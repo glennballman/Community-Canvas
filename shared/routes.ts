@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { insertSnapshotSchema, snapshots } from './schema';
+import { snapshots, snapshotDataSchema } from './schema';
 
 export const errorSchemas = {
   validation: z.object({
@@ -18,12 +18,13 @@ export const api = {
   snapshots: {
     getLatest: {
       method: 'GET' as const,
-      path: '/api/snapshots/latest',
-      input: z.object({
-        location: z.string().default('Vancouver')
-      }),
+      path: '/api/city/:cityName',
       responses: {
-        200: z.custom<typeof snapshots.$inferSelect>(),
+        200: z.object({
+          success: z.boolean(),
+          data: snapshotDataSchema,
+          timestamp: z.string()
+        }),
         404: errorSchemas.notFound,
       },
     },
@@ -31,11 +32,10 @@ export const api = {
       method: 'POST' as const,
       path: '/api/refresh',
       input: z.object({
-        location: z.string().default('Vancouver')
+        location: z.string()
       }),
       responses: {
         200: z.object({ success: z.boolean(), message: z.string() }),
-        400: errorSchemas.validation,
         500: errorSchemas.internal
       }
     }

@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>City Command Center</title>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+    
+    // Icon Components (simplified SVG versions)
+    const Icon = ({ type, className = "h-4 w-4" }) => {
+      const icons = {
+        activity: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />,
+        alert: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />,
+        zap: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />,
+        droplet: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 2.69l5.66 5.66a8 8 0 11-11.31 0z" />,
+        wifi: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0" />,
+        bus: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 17a2 2 0 100 4 2 2 0 000-4zm8 0a2 2 0 100 4 2 2 0 000-4zM3 5v10a2 2 0 002 2h14a2 2 0 002-2V5M3 5h18M7 9h10" />,
+        navigation: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />,
+        plane: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M12 5l7 7-7 7" />,
+        ship: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" />,
+        cloud: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z" />,
+        clock: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />,
+        wind: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />,
+        waves: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 10l-2 1m0 0l-2-1m2 1v2.5M20 7l-2 1m2-1l-2-1m2 1v2.5M14 4l-2-1-2 1M4 7l2-1M4 7l2 1M4 7v2.5M12 21l-2-1m2 1l2-1m-2 1v-2.5M6 18l-2-1v-2.5M18 18l2-1v-2.5" />,
+        anchor: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 2v20m0-10a6 6 0 11-12 0h24a6 6 0 01-12 0z" />,
+        umbrella: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12h18M3 12a9 9 0 0118 0M3 12a9 9 0 0018 0M12 12v9" />,
+        heart: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />,
+        calendar: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />,
+        trending: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />,
+        building: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />,
+        trash: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />,
+        parking: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-6h3a3 3 0 010 6H9zm0 0v4" />,
+        construction: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />,
+        flame: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z" />
+      };
+      
+      return (
+        <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          {icons[type] || icons.activity}
+        </svg>
+      );
+    };
+
+    const StatusDot = ({ status }) => {
+      const colors = {
+        'Operational': 'bg-green-500', 'On Time': 'bg-green-500', 'Open': 'bg-green-500',
+        'Normal Operations': 'bg-green-500', 'On Schedule': 'bg-green-500', 'Clear': 'bg-green-500',
+        'Minor Delays': 'bg-yellow-500', 'Moderate': 'bg-yellow-500',
+        'Outage': 'bg-red-500', 'Heavy NB': 'bg-red-500', 'Stop/Go': 'bg-red-500'
+      };
+      return <div className={`w-1.5 h-1.5 rounded-full ${colors[status] || 'bg-gray-500'}`}></div>;
+    };
+
+    function CommandCenter() {
+      const [data, setData] = useState(null);
+      const [loading, setLoading] = useState(true);
+      const [error, setError] = useState(null);
+      const [selectedCity, setSelectedCity] = useState('vancouver');
+      const [lastUpdate, setLastUpdate] = useState(null);
+
+      useEffect(() => {
+        fetchCityData();
+        const interval = setInterval(fetchCityData, 5 * 60 * 1000); // Refresh every 5 minutes
+        return () => clearInterval(interval);
+      }, [selectedCity]);
+
+      async function fetchCityData() {
+        try {
+          setLoading(true);
+          const response = await fetch(`/api/city/${selectedCity}`);
+          const result = await response.json();
+          
+          if (result.success) {
+            setData(transformData(result.data));
+            setError(null);
+          } else {
+            setError(result.error);
+            setData(getMockData(selectedCity));
+          }
+          setLastUpdate(new Date());
+        } catch (err) {
+          setError(err.message);
+          setData(getMockData(selectedCity));
+        } finally {
+          setLoading(false);
+        }
+      }
+
+      // Transform Firecrawl API response to dashboard format
+      function transformData(apiData) {
+        const transformed = {
+          location: apiData.location || selectedCity,
+          critical_alerts: apiData.real_time_status_updates?.active_alerts?.map(a => ({
+            type: a.value.split(':')[0] || 'Alert',
+            severity: a.severity || 'warning',
+            message: a.value
+          })) || [],
+          emergency_services: {
+            status: "Normal Operations",
+            recent_incidents: 12,
+            response_time_avg: "6.2 minutes"
+          },
+          power: apiData.real_time_status_updates?.bc_hydro_outages?.map((outage, idx) => ({
+            area: `Area ${idx + 1}`,
+            status: outage.value.includes('No') || outage.value.includes('Operational') ? 'Operational' : 'Outage',
+            affected: outage.value.includes('No') ? 0 : 145
+          })) || [{ area: "Downtown Core", status: "Operational", affected: 0 }],
+          water_sewer: {
+            status: apiData.real_time_status_updates?.water_sewer_alerts?.[0]?.value || "All systems operational",
+            reservoirs: "92% capacity"
+          },
+          telecom: { internet_outages: 2, phone_outages: 0 },
+          transit: {
+            skytrain: apiData.real_time_status_updates?.ferry_schedules?.slice(0, 3).map(f => ({
+              line: f.ferry_line,
+              status: f.status,
+              delay: null
+            })) || [
+              { line: "Expo Line", status: "On Time", delay: null },
+              { line: "Millennium Line", status: "Minor Delays", delay: "5-7 min" },
+              { line: "Canada Line", status: "On Time", delay: null }
+            ],
+            buses: { on_time_performance: "87%", detours: 3 },
+            seabus: { status: "On Schedule", next_departure: "12 minutes" }
+          },
+          traffic: apiData.real_time_status_updates?.road_conditions?.map(road => ({
+            route: road.road_name,
+            status: road.status,
+            time: "12 min",
+            normal: "8 min"
+          })) || [
+            { route: "Lions Gate", status: "Heavy NB", time: "18 min", normal: "8 min" },
+            { route: "Granville St", status: "Moderate", time: "6 min", normal: "4 min" }
+          ],
+          airport: { status: "Normal Operations", delays: 3, cancellations: 0, security_wait: "12 min" },
+          ferries: apiData.real_time_status_updates?.ferry_schedules?.map(f => ({
+            route: f.route,
+            status: f.status,
+            next: "2:30 PM",
+            capacity: "78%"
+          })) || [],
+          road_closures: [],
+          parking: [
+            { facility: "Downtown Parkades", available: 342, total: 1200 },
+            { facility: "Street Parking", available: 89, total: 450 }
+          ],
+          bike_share: { bikes: 234, docks: 156 },
+          weather: apiData.real_time_status_updates?.weather || {
+            current: "Cloudy", temp: "8°C", feels_like: "5°C", wind: "SW 25 km/h",
+            humidity: "87%", pressure: "1012 mb", visibility: "16 km", precipitation: "2mm/hr", uv: 1
+          },
+          forecast: [
+            { time: "Now", temp: "8°C", condition: "Cloudy", pop: "40%" },
+            { time: "3PM", temp: "9°C", condition: "Rain", pop: "70%" },
+            { time: "6PM", temp: "7°C", condition: "Rain", pop: "80%" },
+            { time: "9PM", temp: "6°C", condition: "Cloudy", pop: "40%" }
+          ],
+          air_quality: { aqi: 42, category: "Good", pm25: 12, pm10: 18, ventilation: "Good" },
+          tides: apiData.real_time_status_updates?.tides || [
+            { time: "5:45 AM", height: "3.8m", type: "High" },
+            { time: "11:30 AM", height: "1.2m", type: "Low" },
+            { time: "6:15 PM", height: "4.1m", type: "High" }
+          ],
+          ocean: { water_temp: "9°C", wave_height: "0.8m", marine_wind: "SW 20 knots" },
+          beaches: [
+            { name: "English Bay", status: "Open", quality: "Good" },
+            { name: "Kitsilano", status: "Open", quality: "Good" }
+          ],
+          health: {
+            hospital_wait_times: [
+              { hospital: "VGH ER", wait: "3.5h" },
+              { hospital: "St. Paul's ER", wait: "2.8h" }
+            ],
+            covid_activity: "Low", flu_activity: "Moderate", pollen: "Low"
+          },
+          active_events: [
+            { name: "Canucks Game", location: "Rogers Arena", time: "7PM", impact: "Downtown traffic" }
+          ],
+          economic: {
+            gas_prices: { regular: "$1.859/L", diesel: "$1.729/L" },
+            exchange_rate: "USD $0.71",
+            tsx: "+0.34%"
+          },
+          civic_announcements: [{ ti
