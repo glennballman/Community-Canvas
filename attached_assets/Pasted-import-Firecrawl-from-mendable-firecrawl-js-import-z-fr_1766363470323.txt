@@ -1,0 +1,42 @@
+import Firecrawl from '@mendable/firecrawl-js';
+import { z } from 'zod';
+
+const firecrawl = new Firecrawl({ apiKey: 'your-api-key' });
+
+const result = await firecrawl.agent({
+  prompt: "Extract real-time status updates and 15-minute snapshots for Bamfield, BC, covering BC Hydro outages, local water/sewer service alerts, and ferry schedules for BC Ferries and the Lady Rose Marine Services. Include the ventilation index, current weather conditions, tide tables, and active alerts for tsunamis, earthquakes, and forest fires. Monitor road conditions for Bamfield Main, Highway 4 (Coombs to Port Alberni), and the logging road from Youbou. Collect all available economic indicators, government warnings, and press coverage. \n\nAdditionally, generate a 'dashboard_html' field containing a single, standalone HTML file (including CSS and JS). This file should act as a visual template that renders all the extracted data into a clean, modern dashboard. \n\nDashboard Requirements:\n1. Emergency Priority: Any active alerts (tsunami, fire, earthquake) or urgent water/sewer advisories must appear in a prominent, high-visibility section at the very top.\n2. Layout: Use a grid-based card layout for weather, roads, and ferry schedules.\n3. Dynamic: The HTML should be structured so that the data extracted in this JSON can be easily injected into the template.",
+  schema: z.object({
+      location: z.string(),
+      location_citation: z.string(),
+      real_time_status_updates: z.object({
+        bc_hydro_outages: z.array(z.object({
+          value: z.string(),
+          value_citation: z.string().describe("Source URL for this value").optional()
+        })),
+        water_sewer_alerts: z.array(z.object({
+          value: z.string(),
+          value_citation: z.string().describe("Source URL for this value").optional()
+        })),
+        ferry_schedules: z.array(z.object({
+          ferry_line: z.string(),
+          ferry_line_citation: z.string(),
+          route: z.string(),
+          route_citation: z.string(),
+          status: z.string(),
+          status_citation: z.string()
+        })),
+        road_conditions: z.array(z.object({
+          road_name: z.string(),
+          road_name_citation: z.string(),
+          status: z.string(),
+          status_citation: z.string()
+        })),
+        active_alerts: z.array(z.object({
+          value: z.string(),
+          value_citation: z.string().describe("Source URL for this value").optional()
+        }))
+      }),
+      dashboard_html: z.string(),
+      dashboard_html_citation: z.string()
+    }),
+});
