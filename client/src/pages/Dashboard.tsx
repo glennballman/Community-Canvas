@@ -7,55 +7,33 @@ import { useToast } from "@/hooks/use-toast";
 import { 
   Zap, 
   Droplet, 
-  Ship, 
-  Navigation, 
   AlertTriangle, 
-  Cloud, 
-  Waves, 
   Bus, 
   Plane, 
-  Wind,
-  Heart,
-  Calendar,
-  ParkingCircle,
-  Construction,
   TrendingUp,
-  Flame,
   RefreshCw,
   Activity,
   ExternalLink,
   X,
   ChevronRight,
-  Wifi,
   Trash2,
-  Building,
   Eye,
   Database,
-  Globe
+  Globe,
+  Newspaper
 } from "lucide-react";
 import type { StatusEntry } from "@shared/schema";
 import { getSourcesByCategory, ALL_MUNICIPALITIES, type DataSource } from "@shared/sources";
 
 const CATEGORIES = [
   { id: "emergency", label: "Emergency Alerts", icon: AlertTriangle, color: "text-red-500" },
-  { id: "power", label: "BC Hydro", icon: Zap, color: "text-yellow-500" },
+  { id: "power", label: "Power / Hydro", icon: Zap, color: "text-yellow-500" },
   { id: "water", label: "Water & Sewer", icon: Droplet, color: "text-blue-400" },
-  { id: "telecom", label: "Telecom", icon: Wifi, color: "text-purple-400" },
-  { id: "transit", label: "TransLink", icon: Bus, color: "text-green-400" },
-  { id: "traffic", label: "Traffic", icon: Navigation, color: "text-orange-400" },
-  { id: "parking", label: "Parking", icon: ParkingCircle, color: "text-cyan-400" },
-  { id: "closures", label: "Road Closures", icon: Construction, color: "text-red-400" },
-  { id: "ferry", label: "Ferries", icon: Ship, color: "text-blue-500" },
-  { id: "airport", label: "YVR Airport", icon: Plane, color: "text-sky-400" },
-  { id: "weather", label: "Weather", icon: Cloud, color: "text-gray-400" },
-  { id: "air_quality", label: "Air Quality", icon: Wind, color: "text-emerald-400" },
-  { id: "tides", label: "Tides", icon: Waves, color: "text-teal-400" },
-  { id: "health", label: "Health Services", icon: Heart, color: "text-pink-400" },
-  { id: "events", label: "Active Events", icon: Calendar, color: "text-violet-400" },
-  { id: "economic", label: "Economic", icon: TrendingUp, color: "text-lime-400" },
-  { id: "facilities", label: "Facilities", icon: Building, color: "text-slate-400" },
-  { id: "waste", label: "Waste Collection", icon: Trash2, color: "text-amber-400" },
-  { id: "fire", label: "Wildfire Risk", icon: Flame, color: "text-orange-500" },
+  { id: "transit", label: "Transit & Roads", icon: Bus, color: "text-green-400" },
+  { id: "aviation", label: "Aviation", icon: Plane, color: "text-sky-400" },
+  { id: "economic", label: "Economic/Govt", icon: TrendingUp, color: "text-lime-400" },
+  { id: "news", label: "Local News", icon: Newspaper, color: "text-violet-400" },
+  { id: "waste", label: "Waste & Recycling", icon: Trash2, color: "text-amber-400" },
 ];
 
 function StatusDot({ status }: { status?: string }) {
@@ -428,7 +406,7 @@ function DataDetailPanel({
 }
 
 export default function Dashboard() {
-  const [cityName, setCityName] = useState("Vancouver");
+  const [cityName, setCityName] = useState("City of Vancouver");
   const [viewMode, setViewMode] = useState<"data" | "sources">("sources");
   const [selectedItem, setSelectedItem] = useState<StatusEntry | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<typeof CATEGORIES[0] | null>(null);
@@ -479,7 +457,7 @@ export default function Dashboard() {
   const leftColumnCategories = CATEGORIES.filter((_, i) => i % 2 === 0);
   const rightColumnCategories = CATEGORIES.filter((_, i) => i % 2 === 1);
 
-  const municipalities = ["Vancouver", "Bamfield", ...ALL_MUNICIPALITIES.filter(m => m !== "Vancouver" && m !== "Bamfield")];
+  const municipalities = ALL_MUNICIPALITIES;
 
   return (
     <div className="h-screen w-full bg-background flex flex-col overflow-hidden">

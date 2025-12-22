@@ -1,0 +1,28 @@
+import Firecrawl from '@mendable/firecrawl-js';
+import { z } from 'zod';
+
+const firecrawl = new Firecrawl({ apiKey: 'your-api-key' });
+
+const result = await firecrawl.agent({
+  prompt: "Generate an extensive list of data sources for 27 municipalities: the 21 in Metro Vancouver (Anmore, Belcarra, Bowen Island, Burnaby, Coquitlam, Delta, Langley City, Langley Township, Lions Bay, Maple Ridge, New Westminster, North Vancouver City, North Vancouver District, Pitt Meadows, Port Coquitlam, Port Moody, Richmond, Surrey, Tsawwassen First Nation, Vancouver, West Vancouver, and White Rock) AND the 6 in Fraser Valley (Abbotsford, Chilliwack, Mission, Hope, Kent, and Harrison Hot Springs), plus a 'Shared/Regional' category.\n\nFor each municipality, identify specific URLs for:\n1. Local Utilities (Water/Sewer/Power)\n2. Transit & Roads (TransLink/BC Transit, local road closures)\n3. Emergency Alerts (Fire, Police, Tsunami, Weather)\n4. Local News/Press Coverage\n5. Economic/Government indicators\n6. Local Airport/Heliport/Seaplane Base (if applicable): Include specific URLs for flight status, operational alerts, and utilities for that facility (e.g., Abbotsford Intl, Langley Regional, Pitt Meadows Airport).\n\nIn the 'Shared/Regional' category, create a dedicated 'Aviation' sub-section including all regional services (e.g., Helijet, Harbour Air, Seair Seaplanes, Boundary Bay Airport). \n\nLogic for Shared Data: Include all 'Shared/Regional' sources (Air Quality, TransLink, BC Hydro, and the full Aviation list) within every single municipality's list, explicitly flagged as 'is_shared': true. \n\nThe 'dashboard_html' should be a single standalone file rendering these 28 categories (27 municipalities + 1 Shared). Each source must be a clickable card/link with an icon. Ensure the Aviation category is prominent within the Shared section of every view.",
+  schema: z.object({
+      municipalities: z.array(z.object({
+        name: z.string().describe("Name of the municipality or 'Shared/Regional'"),
+        name_citation: z.string().describe("Source URL for name").optional(),
+        data_sources: z.array(z.object({
+          category: z.string().describe("One of: Utilities, Transit & Roads, Emergency Alerts, Local News, Economic Indicators, or Aviation"),
+          category_citation: z.string().describe("Source URL for category").optional(),
+          source_name: z.string(),
+          source_name_citation: z.string().describe("Source URL for source_name").optional(),
+          url: z.string(),
+          url_citation: z.string().describe("Source URL for url").optional(),
+          description: z.string().optional(),
+          description_citation: z.string().describe("Source URL for description").optional(),
+          is_shared: z.boolean().describe("True if this is a regional/aviation source shared across all views"),
+          is_shared_citation: z.string().describe("Source URL for is_shared").optional()
+        }))
+      })),
+      dashboard_html: z.string().describe("HTML template to visualize the directory of sources."),
+      dashboard_html_citation: z.string().describe("Source URL for dashboard_html").optional()
+    }),
+});
