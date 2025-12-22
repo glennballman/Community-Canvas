@@ -1,61 +1,205 @@
 import { useState } from "react";
 import { useLatestSnapshot, useRefreshSnapshot } from "@/hooks/use-snapshots";
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
-import { motion, AnimatePresence } from "framer-motion";
-import { ThemeToggle } from "@/components/ThemeToggle";
 import { 
-  AlertCircle, 
-  Info, 
-  AlertTriangle, 
-  ExternalLink, 
-  Activity,
   Zap, 
   Droplet, 
   Ship, 
   Navigation, 
-  Bus, 
-  Plane, 
+  AlertTriangle, 
   Cloud, 
   Waves, 
-  Wind, 
-  Heart, 
-  Calendar, 
-  ParkingCircle, 
-  Construction, 
-  TrendingUp, 
+  Bus, 
+  Plane, 
+  Wind,
+  Heart,
+  Calendar,
+  ParkingCircle,
+  Construction,
+  TrendingUp,
   Flame,
-  Clock,
-  ChevronRight
+  RefreshCw,
+  Activity,
+  ExternalLink,
+  X,
+  ChevronRight,
+  Wifi,
+  Trash2,
+  Building
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import type { StatusEntry } from "@shared/schema";
 
 const CATEGORIES = [
-  { id: "emergency", label: "Emergency", icon: AlertTriangle },
-  { id: "power", label: "Power", icon: Zap },
-  { id: "water", label: "Water", icon: Droplet },
-  { id: "ferry", label: "Ferries", icon: Ship },
-  { id: "traffic", label: "Traffic", icon: Navigation },
-  { id: "transit", label: "Transit", icon: Bus },
-  { id: "airport", label: "Airport", icon: Plane },
-  { id: "weather", label: "Weather", icon: Cloud },
-  { id: "tides", label: "Tides", icon: Waves },
-  { id: "air_quality", label: "Air Quality", icon: Wind },
-  { id: "health", label: "Health", icon: Heart },
-  { id: "events", label: "Events", icon: Calendar },
-  { id: "parking", label: "Parking", icon: ParkingCircle },
-  { id: "construction", label: "Construction", icon: Construction },
-  { id: "economic", label: "Economic", icon: TrendingUp },
-  { id: "fire", label: "Fire Risk", icon: Flame },
+  { id: "emergency", label: "Emergency Alerts", icon: AlertTriangle, color: "text-red-500" },
+  { id: "power", label: "BC Hydro", icon: Zap, color: "text-yellow-500" },
+  { id: "water", label: "Water & Sewer", icon: Droplet, color: "text-blue-400" },
+  { id: "telecom", label: "Telecom", icon: Wifi, color: "text-purple-400" },
+  { id: "transit", label: "TransLink", icon: Bus, color: "text-green-400" },
+  { id: "traffic", label: "Traffic", icon: Navigation, color: "text-orange-400" },
+  { id: "parking", label: "Parking", icon: ParkingCircle, color: "text-cyan-400" },
+  { id: "closures", label: "Road Closures", icon: Construction, color: "text-red-400" },
+  { id: "ferry", label: "Ferries", icon: Ship, color: "text-blue-500" },
+  { id: "airport", label: "YVR Airport", icon: Plane, color: "text-sky-400" },
+  { id: "weather", label: "Weather", icon: Cloud, color: "text-gray-400" },
+  { id: "air_quality", label: "Air Quality", icon: Wind, color: "text-emerald-400" },
+  { id: "tides", label: "Tides", icon: Waves, color: "text-teal-400" },
+  { id: "health", label: "Health Services", icon: Heart, color: "text-pink-400" },
+  { id: "events", label: "Active Events", icon: Calendar, color: "text-violet-400" },
+  { id: "economic", label: "Economic", icon: TrendingUp, color: "text-lime-400" },
+  { id: "facilities", label: "Facilities", icon: Building, color: "text-slate-400" },
+  { id: "waste", label: "Waste Collection", icon: Trash2, color: "text-amber-400" },
+  { id: "fire", label: "Wildfire Risk", icon: Flame, color: "text-orange-500" },
 ];
+
+function StatusDot({ status }: { status?: string }) {
+  if (!status) return <span className="w-2 h-2 rounded-full bg-gray-600" />;
+  const s = status.toLowerCase();
+  if (s.includes("operational") || s.includes("on time") || s.includes("open") || s.includes("normal") || s.includes("good") || s.includes("low")) {
+    return <span className="w-2 h-2 rounded-full bg-green-500" />;
+  }
+  if (s.includes("outage") || s.includes("closed") || s.includes("critical") || s.includes("high") || s.includes("cancelled")) {
+    return <span className="w-2 h-2 rounded-full bg-red-500" />;
+  }
+  if (s.includes("delay") || s.includes("warning") || s.includes("moderate") || s.includes("construction")) {
+    return <span className="w-2 h-2 rounded-full bg-yellow-500" />;
+  }
+  return <span className="w-2 h-2 rounded-full bg-blue-500" />;
+}
+
+function CategoryBlock({ 
+  category, 
+  items, 
+  onItemClick,
+  selectedItem
+}: { 
+  category: typeof CATEGORIES[0];
+  items: StatusEntry[];
+  onItemClick: (item: StatusEntry, category: typeof CATEGORIES[0]) => void;
+  selectedItem: StatusEntry | null;
+}) {
+  const Icon = category.icon;
+  const hasData = items && items.length > 0;
+
+  return (
+    <div className="bg-card/30 border border-border/30 rounded p-2 min-h-[80px]">
+      <div className="flex items-center gap-1.5 mb-1.5 border-b border-border/20 pb-1">
+        <Icon className={`h-3.5 w-3.5 ${category.color}`} />
+        <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{category.label}</span>
+      </div>
+      
+      {hasData ? (
+        <div className="space-y-0.5">
+          {items.slice(0, 5).map((item, idx) => (
+            <div 
+              key={idx}
+              onClick={() => onItemClick(item, category)}
+              className={`flex items-center justify-between gap-2 py-0.5 px-1 rounded cursor-pointer text-xs hover-elevate transition-colors ${
+                selectedItem === item ? 'bg-primary/20' : ''
+              }`}
+            >
+              <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                <StatusDot status={item.status} />
+                <span className="truncate">{item.label}</span>
+              </div>
+              <span className="text-[10px] text-muted-foreground whitespace-nowrap">{item.status}</span>
+            </div>
+          ))}
+          {items.length > 5 && (
+            <div className="text-[10px] text-muted-foreground pl-4">+{items.length - 5} more</div>
+          )}
+        </div>
+      ) : (
+        <div className="flex items-center justify-center h-10">
+          <span className="text-[10px] text-muted-foreground/60 uppercase tracking-wide">No Data</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function DetailPanel({ 
+  item, 
+  category,
+  onClose 
+}: { 
+  item: StatusEntry;
+  category: typeof CATEGORIES[0];
+  onClose: () => void;
+}) {
+  const Icon = category.icon;
+  
+  return (
+    <div className="h-full flex flex-col bg-card border-l border-border">
+      <div className="flex items-center justify-between p-3 border-b border-border">
+        <div className="flex items-center gap-2">
+          <Icon className={`h-4 w-4 ${category.color}`} />
+          <span className="font-semibold text-sm">{category.label}</span>
+        </div>
+        <Button size="icon" variant="ghost" onClick={onClose} className="h-6 w-6">
+          <X className="h-4 w-4" />
+        </Button>
+      </div>
+      
+      <ScrollArea className="flex-1 p-3">
+        <div className="space-y-4">
+          <div>
+            <h3 className="font-semibold text-lg">{item.label}</h3>
+            <div className="flex items-center gap-2 mt-1">
+              <StatusDot status={item.status} />
+              <Badge variant={
+                item.status?.toLowerCase().includes("outage") || item.status?.toLowerCase().includes("critical") 
+                  ? "destructive" 
+                  : item.status?.toLowerCase().includes("delay") || item.status?.toLowerCase().includes("warning")
+                  ? "secondary"
+                  : "outline"
+              }>
+                {item.status}
+              </Badge>
+            </div>
+          </div>
+          
+          {item.details && (
+            <div>
+              <h4 className="text-xs font-semibold uppercase text-muted-foreground mb-1">Details</h4>
+              <p className="text-sm">{item.details}</p>
+            </div>
+          )}
+          
+          {item.severity && (
+            <div>
+              <h4 className="text-xs font-semibold uppercase text-muted-foreground mb-1">Severity</h4>
+              <Badge variant={item.severity === "critical" ? "destructive" : item.severity === "warning" ? "secondary" : "outline"}>
+                {item.severity}
+              </Badge>
+            </div>
+          )}
+          
+          {item.status_citation && (
+            <div>
+              <h4 className="text-xs font-semibold uppercase text-muted-foreground mb-1">Source</h4>
+              <a 
+                href={item.status_citation} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-sm text-primary flex items-center gap-1 hover:underline"
+              >
+                View Source <ExternalLink className="h-3 w-3" />
+              </a>
+            </div>
+          )}
+        </div>
+      </ScrollArea>
+    </div>
+  );
+}
 
 export default function Dashboard() {
   const [cityName, setCityName] = useState("Vancouver");
-  const [selectedItem, setSelectedItem] = useState<{ categoryId: string, index: number } | null>(null);
+  const [selectedItem, setSelectedItem] = useState<StatusEntry | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<typeof CATEGORIES[0] | null>(null);
   const { data: snapshotResponse, isLoading, error } = useLatestSnapshot(cityName);
   const { mutate: refresh, isPending: isRefreshing } = useRefreshSnapshot();
   const { toast } = useToast();
@@ -63,202 +207,138 @@ export default function Dashboard() {
   const handleRefresh = () => {
     refresh(cityName, {
       onSuccess: () => {
-        toast({ title: "Refresh Triggered", description: "AI gathering latest data." });
+        toast({
+          title: "Refresh Triggered",
+          description: "Firecrawl AI is gathering the latest data...",
+        });
       },
       onError: (err) => {
-        toast({ title: "Refresh Failed", description: err.message, variant: "destructive" });
+        toast({
+          title: "Refresh Failed",
+          description: err.message,
+          variant: "destructive",
+        });
       }
     });
   };
 
+  const handleItemClick = (item: StatusEntry, category: typeof CATEGORIES[0]) => {
+    setSelectedItem(item);
+    setSelectedCategory(category);
+  };
+
   const snapshot = snapshotResponse?.data;
-  const categoriesData = snapshot?.categories || {};
+  const categories = snapshot?.categories || {};
 
-  const getStatusColor = (status: string) => {
-    const s = status.toLowerCase();
-    if (s.includes("operational") || s.includes("on time") || s.includes("open") || s.includes("normal") || s.includes("good")) return "text-green-500";
-    if (s.includes("outage") || s.includes("delay") || s.includes("closed") || s.includes("heavy") || s.includes("critical")) return "text-red-500";
-    if (s.includes("warning") || s.includes("moderate")) return "text-yellow-500";
-    return "text-muted-foreground";
-  };
-
-  const getSeverityIcon = (severity?: string) => {
-    switch (severity) {
-      case "critical": return <AlertCircle className="h-4 w-4 text-red-500" />;
-      case "warning": return <AlertTriangle className="h-4 w-4 text-yellow-500" />;
-      default: return <Info className="h-4 w-4 text-blue-500" />;
-    }
-  };
-
-  const activeDetail = selectedItem ? categoriesData[selectedItem.categoryId]?.[selectedItem.index] : null;
+  const leftColumnCategories = CATEGORIES.filter((_, i) => i % 2 === 0);
+  const rightColumnCategories = CATEGORIES.filter((_, i) => i % 2 === 1);
 
   return (
-    <div className="flex flex-col h-screen w-full bg-[#0a0a0b] text-white font-mono uppercase text-xs overflow-hidden">
-      {/* Header - Terminal Style */}
-      <header className="flex items-center justify-between px-4 py-2 border-b border-white/10 bg-[#121214]">
-        <div className="flex items-center gap-6">
-          <div className="flex items-center gap-2 text-primary">
-            <Activity className="h-4 w-4" />
-            <span className="font-bold tracking-widest">CITY.TERMINAL v1.0</span>
-          </div>
-          <div className="flex items-center gap-3">
-            <select 
-              value={cityName.toLowerCase()}
-              onChange={(e) => setCityName(e.target.value.charAt(0).toUpperCase() + e.target.value.slice(1))}
-              className="bg-transparent border-none text-white focus:ring-0 cursor-pointer hover:text-primary transition-colors"
-            >
-              <option value="vancouver">LOC: VANCOUVER_BC</option>
-              <option value="bamfield">LOC: BAMFIELD_BC</option>
-            </select>
-          </div>
+    <div className="h-screen w-full bg-background flex flex-col overflow-hidden">
+      {/* Header */}
+      <header className="flex items-center justify-between px-4 py-2 border-b border-border bg-card/50 shrink-0">
+        <div className="flex items-center gap-3">
+          <Activity className="h-5 w-5 text-primary" />
+          <h1 className="text-lg font-bold tracking-tight">{cityName}, BC Command Center</h1>
+          <span className="text-xs text-muted-foreground">
+            {snapshotResponse?.timestamp 
+              ? `Updated: ${new Date(snapshotResponse.timestamp).toLocaleString()}`
+              : 'No data yet'
+            }
+          </span>
         </div>
-        <div className="flex items-center gap-4">
-          {snapshotResponse?.timestamp && (
-            <span className="text-[10px] opacity-50">SYNC_TIME: {new Date(snapshotResponse.timestamp).toLocaleTimeString()}</span>
-          )}
+        <div className="flex items-center gap-2">
+          <select 
+            value={cityName}
+            onChange={(e) => setCityName(e.target.value)}
+            className="bg-background border border-border rounded px-2 py-1 text-sm"
+          >
+            <option value="Vancouver">Vancouver, BC</option>
+            <option value="Bamfield">Bamfield, BC</option>
+          </select>
           <Button 
+            size="sm" 
             onClick={handleRefresh} 
             disabled={isRefreshing}
-            variant="ghost"
-            className="h-6 px-2 text-[10px] border border-white/10 hover:bg-primary/20"
+            className="gap-1"
           >
-            {isRefreshing ? "SYNCING..." : "TRIGGER_REFRESH"}
+            <RefreshCw className={`h-3.5 w-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
+            {isRefreshing ? 'Refreshing...' : 'Refresh'}
           </Button>
         </div>
       </header>
 
-      <div className="flex flex-1 overflow-hidden">
-        {/* Left Side: 2-Column Grid of all categories */}
-        <div className="flex-[2] border-r border-white/10 overflow-y-auto p-4 bg-[#0d0d0f]">
+      {/* Alert Banner */}
+      {categories["emergency"]?.length > 0 && (
+        <div className="bg-red-500/20 border-b border-red-500/30 px-4 py-1.5 flex items-center gap-2 shrink-0">
+          <AlertTriangle className="h-4 w-4 text-red-500" />
+          <span className="text-sm font-medium text-red-400">
+            {categories["emergency"][0]?.label}: {categories["emergency"][0]?.status}
+          </span>
+        </div>
+      )}
+
+      {/* Main Content */}
+      <div className="flex flex-1 min-h-0">
+        {/* Main Grid */}
+        <div className={`flex-1 p-3 overflow-auto ${selectedItem ? 'pr-0' : ''}`}>
           {isLoading ? (
-            <div className="space-y-4">
-              {[1, 2, 3, 4, 5].map(i => <Skeleton key={i} className="h-20 w-full bg-white/5" />)}
+            <div className="flex items-center justify-center h-full">
+              <div className="text-muted-foreground">Loading data...</div>
+            </div>
+          ) : error ? (
+            <div className="flex flex-col items-center justify-center h-full gap-4">
+              <AlertTriangle className="h-12 w-12 text-muted-foreground" />
+              <p className="text-muted-foreground">No data available for {cityName}.</p>
+              <Button onClick={handleRefresh} disabled={isRefreshing}>
+                {isRefreshing ? "Fetching..." : "Run First Extraction"}
+              </Button>
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-px bg-white/5 border border-white/5">
-              {CATEGORIES.map((cat) => {
-                const items = categoriesData[cat.id] || [];
-                return (
-                  <div key={cat.id} className="bg-[#121214] p-3 flex flex-col gap-2 min-h-[140px]">
-                    <div className="flex items-center gap-2 border-b border-white/5 pb-1 mb-1">
-                      <cat.icon className="h-3 w-3 text-primary" />
-                      <span className="font-bold text-primary/80 tracking-tighter">{cat.label}</span>
-                    </div>
-                    <div className="flex flex-col gap-1.5 overflow-hidden">
-                      {items.length > 0 ? (
-                        items.slice(0, 4).map((item, idx) => (
-                          <div 
-                            key={idx}
-                            onClick={() => setSelectedItem({ categoryId: cat.id, index: idx })}
-                            className={`flex items-center justify-between cursor-pointer hover:bg-white/5 p-1 rounded transition-colors group ${selectedItem?.categoryId === cat.id && selectedItem?.index === idx ? 'bg-primary/10 border-l-2 border-primary' : ''}`}
-                          >
-                            <span className="truncate pr-2 opacity-80 group-hover:opacity-100">{item.label}</span>
-                            <span className={`flex-shrink-0 font-bold ${getStatusColor(item.status)}`}>
-                              {item.status.length > 10 ? item.status.substring(0, 8) + '..' : item.status}
-                            </span>
-                          </div>
-                        ))
-                      ) : (
-                        <div className="flex flex-col items-center justify-center h-full opacity-30 italic py-4">
-                          <span>NO_DATA_STREAM</span>
-                          <span className="text-[10px]">RECONFIGURE SOURCE</span>
-                        </div>
-                      )}
-                      {items.length > 4 && (
-                        <div className="text-[9px] opacity-40 text-center mt-auto">+ {items.length - 4} MORE ENTRIES</div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
+            <div className="grid grid-cols-2 gap-2 auto-rows-min">
+              {/* Left Column */}
+              <div className="space-y-2">
+                {leftColumnCategories.map(cat => (
+                  <CategoryBlock 
+                    key={cat.id}
+                    category={cat}
+                    items={categories[cat.id] || []}
+                    onItemClick={handleItemClick}
+                    selectedItem={selectedItem}
+                  />
+                ))}
+              </div>
+              
+              {/* Right Column */}
+              <div className="space-y-2">
+                {rightColumnCategories.map(cat => (
+                  <CategoryBlock 
+                    key={cat.id}
+                    category={cat}
+                    items={categories[cat.id] || []}
+                    onItemClick={handleItemClick}
+                    selectedItem={selectedItem}
+                  />
+                ))}
+              </div>
             </div>
           )}
         </div>
 
-        {/* Right Side: Details Pane */}
-        <div className="flex-1 bg-[#0a0a0b] p-6 overflow-y-auto">
-          <AnimatePresence mode="wait">
-            {activeDetail ? (
-              <motion.div
-                key={`${selectedItem?.categoryId}-${selectedItem?.index}`}
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                className="space-y-6"
-              >
-                <div className="border-b border-white/10 pb-4">
-                  <div className="flex items-center gap-2 text-primary mb-1">
-                    <span className="text-[10px] tracking-[0.2em]">CATEGORY_INSPECT</span>
-                  </div>
-                  <h2 className="text-2xl font-black tracking-tighter">{activeDetail.label}</h2>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-[#121214] border border-white/5 p-4 rounded">
-                    <span className="block text-[10px] opacity-40 mb-1">CURRENT_STATUS</span>
-                    <div className={`text-lg font-bold ${getStatusColor(activeDetail.status)}`}>
-                      {activeDetail.status}
-                    </div>
-                  </div>
-                  <div className="bg-[#121214] border border-white/5 p-4 rounded">
-                    <span className="block text-[10px] opacity-40 mb-1">SEVERITY_LEVEL</span>
-                    <div className="flex items-center gap-2">
-                      {getSeverityIcon(activeDetail.severity)}
-                      <span className="font-bold">{activeDetail.severity || "NORMAL"}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {activeDetail.details && (
-                  <div className="bg-[#121214] border border-white/5 p-4 rounded">
-                    <span className="block text-[10px] opacity-40 mb-2">TELEMETRY_DETAILS</span>
-                    <p className="text-sm opacity-80 leading-relaxed normal-case font-sans">
-                      {activeDetail.details}
-                    </p>
-                  </div>
-                )}
-
-                {activeDetail.status_citation && (
-                  <div className="pt-4">
-                    <Button variant="outline" className="w-full border-white/10 hover:bg-white/5" asChild>
-                      <a href={activeDetail.status_citation} target="_blank" rel="noopener noreferrer">
-                        <ExternalLink className="mr-2 h-4 w-4" />
-                        VIEW_DATA_SOURCE
-                      </a>
-                    </Button>
-                  </div>
-                )}
-              </motion.div>
-            ) : (
-              <div className="flex flex-col items-center justify-center h-full text-center space-y-4 opacity-20">
-                <div className="relative">
-                  <Activity className="h-16 w-16 animate-pulse" />
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="w-24 h-24 border-2 border-white/20 rounded-full animate-[ping_3s_infinite]" />
-                  </div>
-                </div>
-                <div className="space-y-1">
-                  <h3 className="font-bold tracking-widest">AWAITING_INPUT</h3>
-                  <p className="text-[10px]">SELECT_CATEGORY_NODE_FOR_DETAILED_INSPECTION</p>
-                </div>
-              </div>
-            )}
-          </AnimatePresence>
-        </div>
+        {/* Detail Panel */}
+        {selectedItem && selectedCategory && (
+          <div className="w-80 shrink-0 border-l border-border">
+            <DetailPanel 
+              item={selectedItem}
+              category={selectedCategory}
+              onClose={() => {
+                setSelectedItem(null);
+                setSelectedCategory(null);
+              }}
+            />
+          </div>
+        )}
       </div>
-
-      {/* Footer - Status Bar */}
-      <footer className="h-6 bg-[#121214] border-t border-white/10 flex items-center justify-between px-4 text-[9px] opacity-60">
-        <div className="flex gap-4">
-          <span>SYSTEM: ONLINE</span>
-          <span>NETWORK: STABLE</span>
-          <span>LOCATION: {cityName}</span>
-        </div>
-        <div className="flex gap-4">
-          <span>FIRE_CRAWL_AGENT: READY</span>
-          <span>LATENCY: 42ms</span>
-        </div>
-      </footer>
     </div>
   );
 }
