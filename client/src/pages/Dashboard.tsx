@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "wouter";
 import { useLatestSnapshot, useRefreshSnapshot } from "@/hooks/use-snapshots";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -20,7 +21,8 @@ import {
   Eye,
   Database,
   Globe,
-  Newspaper
+  Newspaper,
+  Settings
 } from "lucide-react";
 import type { StatusEntry } from "@shared/schema";
 import { getSourcesByCategory, ALL_MUNICIPALITIES, type DataSource } from "@shared/sources";
@@ -531,6 +533,15 @@ export default function Dashboard() {
               {isRefreshing ? 'Refreshing...' : 'Refresh'}
             </Button>
           )}
+          
+          <div className="h-4 w-px bg-border" />
+          
+          <Link href="/admin">
+            <Button size="sm" variant="ghost" className="gap-1" data-testid="link-admin">
+              <Settings className="h-3.5 w-3.5" />
+              Admin
+            </Button>
+          </Link>
         </div>
       </header>
 
