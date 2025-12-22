@@ -28,9 +28,13 @@ import {
   ChevronRight,
   Wifi,
   Trash2,
-  Building
+  Building,
+  Eye,
+  Database,
+  Globe
 } from "lucide-react";
 import type { StatusEntry } from "@shared/schema";
+import { getSourcesByCategory, ALL_MUNICIPALITIES, type DataSource } from "@shared/sources";
 
 const CATEGORIES = [
   { id: "emergency", label: "Emergency Alerts", icon: AlertTriangle, color: "text-red-500" },
@@ -69,7 +73,74 @@ function StatusDot({ status }: { status?: string }) {
   return <span className="w-2 h-2 rounded-full bg-blue-500" />;
 }
 
-function CategoryBlock({ 
+function truncateUrl(url: string, maxLen: number = 35): string {
+  try {
+    const parsed = new URL(url);
+    const display = parsed.hostname + parsed.pathname;
+    if (display.length > maxLen) {
+      return display.substring(0, maxLen) + "...";
+    }
+    return display;
+  } catch {
+    return url.length > maxLen ? url.substring(0, maxLen) + "..." : url;
+  }
+}
+
+function CategoryBlockSources({ 
+  category, 
+  sources,
+  onSourceClick,
+  selectedSource
+}: { 
+  category: typeof CATEGORIES[0];
+  sources: DataSource[];
+  onSourceClick: (source: DataSource, category: typeof CATEGORIES[0]) => void;
+  selectedSource: DataSource | null;
+}) {
+  const Icon = category.icon;
+  const hasSources = sources && sources.length > 0;
+
+  return (
+    <div className={`bg-card/30 border rounded p-2 min-h-[80px] ${selectedSource && sources.includes(selectedSource) ? 'border-primary/50' : 'border-border/30'}`}>
+      <div className="flex items-center gap-1.5 mb-1.5 border-b border-border/20 pb-1">
+        <Icon className={`h-3.5 w-3.5 ${category.color}`} />
+        <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground flex-1">{category.label}</span>
+        {hasSources && <Badge variant="outline" className="text-[9px] px-1 py-0">{sources.length}</Badge>}
+      </div>
+      
+      {hasSources ? (
+        <div className="space-y-1">
+          {sources.map((source, idx) => (
+            <div 
+              key={idx}
+              onClick={() => onSourceClick(source, category)}
+              className={`py-1 px-1 rounded cursor-pointer text-xs hover-elevate transition-colors ${
+                selectedSource === source ? 'bg-primary/20' : ''
+              }`}
+              data-testid={`source-${category.id}-${idx}`}
+            >
+              <div className="flex items-center gap-1.5">
+                <Database className="h-3 w-3 text-muted-foreground shrink-0" />
+                <span className="font-medium truncate">{source.source_name}</span>
+                {source.is_shared && <Badge variant="secondary" className="text-[8px] px-1 py-0">Regional</Badge>}
+              </div>
+              <div className="flex items-center gap-1 mt-0.5 pl-4">
+                <Globe className="h-2.5 w-2.5 text-muted-foreground/50" />
+                <span className="text-[10px] text-muted-foreground truncate">{truncateUrl(source.url)}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="flex items-center justify-center h-10">
+          <span className="text-[10px] text-muted-foreground/60 uppercase tracking-wide">No Sources Configured</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CategoryBlockData({ 
   category, 
   items, 
   onItemClick,
@@ -134,7 +205,101 @@ function CategoryBlock({
   );
 }
 
-function DetailPanel({ 
+function SourceDetailPanel({ 
+  source, 
+  category,
+  allSources,
+  onClose,
+  onSourceSelect
+}: { 
+  source: DataSource | null;
+  category: typeof CATEGORIES[0];
+  allSources: DataSource[];
+  onClose: () => void;
+  onSourceSelect: (source: DataSource) => void;
+}) {
+  const Icon = category.icon;
+  const displaySource = source || allSources[0];
+  
+  return (
+    <div className="h-full flex flex-col bg-card border-l border-border">
+      <div className="flex items-center justify-between p-3 border-b border-border">
+        <div className="flex items-center gap-2">
+          <Icon className={`h-4 w-4 ${category.color}`} />
+          <span className="font-semibold text-sm">{category.label}</span>
+        </div>
+        <Button size="icon" variant="ghost" onClick={onClose}>
+          <X className="h-4 w-4" />
+        </Button>
+      </div>
+      
+      <ScrollArea className="flex-1">
+        {!displaySource ? (
+          <div className="p-4 text-center">
+            <div className="text-muted-foreground text-sm mb-2">No data sources configured.</div>
+            <div className="text-xs text-muted-foreground/60">
+              Add sources via Firecrawl to populate this category.
+            </div>
+          </div>
+        ) : (
+          <div className="p-3 space-y-4">
+            <div>
+              <h3 className="font-semibold text-lg">{displaySource.source_name}</h3>
+              {displaySource.is_shared && (
+                <Badge variant="secondary" className="mt-1">Regional/Shared Source</Badge>
+              )}
+            </div>
+            
+            <div>
+              <h4 className="text-xs font-semibold uppercase text-muted-foreground mb-1">Source URL</h4>
+              <a 
+                href={displaySource.url} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-sm text-primary flex items-center gap-1 hover:underline break-all"
+              >
+                {displaySource.url} <ExternalLink className="h-3 w-3 shrink-0" />
+              </a>
+            </div>
+            
+            {displaySource.description && (
+              <div>
+                <h4 className="text-xs font-semibold uppercase text-muted-foreground mb-1">Description</h4>
+                <p className="text-sm">{displaySource.description}</p>
+              </div>
+            )}
+            
+            {allSources.length > 1 && (
+              <div className="border-t border-border pt-3 mt-3">
+                <h4 className="text-xs font-semibold uppercase text-muted-foreground mb-2">All Sources ({allSources.length})</h4>
+                <div className="space-y-1">
+                  {allSources.map((s, idx) => (
+                    <div 
+                      key={idx}
+                      onClick={() => onSourceSelect(s)}
+                      className={`p-1.5 rounded cursor-pointer text-xs hover-elevate ${
+                        s === displaySource ? 'bg-primary/20' : ''
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <Database className="h-3 w-3 text-muted-foreground" />
+                        <span className="truncate flex-1">{s.source_name}</span>
+                        {s.is_shared && <Badge variant="secondary" className="text-[8px] px-1">Regional</Badge>}
+                      </div>
+                      <div className="text-[10px] text-muted-foreground pl-5 truncate">{truncateUrl(s.url)}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </ScrollArea>
+    </div>
+  );
+}
+
+function DataDetailPanel({ 
   item, 
   category,
   allItems,
@@ -264,9 +429,13 @@ function DetailPanel({
 
 export default function Dashboard() {
   const [cityName, setCityName] = useState("Vancouver");
+  const [viewMode, setViewMode] = useState<"data" | "sources">("sources");
   const [selectedItem, setSelectedItem] = useState<StatusEntry | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<typeof CATEGORIES[0] | null>(null);
-  const { data: snapshotResponse, isLoading, error } = useLatestSnapshot(cityName);
+  const [selectedSource, setSelectedSource] = useState<DataSource | null>(null);
+  const [selectedSourceCategory, setSelectedSourceCategory] = useState<typeof CATEGORIES[0] | null>(null);
+  
+  const { data: snapshotResponse, isLoading } = useLatestSnapshot(cityName);
   const { mutate: refresh, isPending: isRefreshing } = useRefreshSnapshot();
   const { toast } = useToast();
 
@@ -298,11 +467,19 @@ export default function Dashboard() {
     setSelectedItem(null);
   };
 
+  const handleSourceClick = (source: DataSource, category: typeof CATEGORIES[0]) => {
+    setSelectedSource(source);
+    setSelectedSourceCategory(category);
+  };
+
   const snapshot = snapshotResponse?.data;
   const categories = snapshot?.categories || {};
+  const sourcesByCategory = getSourcesByCategory(cityName);
 
   const leftColumnCategories = CATEGORIES.filter((_, i) => i % 2 === 0);
   const rightColumnCategories = CATEGORIES.filter((_, i) => i % 2 === 1);
+
+  const municipalities = ["Vancouver", "Bamfield", ...ALL_MUNICIPALITIES.filter(m => m !== "Vancouver" && m !== "Bamfield")];
 
   return (
     <div className="h-screen w-full bg-background flex flex-col overflow-hidden">
@@ -310,37 +487,74 @@ export default function Dashboard() {
       <header className="flex items-center justify-between px-4 py-2 border-b border-border bg-card/50 shrink-0">
         <div className="flex items-center gap-3">
           <Activity className="h-5 w-5 text-primary" />
-          <h1 className="text-lg font-bold tracking-tight">{cityName}, BC Command Center</h1>
+          <h1 className="text-lg font-bold tracking-tight">{cityName} Command Center</h1>
           <span className="text-xs text-muted-foreground">
-            {snapshotResponse?.timestamp 
-              ? `Updated: ${new Date(snapshotResponse.timestamp).toLocaleString()}`
-              : 'No data yet'
-            }
+            {viewMode === "sources" ? "Sources View" : (
+              snapshotResponse?.timestamp 
+                ? `Updated: ${new Date(snapshotResponse.timestamp).toLocaleString()}`
+                : 'No data yet'
+            )}
           </span>
         </div>
         <div className="flex items-center gap-2">
+          {/* View Mode Toggle */}
+          <div className="flex items-center bg-muted rounded p-0.5">
+            <Button 
+              size="sm" 
+              variant={viewMode === "sources" ? "default" : "ghost"}
+              onClick={() => setViewMode("sources")}
+              className="gap-1 h-7 text-xs"
+              data-testid="toggle-sources-view"
+            >
+              <Database className="h-3 w-3" />
+              Sources
+            </Button>
+            <Button 
+              size="sm" 
+              variant={viewMode === "data" ? "default" : "ghost"}
+              onClick={() => setViewMode("data")}
+              className="gap-1 h-7 text-xs"
+              data-testid="toggle-data-view"
+            >
+              <Eye className="h-3 w-3" />
+              Data
+            </Button>
+          </div>
+          
           <select 
             value={cityName}
-            onChange={(e) => setCityName(e.target.value)}
+            onChange={(e) => {
+              setCityName(e.target.value);
+              setSelectedCategory(null);
+              setSelectedItem(null);
+              setSelectedSource(null);
+              setSelectedSourceCategory(null);
+            }}
             className="bg-background border border-border rounded px-2 py-1 text-sm"
+            data-testid="select-city"
           >
-            <option value="Vancouver">Vancouver, BC</option>
-            <option value="Bamfield">Bamfield, BC</option>
+            {municipalities.map(m => (
+              <option key={m} value={m}>{m}</option>
+            ))}
           </select>
-          <Button 
-            size="sm" 
-            onClick={handleRefresh} 
-            disabled={isRefreshing}
-            className="gap-1"
-          >
-            <RefreshCw className={`h-3.5 w-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
-            {isRefreshing ? 'Refreshing...' : 'Refresh'}
-          </Button>
+          
+          {viewMode === "data" && (
+            <Button 
+              size="sm" 
+              onClick={handleRefresh} 
+              disabled={isRefreshing}
+              className="gap-1"
+              data-testid="button-refresh"
+            >
+              <RefreshCw className={`h-3.5 w-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
+              {isRefreshing ? 'Refreshing...' : 'Refresh'}
+            </Button>
+          )}
         </div>
       </header>
 
-      {/* Alert Banner */}
-      {categories["emergency"]?.length > 0 && (
+      {/* Alert Banner (only in data view) */}
+      {viewMode === "data" && categories["emergency"]?.length > 0 && (
         <div className="bg-red-500/20 border-b border-red-500/30 px-4 py-1.5 flex items-center gap-2 shrink-0">
           <AlertTriangle className="h-4 w-4 text-red-500" />
           <span className="text-sm font-medium text-red-400">
@@ -352,17 +566,41 @@ export default function Dashboard() {
       {/* Main Content */}
       <div className="flex flex-1 min-h-0">
         {/* Main Grid */}
-        <div className={`flex-1 p-3 overflow-auto ${selectedCategory ? 'pr-0' : ''}`}>
-          {isLoading ? (
+        <div className={`flex-1 p-3 overflow-auto ${(viewMode === "sources" ? selectedSourceCategory : selectedCategory) ? 'pr-0' : ''}`}>
+          {viewMode === "data" && isLoading ? (
             <div className="flex items-center justify-center h-full">
               <div className="text-muted-foreground">Loading data...</div>
             </div>
-          ) : (
+          ) : viewMode === "sources" ? (
             <div className="grid grid-cols-2 gap-2 auto-rows-min">
-              {/* Left Column */}
               <div className="space-y-2">
                 {leftColumnCategories.map(cat => (
-                  <CategoryBlock 
+                  <CategoryBlockSources 
+                    key={cat.id}
+                    category={cat}
+                    sources={sourcesByCategory[cat.id] || []}
+                    onSourceClick={handleSourceClick}
+                    selectedSource={selectedSource}
+                  />
+                ))}
+              </div>
+              <div className="space-y-2">
+                {rightColumnCategories.map(cat => (
+                  <CategoryBlockSources 
+                    key={cat.id}
+                    category={cat}
+                    sources={sourcesByCategory[cat.id] || []}
+                    onSourceClick={handleSourceClick}
+                    selectedSource={selectedSource}
+                  />
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-2 auto-rows-min">
+              <div className="space-y-2">
+                {leftColumnCategories.map(cat => (
+                  <CategoryBlockData 
                     key={cat.id}
                     category={cat}
                     items={categories[cat.id] || []}
@@ -373,11 +611,9 @@ export default function Dashboard() {
                   />
                 ))}
               </div>
-              
-              {/* Right Column */}
               <div className="space-y-2">
                 {rightColumnCategories.map(cat => (
-                  <CategoryBlock 
+                  <CategoryBlockData 
                     key={cat.id}
                     category={cat}
                     items={categories[cat.id] || []}
@@ -393,9 +629,24 @@ export default function Dashboard() {
         </div>
 
         {/* Detail Panel */}
-        {selectedCategory && (
+        {viewMode === "sources" && selectedSourceCategory && (
           <div className="w-80 shrink-0">
-            <DetailPanel 
+            <SourceDetailPanel 
+              source={selectedSource}
+              category={selectedSourceCategory}
+              allSources={sourcesByCategory[selectedSourceCategory.id] || []}
+              onClose={() => {
+                setSelectedSource(null);
+                setSelectedSourceCategory(null);
+              }}
+              onSourceSelect={(source) => setSelectedSource(source)}
+            />
+          </div>
+        )}
+        
+        {viewMode === "data" && selectedCategory && (
+          <div className="w-80 shrink-0">
+            <DataDetailPanel 
               item={selectedItem}
               category={selectedCategory}
               allItems={categories[selectedCategory.id] || []}

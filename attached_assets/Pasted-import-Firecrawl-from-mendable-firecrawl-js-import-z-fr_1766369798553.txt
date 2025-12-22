@@ -1,0 +1,28 @@
+import Firecrawl from '@mendable/firecrawl-js';
+import { z } from 'zod';
+
+const firecrawl = new Firecrawl({ apiKey: 'your-api-key' });
+
+const result = await firecrawl.agent({
+  prompt: "Generate an extensive list of data sources for all 21 municipalities in Metro Vancouver (Anmore, Belcarra, Bowen Island, Burnaby, Coquitlam, Delta, Langley City, Langley Township, Lions Bay, Maple Ridge, New Westminster, North Vancouver City, North Vancouver District, Pitt Meadows, Port Coquitlam, Port Moody, Richmond, Surrey, Tsawwassen First Nation, Vancouver, West Vancouver, and White Rock), plus a 'Shared/Regional' category. \n\nFor each municipality, identify specific URLs for: \n1. Local Utilities (Water/Sewer/Power)\n2. Transit & Roads (TransLink, local road closures)\n3. Emergency Alerts (Fire, Police, Tsunami, Weather)\n4. Local News/Press Coverage\n5. Economic/Government indicators.\n\nInclude shared regional sources (e.g., Metro Vancouver Air Quality, TransLink, BC Hydro) within each municipality's list but explicitly flag them as 'Shared'. \n\nThe 'dashboard_html' should be a single standalone file that renders these 22 categories (21 municipalities + 1 Shared) into a clean interface. Each data source must be represented as a clickable card or link with an icon so I can verify the source directly.",
+  schema: z.object({
+      municipalities: z.array(z.object({
+        name: z.string().describe("Name of the municipality or 'Shared/Regional'"),
+        name_citation: z.string().describe("Source URL for name").optional(),
+        data_sources: z.array(z.object({
+          category: z.string(),
+          category_citation: z.string().describe("Source URL for category").optional(),
+          source_name: z.string(),
+          source_name_citation: z.string().describe("Source URL for source_name").optional(),
+          url: z.string(),
+          url_citation: z.string().describe("Source URL for url").optional(),
+          description: z.string().optional(),
+          description_citation: z.string().describe("Source URL for description").optional(),
+          is_shared: z.boolean().describe("True if this is a regional source shared across multiple districts"),
+          is_shared_citation: z.string().describe("Source URL for is_shared").optional()
+        }))
+      })),
+      dashboard_html: z.string().describe("HTML template to visualize the directory of sources."),
+      dashboard_html_citation: z.string().describe("Source URL for dashboard_html").optional()
+    }),
+});
