@@ -413,6 +413,8 @@ export default function Dashboard() {
   const [selectedSource, setSelectedSource] = useState<DataSource | null>(null);
   const [selectedSourceCategory, setSelectedSourceCategory] = useState<typeof CATEGORIES[0] | null>(null);
   const [iframeUrl, setIframeUrl] = useState<string | null>(null);
+  const [iframeError, setIframeError] = useState(false);
+  const [iframeLoading, setIframeLoading] = useState(false);
   
   const { data: snapshotResponse, isLoading } = useLatestSnapshot(cityName);
   const { mutate: refresh, isPending: isRefreshing } = useRefreshSnapshot();
@@ -561,6 +563,8 @@ export default function Dashboard() {
                     onSourceClick={(source, category) => {
                       handleSourceClick(source, category);
                       setIframeUrl(source.url);
+                      setIframeError(false);
+                      setIframeLoading(true);
                     }}
                     selectedSource={selectedSource}
                   />
@@ -575,6 +579,8 @@ export default function Dashboard() {
                     onSourceClick={(source, category) => {
                       handleSourceClick(source, category);
                       setIframeUrl(source.url);
+                      setIframeError(false);
+                      setIframeLoading(true);
                     }}
                     selectedSource={selectedSource}
                   />
@@ -628,6 +634,8 @@ export default function Dashboard() {
               onSourceSelect={(source) => {
                 setSelectedSource(source);
                 setIframeUrl(source.url);
+                setIframeError(false);
+                setIframeLoading(true);
               }}
             />
           ) : viewMode === "data" && selectedCategory ? (
@@ -663,18 +671,23 @@ export default function Dashboard() {
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
                   <Button
-                    size="icon"
-                    variant="ghost"
+                    size="sm"
+                    variant="outline"
                     onClick={() => window.open(iframeUrl, '_blank')}
-                    className="h-6 w-6"
+                    className="gap-1 h-6 text-xs"
                     data-testid="button-open-external"
                   >
                     <ExternalLink className="h-3 w-3" />
+                    Open in New Tab
                   </Button>
                   <Button
                     size="icon"
                     variant="ghost"
-                    onClick={() => setIframeUrl(null)}
+                    onClick={() => {
+                      setIframeUrl(null);
+                      setIframeError(false);
+                      setIframeLoading(false);
+                    }}
                     className="h-6 w-6"
                     data-testid="button-close-iframe"
                   >
@@ -682,13 +695,52 @@ export default function Dashboard() {
                   </Button>
                 </div>
               </div>
-              <iframe
-                src={iframeUrl}
-                className="flex-1 w-full border-0"
-                title="Source Preview"
-                sandbox="allow-scripts allow-same-origin allow-forms"
-                data-testid="iframe-source-preview"
-              />
+              <div className="flex-1 relative">
+                {iframeLoading && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-background/80 z-10">
+                    <div className="text-center text-muted-foreground">
+                      <RefreshCw className="h-6 w-6 mx-auto mb-2 animate-spin" />
+                      <p className="text-xs">Loading page...</p>
+                    </div>
+                  </div>
+                )}
+                {iframeError ? (
+                  <div className="h-full flex items-center justify-center p-6">
+                    <div className="text-center text-muted-foreground max-w-md">
+                      <AlertTriangle className="h-10 w-10 mx-auto mb-3 text-yellow-500/60" />
+                      <p className="text-sm font-medium mb-2">This site blocks embedding</p>
+                      <p className="text-xs mb-4 text-muted-foreground/70">
+                        Many government and official websites prevent embedding for security reasons. 
+                        You can still view the page in a new browser tab.
+                      </p>
+                      <Button
+                        variant="default"
+                        onClick={() => window.open(iframeUrl, '_blank')}
+                        className="gap-2"
+                        data-testid="button-open-blocked-external"
+                      >
+                        <ExternalLink className="h-4 w-4" />
+                        Open in New Tab
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <iframe
+                    src={iframeUrl}
+                    className="w-full h-full border-0"
+                    title="Source Preview"
+                    sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+                    onLoad={() => {
+                      setIframeLoading(false);
+                    }}
+                    onError={() => {
+                      setIframeLoading(false);
+                      setIframeError(true);
+                    }}
+                    data-testid="iframe-source-preview"
+                  />
+                )}
+              </div>
             </>
           ) : (
             <div className="h-full flex items-center justify-center">
