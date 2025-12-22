@@ -3,7 +3,6 @@ import type { Server } from "http";
 import { storage } from "./storage";
 import { api } from "@shared/routes";
 import { z } from "zod";
-import { insertSnapshotSchema } from "@shared/schema";
 import FirecrawlApp from '@mendable/firecrawl-js';
 
 export async function registerRoutes(
@@ -13,33 +12,19 @@ export async function registerRoutes(
 
   app.get(api.snapshots.getLatest.path, async (req, res) => {
     try {
-      const { location } = api.snapshots.getLatest.input.parse(req.query);
-      const snapshot = await storage.getLatestSnapshot(location);
+      const { cityName } = req.params;
+      const snapshot = await storage.getLatestSnapshot(cityName);
       if (!snapshot) {
         return res.status(404).json({ message: 'No snapshot found for this location' });
       }
-      res.json(snapshot);
+      res.json({
+        success: true,
+        data: snapshot.data,
+        timestamp: snapshot.createdAt?.toISOString() || new Date().toISOString()
+      });
     } catch (error) {
-       if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Invalid query parameters" });
-      }
+      console.error("Fetch snapshot error:", error);
       res.status(500).json({ message: "Internal server error" });
-    }
-  });
-
-  app.post(api.snapshots.create.path, async (req, res) => {
-    try {
-      const input = insertSnapshotSchema.parse(req.body);
-      const snapshot = await storage.createSnapshot(input);
-      res.status(201).json(snapshot);
-    } catch (err) {
-      if (err instanceof z.ZodError) {
-        return res.status(400).json({
-          message: err.errors[0].message,
-          field: err.errors[0].path.join('.'),
-        });
-      }
-      throw err;
     }
   });
 
@@ -54,49 +39,48 @@ export async function registerRoutes(
 
       const firecrawl = new FirecrawlApp({ apiKey });
 
-      const prompt = `Extract real-time status updates and 15-minute snapshots for ${location}, covering BC Hydro outages, local water/sewer service alerts, and ferry schedules for BC Ferries and the Lady Rose Marine Services. Include the ventilation index, current weather conditions, tide tables, and active alerts for tsunamis, earthquakes, and forest fires. Monitor road conditions for Bamfield Main, Highway 4 (Coombs to Port Alberni), and the logging road from Youbou. Collect all available status strings and URLs.`;
+      const prompt = `Extract real-time status updates and snapshots for ${location}. 
+      Structure the response into a 'categories' object where keys are standard IDs (emergency, power, water, ferry, traffic, transit, airport, weather, tides, air_quality, health, events, parking, construction, economic, fire) and values are arrays of status objects.
+      
+      Standard Status Object:
+      {
+        "label": "Name of specific service/area",
+        "status": "Short status string (Operational, Outage, Delay, etc)",
+        "status_citation": "URL to source",
+        "details": "Brief additional context",
+        "severity": "info" | "warning" | "critical"
+      }
+
+      Focus on major municipal services, transit lines, and utilities. If data for a category isn't found, return an empty array for that key.`;
 
       const result = await firecrawl.extract([
+        "https://vancouver.ca",
         "https://www.bchydro.com/outages",
         "https://drivebc.ca",
         "https://www.bcferries.com",
-        "https://ladyrosemarine.com"
+        "https://translink.ca"
       ], {
         prompt,
         schema: z.object({
           location: z.string(),
-          real_time_status_updates: z.object({
-            bc_hydro_outages: z.array(z.object({
-              value: z.string(),
-              value_citation: z.string().optional()
-            })),
-            water_sewer_alerts: z.array(z.object({
-              value: z.string(),
-              value_citation: z.string().optional()
-            })),
-            ferry_schedules: z.array(z.object({
-              ferry_line: z.string(),
-              route: z.string(),
-              status: z.string(),
-              status_citation: z.string().optional()
-            })),
-            road_conditions: z.array(z.object({
-              road_name: z.string(),
-              status: z.string(),
-              road_name_citation: z.string().optional()
-            })),
-            active_alerts: z.array(z.object({
-              value: z.string(),
-              value_citation: z.string().optional()
-            }))
-          })
+          categories: z.record(z.string(), z.array(z.object({
+            label: z.string(),
+            status: z.string(),
+            status_citation: z.string().optional(),
+            details: z.string().optional(),
+            severity: z.enum(["info", "warning", "critical"]).optional()
+          })))
         })
       });
 
       if (result.success && result.data) {
         await storage.createSnapshot({
           location,
-          data: result.data as any
+          data: {
+            location,
+            timestamp: new Date().toISOString(),
+            categories: result.data.categories as any
+          }
         });
         return res.json({ success: true, message: "Data refreshed from Firecrawl" });
       } else {
