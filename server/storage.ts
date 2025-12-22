@@ -13,21 +13,21 @@ export interface IStorage {
 
 export class DatabaseStorage implements IStorage {
   async getLatestSnapshot(location: string): Promise<Snapshot | undefined> {
-    const [snapshot] = await db
+    const results = await db
       .select()
       .from(snapshots)
       .where(eq(snapshots.location, location))
       .orderBy(desc(snapshots.createdAt))
       .limit(1);
-    return snapshot;
+    return results[0];
   }
 
   async createSnapshot(insertSnapshot: InsertSnapshot): Promise<Snapshot> {
-    const [snapshot] = await db
+    const results = await db
       .insert(snapshots)
       .values(insertSnapshot)
       .returning();
-    return snapshot;
+    return results[0];
   }
 }
 

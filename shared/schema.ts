@@ -2,40 +2,17 @@ import { pgTable, text, serial, timestamp, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-// Schema matching the Firecrawl data structure
+// Comprehensive categories for city status
+export const statusCategorySchema = z.object({
+  value: z.string(),
+  status: z.enum(["normal", "warning", "critical", "unknown"]).default("unknown"),
+  value_citation: z.string().optional()
+});
+
 export const snapshotDataSchema = z.object({
   location: z.string(),
-  location_citation: z.string().optional(),
-  real_time_status_updates: z.object({
-    bc_hydro_outages: z.array(z.object({
-      value: z.string(),
-      value_citation: z.string().describe("Source URL for this value").optional()
-    })),
-    water_sewer_alerts: z.array(z.object({
-      value: z.string(),
-      value_citation: z.string().describe("Source URL for this value").optional()
-    })),
-    ferry_schedules: z.array(z.object({
-      ferry_line: z.string(),
-      ferry_line_citation: z.string().optional(),
-      route: z.string(),
-      route_citation: z.string().optional(),
-      status: z.string(),
-      status_citation: z.string().optional()
-    })),
-    road_conditions: z.array(z.object({
-      road_name: z.string(),
-      road_name_citation: z.string().optional(),
-      status: z.string(),
-      status_citation: z.string().optional()
-    })),
-    active_alerts: z.array(z.object({
-      value: z.string(),
-      value_citation: z.string().describe("Source URL for this value").optional()
-    }))
-  }),
-  dashboard_html: z.string().optional(),
-  dashboard_html_citation: z.string().optional()
+  categories: z.record(z.string(), z.array(statusCategorySchema)).default({}),
+  real_time_status_updates: z.record(z.string(), z.any()).optional(), // Legacy support
 });
 
 export const snapshots = pgTable("snapshots", {
