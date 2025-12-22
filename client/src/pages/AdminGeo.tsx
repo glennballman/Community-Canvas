@@ -10,10 +10,9 @@ import {
   getParentChain, 
   getChildren,
   getNode,
-  MUNICIPALITY_TO_GEO_ID,
   type GeoNode 
 } from "@shared/geography";
-import { SHARED_SOURCES, MUNICIPAL_SOURCES, type DataSource } from "@shared/sources";
+import { SHARED_SOURCES, MUNICIPAL_SOURCES, ALL_MUNICIPALITIES, type DataSource } from "@shared/sources";
 
 function Breadcrumb({ nodeId }: { nodeId: string }) {
   const chain = getParentChain(nodeId);
@@ -39,6 +38,16 @@ function getSourcesForNode(node: GeoNode): { sources: DataSource[]; coverageType
     results.push({ sources: SHARED_SOURCES, coverageType: "Provincial/Regional" });
   } else if (node.level === "region") {
     results.push({ sources: SHARED_SOURCES, coverageType: "Provincial (inherited)" });
+    
+    const regionMuniSources: DataSource[] = [];
+    const childNodes = getChildren(node.id);
+    childNodes.forEach(child => {
+      const muniSources = MUNICIPAL_SOURCES[child.name] || [];
+      regionMuniSources.push(...muniSources);
+    });
+    if (regionMuniSources.length > 0) {
+      results.push({ sources: regionMuniSources, coverageType: "Municipal (aggregated)" });
+    }
   } else if (node.level === "municipality") {
     results.push({ sources: SHARED_SOURCES, coverageType: "Provincial (inherited)" });
     
@@ -52,30 +61,78 @@ function getSourcesForNode(node: GeoNode): { sources: DataSource[]; coverageType
   return results;
 }
 
+function hasMunicipalData(node: GeoNode): boolean {
+  if (node.level === "municipality") {
+    return ALL_MUNICIPALITIES.includes(node.name);
+  }
+  if (node.level === "region") {
+    const children = getChildren(node.id);
+    return children.some(child => ALL_MUNICIPALITIES.includes(child.name));
+  }
+  return true;
+}
+
 function NodeDetail({ nodeId }: { nodeId: string }) {
   const node = getNode(nodeId);
   if (!node) return null;
   
-  const children = getChildren(nodeId);
+  const allChildren = getChildren(nodeId);
+  const coveredChildren = allChildren.filter(c => ALL_MUNICIPALITIES.includes(c.name));
+  const children = node.level === "region" ? coveredChildren : allChildren;
   const sourceGroups = getSourcesForNode(node);
   const totalSources = sourceGroups.reduce((sum, g) => sum + g.sources.length, 0);
+  const hasData = hasMunicipalData(node);
+  const noCoverage = node.level === "region" && coveredChildren.length === 0;
   
   return (
     <div className="space-y-4">
       <div>
-        <h2 className="text-lg font-bold">{node.name}</h2>
+        <div className="flex items-center gap-2">
+          <h2 className="text-lg font-bold">{node.name}</h2>
+          {node.level === "municipality" && !ALL_MUNICIPALITIES.includes(node.name) && (
+            <Badge variant="outline" className="text-[9px] text-muted-foreground">NO DATA</Badge>
+          )}
+          {node.level === "municipality" && ALL_MUNICIPALITIES.includes(node.name) && (
+            <Badge className="text-[9px] bg-green-500/20 text-green-400">COVERED</Badge>
+          )}
+          {noCoverage && (
+            <Badge variant="outline" className="text-[9px] text-amber-400 border-amber-400/30">NO MUNICIPAL DATA YET</Badge>
+          )}
+        </div>
         <Breadcrumb nodeId={nodeId} />
       </div>
+      
+      {noCoverage && (
+        <Card className="bg-amber-500/10 border-amber-500/30">
+          <CardContent className="p-4 text-center">
+            <div className="text-amber-400 text-sm mb-2">Region Not Yet Covered</div>
+            <p className="text-xs text-muted-foreground">
+              This region has {allChildren.length} municipalities but none are in the current dataset.
+              Provincial/regional shared sources still apply.
+            </p>
+          </CardContent>
+        </Card>
+      )}
       
       <div className="grid grid-cols-3 gap-3">
         <Card className="bg-card/50">
           <CardContent className="p-3 text-center">
-            <div className="text-2xl font-bold">{children.length}</div>
-            <div className="text-[10px] text-muted-foreground uppercase">
-              {node.level === "province" ? "Regions" : 
-               node.level === "region" ? "Municipalities" : 
-               "Sub-areas"}
-            </div>
+            {node.level === "province" ? (
+              <>
+                <div className="text-2xl font-bold">{allChildren.filter(r => {
+                  const regionChildren = getChildren(r.id);
+                  return regionChildren.some(c => ALL_MUNICIPALITIES.includes(c.name));
+                }).length}/{allChildren.length}</div>
+                <div className="text-[10px] text-muted-foreground uppercase">Regions with Data</div>
+              </>
+            ) : (
+              <>
+                <div className="text-2xl font-bold">{children.length}</div>
+                <div className="text-[10px] text-muted-foreground uppercase">
+                  {node.level === "region" ? "Municipalities" : "Sub-areas"}
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
         

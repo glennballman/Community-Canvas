@@ -55,6 +55,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     children: [
       "metro-vancouver",
       "fraser-valley",
+      "other-areas",
       "capital",
       "vancouver-island-north",
       "sunshine-coast",
@@ -90,7 +91,8 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
       "muni-bowen-island",
       "muni-lions-bay",
       "muni-anmore",
-      "muni-belcarra"
+      "muni-belcarra",
+      "muni-tsawwassen"
     ]
   },
 
@@ -344,6 +346,14 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     parentId: "metro-vancouver",
     metadata: { population: 732 }
   },
+  "muni-tsawwassen": {
+    id: "muni-tsawwassen",
+    name: "Tsawwassen First Nation",
+    shortName: "Tsawwassen FN",
+    level: "municipality",
+    parentId: "metro-vancouver",
+    metadata: { population: 490 }
+  },
 
   // Level 4: Municipalities - Fraser Valley
   "muni-abbotsford": {
@@ -393,6 +403,24 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     level: "municipality",
     parentId: "fraser-valley",
     metadata: { population: 1573 }
+  },
+
+  // Unincorporated/Other Areas
+  "other-areas": {
+    id: "other-areas",
+    name: "Other Areas",
+    shortName: "Other",
+    level: "region",
+    parentId: "bc",
+    children: ["muni-bamfield"]
+  },
+  "muni-bamfield": {
+    id: "muni-bamfield",
+    name: "Bamfield",
+    shortName: "Bamfield",
+    level: "municipality",
+    parentId: "other-areas",
+    metadata: { population: 200 }
   },
 
   // Level 4: Municipalities - Capital Regional District

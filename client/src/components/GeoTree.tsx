@@ -8,6 +8,7 @@ import {
   type GeoNode, 
   type GeoLevel 
 } from "@shared/geography";
+import { ALL_MUNICIPALITIES } from "@shared/sources";
 
 interface GeoTreeProps {
   selectedNodeId: string | null;
@@ -52,6 +53,10 @@ function TreeNode({ node, depth, selectedNodeId, onSelectNode, expandedNodes, to
   const isSelected = selectedNodeId === node.id;
   const Icon = LEVEL_ICONS[node.level];
   const colorClass = LEVEL_COLORS[node.level];
+  const hasCoverage = node.level === "municipality" ? ALL_MUNICIPALITIES.includes(node.name) : true;
+  const coveredChildCount = node.level === "region" 
+    ? children.filter(c => ALL_MUNICIPALITIES.includes(c.name)).length 
+    : children.length;
 
   return (
     <div>
@@ -60,7 +65,7 @@ function TreeNode({ node, depth, selectedNodeId, onSelectNode, expandedNodes, to
           isSelected 
             ? "bg-primary/20 border border-primary/30" 
             : "hover-elevate"
-        }`}
+        } ${!hasCoverage ? "opacity-50" : ""}`}
         style={{ paddingLeft: `${depth * 12 + 8}px` }}
         onClick={() => onSelectNode(node.id)}
         data-testid={`tree-node-${node.id}`}
@@ -86,11 +91,20 @@ function TreeNode({ node, depth, selectedNodeId, onSelectNode, expandedNodes, to
         
         <Icon className={`w-3.5 h-3.5 ${colorClass}`} />
         
-        <span className="text-xs truncate flex-1">
+        <span className={`text-xs truncate flex-1 ${!hasCoverage ? "text-muted-foreground" : ""}`}>
           {node.shortName || node.name}
         </span>
         
-        {hasChildren && (
+        {node.level === "municipality" && hasCoverage && (
+          <span className="w-1.5 h-1.5 rounded-full bg-green-500" title="Has data coverage" />
+        )}
+        
+        {hasChildren && node.level === "region" && (
+          <Badge variant="secondary" className="text-[9px] px-1 py-0">
+            {coveredChildCount}/{children.length}
+          </Badge>
+        )}
+        {hasChildren && node.level !== "region" && (
           <Badge variant="secondary" className="text-[9px] px-1 py-0">
             {children.length}
           </Badge>
@@ -119,10 +133,10 @@ function TreeNode({ node, depth, selectedNodeId, onSelectNode, expandedNodes, to
 export default function GeoTree({ 
   selectedNodeId, 
   onSelectNode, 
-  startNodeId = "earth" 
+  startNodeId = "bc" 
 }: GeoTreeProps) {
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(
-    new Set(["earth", "canada", "bc"])
+    new Set(["bc", "metro-vancouver", "fraser-valley"])
   );
 
   const toggleExpand = (nodeId: string) => {
