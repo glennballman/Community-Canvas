@@ -545,7 +545,7 @@ export default function Dashboard() {
       {/* Main Content - 4 Column Layout */}
       <div className="flex flex-1 min-h-0">
         {/* Column 1 & 2: Category Grid */}
-        <div className="w-[550px] shrink-0 p-2 overflow-auto border-r border-border/30">
+        <div className="w-[800px] shrink-0 p-2 overflow-auto border-r border-border/30">
           {viewMode === "data" && isLoading ? (
             <div className="flex items-center justify-center h-full">
               <div className="text-muted-foreground text-xs">Loading...</div>
