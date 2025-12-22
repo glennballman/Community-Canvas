@@ -1,0 +1,347 @@
+Great! I'll give you the complete code to paste into Replit. Here's everything you need:
+🚀 Step-by-Step Replit Setup
+Step 1: Create a New Repl
+
+Go to Replit.com
+Click "+ Create Repl"
+Choose "Node.js" template
+Name it something like "vancouver-command-center"
+
+Step 2: Set Up Your Files
+I'll give you 4 files to create:
+
+File 1: package.json (Configuration file)
+Click on the existing package.json and replace everything with:
+json{
+  "name": "city-command-center",
+  "version": "1.0.0",
+  "description": "Real-time city status dashboard",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "@mendable/firecrawl-js": "^1.0.0",
+    "zod": "^3.22.4",
+    "node-fetch": "^2.7.0"
+  }
+}
+
+File 2: server.js (Backend - Calls Firecrawl)
+Create a new file called server.js:
+javascriptconst express = require('express');
+const cors = require('cors');
+const Firecrawl = require('@mendable/firecrawl-js').default;
+const { z } = require('zod');
+
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+// Middleware
+app.use(cors());
+app.use(express.json());
+app.use(express.static('public'));
+
+// Initialize Firecrawl with API key from environment variable
+const firecrawl = new Firecrawl({ 
+  apiKey: process.env.FIRECRAWL_API_KEY 
+});
+
+// Schema for data extraction
+const cityDataSchema = z.object({
+  location: z.string(),
+  location_citation: z.string(),
+  real_time_status_updates: z.object({
+    bc_hydro_outages: z.array(z.object({
+      value: z.string(),
+      value_citation: z.string().optional()
+    })),
+    water_sewer_alerts: z.array(z.object({
+      value: z.string(),
+      value_citation: z.string().optional()
+    })),
+    ferry_schedules: z.array(z.object({
+      ferry_line: z.string(),
+      route: z.string(),
+      status: z.string()
+    })),
+    road_conditions: z.array(z.object({
+      road_name: z.string(),
+      status: z.string()
+    })),
+    active_alerts: z.array(z.object({
+      value: z.string(),
+      severity: z.string().optional()
+    })),
+    weather: z.object({
+      current: z.string(),
+      temp: z.string(),
+      wind: z.string()
+    }).optional(),
+    tides: z.array(z.object({
+      time: z.string(),
+      height: z.string(),
+      type: z.string()
+    })).optional()
+  })
+});
+
+// API endpoint to fetch city data
+app.get('/api/city/:cityName', async (req, res) => {
+  const { cityName } = req.params;
+  
+  try {
+    console.log(`Fetching data for ${cityName}...`);
+    
+    // Customize prompt based on city
+    const prompt = getCityPrompt(cityName);
+    
+    const result = await firecrawl.agent({
+      prompt: prompt,
+      schema: cityDataSchema
+    });
+
+    console.log('Data fetched successfully');
+    res.json({
+      success: true,
+      data: result,
+      timestamp: new Date().toISOString()
+    });
+    
+  } catch (error) {
+    console.error('Error fetching city data:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      data: getMockData(cityName) // Fallback to mock data
+    });
+  }
+});
+
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+  res.json({ 
+    status: 'ok', 
+    timestamp: new Date().toISOString(),
+    apiKeyConfigured: !!process.env.FIRECRAWL_API_KEY
+  });
+});
+
+// Generate city-specific prompts
+function getCityPrompt(cityName) {
+  const prompts = {
+    'vancouver': `Extract real-time status updates for Vancouver, BC, covering BC Hydro outages, local water/sewer service alerts, and ferry schedules for BC Ferries. Include current weather conditions, tide tables, and active alerts for tsunamis, earthquakes, and forest fires. Monitor road conditions for Lions Gate Bridge, Highway 1, and Granville Street Bridge. Include TransLink SkyTrain status (Expo, Millennium, Canada lines), bus on-time performance, YVR airport delays, and parking availability. Collect all available emergency service data, economic indicators (gas prices, exchange rates), and civic announcements.`,
+    
+    'bamfield': `Extract real-time status updates for Bamfield, BC, covering BC Hydro outages, local water/sewer service alerts, and ferry schedules for BC Ferries and the Lady Rose Marine Services. Include the ventilation index, current weather conditions, tide tables, and active alerts for tsunamis, earthquakes, and forest fires. Monitor road conditions for Bamfield Main, Highway 4 (Coombs to Port Alberni), and the logging road from Youbou. Collect all available economic indicators, government warnings, and press coverage.`,
+    
+    'default': `Extract real-time status updates for ${cityName}, covering power outages, water/sewer alerts, public transit status, traffic conditions, weather, and any active emergency alerts.`
+  };
+  
+  return prompts[cityName.toLowerCase()] || prompts['default'];
+}
+
+// Mock data fallback (when API fails or for testing)
+function getMockData(cityName) {
+  return {
+    location: `${cityName}, BC`,
+    lastUpdated: new Date().toLocaleString(),
+    critical_alerts: [
+      { type: "Wind Warning", severity: "warning", message: "Strong winds up to 70 km/h" }
+    ],
+    emergency_services: { status: "Normal Operations", recent_incidents: 12, response_time_avg: "6.2 minutes" },
+    power: [
+      { area: "Downtown Core", status: "Operational", affected: 0 },
+      { area: "West End", status: "Outage", affected: 145, eta: "2 hours" }
+    ],
+    // ... rest of mock data
+  };
+}
+
+// Start server
+app.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`🔑 Firecrawl API Key: ${process.env.FIRECRAWL_API_KEY ? 'Configured ✓' : 'NOT SET ✗'}`);
+  console.log(`📡 API available at http://localhost:${PORT}/api/city/vancouver`);
+});
+
+File 3: public/index.html (Frontend HTML)
+Create a folder called public and inside it create index.html:
+html<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>City Command Center</title>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+    
+    // Import Lucide icons via CDN
+    const icons = {
+      Activity: () => <svg className="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>,
+      AlertTriangle: () => <svg className="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>,
+      Cloud: () => <svg className="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z" /></svg>
+    };
+
+    function Dashboard() {
+      const [data, setData] = useState(null);
+      const [loading, setLoading] = useState(true);
+      const [error, setError] = useState(null);
+      const [selectedCity, setSelectedCity] = useState('vancouver');
+
+      useEffect(() => {
+        fetchCityData();
+        // Refresh every 5 minutes
+        const interval = setInterval(fetchCityData, 5 * 60 * 1000);
+        return () => clearInterval(interval);
+      }, [selectedCity]);
+
+      async function fetchCityData() {
+        try {
+          setLoading(true);
+          const response = await fetch(`/api/city/${selectedCity}`);
+          const result = await response.json();
+          
+          if (result.success) {
+            setData(result.data);
+            setError(null);
+          } else {
+            setError(result.error);
+            setData(result.data); // Use mock data
+          }
+        } catch (err) {
+          setError(err.message);
+        } finally {
+          setLoading(false);
+        }
+      }
+
+      if (loading && !data) {
+        return (
+          <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+            <div className="text-white text-xl">Loading city data...</div>
+          </div>
+        );
+      }
+
+      return (
+        <div className="min-h-screen bg-gray-900 p-4 text-gray-100">
+          <div className="max-w-7xl mx-auto">
+            <div className="bg-gray-800 rounded-lg p-4 mb-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <icons.Activity />
+                  <div>
+                    <h1 className="text-2xl font-bold">City Command Center</h1>
+                    <p className="text-xs text-gray-400">
+                      {data?.timestamp ? `Updated: ${new Date(data.timestamp).toLocaleString()}` : 'Loading...'}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex gap-3">
+                  <button 
+                    onClick={fetchCityData}
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded text-sm"
+                  >
+                    Refresh
+                  </button>
+                  <select 
+                    value={selectedCity}
+                    onChange={(e) => setSelectedCity(e.target.value)}
+                    className="px-4 py-2 bg-gray-700 rounded text-sm"
+                  >
+                    <option value="vancouver">Vancouver, BC</option>
+                    <option value="bamfield">Bamfield, BC</option>
+                  </select>
+                </div>
+              </div>
+              
+              {error && (
+                <div className="mt-3 bg-yellow-900/30 border-l-4 border-yellow-500 p-3 rounded">
+                  <p className="text-sm text-yellow-200">
+                    ⚠️ Using mock data. API Error: {error}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <div className="bg-gray-800 rounded-lg p-6">
+              <pre className="text-xs text-gray-300 overflow-auto">
+                {JSON.stringify(data, null, 2)}
+              </pre>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    ReactDOM.render(<Dashboard />, document.getElementById('root'));
+  </script>
+</body>
+</html>
+```
+
+---
+
+## **File 4: `.env`** (Your API Keys - IMPORTANT!)
+
+Create a file called `.env` in the root:
+```
+FIRECRAWL_API_KEY=your-api-key-here
+PORT=3000
+Replace your-api-key-here with your actual Firecrawl API key!
+
+🔐 Step 3: Configure Secrets in Replit
+
+In Replit, look for the "Secrets" tab (🔒 lock icon) in the left sidebar
+Click "+ New Secret"
+Add:
+
+Key: FIRECRAWL_API_KEY
+Value: Your actual Firecrawl API key
+
+
+Click "Add Secret"
+
+
+▶️ Step 4: Run Your Project
+
+Click the big green "Run" button at the top
+Replit will:
+
+Install all packages
+Start the server
+Give you a live URL (looks like https://your-project.replit.app)
+
+
+
+
+🎯 Step 5: Test It
+Once running, you'll see:
+
+✅ Your dashboard at the URL Replit provides
+✅ API endpoint: https://your-project.replit.app/api/city/vancouver
+✅ Health check: https://your-project.replit.app/api/health
+
+
+🔄 Next Steps
+Once this is working with basic data, I can help you:
+
+Integrate the beautiful React dashboard we created earlier
+Map Firecrawl data to the dashboard format
+Add more cities (Toronto, Seattle, etc.)
+Set up auto-refresh every 5-15 minutes
+
+Want me to create the updated index.html with the full dashboard UI once you confirm the backend is working?

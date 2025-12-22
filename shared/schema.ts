@@ -2,17 +2,21 @@ import { pgTable, text, serial, timestamp, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-// Comprehensive categories for city status
+// Comprehensive category schema for all city data
 export const statusCategorySchema = z.object({
-  value: z.string(),
-  status: z.enum(["normal", "warning", "critical", "unknown"]).default("unknown"),
-  value_citation: z.string().optional()
+  id: z.string(),
+  label: z.string(),
+  status: z.enum(["online", "offline", "away", "busy", "unknown"]).default("unknown"),
+  value: z.string().optional(),
+  description: z.string().optional(),
+  citation: z.string().optional(),
+  lastUpdated: z.string().optional(),
 });
 
 export const snapshotDataSchema = z.object({
   location: z.string(),
-  categories: z.record(z.string(), z.array(statusCategorySchema)).default({}),
-  real_time_status_updates: z.record(z.string(), z.any()).optional(), // Legacy support
+  timestamp: z.string(),
+  categories: z.array(statusCategorySchema),
 });
 
 export const snapshots = pgTable("snapshots", {
@@ -30,3 +34,4 @@ export const insertSnapshotSchema = createInsertSchema(snapshots).pick({
 export type Snapshot = typeof snapshots.$inferSelect;
 export type InsertSnapshot = z.infer<typeof insertSnapshotSchema>;
 export type SnapshotData = z.infer<typeof snapshotDataSchema>;
+export type StatusCategory = z.infer<typeof statusCategorySchema>;
