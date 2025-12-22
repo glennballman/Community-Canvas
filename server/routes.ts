@@ -4,7 +4,7 @@ import { storage } from "./storage";
 import { api } from "@shared/routes";
 import { z } from "zod";
 import { insertSnapshotSchema } from "@shared/schema";
-// import Firecrawl from '@mendable/firecrawl-js'; // We will install this later if needed
+import FirecrawlApp from '@mendable/firecrawl-js';
 
 export async function registerRoutes(
   httpServer: Server,
@@ -46,83 +46,68 @@ export async function registerRoutes(
   app.post(api.snapshots.refresh.path, async (req, res) => {
     try {
       const { location } = api.snapshots.refresh.input.parse(req.body);
-      
-      // TODO: Implement actual Firecrawl logic here
-      // For now, we will simulate a refresh by creating a mock snapshot if none exists
-      // or just return success.
-      
       const apiKey = process.env.FIRECRAWL_API_KEY;
-      if (!apiKey) {
-         // Mock data generation for demo purposes if no API key
-         console.log("No Firecrawl API key found. Using mock data.");
-         
-         const mockData = {
-            location: location,
-            real_time_status_updates: {
-              bc_hydro_outages: [
-                { value: "No current outages in Bamfield area", value_citation: "https://www.bchydro.com/outages" }
-              ],
-              water_sewer_alerts: [
-                { value: "Water conservation stage 1 in effect", value_citation: "https://bamfieldwater.ca" }
-              ],
-              ferry_schedules: [
-                { ferry_line: "BC Ferries", route: "Port Alberni to Bamfield", status: "On Time", status_citation: "https://bcferries.com" },
-                { ferry_line: "Lady Rose Marine", route: "Frances Barkley", status: "Running as scheduled", status_citation: "https://ladyrosemarine.com" }
-              ],
-              road_conditions: [
-                { road_name: "Bamfield Main", status: "Open - Graded recently, watch for dust", road_name_citation: "https://facebook.com/bamfieldroads" },
-                { road_name: "Highway 4", status: "Open - Construction delays at Cameron Lake", road_name_citation: "https://drivebc.ca" }
-              ],
-              active_alerts: [
-                 { value: "No active tsunami alerts", value_citation: "https://emergencyinfobc.gov.bc.ca" }
-              ]
-            }
-         };
-         
-         await storage.createSnapshot({
-            location,
-            data: mockData
-         });
-         
-         return res.json({ success: true, message: "Mock data refreshed" });
+
+      if (!apiKey || apiKey === 'your-api-key') {
+        return res.status(400).json({ message: "Firecrawl API key not configured" });
       }
 
-      // If we had the key and logic, we would call Firecrawl here
-      // const app = new Firecrawl({ apiKey });
-      // const result = await app.agent({ ... });
-      // await storage.createSnapshot({ location, data: result.data });
+      const firecrawl = new FirecrawlApp({ apiKey });
 
-      res.json({ success: true, message: "Refresh triggered (Mock)" });
+      const prompt = `Extract real-time status updates and 15-minute snapshots for ${location}, covering BC Hydro outages, local water/sewer service alerts, and ferry schedules for BC Ferries and the Lady Rose Marine Services. Include the ventilation index, current weather conditions, tide tables, and active alerts for tsunamis, earthquakes, and forest fires. Monitor road conditions for Bamfield Main, Highway 4 (Coombs to Port Alberni), and the logging road from Youbou. Collect all available status strings and URLs.`;
+
+      const result = await firecrawl.extract([
+        "https://www.bchydro.com/outages",
+        "https://drivebc.ca",
+        "https://www.bcferries.com",
+        "https://ladyrosemarine.com"
+      ], {
+        prompt,
+        schema: z.object({
+          location: z.string(),
+          real_time_status_updates: z.object({
+            bc_hydro_outages: z.array(z.object({
+              value: z.string(),
+              value_citation: z.string().optional()
+            })),
+            water_sewer_alerts: z.array(z.object({
+              value: z.string(),
+              value_citation: z.string().optional()
+            })),
+            ferry_schedules: z.array(z.object({
+              ferry_line: z.string(),
+              route: z.string(),
+              status: z.string(),
+              status_citation: z.string().optional()
+            })),
+            road_conditions: z.array(z.object({
+              road_name: z.string(),
+              status: z.string(),
+              road_name_citation: z.string().optional()
+            })),
+            active_alerts: z.array(z.object({
+              value: z.string(),
+              value_citation: z.string().optional()
+            }))
+          })
+        })
+      });
+
+      if (result.success && result.data) {
+        await storage.createSnapshot({
+          location,
+          data: result.data as any
+        });
+        return res.json({ success: true, message: "Data refreshed from Firecrawl" });
+      } else {
+        throw new Error(result.error || "Firecrawl extraction failed");
+      }
 
     } catch (err) {
       console.error("Refresh error:", err);
-      res.status(500).json({ message: "Failed to refresh data" });
+      res.status(500).json({ message: "Failed to refresh data: " + (err as Error).message });
     }
   });
-
-  // Seed data if empty
-  const existing = await storage.getLatestSnapshot("Bamfield");
-  if (!existing) {
-     const seedData = {
-        location: "Bamfield",
-        real_time_status_updates: {
-          bc_hydro_outages: [
-            { value: "No current outages reported.", value_citation: "https://www.bchydro.com" }
-          ],
-          water_sewer_alerts: [
-            { value: "Boil water notice rescinded.", value_citation: "https://bamfield.ca" }
-          ],
-          ferry_schedules: [
-            { ferry_line: "BC Ferries", route: "Port Alberni - Bamfield", status: "Scheduled 8:00 AM Departure", status_citation: "https://bcferries.com" }
-          ],
-          road_conditions: [
-            { road_name: "Bamfield Main", status: "Rough washboard sections near km 30", road_name_citation: "https://drivebc.ca" }
-          ],
-          active_alerts: []
-        }
-     };
-     await storage.createSnapshot({ location: "Bamfield", data: seedData });
-  }
 
   return httpServer;
 }
