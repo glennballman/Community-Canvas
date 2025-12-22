@@ -412,6 +412,7 @@ export default function Dashboard() {
   const [selectedCategory, setSelectedCategory] = useState<typeof CATEGORIES[0] | null>(null);
   const [selectedSource, setSelectedSource] = useState<DataSource | null>(null);
   const [selectedSourceCategory, setSelectedSourceCategory] = useState<typeof CATEGORIES[0] | null>(null);
+  const [iframeUrl, setIframeUrl] = useState<string | null>(null);
   
   const { data: snapshotResponse, isLoading } = useLatestSnapshot(cityName);
   const { mutate: refresh, isPending: isRefreshing } = useRefreshSnapshot();
@@ -541,42 +542,48 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Main Content */}
+      {/* Main Content - 4 Column Layout */}
       <div className="flex flex-1 min-h-0">
-        {/* Main Grid */}
-        <div className={`flex-1 p-3 overflow-auto ${(viewMode === "sources" ? selectedSourceCategory : selectedCategory) ? 'pr-0' : ''}`}>
+        {/* Column 1 & 2: Compressed Category Grid (1/3 width) */}
+        <div className="w-[280px] shrink-0 p-2 overflow-auto border-r border-border/30">
           {viewMode === "data" && isLoading ? (
             <div className="flex items-center justify-center h-full">
-              <div className="text-muted-foreground">Loading data...</div>
+              <div className="text-muted-foreground text-xs">Loading...</div>
             </div>
           ) : viewMode === "sources" ? (
-            <div className="grid grid-cols-2 gap-2 auto-rows-min">
-              <div className="space-y-2">
+            <div className="grid grid-cols-2 gap-1.5 auto-rows-min">
+              <div className="space-y-1.5">
                 {leftColumnCategories.map(cat => (
                   <CategoryBlockSources 
                     key={cat.id}
                     category={cat}
                     sources={sourcesByCategory[cat.id] || []}
-                    onSourceClick={handleSourceClick}
+                    onSourceClick={(source, category) => {
+                      handleSourceClick(source, category);
+                      setIframeUrl(source.url);
+                    }}
                     selectedSource={selectedSource}
                   />
                 ))}
               </div>
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 {rightColumnCategories.map(cat => (
                   <CategoryBlockSources 
                     key={cat.id}
                     category={cat}
                     sources={sourcesByCategory[cat.id] || []}
-                    onSourceClick={handleSourceClick}
+                    onSourceClick={(source, category) => {
+                      handleSourceClick(source, category);
+                      setIframeUrl(source.url);
+                    }}
                     selectedSource={selectedSource}
                   />
                 ))}
               </div>
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-2 auto-rows-min">
-              <div className="space-y-2">
+            <div className="grid grid-cols-2 gap-1.5 auto-rows-min">
+              <div className="space-y-1.5">
                 {leftColumnCategories.map(cat => (
                   <CategoryBlockData 
                     key={cat.id}
@@ -589,7 +596,7 @@ export default function Dashboard() {
                   />
                 ))}
               </div>
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 {rightColumnCategories.map(cat => (
                   <CategoryBlockData 
                     key={cat.id}
@@ -606,9 +613,9 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* Detail Panel */}
-        {viewMode === "sources" && selectedSourceCategory && (
-          <div className="w-80 shrink-0">
+        {/* Column 3: Detail Panel */}
+        <div className="w-[260px] shrink-0 border-r border-border/30">
+          {viewMode === "sources" && selectedSourceCategory ? (
             <SourceDetailPanel 
               source={selectedSource}
               category={selectedSourceCategory}
@@ -616,14 +623,14 @@ export default function Dashboard() {
               onClose={() => {
                 setSelectedSource(null);
                 setSelectedSourceCategory(null);
+                setIframeUrl(null);
               }}
-              onSourceSelect={(source) => setSelectedSource(source)}
+              onSourceSelect={(source) => {
+                setSelectedSource(source);
+                setIframeUrl(source.url);
+              }}
             />
-          </div>
-        )}
-        
-        {viewMode === "data" && selectedCategory && (
-          <div className="w-80 shrink-0">
+          ) : viewMode === "data" && selectedCategory ? (
             <DataDetailPanel 
               item={selectedItem}
               category={selectedCategory}
@@ -631,11 +638,68 @@ export default function Dashboard() {
               onClose={() => {
                 setSelectedItem(null);
                 setSelectedCategory(null);
+                setIframeUrl(null);
               }}
               onItemSelect={(item) => setSelectedItem(item)}
             />
-          </div>
-        )}
+          ) : (
+            <div className="h-full flex items-center justify-center p-4">
+              <div className="text-center text-muted-foreground">
+                <ChevronRight className="h-8 w-8 mx-auto mb-2 opacity-30" />
+                <p className="text-xs">Select a source to view details</p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Column 4: Iframe Web View */}
+        <div className="flex-1 flex flex-col bg-black/20">
+          {iframeUrl ? (
+            <>
+              <div className="flex items-center justify-between px-3 py-1.5 bg-card/50 border-b border-border/30 shrink-0">
+                <div className="flex items-center gap-2 min-w-0 flex-1">
+                  <Globe className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                  <span className="text-xs text-muted-foreground truncate font-mono">{iframeUrl}</span>
+                </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    onClick={() => window.open(iframeUrl, '_blank')}
+                    className="h-6 w-6"
+                    data-testid="button-open-external"
+                  >
+                    <ExternalLink className="h-3 w-3" />
+                  </Button>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    onClick={() => setIframeUrl(null)}
+                    className="h-6 w-6"
+                    data-testid="button-close-iframe"
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
+              </div>
+              <iframe
+                src={iframeUrl}
+                className="flex-1 w-full border-0"
+                title="Source Preview"
+                sandbox="allow-scripts allow-same-origin allow-forms"
+                data-testid="iframe-source-preview"
+              />
+            </>
+          ) : (
+            <div className="h-full flex items-center justify-center">
+              <div className="text-center text-muted-foreground">
+                <Globe className="h-12 w-12 mx-auto mb-3 opacity-20" />
+                <p className="text-sm font-medium">Web Preview</p>
+                <p className="text-xs mt-1">Select a source to view the page here</p>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
