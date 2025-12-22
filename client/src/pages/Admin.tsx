@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, Fragment } from "react";
 import { Link } from "wouter";
 import { ArrowLeft, Check, X, ExternalLink, ChevronDown, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -25,6 +25,12 @@ const CATEGORIES = [
   { id: "economic", label: "ECONOMIC", color: "text-orange-400" },
   { id: "news", label: "NEWS", color: "text-cyan-400" },
   { id: "waste", label: "WASTE", color: "text-amber-400" },
+  { id: "health", label: "HEALTH", color: "text-pink-400" },
+  { id: "environment", label: "ENVIRONMENT", color: "text-emerald-400" },
+  { id: "education", label: "EDUCATION", color: "text-indigo-400" },
+  { id: "housing", label: "HOUSING", color: "text-orange-300" },
+  { id: "parks", label: "PARKS & REC", color: "text-teal-400" },
+  { id: "digital", label: "DIGITAL", color: "text-slate-400" },
 ];
 
 interface SourceInfo {
@@ -172,8 +178,8 @@ export default function Admin() {
                   const sources = sourcesByCategory[cat.id] || [];
                   
                   return (
-                    <>
-                      <tr key={cat.id} className="hover:bg-card/20 bg-card/10">
+                    <Fragment key={cat.id}>
+                      <tr className="hover:bg-card/20 bg-card/10">
                         <td 
                           className={`p-1.5 border-b border-r border-border/30 sticky left-0 bg-card/30 z-10 cursor-pointer ${cat.color}`}
                           onClick={() => toggleCategory(cat.id)}
@@ -275,7 +281,7 @@ export default function Admin() {
                           </td>
                         </tr>
                       ))}
-                    </>
+                    </Fragment>
                   );
                 })}
               </tbody>

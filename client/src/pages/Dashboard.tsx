@@ -22,7 +22,13 @@ import {
   Database,
   Globe,
   Newspaper,
-  Settings
+  Settings,
+  Heart,
+  Leaf,
+  GraduationCap,
+  Home,
+  TreePine,
+  Monitor
 } from "lucide-react";
 import type { StatusEntry } from "@shared/schema";
 import { getSourcesByCategory, ALL_MUNICIPALITIES, type DataSource } from "@shared/sources";
@@ -36,6 +42,12 @@ const CATEGORIES = [
   { id: "economic", label: "Economic/Govt", icon: TrendingUp, color: "text-lime-400" },
   { id: "news", label: "Local News", icon: Newspaper, color: "text-violet-400" },
   { id: "waste", label: "Waste & Recycling", icon: Trash2, color: "text-amber-400" },
+  { id: "health", label: "Public Health", icon: Heart, color: "text-pink-400" },
+  { id: "environment", label: "Environment", icon: Leaf, color: "text-emerald-400" },
+  { id: "education", label: "Education", icon: GraduationCap, color: "text-indigo-400" },
+  { id: "housing", label: "Housing & Shelters", icon: Home, color: "text-orange-400" },
+  { id: "parks", label: "Parks & Rec", icon: TreePine, color: "text-teal-400" },
+  { id: "digital", label: "Digital Services", icon: Monitor, color: "text-slate-400" },
 ];
 
 function StatusDot({ status }: { status?: string }) {

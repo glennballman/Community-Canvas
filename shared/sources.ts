@@ -22,6 +22,12 @@ export function mapCategory(firecrawlCategory: string): string {
   if (cat.includes('emergency') || cat.includes('fire') || cat.includes('police') || cat.includes('weather') || cat.includes('alert')) return 'emergency';
   if (cat.includes('news') || cat.includes('media')) return 'news';
   if (cat.includes('economic') || cat.includes('government') || cat.includes('permit') || cat.includes('budget') || cat.includes('development')) return 'economic';
+  if (cat.includes('health') || cat.includes('medical') || cat.includes('hospital')) return 'health';
+  if (cat.includes('environment') || cat.includes('climate') || cat.includes('air quality') || cat.includes('wildfire')) return 'environment';
+  if (cat.includes('education') || cat.includes('school') || cat.includes('university')) return 'education';
+  if (cat.includes('housing') || cat.includes('shelter') || cat.includes('homeless')) return 'housing';
+  if (cat.includes('parks') || cat.includes('recreation') || cat.includes('trails') || cat.includes('beach')) return 'parks';
+  if (cat.includes('digital') || cat.includes('website') || cat.includes('online') || cat.includes('app')) return 'digital';
   return 'other';
 }
 
@@ -74,6 +80,36 @@ export const SHARED_SOURCES: DataSource[] = [
   { category: "aviation", source_name: "Seair Seaplanes", url: "https://www.seairseaplanes.com/", description: "Scheduled seaplane flights and charters serving Gulf Islands and coastal BC communities", is_shared: true },
   { category: "economic", source_name: "Metro Vancouver Regional District", url: "https://www.metrovancouver.org/", description: "Regional planning, air quality, water services, and economic data for 21 Metro Vancouver municipalities", is_shared: true },
   { category: "economic", source_name: "Fraser Valley Regional District", url: "https://www.fvrd.ca/", description: "Regional services, planning, and economic development for Fraser Valley communities", is_shared: true },
+  
+  // Public Health
+  { category: "health", source_name: "Fraser Health Authority", url: "https://www.fraserhealth.ca/health-topics-a-to-z/public-health-alerts", description: "Public health alerts and advisories for Fraser Health region", is_shared: true },
+  { category: "health", source_name: "Vancouver Coastal Health", url: "https://www.vch.ca/en/health-alerts", description: "Health alerts for Vancouver, Richmond, North Shore, Sea-to-Sky, Sunshine Coast, and Central Coast", is_shared: true },
+  { category: "health", source_name: "BC CDC Health Alerts", url: "https://www.bccdc.ca/about/news-stories/news-releases", description: "Provincial health alerts and disease outbreak information from BC Centre for Disease Control", is_shared: true },
+  { category: "health", source_name: "HealthLink BC", url: "https://www.healthlinkbc.ca/healthlinkbc-files/drinking-water-advisories", description: "Drinking water advisories and boil water notices across BC", is_shared: true },
+  
+  // Environment & Climate
+  { category: "environment", source_name: "BC Wildfire Service", url: "https://wildfiresituation.nrs.gov.bc.ca/map", description: "Active wildfire map and fire danger ratings for all of British Columbia", is_shared: true },
+  { category: "environment", source_name: "BC Air Quality", url: "https://www.env.gov.bc.ca/epd/bcairquality/data/aqhi-table.html", description: "Real-time Air Quality Health Index readings for BC monitoring stations", is_shared: true },
+  { category: "environment", source_name: "Environment Canada Heat Warnings", url: "https://weather.gc.ca/warnings/index_e.html?prov=bc", description: "Heat warnings, extreme cold alerts, and weather advisories for BC", is_shared: true },
+  { category: "environment", source_name: "BC Drought Information", url: "https://www2.gov.bc.ca/gov/content/environment/air-land-water/water/drought-flooding-dikes-dams/drought-information", description: "Provincial drought levels and water restriction information", is_shared: true },
+  
+  // Education
+  { category: "education", source_name: "BC School Closures", url: "https://www.bced.gov.bc.ca/", description: "Ministry of Education announcements affecting BC schools", is_shared: true },
+  { category: "education", source_name: "Metro Vancouver School Districts", url: "https://www.bcsta.org/school-districts/", description: "Links to all BC school district websites for closure announcements", is_shared: true },
+  
+  // Housing & Shelters
+  { category: "housing", source_name: "BC Housing", url: "https://www.bchousing.org/", description: "Provincial housing programs, emergency shelter information, and housing registry", is_shared: true },
+  { category: "housing", source_name: "Metro Vancouver Shelter Listings", url: "https://www.metrovancouver.org/services/regional-planning/homelessness", description: "Regional homelessness response and shelter information", is_shared: true },
+  { category: "housing", source_name: "Extreme Weather Response", url: "https://www.bc211.ca/", description: "211 BC - Information on extreme weather shelters and emergency services", is_shared: true },
+  
+  // Parks & Recreation
+  { category: "parks", source_name: "BC Parks Alerts", url: "https://bcparks.ca/park-advisories/", description: "Park closures, trail advisories, and campground status for BC Parks", is_shared: true },
+  { category: "parks", source_name: "Metro Vancouver Parks", url: "https://www.metrovancouver.org/parks", description: "Regional park closures, trail conditions, and beach advisories", is_shared: true },
+  { category: "parks", source_name: "Parks Canada - Pacific", url: "https://www.pc.gc.ca/en/voyage-travel/regles-rules/conditions/bc", description: "National park conditions and closures in British Columbia", is_shared: true },
+  
+  // Digital Services
+  { category: "digital", source_name: "BC Government Service Status", url: "https://www2.gov.bc.ca/gov/content/home", description: "Provincial government online services status", is_shared: true },
+  { category: "digital", source_name: "Service BC Status", url: "https://www.servicebc.gov.bc.ca/", description: "Status of Service BC locations and online services", is_shared: true },
 ];
 
 // Municipal-specific sources
