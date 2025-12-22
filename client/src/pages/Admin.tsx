@@ -18,11 +18,15 @@ import {
 
 const CATEGORIES = [
   { id: "emergency", label: "EMERGENCY", color: "text-red-400" },
+  { id: "weather", label: "WEATHER", color: "text-sky-300" },
   { id: "power", label: "POWER", color: "text-yellow-400" },
   { id: "water", label: "WATER", color: "text-blue-400" },
   { id: "transit", label: "TRANSIT", color: "text-green-400" },
+  { id: "marine", label: "MARINE", color: "text-cyan-400" },
   { id: "aviation", label: "AVIATION", color: "text-purple-400" },
+  { id: "events", label: "EVENTS", color: "text-fuchsia-400" },
   { id: "economic", label: "ECONOMIC", color: "text-orange-400" },
+  { id: "financial", label: "FINANCIAL", color: "text-green-300" },
   { id: "news", label: "NEWS", color: "text-cyan-400" },
   { id: "waste", label: "WASTE", color: "text-amber-400" },
   { id: "health", label: "HEALTH", color: "text-pink-400" },

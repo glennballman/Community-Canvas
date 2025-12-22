@@ -28,18 +28,26 @@ import {
   GraduationCap,
   Home,
   TreePine,
-  Monitor
+  Monitor,
+  Cloud,
+  Waves,
+  Calendar,
+  DollarSign
 } from "lucide-react";
 import type { StatusEntry } from "@shared/schema";
 import { getSourcesByCategory, ALL_MUNICIPALITIES, type DataSource } from "@shared/sources";
 
 const CATEGORIES = [
   { id: "emergency", label: "Emergency Alerts", icon: AlertTriangle, color: "text-red-500" },
+  { id: "weather", label: "Weather", icon: Cloud, color: "text-sky-300" },
   { id: "power", label: "Power / Hydro", icon: Zap, color: "text-yellow-500" },
   { id: "water", label: "Water & Sewer", icon: Droplet, color: "text-blue-400" },
   { id: "transit", label: "Transit & Roads", icon: Bus, color: "text-green-400" },
+  { id: "marine", label: "Marine & Tides", icon: Waves, color: "text-cyan-400" },
   { id: "aviation", label: "Aviation", icon: Plane, color: "text-sky-400" },
+  { id: "events", label: "Events", icon: Calendar, color: "text-fuchsia-400" },
   { id: "economic", label: "Economic/Govt", icon: TrendingUp, color: "text-lime-400" },
+  { id: "financial", label: "Financial", icon: DollarSign, color: "text-green-300" },
   { id: "news", label: "Local News", icon: Newspaper, color: "text-violet-400" },
   { id: "waste", label: "Waste & Recycling", icon: Trash2, color: "text-amber-400" },
   { id: "health", label: "Public Health", icon: Heart, color: "text-pink-400" },

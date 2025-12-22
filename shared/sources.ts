@@ -18,16 +18,20 @@ export function mapCategory(firecrawlCategory: string): string {
   if (cat.includes('water') || cat.includes('sewer')) return 'water';
   if (cat.includes('power') || cat.includes('hydro') || cat.includes('utilities') && !cat.includes('water')) return 'power';
   if (cat.includes('garbage') || cat.includes('recycling') || cat.includes('waste')) return 'waste';
-  if (cat.includes('transit') || cat.includes('road') || cat.includes('traffic') || cat.includes('parking')) return 'transit';
-  if (cat.includes('emergency') || cat.includes('fire') || cat.includes('police') || cat.includes('weather') || cat.includes('alert')) return 'emergency';
+  if (cat.includes('transit') || cat.includes('road') || cat.includes('traffic') || cat.includes('parking') || cat.includes('bridge') || cat.includes('tunnel')) return 'transit';
+  if (cat.includes('emergency') || cat.includes('fire') || cat.includes('police') || cat.includes('alert') || cat.includes('tsunami') || cat.includes('earthquake')) return 'emergency';
   if (cat.includes('news') || cat.includes('media')) return 'news';
   if (cat.includes('economic') || cat.includes('government') || cat.includes('permit') || cat.includes('budget') || cat.includes('development')) return 'economic';
-  if (cat.includes('health') || cat.includes('medical') || cat.includes('hospital')) return 'health';
+  if (cat.includes('health') || cat.includes('medical') || cat.includes('hospital') || cat.includes('wait time')) return 'health';
   if (cat.includes('environment') || cat.includes('climate') || cat.includes('air quality') || cat.includes('wildfire')) return 'environment';
   if (cat.includes('education') || cat.includes('school') || cat.includes('university')) return 'education';
   if (cat.includes('housing') || cat.includes('shelter') || cat.includes('homeless')) return 'housing';
-  if (cat.includes('parks') || cat.includes('recreation') || cat.includes('trails') || cat.includes('beach')) return 'parks';
+  if (cat.includes('parks') || cat.includes('recreation') || cat.includes('trails')) return 'parks';
   if (cat.includes('digital') || cat.includes('website') || cat.includes('online') || cat.includes('app')) return 'digital';
+  if (cat.includes('weather') || cat.includes('forecast') || cat.includes('temperature')) return 'weather';
+  if (cat.includes('marine') || cat.includes('tide') || cat.includes('ocean') || cat.includes('beach')) return 'marine';
+  if (cat.includes('event') || cat.includes('concert') || cat.includes('game') || cat.includes('festival')) return 'events';
+  if (cat.includes('financial') || cat.includes('gas price') || cat.includes('exchange') || cat.includes('stock') || cat.includes('market')) return 'financial';
   return 'other';
 }
 
@@ -110,6 +114,54 @@ export const SHARED_SOURCES: DataSource[] = [
   // Digital Services
   { category: "digital", source_name: "BC Government Service Status", url: "https://www2.gov.bc.ca/gov/content/home", description: "Provincial government online services status", is_shared: true },
   { category: "digital", source_name: "Service BC Status", url: "https://www.servicebc.gov.bc.ca/", description: "Status of Service BC locations and online services", is_shared: true },
+  
+  // Weather
+  { category: "weather", source_name: "Environment Canada - Vancouver", url: "https://weather.gc.ca/city/pages/bc-74_metric_e.html", description: "Current conditions and forecast for Vancouver and Metro area", is_shared: true },
+  { category: "weather", source_name: "Environment Canada - Abbotsford", url: "https://weather.gc.ca/city/pages/bc-63_metric_e.html", description: "Current conditions and forecast for Fraser Valley", is_shared: true },
+  { category: "weather", source_name: "Weather Network - Vancouver", url: "https://www.theweathernetwork.com/ca/weather/british-columbia/vancouver", description: "Extended forecast and radar for Metro Vancouver", is_shared: true },
+  { category: "weather", source_name: "BC Weather Warnings", url: "https://weather.gc.ca/warnings/index_e.html?prov=bc", description: "All active weather warnings for British Columbia", is_shared: true },
+  
+  // Marine & Tides
+  { category: "marine", source_name: "Tides - Point Atkinson", url: "https://www.waterlevels.gc.ca/eng/find/zone/6", description: "Tide predictions for Vancouver Harbour area", is_shared: true },
+  { category: "marine", source_name: "Tides - Vancouver", url: "https://www.tide-forecast.com/locations/Vancouver-British-Columbia/tides/latest", description: "Current and upcoming tide times for Vancouver", is_shared: true },
+  { category: "marine", source_name: "Ocean Conditions - Strait of Georgia", url: "https://www.oceannetworks.ca/observatories/pacific-northeast/salish-sea", description: "Real-time ocean data from Ocean Networks Canada", is_shared: true },
+  { category: "marine", source_name: "Marine Weather - Juan de Fuca", url: "https://weather.gc.ca/marine/region_e.html?mapID=02", description: "Marine forecast for Strait of Georgia and Juan de Fuca", is_shared: true },
+  { category: "marine", source_name: "Beach Water Quality", url: "https://www.vch.ca/en/service/beach-water-quality-monitoring", description: "Beach swimming advisories for Metro Vancouver", is_shared: true },
+  
+  // Events
+  { category: "events", source_name: "Vancouver Canucks Schedule", url: "https://www.nhl.com/canucks/schedule", description: "NHL Vancouver Canucks game schedule", is_shared: true },
+  { category: "events", source_name: "BC Lions Schedule", url: "https://www.bclions.com/schedule", description: "CFL BC Lions game schedule", is_shared: true },
+  { category: "events", source_name: "Vancouver Whitecaps Schedule", url: "https://www.whitecapsfc.com/schedule/", description: "MLS Vancouver Whitecaps game schedule", is_shared: true },
+  { category: "events", source_name: "Rogers Arena Events", url: "https://rogersarena.com/events/", description: "Concerts and events at Rogers Arena", is_shared: true },
+  { category: "events", source_name: "BC Place Events", url: "https://www.bcplace.com/events", description: "Events and concerts at BC Place Stadium", is_shared: true },
+  { category: "events", source_name: "Vancouver Events Calendar", url: "https://www.tourismvancouver.com/events/", description: "Major events and festivals in Vancouver", is_shared: true },
+  
+  // Financial/Markets
+  { category: "financial", source_name: "Gas Prices - Vancouver", url: "https://www.gasbuddy.com/gasprices/british-columbia/vancouver", description: "Current gas prices in Metro Vancouver", is_shared: true },
+  { category: "financial", source_name: "Gas Prices - BC", url: "https://www.gasbuddy.com/charts", description: "Gas price trends for British Columbia", is_shared: true },
+  { category: "financial", source_name: "USD/CAD Exchange Rate", url: "https://www.bankofcanada.ca/rates/exchange/daily-exchange-rates/", description: "Bank of Canada daily exchange rates", is_shared: true },
+  { category: "financial", source_name: "TSX Composite Index", url: "https://www.tmx.com/", description: "Toronto Stock Exchange market data", is_shared: true },
+  { category: "financial", source_name: "Yahoo Finance - TSX", url: "https://finance.yahoo.com/quote/%5EGSPTSE/", description: "S&P/TSX Composite Index live data", is_shared: true },
+  
+  // Additional Emergency Sources
+  { category: "emergency", source_name: "Tsunami Warning - NOAA", url: "https://tsunami.gov/", description: "Pacific Tsunami Warning Center alerts", is_shared: true },
+  { category: "emergency", source_name: "Earthquakes - USGS", url: "https://earthquake.usgs.gov/earthquakes/map/?extent=47.5,-130&extent=52,-120", description: "Recent earthquakes near BC from USGS", is_shared: true },
+  { category: "emergency", source_name: "Earthquakes Canada", url: "https://earthquakescanada.nrcan.gc.ca/index-en.php", description: "Recent seismic activity in Canada", is_shared: true },
+  
+  // Additional Transit Sources
+  { category: "transit", source_name: "BC Ferries Sailings", url: "https://www.bcferries.com/current-conditions", description: "Current sailing conditions and wait times", is_shared: true },
+  { category: "transit", source_name: "BC Ferries Departures", url: "https://www.bcferries.com/current-conditions/departures", description: "Departure bay current conditions", is_shared: true },
+  { category: "transit", source_name: "George Massey Tunnel", url: "https://www.drivebc.ca/", description: "Traffic conditions for George Massey Tunnel", is_shared: true },
+  { category: "transit", source_name: "Port Mann Bridge", url: "https://www.drivebc.ca/", description: "Port Mann Bridge traffic and conditions", is_shared: true },
+  { category: "transit", source_name: "Alex Fraser Bridge", url: "https://www.drivebc.ca/", description: "Alex Fraser Bridge traffic status", is_shared: true },
+  { category: "transit", source_name: "Lions Gate Bridge", url: "https://www.th.gov.bc.ca/LGBridge/", description: "Lions Gate Bridge lane configuration and traffic", is_shared: true },
+  { category: "transit", source_name: "Ironworkers Memorial Bridge", url: "https://www.drivebc.ca/", description: "Second Narrows Bridge traffic conditions", is_shared: true },
+  { category: "transit", source_name: "EasyPark Parkades", url: "https://www.easypark.ca/find-parking", description: "Downtown Vancouver parkade availability", is_shared: true },
+  { category: "transit", source_name: "Impark Parking", url: "https://lots.impark.com/", description: "Impark lot locations and rates", is_shared: true },
+  
+  // Additional Health Sources
+  { category: "health", source_name: "ER Wait Times - VGH", url: "https://www.edwaittimes.ca/WaitTimes.aspx", description: "Emergency room wait times at Vancouver General Hospital", is_shared: true },
+  { category: "health", source_name: "ER Wait Times - BC", url: "https://www.edwaittimes.ca/", description: "Emergency department wait times across BC", is_shared: true },
 ];
 
 // Municipal-specific sources
