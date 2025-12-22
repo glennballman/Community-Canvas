@@ -73,21 +73,31 @@ function CategoryBlock({
   category, 
   items, 
   onItemClick,
-  selectedItem
+  onCategoryClick,
+  selectedItem,
+  selectedCategory
 }: { 
   category: typeof CATEGORIES[0];
   items: StatusEntry[];
   onItemClick: (item: StatusEntry, category: typeof CATEGORIES[0]) => void;
+  onCategoryClick: (category: typeof CATEGORIES[0]) => void;
   selectedItem: StatusEntry | null;
+  selectedCategory: typeof CATEGORIES[0] | null;
 }) {
   const Icon = category.icon;
   const hasData = items && items.length > 0;
+  const isSelected = selectedCategory?.id === category.id;
 
   return (
-    <div className="bg-card/30 border border-border/30 rounded p-2 min-h-[80px]">
-      <div className="flex items-center gap-1.5 mb-1.5 border-b border-border/20 pb-1">
+    <div className={`bg-card/30 border rounded p-2 min-h-[80px] ${isSelected ? 'border-primary/50' : 'border-border/30'}`}>
+      <div 
+        className="flex items-center gap-1.5 mb-1.5 border-b border-border/20 pb-1 cursor-pointer hover-elevate rounded px-1 -mx-1"
+        onClick={() => onCategoryClick(category)}
+        data-testid={`category-header-${category.id}`}
+      >
         <Icon className={`h-3.5 w-3.5 ${category.color}`} />
-        <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{category.label}</span>
+        <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground flex-1">{category.label}</span>
+        <ChevronRight className="h-3 w-3 text-muted-foreground/50" />
       </div>
       
       {hasData ? (
@@ -96,6 +106,7 @@ function CategoryBlock({
             <div 
               key={idx}
               onClick={() => onItemClick(item, category)}
+              data-testid={`item-${category.id}-${idx}`}
               className={`flex items-center justify-between gap-2 py-0.5 px-1 rounded cursor-pointer text-xs hover-elevate transition-colors ${
                 selectedItem === item ? 'bg-primary/20' : ''
               }`}
@@ -112,7 +123,10 @@ function CategoryBlock({
           )}
         </div>
       ) : (
-        <div className="flex items-center justify-center h-10">
+        <div 
+          className="flex items-center justify-center h-10 cursor-pointer hover-elevate rounded"
+          onClick={() => onCategoryClick(category)}
+        >
           <span className="text-[10px] text-muted-foreground/60 uppercase tracking-wide">No Data</span>
         </div>
       )}
@@ -123,13 +137,18 @@ function CategoryBlock({
 function DetailPanel({ 
   item, 
   category,
-  onClose 
+  allItems,
+  onClose,
+  onItemSelect
 }: { 
-  item: StatusEntry;
+  item: StatusEntry | null;
   category: typeof CATEGORIES[0];
+  allItems: StatusEntry[];
   onClose: () => void;
+  onItemSelect: (item: StatusEntry) => void;
 }) {
   const Icon = category.icon;
+  const hasData = allItems && allItems.length > 0;
   
   return (
     <div className="h-full flex flex-col bg-card border-l border-border">
@@ -138,59 +157,106 @@ function DetailPanel({
           <Icon className={`h-4 w-4 ${category.color}`} />
           <span className="font-semibold text-sm">{category.label}</span>
         </div>
-        <Button size="icon" variant="ghost" onClick={onClose} className="h-6 w-6">
+        <Button size="icon" variant="ghost" onClick={onClose}>
           <X className="h-4 w-4" />
         </Button>
       </div>
       
-      <ScrollArea className="flex-1 p-3">
-        <div className="space-y-4">
-          <div>
-            <h3 className="font-semibold text-lg">{item.label}</h3>
-            <div className="flex items-center gap-2 mt-1">
-              <StatusDot status={item.status} />
-              <Badge variant={
-                item.status?.toLowerCase().includes("outage") || item.status?.toLowerCase().includes("critical") 
-                  ? "destructive" 
-                  : item.status?.toLowerCase().includes("delay") || item.status?.toLowerCase().includes("warning")
-                  ? "secondary"
-                  : "outline"
-              }>
-                {item.status}
-              </Badge>
+      <ScrollArea className="flex-1">
+        {!hasData ? (
+          <div className="p-4 text-center">
+            <div className="text-muted-foreground text-sm mb-2">No data available for this category.</div>
+            <div className="text-xs text-muted-foreground/60">
+              Click "Refresh" to fetch the latest data from configured sources.
             </div>
           </div>
-          
-          {item.details && (
+        ) : item ? (
+          <div className="p-3 space-y-4">
             <div>
-              <h4 className="text-xs font-semibold uppercase text-muted-foreground mb-1">Details</h4>
-              <p className="text-sm">{item.details}</p>
+              <h3 className="font-semibold text-lg">{item.label}</h3>
+              <div className="flex items-center gap-2 mt-1">
+                <StatusDot status={item.status} />
+                <Badge variant={
+                  item.status?.toLowerCase().includes("outage") || item.status?.toLowerCase().includes("critical") 
+                    ? "destructive" 
+                    : item.status?.toLowerCase().includes("delay") || item.status?.toLowerCase().includes("warning")
+                    ? "secondary"
+                    : "outline"
+                }>
+                  {item.status}
+                </Badge>
+              </div>
             </div>
-          )}
-          
-          {item.severity && (
-            <div>
-              <h4 className="text-xs font-semibold uppercase text-muted-foreground mb-1">Severity</h4>
-              <Badge variant={item.severity === "critical" ? "destructive" : item.severity === "warning" ? "secondary" : "outline"}>
-                {item.severity}
-              </Badge>
+            
+            {item.details && (
+              <div>
+                <h4 className="text-xs font-semibold uppercase text-muted-foreground mb-1">Details</h4>
+                <p className="text-sm">{item.details}</p>
+              </div>
+            )}
+            
+            {item.severity && (
+              <div>
+                <h4 className="text-xs font-semibold uppercase text-muted-foreground mb-1">Severity</h4>
+                <Badge variant={item.severity === "critical" ? "destructive" : item.severity === "warning" ? "secondary" : "outline"}>
+                  {item.severity}
+                </Badge>
+              </div>
+            )}
+            
+            {item.status_citation && (
+              <div>
+                <h4 className="text-xs font-semibold uppercase text-muted-foreground mb-1">Source</h4>
+                <a 
+                  href={item.status_citation} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-sm text-primary flex items-center gap-1 hover:underline"
+                >
+                  View Source <ExternalLink className="h-3 w-3" />
+                </a>
+              </div>
+            )}
+            
+            {allItems.length > 1 && (
+              <div className="border-t border-border pt-3 mt-3">
+                <h4 className="text-xs font-semibold uppercase text-muted-foreground mb-2">All Items ({allItems.length})</h4>
+                <div className="space-y-1">
+                  {allItems.map((i, idx) => (
+                    <div 
+                      key={idx}
+                      onClick={() => onItemSelect(i)}
+                      className={`flex items-center gap-2 p-1.5 rounded cursor-pointer text-xs hover-elevate ${
+                        i === item ? 'bg-primary/20' : ''
+                      }`}
+                    >
+                      <StatusDot status={i.status} />
+                      <span className="truncate flex-1">{i.label}</span>
+                      <span className="text-muted-foreground">{i.status}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="p-3">
+            <h4 className="text-xs font-semibold uppercase text-muted-foreground mb-2">All Items ({allItems.length})</h4>
+            <div className="space-y-1">
+              {allItems.map((i, idx) => (
+                <div 
+                  key={idx}
+                  onClick={() => onItemSelect(i)}
+                  className="flex items-center gap-2 p-1.5 rounded cursor-pointer text-xs hover-elevate"
+                >
+                  <StatusDot status={i.status} />
+                  <span className="truncate flex-1">{i.label}</span>
+                  <span className="text-muted-foreground">{i.status}</span>
+                </div>
+              ))}
             </div>
-          )}
-          
-          {item.status_citation && (
-            <div>
-              <h4 className="text-xs font-semibold uppercase text-muted-foreground mb-1">Source</h4>
-              <a 
-                href={item.status_citation} 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="text-sm text-primary flex items-center gap-1 hover:underline"
-              >
-                View Source <ExternalLink className="h-3 w-3" />
-              </a>
-            </div>
-          )}
-        </div>
+          </div>
+        )}
       </ScrollArea>
     </div>
   );
@@ -225,6 +291,11 @@ export default function Dashboard() {
   const handleItemClick = (item: StatusEntry, category: typeof CATEGORIES[0]) => {
     setSelectedItem(item);
     setSelectedCategory(category);
+  };
+
+  const handleCategoryClick = (category: typeof CATEGORIES[0]) => {
+    setSelectedCategory(category);
+    setSelectedItem(null);
   };
 
   const snapshot = snapshotResponse?.data;
@@ -281,18 +352,10 @@ export default function Dashboard() {
       {/* Main Content */}
       <div className="flex flex-1 min-h-0">
         {/* Main Grid */}
-        <div className={`flex-1 p-3 overflow-auto ${selectedItem ? 'pr-0' : ''}`}>
+        <div className={`flex-1 p-3 overflow-auto ${selectedCategory ? 'pr-0' : ''}`}>
           {isLoading ? (
             <div className="flex items-center justify-center h-full">
               <div className="text-muted-foreground">Loading data...</div>
-            </div>
-          ) : error ? (
-            <div className="flex flex-col items-center justify-center h-full gap-4">
-              <AlertTriangle className="h-12 w-12 text-muted-foreground" />
-              <p className="text-muted-foreground">No data available for {cityName}.</p>
-              <Button onClick={handleRefresh} disabled={isRefreshing}>
-                {isRefreshing ? "Fetching..." : "Run First Extraction"}
-              </Button>
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-2 auto-rows-min">
@@ -304,7 +367,9 @@ export default function Dashboard() {
                     category={cat}
                     items={categories[cat.id] || []}
                     onItemClick={handleItemClick}
+                    onCategoryClick={handleCategoryClick}
                     selectedItem={selectedItem}
+                    selectedCategory={selectedCategory}
                   />
                 ))}
               </div>
@@ -317,7 +382,9 @@ export default function Dashboard() {
                     category={cat}
                     items={categories[cat.id] || []}
                     onItemClick={handleItemClick}
+                    onCategoryClick={handleCategoryClick}
                     selectedItem={selectedItem}
+                    selectedCategory={selectedCategory}
                   />
                 ))}
               </div>
@@ -326,15 +393,17 @@ export default function Dashboard() {
         </div>
 
         {/* Detail Panel */}
-        {selectedItem && selectedCategory && (
-          <div className="w-80 shrink-0 border-l border-border">
+        {selectedCategory && (
+          <div className="w-80 shrink-0">
             <DetailPanel 
               item={selectedItem}
               category={selectedCategory}
+              allItems={categories[selectedCategory.id] || []}
               onClose={() => {
                 setSelectedItem(null);
                 setSelectedCategory(null);
               }}
+              onItemSelect={(item) => setSelectedItem(item)}
             />
           </div>
         )}
