@@ -1,8 +1,7 @@
 import { useState, useMemo, Fragment } from "react";
-import { Link } from "wouter";
-import { ArrowLeft, Check, X, ExternalLink, ChevronDown, ChevronRight } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Check, X, ExternalLink, ChevronDown, ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
   ALL_MUNICIPALITIES, 
@@ -50,7 +49,7 @@ function getShortName(fullName: string): string {
     .replace(/ First Nation$/i, " FN");
 }
 
-export default function Admin() {
+export default function AdminMatrix() {
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
   const [selectedSource, setSelectedSource] = useState<{ source: SourceInfo; category: string } | null>(null);
 
@@ -129,18 +128,9 @@ export default function Admin() {
   };
 
   return (
-    <div className="h-screen flex flex-col bg-background text-foreground font-mono text-xs">
+    <div className="h-full flex flex-col bg-background text-foreground font-mono text-xs">
       <header className="flex items-center justify-between gap-4 px-4 py-2 border-b border-border/50 bg-card/30 shrink-0">
-        <div className="flex items-center gap-3">
-          <Link href="/">
-            <Button variant="ghost" size="sm" className="gap-2" data-testid="button-back-dashboard">
-              <ArrowLeft className="h-4 w-4" />
-              Dashboard
-            </Button>
-          </Link>
-          <div className="h-4 w-px bg-border" />
-          <h1 className="text-sm font-semibold uppercase tracking-wider">Data Source Coverage Matrix</h1>
-        </div>
+        <h1 className="text-sm font-semibold uppercase tracking-wider">Data Source Coverage Matrix</h1>
         <div className="flex items-center gap-4 text-muted-foreground">
           <span>{ALL_MUNICIPALITIES.length} Jurisdictions</span>
           <span className="text-border">|</span>
