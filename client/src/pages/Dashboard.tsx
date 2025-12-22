@@ -544,8 +544,8 @@ export default function Dashboard() {
 
       {/* Main Content - 4 Column Layout */}
       <div className="flex flex-1 min-h-0">
-        {/* Column 1 & 2: Compressed Category Grid (1/3 width) */}
-        <div className="w-[280px] shrink-0 p-2 overflow-auto border-r border-border/30">
+        {/* Column 1 & 2: Category Grid */}
+        <div className="w-[420px] shrink-0 p-2 overflow-auto border-r border-border/30">
           {viewMode === "data" && isLoading ? (
             <div className="flex items-center justify-center h-full">
               <div className="text-muted-foreground text-xs">Loading...</div>
@@ -614,7 +614,7 @@ export default function Dashboard() {
         </div>
 
         {/* Column 3: Detail Panel */}
-        <div className="w-[260px] shrink-0 border-r border-border/30">
+        <div className="w-[320px] shrink-0 border-r border-border/30">
           {viewMode === "sources" && selectedSourceCategory ? (
             <SourceDetailPanel 
               source={selectedSource}
@@ -652,8 +652,8 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* Column 4: Iframe Web View */}
-        <div className="flex-1 flex flex-col bg-black/20">
+        {/* Column 4: Iframe Web View (50% of remaining) */}
+        <div className="w-1/2 flex flex-col bg-black/20">
           {iframeUrl ? (
             <>
               <div className="flex items-center justify-between px-3 py-1.5 bg-card/50 border-b border-border/30 shrink-0">
