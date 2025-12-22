@@ -7,7 +7,8 @@ import {
   ArrowLeft,
   Plus,
   FileText,
-  Activity
+  Activity,
+  Globe
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -18,6 +19,7 @@ interface AdminLayoutProps {
 
 const NAV_ITEMS = [
   { path: "/admin", label: "OVERVIEW", icon: LayoutDashboard },
+  { path: "/admin/geo", label: "GEOGRAPHIC VIEW", icon: Globe },
   { path: "/admin/matrix", label: "SOURCE MATRIX", icon: Grid3X3 },
   { path: "/admin/sources", label: "MANAGE SOURCES", icon: Database },
   { path: "/admin/logs", label: "SCRAPE LOGS", icon: FileText },
