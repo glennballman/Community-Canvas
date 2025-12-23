@@ -59,7 +59,8 @@ import {
 import { BC_WATER_FACILITIES, type WaterFacility, type WaterFacilityType } from "@shared/utilities-water";
 import { BC_WASTE_FACILITIES, type WasteFacility, type WasteFacilityType } from "@shared/utilities-waste";
 import { BC_ELECTRICITY_FACILITIES, type ElectricityFacility, type ElectricityFacilityType } from "@shared/utilities-electricity";
-import { Fuel, Apple, Container, TreePine, Snowflake, Droplets, Trash2, Zap } from "lucide-react";
+import { BC_PHARMACIES, type Pharmacy, type PharmacyType, type PharmacyChain, pharmacyTypeLabels, pharmacyChainLabels } from "@shared/pharmacies";
+import { Fuel, Apple, Container, TreePine, Snowflake, Droplets, Trash2, Zap, Pill } from "lucide-react";
 import { GEO_HIERARCHY, type GeoNode } from "@shared/geography";
 
 function getAirportTypeIcon(type: string) {
@@ -392,6 +393,11 @@ interface CourierFacilityWithMatch {
   matchedRegion: GeoNode | null;
 }
 
+interface PharmacyWithMatch extends Pharmacy {
+  matchedMunicipality: GeoNode | null;
+  matchedRegion: GeoNode | null;
+}
+
 export default function AdminInfrastructure() {
   const [airportSearch, setAirportSearch] = useState("");
   const [weatherSearch, setWeatherSearch] = useState("");
@@ -404,6 +410,7 @@ export default function AdminInfrastructure() {
   const [waterSearch, setWaterSearch] = useState("");
   const [wasteSearch, setWasteSearch] = useState("");
   const [electricitySearch, setElectricitySearch] = useState("");
+  const [pharmacySearch, setPharmacySearch] = useState("");
   const [lifelineSubTab, setLifelineSubTab] = useState<"fuel" | "food" | "hazmat">("fuel");
   const [supplySubTab, setSupplySubTab] = useState<"freight" | "rail">("freight");
   const [mobilitySubTab, setMobilitySubTab] = useState<"intercity" | "transit" | "charter" | "rail">("intercity");
@@ -532,25 +539,27 @@ export default function AdminInfrastructure() {
   const courierFacilitiesWithMatches: CourierFacilityWithMatch[] = useMemo(() => {
     const courierServices = BC_COURIER_SERVICES.filter(s => s.type !== 'postal');
     return courierServices.flatMap(service => 
-      service.facilities.map((facility, index) => {
-        const matchedMuni = findMatchingMunicipality(facility.municipality);
-        const matchedRegion = matchedMuni?.parentId ? GEO_HIERARCHY[matchedMuni.parentId] || null : null;
-        return {
-          id: `${service.id}-${index}`,
-          serviceName: service.name,
-          serviceType: service.type as "express" | "regional" | "freight" | "same_day",
-          facilityName: facility.name,
-          facilityType: facility.facility_type,
-          municipality: facility.municipality,
-          address: facility.address,
-          lat: facility.lat,
-          lng: facility.lng,
-          website: service.website,
-          phone: service.phone,
-          matchedMunicipality: matchedMuni,
-          matchedRegion,
-        };
-      })
+      service.facilities
+        .filter(f => ['hub', 'depot', 'outlet', 'dropbox', 'locker'].includes(f.facility_type))
+        .map((facility, index) => {
+          const matchedMuni = findMatchingMunicipality(facility.municipality);
+          const matchedRegion = matchedMuni?.parentId ? GEO_HIERARCHY[matchedMuni.parentId] || null : null;
+          return {
+            id: `${service.id}-${index}`,
+            serviceName: service.name,
+            serviceType: service.type as "express" | "regional" | "freight" | "same_day",
+            facilityName: facility.name,
+            facilityType: facility.facility_type as "hub" | "depot" | "outlet" | "dropbox" | "locker",
+            municipality: facility.municipality,
+            address: facility.address,
+            lat: facility.lat,
+            lng: facility.lng,
+            website: service.website,
+            phone: service.phone,
+            matchedMunicipality: matchedMuni,
+            matchedRegion,
+          };
+        })
     );
   }, []);
 
@@ -594,6 +603,18 @@ export default function AdminInfrastructure() {
       matchedMunicipality: findMatchingMunicipality(facility.municipality),
       matchedRegion: findMatchingRegion(facility.region.toLowerCase().replace(/\s+/g, '-')),
     }));
+  }, []);
+
+  const pharmacyWithMatches: PharmacyWithMatch[] = useMemo(() => {
+    return BC_PHARMACIES.map(pharmacy => {
+      const matchedMuni = findMatchingMunicipality(pharmacy.municipality);
+      const matchedRegion = matchedMuni?.parentId ? GEO_HIERARCHY[matchedMuni.parentId] || null : null;
+      return {
+        ...pharmacy,
+        matchedMunicipality: matchedMuni,
+        matchedRegion,
+      };
+    });
   }, []);
 
   const filteredAirports = useMemo(() => {
@@ -890,9 +911,24 @@ export default function AdminInfrastructure() {
       f.matchedRegion?.name.toLowerCase().includes(search) ||
       f.type.toLowerCase().includes(search) ||
       f.operator?.toLowerCase().includes(search) ||
-      f.dam_name?.toLowerCase().includes(search)
+      (f as any).dam_name?.toLowerCase().includes(search)
     );
   }, [electricityWithMatches, electricitySearch]);
+
+  const filteredPharmacies = useMemo(() => {
+    if (!pharmacySearch) return pharmacyWithMatches;
+    const search = pharmacySearch.toLowerCase();
+    return pharmacyWithMatches.filter(p => 
+      p.name.toLowerCase().includes(search) ||
+      p.municipality?.toLowerCase().includes(search) ||
+      p.chain?.toLowerCase().includes(search) ||
+      p.matchedMunicipality?.name.toLowerCase().includes(search) ||
+      p.matchedRegion?.name.toLowerCase().includes(search) ||
+      p.type.toLowerCase().includes(search) ||
+      p.address?.toLowerCase().includes(search) ||
+      p.courier_services?.some(c => c.toLowerCase().includes(search))
+    );
+  }, [pharmacyWithMatches, pharmacySearch]);
 
   const airportStats = useMemo(() => {
     const matched = airportsWithMatches.filter(a => a.matchedMunicipality).length;
@@ -1067,6 +1103,22 @@ export default function AdminInfrastructure() {
     return { total: electricityWithMatches.length, matched, regionOnly, unmatched, byType, totalCapacity };
   }, [electricityWithMatches]);
 
+  const pharmacyStats = useMemo(() => {
+    const matched = pharmacyWithMatches.filter(p => p.matchedMunicipality).length;
+    const regionOnly = pharmacyWithMatches.filter(p => !p.matchedMunicipality && p.matchedRegion).length;
+    const unmatched = pharmacyWithMatches.filter(p => !p.matchedMunicipality && !p.matchedRegion).length;
+    const byChain: Record<string, number> = {};
+    pharmacyWithMatches.forEach(p => {
+      byChain[p.chain] = (byChain[p.chain] || 0) + 1;
+    });
+    const byType: Record<string, number> = {};
+    pharmacyWithMatches.forEach(p => {
+      byType[p.type] = (byType[p.type] || 0) + 1;
+    });
+    const withCourier = pharmacyWithMatches.filter(p => p.courier_services && p.courier_services.length > 0).length;
+    return { total: pharmacyWithMatches.length, matched, regionOnly, unmatched, byChain, byType, withCourier };
+  }, [pharmacyWithMatches]);
+
   return (
     <div className="h-full flex flex-col font-mono">
       <div className="border-b border-border/50 p-4">
@@ -1201,6 +1253,14 @@ export default function AdminInfrastructure() {
             >
               <Zap className="w-3 h-3 mr-1" />
               ELECTRICITY ({electricityStats.total})
+            </TabsTrigger>
+            <TabsTrigger 
+              value="pharmacies" 
+              className="text-xs data-[state=active]:bg-pink-500/20 data-[state=active]:text-pink-400"
+              data-testid="tab-pharmacies"
+            >
+              <Pill className="w-3 h-3 mr-1" />
+              PHARMACIES ({pharmacyStats.total})
             </TabsTrigger>
             <TabsTrigger 
               value="summary" 
@@ -3021,7 +3081,7 @@ export default function AdminInfrastructure() {
                           <Zap className="w-3 h-3 text-yellow-400" />
                           <div>
                             <div className="font-medium">{facility.name}</div>
-                            {facility.dam_name && <div className="text-[10px] text-muted-foreground">Dam: {facility.dam_name}</div>}
+                            {(facility as any).dam_name && <div className="text-[10px] text-muted-foreground">Dam: {(facility as any).dam_name}</div>}
                             <div className="text-[10px] text-muted-foreground">{facility.latitude.toFixed(4)}, {facility.longitude.toFixed(4)}</div>
                           </div>
                         </div>
@@ -3056,6 +3116,117 @@ export default function AdminInfrastructure() {
                         {facility.matchedRegion ? (
                           <Badge variant="outline" className="text-[8px]">{facility.matchedRegion.name}</Badge>
                         ) : <span className="text-muted-foreground/50">{facility.region}</span>}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </ScrollArea>
+        </TabsContent>
+
+        <TabsContent value="pharmacies" className="flex-1 overflow-hidden m-0 flex flex-col data-[state=inactive]:hidden">
+          <div className="p-3 border-b border-border/30 flex items-center gap-4">
+            <div className="relative flex-1 max-w-sm">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground" />
+              <Input
+                placeholder="Search pharmacies..."
+                value={pharmacySearch}
+                onChange={e => setPharmacySearch(e.target.value)}
+                className="pl-8 h-8 text-xs bg-background/50"
+                data-testid="input-pharmacy-search"
+              />
+            </div>
+            <div className="flex gap-2 text-[10px] text-muted-foreground">
+              <span className="text-green-400">{pharmacyStats.matched} MATCHED</span>
+              <span className="text-yellow-400">{pharmacyStats.regionOnly} REGION ONLY</span>
+              <span className="text-red-400">{pharmacyStats.unmatched} UNMATCHED</span>
+              <span className="text-pink-400">{pharmacyStats.withCourier} W/COURIER</span>
+            </div>
+          </div>
+          <ScrollArea className="flex-1">
+            <div className="p-3">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="text-[10px] text-muted-foreground border-b border-border/30">
+                    <th className="text-left py-2 px-2">PHARMACY</th>
+                    <th className="text-left py-2 px-2">CHAIN</th>
+                    <th className="text-left py-2 px-2">TYPE</th>
+                    <th className="text-left py-2 px-2">COURIER SERVICES</th>
+                    <th className="text-left py-2 px-2">SOURCE MUNICIPALITY</th>
+                    <th className="text-left py-2 px-2">MATCHED TO</th>
+                    <th className="text-left py-2 px-2">REGION</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredPharmacies.map(pharmacy => (
+                    <tr 
+                      key={pharmacy.id} 
+                      className="border-b border-border/20 hover-elevate"
+                      data-testid={`row-pharmacy-${pharmacy.id}`}
+                    >
+                      <td className="py-2 px-2">
+                        <div className="flex items-center gap-2">
+                          <Pill className="w-3 h-3 text-pink-400" />
+                          <div>
+                            <div className="font-medium">{pharmacy.name}</div>
+                            {pharmacy.address && <div className="text-[10px] text-muted-foreground">{pharmacy.address}</div>}
+                            <div className="text-[10px] text-muted-foreground">{pharmacy.lat.toFixed(4)}, {pharmacy.lng.toFixed(4)}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-2 px-2">
+                        <Badge variant="outline" className="text-[8px] bg-pink-500/10 text-pink-400 border-pink-500/30">
+                          {pharmacyChainLabels[pharmacy.chain]}
+                        </Badge>
+                      </td>
+                      <td className="py-2 px-2">
+                        <Badge variant="outline" className={`text-[8px] ${
+                          pharmacy.type === 'chain' ? 'bg-blue-500/10 text-blue-400 border-blue-500/30' :
+                          pharmacy.type === 'grocery' ? 'bg-green-500/10 text-green-400 border-green-500/30' :
+                          pharmacy.type === 'warehouse' ? 'bg-purple-500/10 text-purple-400 border-purple-500/30' :
+                          pharmacy.type === 'independent' ? 'bg-cyan-500/10 text-cyan-400 border-cyan-500/30' :
+                          pharmacy.type === 'hospital' ? 'bg-red-500/10 text-red-400 border-red-500/30' :
+                          'bg-orange-500/10 text-orange-400 border-orange-500/30'
+                        }`}>
+                          {pharmacyTypeLabels[pharmacy.type]}
+                        </Badge>
+                      </td>
+                      <td className="py-2 px-2">
+                        {pharmacy.courier_services && pharmacy.courier_services.length > 0 ? (
+                          <div className="flex flex-wrap gap-1">
+                            {pharmacy.courier_services.map(cs => (
+                              <Badge key={cs} variant="outline" className={`text-[8px] ${
+                                cs === 'canada_post' ? 'bg-red-500/10 text-red-400 border-red-500/30' :
+                                cs === 'purolator' ? 'bg-orange-500/10 text-orange-400 border-orange-500/30' :
+                                cs === 'ups' ? 'bg-amber-500/10 text-amber-400 border-amber-500/30' :
+                                'bg-purple-500/10 text-purple-400 border-purple-500/30'
+                              }`}>
+                                {cs.replace(/_/g, ' ').toUpperCase()}
+                              </Badge>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground/50">-</span>
+                        )}
+                      </td>
+                      <td className="py-2 px-2 text-muted-foreground">{pharmacy.municipality}</td>
+                      <td className="py-2 px-2">
+                        {pharmacy.matchedMunicipality ? (
+                          <div className="flex items-center gap-1 text-green-400">
+                            <CheckCircle className="w-3 h-3" />
+                            <span>{pharmacy.matchedMunicipality.name}</span>
+                          </div>
+                        ) : pharmacy.matchedRegion ? (
+                          <span className="text-yellow-400">(region only)</span>
+                        ) : (
+                          <span className="text-red-400">NOT MATCHED</span>
+                        )}
+                      </td>
+                      <td className="py-2 px-2">
+                        {pharmacy.matchedRegion ? (
+                          <Badge variant="outline" className="text-[8px]">{pharmacy.matchedRegion.name}</Badge>
+                        ) : <span className="text-muted-foreground/50">-</span>}
                       </td>
                     </tr>
                   ))}
