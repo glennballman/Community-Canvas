@@ -23,6 +23,13 @@ export type CharterBusType =
   | "school"         // School bus contractor
   | "airport";       // Airport shuttle service
 
+export type CourierServiceType =
+  | "postal"         // Canada Post / national postal service
+  | "express"        // Express courier (FedEx, UPS, Purolator, DHL)
+  | "regional"       // Regional delivery provider
+  | "freight"        // Freight/LTL carrier with parcel service
+  | "same_day";      // Same-day delivery service
+
 export interface IntercityBusService {
   id: string;
   name: string;
@@ -68,6 +75,25 @@ export interface CharterBusOperator {
   fleet_size?: string;
   website?: string;
   phone?: string;
+  notes?: string;
+}
+
+export interface CourierService {
+  id: string;
+  name: string;
+  type: CourierServiceType;
+  facilities: {
+    name: string;
+    facility_type: "hub" | "depot" | "outlet" | "dropbox" | "locker";
+    municipality: string;
+    address?: string;
+    lat: number;
+    lng: number;
+  }[];
+  service_coverage: string[];  // Municipalities/regions served
+  website?: string;
+  phone?: string;
+  tracking_url?: string;
   notes?: string;
 }
 
@@ -788,11 +814,285 @@ export const BC_CHARTER_BUS: CharterBusOperator[] = [
   }
 ];
 
+// ============================================================================
+// COURIER & POSTAL SERVICES
+// ============================================================================
+
+export const BC_COURIER_SERVICES: CourierService[] = [
+  // Canada Post - Major Processing Plants and Depots
+  {
+    id: "canada-post",
+    name: "Canada Post",
+    type: "postal",
+    facilities: [
+      { name: "Vancouver Mail Processing Plant", facility_type: "hub", municipality: "Vancouver", address: "349 W Georgia St", lat: 49.2812, lng: -123.1151 },
+      { name: "Richmond Processing Centre", facility_type: "hub", municipality: "Richmond", address: "4411 No. 3 Rd", lat: 49.1741, lng: -123.1369 },
+      { name: "Victoria Letter Carrier Depot", facility_type: "depot", municipality: "Victoria", address: "714 Caledonia Ave", lat: 48.4344, lng: -123.3579 },
+      { name: "Nanaimo Depot", facility_type: "depot", municipality: "Nanaimo", address: "35 Front St", lat: 49.1659, lng: -123.9401 },
+      { name: "Kelowna Depot", facility_type: "depot", municipality: "Kelowna", address: "591 Bernard Ave", lat: 49.8863, lng: -119.4963 },
+      { name: "Kamloops Depot", facility_type: "depot", municipality: "Kamloops", address: "301 Seymour St", lat: 50.6745, lng: -120.3273 },
+      { name: "Prince George Depot", facility_type: "depot", municipality: "Prince George", address: "1323 5th Ave", lat: 53.9171, lng: -122.7497 },
+      { name: "Surrey Processing Facility", facility_type: "hub", municipality: "Surrey", address: "9636 King George Blvd", lat: 49.1762, lng: -122.8475 },
+      { name: "Burnaby Depot", facility_type: "depot", municipality: "Burnaby", address: "6360 Halifax St", lat: 49.2624, lng: -122.9636 },
+      { name: "Coquitlam Depot", facility_type: "depot", municipality: "Coquitlam", address: "101-1015 Austin Ave", lat: 49.2744, lng: -122.7941 },
+      { name: "Abbotsford Depot", facility_type: "depot", municipality: "Abbotsford", address: "2815 Clearbrook Rd", lat: 49.0504, lng: -122.3045 },
+      { name: "Chilliwack Depot", facility_type: "depot", municipality: "Chilliwack", address: "45585 Airport Rd", lat: 49.1518, lng: -121.9378 },
+      { name: "Courtenay Depot", facility_type: "depot", municipality: "Courtenay", address: "500 6th St", lat: 49.6874, lng: -124.9943 },
+      { name: "Campbell River Depot", facility_type: "depot", municipality: "Campbell River", address: "1351 Shoppers Row", lat: 50.0265, lng: -125.2470 },
+      { name: "Cranbrook Depot", facility_type: "depot", municipality: "Cranbrook", address: "102 11th Ave S", lat: 49.5097, lng: -115.7686 },
+      { name: "Trail Depot", facility_type: "depot", municipality: "Trail", address: "1199 Bay Ave", lat: 49.0963, lng: -117.7111 },
+      { name: "Nelson Depot", facility_type: "depot", municipality: "Nelson", address: "514 Vernon St", lat: 49.4928, lng: -117.2948 },
+      { name: "Penticton Depot", facility_type: "depot", municipality: "Penticton", address: "56 Front St", lat: 49.4991, lng: -119.5937 },
+      { name: "Vernon Depot", facility_type: "depot", municipality: "Vernon", address: "3101 32nd St", lat: 50.2671, lng: -119.2720 },
+      { name: "Fort St John Depot", facility_type: "depot", municipality: "Fort St. John", address: "10631 100th St", lat: 56.2465, lng: -120.8476 },
+      { name: "Dawson Creek Depot", facility_type: "depot", municipality: "Dawson Creek", address: "901 102nd Ave", lat: 55.7596, lng: -120.2377 },
+      { name: "Terrace Depot", facility_type: "depot", municipality: "Terrace", address: "3232 Emerson St", lat: 54.5182, lng: -128.6033 },
+      { name: "Prince Rupert Depot", facility_type: "depot", municipality: "Prince Rupert", address: "200 2nd Ave W", lat: 54.3150, lng: -130.3208 },
+      { name: "Williams Lake Depot", facility_type: "depot", municipality: "Williams Lake", address: "42 2nd Ave S", lat: 52.1417, lng: -122.1417 },
+      { name: "Quesnel Depot", facility_type: "depot", municipality: "Quesnel", address: "350 Reid St", lat: 52.9784, lng: -122.4927 }
+    ],
+    service_coverage: ["Province-wide", "All BC municipalities"],
+    website: "https://www.canadapost.ca",
+    phone: "1-866-607-6301",
+    tracking_url: "https://www.canadapost.ca/track-reperage/en",
+    notes: "Crown corporation; universal service obligation to all addresses in Canada"
+  },
+  // Purolator
+  {
+    id: "purolator",
+    name: "Purolator",
+    type: "express",
+    facilities: [
+      { name: "Vancouver Hub", facility_type: "hub", municipality: "Richmond", address: "2340 Shell Rd", lat: 49.1841, lng: -123.1283 },
+      { name: "Surrey Depot", facility_type: "depot", municipality: "Surrey", address: "7327 137th St", lat: 49.1288, lng: -122.8576 },
+      { name: "Burnaby Depot", facility_type: "depot", municipality: "Burnaby", address: "3780 Jacombs Rd", lat: 49.1964, lng: -122.9636 },
+      { name: "Victoria Depot", facility_type: "depot", municipality: "Victoria", address: "3934 Quadra St", lat: 48.4584, lng: -123.3659 },
+      { name: "Nanaimo Depot", facility_type: "depot", municipality: "Nanaimo", address: "6404 Applecross Rd", lat: 49.1547, lng: -123.9678 },
+      { name: "Kelowna Depot", facility_type: "depot", municipality: "Kelowna", address: "1470 Harvey Ave", lat: 49.8838, lng: -119.4747 },
+      { name: "Kamloops Depot", facility_type: "depot", municipality: "Kamloops", address: "1250 Rogers Way", lat: 50.6897, lng: -120.3495 },
+      { name: "Prince George Depot", facility_type: "depot", municipality: "Prince George", address: "1991 Queensway", lat: 53.9033, lng: -122.7819 },
+      { name: "Abbotsford Depot", facility_type: "depot", municipality: "Abbotsford", address: "31205 Wheel Ave", lat: 49.0566, lng: -122.3712 }
+    ],
+    service_coverage: ["Metro Vancouver", "Vancouver Island", "Okanagan", "BC Interior", "Northern BC"],
+    website: "https://www.purolator.com",
+    phone: "1-888-744-7123",
+    tracking_url: "https://www.purolator.com/en/ship-track/tracking-tool.page",
+    notes: "Majority owned by Canada Post; largest Canadian courier"
+  },
+  // FedEx
+  {
+    id: "fedex",
+    name: "FedEx",
+    type: "express",
+    facilities: [
+      { name: "Vancouver Gateway Hub", facility_type: "hub", municipality: "Richmond", address: "5000 Miller Rd", lat: 49.1928, lng: -123.1812 },
+      { name: "Surrey Ship Centre", facility_type: "depot", municipality: "Surrey", address: "12568 88th Ave", lat: 49.1585, lng: -122.8888 },
+      { name: "Burnaby Depot", facility_type: "depot", municipality: "Burnaby", address: "4180 Still Creek Dr", lat: 49.2652, lng: -123.0089 },
+      { name: "Victoria Depot", facility_type: "depot", municipality: "Victoria", address: "752 Pembroke St", lat: 48.4323, lng: -123.3611 },
+      { name: "Kelowna Depot", facility_type: "depot", municipality: "Kelowna", address: "1980 Windsor Rd", lat: 49.8676, lng: -119.4508 },
+      { name: "Kamloops Depot", facility_type: "depot", municipality: "Kamloops", address: "1395 Dalhousie Dr", lat: 50.6713, lng: -120.3607 },
+      { name: "Prince George Depot", facility_type: "depot", municipality: "Prince George", address: "1320 2nd Ave", lat: 53.9171, lng: -122.7497 },
+      { name: "Nanaimo Depot", facility_type: "depot", municipality: "Nanaimo", address: "1925 Bowen Rd", lat: 49.1688, lng: -123.9456 }
+    ],
+    service_coverage: ["Metro Vancouver", "Vancouver Island", "Okanagan", "BC Interior", "Northern BC"],
+    website: "https://www.fedex.com/en-ca",
+    phone: "1-800-463-3339",
+    tracking_url: "https://www.fedex.com/fedextrack",
+    notes: "International express; ground service through FedEx Ground"
+  },
+  // UPS
+  {
+    id: "ups",
+    name: "UPS",
+    type: "express",
+    facilities: [
+      { name: "Vancouver Hub", facility_type: "hub", municipality: "Richmond", address: "6911 No. 9 Rd", lat: 49.1483, lng: -123.0936 },
+      { name: "Burnaby Customer Centre", facility_type: "depot", municipality: "Burnaby", address: "8571 River Rd", lat: 49.1875, lng: -122.9489 },
+      { name: "Surrey Depot", facility_type: "depot", municipality: "Surrey", address: "8323 129th St", lat: 49.1573, lng: -122.8676 },
+      { name: "Victoria Depot", facility_type: "depot", municipality: "Victoria", address: "1004 North Park St", lat: 48.4344, lng: -123.3511 },
+      { name: "Kelowna Depot", facility_type: "depot", municipality: "Kelowna", address: "2070 Leckie Rd", lat: 49.8847, lng: -119.4236 },
+      { name: "Kamloops Depot", facility_type: "depot", municipality: "Kamloops", address: "1000 Laval Crescent", lat: 50.6752, lng: -120.3495 },
+      { name: "Nanaimo Depot", facility_type: "depot", municipality: "Nanaimo", address: "2100 Northfield Rd", lat: 49.1897, lng: -123.9678 }
+    ],
+    service_coverage: ["Metro Vancouver", "Vancouver Island", "Okanagan", "BC Interior"],
+    website: "https://www.ups.com/ca",
+    phone: "1-800-742-5877",
+    tracking_url: "https://www.ups.com/track",
+    notes: "UPS Access Point network includes retail locations throughout BC"
+  },
+  // DHL
+  {
+    id: "dhl",
+    name: "DHL Express",
+    type: "express",
+    facilities: [
+      { name: "Vancouver Gateway", facility_type: "hub", municipality: "Richmond", address: "5711 Airport Rd S", lat: 49.1878, lng: -123.1756 },
+      { name: "Vancouver Service Point", facility_type: "depot", municipality: "Vancouver", address: "1111 Melville St", lat: 49.2869, lng: -123.1223 },
+      { name: "Victoria Service Point", facility_type: "depot", municipality: "Victoria", address: "2750 Quadra St", lat: 48.4384, lng: -123.3659 },
+      { name: "Kelowna Service Point", facility_type: "depot", municipality: "Kelowna", address: "1634 Harvey Ave", lat: 49.8838, lng: -119.4690 }
+    ],
+    service_coverage: ["Metro Vancouver", "Vancouver Island", "Okanagan"],
+    website: "https://www.dhl.com/ca-en",
+    phone: "1-800-225-5345",
+    tracking_url: "https://www.dhl.com/en/express/tracking.html",
+    notes: "Focus on international express; limited domestic network"
+  },
+  // Canpar
+  {
+    id: "canpar",
+    name: "Canpar Express",
+    type: "express",
+    facilities: [
+      { name: "Vancouver Terminal", facility_type: "hub", municipality: "Surrey", address: "19123 16th Ave", lat: 49.0327, lng: -122.7296 },
+      { name: "Victoria Depot", facility_type: "depot", municipality: "Victoria", address: "2945 Bridge St", lat: 48.4413, lng: -123.3889 },
+      { name: "Kelowna Depot", facility_type: "depot", municipality: "Kelowna", address: "730 McCurdy Rd", lat: 49.9012, lng: -119.3867 }
+    ],
+    service_coverage: ["Metro Vancouver", "Vancouver Island", "Okanagan", "BC Interior"],
+    website: "https://www.canpar.com",
+    phone: "1-800-387-9335",
+    tracking_url: "https://www.canpar.com/en/tracking/track.htm",
+    notes: "TFI International subsidiary; regional strength in Western Canada"
+  },
+  // Loomis Express
+  {
+    id: "loomis",
+    name: "Loomis Express",
+    type: "express",
+    facilities: [
+      { name: "Vancouver Terminal", facility_type: "hub", municipality: "Richmond", address: "11091 Bridgeport Rd", lat: 49.1883, lng: -123.1433 },
+      { name: "Victoria Depot", facility_type: "depot", municipality: "Victoria", address: "2945 Bridge St", lat: 48.4413, lng: -123.3889 },
+      { name: "Kelowna Depot", facility_type: "depot", municipality: "Kelowna", address: "2475 Dobbin Rd", lat: 49.8897, lng: -119.3945 }
+    ],
+    service_coverage: ["Metro Vancouver", "Vancouver Island", "Okanagan"],
+    website: "https://www.loomis-express.com",
+    phone: "1-855-256-6647",
+    tracking_url: "https://www.loomis-express.com/track",
+    notes: "Day-definite ground service across Canada"
+  },
+  // Puro Freight (Purolator Freight)
+  {
+    id: "puro-freight",
+    name: "Purolator Freight",
+    type: "freight",
+    facilities: [
+      { name: "Vancouver Terminal", facility_type: "hub", municipality: "Delta", address: "1155 56th St", lat: 49.1098, lng: -122.9167 },
+      { name: "Kelowna Terminal", facility_type: "depot", municipality: "Kelowna", address: "730 McCurdy Rd", lat: 49.9012, lng: -119.3867 }
+    ],
+    service_coverage: ["Metro Vancouver", "BC Interior", "Okanagan"],
+    website: "https://www.purolatorfreight.com",
+    phone: "1-888-302-8819",
+    notes: "LTL freight division of Purolator; palletized shipments"
+  },
+  // Day & Ross
+  {
+    id: "day-ross",
+    name: "Day & Ross",
+    type: "freight",
+    facilities: [
+      { name: "Vancouver Terminal", facility_type: "hub", municipality: "Surrey", address: "11451 Bridgeview Dr", lat: 49.1998, lng: -122.8967 },
+      { name: "Victoria Terminal", facility_type: "depot", municipality: "Victoria", address: "531 David St", lat: 48.4369, lng: -123.3889 },
+      { name: "Kelowna Terminal", facility_type: "depot", municipality: "Kelowna", address: "795 McCurdy Rd", lat: 49.9012, lng: -119.3867 }
+    ],
+    service_coverage: ["Metro Vancouver", "Vancouver Island", "BC Interior"],
+    website: "https://www.dayross.com",
+    phone: "1-800-387-8646",
+    tracking_url: "https://www.dayross.com/ship/tracking",
+    notes: "McCain Foods subsidiary; LTL and express freight"
+  },
+  // Bandstra Transportation
+  {
+    id: "bandstra",
+    name: "Bandstra Transportation",
+    type: "regional",
+    facilities: [
+      { name: "Smithers Terminal", facility_type: "hub", municipality: "Smithers", address: "3883 Railway Ave", lat: 54.7804, lng: -127.1756 },
+      { name: "Prince George Terminal", facility_type: "depot", municipality: "Prince George", address: "2863 McCullough Rd", lat: 53.8873, lng: -122.8098 },
+      { name: "Terrace Terminal", facility_type: "depot", municipality: "Terrace", address: "5120 Keith Ave", lat: 54.5182, lng: -128.5767 },
+      { name: "Kitimat Depot", facility_type: "depot", municipality: "Kitimat", address: "1355 Lahakas Blvd", lat: 54.0534, lng: -128.6537 }
+    ],
+    service_coverage: ["Northern BC", "Skeena-Bulkley", "Prince George area"],
+    website: "https://www.bandstra.com",
+    phone: "1-800-663-8687",
+    notes: "Northern BC specialist; freight and courier since 1955"
+  },
+  // Northern Freightways
+  {
+    id: "northern-freightways",
+    name: "Northern Freightways",
+    type: "regional",
+    facilities: [
+      { name: "Prince George Terminal", facility_type: "hub", municipality: "Prince George", address: "1986 Queensway", lat: 53.9033, lng: -122.7819 },
+      { name: "Dawson Creek Depot", facility_type: "depot", municipality: "Dawson Creek", address: "1000 96th Ave", lat: 55.7596, lng: -120.2377 },
+      { name: "Fort St John Depot", facility_type: "depot", municipality: "Fort St. John", address: "9504 Alaska Rd", lat: 56.2465, lng: -120.8476 }
+    ],
+    service_coverage: ["Northern BC", "Peace Region", "Alaska Highway corridor"],
+    website: "https://www.northernfreightways.com",
+    phone: "250-564-2228",
+    notes: "Peace Region and Northern BC freight specialist"
+  },
+  // Coastal Courier
+  {
+    id: "coastal-courier",
+    name: "Coastal Courier Services",
+    type: "regional",
+    facilities: [
+      { name: "Nanaimo Hub", facility_type: "hub", municipality: "Nanaimo", address: "1925 Bowen Rd", lat: 49.1688, lng: -123.9456 },
+      { name: "Victoria Depot", facility_type: "depot", municipality: "Victoria", address: "3934 Quadra St", lat: 48.4584, lng: -123.3659 }
+    ],
+    service_coverage: ["Vancouver Island", "Gulf Islands"],
+    phone: "250-753-3433",
+    notes: "Vancouver Island same-day and next-day delivery"
+  },
+  // Novex Delivery Solutions
+  {
+    id: "novex",
+    name: "Novex Delivery Solutions",
+    type: "same_day",
+    facilities: [
+      { name: "Vancouver Hub", facility_type: "hub", municipality: "Burnaby", address: "4088 Lougheed Hwy", lat: 49.2652, lng: -123.0089 },
+      { name: "Victoria Depot", facility_type: "depot", municipality: "Victoria", address: "3934 Quadra St", lat: 48.4584, lng: -123.3659 }
+    ],
+    service_coverage: ["Metro Vancouver", "Victoria", "Lower Mainland"],
+    website: "https://www.novex.ca",
+    phone: "604-437-4477",
+    notes: "Same-day courier and scheduled routes"
+  },
+  // Dynamex
+  {
+    id: "dynamex",
+    name: "Dynamex",
+    type: "same_day",
+    facilities: [
+      { name: "Vancouver Hub", facility_type: "hub", municipality: "Burnaby", address: "7575 Kingsway", lat: 49.2278, lng: -122.9784 }
+    ],
+    service_coverage: ["Metro Vancouver", "Fraser Valley"],
+    website: "https://www.dynamex.com",
+    phone: "604-420-9111",
+    notes: "Same-day rush delivery; medical and legal courier specialist"
+  },
+  // Intelcom
+  {
+    id: "intelcom",
+    name: "Intelcom",
+    type: "express",
+    facilities: [
+      { name: "Vancouver Hub", facility_type: "hub", municipality: "Delta", address: "7900 River Rd", lat: 49.1098, lng: -123.0456 },
+      { name: "Victoria Depot", facility_type: "depot", municipality: "Victoria", address: "3934 Quadra St", lat: 48.4584, lng: -123.3659 }
+    ],
+    service_coverage: ["Metro Vancouver", "Vancouver Island", "Fraser Valley"],
+    website: "https://www.intelcom.ca",
+    phone: "1-855-355-3278",
+    tracking_url: "https://www.intelcom.ca/track",
+    notes: "Amazon delivery partner; last-mile e-commerce specialist"
+  }
+];
+
 // Helper function to get all ground transport by municipality
 export function getGroundTransportByMunicipality(municipality: string): {
   intercityBus: IntercityBusService[];
   transitSystems: TransitSystem[];
   charterBus: CharterBusOperator[];
+  courierServices: CourierService[];
 } {
   const normalizedMuni = municipality.toLowerCase();
   
@@ -806,6 +1106,10 @@ export function getGroundTransportByMunicipality(municipality: string): {
     charterBus: BC_CHARTER_BUS.filter(op =>
       op.base_location.municipality.toLowerCase() === normalizedMuni ||
       op.service_area.some(area => area.toLowerCase().includes(normalizedMuni))
+    ),
+    courierServices: BC_COURIER_SERVICES.filter(service =>
+      service.facilities.some(f => f.municipality.toLowerCase() === normalizedMuni) ||
+      service.service_coverage.some(area => area.toLowerCase().includes(normalizedMuni))
     )
   };
 }
@@ -818,6 +1122,10 @@ export function getGroundTransportStats() {
     transitSystems: BC_TRANSIT_SYSTEMS.length,
     municipalitiesWithTransit: Array.from(new Set(BC_TRANSIT_SYSTEMS.flatMap(s => s.municipalities_served))).length,
     charterOperators: BC_CHARTER_BUS.length,
-    schoolBusOperators: BC_CHARTER_BUS.filter(o => o.type === 'school').length
+    schoolBusOperators: BC_CHARTER_BUS.filter(o => o.type === 'school').length,
+    courierServices: BC_COURIER_SERVICES.length,
+    courierFacilities: BC_COURIER_SERVICES.reduce((sum, s) => sum + s.facilities.length, 0),
+    postalFacilities: BC_COURIER_SERVICES.filter(s => s.type === 'postal').reduce((sum, s) => sum + s.facilities.length, 0),
+    expressCouriers: BC_COURIER_SERVICES.filter(s => s.type === 'express').length
   };
 }
