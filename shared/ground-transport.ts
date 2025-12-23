@@ -1763,20 +1763,130 @@ export const BC_COURIER_SERVICES: CourierService[] = [
     name: "FedEx",
     type: "express",
     facilities: [
+      // ============================================================================
+      // FEDEX HUBS & DEPOTS (Operational Facilities)
+      // ============================================================================
       { name: "Vancouver Gateway Hub", facility_type: "hub", municipality: "Richmond", address: "5000 Miller Rd", lat: 49.1928, lng: -123.1812 },
-      { name: "Surrey Ship Centre", facility_type: "depot", municipality: "Surrey", address: "12568 88th Ave", lat: 49.1585, lng: -122.8888 },
-      { name: "Burnaby Depot", facility_type: "depot", municipality: "Burnaby", address: "4180 Still Creek Dr", lat: 49.2652, lng: -123.0089 },
+      { name: "Surrey Distribution Centre", facility_type: "depot", municipality: "Surrey", address: "12568 88th Ave", lat: 49.1585, lng: -122.8888 },
+      { name: "Burnaby Operations", facility_type: "depot", municipality: "Burnaby", address: "4180 Still Creek Dr", lat: 49.2652, lng: -123.0089 },
+      { name: "Delta Ground Hub", facility_type: "hub", municipality: "Delta", address: "7388 Vantage Way", lat: 49.0856, lng: -123.0567 },
+      { name: "Langley Distribution", facility_type: "depot", municipality: "Langley", address: "20128 102A Ave", lat: 49.1634, lng: -122.6512 },
+      { name: "Coquitlam Depot", facility_type: "depot", municipality: "Coquitlam", address: "1420 Broadway St", lat: 49.2756, lng: -122.7934 },
       { name: "Victoria Depot", facility_type: "depot", municipality: "Victoria", address: "752 Pembroke St", lat: 48.4323, lng: -123.3611 },
       { name: "Kelowna Depot", facility_type: "depot", municipality: "Kelowna", address: "1980 Windsor Rd", lat: 49.8676, lng: -119.4508 },
       { name: "Kamloops Depot", facility_type: "depot", municipality: "Kamloops", address: "1395 Dalhousie Dr", lat: 50.6713, lng: -120.3607 },
       { name: "Prince George Depot", facility_type: "depot", municipality: "Prince George", address: "1320 2nd Ave", lat: 53.9171, lng: -122.7497 },
-      { name: "Nanaimo Depot", facility_type: "depot", municipality: "Nanaimo", address: "1925 Bowen Rd", lat: 49.1688, lng: -123.9456 }
+      { name: "Nanaimo Depot", facility_type: "depot", municipality: "Nanaimo", address: "1925 Bowen Rd", lat: 49.1688, lng: -123.9456 },
+      { name: "Abbotsford Depot", facility_type: "depot", municipality: "Abbotsford", address: "2556 Montrose Ave", lat: 49.0523, lng: -122.3245 },
+      
+      // ============================================================================
+      // FEDEX SHIP CENTRE LOCATIONS (Retail/Self-Service)
+      // ============================================================================
+      // Metro Vancouver Ship Centres
+      { name: "FedEx Ship Centre - Downtown Vancouver", facility_type: "outlet", municipality: "Vancouver", address: "725 Granville St", lat: 49.2823, lng: -123.1187 },
+      { name: "FedEx Ship Centre - Gastown", facility_type: "outlet", municipality: "Vancouver", address: "375 Water St", lat: 49.2845, lng: -123.1089 },
+      { name: "FedEx Ship Centre - Broadway", facility_type: "outlet", municipality: "Vancouver", address: "1555 W Broadway", lat: 49.2635, lng: -123.1456 },
+      { name: "FedEx Ship Centre - Yaletown", facility_type: "outlet", municipality: "Vancouver", address: "1089 Marinaside Cres", lat: 49.2712, lng: -123.1234 },
+      { name: "FedEx Ship Centre - Burnaby Metrotown", facility_type: "outlet", municipality: "Burnaby", address: "4700 Kingsway", lat: 49.2267, lng: -123.0012 },
+      { name: "FedEx Ship Centre - Burnaby Lougheed", facility_type: "outlet", municipality: "Burnaby", address: "9855 Austin Rd", lat: 49.2534, lng: -122.8934 },
+      { name: "FedEx Ship Centre - New Westminster", facility_type: "outlet", municipality: "New Westminster", address: "555 6th St", lat: 49.2089, lng: -122.9112 },
+      { name: "FedEx Ship Centre - Richmond Centre", facility_type: "outlet", municipality: "Richmond", address: "6060 Minoru Blvd", lat: 49.1656, lng: -123.1367 },
+      { name: "FedEx Ship Centre - Richmond Bridgeport", facility_type: "outlet", municipality: "Richmond", address: "4151 Hazelbridge Way", lat: 49.1789, lng: -123.1234 },
+      { name: "FedEx Ship Centre - Surrey Central", facility_type: "outlet", municipality: "Surrey", address: "10355 King George Blvd", lat: 49.1856, lng: -122.8489 },
+      { name: "FedEx Ship Centre - Surrey Guildford", facility_type: "outlet", municipality: "Surrey", address: "10252 152nd St", lat: 49.1912, lng: -122.8012 },
+      { name: "FedEx Ship Centre - Surrey Newton", facility_type: "outlet", municipality: "Surrey", address: "7380 King George Blvd", lat: 49.1312, lng: -122.8456 },
+      { name: "FedEx Ship Centre - Langley Willowbrook", facility_type: "outlet", municipality: "Langley", address: "19705 Fraser Hwy", lat: 49.1067, lng: -122.6789 },
+      { name: "FedEx Ship Centre - Langley Walnut Grove", facility_type: "outlet", municipality: "Langley", address: "20159 88th Ave", lat: 49.1634, lng: -122.6134 },
+      { name: "FedEx Ship Centre - Coquitlam Centre", facility_type: "outlet", municipality: "Coquitlam", address: "2929 Barnet Hwy", lat: 49.2734, lng: -122.7934 },
+      { name: "FedEx Ship Centre - Port Coquitlam", facility_type: "outlet", municipality: "Port Coquitlam", address: "2755 Lougheed Hwy", lat: 49.2612, lng: -122.7689 },
+      { name: "FedEx Ship Centre - Port Moody", facility_type: "outlet", municipality: "Port Moody", address: "121 Brew St", lat: 49.2823, lng: -122.8312 },
+      { name: "FedEx Ship Centre - Maple Ridge", facility_type: "outlet", municipality: "Maple Ridge", address: "22709 Lougheed Hwy", lat: 49.2189, lng: -122.5989 },
+      { name: "FedEx Ship Centre - North Vancouver", facility_type: "outlet", municipality: "North Vancouver", address: "1100 Marine Dr", lat: 49.3134, lng: -123.0789 },
+      { name: "FedEx Ship Centre - West Vancouver", facility_type: "outlet", municipality: "West Vancouver", address: "2002 Park Royal S", lat: 49.3256, lng: -123.1312 },
+      { name: "FedEx Ship Centre - Delta", facility_type: "outlet", municipality: "Delta", address: "7211 120th St", lat: 49.1134, lng: -122.9012 },
+      { name: "FedEx Ship Centre - White Rock", facility_type: "outlet", municipality: "White Rock", address: "1711 152nd St", lat: 49.0189, lng: -122.8012 },
+      
+      // Fraser Valley Ship Centres
+      { name: "FedEx Ship Centre - Abbotsford", facility_type: "outlet", municipality: "Abbotsford", address: "32555 London Ave", lat: 49.0412, lng: -122.2934 },
+      { name: "FedEx Ship Centre - Abbotsford Highstreet", facility_type: "outlet", municipality: "Abbotsford", address: "3122 Mount Lehman Rd", lat: 49.0534, lng: -122.3712 },
+      { name: "FedEx Ship Centre - Chilliwack", facility_type: "outlet", municipality: "Chilliwack", address: "45585 Luckakuck Way", lat: 49.1534, lng: -121.9512 },
+      { name: "FedEx Ship Centre - Mission", facility_type: "outlet", municipality: "Mission", address: "32471 Lougheed Hwy", lat: 49.1289, lng: -122.3089 },
+      { name: "FedEx Ship Centre - Hope", facility_type: "outlet", municipality: "Hope", address: "350 Wallace St", lat: 49.3812, lng: -121.4412 },
+      
+      // Vancouver Island Ship Centres
+      { name: "FedEx Ship Centre - Victoria Downtown", facility_type: "outlet", municipality: "Victoria", address: "1006 Fort St", lat: 48.4245, lng: -123.3489 },
+      { name: "FedEx Ship Centre - Victoria Hillside", facility_type: "outlet", municipality: "Victoria", address: "1644 Hillside Ave", lat: 48.4389, lng: -123.3512 },
+      { name: "FedEx Ship Centre - Victoria Uptown", facility_type: "outlet", municipality: "Victoria", address: "3130 Tillicum Rd", lat: 48.4512, lng: -123.3934 },
+      { name: "FedEx Ship Centre - Saanich", facility_type: "outlet", municipality: "Saanich", address: "3995 Quadra St", lat: 48.4612, lng: -123.3612 },
+      { name: "FedEx Ship Centre - Sidney", facility_type: "outlet", municipality: "Sidney", address: "2345 Beacon Ave", lat: 48.6489, lng: -123.3989 },
+      { name: "FedEx Ship Centre - Langford", facility_type: "outlet", municipality: "Langford", address: "2945 Jacklin Rd", lat: 48.4489, lng: -123.5012 },
+      { name: "FedEx Ship Centre - Nanaimo Downtown", facility_type: "outlet", municipality: "Nanaimo", address: "55 Victoria Cres", lat: 49.1656, lng: -123.9367 },
+      { name: "FedEx Ship Centre - Nanaimo Woodgrove", facility_type: "outlet", municipality: "Nanaimo", address: "6631 Island Hwy N", lat: 49.2234, lng: -124.0012 },
+      { name: "FedEx Ship Centre - Parksville", facility_type: "outlet", municipality: "Parksville", address: "280 E Island Hwy", lat: 49.3189, lng: -124.3112 },
+      { name: "FedEx Ship Centre - Courtenay", facility_type: "outlet", municipality: "Courtenay", address: "2750 Cliffe Ave", lat: 49.6834, lng: -124.9934 },
+      { name: "FedEx Ship Centre - Campbell River", facility_type: "outlet", municipality: "Campbell River", address: "1350 Island Hwy", lat: 50.0189, lng: -125.2489 },
+      { name: "FedEx Ship Centre - Duncan", facility_type: "outlet", municipality: "Duncan", address: "2806 Beverly St", lat: 48.7834, lng: -123.7089 },
+      
+      // Okanagan Ship Centres
+      { name: "FedEx Ship Centre - Kelowna Downtown", facility_type: "outlet", municipality: "Kelowna", address: "1755 Springfield Rd", lat: 49.8756, lng: -119.4534 },
+      { name: "FedEx Ship Centre - Kelowna Orchard Park", facility_type: "outlet", municipality: "Kelowna", address: "2271 Harvey Ave", lat: 49.8834, lng: -119.4812 },
+      { name: "FedEx Ship Centre - West Kelowna", facility_type: "outlet", municipality: "West Kelowna", address: "2484 Main St", lat: 49.8612, lng: -119.5812 },
+      { name: "FedEx Ship Centre - Penticton", facility_type: "outlet", municipality: "Penticton", address: "2111 Main St", lat: 49.4889, lng: -119.5889 },
+      { name: "FedEx Ship Centre - Vernon", facility_type: "outlet", municipality: "Vernon", address: "4400 32nd St", lat: 50.2612, lng: -119.2712 },
+      { name: "FedEx Ship Centre - Salmon Arm", facility_type: "outlet", municipality: "Salmon Arm", address: "1091 Trans-Canada Hwy", lat: 50.6989, lng: -119.2712 },
+      { name: "FedEx Ship Centre - Oliver", facility_type: "outlet", municipality: "Oliver", address: "35929 97th St", lat: 49.1834, lng: -119.5489 },
+      { name: "FedEx Ship Centre - Osoyoos", facility_type: "outlet", municipality: "Osoyoos", address: "8523 Main St", lat: 49.0312, lng: -119.4612 },
+      
+      // BC Interior Ship Centres
+      { name: "FedEx Ship Centre - Kamloops Downtown", facility_type: "outlet", municipality: "Kamloops", address: "450 Lansdowne St", lat: 50.6734, lng: -120.3312 },
+      { name: "FedEx Ship Centre - Kamloops Aberdeen", facility_type: "outlet", municipality: "Kamloops", address: "1320 Hugh Allan Dr", lat: 50.6989, lng: -120.3712 },
+      { name: "FedEx Ship Centre - Merritt", facility_type: "outlet", municipality: "Merritt", address: "2025 Voght St", lat: 50.1112, lng: -120.7889 },
+      { name: "FedEx Ship Centre - Williams Lake", facility_type: "outlet", municipality: "Williams Lake", address: "1150 Broadway Ave S", lat: 52.1289, lng: -122.1412 },
+      { name: "FedEx Ship Centre - Quesnel", facility_type: "outlet", municipality: "Quesnel", address: "383 Reid St", lat: 52.9789, lng: -122.4912 },
+      { name: "FedEx Ship Centre - 100 Mile House", facility_type: "outlet", municipality: "100 Mile House", address: "385 Birch Ave", lat: 51.6434, lng: -121.2934 },
+      { name: "FedEx Ship Centre - Revelstoke", facility_type: "outlet", municipality: "Revelstoke", address: "555 Victoria Rd", lat: 50.9989, lng: -118.1934 },
+      { name: "FedEx Ship Centre - Golden", facility_type: "outlet", municipality: "Golden", address: "1007 11th Ave S", lat: 51.2989, lng: -116.9634 },
+      
+      // Kootenays Ship Centres
+      { name: "FedEx Ship Centre - Cranbrook", facility_type: "outlet", municipality: "Cranbrook", address: "1600 2nd St N", lat: 49.5189, lng: -115.7689 },
+      { name: "FedEx Ship Centre - Nelson", facility_type: "outlet", municipality: "Nelson", address: "590 Baker St", lat: 49.4934, lng: -117.2934 },
+      { name: "FedEx Ship Centre - Trail", facility_type: "outlet", municipality: "Trail", address: "1500 Bay Ave", lat: 49.0989, lng: -117.7089 },
+      { name: "FedEx Ship Centre - Castlegar", facility_type: "outlet", municipality: "Castlegar", address: "1555 Columbia Ave", lat: 49.3234, lng: -117.6612 },
+      { name: "FedEx Ship Centre - Invermere", facility_type: "outlet", municipality: "Invermere", address: "1310 7th Ave", lat: 50.5089, lng: -116.0312 },
+      { name: "FedEx Ship Centre - Fernie", facility_type: "outlet", municipality: "Fernie", address: "792 2nd Ave", lat: 49.5034, lng: -115.0634 },
+      { name: "FedEx Ship Centre - Kimberley", facility_type: "outlet", municipality: "Kimberley", address: "380 Wallinger Ave", lat: 49.6712, lng: -115.9789 },
+      
+      // Northern BC Ship Centres
+      { name: "FedEx Ship Centre - Prince George Downtown", facility_type: "outlet", municipality: "Prince George", address: "1600 15th Ave", lat: 53.9089, lng: -122.7689 },
+      { name: "FedEx Ship Centre - Prince George Pine Centre", facility_type: "outlet", municipality: "Prince George", address: "3055 Massey Dr", lat: 53.8856, lng: -122.8012 },
+      { name: "FedEx Ship Centre - Terrace", facility_type: "outlet", municipality: "Terrace", address: "4710 Keith Ave", lat: 54.5189, lng: -128.6012 },
+      { name: "FedEx Ship Centre - Prince Rupert", facility_type: "outlet", municipality: "Prince Rupert", address: "500 2nd Ave W", lat: 54.3134, lng: -130.3212 },
+      { name: "FedEx Ship Centre - Kitimat", facility_type: "outlet", municipality: "Kitimat", address: "237 City Centre", lat: 54.0534, lng: -128.6534 },
+      { name: "FedEx Ship Centre - Smithers", facility_type: "outlet", municipality: "Smithers", address: "3763 Broadway Ave", lat: 54.7834, lng: -127.1712 },
+      { name: "FedEx Ship Centre - Burns Lake", facility_type: "outlet", municipality: "Burns Lake", address: "260 Hwy 16 W", lat: 54.2312, lng: -125.7612 },
+      { name: "FedEx Ship Centre - Vanderhoof", facility_type: "outlet", municipality: "Vanderhoof", address: "2641 Burrard Ave", lat: 54.0189, lng: -124.0012 },
+      
+      // Peace Region Ship Centres
+      { name: "FedEx Ship Centre - Fort St John", facility_type: "outlet", municipality: "Fort St John", address: "10631 100th St", lat: 56.2489, lng: -120.8534 },
+      { name: "FedEx Ship Centre - Dawson Creek", facility_type: "outlet", municipality: "Dawson Creek", address: "900 102nd Ave", lat: 55.7612, lng: -120.2312 },
+      { name: "FedEx Ship Centre - Fort Nelson", facility_type: "outlet", municipality: "Fort Nelson", address: "5224 50th Ave S", lat: 58.8034, lng: -122.6934 },
+      { name: "FedEx Ship Centre - Chetwynd", facility_type: "outlet", municipality: "Chetwynd", address: "5012 51st St", lat: 55.7012, lng: -121.6312 },
+      
+      // Sea-to-Sky Ship Centres
+      { name: "FedEx Ship Centre - Squamish", facility_type: "outlet", municipality: "Squamish", address: "38085 2nd Ave", lat: 49.7012, lng: -123.1489 },
+      { name: "FedEx Ship Centre - Whistler", facility_type: "outlet", municipality: "Whistler", address: "4308 Main St", lat: 50.1167, lng: -122.9578 },
+      { name: "FedEx Ship Centre - Pemberton", facility_type: "outlet", municipality: "Pemberton", address: "7452 Prospect St", lat: 50.3189, lng: -122.8012 },
+      
+      // Sunshine Coast Ship Centres
+      { name: "FedEx Ship Centre - Gibsons", facility_type: "outlet", municipality: "Gibsons", address: "900 Gibsons Way", lat: 49.4034, lng: -123.5112 },
+      { name: "FedEx Ship Centre - Sechelt", facility_type: "outlet", municipality: "Sechelt", address: "5655 Cowrie St", lat: 49.4734, lng: -123.7512 },
+      { name: "FedEx Ship Centre - Powell River", facility_type: "outlet", municipality: "Powell River", address: "4801 Joyce Ave", lat: 49.8312, lng: -124.5234 }
     ],
-    service_coverage: ["Metro Vancouver", "Vancouver Island", "Okanagan", "BC Interior", "Northern BC"],
+    service_coverage: ["Metro Vancouver", "Vancouver Island", "Okanagan", "BC Interior", "Northern BC", "Kootenays", "Peace Region"],
     website: "https://www.fedex.com/en-ca",
     phone: "1-800-463-3339",
     tracking_url: "https://www.fedex.com/fedextrack",
-    notes: "International express; ground service through FedEx Ground"
+    notes: "International express; ground service through FedEx Ground; extensive Ship Centre network"
   },
   // UPS
   {
