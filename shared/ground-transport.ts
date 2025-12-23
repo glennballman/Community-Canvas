@@ -30,6 +30,32 @@ export type CourierServiceType =
   | "freight"        // Freight/LTL carrier with parcel service
   | "same_day";      // Same-day delivery service
 
+export type RailServiceType =
+  | "class_1_freight"  // CN, CP - Class I freight railroads
+  | "shortline"        // Regional/shortline freight railroads
+  | "passenger"        // VIA Rail intercity passenger
+  | "commuter"         // West Coast Express commuter rail
+  | "tourist";         // Rocky Mountaineer, heritage railways
+
+export interface RailService {
+  id: string;
+  name: string;
+  type: RailServiceType;
+  stations: {
+    name: string;
+    station_type: "major_yard" | "intermodal" | "passenger_station" | "freight_depot" | "heritage";
+    municipality: string;
+    subdivision?: string;  // Railway subdivision name
+    lat: number;
+    lng: number;
+  }[];
+  routes: string[];
+  service_coverage: string[];
+  website?: string;
+  phone?: string;
+  notes?: string;
+}
+
 export interface IntercityBusService {
   id: string;
   name: string;
@@ -1442,6 +1468,205 @@ export const BC_TRUCKING_SERVICES: TruckingService[] = [
   }
 ];
 
+// ============================================================================
+// RAIL SERVICES - Freight, Passenger, and Tourist Railways
+// ============================================================================
+
+export const BC_RAIL_SERVICES: RailService[] = [
+  // Class I Freight Railroads
+  {
+    id: "cn-rail",
+    name: "Canadian National Railway",
+    type: "class_1_freight",
+    stations: [
+      { name: "Thornton Yard", station_type: "major_yard", municipality: "Surrey", subdivision: "Yale", lat: 49.1234, lng: -122.8456 },
+      { name: "Port of Vancouver - Centerm", station_type: "intermodal", municipality: "Vancouver", subdivision: "Burrard Inlet", lat: 49.2847, lng: -123.0714 },
+      { name: "Prince Rupert Fairview Terminal", station_type: "intermodal", municipality: "Prince Rupert", subdivision: "Prince Rupert", lat: 54.3150, lng: -130.3210 },
+      { name: "Kamloops Yard", station_type: "major_yard", municipality: "Kamloops", subdivision: "Clearwater", lat: 50.6745, lng: -120.3456 },
+      { name: "Prince George Yard", station_type: "major_yard", municipality: "Prince George", subdivision: "Fraser", lat: 53.9045, lng: -122.7934 },
+      { name: "Boston Bar", station_type: "freight_depot", municipality: "Boston Bar", subdivision: "Yale", lat: 49.8667, lng: -121.4500 },
+      { name: "Burns Lake", station_type: "freight_depot", municipality: "Burns Lake", subdivision: "Bulkley", lat: 54.2300, lng: -125.7600 },
+      { name: "Fort St James", station_type: "freight_depot", municipality: "Fort St James", subdivision: "Takla", lat: 54.4333, lng: -124.2500 }
+    ],
+    routes: [
+      "Vancouver - Prince Rupert (Northern Mainline)",
+      "Vancouver - Edmonton via Yellowhead Pass",
+      "Vancouver - Kamloops - Calgary",
+      "Prince George - Fort Nelson"
+    ],
+    service_coverage: ["Province-wide", "Gateway to Asia-Pacific via Prince Rupert"],
+    website: "https://www.cn.ca",
+    phone: "1-888-668-4626",
+    notes: "Major freight carrier; operates former BC Rail network north of Prince George"
+  },
+  {
+    id: "cp-rail",
+    name: "Canadian Pacific Kansas City",
+    type: "class_1_freight",
+    stations: [
+      { name: "Coquitlam Yard", station_type: "major_yard", municipality: "Coquitlam", subdivision: "Cascade", lat: 49.2456, lng: -122.8567 },
+      { name: "Vancouver Intermodal", station_type: "intermodal", municipality: "Vancouver", subdivision: "Cascade", lat: 49.2678, lng: -123.0234 },
+      { name: "Kamloops Yard", station_type: "major_yard", municipality: "Kamloops", subdivision: "Thompson", lat: 50.6734, lng: -120.3234 },
+      { name: "Golden Yard", station_type: "freight_depot", municipality: "Golden", subdivision: "Mountain", lat: 51.2978, lng: -116.9634 },
+      { name: "Revelstoke Yard", station_type: "freight_depot", municipality: "Revelstoke", subdivision: "Mountain", lat: 50.9981, lng: -118.1957 },
+      { name: "Field", station_type: "freight_depot", municipality: "Field", subdivision: "Mountain", lat: 51.3978, lng: -116.4856 }
+    ],
+    routes: [
+      "Vancouver - Calgary via Rogers Pass",
+      "Vancouver - Kamloops - Calgary Mainline"
+    ],
+    service_coverage: ["Southern BC Mainline", "Trans-Canada Route"],
+    website: "https://www.cpkcr.com",
+    phone: "1-888-333-6370",
+    notes: "Major transcontinental freight; merged with Kansas City Southern 2023"
+  },
+  // Shortline/Regional Railways
+  {
+    id: "southern-railway-bc",
+    name: "Southern Railway of BC",
+    type: "shortline",
+    stations: [
+      { name: "New Westminster Yard", station_type: "freight_depot", municipality: "New Westminster", lat: 49.2057, lng: -122.9110 },
+      { name: "Huntingdon", station_type: "freight_depot", municipality: "Abbotsford", lat: 49.0020, lng: -122.2650 },
+      { name: "Cloverdale Yard", station_type: "freight_depot", municipality: "Surrey", lat: 49.1015, lng: -122.7234 }
+    ],
+    routes: [
+      "New Westminster - Huntingdon (BNSF interchange)",
+      "Fraser Valley industrial switching"
+    ],
+    service_coverage: ["Fraser Valley", "New Westminster", "US Border interchange"],
+    website: "https://www.gwrr.com",
+    notes: "Genesee & Wyoming subsidiary; serves Fraser Valley industrial customers"
+  },
+  {
+    id: "kelowna-pacific",
+    name: "Kelowna Pacific Railway",
+    type: "shortline",
+    stations: [
+      { name: "Kelowna Yard", station_type: "freight_depot", municipality: "Kelowna", lat: 49.8834, lng: -119.4956 },
+      { name: "Vernon Yard", station_type: "freight_depot", municipality: "Vernon", lat: 50.2634, lng: -119.2723 },
+      { name: "Armstrong", station_type: "freight_depot", municipality: "Armstrong", lat: 50.4489, lng: -119.1978 }
+    ],
+    routes: [
+      "Kelowna - Kamloops (CN interchange)"
+    ],
+    service_coverage: ["Okanagan Valley", "North Okanagan"],
+    website: "https://www.gwrr.com",
+    notes: "Genesee & Wyoming subsidiary; serves Okanagan agricultural and industrial customers"
+  },
+  // Passenger Rail
+  {
+    id: "via-rail",
+    name: "VIA Rail Canada",
+    type: "passenger",
+    stations: [
+      { name: "Pacific Central Station", station_type: "passenger_station", municipality: "Vancouver", lat: 49.2735, lng: -123.0978 },
+      { name: "Kamloops Station", station_type: "passenger_station", municipality: "Kamloops", lat: 50.6745, lng: -120.3273 },
+      { name: "Jasper Station", station_type: "passenger_station", municipality: "Jasper", lat: 52.8737, lng: -118.0814 },
+      { name: "Prince Rupert Station", station_type: "passenger_station", municipality: "Prince Rupert", lat: 54.3150, lng: -130.3256 },
+      { name: "Prince George Station", station_type: "passenger_station", municipality: "Prince George", lat: 53.9045, lng: -122.7934 }
+    ],
+    routes: [
+      "The Canadian: Vancouver - Toronto (via Jasper, Edmonton)",
+      "Jasper - Prince Rupert (Skeena)"
+    ],
+    service_coverage: ["Vancouver", "Kamloops", "Jasper", "Prince George", "Prince Rupert"],
+    website: "https://www.viarail.ca",
+    phone: "1-888-842-7245",
+    notes: "National passenger rail; scenic routes through Rockies and Northern BC"
+  },
+  // Commuter Rail
+  {
+    id: "west-coast-express",
+    name: "West Coast Express",
+    type: "commuter",
+    stations: [
+      { name: "Waterfront Station", station_type: "passenger_station", municipality: "Vancouver", lat: 49.2856, lng: -123.1115 },
+      { name: "Port Moody Station", station_type: "passenger_station", municipality: "Port Moody", lat: 49.2789, lng: -122.8567 },
+      { name: "Coquitlam Central", station_type: "passenger_station", municipality: "Coquitlam", lat: 49.2739, lng: -122.7932 },
+      { name: "Port Coquitlam Station", station_type: "passenger_station", municipality: "Port Coquitlam", lat: 49.2620, lng: -122.7645 },
+      { name: "Pitt Meadows Station", station_type: "passenger_station", municipality: "Pitt Meadows", lat: 49.2233, lng: -122.6890 },
+      { name: "Maple Meadows Station", station_type: "passenger_station", municipality: "Maple Ridge", lat: 49.2156, lng: -122.6534 },
+      { name: "Port Haney Station", station_type: "passenger_station", municipality: "Maple Ridge", lat: 49.2234, lng: -122.6178 },
+      { name: "Mission City Station", station_type: "passenger_station", municipality: "Mission", lat: 49.1330, lng: -122.3089 }
+    ],
+    routes: [
+      "Waterfront Vancouver - Mission City"
+    ],
+    service_coverage: ["Metro Vancouver", "Fraser Valley"],
+    website: "https://www.translink.ca/wce",
+    phone: "604-488-8906",
+    notes: "Peak-hour commuter service; operated by TransLink; 68km route"
+  },
+  // Tourist Railways
+  {
+    id: "rocky-mountaineer",
+    name: "Rocky Mountaineer",
+    type: "tourist",
+    stations: [
+      { name: "Vancouver Terminal", station_type: "passenger_station", municipality: "Vancouver", lat: 49.2892, lng: -123.0456 },
+      { name: "Kamloops Overnight", station_type: "passenger_station", municipality: "Kamloops", lat: 50.6745, lng: -120.3273 },
+      { name: "Whistler Station", station_type: "passenger_station", municipality: "Whistler", lat: 50.1163, lng: -122.9574 },
+      { name: "Quesnel Station", station_type: "passenger_station", municipality: "Quesnel", lat: 52.9784, lng: -122.4934 },
+      { name: "Jasper Station", station_type: "passenger_station", municipality: "Jasper", lat: 52.8737, lng: -118.0814 }
+    ],
+    routes: [
+      "First Passage to the West: Vancouver - Banff/Lake Louise",
+      "Journey Through the Clouds: Vancouver - Jasper",
+      "Rainforest to Gold Rush: Vancouver - Jasper via Whistler/Quesnel"
+    ],
+    service_coverage: ["Vancouver", "Kamloops", "Whistler", "Quesnel", "Jasper", "Banff"],
+    website: "https://www.rockymountaineer.com",
+    phone: "1-877-460-3200",
+    notes: "Luxury daylight-only scenic rail; April-October season"
+  },
+  {
+    id: "kettle-valley-steam",
+    name: "Kettle Valley Steam Railway",
+    type: "tourist",
+    stations: [
+      { name: "Prairie Valley Station", station_type: "heritage", municipality: "Summerland", lat: 49.6012, lng: -119.6678 }
+    ],
+    routes: [
+      "Summerland - Prairie Valley (Heritage route)"
+    ],
+    service_coverage: ["Summerland", "South Okanagan"],
+    website: "https://www.kettlevalleyrail.org",
+    phone: "250-494-8422",
+    notes: "Heritage railway; restored 1912 steam locomotive; seasonal operation"
+  },
+  {
+    id: "alberni-pacific",
+    name: "Alberni Pacific Railway",
+    type: "tourist",
+    stations: [
+      { name: "Port Alberni Station", station_type: "heritage", municipality: "Port Alberni", lat: 49.2339, lng: -124.8053 },
+      { name: "McLean Mill", station_type: "heritage", municipality: "Port Alberni", lat: 49.2456, lng: -124.8234 }
+    ],
+    routes: [
+      "Port Alberni - McLean Mill (Heritage logging railway)"
+    ],
+    service_coverage: ["Port Alberni", "Alberni Valley"],
+    website: "https://www.alberniheritage.com",
+    phone: "250-723-2118",
+    notes: "Historic logging railway; 1929 Baldwin steam locomotive"
+  },
+  {
+    id: "kamloops-heritage",
+    name: "Kamloops Heritage Railway",
+    type: "tourist",
+    stations: [
+      { name: "Kamloops Station", station_type: "heritage", municipality: "Kamloops", lat: 50.6745, lng: -120.3273 }
+    ],
+    routes: [
+      "Kamloops city excursions (Spirit of Kamloops)"
+    ],
+    service_coverage: ["Kamloops"],
+    website: "https://www.kamloopsheritagerailway.com",
+    notes: "2141 Steam locomotive excursions; seasonal"
+  }
+];
+
 // Helper function to get all ground transport by municipality
 export function getGroundTransportByMunicipality(municipality: string): {
   intercityBus: IntercityBusService[];
@@ -1449,6 +1674,7 @@ export function getGroundTransportByMunicipality(municipality: string): {
   charterBus: CharterBusOperator[];
   courierServices: CourierService[];
   truckingServices: TruckingService[];
+  railServices: RailService[];
 } {
   const normalizedMuni = municipality.toLowerCase();
   
@@ -1470,6 +1696,10 @@ export function getGroundTransportByMunicipality(municipality: string): {
     truckingServices: BC_TRUCKING_SERVICES.filter(service =>
       service.terminals.some(t => t.municipality.toLowerCase() === normalizedMuni) ||
       service.service_coverage.some(area => area.toLowerCase().includes(normalizedMuni))
+    ),
+    railServices: BC_RAIL_SERVICES.filter(service =>
+      service.stations.some(s => s.municipality.toLowerCase() === normalizedMuni) ||
+      service.service_coverage.some(area => area.toLowerCase().includes(normalizedMuni))
     )
   };
 }
@@ -1490,6 +1720,11 @@ export function getGroundTransportStats() {
     truckingServices: BC_TRUCKING_SERVICES.length,
     truckingTerminals: BC_TRUCKING_SERVICES.reduce((sum, s) => sum + s.terminals.length, 0),
     fuelDistributors: BC_TRUCKING_SERVICES.filter(s => s.type === 'fuel').length,
-    foodDistributors: BC_TRUCKING_SERVICES.filter(s => s.type === 'food').length
+    foodDistributors: BC_TRUCKING_SERVICES.filter(s => s.type === 'food').length,
+    railServices: BC_RAIL_SERVICES.length,
+    railStations: BC_RAIL_SERVICES.reduce((sum, s) => sum + s.stations.length, 0),
+    freightRailways: BC_RAIL_SERVICES.filter(s => s.type === 'class_1_freight' || s.type === 'shortline').length,
+    passengerRailways: BC_RAIL_SERVICES.filter(s => s.type === 'passenger' || s.type === 'commuter').length,
+    touristRailways: BC_RAIL_SERVICES.filter(s => s.type === 'tourist').length
   };
 }

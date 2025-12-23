@@ -68,6 +68,12 @@ Located in `shared/` directory with GPS coordinates and geographic correlation:
     - Logging/forestry (Arrow Transportation, Teal-Jones)
     - Aggregate/construction (Jack Cewe, Ocean Concrete)
     - Hazmat/propane (Trimac, Superior Propane)
+  - **Rail**: 10 railway operators with 40+ stations including:
+    - Class I freight (CN Rail, CP Kansas City) with major yards and intermodal terminals
+    - Shortline railways (Southern Railway of BC, Kelowna Pacific Railway)
+    - Passenger rail (VIA Rail - The Canadian, Skeena routes)
+    - Commuter rail (West Coast Express - Vancouver to Mission)
+    - Tourist/heritage railways (Rocky Mountaineer, Kettle Valley Steam, Alberni Pacific, Kamloops Heritage)
 
 ### Key Design Patterns
 - **Shared Types**: Schema definitions in `shared/` directory used by both client and server

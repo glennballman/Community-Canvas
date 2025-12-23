@@ -41,15 +41,18 @@ import {
   BC_CHARTER_BUS,
   BC_COURIER_SERVICES,
   BC_TRUCKING_SERVICES,
+  BC_RAIL_SERVICES,
   type IntercityBusService,
   type TransitSystem,
   type CharterBusOperator,
   type CourierService,
   type TruckingService,
+  type RailService,
   type IntercityBusType,
   type TransitSystemType,
   type CharterBusType,
-  type CourierServiceType
+  type CourierServiceType,
+  type RailServiceType
 } from "@shared/ground-transport";
 import { Fuel, Apple, Container, TreePine, Snowflake } from "lucide-react";
 import { GEO_HIERARCHY, type GeoNode } from "@shared/geography";
@@ -334,6 +337,10 @@ interface TruckingWithMatch extends TruckingService {
   matchedMunicipalities: GeoNode[];
 }
 
+interface RailWithMatch extends RailService {
+  matchedMunicipalities: GeoNode[];
+}
+
 export default function AdminInfrastructure() {
   const [airportSearch, setAirportSearch] = useState("");
   const [weatherSearch, setWeatherSearch] = useState("");
@@ -343,7 +350,7 @@ export default function AdminInfrastructure() {
   const [policeSearch, setPoliceSearch] = useState("");
   const [sarSearch, setSarSearch] = useState("");
   const [groundSearch, setGroundSearch] = useState("");
-  const [groundSubTab, setGroundSubTab] = useState<"intercity" | "transit" | "charter" | "courier" | "trucking">("intercity");
+  const [groundSubTab, setGroundSubTab] = useState<"intercity" | "transit" | "charter" | "courier" | "trucking" | "rail">("intercity");
   const [activeTab, setActiveTab] = useState("airports");
 
   const airportsWithMatches: AirportWithMatch[] = useMemo(() => {
@@ -447,6 +454,15 @@ export default function AdminInfrastructure() {
       ...service,
       matchedMunicipalities: service.terminals
         .map(t => findMatchingMunicipality(t.municipality))
+        .filter((m): m is GeoNode => m !== null),
+    }));
+  }, []);
+
+  const railWithMatches: RailWithMatch[] = useMemo(() => {
+    return BC_RAIL_SERVICES.map(service => ({
+      ...service,
+      matchedMunicipalities: service.stations
+        .map(s => findMatchingMunicipality(s.municipality))
         .filter((m): m is GeoNode => m !== null),
     }));
   }, []);
@@ -608,6 +624,19 @@ export default function AdminInfrastructure() {
     );
   }, [truckingWithMatches, groundSearch]);
 
+  const filteredRail = useMemo(() => {
+    if (!groundSearch) return railWithMatches;
+    const search = groundSearch.toLowerCase();
+    return railWithMatches.filter(s => 
+      s.name.toLowerCase().includes(search) ||
+      s.stations.some(st => st.name.toLowerCase().includes(search) || st.municipality.toLowerCase().includes(search)) ||
+      s.routes.some(r => r.toLowerCase().includes(search)) ||
+      s.service_coverage.some(c => c.toLowerCase().includes(search)) ||
+      s.type.toLowerCase().includes(search) ||
+      s.notes?.toLowerCase().includes(search)
+    );
+  }, [railWithMatches, groundSearch]);
+
   const airportStats = useMemo(() => {
     const matched = airportsWithMatches.filter(a => a.matchedMunicipality).length;
     const regionOnly = airportsWithMatches.filter(a => !a.matchedMunicipality && a.matchedRegion).length;
@@ -689,6 +718,7 @@ export default function AdminInfrastructure() {
     const charterMatched = charterWithMatches.filter(o => o.matchedMunicipality).length;
     const courierMatched = courierWithMatches.filter(s => s.matchedMunicipalities.length > 0).length;
     const truckingMatched = truckingWithMatches.filter(s => s.matchedMunicipalities.length > 0).length;
+    const railMatched = railWithMatches.filter(s => s.matchedMunicipalities.length > 0).length;
     const totalHubs = intercityBusWithMatches.reduce((sum, s) => sum + s.hubs.length, 0);
     const totalMunis = Array.from(new Set(transitWithMatches.flatMap(s => s.municipalities_served))).length;
     const schoolBus = charterWithMatches.filter(o => o.type === 'school').length;
@@ -698,6 +728,10 @@ export default function AdminInfrastructure() {
     const truckingTerminals = truckingWithMatches.reduce((sum, s) => sum + s.terminals.length, 0);
     const fuelDistributors = truckingWithMatches.filter(s => s.type === 'fuel').length;
     const foodDistributors = truckingWithMatches.filter(s => s.type === 'food').length;
+    const railStations = railWithMatches.reduce((sum, s) => sum + s.stations.length, 0);
+    const freightRails = railWithMatches.filter(s => s.type === 'class_1_freight' || s.type === 'shortline').length;
+    const passengerRails = railWithMatches.filter(s => s.type === 'passenger' || s.type === 'commuter').length;
+    const touristRails = railWithMatches.filter(s => s.type === 'tourist').length;
     return {
       intercityServices: intercityBusWithMatches.length,
       intercityHubs: totalHubs,
@@ -718,9 +752,15 @@ export default function AdminInfrastructure() {
       truckingTerminals,
       fuelDistributors,
       foodDistributors,
-      total: intercityBusWithMatches.length + transitWithMatches.length + charterWithMatches.length + courierWithMatches.length + truckingWithMatches.length
+      railServices: railWithMatches.length,
+      railMatched,
+      railStations,
+      freightRails,
+      passengerRails,
+      touristRails,
+      total: intercityBusWithMatches.length + transitWithMatches.length + charterWithMatches.length + courierWithMatches.length + truckingWithMatches.length + railWithMatches.length
     };
-  }, [intercityBusWithMatches, transitWithMatches, charterWithMatches, courierWithMatches, truckingWithMatches]);
+  }, [intercityBusWithMatches, transitWithMatches, charterWithMatches, courierWithMatches, truckingWithMatches, railWithMatches]);
 
   return (
     <div className="h-full flex flex-col font-mono">
@@ -1529,6 +1569,16 @@ export default function AdminInfrastructure() {
                 <Fuel className="w-2.5 h-2.5 mr-1" />
                 TRUCKING ({groundStats.truckingServices})
               </Button>
+              <Button
+                size="sm"
+                variant={groundSubTab === "rail" ? "default" : "outline"}
+                className="text-[9px] h-7"
+                onClick={() => setGroundSubTab("rail")}
+                data-testid="button-ground-subtab-rail"
+              >
+                <Train className="w-2.5 h-2.5 mr-1" />
+                RAIL ({groundStats.railServices})
+              </Button>
             </div>
           </div>
 
@@ -2020,6 +2070,107 @@ export default function AdminInfrastructure() {
                             <div className="flex items-center gap-1 text-green-400">
                               <CheckCircle className="w-3 h-3" />
                               <span>{service.matchedMunicipalities.length} of {service.terminals.length}</span>
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground/50">-</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </ScrollArea>
+          )}
+
+          {groundSubTab === "rail" && (
+            <ScrollArea className="flex-1">
+              <div className="p-2">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="border-b border-border/30 text-muted-foreground">
+                      <th className="text-left py-2 px-2 font-medium">TYPE</th>
+                      <th className="text-left py-2 px-2 font-medium">RAILWAY</th>
+                      <th className="text-left py-2 px-2 font-medium">STATIONS</th>
+                      <th className="text-left py-2 px-2 font-medium">ROUTES</th>
+                      <th className="text-left py-2 px-2 font-medium">MATCHED</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredRail.map(service => (
+                      <tr key={service.id} className="border-b border-border/20 hover:bg-muted/20">
+                        <td className="py-2 px-2">
+                          <Badge 
+                            variant="outline" 
+                            className={`text-[9px] ${
+                              service.type === 'class_1_freight' ? 'bg-blue-500/20 text-blue-400 border-blue-500/30' :
+                              service.type === 'shortline' ? 'bg-blue-500/20 text-blue-400 border-blue-500/30' :
+                              service.type === 'passenger' ? 'bg-green-500/20 text-green-400 border-green-500/30' :
+                              service.type === 'commuter' ? 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30' :
+                              'bg-purple-500/20 text-purple-400 border-purple-500/30'
+                            }`}
+                          >
+                            {service.type === 'class_1_freight' ? 'CLASS I' :
+                             service.type === 'shortline' ? 'SHORTLINE' :
+                             service.type.toUpperCase()}
+                          </Badge>
+                        </td>
+                        <td className="py-2 px-2">
+                          <div className="flex items-center gap-2">
+                            <Train className={`w-3 h-3 ${
+                              (service.type === 'class_1_freight' || service.type === 'shortline') ? 'text-blue-400' :
+                              service.type === 'passenger' ? 'text-green-400' :
+                              service.type === 'commuter' ? 'text-yellow-400' :
+                              'text-purple-400'
+                            }`} />
+                            <div>
+                              <div className="font-medium text-foreground">{service.name}</div>
+                              {service.website && (
+                                <a 
+                                  href={service.website} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="text-[10px] text-cyan-400 hover:underline"
+                                >
+                                  {service.website.replace('https://', '').replace('http://', '')}
+                                </a>
+                              )}
+                              {service.notes && (
+                                <div className="text-[10px] text-muted-foreground/70">{service.notes}</div>
+                              )}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="py-2 px-2">
+                          <div className="space-y-0.5">
+                            {service.stations.slice(0, 4).map((station, i) => (
+                              <div key={i} className="text-[10px] text-muted-foreground flex items-center gap-1">
+                                <Badge variant="outline" className="text-[8px] px-1">
+                                  {station.station_type.replace('_', ' ').toUpperCase()}
+                                </Badge>
+                                <span>{station.municipality}</span>
+                              </div>
+                            ))}
+                            {service.stations.length > 4 && (
+                              <div className="text-[10px] text-cyan-400">+{service.stations.length - 4} more stations</div>
+                            )}
+                          </div>
+                        </td>
+                        <td className="py-2 px-2">
+                          <div className="space-y-0.5">
+                            {service.routes.slice(0, 3).map((route, i) => (
+                              <div key={i} className="text-[10px] text-muted-foreground">{route}</div>
+                            ))}
+                            {service.routes.length > 3 && (
+                              <div className="text-[10px] text-cyan-400">+{service.routes.length - 3} more routes</div>
+                            )}
+                          </div>
+                        </td>
+                        <td className="py-2 px-2">
+                          {service.matchedMunicipalities.length > 0 ? (
+                            <div className="flex items-center gap-1 text-green-400">
+                              <CheckCircle className="w-3 h-3" />
+                              <span>{service.matchedMunicipalities.length} of {service.stations.length}</span>
                             </div>
                           ) : (
                             <span className="text-muted-foreground/50">-</span>
