@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Globe, ChevronRight, Database, Users, MapPin, ExternalLink } from "lucide-react";
+import { useState, useMemo } from "react";
+import { Globe, ChevronRight, Database, Users, MapPin, ExternalLink, Plane, Cloud, Anchor, Radio } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,8 @@ import {
   type GeoNode 
 } from "@shared/geography";
 import { PROVINCIAL_SOURCES, REGIONAL_SOURCES, MUNICIPAL_SOURCES, ALL_MUNICIPALITIES, getSourcesByTier, type DataSource } from "@shared/sources";
+import { BC_AIRPORTS, getAirportsByMunicipality, getNearestAirports, type Airport } from "@shared/aviation";
+import { BC_WEATHER_STATIONS, getNearestWeatherStationsWithDistance, type WeatherStation, type NearestStationWithDistance } from "@shared/weather-stations";
 
 function Breadcrumb({ nodeId }: { nodeId: string }) {
   const node = getNode(nodeId);
@@ -250,6 +252,168 @@ function NodeDetail({ nodeId }: { nodeId: string }) {
           </CardContent>
         </Card>
       )}
+      
+      <AviationWeatherSection node={node} />
+    </div>
+  );
+}
+
+function AviationWeatherSection({ node }: { node: GeoNode }) {
+  const coords = node.coordinates;
+  
+  const localAirports = useMemo(() => {
+    if (node.level === "municipality") {
+      const shortName = node.shortName || node.name;
+      const fullName = node.name;
+      const byShortName = getAirportsByMunicipality(shortName);
+      if (byShortName.length > 0) return byShortName;
+      const byFullName = getAirportsByMunicipality(fullName);
+      if (byFullName.length > 0) return byFullName;
+      const cleanedName = fullName
+        .replace(/^(City of |District of |Township of |Village of |Corporation of |Town of )/i, "")
+        .replace(/ Municipality$/i, "");
+      return getAirportsByMunicipality(cleanedName);
+    }
+    return [];
+  }, [node]);
+  
+  const nearbyAirports = useMemo(() => {
+    if (coords) {
+      return getNearestAirports(coords.latitude, coords.longitude, 5);
+    }
+    return [];
+  }, [coords]);
+  
+  const nearbyWeatherStations = useMemo(() => {
+    if (coords) {
+      return getNearestWeatherStationsWithDistance(coords.latitude, coords.longitude, 8);
+    }
+    return [];
+  }, [coords]);
+  
+  if (node.level !== "municipality") {
+    return null;
+  }
+  
+  const getTypeIcon = (type: string) => {
+    switch (type) {
+      case 'metar': return <Plane className="w-3 h-3" />;
+      case 'marine_buoy': return <Anchor className="w-3 h-3" />;
+      case 'lightstation': return <Radio className="w-3 h-3" />;
+      default: return <Cloud className="w-3 h-3" />;
+    }
+  };
+  
+  const getTypeBadgeClass = (type: string) => {
+    switch (type) {
+      case 'metar': return 'bg-sky-500/20 text-sky-400';
+      case 'marine_buoy': return 'bg-blue-500/20 text-blue-400';
+      case 'lightstation': return 'bg-amber-500/20 text-amber-400';
+      case 'climate': return 'bg-green-500/20 text-green-400';
+      default: return 'bg-muted';
+    }
+  };
+  
+  const getAirportTypeBadge = (airport: Airport) => {
+    const typeColors: Record<string, string> = {
+      'large_airport': 'bg-green-500/20 text-green-400',
+      'medium_airport': 'bg-blue-500/20 text-blue-400',
+      'small_airport': 'bg-sky-500/20 text-sky-400',
+      'seaplane_base': 'bg-cyan-500/20 text-cyan-400',
+      'heliport': 'bg-purple-500/20 text-purple-400',
+      'closed': 'bg-red-500/20 text-red-400',
+    };
+    return typeColors[airport.type] || 'bg-muted';
+  };
+  
+  return (
+    <div className="grid grid-cols-2 gap-4">
+      <Card className="bg-card/50">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <Plane className="w-4 h-4 text-sky-400" />
+            Aviation Infrastructure
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {!coords ? (
+            <div className="text-xs text-muted-foreground text-center py-4">
+              No coordinates available for this location
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {localAirports.length > 0 && (
+                <div>
+                  <div className="text-[10px] text-muted-foreground mb-1 uppercase">Local Airports</div>
+                  <div className="space-y-1">
+                    {localAirports.map(airport => (
+                      <div key={airport.id} className="flex items-center gap-2 text-xs p-1.5 rounded bg-background/50">
+                        <Badge className={`text-[9px] ${getAirportTypeBadge(airport)}`}>
+                          {airport.type.replace('_', ' ').toUpperCase()}
+                        </Badge>
+                        <span className="truncate flex-1">{airport.name}</span>
+                        {airport.icao && <span className="text-muted-foreground">{airport.icao}</span>}
+                        {airport.has_metar && <Badge className="text-[8px] bg-green-500/20 text-green-400">METAR</Badge>}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
+              <div>
+                <div className="text-[10px] text-muted-foreground mb-1 uppercase">Nearest Airports</div>
+                <ScrollArea className="h-32">
+                  <div className="space-y-1">
+                    {nearbyAirports.map((airport, idx) => (
+                      <div key={airport.id} className="flex items-center gap-2 text-xs p-1.5 rounded bg-background/50">
+                        <span className="w-4 text-muted-foreground">{idx + 1}.</span>
+                        <Badge className={`text-[9px] ${getAirportTypeBadge(airport)}`}>
+                          {airport.icao || airport.tc_lid || airport.type.substring(0, 3).toUpperCase()}
+                        </Badge>
+                        <span className="truncate flex-1">{airport.name}</span>
+                        {airport.has_metar && <Cloud className="w-3 h-3 text-green-400" />}
+                        {airport.status === 'closed' && <Badge variant="destructive" className="text-[8px]">CLOSED</Badge>}
+                      </div>
+                    ))}
+                  </div>
+                </ScrollArea>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+      
+      <Card className="bg-card/50">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <Cloud className="w-4 h-4 text-cyan-400" />
+            Weather Stations
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {!coords ? (
+            <div className="text-xs text-muted-foreground text-center py-4">
+              No coordinates available for this location
+            </div>
+          ) : (
+            <ScrollArea className="h-48">
+              <div className="space-y-1">
+                {nearbyWeatherStations.map((item, idx) => (
+                  <div key={item.station.id} className="flex items-center gap-2 text-xs p-1.5 rounded bg-background/50">
+                    <span className="w-4 text-muted-foreground">{idx + 1}.</span>
+                    {getTypeIcon(item.station.type)}
+                    <Badge className={`text-[9px] ${getTypeBadgeClass(item.station.type)}`}>
+                      {item.station.type.toUpperCase()}
+                    </Badge>
+                    <span className="truncate flex-1">{item.station.name}</span>
+                    <span className="text-muted-foreground text-[10px]">{item.distance_km}km</span>
+                  </div>
+                ))}
+              </div>
+            </ScrollArea>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

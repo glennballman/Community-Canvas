@@ -7,6 +7,10 @@ export interface GeoNode {
   level: GeoLevel;
   parentId: string | null;
   children?: string[];
+  coordinates?: {
+    latitude: number;
+    longitude: number;
+  };
   metadata?: {
     population?: number;
     area?: number;
@@ -529,6 +533,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Vancouver",
     level: "municipality",
     parentId: "metro-vancouver",
+    coordinates: { latitude: 49.2827, longitude: -123.1207 },
     metadata: { population: 662248 }
   },
   "muni-burnaby": {
@@ -537,6 +542,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Burnaby",
     level: "municipality",
     parentId: "metro-vancouver",
+    coordinates: { latitude: 49.2488, longitude: -122.9805 },
     metadata: { population: 249125 }
   },
   "muni-surrey": {
@@ -545,6 +551,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Surrey",
     level: "municipality",
     parentId: "metro-vancouver",
+    coordinates: { latitude: 49.1044, longitude: -122.8011 },
     metadata: { population: 568322 }
   },
   "muni-richmond": {
@@ -553,6 +560,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Richmond",
     level: "municipality",
     parentId: "metro-vancouver",
+    coordinates: { latitude: 49.1666, longitude: -123.1336 },
     metadata: { population: 209937 }
   },
   "muni-coquitlam": {
@@ -561,6 +569,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Coquitlam",
     level: "municipality",
     parentId: "metro-vancouver",
+    coordinates: { latitude: 49.2838, longitude: -122.7932 },
     metadata: { population: 148625 }
   },
   "muni-delta": {
@@ -569,6 +578,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Delta",
     level: "municipality",
     parentId: "metro-vancouver",
+    coordinates: { latitude: 49.0847, longitude: -123.0587 },
     metadata: { population: 108455 }
   },
   "muni-north-vancouver-city": {
@@ -577,6 +587,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "N Van City",
     level: "municipality",
     parentId: "metro-vancouver",
+    coordinates: { latitude: 49.3165, longitude: -123.0688 },
     metadata: { population: 58120 }
   },
   "muni-north-vancouver-district": {
@@ -585,6 +596,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "N Van District",
     level: "municipality",
     parentId: "metro-vancouver",
+    coordinates: { latitude: 49.3500, longitude: -123.0600 },
     metadata: { population: 88168 }
   },
   "muni-west-vancouver": {
@@ -593,6 +605,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "West Van",
     level: "municipality",
     parentId: "metro-vancouver",
+    coordinates: { latitude: 49.3272, longitude: -123.1663 },
     metadata: { population: 44122 }
   },
   "muni-new-westminster": {
@@ -601,6 +614,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "New West",
     level: "municipality",
     parentId: "metro-vancouver",
+    coordinates: { latitude: 49.2069, longitude: -122.9110 },
     metadata: { population: 78916 }
   },
   "muni-port-coquitlam": {
@@ -609,6 +623,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "PoCo",
     level: "municipality",
     parentId: "metro-vancouver",
+    coordinates: { latitude: 49.2628, longitude: -122.7811 },
     metadata: { population: 61498 }
   },
   "muni-port-moody": {
@@ -617,6 +632,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Port Moody",
     level: "municipality",
     parentId: "metro-vancouver",
+    coordinates: { latitude: 49.2783, longitude: -122.8312 },
     metadata: { population: 33551 }
   },
   "muni-maple-ridge": {
@@ -625,6 +641,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Maple Ridge",
     level: "municipality",
     parentId: "metro-vancouver",
+    coordinates: { latitude: 49.2193, longitude: -122.5984 },
     metadata: { population: 90990 }
   },
   "muni-pitt-meadows": {
@@ -633,6 +650,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Pitt Meadows",
     level: "municipality",
     parentId: "metro-vancouver",
+    coordinates: { latitude: 49.2211, longitude: -122.6897 },
     metadata: { population: 19146 }
   },
   "muni-langley-city": {
@@ -641,6 +659,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Langley City",
     level: "municipality",
     parentId: "metro-vancouver",
+    coordinates: { latitude: 49.1044, longitude: -122.6600 },
     metadata: { population: 28963 }
   },
   "muni-langley-township": {
@@ -649,6 +668,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Langley Twp",
     level: "municipality",
     parentId: "metro-vancouver",
+    coordinates: { latitude: 49.1044, longitude: -122.5600 },
     metadata: { population: 145860 }
   },
   "muni-white-rock": {
@@ -657,6 +677,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "White Rock",
     level: "municipality",
     parentId: "metro-vancouver",
+    coordinates: { latitude: 49.0254, longitude: -122.8030 },
     metadata: { population: 21939 }
   },
   "muni-bowen-island": {
@@ -665,6 +686,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Bowen Island",
     level: "municipality",
     parentId: "metro-vancouver",
+    coordinates: { latitude: 49.3848, longitude: -123.3361 },
     metadata: { population: 4256 }
   },
   "muni-lions-bay": {
@@ -673,6 +695,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Lions Bay",
     level: "municipality",
     parentId: "metro-vancouver",
+    coordinates: { latitude: 49.4548, longitude: -123.2378 },
     metadata: { population: 1334 }
   },
   "muni-anmore": {
@@ -681,6 +704,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Anmore",
     level: "municipality",
     parentId: "metro-vancouver",
+    coordinates: { latitude: 49.3137, longitude: -122.8513 },
     metadata: { population: 2350 }
   },
   "muni-belcarra": {
@@ -689,6 +713,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Belcarra",
     level: "municipality",
     parentId: "metro-vancouver",
+    coordinates: { latitude: 49.3167, longitude: -122.8333 },
     metadata: { population: 732 }
   },
   "muni-tsawwassen": {
@@ -697,6 +722,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Tsawwassen FN",
     level: "municipality",
     parentId: "metro-vancouver",
+    coordinates: { latitude: 49.0200, longitude: -123.0800 },
     metadata: { population: 490 }
   },
 
@@ -709,6 +735,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Abbotsford",
     level: "municipality",
     parentId: "fraser-valley",
+    coordinates: { latitude: 49.0504, longitude: -122.3045 },
     metadata: { population: 153524 }
   },
   "muni-chilliwack": {
@@ -717,6 +744,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Chilliwack",
     level: "municipality",
     parentId: "fraser-valley",
+    coordinates: { latitude: 49.1579, longitude: -121.9514 },
     metadata: { population: 93203 }
   },
   "muni-mission": {
@@ -725,6 +753,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Mission",
     level: "municipality",
     parentId: "fraser-valley",
+    coordinates: { latitude: 49.1327, longitude: -122.3112 },
     metadata: { population: 41519 }
   },
   "muni-hope": {
@@ -733,6 +762,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Hope",
     level: "municipality",
     parentId: "fraser-valley",
+    coordinates: { latitude: 49.3800, longitude: -121.4400 },
     metadata: { population: 7090 }
   },
   "muni-kent": {
@@ -741,6 +771,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Kent",
     level: "municipality",
     parentId: "fraser-valley",
+    coordinates: { latitude: 49.2167, longitude: -121.7500 },
     metadata: { population: 6879 }
   },
   "muni-harrison-hot-springs": {
@@ -749,6 +780,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Harrison",
     level: "municipality",
     parentId: "fraser-valley",
+    coordinates: { latitude: 49.3000, longitude: -121.7833 },
     metadata: { population: 1573 }
   },
 
@@ -761,6 +793,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Victoria",
     level: "municipality",
     parentId: "capital",
+    coordinates: { latitude: 48.4284, longitude: -123.3656 },
     metadata: { population: 91867 }
   },
   "muni-saanich": {
@@ -769,6 +802,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Saanich",
     level: "municipality",
     parentId: "capital",
+    coordinates: { latitude: 48.4847, longitude: -123.3936 },
     metadata: { population: 117735 }
   },
   "muni-esquimalt": {
@@ -777,6 +811,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Esquimalt",
     level: "municipality",
     parentId: "capital",
+    coordinates: { latitude: 48.4322, longitude: -123.4141 },
     metadata: { population: 18613 }
   },
   "muni-oak-bay": {
@@ -785,6 +820,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Oak Bay",
     level: "municipality",
     parentId: "capital",
+    coordinates: { latitude: 48.4264, longitude: -123.3171 },
     metadata: { population: 18094 }
   },
   "muni-view-royal": {
@@ -793,6 +829,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "View Royal",
     level: "municipality",
     parentId: "capital",
+    coordinates: { latitude: 48.4517, longitude: -123.4333 },
     metadata: { population: 11575 }
   },
   "muni-colwood": {
@@ -801,6 +838,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Colwood",
     level: "municipality",
     parentId: "capital",
+    coordinates: { latitude: 48.4236, longitude: -123.4958 },
     metadata: { population: 18961 }
   },
   "muni-langford": {
@@ -809,6 +847,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Langford",
     level: "municipality",
     parentId: "capital",
+    coordinates: { latitude: 48.4500, longitude: -123.5056 },
     metadata: { population: 46584 }
   },
   "muni-sooke": {
@@ -817,6 +856,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Sooke",
     level: "municipality",
     parentId: "capital",
+    coordinates: { latitude: 48.3742, longitude: -123.7356 },
     metadata: { population: 15054 }
   },
   "muni-metchosin": {
@@ -825,6 +865,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Metchosin",
     level: "municipality",
     parentId: "capital",
+    coordinates: { latitude: 48.3833, longitude: -123.5333 },
     metadata: { population: 5120 }
   },
   "muni-highlands": {
@@ -833,6 +874,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Highlands",
     level: "municipality",
     parentId: "capital",
+    coordinates: { latitude: 48.4833, longitude: -123.5000 },
     metadata: { population: 2491 }
   },
   "muni-central-saanich": {
@@ -841,6 +883,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Central Saanich",
     level: "municipality",
     parentId: "capital",
+    coordinates: { latitude: 48.5167, longitude: -123.4000 },
     metadata: { population: 17385 }
   },
   "muni-north-saanich": {
@@ -849,6 +892,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "North Saanich",
     level: "municipality",
     parentId: "capital",
+    coordinates: { latitude: 48.6167, longitude: -123.4167 },
     metadata: { population: 12554 }
   },
   "muni-sidney": {
@@ -857,6 +901,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Sidney",
     level: "municipality",
     parentId: "capital",
+    coordinates: { latitude: 48.6500, longitude: -123.4000 },
     metadata: { population: 12196 }
   },
 
@@ -869,6 +914,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Duncan",
     level: "municipality",
     parentId: "cowichan-valley",
+    coordinates: { latitude: 48.7787, longitude: -123.7079 },
     metadata: { population: 5104 }
   },
   "muni-north-cowichan": {
@@ -877,6 +923,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "North Cowichan",
     level: "municipality",
     parentId: "cowichan-valley",
+    coordinates: { latitude: 48.8333, longitude: -123.7333 },
     metadata: { population: 31990 }
   },
   "muni-lake-cowichan": {
@@ -885,6 +932,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Lake Cowichan",
     level: "municipality",
     parentId: "cowichan-valley",
+    coordinates: { latitude: 48.8300, longitude: -124.0500 },
     metadata: { population: 3467 }
   },
   "muni-ladysmith": {
@@ -893,6 +941,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Ladysmith",
     level: "municipality",
     parentId: "cowichan-valley",
+    coordinates: { latitude: 48.9975, longitude: -123.8178 },
     metadata: { population: 9328 }
   },
 
@@ -905,6 +954,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Nanaimo",
     level: "municipality",
     parentId: "nanaimo",
+    coordinates: { latitude: 49.1659, longitude: -123.9401 },
     metadata: { population: 99863 }
   },
   "muni-parksville": {
@@ -913,6 +963,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Parksville",
     level: "municipality",
     parentId: "nanaimo",
+    coordinates: { latitude: 49.3150, longitude: -124.3122 },
     metadata: { population: 13642 }
   },
   "muni-qualicum-beach": {
@@ -921,6 +972,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Qualicum Beach",
     level: "municipality",
     parentId: "nanaimo",
+    coordinates: { latitude: 49.3481, longitude: -124.4350 },
     metadata: { population: 9416 }
   },
   "muni-lantzville": {
@@ -929,6 +981,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Lantzville",
     level: "municipality",
     parentId: "nanaimo",
+    coordinates: { latitude: 49.2500, longitude: -124.0667 },
     metadata: { population: 4124 }
   },
 
@@ -941,6 +994,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Port Alberni",
     level: "municipality",
     parentId: "alberni-clayoquot",
+    coordinates: { latitude: 49.2339, longitude: -124.8055 },
     metadata: { population: 18867 }
   },
   "muni-tofino": {
@@ -949,6 +1003,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Tofino",
     level: "municipality",
     parentId: "alberni-clayoquot",
+    coordinates: { latitude: 49.1530, longitude: -125.9066 },
     metadata: { population: 2304 }
   },
   "muni-ucluelet": {
@@ -957,6 +1012,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Ucluelet",
     level: "municipality",
     parentId: "alberni-clayoquot",
+    coordinates: { latitude: 48.9422, longitude: -125.5461 },
     metadata: { population: 1922 }
   },
   "muni-bamfield": {
@@ -965,6 +1021,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Bamfield",
     level: "municipality",
     parentId: "alberni-clayoquot",
+    coordinates: { latitude: 48.8333, longitude: -125.1350 },
     metadata: { population: 200 }
   },
 
@@ -977,6 +1034,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Courtenay",
     level: "municipality",
     parentId: "comox-valley",
+    coordinates: { latitude: 49.6879, longitude: -125.0032 },
     metadata: { population: 28420 }
   },
   "muni-comox": {
@@ -985,6 +1043,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Comox",
     level: "municipality",
     parentId: "comox-valley",
+    coordinates: { latitude: 49.6733, longitude: -124.9022 },
     metadata: { population: 15277 }
   },
   "muni-cumberland": {
@@ -993,6 +1052,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Cumberland",
     level: "municipality",
     parentId: "comox-valley",
+    coordinates: { latitude: 49.6167, longitude: -125.0333 },
     metadata: { population: 4240 }
   },
 
@@ -1005,6 +1065,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Campbell River",
     level: "municipality",
     parentId: "strathcona",
+    coordinates: { latitude: 50.0244, longitude: -125.2475 },
     metadata: { population: 35519 }
   },
   "muni-gold-river": {
@@ -1013,6 +1074,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Gold River",
     level: "municipality",
     parentId: "strathcona",
+    coordinates: { latitude: 49.7833, longitude: -126.0500 },
     metadata: { population: 1212 }
   },
   "muni-tahsis": {
@@ -1021,6 +1083,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Tahsis",
     level: "municipality",
     parentId: "strathcona",
+    coordinates: { latitude: 49.9167, longitude: -126.6667 },
     metadata: { population: 293 }
   },
   "muni-zeballos": {
@@ -1029,6 +1092,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Zeballos",
     level: "municipality",
     parentId: "strathcona",
+    coordinates: { latitude: 49.9833, longitude: -126.8500 },
     metadata: { population: 107 }
   },
   "muni-sayward": {
@@ -1037,6 +1101,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Sayward",
     level: "municipality",
     parentId: "strathcona",
+    coordinates: { latitude: 50.3833, longitude: -125.9667 },
     metadata: { population: 311 }
   },
 
@@ -1049,6 +1114,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Port Hardy",
     level: "municipality",
     parentId: "mount-waddington",
+    coordinates: { latitude: 50.7256, longitude: -127.4969 },
     metadata: { population: 4132 }
   },
   "muni-port-mcneill": {
@@ -1057,6 +1123,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Port McNeill",
     level: "municipality",
     parentId: "mount-waddington",
+    coordinates: { latitude: 50.5906, longitude: -127.0844 },
     metadata: { population: 2623 }
   },
   "muni-alert-bay": {
@@ -1065,6 +1132,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Alert Bay",
     level: "municipality",
     parentId: "mount-waddington",
+    coordinates: { latitude: 50.5833, longitude: -126.9333 },
     metadata: { population: 489 }
   },
   "muni-port-alice": {
@@ -1073,6 +1141,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Port Alice",
     level: "municipality",
     parentId: "mount-waddington",
+    coordinates: { latitude: 50.3833, longitude: -127.4500 },
     metadata: { population: 664 }
   },
 
@@ -1085,6 +1154,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Powell River",
     level: "municipality",
     parentId: "powell-river",
+    coordinates: { latitude: 49.8353, longitude: -124.5247 },
     metadata: { population: 13831 }
   },
 
@@ -1097,6 +1167,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Sechelt",
     level: "municipality",
     parentId: "sunshine-coast",
+    coordinates: { latitude: 49.4742, longitude: -123.7544 },
     metadata: { population: 10871 }
   },
   "muni-gibsons": {
@@ -1105,6 +1176,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Gibsons",
     level: "municipality",
     parentId: "sunshine-coast",
+    coordinates: { latitude: 49.3967, longitude: -123.5044 },
     metadata: { population: 4758 }
   },
 
@@ -1117,6 +1189,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Squamish",
     level: "municipality",
     parentId: "squamish-lillooet",
+    coordinates: { latitude: 49.7016, longitude: -123.1558 },
     metadata: { population: 23819 }
   },
   "muni-whistler": {
@@ -1125,6 +1198,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Whistler",
     level: "municipality",
     parentId: "squamish-lillooet",
+    coordinates: { latitude: 50.1163, longitude: -122.9574 },
     metadata: { population: 13982 }
   },
   "muni-pemberton": {
@@ -1133,6 +1207,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Pemberton",
     level: "municipality",
     parentId: "squamish-lillooet",
+    coordinates: { latitude: 50.3167, longitude: -122.8000 },
     metadata: { population: 2574 }
   },
   "muni-lillooet": {
@@ -1141,6 +1216,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Lillooet",
     level: "municipality",
     parentId: "squamish-lillooet",
+    coordinates: { latitude: 50.6833, longitude: -121.9333 },
     metadata: { population: 2321 }
   },
 
@@ -1153,6 +1229,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Kamloops",
     level: "municipality",
     parentId: "thompson-nicola",
+    coordinates: { latitude: 50.6745, longitude: -120.3273 },
     metadata: { population: 100046 }
   },
   "muni-merritt": {
@@ -1161,6 +1238,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Merritt",
     level: "municipality",
     parentId: "thompson-nicola",
+    coordinates: { latitude: 50.1108, longitude: -120.7930 },
     metadata: { population: 7051 }
   },
   "muni-sun-peaks": {
@@ -1169,6 +1247,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Sun Peaks",
     level: "municipality",
     parentId: "thompson-nicola",
+    coordinates: { latitude: 50.8833, longitude: -119.9000 },
     metadata: { population: 616 }
   },
   "muni-ashcroft": {
@@ -1177,6 +1256,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Ashcroft",
     level: "municipality",
     parentId: "thompson-nicola",
+    coordinates: { latitude: 50.7200, longitude: -121.2833 },
     metadata: { population: 1558 }
   },
   "muni-cache-creek": {
@@ -1185,6 +1265,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Cache Creek",
     level: "municipality",
     parentId: "thompson-nicola",
+    coordinates: { latitude: 50.8106, longitude: -121.3253 },
     metadata: { population: 947 }
   },
   "muni-chase": {
@@ -1193,6 +1274,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Chase",
     level: "municipality",
     parentId: "thompson-nicola",
+    coordinates: { latitude: 50.8167, longitude: -119.6833 },
     metadata: { population: 2419 }
   },
   "muni-clearwater": {
@@ -1201,6 +1283,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Clearwater",
     level: "municipality",
     parentId: "thompson-nicola",
+    coordinates: { latitude: 51.6500, longitude: -120.0333 },
     metadata: { population: 2331 }
   },
   "muni-barriere": {
@@ -1209,6 +1292,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Barriere",
     level: "municipality",
     parentId: "thompson-nicola",
+    coordinates: { latitude: 51.1833, longitude: -120.1167 },
     metadata: { population: 1713 }
   },
   "muni-clinton": {
@@ -1217,6 +1301,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Clinton",
     level: "municipality",
     parentId: "thompson-nicola",
+    coordinates: { latitude: 51.0833, longitude: -121.5833 },
     metadata: { population: 580 }
   },
   "muni-logan-lake": {
@@ -1225,6 +1310,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Logan Lake",
     level: "municipality",
     parentId: "thompson-nicola",
+    coordinates: { latitude: 50.4833, longitude: -120.8167 },
     metadata: { population: 1993 }
   },
   "muni-lytton": {
@@ -1233,6 +1319,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Lytton",
     level: "municipality",
     parentId: "thompson-nicola",
+    coordinates: { latitude: 50.2333, longitude: -121.5833 },
     metadata: { population: 228 }
   },
 
@@ -1245,6 +1332,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Kelowna",
     level: "municipality",
     parentId: "central-okanagan",
+    coordinates: { latitude: 49.8880, longitude: -119.4960 },
     metadata: { population: 144576 }
   },
   "muni-west-kelowna": {
@@ -1253,6 +1341,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "West Kelowna",
     level: "municipality",
     parentId: "central-okanagan",
+    coordinates: { latitude: 49.8625, longitude: -119.5833 },
     metadata: { population: 36337 }
   },
   "muni-peachland": {
@@ -1261,6 +1350,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Peachland",
     level: "municipality",
     parentId: "central-okanagan",
+    coordinates: { latitude: 49.7667, longitude: -119.7333 },
     metadata: { population: 5634 }
   },
   "muni-lake-country": {
@@ -1269,6 +1359,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Lake Country",
     level: "municipality",
     parentId: "central-okanagan",
+    coordinates: { latitude: 50.0500, longitude: -119.4167 },
     metadata: { population: 15817 }
   },
 
@@ -1281,6 +1372,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Vernon",
     level: "municipality",
     parentId: "north-okanagan",
+    coordinates: { latitude: 50.2671, longitude: -119.2720 },
     metadata: { population: 44519 }
   },
   "muni-coldstream": {
@@ -1289,6 +1381,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Coldstream",
     level: "municipality",
     parentId: "north-okanagan",
+    coordinates: { latitude: 50.2167, longitude: -119.1667 },
     metadata: { population: 11293 }
   },
   "muni-armstrong": {
@@ -1297,6 +1390,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Armstrong",
     level: "municipality",
     parentId: "north-okanagan",
+    coordinates: { latitude: 50.4486, longitude: -119.1975 },
     metadata: { population: 5354 }
   },
   "muni-spallumcheen": {
@@ -1305,6 +1399,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Spallumcheen",
     level: "municipality",
     parentId: "north-okanagan",
+    coordinates: { latitude: 50.4667, longitude: -119.1500 },
     metadata: { population: 5625 }
   },
   "muni-enderby": {
@@ -1313,6 +1408,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Enderby",
     level: "municipality",
     parentId: "north-okanagan",
+    coordinates: { latitude: 50.5500, longitude: -119.1500 },
     metadata: { population: 3036 }
   },
   "muni-lumby": {
@@ -1321,6 +1417,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Lumby",
     level: "municipality",
     parentId: "north-okanagan",
+    coordinates: { latitude: 50.2500, longitude: -118.9667 },
     metadata: { population: 1912 }
   },
 
@@ -1333,6 +1430,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Penticton",
     level: "municipality",
     parentId: "okanagan-similkameen",
+    coordinates: { latitude: 49.4991, longitude: -119.5937 },
     metadata: { population: 36773 }
   },
   "muni-summerland": {
@@ -1341,6 +1439,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Summerland",
     level: "municipality",
     parentId: "okanagan-similkameen",
+    coordinates: { latitude: 49.6006, longitude: -119.6778 },
     metadata: { population: 12038 }
   },
   "muni-oliver": {
@@ -1349,6 +1448,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Oliver",
     level: "municipality",
     parentId: "okanagan-similkameen",
+    coordinates: { latitude: 49.1833, longitude: -119.5500 },
     metadata: { population: 5304 }
   },
   "muni-osoyoos": {
@@ -1357,6 +1457,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Osoyoos",
     level: "municipality",
     parentId: "okanagan-similkameen",
+    coordinates: { latitude: 49.0333, longitude: -119.4667 },
     metadata: { population: 5574 }
   },
   "muni-princeton": {
@@ -1365,6 +1466,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Princeton",
     level: "municipality",
     parentId: "okanagan-similkameen",
+    coordinates: { latitude: 49.4583, longitude: -120.5083 },
     metadata: { population: 2828 }
   },
   "muni-keremeos": {
@@ -1373,6 +1475,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Keremeos",
     level: "municipality",
     parentId: "okanagan-similkameen",
+    coordinates: { latitude: 49.2000, longitude: -119.8333 },
     metadata: { population: 1502 }
   },
 
@@ -1385,6 +1488,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Revelstoke",
     level: "municipality",
     parentId: "columbia-shuswap",
+    coordinates: { latitude: 50.9981, longitude: -118.1957 },
     metadata: { population: 8275 }
   },
   "muni-salmon-arm": {
@@ -1393,6 +1497,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Salmon Arm",
     level: "municipality",
     parentId: "columbia-shuswap",
+    coordinates: { latitude: 50.6997, longitude: -119.2714 },
     metadata: { population: 19232 }
   },
   "muni-golden": {
@@ -1401,6 +1506,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Golden",
     level: "municipality",
     parentId: "columbia-shuswap",
+    coordinates: { latitude: 51.2969, longitude: -116.9631 },
     metadata: { population: 4294 }
   },
   "muni-sicamous": {
@@ -1409,6 +1515,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Sicamous",
     level: "municipality",
     parentId: "columbia-shuswap",
+    coordinates: { latitude: 50.8333, longitude: -118.9833 },
     metadata: { population: 3023 }
   },
 
@@ -1421,6 +1528,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Cranbrook",
     level: "municipality",
     parentId: "east-kootenay",
+    coordinates: { latitude: 49.5097, longitude: -115.7686 },
     metadata: { population: 21286 }
   },
   "muni-kimberley": {
@@ -1429,6 +1537,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Kimberley",
     level: "municipality",
     parentId: "east-kootenay",
+    coordinates: { latitude: 49.6700, longitude: -115.9778 },
     metadata: { population: 7821 }
   },
   "muni-fernie": {
@@ -1437,6 +1546,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Fernie",
     level: "municipality",
     parentId: "east-kootenay",
+    coordinates: { latitude: 49.5042, longitude: -115.0628 },
     metadata: { population: 6177 }
   },
   "muni-invermere": {
@@ -1445,6 +1555,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Invermere",
     level: "municipality",
     parentId: "east-kootenay",
+    coordinates: { latitude: 50.5072, longitude: -116.0311 },
     metadata: { population: 3769 }
   },
   "muni-sparwood": {
@@ -1453,6 +1564,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Sparwood",
     level: "municipality",
     parentId: "east-kootenay",
+    coordinates: { latitude: 49.7333, longitude: -114.8833 },
     metadata: { population: 4182 }
   },
   "muni-elkford": {
@@ -1461,6 +1573,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Elkford",
     level: "municipality",
     parentId: "east-kootenay",
+    coordinates: { latitude: 50.0167, longitude: -114.9167 },
     metadata: { population: 2499 }
   },
   "muni-radium-hot-springs": {
@@ -1469,6 +1582,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Radium",
     level: "municipality",
     parentId: "east-kootenay",
+    coordinates: { latitude: 50.6167, longitude: -116.0667 },
     metadata: { population: 858 }
   },
   "muni-canal-flats": {
@@ -1477,6 +1591,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Canal Flats",
     level: "municipality",
     parentId: "east-kootenay",
+    coordinates: { latitude: 50.1500, longitude: -115.8167 },
     metadata: { population: 703 }
   },
 
@@ -1489,6 +1604,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Nelson",
     level: "municipality",
     parentId: "central-kootenay",
+    coordinates: { latitude: 49.4928, longitude: -117.2948 },
     metadata: { population: 11106 }
   },
   "muni-castlegar": {
@@ -1497,6 +1613,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Castlegar",
     level: "municipality",
     parentId: "central-kootenay",
+    coordinates: { latitude: 49.3256, longitude: -117.6661 },
     metadata: { population: 8612 }
   },
   "muni-trail": {
@@ -1505,6 +1622,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Trail",
     level: "municipality",
     parentId: "central-kootenay",
+    coordinates: { latitude: 49.0950, longitude: -117.7103 },
     metadata: { population: 8097 }
   },
   "muni-creston": {
@@ -1513,6 +1631,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Creston",
     level: "municipality",
     parentId: "central-kootenay",
+    coordinates: { latitude: 49.0956, longitude: -116.5131 },
     metadata: { population: 5629 }
   },
   "muni-kaslo": {
@@ -1521,6 +1640,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Kaslo",
     level: "municipality",
     parentId: "central-kootenay",
+    coordinates: { latitude: 49.9167, longitude: -116.9167 },
     metadata: { population: 1049 }
   },
   "muni-nakusp": {
@@ -1529,6 +1649,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Nakusp",
     level: "municipality",
     parentId: "central-kootenay",
+    coordinates: { latitude: 50.2500, longitude: -117.8000 },
     metadata: { population: 1605 }
   },
   "muni-new-denver": {
@@ -1537,6 +1658,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "New Denver",
     level: "municipality",
     parentId: "central-kootenay",
+    coordinates: { latitude: 49.9833, longitude: -117.3833 },
     metadata: { population: 504 }
   },
   "muni-silverton": {
@@ -1545,6 +1667,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Silverton",
     level: "municipality",
     parentId: "central-kootenay",
+    coordinates: { latitude: 49.9500, longitude: -117.4000 },
     metadata: { population: 195 }
   },
   "muni-salmo": {
@@ -1553,6 +1676,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Salmo",
     level: "municipality",
     parentId: "central-kootenay",
+    coordinates: { latitude: 49.2000, longitude: -117.2833 },
     metadata: { population: 1141 }
   },
   "muni-slocan": {
@@ -1561,6 +1685,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Slocan",
     level: "municipality",
     parentId: "central-kootenay",
+    coordinates: { latitude: 49.7667, longitude: -117.4667 },
     metadata: { population: 297 }
   },
 
@@ -1573,6 +1698,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Rossland",
     level: "municipality",
     parentId: "kootenay-boundary",
+    coordinates: { latitude: 49.0833, longitude: -117.8000 },
     metadata: { population: 4233 }
   },
   "muni-fruitvale": {
@@ -1581,6 +1707,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Fruitvale",
     level: "municipality",
     parentId: "kootenay-boundary",
+    coordinates: { latitude: 49.1167, longitude: -117.5500 },
     metadata: { population: 1990 }
   },
   "muni-montrose": {
@@ -1589,6 +1716,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Montrose",
     level: "municipality",
     parentId: "kootenay-boundary",
+    coordinates: { latitude: 49.1000, longitude: -117.5833 },
     metadata: { population: 1074 }
   },
   "muni-warfield": {
@@ -1597,6 +1725,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Warfield",
     level: "municipality",
     parentId: "kootenay-boundary",
+    coordinates: { latitude: 49.1000, longitude: -117.7500 },
     metadata: { population: 1744 }
   },
   "muni-greenwood": {
@@ -1605,6 +1734,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Greenwood",
     level: "municipality",
     parentId: "kootenay-boundary",
+    coordinates: { latitude: 49.0833, longitude: -118.6833 },
     metadata: { population: 665 }
   },
   "muni-midway": {
@@ -1613,6 +1743,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Midway",
     level: "municipality",
     parentId: "kootenay-boundary",
+    coordinates: { latitude: 49.0000, longitude: -118.7833 },
     metadata: { population: 675 }
   },
   "muni-grand-forks": {
@@ -1621,6 +1752,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Grand Forks",
     level: "municipality",
     parentId: "kootenay-boundary",
+    coordinates: { latitude: 49.0333, longitude: -118.4500 },
     metadata: { population: 4274 }
   },
 
@@ -1633,6 +1765,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Quesnel",
     level: "municipality",
     parentId: "cariboo",
+    coordinates: { latitude: 52.9784, longitude: -122.4927 },
     metadata: { population: 10283 }
   },
   "muni-williams-lake": {
@@ -1641,6 +1774,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Williams Lake",
     level: "municipality",
     parentId: "cariboo",
+    coordinates: { latitude: 52.1417, longitude: -122.1417 },
     metadata: { population: 11488 }
   },
   "muni-100-mile-house": {
@@ -1649,6 +1783,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "100 Mile House",
     level: "municipality",
     parentId: "cariboo",
+    coordinates: { latitude: 51.6417, longitude: -121.2917 },
     metadata: { population: 2060 }
   },
   "muni-wells": {
@@ -1657,6 +1792,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Wells",
     level: "municipality",
     parentId: "cariboo",
+    coordinates: { latitude: 53.1167, longitude: -121.5667 },
     metadata: { population: 217 }
   },
 
@@ -1669,6 +1805,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Prince George",
     level: "municipality",
     parentId: "fraser-fort-george",
+    coordinates: { latitude: 53.9171, longitude: -122.7497 },
     metadata: { population: 76708 }
   },
   "muni-valemount": {
@@ -1677,6 +1814,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Valemount",
     level: "municipality",
     parentId: "fraser-fort-george",
+    coordinates: { latitude: 52.8333, longitude: -119.2667 },
     metadata: { population: 1021 }
   },
   "muni-mcbride": {
@@ -1685,6 +1823,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "McBride",
     level: "municipality",
     parentId: "fraser-fort-george",
+    coordinates: { latitude: 53.3000, longitude: -120.1667 },
     metadata: { population: 616 }
   },
 
@@ -1697,6 +1836,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Vanderhoof",
     level: "municipality",
     parentId: "bulkley-nechako",
+    coordinates: { latitude: 54.0167, longitude: -124.0000 },
     metadata: { population: 4664 }
   },
   "muni-fort-st-james": {
@@ -1705,6 +1845,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Fort St. James",
     level: "municipality",
     parentId: "bulkley-nechako",
+    coordinates: { latitude: 54.4333, longitude: -124.2500 },
     metadata: { population: 1598 }
   },
   "muni-burns-lake": {
@@ -1713,6 +1854,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Burns Lake",
     level: "municipality",
     parentId: "bulkley-nechako",
+    coordinates: { latitude: 54.2333, longitude: -125.7667 },
     metadata: { population: 1779 }
   },
   "muni-houston": {
@@ -1721,6 +1863,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Houston",
     level: "municipality",
     parentId: "bulkley-nechako",
+    coordinates: { latitude: 54.3833, longitude: -126.6500 },
     metadata: { population: 2993 }
   },
   "muni-smithers": {
@@ -1729,6 +1872,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Smithers",
     level: "municipality",
     parentId: "bulkley-nechako",
+    coordinates: { latitude: 54.7806, longitude: -127.1681 },
     metadata: { population: 5401 }
   },
   "muni-granisle": {
@@ -1737,6 +1881,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Granisle",
     level: "municipality",
     parentId: "bulkley-nechako",
+    coordinates: { latitude: 54.5000, longitude: -126.0833 },
     metadata: { population: 303 }
   },
   "muni-fraser-lake": {
@@ -1745,6 +1890,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Fraser Lake",
     level: "municipality",
     parentId: "bulkley-nechako",
+    coordinates: { latitude: 54.0500, longitude: -124.8500 },
     metadata: { population: 1007 }
   },
 
@@ -1757,6 +1903,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Terrace",
     level: "municipality",
     parentId: "kitimat-stikine",
+    coordinates: { latitude: 54.5164, longitude: -128.5997 },
     metadata: { population: 12473 }
   },
   "muni-kitimat": {
@@ -1765,6 +1912,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Kitimat",
     level: "municipality",
     parentId: "kitimat-stikine",
+    coordinates: { latitude: 54.0522, longitude: -128.6531 },
     metadata: { population: 8234 }
   },
   "muni-stewart": {
@@ -1773,6 +1921,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Stewart",
     level: "municipality",
     parentId: "kitimat-stikine",
+    coordinates: { latitude: 55.9353, longitude: -130.0000 },
     metadata: { population: 401 }
   },
   "muni-hazelton": {
@@ -1781,6 +1930,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Hazelton",
     level: "municipality",
     parentId: "kitimat-stikine",
+    coordinates: { latitude: 55.2500, longitude: -127.6667 },
     metadata: { population: 263 }
   },
   "muni-new-hazelton": {
@@ -1789,6 +1939,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "New Hazelton",
     level: "municipality",
     parentId: "kitimat-stikine",
+    coordinates: { latitude: 55.2500, longitude: -127.5833 },
     metadata: { population: 580 }
   },
 
@@ -1801,6 +1952,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Prince Rupert",
     level: "municipality",
     parentId: "north-coast",
+    coordinates: { latitude: 54.3150, longitude: -130.3208 },
     metadata: { population: 12220 }
   },
   "muni-port-edward": {
@@ -1809,6 +1961,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Port Edward",
     level: "municipality",
     parentId: "north-coast",
+    coordinates: { latitude: 54.2333, longitude: -130.2833 },
     metadata: { population: 436 }
   },
   "muni-masset": {
@@ -1817,6 +1970,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Masset",
     level: "municipality",
     parentId: "north-coast",
+    coordinates: { latitude: 54.0167, longitude: -132.1500 },
     metadata: { population: 829 }
   },
   "muni-queen-charlotte": {
@@ -1825,6 +1979,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Queen Charlotte",
     level: "municipality",
     parentId: "north-coast",
+    coordinates: { latitude: 53.2500, longitude: -132.0833 },
     metadata: { population: 879 }
   },
 
@@ -1837,6 +1992,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Dawson Creek",
     level: "municipality",
     parentId: "peace-river",
+    coordinates: { latitude: 55.7606, longitude: -120.2356 },
     metadata: { population: 12978 }
   },
   "muni-fort-st-john": {
@@ -1845,6 +2001,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Fort St. John",
     level: "municipality",
     parentId: "peace-river",
+    coordinates: { latitude: 56.2465, longitude: -120.8476 },
     metadata: { population: 21718 }
   },
   "muni-chetwynd": {
@@ -1853,6 +2010,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Chetwynd",
     level: "municipality",
     parentId: "peace-river",
+    coordinates: { latitude: 55.6833, longitude: -121.6333 },
     metadata: { population: 2635 }
   },
   "muni-hudson-hope": {
@@ -1861,6 +2019,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Hudson's Hope",
     level: "municipality",
     parentId: "peace-river",
+    coordinates: { latitude: 56.0333, longitude: -121.9000 },
     metadata: { population: 925 }
   },
   "muni-pouce-coupe": {
@@ -1869,6 +2028,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Pouce Coupe",
     level: "municipality",
     parentId: "peace-river",
+    coordinates: { latitude: 55.7167, longitude: -120.1333 },
     metadata: { population: 739 }
   },
   "muni-taylor": {
@@ -1877,6 +2037,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Taylor",
     level: "municipality",
     parentId: "peace-river",
+    coordinates: { latitude: 56.1500, longitude: -120.6833 },
     metadata: { population: 1469 }
   },
 
@@ -1889,6 +2050,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Bella Coola",
     level: "municipality",
     parentId: "central-coast",
+    coordinates: { latitude: 52.3833, longitude: -126.7500 },
     metadata: { population: 885 }
   },
   "muni-ocean-falls": {
@@ -1897,6 +2059,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Ocean Falls",
     level: "municipality",
     parentId: "central-coast",
+    coordinates: { latitude: 52.3500, longitude: -127.7000 },
     metadata: { population: 29 }
   },
 
@@ -1909,6 +2072,7 @@ export const GEO_HIERARCHY: Record<string, GeoNode> = {
     shortName: "Fort Nelson",
     level: "municipality",
     parentId: "northern-rockies",
+    coordinates: { latitude: 58.8050, longitude: -122.6972 },
     metadata: { population: 4401 }
   }
 };
@@ -1959,4 +2123,15 @@ export function getAllRegions(): GeoNode[] {
 
 export function getTotalMunicipalities(): number {
   return Object.values(GEO_HIERARCHY).filter(n => n.level === "municipality").length;
+}
+
+export function getMunicipalityCoordinates(municipalityId: string): { latitude: number; longitude: number } | undefined {
+  const node = GEO_HIERARCHY[municipalityId];
+  return node?.coordinates;
+}
+
+export function getAllMunicipalitiesWithCoordinates(): GeoNode[] {
+  return Object.values(GEO_HIERARCHY).filter(
+    (n): n is GeoNode => n.level === "municipality" && n.coordinates !== undefined
+  );
 }
