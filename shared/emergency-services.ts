@@ -2075,6 +2075,1540 @@ export const BC_EMERGENCY_SERVICES: EmergencyService[] = [
     longitude: -122.3095,
     address: "32352 Logan Ave, Mission",
     notes: "Mission Fire/Rescue"
+  },
+
+  // ==========================================
+  // HEALTH CENTRES - RURAL/REMOTE FACILITIES
+  // ==========================================
+  {
+    id: "health-bamfield",
+    name: "Bamfield Health Centre",
+    type: "hospital",
+    municipality: "Bamfield",
+    region: "Alberni-Clayoquot",
+    latitude: 48.8336,
+    longitude: -125.1361,
+    phone: "(250) 728-3312",
+    address: "353 Bamfield Rd, Bamfield",
+    health_authority: "Island Health",
+    has_helipad: false,
+    emergency_department: true,
+    notes: "Urgent care - Remote certified nurse 24h - No overnight admittance - Patient transfer to Port Alberni/Tofino"
+  },
+  {
+    id: "health-alert-bay",
+    name: "Cormorant Island Health Centre",
+    type: "hospital",
+    municipality: "Alert Bay",
+    region: "Mount Waddington",
+    latitude: 50.5858,
+    longitude: -126.9328,
+    phone: "(250) 974-5585",
+    address: "29 School Rd, Alert Bay",
+    health_authority: "Island Health",
+    emergency_department: true,
+    notes: "Remote community health centre"
+  },
+  {
+    id: "health-bella-coola",
+    name: "Bella Coola General Hospital",
+    type: "hospital",
+    municipality: "Bella Coola",
+    region: "Central Coast",
+    latitude: 52.3686,
+    longitude: -126.7544,
+    phone: "(250) 799-5311",
+    address: "1025 Elcho St, Bella Coola",
+    health_authority: "Vancouver Coastal Health",
+    has_helipad: true,
+    emergency_department: true,
+    notes: "Remote hospital - Central Coast"
+  },
+  {
+    id: "health-bella-bella",
+    name: "R.W. Large Memorial Hospital",
+    type: "hospital",
+    municipality: "Bella Bella",
+    region: "Central Coast",
+    latitude: 52.1608,
+    longitude: -128.1456,
+    phone: "(250) 957-2314",
+    address: "Bella Bella",
+    health_authority: "Vancouver Coastal Health",
+    has_helipad: true,
+    emergency_department: true,
+    notes: "Heiltsuk Nation - Remote hospital"
+  },
+  {
+    id: "health-haida-gwaii",
+    name: "Haida Gwaii Hospital",
+    type: "hospital",
+    municipality: "Queen Charlotte",
+    region: "North Coast",
+    latitude: 53.2522,
+    longitude: -132.0756,
+    phone: "(250) 559-4300",
+    address: "3209 3rd Ave, Queen Charlotte",
+    health_authority: "Northern Health",
+    has_helipad: true,
+    emergency_department: true,
+    notes: "Haida Gwaii - Queen Charlotte City"
+  },
+  {
+    id: "health-masset",
+    name: "Northern Haida Gwaii Hospital",
+    type: "hospital",
+    municipality: "Masset",
+    region: "North Coast",
+    latitude: 54.0153,
+    longitude: -132.1489,
+    phone: "(250) 626-4700",
+    address: "2520 Harrison Ave, Masset",
+    health_authority: "Northern Health",
+    emergency_department: true,
+    notes: "Northern Haida Gwaii"
+  },
+  {
+    id: "health-ucluelet",
+    name: "Ucluelet Medical Clinic",
+    type: "hospital",
+    municipality: "Ucluelet",
+    region: "Alberni-Clayoquot",
+    latitude: 48.9420,
+    longitude: -125.5460,
+    phone: "(250) 726-4433",
+    address: "309 Forbes Rd, Ucluelet",
+    health_authority: "Island Health",
+    emergency_department: false,
+    notes: "Medical clinic - Urgent care available"
+  },
+
+  // ==========================================
+  // VOLUNTEER FIRE DEPARTMENTS - VANCOUVER ISLAND (VIFFA)
+  // ==========================================
+  {
+    id: "fire-bamfield-east",
+    name: "Bamfield Volunteer Fire Department - East Hall",
+    type: "fire_station",
+    municipality: "Bamfield",
+    region: "Alberni-Clayoquot",
+    latitude: 48.8350,
+    longitude: -125.1350,
+    notes: "Bamfield VFD - East Bamfield - VIFFA member"
+  },
+  {
+    id: "fire-bamfield-west",
+    name: "Bamfield Volunteer Fire Department - West Hall",
+    type: "fire_station",
+    municipality: "Bamfield",
+    region: "Alberni-Clayoquot",
+    latitude: 48.8320,
+    longitude: -125.1400,
+    notes: "Bamfield VFD - West Bamfield - VIFFA member"
+  },
+  {
+    id: "fire-ahousaht",
+    name: "Ahousaht Volunteer Fire Department",
+    type: "fire_station",
+    municipality: "Ahousaht",
+    region: "Alberni-Clayoquot",
+    latitude: 49.2819,
+    longitude: -126.0653,
+    notes: "First Nations community - VIFFA member"
+  },
+  {
+    id: "fire-alert-bay",
+    name: "Alert Bay Volunteer Fire Department",
+    type: "fire_station",
+    municipality: "Alert Bay",
+    region: "Mount Waddington",
+    latitude: 50.5858,
+    longitude: -126.9328,
+    notes: "VIFFA member"
+  },
+  {
+    id: "fire-beaver-creek",
+    name: "Beaver Creek Volunteer Fire Department",
+    type: "fire_station",
+    municipality: "Port Alberni",
+    region: "Alberni-Clayoquot",
+    latitude: 49.2867,
+    longitude: -124.7833,
+    notes: "VIFFA member - serves Beaver Creek area"
+  },
+  {
+    id: "fire-bow-horn-bay",
+    name: "Bow Horn Bay Volunteer Fire Department",
+    type: "fire_station",
+    municipality: "Bowser",
+    region: "Nanaimo",
+    latitude: 49.4333,
+    longitude: -124.6833,
+    notes: "VIFFA member"
+  },
+  {
+    id: "fire-caycuse",
+    name: "Caycuse Volunteer Fire Department",
+    type: "fire_station",
+    municipality: "Lake Cowichan",
+    region: "Cowichan Valley",
+    latitude: 48.8667,
+    longitude: -124.3000,
+    notes: "CVRD - VIFFA member"
+  },
+  {
+    id: "fire-central-saanich",
+    name: "Central Saanich Fire Department",
+    type: "fire_station",
+    municipality: "Central Saanich",
+    region: "Capital",
+    latitude: 48.5350,
+    longitude: -123.3833,
+    address: "1903 Mt Newton Cross Rd, Saanichton",
+    notes: "VIFFA member"
+  },
+  {
+    id: "fire-chemainus",
+    name: "Chemainus Volunteer Fire Department",
+    type: "fire_station",
+    municipality: "Chemainus",
+    region: "Cowichan Valley",
+    latitude: 48.9256,
+    longitude: -123.7139,
+    notes: "North Cowichan - VIFFA member"
+  },
+  {
+    id: "fire-cherry-creek",
+    name: "Cherry Creek Fire Department",
+    type: "fire_station",
+    municipality: "Port Alberni",
+    region: "Alberni-Clayoquot",
+    latitude: 49.2700,
+    longitude: -124.7500,
+    notes: "VIFFA member"
+  },
+  {
+    id: "fire-coal-harbour",
+    name: "Coal Harbour Volunteer Fire Department",
+    type: "fire_station",
+    municipality: "Coal Harbour",
+    region: "Mount Waddington",
+    latitude: 50.6000,
+    longitude: -127.5833,
+    phone: "(250) 949-6430",
+    notes: "VIFFA member"
+  },
+  {
+    id: "fire-colwood",
+    name: "Colwood Fire Rescue",
+    type: "fire_station",
+    municipality: "Colwood",
+    region: "Capital",
+    latitude: 48.4233,
+    longitude: -123.4956,
+    notes: "VIFFA member"
+  },
+  {
+    id: "fire-comox",
+    name: "Comox Fire Rescue",
+    type: "fire_station",
+    municipality: "Comox",
+    region: "Comox Valley",
+    latitude: 49.6728,
+    longitude: -124.9278,
+    notes: "VIFFA member"
+  },
+  {
+    id: "fire-coombs-hilliers",
+    name: "Coombs-Hilliers Volunteer Fire Department",
+    type: "fire_station",
+    municipality: "Coombs",
+    region: "Nanaimo",
+    latitude: 49.3000,
+    longitude: -124.4167,
+    notes: "VIFFA member"
+  },
+  {
+    id: "fire-cortes-island",
+    name: "Cortes Island Volunteer Fire Department",
+    type: "fire_station",
+    municipality: "Cortes Island",
+    region: "Strathcona",
+    latitude: 50.0667,
+    longitude: -124.9667,
+    notes: "VIFFA member"
+  },
+  {
+    id: "fire-cowichan-bay",
+    name: "Cowichan Bay Volunteer Fire Rescue",
+    type: "fire_station",
+    municipality: "Cowichan Bay",
+    region: "Cowichan Valley",
+    latitude: 48.7383,
+    longitude: -123.6181,
+    notes: "VIFFA member"
+  },
+  {
+    id: "fire-cranberry",
+    name: "Cranberry Volunteer Fire Department",
+    type: "fire_station",
+    municipality: "Nanaimo",
+    region: "Nanaimo",
+    latitude: 49.1500,
+    longitude: -124.0333,
+    notes: "VIFFA member"
+  },
+  {
+    id: "fire-crofton",
+    name: "Crofton Fire Department",
+    type: "fire_station",
+    municipality: "Crofton",
+    region: "Cowichan Valley",
+    latitude: 48.8667,
+    longitude: -123.6500,
+    notes: "North Cowichan - VIFFA member"
+  },
+  {
+    id: "fire-cumberland",
+    name: "Cumberland Fire Rescue",
+    type: "fire_station",
+    municipality: "Cumberland",
+    region: "Comox Valley",
+    latitude: 49.6197,
+    longitude: -125.0278,
+    notes: "VIFFA member"
+  },
+  {
+    id: "fire-dashwood",
+    name: "Dashwood Volunteer Fire Department",
+    type: "fire_station",
+    municipality: "Dashwood",
+    region: "Nanaimo",
+    latitude: 49.3667,
+    longitude: -124.5167,
+    notes: "VIFFA member"
+  },
+  {
+    id: "fire-deep-bay",
+    name: "Deep Bay Volunteer Fire Department",
+    type: "fire_station",
+    municipality: "Deep Bay",
+    region: "Nanaimo",
+    latitude: 49.4667,
+    longitude: -124.7333,
+    notes: "VIFFA member"
+  },
+  {
+    id: "fire-denman-island",
+    name: "Denman Island Volunteer Fire Department",
+    type: "fire_station",
+    municipality: "Denman Island",
+    region: "Comox Valley",
+    latitude: 49.5333,
+    longitude: -124.8167,
+    notes: "VIFFA member"
+  },
+  {
+    id: "fire-east-sooke",
+    name: "East Sooke Volunteer Fire Department",
+    type: "fire_station",
+    municipality: "East Sooke",
+    region: "Capital",
+    latitude: 48.3667,
+    longitude: -123.6500,
+    notes: "CRD - VIFFA member"
+  },
+  {
+    id: "fire-east-wellington",
+    name: "East Wellington Volunteer Fire Department",
+    type: "fire_station",
+    municipality: "Nanaimo",
+    region: "Nanaimo",
+    latitude: 49.1833,
+    longitude: -123.9667,
+    notes: "Mountain Fire Protection - VIFFA member"
+  },
+  {
+    id: "fire-errington",
+    name: "Errington Fire Department",
+    type: "fire_station",
+    municipality: "Errington",
+    region: "Nanaimo",
+    latitude: 49.2833,
+    longitude: -124.3333,
+    notes: "VIFFA member"
+  },
+  {
+    id: "fire-extension",
+    name: "Extension Fire Department",
+    type: "fire_station",
+    municipality: "Nanaimo",
+    region: "Nanaimo",
+    latitude: 49.1167,
+    longitude: -123.9000,
+    notes: "VIFFA member"
+  },
+  {
+    id: "fire-fanny-bay",
+    name: "Fanny Bay Fire Department",
+    type: "fire_station",
+    municipality: "Fanny Bay",
+    region: "Comox Valley",
+    latitude: 49.4833,
+    longitude: -124.8167,
+    notes: "VIFFA member"
+  },
+  {
+    id: "fire-gabriola",
+    name: "Gabriola Volunteer Fire Department",
+    type: "fire_station",
+    municipality: "Gabriola Island",
+    region: "Nanaimo",
+    latitude: 49.1500,
+    longitude: -123.8000,
+    notes: "VIFFA member"
+  },
+  {
+    id: "fire-gillies-bay",
+    name: "Gillies Bay Volunteer Fire Department",
+    type: "fire_station",
+    municipality: "Texada Island",
+    region: "Powell River",
+    latitude: 49.6833,
+    longitude: -124.5167,
+    notes: "VIFFA member"
+  },
+  {
+    id: "fire-gold-river",
+    name: "Gold River Volunteer Fire Department",
+    type: "fire_station",
+    municipality: "Gold River",
+    region: "Strathcona",
+    latitude: 49.7833,
+    longitude: -126.1000,
+    notes: "VIFFA member"
+  },
+  {
+    id: "fire-highlands",
+    name: "Highlands Volunteer Fire Department",
+    type: "fire_station",
+    municipality: "Highlands",
+    region: "Capital",
+    latitude: 48.4833,
+    longitude: -123.5000,
+    phone: "(250) 479-1814",
+    notes: "VIFFA member"
+  },
+  {
+    id: "fire-holberg",
+    name: "Holberg Volunteer Fire Department",
+    type: "fire_station",
+    municipality: "Holberg",
+    region: "Mount Waddington",
+    latitude: 50.6333,
+    longitude: -128.0333,
+    notes: "RDMW - VIFFA member"
+  },
+  {
+    id: "fire-honeymoon-bay",
+    name: "Honeymoon Bay Fire Department",
+    type: "fire_station",
+    municipality: "Honeymoon Bay",
+    region: "Cowichan Valley",
+    latitude: 48.8333,
+    longitude: -124.1667,
+    notes: "VIFFA member"
+  },
+  {
+    id: "fire-hornby-island",
+    name: "Hornby Island Volunteer Fire Department",
+    type: "fire_station",
+    municipality: "Hornby Island",
+    region: "Comox Valley",
+    latitude: 49.5333,
+    longitude: -124.6667,
+    notes: "VIFFA member"
+  },
+  {
+    id: "fire-hyde-creek",
+    name: "Hyde Creek Fire Department",
+    type: "fire_station",
+    municipality: "Port McNeill",
+    region: "Mount Waddington",
+    latitude: 50.5500,
+    longitude: -127.1667,
+    notes: "VIFFA member"
+  },
+  {
+    id: "fire-ladysmith",
+    name: "Ladysmith Fire Rescue",
+    type: "fire_station",
+    municipality: "Ladysmith",
+    region: "Cowichan Valley",
+    latitude: 48.9947,
+    longitude: -123.8172,
+    notes: "VIFFA member"
+  },
+  {
+    id: "fire-lake-cowichan",
+    name: "Lake Cowichan Fire Department",
+    type: "fire_station",
+    municipality: "Lake Cowichan",
+    region: "Cowichan Valley",
+    latitude: 48.8278,
+    longitude: -124.0544,
+    notes: "VIFFA member"
+  },
+  {
+    id: "fire-lantzville",
+    name: "Lantzville Fire Rescue",
+    type: "fire_station",
+    municipality: "Lantzville",
+    region: "Nanaimo",
+    latitude: 49.2500,
+    longitude: -124.0667,
+    notes: "VIFFA member"
+  },
+  {
+    id: "fire-lasqueti-island",
+    name: "Lasqueti Island Volunteer Fire Department",
+    type: "fire_station",
+    municipality: "Lasqueti Island",
+    region: "Powell River",
+    latitude: 49.5000,
+    longitude: -124.3667,
+    notes: "VIFFA member"
+  },
+  {
+    id: "fire-malahat",
+    name: "Malahat Volunteer Fire Department",
+    type: "fire_station",
+    municipality: "Malahat",
+    region: "Cowichan Valley",
+    latitude: 48.5833,
+    longitude: -123.5500,
+    notes: "VIFFA member"
+  },
+  {
+    id: "fire-maple-bay",
+    name: "Maple Bay Fire Department",
+    type: "fire_station",
+    municipality: "Maple Bay",
+    region: "Cowichan Valley",
+    latitude: 48.8000,
+    longitude: -123.6167,
+    notes: "North Cowichan - VIFFA member"
+  },
+  {
+    id: "fire-mayne-island",
+    name: "Mayne Island Fire Department",
+    type: "fire_station",
+    municipality: "Mayne Island",
+    region: "Capital",
+    latitude: 48.8500,
+    longitude: -123.2833,
+    notes: "VIFFA member - Gulf Islands"
+  },
+  {
+    id: "fire-mesachie-lake",
+    name: "Mesachie Lake Volunteer Fire Department",
+    type: "fire_station",
+    municipality: "Mesachie Lake",
+    region: "Cowichan Valley",
+    latitude: 48.8333,
+    longitude: -124.1333,
+    notes: "VIFFA member"
+  },
+  {
+    id: "fire-metchosin",
+    name: "Metchosin Volunteer Fire Department",
+    type: "fire_station",
+    municipality: "Metchosin",
+    region: "Capital",
+    latitude: 48.3833,
+    longitude: -123.5333,
+    notes: "VIFFA member"
+  },
+  {
+    id: "fire-mill-bay",
+    name: "Mill Bay Fire Department",
+    type: "fire_station",
+    municipality: "Mill Bay",
+    region: "Cowichan Valley",
+    latitude: 48.6500,
+    longitude: -123.5500,
+    notes: "VIFFA member"
+  },
+  {
+    id: "fire-nanoose-bay",
+    name: "Nanoose Bay Volunteer Fire Department",
+    type: "fire_station",
+    municipality: "Nanoose Bay",
+    region: "Nanaimo",
+    latitude: 49.2667,
+    longitude: -124.2000,
+    notes: "VIFFA member"
+  },
+  {
+    id: "fire-north-cedar",
+    name: "North Cedar Fire Department",
+    type: "fire_station",
+    municipality: "Cedar",
+    region: "Nanaimo",
+    latitude: 49.0833,
+    longitude: -123.8500,
+    notes: "NCID - VIFFA member"
+  },
+  {
+    id: "fire-north-cowichan-south",
+    name: "North Cowichan Fire Department - South End",
+    type: "fire_station",
+    municipality: "North Cowichan",
+    region: "Cowichan Valley",
+    latitude: 48.8333,
+    longitude: -123.7000,
+    notes: "VIFFA member"
+  },
+  {
+    id: "fire-north-galiano",
+    name: "North Galiano Volunteer Fire Department",
+    type: "fire_station",
+    municipality: "Galiano Island",
+    region: "Capital",
+    latitude: 49.0000,
+    longitude: -123.4500,
+    notes: "VIFFA member - Gulf Islands"
+  },
+  {
+    id: "fire-north-oyster",
+    name: "North Oyster Fire Department",
+    type: "fire_station",
+    municipality: "Ladysmith",
+    region: "Cowichan Valley",
+    latitude: 49.0167,
+    longitude: -123.8833,
+    notes: "VIFFA member"
+  },
+  {
+    id: "fire-north-saanich",
+    name: "North Saanich Fire Department",
+    type: "fire_station",
+    municipality: "North Saanich",
+    region: "Capital",
+    latitude: 48.6667,
+    longitude: -123.4167,
+    notes: "VIFFA member"
+  },
+  {
+    id: "fire-otter-point",
+    name: "Otter Point Volunteer Fire Department",
+    type: "fire_station",
+    municipality: "Otter Point",
+    region: "Capital",
+    latitude: 48.3833,
+    longitude: -123.8000,
+    notes: "CRD - VIFFA member"
+  },
+  {
+    id: "fire-oyster-river",
+    name: "Oyster River Fire Department",
+    type: "fire_station",
+    municipality: "Black Creek",
+    region: "Comox Valley",
+    latitude: 49.8833,
+    longitude: -125.1333,
+    notes: "VIFFA member"
+  },
+  {
+    id: "fire-pacheedaht",
+    name: "Pacheedaht Volunteer Fire Department",
+    type: "fire_station",
+    municipality: "Port Renfrew",
+    region: "Capital",
+    latitude: 48.5500,
+    longitude: -124.4333,
+    notes: "First Nations - VIFFA member"
+  },
+  {
+    id: "fire-parksville",
+    name: "Parksville Fire Department",
+    type: "fire_station",
+    municipality: "Parksville",
+    region: "Nanaimo",
+    latitude: 49.3206,
+    longitude: -124.3181,
+    notes: "VIFFA member"
+  },
+  {
+    id: "fire-pender-island",
+    name: "Pender Island Fire Rescue",
+    type: "fire_station",
+    municipality: "Pender Island",
+    region: "Capital",
+    latitude: 48.7833,
+    longitude: -123.2833,
+    notes: "VIFFA member - Gulf Islands"
+  },
+  {
+    id: "fire-piers-island",
+    name: "Piers Island Volunteer Fire Department",
+    type: "fire_station",
+    municipality: "Piers Island",
+    region: "Capital",
+    latitude: 48.7000,
+    longitude: -123.4167,
+    notes: "VIFFA member - small island"
+  },
+  {
+    id: "fire-port-alice",
+    name: "Port Alice Volunteer Fire Department",
+    type: "fire_station",
+    municipality: "Port Alice",
+    region: "Mount Waddington",
+    latitude: 50.3833,
+    longitude: -127.4500,
+    notes: "VIFFA member"
+  },
+  {
+    id: "fire-port-hardy",
+    name: "Port Hardy Fire Rescue",
+    type: "fire_station",
+    municipality: "Port Hardy",
+    region: "Mount Waddington",
+    latitude: 50.7175,
+    longitude: -127.4936,
+    phone: "(250) 949-6564",
+    notes: "VIFFA member"
+  },
+  {
+    id: "fire-port-mcneill",
+    name: "Port McNeill Volunteer Fire Department",
+    type: "fire_station",
+    municipality: "Port McNeill",
+    region: "Mount Waddington",
+    latitude: 50.5908,
+    longitude: -127.0858,
+    notes: "VIFFA member"
+  },
+  {
+    id: "fire-port-renfrew",
+    name: "Port Renfrew Volunteer Fire Department",
+    type: "fire_station",
+    municipality: "Port Renfrew",
+    region: "Capital",
+    latitude: 48.5547,
+    longitude: -124.4214,
+    notes: "CRD - VIFFA member"
+  },
+  {
+    id: "fire-quadra-island",
+    name: "Quadra Island Volunteer Fire Department",
+    type: "fire_station",
+    municipality: "Quadra Island",
+    region: "Strathcona",
+    latitude: 50.1000,
+    longitude: -125.2333,
+    notes: "VIFFA member"
+  },
+  {
+    id: "fire-qualicum-beach",
+    name: "Qualicum Beach Fire Department",
+    type: "fire_station",
+    municipality: "Qualicum Beach",
+    region: "Nanaimo",
+    latitude: 49.3500,
+    longitude: -124.4333,
+    notes: "VIFFA member"
+  },
+  {
+    id: "fire-sahtlam",
+    name: "Sahtlam Fire Department",
+    type: "fire_station",
+    municipality: "Duncan",
+    region: "Cowichan Valley",
+    latitude: 48.8000,
+    longitude: -123.8000,
+    notes: "VIFFA member"
+  },
+  {
+    id: "fire-salt-spring",
+    name: "Salt Spring Island Fire Rescue",
+    type: "fire_station",
+    municipality: "Salt Spring Island",
+    region: "Capital",
+    latitude: 48.8567,
+    longitude: -123.5083,
+    notes: "VIFFA member - Gulf Islands"
+  },
+  {
+    id: "fire-saturna-island",
+    name: "Saturna Island Fire Protection Society",
+    type: "fire_station",
+    municipality: "Saturna Island",
+    region: "Capital",
+    latitude: 48.7833,
+    longitude: -123.1333,
+    notes: "VIFFA member - Gulf Islands"
+  },
+  {
+    id: "fire-sayward",
+    name: "Sayward Fire Department",
+    type: "fire_station",
+    municipality: "Sayward",
+    region: "Strathcona",
+    latitude: 50.3833,
+    longitude: -125.9500,
+    notes: "VIFFA member"
+  },
+  {
+    id: "fire-shawnigan-lake",
+    name: "Shawnigan Lake Volunteer Fire Department",
+    type: "fire_station",
+    municipality: "Shawnigan Lake",
+    region: "Cowichan Valley",
+    latitude: 48.6500,
+    longitude: -123.6333,
+    notes: "VIFFA member"
+  },
+  {
+    id: "fire-ships-point",
+    name: "Ships Point Volunteer Fire Department",
+    type: "fire_station",
+    municipality: "Fanny Bay",
+    region: "Comox Valley",
+    latitude: 49.5167,
+    longitude: -124.8000,
+    notes: "SPID - VIFFA member"
+  },
+  {
+    id: "fire-shirley",
+    name: "Shirley Volunteer Fire Department",
+    type: "fire_station",
+    municipality: "Shirley",
+    region: "Capital",
+    latitude: 48.3667,
+    longitude: -123.9333,
+    notes: "CRD - VIFFA member"
+  },
+  {
+    id: "fire-sointula",
+    name: "Sointula Volunteer Fire Department",
+    type: "fire_station",
+    municipality: "Sointula",
+    region: "Mount Waddington",
+    latitude: 50.6167,
+    longitude: -127.0000,
+    notes: "Malcolm Island - VIFFA member"
+  },
+  {
+    id: "fire-sooke",
+    name: "Sooke Fire Rescue",
+    type: "fire_station",
+    municipality: "Sooke",
+    region: "Capital",
+    latitude: 48.3739,
+    longitude: -123.7261,
+    notes: "VIFFA member"
+  },
+  {
+    id: "fire-sproat-lake",
+    name: "Sproat Lake Volunteer Fire Department",
+    type: "fire_station",
+    municipality: "Port Alberni",
+    region: "Alberni-Clayoquot",
+    latitude: 49.2833,
+    longitude: -124.9167,
+    notes: "VIFFA member"
+  },
+  {
+    id: "fire-tahsis",
+    name: "Tahsis Volunteer Fire Department",
+    type: "fire_station",
+    municipality: "Tahsis",
+    region: "Strathcona",
+    latitude: 49.9167,
+    longitude: -126.6667,
+    notes: "VIFFA member"
+  },
+  {
+    id: "fire-thetis-island",
+    name: "Thetis Island Volunteer Fire Department",
+    type: "fire_station",
+    municipality: "Thetis Island",
+    region: "Cowichan Valley",
+    latitude: 48.9833,
+    longitude: -123.6833,
+    notes: "VIFFA member"
+  },
+  {
+    id: "fire-ucluelet",
+    name: "Ucluelet Fire Rescue",
+    type: "fire_station",
+    municipality: "Ucluelet",
+    region: "Alberni-Clayoquot",
+    latitude: 48.9420,
+    longitude: -125.5460,
+    notes: "VIFFA member"
+  },
+  {
+    id: "fire-union-bay",
+    name: "Union Bay Fire Rescue",
+    type: "fire_station",
+    municipality: "Union Bay",
+    region: "Comox Valley",
+    latitude: 49.5833,
+    longitude: -124.8833,
+    notes: "VIFFA member"
+  },
+  {
+    id: "fire-view-royal",
+    name: "View Royal Fire Department",
+    type: "fire_station",
+    municipality: "View Royal",
+    region: "Capital",
+    latitude: 48.4500,
+    longitude: -123.4500,
+    notes: "VIFFA member"
+  },
+  {
+    id: "fire-willis-point",
+    name: "Willis Point Volunteer Fire Department",
+    type: "fire_station",
+    municipality: "Willis Point",
+    region: "Capital",
+    latitude: 48.5500,
+    longitude: -123.4833,
+    notes: "CRD - VIFFA member"
+  },
+  {
+    id: "fire-woss",
+    name: "Woss Fire Department",
+    type: "fire_station",
+    municipality: "Woss",
+    region: "Mount Waddington",
+    latitude: 50.2167,
+    longitude: -126.6000,
+    notes: "VIFFA member"
+  },
+  {
+    id: "fire-youbou",
+    name: "Youbou Volunteer Fire Department",
+    type: "fire_station",
+    municipality: "Youbou",
+    region: "Cowichan Valley",
+    latitude: 48.8667,
+    longitude: -124.1667,
+    notes: "VIFFA member"
+  },
+  {
+    id: "fire-zeballos",
+    name: "Zeballos Fire Department",
+    type: "fire_station",
+    municipality: "Zeballos",
+    region: "Strathcona",
+    latitude: 49.9833,
+    longitude: -126.8500,
+    notes: "VIFFA member"
+  },
+
+  // ==========================================
+  // ADDITIONAL VOLUNTEER FIRE DEPARTMENTS - BC MAINLAND
+  // ==========================================
+  {
+    id: "fire-squamish",
+    name: "Squamish Fire Rescue",
+    type: "fire_station",
+    municipality: "Squamish",
+    region: "Squamish-Lillooet",
+    latitude: 49.7016,
+    longitude: -123.1558,
+    notes: "District of Squamish"
+  },
+  {
+    id: "fire-whistler",
+    name: "Whistler Fire Rescue",
+    type: "fire_station",
+    municipality: "Whistler",
+    region: "Squamish-Lillooet",
+    latitude: 50.1163,
+    longitude: -122.9574,
+    notes: "Resort Municipality of Whistler"
+  },
+  {
+    id: "fire-pemberton",
+    name: "Pemberton Fire Rescue",
+    type: "fire_station",
+    municipality: "Pemberton",
+    region: "Squamish-Lillooet",
+    latitude: 50.3172,
+    longitude: -122.8031,
+    notes: "Village of Pemberton"
+  },
+  {
+    id: "fire-britannia-beach",
+    name: "Britannia Beach Volunteer Fire Department",
+    type: "fire_station",
+    municipality: "Britannia Beach",
+    region: "Squamish-Lillooet",
+    latitude: 49.6333,
+    longitude: -123.2000,
+    phone: "(604) 802-5441",
+    notes: "Sea to Sky corridor"
+  },
+  {
+    id: "fire-birken",
+    name: "Birken Volunteer Fire Service",
+    type: "fire_station",
+    municipality: "Birken",
+    region: "Squamish-Lillooet",
+    latitude: 50.3833,
+    longitude: -122.5500,
+    phone: "(778) 837-7159",
+    notes: "SLRD"
+  },
+  {
+    id: "fire-bralorne",
+    name: "Bralorne Fire Protection Association",
+    type: "fire_station",
+    municipality: "Bralorne",
+    region: "Squamish-Lillooet",
+    latitude: 50.7667,
+    longitude: -122.8000,
+    phone: "(604) 512-1442",
+    notes: "Historic mining community"
+  },
+  {
+    id: "fire-sechelt",
+    name: "Sechelt Fire Department",
+    type: "fire_station",
+    municipality: "Sechelt",
+    region: "Sunshine Coast",
+    latitude: 49.4726,
+    longitude: -123.7545,
+    notes: "Sunshine Coast"
+  },
+  {
+    id: "fire-gibsons",
+    name: "Gibsons Fire Department",
+    type: "fire_station",
+    municipality: "Gibsons",
+    region: "Sunshine Coast",
+    latitude: 49.4028,
+    longitude: -123.5044,
+    notes: "Sunshine Coast"
+  },
+  {
+    id: "fire-powell-river",
+    name: "Powell River Fire Rescue",
+    type: "fire_station",
+    municipality: "Powell River",
+    region: "Powell River",
+    latitude: 49.8354,
+    longitude: -124.5245,
+    notes: "City of Powell River"
+  },
+  {
+    id: "fire-hope",
+    name: "Hope Fire Department",
+    type: "fire_station",
+    municipality: "Hope",
+    region: "Fraser Valley",
+    latitude: 49.3858,
+    longitude: -121.4419,
+    notes: "District of Hope"
+  },
+  {
+    id: "fire-agassiz",
+    name: "Agassiz Fire Department",
+    type: "fire_station",
+    municipality: "Agassiz",
+    region: "Fraser Valley",
+    latitude: 49.2389,
+    longitude: -121.7606,
+    phone: "(604) 796-2614",
+    notes: "District of Kent"
+  },
+  {
+    id: "fire-boston-bar",
+    name: "Boston Bar / North Bend VFD",
+    type: "fire_station",
+    municipality: "Boston Bar",
+    region: "Fraser Valley",
+    latitude: 49.8667,
+    longitude: -121.4500,
+    notes: "Fraser Canyon - volunteer"
+  },
+  {
+    id: "fire-cache-creek",
+    name: "Cache Creek Volunteer Fire Department",
+    type: "fire_station",
+    municipality: "Cache Creek",
+    region: "Thompson-Nicola",
+    latitude: 50.8100,
+    longitude: -121.3244,
+    phone: "(250) 457-9967",
+    notes: "Village of Cache Creek"
+  },
+  {
+    id: "fire-merritt",
+    name: "Merritt Fire Rescue",
+    type: "fire_station",
+    municipality: "Merritt",
+    region: "Thompson-Nicola",
+    latitude: 50.1128,
+    longitude: -120.7919,
+    notes: "City of Merritt"
+  },
+  {
+    id: "fire-barriere",
+    name: "Barriere Fire Rescue",
+    type: "fire_station",
+    municipality: "Barriere",
+    region: "Thompson-Nicola",
+    latitude: 51.1833,
+    longitude: -120.1333,
+    notes: "District of Barriere"
+  },
+  {
+    id: "fire-clearwater",
+    name: "Clearwater Fire Rescue",
+    type: "fire_station",
+    municipality: "Clearwater",
+    region: "Thompson-Nicola",
+    latitude: 51.6500,
+    longitude: -120.0333,
+    notes: "District of Clearwater"
+  },
+  {
+    id: "fire-100-mile-house",
+    name: "100 Mile House Fire Rescue",
+    type: "fire_station",
+    municipality: "100 Mile House",
+    region: "Cariboo",
+    latitude: 51.6392,
+    longitude: -121.2950,
+    notes: "District of 100 Mile House"
+  },
+  {
+    id: "fire-108-mile",
+    name: "108 Mile Fire Department",
+    type: "fire_station",
+    municipality: "108 Mile Ranch",
+    region: "Cariboo",
+    latitude: 51.7333,
+    longitude: -121.3667,
+    notes: "CRD volunteer"
+  },
+  {
+    id: "fire-150-mile",
+    name: "150 Mile Fire Department",
+    type: "fire_station",
+    municipality: "150 Mile House",
+    region: "Cariboo",
+    latitude: 52.0500,
+    longitude: -121.9333,
+    notes: "CRD volunteer"
+  },
+  {
+    id: "fire-revelstoke",
+    name: "Revelstoke Fire Rescue",
+    type: "fire_station",
+    municipality: "Revelstoke",
+    region: "Columbia-Shuswap",
+    latitude: 50.9989,
+    longitude: -118.1956,
+    notes: "City of Revelstoke"
+  },
+  {
+    id: "fire-golden",
+    name: "Golden Fire Department",
+    type: "fire_station",
+    municipality: "Golden",
+    region: "Columbia-Shuswap",
+    latitude: 51.2972,
+    longitude: -116.9631,
+    notes: "Town of Golden"
+  },
+  {
+    id: "fire-salmon-arm",
+    name: "Salmon Arm Fire Department",
+    type: "fire_station",
+    municipality: "Salmon Arm",
+    region: "Columbia-Shuswap",
+    latitude: 50.7014,
+    longitude: -119.2806,
+    notes: "City of Salmon Arm"
+  },
+  {
+    id: "fire-invermere",
+    name: "Invermere Fire Rescue",
+    type: "fire_station",
+    municipality: "Invermere",
+    region: "East Kootenay",
+    latitude: 50.5064,
+    longitude: -116.0322,
+    notes: "District of Invermere"
+  },
+  {
+    id: "fire-fernie",
+    name: "Fernie Fire Rescue",
+    type: "fire_station",
+    municipality: "Fernie",
+    region: "East Kootenay",
+    latitude: 49.5128,
+    longitude: -115.0566,
+    notes: "City of Fernie"
+  },
+  {
+    id: "fire-trail",
+    name: "Trail Fire Department",
+    type: "fire_station",
+    municipality: "Trail",
+    region: "Kootenay Boundary",
+    latitude: 49.0958,
+    longitude: -117.7006,
+    notes: "City of Trail"
+  },
+  {
+    id: "fire-castlegar",
+    name: "Castlegar Fire Department",
+    type: "fire_station",
+    municipality: "Castlegar",
+    region: "Central Kootenay",
+    latitude: 49.3256,
+    longitude: -117.6658,
+    notes: "City of Castlegar"
+  },
+  {
+    id: "fire-kaslo",
+    name: "Kaslo Volunteer Fire Department",
+    type: "fire_station",
+    municipality: "Kaslo",
+    region: "Central Kootenay",
+    latitude: 49.9133,
+    longitude: -116.9136,
+    notes: "Village of Kaslo"
+  },
+  {
+    id: "fire-nakusp",
+    name: "Nakusp Fire Department",
+    type: "fire_station",
+    municipality: "Nakusp",
+    region: "Central Kootenay",
+    latitude: 50.2387,
+    longitude: -117.7946,
+    notes: "Village of Nakusp"
+  },
+  {
+    id: "fire-grand-forks",
+    name: "Grand Forks Fire Rescue",
+    type: "fire_station",
+    municipality: "Grand Forks",
+    region: "Kootenay Boundary",
+    latitude: 49.0303,
+    longitude: -118.4406,
+    notes: "City of Grand Forks"
+  },
+  {
+    id: "fire-princeton",
+    name: "Princeton Fire Rescue",
+    type: "fire_station",
+    municipality: "Princeton",
+    region: "Okanagan-Similkameen",
+    latitude: 49.4589,
+    longitude: -120.5064,
+    notes: "Town of Princeton"
+  },
+  {
+    id: "fire-oliver",
+    name: "Oliver Fire Department",
+    type: "fire_station",
+    municipality: "Oliver",
+    region: "Okanagan-Similkameen",
+    latitude: 49.1833,
+    longitude: -119.5500,
+    notes: "Town of Oliver"
+  },
+  {
+    id: "fire-osoyoos",
+    name: "Osoyoos Fire Department",
+    type: "fire_station",
+    municipality: "Osoyoos",
+    region: "Okanagan-Similkameen",
+    latitude: 49.0333,
+    longitude: -119.4667,
+    notes: "Town of Osoyoos"
+  },
+  {
+    id: "fire-summerland",
+    name: "Summerland Fire Department",
+    type: "fire_station",
+    municipality: "Summerland",
+    region: "Okanagan-Similkameen",
+    latitude: 49.5997,
+    longitude: -119.6772,
+    notes: "District of Summerland"
+  },
+  {
+    id: "fire-lake-country",
+    name: "Lake Country Fire Department",
+    type: "fire_station",
+    municipality: "Lake Country",
+    region: "Central Okanagan",
+    latitude: 50.0500,
+    longitude: -119.4167,
+    notes: "District of Lake Country"
+  },
+  {
+    id: "fire-west-kelowna",
+    name: "West Kelowna Fire Rescue",
+    type: "fire_station",
+    municipality: "West Kelowna",
+    region: "Central Okanagan",
+    latitude: 49.8622,
+    longitude: -119.5833,
+    notes: "City of West Kelowna"
+  },
+  {
+    id: "fire-armstrong",
+    name: "Armstrong-Spallumcheen Fire Department",
+    type: "fire_station",
+    municipality: "Armstrong",
+    region: "North Okanagan",
+    latitude: 50.4489,
+    longitude: -119.1961,
+    phone: "(250) 546-6708",
+    notes: "Composite department"
+  },
+  {
+    id: "fire-enderby",
+    name: "Enderby Fire Department",
+    type: "fire_station",
+    municipality: "Enderby",
+    region: "North Okanagan",
+    latitude: 50.5500,
+    longitude: -119.1333,
+    notes: "City of Enderby"
+  },
+  {
+    id: "fire-lumby",
+    name: "Lumby Fire Department",
+    type: "fire_station",
+    municipality: "Lumby",
+    region: "North Okanagan",
+    latitude: 50.2500,
+    longitude: -118.9667,
+    notes: "Village of Lumby"
+  },
+  {
+    id: "fire-mackenzie",
+    name: "Mackenzie Fire Department",
+    type: "fire_station",
+    municipality: "Mackenzie",
+    region: "Fraser-Fort George",
+    latitude: 55.3378,
+    longitude: -123.0942,
+    notes: "District of Mackenzie"
+  },
+  {
+    id: "fire-mcbride",
+    name: "McBride Fire Department",
+    type: "fire_station",
+    municipality: "McBride",
+    region: "Fraser-Fort George",
+    latitude: 53.3000,
+    longitude: -120.1667,
+    notes: "Village of McBride"
+  },
+  {
+    id: "fire-valemount",
+    name: "Valemount Fire Department",
+    type: "fire_station",
+    municipality: "Valemount",
+    region: "Fraser-Fort George",
+    latitude: 52.8283,
+    longitude: -119.2644,
+    notes: "Village of Valemount"
+  },
+  {
+    id: "fire-vanderhoof",
+    name: "Vanderhoof Fire Department",
+    type: "fire_station",
+    municipality: "Vanderhoof",
+    region: "Bulkley-Nechako",
+    latitude: 54.0167,
+    longitude: -124.0000,
+    notes: "District of Vanderhoof"
+  },
+  {
+    id: "fire-fort-st-james",
+    name: "Fort St. James Fire Department",
+    type: "fire_station",
+    municipality: "Fort St. James",
+    region: "Bulkley-Nechako",
+    latitude: 54.4500,
+    longitude: -124.2500,
+    notes: "District of Fort St. James"
+  },
+  {
+    id: "fire-burns-lake",
+    name: "Burns Lake Fire Department",
+    type: "fire_station",
+    municipality: "Burns Lake",
+    region: "Bulkley-Nechako",
+    latitude: 54.2306,
+    longitude: -125.7597,
+    notes: "Village of Burns Lake"
+  },
+  {
+    id: "fire-houston",
+    name: "Houston Fire Department",
+    type: "fire_station",
+    municipality: "Houston",
+    region: "Bulkley-Nechako",
+    latitude: 54.4000,
+    longitude: -126.6500,
+    notes: "District of Houston"
+  },
+  {
+    id: "fire-smithers",
+    name: "Smithers Fire Department",
+    type: "fire_station",
+    municipality: "Smithers",
+    region: "Bulkley-Nechako",
+    latitude: 54.7806,
+    longitude: -127.1667,
+    notes: "Town of Smithers"
+  },
+  {
+    id: "fire-hazelton",
+    name: "Hazelton Fire Department",
+    type: "fire_station",
+    municipality: "Hazelton",
+    region: "Kitimat-Stikine",
+    latitude: 55.2500,
+    longitude: -127.6667,
+    notes: "Village of Hazelton"
+  },
+  {
+    id: "fire-kitimat",
+    name: "Kitimat Fire Department",
+    type: "fire_station",
+    municipality: "Kitimat",
+    region: "Kitimat-Stikine",
+    latitude: 54.0519,
+    longitude: -128.6542,
+    notes: "District of Kitimat"
+  },
+  {
+    id: "fire-stewart",
+    name: "Stewart Fire Department",
+    type: "fire_station",
+    municipality: "Stewart",
+    region: "Kitimat-Stikine",
+    latitude: 55.9361,
+    longitude: -130.0053,
+    notes: "District of Stewart"
+  },
+  {
+    id: "fire-fort-nelson",
+    name: "Fort Nelson Fire Department",
+    type: "fire_station",
+    municipality: "Fort Nelson",
+    region: "Northern Rockies",
+    latitude: 58.8050,
+    longitude: -122.6972,
+    notes: "Northern Rockies Regional Municipality"
+  },
+  {
+    id: "fire-chetwynd",
+    name: "Chetwynd Fire Department",
+    type: "fire_station",
+    municipality: "Chetwynd",
+    region: "Peace River",
+    latitude: 55.6997,
+    longitude: -121.6333,
+    notes: "District of Chetwynd"
+  },
+  {
+    id: "fire-hudson-hope",
+    name: "Hudson's Hope Fire Department",
+    type: "fire_station",
+    municipality: "Hudson's Hope",
+    region: "Peace River",
+    latitude: 56.0333,
+    longitude: -121.9000,
+    notes: "District of Hudson's Hope"
+  },
+  {
+    id: "fire-tumbler-ridge",
+    name: "Tumbler Ridge Fire Department",
+    type: "fire_station",
+    municipality: "Tumbler Ridge",
+    region: "Peace River",
+    latitude: 55.1294,
+    longitude: -121.0011,
+    notes: "District of Tumbler Ridge"
+  },
+  {
+    id: "fire-pouce-coupe",
+    name: "Pouce Coupe Fire Department",
+    type: "fire_station",
+    municipality: "Pouce Coupe",
+    region: "Peace River",
+    latitude: 55.7167,
+    longitude: -120.1333,
+    notes: "Village of Pouce Coupe"
+  },
+  {
+    id: "fire-atlin",
+    name: "Atlin Fire Department",
+    type: "fire_station",
+    municipality: "Atlin",
+    region: "Stikine",
+    latitude: 59.5706,
+    longitude: -133.6925,
+    notes: "Atlin Community Improvement District"
+  },
+  {
+    id: "fire-port-clements",
+    name: "Port Clements Fire Department",
+    type: "fire_station",
+    municipality: "Port Clements",
+    region: "North Coast",
+    latitude: 53.6833,
+    longitude: -132.1833,
+    notes: "Haida Gwaii"
+  },
+  {
+    id: "fire-sandspit",
+    name: "Sandspit Fire Department",
+    type: "fire_station",
+    municipality: "Sandspit",
+    region: "North Coast",
+    latitude: 53.2500,
+    longitude: -131.8167,
+    notes: "Haida Gwaii"
+  },
+  {
+    id: "fire-queen-charlotte",
+    name: "Queen Charlotte Fire Department",
+    type: "fire_station",
+    municipality: "Queen Charlotte",
+    region: "North Coast",
+    latitude: 53.2522,
+    longitude: -132.0756,
+    notes: "Haida Gwaii"
+  },
+  {
+    id: "fire-port-edward",
+    name: "Port Edward Fire Department",
+    type: "fire_station",
+    municipality: "Port Edward",
+    region: "North Coast",
+    latitude: 54.2333,
+    longitude: -130.2833,
+    notes: "District of Port Edward"
   }
 ];
 
