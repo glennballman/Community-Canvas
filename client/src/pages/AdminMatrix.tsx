@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
   ALL_MUNICIPALITIES, 
-  SHARED_SOURCES, 
+  PROVINCIAL_SOURCES,
+  REGIONAL_SOURCES,
   MUNICIPAL_SOURCES, 
   DataSource 
 } from "@shared/sources";
@@ -53,13 +54,19 @@ export default function AdminMatrix() {
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
   const [selectedSource, setSelectedSource] = useState<{ source: SourceInfo; category: string } | null>(null);
 
+  // Combine provincial + all regional sources for the "shared" category
+  const allSharedSources = useMemo(() => {
+    const allRegional = Object.values(REGIONAL_SOURCES).flat();
+    return [...PROVINCIAL_SOURCES, ...allRegional];
+  }, []);
+
   const sourcesByCategory = useMemo(() => {
     const result: Record<string, SourceInfo[]> = {};
     
     for (const cat of CATEGORIES) {
       const sourcesMap = new Map<string, SourceInfo>();
       
-      const sharedInCat = SHARED_SOURCES.filter(s => s.category === cat.id);
+      const sharedInCat = allSharedSources.filter(s => s.category === cat.id);
       for (const source of sharedInCat) {
         const info: SourceInfo = {
           name: source.source_name,
@@ -97,7 +104,7 @@ export default function AdminMatrix() {
     }
     
     return result;
-  }, []);
+  }, [allSharedSources]);
 
   const categoryTotals = useMemo(() => {
     const totals: Record<string, { shared: number; municipal: number; totalSources: number }> = {};
@@ -136,7 +143,7 @@ export default function AdminMatrix() {
           <span className="text-border">|</span>
           <span>{CATEGORIES.length} Categories</span>
           <span className="text-border">|</span>
-          <span>{SHARED_SOURCES.length} Shared Sources</span>
+          <span>{allSharedSources.length} Shared Sources</span>
         </div>
       </header>
 

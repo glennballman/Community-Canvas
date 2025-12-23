@@ -12,7 +12,7 @@ import {
   getNode,
   type GeoNode 
 } from "@shared/geography";
-import { SHARED_SOURCES, MUNICIPAL_SOURCES, ALL_MUNICIPALITIES, type DataSource } from "@shared/sources";
+import { PROVINCIAL_SOURCES, REGIONAL_SOURCES, MUNICIPAL_SOURCES, ALL_MUNICIPALITIES, getSourcesByTier, type DataSource } from "@shared/sources";
 
 function Breadcrumb({ nodeId }: { nodeId: string }) {
   const node = getNode(nodeId);
@@ -37,10 +37,22 @@ function getSourcesForNode(node: GeoNode): { sources: DataSource[]; coverageType
   const results: { sources: DataSource[]; coverageType: string }[] = [];
   
   if (node.level === "province") {
-    results.push({ sources: SHARED_SOURCES, coverageType: "Provincial/Regional" });
+    results.push({ sources: PROVINCIAL_SOURCES, coverageType: "Provincial" });
+    // Show all regional sources aggregated
+    const allRegionalSources = Object.values(REGIONAL_SOURCES).flat();
+    if (allRegionalSources.length > 0) {
+      results.push({ sources: allRegionalSources, coverageType: "Regional (all)" });
+    }
   } else if (node.level === "region") {
-    results.push({ sources: SHARED_SOURCES, coverageType: "Provincial (inherited)" });
+    results.push({ sources: PROVINCIAL_SOURCES, coverageType: "Provincial" });
     
+    // Get regional sources for this specific region
+    const regionalSources = REGIONAL_SOURCES[node.id] || [];
+    if (regionalSources.length > 0) {
+      results.push({ sources: regionalSources, coverageType: "Regional" });
+    }
+    
+    // Aggregate municipal sources from child municipalities
     const regionMuniSources: DataSource[] = [];
     const childNodes = getChildren(node.id);
     childNodes.forEach(child => {
@@ -51,12 +63,17 @@ function getSourcesForNode(node: GeoNode): { sources: DataSource[]; coverageType
       results.push({ sources: regionMuniSources, coverageType: "Municipal (aggregated)" });
     }
   } else if (node.level === "municipality") {
-    results.push({ sources: SHARED_SOURCES, coverageType: "Provincial (inherited)" });
+    // Use the tiered source function for municipalities
+    const tiers = getSourcesByTier(node.name);
     
-    const muniName = node.name;
-    const municipalSources = MUNICIPAL_SOURCES[muniName] || [];
-    if (municipalSources.length > 0) {
-      results.push({ sources: municipalSources, coverageType: "Municipal" });
+    results.push({ sources: tiers.provincial, coverageType: "Provincial" });
+    
+    if (tiers.regional.length > 0) {
+      results.push({ sources: tiers.regional, coverageType: `Regional (${tiers.regionName || 'inherited'})` });
+    }
+    
+    if (tiers.municipal.length > 0) {
+      results.push({ sources: tiers.municipal, coverageType: "Municipal" });
     }
   }
   

@@ -4,13 +4,19 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { SHARED_SOURCES, MUNICIPAL_SOURCES, type DataSource } from "@shared/sources";
+import { PROVINCIAL_SOURCES, REGIONAL_SOURCES, MUNICIPAL_SOURCES, type DataSource } from "@shared/sources";
 
 export default function AdminSources() {
-  const allSources: (DataSource & { municipality?: string })[] = [
-    ...SHARED_SOURCES.map(s => ({ ...s, municipality: undefined })),
+  // Flatten all regional sources
+  const allRegionalSources = Object.entries(REGIONAL_SOURCES).flatMap(([regionId, sources]) =>
+    sources.map(s => ({ ...s, region: regionId }))
+  );
+  
+  const allSources: (DataSource & { municipality?: string; region?: string; tier?: string })[] = [
+    ...PROVINCIAL_SOURCES.map(s => ({ ...s, tier: 'provincial' as const })),
+    ...allRegionalSources.map(s => ({ ...s, tier: 'regional' as const })),
     ...Object.entries(MUNICIPAL_SOURCES).flatMap(([muni, sources]) => 
-      sources.map(s => ({ ...s, municipality: muni }))
+      sources.map(s => ({ ...s, municipality: muni, tier: 'municipal' as const }))
     )
   ];
 

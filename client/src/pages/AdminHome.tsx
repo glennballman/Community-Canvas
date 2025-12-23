@@ -11,19 +11,28 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { SHARED_SOURCES, MUNICIPAL_SOURCES, ALL_MUNICIPALITIES } from "@shared/sources";
+import { PROVINCIAL_SOURCES, REGIONAL_SOURCES, MUNICIPAL_SOURCES, ALL_MUNICIPALITIES } from "@shared/sources";
 
 export default function AdminHome() {
-  const totalSharedSources = SHARED_SOURCES.length;
+  const totalProvincialSources = PROVINCIAL_SOURCES.length;
+  const totalRegionalSources = Object.values(REGIONAL_SOURCES).reduce(
+    (acc, sources) => acc + sources.length, 0
+  );
   const totalMunicipalSources = Object.values(MUNICIPAL_SOURCES).reduce(
     (acc, sources) => acc + sources.length, 0
   );
+  const totalSharedSources = totalProvincialSources + totalRegionalSources;
   const totalSources = totalSharedSources + totalMunicipalSources;
   const totalMunicipalities = ALL_MUNICIPALITIES.length;
   
   const categoryCounts: Record<string, number> = {};
-  SHARED_SOURCES.forEach(s => {
+  PROVINCIAL_SOURCES.forEach(s => {
     categoryCounts[s.category] = (categoryCounts[s.category] || 0) + 1;
+  });
+  Object.values(REGIONAL_SOURCES).forEach(sources => {
+    sources.forEach(s => {
+      categoryCounts[s.category] = (categoryCounts[s.category] || 0) + 1;
+    });
   });
   Object.values(MUNICIPAL_SOURCES).forEach(sources => {
     sources.forEach(s => {
