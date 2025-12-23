@@ -361,6 +361,21 @@ interface ElectricityWithMatch extends ElectricityFacility {
   matchedRegion: GeoNode | null;
 }
 
+interface PostalFacilityWithMatch {
+  id: string;
+  serviceName: string;
+  facilityName: string;
+  facilityType: "hub" | "depot" | "outlet" | "dropbox" | "locker" | "post_office" | "rural_po";
+  municipality: string;
+  address?: string;
+  lat: number;
+  lng: number;
+  website?: string;
+  phone?: string;
+  matchedMunicipality: GeoNode | null;
+  matchedRegion: GeoNode | null;
+}
+
 export default function AdminInfrastructure() {
   const [airportSearch, setAirportSearch] = useState("");
   const [weatherSearch, setWeatherSearch] = useState("");
@@ -472,6 +487,30 @@ export default function AdminInfrastructure() {
         .map(f => findMatchingMunicipality(f.municipality))
         .filter((m): m is GeoNode => m !== null),
     }));
+  }, []);
+
+  const postalFacilitiesWithMatches: PostalFacilityWithMatch[] = useMemo(() => {
+    const postalServices = BC_COURIER_SERVICES.filter(s => s.type === 'postal');
+    return postalServices.flatMap(service => 
+      service.facilities.map((facility, index) => {
+        const matchedMuni = findMatchingMunicipality(facility.municipality);
+        const matchedRegion = matchedMuni?.parent ? GEO_HIERARCHY[matchedMuni.parent] || null : null;
+        return {
+          id: `${service.id}-${index}`,
+          serviceName: service.name,
+          facilityName: facility.name,
+          facilityType: facility.facility_type,
+          municipality: facility.municipality,
+          address: facility.address,
+          lat: facility.lat,
+          lng: facility.lng,
+          website: service.website,
+          phone: service.phone,
+          matchedMunicipality: matchedMuni,
+          matchedRegion,
+        };
+      })
+    );
   }, []);
 
   const truckingWithMatches: TruckingWithMatch[] = useMemo(() => {
@@ -663,16 +702,18 @@ export default function AdminInfrastructure() {
   }, [courierWithMatches, groundSearch]);
 
   const filteredPostal = useMemo(() => {
-    const postal = courierWithMatches.filter(s => s.type === 'postal');
-    if (!groundSearch) return postal;
+    if (!groundSearch) return postalFacilitiesWithMatches;
     const search = groundSearch.toLowerCase();
-    return postal.filter(s => 
-      s.name.toLowerCase().includes(search) ||
-      s.facilities.some(f => f.name.toLowerCase().includes(search) || f.municipality.toLowerCase().includes(search)) ||
-      s.service_coverage.some(c => c.toLowerCase().includes(search)) ||
-      s.notes?.toLowerCase().includes(search)
+    return postalFacilitiesWithMatches.filter(f => 
+      f.facilityName.toLowerCase().includes(search) ||
+      f.serviceName.toLowerCase().includes(search) ||
+      f.municipality.toLowerCase().includes(search) ||
+      f.address?.toLowerCase().includes(search) ||
+      f.facilityType.toLowerCase().includes(search) ||
+      f.matchedMunicipality?.name.toLowerCase().includes(search) ||
+      f.matchedRegion?.name.toLowerCase().includes(search)
     );
-  }, [courierWithMatches, groundSearch]);
+  }, [postalFacilitiesWithMatches, groundSearch]);
 
   const filteredTrucking = useMemo(() => {
     if (!groundSearch) return truckingWithMatches;
@@ -928,10 +969,10 @@ export default function AdminInfrastructure() {
       supplyTotal: supplyTrucking.length + supplyRail.length,
       busTotal: intercityBusWithMatches.length + transitWithMatches.length + charterWithMatches.length + mobilityRail.length,
       courierTotal: courierWithMatches.filter(s => s.type !== 'postal').length,
-      postalTotal: courierWithMatches.filter(s => s.type === 'postal').length,
-      total: intercityBusWithMatches.length + transitWithMatches.length + charterWithMatches.length + courierWithMatches.length + truckingWithMatches.length + railWithMatches.length
+      postalTotal: postalFacilitiesWithMatches.length,
+      total: intercityBusWithMatches.length + transitWithMatches.length + charterWithMatches.length + courierWithMatches.filter(s => s.type !== 'postal').length + truckingWithMatches.length + railWithMatches.length
     };
-  }, [intercityBusWithMatches, transitWithMatches, charterWithMatches, courierWithMatches, truckingWithMatches, railWithMatches]);
+  }, [intercityBusWithMatches, transitWithMatches, charterWithMatches, courierWithMatches, truckingWithMatches, railWithMatches, postalFacilitiesWithMatches]);
 
   const waterStats = useMemo(() => {
     const matched = waterWithMatches.filter(f => f.matchedMunicipality).length;
@@ -2611,71 +2652,77 @@ export default function AdminInfrastructure() {
             <div className="relative flex-1 max-w-sm">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground" />
               <Input
-                placeholder="Search postal services..."
+                placeholder="Search post offices..."
                 value={groundSearch}
                 onChange={e => setGroundSearch(e.target.value)}
                 className="pl-8 h-8 text-xs bg-background/50"
                 data-testid="input-postal-search"
               />
             </div>
+            <div className="flex gap-2 text-[10px] text-muted-foreground">
+              <span className="text-green-400">{postalFacilitiesWithMatches.filter(f => f.matchedMunicipality).length} MATCHED</span>
+              <span className="text-yellow-400">{postalFacilitiesWithMatches.filter(f => !f.matchedMunicipality && f.matchedRegion).length} REGION ONLY</span>
+              <span className="text-red-400">{postalFacilitiesWithMatches.filter(f => !f.matchedMunicipality && !f.matchedRegion).length} UNMATCHED</span>
+            </div>
             <div className="text-[10px] text-red-400 font-medium">TIER 4 - POSTAL SERVICE</div>
           </div>
           <ScrollArea className="flex-1">
-            <div className="p-2">
+            <div className="p-3">
               <table className="w-full text-xs">
                 <thead>
-                  <tr className="border-b border-border/30 text-muted-foreground">
-                    <th className="text-left py-2 px-2 font-medium">SERVICE</th>
-                    <th className="text-left py-2 px-2 font-medium">FACILITIES</th>
-                    <th className="text-left py-2 px-2 font-medium">COVERAGE</th>
-                    <th className="text-left py-2 px-2 font-medium">MATCHED</th>
+                  <tr className="text-[10px] text-muted-foreground border-b border-border/30">
+                    <th className="text-left py-2 px-2">POST OFFICE</th>
+                    <th className="text-left py-2 px-2">TYPE</th>
+                    <th className="text-left py-2 px-2">ADDRESS</th>
+                    <th className="text-left py-2 px-2">SOURCE MUNICIPALITY</th>
+                    <th className="text-left py-2 px-2">MATCHED TO</th>
+                    <th className="text-left py-2 px-2">REGION</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredPostal.map(service => (
-                    <tr key={service.id} className="border-b border-border/20 hover:bg-muted/20">
+                  {filteredPostal.map(facility => (
+                    <tr 
+                      key={facility.id} 
+                      className="border-b border-border/20 hover-elevate"
+                      data-testid={`row-postal-${facility.id}`}
+                    >
                       <td className="py-2 px-2">
                         <div className="flex items-center gap-2">
                           <Mail className="w-3 h-3 text-red-400" />
                           <div>
-                            <div className="font-medium text-foreground">{service.name}</div>
-                            {service.website && (
-                              <a href={service.website} target="_blank" rel="noopener noreferrer" className="text-[10px] text-cyan-400 hover:underline">
-                                {service.website.replace('https://', '').replace('http://', '')}
-                              </a>
-                            )}
-                            {service.phone && <div className="text-[10px] text-muted-foreground">{service.phone}</div>}
-                            {service.notes && <div className="text-[10px] text-muted-foreground/70">{service.notes}</div>}
+                            <div className="font-medium">{facility.facilityName}</div>
+                            <div className="text-[10px] text-muted-foreground">{facility.lat.toFixed(4)}, {facility.lng.toFixed(4)}</div>
                           </div>
                         </div>
                       </td>
                       <td className="py-2 px-2">
-                        <div className="space-y-0.5">
-                          {service.facilities.slice(0, 4).map((facility, i) => (
-                            <div key={i} className="text-[10px] text-muted-foreground flex items-center gap-1">
-                              <Badge variant="outline" className="text-[8px] px-1 bg-red-500/10 text-red-400 border-red-500/30">{facility.facility_type.toUpperCase()}</Badge>
-                              <span>{facility.municipality}</span>
-                            </div>
-                          ))}
-                          {service.facilities.length > 4 && <div className="text-[10px] text-cyan-400">+{service.facilities.length - 4} more</div>}
-                        </div>
+                        <Badge variant="outline" className={`text-[8px] ${
+                          facility.facilityType === 'hub' ? 'bg-purple-500/10 text-purple-400 border-purple-500/30' :
+                          facility.facilityType === 'depot' ? 'bg-blue-500/10 text-blue-400 border-blue-500/30' :
+                          facility.facilityType === 'post_office' ? 'bg-red-500/10 text-red-400 border-red-500/30' :
+                          facility.facilityType === 'rural_po' ? 'bg-orange-500/10 text-orange-400 border-orange-500/30' :
+                          'bg-gray-500/10 text-gray-400 border-gray-500/30'
+                        }`}>
+                          {facility.facilityType.replace(/_/g, ' ').toUpperCase()}
+                        </Badge>
                       </td>
+                      <td className="py-2 px-2 text-muted-foreground text-[10px]">{facility.address || '-'}</td>
+                      <td className="py-2 px-2 text-muted-foreground">{facility.municipality}</td>
                       <td className="py-2 px-2">
-                        <div className="flex flex-wrap gap-1 max-w-64">
-                          {service.service_coverage.slice(0, 4).map((area, i) => (
-                            <Badge key={i} variant="outline" className="text-[8px]">{area}</Badge>
-                          ))}
-                          {service.service_coverage.length > 4 && (
-                            <Badge variant="outline" className="text-[8px] bg-muted/30">+{service.service_coverage.length - 4}</Badge>
-                          )}
-                        </div>
-                      </td>
-                      <td className="py-2 px-2">
-                        {service.matchedMunicipalities.length > 0 ? (
+                        {facility.matchedMunicipality ? (
                           <div className="flex items-center gap-1 text-green-400">
                             <CheckCircle className="w-3 h-3" />
-                            <span>{service.matchedMunicipalities.length} of {service.facilities.length}</span>
+                            <span>{facility.matchedMunicipality.name}</span>
                           </div>
+                        ) : facility.matchedRegion ? (
+                          <span className="text-yellow-400">(region only)</span>
+                        ) : (
+                          <span className="text-red-400">NOT MATCHED</span>
+                        )}
+                      </td>
+                      <td className="py-2 px-2">
+                        {facility.matchedRegion ? (
+                          <Badge variant="outline" className="text-[8px]">{facility.matchedRegion.name}</Badge>
                         ) : <span className="text-muted-foreground/50">-</span>}
                       </td>
                     </tr>
