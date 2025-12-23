@@ -880,6 +880,7 @@ export default function AdminInfrastructure() {
               <table className="w-full text-xs">
                 <thead>
                   <tr className="border-b border-border/30 text-muted-foreground">
+                    <th className="text-left py-2 px-2 font-medium">TYPE</th>
                     <th className="text-left py-2 px-2 font-medium">NAME</th>
                     <th className="text-left py-2 px-2 font-medium">HEALTH AUTHORITY</th>
                     <th className="text-left py-2 px-2 font-medium">MUNICIPALITY</th>
@@ -893,6 +894,14 @@ export default function AdminInfrastructure() {
                 <tbody>
                   {filteredHealthcare.map(service => (
                     <tr key={service.id} className="border-b border-border/20 hover:bg-muted/20">
+                      <td className="py-2 px-2">
+                        <Badge 
+                          variant="outline" 
+                          className="text-[9px] bg-red-500/20 text-red-400 border-red-500/30"
+                        >
+                          HOSPITAL
+                        </Badge>
+                      </td>
                       <td className="py-2 px-2">
                         <div className="flex items-center gap-2">
                           <Heart className="w-3 h-3 text-red-400" />
@@ -991,6 +1000,7 @@ export default function AdminInfrastructure() {
               <table className="w-full text-xs">
                 <thead>
                   <tr className="border-b border-border/30 text-muted-foreground">
+                    <th className="text-left py-2 px-2 font-medium">TYPE</th>
                     <th className="text-left py-2 px-2 font-medium">NAME</th>
                     <th className="text-left py-2 px-2 font-medium">MUNICIPALITY</th>
                     <th className="text-left py-2 px-2 font-medium">MATCHED TO</th>
@@ -1000,6 +1010,14 @@ export default function AdminInfrastructure() {
                 <tbody>
                   {filteredFire.map(service => (
                     <tr key={service.id} className="border-b border-border/20 hover:bg-muted/20">
+                      <td className="py-2 px-2">
+                        <Badge 
+                          variant="outline" 
+                          className="text-[9px] bg-orange-500/20 text-orange-400 border-orange-500/30"
+                        >
+                          FIRE DEPT
+                        </Badge>
+                      </td>
                       <td className="py-2 px-2">
                         <div className="flex items-center gap-2">
                           <Flame className="w-3 h-3 text-orange-400" />
