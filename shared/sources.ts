@@ -1,3 +1,5 @@
+import { GEO_HIERARCHY } from "./geography";
+
 export interface DataSource {
   category: string;
   source_name: string;
@@ -35,38 +37,11 @@ export function mapCategory(firecrawlCategory: string): string {
   return 'other';
 }
 
-// All municipalities from Firecrawl data
-export const ALL_MUNICIPALITIES = [
-  "City of Abbotsford",
-  "Village of Anmore",
-  "Village of Belcarra",
-  "Bowen Island Municipality",
-  "City of Burnaby",
-  "City of Chilliwack",
-  "City of Coquitlam",
-  "Corporation of Delta",
-  "District of Hope",
-  "District of Kent",
-  "Village of Harrison Hot Springs",
-  "City of Langley",
-  "Township of Langley",
-  "Village of Lions Bay",
-  "City of Maple Ridge",
-  "District of Mission",
-  "City of New Westminster",
-  "City of North Vancouver",
-  "District of North Vancouver",
-  "City of Pitt Meadows",
-  "City of Port Coquitlam",
-  "City of Port Moody",
-  "City of Richmond",
-  "City of Surrey",
-  "Tsawwassen First Nation",
-  "City of Vancouver",
-  "District of West Vancouver",
-  "City of White Rock",
-  "Bamfield"
-].sort();
+// All municipalities from geographic hierarchy
+export const ALL_MUNICIPALITIES = Object.values(GEO_HIERARCHY)
+  .filter(node => node.level === "municipality")
+  .map(node => node.name)
+  .sort();
 
 // Shared/Regional sources that appear across all municipalities
 export const SHARED_SOURCES: DataSource[] = [
