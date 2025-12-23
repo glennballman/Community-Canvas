@@ -45,6 +45,11 @@ Located in `shared/` directory with GPS coordinates and geographic correlation:
   - Fire stations (municipal headquarters)
   - Municipal police departments (11 independent BC departments)
   - RCMP detachments (E Division across BC)
+- **Search and Rescue** (`shared/search-rescue.ts`): 78 Ground SAR (GSAR) groups including:
+  - All BCSARA member organizations with GPS coordinates
+  - Specialized capabilities (rope rescue, avalanche rescue, swiftwater rescue, mountain rescue, helicopter operations, search dogs, tracking)
+  - Coverage areas and operational jurisdictions
+  - Volunteer organization structure (3,200+ trained volunteers province-wide)
 
 ### Key Design Patterns
 - **Shared Types**: Schema definitions in `shared/` directory used by both client and server

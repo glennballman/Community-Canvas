@@ -16,13 +16,16 @@ import {
   Building2,
   Flame,
   Shield,
-  Siren
+  Siren,
+  Mountain,
+  Users
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { BC_AIRPORTS, type Airport } from "@shared/aviation";
 import { BC_WEATHER_STATIONS, type WeatherStation } from "@shared/weather-stations";
 import { BC_MARINE_FACILITIES, type MarineFacility, type MarineFacilityType } from "@shared/marine";
 import { BC_EMERGENCY_SERVICES, type EmergencyService, type EmergencyServiceType } from "@shared/emergency-services";
+import { BC_SAR_GROUPS, type SARGroup, type SARCapability } from "@shared/search-rescue";
 import { GEO_HIERARCHY, type GeoNode } from "@shared/geography";
 
 function getAirportTypeIcon(type: string) {
@@ -179,6 +182,40 @@ function getEmergencyTypeBadge(type: EmergencyServiceType) {
   );
 }
 
+function getSARCapabilityBadge(capability: SARCapability) {
+  const colors: Record<SARCapability, string> = {
+    'ground_search': 'bg-green-500/20 text-green-400 border-green-500/30',
+    'rope_rescue': 'bg-orange-500/20 text-orange-400 border-orange-500/30',
+    'swiftwater_rescue': 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30',
+    'avalanche_rescue': 'bg-blue-500/20 text-blue-400 border-blue-500/30',
+    'search_dogs': 'bg-amber-500/20 text-amber-400 border-amber-500/30',
+    'mountain_rescue': 'bg-purple-500/20 text-purple-400 border-purple-500/30',
+    'inland_water': 'bg-teal-500/20 text-teal-400 border-teal-500/30',
+    'helicopter_operations': 'bg-red-500/20 text-red-400 border-red-500/30',
+    'first_aid': 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
+    'tracking': 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
+    'night_operations': 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30',
+  };
+  const labels: Record<SARCapability, string> = {
+    'ground_search': 'GROUND',
+    'rope_rescue': 'ROPE',
+    'swiftwater_rescue': 'SWIFT',
+    'avalanche_rescue': 'AVY',
+    'search_dogs': 'K9',
+    'mountain_rescue': 'MTN',
+    'inland_water': 'WATER',
+    'helicopter_operations': 'HELI',
+    'first_aid': 'MED',
+    'tracking': 'TRACK',
+    'night_operations': 'NIGHT',
+  };
+  return (
+    <Badge key={capability} variant="outline" className={`text-[8px] ${colors[capability] || ''}`}>
+      {labels[capability] || capability.toUpperCase()}
+    </Badge>
+  );
+}
+
 function findMatchingMunicipality(name: string | undefined): GeoNode | null {
   if (!name) return null;
   
@@ -197,8 +234,8 @@ function findMatchingMunicipality(name: string | undefined): GeoNode | null {
 
 function findMatchingRegion(regionId: string | undefined): GeoNode | null {
   if (!regionId) return null;
-  const key = `region-${regionId}`;
-  return GEO_HIERARCHY[key] || null;
+  // GEO_HIERARCHY uses direct slugs like "capital", "metro-vancouver"
+  return GEO_HIERARCHY[regionId] || null;
 }
 
 interface AirportWithMatch extends Airport {
@@ -221,11 +258,17 @@ interface EmergencyWithMatch extends EmergencyService {
   matchedRegion: GeoNode | null;
 }
 
+interface SARWithMatch extends SARGroup {
+  matchedMunicipality: GeoNode | null;
+  matchedRegion: GeoNode | null;
+}
+
 export default function AdminInfrastructure() {
   const [airportSearch, setAirportSearch] = useState("");
   const [weatherSearch, setWeatherSearch] = useState("");
   const [marineSearch, setMarineSearch] = useState("");
   const [emergencySearch, setEmergencySearch] = useState("");
+  const [sarSearch, setSarSearch] = useState("");
   const [activeTab, setActiveTab] = useState("airports");
 
   const airportsWithMatches: AirportWithMatch[] = useMemo(() => {
@@ -257,6 +300,14 @@ export default function AdminInfrastructure() {
       ...service,
       matchedMunicipality: findMatchingMunicipality(service.municipality),
       matchedRegion: findMatchingRegion(service.region.toLowerCase().replace(/\s+/g, '-')),
+    }));
+  }, []);
+
+  const sarWithMatches: SARWithMatch[] = useMemo(() => {
+    return BC_SAR_GROUPS.map(group => ({
+      ...group,
+      matchedMunicipality: findMatchingMunicipality(group.municipality),
+      matchedRegion: findMatchingRegion(group.region.toLowerCase().replace(/\s+/g, '-')),
     }));
   }, []);
 
@@ -316,6 +367,21 @@ export default function AdminInfrastructure() {
     );
   }, [emergencyWithMatches, emergencySearch]);
 
+  const filteredSAR = useMemo(() => {
+    if (!sarSearch) return sarWithMatches;
+    const search = sarSearch.toLowerCase();
+    return sarWithMatches.filter(g => 
+      g.name.toLowerCase().includes(search) ||
+      g.short_name.toLowerCase().includes(search) ||
+      g.municipality?.toLowerCase().includes(search) ||
+      g.region?.toLowerCase().includes(search) ||
+      g.coverage_area?.toLowerCase().includes(search) ||
+      g.matchedMunicipality?.name.toLowerCase().includes(search) ||
+      g.matchedRegion?.name.toLowerCase().includes(search) ||
+      g.capabilities.some(c => c.toLowerCase().includes(search))
+    );
+  }, [sarWithMatches, sarSearch]);
+
   const airportStats = useMemo(() => {
     const matched = airportsWithMatches.filter(a => a.matchedMunicipality).length;
     const regionOnly = airportsWithMatches.filter(a => !a.matchedMunicipality && a.matchedRegion).length;
@@ -361,6 +427,22 @@ export default function AdminInfrastructure() {
     const traumaCentres = emergencyWithMatches.filter(s => s.type === 'hospital' && s.is_trauma_centre).length;
     return { total: emergencyWithMatches.length, matched, regionOnly, unmatched, byType, hospitalsWithHelipad, traumaCentres };
   }, [emergencyWithMatches]);
+
+  const sarStats = useMemo(() => {
+    const matched = sarWithMatches.filter(g => g.matchedMunicipality).length;
+    const regionOnly = sarWithMatches.filter(g => !g.matchedMunicipality && g.matchedRegion).length;
+    const unmatched = sarWithMatches.filter(g => !g.matchedMunicipality && !g.matchedRegion).length;
+    const byCapability: Record<string, number> = {};
+    sarWithMatches.forEach(g => {
+      g.capabilities.forEach(c => {
+        byCapability[c] = (byCapability[c] || 0) + 1;
+      });
+    });
+    const withAvalanche = sarWithMatches.filter(g => g.capabilities.includes('avalanche_rescue')).length;
+    const withHeli = sarWithMatches.filter(g => g.capabilities.includes('helicopter_operations')).length;
+    const withMountain = sarWithMatches.filter(g => g.capabilities.includes('mountain_rescue')).length;
+    return { total: sarWithMatches.length, matched, regionOnly, unmatched, byCapability, withAvalanche, withHeli, withMountain };
+  }, [sarWithMatches]);
 
   return (
     <div className="h-full flex flex-col font-mono">
@@ -408,6 +490,14 @@ export default function AdminInfrastructure() {
             >
               <Siren className="w-3 h-3 mr-1" />
               EMERGENCY ({emergencyStats.total})
+            </TabsTrigger>
+            <TabsTrigger 
+              value="sar" 
+              className="text-xs data-[state=active]:bg-primary/20 data-[state=active]:text-primary"
+              data-testid="tab-sar"
+            >
+              <Mountain className="w-3 h-3 mr-1" />
+              SAR ({sarStats.total})
             </TabsTrigger>
             <TabsTrigger 
               value="summary" 
@@ -777,6 +867,104 @@ export default function AdminInfrastructure() {
                           <CheckCircle className="w-3 h-3 text-green-400 mx-auto" />
                         ) : (
                           <XCircle className="w-3 h-3 text-muted-foreground/30 mx-auto" />
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </ScrollArea>
+        </TabsContent>
+
+        <TabsContent value="sar" className="flex-1 overflow-hidden m-0 flex flex-col data-[state=inactive]:hidden">
+          <div className="p-3 border-b border-border/30 flex items-center gap-4">
+            <div className="relative flex-1 max-w-sm">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground" />
+              <Input
+                placeholder="Search SAR groups..."
+                value={sarSearch}
+                onChange={e => setSarSearch(e.target.value)}
+                className="pl-8 h-8 text-xs bg-background/50"
+                data-testid="input-sar-search"
+              />
+            </div>
+            <div className="flex gap-2 text-[10px] text-muted-foreground flex-wrap">
+              <span className="text-green-400">{sarStats.total} GROUPS</span>
+              <span className="text-purple-400">{sarStats.withMountain} MTN</span>
+              <span className="text-blue-400">{sarStats.withAvalanche} AVY</span>
+              <span className="text-red-400">{sarStats.withHeli} HELI</span>
+            </div>
+          </div>
+          <ScrollArea className="flex-1">
+            <div className="p-2">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b border-border/30 text-muted-foreground">
+                    <th className="text-left py-2 px-2 font-medium">NAME</th>
+                    <th className="text-left py-2 px-2 font-medium">COVERAGE AREA</th>
+                    <th className="text-left py-2 px-2 font-medium">CAPABILITIES</th>
+                    <th className="text-left py-2 px-2 font-medium">MATCHED TO</th>
+                    <th className="text-left py-2 px-2 font-medium">REGION</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredSAR.map(group => (
+                    <tr key={group.id} className="border-b border-border/20 hover:bg-muted/20">
+                      <td className="py-2 px-2">
+                        <div className="flex items-center gap-2">
+                          <Mountain className="w-3 h-3 text-orange-400" />
+                          <div>
+                            <div className="font-medium text-foreground">{group.short_name}</div>
+                            <div className="text-[10px] text-muted-foreground">{group.name}</div>
+                            {group.website && (
+                              <a 
+                                href={group.website} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="text-[10px] text-cyan-400 hover:underline"
+                              >
+                                {group.website.replace('https://', '')}
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-2 px-2">
+                        <div className="text-[10px] text-muted-foreground max-w-48">
+                          {group.coverage_area}
+                        </div>
+                        {group.notes && (
+                          <div className="text-[10px] text-cyan-400/70 mt-1">{group.notes}</div>
+                        )}
+                      </td>
+                      <td className="py-2 px-2">
+                        <div className="flex flex-wrap gap-1 max-w-64">
+                          {group.capabilities.slice(0, 5).map(c => getSARCapabilityBadge(c))}
+                          {group.capabilities.length > 5 && (
+                            <Badge variant="outline" className="text-[8px] bg-muted/30">
+                              +{group.capabilities.length - 5}
+                            </Badge>
+                          )}
+                        </div>
+                      </td>
+                      <td className="py-2 px-2">
+                        {group.matchedMunicipality ? (
+                          <div className="flex items-center gap-1 text-green-400">
+                            <CheckCircle className="w-3 h-3" />
+                            <span>{group.matchedMunicipality.name}</span>
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground/50">-</span>
+                        )}
+                      </td>
+                      <td className="py-2 px-2">
+                        {group.matchedRegion ? (
+                          <span className="text-cyan-400">{group.matchedRegion.shortName || group.matchedRegion.name}</span>
+                        ) : group.region ? (
+                          <span className="text-yellow-400">{group.region}</span>
+                        ) : (
+                          <span className="text-muted-foreground/50">-</span>
                         )}
                       </td>
                     </tr>
