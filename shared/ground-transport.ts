@@ -1,8 +1,73 @@
 /**
- * BC Ground Transportation Infrastructure - People Carriers
- * Includes intercity bus services, public transit systems, and charter operators
+ * BC Ground Transportation Infrastructure
+ * Organized by criticality tier for community resilience monitoring:
+ * - Tier 1 LIFELINE: Fuel, food, medical supplies (critical to survival)
+ * - Tier 2 SUPPLY CHAIN: General freight, intermodal (economic function)
+ * - Tier 3 MOBILITY: Transit, buses, passenger rail (community movement)
+ * - Tier 4 MESSAGING: Postal, courier, delivery (non-critical logistics)
  * All coordinates in WGS84 (lat/lng)
  */
+
+// Criticality classification for ground transport
+export type CriticalityTier = 1 | 2 | 3 | 4;
+export type LifelineDomain = 'energy' | 'food' | 'health' | 'freight' | 'mobility' | 'messaging';
+
+// Helper to determine trucking criticality tier
+export function getTruckingTier(type: TruckingService['type']): CriticalityTier {
+  switch (type) {
+    case 'fuel':
+    case 'food':
+    case 'hazmat': // propane/heating fuel is lifeline
+      return 1;
+    case 'general_freight':
+    case 'ltl':
+    case 'refrigerated':
+    case 'logging':
+    case 'aggregate':
+      return 2;
+    default:
+      return 2;
+  }
+}
+
+// Helper to determine trucking lifeline domain
+export function getTruckingDomain(type: TruckingService['type']): LifelineDomain {
+  switch (type) {
+    case 'fuel':
+    case 'hazmat':
+      return 'energy';
+    case 'food':
+    case 'refrigerated':
+      return 'food';
+    default:
+      return 'freight';
+  }
+}
+
+// Helper to determine rail criticality tier
+export function getRailTier(type: RailServiceType): CriticalityTier {
+  switch (type) {
+    case 'class_1_freight':
+    case 'shortline':
+      return 2; // Supply chain
+    case 'passenger':
+    case 'commuter':
+    case 'tourist':
+      return 3; // Mobility
+    default:
+      return 2;
+  }
+}
+
+// Helper to determine courier criticality tier (all are Tier 4 messaging)
+export function getCourierTier(): CriticalityTier {
+  return 4;
+}
+
+// Helper for people carrier criticality tier (all are Tier 3 mobility)
+export function getPeopleCarrierTier(): CriticalityTier {
+  return 3;
+}
 
 export type IntercityBusType = 
   | "scheduled"      // Regular scheduled service

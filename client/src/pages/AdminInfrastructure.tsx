@@ -42,6 +42,8 @@ import {
   BC_COURIER_SERVICES,
   BC_TRUCKING_SERVICES,
   BC_RAIL_SERVICES,
+  getTruckingTier,
+  getRailTier,
   type IntercityBusService,
   type TransitSystem,
   type CharterBusOperator,
@@ -350,7 +352,9 @@ export default function AdminInfrastructure() {
   const [policeSearch, setPoliceSearch] = useState("");
   const [sarSearch, setSarSearch] = useState("");
   const [groundSearch, setGroundSearch] = useState("");
-  const [groundSubTab, setGroundSubTab] = useState<"intercity" | "transit" | "charter" | "courier" | "trucking" | "rail">("intercity");
+  const [lifelineSubTab, setLifelineSubTab] = useState<"fuel" | "food" | "hazmat">("fuel");
+  const [supplySubTab, setSupplySubTab] = useState<"freight" | "rail">("freight");
+  const [mobilitySubTab, setMobilitySubTab] = useState<"intercity" | "transit" | "charter" | "rail">("intercity");
   const [activeTab, setActiveTab] = useState("airports");
 
   const airportsWithMatches: AirportWithMatch[] = useMemo(() => {
@@ -637,6 +641,60 @@ export default function AdminInfrastructure() {
     );
   }, [railWithMatches, groundSearch]);
 
+  const filteredLifelineTrucking = useMemo(() => {
+    const tier1 = truckingWithMatches.filter(s => getTruckingTier(s.type) === 1);
+    if (!groundSearch) return tier1;
+    const search = groundSearch.toLowerCase();
+    return tier1.filter(s => 
+      s.name.toLowerCase().includes(search) ||
+      s.terminals.some(t => t.name.toLowerCase().includes(search) || t.municipality.toLowerCase().includes(search)) ||
+      s.service_coverage.some(c => c.toLowerCase().includes(search)) ||
+      s.type.toLowerCase().includes(search) ||
+      s.notes?.toLowerCase().includes(search)
+    );
+  }, [truckingWithMatches, groundSearch]);
+
+  const filteredSupplyTrucking = useMemo(() => {
+    const tier2 = truckingWithMatches.filter(s => getTruckingTier(s.type) === 2);
+    if (!groundSearch) return tier2;
+    const search = groundSearch.toLowerCase();
+    return tier2.filter(s => 
+      s.name.toLowerCase().includes(search) ||
+      s.terminals.some(t => t.name.toLowerCase().includes(search) || t.municipality.toLowerCase().includes(search)) ||
+      s.service_coverage.some(c => c.toLowerCase().includes(search)) ||
+      s.type.toLowerCase().includes(search) ||
+      s.notes?.toLowerCase().includes(search)
+    );
+  }, [truckingWithMatches, groundSearch]);
+
+  const filteredSupplyRail = useMemo(() => {
+    const tier2 = railWithMatches.filter(s => getRailTier(s.type) === 2);
+    if (!groundSearch) return tier2;
+    const search = groundSearch.toLowerCase();
+    return tier2.filter(s => 
+      s.name.toLowerCase().includes(search) ||
+      s.stations.some(st => st.name.toLowerCase().includes(search) || st.municipality.toLowerCase().includes(search)) ||
+      s.routes.some(r => r.toLowerCase().includes(search)) ||
+      s.service_coverage.some(c => c.toLowerCase().includes(search)) ||
+      s.type.toLowerCase().includes(search) ||
+      s.notes?.toLowerCase().includes(search)
+    );
+  }, [railWithMatches, groundSearch]);
+
+  const filteredMobilityRail = useMemo(() => {
+    const tier3 = railWithMatches.filter(s => getRailTier(s.type) === 3);
+    if (!groundSearch) return tier3;
+    const search = groundSearch.toLowerCase();
+    return tier3.filter(s => 
+      s.name.toLowerCase().includes(search) ||
+      s.stations.some(st => st.name.toLowerCase().includes(search) || st.municipality.toLowerCase().includes(search)) ||
+      s.routes.some(r => r.toLowerCase().includes(search)) ||
+      s.service_coverage.some(c => c.toLowerCase().includes(search)) ||
+      s.type.toLowerCase().includes(search) ||
+      s.notes?.toLowerCase().includes(search)
+    );
+  }, [railWithMatches, groundSearch]);
+
   const airportStats = useMemo(() => {
     const matched = airportsWithMatches.filter(a => a.matchedMunicipality).length;
     const regionOnly = airportsWithMatches.filter(a => !a.matchedMunicipality && a.matchedRegion).length;
@@ -732,6 +790,12 @@ export default function AdminInfrastructure() {
     const freightRails = railWithMatches.filter(s => s.type === 'class_1_freight' || s.type === 'shortline').length;
     const passengerRails = railWithMatches.filter(s => s.type === 'passenger' || s.type === 'commuter').length;
     const touristRails = railWithMatches.filter(s => s.type === 'tourist').length;
+    
+    const lifelineTrucking = truckingWithMatches.filter(s => getTruckingTier(s.type) === 1);
+    const supplyTrucking = truckingWithMatches.filter(s => getTruckingTier(s.type) === 2);
+    const supplyRail = railWithMatches.filter(s => getRailTier(s.type) === 2);
+    const mobilityRail = railWithMatches.filter(s => getRailTier(s.type) === 3);
+    
     return {
       intercityServices: intercityBusWithMatches.length,
       intercityHubs: totalHubs,
@@ -758,6 +822,10 @@ export default function AdminInfrastructure() {
       freightRails,
       passengerRails,
       touristRails,
+      lifelineTotal: lifelineTrucking.length,
+      supplyTotal: supplyTrucking.length + supplyRail.length,
+      mobilityTotal: intercityBusWithMatches.length + transitWithMatches.length + charterWithMatches.length + mobilityRail.length,
+      messagingTotal: courierWithMatches.length,
       total: intercityBusWithMatches.length + transitWithMatches.length + charterWithMatches.length + courierWithMatches.length + truckingWithMatches.length + railWithMatches.length
     };
   }, [intercityBusWithMatches, transitWithMatches, charterWithMatches, courierWithMatches, truckingWithMatches, railWithMatches]);
@@ -834,12 +902,36 @@ export default function AdminInfrastructure() {
               SAR ({sarStats.total})
             </TabsTrigger>
             <TabsTrigger 
-              value="ground" 
-              className="text-xs data-[state=active]:bg-primary/20 data-[state=active]:text-primary"
-              data-testid="tab-ground"
+              value="ground-lifeline" 
+              className="text-xs data-[state=active]:bg-orange-500/20 data-[state=active]:text-orange-400"
+              data-testid="tab-ground-lifeline"
+            >
+              <Fuel className="w-3 h-3 mr-1" />
+              LIFELINE ({groundStats.lifelineTotal})
+            </TabsTrigger>
+            <TabsTrigger 
+              value="ground-supply" 
+              className="text-xs data-[state=active]:bg-blue-500/20 data-[state=active]:text-blue-400"
+              data-testid="tab-ground-supply"
+            >
+              <Container className="w-3 h-3 mr-1" />
+              SUPPLY CHAIN ({groundStats.supplyTotal})
+            </TabsTrigger>
+            <TabsTrigger 
+              value="ground-mobility" 
+              className="text-xs data-[state=active]:bg-green-500/20 data-[state=active]:text-green-400"
+              data-testid="tab-ground-mobility"
             >
               <Bus className="w-3 h-3 mr-1" />
-              GROUND ({groundStats.total})
+              MOBILITY ({groundStats.mobilityTotal})
+            </TabsTrigger>
+            <TabsTrigger 
+              value="ground-messaging" 
+              className="text-xs data-[state=active]:bg-purple-500/20 data-[state=active]:text-purple-400"
+              data-testid="tab-ground-messaging"
+            >
+              <Package className="w-3 h-3 mr-1" />
+              MESSAGING ({groundStats.messagingTotal})
             </TabsTrigger>
             <TabsTrigger 
               value="summary" 
@@ -1506,83 +1598,399 @@ export default function AdminInfrastructure() {
           </ScrollArea>
         </TabsContent>
 
-        <TabsContent value="ground" className="flex-1 overflow-hidden m-0 flex flex-col data-[state=inactive]:hidden">
+        <TabsContent value="ground-lifeline" className="flex-1 overflow-hidden m-0 flex flex-col data-[state=inactive]:hidden">
           <div className="p-3 border-b border-border/30 flex items-center gap-4">
             <div className="relative flex-1 max-w-sm">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground" />
               <Input
-                placeholder="Search ground transport..."
+                placeholder="Search lifeline transport..."
                 value={groundSearch}
                 onChange={e => setGroundSearch(e.target.value)}
                 className="pl-8 h-8 text-xs bg-background/50"
-                data-testid="input-ground-search"
+                data-testid="input-lifeline-search"
               />
             </div>
             <div className="flex gap-1">
               <Button
                 size="sm"
-                variant={groundSubTab === "intercity" ? "default" : "outline"}
+                variant={lifelineSubTab === "fuel" ? "default" : "outline"}
                 className="text-[9px] h-7"
-                onClick={() => setGroundSubTab("intercity")}
-                data-testid="button-ground-subtab-intercity"
-              >
-                <Bus className="w-2.5 h-2.5 mr-1" />
-                INTERCITY ({groundStats.intercityServices})
-              </Button>
-              <Button
-                size="sm"
-                variant={groundSubTab === "transit" ? "default" : "outline"}
-                className="text-[9px] h-7"
-                onClick={() => setGroundSubTab("transit")}
-                data-testid="button-ground-subtab-transit"
-              >
-                <Train className="w-2.5 h-2.5 mr-1" />
-                TRANSIT ({groundStats.transitSystems})
-              </Button>
-              <Button
-                size="sm"
-                variant={groundSubTab === "charter" ? "default" : "outline"}
-                className="text-[9px] h-7"
-                onClick={() => setGroundSubTab("charter")}
-                data-testid="button-ground-subtab-charter"
-              >
-                <Truck className="w-2.5 h-2.5 mr-1" />
-                CHARTER ({groundStats.charterOperators})
-              </Button>
-              <Button
-                size="sm"
-                variant={groundSubTab === "courier" ? "default" : "outline"}
-                className="text-[9px] h-7"
-                onClick={() => setGroundSubTab("courier")}
-                data-testid="button-ground-subtab-courier"
-              >
-                <Package className="w-2.5 h-2.5 mr-1" />
-                COURIER ({groundStats.courierServices})
-              </Button>
-              <Button
-                size="sm"
-                variant={groundSubTab === "trucking" ? "default" : "outline"}
-                className="text-[9px] h-7"
-                onClick={() => setGroundSubTab("trucking")}
-                data-testid="button-ground-subtab-trucking"
+                onClick={() => setLifelineSubTab("fuel")}
+                data-testid="button-lifeline-subtab-fuel"
               >
                 <Fuel className="w-2.5 h-2.5 mr-1" />
-                TRUCKING ({groundStats.truckingServices})
+                FUEL ({filteredLifelineTrucking.filter(s => s.type === 'fuel').length})
               </Button>
               <Button
                 size="sm"
-                variant={groundSubTab === "rail" ? "default" : "outline"}
+                variant={lifelineSubTab === "food" ? "default" : "outline"}
                 className="text-[9px] h-7"
-                onClick={() => setGroundSubTab("rail")}
-                data-testid="button-ground-subtab-rail"
+                onClick={() => setLifelineSubTab("food")}
+                data-testid="button-lifeline-subtab-food"
               >
-                <Train className="w-2.5 h-2.5 mr-1" />
-                RAIL ({groundStats.railServices})
+                <Apple className="w-2.5 h-2.5 mr-1" />
+                FOOD ({filteredLifelineTrucking.filter(s => s.type === 'food').length})
+              </Button>
+              <Button
+                size="sm"
+                variant={lifelineSubTab === "hazmat" ? "default" : "outline"}
+                className="text-[9px] h-7"
+                onClick={() => setLifelineSubTab("hazmat")}
+                data-testid="button-lifeline-subtab-hazmat"
+              >
+                <Flame className="w-2.5 h-2.5 mr-1" />
+                HAZMAT ({filteredLifelineTrucking.filter(s => s.type === 'hazmat').length})
               </Button>
             </div>
+            <div className="text-[10px] text-orange-400 font-medium">TIER 1 - CRITICAL</div>
+          </div>
+          <ScrollArea className="flex-1">
+            <div className="p-2">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b border-border/30 text-muted-foreground">
+                    <th className="text-left py-2 px-2 font-medium">TYPE</th>
+                    <th className="text-left py-2 px-2 font-medium">CARRIER</th>
+                    <th className="text-left py-2 px-2 font-medium">TERMINALS</th>
+                    <th className="text-left py-2 px-2 font-medium">COVERAGE</th>
+                    <th className="text-left py-2 px-2 font-medium">MATCHED</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredLifelineTrucking.filter(s => s.type === lifelineSubTab).map(service => (
+                    <tr key={service.id} className="border-b border-border/20 hover:bg-muted/20">
+                      <td className="py-2 px-2">
+                        <Badge 
+                          variant="outline" 
+                          className={`text-[9px] ${
+                            service.type === 'fuel' ? 'bg-orange-500/20 text-orange-400 border-orange-500/30' :
+                            service.type === 'food' ? 'bg-green-500/20 text-green-400 border-green-500/30' :
+                            'bg-red-500/20 text-red-400 border-red-500/30'
+                          }`}
+                        >
+                          {service.type === 'fuel' ? (
+                            <><Fuel className="w-2 h-2 mr-1" />FUEL</>
+                          ) : service.type === 'food' ? (
+                            <><Apple className="w-2 h-2 mr-1" />FOOD</>
+                          ) : (
+                            <><Flame className="w-2 h-2 mr-1" />HAZMAT</>
+                          )}
+                        </Badge>
+                      </td>
+                      <td className="py-2 px-2">
+                        <div className="flex items-center gap-2">
+                          {service.type === 'fuel' ? (
+                            <Fuel className="w-3 h-3 text-orange-400" />
+                          ) : service.type === 'food' ? (
+                            <Apple className="w-3 h-3 text-green-400" />
+                          ) : (
+                            <Flame className="w-3 h-3 text-red-400" />
+                          )}
+                          <div>
+                            <div className="font-medium text-foreground">{service.name}</div>
+                            {service.website && (
+                              <a href={service.website} target="_blank" rel="noopener noreferrer" className="text-[10px] text-cyan-400 hover:underline">
+                                {service.website.replace('https://', '').replace('http://', '')}
+                              </a>
+                            )}
+                            {service.fleet_size && <div className="text-[10px] text-muted-foreground">Fleet: {service.fleet_size}</div>}
+                            {service.notes && <div className="text-[10px] text-muted-foreground/70">{service.notes}</div>}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-2 px-2">
+                        <div className="space-y-0.5">
+                          {service.terminals.slice(0, 4).map((terminal, i) => (
+                            <div key={i} className="text-[10px] text-muted-foreground flex items-center gap-1">
+                              <Badge variant="outline" className="text-[8px] px-1">{terminal.facility_type.toUpperCase()}</Badge>
+                              <span>{terminal.municipality}</span>
+                            </div>
+                          ))}
+                          {service.terminals.length > 4 && <div className="text-[10px] text-cyan-400">+{service.terminals.length - 4} more</div>}
+                        </div>
+                      </td>
+                      <td className="py-2 px-2">
+                        <div className="flex flex-wrap gap-1 max-w-64">
+                          {service.service_coverage.slice(0, 4).map((area, i) => (
+                            <Badge key={i} variant="outline" className="text-[8px]">{area}</Badge>
+                          ))}
+                          {service.service_coverage.length > 4 && (
+                            <Badge variant="outline" className="text-[8px] bg-muted/30">+{service.service_coverage.length - 4}</Badge>
+                          )}
+                        </div>
+                      </td>
+                      <td className="py-2 px-2">
+                        {service.matchedMunicipalities.length > 0 ? (
+                          <div className="flex items-center gap-1 text-green-400">
+                            <CheckCircle className="w-3 h-3" />
+                            <span>{service.matchedMunicipalities.length} of {service.terminals.length}</span>
+                          </div>
+                        ) : <span className="text-muted-foreground/50">-</span>}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </ScrollArea>
+        </TabsContent>
+
+        <TabsContent value="ground-supply" className="flex-1 overflow-hidden m-0 flex flex-col data-[state=inactive]:hidden">
+          <div className="p-3 border-b border-border/30 flex items-center gap-4">
+            <div className="relative flex-1 max-w-sm">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground" />
+              <Input
+                placeholder="Search supply chain..."
+                value={groundSearch}
+                onChange={e => setGroundSearch(e.target.value)}
+                className="pl-8 h-8 text-xs bg-background/50"
+                data-testid="input-supply-search"
+              />
+            </div>
+            <div className="flex gap-1">
+              <Button
+                size="sm"
+                variant={supplySubTab === "freight" ? "default" : "outline"}
+                className="text-[9px] h-7"
+                onClick={() => setSupplySubTab("freight")}
+                data-testid="button-supply-subtab-freight"
+              >
+                <Container className="w-2.5 h-2.5 mr-1" />
+                FREIGHT ({filteredSupplyTrucking.length})
+              </Button>
+              <Button
+                size="sm"
+                variant={supplySubTab === "rail" ? "default" : "outline"}
+                className="text-[9px] h-7"
+                onClick={() => setSupplySubTab("rail")}
+                data-testid="button-supply-subtab-rail"
+              >
+                <Train className="w-2.5 h-2.5 mr-1" />
+                RAIL ({filteredSupplyRail.length})
+              </Button>
+            </div>
+            <div className="text-[10px] text-blue-400 font-medium">TIER 2 - SUPPLY CHAIN</div>
           </div>
 
-          {groundSubTab === "intercity" && (
+          {supplySubTab === "freight" && (
+            <ScrollArea className="flex-1">
+              <div className="p-2">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="border-b border-border/30 text-muted-foreground">
+                      <th className="text-left py-2 px-2 font-medium">TYPE</th>
+                      <th className="text-left py-2 px-2 font-medium">CARRIER</th>
+                      <th className="text-left py-2 px-2 font-medium">TERMINALS</th>
+                      <th className="text-left py-2 px-2 font-medium">COVERAGE</th>
+                      <th className="text-left py-2 px-2 font-medium">MATCHED</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredSupplyTrucking.map(service => (
+                      <tr key={service.id} className="border-b border-border/20 hover:bg-muted/20">
+                        <td className="py-2 px-2">
+                          <Badge 
+                            variant="outline" 
+                            className={`text-[9px] ${
+                              service.type === 'refrigerated' ? 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30' :
+                              service.type === 'logging' ? 'bg-amber-500/20 text-amber-400 border-amber-500/30' :
+                              service.type === 'aggregate' ? 'bg-stone-500/20 text-stone-400 border-stone-500/30' :
+                              service.type === 'ltl' ? 'bg-purple-500/20 text-purple-400 border-purple-500/30' :
+                              'bg-blue-500/20 text-blue-400 border-blue-500/30'
+                            }`}
+                          >
+                            {service.type === 'refrigerated' ? (
+                              <><Snowflake className="w-2 h-2 mr-1" />REEFER</>
+                            ) : service.type === 'logging' ? (
+                              <><TreePine className="w-2 h-2 mr-1" />LOGGING</>
+                            ) : service.type === 'general_freight' ? (
+                              <><Container className="w-2 h-2 mr-1" />FREIGHT</>
+                            ) : (
+                              service.type.toUpperCase().replace('_', ' ')
+                            )}
+                          </Badge>
+                        </td>
+                        <td className="py-2 px-2">
+                          <div className="flex items-center gap-2">
+                            <Truck className="w-3 h-3 text-blue-400" />
+                            <div>
+                              <div className="font-medium text-foreground">{service.name}</div>
+                              {service.website && (
+                                <a href={service.website} target="_blank" rel="noopener noreferrer" className="text-[10px] text-cyan-400 hover:underline">
+                                  {service.website.replace('https://', '').replace('http://', '')}
+                                </a>
+                              )}
+                              {service.fleet_size && <div className="text-[10px] text-muted-foreground">Fleet: {service.fleet_size}</div>}
+                              {service.notes && <div className="text-[10px] text-muted-foreground/70">{service.notes}</div>}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="py-2 px-2">
+                          <div className="space-y-0.5">
+                            {service.terminals.slice(0, 4).map((terminal, i) => (
+                              <div key={i} className="text-[10px] text-muted-foreground flex items-center gap-1">
+                                <Badge variant="outline" className="text-[8px] px-1">{terminal.facility_type.toUpperCase()}</Badge>
+                                <span>{terminal.municipality}</span>
+                              </div>
+                            ))}
+                            {service.terminals.length > 4 && <div className="text-[10px] text-cyan-400">+{service.terminals.length - 4} more</div>}
+                          </div>
+                        </td>
+                        <td className="py-2 px-2">
+                          <div className="flex flex-wrap gap-1 max-w-64">
+                            {service.service_coverage.slice(0, 4).map((area, i) => (
+                              <Badge key={i} variant="outline" className="text-[8px]">{area}</Badge>
+                            ))}
+                            {service.service_coverage.length > 4 && (
+                              <Badge variant="outline" className="text-[8px] bg-muted/30">+{service.service_coverage.length - 4}</Badge>
+                            )}
+                          </div>
+                        </td>
+                        <td className="py-2 px-2">
+                          {service.matchedMunicipalities.length > 0 ? (
+                            <div className="flex items-center gap-1 text-green-400">
+                              <CheckCircle className="w-3 h-3" />
+                              <span>{service.matchedMunicipalities.length} of {service.terminals.length}</span>
+                            </div>
+                          ) : <span className="text-muted-foreground/50">-</span>}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </ScrollArea>
+          )}
+
+          {supplySubTab === "rail" && (
+            <ScrollArea className="flex-1">
+              <div className="p-2">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="border-b border-border/30 text-muted-foreground">
+                      <th className="text-left py-2 px-2 font-medium">TYPE</th>
+                      <th className="text-left py-2 px-2 font-medium">RAILWAY</th>
+                      <th className="text-left py-2 px-2 font-medium">STATIONS</th>
+                      <th className="text-left py-2 px-2 font-medium">ROUTES</th>
+                      <th className="text-left py-2 px-2 font-medium">MATCHED</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredSupplyRail.map(service => (
+                      <tr key={service.id} className="border-b border-border/20 hover:bg-muted/20">
+                        <td className="py-2 px-2">
+                          <Badge variant="outline" className="text-[9px] bg-blue-500/20 text-blue-400 border-blue-500/30">
+                            {service.type === 'class_1_freight' ? 'CLASS I' : 'SHORTLINE'}
+                          </Badge>
+                        </td>
+                        <td className="py-2 px-2">
+                          <div className="flex items-center gap-2">
+                            <Train className="w-3 h-3 text-blue-400" />
+                            <div>
+                              <div className="font-medium text-foreground">{service.name}</div>
+                              {service.website && (
+                                <a href={service.website} target="_blank" rel="noopener noreferrer" className="text-[10px] text-cyan-400 hover:underline">
+                                  {service.website.replace('https://', '').replace('http://', '')}
+                                </a>
+                              )}
+                              {service.notes && <div className="text-[10px] text-muted-foreground/70">{service.notes}</div>}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="py-2 px-2">
+                          <div className="space-y-0.5">
+                            {service.stations.slice(0, 4).map((station, i) => (
+                              <div key={i} className="text-[10px] text-muted-foreground flex items-center gap-1">
+                                <Badge variant="outline" className="text-[8px] px-1">{station.station_type.replace('_', ' ').toUpperCase()}</Badge>
+                                <span>{station.municipality}</span>
+                              </div>
+                            ))}
+                            {service.stations.length > 4 && <div className="text-[10px] text-cyan-400">+{service.stations.length - 4} more</div>}
+                          </div>
+                        </td>
+                        <td className="py-2 px-2">
+                          <div className="space-y-0.5">
+                            {service.routes.slice(0, 3).map((route, i) => (
+                              <div key={i} className="text-[10px] text-muted-foreground">{route}</div>
+                            ))}
+                            {service.routes.length > 3 && <div className="text-[10px] text-cyan-400">+{service.routes.length - 3} more</div>}
+                          </div>
+                        </td>
+                        <td className="py-2 px-2">
+                          {service.matchedMunicipalities.length > 0 ? (
+                            <div className="flex items-center gap-1 text-green-400">
+                              <CheckCircle className="w-3 h-3" />
+                              <span>{service.matchedMunicipalities.length} of {service.stations.length}</span>
+                            </div>
+                          ) : <span className="text-muted-foreground/50">-</span>}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </ScrollArea>
+          )}
+        </TabsContent>
+
+        <TabsContent value="ground-mobility" className="flex-1 overflow-hidden m-0 flex flex-col data-[state=inactive]:hidden">
+          <div className="p-3 border-b border-border/30 flex items-center gap-4">
+            <div className="relative flex-1 max-w-sm">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground" />
+              <Input
+                placeholder="Search mobility services..."
+                value={groundSearch}
+                onChange={e => setGroundSearch(e.target.value)}
+                className="pl-8 h-8 text-xs bg-background/50"
+                data-testid="input-mobility-search"
+              />
+            </div>
+            <div className="flex gap-1">
+              <Button
+                size="sm"
+                variant={mobilitySubTab === "intercity" ? "default" : "outline"}
+                className="text-[9px] h-7"
+                onClick={() => setMobilitySubTab("intercity")}
+                data-testid="button-mobility-subtab-intercity"
+              >
+                <Bus className="w-2.5 h-2.5 mr-1" />
+                INTERCITY ({filteredIntercity.length})
+              </Button>
+              <Button
+                size="sm"
+                variant={mobilitySubTab === "transit" ? "default" : "outline"}
+                className="text-[9px] h-7"
+                onClick={() => setMobilitySubTab("transit")}
+                data-testid="button-mobility-subtab-transit"
+              >
+                <Train className="w-2.5 h-2.5 mr-1" />
+                TRANSIT ({filteredTransit.length})
+              </Button>
+              <Button
+                size="sm"
+                variant={mobilitySubTab === "charter" ? "default" : "outline"}
+                className="text-[9px] h-7"
+                onClick={() => setMobilitySubTab("charter")}
+                data-testid="button-mobility-subtab-charter"
+              >
+                <Truck className="w-2.5 h-2.5 mr-1" />
+                CHARTER ({filteredCharter.length})
+              </Button>
+              <Button
+                size="sm"
+                variant={mobilitySubTab === "rail" ? "default" : "outline"}
+                className="text-[9px] h-7"
+                onClick={() => setMobilitySubTab("rail")}
+                data-testid="button-mobility-subtab-rail"
+              >
+                <Train className="w-2.5 h-2.5 mr-1" />
+                RAIL ({filteredMobilityRail.length})
+              </Button>
+            </div>
+            <div className="text-[10px] text-green-400 font-medium">TIER 3 - COMMUNITY</div>
+          </div>
+
+          {mobilitySubTab === "intercity" && (
             <ScrollArea className="flex-1">
               <div className="p-2">
                 <table className="w-full text-xs">
@@ -1672,7 +2080,7 @@ export default function AdminInfrastructure() {
             </ScrollArea>
           )}
 
-          {groundSubTab === "transit" && (
+          {mobilitySubTab === "transit" && (
             <ScrollArea className="flex-1">
               <div className="p-2">
                 <table className="w-full text-xs">
@@ -1751,7 +2159,7 @@ export default function AdminInfrastructure() {
             </ScrollArea>
           )}
 
-          {groundSubTab === "charter" && (
+          {mobilitySubTab === "charter" && (
             <ScrollArea className="flex-1">
               <div className="p-2">
                 <table className="w-full text-xs">
@@ -1850,240 +2258,7 @@ export default function AdminInfrastructure() {
             </ScrollArea>
           )}
 
-          {groundSubTab === "courier" && (
-            <ScrollArea className="flex-1">
-              <div className="p-2">
-                <table className="w-full text-xs">
-                  <thead>
-                    <tr className="border-b border-border/30 text-muted-foreground">
-                      <th className="text-left py-2 px-2 font-medium">TYPE</th>
-                      <th className="text-left py-2 px-2 font-medium">SERVICE</th>
-                      <th className="text-left py-2 px-2 font-medium">FACILITIES</th>
-                      <th className="text-left py-2 px-2 font-medium">COVERAGE</th>
-                      <th className="text-left py-2 px-2 font-medium">MATCHED</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredCourier.map(service => (
-                      <tr key={service.id} className="border-b border-border/20 hover:bg-muted/20">
-                        <td className="py-2 px-2">
-                          <Badge 
-                            variant="outline" 
-                            className={`text-[9px] ${
-                              service.type === 'postal' ? 'bg-red-500/20 text-red-400 border-red-500/30' :
-                              service.type === 'express' ? 'bg-green-500/20 text-green-400 border-green-500/30' :
-                              service.type === 'regional' ? 'bg-blue-500/20 text-blue-400 border-blue-500/30' :
-                              service.type === 'freight' ? 'bg-orange-500/20 text-orange-400 border-orange-500/30' :
-                              'bg-purple-500/20 text-purple-400 border-purple-500/30'
-                            }`}
-                          >
-                            {service.type === 'postal' ? (
-                              <><Mail className="w-2 h-2 mr-1" />POSTAL</>
-                            ) : service.type === 'same_day' ? (
-                              'SAME DAY'
-                            ) : (
-                              service.type.toUpperCase()
-                            )}
-                          </Badge>
-                        </td>
-                        <td className="py-2 px-2">
-                          <div className="flex items-center gap-2">
-                            {service.type === 'postal' ? (
-                              <Mail className="w-3 h-3 text-red-400" />
-                            ) : (
-                              <Package className="w-3 h-3 text-green-400" />
-                            )}
-                            <div>
-                              <div className="font-medium text-foreground">{service.name}</div>
-                              {service.website && (
-                                <a 
-                                  href={service.website} 
-                                  target="_blank" 
-                                  rel="noopener noreferrer"
-                                  className="text-[10px] text-cyan-400 hover:underline"
-                                >
-                                  {service.website.replace('https://', '').replace('http://', '')}
-                                </a>
-                              )}
-                              {service.phone && (
-                                <div className="text-[10px] text-muted-foreground">{service.phone}</div>
-                              )}
-                              {service.notes && (
-                                <div className="text-[10px] text-muted-foreground/70">{service.notes}</div>
-                              )}
-                            </div>
-                          </div>
-                        </td>
-                        <td className="py-2 px-2">
-                          <div className="space-y-0.5">
-                            {service.facilities.slice(0, 4).map((facility, i) => (
-                              <div key={i} className="text-[10px] text-muted-foreground flex items-center gap-1">
-                                <Badge variant="outline" className="text-[8px] px-1">
-                                  {facility.facility_type.toUpperCase()}
-                                </Badge>
-                                <span>{facility.municipality}</span>
-                              </div>
-                            ))}
-                            {service.facilities.length > 4 && (
-                              <div className="text-[10px] text-cyan-400">+{service.facilities.length - 4} more facilities</div>
-                            )}
-                          </div>
-                        </td>
-                        <td className="py-2 px-2">
-                          <div className="flex flex-wrap gap-1 max-w-64">
-                            {service.service_coverage.slice(0, 4).map((area, i) => (
-                              <Badge key={i} variant="outline" className="text-[8px]">
-                                {area}
-                              </Badge>
-                            ))}
-                            {service.service_coverage.length > 4 && (
-                              <Badge variant="outline" className="text-[8px] bg-muted/30">
-                                +{service.service_coverage.length - 4}
-                              </Badge>
-                            )}
-                          </div>
-                        </td>
-                        <td className="py-2 px-2">
-                          {service.matchedMunicipalities.length > 0 ? (
-                            <div className="flex items-center gap-1 text-green-400">
-                              <CheckCircle className="w-3 h-3" />
-                              <span>{service.matchedMunicipalities.length} of {service.facilities.length}</span>
-                            </div>
-                          ) : (
-                            <span className="text-muted-foreground/50">-</span>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </ScrollArea>
-          )}
-
-          {groundSubTab === "trucking" && (
-            <ScrollArea className="flex-1">
-              <div className="p-2">
-                <table className="w-full text-xs">
-                  <thead>
-                    <tr className="border-b border-border/30 text-muted-foreground">
-                      <th className="text-left py-2 px-2 font-medium">TYPE</th>
-                      <th className="text-left py-2 px-2 font-medium">CARRIER</th>
-                      <th className="text-left py-2 px-2 font-medium">TERMINALS</th>
-                      <th className="text-left py-2 px-2 font-medium">COVERAGE</th>
-                      <th className="text-left py-2 px-2 font-medium">MATCHED</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredTrucking.map(service => (
-                      <tr key={service.id} className="border-b border-border/20 hover:bg-muted/20">
-                        <td className="py-2 px-2">
-                          <Badge 
-                            variant="outline" 
-                            className={`text-[9px] ${
-                              service.type === 'fuel' ? 'bg-orange-500/20 text-orange-400 border-orange-500/30' :
-                              service.type === 'food' ? 'bg-green-500/20 text-green-400 border-green-500/30' :
-                              service.type === 'refrigerated' ? 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30' :
-                              service.type === 'logging' ? 'bg-amber-500/20 text-amber-400 border-amber-500/30' :
-                              service.type === 'aggregate' ? 'bg-stone-500/20 text-stone-400 border-stone-500/30' :
-                              service.type === 'hazmat' ? 'bg-red-500/20 text-red-400 border-red-500/30' :
-                              service.type === 'ltl' ? 'bg-purple-500/20 text-purple-400 border-purple-500/30' :
-                              'bg-blue-500/20 text-blue-400 border-blue-500/30'
-                            }`}
-                          >
-                            {service.type === 'fuel' ? (
-                              <><Fuel className="w-2 h-2 mr-1" />FUEL</>
-                            ) : service.type === 'food' ? (
-                              <><Apple className="w-2 h-2 mr-1" />FOOD</>
-                            ) : service.type === 'refrigerated' ? (
-                              <><Snowflake className="w-2 h-2 mr-1" />REEFER</>
-                            ) : service.type === 'logging' ? (
-                              <><TreePine className="w-2 h-2 mr-1" />LOGGING</>
-                            ) : service.type === 'general_freight' ? (
-                              <><Container className="w-2 h-2 mr-1" />FREIGHT</>
-                            ) : (
-                              service.type.toUpperCase().replace('_', ' ')
-                            )}
-                          </Badge>
-                        </td>
-                        <td className="py-2 px-2">
-                          <div className="flex items-center gap-2">
-                            {service.type === 'fuel' ? (
-                              <Fuel className="w-3 h-3 text-orange-400" />
-                            ) : service.type === 'food' ? (
-                              <Apple className="w-3 h-3 text-green-400" />
-                            ) : (
-                              <Truck className="w-3 h-3 text-blue-400" />
-                            )}
-                            <div>
-                              <div className="font-medium text-foreground">{service.name}</div>
-                              {service.website && (
-                                <a 
-                                  href={service.website} 
-                                  target="_blank" 
-                                  rel="noopener noreferrer"
-                                  className="text-[10px] text-cyan-400 hover:underline"
-                                >
-                                  {service.website.replace('https://', '').replace('http://', '')}
-                                </a>
-                              )}
-                              {service.fleet_size && (
-                                <div className="text-[10px] text-muted-foreground">Fleet: {service.fleet_size}</div>
-                              )}
-                              {service.notes && (
-                                <div className="text-[10px] text-muted-foreground/70">{service.notes}</div>
-                              )}
-                            </div>
-                          </div>
-                        </td>
-                        <td className="py-2 px-2">
-                          <div className="space-y-0.5">
-                            {service.terminals.slice(0, 4).map((terminal, i) => (
-                              <div key={i} className="text-[10px] text-muted-foreground flex items-center gap-1">
-                                <Badge variant="outline" className="text-[8px] px-1">
-                                  {terminal.facility_type.toUpperCase()}
-                                </Badge>
-                                <span>{terminal.municipality}</span>
-                              </div>
-                            ))}
-                            {service.terminals.length > 4 && (
-                              <div className="text-[10px] text-cyan-400">+{service.terminals.length - 4} more terminals</div>
-                            )}
-                          </div>
-                        </td>
-                        <td className="py-2 px-2">
-                          <div className="flex flex-wrap gap-1 max-w-64">
-                            {service.service_coverage.slice(0, 4).map((area, i) => (
-                              <Badge key={i} variant="outline" className="text-[8px]">
-                                {area}
-                              </Badge>
-                            ))}
-                            {service.service_coverage.length > 4 && (
-                              <Badge variant="outline" className="text-[8px] bg-muted/30">
-                                +{service.service_coverage.length - 4}
-                              </Badge>
-                            )}
-                          </div>
-                        </td>
-                        <td className="py-2 px-2">
-                          {service.matchedMunicipalities.length > 0 ? (
-                            <div className="flex items-center gap-1 text-green-400">
-                              <CheckCircle className="w-3 h-3" />
-                              <span>{service.matchedMunicipalities.length} of {service.terminals.length}</span>
-                            </div>
-                          ) : (
-                            <span className="text-muted-foreground/50">-</span>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </ScrollArea>
-          )}
-
-          {groundSubTab === "rail" && (
+          {mobilitySubTab === "rail" && (
             <ScrollArea className="flex-1">
               <div className="p-2">
                 <table className="w-full text-xs">
@@ -2097,28 +2272,23 @@ export default function AdminInfrastructure() {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredRail.map(service => (
+                    {filteredMobilityRail.map(service => (
                       <tr key={service.id} className="border-b border-border/20 hover:bg-muted/20">
                         <td className="py-2 px-2">
                           <Badge 
                             variant="outline" 
                             className={`text-[9px] ${
-                              service.type === 'class_1_freight' ? 'bg-blue-500/20 text-blue-400 border-blue-500/30' :
-                              service.type === 'shortline' ? 'bg-blue-500/20 text-blue-400 border-blue-500/30' :
                               service.type === 'passenger' ? 'bg-green-500/20 text-green-400 border-green-500/30' :
                               service.type === 'commuter' ? 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30' :
                               'bg-purple-500/20 text-purple-400 border-purple-500/30'
                             }`}
                           >
-                            {service.type === 'class_1_freight' ? 'CLASS I' :
-                             service.type === 'shortline' ? 'SHORTLINE' :
-                             service.type.toUpperCase()}
+                            {service.type.toUpperCase()}
                           </Badge>
                         </td>
                         <td className="py-2 px-2">
                           <div className="flex items-center gap-2">
                             <Train className={`w-3 h-3 ${
-                              (service.type === 'class_1_freight' || service.type === 'shortline') ? 'text-blue-400' :
                               service.type === 'passenger' ? 'text-green-400' :
                               service.type === 'commuter' ? 'text-yellow-400' :
                               'text-purple-400'
@@ -2126,18 +2296,11 @@ export default function AdminInfrastructure() {
                             <div>
                               <div className="font-medium text-foreground">{service.name}</div>
                               {service.website && (
-                                <a 
-                                  href={service.website} 
-                                  target="_blank" 
-                                  rel="noopener noreferrer"
-                                  className="text-[10px] text-cyan-400 hover:underline"
-                                >
+                                <a href={service.website} target="_blank" rel="noopener noreferrer" className="text-[10px] text-cyan-400 hover:underline">
                                   {service.website.replace('https://', '').replace('http://', '')}
                                 </a>
                               )}
-                              {service.notes && (
-                                <div className="text-[10px] text-muted-foreground/70">{service.notes}</div>
-                              )}
+                              {service.notes && <div className="text-[10px] text-muted-foreground/70">{service.notes}</div>}
                             </div>
                           </div>
                         </td>
@@ -2145,15 +2308,11 @@ export default function AdminInfrastructure() {
                           <div className="space-y-0.5">
                             {service.stations.slice(0, 4).map((station, i) => (
                               <div key={i} className="text-[10px] text-muted-foreground flex items-center gap-1">
-                                <Badge variant="outline" className="text-[8px] px-1">
-                                  {station.station_type.replace('_', ' ').toUpperCase()}
-                                </Badge>
+                                <Badge variant="outline" className="text-[8px] px-1">{station.station_type.replace('_', ' ').toUpperCase()}</Badge>
                                 <span>{station.municipality}</span>
                               </div>
                             ))}
-                            {service.stations.length > 4 && (
-                              <div className="text-[10px] text-cyan-400">+{service.stations.length - 4} more stations</div>
-                            )}
+                            {service.stations.length > 4 && <div className="text-[10px] text-cyan-400">+{service.stations.length - 4} more</div>}
                           </div>
                         </td>
                         <td className="py-2 px-2">
@@ -2161,9 +2320,7 @@ export default function AdminInfrastructure() {
                             {service.routes.slice(0, 3).map((route, i) => (
                               <div key={i} className="text-[10px] text-muted-foreground">{route}</div>
                             ))}
-                            {service.routes.length > 3 && (
-                              <div className="text-[10px] text-cyan-400">+{service.routes.length - 3} more routes</div>
-                            )}
+                            {service.routes.length > 3 && <div className="text-[10px] text-cyan-400">+{service.routes.length - 3} more</div>}
                           </div>
                         </td>
                         <td className="py-2 px-2">
@@ -2172,9 +2329,7 @@ export default function AdminInfrastructure() {
                               <CheckCircle className="w-3 h-3" />
                               <span>{service.matchedMunicipalities.length} of {service.stations.length}</span>
                             </div>
-                          ) : (
-                            <span className="text-muted-foreground/50">-</span>
-                          )}
+                          ) : <span className="text-muted-foreground/50">-</span>}
                         </td>
                       </tr>
                     ))}
@@ -2183,6 +2338,111 @@ export default function AdminInfrastructure() {
               </div>
             </ScrollArea>
           )}
+        </TabsContent>
+
+        <TabsContent value="ground-messaging" className="flex-1 overflow-hidden m-0 flex flex-col data-[state=inactive]:hidden">
+          <div className="p-3 border-b border-border/30 flex items-center gap-4">
+            <div className="relative flex-1 max-w-sm">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground" />
+              <Input
+                placeholder="Search courier services..."
+                value={groundSearch}
+                onChange={e => setGroundSearch(e.target.value)}
+                className="pl-8 h-8 text-xs bg-background/50"
+                data-testid="input-messaging-search"
+              />
+            </div>
+            <div className="text-[10px] text-purple-400 font-medium">TIER 4 - NON-CRITICAL</div>
+          </div>
+          <ScrollArea className="flex-1">
+            <div className="p-2">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b border-border/30 text-muted-foreground">
+                    <th className="text-left py-2 px-2 font-medium">TYPE</th>
+                    <th className="text-left py-2 px-2 font-medium">SERVICE</th>
+                    <th className="text-left py-2 px-2 font-medium">FACILITIES</th>
+                    <th className="text-left py-2 px-2 font-medium">COVERAGE</th>
+                    <th className="text-left py-2 px-2 font-medium">MATCHED</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredCourier.map(service => (
+                    <tr key={service.id} className="border-b border-border/20 hover:bg-muted/20">
+                      <td className="py-2 px-2">
+                        <Badge 
+                          variant="outline" 
+                          className={`text-[9px] ${
+                            service.type === 'postal' ? 'bg-red-500/20 text-red-400 border-red-500/30' :
+                            service.type === 'express' ? 'bg-green-500/20 text-green-400 border-green-500/30' :
+                            service.type === 'regional' ? 'bg-blue-500/20 text-blue-400 border-blue-500/30' :
+                            service.type === 'freight' ? 'bg-orange-500/20 text-orange-400 border-orange-500/30' :
+                            'bg-purple-500/20 text-purple-400 border-purple-500/30'
+                          }`}
+                        >
+                          {service.type === 'postal' ? (
+                            <><Mail className="w-2 h-2 mr-1" />POSTAL</>
+                          ) : service.type === 'same_day' ? (
+                            'SAME DAY'
+                          ) : (
+                            service.type.toUpperCase()
+                          )}
+                        </Badge>
+                      </td>
+                      <td className="py-2 px-2">
+                        <div className="flex items-center gap-2">
+                          {service.type === 'postal' ? (
+                            <Mail className="w-3 h-3 text-red-400" />
+                          ) : (
+                            <Package className="w-3 h-3 text-purple-400" />
+                          )}
+                          <div>
+                            <div className="font-medium text-foreground">{service.name}</div>
+                            {service.website && (
+                              <a href={service.website} target="_blank" rel="noopener noreferrer" className="text-[10px] text-cyan-400 hover:underline">
+                                {service.website.replace('https://', '').replace('http://', '')}
+                              </a>
+                            )}
+                            {service.phone && <div className="text-[10px] text-muted-foreground">{service.phone}</div>}
+                            {service.notes && <div className="text-[10px] text-muted-foreground/70">{service.notes}</div>}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-2 px-2">
+                        <div className="space-y-0.5">
+                          {service.facilities.slice(0, 4).map((facility, i) => (
+                            <div key={i} className="text-[10px] text-muted-foreground flex items-center gap-1">
+                              <Badge variant="outline" className="text-[8px] px-1">{facility.facility_type.toUpperCase()}</Badge>
+                              <span>{facility.municipality}</span>
+                            </div>
+                          ))}
+                          {service.facilities.length > 4 && <div className="text-[10px] text-cyan-400">+{service.facilities.length - 4} more</div>}
+                        </div>
+                      </td>
+                      <td className="py-2 px-2">
+                        <div className="flex flex-wrap gap-1 max-w-64">
+                          {service.service_coverage.slice(0, 4).map((area, i) => (
+                            <Badge key={i} variant="outline" className="text-[8px]">{area}</Badge>
+                          ))}
+                          {service.service_coverage.length > 4 && (
+                            <Badge variant="outline" className="text-[8px] bg-muted/30">+{service.service_coverage.length - 4}</Badge>
+                          )}
+                        </div>
+                      </td>
+                      <td className="py-2 px-2">
+                        {service.matchedMunicipalities.length > 0 ? (
+                          <div className="flex items-center gap-1 text-green-400">
+                            <CheckCircle className="w-3 h-3" />
+                            <span>{service.matchedMunicipalities.length} of {service.facilities.length}</span>
+                          </div>
+                        ) : <span className="text-muted-foreground/50">-</span>}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </ScrollArea>
         </TabsContent>
 
         <TabsContent value="summary" className="flex-1 overflow-hidden m-0 data-[state=inactive]:hidden">
