@@ -1,3 +1,5 @@
+import { GEO_HIERARCHY, getNode, getAncestors, type GeoNode } from "./geography";
+
 export interface DataSource {
   category: string;
   source_name: string;
@@ -35,101 +37,327 @@ export function mapCategory(firecrawlCategory: string): string {
   return 'other';
 }
 
-// Shared/Regional sources that appear across all municipalities
-export const SHARED_SOURCES: DataSource[] = [
-  { category: "transit", source_name: "TransLink Alerts", url: "https://www.translink.ca/alerts", description: "Real-time alerts and service advisories for SkyTrain, bus, SeaBus, and West Coast Express across Metro Vancouver", is_shared: true },
-  { category: "transit", source_name: "TransLink Trip Planner", url: "https://www.translink.ca/trip-planner", description: "Plan trips across Metro Vancouver's integrated transit network including bus, SkyTrain, SeaBus, and West Coast Express", is_shared: true },
-  { category: "power", source_name: "BC Hydro Outage Map", url: "https://www.bchydro.com/safety-outages/power-outages/outage_map.html", description: "Real-time power outage map for all of British Columbia including Metro Vancouver and Fraser Valley", is_shared: true },
-  { category: "emergency", source_name: "Metro Vancouver AirMap", url: "https://gis.metrovancouver.org/maps/air", description: "Real-time air quality monitoring and Air Quality Health Index for the Lower Fraser Valley", is_shared: true },
-  { category: "emergency", source_name: "Environment Canada Weather Alerts", url: "https://weather.gc.ca/warnings/index_e.html", description: "Official weather warnings, watches, and alerts for all BC regions from Environment and Climate Change Canada", is_shared: true },
-  { category: "emergency", source_name: "Emergency Info BC", url: "https://www.emergencyinfobc.gov.bc.ca/", description: "Provincial emergency alerts, evacuations, and disaster response information for British Columbia", is_shared: true },
-  { category: "emergency", source_name: "DriveBC Road Conditions", url: "https://www.drivebc.ca/", description: "Real-time highway conditions, road closures, and traffic cameras for all BC highways and major routes", is_shared: true },
-  { category: "aviation", source_name: "Vancouver International Airport (YVR)", url: "https://www.yvr.ca/en/passengers/flights", description: "Real-time flight arrivals and departures for Vancouver International Airport, the primary international airport serving Metro Vancouver", is_shared: true },
-  { category: "aviation", source_name: "Harbour Air Flight Status", url: "https://harbourair.com/flight-status/", description: "Real-time flight status for Harbour Air seaplane services between Vancouver, Victoria, Nanaimo, and other coastal destinations", is_shared: true },
-  { category: "aviation", source_name: "Helijet Scheduled Flights", url: "https://helijet.com/scheduled-airline/", description: "Scheduled helicopter service information between Vancouver, Victoria, and other BC locations", is_shared: true },
-  { category: "aviation", source_name: "Boundary Bay Airport", url: "https://www.boundarybayairport.com/", description: "General aviation airport in Delta serving private aircraft, flight training, and regional aviation services", is_shared: true },
-  { category: "aviation", source_name: "Seair Seaplanes", url: "https://www.seairseaplanes.com/", description: "Scheduled seaplane flights and charters serving Gulf Islands and coastal BC communities", is_shared: true },
-  { category: "economic", source_name: "Metro Vancouver Regional District", url: "https://www.metrovancouver.org/", description: "Regional planning, air quality, water services, and economic data for 21 Metro Vancouver municipalities", is_shared: true },
-  { category: "economic", source_name: "Fraser Valley Regional District", url: "https://www.fvrd.ca/", description: "Regional services, planning, and economic development for Fraser Valley communities", is_shared: true },
+// =============================================================================
+// PROVINCIAL SOURCES - Apply to all of BC
+// =============================================================================
+export const PROVINCIAL_SOURCES: DataSource[] = [
+  // Power & Utilities
+  { category: "power", source_name: "BC Hydro Outage Map", url: "https://www.bchydro.com/safety-outages/power-outages/outage_map.html", description: "Real-time power outage map for all of British Columbia", is_shared: true },
   
-  // Public Health
-  { category: "health", source_name: "Fraser Health Authority", url: "https://www.fraserhealth.ca/health-topics-a-to-z/public-health-alerts", description: "Public health alerts and advisories for Fraser Health region", is_shared: true },
-  { category: "health", source_name: "Vancouver Coastal Health", url: "https://www.vch.ca/en/health-alerts", description: "Health alerts for Vancouver, Richmond, North Shore, Sea-to-Sky, Sunshine Coast, and Central Coast", is_shared: true },
-  { category: "health", source_name: "BC CDC Health Alerts", url: "https://www.bccdc.ca/about/news-stories/news-releases", description: "Provincial health alerts and disease outbreak information from BC Centre for Disease Control", is_shared: true },
-  { category: "health", source_name: "HealthLink BC", url: "https://www.healthlinkbc.ca/healthlinkbc-files/drinking-water-advisories", description: "Drinking water advisories and boil water notices across BC", is_shared: true },
+  // Emergency & Safety
+  { category: "emergency", source_name: "Environment Canada Weather Alerts", url: "https://weather.gc.ca/warnings/index_e.html", description: "Official weather warnings, watches, and alerts for all BC regions", is_shared: true },
+  { category: "emergency", source_name: "Emergency Info BC", url: "https://www.emergencyinfobc.gov.bc.ca/", description: "Provincial emergency alerts, evacuations, and disaster response", is_shared: true },
+  { category: "emergency", source_name: "DriveBC Road Conditions", url: "https://www.drivebc.ca/", description: "Real-time highway conditions, road closures, and traffic cameras", is_shared: true },
+  { category: "emergency", source_name: "Tsunami Warning - NOAA", url: "https://tsunami.gov/", description: "Pacific Tsunami Warning Center alerts", is_shared: true },
+  { category: "emergency", source_name: "Earthquakes Canada", url: "https://earthquakescanada.nrcan.gc.ca/index-en.php", description: "Recent seismic activity in Canada", is_shared: true },
+  { category: "emergency", source_name: "Earthquakes - USGS", url: "https://earthquake.usgs.gov/earthquakes/map/?extent=47.5,-130&extent=52,-120", description: "Recent earthquakes near BC", is_shared: true },
   
   // Environment & Climate
-  { category: "environment", source_name: "BC Wildfire Service", url: "https://wildfiresituation.nrs.gov.bc.ca/map", description: "Active wildfire map and fire danger ratings for all of British Columbia", is_shared: true },
-  { category: "environment", source_name: "BC Air Quality", url: "https://www.env.gov.bc.ca/epd/bcairquality/data/aqhi-table.html", description: "Real-time Air Quality Health Index readings for BC monitoring stations", is_shared: true },
-  { category: "environment", source_name: "Environment Canada Heat Warnings", url: "https://weather.gc.ca/warnings/index_e.html?prov=bc", description: "Heat warnings, extreme cold alerts, and weather advisories for BC", is_shared: true },
-  { category: "environment", source_name: "BC Drought Information", url: "https://www2.gov.bc.ca/gov/content/environment/air-land-water/water/drought-flooding-dikes-dams/drought-information", description: "Provincial drought levels and water restriction information", is_shared: true },
+  { category: "environment", source_name: "BC Wildfire Service", url: "https://wildfiresituation.nrs.gov.bc.ca/map", description: "Active wildfire map and fire danger ratings", is_shared: true },
+  { category: "environment", source_name: "BC Air Quality", url: "https://www.env.gov.bc.ca/epd/bcairquality/data/aqhi-table.html", description: "Real-time Air Quality Health Index readings", is_shared: true },
+  { category: "environment", source_name: "BC Drought Information", url: "https://www2.gov.bc.ca/gov/content/environment/air-land-water/water/drought-flooding-dikes-dams/drought-information", description: "Provincial drought levels and water restrictions", is_shared: true },
+  
+  // Health
+  { category: "health", source_name: "BC CDC Health Alerts", url: "https://www.bccdc.ca/about/news-stories/news-releases", description: "Provincial health alerts and disease outbreak information", is_shared: true },
+  { category: "health", source_name: "HealthLink BC", url: "https://www.healthlinkbc.ca/healthlinkbc-files/drinking-water-advisories", description: "Drinking water advisories and boil water notices", is_shared: true },
+  { category: "health", source_name: "ER Wait Times - BC", url: "https://www.edwaittimes.ca/", description: "Emergency department wait times across BC", is_shared: true },
   
   // Education
-  { category: "education", source_name: "BC School Closures", url: "https://www.bced.gov.bc.ca/", description: "Ministry of Education announcements affecting BC schools", is_shared: true },
-  { category: "education", source_name: "Metro Vancouver School Districts", url: "https://www.bcsta.org/school-districts/", description: "Links to all BC school district websites for closure announcements", is_shared: true },
+  { category: "education", source_name: "BC School Closures", url: "https://www.bced.gov.bc.ca/", description: "Ministry of Education announcements", is_shared: true },
   
-  // Housing & Shelters
-  { category: "housing", source_name: "BC Housing", url: "https://www.bchousing.org/", description: "Provincial housing programs, emergency shelter information, and housing registry", is_shared: true },
-  { category: "housing", source_name: "Metro Vancouver Shelter Listings", url: "https://www.metrovancouver.org/services/regional-planning/homelessness", description: "Regional homelessness response and shelter information", is_shared: true },
-  { category: "housing", source_name: "Extreme Weather Response", url: "https://www.bc211.ca/", description: "211 BC - Information on extreme weather shelters and emergency services", is_shared: true },
+  // Housing
+  { category: "housing", source_name: "BC Housing", url: "https://www.bchousing.org/", description: "Provincial housing programs and emergency shelter info", is_shared: true },
+  { category: "housing", source_name: "BC 211", url: "https://www.bc211.ca/", description: "Information on extreme weather shelters and emergency services", is_shared: true },
   
-  // Parks & Recreation
-  { category: "parks", source_name: "BC Parks Alerts", url: "https://bcparks.ca/park-advisories/", description: "Park closures, trail advisories, and campground status for BC Parks", is_shared: true },
-  { category: "parks", source_name: "Metro Vancouver Parks", url: "https://www.metrovancouver.org/parks", description: "Regional park closures, trail conditions, and beach advisories", is_shared: true },
-  { category: "parks", source_name: "Parks Canada - Pacific", url: "https://www.pc.gc.ca/en/voyage-travel/regles-rules/conditions/bc", description: "National park conditions and closures in British Columbia", is_shared: true },
+  // Parks
+  { category: "parks", source_name: "BC Parks Alerts", url: "https://bcparks.ca/park-advisories/", description: "Park closures, trail advisories, and campground status", is_shared: true },
+  { category: "parks", source_name: "Parks Canada - Pacific", url: "https://www.pc.gc.ca/en/voyage-travel/regles-rules/conditions/bc", description: "National park conditions and closures in BC", is_shared: true },
   
   // Digital Services
   { category: "digital", source_name: "BC Government Service Status", url: "https://www2.gov.bc.ca/gov/content/home", description: "Provincial government online services status", is_shared: true },
   { category: "digital", source_name: "Service BC Status", url: "https://www.servicebc.gov.bc.ca/", description: "Status of Service BC locations and online services", is_shared: true },
   
   // Weather
-  { category: "weather", source_name: "Environment Canada - Vancouver", url: "https://weather.gc.ca/city/pages/bc-74_metric_e.html", description: "Current conditions and forecast for Vancouver and Metro area", is_shared: true },
-  { category: "weather", source_name: "Environment Canada - Abbotsford", url: "https://weather.gc.ca/city/pages/bc-63_metric_e.html", description: "Current conditions and forecast for Fraser Valley", is_shared: true },
-  { category: "weather", source_name: "Weather Network - Vancouver", url: "https://www.theweathernetwork.com/ca/weather/british-columbia/vancouver", description: "Extended forecast and radar for Metro Vancouver", is_shared: true },
   { category: "weather", source_name: "BC Weather Warnings", url: "https://weather.gc.ca/warnings/index_e.html?prov=bc", description: "All active weather warnings for British Columbia", is_shared: true },
   
-  // Marine & Tides
-  { category: "marine", source_name: "Tides - Point Atkinson", url: "https://www.waterlevels.gc.ca/eng/find/zone/6", description: "Tide predictions for Vancouver Harbour area", is_shared: true },
-  { category: "marine", source_name: "Tides - Vancouver", url: "https://www.tide-forecast.com/locations/Vancouver-British-Columbia/tides/latest", description: "Current and upcoming tide times for Vancouver", is_shared: true },
-  { category: "marine", source_name: "Ocean Conditions - Strait of Georgia", url: "https://www.oceannetworks.ca/observatories/pacific-northeast/salish-sea", description: "Real-time ocean data from Ocean Networks Canada", is_shared: true },
-  { category: "marine", source_name: "Marine Weather - Juan de Fuca", url: "https://weather.gc.ca/marine/region_e.html?mapID=02", description: "Marine forecast for Strait of Georgia and Juan de Fuca", is_shared: true },
-  { category: "marine", source_name: "Beach Water Quality", url: "https://www.vch.ca/en/service/beach-water-quality-monitoring", description: "Beach swimming advisories for Metro Vancouver", is_shared: true },
+  // Ferry
+  { category: "ferry", source_name: "BC Ferries Sailings", url: "https://www.bcferries.com/current-conditions", description: "Current sailing conditions and wait times", is_shared: true },
+  { category: "ferry", source_name: "BC Ferries Departures", url: "https://www.bcferries.com/current-conditions/departures", description: "Departure bay current conditions", is_shared: true },
   
-  // Events
-  { category: "events", source_name: "Vancouver Canucks Schedule", url: "https://www.nhl.com/canucks/schedule", description: "NHL Vancouver Canucks game schedule", is_shared: true },
-  { category: "events", source_name: "BC Lions Schedule", url: "https://www.bclions.com/schedule", description: "CFL BC Lions game schedule", is_shared: true },
-  { category: "events", source_name: "Vancouver Whitecaps Schedule", url: "https://www.whitecapsfc.com/schedule/", description: "MLS Vancouver Whitecaps game schedule", is_shared: true },
-  { category: "events", source_name: "Rogers Arena Events", url: "https://rogersarena.com/events/", description: "Concerts and events at Rogers Arena", is_shared: true },
-  { category: "events", source_name: "BC Place Events", url: "https://www.bcplace.com/events", description: "Events and concerts at BC Place Stadium", is_shared: true },
-  { category: "events", source_name: "Vancouver Events Calendar", url: "https://www.tourismvancouver.com/events/", description: "Major events and festivals in Vancouver", is_shared: true },
-  
-  // Financial/Markets
-  { category: "financial", source_name: "Gas Prices - Vancouver", url: "https://www.gasbuddy.com/gasprices/british-columbia/vancouver", description: "Current gas prices in Metro Vancouver", is_shared: true },
+  // Financial
   { category: "financial", source_name: "Gas Prices - BC", url: "https://www.gasbuddy.com/charts", description: "Gas price trends for British Columbia", is_shared: true },
   { category: "financial", source_name: "USD/CAD Exchange Rate", url: "https://www.bankofcanada.ca/rates/exchange/daily-exchange-rates/", description: "Bank of Canada daily exchange rates", is_shared: true },
   { category: "financial", source_name: "TSX Composite Index", url: "https://www.tmx.com/", description: "Toronto Stock Exchange market data", is_shared: true },
-  { category: "financial", source_name: "Yahoo Finance - TSX", url: "https://finance.yahoo.com/quote/%5EGSPTSE/", description: "S&P/TSX Composite Index live data", is_shared: true },
   
-  // Additional Emergency Sources
-  { category: "emergency", source_name: "Tsunami Warning - NOAA", url: "https://tsunami.gov/", description: "Pacific Tsunami Warning Center alerts", is_shared: true },
-  { category: "emergency", source_name: "Earthquakes - USGS", url: "https://earthquake.usgs.gov/earthquakes/map/?extent=47.5,-130&extent=52,-120", description: "Recent earthquakes near BC from USGS", is_shared: true },
-  { category: "emergency", source_name: "Earthquakes Canada", url: "https://earthquakescanada.nrcan.gc.ca/index-en.php", description: "Recent seismic activity in Canada", is_shared: true },
-  
-  // Additional Transit Sources
-  { category: "transit", source_name: "BC Ferries Sailings", url: "https://www.bcferries.com/current-conditions", description: "Current sailing conditions and wait times", is_shared: true },
-  { category: "transit", source_name: "BC Ferries Departures", url: "https://www.bcferries.com/current-conditions/departures", description: "Departure bay current conditions", is_shared: true },
-  { category: "transit", source_name: "George Massey Tunnel", url: "https://www.drivebc.ca/", description: "Traffic conditions for George Massey Tunnel", is_shared: true },
-  { category: "transit", source_name: "Port Mann Bridge", url: "https://www.drivebc.ca/", description: "Port Mann Bridge traffic and conditions", is_shared: true },
-  { category: "transit", source_name: "Alex Fraser Bridge", url: "https://www.drivebc.ca/", description: "Alex Fraser Bridge traffic status", is_shared: true },
-  { category: "transit", source_name: "Lions Gate Bridge", url: "https://www.th.gov.bc.ca/LGBridge/", description: "Lions Gate Bridge lane configuration and traffic", is_shared: true },
-  { category: "transit", source_name: "Ironworkers Memorial Bridge", url: "https://www.drivebc.ca/", description: "Second Narrows Bridge traffic conditions", is_shared: true },
-  { category: "transit", source_name: "EasyPark Parkades", url: "https://www.easypark.ca/find-parking", description: "Downtown Vancouver parkade availability", is_shared: true },
-  { category: "transit", source_name: "Impark Parking", url: "https://lots.impark.com/", description: "Impark lot locations and rates", is_shared: true },
-  
-  // Additional Health Sources
-  { category: "health", source_name: "ER Wait Times - VGH", url: "https://www.edwaittimes.ca/WaitTimes.aspx", description: "Emergency room wait times at Vancouver General Hospital", is_shared: true },
-  { category: "health", source_name: "ER Wait Times - BC", url: "https://www.edwaittimes.ca/", description: "Emergency department wait times across BC", is_shared: true },
+  // Aviation (provincial scope - serves multiple regions)
+  { category: "aviation", source_name: "Harbour Air Flight Status", url: "https://harbourair.com/flight-status/", description: "Seaplane services between Vancouver, Victoria, Nanaimo, and coastal destinations", is_shared: true },
+  { category: "aviation", source_name: "Helijet Scheduled Flights", url: "https://helijet.com/scheduled-airline/", description: "Helicopter service between Vancouver, Victoria, and other BC locations", is_shared: true },
 ];
+
+// =============================================================================
+// REGIONAL SOURCES - Apply only to municipalities within specific regions
+// =============================================================================
+export const REGIONAL_SOURCES: Record<string, DataSource[]> = {
+  "metro-vancouver": [
+    // Transit
+    { category: "transit", source_name: "TransLink Alerts", url: "https://www.translink.ca/alerts", description: "Real-time alerts for SkyTrain, bus, SeaBus, and West Coast Express", is_shared: true },
+    { category: "transit", source_name: "TransLink Trip Planner", url: "https://www.translink.ca/trip-planner", description: "Plan trips across Metro Vancouver's transit network", is_shared: true },
+    { category: "transit", source_name: "George Massey Tunnel", url: "https://www.drivebc.ca/", description: "Traffic conditions for George Massey Tunnel", is_shared: true },
+    { category: "transit", source_name: "Port Mann Bridge", url: "https://www.drivebc.ca/", description: "Port Mann Bridge traffic and conditions", is_shared: true },
+    { category: "transit", source_name: "Alex Fraser Bridge", url: "https://www.drivebc.ca/", description: "Alex Fraser Bridge traffic status", is_shared: true },
+    { category: "transit", source_name: "Lions Gate Bridge", url: "https://www.th.gov.bc.ca/LGBridge/", description: "Lions Gate Bridge lane configuration and traffic", is_shared: true },
+    { category: "transit", source_name: "Ironworkers Memorial Bridge", url: "https://www.drivebc.ca/", description: "Second Narrows Bridge traffic conditions", is_shared: true },
+    { category: "transit", source_name: "EasyPark Parkades", url: "https://www.easypark.ca/find-parking", description: "Downtown Vancouver parkade availability", is_shared: true },
+    { category: "transit", source_name: "Impark Parking", url: "https://lots.impark.com/", description: "Impark lot locations and rates", is_shared: true },
+    // Regional Government
+    { category: "economic", source_name: "Metro Vancouver Regional District", url: "https://www.metrovancouver.org/", description: "Regional planning, air quality, water services for 21 municipalities", is_shared: true },
+    // Air Quality
+    { category: "emergency", source_name: "Metro Vancouver AirMap", url: "https://gis.metrovancouver.org/maps/air", description: "Real-time air quality monitoring for Lower Fraser Valley", is_shared: true },
+    // Health
+    { category: "health", source_name: "Vancouver Coastal Health", url: "https://www.vch.ca/en/health-alerts", description: "Health alerts for Vancouver, Richmond, North Shore", is_shared: true },
+    { category: "health", source_name: "Fraser Health Authority", url: "https://www.fraserhealth.ca/health-topics-a-to-z/public-health-alerts", description: "Public health alerts for Fraser Health region", is_shared: true },
+    { category: "health", source_name: "ER Wait Times - VGH", url: "https://www.edwaittimes.ca/WaitTimes.aspx", description: "Emergency room wait times at Vancouver General Hospital", is_shared: true },
+    // Housing
+    { category: "housing", source_name: "Metro Vancouver Shelter Listings", url: "https://www.metrovancouver.org/services/regional-planning/homelessness", description: "Regional homelessness response and shelter information", is_shared: true },
+    // Parks
+    { category: "parks", source_name: "Metro Vancouver Parks", url: "https://www.metrovancouver.org/parks", description: "Regional park closures, trail conditions, and beach advisories", is_shared: true },
+    // Weather
+    { category: "weather", source_name: "Environment Canada - Vancouver", url: "https://weather.gc.ca/city/pages/bc-74_metric_e.html", description: "Current conditions and forecast for Vancouver and Metro area", is_shared: true },
+    { category: "weather", source_name: "Weather Network - Vancouver", url: "https://www.theweathernetwork.com/ca/weather/british-columbia/vancouver", description: "Extended forecast and radar for Metro Vancouver", is_shared: true },
+    // Marine
+    { category: "marine", source_name: "Tides - Point Atkinson", url: "https://www.waterlevels.gc.ca/eng/find/zone/6", description: "Tide predictions for Vancouver Harbour area", is_shared: true },
+    { category: "marine", source_name: "Tides - Vancouver", url: "https://www.tide-forecast.com/locations/Vancouver-British-Columbia/tides/latest", description: "Current and upcoming tide times for Vancouver", is_shared: true },
+    { category: "marine", source_name: "Ocean Conditions - Strait of Georgia", url: "https://www.oceannetworks.ca/observatories/pacific-northeast/salish-sea", description: "Real-time ocean data from Ocean Networks Canada", is_shared: true },
+    { category: "marine", source_name: "Marine Weather - Juan de Fuca", url: "https://weather.gc.ca/marine/region_e.html?mapID=02", description: "Marine forecast for Strait of Georgia and Juan de Fuca", is_shared: true },
+    { category: "marine", source_name: "Beach Water Quality", url: "https://www.vch.ca/en/service/beach-water-quality-monitoring", description: "Beach swimming advisories for Metro Vancouver", is_shared: true },
+    // Events
+    { category: "events", source_name: "Vancouver Canucks Schedule", url: "https://www.nhl.com/canucks/schedule", description: "NHL Vancouver Canucks game schedule", is_shared: true },
+    { category: "events", source_name: "BC Lions Schedule", url: "https://www.bclions.com/schedule", description: "CFL BC Lions game schedule", is_shared: true },
+    { category: "events", source_name: "Vancouver Whitecaps Schedule", url: "https://www.whitecapsfc.com/schedule/", description: "MLS Vancouver Whitecaps game schedule", is_shared: true },
+    { category: "events", source_name: "Rogers Arena Events", url: "https://rogersarena.com/events/", description: "Concerts and events at Rogers Arena", is_shared: true },
+    { category: "events", source_name: "BC Place Events", url: "https://www.bcplace.com/events", description: "Events and concerts at BC Place Stadium", is_shared: true },
+    { category: "events", source_name: "Vancouver Events Calendar", url: "https://www.tourismvancouver.com/events/", description: "Major events and festivals in Vancouver", is_shared: true },
+    // Financial
+    { category: "financial", source_name: "Gas Prices - Vancouver", url: "https://www.gasbuddy.com/gasprices/british-columbia/vancouver", description: "Current gas prices in Metro Vancouver", is_shared: true },
+    // Aviation
+    { category: "aviation", source_name: "Vancouver International Airport (YVR)", url: "https://www.yvr.ca/en/passengers/flights", description: "Real-time flight arrivals and departures for YVR", is_shared: true },
+    { category: "aviation", source_name: "Boundary Bay Airport", url: "https://www.boundarybayairport.com/", description: "General aviation airport in Delta", is_shared: true },
+    { category: "aviation", source_name: "Seair Seaplanes", url: "https://www.seairseaplanes.com/", description: "Seaplane flights and charters serving Gulf Islands", is_shared: true },
+  ],
+  "fraser-valley": [
+    // Regional Government
+    { category: "economic", source_name: "Fraser Valley Regional District", url: "https://www.fvrd.ca/", description: "Regional services and planning for Fraser Valley", is_shared: true },
+    // Health
+    { category: "health", source_name: "Fraser Health Authority", url: "https://www.fraserhealth.ca/health-topics-a-to-z/public-health-alerts", description: "Public health alerts for Fraser Health region", is_shared: true },
+    // Weather
+    { category: "weather", source_name: "Environment Canada - Abbotsford", url: "https://weather.gc.ca/city/pages/bc-63_metric_e.html", description: "Current conditions and forecast for Fraser Valley", is_shared: true },
+  ],
+  "capital": [
+    // Transit
+    { category: "transit", source_name: "BC Transit - Victoria", url: "https://www.bctransit.com/victoria", description: "Victoria Regional Transit System", is_shared: true },
+    // Regional Government
+    { category: "economic", source_name: "Capital Regional District", url: "https://www.crd.bc.ca/", description: "Regional services for Greater Victoria", is_shared: true },
+    // Health
+    { category: "health", source_name: "Island Health", url: "https://www.islandhealth.ca/news", description: "Health alerts for Vancouver Island", is_shared: true },
+    // Weather
+    { category: "weather", source_name: "Environment Canada - Victoria", url: "https://weather.gc.ca/city/pages/bc-85_metric_e.html", description: "Current conditions and forecast for Victoria", is_shared: true },
+    // Aviation
+    { category: "aviation", source_name: "Victoria International Airport (YYJ)", url: "https://www.victoriaairport.com/", description: "Flight information for Victoria International Airport", is_shared: true },
+  ],
+  "cowichan-valley": [
+    // Regional Government
+    { category: "economic", source_name: "Cowichan Valley Regional District", url: "https://www.cvrd.ca/", description: "Regional services for Cowichan Valley", is_shared: true },
+    // Health
+    { category: "health", source_name: "Island Health", url: "https://www.islandhealth.ca/news", description: "Health alerts for Vancouver Island", is_shared: true },
+  ],
+  "alberni-clayoquot": [
+    // Regional Government
+    { category: "economic", source_name: "Alberni-Clayoquot Regional District", url: "https://www.acrd.bc.ca/", description: "Regional services for Alberni-Clayoquot", is_shared: true },
+    // Health
+    { category: "health", source_name: "Island Health", url: "https://www.islandhealth.ca/news", description: "Health alerts for Vancouver Island", is_shared: true },
+    // Weather
+    { category: "weather", source_name: "Environment Canada - Tofino", url: "https://weather.gc.ca/city/pages/bc-131_metric_e.html", description: "Current conditions and forecast for Tofino area", is_shared: true },
+  ],
+  "nanaimo": [
+    // Transit
+    { category: "transit", source_name: "BC Transit - Nanaimo", url: "https://www.bctransit.com/nanaimo", description: "Nanaimo Regional Transit System", is_shared: true },
+    // Regional Government
+    { category: "economic", source_name: "Regional District of Nanaimo", url: "https://www.rdn.bc.ca/", description: "Regional services for Nanaimo area", is_shared: true },
+    // Health
+    { category: "health", source_name: "Island Health", url: "https://www.islandhealth.ca/news", description: "Health alerts for Vancouver Island", is_shared: true },
+    // Aviation
+    { category: "aviation", source_name: "Nanaimo Airport (YCD)", url: "https://www.nanaimoairport.com/", description: "Flight information for Nanaimo Airport", is_shared: true },
+  ],
+  "comox-valley": [
+    // Transit
+    { category: "transit", source_name: "BC Transit - Comox Valley", url: "https://www.bctransit.com/comox-valley", description: "Comox Valley Transit System", is_shared: true },
+    // Regional Government
+    { category: "economic", source_name: "Comox Valley Regional District", url: "https://www.comoxvalleyrd.ca/", description: "Regional services for Comox Valley", is_shared: true },
+    // Health
+    { category: "health", source_name: "Island Health", url: "https://www.islandhealth.ca/news", description: "Health alerts for Vancouver Island", is_shared: true },
+    // Aviation
+    { category: "aviation", source_name: "Comox Valley Airport (YQQ)", url: "https://www.comoxairport.com/", description: "Flight information for Comox Valley Airport", is_shared: true },
+  ],
+  "strathcona": [
+    // Regional Government
+    { category: "economic", source_name: "Strathcona Regional District", url: "https://www.srd.ca/", description: "Regional services for Strathcona", is_shared: true },
+    // Health
+    { category: "health", source_name: "Island Health", url: "https://www.islandhealth.ca/news", description: "Health alerts for Vancouver Island", is_shared: true },
+  ],
+  "mount-waddington": [
+    // Regional Government
+    { category: "economic", source_name: "Mount Waddington Regional District", url: "https://www.rdmw.bc.ca/", description: "Regional services for Mount Waddington", is_shared: true },
+    // Health
+    { category: "health", source_name: "Island Health", url: "https://www.islandhealth.ca/news", description: "Health alerts for Vancouver Island", is_shared: true },
+  ],
+  "central-okanagan": [
+    // Transit
+    { category: "transit", source_name: "BC Transit - Kelowna", url: "https://www.bctransit.com/kelowna", description: "Kelowna Regional Transit System", is_shared: true },
+    // Regional Government
+    { category: "economic", source_name: "Central Okanagan Regional District", url: "https://www.regionaldistrict.com/", description: "Regional services for Central Okanagan", is_shared: true },
+    // Health
+    { category: "health", source_name: "Interior Health", url: "https://www.interiorhealth.ca/health-topics/news-and-alerts", description: "Health alerts for Interior region", is_shared: true },
+    // Aviation
+    { category: "aviation", source_name: "Kelowna International Airport (YLW)", url: "https://ylw.kelowna.ca/", description: "Flight information for Kelowna Airport", is_shared: true },
+  ],
+  "thompson-nicola": [
+    // Transit
+    { category: "transit", source_name: "BC Transit - Kamloops", url: "https://www.bctransit.com/kamloops", description: "Kamloops Transit System", is_shared: true },
+    // Regional Government
+    { category: "economic", source_name: "Thompson-Nicola Regional District", url: "https://www.tnrd.ca/", description: "Regional services for Thompson-Nicola", is_shared: true },
+    // Health
+    { category: "health", source_name: "Interior Health", url: "https://www.interiorhealth.ca/health-topics/news-and-alerts", description: "Health alerts for Interior region", is_shared: true },
+    // Aviation
+    { category: "aviation", source_name: "Kamloops Airport (YKA)", url: "https://www.kamloopsairport.com/", description: "Flight information for Kamloops Airport", is_shared: true },
+  ],
+  "cariboo": [
+    // Regional Government
+    { category: "economic", source_name: "Cariboo Regional District", url: "https://www.cariboord.ca/", description: "Regional services for Cariboo", is_shared: true },
+    // Health
+    { category: "health", source_name: "Interior Health", url: "https://www.interiorhealth.ca/health-topics/news-and-alerts", description: "Health alerts for Interior region", is_shared: true },
+  ],
+  "fraser-fort-george": [
+    // Transit
+    { category: "transit", source_name: "BC Transit - Prince George", url: "https://www.bctransit.com/prince-george", description: "Prince George Transit System", is_shared: true },
+    // Regional Government
+    { category: "economic", source_name: "Regional District of Fraser-Fort George", url: "https://www.rdffg.bc.ca/", description: "Regional services for Fraser-Fort George", is_shared: true },
+    // Health
+    { category: "health", source_name: "Northern Health", url: "https://www.northernhealth.ca/health-topics/news-releases", description: "Health alerts for Northern region", is_shared: true },
+    // Aviation
+    { category: "aviation", source_name: "Prince George Airport (YXS)", url: "https://www.flyprg.com/", description: "Flight information for Prince George Airport", is_shared: true },
+  ],
+  "peace-river": [
+    // Regional Government
+    { category: "economic", source_name: "Peace River Regional District", url: "https://www.prrd.bc.ca/", description: "Regional services for Peace River", is_shared: true },
+    // Health
+    { category: "health", source_name: "Northern Health", url: "https://www.northernhealth.ca/health-topics/news-releases", description: "Health alerts for Northern region", is_shared: true },
+    // Aviation
+    { category: "aviation", source_name: "Fort St. John Airport (YXJ)", url: "https://www.fsjairport.com/", description: "Flight information for Fort St. John Airport", is_shared: true },
+  ],
+  "kootenay-boundary": [
+    // Regional Government
+    { category: "economic", source_name: "Regional District of Kootenay Boundary", url: "https://www.rdkb.com/", description: "Regional services for Kootenay Boundary", is_shared: true },
+    // Health
+    { category: "health", source_name: "Interior Health", url: "https://www.interiorhealth.ca/health-topics/news-and-alerts", description: "Health alerts for Interior region", is_shared: true },
+  ],
+  "central-kootenay": [
+    // Regional Government
+    { category: "economic", source_name: "Regional District of Central Kootenay", url: "https://www.rdck.ca/", description: "Regional services for Central Kootenay", is_shared: true },
+    // Health
+    { category: "health", source_name: "Interior Health", url: "https://www.interiorhealth.ca/health-topics/news-and-alerts", description: "Health alerts for Interior region", is_shared: true },
+  ],
+  "east-kootenay": [
+    // Transit
+    { category: "transit", source_name: "BC Transit - Cranbrook", url: "https://www.bctransit.com/cranbrook", description: "Cranbrook Transit System", is_shared: true },
+    // Regional Government
+    { category: "economic", source_name: "Regional District of East Kootenay", url: "https://www.rdek.bc.ca/", description: "Regional services for East Kootenay", is_shared: true },
+    // Health
+    { category: "health", source_name: "Interior Health", url: "https://www.interiorhealth.ca/health-topics/news-and-alerts", description: "Health alerts for Interior region", is_shared: true },
+    // Aviation
+    { category: "aviation", source_name: "Cranbrook Airport (YXC)", url: "https://www.flyckc.com/", description: "Flight information for Canadian Rockies International Airport", is_shared: true },
+  ],
+  "north-okanagan": [
+    // Regional Government
+    { category: "economic", source_name: "Regional District of North Okanagan", url: "https://www.rdno.ca/", description: "Regional services for North Okanagan", is_shared: true },
+    // Health
+    { category: "health", source_name: "Interior Health", url: "https://www.interiorhealth.ca/health-topics/news-and-alerts", description: "Health alerts for Interior region", is_shared: true },
+  ],
+  "okanagan-similkameen": [
+    // Transit
+    { category: "transit", source_name: "BC Transit - South Okanagan", url: "https://www.bctransit.com/south-okanagan-similkameen", description: "South Okanagan Transit System", is_shared: true },
+    // Regional Government
+    { category: "economic", source_name: "Regional District of Okanagan-Similkameen", url: "https://www.rdos.bc.ca/", description: "Regional services for Okanagan-Similkameen", is_shared: true },
+    // Health
+    { category: "health", source_name: "Interior Health", url: "https://www.interiorhealth.ca/health-topics/news-and-alerts", description: "Health alerts for Interior region", is_shared: true },
+    // Aviation
+    { category: "aviation", source_name: "Penticton Regional Airport (YYF)", url: "https://www.penticton.ca/your-city/airport", description: "Flight information for Penticton Airport", is_shared: true },
+  ],
+  "columbia-shuswap": [
+    // Regional Government
+    { category: "economic", source_name: "Columbia Shuswap Regional District", url: "https://www.csrd.bc.ca/", description: "Regional services for Columbia-Shuswap", is_shared: true },
+    // Health
+    { category: "health", source_name: "Interior Health", url: "https://www.interiorhealth.ca/health-topics/news-and-alerts", description: "Health alerts for Interior region", is_shared: true },
+  ],
+  "squamish-lillooet": [
+    // Regional Government
+    { category: "economic", source_name: "Squamish-Lillooet Regional District", url: "https://www.slrd.bc.ca/", description: "Regional services for Squamish-Lillooet", is_shared: true },
+    // Health
+    { category: "health", source_name: "Vancouver Coastal Health", url: "https://www.vch.ca/en/health-alerts", description: "Health alerts for Sea-to-Sky corridor", is_shared: true },
+  ],
+  "sunshine-coast": [
+    // Ferry
+    { category: "ferry", source_name: "BC Ferries - Langdale", url: "https://www.bcferries.com/current-conditions/HSB-LNG", description: "Horseshoe Bay to Langdale ferry conditions", is_shared: true },
+    // Regional Government
+    { category: "economic", source_name: "Sunshine Coast Regional District", url: "https://www.scrd.ca/", description: "Regional services for Sunshine Coast", is_shared: true },
+    // Health
+    { category: "health", source_name: "Vancouver Coastal Health", url: "https://www.vch.ca/en/health-alerts", description: "Health alerts for Sunshine Coast", is_shared: true },
+  ],
+  "powell-river": [
+    // Ferry
+    { category: "ferry", source_name: "BC Ferries - Texada Island", url: "https://www.bcferries.com/current-conditions/POW-TXI", description: "Powell River to Texada Island ferry conditions", is_shared: true },
+    // Regional Government
+    { category: "economic", source_name: "Powell River Regional District", url: "https://www.powellriverrd.bc.ca/", description: "Regional services for Powell River", is_shared: true },
+    // Health
+    { category: "health", source_name: "Vancouver Coastal Health", url: "https://www.vch.ca/en/health-alerts", description: "Health alerts for Powell River area", is_shared: true },
+  ],
+  "central-coast": [
+    // Regional Government
+    { category: "economic", source_name: "Central Coast Regional District", url: "https://www.ccrd.ca/", description: "Regional services for Central Coast", is_shared: true },
+    // Health
+    { category: "health", source_name: "Vancouver Coastal Health", url: "https://www.vch.ca/en/health-alerts", description: "Health alerts for Central Coast", is_shared: true },
+  ],
+  "north-coast": [
+    // Regional Government
+    { category: "economic", source_name: "North Coast Regional District", url: "https://www.northcoastrd.bc.ca/", description: "Regional services for North Coast", is_shared: true },
+    // Health
+    { category: "health", source_name: "Northern Health", url: "https://www.northernhealth.ca/health-topics/news-releases", description: "Health alerts for Northern region", is_shared: true },
+    // Ferry
+    { category: "ferry", source_name: "BC Ferries - Prince Rupert", url: "https://www.bcferries.com/current-conditions/PRI-SKI", description: "Prince Rupert ferry conditions", is_shared: true },
+  ],
+  "kitimat-stikine": [
+    // Regional Government
+    { category: "economic", source_name: "Regional District of Kitimat-Stikine", url: "https://www.rdks.bc.ca/", description: "Regional services for Kitimat-Stikine", is_shared: true },
+    // Health
+    { category: "health", source_name: "Northern Health", url: "https://www.northernhealth.ca/health-topics/news-releases", description: "Health alerts for Northern region", is_shared: true },
+    // Aviation
+    { category: "aviation", source_name: "Northwest Regional Airport (YXT)", url: "https://www.nwra.ca/", description: "Flight information for Terrace-Kitimat Airport", is_shared: true },
+  ],
+  "bulkley-nechako": [
+    // Regional Government
+    { category: "economic", source_name: "Regional District of Bulkley-Nechako", url: "https://www.rdbn.bc.ca/", description: "Regional services for Bulkley-Nechako", is_shared: true },
+    // Health
+    { category: "health", source_name: "Northern Health", url: "https://www.northernhealth.ca/health-topics/news-releases", description: "Health alerts for Northern region", is_shared: true },
+  ],
+  "northern-rockies": [
+    // Regional Government
+    { category: "economic", source_name: "Northern Rockies Regional Municipality", url: "https://www.northernrockies.ca/", description: "Regional services for Northern Rockies", is_shared: true },
+    // Health
+    { category: "health", source_name: "Northern Health", url: "https://www.northernhealth.ca/health-topics/news-releases", description: "Health alerts for Northern region", is_shared: true },
+  ],
+};
+
+// Legacy alias for backward compatibility
+export const SHARED_SOURCES: DataSource[] = PROVINCIAL_SOURCES;
 
 // Municipal-specific sources
 export const MUNICIPAL_SOURCES: Record<string, DataSource[]> = {
@@ -306,9 +534,50 @@ export const MUNICIPALITIES_WITH_DATA = Object.keys(MUNICIPAL_SOURCES).sort();
 // Legacy alias for compatibility
 export const ALL_MUNICIPALITIES = MUNICIPALITIES_WITH_DATA;
 
+// Helper to find a municipality node by name
+function findMunicipalityByName(name: string): GeoNode | undefined {
+  return Object.values(GEO_HIERARCHY).find(
+    node => node.level === "municipality" && node.name === name
+  );
+}
+
+// Helper to get the region ID for a municipality
+function getRegionIdForMunicipality(municipalityName: string): string | undefined {
+  const muniNode = findMunicipalityByName(municipalityName);
+  if (!muniNode) return undefined;
+  
+  const ancestors = getAncestors(muniNode.id);
+  const regionNode = ancestors.find(node => node.level === "region");
+  return regionNode?.id;
+}
+
+// Get sources with proper geographic inheritance
 export function getSourcesForMunicipality(name: string): DataSource[] {
   const municipal = MUNICIPAL_SOURCES[name] || [];
-  return [...SHARED_SOURCES, ...municipal];
+  const regionId = getRegionIdForMunicipality(name);
+  const regional = regionId ? (REGIONAL_SOURCES[regionId] || []) : [];
+  
+  return [...PROVINCIAL_SOURCES, ...regional, ...municipal];
+}
+
+// Get sources split by tier for display
+export function getSourcesByTier(municipalityName: string): {
+  provincial: DataSource[];
+  regional: DataSource[];
+  municipal: DataSource[];
+  regionName?: string;
+} {
+  const municipal = MUNICIPAL_SOURCES[municipalityName] || [];
+  const regionId = getRegionIdForMunicipality(municipalityName);
+  const regional = regionId ? (REGIONAL_SOURCES[regionId] || []) : [];
+  const regionNode = regionId ? getNode(regionId) : undefined;
+  
+  return {
+    provincial: PROVINCIAL_SOURCES,
+    regional,
+    municipal,
+    regionName: regionNode?.name
+  };
 }
 
 export function getSourcesByCategory(municipalityName: string): Record<string, DataSource[]> {
