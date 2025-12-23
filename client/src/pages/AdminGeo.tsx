@@ -201,6 +201,8 @@ function NodeDetail({ nodeId }: { nodeId: string }) {
         </Card>
       )}
       
+      <AviationWeatherSection node={node} />
+      
       {sourceGroups.length > 0 && (
         <Card className="bg-card/50">
           <CardHeader className="pb-2">
@@ -245,8 +247,6 @@ function NodeDetail({ nodeId }: { nodeId: string }) {
           </CardContent>
         </Card>
       )}
-      
-      <AviationWeatherSection node={node} />
     </div>
   );
 }
@@ -324,6 +324,36 @@ function AviationWeatherSection({ node }: { node: GeoNode }) {
       <Card className="bg-card/50">
         <CardHeader className="pb-2">
           <CardTitle className="text-sm flex items-center gap-2">
+            <Cloud className="w-4 h-4 text-cyan-400" />
+            Weather Stations
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {!coords ? (
+            <div className="text-xs text-muted-foreground text-center py-4">
+              No coordinates available for this location
+            </div>
+          ) : (
+            <div className="space-y-1">
+              {nearbyWeatherStations.map((item, idx) => (
+                <div key={item.station.id} className="flex items-center gap-2 text-xs p-1.5 rounded bg-background/50">
+                  <span className="w-4 text-muted-foreground">{idx + 1}.</span>
+                  {getTypeIcon(item.station.type)}
+                  <Badge className={`text-[9px] ${getTypeBadgeClass(item.station.type)}`}>
+                    {item.station.type.toUpperCase()}
+                  </Badge>
+                  <span className="truncate flex-1">{item.station.name}</span>
+                  <span className="text-muted-foreground text-[10px]">{item.distance_km}km</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+      
+      <Card className="bg-card/50">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm flex items-center gap-2">
             <Plane className="w-4 h-4 text-sky-400" />
             Aviation Infrastructure
           </CardTitle>
@@ -369,36 +399,6 @@ function AviationWeatherSection({ node }: { node: GeoNode }) {
                   ))}
                 </div>
               </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-      
-      <Card className="bg-card/50">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm flex items-center gap-2">
-            <Cloud className="w-4 h-4 text-cyan-400" />
-            Weather Stations
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {!coords ? (
-            <div className="text-xs text-muted-foreground text-center py-4">
-              No coordinates available for this location
-            </div>
-          ) : (
-            <div className="space-y-1">
-              {nearbyWeatherStations.map((item, idx) => (
-                <div key={item.station.id} className="flex items-center gap-2 text-xs p-1.5 rounded bg-background/50">
-                  <span className="w-4 text-muted-foreground">{idx + 1}.</span>
-                  {getTypeIcon(item.station.type)}
-                  <Badge className={`text-[9px] ${getTypeBadgeClass(item.station.type)}`}>
-                    {item.station.type.toUpperCase()}
-                  </Badge>
-                  <span className="truncate flex-1">{item.station.name}</span>
-                  <span className="text-muted-foreground text-[10px]">{item.distance_km}km</span>
-                </div>
-              ))}
             </div>
           )}
         </CardContent>
