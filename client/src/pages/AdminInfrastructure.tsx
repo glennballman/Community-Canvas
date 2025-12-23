@@ -11,11 +11,13 @@ import {
   Thermometer,
   CheckCircle,
   XCircle,
-  Search
+  Search,
+  Ship
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { BC_AIRPORTS, type Airport } from "@shared/aviation";
 import { BC_WEATHER_STATIONS, type WeatherStation } from "@shared/weather-stations";
+import { BC_MARINE_FACILITIES, type MarineFacility, type MarineFacilityType } from "@shared/marine";
 import { GEO_HIERARCHY, type GeoNode } from "@shared/geography";
 
 function getAirportTypeIcon(type: string) {
@@ -89,6 +91,49 @@ function getWeatherTypeBadge(type: string) {
   );
 }
 
+function getMarineTypeIcon(type: MarineFacilityType) {
+  switch (type) {
+    case 'coast_guard': return <Anchor className="w-3 h-3" />;
+    case 'rescue_station': return <Anchor className="w-3 h-3" />;
+    case 'marina': return <Ship className="w-3 h-3" />;
+    case 'fuel_dock': return <Ship className="w-3 h-3" />;
+    case 'public_wharf': return <Anchor className="w-3 h-3" />;
+    case 'harbour_authority': return <Ship className="w-3 h-3" />;
+    case 'ferry_terminal': return <Ship className="w-3 h-3" />;
+    case 'seaplane_dock': return <Plane className="w-3 h-3" />;
+    default: return <Ship className="w-3 h-3" />;
+  }
+}
+
+function getMarineTypeBadge(type: MarineFacilityType) {
+  const colors: Record<MarineFacilityType, string> = {
+    'coast_guard': 'bg-red-500/20 text-red-400 border-red-500/30',
+    'rescue_station': 'bg-orange-500/20 text-orange-400 border-orange-500/30',
+    'marina': 'bg-blue-500/20 text-blue-400 border-blue-500/30',
+    'fuel_dock': 'bg-amber-500/20 text-amber-400 border-amber-500/30',
+    'public_wharf': 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30',
+    'harbour_authority': 'bg-green-500/20 text-green-400 border-green-500/30',
+    'ferry_terminal': 'bg-purple-500/20 text-purple-400 border-purple-500/30',
+    'seaplane_dock': 'bg-sky-500/20 text-sky-400 border-sky-500/30',
+  };
+  const labels: Record<MarineFacilityType, string> = {
+    'coast_guard': 'COAST GUARD',
+    'rescue_station': 'RESCUE',
+    'marina': 'MARINA',
+    'fuel_dock': 'FUEL',
+    'public_wharf': 'WHARF',
+    'harbour_authority': 'HARBOUR',
+    'ferry_terminal': 'FERRY',
+    'seaplane_dock': 'SEAPLANE',
+  };
+  return (
+    <Badge variant="outline" className={`text-[9px] ${colors[type] || ''}`}>
+      {getMarineTypeIcon(type)}
+      <span className="ml-1">{labels[type] || type.toUpperCase()}</span>
+    </Badge>
+  );
+}
+
 function findMatchingMunicipality(name: string | undefined): GeoNode | null {
   if (!name) return null;
   
@@ -121,9 +166,15 @@ interface WeatherWithMatch extends WeatherStation {
   matchedRegion: GeoNode | null;
 }
 
+interface MarineWithMatch extends MarineFacility {
+  matchedMunicipality: GeoNode | null;
+  matchedRegion: GeoNode | null;
+}
+
 export default function AdminInfrastructure() {
   const [airportSearch, setAirportSearch] = useState("");
   const [weatherSearch, setWeatherSearch] = useState("");
+  const [marineSearch, setMarineSearch] = useState("");
   const [activeTab, setActiveTab] = useState("airports");
 
   const airportsWithMatches: AirportWithMatch[] = useMemo(() => {
@@ -139,6 +190,14 @@ export default function AdminInfrastructure() {
       ...station,
       matchedMunicipality: findMatchingMunicipality(station.municipality),
       matchedRegion: findMatchingRegion(station.region_id),
+    }));
+  }, []);
+
+  const marineWithMatches: MarineWithMatch[] = useMemo(() => {
+    return BC_MARINE_FACILITIES.map(facility => ({
+      ...facility,
+      matchedMunicipality: findMatchingMunicipality(facility.municipality),
+      matchedRegion: findMatchingRegion(facility.region.toLowerCase().replace(/\s+/g, '-')),
     }));
   }, []);
 
@@ -170,6 +229,19 @@ export default function AdminInfrastructure() {
     );
   }, [weatherWithMatches, weatherSearch]);
 
+  const filteredMarine = useMemo(() => {
+    if (!marineSearch) return marineWithMatches;
+    const search = marineSearch.toLowerCase();
+    return marineWithMatches.filter(f => 
+      f.name.toLowerCase().includes(search) ||
+      f.municipality?.toLowerCase().includes(search) ||
+      f.region?.toLowerCase().includes(search) ||
+      f.matchedMunicipality?.name.toLowerCase().includes(search) ||
+      f.matchedRegion?.name.toLowerCase().includes(search) ||
+      f.type.toLowerCase().includes(search)
+    );
+  }, [marineWithMatches, marineSearch]);
+
   const airportStats = useMemo(() => {
     const matched = airportsWithMatches.filter(a => a.matchedMunicipality).length;
     const regionOnly = airportsWithMatches.filter(a => !a.matchedMunicipality && a.matchedRegion).length;
@@ -191,6 +263,17 @@ export default function AdminInfrastructure() {
     });
     return { total: weatherWithMatches.length, matched, regionOnly, unmatched, byType };
   }, [weatherWithMatches]);
+
+  const marineStats = useMemo(() => {
+    const matched = marineWithMatches.filter(f => f.matchedMunicipality).length;
+    const regionOnly = marineWithMatches.filter(f => !f.matchedMunicipality && f.matchedRegion).length;
+    const unmatched = marineWithMatches.filter(f => !f.matchedMunicipality && !f.matchedRegion).length;
+    const byType: Record<string, number> = {};
+    marineWithMatches.forEach(f => {
+      byType[f.type] = (byType[f.type] || 0) + 1;
+    });
+    return { total: marineWithMatches.length, matched, regionOnly, unmatched, byType };
+  }, [marineWithMatches]);
 
   return (
     <div className="h-full flex flex-col font-mono">
@@ -222,6 +305,14 @@ export default function AdminInfrastructure() {
             >
               <Radio className="w-3 h-3 mr-1" />
               WEATHER STATIONS ({weatherStats.total})
+            </TabsTrigger>
+            <TabsTrigger 
+              value="marine" 
+              className="text-xs data-[state=active]:bg-primary/20 data-[state=active]:text-primary"
+              data-testid="tab-marine"
+            >
+              <Anchor className="w-3 h-3 mr-1" />
+              MARINE ({marineStats.total})
             </TabsTrigger>
             <TabsTrigger 
               value="summary" 
@@ -391,6 +482,104 @@ export default function AdminInfrastructure() {
                           <span className="text-yellow-400">{station.region_id}</span>
                         ) : (
                           <span className="text-muted-foreground/50">-</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </ScrollArea>
+        </TabsContent>
+
+        <TabsContent value="marine" className="flex-1 overflow-hidden m-0 flex flex-col data-[state=inactive]:hidden">
+          <div className="p-3 border-b border-border/30 flex items-center gap-4">
+            <div className="relative flex-1 max-w-sm">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground" />
+              <Input
+                placeholder="Search marine facilities..."
+                value={marineSearch}
+                onChange={e => setMarineSearch(e.target.value)}
+                className="pl-8 h-8 text-xs bg-background/50"
+                data-testid="input-marine-search"
+              />
+            </div>
+            <div className="flex gap-2 text-[10px] text-muted-foreground">
+              <span className="text-green-400">{marineStats.matched} MATCHED</span>
+              <span className="text-yellow-400">{marineStats.regionOnly} REGION ONLY</span>
+              <span className="text-red-400">{marineStats.unmatched} UNMATCHED</span>
+            </div>
+          </div>
+          <ScrollArea className="flex-1">
+            <div className="p-3">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="text-[10px] text-muted-foreground border-b border-border/30">
+                    <th className="text-left py-2 px-2">TYPE</th>
+                    <th className="text-left py-2 px-2">NAME</th>
+                    <th className="text-left py-2 px-2">SERVICES</th>
+                    <th className="text-left py-2 px-2">SOURCE MUNICIPALITY</th>
+                    <th className="text-left py-2 px-2">MATCHED TO</th>
+                    <th className="text-left py-2 px-2">REGION</th>
+                    <th className="text-center py-2 px-2">FUEL</th>
+                    <th className="text-center py-2 px-2">RESCUE</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredMarine.map(facility => (
+                    <tr 
+                      key={facility.id} 
+                      className="border-b border-border/20 hover-elevate"
+                      data-testid={`row-marine-${facility.id}`}
+                    >
+                      <td className="py-2 px-2">{getMarineTypeBadge(facility.type)}</td>
+                      <td className="py-2 px-2 text-foreground">{facility.name}</td>
+                      <td className="py-2 px-2">
+                        <div className="flex flex-wrap gap-1">
+                          {facility.services?.slice(0, 2).map(s => (
+                            <Badge key={s} variant="outline" className="text-[9px] bg-muted/30">
+                              {s}
+                            </Badge>
+                          ))}
+                          {(facility.services?.length || 0) > 2 && (
+                            <Badge variant="outline" className="text-[9px] bg-muted/30">
+                              +{(facility.services?.length || 0) - 2}
+                            </Badge>
+                          )}
+                        </div>
+                      </td>
+                      <td className="py-2 px-2 text-muted-foreground">{facility.municipality || '-'}</td>
+                      <td className="py-2 px-2">
+                        {facility.matchedMunicipality ? (
+                          <div className="flex items-center gap-1 text-green-400">
+                            <CheckCircle className="w-3 h-3" />
+                            <span>{facility.matchedMunicipality.name}</span>
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground/50">-</span>
+                        )}
+                      </td>
+                      <td className="py-2 px-2">
+                        {facility.matchedRegion ? (
+                          <span className="text-cyan-400">{facility.matchedRegion.shortName || facility.matchedRegion.name}</span>
+                        ) : facility.region ? (
+                          <span className="text-yellow-400">{facility.region}</span>
+                        ) : (
+                          <span className="text-muted-foreground/50">-</span>
+                        )}
+                      </td>
+                      <td className="py-2 px-2 text-center">
+                        {facility.has_fuel ? (
+                          <CheckCircle className="w-3 h-3 text-amber-400 mx-auto" />
+                        ) : (
+                          <XCircle className="w-3 h-3 text-muted-foreground/30 mx-auto" />
+                        )}
+                      </td>
+                      <td className="py-2 px-2 text-center">
+                        {facility.emergency_services ? (
+                          <CheckCircle className="w-3 h-3 text-red-400 mx-auto" />
+                        ) : (
+                          <XCircle className="w-3 h-3 text-muted-foreground/30 mx-auto" />
                         )}
                       </td>
                     </tr>
