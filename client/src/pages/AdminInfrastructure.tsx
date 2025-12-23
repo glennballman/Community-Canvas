@@ -605,13 +605,26 @@ export default function AdminInfrastructure() {
   }, [charterWithMatches, groundSearch]);
 
   const filteredCourier = useMemo(() => {
-    if (!groundSearch) return courierWithMatches;
+    const nonPostal = courierWithMatches.filter(s => s.type !== 'postal');
+    if (!groundSearch) return nonPostal;
     const search = groundSearch.toLowerCase();
-    return courierWithMatches.filter(s => 
+    return nonPostal.filter(s => 
       s.name.toLowerCase().includes(search) ||
       s.facilities.some(f => f.name.toLowerCase().includes(search) || f.municipality.toLowerCase().includes(search)) ||
       s.service_coverage.some(c => c.toLowerCase().includes(search)) ||
       s.type.toLowerCase().includes(search) ||
+      s.notes?.toLowerCase().includes(search)
+    );
+  }, [courierWithMatches, groundSearch]);
+
+  const filteredPostal = useMemo(() => {
+    const postal = courierWithMatches.filter(s => s.type === 'postal');
+    if (!groundSearch) return postal;
+    const search = groundSearch.toLowerCase();
+    return postal.filter(s => 
+      s.name.toLowerCase().includes(search) ||
+      s.facilities.some(f => f.name.toLowerCase().includes(search) || f.municipality.toLowerCase().includes(search)) ||
+      s.service_coverage.some(c => c.toLowerCase().includes(search)) ||
       s.notes?.toLowerCase().includes(search)
     );
   }, [courierWithMatches, groundSearch]);
@@ -824,8 +837,9 @@ export default function AdminInfrastructure() {
       touristRails,
       lifelineTotal: lifelineTrucking.length,
       supplyTotal: supplyTrucking.length + supplyRail.length,
-      mobilityTotal: intercityBusWithMatches.length + transitWithMatches.length + charterWithMatches.length + mobilityRail.length,
-      messagingTotal: courierWithMatches.length,
+      busTotal: intercityBusWithMatches.length + transitWithMatches.length + charterWithMatches.length + mobilityRail.length,
+      courierTotal: courierWithMatches.filter(s => s.type !== 'postal').length,
+      postalTotal: courierWithMatches.filter(s => s.type === 'postal').length,
       total: intercityBusWithMatches.length + transitWithMatches.length + charterWithMatches.length + courierWithMatches.length + truckingWithMatches.length + railWithMatches.length
     };
   }, [intercityBusWithMatches, transitWithMatches, charterWithMatches, courierWithMatches, truckingWithMatches, railWithMatches]);
@@ -918,20 +932,28 @@ export default function AdminInfrastructure() {
               SUPPLY CHAIN ({groundStats.supplyTotal})
             </TabsTrigger>
             <TabsTrigger 
-              value="ground-mobility" 
+              value="ground-bus" 
               className="text-xs data-[state=active]:bg-green-500/20 data-[state=active]:text-green-400"
-              data-testid="tab-ground-mobility"
+              data-testid="tab-ground-bus"
             >
               <Bus className="w-3 h-3 mr-1" />
-              MOBILITY ({groundStats.mobilityTotal})
+              BUS ({groundStats.busTotal})
             </TabsTrigger>
             <TabsTrigger 
-              value="ground-messaging" 
+              value="ground-courier" 
               className="text-xs data-[state=active]:bg-purple-500/20 data-[state=active]:text-purple-400"
-              data-testid="tab-ground-messaging"
+              data-testid="tab-ground-courier"
             >
               <Package className="w-3 h-3 mr-1" />
-              MESSAGING ({groundStats.messagingTotal})
+              COURIER ({groundStats.courierTotal})
+            </TabsTrigger>
+            <TabsTrigger 
+              value="ground-postal" 
+              className="text-xs data-[state=active]:bg-red-500/20 data-[state=active]:text-red-400"
+              data-testid="tab-ground-postal"
+            >
+              <Mail className="w-3 h-3 mr-1" />
+              POSTAL ({groundStats.postalTotal})
             </TabsTrigger>
             <TabsTrigger 
               value="summary" 
@@ -1933,16 +1955,16 @@ export default function AdminInfrastructure() {
           )}
         </TabsContent>
 
-        <TabsContent value="ground-mobility" className="flex-1 overflow-hidden m-0 flex flex-col data-[state=inactive]:hidden">
+        <TabsContent value="ground-bus" className="flex-1 overflow-hidden m-0 flex flex-col data-[state=inactive]:hidden">
           <div className="p-3 border-b border-border/30 flex items-center gap-4">
             <div className="relative flex-1 max-w-sm">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground" />
               <Input
-                placeholder="Search mobility services..."
+                placeholder="Search bus services..."
                 value={groundSearch}
                 onChange={e => setGroundSearch(e.target.value)}
                 className="pl-8 h-8 text-xs bg-background/50"
-                data-testid="input-mobility-search"
+                data-testid="input-bus-search"
               />
             </div>
             <div className="flex gap-1">
@@ -1951,7 +1973,7 @@ export default function AdminInfrastructure() {
                 variant={mobilitySubTab === "intercity" ? "default" : "outline"}
                 className="text-[9px] h-7"
                 onClick={() => setMobilitySubTab("intercity")}
-                data-testid="button-mobility-subtab-intercity"
+                data-testid="button-bus-subtab-intercity"
               >
                 <Bus className="w-2.5 h-2.5 mr-1" />
                 INTERCITY ({filteredIntercity.length})
@@ -1961,7 +1983,7 @@ export default function AdminInfrastructure() {
                 variant={mobilitySubTab === "transit" ? "default" : "outline"}
                 className="text-[9px] h-7"
                 onClick={() => setMobilitySubTab("transit")}
-                data-testid="button-mobility-subtab-transit"
+                data-testid="button-bus-subtab-transit"
               >
                 <Train className="w-2.5 h-2.5 mr-1" />
                 TRANSIT ({filteredTransit.length})
@@ -1971,7 +1993,7 @@ export default function AdminInfrastructure() {
                 variant={mobilitySubTab === "charter" ? "default" : "outline"}
                 className="text-[9px] h-7"
                 onClick={() => setMobilitySubTab("charter")}
-                data-testid="button-mobility-subtab-charter"
+                data-testid="button-bus-subtab-charter"
               >
                 <Truck className="w-2.5 h-2.5 mr-1" />
                 CHARTER ({filteredCharter.length})
@@ -1981,13 +2003,13 @@ export default function AdminInfrastructure() {
                 variant={mobilitySubTab === "rail" ? "default" : "outline"}
                 className="text-[9px] h-7"
                 onClick={() => setMobilitySubTab("rail")}
-                data-testid="button-mobility-subtab-rail"
+                data-testid="button-bus-subtab-rail"
               >
                 <Train className="w-2.5 h-2.5 mr-1" />
                 RAIL ({filteredMobilityRail.length})
               </Button>
             </div>
-            <div className="text-[10px] text-green-400 font-medium">TIER 3 - COMMUNITY</div>
+            <div className="text-[10px] text-green-400 font-medium">TIER 3 - COMMUNITY MOVEMENT</div>
           </div>
 
           {mobilitySubTab === "intercity" && (
@@ -2340,7 +2362,7 @@ export default function AdminInfrastructure() {
           )}
         </TabsContent>
 
-        <TabsContent value="ground-messaging" className="flex-1 overflow-hidden m-0 flex flex-col data-[state=inactive]:hidden">
+        <TabsContent value="ground-courier" className="flex-1 overflow-hidden m-0 flex flex-col data-[state=inactive]:hidden">
           <div className="p-3 border-b border-border/30 flex items-center gap-4">
             <div className="relative flex-1 max-w-sm">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground" />
@@ -2349,10 +2371,10 @@ export default function AdminInfrastructure() {
                 value={groundSearch}
                 onChange={e => setGroundSearch(e.target.value)}
                 className="pl-8 h-8 text-xs bg-background/50"
-                data-testid="input-messaging-search"
+                data-testid="input-courier-search"
               />
             </div>
-            <div className="text-[10px] text-purple-400 font-medium">TIER 4 - NON-CRITICAL</div>
+            <div className="text-[10px] text-purple-400 font-medium">TIER 4 - DELIVERY SERVICES</div>
           </div>
           <ScrollArea className="flex-1">
             <div className="p-2">
@@ -2373,29 +2395,18 @@ export default function AdminInfrastructure() {
                         <Badge 
                           variant="outline" 
                           className={`text-[9px] ${
-                            service.type === 'postal' ? 'bg-red-500/20 text-red-400 border-red-500/30' :
                             service.type === 'express' ? 'bg-green-500/20 text-green-400 border-green-500/30' :
                             service.type === 'regional' ? 'bg-blue-500/20 text-blue-400 border-blue-500/30' :
                             service.type === 'freight' ? 'bg-orange-500/20 text-orange-400 border-orange-500/30' :
                             'bg-purple-500/20 text-purple-400 border-purple-500/30'
                           }`}
                         >
-                          {service.type === 'postal' ? (
-                            <><Mail className="w-2 h-2 mr-1" />POSTAL</>
-                          ) : service.type === 'same_day' ? (
-                            'SAME DAY'
-                          ) : (
-                            service.type.toUpperCase()
-                          )}
+                          {service.type === 'same_day' ? 'SAME DAY' : service.type.toUpperCase()}
                         </Badge>
                       </td>
                       <td className="py-2 px-2">
                         <div className="flex items-center gap-2">
-                          {service.type === 'postal' ? (
-                            <Mail className="w-3 h-3 text-red-400" />
-                          ) : (
-                            <Package className="w-3 h-3 text-purple-400" />
-                          )}
+                          <Package className="w-3 h-3 text-purple-400" />
                           <div>
                             <div className="font-medium text-foreground">{service.name}</div>
                             {service.website && (
@@ -2413,6 +2424,86 @@ export default function AdminInfrastructure() {
                           {service.facilities.slice(0, 4).map((facility, i) => (
                             <div key={i} className="text-[10px] text-muted-foreground flex items-center gap-1">
                               <Badge variant="outline" className="text-[8px] px-1">{facility.facility_type.toUpperCase()}</Badge>
+                              <span>{facility.municipality}</span>
+                            </div>
+                          ))}
+                          {service.facilities.length > 4 && <div className="text-[10px] text-cyan-400">+{service.facilities.length - 4} more</div>}
+                        </div>
+                      </td>
+                      <td className="py-2 px-2">
+                        <div className="flex flex-wrap gap-1 max-w-64">
+                          {service.service_coverage.slice(0, 4).map((area, i) => (
+                            <Badge key={i} variant="outline" className="text-[8px]">{area}</Badge>
+                          ))}
+                          {service.service_coverage.length > 4 && (
+                            <Badge variant="outline" className="text-[8px] bg-muted/30">+{service.service_coverage.length - 4}</Badge>
+                          )}
+                        </div>
+                      </td>
+                      <td className="py-2 px-2">
+                        {service.matchedMunicipalities.length > 0 ? (
+                          <div className="flex items-center gap-1 text-green-400">
+                            <CheckCircle className="w-3 h-3" />
+                            <span>{service.matchedMunicipalities.length} of {service.facilities.length}</span>
+                          </div>
+                        ) : <span className="text-muted-foreground/50">-</span>}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </ScrollArea>
+        </TabsContent>
+
+        <TabsContent value="ground-postal" className="flex-1 overflow-hidden m-0 flex flex-col data-[state=inactive]:hidden">
+          <div className="p-3 border-b border-border/30 flex items-center gap-4">
+            <div className="relative flex-1 max-w-sm">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground" />
+              <Input
+                placeholder="Search postal services..."
+                value={groundSearch}
+                onChange={e => setGroundSearch(e.target.value)}
+                className="pl-8 h-8 text-xs bg-background/50"
+                data-testid="input-postal-search"
+              />
+            </div>
+            <div className="text-[10px] text-red-400 font-medium">TIER 4 - POSTAL SERVICE</div>
+          </div>
+          <ScrollArea className="flex-1">
+            <div className="p-2">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b border-border/30 text-muted-foreground">
+                    <th className="text-left py-2 px-2 font-medium">SERVICE</th>
+                    <th className="text-left py-2 px-2 font-medium">FACILITIES</th>
+                    <th className="text-left py-2 px-2 font-medium">COVERAGE</th>
+                    <th className="text-left py-2 px-2 font-medium">MATCHED</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredPostal.map(service => (
+                    <tr key={service.id} className="border-b border-border/20 hover:bg-muted/20">
+                      <td className="py-2 px-2">
+                        <div className="flex items-center gap-2">
+                          <Mail className="w-3 h-3 text-red-400" />
+                          <div>
+                            <div className="font-medium text-foreground">{service.name}</div>
+                            {service.website && (
+                              <a href={service.website} target="_blank" rel="noopener noreferrer" className="text-[10px] text-cyan-400 hover:underline">
+                                {service.website.replace('https://', '').replace('http://', '')}
+                              </a>
+                            )}
+                            {service.phone && <div className="text-[10px] text-muted-foreground">{service.phone}</div>}
+                            {service.notes && <div className="text-[10px] text-muted-foreground/70">{service.notes}</div>}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-2 px-2">
+                        <div className="space-y-0.5">
+                          {service.facilities.slice(0, 4).map((facility, i) => (
+                            <div key={i} className="text-[10px] text-muted-foreground flex items-center gap-1">
+                              <Badge variant="outline" className="text-[8px] px-1 bg-red-500/10 text-red-400 border-red-500/30">{facility.facility_type.toUpperCase()}</Badge>
                               <span>{facility.municipality}</span>
                             </div>
                           ))}
