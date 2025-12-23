@@ -50,6 +50,10 @@ Located in `shared/` directory with GPS coordinates and geographic correlation:
   - Specialized capabilities (rope rescue, avalanche rescue, swiftwater rescue, mountain rescue, helicopter operations, search dogs, tracking)
   - Coverage areas and operational jurisdictions
   - Volunteer organization structure (3,200+ trained volunteers province-wide)
+- **Ground Transportation** (`shared/ground-transport.ts`): People carrier services including:
+  - **Intercity Bus**: 11+ scheduled services (Ebus, Rider Express, FlixBus, Island Express/Tofino Bus, Wilson's, BC Bus North, Health Connections, etc.)
+  - **Public Transit**: 30+ BC Transit systems and TransLink (Metro Vancouver), mapped to municipalities served
+  - **Charter/Tour Bus**: 13+ operators including school bus contractors (First Student, Lynch Bus Lines), tour operators, and airport shuttles
 
 ### Key Design Patterns
 - **Shared Types**: Schema definitions in `shared/` directory used by both client and server
