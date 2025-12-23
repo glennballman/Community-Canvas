@@ -7,7 +7,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import GeoTree from "@/components/GeoTree";
 import { 
   GEO_HIERARCHY, 
-  getParentChain, 
+  getAncestors, 
   getChildren,
   getNode,
   type GeoNode 
@@ -15,7 +15,9 @@ import {
 import { SHARED_SOURCES, MUNICIPAL_SOURCES, ALL_MUNICIPALITIES, type DataSource } from "@shared/sources";
 
 function Breadcrumb({ nodeId }: { nodeId: string }) {
-  const chain = getParentChain(nodeId);
+  const node = getNode(nodeId);
+  const ancestors = getAncestors(nodeId);
+  const chain = node ? [...ancestors, node] : ancestors;
   
   return (
     <div className="flex items-center gap-1 text-xs text-muted-foreground">

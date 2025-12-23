@@ -1,5 +1,3 @@
-import { GEO_HIERARCHY } from "./geography";
-
 export interface DataSource {
   category: string;
   source_name: string;
@@ -36,12 +34,6 @@ export function mapCategory(firecrawlCategory: string): string {
   if (cat.includes('financial') || cat.includes('gas price') || cat.includes('exchange') || cat.includes('stock') || cat.includes('market')) return 'financial';
   return 'other';
 }
-
-// All municipalities from geographic hierarchy
-export const ALL_MUNICIPALITIES = Object.values(GEO_HIERARCHY)
-  .filter(node => node.level === "municipality")
-  .map(node => node.name)
-  .sort();
 
 // Shared/Regional sources that appear across all municipalities
 export const SHARED_SOURCES: DataSource[] = [
@@ -284,6 +276,12 @@ export const MUNICIPAL_SOURCES: Record<string, DataSource[]> = {
     { category: "power", source_name: "BC Hydro - Bamfield", url: "https://www.bchydro.com/power-outages", description: "Power outage information", is_shared: false },
   ],
 };
+
+// Municipalities that have municipal-specific data sources
+export const MUNICIPALITIES_WITH_DATA = Object.keys(MUNICIPAL_SOURCES).sort();
+
+// Legacy alias for compatibility
+export const ALL_MUNICIPALITIES = MUNICIPALITIES_WITH_DATA;
 
 export function getSourcesForMunicipality(name: string): DataSource[] {
   const municipal = MUNICIPAL_SOURCES[name] || [];
