@@ -175,7 +175,7 @@ export interface CourierService {
   type: CourierServiceType;
   facilities: {
     name: string;
-    facility_type: "hub" | "depot" | "outlet" | "dropbox" | "locker" | "post_office" | "rural_po";
+    facility_type: "hub" | "depot" | "outlet" | "dropbox" | "locker" | "post_office" | "rural_po" | "franchise";
     municipality: string;
     address?: string;
     lat: number;
@@ -1415,7 +1415,197 @@ export const BC_COURIER_SERVICES: CourierService[] = [
       { name: "Telegraph Creek", facility_type: "rural_po", municipality: "Telegraph Creek", address: "Stikine Dr", lat: 57.9000, lng: -131.1500 },
       { name: "Dease Lake", facility_type: "rural_po", municipality: "Dease Lake", address: "37024 Hwy 37", lat: 58.4333, lng: -130.0333 },
       { name: "Iskut", facility_type: "rural_po", municipality: "Iskut", address: "Hwy 37", lat: 57.8333, lng: -129.9833 },
-      { name: "Good Hope Lake", facility_type: "rural_po", municipality: "Good Hope Lake", address: "Cassiar Hwy", lat: 59.3500, lng: -129.1833 }
+      { name: "Good Hope Lake", facility_type: "rural_po", municipality: "Good Hope Lake", address: "Cassiar Hwy", lat: 59.3500, lng: -129.1833 },
+      
+      // ============================================================================
+      // FRANCHISE RETAIL OUTLETS (Canada Post counters in pharmacies & retailers)
+      // ============================================================================
+      
+      // Metro Vancouver - Shoppers Drug Mart locations
+      { name: "Shoppers Drug Mart - Granville & Broadway", facility_type: "franchise", municipality: "Vancouver", address: "2302 Granville St", lat: 49.2635, lng: -123.1384 },
+      { name: "Shoppers Drug Mart - Commercial Drive", facility_type: "franchise", municipality: "Vancouver", address: "1650 Commercial Dr", lat: 49.2686, lng: -123.0695 },
+      { name: "Shoppers Drug Mart - Kerrisdale", facility_type: "franchise", municipality: "Vancouver", address: "2188 W 41st Ave", lat: 49.2335, lng: -123.1577 },
+      { name: "Shoppers Drug Mart - Dunbar", facility_type: "franchise", municipality: "Vancouver", address: "4326 Dunbar St", lat: 49.2445, lng: -123.1867 },
+      { name: "Shoppers Drug Mart - Main Street", facility_type: "franchise", municipality: "Vancouver", address: "4088 Main St", lat: 49.2447, lng: -123.1008 },
+      { name: "Shoppers Drug Mart - Cambie Village", facility_type: "franchise", municipality: "Vancouver", address: "3989 Cambie St", lat: 49.2461, lng: -123.1147 },
+      { name: "Shoppers Drug Mart - Kitsilano", facility_type: "franchise", municipality: "Vancouver", address: "2560 W Broadway", lat: 49.2635, lng: -123.1654 },
+      { name: "Shoppers Drug Mart - Marpole", facility_type: "franchise", municipality: "Vancouver", address: "8318 Granville St", lat: 49.2112, lng: -123.1384 },
+      { name: "Shoppers Drug Mart - Joyce", facility_type: "franchise", municipality: "Vancouver", address: "5080 Joyce St", lat: 49.2382, lng: -123.0281 },
+      { name: "Shoppers Drug Mart - Hastings Sunrise", facility_type: "franchise", municipality: "Vancouver", address: "2918 E Hastings St", lat: 49.2812, lng: -123.0389 },
+      { name: "London Drugs - Broadway & Cambie", facility_type: "franchise", municipality: "Vancouver", address: "525 W Broadway", lat: 49.2634, lng: -123.1147 },
+      { name: "London Drugs - Oakridge", facility_type: "franchise", municipality: "Vancouver", address: "650 W 41st Ave", lat: 49.2271, lng: -123.1166 },
+      { name: "London Drugs - Park Royal", facility_type: "franchise", municipality: "West Vancouver", address: "910 Park Royal S", lat: 49.3259, lng: -123.1356 },
+      
+      // Burnaby franchises
+      { name: "Shoppers Drug Mart - Metrotown", facility_type: "franchise", municipality: "Burnaby", address: "4820 Kingsway", lat: 49.2277, lng: -123.0025 },
+      { name: "Shoppers Drug Mart - Brentwood", facility_type: "franchise", municipality: "Burnaby", address: "4567 Lougheed Hwy", lat: 49.2683, lng: -123.0002 },
+      { name: "Shoppers Drug Mart - Edmonds", facility_type: "franchise", municipality: "Burnaby", address: "7155 Kingsway", lat: 49.2145, lng: -122.9567 },
+      { name: "London Drugs - Lougheed", facility_type: "franchise", municipality: "Burnaby", address: "9855 Austin Ave", lat: 49.2533, lng: -122.8912 },
+      { name: "Pharmasave - Burnaby Heights", facility_type: "franchise", municipality: "Burnaby", address: "4208 Hastings St", lat: 49.2812, lng: -123.0089 },
+      
+      // Surrey franchises
+      { name: "Shoppers Drug Mart - Guildford", facility_type: "franchise", municipality: "Surrey", address: "10355 152nd St", lat: 49.1912, lng: -122.8012 },
+      { name: "Shoppers Drug Mart - Newton", facility_type: "franchise", municipality: "Surrey", address: "7380 King George Blvd", lat: 49.1289, lng: -122.8475 },
+      { name: "Shoppers Drug Mart - Fleetwood", facility_type: "franchise", municipality: "Surrey", address: "15910 Fraser Hwy", lat: 49.1534, lng: -122.7712 },
+      { name: "Shoppers Drug Mart - South Surrey", facility_type: "franchise", municipality: "Surrey", address: "2080 152nd St", lat: 49.0434, lng: -122.8012 },
+      { name: "London Drugs - Central City", facility_type: "franchise", municipality: "Surrey", address: "10153 King George Blvd", lat: 49.1891, lng: -122.8475 },
+      { name: "Save-On-Foods - Cloverdale", facility_type: "franchise", municipality: "Surrey", address: "5778 176th St", lat: 49.1056, lng: -122.7345 },
+      
+      // Richmond franchises
+      { name: "Shoppers Drug Mart - Richmond Centre", facility_type: "franchise", municipality: "Richmond", address: "6060 Minoru Blvd", lat: 49.1666, lng: -123.1369 },
+      { name: "Shoppers Drug Mart - Steveston", facility_type: "franchise", municipality: "Richmond", address: "12051 2nd Ave", lat: 49.1289, lng: -123.1812 },
+      { name: "London Drugs - Richmond Centre", facility_type: "franchise", municipality: "Richmond", address: "6551 No. 3 Rd", lat: 49.1666, lng: -123.1369 },
+      { name: "Pharmasave - Broadmoor", facility_type: "franchise", municipality: "Richmond", address: "7771 Westminster Hwy", lat: 49.1645, lng: -123.1123 },
+      
+      // Coquitlam/Port Coquitlam/Port Moody franchises
+      { name: "Shoppers Drug Mart - Coquitlam Centre", facility_type: "franchise", municipality: "Coquitlam", address: "2929 Barnet Hwy", lat: 49.2744, lng: -122.7941 },
+      { name: "Shoppers Drug Mart - Westwood Mall", facility_type: "franchise", municipality: "Coquitlam", address: "3025 Lougheed Hwy", lat: 49.2744, lng: -122.7891 },
+      { name: "London Drugs - Coquitlam", facility_type: "franchise", municipality: "Coquitlam", address: "1163 Pinetree Way", lat: 49.2786, lng: -122.7958 },
+      { name: "Shoppers Drug Mart - Port Coquitlam", facility_type: "franchise", municipality: "Port Coquitlam", address: "1250 Dominion Ave", lat: 49.2633, lng: -122.7531 },
+      { name: "Pharmasave - Port Moody", facility_type: "franchise", municipality: "Port Moody", address: "2701 Barnet Hwy", lat: 49.2839, lng: -122.8317 },
+      
+      // North Shore franchises
+      { name: "Shoppers Drug Mart - Lonsdale", facility_type: "franchise", municipality: "North Vancouver", address: "1277 Marine Dr", lat: 49.3132, lng: -123.0752 },
+      { name: "Shoppers Drug Mart - Lynn Valley", facility_type: "franchise", municipality: "North Vancouver", address: "1199 Lynn Valley Rd", lat: 49.3396, lng: -123.0435 },
+      { name: "London Drugs - Marine Drive", facility_type: "franchise", municipality: "North Vancouver", address: "1403 Lonsdale Ave", lat: 49.3117, lng: -123.0752 },
+      { name: "Shoppers Drug Mart - Dundarave", facility_type: "franchise", municipality: "West Vancouver", address: "2459 Marine Dr", lat: 49.3351, lng: -123.1892 },
+      { name: "Pharmasave - Deep Cove", facility_type: "franchise", municipality: "North Vancouver", address: "4380 Gallant Ave", lat: 49.3289, lng: -122.9512 },
+      
+      // Langley/Maple Ridge franchises
+      { name: "Shoppers Drug Mart - Langley", facility_type: "franchise", municipality: "Langley", address: "20159 88th Ave", lat: 49.1515, lng: -122.6586 },
+      { name: "Shoppers Drug Mart - Willowbrook", facility_type: "franchise", municipality: "Langley", address: "19705 Fraser Hwy", lat: 49.1126, lng: -122.6658 },
+      { name: "London Drugs - Langley", facility_type: "franchise", municipality: "Langley", address: "20202 66th Ave", lat: 49.1041, lng: -122.6586 },
+      { name: "Shoppers Drug Mart - Maple Ridge", facility_type: "franchise", municipality: "Maple Ridge", address: "22709 Lougheed Hwy", lat: 49.2194, lng: -122.5978 },
+      { name: "Pharmasave - Pitt Meadows", facility_type: "franchise", municipality: "Pitt Meadows", address: "19150 Lougheed Hwy", lat: 49.2289, lng: -122.6912 },
+      
+      // New Westminster/Delta franchises
+      { name: "Shoppers Drug Mart - New West", facility_type: "franchise", municipality: "New Westminster", address: "800 Carnarvon St", lat: 49.2012, lng: -122.9107 },
+      { name: "London Drugs - Queensborough", facility_type: "franchise", municipality: "New Westminster", address: "920 Ewen Ave", lat: 49.1945, lng: -122.9478 },
+      { name: "Shoppers Drug Mart - Ladner", facility_type: "franchise", municipality: "Delta", address: "4949 Delta St", lat: 49.0900, lng: -123.0823 },
+      { name: "Shoppers Drug Mart - Tsawwassen", facility_type: "franchise", municipality: "Delta", address: "1208 56th St", lat: 49.0159, lng: -123.0855 },
+      { name: "London Drugs - Scottsdale", facility_type: "franchise", municipality: "Delta", address: "7211 120th St", lat: 49.1548, lng: -122.9053 },
+      
+      // Fraser Valley franchises
+      { name: "Shoppers Drug Mart - Abbotsford", facility_type: "franchise", municipality: "Abbotsford", address: "3122 Mt Lehman Rd", lat: 49.0512, lng: -122.4012 },
+      { name: "Shoppers Drug Mart - Sevenoaks", facility_type: "franchise", municipality: "Abbotsford", address: "32900 S Fraser Way", lat: 49.0512, lng: -122.3123 },
+      { name: "London Drugs - Abbotsford", facility_type: "franchise", municipality: "Abbotsford", address: "32700 S Fraser Way", lat: 49.0512, lng: -122.3089 },
+      { name: "Shoppers Drug Mart - Chilliwack", facility_type: "franchise", municipality: "Chilliwack", address: "45585 Luckakuck Way", lat: 49.1579, lng: -121.9712 },
+      { name: "London Drugs - Chilliwack", facility_type: "franchise", municipality: "Chilliwack", address: "45610 Yale Rd", lat: 49.1634, lng: -121.9514 },
+      { name: "Shoppers Drug Mart - Mission", facility_type: "franchise", municipality: "Mission", address: "32471 Lougheed Hwy", lat: 49.1334, lng: -122.3089 },
+      { name: "Pharmasave - Hope", facility_type: "franchise", municipality: "Hope", address: "800 Fraser Ave", lat: 49.3850, lng: -121.4410 },
+      { name: "Pharmasave - Harrison Hot Springs", facility_type: "franchise", municipality: "Harrison Hot Springs", address: "499 Hot Springs Rd", lat: 49.3012, lng: -121.7867 },
+      { name: "Pharmasave - Agassiz", facility_type: "franchise", municipality: "Agassiz", address: "7188 Pioneer Ave", lat: 49.2389, lng: -121.7612 },
+      
+      // Vancouver Island - Victoria area franchises
+      { name: "Shoppers Drug Mart - Oak Bay", facility_type: "franchise", municipality: "Victoria", address: "2227 Oak Bay Ave", lat: 48.4384, lng: -123.3156 },
+      { name: "Shoppers Drug Mart - James Bay", facility_type: "franchise", municipality: "Victoria", address: "230 Menzies St", lat: 48.4218, lng: -123.3712 },
+      { name: "London Drugs - Hillside", facility_type: "franchise", municipality: "Victoria", address: "1644 Hillside Ave", lat: 48.4384, lng: -123.3511 },
+      { name: "London Drugs - Mayfair", facility_type: "franchise", municipality: "Victoria", address: "3147 Douglas St", lat: 48.4489, lng: -123.3712 },
+      { name: "Shoppers Drug Mart - Sidney", facility_type: "franchise", municipality: "Sidney", address: "2353 Bevan Ave", lat: 48.6500, lng: -123.3989 },
+      { name: "Pharmasave - Oak Bay", facility_type: "franchise", municipality: "Victoria", address: "2200 Oak Bay Ave", lat: 48.4384, lng: -123.3156 },
+      { name: "Shoppers Drug Mart - Langford", facility_type: "franchise", municipality: "Langford", address: "2945 Jacklin Rd", lat: 48.4512, lng: -123.4956 },
+      { name: "London Drugs - Westshore", facility_type: "franchise", municipality: "Langford", address: "845 Langford Pkwy", lat: 48.4512, lng: -123.4856 },
+      { name: "Shoppers Drug Mart - Sooke", facility_type: "franchise", municipality: "Sooke", address: "6726 West Coast Rd", lat: 48.3756, lng: -123.7356 },
+      
+      // Vancouver Island - Central/North franchises
+      { name: "Shoppers Drug Mart - Nanaimo Harbour Park", facility_type: "franchise", municipality: "Nanaimo", address: "1 Port Dr", lat: 49.1688, lng: -123.9389 },
+      { name: "London Drugs - Nanaimo", facility_type: "franchise", municipality: "Nanaimo", address: "4750 Rutherford Rd", lat: 49.1747, lng: -123.9678 },
+      { name: "Shoppers Drug Mart - Parksville", facility_type: "franchise", municipality: "Parksville", address: "280 E Island Hwy", lat: 49.3189, lng: -124.3112 },
+      { name: "Pharmasave - Qualicum Beach", facility_type: "franchise", municipality: "Qualicum Beach", address: "180 W 2nd Ave", lat: 49.3489, lng: -124.4312 },
+      { name: "Shoppers Drug Mart - Courtenay", facility_type: "franchise", municipality: "Courtenay", address: "2777 Cliffe Ave", lat: 49.6912, lng: -124.9912 },
+      { name: "London Drugs - Courtenay", facility_type: "franchise", municipality: "Courtenay", address: "2801 Cliffe Ave", lat: 49.6912, lng: -124.9945 },
+      { name: "Shoppers Drug Mart - Campbell River", facility_type: "franchise", municipality: "Campbell River", address: "1400 Island Hwy", lat: 50.0289, lng: -125.2478 },
+      { name: "Pharmasave - Port Alberni", facility_type: "franchise", municipality: "Port Alberni", address: "4505 Gertrude St", lat: 49.2434, lng: -124.8089 },
+      { name: "Pharmasave - Tofino", facility_type: "franchise", municipality: "Tofino", address: "430 Campbell St", lat: 49.1534, lng: -125.9067 },
+      { name: "Pharmasave - Ucluelet", facility_type: "franchise", municipality: "Ucluelet", address: "1576 Peninsula Rd", lat: 48.9412, lng: -125.5489 },
+      { name: "Pharmasave - Port Hardy", facility_type: "franchise", municipality: "Port Hardy", address: "8640 Granville St", lat: 50.7234, lng: -127.4923 },
+      { name: "Pharmasave - Port McNeill", facility_type: "franchise", municipality: "Port McNeill", address: "2255 Mine Rd", lat: 50.5889, lng: -127.0856 },
+      
+      // Gulf Islands franchises
+      { name: "Pharmasave - Salt Spring Island", facility_type: "franchise", municipality: "Salt Spring Island", address: "104 Lower Ganges Rd", lat: 48.8534, lng: -123.5089 },
+      { name: "Pharmasave - Pender Island", facility_type: "franchise", municipality: "Pender Island", address: "4301 Bedwell Harbour Rd", lat: 48.7534, lng: -123.2789 },
+      { name: "Pharmasave - Gabriola Island", facility_type: "franchise", municipality: "Gabriola Island", address: "575 North Rd", lat: 49.1634, lng: -123.7889 },
+      
+      // Okanagan franchises
+      { name: "Shoppers Drug Mart - Kelowna Downtown", facility_type: "franchise", municipality: "Kelowna", address: "1876 Cooper Rd", lat: 49.8863, lng: -119.4966 },
+      { name: "Shoppers Drug Mart - Kelowna Mission", facility_type: "franchise", municipality: "Kelowna", address: "3155 Lakeshore Rd", lat: 49.8512, lng: -119.4512 },
+      { name: "London Drugs - Kelowna", facility_type: "franchise", municipality: "Kelowna", address: "1835 Harvey Ave", lat: 49.8838, lng: -119.4747 },
+      { name: "Shoppers Drug Mart - West Kelowna", facility_type: "franchise", municipality: "West Kelowna", address: "525 Hwy 97 S", lat: 49.8534, lng: -119.5834 },
+      { name: "Shoppers Drug Mart - Vernon", facility_type: "franchise", municipality: "Vernon", address: "4400 32nd St", lat: 50.2645, lng: -119.2723 },
+      { name: "London Drugs - Vernon", facility_type: "franchise", municipality: "Vernon", address: "3100 30th Ave", lat: 50.2645, lng: -119.2656 },
+      { name: "Shoppers Drug Mart - Penticton", facility_type: "franchise", municipality: "Penticton", address: "301 Main St", lat: 49.4912, lng: -119.5934 },
+      { name: "London Drugs - Penticton", facility_type: "franchise", municipality: "Penticton", address: "2111 Main St", lat: 49.5012, lng: -119.5834 },
+      { name: "Pharmasave - Summerland", facility_type: "franchise", municipality: "Summerland", address: "13211 N Victoria Rd", lat: 49.6012, lng: -119.6512 },
+      { name: "Pharmasave - Osoyoos", facility_type: "franchise", municipality: "Osoyoos", address: "8523 Main St", lat: 49.0312, lng: -119.4656 },
+      { name: "Pharmasave - Oliver", facility_type: "franchise", municipality: "Oliver", address: "6187 Main St", lat: 49.1834, lng: -119.5512 },
+      { name: "Pharmasave - Keremeos", facility_type: "franchise", municipality: "Keremeos", address: "614 7th Ave", lat: 49.2034, lng: -119.8289 },
+      { name: "Pharmasave - Peachland", facility_type: "franchise", municipality: "Peachland", address: "5500 Clements Crescent", lat: 49.7712, lng: -119.7389 },
+      { name: "Pharmasave - Armstrong", facility_type: "franchise", municipality: "Armstrong", address: "3390 Okanagan St", lat: 50.4489, lng: -119.1989 },
+      { name: "Pharmasave - Salmon Arm", facility_type: "franchise", municipality: "Salmon Arm", address: "350 Trans Canada Hwy SW", lat: 50.6989, lng: -119.2889 },
+      { name: "Shoppers Drug Mart - Salmon Arm", facility_type: "franchise", municipality: "Salmon Arm", address: "1151 10th Ave SW", lat: 50.6989, lng: -119.2923 },
+      
+      // Kamloops area franchises
+      { name: "Shoppers Drug Mart - Kamloops Aberdeen", facility_type: "franchise", municipality: "Kamloops", address: "1320 Trans Canada Hwy W", lat: 50.7012, lng: -120.3607 },
+      { name: "Shoppers Drug Mart - Kamloops Sahali", facility_type: "franchise", municipality: "Kamloops", address: "945 Columbia St W", lat: 50.6712, lng: -120.3478 },
+      { name: "London Drugs - Kamloops", facility_type: "franchise", municipality: "Kamloops", address: "1395 Hillside Dr", lat: 50.6897, lng: -120.3495 },
+      { name: "Pharmasave - Merritt", facility_type: "franchise", municipality: "Merritt", address: "2099 Nicola Ave", lat: 50.1134, lng: -120.7912 },
+      { name: "Pharmasave - Chase", facility_type: "franchise", municipality: "Chase", address: "520 Shuswap Ave", lat: 50.8190, lng: -119.6847 },
+      { name: "Pharmasave - Clearwater", facility_type: "franchise", municipality: "Clearwater", address: "419 Eden Rd", lat: 51.6512, lng: -120.0389 },
+      
+      // Kootenays franchises
+      { name: "Shoppers Drug Mart - Cranbrook", facility_type: "franchise", municipality: "Cranbrook", address: "1600 Cranbrook St N", lat: 49.5212, lng: -115.7656 },
+      { name: "Pharmasave - Fernie", facility_type: "franchise", municipality: "Fernie", address: "501 2nd Ave", lat: 49.5034, lng: -115.0634 },
+      { name: "Pharmasave - Kimberley", facility_type: "franchise", municipality: "Kimberley", address: "285 Spokane St", lat: 49.6712, lng: -115.9812 },
+      { name: "Pharmasave - Invermere", facility_type: "franchise", municipality: "Invermere", address: "1305 7th Ave", lat: 50.5089, lng: -116.0312 },
+      { name: "Pharmasave - Golden", facility_type: "franchise", municipality: "Golden", address: "416 9th Ave N", lat: 51.2989, lng: -116.9656 },
+      { name: "Pharmasave - Revelstoke", facility_type: "franchise", municipality: "Revelstoke", address: "555 Victoria Rd", lat: 50.9989, lng: -118.1934 },
+      { name: "Shoppers Drug Mart - Nelson", facility_type: "franchise", municipality: "Nelson", address: "590 Baker St", lat: 49.4934, lng: -117.2912 },
+      { name: "Pharmasave - Castlegar", facility_type: "franchise", municipality: "Castlegar", address: "1989 Columbia Ave", lat: 49.3234, lng: -117.6656 },
+      { name: "Pharmasave - Trail", facility_type: "franchise", municipality: "Trail", address: "1500 Bay Ave", lat: 49.0989, lng: -117.7089 },
+      { name: "Pharmasave - Rossland", facility_type: "franchise", municipality: "Rossland", address: "2063 Washington St", lat: 49.0789, lng: -117.8012 },
+      { name: "Pharmasave - Grand Forks", facility_type: "franchise", municipality: "Grand Forks", address: "7372 2nd St", lat: 49.0312, lng: -118.4412 },
+      { name: "Pharmasave - Nakusp", facility_type: "franchise", municipality: "Nakusp", address: "92 Broadway St W", lat: 50.2434, lng: -117.8012 },
+      { name: "Pharmasave - New Denver", facility_type: "franchise", municipality: "New Denver", address: "309 6th Ave", lat: 49.9934, lng: -117.3789 },
+      
+      // Northern BC franchises
+      { name: "Shoppers Drug Mart - Prince George Downtown", facility_type: "franchise", municipality: "Prince George", address: "1600 15th Ave", lat: 53.9171, lng: -122.7497 },
+      { name: "Shoppers Drug Mart - Prince George Pine Centre", facility_type: "franchise", municipality: "Prince George", address: "3055 Massey Dr", lat: 53.8934, lng: -122.8112 },
+      { name: "London Drugs - Prince George", facility_type: "franchise", municipality: "Prince George", address: "2155 Ferry Ave", lat: 53.9033, lng: -122.7819 },
+      { name: "Pharmasave - Vanderhoof", facility_type: "franchise", municipality: "Vanderhoof", address: "2681 Burrard Ave", lat: 54.0167, lng: -124.0000 },
+      { name: "Pharmasave - Fort St James", facility_type: "franchise", municipality: "Fort St James", address: "320 Stuart Dr W", lat: 54.4434, lng: -124.2512 },
+      { name: "Pharmasave - Mackenzie", facility_type: "franchise", municipality: "Mackenzie", address: "400 Centennial Dr", lat: 55.3389, lng: -123.0912 },
+      { name: "Pharmasave - Houston", facility_type: "franchise", municipality: "Houston", address: "3383 Hwy 16", lat: 54.4012, lng: -126.6512 },
+      { name: "Pharmasave - Burns Lake", facility_type: "franchise", municipality: "Burns Lake", address: "240 Hwy 16", lat: 54.2312, lng: -125.7612 },
+      { name: "Shoppers Drug Mart - Quesnel", facility_type: "franchise", municipality: "Quesnel", address: "383 Reid St", lat: 52.9785, lng: -122.4945 },
+      { name: "Pharmasave - Williams Lake", facility_type: "franchise", municipality: "Williams Lake", address: "83 S 1st Ave", lat: 52.1289, lng: -122.1534 },
+      { name: "Pharmasave - 100 Mile House", facility_type: "franchise", municipality: "100 Mile House", address: "385 Birch Ave", lat: 51.6434, lng: -121.2912 },
+      { name: "Pharmasave - Lillooet", facility_type: "franchise", municipality: "Lillooet", address: "655 Main St", lat: 50.6834, lng: -121.9412 },
+      
+      // Northwest BC franchises  
+      { name: "Shoppers Drug Mart - Terrace", facility_type: "franchise", municipality: "Terrace", address: "4635 Lakelse Ave", lat: 54.5134, lng: -128.5989 },
+      { name: "Pharmasave - Kitimat", facility_type: "franchise", municipality: "Kitimat", address: "252 City Centre", lat: 54.0534, lng: -128.6512 },
+      { name: "Shoppers Drug Mart - Prince Rupert", facility_type: "franchise", municipality: "Prince Rupert", address: "500 2nd Ave W", lat: 54.3150, lng: -130.3208 },
+      { name: "Pharmasave - Smithers", facility_type: "franchise", municipality: "Smithers", address: "3763 Alfred Ave", lat: 54.3834, lng: -127.1689 },
+      
+      // Peace Region franchises
+      { name: "Shoppers Drug Mart - Fort St John", facility_type: "franchise", municipality: "Fort St John", address: "9600 93rd Ave", lat: 56.2434, lng: -120.8456 },
+      { name: "London Drugs - Fort St John", facility_type: "franchise", municipality: "Fort St John", address: "9815 100th St", lat: 56.2434, lng: -120.8512 },
+      { name: "Shoppers Drug Mart - Dawson Creek", facility_type: "franchise", municipality: "Dawson Creek", address: "10200 8th St", lat: 55.7634, lng: -120.2312 },
+      { name: "Pharmasave - Chetwynd", facility_type: "franchise", municipality: "Chetwynd", address: "4727 51st Ave", lat: 55.6989, lng: -121.6312 },
+      { name: "Pharmasave - Fort Nelson", facility_type: "franchise", municipality: "Fort Nelson", address: "5500 50th Ave S", lat: 58.8067, lng: -122.6989 },
+      { name: "Pharmasave - Hudson's Hope", facility_type: "franchise", municipality: "Hudson's Hope", address: "10511 Beattie Dr", lat: 56.0312, lng: -121.9089 },
+      { name: "Pharmasave - Tumbler Ridge", facility_type: "franchise", municipality: "Tumbler Ridge", address: "330 Southgate", lat: 55.1289, lng: -120.9989 },
+      
+      // Squamish/Whistler/Sea-to-Sky franchises
+      { name: "Shoppers Drug Mart - Squamish", facility_type: "franchise", municipality: "Squamish", address: "1200 Hunter Pl", lat: 49.7012, lng: -123.1512 },
+      { name: "Pharmasave - Whistler", facility_type: "franchise", municipality: "Whistler", address: "4295 Blackcomb Way", lat: 50.1163, lng: -122.9574 },
+      { name: "Pharmasave - Pemberton", facility_type: "franchise", municipality: "Pemberton", address: "7355 Prospect St", lat: 50.3189, lng: -122.8034 },
+      
+      // Sunshine Coast franchises
+      { name: "Pharmasave - Gibsons", facility_type: "franchise", municipality: "Gibsons", address: "900 Gibsons Way", lat: 49.4012, lng: -123.5089 },
+      { name: "Pharmasave - Sechelt", facility_type: "franchise", municipality: "Sechelt", address: "5500 Shorncliffe Ave", lat: 49.4712, lng: -123.7534 },
+      { name: "Pharmasave - Madeira Park", facility_type: "franchise", municipality: "Madeira Park", address: "12905 Madeira Park Rd", lat: 49.6234, lng: -124.0234 },
+      { name: "Pharmasave - Powell River", facility_type: "franchise", municipality: "Powell River", address: "4794 Joyce Ave", lat: 49.8312, lng: -124.5234 }
     ],
     service_coverage: ["Province-wide", "All BC municipalities", "All remote communities"],
     website: "https://www.canadapost.ca",

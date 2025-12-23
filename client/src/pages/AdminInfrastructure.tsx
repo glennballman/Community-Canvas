@@ -365,7 +365,7 @@ interface PostalFacilityWithMatch {
   id: string;
   serviceName: string;
   facilityName: string;
-  facilityType: "hub" | "depot" | "outlet" | "dropbox" | "locker" | "post_office" | "rural_po";
+  facilityType: "hub" | "depot" | "outlet" | "dropbox" | "locker" | "post_office" | "rural_po" | "franchise";
   municipality: string;
   address?: string;
   lat: number;
@@ -2701,6 +2701,7 @@ export default function AdminInfrastructure() {
                           facility.facilityType === 'depot' ? 'bg-blue-500/10 text-blue-400 border-blue-500/30' :
                           facility.facilityType === 'post_office' ? 'bg-red-500/10 text-red-400 border-red-500/30' :
                           facility.facilityType === 'rural_po' ? 'bg-orange-500/10 text-orange-400 border-orange-500/30' :
+                          facility.facilityType === 'franchise' ? 'bg-green-500/10 text-green-400 border-green-500/30' :
                           'bg-gray-500/10 text-gray-400 border-gray-500/30'
                         }`}>
                           {facility.facilityType.replace(/_/g, ' ').toUpperCase()}
