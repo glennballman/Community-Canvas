@@ -921,7 +921,7 @@ export default function AdminInfrastructure() {
               data-testid="tab-ground-lifeline"
             >
               <Fuel className="w-3 h-3 mr-1" />
-              LIFELINE ({groundStats.lifelineTotal})
+              GROUND - LIFELINE ({groundStats.lifelineTotal})
             </TabsTrigger>
             <TabsTrigger 
               value="ground-supply" 
@@ -929,7 +929,7 @@ export default function AdminInfrastructure() {
               data-testid="tab-ground-supply"
             >
               <Container className="w-3 h-3 mr-1" />
-              SUPPLY CHAIN ({groundStats.supplyTotal})
+              GROUND - SUPPLY CHAIN ({groundStats.supplyTotal})
             </TabsTrigger>
             <TabsTrigger 
               value="ground-bus" 
@@ -937,7 +937,7 @@ export default function AdminInfrastructure() {
               data-testid="tab-ground-bus"
             >
               <Bus className="w-3 h-3 mr-1" />
-              BUS ({groundStats.busTotal})
+              GROUND - BUS ({groundStats.busTotal})
             </TabsTrigger>
             <TabsTrigger 
               value="ground-courier" 
@@ -945,7 +945,7 @@ export default function AdminInfrastructure() {
               data-testid="tab-ground-courier"
             >
               <Package className="w-3 h-3 mr-1" />
-              COURIER ({groundStats.courierTotal})
+              GROUND - COURIER ({groundStats.courierTotal})
             </TabsTrigger>
             <TabsTrigger 
               value="ground-postal" 
@@ -953,7 +953,7 @@ export default function AdminInfrastructure() {
               data-testid="tab-ground-postal"
             >
               <Mail className="w-3 h-3 mr-1" />
-              POSTAL ({groundStats.postalTotal})
+              GROUND - POSTAL ({groundStats.postalTotal})
             </TabsTrigger>
             <TabsTrigger 
               value="summary" 
