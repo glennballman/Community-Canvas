@@ -18,7 +18,9 @@ import {
   Shield,
   Siren,
   Mountain,
-  Users
+  Users,
+  Heart,
+  BadgeCheck
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { BC_AIRPORTS, type Airport } from "@shared/aviation";
@@ -267,7 +269,9 @@ export default function AdminInfrastructure() {
   const [airportSearch, setAirportSearch] = useState("");
   const [weatherSearch, setWeatherSearch] = useState("");
   const [marineSearch, setMarineSearch] = useState("");
-  const [emergencySearch, setEmergencySearch] = useState("");
+  const [healthcareSearch, setHealthcareSearch] = useState("");
+  const [fireSearch, setFireSearch] = useState("");
+  const [policeSearch, setPoliceSearch] = useState("");
   const [sarSearch, setSarSearch] = useState("");
   const [activeTab, setActiveTab] = useState("airports");
 
@@ -295,12 +299,34 @@ export default function AdminInfrastructure() {
     }));
   }, []);
 
-  const emergencyWithMatches: EmergencyWithMatch[] = useMemo(() => {
-    return BC_EMERGENCY_SERVICES.map(service => ({
-      ...service,
-      matchedMunicipality: findMatchingMunicipality(service.municipality),
-      matchedRegion: findMatchingRegion(service.region.toLowerCase().replace(/\s+/g, '-')),
-    }));
+  const healthcareWithMatches: EmergencyWithMatch[] = useMemo(() => {
+    return BC_EMERGENCY_SERVICES
+      .filter(service => service.type === 'hospital')
+      .map(service => ({
+        ...service,
+        matchedMunicipality: findMatchingMunicipality(service.municipality),
+        matchedRegion: findMatchingRegion(service.region.toLowerCase().replace(/\s+/g, '-')),
+      }));
+  }, []);
+
+  const fireWithMatches: EmergencyWithMatch[] = useMemo(() => {
+    return BC_EMERGENCY_SERVICES
+      .filter(service => service.type === 'fire_station')
+      .map(service => ({
+        ...service,
+        matchedMunicipality: findMatchingMunicipality(service.municipality),
+        matchedRegion: findMatchingRegion(service.region.toLowerCase().replace(/\s+/g, '-')),
+      }));
+  }, []);
+
+  const policeWithMatches: EmergencyWithMatch[] = useMemo(() => {
+    return BC_EMERGENCY_SERVICES
+      .filter(service => service.type === 'municipal_police' || service.type === 'rcmp_detachment')
+      .map(service => ({
+        ...service,
+        matchedMunicipality: findMatchingMunicipality(service.municipality),
+        matchedRegion: findMatchingRegion(service.region.toLowerCase().replace(/\s+/g, '-')),
+      }));
   }, []);
 
   const sarWithMatches: SARWithMatch[] = useMemo(() => {
@@ -352,20 +378,46 @@ export default function AdminInfrastructure() {
     );
   }, [marineWithMatches, marineSearch]);
 
-  const filteredEmergency = useMemo(() => {
-    if (!emergencySearch) return emergencyWithMatches;
-    const search = emergencySearch.toLowerCase();
-    return emergencyWithMatches.filter(s => 
+  const filteredHealthcare = useMemo(() => {
+    if (!healthcareSearch) return healthcareWithMatches;
+    const search = healthcareSearch.toLowerCase();
+    return healthcareWithMatches.filter(s => 
+      s.name.toLowerCase().includes(search) ||
+      s.municipality?.toLowerCase().includes(search) ||
+      s.region?.toLowerCase().includes(search) ||
+      s.matchedMunicipality?.name.toLowerCase().includes(search) ||
+      s.matchedRegion?.name.toLowerCase().includes(search) ||
+      s.health_authority?.toLowerCase().includes(search) ||
+      s.notes?.toLowerCase().includes(search)
+    );
+  }, [healthcareWithMatches, healthcareSearch]);
+
+  const filteredFire = useMemo(() => {
+    if (!fireSearch) return fireWithMatches;
+    const search = fireSearch.toLowerCase();
+    return fireWithMatches.filter(s => 
+      s.name.toLowerCase().includes(search) ||
+      s.municipality?.toLowerCase().includes(search) ||
+      s.region?.toLowerCase().includes(search) ||
+      s.matchedMunicipality?.name.toLowerCase().includes(search) ||
+      s.matchedRegion?.name.toLowerCase().includes(search) ||
+      s.notes?.toLowerCase().includes(search)
+    );
+  }, [fireWithMatches, fireSearch]);
+
+  const filteredPolice = useMemo(() => {
+    if (!policeSearch) return policeWithMatches;
+    const search = policeSearch.toLowerCase();
+    return policeWithMatches.filter(s => 
       s.name.toLowerCase().includes(search) ||
       s.municipality?.toLowerCase().includes(search) ||
       s.region?.toLowerCase().includes(search) ||
       s.matchedMunicipality?.name.toLowerCase().includes(search) ||
       s.matchedRegion?.name.toLowerCase().includes(search) ||
       s.type.toLowerCase().includes(search) ||
-      s.health_authority?.toLowerCase().includes(search) ||
       s.notes?.toLowerCase().includes(search)
     );
-  }, [emergencyWithMatches, emergencySearch]);
+  }, [policeWithMatches, policeSearch]);
 
   const filteredSAR = useMemo(() => {
     if (!sarSearch) return sarWithMatches;
@@ -415,18 +467,31 @@ export default function AdminInfrastructure() {
     return { total: marineWithMatches.length, matched, regionOnly, unmatched, byType };
   }, [marineWithMatches]);
 
-  const emergencyStats = useMemo(() => {
-    const matched = emergencyWithMatches.filter(s => s.matchedMunicipality).length;
-    const regionOnly = emergencyWithMatches.filter(s => !s.matchedMunicipality && s.matchedRegion).length;
-    const unmatched = emergencyWithMatches.filter(s => !s.matchedMunicipality && !s.matchedRegion).length;
-    const byType: Record<string, number> = {};
-    emergencyWithMatches.forEach(s => {
-      byType[s.type] = (byType[s.type] || 0) + 1;
-    });
-    const hospitalsWithHelipad = emergencyWithMatches.filter(s => s.type === 'hospital' && s.has_helipad).length;
-    const traumaCentres = emergencyWithMatches.filter(s => s.type === 'hospital' && s.is_trauma_centre).length;
-    return { total: emergencyWithMatches.length, matched, regionOnly, unmatched, byType, hospitalsWithHelipad, traumaCentres };
-  }, [emergencyWithMatches]);
+  const healthcareStats = useMemo(() => {
+    const matched = healthcareWithMatches.filter(s => s.matchedMunicipality).length;
+    const regionOnly = healthcareWithMatches.filter(s => !s.matchedMunicipality && s.matchedRegion).length;
+    const unmatched = healthcareWithMatches.filter(s => !s.matchedMunicipality && !s.matchedRegion).length;
+    const withHelipad = healthcareWithMatches.filter(s => s.has_helipad).length;
+    const traumaCentres = healthcareWithMatches.filter(s => s.is_trauma_centre).length;
+    const withER = healthcareWithMatches.filter(s => s.emergency_department).length;
+    return { total: healthcareWithMatches.length, matched, regionOnly, unmatched, withHelipad, traumaCentres, withER };
+  }, [healthcareWithMatches]);
+
+  const fireStats = useMemo(() => {
+    const matched = fireWithMatches.filter(s => s.matchedMunicipality).length;
+    const regionOnly = fireWithMatches.filter(s => !s.matchedMunicipality && s.matchedRegion).length;
+    const unmatched = fireWithMatches.filter(s => !s.matchedMunicipality && !s.matchedRegion).length;
+    return { total: fireWithMatches.length, matched, regionOnly, unmatched };
+  }, [fireWithMatches]);
+
+  const policeStats = useMemo(() => {
+    const matched = policeWithMatches.filter(s => s.matchedMunicipality).length;
+    const regionOnly = policeWithMatches.filter(s => !s.matchedMunicipality && s.matchedRegion).length;
+    const unmatched = policeWithMatches.filter(s => !s.matchedMunicipality && !s.matchedRegion).length;
+    const municipal = policeWithMatches.filter(s => s.type === 'municipal_police').length;
+    const rcmp = policeWithMatches.filter(s => s.type === 'rcmp_detachment').length;
+    return { total: policeWithMatches.length, matched, regionOnly, unmatched, municipal, rcmp };
+  }, [policeWithMatches]);
 
   const sarStats = useMemo(() => {
     const matched = sarWithMatches.filter(g => g.matchedMunicipality).length;
@@ -484,12 +549,28 @@ export default function AdminInfrastructure() {
               MARINE ({marineStats.total})
             </TabsTrigger>
             <TabsTrigger 
-              value="emergency" 
+              value="healthcare" 
               className="text-xs data-[state=active]:bg-primary/20 data-[state=active]:text-primary"
-              data-testid="tab-emergency"
+              data-testid="tab-healthcare"
             >
-              <Siren className="w-3 h-3 mr-1" />
-              EMERGENCY ({emergencyStats.total})
+              <Heart className="w-3 h-3 mr-1" />
+              HEALTHCARE ({healthcareStats.total})
+            </TabsTrigger>
+            <TabsTrigger 
+              value="fire" 
+              className="text-xs data-[state=active]:bg-primary/20 data-[state=active]:text-primary"
+              data-testid="tab-fire"
+            >
+              <Flame className="w-3 h-3 mr-1" />
+              FIRE ({fireStats.total})
+            </TabsTrigger>
+            <TabsTrigger 
+              value="police" 
+              className="text-xs data-[state=active]:bg-primary/20 data-[state=active]:text-primary"
+              data-testid="tab-police"
+            >
+              <Shield className="w-3 h-3 mr-1" />
+              POLICE ({policeStats.total})
             </TabsTrigger>
             <TabsTrigger 
               value="sar" 
@@ -775,24 +856,23 @@ export default function AdminInfrastructure() {
           </ScrollArea>
         </TabsContent>
 
-        <TabsContent value="emergency" className="flex-1 overflow-hidden m-0 flex flex-col data-[state=inactive]:hidden">
+        <TabsContent value="healthcare" className="flex-1 overflow-hidden m-0 flex flex-col data-[state=inactive]:hidden">
           <div className="p-3 border-b border-border/30 flex items-center gap-4">
             <div className="relative flex-1 max-w-sm">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground" />
               <Input
-                placeholder="Search emergency services..."
-                value={emergencySearch}
-                onChange={e => setEmergencySearch(e.target.value)}
+                placeholder="Search hospitals..."
+                value={healthcareSearch}
+                onChange={e => setHealthcareSearch(e.target.value)}
                 className="pl-8 h-8 text-xs bg-background/50"
-                data-testid="input-emergency-search"
+                data-testid="input-healthcare-search"
               />
             </div>
             <div className="flex gap-2 text-[10px] text-muted-foreground flex-wrap">
-              <span className="text-green-400">{emergencyStats.matched} MATCHED</span>
-              <span className="text-red-400">{emergencyStats.byType['hospital'] || 0} HOSPITALS</span>
-              <span className="text-orange-400">{emergencyStats.byType['fire_station'] || 0} FIRE</span>
-              <span className="text-blue-400">{emergencyStats.byType['municipal_police'] || 0} MUNICIPAL</span>
-              <span className="text-yellow-400">{emergencyStats.byType['rcmp_detachment'] || 0} RCMP</span>
+              <span className="text-green-400">{healthcareStats.matched} MATCHED</span>
+              <span className="text-purple-400">{healthcareStats.withHelipad} HELIPAD</span>
+              <span className="text-red-400">{healthcareStats.traumaCentres} TRAUMA</span>
+              <span className="text-cyan-400">{healthcareStats.withER} ER</span>
             </div>
           </div>
           <ScrollArea className="flex-1">
@@ -800,8 +880,8 @@ export default function AdminInfrastructure() {
               <table className="w-full text-xs">
                 <thead>
                   <tr className="border-b border-border/30 text-muted-foreground">
-                    <th className="text-left py-2 px-2 font-medium">TYPE</th>
                     <th className="text-left py-2 px-2 font-medium">NAME</th>
+                    <th className="text-left py-2 px-2 font-medium">HEALTH AUTHORITY</th>
                     <th className="text-left py-2 px-2 font-medium">MUNICIPALITY</th>
                     <th className="text-left py-2 px-2 font-medium">MATCHED TO</th>
                     <th className="text-left py-2 px-2 font-medium">REGION</th>
@@ -811,16 +891,27 @@ export default function AdminInfrastructure() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredEmergency.map(service => (
+                  {filteredHealthcare.map(service => (
                     <tr key={service.id} className="border-b border-border/20 hover:bg-muted/20">
-                      <td className="py-2 px-2">{getEmergencyTypeBadge(service.type)}</td>
                       <td className="py-2 px-2">
-                        <div className="font-medium text-foreground">{service.name}</div>
-                        {service.address && (
-                          <div className="text-[10px] text-muted-foreground">{service.address}</div>
-                        )}
-                        {service.notes && (
-                          <div className="text-[10px] text-cyan-400/70">{service.notes}</div>
+                        <div className="flex items-center gap-2">
+                          <Heart className="w-3 h-3 text-red-400" />
+                          <div>
+                            <div className="font-medium text-foreground">{service.name}</div>
+                            {service.address && (
+                              <div className="text-[10px] text-muted-foreground">{service.address}</div>
+                            )}
+                            {service.notes && (
+                              <div className="text-[10px] text-cyan-400/70">{service.notes}</div>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-2 px-2">
+                        {service.health_authority && (
+                          <Badge variant="outline" className="text-[9px]">
+                            {service.health_authority}
+                          </Badge>
                         )}
                       </td>
                       <td className="py-2 px-2 text-muted-foreground">{service.municipality || '-'}</td>
@@ -867,6 +958,167 @@ export default function AdminInfrastructure() {
                           <CheckCircle className="w-3 h-3 text-green-400 mx-auto" />
                         ) : (
                           <XCircle className="w-3 h-3 text-muted-foreground/30 mx-auto" />
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </ScrollArea>
+        </TabsContent>
+
+        <TabsContent value="fire" className="flex-1 overflow-hidden m-0 flex flex-col data-[state=inactive]:hidden">
+          <div className="p-3 border-b border-border/30 flex items-center gap-4">
+            <div className="relative flex-1 max-w-sm">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground" />
+              <Input
+                placeholder="Search fire departments..."
+                value={fireSearch}
+                onChange={e => setFireSearch(e.target.value)}
+                className="pl-8 h-8 text-xs bg-background/50"
+                data-testid="input-fire-search"
+              />
+            </div>
+            <div className="flex gap-2 text-[10px] text-muted-foreground flex-wrap">
+              <span className="text-green-400">{fireStats.matched} MATCHED</span>
+              <span className="text-yellow-400">{fireStats.regionOnly} REGION ONLY</span>
+              <span className="text-red-400">{fireStats.unmatched} UNMATCHED</span>
+            </div>
+          </div>
+          <ScrollArea className="flex-1">
+            <div className="p-2">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b border-border/30 text-muted-foreground">
+                    <th className="text-left py-2 px-2 font-medium">NAME</th>
+                    <th className="text-left py-2 px-2 font-medium">MUNICIPALITY</th>
+                    <th className="text-left py-2 px-2 font-medium">MATCHED TO</th>
+                    <th className="text-left py-2 px-2 font-medium">REGION</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredFire.map(service => (
+                    <tr key={service.id} className="border-b border-border/20 hover:bg-muted/20">
+                      <td className="py-2 px-2">
+                        <div className="flex items-center gap-2">
+                          <Flame className="w-3 h-3 text-orange-400" />
+                          <div>
+                            <div className="font-medium text-foreground">{service.name}</div>
+                            {service.address && (
+                              <div className="text-[10px] text-muted-foreground">{service.address}</div>
+                            )}
+                            {service.notes && (
+                              <div className="text-[10px] text-cyan-400/70">{service.notes}</div>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-2 px-2 text-muted-foreground">{service.municipality || '-'}</td>
+                      <td className="py-2 px-2">
+                        {service.matchedMunicipality ? (
+                          <div className="flex items-center gap-1 text-green-400">
+                            <CheckCircle className="w-3 h-3" />
+                            <span>{service.matchedMunicipality.name}</span>
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground/50">-</span>
+                        )}
+                      </td>
+                      <td className="py-2 px-2">
+                        {service.matchedRegion ? (
+                          <span className="text-cyan-400">{service.matchedRegion.shortName || service.matchedRegion.name}</span>
+                        ) : service.region ? (
+                          <span className="text-yellow-400">{service.region}</span>
+                        ) : (
+                          <span className="text-muted-foreground/50">-</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </ScrollArea>
+        </TabsContent>
+
+        <TabsContent value="police" className="flex-1 overflow-hidden m-0 flex flex-col data-[state=inactive]:hidden">
+          <div className="p-3 border-b border-border/30 flex items-center gap-4">
+            <div className="relative flex-1 max-w-sm">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground" />
+              <Input
+                placeholder="Search police services..."
+                value={policeSearch}
+                onChange={e => setPoliceSearch(e.target.value)}
+                className="pl-8 h-8 text-xs bg-background/50"
+                data-testid="input-police-search"
+              />
+            </div>
+            <div className="flex gap-2 text-[10px] text-muted-foreground flex-wrap">
+              <span className="text-green-400">{policeStats.matched} MATCHED</span>
+              <span className="text-blue-400">{policeStats.municipal} MUNICIPAL</span>
+              <span className="text-yellow-400">{policeStats.rcmp} RCMP</span>
+            </div>
+          </div>
+          <ScrollArea className="flex-1">
+            <div className="p-2">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b border-border/30 text-muted-foreground">
+                    <th className="text-left py-2 px-2 font-medium">TYPE</th>
+                    <th className="text-left py-2 px-2 font-medium">NAME</th>
+                    <th className="text-left py-2 px-2 font-medium">MUNICIPALITY</th>
+                    <th className="text-left py-2 px-2 font-medium">MATCHED TO</th>
+                    <th className="text-left py-2 px-2 font-medium">REGION</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredPolice.map(service => (
+                    <tr key={service.id} className="border-b border-border/20 hover:bg-muted/20">
+                      <td className="py-2 px-2">
+                        <Badge 
+                          variant="outline" 
+                          className={`text-[9px] ${
+                            service.type === 'municipal_police' 
+                              ? 'bg-blue-500/20 text-blue-400 border-blue-500/30'
+                              : 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30'
+                          }`}
+                        >
+                          {service.type === 'municipal_police' ? 'MUNICIPAL' : 'RCMP'}
+                        </Badge>
+                      </td>
+                      <td className="py-2 px-2">
+                        <div className="flex items-center gap-2">
+                          <Shield className="w-3 h-3 text-blue-400" />
+                          <div>
+                            <div className="font-medium text-foreground">{service.name}</div>
+                            {service.address && (
+                              <div className="text-[10px] text-muted-foreground">{service.address}</div>
+                            )}
+                            {service.notes && (
+                              <div className="text-[10px] text-cyan-400/70">{service.notes}</div>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-2 px-2 text-muted-foreground">{service.municipality || '-'}</td>
+                      <td className="py-2 px-2">
+                        {service.matchedMunicipality ? (
+                          <div className="flex items-center gap-1 text-green-400">
+                            <CheckCircle className="w-3 h-3" />
+                            <span>{service.matchedMunicipality.name}</span>
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground/50">-</span>
+                        )}
+                      </td>
+                      <td className="py-2 px-2">
+                        {service.matchedRegion ? (
+                          <span className="text-cyan-400">{service.matchedRegion.shortName || service.matchedRegion.name}</span>
+                        ) : service.region ? (
+                          <span className="text-yellow-400">{service.region}</span>
+                        ) : (
+                          <span className="text-muted-foreground/50">-</span>
                         )}
                       </td>
                     </tr>
