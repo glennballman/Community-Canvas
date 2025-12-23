@@ -101,6 +101,8 @@ function getMarineTypeIcon(type: MarineFacilityType) {
     case 'harbour_authority': return <Ship className="w-3 h-3" />;
     case 'ferry_terminal': return <Ship className="w-3 h-3" />;
     case 'seaplane_dock': return <Plane className="w-3 h-3" />;
+    case 'private_ferry': return <Ship className="w-3 h-3" />;
+    case 'water_taxi': return <Ship className="w-3 h-3" />;
     default: return <Ship className="w-3 h-3" />;
   }
 }
@@ -115,6 +117,8 @@ function getMarineTypeBadge(type: MarineFacilityType) {
     'harbour_authority': 'bg-green-500/20 text-green-400 border-green-500/30',
     'ferry_terminal': 'bg-purple-500/20 text-purple-400 border-purple-500/30',
     'seaplane_dock': 'bg-sky-500/20 text-sky-400 border-sky-500/30',
+    'private_ferry': 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
+    'water_taxi': 'bg-teal-500/20 text-teal-400 border-teal-500/30',
   };
   const labels: Record<MarineFacilityType, string> = {
     'coast_guard': 'COAST GUARD',
@@ -125,6 +129,8 @@ function getMarineTypeBadge(type: MarineFacilityType) {
     'harbour_authority': 'HARBOUR',
     'ferry_terminal': 'FERRY',
     'seaplane_dock': 'SEAPLANE',
+    'private_ferry': 'PRIVATE FERRY',
+    'water_taxi': 'WATER TAXI',
   };
   return (
     <Badge variant="outline" className={`text-[9px] ${colors[type] || ''}`}>

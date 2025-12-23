@@ -6,7 +6,9 @@ export type MarineFacilityType =
   | 'rescue_station'
   | 'harbour_authority'
   | 'ferry_terminal'
-  | 'seaplane_dock';
+  | 'seaplane_dock'
+  | 'private_ferry'
+  | 'water_taxi';
 
 export interface MarineFacility {
   id: string;
@@ -927,6 +929,227 @@ export const BC_MARINE_FACILITIES: MarineFacility[] = [
     latitude: 49.1535,
     longitude: -125.9100,
     services: ["Float Plane Departures"]
+  },
+
+  // PRIVATE FERRY OPERATORS
+  {
+    id: "hullo-vancouver",
+    name: "Hullo Ferries - Vancouver Terminal",
+    type: "private_ferry",
+    municipality: "Vancouver",
+    region: "Metro Vancouver",
+    latitude: 49.2890,
+    longitude: -123.1128,
+    services: ["Fast Ferry to Nanaimo", "Passenger Only", "70 min crossing"],
+    notes: "Vancouver Convention Centre - 354 passenger catamarans"
+  },
+  {
+    id: "hullo-nanaimo",
+    name: "Hullo Ferries - Nanaimo Terminal",
+    type: "private_ferry",
+    municipality: "Nanaimo",
+    region: "Nanaimo",
+    latitude: 49.1690,
+    longitude: -123.9350,
+    services: ["Fast Ferry to Vancouver", "Passenger Only", "70 min crossing"],
+    notes: "Nanaimo Cruise Terminal - 354 passenger catamarans"
+  },
+  {
+    id: "lady-rose-port-alberni",
+    name: "Lady Rose Marine - MV Frances Barkley",
+    type: "private_ferry",
+    municipality: "Port Alberni",
+    region: "Alberni-Clayoquot",
+    latitude: 49.2340,
+    longitude: -124.8050,
+    services: ["Passenger Ferry", "Freight", "Bamfield Route", "Ucluelet Route", "Broken Group Islands"],
+    notes: "Heritage freight/passenger ferry - 200 passenger capacity - serves remote communities"
+  },
+  {
+    id: "lady-rose-bamfield",
+    name: "Lady Rose Marine - Bamfield Dock",
+    type: "private_ferry",
+    municipality: "Bamfield",
+    region: "Alberni-Clayoquot",
+    latitude: 48.8339,
+    longitude: -125.1353,
+    services: ["Passenger Ferry", "Freight", "Connection to Port Alberni"],
+    notes: "MV Frances Barkley service - Tue/Thu/Sat year-round"
+  },
+
+  // WATER TAXI SERVICES - GULF ISLANDS
+  {
+    id: "water-taxi-island",
+    name: "Island Water Taxi",
+    type: "water_taxi",
+    municipality: "Sidney",
+    region: "Capital",
+    latitude: 48.6483,
+    longitude: -123.3950,
+    services: ["Southern Gulf Islands", "24/7 Service", "Cargo Transport"],
+    notes: "Serving Gulf Islands since 1999 - up to 11 passengers"
+  },
+  {
+    id: "water-taxi-sidney",
+    name: "Sidney Water Taxi",
+    type: "water_taxi",
+    municipality: "Sidney",
+    region: "Capital",
+    latitude: 48.6500,
+    longitude: -123.4000,
+    services: ["Gulf Islands", "Charter Service"],
+    notes: "24ft Northwest Aluminum boat"
+  },
+  {
+    id: "water-taxi-gulf-islands",
+    name: "Gulf Islands Water Taxi",
+    type: "water_taxi",
+    municipality: "Sidney",
+    region: "Capital",
+    latitude: 48.6880,
+    longitude: -123.4100,
+    services: ["Launch Services", "Pilot Transfers", "Government Officials"],
+    notes: "Canoe Cove base - 24/7 operations"
+  },
+  {
+    id: "water-taxi-bay-to-bay",
+    name: "Bay to Bay Charters",
+    type: "water_taxi",
+    municipality: "Salt Spring Island",
+    region: "Capital",
+    latitude: 48.8548,
+    longitude: -123.5090,
+    services: ["Salt Spring", "Mill Bay", "Pender Island", "Deep Cove"],
+    notes: "Water taxi to Vancouver Island and Gulf Islands"
+  },
+  {
+    id: "water-taxi-birds-feather",
+    name: "Birds of a Feather Marine",
+    type: "water_taxi",
+    municipality: "Salt Spring Island",
+    region: "Capital",
+    latitude: 48.8550,
+    longitude: -123.5000,
+    services: ["Private Charters", "Southern Gulf Islands", "Bicycle Transport", "Pet Friendly"],
+    notes: "Custom destinations including Galiano, Mayne, Saturna, Penders"
+  },
+
+  // WATER TAXI SERVICES - TOFINO/CLAYOQUOT
+  {
+    id: "water-taxi-tofino",
+    name: "Tofino Water Taxi",
+    type: "water_taxi",
+    municipality: "Tofino",
+    region: "Alberni-Clayoquot",
+    latitude: 49.1530,
+    longitude: -125.9066,
+    services: ["Meares Island", "Hot Springs Cove", "Vargas Island", "Lone Cone"],
+    notes: "First Street Dock - includes zero-emission electric charter boat"
+  },
+  {
+    id: "water-taxi-meares",
+    name: "Meares Island Water Taxi",
+    type: "water_taxi",
+    municipality: "Tofino",
+    region: "Alberni-Clayoquot",
+    latitude: 49.1535,
+    longitude: -125.9080,
+    services: ["Meares Island", "Vargas Island", "Opitsaht", "Bear Watching", "Kayak Pickup"],
+    notes: "Personalized charters throughout Clayoquot Sound"
+  },
+  {
+    id: "water-taxi-ahous",
+    name: "Ahous Hakuum",
+    type: "water_taxi",
+    municipality: "Tofino",
+    region: "Alberni-Clayoquot",
+    latitude: 49.1540,
+    longitude: -125.9100,
+    services: ["Ahousaht Community Service", "Scheduled Trips", "Charter Bookings"],
+    notes: "Maaqutusiis (Ahousaht) to Tofino route - community transportation"
+  },
+
+  // WATER TAXI SERVICES - SUNSHINE COAST
+  {
+    id: "water-taxi-pender-harbour",
+    name: "Pender Harbour Water Taxi",
+    type: "water_taxi",
+    municipality: "Madeira Park",
+    region: "Sunshine Coast",
+    latitude: 49.6320,
+    longitude: -124.0280,
+    services: ["Local Transport", "Garden Bay", "Irvines Landing"],
+    notes: "Serving Pender Harbour communities"
+  },
+
+  // WATER TAXI SERVICES - PRINCE RUPERT/NORTH COAST
+  {
+    id: "water-taxi-prince-rupert",
+    name: "Prince Rupert Water Taxi",
+    type: "water_taxi",
+    municipality: "Prince Rupert",
+    region: "North Coast",
+    latitude: 54.3150,
+    longitude: -130.3208,
+    services: ["Local Islands", "Charter Service", "Fishing Access"],
+    notes: "North coast water taxi services"
+  },
+
+  // INLAND FERRY SERVICES (BC Ministry contracted)
+  {
+    id: "inland-ferry-kootenay",
+    name: "Kootenay Lake Ferry",
+    type: "private_ferry",
+    municipality: "Balfour",
+    region: "Central Kootenay",
+    latitude: 49.6310,
+    longitude: -116.9580,
+    services: ["Free Vehicle Ferry", "Balfour to Kootenay Bay", "35 min crossing"],
+    notes: "Ministry of Transportation contracted - longest free ferry in world"
+  },
+  {
+    id: "inland-ferry-upper-arrow",
+    name: "Upper Arrow Lake Ferry",
+    type: "private_ferry",
+    municipality: "Galena Bay",
+    region: "Columbia-Shuswap",
+    latitude: 50.7520,
+    longitude: -117.8560,
+    services: ["Free Vehicle Ferry", "Galena Bay to Shelter Bay", "20 min crossing"],
+    notes: "Ministry of Transportation contracted"
+  },
+  {
+    id: "inland-ferry-adams-lake",
+    name: "Adams Lake Ferry",
+    type: "private_ferry",
+    municipality: "Adams Lake",
+    region: "Columbia-Shuswap",
+    latitude: 51.0830,
+    longitude: -119.6350,
+    services: ["Free Vehicle Ferry", "Cable Ferry"],
+    notes: "Ministry of Transportation contracted - reaction ferry"
+  },
+  {
+    id: "inland-ferry-francois-lake",
+    name: "Francois Lake Ferry",
+    type: "private_ferry",
+    municipality: "Burns Lake",
+    region: "Bulkley-Nechako",
+    latitude: 54.0540,
+    longitude: -125.7850,
+    services: ["Free Vehicle Ferry", "15 min crossing"],
+    notes: "Ministry of Transportation contracted"
+  },
+  {
+    id: "inland-ferry-lytton",
+    name: "Lytton Reaction Ferry",
+    type: "private_ferry",
+    municipality: "Lytton",
+    region: "Thompson-Nicola",
+    latitude: 50.2330,
+    longitude: -121.5680,
+    services: ["Free Vehicle Ferry", "Fraser River Crossing", "Cable Ferry"],
+    notes: "Ministry of Transportation contracted - reaction ferry"
   }
 ];
 

@@ -353,6 +353,8 @@ function AviationWeatherSection({ node }: { node: GeoNode }) {
       'harbour_authority': 'bg-green-500/20 text-green-400',
       'ferry_terminal': 'bg-purple-500/20 text-purple-400',
       'seaplane_dock': 'bg-sky-500/20 text-sky-400',
+      'private_ferry': 'bg-emerald-500/20 text-emerald-400',
+      'water_taxi': 'bg-teal-500/20 text-teal-400',
     };
     return typeColors[type] || 'bg-muted';
   };
@@ -363,6 +365,8 @@ function AviationWeatherSection({ node }: { node: GeoNode }) {
       case 'rescue_station': return <Anchor className="w-3 h-3 text-orange-400" />;
       case 'ferry_terminal': return <Ship className="w-3 h-3 text-purple-400" />;
       case 'fuel_dock': return <Ship className="w-3 h-3 text-amber-400" />;
+      case 'private_ferry': return <Ship className="w-3 h-3 text-emerald-400" />;
+      case 'water_taxi': return <Ship className="w-3 h-3 text-teal-400" />;
       default: return <Ship className="w-3 h-3" />;
     }
   };
