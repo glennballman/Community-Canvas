@@ -60,6 +60,14 @@ Located in `shared/` directory with GPS coordinates and geographic correlation:
     - Regional carriers (Bandstra, Northern Freightways, Coastal Courier)
     - Freight/LTL (Purolator Freight, Day & Ross)
     - Same-day delivery (Novex, Dynamex, Intelcom)
+  - **Trucking (Critical Infrastructure)**: 20+ carriers with 60+ terminals including:
+    - Fuel distributors (Suncor/Petro-Canada, Imperial/Esso, Parkland, Cenovus, Super Save)
+    - Food/grocery distribution (Sysco, Gordon Food Service, Sobeys, Save-On-Foods, Loblaw)
+    - General freight and LTL (Mullen Group, Day & Ross, Manitoulin, CP/CN Intermodal)
+    - Refrigerated transport (Vedder Transport, Van Kam Freightways)
+    - Logging/forestry (Arrow Transportation, Teal-Jones)
+    - Aggregate/construction (Jack Cewe, Ocean Concrete)
+    - Hazmat/propane (Trimac, Superior Propane)
 
 ### Key Design Patterns
 - **Shared Types**: Schema definitions in `shared/` directory used by both client and server

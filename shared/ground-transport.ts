@@ -1087,12 +1087,368 @@ export const BC_COURIER_SERVICES: CourierService[] = [
   }
 ];
 
+// Trucking Services - Critical Infrastructure
+export interface TruckingService {
+  id: string;
+  name: string;
+  type: 'fuel' | 'food' | 'general_freight' | 'ltl' | 'logging' | 'aggregate' | 'hazmat' | 'refrigerated';
+  terminals: {
+    name: string;
+    facility_type: 'terminal' | 'depot' | 'yard' | 'bulk_plant';
+    municipality: string;
+    address?: string;
+    lat: number;
+    lng: number;
+  }[];
+  service_coverage: string[];
+  fleet_size?: string;
+  website?: string;
+  phone?: string;
+  notes?: string;
+}
+
+export const BC_TRUCKING_SERVICES: TruckingService[] = [
+  // ===== FUEL DELIVERY (Critical Infrastructure) =====
+  {
+    id: "suncor-petro-canada",
+    name: "Suncor/Petro-Canada Fuel Distribution",
+    type: "fuel",
+    terminals: [
+      { name: "Burnaby Refinery Terminal", facility_type: "terminal", municipality: "Burnaby", address: "355 N Willingdon Ave", lat: 49.2823, lng: -123.0056 },
+      { name: "Kamloops Bulk Plant", facility_type: "bulk_plant", municipality: "Kamloops", address: "1295 Lorne St", lat: 50.6745, lng: -120.3273 },
+      { name: "Prince George Terminal", facility_type: "terminal", municipality: "Prince George", address: "3755 Opie Crescent", lat: 53.8873, lng: -122.8098 }
+    ],
+    service_coverage: ["Province-wide", "All major communities"],
+    fleet_size: "50+ tankers",
+    website: "https://www.suncor.com",
+    notes: "Major fuel supplier; refinery in Burnaby"
+  },
+  {
+    id: "imperial-oil-esso",
+    name: "Imperial Oil/Esso",
+    type: "fuel",
+    terminals: [
+      { name: "Vancouver Terminal", facility_type: "terminal", municipality: "Burnaby", address: "355 Shellmont St", lat: 49.2789, lng: -123.0167 },
+      { name: "Nanaimo Terminal", facility_type: "terminal", municipality: "Nanaimo", address: "1600 Stewart Ave", lat: 49.1688, lng: -123.9401 },
+      { name: "Kelowna Bulk Plant", facility_type: "bulk_plant", municipality: "Kelowna", address: "1090 Richter St", lat: 49.8838, lng: -119.4690 }
+    ],
+    service_coverage: ["Province-wide", "Vancouver Island", "Interior"],
+    fleet_size: "40+ tankers",
+    website: "https://www.imperialoil.ca",
+    notes: "Major petroleum distributor"
+  },
+  {
+    id: "parkland-fuel",
+    name: "Parkland Fuel Corporation",
+    type: "fuel",
+    terminals: [
+      { name: "Burnaby Terminal", facility_type: "terminal", municipality: "Burnaby", address: "4601 Still Creek Dr", lat: 49.2678, lng: -123.0234 },
+      { name: "Victoria Terminal", facility_type: "terminal", municipality: "Victoria", address: "450 Esquimalt Rd", lat: 48.4284, lng: -123.3867 },
+      { name: "Prince George Terminal", facility_type: "terminal", municipality: "Prince George", address: "2300 Queensway", lat: 53.9033, lng: -122.7819 }
+    ],
+    service_coverage: ["Province-wide", "Chevron/Fas Gas/Race Trac networks"],
+    fleet_size: "60+ tankers",
+    website: "https://www.parkland.ca",
+    phone: "1-855-355-3001",
+    notes: "Chevron brand fuel; largest independent fuel marketer in Canada"
+  },
+  {
+    id: "husky-cenovus",
+    name: "Cenovus Energy (Husky)",
+    type: "fuel",
+    terminals: [
+      { name: "Prince George Refinery", facility_type: "terminal", municipality: "Prince George", address: "10th Ave & Lyon St", lat: 53.9133, lng: -122.7650 },
+      { name: "Kamloops Terminal", facility_type: "bulk_plant", municipality: "Kamloops", address: "955 Lorne St", lat: 50.6723, lng: -120.3289 }
+    ],
+    service_coverage: ["Northern BC", "Interior", "Peace Region"],
+    fleet_size: "30+ tankers",
+    website: "https://www.cenovus.com",
+    notes: "Prince George refinery serves Northern BC"
+  },
+  {
+    id: "super-save-fuel",
+    name: "Super Save Fuel",
+    type: "fuel",
+    terminals: [
+      { name: "Surrey Terminal", facility_type: "terminal", municipality: "Surrey", address: "8875 Eastlake Dr", lat: 49.1234, lng: -122.8567 },
+      { name: "Langley Bulk Plant", facility_type: "bulk_plant", municipality: "Langley", address: "5660 Production Way", lat: 49.0834, lng: -122.6567 }
+    ],
+    service_coverage: ["Metro Vancouver", "Fraser Valley"],
+    fleet_size: "25+ tankers",
+    website: "https://www.supersave.ca",
+    phone: "604-576-6666",
+    notes: "Independent fuel distributor; cardlock network"
+  },
+
+  // ===== FOOD/GROCERY DISTRIBUTION (Essential Supplies) =====
+  {
+    id: "sysco-vancouver",
+    name: "Sysco Vancouver",
+    type: "food",
+    terminals: [
+      { name: "Vancouver Distribution Centre", facility_type: "terminal", municipality: "Richmond", address: "5899 Minoru Blvd", lat: 49.1623, lng: -123.1456 },
+      { name: "Victoria Distribution Centre", facility_type: "depot", municipality: "Victoria", address: "2807 Quesnel St", lat: 48.4323, lng: -123.3789 },
+      { name: "Kelowna Depot", facility_type: "depot", municipality: "Kelowna", address: "1875 Dilworth Dr", lat: 49.8789, lng: -119.4512 }
+    ],
+    service_coverage: ["Province-wide", "All major communities", "Remote communities"],
+    fleet_size: "150+ trucks",
+    website: "https://www.sysco.ca",
+    phone: "604-270-6100",
+    notes: "Largest foodservice distributor; restaurants, hospitals, schools"
+  },
+  {
+    id: "gfs-canada",
+    name: "Gordon Food Service",
+    type: "food",
+    terminals: [
+      { name: "Vancouver Distribution Centre", facility_type: "terminal", municipality: "Burnaby", address: "3585 Grandview Hwy", lat: 49.2589, lng: -123.0278 },
+      { name: "Prince George Depot", facility_type: "depot", municipality: "Prince George", address: "2175 Lyon St", lat: 53.9134, lng: -122.7623 }
+    ],
+    service_coverage: ["Province-wide", "Northern BC"],
+    fleet_size: "100+ trucks",
+    website: "https://www.gfs.ca",
+    phone: "604-294-3466",
+    notes: "Major foodservice distributor; wholesale and retail"
+  },
+  {
+    id: "sobeys-distribution",
+    name: "Sobeys/IGA Distribution",
+    type: "food",
+    terminals: [
+      { name: "Langley Distribution Centre", facility_type: "terminal", municipality: "Langley", address: "19638 56th Ave", lat: 49.1056, lng: -122.6789 },
+      { name: "Kelowna Cross-Dock", facility_type: "depot", municipality: "Kelowna", address: "2475 Dobbin Rd", lat: 49.8897, lng: -119.3945 }
+    ],
+    service_coverage: ["Province-wide", "Safeway/FreshCo/IGA stores"],
+    fleet_size: "80+ trucks",
+    website: "https://www.sobeys.com",
+    notes: "Safeway, FreshCo, IGA grocery distribution"
+  },
+  {
+    id: "save-on-foods-distribution",
+    name: "Save-On-Foods/Overwaitea",
+    type: "food",
+    terminals: [
+      { name: "Langley Distribution Centre", facility_type: "terminal", municipality: "Langley", address: "19855 92A Ave", lat: 49.1789, lng: -122.6534 },
+      { name: "Kelowna Regional Depot", facility_type: "depot", municipality: "Kelowna", address: "2650 Highway 97 N", lat: 49.9123, lng: -119.4256 },
+      { name: "Prince George Depot", facility_type: "depot", municipality: "Prince George", address: "3505 Opie Crescent", lat: 53.8856, lng: -122.8123 }
+    ],
+    service_coverage: ["Province-wide", "All Save-On/PriceSmart stores"],
+    fleet_size: "120+ trucks",
+    website: "https://www.saveonfoods.com",
+    notes: "Jim Pattison Group; largest western Canadian grocer"
+  },
+  {
+    id: "loblaw-westfair",
+    name: "Loblaw/Westfair Foods",
+    type: "food",
+    terminals: [
+      { name: "Surrey Distribution Centre", facility_type: "terminal", municipality: "Surrey", address: "19133 21st Ave", lat: 49.0456, lng: -122.7234 },
+      { name: "Calgary Cross-Dock (serves BC)", facility_type: "depot", municipality: "Kamloops", address: "1650 Versatile Dr", lat: 50.6823, lng: -120.3489 }
+    ],
+    service_coverage: ["Province-wide", "Real Canadian Superstore/No Frills"],
+    fleet_size: "60+ trucks in BC",
+    website: "https://www.loblaw.ca",
+    notes: "Real Canadian Superstore, No Frills, Shoppers Drug Mart"
+  },
+
+  // ===== GENERAL FREIGHT =====
+  {
+    id: "mullen-group",
+    name: "Mullen Group",
+    type: "general_freight",
+    terminals: [
+      { name: "Surrey Terminal", facility_type: "terminal", municipality: "Surrey", address: "12939 76th Ave", lat: 49.1334, lng: -122.8567 },
+      { name: "Prince George Terminal", facility_type: "terminal", municipality: "Prince George", address: "2600 Queensway", lat: 53.9056, lng: -122.7756 },
+      { name: "Fort St John Terminal", facility_type: "depot", municipality: "Fort St. John", address: "8607 100th St", lat: 56.2445, lng: -120.8456 }
+    ],
+    service_coverage: ["Province-wide", "Western Canada", "Alaska Highway"],
+    fleet_size: "500+ units company-wide",
+    website: "https://www.mullen-group.com",
+    notes: "Major LTL and TL carrier; oilfield services"
+  },
+  {
+    id: "day-ross",
+    name: "Day & Ross Transportation",
+    type: "ltl",
+    terminals: [
+      { name: "Surrey Terminal", facility_type: "terminal", municipality: "Surrey", address: "11451 Bridgeview Dr", lat: 49.1998, lng: -122.8967 },
+      { name: "Victoria Depot", facility_type: "depot", municipality: "Victoria", address: "531 David St", lat: 48.4369, lng: -123.3889 },
+      { name: "Kelowna Depot", facility_type: "depot", municipality: "Kelowna", address: "795 McCurdy Rd", lat: 49.9012, lng: -119.3867 }
+    ],
+    service_coverage: ["Province-wide", "Cross-Canada LTL"],
+    fleet_size: "300+ units in BC",
+    website: "https://www.dayross.com",
+    phone: "1-800-387-4063",
+    notes: "LTL specialist; Purolator Freight partner"
+  },
+  {
+    id: "manitoulin-transport",
+    name: "Manitoulin Transport",
+    type: "ltl",
+    terminals: [
+      { name: "Delta Terminal", facility_type: "terminal", municipality: "Delta", address: "7880 Vantage Way", lat: 49.1134, lng: -123.0234 },
+      { name: "Nanaimo Depot", facility_type: "depot", municipality: "Nanaimo", address: "1925 Bowen Rd", lat: 49.1688, lng: -123.9456 }
+    ],
+    service_coverage: ["Province-wide", "Vancouver Island", "Cross-Canada"],
+    fleet_size: "100+ units in BC",
+    website: "https://www.manitoulintransport.com",
+    phone: "1-800-265-0182",
+    notes: "LTL and specialized freight; remote community service"
+  },
+  {
+    id: "cp-intermodal",
+    name: "CP Rail Intermodal Trucking",
+    type: "general_freight",
+    terminals: [
+      { name: "Vancouver Intermodal Yard", facility_type: "yard", municipality: "Coquitlam", address: "2850 Shaughnessy St", lat: 49.2578, lng: -122.8834 },
+      { name: "Kamloops Yard", facility_type: "yard", municipality: "Kamloops", address: "400 Lorne St", lat: 50.6712, lng: -120.3278 }
+    ],
+    service_coverage: ["Major rail corridors", "Container drayage"],
+    fleet_size: "200+ drayage trucks",
+    website: "https://www.cpr.ca",
+    notes: "Rail intermodal container trucking"
+  },
+  {
+    id: "cn-intermodal",
+    name: "CN Rail Intermodal Trucking",
+    type: "general_freight",
+    terminals: [
+      { name: "Vancouver Intermodal Terminal", facility_type: "yard", municipality: "Surrey", address: "10400 120th St", lat: 49.1456, lng: -122.8934 },
+      { name: "Prince Rupert Yard", facility_type: "yard", municipality: "Prince Rupert", address: "200 1st Ave W", lat: 54.3150, lng: -130.3208 }
+    ],
+    service_coverage: ["Major rail corridors", "Port container drayage"],
+    fleet_size: "150+ drayage trucks",
+    website: "https://www.cn.ca",
+    notes: "Rail intermodal; Prince Rupert port service"
+  },
+
+  // ===== REFRIGERATED/TEMPERATURE CONTROLLED =====
+  {
+    id: "vedder-transport",
+    name: "Vedder Transport",
+    type: "refrigerated",
+    terminals: [
+      { name: "Abbotsford Terminal", facility_type: "terminal", municipality: "Abbotsford", address: "34663 Vye Rd", lat: 49.0589, lng: -122.2534 },
+      { name: "Surrey Depot", facility_type: "depot", municipality: "Surrey", address: "7535 134th St", lat: 49.1289, lng: -122.8534 }
+    ],
+    service_coverage: ["Western Canada", "US Pacific Northwest"],
+    fleet_size: "200+ reefer units",
+    website: "https://www.veddertransport.com",
+    phone: "604-857-9000",
+    notes: "Temperature-controlled freight specialist"
+  },
+  {
+    id: "van-kam-freightways",
+    name: "Van Kam Freightways",
+    type: "refrigerated",
+    terminals: [
+      { name: "Delta Terminal", facility_type: "terminal", municipality: "Delta", address: "7525 Vantage Way", lat: 49.1123, lng: -123.0189 },
+      { name: "Prince George Depot", facility_type: "depot", municipality: "Prince George", address: "2175 Lyon St", lat: 53.9134, lng: -122.7623 }
+    ],
+    service_coverage: ["Province-wide", "Temperature-controlled LTL"],
+    fleet_size: "150+ units",
+    website: "https://www.vankam.com",
+    phone: "604-940-1111",
+    notes: "Refrigerated LTL; remote community delivery"
+  },
+
+  // ===== LOGGING/FORESTRY =====
+  {
+    id: "arrow-transportation",
+    name: "Arrow Transportation Systems",
+    type: "logging",
+    terminals: [
+      { name: "Kamloops Terminal", facility_type: "terminal", municipality: "Kamloops", address: "955 Dalhousie Dr", lat: 50.6623, lng: -120.3567 },
+      { name: "Quesnel Terminal", facility_type: "depot", municipality: "Quesnel", address: "2450 Brownmiller Rd", lat: 52.9785, lng: -122.4945 },
+      { name: "Williams Lake Depot", facility_type: "depot", municipality: "Williams Lake", address: "1800 Broadway Ave S", lat: 52.1289, lng: -122.1534 }
+    ],
+    service_coverage: ["Interior BC", "Cariboo", "Forestry regions"],
+    fleet_size: "300+ log trucks",
+    website: "https://www.arrow.ca",
+    notes: "Major log hauler; chip trucks; forestry services"
+  },
+  {
+    id: "teal-jones-trucking",
+    name: "Teal-Jones Trucking",
+    type: "logging",
+    terminals: [
+      { name: "Surrey Terminal", facility_type: "yard", municipality: "Surrey", address: "19899 28th Ave", lat: 49.0634, lng: -122.7234 }
+    ],
+    service_coverage: ["Coastal BC", "Fraser Valley", "Vancouver Island"],
+    fleet_size: "75+ log trucks",
+    website: "https://www.tealjones.com",
+    notes: "Coastal log hauling; sawmill supply"
+  },
+
+  // ===== AGGREGATE/CONSTRUCTION =====
+  {
+    id: "jack-cewe-trucking",
+    name: "Jack Cewe Trucking",
+    type: "aggregate",
+    terminals: [
+      { name: "Port Coquitlam Yard", facility_type: "yard", municipality: "Port Coquitlam", address: "1515 Broadway St", lat: 49.2612, lng: -122.7612 },
+      { name: "Surrey Pit", facility_type: "yard", municipality: "Surrey", address: "18600 96th Ave", lat: 49.1823, lng: -122.7234 }
+    ],
+    service_coverage: ["Metro Vancouver", "Fraser Valley"],
+    fleet_size: "100+ dump trucks",
+    website: "https://www.jackcewe.com",
+    phone: "604-941-8166",
+    notes: "Aggregate, gravel, construction materials"
+  },
+  {
+    id: "ocean-concrete",
+    name: "Ocean Concrete (Lehigh Hanson)",
+    type: "aggregate",
+    terminals: [
+      { name: "Vancouver Island Terminal", facility_type: "terminal", municipality: "Victoria", address: "100 Dallas Rd", lat: 48.4112, lng: -123.3789 },
+      { name: "Vancouver Terminal", facility_type: "terminal", municipality: "Vancouver", address: "950 SE Marine Dr", lat: 49.2012, lng: -123.0989 }
+    ],
+    service_coverage: ["Metro Vancouver", "Vancouver Island"],
+    fleet_size: "80+ mixer trucks",
+    website: "https://www.oceanconcretebc.com",
+    notes: "Ready-mix concrete; aggregate delivery"
+  },
+
+  // ===== HAZMAT/SPECIALIZED =====
+  {
+    id: "trimac-transportation",
+    name: "Trimac Transportation",
+    type: "hazmat",
+    terminals: [
+      { name: "Burnaby Terminal", facility_type: "terminal", municipality: "Burnaby", address: "3850 Henning Dr", lat: 49.2489, lng: -122.9834 },
+      { name: "Prince George Terminal", facility_type: "depot", municipality: "Prince George", address: "3755 Opie Crescent", lat: 53.8873, lng: -122.8098 }
+    ],
+    service_coverage: ["Province-wide", "Bulk liquids", "Industrial chemicals"],
+    fleet_size: "100+ tankers in BC",
+    website: "https://www.trimac.com",
+    phone: "1-888-874-6221",
+    notes: "Bulk liquid transport; industrial chemicals; propane"
+  },
+  {
+    id: "superior-propane",
+    name: "Superior Propane",
+    type: "hazmat",
+    terminals: [
+      { name: "Surrey Depot", facility_type: "bulk_plant", municipality: "Surrey", address: "7920 Enterprise St", lat: 49.1234, lng: -122.8678 },
+      { name: "Kamloops Depot", facility_type: "bulk_plant", municipality: "Kamloops", address: "1825 Tranquille Rd", lat: 50.6934, lng: -120.3567 },
+      { name: "Prince George Depot", facility_type: "bulk_plant", municipality: "Prince George", address: "3120 Recycle Rd", lat: 53.9045, lng: -122.7934 },
+      { name: "Vernon Depot", facility_type: "bulk_plant", municipality: "Vernon", address: "6191 Okanagan Ave", lat: 50.2634, lng: -119.2723 }
+    ],
+    service_coverage: ["Province-wide", "Propane heating fuel"],
+    fleet_size: "50+ propane trucks",
+    website: "https://www.superiorpropane.com",
+    phone: "1-877-873-7467",
+    notes: "Propane delivery; critical heating fuel for rural BC"
+  }
+];
+
 // Helper function to get all ground transport by municipality
 export function getGroundTransportByMunicipality(municipality: string): {
   intercityBus: IntercityBusService[];
   transitSystems: TransitSystem[];
   charterBus: CharterBusOperator[];
   courierServices: CourierService[];
+  truckingServices: TruckingService[];
 } {
   const normalizedMuni = municipality.toLowerCase();
   
@@ -1110,6 +1466,10 @@ export function getGroundTransportByMunicipality(municipality: string): {
     courierServices: BC_COURIER_SERVICES.filter(service =>
       service.facilities.some(f => f.municipality.toLowerCase() === normalizedMuni) ||
       service.service_coverage.some(area => area.toLowerCase().includes(normalizedMuni))
+    ),
+    truckingServices: BC_TRUCKING_SERVICES.filter(service =>
+      service.terminals.some(t => t.municipality.toLowerCase() === normalizedMuni) ||
+      service.service_coverage.some(area => area.toLowerCase().includes(normalizedMuni))
     )
   };
 }
@@ -1126,6 +1486,10 @@ export function getGroundTransportStats() {
     courierServices: BC_COURIER_SERVICES.length,
     courierFacilities: BC_COURIER_SERVICES.reduce((sum, s) => sum + s.facilities.length, 0),
     postalFacilities: BC_COURIER_SERVICES.filter(s => s.type === 'postal').reduce((sum, s) => sum + s.facilities.length, 0),
-    expressCouriers: BC_COURIER_SERVICES.filter(s => s.type === 'express').length
+    expressCouriers: BC_COURIER_SERVICES.filter(s => s.type === 'express').length,
+    truckingServices: BC_TRUCKING_SERVICES.length,
+    truckingTerminals: BC_TRUCKING_SERVICES.reduce((sum, s) => sum + s.terminals.length, 0),
+    fuelDistributors: BC_TRUCKING_SERVICES.filter(s => s.type === 'fuel').length,
+    foodDistributors: BC_TRUCKING_SERVICES.filter(s => s.type === 'food').length
   };
 }

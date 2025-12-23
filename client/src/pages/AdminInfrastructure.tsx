@@ -40,15 +40,18 @@ import {
   BC_TRANSIT_SYSTEMS, 
   BC_CHARTER_BUS,
   BC_COURIER_SERVICES,
+  BC_TRUCKING_SERVICES,
   type IntercityBusService,
   type TransitSystem,
   type CharterBusOperator,
   type CourierService,
+  type TruckingService,
   type IntercityBusType,
   type TransitSystemType,
   type CharterBusType,
   type CourierServiceType
 } from "@shared/ground-transport";
+import { Fuel, Apple, Container, TreePine, Snowflake } from "lucide-react";
 import { GEO_HIERARCHY, type GeoNode } from "@shared/geography";
 
 function getAirportTypeIcon(type: string) {
@@ -327,6 +330,10 @@ interface CourierWithMatch extends CourierService {
   matchedMunicipalities: GeoNode[];
 }
 
+interface TruckingWithMatch extends TruckingService {
+  matchedMunicipalities: GeoNode[];
+}
+
 export default function AdminInfrastructure() {
   const [airportSearch, setAirportSearch] = useState("");
   const [weatherSearch, setWeatherSearch] = useState("");
@@ -336,7 +343,7 @@ export default function AdminInfrastructure() {
   const [policeSearch, setPoliceSearch] = useState("");
   const [sarSearch, setSarSearch] = useState("");
   const [groundSearch, setGroundSearch] = useState("");
-  const [groundSubTab, setGroundSubTab] = useState<"intercity" | "transit" | "charter" | "courier">("intercity");
+  const [groundSubTab, setGroundSubTab] = useState<"intercity" | "transit" | "charter" | "courier" | "trucking">("intercity");
   const [activeTab, setActiveTab] = useState("airports");
 
   const airportsWithMatches: AirportWithMatch[] = useMemo(() => {
@@ -431,6 +438,15 @@ export default function AdminInfrastructure() {
       ...service,
       matchedMunicipalities: service.facilities
         .map(f => findMatchingMunicipality(f.municipality))
+        .filter((m): m is GeoNode => m !== null),
+    }));
+  }, []);
+
+  const truckingWithMatches: TruckingWithMatch[] = useMemo(() => {
+    return BC_TRUCKING_SERVICES.map(service => ({
+      ...service,
+      matchedMunicipalities: service.terminals
+        .map(t => findMatchingMunicipality(t.municipality))
         .filter((m): m is GeoNode => m !== null),
     }));
   }, []);
@@ -580,6 +596,18 @@ export default function AdminInfrastructure() {
     );
   }, [courierWithMatches, groundSearch]);
 
+  const filteredTrucking = useMemo(() => {
+    if (!groundSearch) return truckingWithMatches;
+    const search = groundSearch.toLowerCase();
+    return truckingWithMatches.filter(s => 
+      s.name.toLowerCase().includes(search) ||
+      s.terminals.some(t => t.name.toLowerCase().includes(search) || t.municipality.toLowerCase().includes(search)) ||
+      s.service_coverage.some(c => c.toLowerCase().includes(search)) ||
+      s.type.toLowerCase().includes(search) ||
+      s.notes?.toLowerCase().includes(search)
+    );
+  }, [truckingWithMatches, groundSearch]);
+
   const airportStats = useMemo(() => {
     const matched = airportsWithMatches.filter(a => a.matchedMunicipality).length;
     const regionOnly = airportsWithMatches.filter(a => !a.matchedMunicipality && a.matchedRegion).length;
@@ -660,12 +688,16 @@ export default function AdminInfrastructure() {
     const transitMatched = transitWithMatches.filter(s => s.matchedMunicipalities.length > 0).length;
     const charterMatched = charterWithMatches.filter(o => o.matchedMunicipality).length;
     const courierMatched = courierWithMatches.filter(s => s.matchedMunicipalities.length > 0).length;
+    const truckingMatched = truckingWithMatches.filter(s => s.matchedMunicipalities.length > 0).length;
     const totalHubs = intercityBusWithMatches.reduce((sum, s) => sum + s.hubs.length, 0);
     const totalMunis = Array.from(new Set(transitWithMatches.flatMap(s => s.municipalities_served))).length;
     const schoolBus = charterWithMatches.filter(o => o.type === 'school').length;
     const totalFacilities = courierWithMatches.reduce((sum, s) => sum + s.facilities.length, 0);
     const postalFacilities = courierWithMatches.filter(s => s.type === 'postal').reduce((sum, s) => sum + s.facilities.length, 0);
     const expressCouriers = courierWithMatches.filter(s => s.type === 'express').length;
+    const truckingTerminals = truckingWithMatches.reduce((sum, s) => sum + s.terminals.length, 0);
+    const fuelDistributors = truckingWithMatches.filter(s => s.type === 'fuel').length;
+    const foodDistributors = truckingWithMatches.filter(s => s.type === 'food').length;
     return {
       intercityServices: intercityBusWithMatches.length,
       intercityHubs: totalHubs,
@@ -681,9 +713,14 @@ export default function AdminInfrastructure() {
       courierFacilities: totalFacilities,
       postalFacilities,
       expressCouriers,
-      total: intercityBusWithMatches.length + transitWithMatches.length + charterWithMatches.length + courierWithMatches.length
+      truckingServices: truckingWithMatches.length,
+      truckingMatched,
+      truckingTerminals,
+      fuelDistributors,
+      foodDistributors,
+      total: intercityBusWithMatches.length + transitWithMatches.length + charterWithMatches.length + courierWithMatches.length + truckingWithMatches.length
     };
-  }, [intercityBusWithMatches, transitWithMatches, charterWithMatches, courierWithMatches]);
+  }, [intercityBusWithMatches, transitWithMatches, charterWithMatches, courierWithMatches, truckingWithMatches]);
 
   return (
     <div className="h-full flex flex-col font-mono">
@@ -1482,6 +1519,16 @@ export default function AdminInfrastructure() {
                 <Package className="w-2.5 h-2.5 mr-1" />
                 COURIER ({groundStats.courierServices})
               </Button>
+              <Button
+                size="sm"
+                variant={groundSubTab === "trucking" ? "default" : "outline"}
+                className="text-[9px] h-7"
+                onClick={() => setGroundSubTab("trucking")}
+                data-testid="button-ground-subtab-trucking"
+              >
+                <Fuel className="w-2.5 h-2.5 mr-1" />
+                TRUCKING ({groundStats.truckingServices})
+              </Button>
             </div>
           </div>
 
@@ -1851,6 +1898,128 @@ export default function AdminInfrastructure() {
                             <div className="flex items-center gap-1 text-green-400">
                               <CheckCircle className="w-3 h-3" />
                               <span>{service.matchedMunicipalities.length} of {service.facilities.length}</span>
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground/50">-</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </ScrollArea>
+          )}
+
+          {groundSubTab === "trucking" && (
+            <ScrollArea className="flex-1">
+              <div className="p-2">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="border-b border-border/30 text-muted-foreground">
+                      <th className="text-left py-2 px-2 font-medium">TYPE</th>
+                      <th className="text-left py-2 px-2 font-medium">CARRIER</th>
+                      <th className="text-left py-2 px-2 font-medium">TERMINALS</th>
+                      <th className="text-left py-2 px-2 font-medium">COVERAGE</th>
+                      <th className="text-left py-2 px-2 font-medium">MATCHED</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredTrucking.map(service => (
+                      <tr key={service.id} className="border-b border-border/20 hover:bg-muted/20">
+                        <td className="py-2 px-2">
+                          <Badge 
+                            variant="outline" 
+                            className={`text-[9px] ${
+                              service.type === 'fuel' ? 'bg-orange-500/20 text-orange-400 border-orange-500/30' :
+                              service.type === 'food' ? 'bg-green-500/20 text-green-400 border-green-500/30' :
+                              service.type === 'refrigerated' ? 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30' :
+                              service.type === 'logging' ? 'bg-amber-500/20 text-amber-400 border-amber-500/30' :
+                              service.type === 'aggregate' ? 'bg-stone-500/20 text-stone-400 border-stone-500/30' :
+                              service.type === 'hazmat' ? 'bg-red-500/20 text-red-400 border-red-500/30' :
+                              service.type === 'ltl' ? 'bg-purple-500/20 text-purple-400 border-purple-500/30' :
+                              'bg-blue-500/20 text-blue-400 border-blue-500/30'
+                            }`}
+                          >
+                            {service.type === 'fuel' ? (
+                              <><Fuel className="w-2 h-2 mr-1" />FUEL</>
+                            ) : service.type === 'food' ? (
+                              <><Apple className="w-2 h-2 mr-1" />FOOD</>
+                            ) : service.type === 'refrigerated' ? (
+                              <><Snowflake className="w-2 h-2 mr-1" />REEFER</>
+                            ) : service.type === 'logging' ? (
+                              <><TreePine className="w-2 h-2 mr-1" />LOGGING</>
+                            ) : service.type === 'general_freight' ? (
+                              <><Container className="w-2 h-2 mr-1" />FREIGHT</>
+                            ) : (
+                              service.type.toUpperCase().replace('_', ' ')
+                            )}
+                          </Badge>
+                        </td>
+                        <td className="py-2 px-2">
+                          <div className="flex items-center gap-2">
+                            {service.type === 'fuel' ? (
+                              <Fuel className="w-3 h-3 text-orange-400" />
+                            ) : service.type === 'food' ? (
+                              <Apple className="w-3 h-3 text-green-400" />
+                            ) : (
+                              <Truck className="w-3 h-3 text-blue-400" />
+                            )}
+                            <div>
+                              <div className="font-medium text-foreground">{service.name}</div>
+                              {service.website && (
+                                <a 
+                                  href={service.website} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="text-[10px] text-cyan-400 hover:underline"
+                                >
+                                  {service.website.replace('https://', '').replace('http://', '')}
+                                </a>
+                              )}
+                              {service.fleet_size && (
+                                <div className="text-[10px] text-muted-foreground">Fleet: {service.fleet_size}</div>
+                              )}
+                              {service.notes && (
+                                <div className="text-[10px] text-muted-foreground/70">{service.notes}</div>
+                              )}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="py-2 px-2">
+                          <div className="space-y-0.5">
+                            {service.terminals.slice(0, 4).map((terminal, i) => (
+                              <div key={i} className="text-[10px] text-muted-foreground flex items-center gap-1">
+                                <Badge variant="outline" className="text-[8px] px-1">
+                                  {terminal.facility_type.toUpperCase()}
+                                </Badge>
+                                <span>{terminal.municipality}</span>
+                              </div>
+                            ))}
+                            {service.terminals.length > 4 && (
+                              <div className="text-[10px] text-cyan-400">+{service.terminals.length - 4} more terminals</div>
+                            )}
+                          </div>
+                        </td>
+                        <td className="py-2 px-2">
+                          <div className="flex flex-wrap gap-1 max-w-64">
+                            {service.service_coverage.slice(0, 4).map((area, i) => (
+                              <Badge key={i} variant="outline" className="text-[8px]">
+                                {area}
+                              </Badge>
+                            ))}
+                            {service.service_coverage.length > 4 && (
+                              <Badge variant="outline" className="text-[8px] bg-muted/30">
+                                +{service.service_coverage.length - 4}
+                              </Badge>
+                            )}
+                          </div>
+                        </td>
+                        <td className="py-2 px-2">
+                          {service.matchedMunicipalities.length > 0 ? (
+                            <div className="flex items-center gap-1 text-green-400">
+                              <CheckCircle className="w-3 h-3" />
+                              <span>{service.matchedMunicipalities.length} of {service.terminals.length}</span>
                             </div>
                           ) : (
                             <span className="text-muted-foreground/50">-</span>
