@@ -204,7 +204,7 @@ export default function AdminInfrastructure() {
         </p>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden min-h-0">
         <div className="border-b border-border/50 px-4">
           <TabsList className="bg-transparent border-none h-10">
             <TabsTrigger 
@@ -234,7 +234,7 @@ export default function AdminInfrastructure() {
           </TabsList>
         </div>
 
-        <TabsContent value="airports" className="flex-1 overflow-hidden m-0 flex flex-col">
+        <TabsContent value="airports" className="flex-1 overflow-hidden m-0 flex flex-col data-[state=inactive]:hidden">
           <div className="p-3 border-b border-border/30 flex items-center gap-4">
             <div className="relative flex-1 max-w-sm">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground" />
@@ -317,7 +317,7 @@ export default function AdminInfrastructure() {
           </ScrollArea>
         </TabsContent>
 
-        <TabsContent value="weather" className="flex-1 overflow-hidden m-0 flex flex-col">
+        <TabsContent value="weather" className="flex-1 overflow-hidden m-0 flex flex-col data-[state=inactive]:hidden">
           <div className="p-3 border-b border-border/30 flex items-center gap-4">
             <div className="relative flex-1 max-w-sm">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground" />
@@ -401,7 +401,7 @@ export default function AdminInfrastructure() {
           </ScrollArea>
         </TabsContent>
 
-        <TabsContent value="summary" className="flex-1 overflow-hidden m-0">
+        <TabsContent value="summary" className="flex-1 overflow-hidden m-0 data-[state=inactive]:hidden">
           <ScrollArea className="h-full">
             <div className="p-4 space-y-6">
               <div className="grid grid-cols-2 gap-6">
