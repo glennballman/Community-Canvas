@@ -56,7 +56,10 @@ import {
   type CourierServiceType,
   type RailServiceType
 } from "@shared/ground-transport";
-import { Fuel, Apple, Container, TreePine, Snowflake } from "lucide-react";
+import { BC_WATER_FACILITIES, type WaterFacility, type WaterFacilityType } from "@shared/utilities-water";
+import { BC_WASTE_FACILITIES, type WasteFacility, type WasteFacilityType } from "@shared/utilities-waste";
+import { BC_ELECTRICITY_FACILITIES, type ElectricityFacility, type ElectricityFacilityType } from "@shared/utilities-electricity";
+import { Fuel, Apple, Container, TreePine, Snowflake, Droplets, Trash2, Zap } from "lucide-react";
 import { GEO_HIERARCHY, type GeoNode } from "@shared/geography";
 
 function getAirportTypeIcon(type: string) {
@@ -343,6 +346,21 @@ interface RailWithMatch extends RailService {
   matchedMunicipalities: GeoNode[];
 }
 
+interface WaterWithMatch extends WaterFacility {
+  matchedMunicipality: GeoNode | null;
+  matchedRegion: GeoNode | null;
+}
+
+interface WasteWithMatch extends WasteFacility {
+  matchedMunicipality: GeoNode | null;
+  matchedRegion: GeoNode | null;
+}
+
+interface ElectricityWithMatch extends ElectricityFacility {
+  matchedMunicipality: GeoNode | null;
+  matchedRegion: GeoNode | null;
+}
+
 export default function AdminInfrastructure() {
   const [airportSearch, setAirportSearch] = useState("");
   const [weatherSearch, setWeatherSearch] = useState("");
@@ -352,6 +370,9 @@ export default function AdminInfrastructure() {
   const [policeSearch, setPoliceSearch] = useState("");
   const [sarSearch, setSarSearch] = useState("");
   const [groundSearch, setGroundSearch] = useState("");
+  const [waterSearch, setWaterSearch] = useState("");
+  const [wasteSearch, setWasteSearch] = useState("");
+  const [electricitySearch, setElectricitySearch] = useState("");
   const [lifelineSubTab, setLifelineSubTab] = useState<"fuel" | "food" | "hazmat">("fuel");
   const [supplySubTab, setSupplySubTab] = useState<"freight" | "rail">("freight");
   const [mobilitySubTab, setMobilitySubTab] = useState<"intercity" | "transit" | "charter" | "rail">("intercity");
@@ -468,6 +489,30 @@ export default function AdminInfrastructure() {
       matchedMunicipalities: service.stations
         .map(s => findMatchingMunicipality(s.municipality))
         .filter((m): m is GeoNode => m !== null),
+    }));
+  }, []);
+
+  const waterWithMatches: WaterWithMatch[] = useMemo(() => {
+    return BC_WATER_FACILITIES.map(facility => ({
+      ...facility,
+      matchedMunicipality: findMatchingMunicipality(facility.municipality),
+      matchedRegion: findMatchingRegion(facility.region.toLowerCase().replace(/\s+/g, '-')),
+    }));
+  }, []);
+
+  const wasteWithMatches: WasteWithMatch[] = useMemo(() => {
+    return BC_WASTE_FACILITIES.map(facility => ({
+      ...facility,
+      matchedMunicipality: findMatchingMunicipality(facility.municipality),
+      matchedRegion: findMatchingRegion(facility.region.toLowerCase().replace(/\s+/g, '-')),
+    }));
+  }, []);
+
+  const electricityWithMatches: ElectricityWithMatch[] = useMemo(() => {
+    return BC_ELECTRICITY_FACILITIES.map(facility => ({
+      ...facility,
+      matchedMunicipality: findMatchingMunicipality(facility.municipality),
+      matchedRegion: findMatchingRegion(facility.region.toLowerCase().replace(/\s+/g, '-')),
     }));
   }, []);
 
@@ -708,6 +753,50 @@ export default function AdminInfrastructure() {
     );
   }, [railWithMatches, groundSearch]);
 
+  const filteredWater = useMemo(() => {
+    if (!waterSearch) return waterWithMatches;
+    const search = waterSearch.toLowerCase();
+    return waterWithMatches.filter(f => 
+      f.name.toLowerCase().includes(search) ||
+      f.municipality?.toLowerCase().includes(search) ||
+      f.region?.toLowerCase().includes(search) ||
+      f.matchedMunicipality?.name.toLowerCase().includes(search) ||
+      f.matchedRegion?.name.toLowerCase().includes(search) ||
+      f.type.toLowerCase().includes(search) ||
+      f.operator?.toLowerCase().includes(search)
+    );
+  }, [waterWithMatches, waterSearch]);
+
+  const filteredWaste = useMemo(() => {
+    if (!wasteSearch) return wasteWithMatches;
+    const search = wasteSearch.toLowerCase();
+    return wasteWithMatches.filter(f => 
+      f.name.toLowerCase().includes(search) ||
+      f.municipality?.toLowerCase().includes(search) ||
+      f.region?.toLowerCase().includes(search) ||
+      f.matchedMunicipality?.name.toLowerCase().includes(search) ||
+      f.matchedRegion?.name.toLowerCase().includes(search) ||
+      f.type.toLowerCase().includes(search) ||
+      f.operator?.toLowerCase().includes(search) ||
+      f.services?.some(s => s.toLowerCase().includes(search))
+    );
+  }, [wasteWithMatches, wasteSearch]);
+
+  const filteredElectricity = useMemo(() => {
+    if (!electricitySearch) return electricityWithMatches;
+    const search = electricitySearch.toLowerCase();
+    return electricityWithMatches.filter(f => 
+      f.name.toLowerCase().includes(search) ||
+      f.municipality?.toLowerCase().includes(search) ||
+      f.region?.toLowerCase().includes(search) ||
+      f.matchedMunicipality?.name.toLowerCase().includes(search) ||
+      f.matchedRegion?.name.toLowerCase().includes(search) ||
+      f.type.toLowerCase().includes(search) ||
+      f.operator?.toLowerCase().includes(search) ||
+      f.dam_name?.toLowerCase().includes(search)
+    );
+  }, [electricityWithMatches, electricitySearch]);
+
   const airportStats = useMemo(() => {
     const matched = airportsWithMatches.filter(a => a.matchedMunicipality).length;
     const regionOnly = airportsWithMatches.filter(a => !a.matchedMunicipality && a.matchedRegion).length;
@@ -844,6 +933,43 @@ export default function AdminInfrastructure() {
     };
   }, [intercityBusWithMatches, transitWithMatches, charterWithMatches, courierWithMatches, truckingWithMatches, railWithMatches]);
 
+  const waterStats = useMemo(() => {
+    const matched = waterWithMatches.filter(f => f.matchedMunicipality).length;
+    const regionOnly = waterWithMatches.filter(f => !f.matchedMunicipality && f.matchedRegion).length;
+    const unmatched = waterWithMatches.filter(f => !f.matchedMunicipality && !f.matchedRegion).length;
+    const byType: Record<string, number> = {};
+    waterWithMatches.forEach(f => {
+      byType[f.type] = (byType[f.type] || 0) + 1;
+    });
+    const totalCapacity = waterWithMatches.reduce((sum, f) => sum + (f.capacity_ml_day || 0), 0);
+    const totalPopulation = waterWithMatches.reduce((sum, f) => sum + (f.population_served || 0), 0);
+    return { total: waterWithMatches.length, matched, regionOnly, unmatched, byType, totalCapacity, totalPopulation };
+  }, [waterWithMatches]);
+
+  const wasteStats = useMemo(() => {
+    const matched = wasteWithMatches.filter(f => f.matchedMunicipality).length;
+    const regionOnly = wasteWithMatches.filter(f => !f.matchedMunicipality && f.matchedRegion).length;
+    const unmatched = wasteWithMatches.filter(f => !f.matchedMunicipality && !f.matchedRegion).length;
+    const byType: Record<string, number> = {};
+    wasteWithMatches.forEach(f => {
+      byType[f.type] = (byType[f.type] || 0) + 1;
+    });
+    const publicAccess = wasteWithMatches.filter(f => f.accepts_public).length;
+    return { total: wasteWithMatches.length, matched, regionOnly, unmatched, byType, publicAccess };
+  }, [wasteWithMatches]);
+
+  const electricityStats = useMemo(() => {
+    const matched = electricityWithMatches.filter(f => f.matchedMunicipality).length;
+    const regionOnly = electricityWithMatches.filter(f => !f.matchedMunicipality && f.matchedRegion).length;
+    const unmatched = electricityWithMatches.filter(f => !f.matchedMunicipality && !f.matchedRegion).length;
+    const byType: Record<string, number> = {};
+    electricityWithMatches.forEach(f => {
+      byType[f.type] = (byType[f.type] || 0) + 1;
+    });
+    const totalCapacity = electricityWithMatches.reduce((sum, f) => sum + (f.capacity_mw || 0), 0);
+    return { total: electricityWithMatches.length, matched, regionOnly, unmatched, byType, totalCapacity };
+  }, [electricityWithMatches]);
+
   return (
     <div className="h-full flex flex-col font-mono">
       <div className="border-b border-border/50 p-4">
@@ -954,6 +1080,30 @@ export default function AdminInfrastructure() {
             >
               <Mail className="w-3 h-3 mr-1" />
               GROUND - POSTAL ({groundStats.postalTotal})
+            </TabsTrigger>
+            <TabsTrigger 
+              value="water" 
+              className="text-xs data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-400"
+              data-testid="tab-water"
+            >
+              <Droplets className="w-3 h-3 mr-1" />
+              WATER ({waterStats.total})
+            </TabsTrigger>
+            <TabsTrigger 
+              value="waste" 
+              className="text-xs data-[state=active]:bg-amber-500/20 data-[state=active]:text-amber-400"
+              data-testid="tab-waste"
+            >
+              <Trash2 className="w-3 h-3 mr-1" />
+              WASTE ({wasteStats.total})
+            </TabsTrigger>
+            <TabsTrigger 
+              value="electricity" 
+              className="text-xs data-[state=active]:bg-yellow-500/20 data-[state=active]:text-yellow-400"
+              data-testid="tab-electricity"
+            >
+              <Zap className="w-3 h-3 mr-1" />
+              ELECTRICITY ({electricityStats.total})
             </TabsTrigger>
             <TabsTrigger 
               value="summary" 
@@ -2527,6 +2677,276 @@ export default function AdminInfrastructure() {
                             <span>{service.matchedMunicipalities.length} of {service.facilities.length}</span>
                           </div>
                         ) : <span className="text-muted-foreground/50">-</span>}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </ScrollArea>
+        </TabsContent>
+
+        <TabsContent value="water" className="flex-1 overflow-hidden m-0 flex flex-col data-[state=inactive]:hidden">
+          <div className="p-3 border-b border-border/30 flex items-center gap-4">
+            <div className="relative flex-1 max-w-sm">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground" />
+              <Input
+                placeholder="Search water facilities..."
+                value={waterSearch}
+                onChange={e => setWaterSearch(e.target.value)}
+                className="pl-8 h-8 text-xs bg-background/50"
+                data-testid="input-water-search"
+              />
+            </div>
+            <div className="flex gap-2 text-[10px] text-muted-foreground">
+              <span className="text-green-400">{waterStats.matched} MATCHED</span>
+              <span className="text-yellow-400">{waterStats.regionOnly} REGION ONLY</span>
+              <span className="text-red-400">{waterStats.unmatched} UNMATCHED</span>
+              <span className="text-cyan-400">{waterStats.totalCapacity.toFixed(0)} ML/DAY CAPACITY</span>
+            </div>
+          </div>
+          <ScrollArea className="flex-1">
+            <div className="p-3">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="text-[10px] text-muted-foreground border-b border-border/30">
+                    <th className="text-left py-2 px-2">FACILITY</th>
+                    <th className="text-left py-2 px-2">TYPE</th>
+                    <th className="text-left py-2 px-2">OPERATOR</th>
+                    <th className="text-left py-2 px-2">CAPACITY</th>
+                    <th className="text-left py-2 px-2">SOURCE MUNICIPALITY</th>
+                    <th className="text-left py-2 px-2">MATCHED TO</th>
+                    <th className="text-left py-2 px-2">REGION</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredWater.map(facility => (
+                    <tr 
+                      key={facility.id} 
+                      className="border-b border-border/20 hover-elevate"
+                      data-testid={`row-water-${facility.id}`}
+                    >
+                      <td className="py-2 px-2">
+                        <div className="flex items-center gap-2">
+                          <Droplets className="w-3 h-3 text-cyan-400" />
+                          <div>
+                            <div className="font-medium">{facility.name}</div>
+                            <div className="text-[10px] text-muted-foreground">{facility.latitude.toFixed(4)}, {facility.longitude.toFixed(4)}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-2 px-2">
+                        <Badge variant="outline" className="text-[8px] bg-cyan-500/10 text-cyan-400 border-cyan-500/30">
+                          {facility.type.replace(/_/g, ' ').toUpperCase()}
+                        </Badge>
+                      </td>
+                      <td className="py-2 px-2 text-muted-foreground">{facility.operator || '-'}</td>
+                      <td className="py-2 px-2">
+                        {facility.capacity_ml_day ? (
+                          <span className="text-cyan-400">{facility.capacity_ml_day} ML/day</span>
+                        ) : facility.population_served ? (
+                          <span className="text-blue-400">{facility.population_served.toLocaleString()} people</span>
+                        ) : '-'}
+                      </td>
+                      <td className="py-2 px-2 text-muted-foreground">{facility.municipality}</td>
+                      <td className="py-2 px-2">
+                        {facility.matchedMunicipality ? (
+                          <div className="flex items-center gap-1 text-green-400">
+                            <CheckCircle className="w-3 h-3" />
+                            <span>{facility.matchedMunicipality.name}</span>
+                          </div>
+                        ) : facility.matchedRegion ? (
+                          <span className="text-yellow-400">(region only)</span>
+                        ) : (
+                          <span className="text-red-400">NOT MATCHED</span>
+                        )}
+                      </td>
+                      <td className="py-2 px-2">
+                        {facility.matchedRegion ? (
+                          <Badge variant="outline" className="text-[8px]">{facility.matchedRegion.name}</Badge>
+                        ) : <span className="text-muted-foreground/50">{facility.region}</span>}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </ScrollArea>
+        </TabsContent>
+
+        <TabsContent value="waste" className="flex-1 overflow-hidden m-0 flex flex-col data-[state=inactive]:hidden">
+          <div className="p-3 border-b border-border/30 flex items-center gap-4">
+            <div className="relative flex-1 max-w-sm">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground" />
+              <Input
+                placeholder="Search waste facilities..."
+                value={wasteSearch}
+                onChange={e => setWasteSearch(e.target.value)}
+                className="pl-8 h-8 text-xs bg-background/50"
+                data-testid="input-waste-search"
+              />
+            </div>
+            <div className="flex gap-2 text-[10px] text-muted-foreground">
+              <span className="text-green-400">{wasteStats.matched} MATCHED</span>
+              <span className="text-yellow-400">{wasteStats.regionOnly} REGION ONLY</span>
+              <span className="text-red-400">{wasteStats.unmatched} UNMATCHED</span>
+              <span className="text-amber-400">{wasteStats.publicAccess} PUBLIC ACCESS</span>
+            </div>
+          </div>
+          <ScrollArea className="flex-1">
+            <div className="p-3">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="text-[10px] text-muted-foreground border-b border-border/30">
+                    <th className="text-left py-2 px-2">FACILITY</th>
+                    <th className="text-left py-2 px-2">TYPE</th>
+                    <th className="text-left py-2 px-2">OPERATOR</th>
+                    <th className="text-left py-2 px-2">SERVICES</th>
+                    <th className="text-left py-2 px-2">SOURCE MUNICIPALITY</th>
+                    <th className="text-left py-2 px-2">MATCHED TO</th>
+                    <th className="text-center py-2 px-2">PUBLIC</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredWaste.map(facility => (
+                    <tr 
+                      key={facility.id} 
+                      className="border-b border-border/20 hover-elevate"
+                      data-testid={`row-waste-${facility.id}`}
+                    >
+                      <td className="py-2 px-2">
+                        <div className="flex items-center gap-2">
+                          <Trash2 className="w-3 h-3 text-amber-400" />
+                          <div>
+                            <div className="font-medium">{facility.name}</div>
+                            <div className="text-[10px] text-muted-foreground">{facility.latitude.toFixed(4)}, {facility.longitude.toFixed(4)}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-2 px-2">
+                        <Badge variant="outline" className="text-[8px] bg-amber-500/10 text-amber-400 border-amber-500/30">
+                          {facility.type.replace(/_/g, ' ').toUpperCase()}
+                        </Badge>
+                      </td>
+                      <td className="py-2 px-2 text-muted-foreground">{facility.operator || '-'}</td>
+                      <td className="py-2 px-2">
+                        <div className="flex flex-wrap gap-1 max-w-48">
+                          {facility.services?.slice(0, 3).map((service, i) => (
+                            <Badge key={i} variant="outline" className="text-[8px]">{service}</Badge>
+                          ))}
+                          {facility.services && facility.services.length > 3 && (
+                            <Badge variant="outline" className="text-[8px] bg-muted/30">+{facility.services.length - 3}</Badge>
+                          )}
+                        </div>
+                      </td>
+                      <td className="py-2 px-2 text-muted-foreground">{facility.municipality}</td>
+                      <td className="py-2 px-2">
+                        {facility.matchedMunicipality ? (
+                          <div className="flex items-center gap-1 text-green-400">
+                            <CheckCircle className="w-3 h-3" />
+                            <span>{facility.matchedMunicipality.name}</span>
+                          </div>
+                        ) : facility.matchedRegion ? (
+                          <span className="text-yellow-400">(region only)</span>
+                        ) : (
+                          <span className="text-red-400">NOT MATCHED</span>
+                        )}
+                      </td>
+                      <td className="py-2 px-2 text-center">
+                        {facility.accepts_public ? (
+                          <CheckCircle className="w-4 h-4 text-green-400 mx-auto" />
+                        ) : (
+                          <XCircle className="w-4 h-4 text-muted-foreground/30 mx-auto" />
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </ScrollArea>
+        </TabsContent>
+
+        <TabsContent value="electricity" className="flex-1 overflow-hidden m-0 flex flex-col data-[state=inactive]:hidden">
+          <div className="p-3 border-b border-border/30 flex items-center gap-4">
+            <div className="relative flex-1 max-w-sm">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground" />
+              <Input
+                placeholder="Search electricity facilities..."
+                value={electricitySearch}
+                onChange={e => setElectricitySearch(e.target.value)}
+                className="pl-8 h-8 text-xs bg-background/50"
+                data-testid="input-electricity-search"
+              />
+            </div>
+            <div className="flex gap-2 text-[10px] text-muted-foreground">
+              <span className="text-green-400">{electricityStats.matched} MATCHED</span>
+              <span className="text-yellow-400">{electricityStats.regionOnly} REGION ONLY</span>
+              <span className="text-red-400">{electricityStats.unmatched} UNMATCHED</span>
+              <span className="text-yellow-400">{electricityStats.totalCapacity.toLocaleString()} MW TOTAL</span>
+            </div>
+          </div>
+          <ScrollArea className="flex-1">
+            <div className="p-3">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="text-[10px] text-muted-foreground border-b border-border/30">
+                    <th className="text-left py-2 px-2">FACILITY</th>
+                    <th className="text-left py-2 px-2">TYPE</th>
+                    <th className="text-left py-2 px-2">OPERATOR</th>
+                    <th className="text-left py-2 px-2">CAPACITY</th>
+                    <th className="text-left py-2 px-2">SOURCE MUNICIPALITY</th>
+                    <th className="text-left py-2 px-2">MATCHED TO</th>
+                    <th className="text-left py-2 px-2">REGION</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredElectricity.map(facility => (
+                    <tr 
+                      key={facility.id} 
+                      className="border-b border-border/20 hover-elevate"
+                      data-testid={`row-electricity-${facility.id}`}
+                    >
+                      <td className="py-2 px-2">
+                        <div className="flex items-center gap-2">
+                          <Zap className="w-3 h-3 text-yellow-400" />
+                          <div>
+                            <div className="font-medium">{facility.name}</div>
+                            {facility.dam_name && <div className="text-[10px] text-muted-foreground">Dam: {facility.dam_name}</div>}
+                            <div className="text-[10px] text-muted-foreground">{facility.latitude.toFixed(4)}, {facility.longitude.toFixed(4)}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-2 px-2">
+                        <Badge variant="outline" className="text-[8px] bg-yellow-500/10 text-yellow-400 border-yellow-500/30">
+                          {facility.type.replace(/_/g, ' ').toUpperCase()}
+                        </Badge>
+                      </td>
+                      <td className="py-2 px-2 text-muted-foreground">{facility.operator || '-'}</td>
+                      <td className="py-2 px-2">
+                        {facility.capacity_mw ? (
+                          <span className="text-yellow-400">{facility.capacity_mw.toLocaleString()} MW</span>
+                        ) : facility.voltage_kv ? (
+                          <span className="text-blue-400">{facility.voltage_kv} kV</span>
+                        ) : '-'}
+                      </td>
+                      <td className="py-2 px-2 text-muted-foreground">{facility.municipality}</td>
+                      <td className="py-2 px-2">
+                        {facility.matchedMunicipality ? (
+                          <div className="flex items-center gap-1 text-green-400">
+                            <CheckCircle className="w-3 h-3" />
+                            <span>{facility.matchedMunicipality.name}</span>
+                          </div>
+                        ) : facility.matchedRegion ? (
+                          <span className="text-yellow-400">(region only)</span>
+                        ) : (
+                          <span className="text-red-400">NOT MATCHED</span>
+                        )}
+                      </td>
+                      <td className="py-2 px-2">
+                        {facility.matchedRegion ? (
+                          <Badge variant="outline" className="text-[8px]">{facility.matchedRegion.name}</Badge>
+                        ) : <span className="text-muted-foreground/50">{facility.region}</span>}
                       </td>
                     </tr>
                   ))}
