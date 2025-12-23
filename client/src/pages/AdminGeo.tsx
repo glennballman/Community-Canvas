@@ -216,37 +216,30 @@ function NodeDetail({ nodeId }: { nodeId: string }) {
                   <Badge variant="outline" className="text-[9px]">{group.coverageType}</Badge>
                   <span>{group.sources.length} sources</span>
                 </div>
-                <ScrollArea className="h-32">
-                  <div className="space-y-1">
-                    {group.sources.slice(0, 20).map((source, sidx) => (
-                      <div 
-                        key={sidx} 
-                        className="flex items-center justify-between gap-2 text-xs p-1.5 rounded bg-background/50"
+                <div className="space-y-1">
+                  {group.sources.map((source, sidx) => (
+                    <div 
+                      key={sidx} 
+                      className="flex items-center justify-between gap-2 text-xs p-1.5 rounded bg-background/50"
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Badge variant="secondary" className="text-[9px] shrink-0">
+                          {source.category}
+                        </Badge>
+                        <span className="truncate">{source.source_name}</span>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 shrink-0"
+                        onClick={() => window.open(source.url, "_blank")}
+                        data-testid={`button-open-source-${sidx}`}
                       >
-                        <div className="flex items-center gap-2 min-w-0">
-                          <Badge variant="secondary" className="text-[9px] shrink-0">
-                            {source.category}
-                          </Badge>
-                          <span className="truncate">{source.source_name}</span>
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-6 w-6 shrink-0"
-                          onClick={() => window.open(source.url, "_blank")}
-                          data-testid={`button-open-source-${sidx}`}
-                        >
-                          <ExternalLink className="w-3 h-3" />
-                        </Button>
-                      </div>
-                    ))}
-                    {group.sources.length > 20 && (
-                      <div className="text-[10px] text-muted-foreground text-center py-2">
-                        + {group.sources.length - 20} more sources
-                      </div>
-                    )}
-                  </div>
-                </ScrollArea>
+                        <ExternalLink className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
               </div>
             ))}
           </CardContent>
@@ -362,21 +355,19 @@ function AviationWeatherSection({ node }: { node: GeoNode }) {
               
               <div>
                 <div className="text-[10px] text-muted-foreground mb-1 uppercase">Nearest Airports</div>
-                <ScrollArea className="h-32">
-                  <div className="space-y-1">
-                    {nearbyAirports.map((airport, idx) => (
-                      <div key={airport.id} className="flex items-center gap-2 text-xs p-1.5 rounded bg-background/50">
-                        <span className="w-4 text-muted-foreground">{idx + 1}.</span>
-                        <Badge className={`text-[9px] ${getAirportTypeBadge(airport)}`}>
-                          {airport.icao || airport.tc_lid || airport.type.substring(0, 3).toUpperCase()}
-                        </Badge>
-                        <span className="truncate flex-1">{airport.name}</span>
-                        {airport.has_metar && <Cloud className="w-3 h-3 text-green-400" />}
-                        {airport.status === 'closed' && <Badge variant="destructive" className="text-[8px]">CLOSED</Badge>}
-                      </div>
-                    ))}
-                  </div>
-                </ScrollArea>
+                <div className="space-y-1">
+                  {nearbyAirports.map((airport, idx) => (
+                    <div key={airport.id} className="flex items-center gap-2 text-xs p-1.5 rounded bg-background/50">
+                      <span className="w-4 text-muted-foreground">{idx + 1}.</span>
+                      <Badge className={`text-[9px] ${getAirportTypeBadge(airport)}`}>
+                        {airport.icao || airport.tc_lid || airport.type.substring(0, 3).toUpperCase()}
+                      </Badge>
+                      <span className="truncate flex-1">{airport.name}</span>
+                      {airport.has_metar && <Cloud className="w-3 h-3 text-green-400" />}
+                      {airport.status === 'closed' && <Badge variant="destructive" className="text-[8px]">CLOSED</Badge>}
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           )}
@@ -396,21 +387,19 @@ function AviationWeatherSection({ node }: { node: GeoNode }) {
               No coordinates available for this location
             </div>
           ) : (
-            <ScrollArea className="h-48">
-              <div className="space-y-1">
-                {nearbyWeatherStations.map((item, idx) => (
-                  <div key={item.station.id} className="flex items-center gap-2 text-xs p-1.5 rounded bg-background/50">
-                    <span className="w-4 text-muted-foreground">{idx + 1}.</span>
-                    {getTypeIcon(item.station.type)}
-                    <Badge className={`text-[9px] ${getTypeBadgeClass(item.station.type)}`}>
-                      {item.station.type.toUpperCase()}
-                    </Badge>
-                    <span className="truncate flex-1">{item.station.name}</span>
-                    <span className="text-muted-foreground text-[10px]">{item.distance_km}km</span>
-                  </div>
-                ))}
-              </div>
-            </ScrollArea>
+            <div className="space-y-1">
+              {nearbyWeatherStations.map((item, idx) => (
+                <div key={item.station.id} className="flex items-center gap-2 text-xs p-1.5 rounded bg-background/50">
+                  <span className="w-4 text-muted-foreground">{idx + 1}.</span>
+                  {getTypeIcon(item.station.type)}
+                  <Badge className={`text-[9px] ${getTypeBadgeClass(item.station.type)}`}>
+                    {item.station.type.toUpperCase()}
+                  </Badge>
+                  <span className="truncate flex-1">{item.station.name}</span>
+                  <span className="text-muted-foreground text-[10px]">{item.distance_km}km</span>
+                </div>
+              ))}
+            </div>
           )}
         </CardContent>
       </Card>
