@@ -1619,21 +1619,143 @@ export const BC_COURIER_SERVICES: CourierService[] = [
     name: "Purolator",
     type: "express",
     facilities: [
+      // ============================================================================
+      // PUROLATOR HUBS & SHIPPING CENTRES (Corporate facilities)
+      // ============================================================================
       { name: "Vancouver Hub", facility_type: "hub", municipality: "Richmond", address: "2340 Shell Rd", lat: 49.1841, lng: -123.1283 },
-      { name: "Surrey Depot", facility_type: "depot", municipality: "Surrey", address: "7327 137th St", lat: 49.1288, lng: -122.8576 },
-      { name: "Burnaby Depot", facility_type: "depot", municipality: "Burnaby", address: "3780 Jacombs Rd", lat: 49.1964, lng: -122.9636 },
-      { name: "Victoria Depot", facility_type: "depot", municipality: "Victoria", address: "3934 Quadra St", lat: 48.4584, lng: -123.3659 },
-      { name: "Nanaimo Depot", facility_type: "depot", municipality: "Nanaimo", address: "6404 Applecross Rd", lat: 49.1547, lng: -123.9678 },
-      { name: "Kelowna Depot", facility_type: "depot", municipality: "Kelowna", address: "1470 Harvey Ave", lat: 49.8838, lng: -119.4747 },
-      { name: "Kamloops Depot", facility_type: "depot", municipality: "Kamloops", address: "1250 Rogers Way", lat: 50.6897, lng: -120.3495 },
-      { name: "Prince George Depot", facility_type: "depot", municipality: "Prince George", address: "1991 Queensway", lat: 53.9033, lng: -122.7819 },
-      { name: "Abbotsford Depot", facility_type: "depot", municipality: "Abbotsford", address: "31205 Wheel Ave", lat: 49.0566, lng: -122.3712 }
+      { name: "Surrey Shipping Centre", facility_type: "depot", municipality: "Surrey", address: "7327 137th St", lat: 49.1288, lng: -122.8576 },
+      { name: "Burnaby Shipping Centre", facility_type: "depot", municipality: "Burnaby", address: "3780 Jacombs Rd", lat: 49.1964, lng: -122.9636 },
+      { name: "Langley Shipping Centre", facility_type: "depot", municipality: "Langley", address: "19978 96th Ave", lat: 49.1612, lng: -122.6586 },
+      { name: "Coquitlam Shipping Centre", facility_type: "depot", municipality: "Coquitlam", address: "1600 United Blvd", lat: 49.2744, lng: -122.7941 },
+      { name: "Delta Shipping Centre", facility_type: "depot", municipality: "Delta", address: "7455 132nd St", lat: 49.1412, lng: -122.8712 },
+      { name: "Richmond Shipping Centre", facility_type: "depot", municipality: "Richmond", address: "11780 River Rd", lat: 49.1789, lng: -123.0912 },
+      { name: "Victoria Shipping Centre", facility_type: "depot", municipality: "Victoria", address: "3934 Quadra St", lat: 48.4584, lng: -123.3659 },
+      { name: "Nanaimo Shipping Centre", facility_type: "depot", municipality: "Nanaimo", address: "6404 Applecross Rd", lat: 49.1547, lng: -123.9678 },
+      { name: "Courtenay Shipping Centre", facility_type: "depot", municipality: "Courtenay", address: "2400 Cliffe Ave", lat: 49.6912, lng: -124.9856 },
+      { name: "Campbell River Shipping Centre", facility_type: "depot", municipality: "Campbell River", address: "1560 Island Hwy", lat: 50.0289, lng: -125.2478 },
+      { name: "Kelowna Shipping Centre", facility_type: "depot", municipality: "Kelowna", address: "1470 Harvey Ave", lat: 49.8838, lng: -119.4747 },
+      { name: "Vernon Shipping Centre", facility_type: "depot", municipality: "Vernon", address: "4204 25th Ave", lat: 50.2645, lng: -119.2712 },
+      { name: "Penticton Shipping Centre", facility_type: "depot", municipality: "Penticton", address: "1848 Main St", lat: 49.4912, lng: -119.5834 },
+      { name: "Kamloops Shipping Centre", facility_type: "depot", municipality: "Kamloops", address: "1250 Rogers Way", lat: 50.6897, lng: -120.3495 },
+      { name: "Prince George Shipping Centre", facility_type: "depot", municipality: "Prince George", address: "1991 Queensway", lat: 53.9033, lng: -122.7819 },
+      { name: "Terrace Shipping Centre", facility_type: "depot", municipality: "Terrace", address: "4916 Hwy 16 W", lat: 54.5134, lng: -128.6189 },
+      { name: "Fort St John Shipping Centre", facility_type: "depot", municipality: "Fort St John", address: "9923 101st Ave", lat: 56.2434, lng: -120.8512 },
+      { name: "Abbotsford Shipping Centre", facility_type: "depot", municipality: "Abbotsford", address: "31205 Wheel Ave", lat: 49.0566, lng: -122.3712 },
+      { name: "Chilliwack Shipping Centre", facility_type: "depot", municipality: "Chilliwack", address: "45850 Yale Rd", lat: 49.1634, lng: -121.9514 },
+      { name: "Cranbrook Shipping Centre", facility_type: "depot", municipality: "Cranbrook", address: "1215 Cranbrook St N", lat: 49.5212, lng: -115.7656 },
+      { name: "Nelson Shipping Centre", facility_type: "depot", municipality: "Nelson", address: "524 Railway St", lat: 49.4934, lng: -117.2856 },
+      
+      // ============================================================================
+      // PUROLATOR AUTHORIZED SHIPPING AGENTS (Retail partners - Staples, etc.)
+      // ============================================================================
+      // Metro Vancouver - Staples locations
+      { name: "Staples - Downtown Vancouver", facility_type: "outlet", municipality: "Vancouver", address: "710 Granville St", lat: 49.2829, lng: -123.1178 },
+      { name: "Staples - Broadway", facility_type: "outlet", municipality: "Vancouver", address: "2220 Cambie St", lat: 49.2634, lng: -123.1147 },
+      { name: "Staples - Commercial Drive", facility_type: "outlet", municipality: "Vancouver", address: "1780 E Broadway", lat: 49.2634, lng: -123.0689 },
+      { name: "Staples - Marine Gateway", facility_type: "outlet", municipality: "Vancouver", address: "458 SW Marine Dr", lat: 49.2112, lng: -123.1147 },
+      { name: "Staples - Metrotown", facility_type: "outlet", municipality: "Burnaby", address: "4820 Kingsway", lat: 49.2277, lng: -123.0025 },
+      { name: "Staples - Lougheed", facility_type: "outlet", municipality: "Burnaby", address: "9855 Austin Ave", lat: 49.2533, lng: -122.8912 },
+      { name: "Staples - Guildford", facility_type: "outlet", municipality: "Surrey", address: "10355 152nd St", lat: 49.1912, lng: -122.8012 },
+      { name: "Staples - Newton", facility_type: "outlet", municipality: "Surrey", address: "7380 King George Blvd", lat: 49.1289, lng: -122.8475 },
+      { name: "Staples - South Surrey", facility_type: "outlet", municipality: "Surrey", address: "2355 160th St", lat: 49.0434, lng: -122.7812 },
+      { name: "Staples - Richmond Centre", facility_type: "outlet", municipality: "Richmond", address: "6551 No. 3 Rd", lat: 49.1666, lng: -123.1369 },
+      { name: "Staples - Coquitlam", facility_type: "outlet", municipality: "Coquitlam", address: "1163 Pinetree Way", lat: 49.2786, lng: -122.7958 },
+      { name: "Staples - Port Coquitlam", facility_type: "outlet", municipality: "Port Coquitlam", address: "2748 Lougheed Hwy", lat: 49.2633, lng: -122.7689 },
+      { name: "Staples - Lonsdale", facility_type: "outlet", municipality: "North Vancouver", address: "1403 Lonsdale Ave", lat: 49.3117, lng: -123.0752 },
+      { name: "Staples - Langley", facility_type: "outlet", municipality: "Langley", address: "20202 66th Ave", lat: 49.1041, lng: -122.6586 },
+      { name: "Staples - Maple Ridge", facility_type: "outlet", municipality: "Maple Ridge", address: "22935 Lougheed Hwy", lat: 49.2194, lng: -122.5912 },
+      { name: "Staples - New Westminster", facility_type: "outlet", municipality: "New Westminster", address: "800 Boyd St", lat: 49.2145, lng: -122.9178 },
+      { name: "Staples - Delta", facility_type: "outlet", municipality: "Delta", address: "7211 120th St", lat: 49.1548, lng: -122.9053 },
+      
+      // Fraser Valley Staples/Agents
+      { name: "Staples - Abbotsford", facility_type: "outlet", municipality: "Abbotsford", address: "32700 S Fraser Way", lat: 49.0512, lng: -122.3089 },
+      { name: "Staples - Chilliwack", facility_type: "outlet", municipality: "Chilliwack", address: "45585 Luckakuck Way", lat: 49.1579, lng: -121.9712 },
+      { name: "Purolator Agent - Mission", facility_type: "outlet", municipality: "Mission", address: "32555 London Ave", lat: 49.1334, lng: -122.3089 },
+      { name: "Purolator Agent - Hope", facility_type: "outlet", municipality: "Hope", address: "800 Fraser Ave", lat: 49.3850, lng: -121.4410 },
+      
+      // Vancouver Island Staples/Agents
+      { name: "Staples - Victoria Downtown", facility_type: "outlet", municipality: "Victoria", address: "1010 Douglas St", lat: 48.4262, lng: -123.3656 },
+      { name: "Staples - Victoria Hillside", facility_type: "outlet", municipality: "Victoria", address: "1644 Hillside Ave", lat: 48.4384, lng: -123.3511 },
+      { name: "Staples - Langford", facility_type: "outlet", municipality: "Langford", address: "845 Langford Pkwy", lat: 48.4512, lng: -123.4856 },
+      { name: "Staples - Sidney", facility_type: "outlet", municipality: "Sidney", address: "9768 5th St", lat: 48.6500, lng: -123.3989 },
+      { name: "Staples - Nanaimo", facility_type: "outlet", municipality: "Nanaimo", address: "6581 Aulds Rd", lat: 49.1688, lng: -123.9389 },
+      { name: "Staples - Courtenay", facility_type: "outlet", municipality: "Courtenay", address: "2801 Cliffe Ave", lat: 49.6912, lng: -124.9912 },
+      { name: "Purolator Agent - Duncan", facility_type: "outlet", municipality: "Duncan", address: "561 Canada Ave", lat: 48.7767, lng: -123.7089 },
+      { name: "Purolator Agent - Parksville", facility_type: "outlet", municipality: "Parksville", address: "280 E Island Hwy", lat: 49.3189, lng: -124.3112 },
+      { name: "Purolator Agent - Port Alberni", facility_type: "outlet", municipality: "Port Alberni", address: "4505 Gertrude St", lat: 49.2434, lng: -124.8089 },
+      { name: "Purolator Agent - Campbell River", facility_type: "outlet", municipality: "Campbell River", address: "1350 Island Hwy", lat: 50.0289, lng: -125.2478 },
+      
+      // Okanagan Staples/Agents
+      { name: "Staples - Kelowna", facility_type: "outlet", municipality: "Kelowna", address: "1835 Harvey Ave", lat: 49.8838, lng: -119.4747 },
+      { name: "Staples - West Kelowna", facility_type: "outlet", municipality: "West Kelowna", address: "2475 Dobbin Rd", lat: 49.8534, lng: -119.5834 },
+      { name: "Staples - Vernon", facility_type: "outlet", municipality: "Vernon", address: "3100 30th Ave", lat: 50.2645, lng: -119.2656 },
+      { name: "Staples - Penticton", facility_type: "outlet", municipality: "Penticton", address: "2111 Main St", lat: 49.5012, lng: -119.5834 },
+      { name: "Purolator Agent - Salmon Arm", facility_type: "outlet", municipality: "Salmon Arm", address: "350 Trans Canada Hwy SW", lat: 50.6989, lng: -119.2889 },
+      { name: "Purolator Agent - Summerland", facility_type: "outlet", municipality: "Summerland", address: "13211 N Victoria Rd", lat: 49.6012, lng: -119.6512 },
+      { name: "Purolator Agent - Oliver", facility_type: "outlet", municipality: "Oliver", address: "6187 Main St", lat: 49.1834, lng: -119.5512 },
+      { name: "Purolator Agent - Osoyoos", facility_type: "outlet", municipality: "Osoyoos", address: "8523 Main St", lat: 49.0312, lng: -119.4656 },
+      
+      // Kamloops Area Agents
+      { name: "Staples - Kamloops", facility_type: "outlet", municipality: "Kamloops", address: "1395 Hillside Dr", lat: 50.6897, lng: -120.3495 },
+      { name: "Purolator Agent - Merritt", facility_type: "outlet", municipality: "Merritt", address: "2099 Nicola Ave", lat: 50.1134, lng: -120.7912 },
+      { name: "Purolator Agent - Chase", facility_type: "outlet", municipality: "Chase", address: "520 Shuswap Ave", lat: 50.8190, lng: -119.6847 },
+      { name: "Purolator Agent - Clearwater", facility_type: "outlet", municipality: "Clearwater", address: "419 Eden Rd", lat: 51.6512, lng: -120.0389 },
+      
+      // Kootenays Agents
+      { name: "Staples - Cranbrook", facility_type: "outlet", municipality: "Cranbrook", address: "1600 Cranbrook St N", lat: 49.5212, lng: -115.7656 },
+      { name: "Purolator Agent - Fernie", facility_type: "outlet", municipality: "Fernie", address: "501 2nd Ave", lat: 49.5034, lng: -115.0634 },
+      { name: "Purolator Agent - Kimberley", facility_type: "outlet", municipality: "Kimberley", address: "285 Spokane St", lat: 49.6712, lng: -115.9812 },
+      { name: "Purolator Agent - Invermere", facility_type: "outlet", municipality: "Invermere", address: "1305 7th Ave", lat: 50.5089, lng: -116.0312 },
+      { name: "Purolator Agent - Golden", facility_type: "outlet", municipality: "Golden", address: "416 9th Ave N", lat: 51.2989, lng: -116.9656 },
+      { name: "Purolator Agent - Revelstoke", facility_type: "outlet", municipality: "Revelstoke", address: "555 Victoria Rd", lat: 50.9989, lng: -118.1934 },
+      { name: "Purolator Agent - Nelson", facility_type: "outlet", municipality: "Nelson", address: "590 Baker St", lat: 49.4934, lng: -117.2912 },
+      { name: "Purolator Agent - Castlegar", facility_type: "outlet", municipality: "Castlegar", address: "1989 Columbia Ave", lat: 49.3234, lng: -117.6656 },
+      { name: "Purolator Agent - Trail", facility_type: "outlet", municipality: "Trail", address: "1500 Bay Ave", lat: 49.0989, lng: -117.7089 },
+      { name: "Purolator Agent - Grand Forks", facility_type: "outlet", municipality: "Grand Forks", address: "7372 2nd St", lat: 49.0312, lng: -118.4412 },
+      
+      // Northern BC Agents
+      { name: "Staples - Prince George", facility_type: "outlet", municipality: "Prince George", address: "2155 Ferry Ave", lat: 53.9033, lng: -122.7819 },
+      { name: "Purolator Agent - Quesnel", facility_type: "outlet", municipality: "Quesnel", address: "383 Reid St", lat: 52.9785, lng: -122.4945 },
+      { name: "Purolator Agent - Williams Lake", facility_type: "outlet", municipality: "Williams Lake", address: "83 S 1st Ave", lat: 52.1289, lng: -122.1534 },
+      { name: "Purolator Agent - 100 Mile House", facility_type: "outlet", municipality: "100 Mile House", address: "385 Birch Ave", lat: 51.6434, lng: -121.2912 },
+      { name: "Purolator Agent - Vanderhoof", facility_type: "outlet", municipality: "Vanderhoof", address: "2681 Burrard Ave", lat: 54.0167, lng: -124.0000 },
+      { name: "Purolator Agent - Fort St James", facility_type: "outlet", municipality: "Fort St James", address: "320 Stuart Dr W", lat: 54.4434, lng: -124.2512 },
+      { name: "Purolator Agent - Burns Lake", facility_type: "outlet", municipality: "Burns Lake", address: "240 Hwy 16", lat: 54.2312, lng: -125.7612 },
+      { name: "Purolator Agent - Houston", facility_type: "outlet", municipality: "Houston", address: "3383 Hwy 16", lat: 54.4012, lng: -126.6512 },
+      
+      // Northwest BC Agents
+      { name: "Purolator Agent - Terrace", facility_type: "outlet", municipality: "Terrace", address: "4635 Lakelse Ave", lat: 54.5134, lng: -128.5989 },
+      { name: "Purolator Agent - Kitimat", facility_type: "outlet", municipality: "Kitimat", address: "252 City Centre", lat: 54.0534, lng: -128.6512 },
+      { name: "Purolator Agent - Prince Rupert", facility_type: "outlet", municipality: "Prince Rupert", address: "500 2nd Ave W", lat: 54.3150, lng: -130.3208 },
+      { name: "Purolator Agent - Smithers", facility_type: "outlet", municipality: "Smithers", address: "3763 Alfred Ave", lat: 54.3834, lng: -127.1689 },
+      
+      // Peace Region Agents
+      { name: "Staples - Fort St John", facility_type: "outlet", municipality: "Fort St John", address: "9815 100th St", lat: 56.2434, lng: -120.8512 },
+      { name: "Purolator Agent - Dawson Creek", facility_type: "outlet", municipality: "Dawson Creek", address: "10200 8th St", lat: 55.7634, lng: -120.2312 },
+      { name: "Purolator Agent - Chetwynd", facility_type: "outlet", municipality: "Chetwynd", address: "4727 51st Ave", lat: 55.6989, lng: -121.6312 },
+      { name: "Purolator Agent - Fort Nelson", facility_type: "outlet", municipality: "Fort Nelson", address: "5500 50th Ave S", lat: 58.8067, lng: -122.6989 },
+      { name: "Purolator Agent - Tumbler Ridge", facility_type: "outlet", municipality: "Tumbler Ridge", address: "330 Southgate", lat: 55.1289, lng: -120.9989 },
+      { name: "Purolator Agent - Hudson's Hope", facility_type: "outlet", municipality: "Hudson's Hope", address: "10511 Beattie Dr", lat: 56.0312, lng: -121.9089 },
+      
+      // Sea-to-Sky Agents
+      { name: "Purolator Agent - Squamish", facility_type: "outlet", municipality: "Squamish", address: "1200 Hunter Pl", lat: 49.7012, lng: -123.1512 },
+      { name: "Purolator Agent - Whistler", facility_type: "outlet", municipality: "Whistler", address: "4295 Blackcomb Way", lat: 50.1163, lng: -122.9574 },
+      { name: "Purolator Agent - Pemberton", facility_type: "outlet", municipality: "Pemberton", address: "7355 Prospect St", lat: 50.3189, lng: -122.8034 },
+      { name: "Purolator Agent - Lillooet", facility_type: "outlet", municipality: "Lillooet", address: "655 Main St", lat: 50.6834, lng: -121.9412 },
+      
+      // Sunshine Coast/Powell River Agents
+      { name: "Purolator Agent - Gibsons", facility_type: "outlet", municipality: "Gibsons", address: "900 Gibsons Way", lat: 49.4012, lng: -123.5089 },
+      { name: "Purolator Agent - Sechelt", facility_type: "outlet", municipality: "Sechelt", address: "5500 Shorncliffe Ave", lat: 49.4712, lng: -123.7534 },
+      { name: "Purolator Agent - Powell River", facility_type: "outlet", municipality: "Powell River", address: "4794 Joyce Ave", lat: 49.8312, lng: -124.5234 },
+      
+      // Gulf Islands
+      { name: "Purolator Agent - Salt Spring Island", facility_type: "outlet", municipality: "Salt Spring Island", address: "104 Lower Ganges Rd", lat: 48.8534, lng: -123.5089 }
     ],
-    service_coverage: ["Metro Vancouver", "Vancouver Island", "Okanagan", "BC Interior", "Northern BC"],
+    service_coverage: ["Metro Vancouver", "Vancouver Island", "Okanagan", "BC Interior", "Northern BC", "Kootenays", "Peace Region"],
     website: "https://www.purolator.com",
     phone: "1-888-744-7123",
     tracking_url: "https://www.purolator.com/en/ship-track/tracking-tool.page",
-    notes: "Majority owned by Canada Post; largest Canadian courier"
+    notes: "Majority owned by Canada Post; largest Canadian courier; extensive authorized agent network"
   },
   // FedEx
   {
