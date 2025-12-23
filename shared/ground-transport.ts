@@ -1662,19 +1662,153 @@ export const BC_COURIER_SERVICES: CourierService[] = [
     name: "UPS",
     type: "express",
     facilities: [
+      // ============================================================================
+      // UPS HUBS & CUSTOMER CENTRES
+      // ============================================================================
       { name: "Vancouver Hub", facility_type: "hub", municipality: "Richmond", address: "6911 No. 9 Rd", lat: 49.1483, lng: -123.0936 },
       { name: "Burnaby Customer Centre", facility_type: "depot", municipality: "Burnaby", address: "8571 River Rd", lat: 49.1875, lng: -122.9489 },
       { name: "Surrey Depot", facility_type: "depot", municipality: "Surrey", address: "8323 129th St", lat: 49.1573, lng: -122.8676 },
+      { name: "Langley Depot", facility_type: "depot", municipality: "Langley", address: "19988 96th Ave", lat: 49.1612, lng: -122.6586 },
+      { name: "Coquitlam Depot", facility_type: "depot", municipality: "Coquitlam", address: "1600 Kingsway Ave", lat: 49.2744, lng: -122.7941 },
+      { name: "Delta Depot", facility_type: "depot", municipality: "Delta", address: "7950 River Rd", lat: 49.1412, lng: -123.0512 },
       { name: "Victoria Depot", facility_type: "depot", municipality: "Victoria", address: "1004 North Park St", lat: 48.4344, lng: -123.3511 },
       { name: "Kelowna Depot", facility_type: "depot", municipality: "Kelowna", address: "2070 Leckie Rd", lat: 49.8847, lng: -119.4236 },
       { name: "Kamloops Depot", facility_type: "depot", municipality: "Kamloops", address: "1000 Laval Crescent", lat: 50.6752, lng: -120.3495 },
-      { name: "Nanaimo Depot", facility_type: "depot", municipality: "Nanaimo", address: "2100 Northfield Rd", lat: 49.1897, lng: -123.9678 }
+      { name: "Nanaimo Depot", facility_type: "depot", municipality: "Nanaimo", address: "2100 Northfield Rd", lat: 49.1897, lng: -123.9678 },
+      { name: "Prince George Depot", facility_type: "depot", municipality: "Prince George", address: "1677 Ogilvie St", lat: 53.9171, lng: -122.7497 },
+      { name: "Abbotsford Depot", facility_type: "depot", municipality: "Abbotsford", address: "30423 Progressive Way", lat: 49.0512, lng: -122.3789 },
+      
+      // ============================================================================
+      // UPS STORE LOCATIONS (Franchise retail - shipping/receiving)
+      // ============================================================================
+      // Metro Vancouver - UPS Stores
+      { name: "The UPS Store - Yaletown", facility_type: "outlet", municipality: "Vancouver", address: "1128 Homer St", lat: 49.2745, lng: -123.1212 },
+      { name: "The UPS Store - Kitsilano", facility_type: "outlet", municipality: "Vancouver", address: "2609 W Broadway", lat: 49.2635, lng: -123.1678 },
+      { name: "The UPS Store - Commercial Drive", facility_type: "outlet", municipality: "Vancouver", address: "1629 Commercial Dr", lat: 49.2689, lng: -123.0695 },
+      { name: "The UPS Store - Dunbar", facility_type: "outlet", municipality: "Vancouver", address: "4388 Dunbar St", lat: 49.2445, lng: -123.1867 },
+      { name: "The UPS Store - Kerrisdale", facility_type: "outlet", municipality: "Vancouver", address: "2255 W 41st Ave", lat: 49.2335, lng: -123.1577 },
+      { name: "The UPS Store - Main Street", facility_type: "outlet", municipality: "Vancouver", address: "4116 Main St", lat: 49.2447, lng: -123.1008 },
+      { name: "The UPS Store - Coal Harbour", facility_type: "outlet", municipality: "Vancouver", address: "1055 W Hastings St", lat: 49.2869, lng: -123.1178 },
+      { name: "The UPS Store - Davie Village", facility_type: "outlet", municipality: "Vancouver", address: "1033 Davie St", lat: 49.2787, lng: -123.1256 },
+      { name: "The UPS Store - Gastown", facility_type: "outlet", municipality: "Vancouver", address: "102 Water St", lat: 49.2845, lng: -123.1089 },
+      { name: "The UPS Store - Cambie", facility_type: "outlet", municipality: "Vancouver", address: "4012 Cambie St", lat: 49.2461, lng: -123.1147 },
+      { name: "The UPS Store - Olympic Village", facility_type: "outlet", municipality: "Vancouver", address: "1661 Ontario St", lat: 49.2678, lng: -123.1045 },
+      { name: "The UPS Store - Mount Pleasant", facility_type: "outlet", municipality: "Vancouver", address: "2853 Broadway W", lat: 49.2634, lng: -123.0934 },
+      
+      // Burnaby UPS Stores
+      { name: "The UPS Store - Metrotown", facility_type: "outlet", municipality: "Burnaby", address: "4700 Kingsway", lat: 49.2277, lng: -123.0025 },
+      { name: "The UPS Store - Brentwood", facility_type: "outlet", municipality: "Burnaby", address: "4438 Lougheed Hwy", lat: 49.2683, lng: -123.0002 },
+      { name: "The UPS Store - Burnaby Heights", facility_type: "outlet", municipality: "Burnaby", address: "4190 Hastings St", lat: 49.2812, lng: -123.0089 },
+      { name: "The UPS Store - Edmonds", facility_type: "outlet", municipality: "Burnaby", address: "7488 Edmonds St", lat: 49.2145, lng: -122.9567 },
+      
+      // Surrey UPS Stores
+      { name: "The UPS Store - Guildford", facility_type: "outlet", municipality: "Surrey", address: "10362 King George Blvd", lat: 49.1912, lng: -122.8475 },
+      { name: "The UPS Store - Newton", facility_type: "outlet", municipality: "Surrey", address: "7380 King George Blvd", lat: 49.1289, lng: -122.8475 },
+      { name: "The UPS Store - Fleetwood", facility_type: "outlet", municipality: "Surrey", address: "16033 Fraser Hwy", lat: 49.1534, lng: -122.7712 },
+      { name: "The UPS Store - South Surrey", facility_type: "outlet", municipality: "Surrey", address: "2102 152nd St", lat: 49.0434, lng: -122.8012 },
+      { name: "The UPS Store - Cloverdale", facility_type: "outlet", municipality: "Surrey", address: "5679 176th St", lat: 49.1056, lng: -122.7345 },
+      { name: "The UPS Store - Whalley", facility_type: "outlet", municipality: "Surrey", address: "10252 135th St", lat: 49.1912, lng: -122.8612 },
+      
+      // Richmond UPS Stores
+      { name: "The UPS Store - Richmond Centre", facility_type: "outlet", municipality: "Richmond", address: "6011 No. 3 Rd", lat: 49.1666, lng: -123.1369 },
+      { name: "The UPS Store - Steveston", facility_type: "outlet", municipality: "Richmond", address: "12020 1st Ave", lat: 49.1289, lng: -123.1812 },
+      { name: "The UPS Store - Lansdowne", facility_type: "outlet", municipality: "Richmond", address: "5300 No. 3 Rd", lat: 49.1756, lng: -123.1369 },
+      
+      // Coquitlam/Port Coquitlam/Port Moody UPS Stores
+      { name: "The UPS Store - Coquitlam Centre", facility_type: "outlet", municipality: "Coquitlam", address: "1163 Pinetree Way", lat: 49.2786, lng: -122.7958 },
+      { name: "The UPS Store - Port Coquitlam", facility_type: "outlet", municipality: "Port Coquitlam", address: "1930 Como Lake Ave", lat: 49.2633, lng: -122.7531 },
+      { name: "The UPS Store - Port Moody", facility_type: "outlet", municipality: "Port Moody", address: "121 Brew St", lat: 49.2839, lng: -122.8317 },
+      { name: "The UPS Store - Burke Mountain", facility_type: "outlet", municipality: "Coquitlam", address: "3025 Lougheed Hwy", lat: 49.2744, lng: -122.7891 },
+      
+      // North Shore UPS Stores
+      { name: "The UPS Store - Lonsdale", facility_type: "outlet", municipality: "North Vancouver", address: "120 Lonsdale Ave", lat: 49.3117, lng: -123.0752 },
+      { name: "The UPS Store - Lynn Valley", facility_type: "outlet", municipality: "North Vancouver", address: "1277 Lynn Valley Rd", lat: 49.3396, lng: -123.0435 },
+      { name: "The UPS Store - Park Royal", facility_type: "outlet", municipality: "West Vancouver", address: "925 Main St", lat: 49.3259, lng: -123.1356 },
+      { name: "The UPS Store - Marine Drive", facility_type: "outlet", municipality: "North Vancouver", address: "1501 Marine Dr", lat: 49.3132, lng: -123.0752 },
+      
+      // Langley/Maple Ridge UPS Stores
+      { name: "The UPS Store - Langley City", facility_type: "outlet", municipality: "Langley", address: "20171 88th Ave", lat: 49.1515, lng: -122.6586 },
+      { name: "The UPS Store - Willowbrook", facility_type: "outlet", municipality: "Langley", address: "19689 Fraser Hwy", lat: 49.1126, lng: -122.6658 },
+      { name: "The UPS Store - Walnut Grove", facility_type: "outlet", municipality: "Langley", address: "20159 88th Ave", lat: 49.1612, lng: -122.6412 },
+      { name: "The UPS Store - Maple Ridge", facility_type: "outlet", municipality: "Maple Ridge", address: "22709 Lougheed Hwy", lat: 49.2194, lng: -122.5978 },
+      { name: "The UPS Store - Pitt Meadows", facility_type: "outlet", municipality: "Pitt Meadows", address: "19150 Lougheed Hwy", lat: 49.2289, lng: -122.6912 },
+      
+      // New Westminster/Delta UPS Stores
+      { name: "The UPS Store - New Westminster", facility_type: "outlet", municipality: "New Westminster", address: "800 Carnarvon St", lat: 49.2012, lng: -122.9107 },
+      { name: "The UPS Store - Ladner", facility_type: "outlet", municipality: "Delta", address: "4949 Delta St", lat: 49.0900, lng: -123.0823 },
+      { name: "The UPS Store - Tsawwassen", facility_type: "outlet", municipality: "Delta", address: "1210 56th St", lat: 49.0159, lng: -123.0855 },
+      
+      // Fraser Valley UPS Stores
+      { name: "The UPS Store - Abbotsford", facility_type: "outlet", municipality: "Abbotsford", address: "2525 McCallum Rd", lat: 49.0512, lng: -122.3312 },
+      { name: "The UPS Store - Clearbrook", facility_type: "outlet", municipality: "Abbotsford", address: "32700 S Fraser Way", lat: 49.0512, lng: -122.3089 },
+      { name: "The UPS Store - Chilliwack", facility_type: "outlet", municipality: "Chilliwack", address: "45610 Yale Rd", lat: 49.1634, lng: -121.9514 },
+      { name: "The UPS Store - Mission", facility_type: "outlet", municipality: "Mission", address: "32471 Lougheed Hwy", lat: 49.1334, lng: -122.3089 },
+      { name: "The UPS Store - Hope", facility_type: "outlet", municipality: "Hope", address: "570 Old Hope Princeton Way", lat: 49.3850, lng: -121.4410 },
+      
+      // Vancouver Island - Victoria Area UPS Stores
+      { name: "The UPS Store - Downtown Victoria", facility_type: "outlet", municipality: "Victoria", address: "770 Yates St", lat: 48.4262, lng: -123.3656 },
+      { name: "The UPS Store - Oak Bay", facility_type: "outlet", municipality: "Victoria", address: "2193 Oak Bay Ave", lat: 48.4384, lng: -123.3156 },
+      { name: "The UPS Store - Quadra", facility_type: "outlet", municipality: "Victoria", address: "2750 Quadra St", lat: 48.4489, lng: -123.3659 },
+      { name: "The UPS Store - Sidney", facility_type: "outlet", municipality: "Sidney", address: "2353 Bevan Ave", lat: 48.6500, lng: -123.3989 },
+      { name: "The UPS Store - Langford", facility_type: "outlet", municipality: "Langford", address: "2945 Jacklin Rd", lat: 48.4512, lng: -123.4956 },
+      { name: "The UPS Store - Colwood", facility_type: "outlet", municipality: "Colwood", address: "1913 Sooke Rd", lat: 48.4312, lng: -123.4689 },
+      { name: "The UPS Store - Saanich", facility_type: "outlet", municipality: "Saanich", address: "3995 Quadra St", lat: 48.4712, lng: -123.3659 },
+      { name: "The UPS Store - Esquimalt", facility_type: "outlet", municipality: "Esquimalt", address: "1153 Esquimalt Rd", lat: 48.4312, lng: -123.4012 },
+      
+      // Vancouver Island - Central/North UPS Stores
+      { name: "The UPS Store - Nanaimo Downtown", facility_type: "outlet", municipality: "Nanaimo", address: "6581 Aulds Rd", lat: 49.1688, lng: -123.9389 },
+      { name: "The UPS Store - Nanaimo North", facility_type: "outlet", municipality: "Nanaimo", address: "4750 Rutherford Rd", lat: 49.1897, lng: -123.9678 },
+      { name: "The UPS Store - Parksville", facility_type: "outlet", municipality: "Parksville", address: "280 E Island Hwy", lat: 49.3189, lng: -124.3112 },
+      { name: "The UPS Store - Courtenay", facility_type: "outlet", municipality: "Courtenay", address: "2801 Cliffe Ave", lat: 49.6912, lng: -124.9912 },
+      { name: "The UPS Store - Campbell River", facility_type: "outlet", municipality: "Campbell River", address: "1400 Island Hwy", lat: 50.0289, lng: -125.2478 },
+      { name: "The UPS Store - Duncan", facility_type: "outlet", municipality: "Duncan", address: "2806 Beverly St", lat: 48.7767, lng: -123.7089 },
+      { name: "The UPS Store - Port Alberni", facility_type: "outlet", municipality: "Port Alberni", address: "4505 Gertrude St", lat: 49.2434, lng: -124.8089 },
+      
+      // Okanagan UPS Stores
+      { name: "The UPS Store - Kelowna Downtown", facility_type: "outlet", municipality: "Kelowna", address: "1626 Richter St", lat: 49.8863, lng: -119.4890 },
+      { name: "The UPS Store - Kelowna Orchard", facility_type: "outlet", municipality: "Kelowna", address: "1835 Gordon Dr", lat: 49.8712, lng: -119.4512 },
+      { name: "The UPS Store - West Kelowna", facility_type: "outlet", municipality: "West Kelowna", address: "2475 Dobbin Rd", lat: 49.8534, lng: -119.5834 },
+      { name: "The UPS Store - Vernon", facility_type: "outlet", municipality: "Vernon", address: "3100 30th Ave", lat: 50.2645, lng: -119.2656 },
+      { name: "The UPS Store - Penticton", facility_type: "outlet", municipality: "Penticton", address: "301 Main St", lat: 49.4912, lng: -119.5934 },
+      { name: "The UPS Store - Salmon Arm", facility_type: "outlet", municipality: "Salmon Arm", address: "350 Trans Canada Hwy SW", lat: 50.6989, lng: -119.2889 },
+      
+      // Kamloops Area UPS Stores
+      { name: "The UPS Store - Kamloops Downtown", facility_type: "outlet", municipality: "Kamloops", address: "175 2nd Ave", lat: 50.6752, lng: -120.3278 },
+      { name: "The UPS Store - Kamloops Aberdeen", facility_type: "outlet", municipality: "Kamloops", address: "1395 Hillside Dr", lat: 50.6897, lng: -120.3495 },
+      
+      // Kootenays UPS Stores
+      { name: "The UPS Store - Cranbrook", facility_type: "outlet", municipality: "Cranbrook", address: "1600 Cranbrook St N", lat: 49.5212, lng: -115.7656 },
+      { name: "The UPS Store - Nelson", facility_type: "outlet", municipality: "Nelson", address: "590 Baker St", lat: 49.4934, lng: -117.2912 },
+      { name: "The UPS Store - Trail", facility_type: "outlet", municipality: "Trail", address: "1500 Bay Ave", lat: 49.0989, lng: -117.7089 },
+      
+      // Northern BC UPS Stores
+      { name: "The UPS Store - Prince George Downtown", facility_type: "outlet", municipality: "Prince George", address: "1600 15th Ave", lat: 53.9171, lng: -122.7497 },
+      { name: "The UPS Store - Prince George Pine Centre", facility_type: "outlet", municipality: "Prince George", address: "3055 Massey Dr", lat: 53.8934, lng: -122.8112 },
+      { name: "The UPS Store - Terrace", facility_type: "outlet", municipality: "Terrace", address: "4635 Lakelse Ave", lat: 54.5134, lng: -128.5989 },
+      { name: "The UPS Store - Quesnel", facility_type: "outlet", municipality: "Quesnel", address: "383 Reid St", lat: 52.9785, lng: -122.4945 },
+      { name: "The UPS Store - Williams Lake", facility_type: "outlet", municipality: "Williams Lake", address: "83 S 1st Ave", lat: 52.1289, lng: -122.1534 },
+      
+      // Peace Region UPS Stores
+      { name: "The UPS Store - Fort St John", facility_type: "outlet", municipality: "Fort St John", address: "9815 100th St", lat: 56.2434, lng: -120.8512 },
+      { name: "The UPS Store - Dawson Creek", facility_type: "outlet", municipality: "Dawson Creek", address: "10200 8th St", lat: 55.7634, lng: -120.2312 },
+      
+      // Sea-to-Sky UPS Stores
+      { name: "The UPS Store - Squamish", facility_type: "outlet", municipality: "Squamish", address: "1200 Hunter Pl", lat: 49.7012, lng: -123.1512 },
+      { name: "The UPS Store - Whistler", facility_type: "outlet", municipality: "Whistler", address: "4295 Blackcomb Way", lat: 50.1163, lng: -122.9574 },
+      
+      // Sunshine Coast/Powell River UPS Stores
+      { name: "The UPS Store - Gibsons", facility_type: "outlet", municipality: "Gibsons", address: "900 Gibsons Way", lat: 49.4012, lng: -123.5089 },
+      { name: "The UPS Store - Sechelt", facility_type: "outlet", municipality: "Sechelt", address: "5500 Shorncliffe Ave", lat: 49.4712, lng: -123.7534 },
+      { name: "The UPS Store - Powell River", facility_type: "outlet", municipality: "Powell River", address: "4794 Joyce Ave", lat: 49.8312, lng: -124.5234 },
+      
+      // Gulf Islands
+      { name: "The UPS Store - Salt Spring Island", facility_type: "outlet", municipality: "Salt Spring Island", address: "104 Lower Ganges Rd", lat: 48.8534, lng: -123.5089 }
     ],
-    service_coverage: ["Metro Vancouver", "Vancouver Island", "Okanagan", "BC Interior"],
+    service_coverage: ["Metro Vancouver", "Vancouver Island", "Okanagan", "BC Interior", "Northern BC", "Kootenays", "Peace Region"],
     website: "https://www.ups.com/ca",
     phone: "1-800-742-5877",
     tracking_url: "https://www.ups.com/track",
-    notes: "UPS Access Point network includes retail locations throughout BC"
+    notes: "UPS Store franchise network provides retail shipping/receiving across BC"
   },
   // DHL
   {
