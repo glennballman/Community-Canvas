@@ -4,6 +4,13 @@
 
 A Bloomberg-terminal style community status dashboard covering all of British Columbia. Features dual-view mode (Sources View for data source URLs, Data View for live monitoring), 4-column layout, comprehensive admin tools, hierarchical source inheritance (Provincial → Regional → Municipal), and complete geographic navigation covering all 27 BC regional districts and 161+ municipalities.
 
+### Ground Transportation Criticality Tiers
+Ground transportation is organized by criticality for community resilience monitoring:
+- **Tier 1 LIFELINE**: Fuel/energy, food/grocery, hazmat (propane) - critical to survival
+- **Tier 2 SUPPLY CHAIN**: General freight, LTL, refrigerated, logging, aggregate, rail freight - economic function
+- **Tier 3 MOBILITY**: Transit, intercity buses, charter, passenger/commuter/tourist rail - community movement
+- **Tier 4 MESSAGING**: Postal, courier, delivery services - non-critical logistics
+
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.
