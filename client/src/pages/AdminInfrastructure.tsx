@@ -12,12 +12,17 @@ import {
   CheckCircle,
   XCircle,
   Search,
-  Ship
+  Ship,
+  Building2,
+  Flame,
+  Shield,
+  Siren
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { BC_AIRPORTS, type Airport } from "@shared/aviation";
 import { BC_WEATHER_STATIONS, type WeatherStation } from "@shared/weather-stations";
 import { BC_MARINE_FACILITIES, type MarineFacility, type MarineFacilityType } from "@shared/marine";
+import { BC_EMERGENCY_SERVICES, type EmergencyService, type EmergencyServiceType } from "@shared/emergency-services";
 import { GEO_HIERARCHY, type GeoNode } from "@shared/geography";
 
 function getAirportTypeIcon(type: string) {
@@ -140,6 +145,40 @@ function getMarineTypeBadge(type: MarineFacilityType) {
   );
 }
 
+function getEmergencyTypeIcon(type: EmergencyServiceType) {
+  switch (type) {
+    case 'hospital': return <Building2 className="w-3 h-3" />;
+    case 'fire_station': return <Flame className="w-3 h-3" />;
+    case 'municipal_police': return <Shield className="w-3 h-3" />;
+    case 'rcmp_detachment': return <Shield className="w-3 h-3" />;
+    case 'ambulance_station': return <Siren className="w-3 h-3" />;
+    default: return <Building2 className="w-3 h-3" />;
+  }
+}
+
+function getEmergencyTypeBadge(type: EmergencyServiceType) {
+  const colors: Record<EmergencyServiceType, string> = {
+    'hospital': 'bg-red-500/20 text-red-400 border-red-500/30',
+    'fire_station': 'bg-orange-500/20 text-orange-400 border-orange-500/30',
+    'municipal_police': 'bg-blue-500/20 text-blue-400 border-blue-500/30',
+    'rcmp_detachment': 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
+    'ambulance_station': 'bg-green-500/20 text-green-400 border-green-500/30',
+  };
+  const labels: Record<EmergencyServiceType, string> = {
+    'hospital': 'HOSPITAL',
+    'fire_station': 'FIRE',
+    'municipal_police': 'MUNICIPAL POLICE',
+    'rcmp_detachment': 'RCMP',
+    'ambulance_station': 'AMBULANCE',
+  };
+  return (
+    <Badge variant="outline" className={`text-[9px] ${colors[type] || ''}`}>
+      {getEmergencyTypeIcon(type)}
+      <span className="ml-1">{labels[type] || type.toUpperCase()}</span>
+    </Badge>
+  );
+}
+
 function findMatchingMunicipality(name: string | undefined): GeoNode | null {
   if (!name) return null;
   
@@ -177,10 +216,16 @@ interface MarineWithMatch extends MarineFacility {
   matchedRegion: GeoNode | null;
 }
 
+interface EmergencyWithMatch extends EmergencyService {
+  matchedMunicipality: GeoNode | null;
+  matchedRegion: GeoNode | null;
+}
+
 export default function AdminInfrastructure() {
   const [airportSearch, setAirportSearch] = useState("");
   const [weatherSearch, setWeatherSearch] = useState("");
   const [marineSearch, setMarineSearch] = useState("");
+  const [emergencySearch, setEmergencySearch] = useState("");
   const [activeTab, setActiveTab] = useState("airports");
 
   const airportsWithMatches: AirportWithMatch[] = useMemo(() => {
@@ -204,6 +249,14 @@ export default function AdminInfrastructure() {
       ...facility,
       matchedMunicipality: findMatchingMunicipality(facility.municipality),
       matchedRegion: findMatchingRegion(facility.region.toLowerCase().replace(/\s+/g, '-')),
+    }));
+  }, []);
+
+  const emergencyWithMatches: EmergencyWithMatch[] = useMemo(() => {
+    return BC_EMERGENCY_SERVICES.map(service => ({
+      ...service,
+      matchedMunicipality: findMatchingMunicipality(service.municipality),
+      matchedRegion: findMatchingRegion(service.region.toLowerCase().replace(/\s+/g, '-')),
     }));
   }, []);
 
@@ -248,6 +301,21 @@ export default function AdminInfrastructure() {
     );
   }, [marineWithMatches, marineSearch]);
 
+  const filteredEmergency = useMemo(() => {
+    if (!emergencySearch) return emergencyWithMatches;
+    const search = emergencySearch.toLowerCase();
+    return emergencyWithMatches.filter(s => 
+      s.name.toLowerCase().includes(search) ||
+      s.municipality?.toLowerCase().includes(search) ||
+      s.region?.toLowerCase().includes(search) ||
+      s.matchedMunicipality?.name.toLowerCase().includes(search) ||
+      s.matchedRegion?.name.toLowerCase().includes(search) ||
+      s.type.toLowerCase().includes(search) ||
+      s.health_authority?.toLowerCase().includes(search) ||
+      s.notes?.toLowerCase().includes(search)
+    );
+  }, [emergencyWithMatches, emergencySearch]);
+
   const airportStats = useMemo(() => {
     const matched = airportsWithMatches.filter(a => a.matchedMunicipality).length;
     const regionOnly = airportsWithMatches.filter(a => !a.matchedMunicipality && a.matchedRegion).length;
@@ -280,6 +348,19 @@ export default function AdminInfrastructure() {
     });
     return { total: marineWithMatches.length, matched, regionOnly, unmatched, byType };
   }, [marineWithMatches]);
+
+  const emergencyStats = useMemo(() => {
+    const matched = emergencyWithMatches.filter(s => s.matchedMunicipality).length;
+    const regionOnly = emergencyWithMatches.filter(s => !s.matchedMunicipality && s.matchedRegion).length;
+    const unmatched = emergencyWithMatches.filter(s => !s.matchedMunicipality && !s.matchedRegion).length;
+    const byType: Record<string, number> = {};
+    emergencyWithMatches.forEach(s => {
+      byType[s.type] = (byType[s.type] || 0) + 1;
+    });
+    const hospitalsWithHelipad = emergencyWithMatches.filter(s => s.type === 'hospital' && s.has_helipad).length;
+    const traumaCentres = emergencyWithMatches.filter(s => s.type === 'hospital' && s.is_trauma_centre).length;
+    return { total: emergencyWithMatches.length, matched, regionOnly, unmatched, byType, hospitalsWithHelipad, traumaCentres };
+  }, [emergencyWithMatches]);
 
   return (
     <div className="h-full flex flex-col font-mono">
@@ -319,6 +400,14 @@ export default function AdminInfrastructure() {
             >
               <Anchor className="w-3 h-3 mr-1" />
               MARINE ({marineStats.total})
+            </TabsTrigger>
+            <TabsTrigger 
+              value="emergency" 
+              className="text-xs data-[state=active]:bg-primary/20 data-[state=active]:text-primary"
+              data-testid="tab-emergency"
+            >
+              <Siren className="w-3 h-3 mr-1" />
+              EMERGENCY ({emergencyStats.total})
             </TabsTrigger>
             <TabsTrigger 
               value="summary" 
@@ -584,6 +673,108 @@ export default function AdminInfrastructure() {
                       <td className="py-2 px-2 text-center">
                         {facility.emergency_services ? (
                           <CheckCircle className="w-3 h-3 text-red-400 mx-auto" />
+                        ) : (
+                          <XCircle className="w-3 h-3 text-muted-foreground/30 mx-auto" />
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </ScrollArea>
+        </TabsContent>
+
+        <TabsContent value="emergency" className="flex-1 overflow-hidden m-0 flex flex-col data-[state=inactive]:hidden">
+          <div className="p-3 border-b border-border/30 flex items-center gap-4">
+            <div className="relative flex-1 max-w-sm">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground" />
+              <Input
+                placeholder="Search emergency services..."
+                value={emergencySearch}
+                onChange={e => setEmergencySearch(e.target.value)}
+                className="pl-8 h-8 text-xs bg-background/50"
+                data-testid="input-emergency-search"
+              />
+            </div>
+            <div className="flex gap-2 text-[10px] text-muted-foreground flex-wrap">
+              <span className="text-green-400">{emergencyStats.matched} MATCHED</span>
+              <span className="text-red-400">{emergencyStats.byType['hospital'] || 0} HOSPITALS</span>
+              <span className="text-orange-400">{emergencyStats.byType['fire_station'] || 0} FIRE</span>
+              <span className="text-blue-400">{emergencyStats.byType['municipal_police'] || 0} MUNICIPAL</span>
+              <span className="text-yellow-400">{emergencyStats.byType['rcmp_detachment'] || 0} RCMP</span>
+            </div>
+          </div>
+          <ScrollArea className="flex-1">
+            <div className="p-2">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b border-border/30 text-muted-foreground">
+                    <th className="text-left py-2 px-2 font-medium">TYPE</th>
+                    <th className="text-left py-2 px-2 font-medium">NAME</th>
+                    <th className="text-left py-2 px-2 font-medium">MUNICIPALITY</th>
+                    <th className="text-left py-2 px-2 font-medium">MATCHED TO</th>
+                    <th className="text-left py-2 px-2 font-medium">REGION</th>
+                    <th className="text-center py-2 px-2 font-medium">HELI</th>
+                    <th className="text-center py-2 px-2 font-medium">TRAUMA</th>
+                    <th className="text-center py-2 px-2 font-medium">ER</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredEmergency.map(service => (
+                    <tr key={service.id} className="border-b border-border/20 hover:bg-muted/20">
+                      <td className="py-2 px-2">{getEmergencyTypeBadge(service.type)}</td>
+                      <td className="py-2 px-2">
+                        <div className="font-medium text-foreground">{service.name}</div>
+                        {service.address && (
+                          <div className="text-[10px] text-muted-foreground">{service.address}</div>
+                        )}
+                        {service.notes && (
+                          <div className="text-[10px] text-cyan-400/70">{service.notes}</div>
+                        )}
+                      </td>
+                      <td className="py-2 px-2 text-muted-foreground">{service.municipality || '-'}</td>
+                      <td className="py-2 px-2">
+                        {service.matchedMunicipality ? (
+                          <div className="flex items-center gap-1 text-green-400">
+                            <CheckCircle className="w-3 h-3" />
+                            <span>{service.matchedMunicipality.name}</span>
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground/50">-</span>
+                        )}
+                      </td>
+                      <td className="py-2 px-2">
+                        {service.matchedRegion ? (
+                          <span className="text-cyan-400">{service.matchedRegion.shortName || service.matchedRegion.name}</span>
+                        ) : service.region ? (
+                          <span className="text-yellow-400">{service.region}</span>
+                        ) : (
+                          <span className="text-muted-foreground/50">-</span>
+                        )}
+                      </td>
+                      <td className="py-2 px-2 text-center">
+                        {service.has_helipad ? (
+                          <div className="flex flex-col items-center">
+                            <CheckCircle className="w-3 h-3 text-purple-400" />
+                            {service.helipad_icao && (
+                              <span className="text-[9px] text-purple-400">{service.helipad_icao}</span>
+                            )}
+                          </div>
+                        ) : (
+                          <XCircle className="w-3 h-3 text-muted-foreground/30 mx-auto" />
+                        )}
+                      </td>
+                      <td className="py-2 px-2 text-center">
+                        {service.is_trauma_centre ? (
+                          <CheckCircle className="w-3 h-3 text-red-400 mx-auto" />
+                        ) : (
+                          <XCircle className="w-3 h-3 text-muted-foreground/30 mx-auto" />
+                        )}
+                      </td>
+                      <td className="py-2 px-2 text-center">
+                        {service.emergency_department ? (
+                          <CheckCircle className="w-3 h-3 text-green-400 mx-auto" />
                         ) : (
                           <XCircle className="w-3 h-3 text-muted-foreground/30 mx-auto" />
                         )}

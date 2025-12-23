@@ -2,7 +2,7 @@
 
 ## Overview
 
-A real-time community status dashboard for Bamfield, BC that aggregates and displays local infrastructure status including BC Hydro power outages, water/sewer alerts, ferry schedules, and road conditions. The application uses Firecrawl's AI agent to scrape and structure data from various public sources, storing snapshots in PostgreSQL for display on a modern React dashboard.
+A Bloomberg-terminal style community status dashboard covering all of British Columbia. Features dual-view mode (Sources View for data source URLs, Data View for live monitoring), 4-column layout, comprehensive admin tools, hierarchical source inheritance (Provincial → Regional → Municipal), and complete geographic navigation covering all 27 BC regional districts and 161+ municipalities.
 
 ## User Preferences
 
@@ -29,10 +29,29 @@ Preferred communication style: Simple, everyday language.
 - **Schema**: Single `snapshots` table storing location-based status data as JSONB
 - **Migrations**: Drizzle Kit for schema management (`db:push` command)
 
+### Infrastructure Datasets
+Located in `shared/` directory with GPS coordinates and geographic correlation:
+
+- **Aviation** (`shared/aviation.ts`): 45+ airports with ICAO/IATA/TC codes, METAR availability
+- **Weather Stations** (`shared/weather-stations.ts`): 60+ stations including METAR, marine buoys, lightstations
+- **Marine** (`shared/marine.ts`): 170+ facilities including:
+  - Coast Guard stations and rescue stations
+  - Marinas, fuel docks, public wharves, harbour authorities
+  - Ferry terminals and seaplane docks
+  - Private ferry operators (Hullo Ferries, Lady Rose Marine, BC inland ferries)
+  - Water taxi services (Gulf Islands, Tofino/Clayoquot, Sunshine Coast)
+- **Emergency Services** (`shared/emergency-services.ts`): 150+ facilities including:
+  - Hospitals (with helipad ICAO codes, trauma centre designation, health authority)
+  - Fire stations (municipal headquarters)
+  - Municipal police departments (11 independent BC departments)
+  - RCMP detachments (E Division across BC)
+
 ### Key Design Patterns
 - **Shared Types**: Schema definitions in `shared/` directory used by both client and server
 - **Type-safe API**: Zod schemas for request/response validation with inferred TypeScript types
 - **Storage Abstraction**: `IStorage` interface in `server/storage.ts` allows swapping implementations
+- **Geographic Hierarchy**: Provincial → Regional → Municipal inheritance for data sources
+- **GPS Correlation**: Geodesic distance calculations for nearest infrastructure lookups
 
 ### Data Flow
 1. User triggers refresh via dashboard button
