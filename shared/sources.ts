@@ -271,9 +271,32 @@ export const MUNICIPAL_SOURCES: Record<string, DataSource[]> = {
     { category: "emergency", source_name: "Harrison Emergency", url: "https://www.harrisonhotsprings.ca/emergency", description: "Emergency services", is_shared: false },
   ],
   "Bamfield": [
-    { category: "emergency", source_name: "Bamfield Community", url: "https://bamfieldcommunity.com", description: "Community emergency information", is_shared: false },
-    { category: "aviation", source_name: "Lady Rose Marine", url: "https://www.ladyrosemarine.com", description: "Ferry service to Bamfield", is_shared: false },
-    { category: "power", source_name: "BC Hydro - Bamfield", url: "https://www.bchydro.com/power-outages", description: "Power outage information", is_shared: false },
+    // Community & Emergency
+    { category: "emergency", source_name: "Bamfield Community", url: "https://bamfieldcommunity.com", description: "Community news and emergency information", is_shared: false },
+    { category: "emergency", source_name: "Bamfield Fire Department", url: "https://bamfieldcommunity.com/fire-department", description: "Volunteer fire department and emergency response", is_shared: false },
+    // Ferry & Marine Access
+    { category: "ferry", source_name: "Lady Rose Marine Services", url: "https://www.ladyrosemarine.com", description: "MV Frances Barkley passenger/cargo ferry from Port Alberni to Bamfield", is_shared: false },
+    // Roads & Access
+    { category: "road", source_name: "Bamfield Main Road Conditions", url: "https://www.drivebc.ca", description: "Bamfield Main logging road conditions and closures", is_shared: false },
+    { category: "road", source_name: "Lake Cowichan/Youbou Road", url: "https://www.drivebc.ca", description: "Alternative access route via Lake Cowichan and Youbou", is_shared: false },
+    // Weather & Marine
+    { category: "weather", source_name: "Bamfield Weather", url: "https://weather.gc.ca/city/pages/bc-80_metric_e.html", description: "Environment Canada weather forecast for Bamfield", is_shared: false },
+    { category: "weather", source_name: "Barkley Sound Marine Forecast", url: "https://weather.gc.ca/marine/forecast_e.html?mapID=02&siteID=06300", description: "Marine weather for Barkley Sound and approaches", is_shared: false },
+    { category: "marine", source_name: "Bamfield Tides", url: "https://www.tides.gc.ca/en/stations/8545", description: "Tide predictions for Bamfield Inlet", is_shared: false },
+    // Natural Hazards
+    { category: "earthquake", source_name: "Earthquakes Near Bamfield", url: "https://earthquakescanada.nrcan.gc.ca/recent/maps-cartes/index-en.php?tpl_region=west", description: "Recent seismic activity in Cascadia region", is_shared: false },
+    { category: "tsunami", source_name: "Tsunami Alerts", url: "https://wcatwc.arh.noaa.gov/", description: "West Coast/Alaska Tsunami Warning Center alerts", is_shared: false },
+    { category: "wildfire", source_name: "BC Wildfire Map", url: "https://wildfiresituation.nrs.gov.bc.ca/map", description: "Active wildfires and fire danger rating", is_shared: false },
+    { category: "flood", source_name: "BC River Forecast Centre", url: "https://bcrfc.env.gov.bc.ca/warnings/", description: "Flood warnings and streamflow advisories", is_shared: false },
+    { category: "weather", source_name: "Atmospheric River Alerts", url: "https://weather.gc.ca/warnings/index_e.html?prov=bc", description: "Weather warnings including atmospheric rivers", is_shared: false },
+    // Power & Utilities
+    { category: "power", source_name: "BC Hydro - West Coast", url: "https://www.bchydro.com/power-outages/app/outage-map.html", description: "Power outage information for Bamfield area", is_shared: false },
+    // Parks & Environment
+    { category: "park", source_name: "Pacific Rim National Park Reserve", url: "https://parks.canada.ca/pn-np/bc/pacificrim", description: "National park conditions and closures", is_shared: false },
+    { category: "park", source_name: "West Coast Trail", url: "https://parks.canada.ca/pn-np/bc/pacificrim/activ/activ6", description: "Trail conditions and reservations", is_shared: false },
+    // Facilities
+    { category: "facility", source_name: "Bamfield Marine Sciences Centre", url: "https://www.bamfieldmsc.com", description: "Research and education facility", is_shared: false },
+    { category: "facility", source_name: "Bamfield Community School", url: "https://bamfield.sd70.bc.ca/", description: "K-12 community school", is_shared: false },
   ],
 };
 
