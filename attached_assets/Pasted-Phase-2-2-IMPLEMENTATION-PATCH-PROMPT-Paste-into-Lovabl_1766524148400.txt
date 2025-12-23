@@ -1,0 +1,215 @@
+Phase 2.2 — IMPLEMENTATION PATCH PROMPT (Paste into Lovable)
+Goal
+
+Create the missing edge functions:
+
+scm-certify-kernel
+
+scm-certify-all-kernels
+
+They must certify kernels using scm_evidence_items as the evidence source (NOT diagnostics), write results to scm_certification_states, and append immutable events to scm_certification_events, using only allowed event_type values.
+
+Do not add new tables.
+
+0) Constraints (must follow exactly)
+Evidence truth
+
+Use scm_evidence_items
+
+Filter bootstrap scope: tenant_id IS NULL
+
+Entity keys must match the SCM kernel keys (e.g. workflow_engine, audit_ledger, etc)
+
+Freshness
+
+Use occurred_at from scm_evidence_items
+
+Max age: 1440 minutes (24h) (match Rule Configuration)
+
+Derived outcome mapping (must match event constraint)
+
+fresh evidence → derived_certified
+
+stale evidence → derived_stale
+
+no evidence → derived_blocked
+
+Deterministic hashing
+
+Use existing _shared/crypto helpers (canonical JSON + sha256).
+Hash payload MUST NOT include timestamps.
+
+Hash payload exactly:
+
+{
+  "entity_type": "kernel",
+  "entity_key": "<key>",
+  "derived_status": "<derived_certified|derived_stale|derived_blocked>",
+  "evidence_count": <number>,
+  "fresh": <boolean>
+}
+
+Unique index workaround
+
+scm_certification_states has a COALESCE unique index on tenant_id.
+For bootstrap (tenant_id = NULL) you MUST use delete + insert, not upsert.
+
+1) Create Edge Function: scm-certify-kernel
+Route
+
+/functions/v1/scm-certify-kernel
+
+Request Body
+{
+  "kernel_key": "workflow_engine",
+  "reason": "optional string"
+}
+
+Steps
+
+Validate kernel_key present.
+
+Query scm_evidence_items:
+
+entity_type = 'kernel'
+
+entity_key = kernel_key
+
+tenant_id IS NULL
+
+compute:
+
+evidence_count
+
+max(occurred_at) as latest_occurred_at
+
+Derive:
+
+if evidence_count == 0 → blocked
+
+else compute fresh = now() - latest_occurred_at <= 1440 minutes
+
+fresh → certified
+
+not fresh → stale
+
+Build hash payload (no timestamps), canonicalize + sha256 → payload_hash
+
+Write state to scm_certification_states with delete+insert:
+
+delete where (tenant_id IS NULL AND entity_type='kernel' AND entity_key=kernel_key)
+
+insert new row:
+
+tenant_id NULL
+
+entity_type 'kernel'
+
+entity_key kernel_key
+
+derived_status (string)
+
+direct_status should remain 'none' unless schema requires otherwise
+
+blockers array should include:
+
+no_evidence if count=0
+
+stale_evidence if evidence exists but stale
+
+evidence_count, latest_occurred_at if schema supports, otherwise store in a jsonb details
+
+payload_hash
+
+Insert event into scm_certification_events:
+
+event_type set to the derived event type (derived_certified|derived_stale|derived_blocked)
+
+entity_type 'kernel'
+
+entity_key kernel_key
+
+tenant_id NULL
+
+payload_hash
+
+payload jsonb can include the hash payload + optional reason (ok)
+
+Return response:
+
+{
+  "kernel_key": "...",
+  "derived_status": "...",
+  "fresh": true,
+  "evidence_count": 42,
+  "latest_occurred_at": "...",
+  "event_type": "derived_certified"
+}
+
+2) Create Edge Function: scm-certify-all-kernels
+Route
+
+/functions/v1/scm-certify-all-kernels
+
+Request Body
+{
+  "reason": "optional string"
+}
+
+Steps
+
+Query all kernel rows from system_matrix_rows:
+
+type = 'kernel' OR row_key starts with KERNEL:
+
+Normalize keys:
+
+from KERNEL:workflow_engine → workflow_engine
+
+For each kernel_key, call the same internal logic as scm-certify-kernel (shared helper).
+
+Track summary counts:
+
+total
+
+certified (derived_certified)
+
+stale (derived_stale)
+
+blocked (derived_blocked)
+
+certifiable = kernels with evidence_count>0 AND fresh (or optionally >0 regardless; but keep consistent with UI: “Certifiable” means evidence exists and fresh).
+Return certifiable explicitly.
+
+Return:
+
+{
+  "total": 10,
+  "certified": X,
+  "certifiable": X,
+  "blocked": Z,
+  "stale": W
+}
+
+3) UI Wiring (minimal)
+
+Ensure CertifyAllKernelsButton.tsx calls /functions/v1/scm-certify-all-kernels.
+Toast must display the returned summary numbers and MUST NOT show “undefined certifiable”.
+
+No other UI changes.
+
+4) Acceptance test checklist (must pass)
+
+Clicking Certify All Kernels (Bootstrap):
+
+does not error
+
+returns summary with all fields populated
+
+creates/updates 10 rows in scm_certification_states (tenant_id NULL)
+
+creates 10 immutable events in scm_certification_events
+
+Phase Certification screen updates after recompute (kernels feed phases)
+
+No usage of scm_diagnostic_runs in either function
