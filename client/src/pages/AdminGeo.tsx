@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Globe, ChevronRight, Database, Users, MapPin, ExternalLink, Plane, Cloud, Anchor, Radio } from "lucide-react";
+import { Globe, ChevronRight, Database, Users, MapPin, ExternalLink, Plane, Cloud, Anchor, Radio, Ship } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,7 @@ import {
 import { PROVINCIAL_SOURCES, REGIONAL_SOURCES, MUNICIPAL_SOURCES, ALL_MUNICIPALITIES, getSourcesByTier, type DataSource } from "@shared/sources";
 import { BC_AIRPORTS, getAirportsByMunicipality, getNearestAirports, type Airport } from "@shared/aviation";
 import { BC_WEATHER_STATIONS, getNearestWeatherStationsWithDistance, type WeatherStation, type NearestStationWithDistance } from "@shared/weather-stations";
+import { BC_MARINE_FACILITIES, getNearestMarineFacilities, getMarineFacilitiesByMunicipality, type MarineFacility, type MarineFacilityType } from "@shared/marine";
 
 function Breadcrumb({ nodeId }: { nodeId: string }) {
   const node = getNode(nodeId);
@@ -284,6 +285,29 @@ function AviationWeatherSection({ node }: { node: GeoNode }) {
     return [];
   }, [coords]);
   
+  const nearbyMarineFacilities = useMemo(() => {
+    if (coords) {
+      return getNearestMarineFacilities(coords.latitude, coords.longitude, 8);
+    }
+    return [];
+  }, [coords]);
+  
+  const localMarineFacilities = useMemo(() => {
+    if (node.level === "municipality") {
+      const shortName = node.shortName || node.name;
+      const fullName = node.name;
+      const byShortName = getMarineFacilitiesByMunicipality(shortName);
+      if (byShortName.length > 0) return byShortName;
+      const byFullName = getMarineFacilitiesByMunicipality(fullName);
+      if (byFullName.length > 0) return byFullName;
+      const cleanedName = fullName
+        .replace(/^(City of |District of |Township of |Village of |Corporation of |Town of )/i, "")
+        .replace(/ Municipality$/i, "");
+      return getMarineFacilitiesByMunicipality(cleanedName);
+    }
+    return [];
+  }, [node]);
+  
   if (node.level !== "municipality") {
     return null;
   }
@@ -319,8 +343,32 @@ function AviationWeatherSection({ node }: { node: GeoNode }) {
     return typeColors[airport.type] || 'bg-muted';
   };
   
+  const getMarineTypeBadge = (type: MarineFacilityType) => {
+    const typeColors: Record<MarineFacilityType, string> = {
+      'coast_guard': 'bg-red-500/20 text-red-400',
+      'rescue_station': 'bg-orange-500/20 text-orange-400',
+      'marina': 'bg-blue-500/20 text-blue-400',
+      'fuel_dock': 'bg-amber-500/20 text-amber-400',
+      'public_wharf': 'bg-cyan-500/20 text-cyan-400',
+      'harbour_authority': 'bg-green-500/20 text-green-400',
+      'ferry_terminal': 'bg-purple-500/20 text-purple-400',
+      'seaplane_dock': 'bg-sky-500/20 text-sky-400',
+    };
+    return typeColors[type] || 'bg-muted';
+  };
+  
+  const getMarineTypeIcon = (type: MarineFacilityType) => {
+    switch (type) {
+      case 'coast_guard': return <Anchor className="w-3 h-3 text-red-400" />;
+      case 'rescue_station': return <Anchor className="w-3 h-3 text-orange-400" />;
+      case 'ferry_terminal': return <Ship className="w-3 h-3 text-purple-400" />;
+      case 'fuel_dock': return <Ship className="w-3 h-3 text-amber-400" />;
+      default: return <Ship className="w-3 h-3" />;
+    }
+  };
+  
   return (
-    <div className="grid grid-cols-2 gap-4">
+    <div className="grid grid-cols-3 gap-4">
       <Card className="bg-card/50">
         <CardHeader className="pb-2">
           <CardTitle className="text-sm flex items-center gap-2">
@@ -395,6 +443,60 @@ function AviationWeatherSection({ node }: { node: GeoNode }) {
                       <span className="truncate flex-1">{airport.name}</span>
                       {airport.has_metar && <Cloud className="w-3 h-3 text-green-400" />}
                       {airport.status === 'closed' && <Badge variant="destructive" className="text-[8px]">CLOSED</Badge>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+      
+      <Card className="bg-card/50">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <Anchor className="w-4 h-4 text-blue-400" />
+            Marine Infrastructure
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {!coords ? (
+            <div className="text-xs text-muted-foreground text-center py-4">
+              No coordinates available for this location
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {localMarineFacilities.length > 0 && (
+                <div>
+                  <div className="text-[10px] text-muted-foreground mb-1 uppercase">Local Facilities</div>
+                  <div className="space-y-1">
+                    {localMarineFacilities.map(facility => (
+                      <div key={facility.id} className="flex items-center gap-2 text-xs p-1.5 rounded bg-background/50">
+                        {getMarineTypeIcon(facility.type)}
+                        <Badge className={`text-[9px] ${getMarineTypeBadge(facility.type)}`}>
+                          {facility.type.replace('_', ' ').toUpperCase()}
+                        </Badge>
+                        <span className="truncate flex-1">{facility.name}</span>
+                        {facility.has_fuel && <Badge className="text-[8px] bg-amber-500/20 text-amber-400">FUEL</Badge>}
+                        {facility.emergency_services && <Badge className="text-[8px] bg-red-500/20 text-red-400">RESCUE</Badge>}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
+              <div>
+                <div className="text-[10px] text-muted-foreground mb-1 uppercase">Nearest Facilities</div>
+                <div className="space-y-1">
+                  {nearbyMarineFacilities.map((item, idx) => (
+                    <div key={item.facility.id} className="flex items-center gap-2 text-xs p-1.5 rounded bg-background/50">
+                      <span className="w-4 text-muted-foreground">{idx + 1}.</span>
+                      {getMarineTypeIcon(item.facility.type)}
+                      <Badge className={`text-[9px] ${getMarineTypeBadge(item.facility.type)}`}>
+                        {item.facility.type.replace('_', ' ').toUpperCase()}
+                      </Badge>
+                      <span className="truncate flex-1">{item.facility.name}</span>
+                      <span className="text-muted-foreground text-[10px]">{item.distance_km}km</span>
                     </div>
                   ))}
                 </div>
