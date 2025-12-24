@@ -95,6 +95,14 @@ Located in `shared/` directory with GPS coordinates and geographic correlation:
   - Playgrounds, skate parks, and recreation parks
   - Stadiums and fieldhouses
   - Amenity tracking: pools, ice sheets, curling sheets, gyms, weight rooms, meeting rooms, courts, fields, etc.
+- **Schools** (`shared/schools.ts`): 150+ educational institutions including:
+  - Universities (UBC, SFU, UVic, UNBC, TRU, Royal Roads, KPU, Capilano, Emily Carr)
+  - Colleges (BCIT, Douglas, Langara, VCC, Camosun, Okanagan, Selkirk, CNC, Coast Mountain, Northern Lights, North Island, UFV, VIU)
+  - Polytechnics and trades schools (ITA BC, Sprott Shaw, CDI College, Pacific Vocational)
+  - Public secondary schools (Vancouver, Burnaby, Surrey, Richmond, Victoria, Kelowna, Kamloops, Prince George districts)
+  - Private/independent schools (St. George's, Crofton House, Mulgrave, Shawnigan Lake, Brentwood, etc.)
+  - First Nations schools (Seabird Island, Xet'olacw, Stz'uminus, Gitanyow, Witset)
+  - Online/distance learning (SIDES, eBus Academy, SelfDesign)
 
 ### Key Design Patterns
 - **Shared Types**: Schema definitions in `shared/` directory used by both client and server

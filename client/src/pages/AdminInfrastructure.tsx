@@ -61,6 +61,7 @@ import { BC_WASTE_FACILITIES, type WasteFacility, type WasteFacilityType } from 
 import { BC_ELECTRICITY_FACILITIES, type ElectricityFacility, type ElectricityFacilityType } from "@shared/utilities-electricity";
 import { BC_PHARMACIES, type Pharmacy, type PharmacyType, type PharmacyChain, pharmacyTypeLabels, pharmacyChainLabels } from "@shared/pharmacies";
 import { BC_COMMUNITY_FACILITIES, type CommunityFacility, type FacilityCategory, type AmenityType, facilityCategoryLabels, amenityTypeLabels } from "@shared/community-facilities";
+import { BC_SCHOOLS, type School, type SchoolType, type SchoolCategory, schoolTypeLabels, schoolCategoryLabels } from "@shared/schools";
 import { Fuel, Apple, Container, TreePine, Snowflake, Droplets, Trash2, Zap, Pill } from "lucide-react";
 import { GEO_HIERARCHY, type GeoNode } from "@shared/geography";
 
@@ -404,6 +405,11 @@ interface CommunityFacilityWithMatch extends CommunityFacility {
   matchedRegion: GeoNode | null;
 }
 
+interface SchoolWithMatch extends School {
+  matchedMunicipality: GeoNode | null;
+  matchedRegion: GeoNode | null;
+}
+
 export default function AdminInfrastructure() {
   const [airportSearch, setAirportSearch] = useState("");
   const [weatherSearch, setWeatherSearch] = useState("");
@@ -418,6 +424,7 @@ export default function AdminInfrastructure() {
   const [electricitySearch, setElectricitySearch] = useState("");
   const [pharmacySearch, setPharmacySearch] = useState("");
   const [facilitySearch, setFacilitySearch] = useState("");
+  const [schoolSearch, setSchoolSearch] = useState("");
   const [lifelineSubTab, setLifelineSubTab] = useState<"fuel" | "food" | "hazmat">("fuel");
   const [supplySubTab, setSupplySubTab] = useState<"freight" | "rail">("freight");
   const [mobilitySubTab, setMobilitySubTab] = useState<"intercity" | "transit" | "charter" | "rail">("intercity");
@@ -630,6 +637,18 @@ export default function AdminInfrastructure() {
       const matchedRegion = matchedMuni?.parentId ? GEO_HIERARCHY[matchedMuni.parentId] || null : null;
       return {
         ...facility,
+        matchedMunicipality: matchedMuni,
+        matchedRegion,
+      };
+    });
+  }, []);
+
+  const schoolWithMatches: SchoolWithMatch[] = useMemo(() => {
+    return BC_SCHOOLS.map(school => {
+      const matchedMuni = findMatchingMunicipality(school.municipality);
+      const matchedRegion = matchedMuni?.parentId ? GEO_HIERARCHY[matchedMuni.parentId] || null : null;
+      return {
+        ...school,
         matchedMunicipality: matchedMuni,
         matchedRegion,
       };
@@ -964,6 +983,23 @@ export default function AdminInfrastructure() {
     );
   }, [facilityWithMatches, facilitySearch]);
 
+  const filteredSchools = useMemo(() => {
+    if (!schoolSearch) return schoolWithMatches;
+    const search = schoolSearch.toLowerCase();
+    return schoolWithMatches.filter(s => 
+      s.name.toLowerCase().includes(search) ||
+      s.municipality?.toLowerCase().includes(search) ||
+      s.category?.toLowerCase().includes(search) ||
+      s.type?.toLowerCase().includes(search) ||
+      s.matchedMunicipality?.name.toLowerCase().includes(search) ||
+      s.matchedRegion?.name.toLowerCase().includes(search) ||
+      s.address?.toLowerCase().includes(search) ||
+      s.district?.toLowerCase().includes(search) ||
+      schoolTypeLabels[s.type]?.toLowerCase().includes(search) ||
+      schoolCategoryLabels[s.category]?.toLowerCase().includes(search)
+    );
+  }, [schoolWithMatches, schoolSearch]);
+
   const airportStats = useMemo(() => {
     const matched = airportsWithMatches.filter(a => a.matchedMunicipality).length;
     const regionOnly = airportsWithMatches.filter(a => !a.matchedMunicipality && a.matchedRegion).length;
@@ -1165,6 +1201,21 @@ export default function AdminInfrastructure() {
     return { total: facilityWithMatches.length, matched, regionOnly, unmatched, byCategory, totalAmenities };
   }, [facilityWithMatches]);
 
+  const schoolStats = useMemo(() => {
+    const matched = schoolWithMatches.filter(s => s.matchedMunicipality).length;
+    const regionOnly = schoolWithMatches.filter(s => !s.matchedMunicipality && s.matchedRegion).length;
+    const unmatched = schoolWithMatches.filter(s => !s.matchedMunicipality && !s.matchedRegion).length;
+    const byCategory: Record<string, number> = {};
+    schoolWithMatches.forEach(s => {
+      byCategory[s.category] = (byCategory[s.category] || 0) + 1;
+    });
+    const byType: Record<string, number> = {};
+    schoolWithMatches.forEach(s => {
+      byType[s.type] = (byType[s.type] || 0) + 1;
+    });
+    return { total: schoolWithMatches.length, matched, regionOnly, unmatched, byCategory, byType };
+  }, [schoolWithMatches]);
+
   return (
     <div className="h-full flex flex-col font-mono">
       <div className="border-b border-border/50 p-4">
@@ -1315,6 +1366,14 @@ export default function AdminInfrastructure() {
             >
               <Building2 className="w-3 h-3 mr-1" />
               REC FACILITIES ({facilityStats.total})
+            </TabsTrigger>
+            <TabsTrigger 
+              value="schools" 
+              className="text-xs data-[state=active]:bg-violet-500/20 data-[state=active]:text-violet-400"
+              data-testid="tab-schools"
+            >
+              <GraduationCap className="w-3 h-3 mr-1" />
+              SCHOOLS ({schoolStats.total})
             </TabsTrigger>
             <TabsTrigger 
               value="summary" 
@@ -3405,6 +3464,117 @@ export default function AdminInfrastructure() {
                       <td className="py-2 px-2">
                         {facility.matchedRegion ? (
                           <Badge variant="outline" className="text-[8px]">{facility.matchedRegion.name}</Badge>
+                        ) : <span className="text-muted-foreground/50">-</span>}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </ScrollArea>
+        </TabsContent>
+
+        <TabsContent value="schools" className="flex-1 overflow-hidden m-0 flex flex-col data-[state=inactive]:hidden">
+          <div className="p-3 border-b border-border/30 flex items-center gap-4">
+            <div className="relative flex-1 max-w-sm">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground" />
+              <Input
+                placeholder="Search schools, districts..."
+                value={schoolSearch}
+                onChange={e => setSchoolSearch(e.target.value)}
+                className="pl-8 h-8 text-xs bg-background/50"
+                data-testid="input-school-search"
+              />
+            </div>
+            <div className="flex gap-2 text-[10px] text-muted-foreground">
+              <span className="text-green-400">{schoolStats.matched} MATCHED</span>
+              <span className="text-yellow-400">{schoolStats.regionOnly} REGION ONLY</span>
+              <span className="text-red-400">{schoolStats.unmatched} UNMATCHED</span>
+            </div>
+          </div>
+          <ScrollArea className="flex-1">
+            <div className="p-3">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="text-[10px] text-muted-foreground border-b border-border/30">
+                    <th className="text-left py-2 px-2">SCHOOL</th>
+                    <th className="text-left py-2 px-2">CATEGORY</th>
+                    <th className="text-left py-2 px-2">TYPE</th>
+                    <th className="text-left py-2 px-2">DISTRICT / GRADES</th>
+                    <th className="text-left py-2 px-2">SOURCE MUNICIPALITY</th>
+                    <th className="text-left py-2 px-2">MATCHED TO</th>
+                    <th className="text-left py-2 px-2">REGION</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredSchools.map(school => (
+                    <tr 
+                      key={school.id} 
+                      className="border-b border-border/20 hover-elevate"
+                      data-testid={`row-school-${school.id}`}
+                    >
+                      <td className="py-2 px-2">
+                        <div className="flex items-center gap-2">
+                          <GraduationCap className="w-3 h-3 text-violet-400" />
+                          <div>
+                            <div className="font-medium">{school.name}</div>
+                            {school.address && <div className="text-[10px] text-muted-foreground">{school.address}</div>}
+                            <div className="text-[10px] text-muted-foreground">{school.lat.toFixed(4)}, {school.lng.toFixed(4)}</div>
+                            {school.website && <div className="text-[10px] text-blue-400/70 truncate max-w-[200px]">{school.website}</div>}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-2 px-2">
+                        <Badge variant="outline" className={`text-[8px] ${
+                          school.category === 'public_k12' ? 'bg-blue-500/10 text-blue-400 border-blue-500/30' :
+                          school.category === 'private_k12' ? 'bg-purple-500/10 text-purple-400 border-purple-500/30' :
+                          school.category === 'post_secondary' ? 'bg-green-500/10 text-green-400 border-green-500/30' :
+                          school.category === 'trades_technical' ? 'bg-amber-500/10 text-amber-400 border-amber-500/30' :
+                          'bg-muted/30 text-muted-foreground border-muted/50'
+                        }`}>
+                          {schoolCategoryLabels[school.category]}
+                        </Badge>
+                      </td>
+                      <td className="py-2 px-2">
+                        <Badge variant="outline" className={`text-[8px] ${
+                          school.type === 'university' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' :
+                          school.type === 'college' ? 'bg-cyan-500/10 text-cyan-400 border-cyan-500/30' :
+                          school.type === 'polytechnic' ? 'bg-teal-500/10 text-teal-400 border-teal-500/30' :
+                          school.type === 'trades' ? 'bg-amber-500/10 text-amber-400 border-amber-500/30' :
+                          school.type === 'secondary' ? 'bg-blue-500/10 text-blue-400 border-blue-500/30' :
+                          school.type === 'elementary' ? 'bg-sky-500/10 text-sky-400 border-sky-500/30' :
+                          school.type === 'k_12' || school.type === 'k_9' || school.type === 'k_7' ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/30' :
+                          school.type === 'private_k_12' || school.type === 'independent' ? 'bg-purple-500/10 text-purple-400 border-purple-500/30' :
+                          school.type === 'first_nations' ? 'bg-orange-500/10 text-orange-400 border-orange-500/30' :
+                          school.type === 'online' ? 'bg-pink-500/10 text-pink-400 border-pink-500/30' :
+                          'bg-muted/30 text-muted-foreground border-muted/50'
+                        }`}>
+                          {schoolTypeLabels[school.type]}
+                        </Badge>
+                      </td>
+                      <td className="py-2 px-2">
+                        <div className="text-xs">
+                          {school.district && <div className="text-muted-foreground">{school.district}</div>}
+                          {school.grades && <div className="text-[10px] text-muted-foreground/70">Grades: {school.grades}</div>}
+                          {school.enrollment && <div className="text-[10px] text-muted-foreground/70">Enrollment: {school.enrollment.toLocaleString()}</div>}
+                        </div>
+                      </td>
+                      <td className="py-2 px-2 text-muted-foreground">{school.municipality}</td>
+                      <td className="py-2 px-2">
+                        {school.matchedMunicipality ? (
+                          <div className="flex items-center gap-1 text-green-400">
+                            <CheckCircle className="w-3 h-3" />
+                            <span>{school.matchedMunicipality.name}</span>
+                          </div>
+                        ) : school.matchedRegion ? (
+                          <span className="text-yellow-400">(region only)</span>
+                        ) : (
+                          <span className="text-red-400">NOT MATCHED</span>
+                        )}
+                      </td>
+                      <td className="py-2 px-2">
+                        {school.matchedRegion ? (
+                          <Badge variant="outline" className="text-[8px]">{school.matchedRegion.name}</Badge>
                         ) : <span className="text-muted-foreground/50">-</span>}
                       </td>
                     </tr>
