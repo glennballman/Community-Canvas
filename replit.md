@@ -105,6 +105,13 @@ Located in `shared/` directory with GPS coordinates and geographic correlation:
   - Online/distance learning (SIDES, eBus Academy, SelfDesign)
   - University research stations (Bamfield Marine Sciences Centre - operated by UBC, UVic, SFU, U of Alberta, U of Calgary)
   - First Nations community gymnasiums serving as de facto community centers for events and sports
+- **Municipal Offices** (`shared/municipal-offices.ts`): 200+ government administration offices including:
+  - City halls (Vancouver, Victoria, Kelowna, Prince George, Kamloops, Nanaimo, etc.)
+  - Town offices, village offices, district municipal offices
+  - Regional district offices
+  - First Nation band offices and administration buildings (Musqueam, Squamish, Tsawwassen, Nisga'a, Heiltsuk, Haida, etc.)
+  - Treaty nation offices (Maa-nulth, Tsawwassen, Nisga'a, Westbank - self-governing nations)
+  - Court location notes for upcoming courts/jails dataset (most courts are in separate buildings from municipal offices)
 
 ### Key Design Patterns
 - **Shared Types**: Schema definitions in `shared/` directory used by both client and server
