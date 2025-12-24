@@ -82,6 +82,19 @@ Located in `shared/` directory with GPS coordinates and geographic correlation:
     - Passenger rail (VIA Rail - The Canadian, Skeena routes)
     - Commuter rail (West Coast Express - Vancouver to Mission)
     - Tourist/heritage railways (Rocky Mountaineer, Kettle Valley Steam, Alberni Pacific, Kamloops Heritage)
+- **Pharmacies** (`shared/pharmacies.ts`): 400+ pharmacy locations including:
+  - Major chains (Shoppers Drug Mart, London Drugs, Pharmasave, Rexall)
+  - Grocery pharmacies (Save-On-Foods, Safeway, Thrifty Foods)
+  - Warehouse pharmacies (Walmart, Costco)
+  - Hospital and independent pharmacies
+  - Cross-referenced courier services (Canada Post, Purolator, UPS, FedEx drop-off locations)
+- **Community/Recreation Facilities** (`shared/community-facilities.ts`): 130+ facilities including:
+  - Community centres with multi-use amenities
+  - Sports complexes and arenas
+  - Aquatic centres and curling clubs
+  - Playgrounds, skate parks, and recreation parks
+  - Stadiums and fieldhouses
+  - Amenity tracking: pools, ice sheets, curling sheets, gyms, weight rooms, meeting rooms, courts, fields, etc.
 
 ### Key Design Patterns
 - **Shared Types**: Schema definitions in `shared/` directory used by both client and server

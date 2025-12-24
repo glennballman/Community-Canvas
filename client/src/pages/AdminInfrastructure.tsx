@@ -60,6 +60,7 @@ import { BC_WATER_FACILITIES, type WaterFacility, type WaterFacilityType } from 
 import { BC_WASTE_FACILITIES, type WasteFacility, type WasteFacilityType } from "@shared/utilities-waste";
 import { BC_ELECTRICITY_FACILITIES, type ElectricityFacility, type ElectricityFacilityType } from "@shared/utilities-electricity";
 import { BC_PHARMACIES, type Pharmacy, type PharmacyType, type PharmacyChain, pharmacyTypeLabels, pharmacyChainLabels } from "@shared/pharmacies";
+import { BC_COMMUNITY_FACILITIES, type CommunityFacility, type FacilityCategory, type AmenityType, facilityCategoryLabels, amenityTypeLabels } from "@shared/community-facilities";
 import { Fuel, Apple, Container, TreePine, Snowflake, Droplets, Trash2, Zap, Pill } from "lucide-react";
 import { GEO_HIERARCHY, type GeoNode } from "@shared/geography";
 
@@ -398,6 +399,11 @@ interface PharmacyWithMatch extends Pharmacy {
   matchedRegion: GeoNode | null;
 }
 
+interface CommunityFacilityWithMatch extends CommunityFacility {
+  matchedMunicipality: GeoNode | null;
+  matchedRegion: GeoNode | null;
+}
+
 export default function AdminInfrastructure() {
   const [airportSearch, setAirportSearch] = useState("");
   const [weatherSearch, setWeatherSearch] = useState("");
@@ -411,6 +417,7 @@ export default function AdminInfrastructure() {
   const [wasteSearch, setWasteSearch] = useState("");
   const [electricitySearch, setElectricitySearch] = useState("");
   const [pharmacySearch, setPharmacySearch] = useState("");
+  const [facilitySearch, setFacilitySearch] = useState("");
   const [lifelineSubTab, setLifelineSubTab] = useState<"fuel" | "food" | "hazmat">("fuel");
   const [supplySubTab, setSupplySubTab] = useState<"freight" | "rail">("freight");
   const [mobilitySubTab, setMobilitySubTab] = useState<"intercity" | "transit" | "charter" | "rail">("intercity");
@@ -611,6 +618,18 @@ export default function AdminInfrastructure() {
       const matchedRegion = matchedMuni?.parentId ? GEO_HIERARCHY[matchedMuni.parentId] || null : null;
       return {
         ...pharmacy,
+        matchedMunicipality: matchedMuni,
+        matchedRegion,
+      };
+    });
+  }, []);
+
+  const facilityWithMatches: CommunityFacilityWithMatch[] = useMemo(() => {
+    return BC_COMMUNITY_FACILITIES.map(facility => {
+      const matchedMuni = findMatchingMunicipality(facility.municipality);
+      const matchedRegion = matchedMuni?.parentId ? GEO_HIERARCHY[matchedMuni.parentId] || null : null;
+      return {
+        ...facility,
         matchedMunicipality: matchedMuni,
         matchedRegion,
       };
@@ -930,6 +949,21 @@ export default function AdminInfrastructure() {
     );
   }, [pharmacyWithMatches, pharmacySearch]);
 
+  const filteredFacilities = useMemo(() => {
+    if (!facilitySearch) return facilityWithMatches;
+    const search = facilitySearch.toLowerCase();
+    return facilityWithMatches.filter(f => 
+      f.name.toLowerCase().includes(search) ||
+      f.municipality?.toLowerCase().includes(search) ||
+      f.category?.toLowerCase().includes(search) ||
+      f.matchedMunicipality?.name.toLowerCase().includes(search) ||
+      f.matchedRegion?.name.toLowerCase().includes(search) ||
+      f.address?.toLowerCase().includes(search) ||
+      f.operator?.toLowerCase().includes(search) ||
+      f.amenities?.some(a => a.type.toLowerCase().includes(search) || amenityTypeLabels[a.type]?.toLowerCase().includes(search))
+    );
+  }, [facilityWithMatches, facilitySearch]);
+
   const airportStats = useMemo(() => {
     const matched = airportsWithMatches.filter(a => a.matchedMunicipality).length;
     const regionOnly = airportsWithMatches.filter(a => !a.matchedMunicipality && a.matchedRegion).length;
@@ -1119,6 +1153,18 @@ export default function AdminInfrastructure() {
     return { total: pharmacyWithMatches.length, matched, regionOnly, unmatched, byChain, byType, withCourier };
   }, [pharmacyWithMatches]);
 
+  const facilityStats = useMemo(() => {
+    const matched = facilityWithMatches.filter(f => f.matchedMunicipality).length;
+    const regionOnly = facilityWithMatches.filter(f => !f.matchedMunicipality && f.matchedRegion).length;
+    const unmatched = facilityWithMatches.filter(f => !f.matchedMunicipality && !f.matchedRegion).length;
+    const byCategory: Record<string, number> = {};
+    facilityWithMatches.forEach(f => {
+      byCategory[f.category] = (byCategory[f.category] || 0) + 1;
+    });
+    const totalAmenities = facilityWithMatches.reduce((sum, f) => sum + (f.amenities?.length || 0), 0);
+    return { total: facilityWithMatches.length, matched, regionOnly, unmatched, byCategory, totalAmenities };
+  }, [facilityWithMatches]);
+
   return (
     <div className="h-full flex flex-col font-mono">
       <div className="border-b border-border/50 p-4">
@@ -1261,6 +1307,14 @@ export default function AdminInfrastructure() {
             >
               <Pill className="w-3 h-3 mr-1" />
               PHARMACIES ({pharmacyStats.total})
+            </TabsTrigger>
+            <TabsTrigger 
+              value="facilities" 
+              className="text-xs data-[state=active]:bg-teal-500/20 data-[state=active]:text-teal-400"
+              data-testid="tab-facilities"
+            >
+              <Building2 className="w-3 h-3 mr-1" />
+              REC FACILITIES ({facilityStats.total})
             </TabsTrigger>
             <TabsTrigger 
               value="summary" 
@@ -3226,6 +3280,131 @@ export default function AdminInfrastructure() {
                       <td className="py-2 px-2">
                         {pharmacy.matchedRegion ? (
                           <Badge variant="outline" className="text-[8px]">{pharmacy.matchedRegion.name}</Badge>
+                        ) : <span className="text-muted-foreground/50">-</span>}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </ScrollArea>
+        </TabsContent>
+
+        <TabsContent value="facilities" className="flex-1 overflow-hidden m-0 flex flex-col data-[state=inactive]:hidden">
+          <div className="p-3 border-b border-border/30 flex items-center gap-4">
+            <div className="relative flex-1 max-w-sm">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground" />
+              <Input
+                placeholder="Search facilities, amenities..."
+                value={facilitySearch}
+                onChange={e => setFacilitySearch(e.target.value)}
+                className="pl-8 h-8 text-xs bg-background/50"
+                data-testid="input-facility-search"
+              />
+            </div>
+            <div className="flex gap-2 text-[10px] text-muted-foreground">
+              <span className="text-green-400">{facilityStats.matched} MATCHED</span>
+              <span className="text-yellow-400">{facilityStats.regionOnly} REGION ONLY</span>
+              <span className="text-red-400">{facilityStats.unmatched} UNMATCHED</span>
+              <span className="text-teal-400">{facilityStats.totalAmenities} AMENITIES</span>
+            </div>
+          </div>
+          <ScrollArea className="flex-1">
+            <div className="p-3">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="text-[10px] text-muted-foreground border-b border-border/30">
+                    <th className="text-left py-2 px-2">FACILITY</th>
+                    <th className="text-left py-2 px-2">CATEGORY</th>
+                    <th className="text-left py-2 px-2">AMENITIES</th>
+                    <th className="text-left py-2 px-2">SOURCE MUNICIPALITY</th>
+                    <th className="text-left py-2 px-2">MATCHED TO</th>
+                    <th className="text-left py-2 px-2">REGION</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredFacilities.map(facility => (
+                    <tr 
+                      key={facility.id} 
+                      className="border-b border-border/20 hover-elevate"
+                      data-testid={`row-facility-${facility.id}`}
+                    >
+                      <td className="py-2 px-2">
+                        <div className="flex items-center gap-2">
+                          <Building2 className="w-3 h-3 text-teal-400" />
+                          <div>
+                            <div className="font-medium">{facility.name}</div>
+                            {facility.address && <div className="text-[10px] text-muted-foreground">{facility.address}</div>}
+                            <div className="text-[10px] text-muted-foreground">{facility.lat.toFixed(4)}, {facility.lng.toFixed(4)}</div>
+                            {facility.operator && <div className="text-[10px] text-muted-foreground/60">{facility.operator}</div>}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-2 px-2">
+                        <Badge variant="outline" className={`text-[8px] ${
+                          facility.category === 'community_center' ? 'bg-teal-500/10 text-teal-400 border-teal-500/30' :
+                          facility.category === 'sports_complex' ? 'bg-blue-500/10 text-blue-400 border-blue-500/30' :
+                          facility.category === 'arena' ? 'bg-cyan-500/10 text-cyan-400 border-cyan-500/30' :
+                          facility.category === 'aquatic_center' ? 'bg-sky-500/10 text-sky-400 border-sky-500/30' :
+                          facility.category === 'curling_club' ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/30' :
+                          facility.category === 'ice_rink' ? 'bg-blue-500/10 text-blue-400 border-blue-500/30' :
+                          facility.category === 'fieldhouse' ? 'bg-green-500/10 text-green-400 border-green-500/30' :
+                          facility.category === 'recreation_park' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' :
+                          facility.category === 'playground' ? 'bg-amber-500/10 text-amber-400 border-amber-500/30' :
+                          facility.category === 'skate_park' ? 'bg-orange-500/10 text-orange-400 border-orange-500/30' :
+                          'bg-purple-500/10 text-purple-400 border-purple-500/30'
+                        }`}>
+                          {facilityCategoryLabels[facility.category]}
+                        </Badge>
+                        {facility.ownership && (
+                          <Badge variant="outline" className="text-[8px] ml-1 bg-muted/30 text-muted-foreground border-muted/50">
+                            {facility.ownership}
+                          </Badge>
+                        )}
+                      </td>
+                      <td className="py-2 px-2">
+                        {facility.amenities && facility.amenities.length > 0 ? (
+                          <div className="flex flex-wrap gap-1 max-w-xs">
+                            {facility.amenities.slice(0, 6).map((am, idx) => (
+                              <Badge key={idx} variant="outline" className={`text-[8px] ${
+                                am.type.includes('pool') || am.type.includes('hot_tub') || am.type.includes('sauna') || am.type.includes('steam') ? 'bg-sky-500/10 text-sky-400 border-sky-500/30' :
+                                am.type.includes('ice') || am.type.includes('curling') ? 'bg-cyan-500/10 text-cyan-400 border-cyan-500/30' :
+                                am.type.includes('gym') || am.type.includes('weight') || am.type.includes('fitness') ? 'bg-orange-500/10 text-orange-400 border-orange-500/30' :
+                                am.type.includes('court') || am.type.includes('field') || am.type.includes('diamond') || am.type.includes('turf') ? 'bg-green-500/10 text-green-400 border-green-500/30' :
+                                am.type.includes('meeting') || am.type.includes('lounge') || am.type.includes('banquet') ? 'bg-purple-500/10 text-purple-400 border-purple-500/30' :
+                                am.type.includes('child') || am.type.includes('youth') || am.type.includes('senior') ? 'bg-pink-500/10 text-pink-400 border-pink-500/30' :
+                                am.type.includes('playground') || am.type.includes('spray') || am.type.includes('skate') ? 'bg-amber-500/10 text-amber-400 border-amber-500/30' :
+                                'bg-muted/30 text-muted-foreground border-muted/50'
+                              }`}>
+                                {amenityTypeLabels[am.type]}{am.count && am.count > 1 ? ` (${am.count})` : ''}
+                              </Badge>
+                            ))}
+                            {facility.amenities.length > 6 && (
+                              <Badge variant="outline" className="text-[8px] bg-muted/30 text-muted-foreground border-muted/50">
+                                +{facility.amenities.length - 6} more
+                              </Badge>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground/50">-</span>
+                        )}
+                      </td>
+                      <td className="py-2 px-2 text-muted-foreground">{facility.municipality}</td>
+                      <td className="py-2 px-2">
+                        {facility.matchedMunicipality ? (
+                          <div className="flex items-center gap-1 text-green-400">
+                            <CheckCircle className="w-3 h-3" />
+                            <span>{facility.matchedMunicipality.name}</span>
+                          </div>
+                        ) : facility.matchedRegion ? (
+                          <span className="text-yellow-400">(region only)</span>
+                        ) : (
+                          <span className="text-red-400">NOT MATCHED</span>
+                        )}
+                      </td>
+                      <td className="py-2 px-2">
+                        {facility.matchedRegion ? (
+                          <Badge variant="outline" className="text-[8px]">{facility.matchedRegion.name}</Badge>
                         ) : <span className="text-muted-foreground/50">-</span>}
                       </td>
                     </tr>
