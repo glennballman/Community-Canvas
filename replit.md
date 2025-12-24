@@ -88,21 +88,23 @@ Located in `shared/` directory with GPS coordinates and geographic correlation:
   - Warehouse pharmacies (Walmart, Costco)
   - Hospital and independent pharmacies
   - Cross-referenced courier services (Canada Post, Purolator, UPS, FedEx drop-off locations)
-- **Community/Recreation Facilities** (`shared/community-facilities.ts`): 130+ facilities including:
+- **Community/Recreation Facilities** (`shared/community-facilities.ts`): 158+ facilities including:
   - Community centres with multi-use amenities
   - Sports complexes and arenas
   - Aquatic centres and curling clubs
   - Playgrounds, skate parks, and recreation parks
   - Stadiums and fieldhouses
   - Amenity tracking: pools, ice sheets, curling sheets, gyms, weight rooms, meeting rooms, courts, fields, etc.
-- **Schools** (`shared/schools.ts`): 150+ educational institutions including:
+- **Schools** (`shared/schools.ts`): 314+ educational institutions including:
   - Universities (UBC, SFU, UVic, UNBC, TRU, Royal Roads, KPU, Capilano, Emily Carr)
   - Colleges (BCIT, Douglas, Langara, VCC, Camosun, Okanagan, Selkirk, CNC, Coast Mountain, Northern Lights, North Island, UFV, VIU)
   - Polytechnics and trades schools (ITA BC, Sprott Shaw, CDI College, Pacific Vocational)
   - Public secondary schools (Vancouver, Burnaby, Surrey, Richmond, Victoria, Kelowna, Kamloops, Prince George districts)
   - Private/independent schools (St. George's, Crofton House, Mulgrave, Shawnigan Lake, Brentwood, etc.)
-  - First Nations schools (Seabird Island, Xet'olacw, Stz'uminus, Gitanyow, Witset)
+  - First Nations schools (Seabird Island, Xet'olacw, Stz'uminus, Gitanyow, Witset, Haahuupayak, Maaqtusiis, 'Namgis, Bella Bella, Klemtu, Haida Gwaii, Peace River nations)
   - Online/distance learning (SIDES, eBus Academy, SelfDesign)
+  - University research stations (Bamfield Marine Sciences Centre - operated by UBC, UVic, SFU, U of Alberta, U of Calgary)
+  - First Nations community gymnasiums serving as de facto community centers for events and sports
 
 ### Key Design Patterns
 - **Shared Types**: Schema definitions in `shared/` directory used by both client and server
