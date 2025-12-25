@@ -62,6 +62,7 @@ import { BC_ELECTRICITY_FACILITIES, type ElectricityFacility, type ElectricityFa
 import { BC_PHARMACIES, type Pharmacy, type PharmacyType, type PharmacyChain, pharmacyTypeLabels, pharmacyChainLabels } from "@shared/pharmacies";
 import { BC_COMMUNITY_FACILITIES, type CommunityFacility, type FacilityCategory, type AmenityType, facilityCategoryLabels, amenityTypeLabels } from "@shared/community-facilities";
 import { BC_SCHOOLS, type School, type SchoolType, type SchoolCategory, schoolTypeLabels, schoolCategoryLabels } from "@shared/schools";
+import { municipalOffices, type MunicipalOffice } from "@shared/municipal-offices";
 import { Fuel, Apple, Container, TreePine, Snowflake, Droplets, Trash2, Zap, Pill } from "lucide-react";
 import { GEO_HIERARCHY, type GeoNode } from "@shared/geography";
 
@@ -410,6 +411,11 @@ interface SchoolWithMatch extends School {
   matchedRegion: GeoNode | null;
 }
 
+interface MunicipalOfficeWithMatch extends MunicipalOffice {
+  matchedMunicipality: GeoNode | null;
+  matchedRegion: GeoNode | null;
+}
+
 export default function AdminInfrastructure() {
   const [airportSearch, setAirportSearch] = useState("");
   const [weatherSearch, setWeatherSearch] = useState("");
@@ -425,6 +431,7 @@ export default function AdminInfrastructure() {
   const [pharmacySearch, setPharmacySearch] = useState("");
   const [facilitySearch, setFacilitySearch] = useState("");
   const [schoolSearch, setSchoolSearch] = useState("");
+  const [municipalOfficeSearch, setMunicipalOfficeSearch] = useState("");
   const [lifelineSubTab, setLifelineSubTab] = useState<"fuel" | "food" | "hazmat">("fuel");
   const [supplySubTab, setSupplySubTab] = useState<"freight" | "rail">("freight");
   const [mobilitySubTab, setMobilitySubTab] = useState<"intercity" | "transit" | "charter" | "rail">("intercity");
@@ -649,6 +656,18 @@ export default function AdminInfrastructure() {
       const matchedRegion = matchedMuni?.parentId ? GEO_HIERARCHY[matchedMuni.parentId] || null : null;
       return {
         ...school,
+        matchedMunicipality: matchedMuni,
+        matchedRegion,
+      };
+    });
+  }, []);
+
+  const municipalOfficeWithMatches: MunicipalOfficeWithMatch[] = useMemo(() => {
+    return municipalOffices.map(office => {
+      const matchedMuni = findMatchingMunicipality(office.municipality);
+      const matchedRegion = matchedMuni?.parentId ? GEO_HIERARCHY[matchedMuni.parentId] || null : null;
+      return {
+        ...office,
         matchedMunicipality: matchedMuni,
         matchedRegion,
       };
@@ -1000,6 +1019,20 @@ export default function AdminInfrastructure() {
     );
   }, [schoolWithMatches, schoolSearch]);
 
+  const filteredMunicipalOffices = useMemo(() => {
+    if (!municipalOfficeSearch) return municipalOfficeWithMatches;
+    const search = municipalOfficeSearch.toLowerCase();
+    return municipalOfficeWithMatches.filter(o => 
+      o.name.toLowerCase().includes(search) ||
+      o.municipality?.toLowerCase().includes(search) ||
+      o.type?.toLowerCase().includes(search) ||
+      o.matchedMunicipality?.name.toLowerCase().includes(search) ||
+      o.matchedRegion?.name.toLowerCase().includes(search) ||
+      o.address?.toLowerCase().includes(search) ||
+      o.region?.toLowerCase().includes(search)
+    );
+  }, [municipalOfficeWithMatches, municipalOfficeSearch]);
+
   const airportStats = useMemo(() => {
     const matched = airportsWithMatches.filter(a => a.matchedMunicipality).length;
     const regionOnly = airportsWithMatches.filter(a => !a.matchedMunicipality && a.matchedRegion).length;
@@ -1216,6 +1249,37 @@ export default function AdminInfrastructure() {
     return { total: schoolWithMatches.length, matched, regionOnly, unmatched, byCategory, byType };
   }, [schoolWithMatches]);
 
+  const municipalOfficeStats = useMemo(() => {
+    const matched = municipalOfficeWithMatches.filter(o => o.matchedMunicipality).length;
+    const regionOnly = municipalOfficeWithMatches.filter(o => !o.matchedMunicipality && o.matchedRegion).length;
+    const unmatched = municipalOfficeWithMatches.filter(o => !o.matchedMunicipality && !o.matchedRegion).length;
+    const byType: Record<string, number> = {};
+    municipalOfficeWithMatches.forEach(o => {
+      byType[o.type] = (byType[o.type] || 0) + 1;
+    });
+    const cityHalls = municipalOfficeWithMatches.filter(o => o.type === 'city_hall').length;
+    const townOffices = municipalOfficeWithMatches.filter(o => o.type === 'town_office').length;
+    const districtOffices = municipalOfficeWithMatches.filter(o => o.type === 'district_office').length;
+    const villageOffices = municipalOfficeWithMatches.filter(o => o.type === 'village_office').length;
+    const regionalDistricts = municipalOfficeWithMatches.filter(o => o.type === 'regional_district').length;
+    const firstNation = municipalOfficeWithMatches.filter(o => o.type === 'first_nation_band_office').length;
+    const treatyNation = municipalOfficeWithMatches.filter(o => o.type === 'treaty_nation_office').length;
+    return { 
+      total: municipalOfficeWithMatches.length, 
+      matched, 
+      regionOnly, 
+      unmatched, 
+      byType, 
+      cityHalls, 
+      townOffices, 
+      districtOffices, 
+      villageOffices,
+      regionalDistricts,
+      firstNation,
+      treatyNation
+    };
+  }, [municipalOfficeWithMatches]);
+
   return (
     <div className="h-full flex flex-col font-mono">
       <div className="border-b border-border/50 p-4">
@@ -1374,6 +1438,14 @@ export default function AdminInfrastructure() {
             >
               <GraduationCap className="w-3 h-3 mr-1" />
               SCHOOLS ({schoolStats.total})
+            </TabsTrigger>
+            <TabsTrigger 
+              value="municipal-offices" 
+              className="text-xs data-[state=active]:bg-rose-500/20 data-[state=active]:text-rose-400"
+              data-testid="tab-municipal-offices"
+            >
+              <Building2 className="w-3 h-3 mr-1" />
+              MUNICIPAL ({municipalOfficeStats.total})
             </TabsTrigger>
             <TabsTrigger 
               value="summary" 
@@ -3576,6 +3648,111 @@ export default function AdminInfrastructure() {
                         {school.matchedRegion ? (
                           <Badge variant="outline" className="text-[8px]">{school.matchedRegion.name}</Badge>
                         ) : <span className="text-muted-foreground/50">-</span>}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </ScrollArea>
+        </TabsContent>
+
+        <TabsContent value="municipal-offices" className="flex-1 overflow-hidden m-0 flex flex-col data-[state=inactive]:hidden">
+          <div className="p-3 border-b border-border/30 flex items-center gap-4">
+            <div className="relative flex-1 max-w-sm">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground" />
+              <Input
+                placeholder="Search municipal offices, city halls..."
+                value={municipalOfficeSearch}
+                onChange={e => setMunicipalOfficeSearch(e.target.value)}
+                className="pl-8 h-8 text-xs bg-background/50"
+                data-testid="input-municipal-office-search"
+              />
+            </div>
+            <div className="flex gap-2 text-[10px] text-muted-foreground flex-wrap">
+              <span className="text-green-400">{municipalOfficeStats.matched} MATCHED</span>
+              <span className="text-blue-400">{municipalOfficeStats.cityHalls} CITIES</span>
+              <span className="text-cyan-400">{municipalOfficeStats.districtOffices} DISTRICTS</span>
+              <span className="text-amber-400">{municipalOfficeStats.townOffices} TOWNS</span>
+              <span className="text-orange-400">{municipalOfficeStats.firstNation + municipalOfficeStats.treatyNation} FIRST NATIONS</span>
+            </div>
+          </div>
+          <ScrollArea className="flex-1">
+            <div className="p-3">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="text-[10px] text-muted-foreground border-b border-border/30">
+                    <th className="text-left py-2 px-2">OFFICE</th>
+                    <th className="text-left py-2 px-2">TYPE</th>
+                    <th className="text-left py-2 px-2">SOURCE MUNICIPALITY</th>
+                    <th className="text-left py-2 px-2">MATCHED TO</th>
+                    <th className="text-left py-2 px-2">REGION</th>
+                    <th className="text-left py-2 px-2">CONTACT</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredMunicipalOffices.map(office => (
+                    <tr 
+                      key={office.id} 
+                      className="border-b border-border/20 hover-elevate"
+                      data-testid={`row-municipal-office-${office.id}`}
+                    >
+                      <td className="py-2 px-2">
+                        <div className="flex items-center gap-2">
+                          <Building2 className="w-3 h-3 text-rose-400" />
+                          <div>
+                            <div className="font-medium">{office.name}</div>
+                            {office.address && <div className="text-[10px] text-muted-foreground">{office.address}</div>}
+                            <div className="text-[10px] text-muted-foreground">{office.lat.toFixed(4)}, {office.lng.toFixed(4)}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-2 px-2">
+                        <Badge variant="outline" className={`text-[8px] ${
+                          office.type === 'city_hall' ? 'bg-blue-500/10 text-blue-400 border-blue-500/30' :
+                          office.type === 'town_office' ? 'bg-amber-500/10 text-amber-400 border-amber-500/30' :
+                          office.type === 'district_office' ? 'bg-cyan-500/10 text-cyan-400 border-cyan-500/30' :
+                          office.type === 'village_office' ? 'bg-teal-500/10 text-teal-400 border-teal-500/30' :
+                          office.type === 'regional_district' ? 'bg-purple-500/10 text-purple-400 border-purple-500/30' :
+                          office.type === 'first_nation_band_office' ? 'bg-orange-500/10 text-orange-400 border-orange-500/30' :
+                          office.type === 'treaty_nation_office' ? 'bg-red-500/10 text-red-400 border-red-500/30' :
+                          'bg-muted/30 text-muted-foreground border-muted/50'
+                        }`}>
+                          {office.type === 'city_hall' ? 'CITY HALL' :
+                           office.type === 'town_office' ? 'TOWN' :
+                           office.type === 'district_office' ? 'DISTRICT' :
+                           office.type === 'village_office' ? 'VILLAGE' :
+                           office.type === 'regional_district' ? 'REGIONAL' :
+                           office.type === 'first_nation_band_office' ? 'FIRST NATION' :
+                           'TREATY NATION'}
+                        </Badge>
+                      </td>
+                      <td className="py-2 px-2 text-muted-foreground">{office.municipality}</td>
+                      <td className="py-2 px-2">
+                        {office.matchedMunicipality ? (
+                          <div className="flex items-center gap-1 text-green-400">
+                            <CheckCircle className="w-3 h-3" />
+                            <span>{office.matchedMunicipality.name}</span>
+                          </div>
+                        ) : office.matchedRegion ? (
+                          <span className="text-yellow-400">(region only)</span>
+                        ) : (
+                          <div className="flex items-center gap-1 text-red-400">
+                            <XCircle className="w-3 h-3" />
+                            <span>No match</span>
+                          </div>
+                        )}
+                      </td>
+                      <td className="py-2 px-2">
+                        {office.matchedRegion ? (
+                          <span className="text-blue-400">{office.matchedRegion.name}</span>
+                        ) : <span className="text-muted-foreground/50">-</span>}
+                      </td>
+                      <td className="py-2 px-2">
+                        <div className="text-[10px]">
+                          {office.phone && <div className="text-muted-foreground">{office.phone}</div>}
+                          {office.website && <div className="text-blue-400/70 truncate max-w-[150px]">{office.website.replace(/^https?:\/\//, '')}</div>}
+                        </div>
                       </td>
                     </tr>
                   ))}
