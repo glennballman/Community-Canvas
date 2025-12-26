@@ -9237,65 +9237,9 @@ export const chamberMembers: ChamberMember[] = [
     memberSince: 2022,
   },
 
-  // UNIVERSITIES & COLLEGES
+  // UNIVERSITIES & COLLEGES (Note: UVic, Royal Roads, Camosun already in victoria-coc-member-* entries)
   {
     id: "victoria-member-036",
-    chamberId: "greater-victoria-chamber",
-    businessName: "Camosun College",
-    website: "http://www.camosun.ca/",
-    phone: "(250) 217-4399",
-    address: "4461 Interurban Road, Victoria, BC V9E 2C1",
-    category: "education",
-    subcategory: "College",
-    description: "From accountants to welders, professional chefs to nurses and engineering technologists",
-    municipality: "Victoria",
-    region: "Capital Regional District",
-    memberSince: 1981,
-    featured: true,
-    crossReference: {
-      dataset: "schools",
-      id: "camosun-college",
-    },
-  },
-  {
-    id: "victoria-member-037",
-    chamberId: "greater-victoria-chamber",
-    businessName: "University of Victoria",
-    website: "http://www.uvic.ca/",
-    phone: "(250) 721-7211",
-    address: "Box 1700, Finnerty Rd, Victoria, BC V8W 2Y2",
-    category: "education",
-    subcategory: "University",
-    description: "World-class professors and life-changing opportunities",
-    municipality: "Victoria",
-    region: "Capital Regional District",
-    memberSince: 1976,
-    featured: true,
-    crossReference: {
-      dataset: "schools",
-      id: "university-victoria",
-    },
-  },
-  {
-    id: "victoria-member-038",
-    chamberId: "greater-victoria-chamber",
-    businessName: "Royal Roads University",
-    website: "http://www.royalroads.ca/",
-    phone: "(250) 391-2511",
-    address: "2005 Sooke Rd, Victoria, BC V9B 5Y2",
-    category: "education",
-    subcategory: "University",
-    description: "For people who want to advance in the workplace",
-    municipality: "Victoria",
-    region: "Capital Regional District",
-    memberSince: 1996,
-    crossReference: {
-      dataset: "schools",
-      id: "royal-roads-university",
-    },
-  },
-  {
-    id: "victoria-member-039",
     chamberId: "greater-victoria-chamber",
     businessName: "BC Colleges",
     website: "http://www.bccolleges.ca/",
@@ -9308,7 +9252,7 @@ export const chamberMembers: ChamberMember[] = [
     memberSince: 2018,
   },
   {
-    id: "victoria-member-040",
+    id: "victoria-member-037",
     chamberId: "greater-victoria-chamber",
     businessName: "Peter B. Gustavson School of Business",
     website: "https://www.uvic.ca/gustavson/",
@@ -9323,7 +9267,7 @@ export const chamberMembers: ChamberMember[] = [
 
   // ATTRACTIONS
   {
-    id: "victoria-member-041",
+    id: "victoria-member-038",
     chamberId: "greater-victoria-chamber",
     businessName: "Craigdarroch Castle Historical Museum Society",
     website: "http://www.thecastle.ca/",
@@ -9337,7 +9281,7 @@ export const chamberMembers: ChamberMember[] = [
     memberSince: 1990,
   },
   {
-    id: "victoria-member-042",
+    id: "victoria-member-039",
     chamberId: "greater-victoria-chamber",
     businessName: "Miniature World",
     website: "http://www.miniatureworld.com/",
@@ -9351,7 +9295,7 @@ export const chamberMembers: ChamberMember[] = [
     memberSince: 2023,
   },
   {
-    id: "victoria-member-043",
+    id: "victoria-member-040",
     chamberId: "greater-victoria-chamber",
     businessName: "A Taste of Victoria Food Tours Inc.",
     website: "http://www.atasteofvictoriafoodtours.com/",
@@ -9365,7 +9309,7 @@ export const chamberMembers: ChamberMember[] = [
     memberSince: 2017,
   },
   {
-    id: "victoria-member-044",
+    id: "victoria-member-041",
     chamberId: "greater-victoria-chamber",
     businessName: "Victoria Butterfly Gardens",
     website: "http://www.butterflygardens.com/",
@@ -9379,7 +9323,7 @@ export const chamberMembers: ChamberMember[] = [
     memberSince: 2008,
   },
   {
-    id: "victoria-member-045",
+    id: "victoria-member-042",
     chamberId: "greater-victoria-chamber",
     businessName: "The Butchart Gardens",
     website: "https://www.butchartgardens.com/",
