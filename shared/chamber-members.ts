@@ -171,7 +171,7 @@ export const chamberMembers: ChamberMember[] = [
   // Note: GVBOT has 5,000+ members - listing key/notable members
   {
     id: "gvbot-member-001",
-    chamberId: "gvbot",
+    chamberId: "greater-vancouver-board-of-trade",
     businessName: "TELUS Corporation",
     website: "https://www.telus.com",
     category: "telecommunications",
@@ -181,7 +181,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "gvbot-member-002",
-    chamberId: "gvbot",
+    chamberId: "greater-vancouver-board-of-trade",
     businessName: "Lululemon Athletica",
     website: "https://www.lululemon.com",
     category: "retail",
@@ -192,7 +192,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "gvbot-member-003",
-    chamberId: "gvbot",
+    chamberId: "greater-vancouver-board-of-trade",
     businessName: "Hootsuite Inc.",
     website: "https://www.hootsuite.com",
     category: "it-technology",
@@ -203,7 +203,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "gvbot-member-004",
-    chamberId: "gvbot",
+    chamberId: "greater-vancouver-board-of-trade",
     businessName: "BC Hydro",
     website: "https://www.bchydro.com",
     category: "utilities",
@@ -213,7 +213,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "gvbot-member-005",
-    chamberId: "gvbot",
+    chamberId: "greater-vancouver-board-of-trade",
     businessName: "Port of Vancouver",
     website: "https://www.portvancouver.com",
     category: "fishing-marine",
@@ -224,7 +224,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "gvbot-member-006",
-    chamberId: "gvbot",
+    chamberId: "greater-vancouver-board-of-trade",
     businessName: "Vancouver International Airport",
     website: "https://www.yvr.ca",
     category: "aviation",
@@ -238,7 +238,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "gvbot-member-007",
-    chamberId: "gvbot",
+    chamberId: "greater-vancouver-board-of-trade",
     businessName: "HSBC Bank Canada",
     website: "https://www.hsbc.ca",
     category: "banking-finance",
@@ -248,7 +248,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "gvbot-member-008",
-    chamberId: "gvbot",
+    chamberId: "greater-vancouver-board-of-trade",
     businessName: "Deloitte LLP",
     website: "https://www.deloitte.ca",
     category: "accounting",
@@ -259,7 +259,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "gvbot-member-009",
-    chamberId: "gvbot",
+    chamberId: "greater-vancouver-board-of-trade",
     businessName: "Fasken Martineau DuMoulin LLP",
     website: "https://www.fasken.com",
     category: "legal",
@@ -269,7 +269,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "gvbot-member-010",
-    chamberId: "gvbot",
+    chamberId: "greater-vancouver-board-of-trade",
     businessName: "Electronic Arts Canada",
     website: "https://www.ea.com",
     category: "it-technology",
@@ -282,7 +282,7 @@ export const chamberMembers: ChamberMember[] = [
   // Burnaby Board of Trade
   {
     id: "burnaby-bot-member-001",
-    chamberId: "burnaby-bot",
+    chamberId: "burnaby-board-of-trade",
     businessName: "Electronic Arts Canada",
     website: "https://www.ea.com",
     category: "it-technology",
@@ -293,7 +293,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "burnaby-bot-member-002",
-    chamberId: "burnaby-bot",
+    chamberId: "burnaby-board-of-trade",
     businessName: "Metropolis at Metrotown",
     website: "https://metropolisatmetrotown.com",
     category: "retail",
@@ -304,7 +304,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "burnaby-bot-member-003",
-    chamberId: "burnaby-bot",
+    chamberId: "burnaby-board-of-trade",
     businessName: "BCIT - British Columbia Institute of Technology",
     website: "https://www.bcit.ca",
     category: "education",
@@ -318,7 +318,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "burnaby-bot-member-004",
-    chamberId: "burnaby-bot",
+    chamberId: "burnaby-board-of-trade",
     businessName: "Simon Fraser University",
     website: "https://www.sfu.ca",
     category: "education",
@@ -332,7 +332,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "burnaby-bot-member-005",
-    chamberId: "burnaby-bot",
+    chamberId: "burnaby-board-of-trade",
     businessName: "Burnaby Hospital",
     website: "https://www.fraserhealth.ca",
     category: "healthcare",
@@ -348,7 +348,7 @@ export const chamberMembers: ChamberMember[] = [
   // Surrey Board of Trade
   {
     id: "surrey-bot-member-001",
-    chamberId: "surrey-bot",
+    chamberId: "surrey-white-rock-board-of-trade",
     businessName: "Coast Capital Savings",
     website: "https://www.coastcapitalsavings.com",
     category: "banking-finance",
@@ -359,7 +359,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "surrey-bot-member-002",
-    chamberId: "surrey-bot",
+    chamberId: "surrey-white-rock-board-of-trade",
     businessName: "Simon Fraser University - Surrey Campus",
     website: "https://www.sfu.ca/surrey",
     category: "education",
@@ -369,7 +369,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "surrey-bot-member-003",
-    chamberId: "surrey-bot",
+    chamberId: "surrey-white-rock-board-of-trade",
     businessName: "Kwantlen Polytechnic University",
     website: "https://www.kpu.ca",
     category: "education",
@@ -383,7 +383,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "surrey-bot-member-004",
-    chamberId: "surrey-bot",
+    chamberId: "surrey-white-rock-board-of-trade",
     businessName: "Surrey Memorial Hospital",
     website: "https://www.fraserhealth.ca",
     category: "healthcare",
@@ -397,7 +397,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "surrey-bot-member-005",
-    chamberId: "surrey-bot",
+    chamberId: "surrey-white-rock-board-of-trade",
     businessName: "Nordel Crossing Shopping Centre",
     website: "https://www.nordelcrossing.com",
     category: "retail",
@@ -409,7 +409,7 @@ export const chamberMembers: ChamberMember[] = [
   // Richmond Chamber of Commerce
   {
     id: "richmond-coc-member-001",
-    chamberId: "richmond-coc",
+    chamberId: "richmond-chamber-of-commerce",
     businessName: "Vancouver International Airport (YVR)",
     website: "https://www.yvr.ca",
     category: "aviation",
@@ -423,7 +423,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "richmond-coc-member-002",
-    chamberId: "richmond-coc",
+    chamberId: "richmond-chamber-of-commerce",
     businessName: "Aberdeen Centre",
     website: "https://www.aberdeencentre.com",
     category: "retail",
@@ -434,7 +434,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "richmond-coc-member-003",
-    chamberId: "richmond-coc",
+    chamberId: "richmond-chamber-of-commerce",
     businessName: "Richmond Hospital",
     website: "https://www.vch.ca",
     category: "healthcare",
@@ -448,7 +448,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "richmond-coc-member-004",
-    chamberId: "richmond-coc",
+    chamberId: "richmond-chamber-of-commerce",
     businessName: "London Drugs",
     website: "https://www.londondrugs.com",
     category: "pharmacy",
@@ -459,7 +459,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "richmond-coc-member-005",
-    chamberId: "richmond-coc",
+    chamberId: "richmond-chamber-of-commerce",
     businessName: "Steveston Harbour Authority",
     website: "https://www.stevestonharbour.com",
     category: "fishing-marine",
@@ -476,7 +476,7 @@ export const chamberMembers: ChamberMember[] = [
   // Abbotsford Chamber of Commerce
   {
     id: "abbotsford-coc-member-001",
-    chamberId: "abbotsford-coc",
+    chamberId: "abbotsford-chamber-of-commerce",
     businessName: "Abbotsford International Airport",
     website: "https://www.abbotsfordairport.ca",
     category: "aviation",
@@ -490,7 +490,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "abbotsford-coc-member-002",
-    chamberId: "abbotsford-coc",
+    chamberId: "abbotsford-chamber-of-commerce",
     businessName: "University of the Fraser Valley",
     website: "https://www.ufv.ca",
     category: "education",
@@ -504,7 +504,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "abbotsford-coc-member-003",
-    chamberId: "abbotsford-coc",
+    chamberId: "abbotsford-chamber-of-commerce",
     businessName: "Abbotsford Regional Hospital",
     website: "https://www.fraserhealth.ca",
     category: "healthcare",
@@ -518,7 +518,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "abbotsford-coc-member-004",
-    chamberId: "abbotsford-coc",
+    chamberId: "abbotsford-chamber-of-commerce",
     businessName: "Save-On-Foods",
     website: "https://www.saveonfoods.com",
     category: "grocery",
@@ -528,7 +528,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "abbotsford-coc-member-005",
-    chamberId: "abbotsford-coc",
+    chamberId: "abbotsford-chamber-of-commerce",
     businessName: "Vedder Transport Ltd.",
     website: "https://www.vedder.ca",
     category: "trucking-freight",
@@ -545,7 +545,7 @@ export const chamberMembers: ChamberMember[] = [
   // Chilliwack Chamber of Commerce
   {
     id: "chilliwack-coc-member-001",
-    chamberId: "chilliwack-coc",
+    chamberId: "chilliwack-chamber-of-commerce",
     businessName: "Chilliwack General Hospital",
     website: "https://www.fraserhealth.ca",
     category: "healthcare",
@@ -559,7 +559,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "chilliwack-coc-member-002",
-    chamberId: "chilliwack-coc",
+    chamberId: "chilliwack-chamber-of-commerce",
     businessName: "University of the Fraser Valley - Chilliwack",
     website: "https://www.ufv.ca",
     category: "education",
@@ -569,7 +569,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "chilliwack-coc-member-003",
-    chamberId: "chilliwack-coc",
+    chamberId: "chilliwack-chamber-of-commerce",
     businessName: "Chilliwack Airport",
     website: "https://www.chilliwackairport.com",
     category: "aviation",
@@ -583,7 +583,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "chilliwack-coc-member-004",
-    chamberId: "chilliwack-coc",
+    chamberId: "chilliwack-chamber-of-commerce",
     businessName: "Cottonwood Mall",
     website: "https://cottonwoodmall.ca",
     category: "retail",
@@ -595,7 +595,7 @@ export const chamberMembers: ChamberMember[] = [
   // Hope & District Chamber of Commerce
   {
     id: "hope-coc-member-001",
-    chamberId: "hope-coc",
+    chamberId: "hope-chamber-of-commerce",
     businessName: "Hope Airport",
     website: "https://www.hopebc.ca",
     category: "aviation",
@@ -609,7 +609,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "hope-coc-member-002",
-    chamberId: "hope-coc",
+    chamberId: "hope-chamber-of-commerce",
     businessName: "Kawkawa Lake Resort",
     category: "accommodation",
     subcategory: "Resort",
@@ -619,7 +619,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "hope-coc-member-003",
-    chamberId: "hope-coc",
+    chamberId: "hope-chamber-of-commerce",
     businessName: "Othello Tunnels Adventure",
     website: "https://www.hopebc.ca",
     category: "hospitality",
@@ -636,7 +636,7 @@ export const chamberMembers: ChamberMember[] = [
   // Greater Victoria Chamber of Commerce
   {
     id: "victoria-coc-member-001",
-    chamberId: "victoria-coc",
+    chamberId: "greater-victoria-chamber",
     businessName: "Royal BC Museum",
     website: "https://www.royalbcmuseum.bc.ca",
     category: "arts-culture",
@@ -647,7 +647,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "victoria-coc-member-002",
-    chamberId: "victoria-coc",
+    chamberId: "greater-victoria-chamber",
     businessName: "The Fairmont Empress",
     website: "https://www.fairmont.com/empress-victoria",
     category: "accommodation",
@@ -658,7 +658,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "victoria-coc-member-003",
-    chamberId: "victoria-coc",
+    chamberId: "greater-victoria-chamber",
     businessName: "BC Ferries",
     website: "https://www.bcferries.com",
     category: "transit",
@@ -673,7 +673,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "victoria-coc-member-004",
-    chamberId: "victoria-coc",
+    chamberId: "greater-victoria-chamber",
     businessName: "University of Victoria",
     website: "https://www.uvic.ca",
     category: "education",
@@ -687,7 +687,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "victoria-coc-member-005",
-    chamberId: "victoria-coc",
+    chamberId: "greater-victoria-chamber",
     businessName: "Victoria General Hospital",
     website: "https://www.islandhealth.ca",
     category: "healthcare",
@@ -701,7 +701,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "victoria-coc-member-006",
-    chamberId: "victoria-coc",
+    chamberId: "greater-victoria-chamber",
     businessName: "Bluebird Cabs",
     website: "https://www.bluebirdcabs.ca",
     category: "taxi-rideshare",
@@ -717,7 +717,7 @@ export const chamberMembers: ChamberMember[] = [
   // WestShore Chamber of Commerce
   {
     id: "westshore-coc-member-001",
-    chamberId: "westshore-coc",
+    chamberId: "westshore-chamber",
     businessName: "Westshore Town Centre",
     website: "https://www.westshoretowncentre.com",
     category: "retail",
@@ -727,7 +727,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "westshore-coc-member-002",
-    chamberId: "westshore-coc",
+    chamberId: "westshore-chamber",
     businessName: "Royal Roads University",
     website: "https://www.royalroads.ca",
     category: "education",
@@ -743,7 +743,7 @@ export const chamberMembers: ChamberMember[] = [
   // Sooke Region Chamber of Commerce
   {
     id: "sooke-coc-member-001",
-    chamberId: "sooke-coc",
+    chamberId: "sooke-chamber",
     businessName: "Sooke Harbour House",
     category: "accommodation",
     subcategory: "Boutique hotel",
@@ -754,7 +754,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "sooke-coc-member-002",
-    chamberId: "sooke-coc",
+    chamberId: "sooke-chamber",
     businessName: "Wild Coast Tofino",
     category: "hospitality",
     subcategory: "Adventure tourism",
@@ -766,7 +766,7 @@ export const chamberMembers: ChamberMember[] = [
   // Salt Spring Island Chamber of Commerce
   {
     id: "saltspring-coc-member-001",
-    chamberId: "saltspring-coc",
+    chamberId: "salt-spring-chamber",
     businessName: "Salt Spring Island Cheese",
     website: "https://www.saltspringcheese.com",
     category: "agriculture",
@@ -777,7 +777,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saltspring-coc-member-002",
-    chamberId: "saltspring-coc",
+    chamberId: "salt-spring-chamber",
     businessName: "Harbour House Hotel",
     website: "https://www.saltspringharbourhouse.com",
     category: "accommodation",
@@ -787,7 +787,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saltspring-coc-member-003",
-    chamberId: "saltspring-coc",
+    chamberId: "salt-spring-chamber",
     businessName: "Salt Spring Taxi",
     category: "taxi-rideshare",
     municipality: "Salt Spring Island",
@@ -802,7 +802,7 @@ export const chamberMembers: ChamberMember[] = [
   // Pender Island Chamber of Commerce  
   {
     id: "pender-coc-member-001",
-    chamberId: "pender-coc",
+    chamberId: "pender-island-chamber",
     businessName: "Poets Cove Resort & Spa",
     website: "https://www.poetscove.com",
     category: "accommodation",
@@ -813,7 +813,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "pender-coc-member-002",
-    chamberId: "pender-coc",
+    chamberId: "pender-island-chamber",
     businessName: "Pender Island Kayak Adventures",
     category: "recreation",
     subcategory: "Kayaking",
@@ -825,7 +825,7 @@ export const chamberMembers: ChamberMember[] = [
   // Port Renfrew Chamber of Commerce
   {
     id: "portrenfrew-coc-member-001",
-    chamberId: "portrenfrew-coc",
+    chamberId: "port-renfrew-chamber",
     businessName: "Wild Renfrew",
     website: "https://www.wildrenfrew.com",
     category: "accommodation",
@@ -836,7 +836,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "portrenfrew-coc-member-002",
-    chamberId: "portrenfrew-coc",
+    chamberId: "port-renfrew-chamber",
     businessName: "West Coast Trail Lodge",
     category: "accommodation",
     subcategory: "Lodge",
@@ -853,7 +853,7 @@ export const chamberMembers: ChamberMember[] = [
   // Nanaimo Chamber of Commerce
   {
     id: "nanaimo-coc-member-001",
-    chamberId: "nanaimo-coc",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Vancouver Island University",
     website: "https://www.viu.ca",
     category: "education",
@@ -867,7 +867,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-coc-member-002",
-    chamberId: "nanaimo-coc",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Nanaimo Regional General Hospital",
     website: "https://www.islandhealth.ca",
     category: "healthcare",
@@ -881,7 +881,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-coc-member-003",
-    chamberId: "nanaimo-coc",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Nanaimo Airport",
     website: "https://www.nanaimoairport.com",
     category: "aviation",
@@ -895,7 +895,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-coc-member-004",
-    chamberId: "nanaimo-coc",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "A.C. Taxi",
     website: "https://www.actaxi.ca",
     category: "taxi-rideshare",
@@ -911,7 +911,7 @@ export const chamberMembers: ChamberMember[] = [
   // Comox Valley Chamber of Commerce
   {
     id: "comox-coc-member-001",
-    chamberId: "comox-coc",
+    chamberId: "comox-valley-chamber",
     businessName: "CFB Comox",
     website: "https://www.canada.ca/en/department-national-defence",
     category: "government",
@@ -926,7 +926,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "comox-coc-member-002",
-    chamberId: "comox-coc",
+    chamberId: "comox-valley-chamber",
     businessName: "Mount Washington Alpine Resort",
     website: "https://www.mountwashington.ca",
     category: "recreation",
@@ -937,7 +937,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "comox-coc-member-003",
-    chamberId: "comox-coc",
+    chamberId: "comox-valley-chamber",
     businessName: "North Island Hospital - Comox Valley",
     website: "https://www.islandhealth.ca",
     category: "healthcare",
@@ -949,7 +949,7 @@ export const chamberMembers: ChamberMember[] = [
   // Campbell River Chamber of Commerce
   {
     id: "campbell-coc-member-001",
-    chamberId: "campbell-coc",
+    chamberId: "campbell-river-chamber",
     businessName: "Campbell River Airport",
     website: "https://www.campbellriver.ca/airport",
     category: "aviation",
@@ -963,7 +963,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "campbell-coc-member-002",
-    chamberId: "campbell-coc",
+    chamberId: "campbell-river-chamber",
     businessName: "Campbell River Hospital",
     website: "https://www.islandhealth.ca",
     category: "healthcare",
@@ -977,7 +977,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "campbell-coc-member-003",
-    chamberId: "campbell-coc",
+    chamberId: "campbell-river-chamber",
     businessName: "Discovery Passage Sea Kayaking",
     website: "https://www.discoveryseakayaking.com",
     category: "recreation",
@@ -990,7 +990,7 @@ export const chamberMembers: ChamberMember[] = [
   // Port Hardy Chamber of Commerce
   {
     id: "porthardy-coc-member-001",
-    chamberId: "porthardy-coc",
+    chamberId: "port-hardy-chamber",
     businessName: "Port Hardy Airport",
     website: "https://www.porthardy.ca",
     category: "aviation",
@@ -1004,7 +1004,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "porthardy-coc-member-002",
-    chamberId: "porthardy-coc",
+    chamberId: "port-hardy-chamber",
     businessName: "BC Ferries - Port Hardy Terminal",
     website: "https://www.bcferries.com",
     category: "transit",
@@ -1019,7 +1019,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "porthardy-coc-member-003",
-    chamberId: "porthardy-coc",
+    chamberId: "port-hardy-chamber",
     businessName: "Port Hardy Hospital",
     website: "https://www.islandhealth.ca",
     category: "healthcare",
@@ -1031,7 +1031,7 @@ export const chamberMembers: ChamberMember[] = [
   // Alberni Valley Chamber of Commerce
   {
     id: "alberni-coc-member-001",
-    chamberId: "alberni-coc",
+    chamberId: "port-alberni-chamber",
     businessName: "Lady Rose Marine Services",
     website: "https://www.ladyrosemarine.com",
     category: "fishing-marine",
@@ -1046,7 +1046,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "alberni-coc-member-002",
-    chamberId: "alberni-coc",
+    chamberId: "port-alberni-chamber",
     businessName: "Alberni Pacific Railway",
     website: "https://www.alberniheritage.com",
     category: "hospitality",
@@ -1061,7 +1061,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "alberni-coc-member-003",
-    chamberId: "alberni-coc",
+    chamberId: "port-alberni-chamber",
     businessName: "West Coast General Hospital",
     website: "https://www.islandhealth.ca",
     category: "healthcare",
@@ -1073,7 +1073,7 @@ export const chamberMembers: ChamberMember[] = [
   // Tofino-Long Beach Chamber of Commerce
   {
     id: "tofino-coc-member-001",
-    chamberId: "tofino-coc",
+    chamberId: "tofino-chamber",
     businessName: "Pacific Rim National Park Reserve",
     website: "https://www.pc.gc.ca/en/pn-np/bc/pacificrim",
     category: "government",
@@ -1084,7 +1084,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tofino-coc-member-002",
-    chamberId: "tofino-coc",
+    chamberId: "tofino-chamber",
     businessName: "Wickaninnish Inn",
     website: "https://www.wickinn.com",
     category: "accommodation",
@@ -1095,7 +1095,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tofino-coc-member-003",
-    chamberId: "tofino-coc",
+    chamberId: "tofino-chamber",
     businessName: "Tofino Air",
     website: "https://www.tofinoair.ca",
     category: "aviation",
@@ -1110,7 +1110,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tofino-coc-member-004",
-    chamberId: "tofino-coc",
+    chamberId: "tofino-chamber",
     businessName: "Storm Watching",
     website: "https://www.tourismtofino.com",
     category: "hospitality",
@@ -1121,7 +1121,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tofino-coc-member-005",
-    chamberId: "tofino-coc",
+    chamberId: "tofino-chamber",
     businessName: "Tofino Taxi",
     category: "taxi-rideshare",
     municipality: "Tofino",
@@ -1136,7 +1136,7 @@ export const chamberMembers: ChamberMember[] = [
   // Ucluelet Chamber of Commerce
   {
     id: "ucluelet-coc-member-001",
-    chamberId: "ucluelet-coc",
+    chamberId: "ucluelet-chamber",
     businessName: "Black Rock Oceanfront Resort",
     website: "https://www.blackrockresort.com",
     category: "accommodation",
@@ -1147,7 +1147,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "ucluelet-coc-member-002",
-    chamberId: "ucluelet-coc",
+    chamberId: "ucluelet-chamber",
     businessName: "Wild Pacific Trail Society",
     website: "https://www.wildpacifictrail.com",
     category: "charity-nonprofit",
@@ -1158,7 +1158,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "ucluelet-coc-member-003",
-    chamberId: "ucluelet-coc",
+    chamberId: "ucluelet-chamber",
     businessName: "Ucluelet Taxi",
     category: "taxi-rideshare",
     municipality: "Ucluelet",
@@ -1173,7 +1173,7 @@ export const chamberMembers: ChamberMember[] = [
   // Bamfield Chamber of Commerce
   {
     id: "bamfield-coc-member-001",
-    chamberId: "bamfield-coc",
+    chamberId: "bamfield-chamber",
     businessName: "Bamfield Marine Sciences Centre",
     website: "https://www.bamfieldmsc.com",
     category: "education",
@@ -1188,7 +1188,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "bamfield-coc-member-002",
-    chamberId: "bamfield-coc",
+    chamberId: "bamfield-chamber",
     businessName: "West Coast Trail Express",
     website: "https://www.trailbus.com",
     category: "transit",
@@ -1199,7 +1199,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "bamfield-coc-member-003",
-    chamberId: "bamfield-coc",
+    chamberId: "bamfield-chamber",
     businessName: "Bamfield Lodge",
     category: "accommodation",
     subcategory: "Lodge",
@@ -1209,7 +1209,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "bamfield-coc-member-004",
-    chamberId: "bamfield-coc",
+    chamberId: "bamfield-chamber",
     businessName: "Broken Island Adventures",
     website: "https://www.brokenislandadventures.com",
     category: "recreation",
@@ -1222,7 +1222,7 @@ export const chamberMembers: ChamberMember[] = [
   // Duncan Cowichan Chamber of Commerce
   {
     id: "duncan-coc-member-001",
-    chamberId: "duncan-coc",
+    chamberId: "duncan-cowichan-chamber",
     businessName: "Cowichan District Hospital",
     website: "https://www.islandhealth.ca",
     category: "healthcare",
@@ -1232,7 +1232,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "duncan-coc-member-002",
-    chamberId: "duncan-coc",
+    chamberId: "duncan-cowichan-chamber",
     businessName: "Cowichan Valley Museum",
     website: "https://www.cowichanvalleymuseum.bc.ca",
     category: "arts-culture",
@@ -1242,7 +1242,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "duncan-coc-member-003",
-    chamberId: "duncan-coc",
+    chamberId: "duncan-cowichan-chamber",
     businessName: "Cowichan Tribes",
     website: "https://www.cowichantribes.com",
     category: "first-nations",
@@ -1258,7 +1258,7 @@ export const chamberMembers: ChamberMember[] = [
   // Kelowna Chamber of Commerce
   {
     id: "kelowna-coc-member-001",
-    chamberId: "kelowna-coc",
+    chamberId: "kelowna-chamber",
     businessName: "UBC Okanagan",
     website: "https://ok.ubc.ca",
     category: "education",
@@ -1272,7 +1272,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "kelowna-coc-member-002",
-    chamberId: "kelowna-coc",
+    chamberId: "kelowna-chamber",
     businessName: "Kelowna General Hospital",
     website: "https://www.interiorhealth.ca",
     category: "healthcare",
@@ -1286,7 +1286,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "kelowna-coc-member-003",
-    chamberId: "kelowna-coc",
+    chamberId: "kelowna-chamber",
     businessName: "Kelowna International Airport",
     website: "https://www.ylw.kelowna.ca",
     category: "aviation",
@@ -1300,7 +1300,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "kelowna-coc-member-004",
-    chamberId: "kelowna-coc",
+    chamberId: "kelowna-chamber",
     businessName: "Mission Hill Family Estate Winery",
     website: "https://www.missionhillwinery.com",
     category: "winery-brewery",
@@ -1311,7 +1311,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "kelowna-coc-member-005",
-    chamberId: "kelowna-coc",
+    chamberId: "kelowna-chamber",
     businessName: "Kelowna Cabs",
     website: "https://www.kelownacabs.ca",
     category: "taxi-rideshare",
@@ -1326,7 +1326,7 @@ export const chamberMembers: ChamberMember[] = [
   // Vernon Chamber of Commerce
   {
     id: "vernon-coc-member-001",
-    chamberId: "vernon-coc",
+    chamberId: "vernon-chamber",
     businessName: "Vernon Jubilee Hospital",
     website: "https://www.interiorhealth.ca",
     category: "healthcare",
@@ -1336,7 +1336,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "vernon-coc-member-002",
-    chamberId: "vernon-coc",
+    chamberId: "vernon-chamber",
     businessName: "Silver Star Mountain Resort",
     website: "https://www.skisilverstar.com",
     category: "recreation",
@@ -1347,7 +1347,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "vernon-coc-member-003",
-    chamberId: "vernon-coc",
+    chamberId: "vernon-chamber",
     businessName: "Vernon Regional Airport",
     website: "https://www.vernonairport.ca",
     category: "aviation",
@@ -1362,7 +1362,7 @@ export const chamberMembers: ChamberMember[] = [
   // Penticton Chamber of Commerce
   {
     id: "penticton-coc-member-001",
-    chamberId: "penticton-coc",
+    chamberId: "penticton-chamber",
     businessName: "Penticton Regional Hospital",
     website: "https://www.interiorhealth.ca",
     category: "healthcare",
@@ -1372,7 +1372,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "penticton-coc-member-002",
-    chamberId: "penticton-coc",
+    chamberId: "penticton-chamber",
     businessName: "Penticton Airport",
     website: "https://www.pentictonairport.com",
     category: "aviation",
@@ -1385,7 +1385,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "penticton-coc-member-003",
-    chamberId: "penticton-coc",
+    chamberId: "penticton-chamber",
     businessName: "Penticton Lakeside Resort",
     website: "https://www.pentictonlakesideresort.com",
     category: "accommodation",
@@ -1401,7 +1401,7 @@ export const chamberMembers: ChamberMember[] = [
   // Kamloops Chamber of Commerce
   {
     id: "kamloops-coc-member-001",
-    chamberId: "kamloops-coc",
+    chamberId: "kamloops-chamber",
     businessName: "Thompson Rivers University",
     website: "https://www.tru.ca",
     category: "education",
@@ -1415,7 +1415,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "kamloops-coc-member-002",
-    chamberId: "kamloops-coc",
+    chamberId: "kamloops-chamber",
     businessName: "Royal Inland Hospital",
     website: "https://www.interiorhealth.ca",
     category: "healthcare",
@@ -1429,7 +1429,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "kamloops-coc-member-003",
-    chamberId: "kamloops-coc",
+    chamberId: "kamloops-chamber",
     businessName: "Kamloops Airport",
     website: "https://www.kamloopsairport.com",
     category: "aviation",
@@ -1443,7 +1443,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "kamloops-coc-member-004",
-    chamberId: "kamloops-coc",
+    chamberId: "kamloops-chamber",
     businessName: "Sun Peaks Resort",
     website: "https://www.sunpeaksresort.com",
     category: "recreation",
@@ -1456,7 +1456,7 @@ export const chamberMembers: ChamberMember[] = [
   // Salmon Arm Chamber of Commerce
   {
     id: "salmon-arm-coc-member-001",
-    chamberId: "salmon-arm-coc",
+    chamberId: "salmon-arm-chamber",
     businessName: "Shuswap Lake General Hospital",
     website: "https://www.interiorhealth.ca",
     category: "healthcare",
@@ -1466,7 +1466,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "salmon-arm-coc-member-002",
-    chamberId: "salmon-arm-coc",
+    chamberId: "salmon-arm-chamber",
     businessName: "Salmon Arm Airport",
     website: "https://www.salmonarm.ca",
     category: "aviation",
@@ -1481,7 +1481,7 @@ export const chamberMembers: ChamberMember[] = [
   // Revelstoke Chamber of Commerce
   {
     id: "revelstoke-coc-member-001",
-    chamberId: "revelstoke-coc",
+    chamberId: "revelstoke-chamber",
     businessName: "Revelstoke Mountain Resort",
     website: "https://www.revelstokemountainresort.com",
     category: "recreation",
@@ -1492,7 +1492,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "revelstoke-coc-member-002",
-    chamberId: "revelstoke-coc",
+    chamberId: "revelstoke-chamber",
     businessName: "Queen Victoria Hospital",
     website: "https://www.interiorhealth.ca",
     category: "healthcare",
@@ -1502,7 +1502,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "revelstoke-coc-member-003",
-    chamberId: "revelstoke-coc",
+    chamberId: "revelstoke-chamber",
     businessName: "Parks Canada - Rogers Pass",
     website: "https://www.pc.gc.ca",
     category: "government",
@@ -1515,7 +1515,7 @@ export const chamberMembers: ChamberMember[] = [
   // Golden Chamber of Commerce
   {
     id: "golden-coc-member-001",
-    chamberId: "golden-coc",
+    chamberId: "golden-chamber",
     businessName: "Kicking Horse Mountain Resort",
     website: "https://www.kickinghorseresort.com",
     category: "recreation",
@@ -1526,7 +1526,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "golden-coc-member-002",
-    chamberId: "golden-coc",
+    chamberId: "golden-chamber",
     businessName: "Golden & District Hospital",
     website: "https://www.interiorhealth.ca",
     category: "healthcare",
@@ -1536,7 +1536,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "golden-coc-member-003",
-    chamberId: "golden-coc",
+    chamberId: "golden-chamber",
     businessName: "Mount 7 Taxi",
     category: "taxi-rideshare",
     municipality: "Golden",
@@ -1555,7 +1555,7 @@ export const chamberMembers: ChamberMember[] = [
   // Williams Lake Chamber of Commerce
   {
     id: "williams-lake-coc-member-001",
-    chamberId: "williams-lake-coc",
+    chamberId: "williams-lake-chamber",
     businessName: "Cariboo Memorial Hospital",
     website: "https://www.interiorhealth.ca",
     category: "healthcare",
@@ -1565,7 +1565,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "williams-lake-coc-member-002",
-    chamberId: "williams-lake-coc",
+    chamberId: "williams-lake-chamber",
     businessName: "Williams Lake Airport",
     website: "https://www.williamslake.ca",
     category: "aviation",
@@ -1578,7 +1578,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "williams-lake-coc-member-003",
-    chamberId: "williams-lake-coc",
+    chamberId: "williams-lake-chamber",
     businessName: "Williams Lake Stampede",
     website: "https://www.williamslakestampede.com",
     category: "entertainment",
@@ -1591,7 +1591,7 @@ export const chamberMembers: ChamberMember[] = [
   // Quesnel Chamber of Commerce
   {
     id: "quesnel-coc-member-001",
-    chamberId: "quesnel-coc",
+    chamberId: "quesnel-chamber",
     businessName: "G.R. Baker Memorial Hospital",
     website: "https://www.northernhealth.ca",
     category: "healthcare",
@@ -1601,7 +1601,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "quesnel-coc-member-002",
-    chamberId: "quesnel-coc",
+    chamberId: "quesnel-chamber",
     businessName: "Quesnel Airport",
     website: "https://www.quesnel.ca",
     category: "aviation",
@@ -1620,7 +1620,7 @@ export const chamberMembers: ChamberMember[] = [
   // Prince George Chamber of Commerce
   {
     id: "pg-coc-member-001",
-    chamberId: "pg-coc",
+    chamberId: "prince-george-chamber",
     businessName: "University of Northern British Columbia",
     website: "https://www.unbc.ca",
     category: "education",
@@ -1634,7 +1634,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "pg-coc-member-002",
-    chamberId: "pg-coc",
+    chamberId: "prince-george-chamber",
     businessName: "University Hospital of Northern BC",
     website: "https://www.northernhealth.ca",
     category: "healthcare",
@@ -1648,7 +1648,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "pg-coc-member-003",
-    chamberId: "pg-coc",
+    chamberId: "prince-george-chamber",
     businessName: "Prince George Airport",
     website: "https://www.pgairport.ca",
     category: "aviation",
@@ -1662,7 +1662,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "pg-coc-member-004",
-    chamberId: "pg-coc",
+    chamberId: "prince-george-chamber",
     businessName: "Canfor Corporation",
     website: "https://www.canfor.com",
     category: "forestry-logging",
@@ -1672,7 +1672,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "pg-coc-member-005",
-    chamberId: "pg-coc",
+    chamberId: "prince-george-chamber",
     businessName: "CN Rail - Prince George Yard",
     website: "https://www.cn.ca",
     category: "trucking-freight",
@@ -1689,7 +1689,7 @@ export const chamberMembers: ChamberMember[] = [
   // Fort St. John Chamber of Commerce
   {
     id: "fsj-coc-member-001",
-    chamberId: "fsj-coc",
+    chamberId: "fort-st-john-chamber",
     businessName: "Northern Lights College",
     website: "https://www.nlc.bc.ca",
     category: "education",
@@ -1703,7 +1703,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "fsj-coc-member-002",
-    chamberId: "fsj-coc",
+    chamberId: "fort-st-john-chamber",
     businessName: "Fort St. John Hospital",
     website: "https://www.northernhealth.ca",
     category: "healthcare",
@@ -1713,7 +1713,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "fsj-coc-member-003",
-    chamberId: "fsj-coc",
+    chamberId: "fort-st-john-chamber",
     businessName: "Fort St. John Airport",
     website: "https://www.fsjairport.com",
     category: "aviation",
@@ -1729,7 +1729,7 @@ export const chamberMembers: ChamberMember[] = [
   // Terrace Chamber of Commerce
   {
     id: "terrace-coc-member-001",
-    chamberId: "terrace-coc",
+    chamberId: "terrace-chamber",
     businessName: "Mills Memorial Hospital",
     website: "https://www.northernhealth.ca",
     category: "healthcare",
@@ -1739,7 +1739,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "terrace-coc-member-002",
-    chamberId: "terrace-coc",
+    chamberId: "terrace-chamber",
     businessName: "Northwest Regional Airport (Terrace)",
     website: "https://www.yxt.ca",
     category: "aviation",
@@ -1753,7 +1753,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "terrace-coc-member-003",
-    chamberId: "terrace-coc",
+    chamberId: "terrace-chamber",
     businessName: "Coast Mountain College - Terrace",
     website: "https://www.coastmountaincollege.ca",
     category: "education",
@@ -1769,7 +1769,7 @@ export const chamberMembers: ChamberMember[] = [
   // Kitimat Chamber of Commerce
   {
     id: "kitimat-coc-member-001",
-    chamberId: "kitimat-coc",
+    chamberId: "kitimat-chamber",
     businessName: "Rio Tinto Alcan - Kitimat Smelter",
     website: "https://www.riotinto.com",
     category: "manufacturing",
@@ -1780,7 +1780,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "kitimat-coc-member-002",
-    chamberId: "kitimat-coc",
+    chamberId: "kitimat-chamber",
     businessName: "LNG Canada",
     website: "https://www.lngcanada.ca",
     category: "utilities",
@@ -1791,7 +1791,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "kitimat-coc-member-003",
-    chamberId: "kitimat-coc",
+    chamberId: "kitimat-chamber",
     businessName: "Kitimat General Hospital",
     website: "https://www.northernhealth.ca",
     category: "healthcare",
@@ -1803,7 +1803,7 @@ export const chamberMembers: ChamberMember[] = [
   // Prince Rupert Chamber of Commerce
   {
     id: "prupert-coc-member-001",
-    chamberId: "prupert-coc",
+    chamberId: "prince-rupert-chamber",
     businessName: "Port of Prince Rupert",
     website: "https://www.rupertport.com",
     category: "fishing-marine",
@@ -1818,7 +1818,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "prupert-coc-member-002",
-    chamberId: "prupert-coc",
+    chamberId: "prince-rupert-chamber",
     businessName: "BC Ferries - Prince Rupert Terminal",
     website: "https://www.bcferries.com",
     category: "transit",
@@ -1833,7 +1833,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "prupert-coc-member-003",
-    chamberId: "prupert-coc",
+    chamberId: "prince-rupert-chamber",
     businessName: "Prince Rupert Regional Hospital",
     website: "https://www.northernhealth.ca",
     category: "healthcare",
@@ -1849,7 +1849,7 @@ export const chamberMembers: ChamberMember[] = [
   // Nelson Chamber of Commerce
   {
     id: "nelson-coc-member-001",
-    chamberId: "nelson-coc",
+    chamberId: "nelson-chamber",
     businessName: "Kootenay Lake Hospital",
     website: "https://www.interiorhealth.ca",
     category: "healthcare",
@@ -1859,7 +1859,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nelson-coc-member-002",
-    chamberId: "nelson-coc",
+    chamberId: "nelson-chamber",
     businessName: "Selkirk College",
     website: "https://www.selkirk.ca",
     category: "education",
@@ -1873,7 +1873,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nelson-coc-member-003",
-    chamberId: "nelson-coc",
+    chamberId: "nelson-chamber",
     businessName: "Whitewater Ski Resort",
     website: "https://www.skiwhitewater.com",
     category: "recreation",
@@ -1884,7 +1884,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nelson-coc-member-004",
-    chamberId: "nelson-coc",
+    chamberId: "nelson-chamber",
     businessName: "Glacier Cabs Nelson",
     category: "taxi-rideshare",
     municipality: "Nelson",
@@ -1899,7 +1899,7 @@ export const chamberMembers: ChamberMember[] = [
   // Cranbrook Chamber of Commerce
   {
     id: "cranbrook-coc-member-001",
-    chamberId: "cranbrook-coc",
+    chamberId: "cranbrook-chamber",
     businessName: "East Kootenay Regional Hospital",
     website: "https://www.interiorhealth.ca",
     category: "healthcare",
@@ -1913,7 +1913,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "cranbrook-coc-member-002",
-    chamberId: "cranbrook-coc",
+    chamberId: "cranbrook-chamber",
     businessName: "Canadian Rockies International Airport",
     website: "https://www.cranbrookairport.com",
     category: "aviation",
@@ -1927,7 +1927,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "cranbrook-coc-member-003",
-    chamberId: "cranbrook-coc",
+    chamberId: "cranbrook-chamber",
     businessName: "College of the Rockies",
     website: "https://www.cotr.bc.ca",
     category: "education",
@@ -1943,7 +1943,7 @@ export const chamberMembers: ChamberMember[] = [
   // Fernie Chamber of Commerce
   {
     id: "fernie-coc-member-001",
-    chamberId: "fernie-coc",
+    chamberId: "fernie-chamber",
     businessName: "Fernie Alpine Resort",
     website: "https://www.skifernie.com",
     category: "recreation",
@@ -1954,7 +1954,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "fernie-coc-member-002",
-    chamberId: "fernie-coc",
+    chamberId: "fernie-chamber",
     businessName: "Elk Valley Hospital",
     website: "https://www.interiorhealth.ca",
     category: "healthcare",
@@ -1964,7 +1964,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "fernie-coc-member-003",
-    chamberId: "fernie-coc",
+    chamberId: "fernie-chamber",
     businessName: "Teck Resources - Coal Mountain",
     website: "https://www.teck.com",
     category: "mining",
@@ -1977,7 +1977,7 @@ export const chamberMembers: ChamberMember[] = [
   // Trail Chamber of Commerce
   {
     id: "trail-coc-member-001",
-    chamberId: "trail-coc",
+    chamberId: "trail-chamber",
     businessName: "Teck Trail Operations",
     website: "https://www.teck.com",
     category: "manufacturing",
@@ -1988,7 +1988,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "trail-coc-member-002",
-    chamberId: "trail-coc",
+    chamberId: "trail-chamber",
     businessName: "Kootenay Boundary Regional Hospital",
     website: "https://www.interiorhealth.ca",
     category: "healthcare",
@@ -1998,7 +1998,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "trail-coc-member-003",
-    chamberId: "trail-coc",
+    chamberId: "trail-chamber",
     businessName: "Rossland Red Mountain Resort",
     website: "https://www.redresort.com",
     category: "recreation",
@@ -2015,7 +2015,7 @@ export const chamberMembers: ChamberMember[] = [
   // Whistler Chamber of Commerce
   {
     id: "whistler-coc-member-001",
-    chamberId: "whistler-coc",
+    chamberId: "whistler-chamber",
     businessName: "Whistler Blackcomb",
     website: "https://www.whistlerblackcomb.com",
     category: "recreation",
@@ -2026,7 +2026,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "whistler-coc-member-002",
-    chamberId: "whistler-coc",
+    chamberId: "whistler-chamber",
     businessName: "Tourism Whistler",
     website: "https://www.whistler.com",
     category: "hospitality",
@@ -2037,7 +2037,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "whistler-coc-member-003",
-    chamberId: "whistler-coc",
+    chamberId: "whistler-chamber",
     businessName: "Fairmont Chateau Whistler",
     website: "https://www.fairmont.com/whistler",
     category: "accommodation",
@@ -2048,7 +2048,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "whistler-coc-member-004",
-    chamberId: "whistler-coc",
+    chamberId: "whistler-chamber",
     businessName: "Whistler Health Care Centre",
     website: "https://www.vch.ca",
     category: "healthcare",
@@ -2058,7 +2058,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "whistler-coc-member-005",
-    chamberId: "whistler-coc",
+    chamberId: "whistler-chamber",
     businessName: "Whistler Taxis",
     category: "taxi-rideshare",
     municipality: "Whistler",
@@ -2073,7 +2073,7 @@ export const chamberMembers: ChamberMember[] = [
   // Squamish Chamber of Commerce
   {
     id: "squamish-coc-member-001",
-    chamberId: "squamish-coc",
+    chamberId: "squamish-chamber",
     businessName: "Sea to Sky Gondola",
     website: "https://www.seatoskygondola.com",
     category: "hospitality",
@@ -2084,7 +2084,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "squamish-coc-member-002",
-    chamberId: "squamish-coc",
+    chamberId: "squamish-chamber",
     businessName: "Quest University Canada",
     website: "https://www.questu.ca",
     category: "education",
@@ -2094,7 +2094,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "squamish-coc-member-003",
-    chamberId: "squamish-coc",
+    chamberId: "squamish-chamber",
     businessName: "Squamish General Hospital",
     website: "https://www.vch.ca",
     category: "healthcare",
@@ -2104,7 +2104,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "squamish-coc-member-004",
-    chamberId: "squamish-coc",
+    chamberId: "squamish-chamber",
     businessName: "Squamish Airport",
     website: "https://www.squamish.ca",
     category: "aviation",
@@ -2123,7 +2123,7 @@ export const chamberMembers: ChamberMember[] = [
   // Sechelt Chamber of Commerce
   {
     id: "sechelt-coc-member-001",
-    chamberId: "sechelt-coc",
+    chamberId: "sechelt-chamber",
     businessName: "Sechelt Hospital (St. Mary's)",
     website: "https://www.vch.ca",
     category: "healthcare",
@@ -2133,7 +2133,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "sechelt-coc-member-002",
-    chamberId: "sechelt-coc",
+    chamberId: "sechelt-chamber",
     businessName: "Sechelt Airport",
     website: "https://www.sechelt.ca",
     category: "aviation",
@@ -2146,7 +2146,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "sechelt-coc-member-003",
-    chamberId: "sechelt-coc",
+    chamberId: "sechelt-chamber",
     businessName: "Sechelt Taxi",
     category: "taxi-rideshare",
     municipality: "Sechelt",
@@ -2161,7 +2161,7 @@ export const chamberMembers: ChamberMember[] = [
   // Powell River Chamber of Commerce
   {
     id: "powell-river-coc-member-001",
-    chamberId: "powell-river-coc",
+    chamberId: "powell-river-chamber",
     businessName: "Powell River General Hospital",
     website: "https://www.vch.ca",
     category: "healthcare",
@@ -2171,7 +2171,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "powell-river-coc-member-002",
-    chamberId: "powell-river-coc",
+    chamberId: "powell-river-chamber",
     businessName: "Powell River Airport",
     website: "https://www.powellriverairport.ca",
     category: "aviation",
@@ -2184,7 +2184,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "powell-river-coc-member-003",
-    chamberId: "powell-river-coc",
+    chamberId: "powell-river-chamber",
     businessName: "BC Ferries - Powell River Terminal",
     website: "https://www.bcferries.com",
     category: "transit",
@@ -2204,7 +2204,7 @@ export const chamberMembers: ChamberMember[] = [
   // More Greater Vancouver Board of Trade members
   {
     id: "gvbot-member-011",
-    chamberId: "gvbot",
+    chamberId: "greater-vancouver-board-of-trade",
     businessName: "RBC Royal Bank of Canada",
     website: "https://www.rbc.com",
     category: "banking-finance",
@@ -2214,7 +2214,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "gvbot-member-012",
-    chamberId: "gvbot",
+    chamberId: "greater-vancouver-board-of-trade",
     businessName: "ICBC - Insurance Corporation of BC",
     website: "https://www.icbc.com",
     category: "insurance",
@@ -2224,7 +2224,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "gvbot-member-013",
-    chamberId: "gvbot",
+    chamberId: "greater-vancouver-board-of-trade",
     businessName: "Finning International",
     website: "https://www.finning.com",
     category: "manufacturing",
@@ -2235,7 +2235,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "gvbot-member-014",
-    chamberId: "gvbot",
+    chamberId: "greater-vancouver-board-of-trade",
     businessName: "BC Investment Management Corporation (BCI)",
     website: "https://www.bci.ca",
     category: "banking-finance",
@@ -2246,7 +2246,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "gvbot-member-015",
-    chamberId: "gvbot",
+    chamberId: "greater-vancouver-board-of-trade",
     businessName: "Teck Resources Limited",
     website: "https://www.teck.com",
     category: "mining",
@@ -2256,7 +2256,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "gvbot-member-016",
-    chamberId: "gvbot",
+    chamberId: "greater-vancouver-board-of-trade",
     businessName: "Ledcor Group",
     website: "https://www.ledcor.com",
     category: "construction",
@@ -2266,7 +2266,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "gvbot-member-017",
-    chamberId: "gvbot",
+    chamberId: "greater-vancouver-board-of-trade",
     businessName: "TransLink",
     website: "https://www.translink.ca",
     category: "transit",
@@ -2280,7 +2280,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "gvbot-member-018",
-    chamberId: "gvbot",
+    chamberId: "greater-vancouver-board-of-trade",
     businessName: "Vancouver Convention Centre",
     website: "https://www.vancouverconventioncentre.com",
     category: "entertainment",
@@ -2290,7 +2290,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "gvbot-member-019",
-    chamberId: "gvbot",
+    chamberId: "greater-vancouver-board-of-trade",
     businessName: "Shoppers Drug Mart",
     website: "https://www.shoppersdrugmart.ca",
     category: "pharmacy",
@@ -2300,7 +2300,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "gvbot-member-020",
-    chamberId: "gvbot",
+    chamberId: "greater-vancouver-board-of-trade",
     businessName: "KPMG LLP",
     website: "https://www.kpmg.ca",
     category: "accounting",
@@ -2313,7 +2313,7 @@ export const chamberMembers: ChamberMember[] = [
   // More North Vancouver Chamber members
   {
     id: "northvan-coc-member-001",
-    chamberId: "northvan-coc",
+    chamberId: "north-vancouver-chamber",
     businessName: "BlueShore Financial",
     website: "https://www.blueshorefinancial.com",
     category: "banking-finance",
@@ -2323,7 +2323,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "northvan-coc-member-002",
-    chamberId: "northvan-coc",
+    chamberId: "north-vancouver-chamber",
     businessName: "Capilano University",
     website: "https://www.capilanou.ca",
     category: "education",
@@ -2337,7 +2337,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "northvan-coc-member-003",
-    chamberId: "northvan-coc",
+    chamberId: "north-vancouver-chamber",
     businessName: "Lions Gate Hospital",
     website: "https://www.vch.ca",
     category: "healthcare",
@@ -2351,7 +2351,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "northvan-coc-member-004",
-    chamberId: "northvan-coc",
+    chamberId: "north-vancouver-chamber",
     businessName: "FortisBC",
     website: "https://www.fortisbc.com",
     category: "utilities",
@@ -2361,7 +2361,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "northvan-coc-member-005",
-    chamberId: "northvan-coc",
+    chamberId: "north-vancouver-chamber",
     businessName: "Grouse Mountain Resorts",
     website: "https://www.grousemountain.com",
     category: "recreation",
@@ -2371,7 +2371,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "northvan-coc-member-006",
-    chamberId: "northvan-coc",
+    chamberId: "north-vancouver-chamber",
     businessName: "Seaspan Shipyards",
     website: "https://www.seaspan.com",
     category: "manufacturing",
@@ -2384,7 +2384,7 @@ export const chamberMembers: ChamberMember[] = [
   // Tri-Cities Chamber members
   {
     id: "tricities-coc-member-001",
-    chamberId: "tricities-coc",
+    chamberId: "tri-cities-chamber",
     businessName: "Eagle Ridge Hospital",
     website: "https://www.fraserhealth.ca",
     category: "healthcare",
@@ -2398,7 +2398,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tricities-coc-member-002",
-    chamberId: "tricities-coc",
+    chamberId: "tri-cities-chamber",
     businessName: "Douglas College - Coquitlam",
     website: "https://www.douglascollege.ca",
     category: "education",
@@ -2412,7 +2412,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tricities-coc-member-003",
-    chamberId: "tricities-coc",
+    chamberId: "tri-cities-chamber",
     businessName: "Coquitlam Centre",
     website: "https://www.coquitlamcentre.com",
     category: "retail",
@@ -2422,7 +2422,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tricities-coc-member-004",
-    chamberId: "tricities-coc",
+    chamberId: "tri-cities-chamber",
     businessName: "Golbey Levine Lawyers",
     website: "https://www.golbeylevine.com",
     category: "legal",
@@ -2433,7 +2433,7 @@ export const chamberMembers: ChamberMember[] = [
   // Delta Chamber members
   {
     id: "delta-coc-member-001",
-    chamberId: "delta-coc",
+    chamberId: "delta-chamber-of-commerce",
     businessName: "Pure Sunfarms",
     website: "https://www.puresunfarms.com",
     category: "cannabis",
@@ -2443,7 +2443,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "delta-coc-member-002",
-    chamberId: "delta-coc",
+    chamberId: "delta-chamber-of-commerce",
     businessName: "Tsawwassen Mills",
     website: "https://www.tsawwassenmills.com",
     category: "retail",
@@ -2453,7 +2453,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "delta-coc-member-003",
-    chamberId: "delta-coc",
+    chamberId: "delta-chamber-of-commerce",
     businessName: "BC Ferries - Tsawwassen Terminal",
     website: "https://www.bcferries.com",
     category: "transit",
@@ -2468,7 +2468,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "delta-coc-member-004",
-    chamberId: "delta-coc",
+    chamberId: "delta-chamber-of-commerce",
     businessName: "Boundary Bay Airport",
     website: "https://www.boundarybayairport.com",
     category: "aviation",
@@ -2484,7 +2484,7 @@ export const chamberMembers: ChamberMember[] = [
   // New Westminster Chamber members
   {
     id: "newwest-coc-member-001",
-    chamberId: "newwest-coc",
+    chamberId: "new-westminster-chamber",
     businessName: "Royal Columbian Hospital",
     website: "https://www.fraserhealth.ca",
     category: "healthcare",
@@ -2498,7 +2498,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "newwest-coc-member-002",
-    chamberId: "newwest-coc",
+    chamberId: "new-westminster-chamber",
     businessName: "Douglas College",
     website: "https://www.douglascollege.ca",
     category: "education",
@@ -2512,7 +2512,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "newwest-coc-member-003",
-    chamberId: "newwest-coc",
+    chamberId: "new-westminster-chamber",
     businessName: "Anvil Centre",
     website: "https://www.anvilcentre.com",
     category: "entertainment",
@@ -2528,7 +2528,7 @@ export const chamberMembers: ChamberMember[] = [
   // More Abbotsford Chamber members
   {
     id: "abbotsford-coc-member-006",
-    chamberId: "abbotsford-coc",
+    chamberId: "abbotsford-chamber-of-commerce",
     businessName: "Tradex Exhibition Centre",
     website: "https://www.tradexbc.com",
     category: "entertainment",
@@ -2538,7 +2538,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "abbotsford-coc-member-007",
-    chamberId: "abbotsford-coc",
+    chamberId: "abbotsford-chamber-of-commerce",
     businessName: "Abbotsford Police Department",
     website: "https://www.abbypd.ca",
     category: "government",
@@ -2552,7 +2552,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "abbotsford-coc-member-008",
-    chamberId: "abbotsford-coc",
+    chamberId: "abbotsford-chamber-of-commerce",
     businessName: "Cascade Aerospace",
     website: "https://www.cascadeaerospace.com",
     category: "aviation",
@@ -2563,7 +2563,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "abbotsford-coc-member-009",
-    chamberId: "abbotsford-coc",
+    chamberId: "abbotsford-chamber-of-commerce",
     businessName: "Minter Country Garden Store",
     website: "https://www.mintergardening.com",
     category: "retail",
@@ -2575,7 +2575,7 @@ export const chamberMembers: ChamberMember[] = [
   // Langley Chamber members
   {
     id: "langley-coc-member-001",
-    chamberId: "langley-coc",
+    chamberId: "langley-chamber-of-commerce",
     businessName: "Langley Memorial Hospital",
     website: "https://www.fraserhealth.ca",
     category: "healthcare",
@@ -2589,7 +2589,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "langley-coc-member-002",
-    chamberId: "langley-coc",
+    chamberId: "langley-chamber-of-commerce",
     businessName: "Trinity Western University",
     website: "https://www.twu.ca",
     category: "education",
@@ -2603,7 +2603,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "langley-coc-member-003",
-    chamberId: "langley-coc",
+    chamberId: "langley-chamber-of-commerce",
     businessName: "Langley Airport",
     website: "https://www.langleyflying.com",
     category: "aviation",
@@ -2617,7 +2617,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "langley-coc-member-004",
-    chamberId: "langley-coc",
+    chamberId: "langley-chamber-of-commerce",
     businessName: "Cascades Casino Langley",
     website: "https://www.gcgaming.com",
     category: "entertainment",
@@ -2627,7 +2627,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "langley-coc-member-005",
-    chamberId: "langley-coc",
+    chamberId: "langley-chamber-of-commerce",
     businessName: "Langley Cabs",
     category: "taxi-rideshare",
     municipality: "Langley",
@@ -2642,7 +2642,7 @@ export const chamberMembers: ChamberMember[] = [
   // Mission Chamber members
   {
     id: "mission-coc-member-001",
-    chamberId: "mission-coc",
+    chamberId: "mission-chamber-of-commerce",
     businessName: "Mission Memorial Hospital",
     website: "https://www.fraserhealth.ca",
     category: "healthcare",
@@ -2652,7 +2652,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "mission-coc-member-002",
-    chamberId: "mission-coc",
+    chamberId: "mission-chamber-of-commerce",
     businessName: "West Coast Express - Mission Station",
     website: "https://www.translink.ca",
     category: "transit",
@@ -2673,7 +2673,7 @@ export const chamberMembers: ChamberMember[] = [
   // More Nanaimo Chamber members
   {
     id: "nanaimo-coc-member-005",
-    chamberId: "nanaimo-coc",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Woodgrove Centre",
     website: "https://www.woodgrovecentre.com",
     category: "retail",
@@ -2684,7 +2684,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-coc-member-006",
-    chamberId: "nanaimo-coc",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Nanaimo Port Authority",
     website: "https://www.npa.ca",
     category: "fishing-marine",
@@ -2698,7 +2698,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-coc-member-007",
-    chamberId: "nanaimo-coc",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "BC Ferries - Departure Bay Terminal",
     website: "https://www.bcferries.com",
     category: "transit",
@@ -2712,7 +2712,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-coc-member-008",
-    chamberId: "nanaimo-coc",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Harbour Air Seaplanes",
     website: "https://www.harbourair.com",
     category: "aviation",
@@ -2729,7 +2729,7 @@ export const chamberMembers: ChamberMember[] = [
   // Parksville & Qualicum Beach
   {
     id: "parksville-coc-member-001",
-    chamberId: "parksville-coc",
+    chamberId: "parksville-chamber",
     businessName: "Tigh-Na-Mara Seaside Spa Resort",
     website: "https://www.tigh-na-mara.com",
     category: "accommodation",
@@ -2740,7 +2740,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "parksville-coc-member-002",
-    chamberId: "parksville-coc",
+    chamberId: "parksville-chamber",
     businessName: "Parksville Community Centre",
     website: "https://www.parksville.ca",
     category: "recreation",
@@ -2754,7 +2754,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "qualicum-coc-member-001",
-    chamberId: "qualicum-coc",
+    chamberId: "qualicum-beach-chamber",
     businessName: "Qualicum Beach Inn",
     website: "https://www.qualicumbeachinn.com",
     category: "accommodation",
@@ -2766,7 +2766,7 @@ export const chamberMembers: ChamberMember[] = [
   // Port McNeill & Alert Bay
   {
     id: "portmcneill-coc-member-001",
-    chamberId: "portmcneill-coc",
+    chamberId: "port-mcneill-chamber",
     businessName: "Port McNeill & District Hospital",
     website: "https://www.islandhealth.ca",
     category: "healthcare",
@@ -2776,7 +2776,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "portmcneill-coc-member-002",
-    chamberId: "portmcneill-coc",
+    chamberId: "port-mcneill-chamber",
     businessName: "Port McNeill Airport",
     category: "aviation",
     municipality: "Port McNeill",
@@ -2789,7 +2789,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "alertbay-coc-member-001",
-    chamberId: "alertbay-coc",
+    chamberId: "alert-bay-chamber",
     businessName: "U'mista Cultural Centre",
     website: "https://www.umista.ca",
     category: "arts-culture",
@@ -2800,7 +2800,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "alertbay-coc-member-002",
-    chamberId: "alertbay-coc",
+    chamberId: "alert-bay-chamber",
     businessName: "'Namgis First Nation",
     website: "https://www.namgis.bc.ca",
     category: "first-nations",
@@ -2812,7 +2812,7 @@ export const chamberMembers: ChamberMember[] = [
   // Cowichan Lake District
   {
     id: "cowichanlake-coc-member-001",
-    chamberId: "cowichanlake-coc",
+    chamberId: "cowichan-lake-chamber",
     businessName: "Lake Cowichan District Hospital",
     website: "https://www.islandhealth.ca",
     category: "healthcare",
@@ -2822,7 +2822,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "cowichanlake-coc-member-002",
-    chamberId: "cowichanlake-coc",
+    chamberId: "cowichan-lake-chamber",
     businessName: "Kaatza Station Museum",
     website: "https://www.kaatzamuseum.ca",
     category: "arts-culture",
@@ -2835,7 +2835,7 @@ export const chamberMembers: ChamberMember[] = [
   // Ladysmith & Chemainus
   {
     id: "ladysmith-coc-member-001",
-    chamberId: "ladysmith-coc",
+    chamberId: "ladysmith-chamber",
     businessName: "Ladysmith GoTaxi",
     category: "taxi-rideshare",
     municipality: "Ladysmith",
@@ -2848,7 +2848,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "ladysmith-coc-member-002",
-    chamberId: "ladysmith-coc",
+    chamberId: "ladysmith-chamber",
     businessName: "Transfer Beach Park",
     category: "recreation",
     subcategory: "Beach park",
@@ -2858,7 +2858,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "chemainus-coc-member-001",
-    chamberId: "chemainus-coc",
+    chamberId: "chemainus-chamber",
     businessName: "Chemainus Theatre Festival",
     website: "https://www.chemainustheatrefestival.ca",
     category: "entertainment",
@@ -2875,7 +2875,7 @@ export const chamberMembers: ChamberMember[] = [
   // More Kelowna Chamber members
   {
     id: "kelowna-coc-member-006",
-    chamberId: "kelowna-coc",
+    chamberId: "kelowna-chamber",
     businessName: "Okanagan College - Kelowna",
     website: "https://www.okanagan.bc.ca",
     category: "education",
@@ -2889,7 +2889,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "kelowna-coc-member-007",
-    chamberId: "kelowna-coc",
+    chamberId: "kelowna-chamber",
     businessName: "Big White Ski Resort",
     website: "https://www.bigwhite.com",
     category: "recreation",
@@ -2900,7 +2900,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "kelowna-coc-member-008",
-    chamberId: "kelowna-coc",
+    chamberId: "kelowna-chamber",
     businessName: "Orchard Park Shopping Centre",
     website: "https://www.orchardparkmall.com",
     category: "retail",
@@ -2910,7 +2910,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "kelowna-coc-member-009",
-    chamberId: "kelowna-coc",
+    chamberId: "kelowna-chamber",
     businessName: "Quails' Gate Winery",
     website: "https://www.quailsgate.com",
     category: "winery-brewery",
@@ -2923,7 +2923,7 @@ export const chamberMembers: ChamberMember[] = [
   // West Kelowna Chamber
   {
     id: "westkelowna-coc-member-001",
-    chamberId: "westkelowna-coc",
+    chamberId: "west-kelowna-board-of-trade",
     businessName: "West Kelowna City Hall",
     website: "https://www.westkelownacity.ca",
     category: "government",
@@ -2937,7 +2937,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "westkelowna-coc-member-002",
-    chamberId: "westkelowna-coc",
+    chamberId: "west-kelowna-board-of-trade",
     businessName: "Gorman Bros. Lumber",
     website: "https://www.gormanbros.com",
     category: "forestry-logging",
@@ -2950,7 +2950,7 @@ export const chamberMembers: ChamberMember[] = [
   // Summerland & South Okanagan
   {
     id: "summerland-coc-member-001",
-    chamberId: "summerland-coc",
+    chamberId: "summerland-chamber",
     businessName: "Sumac Ridge Estate Winery",
     website: "https://www.sumacridge.com",
     category: "winery-brewery",
@@ -2960,7 +2960,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "summerland-coc-member-002",
-    chamberId: "summerland-coc",
+    chamberId: "summerland-chamber",
     businessName: "Kettle Valley Steam Railway",
     website: "https://www.kettlevalleyrail.org",
     category: "hospitality",
@@ -2977,7 +2977,7 @@ export const chamberMembers: ChamberMember[] = [
   // Armstrong/Enderby
   {
     id: "armstrong-coc-member-001",
-    chamberId: "armstrong-coc",
+    chamberId: "armstrong-spallumcheen-chamber",
     businessName: "Interior Provincial Exhibition (IPE)",
     website: "https://www.ipe.bc.ca",
     category: "entertainment",
@@ -2988,7 +2988,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "enderby-coc-member-001",
-    chamberId: "enderby-coc",
+    chamberId: "enderby-chamber",
     businessName: "Enderby Cliff",
     category: "recreation",
     subcategory: "Natural attraction",
@@ -3001,7 +3001,7 @@ export const chamberMembers: ChamberMember[] = [
   // Princeton/Similkameen
   {
     id: "princeton-coc-member-001",
-    chamberId: "princeton-coc",
+    chamberId: "princeton-chamber",
     businessName: "Princeton Museum",
     category: "arts-culture",
     subcategory: "Museum",
@@ -3011,7 +3011,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "similkameen-coc-member-001",
-    chamberId: "similkameen-coc",
+    chamberId: "similkameen-chamber",
     businessName: "Cawston Farmers Market",
     category: "agriculture",
     subcategory: "Farmers market",
@@ -3028,7 +3028,7 @@ export const chamberMembers: ChamberMember[] = [
   // More Kamloops Chamber members
   {
     id: "kamloops-coc-member-005",
-    chamberId: "kamloops-coc",
+    chamberId: "kamloops-chamber",
     businessName: "Kamloops Heritage Railway",
     website: "https://www.kamrail.com",
     category: "hospitality",
@@ -3043,7 +3043,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "kamloops-coc-member-006",
-    chamberId: "kamloops-coc",
+    chamberId: "kamloops-chamber",
     businessName: "Sandman Centre",
     website: "https://www.sandmancentre.net",
     category: "entertainment",
@@ -3054,7 +3054,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "kamloops-coc-member-007",
-    chamberId: "kamloops-coc",
+    chamberId: "kamloops-chamber",
     businessName: "Kami Cabs",
     category: "taxi-rideshare",
     municipality: "Kamloops",
@@ -3069,7 +3069,7 @@ export const chamberMembers: ChamberMember[] = [
   // Merritt Chamber
   {
     id: "merritt-coc-member-001",
-    chamberId: "merritt-coc",
+    chamberId: "merritt-chamber",
     businessName: "Nicola Valley General Hospital",
     website: "https://www.interiorhealth.ca",
     category: "healthcare",
@@ -3079,7 +3079,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "merritt-coc-member-002",
-    chamberId: "merritt-coc",
+    chamberId: "merritt-chamber",
     businessName: "Merritt Mountain Music Festival",
     category: "entertainment",
     subcategory: "Music festival",
@@ -3092,7 +3092,7 @@ export const chamberMembers: ChamberMember[] = [
   // Clearwater/Barriere/Sun Peaks
   {
     id: "clearwater-coc-member-001",
-    chamberId: "clearwater-coc",
+    chamberId: "clearwater-chamber",
     businessName: "Wells Gray Provincial Park",
     website: "https://bcparks.ca/wells-gray-park",
     category: "government",
@@ -3103,7 +3103,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "clearwater-coc-member-002",
-    chamberId: "clearwater-coc",
+    chamberId: "clearwater-chamber",
     businessName: "Dr. Helmcken Memorial Hospital",
     website: "https://www.interiorhealth.ca",
     category: "healthcare",
@@ -3113,7 +3113,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "sunpeaks-coc-member-001",
-    chamberId: "sunpeaks-coc",
+    chamberId: "sun-peaks-chamber",
     businessName: "Sun Peaks Grand Hotel",
     website: "https://www.sunpeaksgrand.com",
     category: "accommodation",
@@ -3125,7 +3125,7 @@ export const chamberMembers: ChamberMember[] = [
   // Lytton & Desert Mesa Regional
   {
     id: "lytton-coc-member-001",
-    chamberId: "lytton-coc",
+    chamberId: "lytton-chamber",
     businessName: "Lytton First Nation",
     website: "https://www.lyttonfirstnation.ca",
     category: "first-nations",
@@ -3135,7 +3135,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "desertmesa-coc-member-001",
-    chamberId: "desertmesa-coc",
+    chamberId: "corridor-chamber",
     businessName: "Historic Hat Creek Ranch",
     website: "https://www.hatcreekranch.ca",
     category: "hospitality",
@@ -3152,7 +3152,7 @@ export const chamberMembers: ChamberMember[] = [
   // More Williams Lake members
   {
     id: "williams-lake-coc-member-004",
-    chamberId: "williams-lake-coc",
+    chamberId: "williams-lake-chamber",
     businessName: "Scout Island Nature Centre",
     website: "https://www.scoutislandnaturecentre.ca",
     category: "charity-nonprofit",
@@ -3162,7 +3162,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "williams-lake-coc-member-005",
-    chamberId: "williams-lake-coc",
+    chamberId: "williams-lake-chamber",
     businessName: "Town Taxi Williams Lake",
     category: "taxi-rideshare",
     municipality: "Williams Lake",
@@ -3177,7 +3177,7 @@ export const chamberMembers: ChamberMember[] = [
   // 100 Mile House/South Cariboo
   {
     id: "southcariboo-coc-member-001",
-    chamberId: "southcariboo-coc",
+    chamberId: "south-cariboo-chamber",
     businessName: "100 Mile District General Hospital",
     website: "https://www.interiorhealth.ca",
     category: "healthcare",
@@ -3187,7 +3187,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "southcariboo-coc-member-002",
-    chamberId: "southcariboo-coc",
+    chamberId: "south-cariboo-chamber",
     businessName: "108 Mile Ranch Resort",
     website: "https://www.108resort.com",
     category: "recreation",
@@ -3203,7 +3203,7 @@ export const chamberMembers: ChamberMember[] = [
   // More Prince George members
   {
     id: "pg-coc-member-006",
-    chamberId: "pg-coc",
+    chamberId: "prince-george-chamber",
     businessName: "Exploration Place",
     website: "https://www.theexplorationplace.com",
     category: "arts-culture",
@@ -3213,7 +3213,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "pg-coc-member-007",
-    chamberId: "pg-coc",
+    chamberId: "prince-george-chamber",
     businessName: "Prince George Cougars",
     website: "https://www.cougars.bc.ca",
     category: "entertainment",
@@ -3224,7 +3224,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "pg-coc-member-008",
-    chamberId: "pg-coc",
+    chamberId: "prince-george-chamber",
     businessName: "Prince George Taxi",
     category: "taxi-rideshare",
     municipality: "Prince George",
@@ -3239,7 +3239,7 @@ export const chamberMembers: ChamberMember[] = [
   // Fort St. John members
   {
     id: "fsj-coc-member-004",
-    chamberId: "fsj-coc",
+    chamberId: "fort-st-john-chamber",
     businessName: "North Peace Arena",
     website: "https://www.fortstjohn.ca",
     category: "recreation",
@@ -3249,7 +3249,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "fsj-coc-member-005",
-    chamberId: "fsj-coc",
+    chamberId: "fort-st-john-chamber",
     businessName: "Teco Taxi",
     category: "taxi-rideshare",
     municipality: "Fort St. John",
@@ -3264,7 +3264,7 @@ export const chamberMembers: ChamberMember[] = [
   // Dawson Creek members
   {
     id: "dawson-creek-coc-member-001",
-    chamberId: "dawson-creek-coc",
+    chamberId: "dawson-creek-chamber",
     businessName: "Mile Zero Post",
     category: "hospitality",
     subcategory: "Tourism attraction",
@@ -3275,7 +3275,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "dawson-creek-coc-member-002",
-    chamberId: "dawson-creek-coc",
+    chamberId: "dawson-creek-chamber",
     businessName: "Dawson Creek & District Hospital",
     website: "https://www.northernhealth.ca",
     category: "healthcare",
@@ -3287,7 +3287,7 @@ export const chamberMembers: ChamberMember[] = [
   // Tumbler Ridge
   {
     id: "tumblerridge-coc-member-001",
-    chamberId: "tumblerridge-coc",
+    chamberId: "tumbler-ridge-chamber",
     businessName: "Tumbler Ridge Global Geopark",
     website: "https://www.tumblerridgegeopark.ca",
     category: "hospitality",
@@ -3300,7 +3300,7 @@ export const chamberMembers: ChamberMember[] = [
   // Vanderhoof
   {
     id: "vanderhoof-coc-member-001",
-    chamberId: "vanderhoof-coc",
+    chamberId: "vanderhoof-chamber",
     businessName: "Vanderhoof International Airshow",
     website: "https://www.vanderhoofairshow.com",
     category: "entertainment",
@@ -3311,7 +3311,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "vanderhoof-coc-member-002",
-    chamberId: "vanderhoof-coc",
+    chamberId: "vanderhoof-chamber",
     businessName: "St. John Hospital",
     website: "https://www.northernhealth.ca",
     category: "healthcare",
@@ -3323,7 +3323,7 @@ export const chamberMembers: ChamberMember[] = [
   // Burns Lake
   {
     id: "burnslake-coc-member-001",
-    chamberId: "burnslake-coc",
+    chamberId: "burns-lake-chamber",
     businessName: "Lakes District Hospital & Health Centre",
     website: "https://www.northernhealth.ca",
     category: "healthcare",
@@ -3333,7 +3333,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "burnslake-coc-member-002",
-    chamberId: "burnslake-coc",
+    chamberId: "burns-lake-chamber",
     businessName: "Burns Lake Airport",
     category: "aviation",
     municipality: "Burns Lake",
@@ -3348,7 +3348,7 @@ export const chamberMembers: ChamberMember[] = [
   // Smithers
   {
     id: "smithers-coc-member-001",
-    chamberId: "smithers-coc",
+    chamberId: "smithers-chamber",
     businessName: "Bulkley Valley District Hospital",
     website: "https://www.northernhealth.ca",
     category: "healthcare",
@@ -3358,7 +3358,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "smithers-coc-member-002",
-    chamberId: "smithers-coc",
+    chamberId: "smithers-chamber",
     businessName: "Smithers Regional Airport",
     website: "https://www.smithers.ca",
     category: "aviation",
@@ -3371,7 +3371,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "smithers-coc-member-003",
-    chamberId: "smithers-coc",
+    chamberId: "smithers-chamber",
     businessName: "Hudson Bay Mountain",
     website: "https://www.hudsonbaymountain.com",
     category: "recreation",
@@ -3384,7 +3384,7 @@ export const chamberMembers: ChamberMember[] = [
   // Stewart/Hyder
   {
     id: "stewart-coc-member-001",
-    chamberId: "stewart-coc",
+    chamberId: "stewart-chamber",
     businessName: "Bear Glacier Provincial Park",
     website: "https://bcparks.ca/bear-glacier-park",
     category: "government",
@@ -3395,7 +3395,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "stewart-coc-member-002",
-    chamberId: "stewart-coc",
+    chamberId: "stewart-chamber",
     businessName: "Stewart Historical Museum",
     category: "arts-culture",
     subcategory: "Museum",
@@ -3411,7 +3411,7 @@ export const chamberMembers: ChamberMember[] = [
   // More Nelson members
   {
     id: "nelson-coc-member-005",
-    chamberId: "nelson-coc",
+    chamberId: "nelson-chamber",
     businessName: "Hume Hotel & Spa",
     website: "https://www.humehotel.com",
     category: "accommodation",
@@ -3422,7 +3422,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nelson-coc-member-006",
-    chamberId: "nelson-coc",
+    chamberId: "nelson-chamber",
     businessName: "Nelson Brewing Company",
     website: "https://www.nelsonbrewing.com",
     category: "winery-brewery",
@@ -3435,7 +3435,7 @@ export const chamberMembers: ChamberMember[] = [
   // More Cranbrook members
   {
     id: "cranbrook-coc-member-004",
-    chamberId: "cranbrook-coc",
+    chamberId: "cranbrook-chamber",
     businessName: "Cranbrook History Centre",
     website: "https://www.cranbrookhistorycentre.com",
     category: "arts-culture",
@@ -3446,7 +3446,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "cranbrook-coc-member-005",
-    chamberId: "cranbrook-coc",
+    chamberId: "cranbrook-chamber",
     businessName: "Star Taxi Cranbrook",
     category: "taxi-rideshare",
     municipality: "Cranbrook",
@@ -3461,7 +3461,7 @@ export const chamberMembers: ChamberMember[] = [
   // Kimberley
   {
     id: "kimberley-coc-member-001",
-    chamberId: "kimberley-coc",
+    chamberId: "kimberley-chamber",
     businessName: "Kimberley Alpine Resort",
     website: "https://www.skikimberley.com",
     category: "recreation",
@@ -3471,7 +3471,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "kimberley-coc-member-002",
-    chamberId: "kimberley-coc",
+    chamberId: "kimberley-chamber",
     businessName: "Kimberley Underground Mining Railway",
     website: "https://www.kimberleybcaccommodations.com",
     category: "hospitality",
@@ -3484,7 +3484,7 @@ export const chamberMembers: ChamberMember[] = [
   // Sparwood & Elkford
   {
     id: "sparwood-coc-member-001",
-    chamberId: "sparwood-coc",
+    chamberId: "sparwood-chamber",
     businessName: "Titan - World's Largest Truck",
     category: "hospitality",
     subcategory: "Tourism attraction",
@@ -3495,7 +3495,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "elkford-coc-member-001",
-    chamberId: "elkford-coc",
+    chamberId: "elkford-chamber",
     businessName: "Elkford Community Conference Centre",
     category: "entertainment",
     subcategory: "Conference centre",
@@ -3507,7 +3507,7 @@ export const chamberMembers: ChamberMember[] = [
   // Invermere/Columbia Valley
   {
     id: "invermere-coc-member-001",
-    chamberId: "invermere-coc",
+    chamberId: "columbia-valley-chamber",
     businessName: "Panorama Mountain Resort",
     website: "https://www.panoramaresort.com",
     category: "recreation",
@@ -3517,7 +3517,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "invermere-coc-member-002",
-    chamberId: "invermere-coc",
+    chamberId: "columbia-valley-chamber",
     businessName: "Radium Hot Springs",
     website: "https://www.hotsprings.ca",
     category: "recreation",
@@ -3527,7 +3527,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "invermere-coc-member-003",
-    chamberId: "invermere-coc",
+    chamberId: "columbia-valley-chamber",
     businessName: "Invermere & District Hospital",
     website: "https://www.interiorhealth.ca",
     category: "healthcare",
@@ -3539,7 +3539,7 @@ export const chamberMembers: ChamberMember[] = [
   // Creston Valley
   {
     id: "creston-coc-member-001",
-    chamberId: "creston-coc",
+    chamberId: "creston-valley-chamber",
     businessName: "Creston Valley Wildlife Management Area",
     website: "https://www.crestonwildlife.ca",
     category: "charity-nonprofit",
@@ -3550,7 +3550,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "creston-coc-member-002",
-    chamberId: "creston-coc",
+    chamberId: "creston-valley-chamber",
     businessName: "Columbia Brewery",
     website: "https://www.columbiabrewery.ca",
     category: "winery-brewery",
@@ -3563,7 +3563,7 @@ export const chamberMembers: ChamberMember[] = [
   // Nakusp
   {
     id: "nakusp-coc-member-001",
-    chamberId: "nakusp-coc",
+    chamberId: "nakusp-chamber",
     businessName: "Nakusp Hot Springs",
     website: "https://www.nakusphotsprings.com",
     category: "recreation",
@@ -3573,7 +3573,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nakusp-coc-member-002",
-    chamberId: "nakusp-coc",
+    chamberId: "nakusp-chamber",
     businessName: "Arrow Lakes Hospital",
     website: "https://www.interiorhealth.ca",
     category: "healthcare",
@@ -3585,7 +3585,7 @@ export const chamberMembers: ChamberMember[] = [
   // Castlegar
   {
     id: "castlegar-coc-member-001",
-    chamberId: "castlegar-coc",
+    chamberId: "castlegar-chamber",
     businessName: "West Kootenay Regional Airport",
     website: "https://www.wkrairport.ca",
     category: "aviation",
@@ -3599,7 +3599,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "castlegar-coc-member-002",
-    chamberId: "castlegar-coc",
+    chamberId: "castlegar-chamber",
     businessName: "Selkirk College - Castlegar",
     website: "https://www.selkirk.ca",
     category: "education",
@@ -3619,7 +3619,7 @@ export const chamberMembers: ChamberMember[] = [
   // More Whistler members
   {
     id: "whistler-coc-member-006",
-    chamberId: "whistler-coc",
+    chamberId: "whistler-chamber",
     businessName: "Peak 2 Peak Gondola",
     website: "https://www.whistlerblackcomb.com",
     category: "recreation",
@@ -3630,7 +3630,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "whistler-coc-member-007",
-    chamberId: "whistler-coc",
+    chamberId: "whistler-chamber",
     businessName: "Audain Art Museum",
     website: "https://www.audainartmuseum.com",
     category: "arts-culture",
@@ -3641,7 +3641,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "whistler-coc-member-008",
-    chamberId: "whistler-coc",
+    chamberId: "whistler-chamber",
     businessName: "Scandinave Spa Whistler",
     website: "https://www.scandinave.com/whistler",
     category: "spa-beauty",
@@ -3654,7 +3654,7 @@ export const chamberMembers: ChamberMember[] = [
   // More Squamish members
   {
     id: "squamish-coc-member-005",
-    chamberId: "squamish-coc",
+    chamberId: "squamish-chamber",
     businessName: "Britannia Mine Museum",
     website: "https://www.britanniaminemuseum.ca",
     category: "arts-culture",
@@ -3665,7 +3665,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "squamish-coc-member-006",
-    chamberId: "squamish-coc",
+    chamberId: "squamish-chamber",
     businessName: "Squamish Taxi",
     category: "taxi-rideshare",
     municipality: "Squamish",
@@ -3680,7 +3680,7 @@ export const chamberMembers: ChamberMember[] = [
   // Pemberton
   {
     id: "pemberton-coc-member-001",
-    chamberId: "pemberton-coc",
+    chamberId: "pemberton-chamber",
     businessName: "Pemberton Valley Lodge",
     website: "https://www.pembertonvalleylodge.com",
     category: "accommodation",
@@ -3690,7 +3690,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "pemberton-coc-member-002",
-    chamberId: "pemberton-coc",
+    chamberId: "pemberton-chamber",
     businessName: "Pemberton Music Festival",
     category: "entertainment",
     subcategory: "Music festival",
@@ -3702,7 +3702,7 @@ export const chamberMembers: ChamberMember[] = [
   // Lillooet
   {
     id: "lillooet-coc-member-001",
-    chamberId: "lillooet-coc",
+    chamberId: "lillooet-chamber",
     businessName: "Lillooet Museum & Visitor Centre",
     website: "https://www.lillooetbc.com",
     category: "arts-culture",
@@ -3713,7 +3713,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "lillooet-coc-member-002",
-    chamberId: "lillooet-coc",
+    chamberId: "lillooet-chamber",
     businessName: "St'at'imc Nation",
     website: "https://www.statimc.ca",
     category: "first-nations",
@@ -3729,7 +3729,7 @@ export const chamberMembers: ChamberMember[] = [
   // Gibsons
   {
     id: "gibsons-coc-member-001",
-    chamberId: "gibsons-coc",
+    chamberId: "gibsons-chamber",
     businessName: "Gibsons Landing Harbour Authority",
     website: "https://www.gibsonsharbour.ca",
     category: "fishing-marine",
@@ -3739,7 +3739,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "gibsons-coc-member-002",
-    chamberId: "gibsons-coc",
+    chamberId: "gibsons-chamber",
     businessName: "BC Ferries - Langdale Terminal",
     website: "https://www.bcferries.com",
     category: "transit",
@@ -3756,7 +3756,7 @@ export const chamberMembers: ChamberMember[] = [
   // More Powell River members
   {
     id: "powell-river-coc-member-004",
-    chamberId: "powell-river-coc",
+    chamberId: "powell-river-chamber",
     businessName: "Townsite Heritage Society",
     website: "https://www.powellrivertownsite.com",
     category: "charity-nonprofit",
@@ -3767,7 +3767,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "powell-river-coc-member-005",
-    chamberId: "powell-river-coc",
+    chamberId: "powell-river-chamber",
     businessName: "Powell River Taxi",
     category: "taxi-rideshare",
     municipality: "Powell River",
@@ -3782,7 +3782,7 @@ export const chamberMembers: ChamberMember[] = [
   // Pender Harbour
   {
     id: "penderharbour-coc-member-001",
-    chamberId: "penderharbour-coc",
+    chamberId: "pender-harbour-chamber",
     businessName: "Sunshine Coast Resort Hotel & Marina",
     website: "https://www.sunshinecoast-resort.com",
     category: "accommodation",
@@ -3792,7 +3792,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "penderharbour-coc-member-002",
-    chamberId: "penderharbour-coc",
+    chamberId: "pender-harbour-chamber",
     businessName: "Pender Harbour Health Centre",
     website: "https://www.vch.ca",
     category: "healthcare",
@@ -3808,7 +3808,7 @@ export const chamberMembers: ChamberMember[] = [
   // Major Law Firms
   {
     id: "gvbot-member-021",
-    chamberId: "gvbot",
+    chamberId: "greater-vancouver-board-of-trade",
     businessName: "Fasken Martineau DuMoulin LLP",
     website: "https://www.fasken.com",
     category: "legal",
@@ -3819,7 +3819,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "gvbot-member-022",
-    chamberId: "gvbot",
+    chamberId: "greater-vancouver-board-of-trade",
     businessName: "Borden Ladner Gervais LLP",
     website: "https://www.blg.com",
     category: "legal",
@@ -3830,7 +3830,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "gvbot-member-023",
-    chamberId: "gvbot",
+    chamberId: "greater-vancouver-board-of-trade",
     businessName: "McCarthy Tetrault LLP",
     website: "https://www.mccarthy.ca",
     category: "legal",
@@ -3841,7 +3841,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "gvbot-member-024",
-    chamberId: "gvbot",
+    chamberId: "greater-vancouver-board-of-trade",
     businessName: "Blake, Cassels & Graydon LLP",
     website: "https://www.blakes.com",
     category: "legal",
@@ -3851,8 +3851,8 @@ export const chamberMembers: ChamberMember[] = [
     region: "Metro Vancouver",
   },
   {
-    id: "victoria-coc-member-006",
-    chamberId: "victoria-coc",
+    id: "victoria-coc-member-020",
+    chamberId: "greater-victoria-chamber",
     businessName: "Cox Taylor",
     website: "https://www.coxtaylor.ca",
     category: "legal",
@@ -3865,7 +3865,7 @@ export const chamberMembers: ChamberMember[] = [
   // Major Accounting/Professional Services Firms
   {
     id: "gvbot-member-025",
-    chamberId: "gvbot",
+    chamberId: "greater-vancouver-board-of-trade",
     businessName: "Deloitte",
     website: "https://www.deloitte.ca",
     category: "accounting",
@@ -3876,7 +3876,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "gvbot-member-026",
-    chamberId: "gvbot",
+    chamberId: "greater-vancouver-board-of-trade",
     businessName: "PricewaterhouseCoopers (PwC)",
     website: "https://www.pwc.com/ca",
     category: "accounting",
@@ -3887,7 +3887,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "gvbot-member-027",
-    chamberId: "gvbot",
+    chamberId: "greater-vancouver-board-of-trade",
     businessName: "Ernst & Young (EY)",
     website: "https://www.ey.com/ca",
     category: "accounting",
@@ -3898,7 +3898,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "gvbot-member-028",
-    chamberId: "gvbot",
+    chamberId: "greater-vancouver-board-of-trade",
     businessName: "MNP LLP",
     website: "https://www.mnp.ca",
     category: "accounting",
@@ -3911,7 +3911,7 @@ export const chamberMembers: ChamberMember[] = [
   // Major Banks and Credit Unions
   {
     id: "gvbot-member-029",
-    chamberId: "gvbot",
+    chamberId: "greater-vancouver-board-of-trade",
     businessName: "TD Bank",
     website: "https://www.td.com",
     category: "banking-finance",
@@ -3921,7 +3921,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "gvbot-member-030",
-    chamberId: "gvbot",
+    chamberId: "greater-vancouver-board-of-trade",
     businessName: "Bank of Montreal (BMO)",
     website: "https://www.bmo.com",
     category: "banking-finance",
@@ -3931,7 +3931,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "gvbot-member-031",
-    chamberId: "gvbot",
+    chamberId: "greater-vancouver-board-of-trade",
     businessName: "Scotiabank",
     website: "https://www.scotiabank.com",
     category: "banking-finance",
@@ -3941,7 +3941,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "gvbot-member-033",
-    chamberId: "gvbot",
+    chamberId: "greater-vancouver-board-of-trade",
     businessName: "Vancity Credit Union",
     website: "https://www.vancity.com",
     category: "banking-finance",
@@ -3952,7 +3952,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "gvbot-member-034",
-    chamberId: "gvbot",
+    chamberId: "greater-vancouver-board-of-trade",
     businessName: "Coast Capital Savings",
     website: "https://www.coastcapitalsavings.com",
     category: "banking-finance",
@@ -3963,7 +3963,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "kelowna-coc-member-010",
-    chamberId: "kelowna-coc",
+    chamberId: "kelowna-chamber",
     businessName: "First West Credit Union",
     website: "https://www.firstwestcu.ca",
     category: "banking-finance",
@@ -3974,7 +3974,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "victoria-coc-member-007",
-    chamberId: "victoria-coc",
+    chamberId: "greater-victoria-chamber",
     businessName: "Island Savings Credit Union",
     website: "https://www.iscu.com",
     category: "banking-finance",
@@ -3987,7 +3987,7 @@ export const chamberMembers: ChamberMember[] = [
   // Insurance Companies
   {
     id: "gvbot-member-035",
-    chamberId: "gvbot",
+    chamberId: "greater-vancouver-board-of-trade",
     businessName: "Manulife Financial",
     website: "https://www.manulife.ca",
     category: "insurance",
@@ -3997,7 +3997,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "gvbot-member-036",
-    chamberId: "gvbot",
+    chamberId: "greater-vancouver-board-of-trade",
     businessName: "Sun Life Financial",
     website: "https://www.sunlife.ca",
     category: "insurance",
@@ -4007,7 +4007,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "gvbot-member-037",
-    chamberId: "gvbot",
+    chamberId: "greater-vancouver-board-of-trade",
     businessName: "Intact Insurance",
     website: "https://www.intact.ca",
     category: "insurance",
@@ -4017,7 +4017,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "surrey-coc-member-005",
-    chamberId: "surrey-coc",
+    chamberId: "surrey-white-rock-board-of-trade",
     businessName: "Westland Insurance",
     website: "https://www.westlandinsurance.ca",
     category: "insurance",
@@ -4033,7 +4033,7 @@ export const chamberMembers: ChamberMember[] = [
 
   {
     id: "gvbot-member-038",
-    chamberId: "gvbot",
+    chamberId: "greater-vancouver-board-of-trade",
     businessName: "London Drugs",
     website: "https://www.londondrugs.com",
     category: "retail",
@@ -4044,7 +4044,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "gvbot-member-039",
-    chamberId: "gvbot",
+    chamberId: "greater-vancouver-board-of-trade",
     businessName: "Save-On-Foods",
     website: "https://www.saveonfoods.com",
     category: "grocery",
@@ -4054,7 +4054,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "gvbot-member-040",
-    chamberId: "gvbot",
+    chamberId: "greater-vancouver-board-of-trade",
     businessName: "Thrifty Foods",
     website: "https://www.thriftyfoods.com",
     category: "grocery",
@@ -4064,7 +4064,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "gvbot-member-041",
-    chamberId: "gvbot",
+    chamberId: "greater-vancouver-board-of-trade",
     businessName: "Choices Markets",
     website: "https://www.choicesmarkets.com",
     category: "grocery",
@@ -4075,7 +4075,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "gvbot-member-042",
-    chamberId: "gvbot",
+    chamberId: "greater-vancouver-board-of-trade",
     businessName: "Nesters Market",
     website: "https://www.nestersmarket.com",
     category: "grocery",
@@ -4085,7 +4085,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "gvbot-member-043",
-    chamberId: "gvbot",
+    chamberId: "greater-vancouver-board-of-trade",
     businessName: "T&T Supermarket",
     website: "https://www.tnt-supermarket.com",
     category: "grocery",
@@ -4096,7 +4096,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "gvbot-member-044",
-    chamberId: "gvbot",
+    chamberId: "greater-vancouver-board-of-trade",
     businessName: "H Mart",
     website: "https://www.hmart.com",
     category: "grocery",
@@ -4109,7 +4109,7 @@ export const chamberMembers: ChamberMember[] = [
   // Home Improvement / Hardware
   {
     id: "gvbot-member-045",
-    chamberId: "gvbot",
+    chamberId: "greater-vancouver-board-of-trade",
     businessName: "Home Hardware",
     website: "https://www.homehardware.ca",
     category: "hardware-supplies",
@@ -4119,7 +4119,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "gvbot-member-046",
-    chamberId: "gvbot",
+    chamberId: "greater-vancouver-board-of-trade",
     businessName: "RONA",
     website: "https://www.rona.ca",
     category: "hardware-supplies",
@@ -4135,7 +4135,7 @@ export const chamberMembers: ChamberMember[] = [
   // BC Wineries, Breweries, Distilleries
   {
     id: "kelowna-coc-member-011",
-    chamberId: "kelowna-coc",
+    chamberId: "kelowna-chamber",
     businessName: "Mission Hill Family Estate",
     website: "https://www.missionhillwinery.com",
     category: "winery-brewery",
@@ -4146,7 +4146,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "kelowna-coc-member-012",
-    chamberId: "kelowna-coc",
+    chamberId: "kelowna-chamber",
     businessName: "Summerhill Pyramid Winery",
     website: "https://www.summerhill.bc.ca",
     category: "winery-brewery",
@@ -4156,8 +4156,8 @@ export const chamberMembers: ChamberMember[] = [
     region: "Central Okanagan",
   },
   {
-    id: "penticton-coc-member-003",
-    chamberId: "penticton-coc",
+    id: "penticton-coc-member-010",
+    chamberId: "penticton-chamber",
     businessName: "Hester Creek Estate Winery",
     website: "https://www.hestercreek.com",
     category: "winery-brewery",
@@ -4167,7 +4167,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "penticton-coc-member-004",
-    chamberId: "penticton-coc",
+    chamberId: "penticton-chamber",
     businessName: "Burrowing Owl Estate Winery",
     website: "https://www.burrowingowlwine.ca",
     category: "winery-brewery",
@@ -4177,7 +4177,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "gvbot-member-047",
-    chamberId: "gvbot",
+    chamberId: "greater-vancouver-board-of-trade",
     businessName: "Stanley Park Brewing",
     website: "https://www.stanleyparkbrewing.com",
     category: "winery-brewery",
@@ -4188,7 +4188,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "gvbot-member-048",
-    chamberId: "gvbot",
+    chamberId: "greater-vancouver-board-of-trade",
     businessName: "Phillips Brewing & Malting",
     website: "https://www.phillipsbeer.com",
     category: "winery-brewery",
@@ -4199,7 +4199,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "victoria-coc-member-008",
-    chamberId: "victoria-coc",
+    chamberId: "greater-victoria-chamber",
     businessName: "Victoria Distillers",
     website: "https://www.victoriadistillers.com",
     category: "winery-brewery",
@@ -4210,7 +4210,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "victoria-coc-member-009",
-    chamberId: "victoria-coc",
+    chamberId: "greater-victoria-chamber",
     businessName: "Church & State Wines",
     website: "https://www.churchandstatewines.com",
     category: "winery-brewery",
@@ -4223,7 +4223,7 @@ export const chamberMembers: ChamberMember[] = [
   // Major Restaurant Groups
   {
     id: "gvbot-member-049",
-    chamberId: "gvbot",
+    chamberId: "greater-vancouver-board-of-trade",
     businessName: "Cactus Club Cafe",
     website: "https://www.cactusclubcafe.com",
     category: "restaurant",
@@ -4234,7 +4234,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "gvbot-member-050",
-    chamberId: "gvbot",
+    chamberId: "greater-vancouver-board-of-trade",
     businessName: "Earls Kitchen + Bar",
     website: "https://www.earls.ca",
     category: "restaurant",
@@ -4245,7 +4245,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "gvbot-member-051",
-    chamberId: "gvbot",
+    chamberId: "greater-vancouver-board-of-trade",
     businessName: "White Spot Restaurants",
     website: "https://www.whitespot.ca",
     category: "restaurant",
@@ -4256,7 +4256,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "gvbot-member-052",
-    chamberId: "gvbot",
+    chamberId: "greater-vancouver-board-of-trade",
     businessName: "Toptable Group",
     website: "https://www.toptable.ca",
     category: "restaurant",
@@ -4267,7 +4267,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "gvbot-member-053",
-    chamberId: "gvbot",
+    chamberId: "greater-vancouver-board-of-trade",
     businessName: "Glowbal Restaurant Group",
     website: "https://www.glowbalgroup.com",
     category: "restaurant",
@@ -4283,7 +4283,7 @@ export const chamberMembers: ChamberMember[] = [
 
   {
     id: "gvbot-member-054",
-    chamberId: "gvbot",
+    chamberId: "greater-vancouver-board-of-trade",
     businessName: "Microsoft Canada",
     website: "https://www.microsoft.com/en-ca",
     category: "it-technology",
@@ -4293,7 +4293,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "gvbot-member-055",
-    chamberId: "gvbot",
+    chamberId: "greater-vancouver-board-of-trade",
     businessName: "Amazon Web Services (AWS)",
     website: "https://aws.amazon.com",
     category: "it-technology",
@@ -4304,7 +4304,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "gvbot-member-056",
-    chamberId: "gvbot",
+    chamberId: "greater-vancouver-board-of-trade",
     businessName: "SAP Canada",
     website: "https://www.sap.com/canada",
     category: "it-technology",
@@ -4315,7 +4315,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "gvbot-member-058",
-    chamberId: "gvbot",
+    chamberId: "greater-vancouver-board-of-trade",
     businessName: "Shaw Communications",
     website: "https://www.shaw.ca",
     category: "telecommunications",
@@ -4325,7 +4325,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "gvbot-member-059",
-    chamberId: "gvbot",
+    chamberId: "greater-vancouver-board-of-trade",
     businessName: "Electronic Arts (EA) Canada",
     website: "https://www.ea.com",
     category: "it-technology",
@@ -4335,8 +4335,8 @@ export const chamberMembers: ChamberMember[] = [
     region: "Metro Vancouver",
   },
   {
-    id: "burnaby-bot-member-003",
-    chamberId: "burnaby-bot",
+    id: "burnaby-bot-member-010",
+    chamberId: "burnaby-board-of-trade",
     businessName: "Nintendo of Canada",
     website: "https://www.nintendo.ca",
     category: "it-technology",
@@ -4347,7 +4347,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "victoria-coc-member-010",
-    chamberId: "victoria-coc",
+    chamberId: "greater-victoria-chamber",
     businessName: "Schneider Electric",
     website: "https://www.se.com",
     category: "it-technology",
@@ -4363,7 +4363,7 @@ export const chamberMembers: ChamberMember[] = [
 
   {
     id: "gvbot-member-060",
-    chamberId: "gvbot",
+    chamberId: "greater-vancouver-board-of-trade",
     businessName: "LifeLabs",
     website: "https://www.lifelabs.com",
     category: "healthcare",
@@ -4374,7 +4374,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "gvbot-member-061",
-    chamberId: "gvbot",
+    chamberId: "greater-vancouver-board-of-trade",
     businessName: "TELUS Health",
     website: "https://www.telushealth.com",
     category: "healthcare",
@@ -4385,7 +4385,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "gvbot-member-062",
-    chamberId: "gvbot",
+    chamberId: "greater-vancouver-board-of-trade",
     businessName: "Canuck Place Children's Hospice",
     website: "https://www.canuckplace.org",
     category: "healthcare",
@@ -4396,7 +4396,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "victoria-coc-member-011",
-    chamberId: "victoria-coc",
+    chamberId: "greater-victoria-chamber",
     businessName: "Victoria Hospice",
     website: "https://www.victoriahospice.org",
     category: "healthcare",
@@ -4409,7 +4409,7 @@ export const chamberMembers: ChamberMember[] = [
   // Pharmacy Chains
   {
     id: "gvbot-member-063",
-    chamberId: "gvbot",
+    chamberId: "greater-vancouver-board-of-trade",
     businessName: "Pharmasave",
     website: "https://www.pharmasave.com",
     category: "pharmacy",
@@ -4419,7 +4419,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "victoria-coc-member-012",
-    chamberId: "victoria-coc",
+    chamberId: "greater-victoria-chamber",
     businessName: "Medicine Shoppe Canada",
     website: "https://www.medicineshoppecanada.ca",
     category: "pharmacy",
@@ -4434,7 +4434,7 @@ export const chamberMembers: ChamberMember[] = [
 
   {
     id: "gvbot-member-064",
-    chamberId: "gvbot",
+    chamberId: "greater-vancouver-board-of-trade",
     businessName: "Bosa Development",
     website: "https://www.bosadevelopment.com",
     category: "real-estate",
@@ -4445,7 +4445,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "gvbot-member-065",
-    chamberId: "gvbot",
+    chamberId: "greater-vancouver-board-of-trade",
     businessName: "Wesgroup Properties",
     website: "https://www.wesgroupproperties.com",
     category: "real-estate",
@@ -4456,7 +4456,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "gvbot-member-066",
-    chamberId: "gvbot",
+    chamberId: "greater-vancouver-board-of-trade",
     businessName: "PC Urban Properties",
     website: "https://www.pcurban.ca",
     category: "real-estate",
@@ -4467,7 +4467,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "gvbot-member-067",
-    chamberId: "gvbot",
+    chamberId: "greater-vancouver-board-of-trade",
     businessName: "Graham Construction",
     website: "https://www.graham.ca",
     category: "construction",
@@ -4477,7 +4477,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "gvbot-member-068",
-    chamberId: "gvbot",
+    chamberId: "greater-vancouver-board-of-trade",
     businessName: "EllisDon",
     website: "https://www.ellisdon.com",
     category: "construction",
@@ -4487,7 +4487,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "gvbot-member-069",
-    chamberId: "gvbot",
+    chamberId: "greater-vancouver-board-of-trade",
     businessName: "PCL Construction",
     website: "https://www.pcl.com",
     category: "construction",
@@ -4502,7 +4502,7 @@ export const chamberMembers: ChamberMember[] = [
 
   {
     id: "gvbot-member-070",
-    chamberId: "gvbot",
+    chamberId: "greater-vancouver-board-of-trade",
     businessName: "GCT Global Container Terminals",
     website: "https://www.globalterminals.com",
     category: "trucking-freight",
@@ -4517,7 +4517,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "gvbot-member-071",
-    chamberId: "gvbot",
+    chamberId: "greater-vancouver-board-of-trade",
     businessName: "DP World Vancouver",
     website: "https://www.dpworld.com/vancouver",
     category: "trucking-freight",
@@ -4528,7 +4528,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "gvbot-member-072",
-    chamberId: "gvbot",
+    chamberId: "greater-vancouver-board-of-trade",
     businessName: "YVR Airport Authority",
     website: "https://www.yvr.ca",
     category: "aviation",
@@ -4542,7 +4542,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "victoria-coc-member-013",
-    chamberId: "victoria-coc",
+    chamberId: "greater-victoria-chamber",
     businessName: "Victoria Airport Authority",
     website: "https://www.victoriaairport.com",
     category: "aviation",
@@ -4556,7 +4556,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "kelowna-coc-member-013",
-    chamberId: "kelowna-coc",
+    chamberId: "kelowna-chamber",
     businessName: "Kelowna International Airport",
     website: "https://www.ylw.aero",
     category: "aviation",
@@ -4575,7 +4575,7 @@ export const chamberMembers: ChamberMember[] = [
 
   {
     id: "gvbot-member-073",
-    chamberId: "gvbot",
+    chamberId: "greater-vancouver-board-of-trade",
     businessName: "Musqueam Capital Corporation",
     website: "https://www.musqueamcapital.com",
     category: "first-nations",
@@ -4586,7 +4586,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "gvbot-member-074",
-    chamberId: "gvbot",
+    chamberId: "greater-vancouver-board-of-trade",
     businessName: "Squamish Nation Enterprises",
     category: "first-nations",
     subcategory: "Development corporation",
@@ -4597,7 +4597,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "gvbot-member-075",
-    chamberId: "gvbot",
+    chamberId: "greater-vancouver-board-of-trade",
     businessName: "Tsleil-Waututh Nation",
     website: "https://www.twnation.ca",
     category: "first-nations",
@@ -4607,7 +4607,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "victoria-coc-member-014",
-    chamberId: "victoria-coc",
+    chamberId: "greater-victoria-chamber",
     businessName: "Songhees Nation",
     website: "https://www.songheesnation.ca",
     category: "first-nations",
@@ -4617,7 +4617,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "victoria-coc-member-015",
-    chamberId: "victoria-coc",
+    chamberId: "greater-victoria-chamber",
     businessName: "Esquimalt Nation",
     website: "https://www.esquimaltnation.ca",
     category: "first-nations",
@@ -4627,7 +4627,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-coc-member-009",
-    chamberId: "nanaimo-coc",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Snuneymuxw First Nation",
     website: "https://www.snuneymuxw.ca",
     category: "first-nations",
@@ -4637,7 +4637,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "pg-coc-member-009",
-    chamberId: "pg-coc",
+    chamberId: "prince-george-chamber",
     businessName: "Lheidli T'enneh First Nation",
     website: "https://www.lheidli.ca",
     category: "first-nations",
@@ -4646,8 +4646,8 @@ export const chamberMembers: ChamberMember[] = [
     region: "Fraser-Fort George",
   },
   {
-    id: "terrace-coc-member-003",
-    chamberId: "terrace-coc",
+    id: "terrace-coc-member-010",
+    chamberId: "terrace-chamber",
     businessName: "Kitselas First Nation",
     website: "https://www.kitselas.com",
     category: "first-nations",
@@ -4657,7 +4657,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "terrace-coc-member-004",
-    chamberId: "terrace-coc",
+    chamberId: "terrace-chamber",
     businessName: "Kitsumkalum First Nation",
     website: "https://www.kitsumkalum.com",
     category: "first-nations",
@@ -4672,7 +4672,7 @@ export const chamberMembers: ChamberMember[] = [
 
   {
     id: "gvbot-member-077",
-    chamberId: "gvbot",
+    chamberId: "greater-vancouver-board-of-trade",
     businessName: "Metro Vancouver",
     website: "https://www.metrovancouver.org",
     category: "government",
@@ -4683,7 +4683,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "victoria-coc-member-016",
-    chamberId: "victoria-coc",
+    chamberId: "greater-victoria-chamber",
     businessName: "Capital Regional District",
     website: "https://www.crd.bc.ca",
     category: "government",
@@ -4694,282 +4694,12 @@ export const chamberMembers: ChamberMember[] = [
   },
 
   // ============================================================================
-  // GULF ISLANDS CHAMBERS
-  // ============================================================================
-
-  // Salt Spring Island
-  {
-    id: "saltspring-coc-member-001",
-    chamberId: "saltspring-coc",
-    businessName: "BC Ferries - Long Harbour Terminal",
-    website: "https://www.bcferries.com",
-    category: "transit",
-    subcategory: "Ferry terminal",
-    municipality: "Salt Spring Island",
-    region: "Capital",
-    crossReference: {
-      dataset: "marine",
-      id: "bc-ferries-long-harbour",
-    },
-  },
-  {
-    id: "saltspring-coc-member-002",
-    chamberId: "saltspring-coc",
-    businessName: "Salt Spring Taxi",
-    category: "taxi-rideshare",
-    municipality: "Salt Spring Island",
-    region: "Capital",
-    crossReference: {
-      dataset: "taxi-services",
-      id: "salt-spring-taxi",
-    },
-    websiteNeedsCollection: true,
-  },
-  {
-    id: "saltspring-coc-member-003",
-    chamberId: "saltspring-coc",
-    businessName: "Salt Spring Air",
-    website: "https://www.saltspringair.com",
-    category: "aviation",
-    subcategory: "Floatplane",
-    description: "Scheduled floatplane service",
-    municipality: "Salt Spring Island",
-    region: "Capital",
-    crossReference: {
-      dataset: "aviation",
-      id: "saltspring-harbour-sph",
-    },
-  },
-  {
-    id: "saltspring-coc-member-004",
-    chamberId: "saltspring-coc",
-    businessName: "Hastings House Country House Hotel",
-    website: "https://www.hastingshouse.com",
-    category: "accommodation",
-    subcategory: "Luxury hotel",
-    description: "Relais & Chateaux property",
-    municipality: "Salt Spring Island",
-    region: "Capital",
-  },
-  {
-    id: "saltspring-coc-member-005",
-    chamberId: "saltspring-coc",
-    businessName: "Saturday Market in the Park",
-    website: "https://www.saltspringmarket.com",
-    category: "retail",
-    subcategory: "Farmers market",
-    description: "Famous outdoor market",
-    municipality: "Salt Spring Island",
-    region: "Capital",
-  },
-  {
-    id: "saltspring-coc-member-006",
-    chamberId: "saltspring-coc",
-    businessName: "Lady Minto Hospital",
-    website: "https://www.islandhealth.ca",
-    category: "healthcare",
-    description: "Community hospital",
-    municipality: "Salt Spring Island",
-    region: "Capital",
-  },
-  {
-    id: "saltspring-coc-member-007",
-    chamberId: "saltspring-coc",
-    businessName: "Salt Spring Island Cheese",
-    website: "https://www.saltspringcheese.com",
-    category: "food-beverage",
-    subcategory: "Artisan cheese",
-    description: "Award-winning artisan cheese producer",
-    municipality: "Salt Spring Island",
-    region: "Capital",
-  },
-
-  // Pender Island
-  {
-    id: "pender-coc-member-001",
-    chamberId: "pender-coc",
-    businessName: "BC Ferries - Otter Bay Terminal",
-    website: "https://www.bcferries.com",
-    category: "transit",
-    subcategory: "Ferry terminal",
-    municipality: "Pender Island",
-    region: "Capital",
-    crossReference: {
-      dataset: "marine",
-      id: "bc-ferries-otter-bay",
-    },
-  },
-  {
-    id: "pender-coc-member-002",
-    chamberId: "pender-coc",
-    businessName: "Poets Cove Resort & Spa",
-    website: "https://www.poetscove.com",
-    category: "accommodation",
-    subcategory: "Resort",
-    description: "Marina resort on South Pender",
-    municipality: "Pender Island",
-    region: "Capital",
-  },
-
-  // ============================================================================
-  // REMOTE VANCOUVER ISLAND COMMUNITIES
-  // ============================================================================
-
-  // Port Renfrew
-  {
-    id: "portrenfrew-coc-member-001",
-    chamberId: "portrenfrew-coc",
-    businessName: "West Coast Trail",
-    website: "https://www.pc.gc.ca/en/pn-np/bc/pacificrim/activ/activ6",
-    category: "government",
-    subcategory: "National park",
-    description: "Pacific Rim National Park - trailhead",
-    municipality: "Port Renfrew",
-    region: "Capital",
-  },
-  {
-    id: "portrenfrew-coc-member-002",
-    chamberId: "portrenfrew-coc",
-    businessName: "Port Renfrew Marina",
-    category: "fishing-marine",
-    subcategory: "Marina",
-    municipality: "Port Renfrew",
-    region: "Capital",
-    websiteNeedsCollection: true,
-  },
-  {
-    id: "portrenfrew-coc-member-003",
-    chamberId: "portrenfrew-coc",
-    businessName: "Avatar Grove",
-    category: "recreation",
-    subcategory: "Old growth forest",
-    description: "Protected old-growth forest with giant trees",
-    municipality: "Port Renfrew",
-    region: "Capital",
-    websiteNeedsCollection: true,
-  },
-
-  // Bamfield
-  {
-    id: "bamfield-coc-member-001",
-    chamberId: "bamfield-coc",
-    businessName: "Bamfield Marine Sciences Centre",
-    website: "https://www.bamfieldmsc.com",
-    category: "education",
-    subcategory: "Research station",
-    description: "Multi-university marine research station",
-    municipality: "Bamfield",
-    region: "Alberni-Clayoquot",
-    crossReference: {
-      dataset: "schools",
-      id: "bamfield-marine-sciences",
-    },
-  },
-  {
-    id: "bamfield-coc-member-002",
-    chamberId: "bamfield-coc",
-    businessName: "West Coast Trail - Pachena Bay",
-    website: "https://www.pc.gc.ca/en/pn-np/bc/pacificrim",
-    category: "government",
-    subcategory: "National park",
-    description: "West Coast Trail northern trailhead",
-    municipality: "Bamfield",
-    region: "Alberni-Clayoquot",
-  },
-  {
-    id: "bamfield-coc-member-003",
-    chamberId: "bamfield-coc",
-    businessName: "Lady Rose Marine Services",
-    website: "https://www.ladyrosemarine.com",
-    category: "transit",
-    subcategory: "Passenger ferry",
-    description: "Historic passenger/freight vessel to Barkley Sound",
-    municipality: "Bamfield",
-    region: "Alberni-Clayoquot",
-    crossReference: {
-      dataset: "marine",
-      id: "lady-rose-marine",
-    },
-  },
-
-  // More Tofino/Ucluelet members
-  {
-    id: "tofino-coc-member-004",
-    chamberId: "tofino-coc",
-    businessName: "Pacific Rim National Park Reserve",
-    website: "https://www.pc.gc.ca/en/pn-np/bc/pacificrim",
-    category: "government",
-    subcategory: "National park",
-    description: "Famous surf beach and rainforest park",
-    municipality: "Tofino",
-    region: "Alberni-Clayoquot",
-  },
-  {
-    id: "tofino-coc-member-005",
-    chamberId: "tofino-coc",
-    businessName: "Wickaninnish Inn",
-    website: "https://www.wickinn.com",
-    category: "accommodation",
-    subcategory: "Luxury resort",
-    description: "Renowned oceanfront lodge",
-    municipality: "Tofino",
-    region: "Alberni-Clayoquot",
-  },
-  {
-    id: "tofino-coc-member-006",
-    chamberId: "tofino-coc",
-    businessName: "Pacific Sands Beach Resort",
-    website: "https://www.pacificsands.com",
-    category: "accommodation",
-    subcategory: "Beach resort",
-    municipality: "Tofino",
-    region: "Alberni-Clayoquot",
-  },
-  {
-    id: "tofino-coc-member-007",
-    chamberId: "tofino-coc",
-    businessName: "Tofino Air",
-    website: "https://www.tofinoair.ca",
-    category: "aviation",
-    subcategory: "Floatplane",
-    description: "Charter floatplane service",
-    municipality: "Tofino",
-    region: "Alberni-Clayoquot",
-    crossReference: {
-      dataset: "aviation",
-      id: "tofino-harbour-sph",
-    },
-  },
-  {
-    id: "ucluelet-coc-member-001",
-    chamberId: "ucluelet-coc",
-    businessName: "Wild Pacific Trail Society",
-    website: "https://www.wildpacifictrail.com",
-    category: "charity-nonprofit",
-    subcategory: "Trail society",
-    description: "Famous coastal hiking trail",
-    municipality: "Ucluelet",
-    region: "Alberni-Clayoquot",
-  },
-  {
-    id: "ucluelet-coc-member-002",
-    chamberId: "ucluelet-coc",
-    businessName: "Canadian Princess Resort",
-    website: "https://www.canadianprincess.com",
-    category: "accommodation",
-    subcategory: "Floating resort",
-    description: "Historic ship resort",
-    municipality: "Ucluelet",
-    region: "Alberni-Clayoquot",
-  },
-
-  // ============================================================================
   // HAIDA GWAII
   // ============================================================================
 
   {
     id: "haidagwaii-coc-member-001",
-    chamberId: "haidagwaii-coc",
+    chamberId: "haida-gwaii-chamber",
     businessName: "Haida Heritage Foundation",
     website: "https://www.haidaheritagecentre.com",
     category: "arts-culture",
@@ -4980,7 +4710,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "haidagwaii-coc-member-002",
-    chamberId: "haidagwaii-coc",
+    chamberId: "haida-gwaii-chamber",
     businessName: "Gwaii Haanas National Park Reserve",
     website: "https://www.pc.gc.ca/en/pn-np/bc/gwaiihaanas",
     category: "government",
@@ -4991,7 +4721,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "haidagwaii-coc-member-003",
-    chamberId: "haidagwaii-coc",
+    chamberId: "haida-gwaii-chamber",
     businessName: "Sandspit Airport",
     category: "aviation",
     municipality: "Sandspit",
@@ -5004,7 +4734,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "haidagwaii-coc-member-004",
-    chamberId: "haidagwaii-coc",
+    chamberId: "haida-gwaii-chamber",
     businessName: "BC Ferries - Skidegate Terminal",
     website: "https://www.bcferries.com",
     category: "transit",
@@ -5018,7 +4748,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "haidagwaii-coc-member-005",
-    chamberId: "haidagwaii-coc",
+    chamberId: "haida-gwaii-chamber",
     businessName: "Masset Hospital",
     website: "https://www.northernhealth.ca",
     category: "healthcare",
@@ -5034,7 +4764,7 @@ export const chamberMembers: ChamberMember[] = [
   // Engineering Firms
   {
     id: "gvbot-member-078",
-    chamberId: "gvbot",
+    chamberId: "greater-vancouver-board-of-trade",
     businessName: "WSP Canada",
     website: "https://www.wsp.com/en-ca",
     category: "engineering",
@@ -5044,7 +4774,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "gvbot-member-079",
-    chamberId: "gvbot",
+    chamberId: "greater-vancouver-board-of-trade",
     businessName: "Stantec",
     website: "https://www.stantec.com",
     category: "engineering",
@@ -5054,7 +4784,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "gvbot-member-080",
-    chamberId: "gvbot",
+    chamberId: "greater-vancouver-board-of-trade",
     businessName: "AECOM",
     website: "https://www.aecom.com",
     category: "engineering",
@@ -5064,7 +4794,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "gvbot-member-081",
-    chamberId: "gvbot",
+    chamberId: "greater-vancouver-board-of-trade",
     businessName: "Associated Engineering",
     website: "https://www.ae.ca",
     category: "engineering",
@@ -5074,7 +4804,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "gvbot-member-082",
-    chamberId: "gvbot",
+    chamberId: "greater-vancouver-board-of-trade",
     businessName: "Hatch Ltd.",
     website: "https://www.hatch.com",
     category: "engineering",
@@ -5086,7 +4816,7 @@ export const chamberMembers: ChamberMember[] = [
   // Architecture Firms
   {
     id: "gvbot-member-083",
-    chamberId: "gvbot",
+    chamberId: "greater-vancouver-board-of-trade",
     businessName: "Perkins+Will",
     website: "https://www.perkinswill.com",
     category: "construction",
@@ -5097,7 +4827,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "gvbot-member-084",
-    chamberId: "gvbot",
+    chamberId: "greater-vancouver-board-of-trade",
     businessName: "DIALOG",
     website: "https://www.dialogdesign.ca",
     category: "construction",
@@ -5108,7 +4838,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "gvbot-member-085",
-    chamberId: "gvbot",
+    chamberId: "greater-vancouver-board-of-trade",
     businessName: "Henriquez Partners Architects",
     website: "https://www.henriquezpartners.com",
     category: "construction",
@@ -5121,7 +4851,7 @@ export const chamberMembers: ChamberMember[] = [
   // Media Companies
   {
     id: "gvbot-member-086",
-    chamberId: "gvbot",
+    chamberId: "greater-vancouver-board-of-trade",
     businessName: "Global BC",
     website: "https://www.globalnews.ca/bc",
     category: "media",
@@ -5132,7 +4862,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "gvbot-member-087",
-    chamberId: "gvbot",
+    chamberId: "greater-vancouver-board-of-trade",
     businessName: "CTV Vancouver",
     website: "https://www.bc.ctvnews.ca",
     category: "media",
@@ -5143,7 +4873,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "gvbot-member-088",
-    chamberId: "gvbot",
+    chamberId: "greater-vancouver-board-of-trade",
     businessName: "CBC Vancouver",
     website: "https://www.cbc.ca/bc",
     category: "media",
@@ -5154,7 +4884,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "gvbot-member-089",
-    chamberId: "gvbot",
+    chamberId: "greater-vancouver-board-of-trade",
     businessName: "Vancouver Sun / The Province",
     website: "https://www.vancouversun.com",
     category: "media",
@@ -5165,7 +4895,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "victoria-coc-member-017",
-    chamberId: "victoria-coc",
+    chamberId: "greater-victoria-chamber",
     businessName: "Times Colonist",
     website: "https://www.timescolonist.com",
     category: "media",
@@ -5176,7 +4906,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "kelowna-coc-member-014",
-    chamberId: "kelowna-coc",
+    chamberId: "kelowna-chamber",
     businessName: "Kelowna Capital News",
     website: "https://www.kelownacapnews.com",
     category: "media",
@@ -5192,7 +4922,7 @@ export const chamberMembers: ChamberMember[] = [
 
   {
     id: "gvbot-member-090",
-    chamberId: "gvbot",
+    chamberId: "greater-vancouver-board-of-trade",
     businessName: "BC Place Stadium",
     website: "https://www.bcplace.com",
     category: "entertainment",
@@ -5207,7 +4937,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "gvbot-member-091",
-    chamberId: "gvbot",
+    chamberId: "greater-vancouver-board-of-trade",
     businessName: "Rogers Arena",
     website: "https://www.rogersarena.com",
     category: "entertainment",
@@ -5222,7 +4952,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "victoria-coc-member-018",
-    chamberId: "victoria-coc",
+    chamberId: "greater-victoria-chamber",
     businessName: "Save-On-Foods Memorial Centre",
     website: "https://www.selectyourtickets.com",
     category: "entertainment",
@@ -5237,7 +4967,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "kelowna-coc-member-015",
-    chamberId: "kelowna-coc",
+    chamberId: "kelowna-chamber",
     businessName: "Prospera Place",
     website: "https://www.prosperaplace.com",
     category: "entertainment",
@@ -5248,7 +4978,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "kamloops-coc-member-008",
-    chamberId: "kamloops-coc",
+    chamberId: "kamloops-chamber",
     businessName: "Sandman Centre",
     website: "https://www.sandmancentre.ca",
     category: "entertainment",
@@ -5264,7 +4994,7 @@ export const chamberMembers: ChamberMember[] = [
 
   {
     id: "abbotsford-coc-member-010",
-    chamberId: "abbotsford-coc",
+    chamberId: "abbotsford-chamber-of-commerce",
     businessName: "BC Egg",
     website: "https://www.bcegg.com",
     category: "agriculture",
@@ -5275,7 +5005,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "abbotsford-coc-member-011",
-    chamberId: "abbotsford-coc",
+    chamberId: "abbotsford-chamber-of-commerce",
     businessName: "BC Chicken Marketing Board",
     website: "https://www.bcchicken.ca",
     category: "agriculture",
@@ -5285,8 +5015,8 @@ export const chamberMembers: ChamberMember[] = [
     region: "Fraser Valley",
   },
   {
-    id: "chilliwack-coc-member-002",
-    chamberId: "chilliwack-coc",
+    id: "chilliwack-coc-member-010",
+    chamberId: "chilliwack-chamber-of-commerce",
     businessName: "BC Dairy Association",
     website: "https://www.bcdairy.ca",
     category: "agriculture",
@@ -5297,7 +5027,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "kelowna-coc-member-016",
-    chamberId: "kelowna-coc",
+    chamberId: "kelowna-chamber",
     businessName: "BC Tree Fruits",
     website: "https://www.bctreefruits.com",
     category: "agriculture",
@@ -5308,7 +5038,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "penticton-coc-member-005",
-    chamberId: "penticton-coc",
+    chamberId: "penticton-chamber",
     businessName: "BC Cherry Association",
     website: "https://www.bccherry.com",
     category: "agriculture",
@@ -5324,7 +5054,7 @@ export const chamberMembers: ChamberMember[] = [
 
   {
     id: "gvbot-member-092",
-    chamberId: "gvbot",
+    chamberId: "greater-vancouver-board-of-trade",
     businessName: "Copper Mountain Mining Corporation",
     website: "https://www.cumtn.com",
     category: "mining",
@@ -5334,7 +5064,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "gvbot-member-093",
-    chamberId: "gvbot",
+    chamberId: "greater-vancouver-board-of-trade",
     businessName: "Imperial Metals Corporation",
     website: "https://www.imperialmetals.com",
     category: "mining",
@@ -5344,7 +5074,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "gvbot-member-094",
-    chamberId: "gvbot",
+    chamberId: "greater-vancouver-board-of-trade",
     businessName: "Eldorado Gold Corporation",
     website: "https://www.eldoradogold.com",
     category: "mining",
@@ -5354,7 +5084,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "pg-coc-member-010",
-    chamberId: "pg-coc",
+    chamberId: "prince-george-chamber",
     businessName: "Canfor Corporation",
     website: "https://www.canfor.com",
     category: "forestry-logging",
@@ -5364,7 +5094,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "pg-coc-member-011",
-    chamberId: "pg-coc",
+    chamberId: "prince-george-chamber",
     businessName: "West Fraser Timber",
     website: "https://www.westfraser.com",
     category: "forestry-logging",
@@ -5374,7 +5104,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "pg-coc-member-012",
-    chamberId: "pg-coc",
+    chamberId: "prince-george-chamber",
     businessName: "Mercer International",
     website: "https://www.mercerint.com",
     category: "forestry-logging",
@@ -5390,7 +5120,7 @@ export const chamberMembers: ChamberMember[] = [
 
   {
     id: "gvbot-member-095",
-    chamberId: "gvbot",
+    chamberId: "greater-vancouver-board-of-trade",
     businessName: "University of British Columbia",
     website: "https://www.ubc.ca",
     category: "education",
@@ -5404,7 +5134,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "gvbot-member-097",
-    chamberId: "gvbot",
+    chamberId: "greater-vancouver-board-of-trade",
     businessName: "British Columbia Institute of Technology (BCIT)",
     website: "https://www.bcit.ca",
     category: "education",
@@ -5418,7 +5148,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "victoria-coc-member-019",
-    chamberId: "victoria-coc",
+    chamberId: "greater-victoria-chamber",
     businessName: "University of Victoria",
     website: "https://www.uvic.ca",
     category: "education",
@@ -5431,8 +5161,8 @@ export const chamberMembers: ChamberMember[] = [
     },
   },
   {
-    id: "victoria-coc-member-020",
-    chamberId: "victoria-coc",
+    id: "victoria-coc-member-021",
+    chamberId: "greater-victoria-chamber",
     businessName: "Camosun College",
     website: "https://www.camosun.ca",
     category: "education",
@@ -5446,7 +5176,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "kelowna-coc-member-017",
-    chamberId: "kelowna-coc",
+    chamberId: "kelowna-chamber",
     businessName: "UBC Okanagan",
     website: "https://www.ok.ubc.ca",
     category: "education",
@@ -5460,7 +5190,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "pg-coc-member-013",
-    chamberId: "pg-coc",
+    chamberId: "prince-george-chamber",
     businessName: "University of Northern British Columbia",
     website: "https://www.unbc.ca",
     category: "education",
@@ -5474,7 +5204,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "pg-coc-member-014",
-    chamberId: "pg-coc",
+    chamberId: "prince-george-chamber",
     businessName: "College of New Caledonia",
     website: "https://www.cnc.bc.ca",
     category: "education",
@@ -5488,7 +5218,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "kamloops-coc-member-009",
-    chamberId: "kamloops-coc",
+    chamberId: "kamloops-chamber",
     businessName: "Thompson Rivers University",
     website: "https://www.tru.ca",
     category: "education",
@@ -5502,7 +5232,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-coc-member-010",
-    chamberId: "nanaimo-coc",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Vancouver Island University",
     website: "https://www.viu.ca",
     category: "education",
@@ -5513,6 +5243,1145 @@ export const chamberMembers: ChamberMember[] = [
       dataset: "schools",
       id: "viu",
     },
+  },
+
+  // ============================================================================
+  // WEST VANCOUVER CHAMBER - Previously Missing
+  // ============================================================================
+  {
+    id: "westvancouver-member-001",
+    chamberId: "west-vancouver-chamber",
+    businessName: "Park Royal Shopping Centre",
+    website: "https://www.shopparkroyal.com",
+    category: "retail",
+    description: "Major shopping destination",
+    municipality: "West Vancouver",
+    region: "Metro Vancouver",
+  },
+  {
+    id: "westvancouver-member-002",
+    chamberId: "west-vancouver-chamber",
+    businessName: "Hollyburn Country Club",
+    website: "https://www.hollyburn.org",
+    category: "recreation",
+    description: "Private recreation club",
+    municipality: "West Vancouver",
+    region: "Metro Vancouver",
+  },
+  {
+    id: "westvancouver-member-003",
+    chamberId: "west-vancouver-chamber",
+    businessName: "West Vancouver Memorial Library",
+    website: "https://westvanlibrary.ca",
+    category: "government",
+    description: "Public library services",
+    municipality: "West Vancouver",
+    region: "Metro Vancouver",
+  },
+  {
+    id: "westvancouver-member-004",
+    chamberId: "west-vancouver-chamber",
+    businessName: "Lions Gate Hospital",
+    website: "https://www.vch.ca",
+    category: "healthcare",
+    description: "Community hospital",
+    municipality: "North Vancouver",
+    region: "Metro Vancouver",
+    crossReference: {
+      dataset: "emergency-services",
+      id: "lions-gate-hospital",
+    },
+  },
+  {
+    id: "westvancouver-member-005",
+    chamberId: "west-vancouver-chamber",
+    businessName: "Cypress Mountain",
+    website: "https://www.cypressmountain.com",
+    category: "recreation",
+    subcategory: "Ski resort",
+    description: "Olympic ski venue",
+    municipality: "West Vancouver",
+    region: "Metro Vancouver",
+  },
+
+  // ============================================================================
+  // CLOVERDALE DISTRICT CHAMBER - Previously Missing
+  // ============================================================================
+  {
+    id: "cloverdale-member-001",
+    chamberId: "cloverdale-district-chamber",
+    businessName: "Cloverdale Fairgrounds",
+    websiteNeedsCollection: true,
+    category: "entertainment",
+    description: "Rodeo and fair venue",
+    municipality: "Surrey",
+    region: "Metro Vancouver",
+  },
+  {
+    id: "cloverdale-member-002",
+    chamberId: "cloverdale-district-chamber",
+    businessName: "Cloverdale Paint",
+    website: "https://www.cloverdalepaint.com",
+    category: "retail",
+    subcategory: "Paint and coatings",
+    description: "Paint manufacturer and retailer",
+    municipality: "Surrey",
+    region: "Metro Vancouver",
+  },
+  {
+    id: "cloverdale-member-003",
+    chamberId: "cloverdale-district-chamber",
+    businessName: "Shannon Oaks Winery",
+    websiteNeedsCollection: true,
+    category: "winery-brewery",
+    description: "Local winery",
+    municipality: "Surrey",
+    region: "Metro Vancouver",
+  },
+  {
+    id: "cloverdale-member-004",
+    chamberId: "cloverdale-district-chamber",
+    businessName: "Cloverdale Pharmacy",
+    websiteNeedsCollection: true,
+    category: "pharmacy",
+    description: "Community pharmacy",
+    municipality: "Surrey",
+    region: "Metro Vancouver",
+  },
+  {
+    id: "cloverdale-member-005",
+    chamberId: "cloverdale-district-chamber",
+    businessName: "Cloverdale Veterinary Hospital",
+    website: "https://www.cloverdalevet.ca",
+    category: "veterinary",
+    description: "Animal hospital",
+    municipality: "Surrey",
+    region: "Metro Vancouver",
+  },
+
+  // ============================================================================
+  // MAPLE RIDGE PITT MEADOWS CHAMBER - Previously Missing
+  // ============================================================================
+  {
+    id: "mapleridge-member-001",
+    chamberId: "maple-ridge-pitt-meadows-chamber",
+    businessName: "Pitt Meadows Airport",
+    website: "https://www.pittmeadowsairport.ca",
+    category: "aviation",
+    description: "General aviation airport",
+    municipality: "Pitt Meadows",
+    region: "Metro Vancouver",
+    crossReference: {
+      dataset: "aviation",
+      id: "cypq",
+    },
+  },
+  {
+    id: "mapleridge-member-002",
+    chamberId: "maple-ridge-pitt-meadows-chamber",
+    businessName: "Golden Ears Provincial Park",
+    website: "https://bcparks.ca",
+    category: "recreation",
+    description: "Provincial park",
+    municipality: "Maple Ridge",
+    region: "Metro Vancouver",
+  },
+  {
+    id: "mapleridge-member-003",
+    chamberId: "maple-ridge-pitt-meadows-chamber",
+    businessName: "Haney Place Mall",
+    websiteNeedsCollection: true,
+    category: "retail",
+    description: "Shopping centre",
+    municipality: "Maple Ridge",
+    region: "Metro Vancouver",
+  },
+  {
+    id: "mapleridge-member-004",
+    chamberId: "maple-ridge-pitt-meadows-chamber",
+    businessName: "Ridge Meadows Hospital",
+    website: "https://www.fraserhealth.ca",
+    category: "healthcare",
+    description: "Community hospital",
+    municipality: "Maple Ridge",
+    region: "Metro Vancouver",
+    crossReference: {
+      dataset: "emergency-services",
+      id: "ridge-meadows-hospital",
+    },
+  },
+  {
+    id: "mapleridge-member-005",
+    chamberId: "maple-ridge-pitt-meadows-chamber",
+    businessName: "Maple Ridge Chrysler Jeep Dodge",
+    websiteNeedsCollection: true,
+    category: "automotive",
+    description: "Auto dealership",
+    municipality: "Maple Ridge",
+    region: "Metro Vancouver",
+  },
+  {
+    id: "mapleridge-member-006",
+    chamberId: "maple-ridge-pitt-meadows-chamber",
+    businessName: "Kanaka Creek Coffee",
+    websiteNeedsCollection: true,
+    category: "food-beverage",
+    description: "Local coffee roaster",
+    municipality: "Maple Ridge",
+    region: "Metro Vancouver",
+  },
+
+  // ============================================================================
+  // AGASSIZ CHAMBER - Previously Missing
+  // ============================================================================
+  {
+    id: "agassiz-member-001",
+    chamberId: "agassiz-chamber",
+    businessName: "Seabird Island Band",
+    website: "https://www.seabirdisland.ca",
+    category: "first-nations",
+    description: "First Nations community",
+    municipality: "Agassiz",
+    region: "Fraser Valley",
+  },
+  {
+    id: "agassiz-member-002",
+    chamberId: "agassiz-chamber",
+    businessName: "Mountain Prison",
+    websiteNeedsCollection: true,
+    category: "government",
+    description: "Federal correctional facility",
+    municipality: "Agassiz",
+    region: "Fraser Valley",
+  },
+  {
+    id: "agassiz-member-003",
+    chamberId: "agassiz-chamber",
+    businessName: "Cheam First Nation",
+    website: "https://www.cheamfirstnation.com",
+    category: "first-nations",
+    description: "First Nations community",
+    municipality: "Agassiz",
+    region: "Fraser Valley",
+  },
+  {
+    id: "agassiz-member-004",
+    chamberId: "agassiz-chamber",
+    businessName: "Agassiz-Harrison Observer",
+    websiteNeedsCollection: true,
+    category: "media",
+    description: "Local newspaper",
+    municipality: "Agassiz",
+    region: "Fraser Valley",
+  },
+  {
+    id: "agassiz-member-005",
+    chamberId: "agassiz-chamber",
+    businessName: "Agassiz Foods",
+    websiteNeedsCollection: true,
+    category: "grocery",
+    description: "Local grocery store",
+    municipality: "Agassiz",
+    region: "Fraser Valley",
+  },
+
+  // ============================================================================
+  // HARRISON HOT SPRINGS CHAMBER - Previously Missing
+  // ============================================================================
+  {
+    id: "harrison-member-001",
+    chamberId: "harrison-hot-springs-chamber",
+    businessName: "Harrison Hot Springs Resort & Spa",
+    website: "https://www.harrisonresort.com",
+    category: "accommodation",
+    description: "Hot springs resort hotel",
+    municipality: "Harrison Hot Springs",
+    region: "Fraser Valley",
+  },
+  {
+    id: "harrison-member-002",
+    chamberId: "harrison-hot-springs-chamber",
+    businessName: "Harrison Lake Hotel",
+    websiteNeedsCollection: true,
+    category: "accommodation",
+    description: "Lakefront hotel",
+    municipality: "Harrison Hot Springs",
+    region: "Fraser Valley",
+  },
+  {
+    id: "harrison-member-003",
+    chamberId: "harrison-hot-springs-chamber",
+    businessName: "Sasquatch Provincial Park",
+    website: "https://bcparks.ca",
+    category: "recreation",
+    description: "Provincial park",
+    municipality: "Harrison Hot Springs",
+    region: "Fraser Valley",
+  },
+  {
+    id: "harrison-member-004",
+    chamberId: "harrison-hot-springs-chamber",
+    businessName: "Harrison Eco Tours",
+    websiteNeedsCollection: true,
+    category: "hospitality",
+    description: "Eco tourism operator",
+    municipality: "Harrison Hot Springs",
+    region: "Fraser Valley",
+  },
+  {
+    id: "harrison-member-005",
+    chamberId: "harrison-hot-springs-chamber",
+    businessName: "Black Forest Steak & Schnitzel",
+    websiteNeedsCollection: true,
+    category: "restaurant",
+    description: "German restaurant",
+    municipality: "Harrison Hot Springs",
+    region: "Fraser Valley",
+  },
+
+  // ============================================================================
+  // SIDNEY CHAMBER - Previously Missing
+  // ============================================================================
+  {
+    id: "sidney-member-001",
+    chamberId: "sidney-chamber",
+    businessName: "Victoria International Airport",
+    website: "https://www.victoriaairport.com",
+    category: "aviation",
+    description: "Major regional airport",
+    municipality: "North Saanich",
+    region: "Capital",
+    crossReference: {
+      dataset: "aviation",
+      id: "cyyj",
+    },
+  },
+  {
+    id: "sidney-member-002",
+    chamberId: "sidney-chamber",
+    businessName: "BC Ferries - Swartz Bay Terminal",
+    website: "https://www.bcferries.com",
+    category: "transit",
+    description: "Major ferry terminal",
+    municipality: "North Saanich",
+    region: "Capital",
+    crossReference: {
+      dataset: "marine",
+      id: "swartz-bay-terminal",
+    },
+  },
+  {
+    id: "sidney-member-003",
+    chamberId: "sidney-chamber",
+    businessName: "Mary Winspear Centre",
+    website: "https://www.marywinspear.ca",
+    category: "entertainment",
+    description: "Performing arts centre",
+    municipality: "Sidney",
+    region: "Capital",
+  },
+  {
+    id: "sidney-member-004",
+    chamberId: "sidney-chamber",
+    businessName: "Shaw Centre for the Salish Sea",
+    website: "https://www.salishseacentre.org",
+    category: "arts-culture",
+    description: "Marine science centre",
+    municipality: "Sidney",
+    region: "Capital",
+  },
+  {
+    id: "sidney-member-005",
+    chamberId: "sidney-chamber",
+    businessName: "Sidney Pharmacy",
+    websiteNeedsCollection: true,
+    category: "pharmacy",
+    description: "Community pharmacy",
+    municipality: "Sidney",
+    region: "Capital",
+  },
+  {
+    id: "sidney-member-006",
+    chamberId: "sidney-chamber",
+    businessName: "Washington State Ferries - Sidney Terminal",
+    website: "https://www.wsdot.com/ferries",
+    category: "transit",
+    description: "International ferry terminal",
+    municipality: "Sidney",
+    region: "Capital",
+  },
+
+  // ============================================================================
+  // LAKE COUNTRY CHAMBER - Previously Missing
+  // ============================================================================
+  {
+    id: "lakecountry-member-001",
+    chamberId: "lake-country-chamber",
+    businessName: "Gray Monk Estate Winery",
+    website: "https://www.graymonk.com",
+    category: "winery-brewery",
+    description: "Award-winning winery",
+    municipality: "Lake Country",
+    region: "Central Okanagan",
+  },
+  {
+    id: "lakecountry-member-002",
+    chamberId: "lake-country-chamber",
+    businessName: "Arrowleaf Cellars",
+    website: "https://www.arrowleafcellars.com",
+    category: "winery-brewery",
+    description: "Family winery",
+    municipality: "Lake Country",
+    region: "Central Okanagan",
+  },
+  {
+    id: "lakecountry-member-003",
+    chamberId: "lake-country-chamber",
+    businessName: "The Jammery",
+    website: "https://www.thejammery.com",
+    category: "food-beverage",
+    description: "Jam and preserves producer",
+    municipality: "Lake Country",
+    region: "Central Okanagan",
+  },
+  {
+    id: "lakecountry-member-004",
+    chamberId: "lake-country-chamber",
+    businessName: "Lake Country Museum",
+    websiteNeedsCollection: true,
+    category: "arts-culture",
+    description: "Local history museum",
+    municipality: "Lake Country",
+    region: "Central Okanagan",
+  },
+  {
+    id: "lakecountry-member-005",
+    chamberId: "lake-country-chamber",
+    businessName: "Oyama Zipline Adventure Park",
+    website: "https://www.oyamazipline.com",
+    category: "recreation",
+    description: "Adventure tourism",
+    municipality: "Lake Country",
+    region: "Central Okanagan",
+  },
+
+  // ============================================================================
+  // PEACHLAND CHAMBER - Previously Missing
+  // ============================================================================
+  {
+    id: "peachland-member-001",
+    chamberId: "peachland-chamber",
+    businessName: "Hainle Vineyards Estate Winery",
+    website: "https://www.hainle.com",
+    category: "winery-brewery",
+    description: "Organic winery",
+    municipality: "Peachland",
+    region: "Central Okanagan",
+  },
+  {
+    id: "peachland-member-002",
+    chamberId: "peachland-chamber",
+    businessName: "Peachland View Homes",
+    websiteNeedsCollection: true,
+    category: "real-estate",
+    description: "Real estate agency",
+    municipality: "Peachland",
+    region: "Central Okanagan",
+  },
+  {
+    id: "peachland-member-003",
+    chamberId: "peachland-chamber",
+    businessName: "Peachland Museum",
+    websiteNeedsCollection: true,
+    category: "arts-culture",
+    description: "Local history museum",
+    municipality: "Peachland",
+    region: "Central Okanagan",
+  },
+  {
+    id: "peachland-member-004",
+    chamberId: "peachland-chamber",
+    businessName: "Bliss Bakery Peachland",
+    websiteNeedsCollection: true,
+    category: "food-beverage",
+    description: "Local bakery",
+    municipality: "Peachland",
+    region: "Central Okanagan",
+  },
+  {
+    id: "peachland-member-005",
+    chamberId: "peachland-chamber",
+    businessName: "Peachland Pharmacy",
+    websiteNeedsCollection: true,
+    category: "pharmacy",
+    description: "Community pharmacy",
+    municipality: "Peachland",
+    region: "Central Okanagan",
+  },
+
+  // ============================================================================
+  // SOUTH OKANAGAN CHAMBER - Previously Missing
+  // ============================================================================
+  {
+    id: "southokanagan-member-001",
+    chamberId: "south-okanagan-chamber",
+    businessName: "Nk'Mip Cellars",
+    website: "https://www.nkmipcellars.com",
+    category: "winery-brewery",
+    description: "First Nations-owned winery",
+    municipality: "Oliver",
+    region: "Okanagan-Similkameen",
+  },
+  {
+    id: "southokanagan-member-002",
+    chamberId: "south-okanagan-chamber",
+    businessName: "Burrowing Owl Estate Winery",
+    website: "https://www.burrowingowlwine.ca",
+    category: "winery-brewery",
+    description: "Premium winery",
+    municipality: "Oliver",
+    region: "Okanagan-Similkameen",
+  },
+  {
+    id: "southokanagan-member-003",
+    chamberId: "south-okanagan-chamber",
+    businessName: "Osoyoos Desert Centre",
+    website: "https://www.desert.org",
+    category: "arts-culture",
+    description: "Desert ecology education",
+    municipality: "Osoyoos",
+    region: "Okanagan-Similkameen",
+  },
+  {
+    id: "southokanagan-member-004",
+    chamberId: "south-okanagan-chamber",
+    businessName: "Watermark Beach Resort",
+    website: "https://www.watermarkbeachresort.com",
+    category: "accommodation",
+    description: "Lakefront resort",
+    municipality: "Osoyoos",
+    region: "Okanagan-Similkameen",
+  },
+  {
+    id: "southokanagan-member-005",
+    chamberId: "south-okanagan-chamber",
+    businessName: "Osoyoos Indian Band",
+    website: "https://www.oib.ca",
+    category: "first-nations",
+    description: "First Nations community",
+    municipality: "Osoyoos",
+    region: "Okanagan-Similkameen",
+  },
+
+  // ============================================================================
+  // SICAMOUS CHAMBER - Previously Missing
+  // ============================================================================
+  {
+    id: "sicamous-member-001",
+    chamberId: "sicamous-chamber",
+    businessName: "Sicamous & District Recreation Centre",
+    websiteNeedsCollection: true,
+    category: "recreation",
+    description: "Community recreation",
+    municipality: "Sicamous",
+    region: "Columbia-Shuswap",
+  },
+  {
+    id: "sicamous-member-002",
+    chamberId: "sicamous-chamber",
+    businessName: "Sicamous Creek Campground",
+    websiteNeedsCollection: true,
+    category: "accommodation",
+    description: "RV and tent camping",
+    municipality: "Sicamous",
+    region: "Columbia-Shuswap",
+  },
+  {
+    id: "sicamous-member-003",
+    chamberId: "sicamous-chamber",
+    businessName: "Twin Anchors Houseboat Vacations",
+    website: "https://www.twinanchors.com",
+    category: "hospitality",
+    description: "Houseboat rentals",
+    municipality: "Sicamous",
+    region: "Columbia-Shuswap",
+  },
+  {
+    id: "sicamous-member-004",
+    chamberId: "sicamous-chamber",
+    businessName: "Sicamous IGA",
+    websiteNeedsCollection: true,
+    category: "grocery",
+    description: "Grocery store",
+    municipality: "Sicamous",
+    region: "Columbia-Shuswap",
+  },
+  {
+    id: "sicamous-member-005",
+    chamberId: "sicamous-chamber",
+    businessName: "Three Valley Gap Heritage Ghost Town",
+    website: "https://www.3valleygap.com",
+    category: "hospitality",
+    description: "Heritage attraction",
+    municipality: "Sicamous",
+    region: "Columbia-Shuswap",
+  },
+
+  // ============================================================================
+  // BARRIERE CHAMBER - Previously Missing
+  // ============================================================================
+  {
+    id: "barriere-member-001",
+    chamberId: "barriere-chamber",
+    businessName: "Barriere IGA",
+    websiteNeedsCollection: true,
+    category: "grocery",
+    description: "Grocery store",
+    municipality: "Barriere",
+    region: "Thompson-Nicola",
+  },
+  {
+    id: "barriere-member-002",
+    chamberId: "barriere-chamber",
+    businessName: "North Thompson Times",
+    websiteNeedsCollection: true,
+    category: "media",
+    description: "Local newspaper",
+    municipality: "Barriere",
+    region: "Thompson-Nicola",
+  },
+  {
+    id: "barriere-member-003",
+    chamberId: "barriere-chamber",
+    businessName: "Barriere & District Health Centre",
+    websiteNeedsCollection: true,
+    category: "healthcare",
+    description: "Community health centre",
+    municipality: "Barriere",
+    region: "Thompson-Nicola",
+  },
+  {
+    id: "barriere-member-004",
+    chamberId: "barriere-chamber",
+    businessName: "Dunn Lake Resort",
+    websiteNeedsCollection: true,
+    category: "accommodation",
+    description: "Fishing resort",
+    municipality: "Barriere",
+    region: "Thompson-Nicola",
+  },
+  {
+    id: "barriere-member-005",
+    chamberId: "barriere-chamber",
+    businessName: "Simpcw First Nation",
+    website: "https://www.simpcw.com",
+    category: "first-nations",
+    description: "First Nations community",
+    municipality: "Barriere",
+    region: "Thompson-Nicola",
+  },
+
+  // ============================================================================
+  // LOGAN LAKE CHAMBER - Previously Missing
+  // ============================================================================
+  {
+    id: "loganlake-member-001",
+    chamberId: "logan-lake-chamber",
+    businessName: "Highland Valley Copper",
+    website: "https://www.teck.com",
+    category: "mining",
+    description: "Major copper mine",
+    municipality: "Logan Lake",
+    region: "Thompson-Nicola",
+  },
+  {
+    id: "loganlake-member-002",
+    chamberId: "logan-lake-chamber",
+    businessName: "Logan Lake Community Centre",
+    websiteNeedsCollection: true,
+    category: "recreation",
+    description: "Community recreation",
+    municipality: "Logan Lake",
+    region: "Thompson-Nicola",
+  },
+  {
+    id: "loganlake-member-003",
+    chamberId: "logan-lake-chamber",
+    businessName: "Logan Lake TV Society",
+    websiteNeedsCollection: true,
+    category: "telecommunications",
+    description: "Community TV service",
+    municipality: "Logan Lake",
+    region: "Thompson-Nicola",
+  },
+  {
+    id: "loganlake-member-004",
+    chamberId: "logan-lake-chamber",
+    businessName: "Logan Lake Pharmacy",
+    websiteNeedsCollection: true,
+    category: "pharmacy",
+    description: "Community pharmacy",
+    municipality: "Logan Lake",
+    region: "Thompson-Nicola",
+  },
+  {
+    id: "loganlake-member-005",
+    chamberId: "logan-lake-chamber",
+    businessName: "Logan Lake IGA",
+    websiteNeedsCollection: true,
+    category: "grocery",
+    description: "Grocery store",
+    municipality: "Logan Lake",
+    region: "Thompson-Nicola",
+  },
+
+  // ============================================================================
+  // CLINTON CHAMBER - Previously Missing
+  // ============================================================================
+  {
+    id: "clinton-member-001",
+    chamberId: "clinton-chamber",
+    businessName: "Clinton Museum",
+    websiteNeedsCollection: true,
+    category: "arts-culture",
+    description: "Gold Rush history museum",
+    municipality: "Clinton",
+    region: "Cariboo",
+  },
+  {
+    id: "clinton-member-002",
+    chamberId: "clinton-chamber",
+    businessName: "Big Bar Guest Ranch",
+    website: "https://www.bigbarranch.com",
+    category: "accommodation",
+    description: "Guest ranch and resort",
+    municipality: "Clinton",
+    region: "Cariboo",
+  },
+  {
+    id: "clinton-member-003",
+    chamberId: "clinton-chamber",
+    businessName: "Clinton IGA",
+    websiteNeedsCollection: true,
+    category: "grocery",
+    description: "Grocery store",
+    municipality: "Clinton",
+    region: "Cariboo",
+  },
+  {
+    id: "clinton-member-004",
+    chamberId: "clinton-chamber",
+    businessName: "Clinton Emporium",
+    websiteNeedsCollection: true,
+    category: "retail",
+    description: "General store",
+    municipality: "Clinton",
+    region: "Cariboo",
+  },
+  {
+    id: "clinton-member-005",
+    chamberId: "clinton-chamber",
+    businessName: "Clinton Ball",
+    websiteNeedsCollection: true,
+    category: "entertainment",
+    description: "Historic annual event",
+    municipality: "Clinton",
+    region: "Cariboo",
+  },
+
+  // ============================================================================
+  // VALEMOUNT CHAMBER - Previously Missing
+  // ============================================================================
+  {
+    id: "valemount-member-001",
+    chamberId: "valemount-chamber",
+    businessName: "Valemount Glacier Destinations",
+    website: "https://www.valemountglacierdestinations.com",
+    category: "hospitality",
+    description: "Glacier tourism",
+    municipality: "Valemount",
+    region: "Fraser-Fort George",
+  },
+  {
+    id: "valemount-member-002",
+    chamberId: "valemount-chamber",
+    businessName: "Mount Robson Provincial Park",
+    website: "https://bcparks.ca",
+    category: "recreation",
+    description: "Highest peak in Rockies",
+    municipality: "Valemount",
+    region: "Fraser-Fort George",
+  },
+  {
+    id: "valemount-member-003",
+    chamberId: "valemount-chamber",
+    businessName: "Best Western Plus Valemount",
+    websiteNeedsCollection: true,
+    category: "accommodation",
+    description: "Hotel",
+    municipality: "Valemount",
+    region: "Fraser-Fort George",
+  },
+  {
+    id: "valemount-member-004",
+    chamberId: "valemount-chamber",
+    businessName: "Valemount IGA",
+    websiteNeedsCollection: true,
+    category: "grocery",
+    description: "Grocery store",
+    municipality: "Valemount",
+    region: "Fraser-Fort George",
+  },
+  {
+    id: "valemount-member-005",
+    chamberId: "valemount-chamber",
+    businessName: "Simpcw Resources Group",
+    website: "https://www.simpcw.com",
+    category: "first-nations",
+    subcategory: "Resource development",
+    description: "First Nations business",
+    municipality: "Valemount",
+    region: "Fraser-Fort George",
+  },
+
+  // ============================================================================
+  // MCBRIDE CHAMBER - Previously Missing
+  // ============================================================================
+  {
+    id: "mcbride-member-001",
+    chamberId: "mcbride-chamber",
+    businessName: "McBride & District Museum",
+    websiteNeedsCollection: true,
+    category: "arts-culture",
+    description: "Local history museum",
+    municipality: "McBride",
+    region: "Fraser-Fort George",
+  },
+  {
+    id: "mcbride-member-002",
+    chamberId: "mcbride-chamber",
+    businessName: "McBride IGA",
+    websiteNeedsCollection: true,
+    category: "grocery",
+    description: "Grocery store",
+    municipality: "McBride",
+    region: "Fraser-Fort George",
+  },
+  {
+    id: "mcbride-member-003",
+    chamberId: "mcbride-chamber",
+    businessName: "Robson Valley Times",
+    websiteNeedsCollection: true,
+    category: "media",
+    description: "Local newspaper",
+    municipality: "McBride",
+    region: "Fraser-Fort George",
+  },
+  {
+    id: "mcbride-member-004",
+    chamberId: "mcbride-chamber",
+    businessName: "Ancient Forest/Chun T'oh Whudujut",
+    website: "https://bcparks.ca",
+    category: "recreation",
+    description: "Ancient rainforest park",
+    municipality: "McBride",
+    region: "Fraser-Fort George",
+  },
+  {
+    id: "mcbride-member-005",
+    chamberId: "mcbride-chamber",
+    businessName: "McBride Pharmacy",
+    websiteNeedsCollection: true,
+    category: "pharmacy",
+    description: "Community pharmacy",
+    municipality: "McBride",
+    region: "Fraser-Fort George",
+  },
+
+  // ============================================================================
+  // FORT ST. JAMES CHAMBER - Previously Missing
+  // ============================================================================
+  {
+    id: "ftstjames-member-001",
+    chamberId: "fort-st-james-chamber",
+    businessName: "Fort St. James National Historic Site",
+    website: "https://www.pc.gc.ca",
+    category: "arts-culture",
+    description: "Historic fur trading post",
+    municipality: "Fort St. James",
+    region: "Bulkley-Nechako",
+  },
+  {
+    id: "ftstjames-member-002",
+    chamberId: "fort-st-james-chamber",
+    businessName: "Nak'azdli Whut'en",
+    website: "https://www.nakazdli.ca",
+    category: "first-nations",
+    description: "First Nations community",
+    municipality: "Fort St. James",
+    region: "Bulkley-Nechako",
+  },
+  {
+    id: "ftstjames-member-003",
+    chamberId: "fort-st-james-chamber",
+    businessName: "Fort St. James IGA",
+    websiteNeedsCollection: true,
+    category: "grocery",
+    description: "Grocery store",
+    municipality: "Fort St. James",
+    region: "Bulkley-Nechako",
+  },
+  {
+    id: "ftstjames-member-004",
+    chamberId: "fort-st-james-chamber",
+    businessName: "Stuart Lake Hospital",
+    websiteNeedsCollection: true,
+    category: "healthcare",
+    description: "Community hospital",
+    municipality: "Fort St. James",
+    region: "Bulkley-Nechako",
+  },
+  {
+    id: "ftstjames-member-005",
+    chamberId: "fort-st-james-chamber",
+    businessName: "Sowchea Bay Resort",
+    websiteNeedsCollection: true,
+    category: "accommodation",
+    description: "Fishing resort",
+    municipality: "Fort St. James",
+    region: "Bulkley-Nechako",
+  },
+
+  // ============================================================================
+  // FRASER LAKE CHAMBER - Previously Missing
+  // ============================================================================
+  {
+    id: "fraserlake-member-001",
+    chamberId: "fraser-lake-chamber",
+    businessName: "Rio Tinto - Endako Mine",
+    website: "https://www.riotinto.com",
+    category: "mining",
+    description: "Molybdenum mine",
+    municipality: "Fraser Lake",
+    region: "Bulkley-Nechako",
+  },
+  {
+    id: "fraserlake-member-002",
+    chamberId: "fraser-lake-chamber",
+    businessName: "Fraser Lake IGA",
+    websiteNeedsCollection: true,
+    category: "grocery",
+    description: "Grocery store",
+    municipality: "Fraser Lake",
+    region: "Bulkley-Nechako",
+  },
+  {
+    id: "fraserlake-member-003",
+    chamberId: "fraser-lake-chamber",
+    businessName: "Stellat'en First Nation",
+    website: "https://www.stellaten.ca",
+    category: "first-nations",
+    description: "First Nations community",
+    municipality: "Fraser Lake",
+    region: "Bulkley-Nechako",
+  },
+  {
+    id: "fraserlake-member-004",
+    chamberId: "fraser-lake-chamber",
+    businessName: "Fraser Lake & District Museum",
+    websiteNeedsCollection: true,
+    category: "arts-culture",
+    description: "Local history museum",
+    municipality: "Fraser Lake",
+    region: "Bulkley-Nechako",
+  },
+  {
+    id: "fraserlake-member-005",
+    chamberId: "fraser-lake-chamber",
+    businessName: "Fraser Lake Pharmacy",
+    websiteNeedsCollection: true,
+    category: "pharmacy",
+    description: "Community pharmacy",
+    municipality: "Fraser Lake",
+    region: "Bulkley-Nechako",
+  },
+
+  // ============================================================================
+  // HOUSTON CHAMBER - Previously Missing
+  // ============================================================================
+  {
+    id: "houston-member-001",
+    chamberId: "houston-chamber",
+    businessName: "Houston Forest Products",
+    websiteNeedsCollection: true,
+    category: "forestry-logging",
+    description: "Sawmill and lumber",
+    municipality: "Houston",
+    region: "Bulkley-Nechako",
+  },
+  {
+    id: "houston-member-002",
+    chamberId: "houston-chamber",
+    businessName: "Houston IGA",
+    websiteNeedsCollection: true,
+    category: "grocery",
+    description: "Grocery store",
+    municipality: "Houston",
+    region: "Bulkley-Nechako",
+  },
+  {
+    id: "houston-member-003",
+    chamberId: "houston-chamber",
+    businessName: "Houston Health Centre",
+    websiteNeedsCollection: true,
+    category: "healthcare",
+    description: "Community health centre",
+    municipality: "Houston",
+    region: "Bulkley-Nechako",
+  },
+  {
+    id: "houston-member-004",
+    chamberId: "houston-chamber",
+    businessName: "Houston & District Museum",
+    websiteNeedsCollection: true,
+    category: "arts-culture",
+    description: "Local history museum",
+    municipality: "Houston",
+    region: "Bulkley-Nechako",
+  },
+  {
+    id: "houston-member-005",
+    chamberId: "houston-chamber",
+    businessName: "Skin Tyee First Nation",
+    websiteNeedsCollection: true,
+    category: "first-nations",
+    description: "First Nations community",
+    municipality: "Houston",
+    region: "Bulkley-Nechako",
+  },
+
+  // ============================================================================
+  // CHETWYND CHAMBER - Previously Missing
+  // ============================================================================
+  {
+    id: "chetwynd-member-001",
+    chamberId: "chetwynd-chamber",
+    businessName: "Peace River Coal",
+    websiteNeedsCollection: true,
+    category: "mining",
+    description: "Coal mining",
+    municipality: "Chetwynd",
+    region: "Peace River",
+  },
+  {
+    id: "chetwynd-member-002",
+    chamberId: "chetwynd-chamber",
+    businessName: "Chetwynd IGA",
+    websiteNeedsCollection: true,
+    category: "grocery",
+    description: "Grocery store",
+    municipality: "Chetwynd",
+    region: "Peace River",
+  },
+  {
+    id: "chetwynd-member-003",
+    chamberId: "chetwynd-chamber",
+    businessName: "Chetwynd & District Hospital",
+    websiteNeedsCollection: true,
+    category: "healthcare",
+    description: "Community hospital",
+    municipality: "Chetwynd",
+    region: "Peace River",
+  },
+  {
+    id: "chetwynd-member-004",
+    chamberId: "chetwynd-chamber",
+    businessName: "Northern Lights College - Chetwynd",
+    website: "https://www.nlc.bc.ca",
+    category: "education",
+    description: "College campus",
+    municipality: "Chetwynd",
+    region: "Peace River",
+    crossReference: {
+      dataset: "schools",
+      id: "nlc-chetwynd",
+    },
+  },
+  {
+    id: "chetwynd-member-005",
+    chamberId: "chetwynd-chamber",
+    businessName: "Chainsaw Sculpture Trail",
+    websiteNeedsCollection: true,
+    category: "hospitality",
+    description: "Tourist attraction",
+    municipality: "Chetwynd",
+    region: "Peace River",
+  },
+
+  // ============================================================================
+  // FORT NELSON CHAMBER - Previously Missing
+  // ============================================================================
+  {
+    id: "fortnelson-member-001",
+    chamberId: "fort-nelson-chamber",
+    businessName: "Northern Rockies Regional Municipality",
+    website: "https://www.northernrockies.ca",
+    category: "government",
+    description: "Regional municipality",
+    municipality: "Fort Nelson",
+    region: "Northern Rockies",
+    crossReference: {
+      dataset: "municipal-offices",
+      id: "fort-nelson-city-hall",
+    },
+  },
+  {
+    id: "fortnelson-member-002",
+    chamberId: "fort-nelson-chamber",
+    businessName: "Fort Nelson Airport",
+    websiteNeedsCollection: true,
+    category: "aviation",
+    description: "Regional airport",
+    municipality: "Fort Nelson",
+    region: "Northern Rockies",
+    crossReference: {
+      dataset: "aviation",
+      id: "cyye",
+    },
+  },
+  {
+    id: "fortnelson-member-003",
+    chamberId: "fort-nelson-chamber",
+    businessName: "Fort Nelson General Hospital",
+    websiteNeedsCollection: true,
+    category: "healthcare",
+    description: "Regional hospital",
+    municipality: "Fort Nelson",
+    region: "Northern Rockies",
+    crossReference: {
+      dataset: "emergency-services",
+      id: "fort-nelson-general-hospital",
+    },
+  },
+  {
+    id: "fortnelson-member-004",
+    chamberId: "fort-nelson-chamber",
+    businessName: "Fort Nelson First Nation",
+    website: "https://www.fortnelsonfirstnation.org",
+    category: "first-nations",
+    description: "First Nations community",
+    municipality: "Fort Nelson",
+    region: "Northern Rockies",
+  },
+  {
+    id: "fortnelson-member-005",
+    chamberId: "fort-nelson-chamber",
+    businessName: "Northern Rockies Museum of Culture and Heritage",
+    websiteNeedsCollection: true,
+    category: "arts-culture",
+    description: "Regional museum",
+    municipality: "Fort Nelson",
+    region: "Northern Rockies",
   },
 ];
 

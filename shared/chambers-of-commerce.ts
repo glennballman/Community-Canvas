@@ -1621,6 +1621,22 @@ export const BC_CHAMBERS_OF_COMMERCE: ChamberOfCommerce[] = [
     },
     website: "https://www.powellriverchamber.com",
     notes: "Serving Powell River and Texada Island."
+  },
+
+  // ============================================================================
+  // HAIDA GWAII
+  // ============================================================================
+  {
+    id: "haida-gwaii-chamber",
+    name: "Haida Gwaii Chamber of Commerce",
+    municipality: "Queen Charlotte",
+    region: "North Coast",
+    location: {
+      address: "Queen Charlotte, Haida Gwaii, BC",
+      lat: 53.2541,
+      lng: -132.0750
+    },
+    notes: "Serving the Haida Gwaii archipelago including Queen Charlotte, Skidegate, Masset, and Old Massett."
   }
 ];
 
