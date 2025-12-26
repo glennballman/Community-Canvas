@@ -670,6 +670,776 @@ export const BC_TAXI_SERVICES: TaxiService[] = [
     service_area: ["Courtenay", "Comox", "Cumberland", "Comox Airport (YQQ)"],
     website: "https://ambassadortransportation.net",
     notes: "Specializes in airport shuttles"
+  },
+
+  // ============================================================================
+  // FRASER VALLEY - ABBOTSFORD / LANGLEY / MISSION
+  // ============================================================================
+  {
+    id: "abbotsford-mission-taxi",
+    name: "Abbotsford Mission Taxi",
+    type: "taxi",
+    municipality: "Abbotsford",
+    region: "Fraser Valley",
+    base_location: {
+      address: "Abbotsford",
+      lat: 49.0504,
+      lng: -122.3045
+    },
+    service_area: ["Abbotsford", "Mission", "Matsqui", "Clearbrook"],
+    phone: "(604) 853-8888",
+    website: "https://abbotsfordmissiontaxi.com",
+    app_available: true,
+    notes: "Operating since 1955. 5-10 min response. Flat rates, no surge pricing."
+  },
+  {
+    id: "central-valley-taxi",
+    name: "Central Valley Taxi",
+    type: "taxi",
+    municipality: "Abbotsford",
+    region: "Fraser Valley",
+    base_location: {
+      address: "Abbotsford",
+      lat: 49.0504,
+      lng: -122.3045
+    },
+    service_area: ["Abbotsford", "Clearbrook", "YXX Airport"],
+    phone: "(604) 859-1111",
+    website: "https://centralvalleytaxiltd.com",
+    notes: "Airport transfers, experienced local drivers."
+  },
+  {
+    id: "yellow-top-taxi",
+    name: "Yellow Top Taxi",
+    type: "taxi",
+    municipality: "Abbotsford",
+    region: "Fraser Valley",
+    base_location: {
+      address: "Abbotsford",
+      lat: 49.0504,
+      lng: -122.3045
+    },
+    service_area: ["Abbotsford", "Mission"],
+    phone: "(778) 480-8008",
+    website: "https://yellowtoptaxi.ca",
+    app_available: true,
+    notes: "Mobile app (iOS/Android). No surge pricing. Corporate transport."
+  },
+  {
+    id: "mission-taxi",
+    name: "Mission Taxi (1980) Ltd",
+    type: "taxi",
+    municipality: "Mission",
+    region: "Fraser Valley",
+    base_location: {
+      address: "Mission",
+      lat: 49.1329,
+      lng: -122.3095
+    },
+    service_area: ["Mission", "Hatzic", "Dewdney"],
+    phone: "(604) 826-7155",
+    notes: "Serving Mission since 1980."
+  },
+  {
+    id: "aldergrove-langley-taxi",
+    name: "Aldergrove-Langley Taxi",
+    type: "taxi",
+    municipality: "Langley",
+    region: "Fraser Valley",
+    base_location: {
+      address: "Langley",
+      lat: 49.1044,
+      lng: -122.6608
+    },
+    service_area: ["Langley", "Aldergrove", "Fort Langley", "Walnut Grove"],
+    phone: "(604) 530-4444",
+    website: "https://langleytaxi.ca",
+    app_available: true,
+    notes: "24/7 service. City tours, airport transfers, special occasions."
+  },
+  {
+    id: "langley-cabs",
+    name: "Langley Cabs",
+    type: "taxi",
+    municipality: "Langley",
+    region: "Fraser Valley",
+    base_location: {
+      address: "Langley",
+      lat: 49.1044,
+      lng: -122.6608
+    },
+    service_area: ["Langley", "Surrey"],
+    phone: "(604) 533-3333",
+    notes: "Established Langley provider."
+  },
+  {
+    id: "maple-ridge-taxi",
+    name: "Maple Ridge Taxi",
+    type: "taxi",
+    municipality: "Maple Ridge",
+    region: "Fraser Valley",
+    base_location: {
+      address: "Maple Ridge",
+      lat: 49.2193,
+      lng: -122.5984
+    },
+    service_area: ["Maple Ridge", "Pitt Meadows", "Mission"],
+    phone: "(604) 463-8888",
+    notes: "Serving Maple Ridge and Pitt Meadows."
+  },
+  {
+    id: "hope-taxi",
+    name: "Hope Taxi",
+    type: "taxi",
+    municipality: "Hope",
+    region: "Fraser Valley",
+    base_location: {
+      address: "Hope",
+      lat: 49.3858,
+      lng: -121.4419
+    },
+    service_area: ["Hope", "Yale", "Boston Bar"],
+    phone: "(604) 869-5501",
+    notes: "Serving Hope and Fraser Canyon."
+  },
+
+  // ============================================================================
+  // KOOTENAYS
+  // ============================================================================
+  {
+    id: "glacier-cabs-nelson",
+    name: "Glacier Cabs",
+    type: "taxi",
+    municipality: "Nelson",
+    region: "Central Kootenay",
+    base_location: {
+      address: "593 Baker Street, Nelson",
+      lat: 49.4928,
+      lng: -117.2948
+    },
+    service_area: ["Nelson", "Castlegar", "Trail", "Salmo"],
+    phone: "(250) 354-1111",
+    website: "https://glaciercabs.ca",
+    wheelchair_accessible: true,
+    notes: "24/7 service. Express courier, beverage delivery, long-distance, wheelchair accessible van."
+  },
+  {
+    id: "star-taxi-cranbrook",
+    name: "Star Taxi",
+    type: "taxi",
+    municipality: "Cranbrook",
+    region: "East Kootenay",
+    base_location: {
+      address: "911 Kootenay Street North, Cranbrook",
+      lat: 49.5097,
+      lng: -115.7687
+    },
+    service_area: ["Cranbrook", "Kimberley", "Creston", "Fernie", "Invermere"],
+    phone: "(250) 426-5511",
+    website: "https://startaxicranbrook.ca",
+    notes: "Since 1985. 24/7. Airport shuttle (YXC). Long haul. Roadside assistance."
+  },
+  {
+    id: "key-city-cabs-cranbrook",
+    name: "Key City Cabs",
+    type: "taxi",
+    municipality: "Cranbrook",
+    region: "East Kootenay",
+    base_location: {
+      address: "113 5th Avenue S, Cranbrook",
+      lat: 49.5097,
+      lng: -115.7687
+    },
+    service_area: ["Cranbrook", "Kimberley"],
+    phone: "(250) 426-1111",
+    website: "https://keycitycabscranbrook.ca",
+    notes: "24/7 service. Airport transportation."
+  },
+  {
+    id: "kootenay-taxi-fernie",
+    name: "Kootenay Taxi",
+    type: "taxi",
+    municipality: "Fernie",
+    region: "East Kootenay",
+    base_location: {
+      address: "Fernie",
+      lat: 49.5040,
+      lng: -115.0631
+    },
+    service_area: ["Fernie", "Fernie Alpine Resort", "Sparwood"],
+    phone: "(250) 423-4409",
+    notes: "Local Fernie service."
+  },
+  {
+    id: "tunnel49-fernie",
+    name: "Tunnel49 / Fernie Taxi",
+    type: "taxi",
+    municipality: "Fernie",
+    region: "East Kootenay",
+    base_location: {
+      address: "100-802 BC-3, Fernie",
+      lat: 49.5040,
+      lng: -115.0631
+    },
+    service_area: ["Fernie", "Fernie Alpine Resort"],
+    phone: "(250) 423-5008",
+    website: "https://t49.ca/fernie-taxi/",
+    notes: "10-passenger van. $80 + GST per half hour."
+  },
+  {
+    id: "mount-7-taxi-golden",
+    name: "Mount 7 Taxi",
+    type: "taxi",
+    municipality: "Golden",
+    region: "Columbia-Shuswap",
+    base_location: {
+      address: "801 10th Ave S, Golden",
+      lat: 51.2985,
+      lng: -116.9631
+    },
+    service_area: ["Golden", "Kicking Horse", "Field"],
+    notes: "Operating since 1977. BC Safety Council member. Licensed BC & Alberta."
+  },
+
+  // ============================================================================
+  // NORTHERN BC - TERRACE / KITIMAT / PRINCE RUPERT
+  // ============================================================================
+  {
+    id: "kalum-kabs-terrace",
+    name: "Kalum Kabs",
+    type: "taxi",
+    municipality: "Terrace",
+    region: "Kitimat-Stikine",
+    base_location: {
+      address: "4449 Lakelse Ave, Terrace",
+      lat: 54.5182,
+      lng: -128.6037
+    },
+    service_area: ["Terrace", "Thornhill", "Northwest BC Regional Airport (YXT)"],
+    phone: "(250) 635-7177",
+    notes: "24/7 service. Serving area for 50+ years."
+  },
+  {
+    id: "kitimat-taxi",
+    name: "Kitimat Taxi Co.",
+    type: "taxi",
+    municipality: "Kitimat",
+    region: "Kitimat-Stikine",
+    base_location: {
+      address: "Kitimat",
+      lat: 54.0523,
+      lng: -128.6537
+    },
+    service_area: ["Kitimat", "Terrace"],
+    phone: "(250) 632-2100",
+    website: "https://kitimattaxi.ca",
+    notes: "Services Kitimat and Terrace area."
+  },
+  {
+    id: "skeena-taxi-prince-rupert",
+    name: "Skeena Taxi",
+    type: "accessible",
+    municipality: "Prince Rupert",
+    region: "North Coast",
+    base_location: {
+      address: "Prince Rupert",
+      lat: 54.3150,
+      lng: -130.3208
+    },
+    service_area: ["Prince Rupert", "Port Edward"],
+    website: "https://skeenataxi.com",
+    app_available: true,
+    wheelchair_accessible: true,
+    notes: "Mobile app (Android/iPhone). 3 wheelchair-accessible vehicles. IVR booking."
+  },
+
+  // ============================================================================
+  // NORTHERN BC - PEACE RIVER / FORT ST. JOHN / DAWSON CREEK
+  // ============================================================================
+  {
+    id: "teco-taxi-fsj",
+    name: "Teco Taxi",
+    type: "taxi",
+    municipality: "Fort St. John",
+    region: "Peace River",
+    base_location: {
+      address: "9415 100 Ave, Fort St. John",
+      lat: 56.2465,
+      lng: -120.8476
+    },
+    service_area: ["Fort St. John", "Taylor", "Charlie Lake"],
+    phone: "(250) 787-0641",
+    website: "https://tecotaxi.ca",
+    wheelchair_accessible: true,
+    notes: "24/7 service. Wheelchair accessible. Airport taxi."
+  },
+  {
+    id: "fort-st-john-cabs",
+    name: "Fort St. John Cabs",
+    type: "taxi",
+    municipality: "Fort St. John",
+    region: "Peace River",
+    base_location: {
+      address: "Fort St. John",
+      lat: 56.2465,
+      lng: -120.8476
+    },
+    service_area: ["Fort St. John", "Dawson Creek"],
+    phone: "(250) 785-8294",
+    notes: "Established local service. Long-distance to Dawson Creek."
+  },
+  {
+    id: "energetic-taxi-fsj",
+    name: "Energetic Taxi Cab",
+    type: "taxi",
+    municipality: "Fort St. John",
+    region: "Peace River",
+    base_location: {
+      address: "104-9317 96 St, Fort St. John",
+      lat: 56.2465,
+      lng: -120.8476
+    },
+    service_area: ["Fort St. John"],
+    notes: "7-seaters and minivans. Airport pickup/dropoff. Pre-booking available."
+  },
+
+  // ============================================================================
+  // CARIBOO - WILLIAMS LAKE / QUESNEL / 100 MILE HOUSE
+  // ============================================================================
+  {
+    id: "town-taxi-williams-lake",
+    name: "Town Taxi",
+    type: "taxi",
+    municipality: "Williams Lake",
+    region: "Cariboo",
+    base_location: {
+      address: "Williams Lake",
+      lat: 52.1417,
+      lng: -122.1417
+    },
+    service_area: ["Williams Lake", "150 Mile House", "Cariboo-Chilcotin"],
+    phone: "(250) 392-4151",
+    app_available: true,
+    notes: "Serving Cariboo-Chilcotin since 1987. Charter vans, deliveries, shuttle service."
+  },
+  {
+    id: "williams-lake-taxi",
+    name: "Williams Lake Taxi",
+    type: "taxi",
+    municipality: "Williams Lake",
+    region: "Cariboo",
+    base_location: {
+      address: "Williams Lake",
+      lat: 52.1417,
+      lng: -122.1417
+    },
+    service_area: ["Williams Lake", "Surrounding area"],
+    phone: "(778) 267-2002",
+    notes: "24/7. Female drivers on request. Courier, deliveries."
+  },
+  {
+    id: "cariboo-taxi-quesnel",
+    name: "Cariboo Taxi",
+    type: "taxi",
+    municipality: "Quesnel",
+    region: "Cariboo",
+    base_location: {
+      address: "151 Baker Cres, Quesnel",
+      lat: 52.9784,
+      lng: -122.4927
+    },
+    service_area: ["Quesnel", "Quesnel area"],
+    phone: "(250) 991-0007",
+    website: "https://www.caribootaxi.com",
+    notes: "Since 2000. Corporate & private transport. 24/7. Interstate journeys."
+  },
+  {
+    id: "quesnel-taxi",
+    name: "Quesnel Taxi",
+    type: "taxi",
+    municipality: "Quesnel",
+    region: "Cariboo",
+    base_location: {
+      address: "Quesnel",
+      lat: 52.9784,
+      lng: -122.4927
+    },
+    service_area: ["Quesnel"],
+    phone: "(250) 985-1333",
+    notes: "Serves Quesnel and area."
+  },
+
+  // ============================================================================
+  // OKANAGAN - VERNON / SALMON ARM / REVELSTOKE
+  // ============================================================================
+  {
+    id: "vernon-taxi",
+    name: "Vernon Taxi",
+    type: "taxi",
+    municipality: "Vernon",
+    region: "North Okanagan",
+    base_location: {
+      address: "2701A 35 Street, Vernon",
+      lat: 50.2670,
+      lng: -119.2720
+    },
+    service_area: ["Vernon", "Coldstream", "Armstrong", "Enderby"],
+    phone: "(250) 545-3337",
+    website: "https://www.vernontaxi.com",
+    wheelchair_accessible: true,
+    notes: "Locally owned 30+ years. Wheelchair accessible. Airport transportation."
+  },
+  {
+    id: "salmon-arm-taxi",
+    name: "Salmon Arm Taxi",
+    type: "taxi",
+    municipality: "Salmon Arm",
+    region: "Columbia-Shuswap",
+    base_location: {
+      address: "875 Lakeshore Dr SW, Salmon Arm",
+      lat: 50.7019,
+      lng: -119.2908
+    },
+    service_area: ["Salmon Arm", "Sicamous", "Enderby"],
+    phone: "(250) 803-6677",
+    website: "https://salmonarmtaxi.ca",
+    notes: "24/7. Delivery, roadside assistance, battery boost. Cloud-based dispatch."
+  },
+  {
+    id: "kelowna-eco-taxi",
+    name: "Kelowna Eco Taxi",
+    type: "eco",
+    municipality: "Kelowna",
+    region: "Central Okanagan",
+    base_location: {
+      address: "Kelowna",
+      lat: 49.8863,
+      lng: -119.4966
+    },
+    service_area: ["Kelowna", "Rutland"],
+    phone: "(250) 860-6666",
+    notes: "Eco-friendly transportation."
+  },
+
+  // ============================================================================
+  // VANCOUVER ISLAND - DUNCAN / PORT ALBERNI / TOFINO / LADYSMITH
+  // ============================================================================
+  {
+    id: "ladysmith-gotaxi",
+    name: "Ladysmith GoTaxi",
+    type: "taxi",
+    municipality: "Ladysmith",
+    region: "Cowichan Valley",
+    base_location: {
+      address: "Ladysmith",
+      lat: 48.9975,
+      lng: -123.8181
+    },
+    service_area: ["Ladysmith", "Chemainus", "Duncan"],
+    phone: "(250) 324-2231",
+    notes: "Serves Duncan, Ladysmith, Chemainus area."
+  },
+  {
+    id: "go-taxi-chemainus",
+    name: "Go Taxi Chemainus",
+    type: "taxi",
+    municipality: "Chemainus",
+    region: "Cowichan Valley",
+    base_location: {
+      address: "Chemainus",
+      lat: 48.9261,
+      lng: -123.7147
+    },
+    service_area: ["Chemainus", "Duncan", "Ladysmith"],
+    phone: "(250) 324-8294",
+    notes: "Serves Duncan region."
+  },
+  {
+    id: "united-cabs-port-alberni",
+    name: "United Cabs",
+    type: "taxi",
+    municipality: "Port Alberni",
+    region: "Alberni-Clayoquot",
+    base_location: {
+      address: "Port Alberni",
+      lat: 49.2339,
+      lng: -124.8055
+    },
+    service_area: ["Port Alberni", "Sproat Lake"],
+    phone: "(250) 723-2121",
+    notes: "Local Port Alberni service."
+  },
+  {
+    id: "tofino-taxi",
+    name: "Tofino Taxi",
+    type: "taxi",
+    municipality: "Tofino",
+    region: "Alberni-Clayoquot",
+    base_location: {
+      address: "Tofino",
+      lat: 49.1530,
+      lng: -125.9066
+    },
+    service_area: ["Tofino", "Long Beach", "Pacific Rim"],
+    phone: "(250) 725-3333",
+    notes: "Cash-only service."
+  },
+  {
+    id: "ucluelet-taxi",
+    name: "Ucluelet Taxi",
+    type: "taxi",
+    municipality: "Ucluelet",
+    region: "Alberni-Clayoquot",
+    base_location: {
+      address: "Ucluelet",
+      lat: 48.9419,
+      lng: -125.5466
+    },
+    service_area: ["Ucluelet", "Pacific Rim"],
+    phone: "(250) 726-4415",
+    notes: "Serves Ucluelet and surrounding area."
+  },
+  {
+    id: "pacific-rim-navigators",
+    name: "Pacific Rim Navigators",
+    type: "taxi",
+    municipality: "Tofino",
+    region: "Alberni-Clayoquot",
+    base_location: {
+      address: "Tofino",
+      lat: 49.1530,
+      lng: -125.9066
+    },
+    service_area: ["Tofino", "Ucluelet", "Pacific Rim"],
+    phone: "(250) 725-8393",
+    notes: "Shuttle and private car service."
+  },
+
+  // ============================================================================
+  // VICTORIA REGION - SIDNEY / SOOKE / WESTSHORE
+  // ============================================================================
+  {
+    id: "sidney-taxi",
+    name: "Sidney Taxi",
+    type: "taxi",
+    municipality: "Sidney",
+    region: "Capital",
+    base_location: {
+      address: "Sidney",
+      lat: 48.6500,
+      lng: -123.3986
+    },
+    service_area: ["Sidney", "North Saanich", "YYJ Airport", "Swartz Bay Ferry"],
+    notes: "Serves Sidney and Saanich Peninsula."
+  },
+  {
+    id: "peninsula-taxi",
+    name: "Peninsula Taxi",
+    type: "taxi",
+    municipality: "Sidney",
+    region: "Capital",
+    base_location: {
+      address: "Sidney",
+      lat: 48.6500,
+      lng: -123.3986
+    },
+    service_area: ["Sidney", "North Saanich", "Central Saanich"],
+    notes: "Saanich Peninsula service."
+  },
+  {
+    id: "westshore-taxi",
+    name: "Westshore Taxi",
+    type: "taxi",
+    municipality: "Langford",
+    region: "Capital",
+    base_location: {
+      address: "Langford",
+      lat: 48.4506,
+      lng: -123.5058
+    },
+    service_area: ["Langford", "Colwood", "Sooke", "Metchosin", "View Royal"],
+    notes: "Covers Sooke-Victoria corridor."
+  },
+  {
+    id: "orange-taxi-victoria",
+    name: "Orange Taxi",
+    type: "taxi",
+    municipality: "Victoria",
+    region: "Capital",
+    base_location: {
+      address: "Victoria",
+      lat: 48.4284,
+      lng: -123.3656
+    },
+    service_area: ["Victoria", "Greater Victoria"],
+    notes: "Highly rated on Yelp."
+  },
+
+  // ============================================================================
+  // SUNSHINE COAST / POWELL RIVER
+  // ============================================================================
+  {
+    id: "sechelt-taxi",
+    name: "Sechelt Taxi",
+    type: "eco",
+    municipality: "Sechelt",
+    region: "Sunshine Coast",
+    base_location: {
+      address: "Sechelt",
+      lat: 49.4742,
+      lng: -123.7545
+    },
+    service_area: ["Sechelt", "Gibsons", "Pender Harbour", "Earls Cove to Langdale"],
+    phone: "(604) 989-8294",
+    website: "https://sechelttaxi.com",
+    notes: "Electric & gas vehicles. Ferry-to-ferry service. Pre-booking recommended."
+  },
+  {
+    id: "powell-river-taxi",
+    name: "Powell River Taxi",
+    type: "taxi",
+    municipality: "Powell River",
+    region: "Powell River",
+    base_location: {
+      address: "Powell River",
+      lat: 49.8353,
+      lng: -124.5247
+    },
+    service_area: ["Powell River", "Texada Island ferry"],
+    phone: "(604) 483-3681",
+    website: "https://powellrivertaxi.ca",
+    notes: "24/7 service. Limo available."
+  },
+  {
+    id: "howe-sound-taxi",
+    name: "Howe Sound Taxi",
+    type: "accessible",
+    municipality: "Squamish",
+    region: "Squamish-Lillooet",
+    base_location: {
+      address: "Squamish",
+      lat: 49.7016,
+      lng: -123.1558
+    },
+    service_area: ["Squamish", "Britannia Beach"],
+    phone: "(604) 898-8888",
+    website: "https://howesoundtaxi.com",
+    wheelchair_accessible: true,
+    notes: "Wheelchair accessible 24/7. Vans and sedans."
+  },
+
+  // ============================================================================
+  // GULF ISLANDS
+  // ============================================================================
+  {
+    id: "silver-shadow-taxi",
+    name: "Silver Shadow Taxi",
+    type: "taxi",
+    municipality: "Salt Spring Island",
+    region: "Capital",
+    base_location: {
+      address: "Ganges, Salt Spring Island",
+      lat: 48.8547,
+      lng: -123.5086
+    },
+    service_area: ["Salt Spring Island", "Ganges", "Fulford Harbour", "Vesuvius"],
+    phone: "(250) 537-3030",
+    website: "https://www.silvershadow.ca",
+    notes: "4 cabs. Door-to-door service anywhere on Salt Spring."
+  },
+  {
+    id: "salt-spring-taxi",
+    name: "Salt Spring Taxi",
+    type: "taxi",
+    municipality: "Salt Spring Island",
+    region: "Capital",
+    base_location: {
+      address: "Salt Spring Island",
+      lat: 48.8547,
+      lng: -123.5086
+    },
+    service_area: ["Salt Spring Island"],
+    phone: "(250) 537-3030",
+    notes: "Island-wide service."
+  },
+
+  // ============================================================================
+  // ADDITIONAL METRO VANCOUVER
+  // ============================================================================
+  {
+    id: "queen-city-taxi",
+    name: "Queen City Taxi",
+    type: "taxi",
+    municipality: "New Westminster",
+    region: "Metro Vancouver",
+    base_location: {
+      address: "New Westminster",
+      lat: 49.2057,
+      lng: -122.9110
+    },
+    service_area: ["New Westminster", "Burnaby", "Coquitlam"],
+    phone: "(604) 526-1166",
+    notes: "YVR licensed operator."
+  },
+  {
+    id: "tsawwassen-taxi",
+    name: "Tsawwassen Taxi",
+    type: "taxi",
+    municipality: "Delta",
+    region: "Metro Vancouver",
+    base_location: {
+      address: "Tsawwassen",
+      lat: 49.0068,
+      lng: -123.0812
+    },
+    service_area: ["Tsawwassen", "Ladner", "South Delta", "BC Ferries"],
+    phone: "(604) 943-1111",
+    notes: "YVR licensed. BC Ferries service."
+  },
+  {
+    id: "white-rock-south-surrey-taxi",
+    name: "White Rock South Surrey Taxi",
+    type: "taxi",
+    municipality: "White Rock",
+    region: "Metro Vancouver",
+    base_location: {
+      address: "White Rock",
+      lat: 49.0253,
+      lng: -122.8029
+    },
+    service_area: ["White Rock", "South Surrey", "Crescent Beach"],
+    phone: "(604) 596-6666",
+    notes: "YVR licensed operator."
+  },
+  {
+    id: "coquitlam-taxi",
+    name: "Coquitlam Taxi",
+    type: "taxi",
+    municipality: "Coquitlam",
+    region: "Metro Vancouver",
+    base_location: {
+      address: "Coquitlam",
+      lat: 49.2838,
+      lng: -122.7932
+    },
+    service_area: ["Coquitlam", "Port Coquitlam", "Port Moody"],
+    phone: "(604) 936-8888",
+    notes: "Tri-Cities service."
+  },
+  {
+    id: "delta-sunshine-taxi",
+    name: "Delta Sunshine Taxi",
+    type: "taxi",
+    municipality: "Delta",
+    region: "Metro Vancouver",
+    base_location: {
+      address: "Delta",
+      lat: 49.0847,
+      lng: -123.0587
+    },
+    service_area: ["Delta", "North Delta", "Ladner"],
+    phone: "(604) 594-1111",
+    notes: "Serving Delta."
   }
 ];
 

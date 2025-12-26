@@ -83,16 +83,20 @@ Located in `shared/` directory with GPS coordinates and geographic correlation:
     - Passenger rail (VIA Rail - The Canadian, Skeena routes)
     - Commuter rail (West Coast Express - Vancouver to Mission)
     - Tourist/heritage railways (Rocky Mountaineer, Kettle Valley Steam, Alberni Pacific, Kamloops Heritage)
-- **Taxi Services** (`shared/taxi-services.ts`): 35+ taxi companies across BC including:
-  - Metro Vancouver (Yellow Cab, Black Top & Checker, MacLure's, Vancouver Taxi, Bonny's, North Shore Taxi, Sunshine Cabs, Surdell-Kennedy, Pacific Cabs, Royal City Taxi, Kimber Cabs)
-  - Victoria/Capital Region (Bluebird Cabs, Yellow Cab Victoria, Victoria Taxi, Uptown Taxi)
-  - Sea-to-Sky (Whistler Taxis, Squamish Taxi)
-  - Fraser Valley (Chilliwack Taxi, Cheam Taxi)
-  - Okanagan (Kelowna Cabs, Checkmate Cabs, Current Taxi, West Cabs, Penticton Taxi, Eco Taxi Penticton)
+- **Taxi Services** (`shared/taxi-services.ts`): 80+ taxi companies across BC including:
+  - Metro Vancouver (Yellow Cab, Black Top & Checker, MacLure's, Vancouver Taxi, Bonny's, North Shore Taxi, Sunshine Cabs, Surdell-Kennedy, Pacific Cabs, Royal City Taxi, Kimber Cabs, Queen City Taxi, Tsawwassen Taxi, White Rock South Surrey Taxi, Coquitlam Taxi, Delta Sunshine Taxi)
+  - Victoria/Capital Region (Bluebird Cabs, Yellow Cab Victoria, Victoria Taxi, Uptown Taxi, Sidney Taxi, Peninsula Taxi, Westshore Taxi, Orange Taxi)
+  - Gulf Islands (Silver Shadow Taxi, Salt Spring Taxi)
+  - Sea-to-Sky (Whistler Taxis, Squamish Taxi, Howe Sound Taxi)
+  - Fraser Valley (Abbotsford Mission Taxi, Central Valley Taxi, Yellow Top Taxi, Langley Cabs, Aldergrove-Langley Taxi, Maple Ridge Taxi, Mission Taxi, Hope Taxi, Chilliwack Taxi, Cheam Taxi)
+  - Okanagan (Kelowna Cabs, Checkmate Cabs, Current Taxi, West Cabs, Kelowna Eco Taxi, Penticton Taxi, Eco Taxi Penticton, Vernon Taxi, Salmon Arm Taxi)
   - Kamloops (Kami Cabs, Yellow Cabs Kamloops)
+  - Cariboo (Town Taxi Williams Lake, Williams Lake Taxi, Cariboo Taxi Quesnel, Quesnel Taxi)
   - Prince George (Prince George Taxi, Emerald Taxi)
-  - Nanaimo (A.C. Taxi, Yellow Cab Nanaimo, Nanaimo Taxi Cab)
-  - Campbell River/Comox Valley (Bee Line Taxi, Comox Taxi, Ambassador Shuttle)
+  - Northern BC (Kalum Kabs Terrace, Kitimat Taxi, Skeena Taxi Prince Rupert, Teco Taxi Fort St. John, Fort St. John Cabs, Energetic Taxi)
+  - Kootenays (Glacier Cabs Nelson, Star Taxi Cranbrook, Key City Cabs, Kootenay Taxi Fernie, Tunnel49, Mount 7 Taxi Golden)
+  - Vancouver Island (A.C. Taxi Nanaimo, Yellow Cab Nanaimo, Nanaimo Taxi Cab, Bee Line Taxi Campbell River, Comox Taxi, Ladysmith GoTaxi, United Cabs Port Alberni, Tofino Taxi, Ucluelet Taxi, Pacific Rim Navigators)
+  - Sunshine Coast (Sechelt Taxi, Powell River Taxi)
   - Service type classification: taxi, accessible, eco-friendly, airport specialty
   - Features tracking: mobile app availability, wheelchair accessibility, fleet size
 - **Pharmacies** (`shared/pharmacies.ts`): 400+ pharmacy locations including:
