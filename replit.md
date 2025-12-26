@@ -5,10 +5,11 @@
 A Bloomberg-terminal style community status dashboard covering all of British Columbia. Features dual-view mode (Sources View for data source URLs, Data View for live monitoring), 4-column layout, comprehensive admin tools, hierarchical source inheritance (Provincial → Regional → Municipal), and complete geographic navigation covering all 27 BC regional districts and 161+ municipalities.
 
 ### Ground Transportation Tabs (Criticality-Based)
-Ground transportation is organized into 5 tabs by criticality for community resilience monitoring:
+Ground transportation is organized into 6 tabs by criticality for community resilience monitoring:
 - **Ground - Lifeline** (Tier 1): Fuel/energy distributors, food/grocery distribution, hazmat (propane) - critical to survival
 - **Ground - Supply Chain** (Tier 2): General freight, LTL, refrigerated, logging, aggregate, rail freight - economic function
 - **Ground - Bus** (Tier 3): Transit systems, intercity buses, charter services, passenger/commuter/tourist rail - community movement
+- **Ground - Taxi** (Tier 3): Traditional taxi, accessible/wheelchair, eco-friendly, airport taxi services - on-demand mobility
 - **Ground - Courier** (Tier 4): Express couriers, regional carriers, same-day delivery - delivery services
 - **Ground - Postal** (Tier 4): Canada Post facilities - federal postal service
 
@@ -82,6 +83,18 @@ Located in `shared/` directory with GPS coordinates and geographic correlation:
     - Passenger rail (VIA Rail - The Canadian, Skeena routes)
     - Commuter rail (West Coast Express - Vancouver to Mission)
     - Tourist/heritage railways (Rocky Mountaineer, Kettle Valley Steam, Alberni Pacific, Kamloops Heritage)
+- **Taxi Services** (`shared/taxi-services.ts`): 35+ taxi companies across BC including:
+  - Metro Vancouver (Yellow Cab, Black Top & Checker, MacLure's, Vancouver Taxi, Bonny's, North Shore Taxi, Sunshine Cabs, Surdell-Kennedy, Pacific Cabs, Royal City Taxi, Kimber Cabs)
+  - Victoria/Capital Region (Bluebird Cabs, Yellow Cab Victoria, Victoria Taxi, Uptown Taxi)
+  - Sea-to-Sky (Whistler Taxis, Squamish Taxi)
+  - Fraser Valley (Chilliwack Taxi, Cheam Taxi)
+  - Okanagan (Kelowna Cabs, Checkmate Cabs, Current Taxi, West Cabs, Penticton Taxi, Eco Taxi Penticton)
+  - Kamloops (Kami Cabs, Yellow Cabs Kamloops)
+  - Prince George (Prince George Taxi, Emerald Taxi)
+  - Nanaimo (A.C. Taxi, Yellow Cab Nanaimo, Nanaimo Taxi Cab)
+  - Campbell River/Comox Valley (Bee Line Taxi, Comox Taxi, Ambassador Shuttle)
+  - Service type classification: taxi, accessible, eco-friendly, airport specialty
+  - Features tracking: mobile app availability, wheelchair accessibility, fleet size
 - **Pharmacies** (`shared/pharmacies.ts`): 400+ pharmacy locations including:
   - Major chains (Shoppers Drug Mart, London Drugs, Pharmasave, Rexall)
   - Grocery pharmacies (Save-On-Foods, Safeway, Thrifty Foods)

@@ -27,7 +27,8 @@ import {
   Truck,
   GraduationCap,
   Package,
-  Mail
+  Mail,
+  Car
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { BC_AIRPORTS, type Airport } from "@shared/aviation";
@@ -63,6 +64,7 @@ import { BC_PHARMACIES, type Pharmacy, type PharmacyType, type PharmacyChain, ph
 import { BC_COMMUNITY_FACILITIES, type CommunityFacility, type FacilityCategory, type AmenityType, facilityCategoryLabels, amenityTypeLabels } from "@shared/community-facilities";
 import { BC_SCHOOLS, type School, type SchoolType, type SchoolCategory, schoolTypeLabels, schoolCategoryLabels } from "@shared/schools";
 import { municipalOffices, type MunicipalOffice } from "@shared/municipal-offices";
+import { BC_TAXI_SERVICES, type TaxiService, type TaxiServiceType, taxiServiceTypeLabels } from "@shared/taxi-services";
 import { Fuel, Apple, Container, TreePine, Snowflake, Droplets, Trash2, Zap, Pill } from "lucide-react";
 import { GEO_HIERARCHY, type GeoNode } from "@shared/geography";
 
@@ -416,6 +418,11 @@ interface MunicipalOfficeWithMatch extends MunicipalOffice {
   matchedRegion: GeoNode | null;
 }
 
+interface TaxiServiceWithMatch extends TaxiService {
+  matchedMunicipality: GeoNode | null;
+  matchedRegion: GeoNode | null;
+}
+
 export default function AdminInfrastructure() {
   const [airportSearch, setAirportSearch] = useState("");
   const [weatherSearch, setWeatherSearch] = useState("");
@@ -432,6 +439,7 @@ export default function AdminInfrastructure() {
   const [facilitySearch, setFacilitySearch] = useState("");
   const [schoolSearch, setSchoolSearch] = useState("");
   const [municipalOfficeSearch, setMunicipalOfficeSearch] = useState("");
+  const [taxiSearch, setTaxiSearch] = useState("");
   const [lifelineSubTab, setLifelineSubTab] = useState<"fuel" | "food" | "hazmat">("fuel");
   const [supplySubTab, setSupplySubTab] = useState<"freight" | "rail">("freight");
   const [mobilitySubTab, setMobilitySubTab] = useState<"intercity" | "transit" | "charter" | "rail">("intercity");
@@ -668,6 +676,18 @@ export default function AdminInfrastructure() {
       const matchedRegion = matchedMuni?.parentId ? GEO_HIERARCHY[matchedMuni.parentId] || null : null;
       return {
         ...office,
+        matchedMunicipality: matchedMuni,
+        matchedRegion,
+      };
+    });
+  }, []);
+
+  const taxiServiceWithMatches: TaxiServiceWithMatch[] = useMemo(() => {
+    return BC_TAXI_SERVICES.map(taxi => {
+      const matchedMuni = findMatchingMunicipality(taxi.municipality);
+      const matchedRegion = matchedMuni?.parentId ? GEO_HIERARCHY[matchedMuni.parentId] || null : null;
+      return {
+        ...taxi,
         matchedMunicipality: matchedMuni,
         matchedRegion,
       };
@@ -1033,6 +1053,21 @@ export default function AdminInfrastructure() {
     );
   }, [municipalOfficeWithMatches, municipalOfficeSearch]);
 
+  const filteredTaxiServices = useMemo(() => {
+    if (!taxiSearch) return taxiServiceWithMatches;
+    const search = taxiSearch.toLowerCase();
+    return taxiServiceWithMatches.filter(t => 
+      t.name.toLowerCase().includes(search) ||
+      t.municipality?.toLowerCase().includes(search) ||
+      t.type?.toLowerCase().includes(search) ||
+      t.matchedMunicipality?.name.toLowerCase().includes(search) ||
+      t.matchedRegion?.name.toLowerCase().includes(search) ||
+      t.region?.toLowerCase().includes(search) ||
+      t.service_area?.some(a => a.toLowerCase().includes(search)) ||
+      taxiServiceTypeLabels[t.type]?.toLowerCase().includes(search)
+    );
+  }, [taxiServiceWithMatches, taxiSearch]);
+
   const airportStats = useMemo(() => {
     const matched = airportsWithMatches.filter(a => a.matchedMunicipality).length;
     const regionOnly = airportsWithMatches.filter(a => !a.matchedMunicipality && a.matchedRegion).length;
@@ -1280,6 +1315,27 @@ export default function AdminInfrastructure() {
     };
   }, [municipalOfficeWithMatches]);
 
+  const taxiStats = useMemo(() => {
+    const matched = taxiServiceWithMatches.filter(t => t.matchedMunicipality).length;
+    const regionOnly = taxiServiceWithMatches.filter(t => !t.matchedMunicipality && t.matchedRegion).length;
+    const unmatched = taxiServiceWithMatches.filter(t => !t.matchedMunicipality && !t.matchedRegion).length;
+    const byType: Record<string, number> = {};
+    taxiServiceWithMatches.forEach(t => {
+      byType[t.type] = (byType[t.type] || 0) + 1;
+    });
+    const withApp = taxiServiceWithMatches.filter(t => t.app_available).length;
+    const accessible = taxiServiceWithMatches.filter(t => t.wheelchair_accessible).length;
+    return { 
+      total: taxiServiceWithMatches.length, 
+      matched, 
+      regionOnly, 
+      unmatched, 
+      byType,
+      withApp,
+      accessible
+    };
+  }, [taxiServiceWithMatches]);
+
   return (
     <div className="h-full flex flex-col font-mono">
       <div className="border-b border-border/50 p-4">
@@ -1374,6 +1430,14 @@ export default function AdminInfrastructure() {
             >
               <Bus className="w-3 h-3 mr-1" />
               GROUND - BUS ({groundStats.busTotal})
+            </TabsTrigger>
+            <TabsTrigger 
+              value="ground-taxi" 
+              className="text-xs data-[state=active]:bg-yellow-500/20 data-[state=active]:text-yellow-400"
+              data-testid="tab-ground-taxi"
+            >
+              <Car className="w-3 h-3 mr-1" />
+              GROUND - TAXI ({taxiStats.total})
             </TabsTrigger>
             <TabsTrigger 
               value="ground-courier" 
@@ -2852,6 +2916,116 @@ export default function AdminInfrastructure() {
               </div>
             </ScrollArea>
           )}
+        </TabsContent>
+
+        <TabsContent value="ground-taxi" className="flex-1 overflow-hidden m-0 flex flex-col data-[state=inactive]:hidden">
+          <div className="p-3 border-b border-border/30 flex items-center gap-4">
+            <div className="relative flex-1 max-w-sm">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground" />
+              <Input
+                placeholder="Search taxi services..."
+                value={taxiSearch}
+                onChange={e => setTaxiSearch(e.target.value)}
+                className="pl-8 h-8 text-xs bg-background/50"
+                data-testid="input-taxi-search"
+              />
+            </div>
+            <div className="flex gap-2 text-[10px] text-muted-foreground flex-wrap">
+              <span className="text-green-400">{taxiStats.matched} MATCHED</span>
+              <span className="text-blue-400">{taxiStats.withApp} APP</span>
+              <span className="text-purple-400">{taxiStats.accessible} ACCESSIBLE</span>
+              <span className="text-cyan-400">{taxiStats.byType['eco'] || 0} ECO</span>
+            </div>
+            <div className="text-[10px] text-yellow-400 font-medium">TIER 3 - MOBILITY</div>
+          </div>
+          <ScrollArea className="flex-1">
+            <div className="p-3">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="text-[10px] text-muted-foreground border-b border-border/30">
+                    <th className="text-left py-2 px-2">COMPANY</th>
+                    <th className="text-left py-2 px-2">TYPE</th>
+                    <th className="text-left py-2 px-2">SERVICE AREA</th>
+                    <th className="text-left py-2 px-2">FEATURES</th>
+                    <th className="text-left py-2 px-2">SOURCE MUNICIPALITY</th>
+                    <th className="text-left py-2 px-2">MATCHED TO</th>
+                    <th className="text-left py-2 px-2">CONTACT</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredTaxiServices.map(taxi => (
+                    <tr 
+                      key={taxi.id} 
+                      className="border-b border-border/20 hover-elevate"
+                      data-testid={`row-taxi-${taxi.id}`}
+                    >
+                      <td className="py-2 px-2">
+                        <div className="flex items-center gap-2">
+                          <Car className="w-3 h-3 text-yellow-400" />
+                          <div>
+                            <div className="font-medium">{taxi.name}</div>
+                            {taxi.fleet_size && <div className="text-[10px] text-muted-foreground">{taxi.fleet_size}</div>}
+                            <div className="text-[10px] text-muted-foreground">{taxi.base_location.lat.toFixed(4)}, {taxi.base_location.lng.toFixed(4)}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-2 px-2">
+                        <Badge variant="outline" className={`text-[8px] ${
+                          taxi.type === 'taxi' ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/30' :
+                          taxi.type === 'accessible' ? 'bg-purple-500/10 text-purple-400 border-purple-500/30' :
+                          taxi.type === 'eco' ? 'bg-green-500/10 text-green-400 border-green-500/30' :
+                          taxi.type === 'airport' ? 'bg-blue-500/10 text-blue-400 border-blue-500/30' :
+                          'bg-muted/30 text-muted-foreground border-muted/50'
+                        }`}>
+                          {taxiServiceTypeLabels[taxi.type]}
+                        </Badge>
+                      </td>
+                      <td className="py-2 px-2">
+                        <div className="space-y-0.5">
+                          {taxi.service_area.slice(0, 3).map((area, i) => (
+                            <div key={i} className="text-[10px] text-muted-foreground">{area}</div>
+                          ))}
+                          {taxi.service_area.length > 3 && <div className="text-[10px] text-yellow-400">+{taxi.service_area.length - 3} more</div>}
+                        </div>
+                      </td>
+                      <td className="py-2 px-2">
+                        <div className="flex gap-1 flex-wrap">
+                          {taxi.app_available && (
+                            <Badge variant="outline" className="text-[8px] bg-blue-500/10 text-blue-400 border-blue-500/30">APP</Badge>
+                          )}
+                          {taxi.wheelchair_accessible && (
+                            <Badge variant="outline" className="text-[8px] bg-purple-500/10 text-purple-400 border-purple-500/30">ACCESSIBLE</Badge>
+                          )}
+                        </div>
+                      </td>
+                      <td className="py-2 px-2 text-muted-foreground">{taxi.municipality}</td>
+                      <td className="py-2 px-2">
+                        {taxi.matchedMunicipality ? (
+                          <div className="flex items-center gap-1 text-green-400">
+                            <CheckCircle className="w-3 h-3" />
+                            <span>{taxi.matchedMunicipality.name}</span>
+                          </div>
+                        ) : taxi.matchedRegion ? (
+                          <span className="text-yellow-400">(region only)</span>
+                        ) : (
+                          <div className="flex items-center gap-1 text-red-400">
+                            <XCircle className="w-3 h-3" />
+                            <span>No match</span>
+                          </div>
+                        )}
+                      </td>
+                      <td className="py-2 px-2">
+                        <div className="text-[10px]">
+                          {taxi.phone && <div className="text-muted-foreground">{taxi.phone}</div>}
+                          {taxi.website && <div className="text-blue-400/70 truncate max-w-[120px]">{taxi.website.replace(/^https?:\/\//, '')}</div>}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </ScrollArea>
         </TabsContent>
 
         <TabsContent value="ground-courier" className="flex-1 overflow-hidden m-0 flex flex-col data-[state=inactive]:hidden">
