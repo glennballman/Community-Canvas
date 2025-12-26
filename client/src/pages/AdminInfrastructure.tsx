@@ -65,7 +65,8 @@ import { BC_COMMUNITY_FACILITIES, type CommunityFacility, type FacilityCategory,
 import { BC_SCHOOLS, type School, type SchoolType, type SchoolCategory, schoolTypeLabels, schoolCategoryLabels } from "@shared/schools";
 import { municipalOffices, type MunicipalOffice } from "@shared/municipal-offices";
 import { BC_TAXI_SERVICES, type TaxiService, type TaxiServiceType, taxiServiceTypeLabels } from "@shared/taxi-services";
-import { Fuel, Apple, Container, TreePine, Snowflake, Droplets, Trash2, Zap, Pill } from "lucide-react";
+import { BC_CHAMBERS_OF_COMMERCE, type ChamberOfCommerce } from "@shared/chambers-of-commerce";
+import { Fuel, Apple, Container, TreePine, Snowflake, Droplets, Trash2, Zap, Pill, Briefcase } from "lucide-react";
 import { GEO_HIERARCHY, type GeoNode } from "@shared/geography";
 
 function getAirportTypeIcon(type: string) {
@@ -423,6 +424,11 @@ interface TaxiServiceWithMatch extends TaxiService {
   matchedRegion: GeoNode | null;
 }
 
+interface ChamberWithMatch extends ChamberOfCommerce {
+  matchedMunicipality: GeoNode | null;
+  matchedRegion: GeoNode | null;
+}
+
 export default function AdminInfrastructure() {
   const [airportSearch, setAirportSearch] = useState("");
   const [weatherSearch, setWeatherSearch] = useState("");
@@ -440,6 +446,7 @@ export default function AdminInfrastructure() {
   const [schoolSearch, setSchoolSearch] = useState("");
   const [municipalOfficeSearch, setMunicipalOfficeSearch] = useState("");
   const [taxiSearch, setTaxiSearch] = useState("");
+  const [chamberSearch, setChamberSearch] = useState("");
   const [lifelineSubTab, setLifelineSubTab] = useState<"fuel" | "food" | "hazmat">("fuel");
   const [supplySubTab, setSupplySubTab] = useState<"freight" | "rail">("freight");
   const [mobilitySubTab, setMobilitySubTab] = useState<"intercity" | "transit" | "charter" | "rail">("intercity");
@@ -688,6 +695,18 @@ export default function AdminInfrastructure() {
       const matchedRegion = matchedMuni?.parentId ? GEO_HIERARCHY[matchedMuni.parentId] || null : null;
       return {
         ...taxi,
+        matchedMunicipality: matchedMuni,
+        matchedRegion,
+      };
+    });
+  }, []);
+
+  const chamberWithMatches: ChamberWithMatch[] = useMemo(() => {
+    return BC_CHAMBERS_OF_COMMERCE.map(chamber => {
+      const matchedMuni = findMatchingMunicipality(chamber.municipality);
+      const matchedRegion = matchedMuni?.parentId ? GEO_HIERARCHY[matchedMuni.parentId] || null : null;
+      return {
+        ...chamber,
         matchedMunicipality: matchedMuni,
         matchedRegion,
       };
@@ -1068,6 +1087,20 @@ export default function AdminInfrastructure() {
     );
   }, [taxiServiceWithMatches, taxiSearch]);
 
+  const filteredChambers = useMemo(() => {
+    if (!chamberSearch) return chamberWithMatches;
+    const search = chamberSearch.toLowerCase();
+    return chamberWithMatches.filter(c => 
+      c.name.toLowerCase().includes(search) ||
+      c.municipality?.toLowerCase().includes(search) ||
+      c.region?.toLowerCase().includes(search) ||
+      c.matchedMunicipality?.name.toLowerCase().includes(search) ||
+      c.matchedRegion?.name.toLowerCase().includes(search) ||
+      c.notes?.toLowerCase().includes(search) ||
+      c.website?.toLowerCase().includes(search)
+    );
+  }, [chamberWithMatches, chamberSearch]);
+
   const airportStats = useMemo(() => {
     const matched = airportsWithMatches.filter(a => a.matchedMunicipality).length;
     const regionOnly = airportsWithMatches.filter(a => !a.matchedMunicipality && a.matchedRegion).length;
@@ -1336,6 +1369,29 @@ export default function AdminInfrastructure() {
     };
   }, [taxiServiceWithMatches]);
 
+  const chamberStats = useMemo(() => {
+    const matched = chamberWithMatches.filter(c => c.matchedMunicipality).length;
+    const regionOnly = chamberWithMatches.filter(c => !c.matchedMunicipality && c.matchedRegion).length;
+    const unmatched = chamberWithMatches.filter(c => !c.matchedMunicipality && !c.matchedRegion).length;
+    const byRegion: Record<string, number> = {};
+    chamberWithMatches.forEach(c => {
+      byRegion[c.region] = (byRegion[c.region] || 0) + 1;
+    });
+    const withWebsite = chamberWithMatches.filter(c => c.website).length;
+    const withPhone = chamberWithMatches.filter(c => c.phone).length;
+    const withMembers = chamberWithMatches.filter(c => c.members).length;
+    return { 
+      total: chamberWithMatches.length, 
+      matched, 
+      regionOnly, 
+      unmatched, 
+      byRegion,
+      withWebsite,
+      withPhone,
+      withMembers
+    };
+  }, [chamberWithMatches]);
+
   return (
     <div className="h-full flex flex-col font-mono">
       <div className="border-b border-border/50 p-4">
@@ -1510,6 +1566,14 @@ export default function AdminInfrastructure() {
             >
               <Building2 className="w-3 h-3 mr-1" />
               MUNICIPAL ({municipalOfficeStats.total})
+            </TabsTrigger>
+            <TabsTrigger 
+              value="chambers" 
+              className="text-xs data-[state=active]:bg-indigo-500/20 data-[state=active]:text-indigo-400"
+              data-testid="tab-chambers"
+            >
+              <Briefcase className="w-3 h-3 mr-1" />
+              CHAMBERS ({chamberStats.total})
             </TabsTrigger>
             <TabsTrigger 
               value="summary" 
@@ -3926,6 +3990,98 @@ export default function AdminInfrastructure() {
                         <div className="text-[10px]">
                           {office.phone && <div className="text-muted-foreground">{office.phone}</div>}
                           {office.website && <div className="text-blue-400/70 truncate max-w-[150px]">{office.website.replace(/^https?:\/\//, '')}</div>}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </ScrollArea>
+        </TabsContent>
+
+        <TabsContent value="chambers" className="flex-1 overflow-hidden m-0 flex flex-col data-[state=inactive]:hidden">
+          <div className="p-3 border-b border-border/30 flex items-center gap-4">
+            <div className="relative flex-1 max-w-sm">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground" />
+              <Input
+                placeholder="Search chambers of commerce..."
+                value={chamberSearch}
+                onChange={e => setChamberSearch(e.target.value)}
+                className="pl-8 h-8 text-xs bg-background/50"
+                data-testid="input-chamber-search"
+              />
+            </div>
+            <div className="flex gap-2 text-[10px] text-muted-foreground flex-wrap">
+              <span className="text-green-400">{chamberStats.matched} MATCHED</span>
+              <span className="text-blue-400">{chamberStats.withWebsite} WEBSITES</span>
+              <span className="text-cyan-400">{chamberStats.withPhone} PHONE</span>
+              <span className="text-amber-400">{chamberStats.withMembers} MEMBER DATA</span>
+            </div>
+          </div>
+          <ScrollArea className="flex-1">
+            <div className="p-3">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="text-[10px] text-muted-foreground border-b border-border/30">
+                    <th className="text-left py-2 px-2">CHAMBER</th>
+                    <th className="text-left py-2 px-2">REGION</th>
+                    <th className="text-left py-2 px-2">SOURCE MUNICIPALITY</th>
+                    <th className="text-left py-2 px-2">MATCHED TO</th>
+                    <th className="text-left py-2 px-2">CONTACT</th>
+                    <th className="text-left py-2 px-2">DETAILS</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredChambers.map(chamber => (
+                    <tr 
+                      key={chamber.id} 
+                      className="border-b border-border/20 hover-elevate"
+                      data-testid={`row-chamber-${chamber.id}`}
+                    >
+                      <td className="py-2 px-2">
+                        <div className="flex items-center gap-2">
+                          <Briefcase className="w-3 h-3 text-indigo-400" />
+                          <div>
+                            <div className="font-medium">{chamber.name}</div>
+                            {chamber.location.address && <div className="text-[10px] text-muted-foreground">{chamber.location.address}</div>}
+                            <div className="text-[10px] text-muted-foreground">{chamber.location.lat.toFixed(4)}, {chamber.location.lng.toFixed(4)}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-2 px-2">
+                        <Badge variant="outline" className="text-[8px] bg-indigo-500/10 text-indigo-400 border-indigo-500/30">
+                          {chamber.region}
+                        </Badge>
+                      </td>
+                      <td className="py-2 px-2 text-muted-foreground">{chamber.municipality}</td>
+                      <td className="py-2 px-2">
+                        {chamber.matchedMunicipality ? (
+                          <div className="flex items-center gap-1 text-green-400">
+                            <CheckCircle className="w-3 h-3" />
+                            <span>{chamber.matchedMunicipality.name}</span>
+                          </div>
+                        ) : chamber.matchedRegion ? (
+                          <span className="text-yellow-400">(region only)</span>
+                        ) : (
+                          <div className="flex items-center gap-1 text-red-400">
+                            <XCircle className="w-3 h-3" />
+                            <span>No match</span>
+                          </div>
+                        )}
+                      </td>
+                      <td className="py-2 px-2">
+                        <div className="text-[10px]">
+                          {chamber.phone && <div className="text-muted-foreground">{chamber.phone}</div>}
+                          {chamber.email && <div className="text-muted-foreground">{chamber.email}</div>}
+                          {chamber.website && <div className="text-blue-400/70 truncate max-w-[150px]">{chamber.website.replace(/^https?:\/\//, '')}</div>}
+                        </div>
+                      </td>
+                      <td className="py-2 px-2">
+                        <div className="text-[10px]">
+                          {chamber.founded && <div className="text-muted-foreground">Est. {chamber.founded}</div>}
+                          {chamber.members && <div className="text-cyan-400">{chamber.members} members</div>}
+                          {chamber.notes && <div className="text-muted-foreground/70 truncate max-w-[180px]">{chamber.notes}</div>}
                         </div>
                       </td>
                     </tr>
