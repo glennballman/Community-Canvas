@@ -66,7 +66,8 @@ import { BC_SCHOOLS, type School, type SchoolType, type SchoolCategory, schoolTy
 import { municipalOffices, type MunicipalOffice } from "@shared/municipal-offices";
 import { BC_TAXI_SERVICES, type TaxiService, type TaxiServiceType, taxiServiceTypeLabels } from "@shared/taxi-services";
 import { BC_CHAMBERS_OF_COMMERCE, type ChamberOfCommerce } from "@shared/chambers-of-commerce";
-import { Fuel, Apple, Container, TreePine, Snowflake, Droplets, Trash2, Zap, Pill, Briefcase } from "lucide-react";
+import { chamberMembers, type ChamberMember, type BusinessCategory, businessCategoryLabels, getMembersByChamber, getUsedCategories } from "@shared/chamber-members";
+import { Fuel, Apple, Container, TreePine, Snowflake, Droplets, Trash2, Zap, Pill, Briefcase, Store, ExternalLink, Globe, Link2 } from "lucide-react";
 import { GEO_HIERARCHY, type GeoNode } from "@shared/geography";
 
 function getAirportTypeIcon(type: string) {
@@ -447,6 +448,8 @@ export default function AdminInfrastructure() {
   const [municipalOfficeSearch, setMunicipalOfficeSearch] = useState("");
   const [taxiSearch, setTaxiSearch] = useState("");
   const [chamberSearch, setChamberSearch] = useState("");
+  const [memberSearch, setMemberSearch] = useState("");
+  const [memberCategoryFilter, setMemberCategoryFilter] = useState<BusinessCategory | "all">("all");
   const [lifelineSubTab, setLifelineSubTab] = useState<"fuel" | "food" | "hazmat">("fuel");
   const [supplySubTab, setSupplySubTab] = useState<"freight" | "rail">("freight");
   const [mobilitySubTab, setMobilitySubTab] = useState<"intercity" | "transit" | "charter" | "rail">("intercity");
@@ -1392,6 +1395,60 @@ export default function AdminInfrastructure() {
     };
   }, [chamberWithMatches]);
 
+  const filteredMembers = useMemo(() => {
+    let filtered = chamberMembers;
+    
+    if (memberCategoryFilter !== "all") {
+      filtered = filtered.filter(m => m.category === memberCategoryFilter);
+    }
+    
+    if (!memberSearch) return filtered;
+    const search = memberSearch.toLowerCase();
+    return filtered.filter(m => {
+      const businessName = m.businessName.toLowerCase();
+      const category = m.category.toLowerCase();
+      const subcategory = m.subcategory?.toLowerCase();
+      const description = m.description?.toLowerCase();
+      const municipality = m.municipality?.toLowerCase();
+      const region = m.region?.toLowerCase();
+      const website = m.website?.toLowerCase();
+      const categoryLabel = businessCategoryLabels[m.category]?.toLowerCase();
+      
+      return businessName.includes(search) ||
+        category.includes(search) ||
+        (subcategory && subcategory.includes(search)) ||
+        (description && description.includes(search)) ||
+        (municipality && municipality.includes(search)) ||
+        (region && region.includes(search)) ||
+        (website && website.includes(search)) ||
+        (categoryLabel && categoryLabel.includes(search));
+    });
+  }, [memberSearch, memberCategoryFilter]);
+
+  const memberStats = useMemo(() => {
+    const byCategory: Record<string, number> = {};
+    chamberMembers.forEach(m => {
+      byCategory[m.category] = (byCategory[m.category] || 0) + 1;
+    });
+    const withWebsite = chamberMembers.filter(m => m.website && !m.websiteNeedsCollection).length;
+    const needsWebsite = chamberMembers.filter(m => m.websiteNeedsCollection).length;
+    const withCrossRef = chamberMembers.filter(m => m.crossReference).length;
+    const byChamber: Record<string, number> = {};
+    chamberMembers.forEach(m => {
+      byChamber[m.chamberId] = (byChamber[m.chamberId] || 0) + 1;
+    });
+    const usedCategories = getUsedCategories();
+    return { 
+      total: chamberMembers.length, 
+      byCategory,
+      byChamber,
+      withWebsite,
+      needsWebsite,
+      withCrossRef,
+      usedCategories
+    };
+  }, []);
+
   return (
     <div className="h-full flex flex-col font-mono">
       <div className="border-b border-border/50 p-4">
@@ -1574,6 +1631,14 @@ export default function AdminInfrastructure() {
             >
               <Briefcase className="w-3 h-3 mr-1" />
               CHAMBERS ({chamberStats.total})
+            </TabsTrigger>
+            <TabsTrigger 
+              value="members" 
+              className="text-xs data-[state=active]:bg-emerald-500/20 data-[state=active]:text-emerald-400"
+              data-testid="tab-members"
+            >
+              <Store className="w-3 h-3 mr-1" />
+              MEMBERS ({memberStats.total})
             </TabsTrigger>
             <TabsTrigger 
               value="summary" 
@@ -4083,6 +4148,119 @@ export default function AdminInfrastructure() {
                           {chamber.members && <div className="text-cyan-400">{chamber.members} members</div>}
                           {chamber.notes && <div className="text-muted-foreground/70 truncate max-w-[180px]">{chamber.notes}</div>}
                         </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </ScrollArea>
+        </TabsContent>
+
+        <TabsContent value="members" className="flex-1 overflow-hidden m-0 flex flex-col data-[state=inactive]:hidden">
+          <div className="p-3 border-b border-border/30 flex items-center gap-4 flex-wrap">
+            <div className="relative flex-1 max-w-sm">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground" />
+              <Input
+                placeholder="Search members..."
+                value={memberSearch}
+                onChange={e => setMemberSearch(e.target.value)}
+                className="pl-8 h-8 text-xs bg-background/50"
+                data-testid="input-member-search"
+              />
+            </div>
+            <select
+              value={memberCategoryFilter}
+              onChange={e => setMemberCategoryFilter(e.target.value as BusinessCategory | "all")}
+              className="h-8 text-xs bg-background/50 border border-border/50 rounded-md px-2"
+              data-testid="select-member-category"
+            >
+              <option value="all">All Categories ({memberStats.total})</option>
+              {memberStats.usedCategories.map(cat => (
+                <option key={cat} value={cat}>
+                  {businessCategoryLabels[cat]} ({memberStats.byCategory[cat] || 0})
+                </option>
+              ))}
+            </select>
+            <div className="flex gap-2 text-[10px] text-muted-foreground flex-wrap">
+              <span className="text-emerald-400">{memberStats.withWebsite} WITH WEBSITE</span>
+              <span className="text-amber-400">{memberStats.needsWebsite} NEEDS WEBSITE</span>
+              <span className="text-cyan-400">{memberStats.withCrossRef} CROSS-REF</span>
+            </div>
+          </div>
+          <ScrollArea className="flex-1">
+            <div className="p-3">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="text-[10px] text-muted-foreground border-b border-border/30">
+                    <th className="text-left py-2 px-2">BUSINESS</th>
+                    <th className="text-left py-2 px-2">CATEGORY</th>
+                    <th className="text-left py-2 px-2">CHAMBER</th>
+                    <th className="text-left py-2 px-2">LOCATION</th>
+                    <th className="text-left py-2 px-2">WEBSITE</th>
+                    <th className="text-left py-2 px-2">CROSS-REF</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredMembers.map(member => (
+                    <tr 
+                      key={member.id} 
+                      className="border-b border-border/20 hover-elevate"
+                      data-testid={`row-member-${member.id}`}
+                    >
+                      <td className="py-2 px-2">
+                        <div className="flex items-center gap-2">
+                          <Store className="w-3 h-3 text-emerald-400" />
+                          <div>
+                            <div className="font-medium text-foreground">{member.businessName}</div>
+                            {member.description && <div className="text-[10px] text-muted-foreground truncate max-w-[200px]">{member.description}</div>}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-2 px-2">
+                        <Badge variant="outline" className="text-[8px] bg-emerald-500/10 text-emerald-400 border-emerald-500/30">
+                          {businessCategoryLabels[member.category]}
+                        </Badge>
+                        {member.subcategory && (
+                          <div className="text-[9px] text-muted-foreground mt-0.5">{member.subcategory}</div>
+                        )}
+                      </td>
+                      <td className="py-2 px-2">
+                        <span className="text-indigo-400 text-[10px]">{member.chamberId}</span>
+                      </td>
+                      <td className="py-2 px-2">
+                        <div className="text-[10px]">
+                          <div className="text-foreground">{member.municipality}</div>
+                          <div className="text-muted-foreground">{member.region}</div>
+                        </div>
+                      </td>
+                      <td className="py-2 px-2">
+                        {member.website ? (
+                          <a 
+                            href={member.website} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-1 text-blue-400 hover:text-blue-300 text-[10px]"
+                            data-testid={`link-member-website-${member.id}`}
+                          >
+                            <Globe className="w-3 h-3" />
+                            <span className="truncate max-w-[120px]">{member.website.replace(/^https?:\/\//, '').replace(/\/$/, '')}</span>
+                          </a>
+                        ) : member.websiteNeedsCollection ? (
+                          <span className="text-amber-400/70 text-[10px]">Needs collection</span>
+                        ) : (
+                          <span className="text-muted-foreground/50 text-[10px]">-</span>
+                        )}
+                      </td>
+                      <td className="py-2 px-2">
+                        {member.crossReference ? (
+                          <div className="flex items-center gap-1 text-cyan-400 text-[10px]">
+                            <Link2 className="w-3 h-3" />
+                            <span>{member.crossReference.dataset}</span>
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground/50 text-[10px]">-</span>
+                        )}
                       </td>
                     </tr>
                   ))}
