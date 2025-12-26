@@ -122,16 +122,17 @@ Located in `shared/` directory with GPS coordinates and geographic correlation:
   - Online/distance learning (SIDES, eBus Academy, SelfDesign)
   - University research stations (Bamfield Marine Sciences Centre - operated by UBC, UVic, SFU, U of Alberta, U of Calgary)
   - First Nations community gymnasiums serving as de facto community centers for events and sports
-- **Chambers of Commerce** (`shared/chambers-of-commerce.ts`): 80+ chambers of commerce and boards of trade including:
+- **Chambers of Commerce** (`shared/chambers-of-commerce.ts`): 107+ chambers of commerce and boards of trade including:
   - Metro Vancouver (Greater Vancouver Board of Trade, Burnaby Board of Trade, Surrey & White Rock, Richmond, Delta, North Vancouver, West Vancouver, Tri-Cities, Cloverdale, New Westminster)
   - Fraser Valley (Abbotsford, Chilliwack, Langley, Mission, Maple Ridge Pitt Meadows, Hope)
-  - Victoria/Capital Region (Greater Victoria, WestShore, Sooke, Saanich Peninsula, Salt Spring Island)
-  - Vancouver Island (Nanaimo, Parksville Qualicum, Comox Valley, Campbell River, Port Hardy, Port Alberni, Pacific Rim, Duncan Cowichan, Ladysmith, Chemainus)
-  - Okanagan (Kelowna, West Kelowna, Vernon, Penticton, South Okanagan, Summerland, Salmon Arm, Sicamous)
-  - Kamloops/Thompson-Nicola (Kamloops, Merritt)
-  - Cariboo (Williams Lake, Quesnel, 100 Mile House)
-  - Northern BC (Prince George, Fort St. John, Dawson Creek, Fort Nelson, Terrace, Kitimat, Prince Rupert, Smithers)
-  - Kootenays (Nelson, Cranbrook, Trail, Castlegar, Revelstoke, Golden, Fernie, Invermere, Kimberley, Creston)
+  - Victoria/Capital Region (Greater Victoria, WestShore, Sooke, Saanich Peninsula, Salt Spring Island, Pender Island, Port Renfrew)
+  - Vancouver Island (Nanaimo, Parksville, Qualicum Beach, Comox Valley, Campbell River, Port Hardy, Port McNeill, Alert Bay, Alberni Valley, Tofino-Long Beach, Ucluelet, Bamfield, Duncan Cowichan, Ladysmith, Chemainus, Cowichan Lake)
+  - Okanagan (Kelowna, West Kelowna, Lake Country, Peachland, Vernon, Armstrong, Enderby, Penticton, South Okanagan, Summerland, Similkameen, Princeton)
+  - Shuswap (Salmon Arm, Sicamous, Revelstoke, Golden)
+  - Thompson-Nicola (Kamloops, Merritt, Clearwater, Barriere, Sun Peaks, Lytton, Ashcroft/Cache Creek/Clinton - Desert Mesa Regional, Logan Lake)
+  - Cariboo (Williams Lake, Quesnel, South Cariboo/100 Mile House, Clinton)
+  - Northern BC (Prince George, Valemount, McBride, Vanderhoof, Fort St. James, Burns Lake, Houston, Fraser Lake, Smithers, Fort St. John, Dawson Creek, Tumbler Ridge, Chetwynd, Fort Nelson, Terrace, Kitimat, Stewart, Prince Rupert)
+  - Kootenays (Nelson, Cranbrook, Kimberley, Fernie, Sparwood, Elkford, Columbia Valley/Invermere, Creston Valley, Trail, Castlegar, Nakusp)
   - Sea-to-Sky (Whistler, Squamish, Pemberton, Lillooet)
   - Sunshine Coast (Sechelt, Gibsons, Pender Harbour, Powell River)
   - Contact information: phone, email, website, founding dates, member counts
