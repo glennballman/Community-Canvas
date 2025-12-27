@@ -66,7 +66,8 @@ import { BC_SCHOOLS, type School, type SchoolType, type SchoolCategory, schoolTy
 import { municipalOffices, type MunicipalOffice } from "@shared/municipal-offices";
 import { BC_TAXI_SERVICES, type TaxiService, type TaxiServiceType, taxiServiceTypeLabels } from "@shared/taxi-services";
 import { BC_CHAMBERS_OF_COMMERCE, type ChamberOfCommerce } from "@shared/chambers-of-commerce";
-import { chamberMembers, type ChamberMember, type BusinessCategory, businessCategoryLabels, getMembersByChamber, getUsedCategories } from "@shared/chamber-members";
+import { chamberMembers, type ChamberMember, getMembersByChamber } from "@shared/chamber-members";
+import { naicsSubsectorLabels } from "@shared/naics-codes";
 import { Fuel, Apple, Container, TreePine, Snowflake, Droplets, Trash2, Zap, Pill, Briefcase, Store, ExternalLink, Globe, Link2 } from "lucide-react";
 import { GEO_HIERARCHY, type GeoNode } from "@shared/geography";
 
@@ -449,7 +450,7 @@ export default function AdminInfrastructure() {
   const [taxiSearch, setTaxiSearch] = useState("");
   const [chamberSearch, setChamberSearch] = useState("");
   const [memberSearch, setMemberSearch] = useState("");
-  const [memberCategoryFilter, setMemberCategoryFilter] = useState<BusinessCategory | "all">("all");
+  const [memberNaicsFilter, setMemberNaicsFilter] = useState<string>("all");
   const [lifelineSubTab, setLifelineSubTab] = useState<"fuel" | "food" | "hazmat">("fuel");
   const [supplySubTab, setSupplySubTab] = useState<"freight" | "rail">("freight");
   const [mobilitySubTab, setMobilitySubTab] = useState<"intercity" | "transit" | "charter" | "rail">("intercity");
@@ -1398,37 +1399,38 @@ export default function AdminInfrastructure() {
   const filteredMembers = useMemo(() => {
     let filtered = chamberMembers;
     
-    if (memberCategoryFilter !== "all") {
-      filtered = filtered.filter(m => m.category === memberCategoryFilter);
+    if (memberNaicsFilter !== "all") {
+      filtered = filtered.filter(m => m.naicsSubsector === memberNaicsFilter);
     }
     
     if (!memberSearch) return filtered;
     const search = memberSearch.toLowerCase();
     return filtered.filter(m => {
       const businessName = m.businessName.toLowerCase();
-      const category = m.category.toLowerCase();
+      const naicsTitle = m.naicsTitle?.toLowerCase() || '';
       const subcategory = m.subcategory?.toLowerCase();
       const description = m.description?.toLowerCase();
       const municipality = m.municipality?.toLowerCase();
       const region = m.region?.toLowerCase();
       const website = m.website?.toLowerCase();
-      const categoryLabel = businessCategoryLabels[m.category]?.toLowerCase();
+      const subsectorLabel = naicsSubsectorLabels[m.naicsSubsector || '']?.toLowerCase() || '';
       
       return businessName.includes(search) ||
-        category.includes(search) ||
+        naicsTitle.includes(search) ||
         (subcategory && subcategory.includes(search)) ||
         (description && description.includes(search)) ||
         (municipality && municipality.includes(search)) ||
         (region && region.includes(search)) ||
         (website && website.includes(search)) ||
-        (categoryLabel && categoryLabel.includes(search));
+        subsectorLabel.includes(search);
     });
-  }, [memberSearch, memberCategoryFilter]);
+  }, [memberSearch, memberNaicsFilter]);
 
   const memberStats = useMemo(() => {
-    const byCategory: Record<string, number> = {};
+    const byNaicsSubsector: Record<string, number> = {};
     chamberMembers.forEach(m => {
-      byCategory[m.category] = (byCategory[m.category] || 0) + 1;
+      const subsector = m.naicsSubsector || 'unknown';
+      byNaicsSubsector[subsector] = (byNaicsSubsector[subsector] || 0) + 1;
     });
     const withWebsite = chamberMembers.filter(m => m.website && !m.websiteNeedsCollection).length;
     const needsWebsite = chamberMembers.filter(m => m.websiteNeedsCollection).length;
@@ -1437,15 +1439,15 @@ export default function AdminInfrastructure() {
     chamberMembers.forEach(m => {
       byChamber[m.chamberId] = (byChamber[m.chamberId] || 0) + 1;
     });
-    const usedCategories = getUsedCategories();
+    const usedSubsectors = Object.keys(byNaicsSubsector).filter(s => s !== 'unknown').sort();
     return { 
       total: chamberMembers.length, 
-      byCategory,
+      byNaicsSubsector,
       byChamber,
       withWebsite,
       needsWebsite,
       withCrossRef,
-      usedCategories
+      usedSubsectors
     };
   }, []);
 
@@ -4170,15 +4172,15 @@ export default function AdminInfrastructure() {
               />
             </div>
             <select
-              value={memberCategoryFilter}
-              onChange={e => setMemberCategoryFilter(e.target.value as BusinessCategory | "all")}
+              value={memberNaicsFilter}
+              onChange={e => setMemberNaicsFilter(e.target.value)}
               className="h-8 text-xs bg-background/50 border border-border/50 rounded-md px-2"
-              data-testid="select-member-category"
+              data-testid="select-member-naics"
             >
-              <option value="all">All Categories ({memberStats.total})</option>
-              {memberStats.usedCategories.map(cat => (
-                <option key={cat} value={cat}>
-                  {businessCategoryLabels[cat]} ({memberStats.byCategory[cat] || 0})
+              <option value="all">All Industries ({memberStats.total})</option>
+              {memberStats.usedSubsectors.map(subsector => (
+                <option key={subsector} value={subsector}>
+                  {subsector}: {naicsSubsectorLabels[subsector] || 'Unknown'} ({memberStats.byNaicsSubsector[subsector] || 0})
                 </option>
               ))}
             </select>
@@ -4194,7 +4196,7 @@ export default function AdminInfrastructure() {
                 <thead>
                   <tr className="text-[10px] text-muted-foreground border-b border-border/30">
                     <th className="text-left py-2 px-2">BUSINESS</th>
-                    <th className="text-left py-2 px-2">CATEGORY</th>
+                    <th className="text-left py-2 px-2">NAICS INDUSTRY</th>
                     <th className="text-left py-2 px-2">CHAMBER</th>
                     <th className="text-left py-2 px-2">LOCATION</th>
                     <th className="text-left py-2 px-2">WEBSITE</th>
@@ -4218,12 +4220,12 @@ export default function AdminInfrastructure() {
                         </div>
                       </td>
                       <td className="py-2 px-2">
-                        <Badge variant="outline" className="text-[8px] bg-emerald-500/10 text-emerald-400 border-emerald-500/30">
-                          {businessCategoryLabels[member.category]}
-                        </Badge>
-                        {member.subcategory && (
-                          <div className="text-[9px] text-muted-foreground mt-0.5">{member.subcategory}</div>
-                        )}
+                        <div className="text-[10px]">
+                          <Badge variant="outline" className="text-[8px] bg-emerald-500/10 text-emerald-400 border-emerald-500/30">
+                            {member.naicsSubsector}: {naicsSubsectorLabels[member.naicsSubsector || ''] || 'Unknown'}
+                          </Badge>
+                          <div className="text-[9px] text-muted-foreground mt-0.5">{member.naicsTitle}</div>
+                        </div>
                       </td>
                       <td className="py-2 px-2">
                         <span className="text-indigo-400 text-[10px]">{member.chamberId}</span>
