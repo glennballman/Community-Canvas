@@ -1,0 +1,291 @@
+[
+  {
+    "name": "Standing Cedars Integrative Health",
+    "categories": [
+      "Health & Wellness"
+    ],
+    "address": "#301 - 2015 Sheilds Rd",
+    "phone": "778-583-8182",
+    "slug": "standing-cedars-integrative-health"
+  },
+  {
+    "name": "Under The Seat Plumbing",
+    "categories": [
+      "Plumbing & Building Services"
+    ],
+    "address": "D-6625 Sooke Rd.",
+    "phone": "778-966-7733",
+    "slug": "under-the-seat-plumbing"
+  },
+  {
+    "name": "Candice Neveu Coaching",
+    "categories": [
+      "Health & Wellness",
+      "Professional Services"
+    ],
+    "address": "6367 Riverstone Drive",
+    "phone": "12505325041",
+    "slug": "candice-neveu-coaching"
+  },
+  {
+    "name": "Uptown Creative",
+    "categories": [
+      "Business Consulting",
+      "Marketing"
+    ],
+    "address": "Sooke",
+    "phone": "17809512530",
+    "slug": "uptown-creative"
+  },
+  {
+    "name": "Canada’s Best Karate",
+    "categories": [
+      "Health & Wellness",
+      "Sooke Region Chamber of Commerce",
+      "Sports & Fitness"
+    ],
+    "address": "2197 Ottert Point Rd",
+    "phone": "7783653135",
+    "slug": "canadas-best-karate"
+  },
+  {
+    "name": "At My Place Family Salon",
+    "categories": [
+      "Hair Salons & Spa"
+    ],
+    "address": "6662 Eakin Drive",
+    "phone": "778-425-2852",
+    "slug": "at-my-place-family-salon"
+  },
+  {
+    "name": "Mexico Land Ventures",
+    "categories": [
+      "Finance, Investment & Insurance",
+      "Investment & Insurance",
+      "Lawyers - Legal Services",
+      "Real Estate",
+      "Travel & Recreation"
+    ],
+    "address": "",
+    "phone": "12502173636",
+    "slug": "mexico-land-ventures"
+  },
+  {
+    "name": "RanBro Enterprises Inc",
+    "categories": [
+      "Construction & Supplies",
+      "Contractors"
+    ],
+    "address": "",
+    "phone": "250-883-8837",
+    "slug": "15617"
+  },
+  {
+    "name": "Fresh Cut Mowing",
+    "categories": [
+      "Landscaping"
+    ],
+    "address": "9285 Invermuir road",
+    "phone": "2507321387",
+    "slug": "fresh-cut-mowing"
+  },
+  {
+    "name": "CommunityPlus – Home Healthcare + Nursing",
+    "categories": [
+      "Health & Wellness",
+      "Health Care"
+    ],
+    "address": "3865 Cactus Place",
+    "phone": "2506586508",
+    "slug": "communityplus-home-healthcare-nursing-2"
+  },
+  {
+    "name": "Sooke Clean",
+    "categories": [],
+    "address": "203 - 6609 Goodmere Road",
+    "phone": "12508917477",
+    "slug": "sooke-clean"
+  },
+  {
+    "name": "CommunityPlus – Home Healthcare + Nursing",
+    "categories": [],
+    "address": "3865 Cactus Place",
+    "phone": "2506586508",
+    "slug": "communityplus-home-healthcare-nursing"
+  },
+  {
+    "name": "Silver Jet Events LTD",
+    "categories": [
+      "Food & Dining",
+      "Music",
+      "Professional Services"
+    ],
+    "address": "6113 Kirby Road",
+    "phone": "250-634-5429",
+    "slug": "silver-jet-events-ltd"
+  },
+  {
+    "name": "Sooke Fitness",
+    "categories": [
+      "Travel & Recreation"
+    ],
+    "address": "6625 Sooke Rd",
+    "phone": "2506427111",
+    "slug": "sooke-fitness-2"
+  },
+  {
+    "name": "YYJ Plumbers-Ackinclose & Son",
+    "categories": [
+      "Plumbing & Building Services",
+      "Professional Services",
+      "Sooke Region Chamber of Commerce"
+    ],
+    "address": "641 Tyler Terrace",
+    "phone": "250-589-5651",
+    "slug": "yyj-plumbers-ackinclose-son"
+  },
+  {
+    "name": "Bev Berger, Remax Camosun, Westside personal real estate corporation",
+    "categories": [
+      "Real Estate"
+    ],
+    "address": "2822 Phillips Rd",
+    "phone": "12504156983",
+    "slug": "bev-berger-remax-camosun-westside-personal-real-estate-corporation"
+  },
+  {
+    "name": "V I Spectrum Digital & Photographic Ltd",
+    "categories": [
+      "Advertising",
+      "Business-to-Business Services",
+      "Fine arts",
+      "Marketing",
+      "Photography"
+    ],
+    "address": "6693 Sooke Rd",
+    "phone": "2506429884",
+    "slug": "v-i-spectrum-digital-photographic-ltd"
+  },
+  {
+    "name": "Tau Wellness Cooperative",
+    "categories": [
+      "Health & Wellness"
+    ],
+    "address": "2998 Manzer Road",
+    "phone": "2508001383",
+    "slug": "tau-wellness-cooperative"
+  },
+  {
+    "name": "Sooke Radio Society",
+    "categories": [
+      "Sooke Region Chamber of Commerce"
+    ],
+    "address": "",
+    "phone": "778-676-4829",
+    "slug": "sooke-radio-society"
+  },
+  {
+    "name": "Sasquatch Heat Pumps",
+    "categories": [
+      "Electrical Services",
+      "Heating"
+    ],
+    "address": "C-6625 Sooke Road",
+    "phone": "(778) 715-0131",
+    "slug": "sasquatch-heat-pumps"
+  },
+  {
+    "name": "Island Firearms Safety",
+    "categories": [
+      "School"
+    ],
+    "address": "",
+    "phone": "7786786789",
+    "slug": "mike-holmes"
+  },
+  {
+    "name": "Sooke Detailing",
+    "categories": [
+      "Automotive",
+      "Cleaning Services"
+    ],
+    "address": "#30, 7450 Butler Rd, Sooke BC",
+    "phone": "778-352-2211",
+    "slug": "sooke-detailing"
+  },
+  {
+    "name": "West Coast Esthetics Healing Studio",
+    "categories": [
+      "Health & Wellness"
+    ],
+    "address": "3166 Robinson Road",
+    "phone": "7786784167",
+    "slug": "west-coast-esthetics-healing-studio"
+  },
+  {
+    "name": "Chambermade",
+    "categories": [],
+    "address": "",
+    "phone": "",
+    "slug": "chambermade"
+  },
+  {
+    "name": "Hive & Thrive Consulting",
+    "categories": [
+      "Business Consulting"
+    ],
+    "address": "6664 Rhodonite Drive",
+    "phone": "2502138325",
+    "slug": "hive-thrive-consulting"
+  },
+  {
+    "name": "Earth Dragon TCM",
+    "categories": [
+      "Acupuncture",
+      "Counselling",
+      "Health & Wellness"
+    ],
+    "address": "3166 Robinson Rd, Sooke BC, V9Z 0J9, Canada",
+    "phone": "2502228287",
+    "slug": "earth-dragon-tcm"
+  },
+  {
+    "name": "BGC South Vancouver Island",
+    "categories": [
+      "ChildCare",
+      "Non-Profit Organizations"
+    ],
+    "address": "4-961 Dunford Avenue, Victoria V9B 2S4, Canada",
+    "phone": "12503849133",
+    "slug": "bgc-south-vancouver-island"
+  },
+  {
+    "name": "NOTARIES IN SOOKE",
+    "categories": [
+      "Lawyers - Legal Services"
+    ],
+    "address": "P.O. BOX 730, Sooke B.C. V9Z 1H7",
+    "phone": "(250) 642-3318",
+    "slug": "notaries-in-sooke"
+  },
+  {
+    "name": "Jocelyn Phillips CPA Inc.",
+    "categories": [
+      "Business Consulting",
+      "Financial Consulting (Accounting & Tax)"
+    ],
+    "address": "NA",
+    "phone": "2508862721",
+    "slug": "jocelyn-phillips-cpa-inc"
+  },
+  {
+    "name": "Blossom Behaviour Services",
+    "categories": [
+      "Health & Wellness",
+      "Non-Profit Organizations"
+    ],
+    "address": "2885 Jacklin Rd",
+    "phone": "12505885066",
+    "slug": "blossom-behaviour-services"
+  }
+]
