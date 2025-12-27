@@ -1,0 +1,34 @@
+[
+  {
+    "chamber": "saanich-peninsula",
+    "count": 303,
+    "expected": 300,
+    "coverage": 101,
+    "meetsThreshold": true,
+    "status": "ready"
+  },
+  {
+    "chamber": "pender-island",
+    "count": 76,
+    "expected": 80,
+    "coverage": 95,
+    "meetsThreshold": true,
+    "status": "ready"
+  },
+  {
+    "chamber": "salt-spring-island",
+    "count": 50,
+    "expected": 166,
+    "coverage": 30,
+    "meetsThreshold": false,
+    "status": "incomplete"
+  },
+  {
+    "chamber": "sooke-region",
+    "count": 33,
+    "expected": 100,
+    "coverage": 33,
+    "meetsThreshold": false,
+    "status": "incomplete"
+  }
+]
