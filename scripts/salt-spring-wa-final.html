@@ -1,0 +1,998 @@
+<!DOCTYPE html><html lang="en" class="no-js wf-ubuntu-n4-active wf-ubuntucondensed-n4-active wf-active"><head id="Head1">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="https://sf.wildapricot.org/BuiltTheme/kaleidoscope_cornucopia.v3.0/current/79bd5c29/Styles/combined.css" rel="stylesheet" type="text/css"><link href="https://www.saltspringchamber.com/resources/theme/customStyles.css?t=638887216459350000" rel="stylesheet" type="text/css"><link href="https://live-sf.wildapricot.org/WebUI/built9.11.0-db59b40/scripts/public/react/index-84b33b4.css" rel="stylesheet" type="text/css"><link href="https://live-sf.wildapricot.org/WebUI/built9.11.0-db59b40/css/shared/ui/shared-ui-compiled.css" rel="stylesheet" type="text/css"><script type="text/javascript" async="" charset="utf-8" src="https://www.gstatic.com/recaptcha/releases/7gg7H51Q-naNfhmCP3_R47ho/recaptcha__en.js" crossorigin="anonymous" integrity="sha384-TnttG+UhZcM8I0YLwHFXmjuU0uVv/3X99Itc+0eiXTiqtrwYAZwNs8Q9WliKgfF8"></script><script type="text/javascript" async="" charset="utf-8" src="https://www.gstatic.com/recaptcha/releases/7gg7H51Q-naNfhmCP3_R47ho/recaptcha__en.js" crossorigin="anonymous" integrity="sha384-TnttG+UhZcM8I0YLwHFXmjuU0uVv/3X99Itc+0eiXTiqtrwYAZwNs8Q9WliKgfF8"></script><script type="text/javascript" async="" charset="utf-8" src="https://www.gstatic.com/recaptcha/releases/7gg7H51Q-naNfhmCP3_R47ho/recaptcha__en.js" crossorigin="anonymous" integrity="sha384-TnttG+UhZcM8I0YLwHFXmjuU0uVv/3X99Itc+0eiXTiqtrwYAZwNs8Q9WliKgfF8"></script><script type="text/javascript" language="javascript" id="idJavaScriptEnvironment">var bonaPage_BuildVer='9.11.0-db59b40';
+var bonaPage_AdminBackendUrl = '/admin/';
+var bonaPage_StatRes='https://live-sf.wildapricot.org/WebUI/';
+var bonaPage_InternalPageType = { isUndefinedPage : false,isWebPage : true,isAdminPage : false,isDialogPage : false,isSystemPage : false,isErrorPage : false,isError404Page : false };
+var bonaPage_PageView = { isAnonymousView : true,isMemberView : false,isAdminView : false };
+var WidgetMode = 0;
+var bonaPage_IsUserAnonymous = true;
+var bonaPage_ThemeVer='79bd5c290638887216459350000'; var bonaPage_ThemeId = 'kaleidoscope_cornucopia.v3.0'; var bonaPage_ThemeVersion = '3.0';
+var bonaPage_id='76878'; version_id='';
+if (bonaPage_InternalPageType && (bonaPage_InternalPageType.isSystemPage || bonaPage_InternalPageType.isWebPage) && window.self !== window.top) { var success = true; try { var tmp = top.location.href; if (!tmp) { top.location = self.location; } } catch (err) { try { if (self != top) { top.location = self.location; } } catch (err) { try { if (self != top) { top = self; } success = false; } catch (err) { success = false; } } success = false; } if (!success) { window.onload = function() { document.open('text/html', 'replace'); document.write('<ht'+'ml><he'+'ad></he'+'ad><bo'+'dy><h1>Wrong document context!</h1></bo'+'dy></ht'+'ml>'); document.close(); } } }
+try { function waMetricsGlobalHandler(args) { if (WA.topWindow.waMetricsOuterGlobalHandler && typeof(WA.topWindow.waMetricsOuterGlobalHandler) === 'function') { WA.topWindow.waMetricsOuterGlobalHandler(args); }}} catch(err) {}
+ try { if (parent && parent.BonaPage) parent.BonaPage.implementBonaPage(window); } catch (err) { }
+try { document.write('<style type="text/css"> .WaHideIfJSEnabled, .HideIfJSEnabled { display: none; } </style>'); } catch(err) {}
+var bonaPage_WebPackRootPath = 'https://live-sf.wildapricot.org/WebUI/built9.11.0-db59b40/scripts/public/react/';</script><style type="text/css"> .WaHideIfJSEnabled, .HideIfJSEnabled { display: none; } </style><script type="text/javascript" language="javascript" src="https://live-sf.wildapricot.org/WebUI/built9.11.0-db59b40/scripts/shared/bonapagetop/bonapagetop-compiled.js" id="idBonaPageTop"></script><script type="text/javascript" language="javascript" src="https://live-sf.wildapricot.org/WebUI/built9.11.0-db59b40/scripts/public/react/index-84b33b4.js" id="ReactPublicJs"></script><script type="text/javascript" language="javascript" src="https://live-sf.wildapricot.org/WebUI/built9.11.0-db59b40/scripts/shared/ui/shared-ui-compiled.js" id="idSharedJs"></script><style type="text/css">.CodeMirror { font-family: monospace; height: 300px; }.CodeMirror-scroll { overflow: auto; }.CodeMirror-lines { padding: 4px 0; }.CodeMirror pre { padding: 0 4px; }.CodeMirror-scrollbar-filler, .CodeMirror-gutter-filler { background-color: white; }.CodeMirror-gutters { border-right: 1px solid #ddd; background-color: #f7f7f7; white-space: nowrap; }.CodeMirror-linenumbers {}.CodeMirror-linenumber { padding: 0 3px 0 5px; min-width: 20px; text-align: right; color: #999; }.CodeMirror div.CodeMirror-cursor { border-left: 1px solid black; z-index: 3; }.CodeMirror div.CodeMirror-secondarycursor { border-left: 1px solid silver; }.CodeMirror.cm-keymap-fat-cursor div.CodeMirror-cursor { width: auto; border: 0; background: #7e7; z-index: 1; }.CodeMirror div.CodeMirror-cursor.CodeMirror-overwrite {}.cm-tab { display: inline-block; }.cm-s-default .cm-keyword {color: #708;}.cm-s-default .cm-atom {color: #219;}.cm-s-default .cm-number {color: #164;}.cm-s-default .cm-def {color: #00f;}.cm-s-default .cm-variable {color: black;}.cm-s-default .cm-variable-2 {color: #05a;}.cm-s-default .cm-variable-3 {color: #085;}.cm-s-default .cm-property {color: black;}.cm-s-default .cm-operator {color: black;}.cm-s-default .cm-comment {color: #a50;}.cm-s-default .cm-string {color: #a11;}.cm-s-default .cm-string-2 {color: #f50;}.cm-s-default .cm-meta {color: #555;}.cm-s-default .cm-qualifier {color: #555;}.cm-s-default .cm-builtin {color: #30a;}.cm-s-default .cm-bracket {color: #997;}.cm-s-default .cm-tag {color: #170;}.cm-s-default .cm-attribute {color: #00c;}.cm-s-default .cm-header {color: blue;}.cm-s-default .cm-quote {color: #090;}.cm-s-default .cm-hr {color: #999;}.cm-s-default .cm-link {color: #00c;}.cm-negative {color: #d44;}.cm-positive {color: #292;}.cm-header, .cm-strong {font-weight: bold;}.cm-em {font-style: italic;}.cm-link {text-decoration: underline;}.cm-s-default .cm-error {color: #f00;}.cm-invalidchar {color: #f00;}div.CodeMirror span.CodeMirror-matchingbracket {color: #0f0;}div.CodeMirror span.CodeMirror-nonmatchingbracket {color: #f22;}.CodeMirror-activeline-background {background: #e8f2ff;}.CodeMirror { line-height: 1; position: relative; overflow: hidden; background: white; color: black; }.CodeMirror-scroll { margin-bottom: -30px; margin-right: -30px; padding-bottom: 30px; padding-right: 30px; height: 100%; outline: none; position: relative; -moz-box-sizing: content-box; box-sizing: content-box; }.CodeMirror-sizer { position: relative; }.CodeMirror-vscrollbar, .CodeMirror-hscrollbar, .CodeMirror-scrollbar-filler, .CodeMirror-gutter-filler { position: absolute; z-index: 6; display: none; }.CodeMirror-vscrollbar { right: 0; top: 0; overflow-x: hidden; overflow-y: scroll; }.CodeMirror-hscrollbar { bottom: 0; left: 0; overflow-y: hidden; overflow-x: scroll; }.CodeMirror-scrollbar-filler { right: 0; bottom: 0; }.CodeMirror-gutter-filler { left: 0; bottom: 0; }.CodeMirror-gutters { position: absolute; left: 0; top: 0; padding-bottom: 30px; z-index: 3; }.CodeMirror-gutter { white-space: normal; height: 100%; -moz-box-sizing: content-box; box-sizing: content-box; padding-bottom: 30px; margin-bottom: -32px; display: inline-block;*zoom:1;*display:inline;}.CodeMirror-gutter-elt { position: absolute; cursor: default; z-index: 4; }.CodeMirror-lines { cursor: text; }.CodeMirror pre { -moz-border-radius: 0; -webkit-border-radius: 0; border-radius: 0; border-width: 0; background: transparent; font-family: inherit; font-size: inherit; margin: 0; white-space: pre; word-wrap: normal; line-height: inherit; color: inherit; z-index: 2; position: relative; overflow: visible; }.CodeMirror-wrap pre { word-wrap: break-word; white-space: pre-wrap; word-break: normal; }.CodeMirror-code pre { border-right: 30px solid transparent; width: -webkit-fit-content; width: -moz-fit-content; width: fit-content; }.CodeMirror-wrap .CodeMirror-code pre { border-right: none; width: auto; }.CodeMirror-linebackground { position: absolute; left: 0; right: 0; top: 0; bottom: 0; z-index: 0; }.CodeMirror-linewidget { position: relative; z-index: 2; overflow: auto; }.CodeMirror-widget {}.CodeMirror-wrap .CodeMirror-scroll { overflow-x: hidden; }.CodeMirror-measure { position: absolute; width: 100%; height: 0; overflow: hidden; visibility: hidden; }.CodeMirror-measure pre { position: static; }.CodeMirror div.CodeMirror-cursor { position: absolute; visibility: hidden; border-right: none; width: 0; }.CodeMirror-focused div.CodeMirror-cursor { visibility: visible; }.CodeMirror-selected { background: #d9d9d9; }.CodeMirror-focused .CodeMirror-selected { background: #d7d4f0; }.cm-searching { background: #ffa; background: rgba(255, 255, 0, .4); }.CodeMirror span { *vertical-align: text-bottom; }@media print { .CodeMirror div.CodeMirror-cursor { visibility: hidden; }}.CodeMirror-matchingtag { background-color: #FFCCAA; }</style><style type="text/css">  DIV.dialogRoundedBoxContainerOldIE { filter: alpha(opacity=73); }  DIV.dialogRoundedBoxShadowOldIE { filter: progid:DXImageTransform.Microsoft.Blur(pixelRadius=15, makeShadow=true, shadowOpacity=0.23); }  DIV.dialogOuterHeadContainerShadowOldIE { filter: progid:DXImageTransform.Microsoft.Blur(pixelRadius=2, makeShadow=true, shadowOpacity=0.27); }  DIV.dialogInnerHeadContainerOldIE { filter: progid:DXImageTransform.Microsoft.Gradient(startColorstr=#EEEEEE, endColorstr=#B7B7B7, gradientType=0); }</style><script type="text/javascript" language="javascript" src="https://live-sf.wildapricot.org/WebUI/built9.11.0-db59b40/General.js" id=""></script><script type="text/javascript" language="javascript" src="https://sf.wildapricot.org/BuiltTheme/kaleidoscope_cornucopia.v3.0/current/79bd5c29/Scripts/combined.js" id=""></script><title> Salt Spring Island Chamber of Commerce - Our Members</title>
+<link rel="icon" type="image/png" href="/Resources/Pictures/Favicon/favicon-96x96.png" sizes="96x96">
+<link rel="icon" type="image/svg+xml" href="/Resources/Pictures/Favicon/favicon.svg">
+<link rel="shortcut icon" href="/Resources/Pictures/Favicon/favicon.ico">
+<link rel="apple-touch-icon" sizes="180x180" href="/Resources/Pictures/Favicon/apple-touch-icon.png">
+<link rel="manifest" href="/Resources/Pictures/Favicon/site.webmanifest"><link rel="search" type="application/opensearchdescription+xml" title="www.saltspringchamber.com" href="/opensearch.ashx"></head>
+	<body id="PAGEID_76878" class="publicContentView LayoutMain">
+<div class="mLayout layoutMain" id="mLayout">
+
+<div class="mobilePanelContainer">
+<div id="id_MobilePanel" data-componentid="MobilePanel" class="WaPlaceHolder WaPlaceHolderMobilePanel" style=""><div style=""><div id="id_QFpB82d" class="WaGadgetOnly WaGadgetMobilePanel  gadgetStyleNone" style="" data-componentid="QFpB82d"><div class="mobilePanel">
+	
+	<div class="mobilePanelButton buttonMenu" title="Menu">Menu</div>
+<div class="mobilePanelButton buttonLogin" title="Log in">Log in</div>
+<div class="menuInner">
+		<ul class="firstLevel">
+<li class=" ">
+	<div class="item">
+		<a href="https://www.saltspringchamber.com/" title="Home"><span>Home</span></a>
+</div>
+</li>
+	
+<li class=" ">
+	<div class="item">
+		<a href="https://www.saltspringchamber.com/join" title="Join"><span>Join</span></a>
+</div>
+</li>
+	
+<li class=" dir">
+	<div class="item">
+		<a href="https://www.saltspringchamber.com/Member-Offers" title="Member Offers"><span>Member Offers</span></a>
+<ul class="secondLevel">
+<li class=" ">
+	<div class="item">
+		<a href="https://www.saltspringchamber.com/member-mixer" title="Member Mixers"><span>Member Mixers</span></a>
+</div>
+</li>
+	
+</ul>
+</div>
+</li>
+	
+<li class=" ">
+	<div class="item">
+		<a href="https://www.saltspringchamber.com/visitor-centre" title="Visitor Centre"><span>Visitor Centre</span></a>
+</div>
+</li>
+	
+<li class=" ">
+	<div class="item">
+		<a href="https://www.saltspringchamber.com/salty-awards" title="Salty Awards"><span>Salty Awards</span></a>
+</div>
+</li>
+	
+<li class=" ">
+	<div class="item">
+		<a href="https://www.saltspringchamber.com/Winter-Wander" title="Winter Wander"><span>Winter Wander</span></a>
+</div>
+</li>
+	
+<li class=" dir">
+	<div class="item">
+		<a href="https://www.saltspringchamber.com/about" title="About"><span>About</span></a>
+<ul class="secondLevel">
+<li class=" ">
+	<div class="item">
+		<a href="https://www.saltspringchamber.com/Island-Facts" title="Island Facts"><span>Island Facts</span></a>
+</div>
+</li>
+	
+<li class=" ">
+	<div class="item">
+		<a href="https://www.saltspringchamber.com/Advocacy" title="Advocacy"><span>Advocacy</span></a>
+</div>
+</li>
+	
+</ul>
+</div>
+</li>
+	
+<li class="sel ">
+	<div class="item">
+		<a href="https://www.saltspringchamber.com/Our-Members" title="Our Members"><span>Our Members</span></a>
+</div>
+</li>
+	
+</ul>
+	</div>
+
+	<div class="loginInner">
+<div class="loginContainerForm oAuthIstrue">
+<div class="openAuthFormContainer">
+<form method="post" action="https://www.saltspringchamber.com/Sys/Login/ExternalLogin" id="id_QFpB82d_oAuthForm" class="oAuthForm" data-disableinadminmode="false">
+<div id="id_QFpB82d_container" class="oAuthButtonsContainer">
+			  <!--  <a class="wa-authenticateLoginLink facebook" provider="Facebook">
+					<span class="authenticateLoginIcon" provider="Facebook"></span>
+					<span class="authenticateLoginText" provider="Facebook">Log in with Facebook</span>
+			  </a> --> <a class="wa-authenticateLoginLink googlePlus" provider="GooglePlus">
+					<span class="authenticateLoginIcon" provider="GooglePlus"></span>
+					<span class="authenticateLoginText" provider="GooglePlus">Log in with Google</span>
+			  </a><a class="wa-authenticateLoginLink microsoft" provider="Microsoft">
+					<span class="authenticateLoginIcon" provider="Microsoft"></span>
+					<span class="authenticateLoginText" provider="Microsoft">Log in with Microsoft</span>
+			  </a> <!-- <a class="wa-authenticateLoginLink apple" provider="Apple">
+					<span class="authenticateLoginIcon" provider="Apple"></span>
+					<span class="authenticateLoginText" provider="Apple">Log in with Apple</span>
+			  </a> -->
+			  <input type="hidden" name="ReturnUrl" value="">
+			  <input type="hidden" name="Provider" class="oAuthProvider" value="Undefined">   
+              <input type="hidden" id="id_QFpB82d_browserCapabilities" name="browserCapabilities" value="WebKit;Exec Command;Client Cookies Enabled;Platform Compatible;Javascript Enabled;">  
+			</div>
+</form></div>
+ 
+    <script type="text/javascript" language="javascript">
+        jq$(document).ready(function()
+		{
+            new OAuthButtons({id:'id_QFpB82d', formId: 'id_QFpB82d_oAuthForm'});
+		});
+    </script>
+<form method="post" action="https://www.saltspringchamber.com/Sys/Login" id="id_QFpB82d_form" class="generalLoginBox" data-disableinadminmode="false">
+<input type="hidden" name="ReturnUrl" id="id_QFpB82d_returnUrl" value="">
+				<input type="hidden" name="browserData" id="id_QFpB82d_browserField" value="WebKit;Exec Command;Client Cookies Enabled;Platform Compatible;Javascript Enabled;">
+<div class="loginUserName">
+<div class="loginUserNameTextBox">
+		<input name="email" type="text" maxlength="100" placeholder="Email" id="id_QFpB82d_userName" tabindex="1" class="emailTextBoxControl">
+	</div>
+</div><div class="loginPassword">
+<div class="loginPasswordTextBox">
+		<input name="password" type="password" placeholder="Password" maxlength="50" id="id_QFpB82d_password" tabindex="2" class="passwordTextBoxControl" autocomplete="off">
+	</div>
+</div> 
+    <input id="g-recaptcha-invisible_QFpB82d" name="g-recaptcha-invisible" value="recaptcha" type="hidden"> 
+    <div id="recapcha_placeholder_QFpB82d" style="display: none;"><div class="grecaptcha-badge" data-style="bottomright" style="width: 256px; height: 60px; display: block; transition: right 0.3s; position: fixed; bottom: 14px; right: -186px; box-shadow: gray 0px 0px 5px; border-radius: 2px; overflow: hidden;"><div class="grecaptcha-logo"><iframe title="reCAPTCHA" width="256" height="60" role="presentation" name="a-ol35sfr3njf2" frameborder="0" scrolling="no" sandbox="allow-forms allow-popups allow-same-origin allow-scripts allow-top-navigation allow-modals allow-popups-to-escape-sandbox allow-storage-access-by-user-activation" src="https://www.google.com/recaptcha/api2/anchor?ar=1&amp;k=6LfmM_UhAAAAAJSHT-BwkAlQgN0mMViOmaK7oEIV&amp;co=aHR0cHM6Ly93d3cuc2FsdHNwcmluZ2NoYW1iZXIuY29tOjQ0Mw..&amp;hl=en&amp;v=7gg7H51Q-naNfhmCP3_R47ho&amp;theme=light&amp;size=invisible&amp;anchor-ms=20000&amp;execute-ms=30000&amp;cb=mllcerhebv96"></iframe></div><div class="grecaptcha-error"></div><textarea id="g-recaptcha-response" name="g-recaptcha-response" class="g-recaptcha-response" style="width: 250px; height: 40px; border: 1px solid rgb(193, 193, 193); margin: 10px 25px; padding: 0px; resize: none; display: none;"></textarea></div></div>
+    <span id="idReCaptchaValidator_QFpB82d" errormessage="Please verify that you are not a robot" style="display:none" validatortype="method"></span>
+    <script>
+        $("#idReCaptchaValidator_QFpB82d").on( "wavalidate", function(event, validationResult) {
+            if (grecaptcha.getResponse(widgetId_QFpB82d).length == 0){
+                grecaptcha.execute(widgetId_QFpB82d);	
+                validationResult.shouldStopValidation = true;
+                return;
+            }
+
+            validationResult.result = true;
+        });
+  
+            var widgetId_QFpB82d;
+
+            var onloadCallback_QFpB82d = function() {
+                // Renders the HTML element with id 'recapcha_placeholder_QFpB82d' as a reCAPTCHA widget.
+                // The id of the reCAPTCHA widget is assigned to 'widgetId_QFpB82d'.
+                widgetId_QFpB82d = grecaptcha.render('recapcha_placeholder_QFpB82d', {
+                'sitekey' : '6LfmM_UhAAAAAJSHT-BwkAlQgN0mMViOmaK7oEIV',
+                'size': 'invisible',
+                'callback': function(){
+                    document.getElementById('g-recaptcha-invisible_QFpB82d').form.submit();
+                },
+                'theme' : 'light'
+            });
+        };
+    </script>
+	
+    <script src="https://www.google.com/recaptcha/api.js?onload=onloadCallback_QFpB82d&amp;render=explicit" async="" defer=""></script>
+
+ <div class="loginActionRememberMe">
+		<input id="id_QFpB82d_rememberMe" type="checkbox" name="rememberMe" tabindex="3" class="rememberMeCheckboxControl">
+		<label for="id_QFpB82d_rememberMe">Remember me</label>
+	</div>
+<div class="loginPasswordForgot">
+		<a href="https://www.saltspringchamber.com/Sys/ResetPasswordRequest">Forgot password</a>
+	</div>
+<div class="loginAction">
+	<input type="submit" name="ctl03$ctl02$loginViewControl$loginControl$Login" value="Log in" id="id_QFpB82d_loginAction" onclick="if (!browserInfo.clientCookiesEnabled()) {alert('Warning: browser cookies disabled. Please enable them to use this website.'); return false;}" tabindex="4" class="loginButton loginButtonControl">
+</div></form></div>
+</div>
+
+</div>
+
+<script type="text/javascript">
+
+jq$(function()
+{
+	var gadget = jq$('#id_QFpB82d'),
+		menuContainer = gadget.find('.menuInner'),
+		loginContainer = gadget.find('.loginInner');
+
+	gadget.find('.buttonMenu').on("click",function()
+	{
+		menuContainer.toggle();
+		loginContainer.hide();
+		jq$(this).toggleClass('active');
+        jq$('.buttonLogin').removeClass('active');
+		return false;
+	});
+
+	gadget.find('.buttonLogin').on("click",function()
+	{
+		loginContainer.toggle();
+		menuContainer.hide();
+		jq$(this).toggleClass('active');
+        jq$('.buttonMenu').removeClass('active');
+		return false;
+	});
+
+	gadget.find('.mobilePanel').on("click",function(event)
+	{
+        if( !(jq$(event.target).parents('.loginInner').size() || event.target.className == 'loginInner') )
+        {
+            menuContainer.hide();
+            loginContainer.hide();
+            jq$('.buttonLogin').removeClass('active');
+            jq$('.buttonMenu').removeClass('active');
+        }
+
+        event.stopPropagation();
+	});
+
+	jq$('body').on("click",function()
+	{
+		menuContainer.hide();
+		loginContainer.hide();
+		jq$('.buttonLogin').removeClass('active');
+        jq$('.buttonMenu').removeClass('active');
+	});
+
+
+	// login
+	var browserField = document.getElementById('id_QFpB82d' + '_browserField');
+
+	if (browserField)
+	{
+		browserField.value = browserInfo.getBrowserCapabilitiesData();
+	}
+
+	jq$('#id_QFpB82d' + '_form').FormValidate();
+	jq$('.WaGadgetMobilePanel form').attr('data-disableInAdminMode', 'false');
+
+});
+
+</script></div></div>
+</div></div>
+
+		<!-- header zone -->
+		<div class="zonePlace zoneHeader1">
+<div id="idHeaderContentHolder" data-componentid="Header" class="WaPlaceHolder WaPlaceHolderHeader" style="background-color:transparent;"><div style="padding-top:20px;"><div id="id_cVQrP4r" class="WaGadgetFirst WaGadgetSocialProfile  gadgetThemeStyle2" style="" data-componentid="cVQrP4r"><div class="gadgetStyleBody " style="" data-areaheight="auto">
+<ul class="orientationHorizontal  alignRight">
+
+
+<li>
+				<a href="https://www.facebook.com/saltspringchamber" title="Facebook" class="Facebook" target="_blank"></a>
+			</li>
+<li>
+				<a href="https://x.com/wildapricot" title="X" class="X" target="_blank"></a>
+			</li>
+<li>
+				<a href="https://www.instagram.com/saltspringchamber/" title="Instagram" class="Instagram" target="_blank"></a>
+			</li>
+		
+</ul>
+
+</div>
+</div><div id="id_RYlgXMZ" data-componentid="RYlgXMZ" class="WaLayoutContainerLast" style=""><table cellspacing="0" cellpadding="0" class="WaLayoutTable" style=""><tbody><tr data-componentid="RYlgXMZ_row" class="WaLayoutRow"><td id="id_jlSNBqo" data-componentid="jlSNBqo" class="WaLayoutItem" style="width:33%;"><div id="id_JYXThpB" class="WaLayoutPlaceHolder placeHolderContainer" data-componentid="JYXThpB" style=""><div style=""><div id="id_ySJhfMZ" class="WaGadgetOnly WaGadgetContent  gadgetStyleNone" style="margin-top:14px;" data-componentid="ySJhfMZ"><div class="gadgetStyleBody gadgetContentEditableArea" style="padding-left:30px;" data-editablearea="0" data-areaheight="auto">
+<div align="right"><img src="/resources/Pictures/Chamber%20Logo.jpg" alt="" title="" border="0" width="302" height="131"></div></div>
+</div></div></div></td><td style="" data-componentid="jlSNBqo_separator" class="WaLayoutSeparator"><div style="width: inherit;"></div></td><td id="id_Q7ipAFS" data-componentid="Q7ipAFS" class="WaLayoutItem" style="width:33%;"><div id="id_m8eeiwI" class="WaLayoutPlaceHolder placeHolderContainer" data-componentid="m8eeiwI" style=""><div style=""><div id="id_OPuzLMb" class="WaGadgetOnly WaGadgetContent  gadgetStyleNone" style="" data-componentid="OPuzLMb"><div class="gadgetStyleBody gadgetContentEditableArea" style="padding-top:30px;padding-left:40px;" data-editablearea="0" data-areaheight="auto">
+<h3><font color="#01a6e3">Supporting Local Business.<br></font><font color="#01a6e3">Building Community.<br></font><font color="#01a6e3"> Celebrating Island Success.&nbsp;&nbsp;</font></h3></div>
+</div></div></div></td><td style="" data-componentid="Q7ipAFS_separator" class="WaLayoutSeparator"><div style="width: inherit;"></div></td><td id="id_iTOeAFG" data-componentid="iTOeAFG" class="WaLayoutItem" style="width:33%;"><div id="id_klLvVIL" class="WaLayoutPlaceHolder placeHolderContainer" data-componentid="klLvVIL" style=""><div style=""><div id="id_TIS1iUT" class="WaGadgetFirst WaGadgetCustomHTML  gadgetStyleNone" style="" data-componentid="TIS1iUT"><div class="gadgetStyleBody " style="" data-areaheight="auto">
+<div style="text-align: center; margin: 30px 0;">
+  <a href="https://lp.constantcontactpages.com/sl/Kh9rOHR" target="_blank" style="text-decoration: none;">
+    <button style="
+      padding: 14px 28px;
+      font-size: 18px;
+      background-color: #0072CE;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    " onmouseover="this.style.backgroundColor='#005fa3'" onmouseout="this.style.backgroundColor='#0072CE'">
+      Sign up for our newsletter
+    </button>
+  </a>
+</div></div>
+</div><div id="id_Kp6NqKI" class="WaGadget WaGadgetContent  gadgetStyleNone" style="" data-componentid="Kp6NqKI"><div class="gadgetStyleBody gadgetContentEditableArea" style="" data-editablearea="0" data-areaheight="auto">
+<p align="center"><strong><a href="/Sys/Login">MEMBER LOGIN</a></strong></p></div>
+</div><div id="id_yTkMvOG" class="WaGadgetLast WaGadgetLoginForm  gadgetStyleNone" style="" data-componentid="yTkMvOG"><link rel="stylesheet" type="text/css" href="https://kit-pro.fontawesome.com/releases/latest/css/pro.min.css">
+<div class="loginContainer alignCenter">
+  <div class="loginContainerInner">
+    <a id="id_yTkMvOG_loginLink" class="loginLink">Log in</a>
+    <div id="id_yTkMvOG_loginContainer" class="loginPanel">
+      <div class="loginContainerForm oAuthIsfalse">
+        <div class="loginContainerFormInner">
+          <form method="post" action="https://www.saltspringchamber.com/Sys/Login" id="id_yTkMvOG_form" class="generalLoginBox" data-disableinadminmode="false">
+<input type="hidden" name="ReturnUrl" id="id_yTkMvOG_returnUrl" value="">
+            <input type="hidden" name="CurrentUrl" id="id_yTkMvOG_currentUrl" value="/Our-Members">
+            <input type="hidden" name="browserData" id="id_yTkMvOG_browserField" value="WebKit;Exec Command;Client Cookies Enabled;Platform Compatible;Javascript Enabled;">
+            <div class="loginUserName">
+<div class="loginUserNameTextBox">
+		<input name="email" type="text" maxlength="100" placeholder="Email" id="id_yTkMvOG_userName" tabindex="1" class="emailTextBoxControl">
+	</div>
+</div><div class="loginPassword">
+    <div class="loginPasswordTextBox">
+		<div class="password-wrapper">
+			<input name="password" type="password" placeholder="Password" maxlength="50" id="id_yTkMvOG_password" tabindex="2" class="passwordTextBoxControl" autocomplete="off">
+			<i class="fa fa-eye-slash toggle-password" toggle="#id_yTkMvOG_password"></i>
+		</div>
+    </div>
+</div>
+<script>
+  if (!window.__passwordToggleInitialized) {
+    window.__passwordToggleInitialized = true;
+
+    $(document).ready(function () {
+      $('.toggle-password').each(function () {
+        const $icon = $(this);
+        const selector = $icon.attr('toggle');
+        if (!selector) return;
+
+        const $input = selector.startsWith('#') ? $(selector) : $('#' + selector);
+        if (!$input.length) return;
+
+        $icon.on('click', function () {
+          try {
+            const inputEl = $input[0];
+            const currentType = inputEl.getAttribute('type');
+
+            if (currentType === 'password') {
+              inputEl.setAttribute('type', 'text');
+              $icon.removeClass('fa-eye-slash').addClass('fa-eye');
+            } else {
+              inputEl.setAttribute('type', 'password');
+              $icon.removeClass('fa-eye').addClass('fa-eye-slash');
+            }
+          } catch (err) {
+            console.warn('Password toggle error:', err.message);
+          }
+        });
+      });
+    });
+  }
+</script>
+	  
+             
+    <input id="g-recaptcha-invisible_yTkMvOG" name="g-recaptcha-invisible" value="recaptcha" type="hidden"> 
+    <div id="recapcha_placeholder_yTkMvOG" style="display: none;"><div class="grecaptcha-badge" data-style="none" style="width: 256px; height: 60px; position: fixed; visibility: hidden;"><div class="grecaptcha-logo"><iframe title="reCAPTCHA" width="256" height="60" role="presentation" name="a-8a8zlamkd0ij" frameborder="0" scrolling="no" sandbox="allow-forms allow-popups allow-same-origin allow-scripts allow-top-navigation allow-modals allow-popups-to-escape-sandbox allow-storage-access-by-user-activation" src="https://www.google.com/recaptcha/api2/anchor?ar=1&amp;k=6LfmM_UhAAAAAJSHT-BwkAlQgN0mMViOmaK7oEIV&amp;co=aHR0cHM6Ly93d3cuc2FsdHNwcmluZ2NoYW1iZXIuY29tOjQ0Mw..&amp;hl=en&amp;v=7gg7H51Q-naNfhmCP3_R47ho&amp;theme=light&amp;size=invisible&amp;anchor-ms=20000&amp;execute-ms=30000&amp;cb=fuot9k9575nq"></iframe></div><div class="grecaptcha-error"></div><textarea id="g-recaptcha-response-1" name="g-recaptcha-response" class="g-recaptcha-response" style="width: 250px; height: 40px; border: 1px solid rgb(193, 193, 193); margin: 10px 25px; padding: 0px; resize: none; display: none;"></textarea></div></div>
+    <span id="idReCaptchaValidator_yTkMvOG" errormessage="Please verify that you are not a robot" style="display:none" validatortype="method"></span>
+    <script>
+        $("#idReCaptchaValidator_yTkMvOG").on( "wavalidate", function(event, validationResult) {
+            if (grecaptcha.getResponse(widgetId_yTkMvOG).length == 0){
+                grecaptcha.execute(widgetId_yTkMvOG);	
+                validationResult.shouldStopValidation = true;
+                return;
+            }
+
+            validationResult.result = true;
+        });
+  
+            var widgetId_yTkMvOG;
+
+            var onloadCallback_yTkMvOG = function() {
+                // Renders the HTML element with id 'recapcha_placeholder_yTkMvOG' as a reCAPTCHA widget.
+                // The id of the reCAPTCHA widget is assigned to 'widgetId_yTkMvOG'.
+                widgetId_yTkMvOG = grecaptcha.render('recapcha_placeholder_yTkMvOG', {
+                'sitekey' : '6LfmM_UhAAAAAJSHT-BwkAlQgN0mMViOmaK7oEIV',
+                'size': 'invisible',
+                'callback': function(){
+                    document.getElementById('g-recaptcha-invisible_yTkMvOG').form.submit();
+                },
+                'theme' : 'light'
+            });
+        };
+    </script>
+	
+    <script src="https://www.google.com/recaptcha/api.js?onload=onloadCallback_yTkMvOG&amp;render=explicit" async="" defer=""></script>
+
+  
+      <div class="loginActionRememberMe">
+		<input id="id_yTkMvOG_rememberMe" type="checkbox" name="rememberMe" tabindex="3" class="rememberMeCheckboxControl">
+		<label for="id_yTkMvOG_rememberMe">Remember me</label>
+	</div>
+<div class="loginAction">
+	<input type="submit" name="ctl03$ctl02$loginViewControl$loginControl$Login" value="Log in" id="id_yTkMvOG_loginAction" onclick="if (!WA.isWidgetMode &amp;&amp; !browserInfo.clientCookiesEnabled()) {alert('Warning: browser cookies disabled. Please enable them to use this website.'); return false;}" tabindex="4" class="loginButton loginButtonControl">
+</div><div class="loginPasswordForgot">
+		<a rel="nofollow" href="https://www.saltspringchamber.com/Sys/ResetPasswordRequest">Forgot password</a>
+	</div>
+</form></div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+  jq$(function() {
+    var gadgetId = jq$('#id_yTkMvOG'),
+        containerBox = gadgetId.find('.loginPanel'),
+        loginLink = gadgetId.find('.loginLink'),
+        transitionTime = 300;
+
+    containerBox.isOpening = false;
+
+    loginLink.on('click', function(e) {
+      if (containerBox.css("visibility") == 'visible') {
+        loginLink.removeClass('hover');
+        containerBox.animate({ 'opacity': '0' }, transitionTime, function() {
+          containerBox.css('visibility','hidden');
+          containerBox.css('display','none');
+        });
+      } else {
+        loginLink.addClass('hover');
+        containerBox.isOpening = true;
+        containerBox.css('display','block');
+        containerBox.css('visibility','visible');
+        containerBox.animate({ 'opacity': '1' }, transitionTime, function() {
+          containerBox.isOpening = false;
+        });
+      }
+    });
+
+    containerBox.on('click', function(e) { e.stopPropagation(); });
+
+    jq$('body').on('click', function() {
+      if (containerBox.css("visibility") == 'visible' && !containerBox.isOpening) {
+        loginLink.removeClass('hover');
+        containerBox.animate({ 'opacity': '0' }, transitionTime, function() {
+          containerBox.css('visibility','hidden');
+          containerBox.css('display','none');
+        });
+      }
+    });
+
+    var browserField = document.getElementById('id_yTkMvOG' + '_browserField');
+
+    if (browserField) {
+      browserField.value = browserInfo.getBrowserCapabilitiesData();
+    }
+
+    jq$('#id_yTkMvOG' + '_form').FormValidate();
+    jq$('.WaGadgetLoginForm form').attr('data-disableInAdminMode', 'false');
+  });
+</script>
+</div></div></div></td></tr></tbody></table> </div></div>
+</div></div>
+		<div class="zonePlace zoneHeader2">
+<div id="id_Header1" data-componentid="Header1" class="WaPlaceHolder WaPlaceHolderHeader1" style="background-color:transparent;"><div style=""><div id="id_JpFJ3Gl" data-componentid="JpFJ3Gl" class="WaLayoutContainerFirst" style="background-color:#414A53;"><table cellspacing="0" cellpadding="0" class="WaLayoutTable" style=""><tbody><tr data-componentid="JpFJ3Gl_row" class="WaLayoutRow"><td id="id_bBoPpMR" data-componentid="bBoPpMR" class="WaLayoutItem" style="width:100%;"><div id="id_ClYQFGL" class="WaLayoutPlaceHolder placeHolderContainer" data-componentid="ClYQFGL" style=""><div style=""><div id="id_svVLY2a" class="WaGadgetOnly WaGadgetMenuHorizontal  gadgetStyleNone" style="margin-top:7px;" data-componentid="svVLY2a"><div class="menuBackground"></div>
+<div class="menuInner">
+	<ul class="firstLevel" style=""><li class="">
+	<div class="item">
+		<a href="https://www.saltspringchamber.com/" title="Home"><span>Home</span></a>
+</div>
+</li><li class="">
+	<div class="item">
+		<a href="https://www.saltspringchamber.com/join" title="Join"><span>Join</span></a>
+</div>
+</li><li class="dir">
+	<div class="item">
+		<a href="https://www.saltspringchamber.com/Member-Offers" title="Member Offers"><span>Member Offers</span></a>
+<ul class="secondLevel">
+<li class=" ">
+	<div class="item">
+		<a href="https://www.saltspringchamber.com/member-mixer" title="Member Mixers"><span>Member Mixers</span></a>
+</div>
+</li>
+	
+</ul>
+</div>
+</li><li class="">
+	<div class="item">
+		<a href="https://www.saltspringchamber.com/visitor-centre" title="Visitor Centre"><span>Visitor Centre</span></a>
+</div>
+</li><li class="">
+	<div class="item">
+		<a href="https://www.saltspringchamber.com/salty-awards" title="Salty Awards"><span>Salty Awards</span></a>
+</div>
+</li><li class="">
+	<div class="item">
+		<a href="https://www.saltspringchamber.com/Winter-Wander" title="Winter Wander"><span>Winter Wander</span></a>
+</div>
+</li><li class="dir">
+	<div class="item">
+		<a href="https://www.saltspringchamber.com/about" title="About"><span>About</span></a>
+<ul class="secondLevel">
+<li class=" ">
+	<div class="item">
+		<a href="https://www.saltspringchamber.com/Island-Facts" title="Island Facts"><span>Island Facts</span></a>
+</div>
+</li>
+	
+<li class=" ">
+	<div class="item">
+		<a href="https://www.saltspringchamber.com/Advocacy" title="Advocacy"><span>Advocacy</span></a>
+</div>
+</li>
+	
+</ul>
+</div>
+</li><li class="sel last-child">
+	<div class="item">
+		<a href="https://www.saltspringchamber.com/Our-Members" title="Our Members"><span>Our Members</span></a>
+</div>
+</li></ul>
+</div>
+
+
+<script type="text/javascript">
+
+	jq$(function()
+	{
+
+		WebFont.load({
+			custom: {
+				families: ['Ubuntu', 'Ubuntu condensed']
+			},
+			active: function()
+			{
+				resizeMenu();
+			}
+		});
+
+
+		var gadgetHorMenu = jq$('#id_svVLY2a'),
+			gadgetHorMenuContainer = gadgetHorMenu.find('.menuInner'),
+			firstLevelMenu = gadgetHorMenu.find('ul.firstLevel'),
+			holderInitialMenu = firstLevelMenu.children(),
+			outsideItems = null,
+			phantomElement = '<li class="phantom"><div class="item"><a href="#"><span>&#x2261;</span></a><ul class="secondLevel"></ul></div></li>',
+			placeHolder = gadgetHorMenu.parents('.WaLayoutPlaceHolder'),
+			placeHolderId = placeHolder && placeHolder.attr('data-componentId'),
+			mobileState = false,
+			isTouchSupported = !!(('ontouchstart' in window) || (window.DocumentTouch && document instanceof DocumentTouch) || (navigator.msPointerEnabled && navigator.msMaxTouchPoints));
+
+
+		function resizeMenu()
+		{
+			var i,
+				len,
+				fitMenuWidth = 0,
+				menuItemPhantomWidth = 80;
+
+			firstLevelMenu.html( holderInitialMenu).removeClass('adapted').css({ width: 'auto' }); // restore initial menu
+
+			if( firstLevelMenu.width() > gadgetHorMenuContainer.width() ) // if menu oversize
+			{
+				menuItemPhantomWidth = firstLevelMenu.addClass('adapted').append( phantomElement).children('.phantom').width();
+
+				for( i = 0, len = holderInitialMenu.size(); i <= len; i++ )
+				{
+					fitMenuWidth += jq$( holderInitialMenu.get(i) ).width();
+
+					if( fitMenuWidth + menuItemPhantomWidth > gadgetHorMenuContainer.width() )
+					{
+						outsideItems = firstLevelMenu.children(':gt('+(i-1)+'):not(.phantom)').remove();
+						firstLevelMenu.find('.phantom > .item > ul').append( outsideItems);
+						gadgetHorMenuContainer.css('overflow','visible');
+						break;
+					}
+				}
+				gadgetHorMenu.find('.phantom > .item > a').click(function(){ return false; });
+			}
+
+			disableFirstTouch();
+
+			firstLevelMenu.css( 'width', '' ); // restore initial menu width
+			firstLevelMenu.children().removeClass('last-child').eq(-1).addClass('last-child'); // add last-child mark
+		}
+
+		jq$(window).resize(function()
+		{
+			resizeMenu();
+		});
+
+		function onLayoutColumnResized(sender, args)
+		{
+			args = args || {};
+
+			if (placeHolderId && (placeHolderId == args.leftColPlaceHolderId || placeHolderId == args.rightColPlaceHolderId))
+			{
+				resizeMenu();
+			}
+		}
+
+		BonaPage.addPageStateHandler(BonaPage.PAGE_PARSED, function() { WA.Gadgets.LayoutColumnResized.addHandler(onLayoutColumnResized); });
+		BonaPage.addPageStateHandler(BonaPage.PAGE_UNLOADED, function() { WA.Gadgets.LayoutColumnResized.removeHandler(onLayoutColumnResized); });
+
+
+        function disableFirstTouch()
+        {
+          if (!isTouchSupported) return;
+
+          jq$('#id_svVLY2a').find('.menuInner li.dir > .item > a').on( 'click', function(event)
+          {
+            if( !this.touchCounter )
+              this.touchCounter = 0;
+
+            if( this.touchCounter >= 1 )
+            {
+              this.touchCounter = 0;
+              return true;
+            }
+            this.touchCounter++;
+
+            if (!mobileState)
+            {
+              WA.stopEventDefault(event);
+            }
+          });
+
+          jq$('#id_svVLY2a').find('.menuInner li.dir > .item > a').on( 'mouseout', function(event)
+          {
+            if( !this.touchCounter )
+              this.touchCounter = 0;
+            this.touchCounter = 0;
+          });
+        }
+
+        disableFirstTouch();
+
+	});
+</script></div></div></div></td></tr></tbody></table> </div><div id="id_GU18qnJ" class="WaGadgetLast WaGadgetContent  gadgetStyleNone" style="" data-componentid="GU18qnJ"><div class="gadgetStyleBody gadgetContentEditableArea" style="padding-top:40px;padding-right:40px;padding-bottom:40px;padding-left:40px;" data-editablearea="0" data-areaheight="auto">
+<h3><font color="#1f272b">Our Chamber members are the heart of Salt Spring’s vibrant business community—innovators, creators, service providers, and changemakers who contribute to the island’s unique character and economy. Whether you're looking for local expertise, a trusted product or service, or new opportunities to connect and collaborate, you’ll find it here.</font></h3><h3><font color="#1f272b"><strong>Explore the directory by category to discover the amazing individuals and organizations that help Salt Spring thrive. For contact details, business descriptions, and more, simply click on a member’s name to view their full listing.</strong></font></h3><p>You can also search our members by industry through the <em>Advanced Search option.&nbsp;</em></p>
+
+
+
+<p><br></p></div>
+</div></div>
+</div></div>
+		<!-- /header zone -->
+
+<!-- content zone -->
+	<div class="zonePlace zoneContent">
+<div id="idPrimaryContentBlock1Content" data-componentid="Content" class="WaPlaceHolder WaPlaceHolderContent" style=""><div style="padding-top:0px;padding-bottom:20px;"><div id="id_PvYE3Te" class="WaGadgetFirst WaGadgetHeadline  gadgetStyleNone" style="" data-componentid="PvYE3Te"><div class="gadgetStyleBody gadgetContentEditableArea" style="" data-editablearea="0" data-areaheight="auto">
+<img src="data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==" class="WaContentDivider WaContentDivider divider_style_border_dotted" style="border-top-width: 1px;" data-wacomponenttype="ContentDivider"><h1 align="center">SEE ALL MEMBERS&nbsp;</h1></div>
+</div><div id="id_49T5izN" class="WaGadgetLast WaGadgetMemberDirectory  gadgetStyleNone WaGadgetMemberDirectoryStateList" style="" data-componentid="49T5izN"><div style="">
+    
+
+
+
+<form method="post" action="" id="form">
+<div class="aspNetHidden">
+<input type="hidden" name="__VIEWSTATE" id="__VIEWSTATE" value="kkwuoyvT4ZaOM+I+qaj103+uG1EJEsldGC+/cdUa4FRZed4uLlogjDxihlOm2QK6Vw/HkeDy2jOv6bqg8jpTDghJvs9fM4jIsEGjKrsEFgQN7qrM+jxUY1D7/43dGk55+kcZ03a0EG2Bni+E1EMnyrnWeQfp9F+dDEPLDP+fwr7hF+vYbnEKZBB21reoRqG+f7xDqd3odPdo3fmDqMgI1Gy2syTiEdNZv9rTs3N9VBMxRYcHEZq3JbxIxJt6mlHqPN4cp+wHzQlghvAIezQ73gboY/wI74XWvxKn6KjGMW7apFDm">
+</div>
+
+    
+    <input type="hidden" name="FunctionalBlock1$contentModeHidden" id="FunctionalBlock1_contentModeHidden" value="1">
+<div id="FunctionalBlock1_ctl00_jsSupportedContainer" style="display: block;">
+	
+  
+    
+    
+    
+    
+
+<div class="advSearchContainerLink">
+		<div class="generalFormOuterContainer"><div class="generalFormContainer"><div class="inner">
+      <a id="FunctionalBlock1_ctl00_ctl00_advancedSearchStatusPanel_advancedSearchLink" href="https://www.saltspringchamber.com/Our-Members?&amp;tab=2">Advanced search...</a>
+    <div class="clearEndContainer"></div></div></div></div>
+	</div>
+
+    <div class="memberDirectorySearchAreaOuterContainer" id="memberDirectorySearchArea"><div class="cornersContainer"><div class="topCorners"><div class="c1"></div><div class="c2"></div><div class="c3"></div><div class="c4"></div><div class="c5"></div><!--[if gt IE 6]><!--><div class="r1"><div class="r2"><div class="r3"><div class="r4"><div class="r5"></div></div></div></div></div><!--<![endif]--></div></div><div class="memberDirectorySearchArea"><div class="d1"><div class="d2"><div class="d3"><div class="d4"><div class="d5"><div class="d6"><div class="d7"><div class="d8"><div class="d9"><div class="inner">
+      
+        <label for="FunctionalBlock1_ctl00_ctl00_search" id="FunctionalBlock1_ctl00_ctl00_searchLabel">Search:</label>
+        <input name="FunctionalBlock1$ctl00$ctl00$search" type="text" maxlength="100" id="FunctionalBlock1_ctl00_ctl00_search">
+        <span class="searchResult">
+          Found:&nbsp;
+          <em id="membersFound" style="display: inline;">166</em><span id="idWaitMessages" style="display: none;">undefined</span><a id="idReloadData" style="display: none;"><img id="FunctionalBlock1_ctl00_ctl00_refreshImage" title="Current search is cached. Click to refresh data" src="/Admin/html_res/images/refresh-icon3.gif" alt="Refresh cached search"></a>
+          <span id="idPagingData" style="display: inline;">Show:<select onchange="MemberDirectoryListRenderer.pagerChanged(this);"><option value="0">1-50</option><option value="50">51-100</option><option value="100">101-150</option><option value="150">151-166</option></select></span>
+        </span>
+        
+      <div class="clearEndContainer"></div></div></div></div></div></div></div></div></div></div></div></div><div class="cornersContainer"><div class="bottomCorners"><!--[if gt IE 6]><!--><div class="r1"><div class="r2"><div class="r3"><div class="r4"><div class="r5"></div></div></div></div></div><!--<![endif]--><div class="c5"></div><div class="c4"></div><div class="c3"></div><div class="c2"></div><div class="c1"></div></div></div></div>
+  
+    <div class="memberDirectoryOuterContainer" id="idMemberDirectoryContainer"><div class="cornersContainer"><div class="topCorners"><div class="c1"></div><div class="c2"></div><div class="c3"></div><div class="c4"></div><div class="c5"></div><!--[if gt IE 6]><!--><div class="r1"><div class="r2"><div class="r3"><div class="r4"><div class="r5"></div></div></div></div></div><!--<![endif]--></div></div><div class="memberDirectoryContainer"><div class="d1"><div class="d2"><div class="d3"><div class="d4"><div class="d5"><div class="d6"><div class="d7"><div class="d8"><div class="d9"><div class="inner">
+      
+        <div id="FunctionalBlock1_ctl00_ctl00_memberDirectory" class="memberDirectory"><table id="membersTable" class="membersTable" cellspacing="0"><thead><tr><th width="25%">Business Name</th><th width="25%">Website</th><th width="25%">Industry</th></tr></thead><tbody><tr class="normal" onclick="MemberDirectoryListRenderer.redirectToMemberDetails('https://www.saltspringchamber.com/Sys/PublicProfile/88649611/7006792')" onmouseover="MemberDirectoryListRenderer.highlightRowAndNext(this)" onmouseout="MemberDirectoryListRenderer.normlightRowAndNext(this)"><td class="memberDirectoryColumn1" width="25%"><div class="memberValue"><h5><a title="Go to member details" onclick="globalUtils.stopEventPropogation(event)" href="https://www.saltspringchamber.com/Sys/PublicProfile/88649611/7006792">Above The Narrows Bed and Breakfast</a></h5></div><div class="memberValue">Joseph Schuldhaus</div></td><td class="memberDirectoryColumn2" width="25%"><div class="memberValue"><a onclick="window.open('https://abovethenarrows.com/');BonaPage.stopEvent(event);" href="https://abovethenarrows.com/" target="_blank">https://abovethenarrows.com/</a></div></td><td class="memberDirectoryColumn3" width="25%"><div class="memberValue">Accommodation</div></td></tr><tr class="normal" onclick="MemberDirectoryListRenderer.redirectToMemberDetails('https://www.saltspringchamber.com/Sys/PublicProfile/88649674/7006792')" onmouseover="MemberDirectoryListRenderer.highlightRowAndNext(this)" onmouseout="MemberDirectoryListRenderer.normlightRowAndNext(this)"><td class="memberDirectoryColumn1" width="25%"><div class="memberValue"><h5><a title="Go to member details" onclick="globalUtils.stopEventPropogation(event)" href="https://www.saltspringchamber.com/Sys/PublicProfile/88649674/7006792">All Islands Septic</a></h5></div><div class="memberValue">Robert Roodenburg</div></td><td class="memberDirectoryColumn2" width="25%"></td><td class="memberDirectoryColumn3" width="25%"><div class="memberValue">Construction + Trades, Home + Garden</div></td></tr><tr class="normal" onclick="MemberDirectoryListRenderer.redirectToMemberDetails('https://www.saltspringchamber.com/Sys/PublicProfile/88649561/7006792')" onmouseover="MemberDirectoryListRenderer.highlightRowAndNext(this)" onmouseout="MemberDirectoryListRenderer.normlightRowAndNext(this)"><td class="memberDirectoryColumn1" width="25%"><div class="memberValue"><h5><a title="Go to member details" onclick="globalUtils.stopEventPropogation(event)" href="https://www.saltspringchamber.com/Sys/PublicProfile/88649561/7006792">Andrea Palframan : Websites &amp; Communication</a></h5></div><div class="memberValue">Andrea Palframan</div></td><td class="memberDirectoryColumn2" width="25%"><div class="memberValue"><a onclick="window.open('https://andreapalframan.com/');BonaPage.stopEvent(event);" href="https://andreapalframan.com/" target="_blank">https://andreapalframan.com/</a></div></td><td class="memberDirectoryColumn3" width="25%"><div class="memberValue">Business Services, Media + Marketing</div></td></tr><tr class="normal" onclick="MemberDirectoryListRenderer.redirectToMemberDetails('https://www.saltspringchamber.com/Sys/PublicProfile/88649555/7006792')" onmouseover="MemberDirectoryListRenderer.highlightRowAndNext(this)" onmouseout="MemberDirectoryListRenderer.normlightRowAndNext(this)"><td class="memberDirectoryColumn1" width="25%"><div class="memberValue"><h5><a title="Go to member details" onclick="globalUtils.stopEventPropogation(event)" href="https://www.saltspringchamber.com/Sys/PublicProfile/88649555/7006792">Anna J. Pugh Law Corporation</a></h5></div><div class="memberValue">Anna J. Pugh</div></td><td class="memberDirectoryColumn2" width="25%"><div class="memberValue"><a onclick="window.open('https://saltspringlaw.ca/');BonaPage.stopEvent(event);" href="https://saltspringlaw.ca/" target="_blank">https://saltspringlaw.ca/</a></div></td><td class="memberDirectoryColumn3" width="25%"><div class="memberValue">Professional Services</div></td></tr><tr class="normal" onclick="MemberDirectoryListRenderer.redirectToMemberDetails('https://www.saltspringchamber.com/Sys/PublicProfile/88649684/7006792')" onmouseover="MemberDirectoryListRenderer.highlightRowAndNext(this)" onmouseout="MemberDirectoryListRenderer.normlightRowAndNext(this)"><td class="memberDirectoryColumn1" width="25%"><div class="memberValue"><h5><a title="Go to member details" onclick="globalUtils.stopEventPropogation(event)" href="https://www.saltspringchamber.com/Sys/PublicProfile/88649684/7006792">Araucana Grove</a></h5></div><div class="memberValue">Linda Quinn</div></td><td class="memberDirectoryColumn2" width="25%"></td><td class="memberDirectoryColumn3" width="25%"><div class="memberValue">Recreation</div></td></tr><tr class="normal" onclick="MemberDirectoryListRenderer.redirectToMemberDetails('https://www.saltspringchamber.com/Sys/PublicProfile/88649559/7006792')" onmouseover="MemberDirectoryListRenderer.highlightRowAndNext(this)" onmouseout="MemberDirectoryListRenderer.normlightRowAndNext(this)"><td class="memberDirectoryColumn1" width="25%"><div class="memberValue"><h5><a title="Go to member details" onclick="globalUtils.stopEventPropogation(event)" href="https://www.saltspringchamber.com/Sys/PublicProfile/88649559/7006792">Arbutus View Thermal Spa</a></h5></div><div class="memberValue">Simon Trevelyan</div></td><td class="memberDirectoryColumn2" width="25%"><div class="memberValue"><a onclick="window.open('https://www.arbutusview.com/');BonaPage.stopEvent(event);" href="https://www.arbutusview.com/" target="_blank">https://www.arbutusview.com/</a></div></td><td class="memberDirectoryColumn3" width="25%"><div class="memberValue">Health + Wellness, Recreation</div></td></tr><tr class="normal" onclick="MemberDirectoryListRenderer.redirectToMemberDetails('https://www.saltspringchamber.com/Sys/PublicProfile/88649557/7006792')" onmouseover="MemberDirectoryListRenderer.highlightRowAndNext(this)" onmouseout="MemberDirectoryListRenderer.normlightRowAndNext(this)"><td class="memberDirectoryColumn1" width="25%"><div class="memberValue"><h5><a title="Go to member details" onclick="globalUtils.stopEventPropogation(event)" href="https://www.saltspringchamber.com/Sys/PublicProfile/88649557/7006792">ArtSpring</a></h5></div><div class="memberValue">Howard Jang</div></td><td class="memberDirectoryColumn2" width="25%"><div class="memberValue"><a onclick="window.open('https://artspring.ca/');BonaPage.stopEvent(event);" href="https://artspring.ca/" target="_blank">https://artspring.ca/</a></div></td><td class="memberDirectoryColumn3" width="25%"><div class="memberValue">Arts + Culture</div></td></tr><tr class="normal" onclick="MemberDirectoryListRenderer.redirectToMemberDetails('https://www.saltspringchamber.com/Sys/PublicProfile/88649596/7006792')" onmouseover="MemberDirectoryListRenderer.highlightRowAndNext(this)" onmouseout="MemberDirectoryListRenderer.normlightRowAndNext(this)"><td class="memberDirectoryColumn1" width="25%"><div class="memberValue"><h5><a title="Go to member details" onclick="globalUtils.stopEventPropogation(event)" href="https://www.saltspringchamber.com/Sys/PublicProfile/88649596/7006792">Atelier Jacobsen Jensen</a></h5></div></td><td class="memberDirectoryColumn2" width="25%"><div class="memberValue"><a onclick="window.open('https://pauljacobsenjensen.com/');BonaPage.stopEvent(event);" href="https://pauljacobsenjensen.com/" target="_blank">https://pauljacobsenjensen.com/</a></div></td><td class="memberDirectoryColumn3" width="25%"><div class="memberValue">Arts + Culture</div></td></tr><tr class="normal" onclick="MemberDirectoryListRenderer.redirectToMemberDetails('https://www.saltspringchamber.com/Sys/PublicProfile/90002496/7006792')" onmouseover="MemberDirectoryListRenderer.highlightRowAndNext(this)" onmouseout="MemberDirectoryListRenderer.normlightRowAndNext(this)"><td class="memberDirectoryColumn1" width="25%"><div class="memberValue"><h5><a title="Go to member details" onclick="globalUtils.stopEventPropogation(event)" href="https://www.saltspringchamber.com/Sys/PublicProfile/90002496/7006792">Auntie Pesto's</a></h5></div></td><td class="memberDirectoryColumn2" width="25%"><div class="memberValue"><a onclick="window.open('https://auntiepestos.com/');BonaPage.stopEvent(event);" href="https://auntiepestos.com/" target="_blank">https://auntiepestos.com/</a></div></td><td class="memberDirectoryColumn3" width="25%"><div class="memberValue">Food + Drink</div></td></tr><tr class="normal" onclick="MemberDirectoryListRenderer.redirectToMemberDetails('https://www.saltspringchamber.com/Sys/PublicProfile/90783266/7006792')" onmouseover="MemberDirectoryListRenderer.highlightRowAndNext(this)" onmouseout="MemberDirectoryListRenderer.normlightRowAndNext(this)"><td class="memberDirectoryColumn1" width="25%"><div class="memberValue"><h5><a title="Go to member details" onclick="globalUtils.stopEventPropogation(event)" href="https://www.saltspringchamber.com/Sys/PublicProfile/90783266/7006792">Beacon Community Services</a></h5></div><div class="memberValue">Alice Van Blokland</div></td><td class="memberDirectoryColumn2" width="25%"><div class="memberValue"><a onclick="window.open('https://beaconcs.ca/');BonaPage.stopEvent(event);" href="https://beaconcs.ca/" target="_blank">https://beaconcs.ca/</a></div></td><td class="memberDirectoryColumn3" width="25%"><div class="memberValue">Community + Government</div></td></tr><tr class="normal" onclick="MemberDirectoryListRenderer.redirectToMemberDetails('https://www.saltspringchamber.com/Sys/PublicProfile/88649602/7006792')" onmouseover="MemberDirectoryListRenderer.highlightRowAndNext(this)" onmouseout="MemberDirectoryListRenderer.normlightRowAndNext(this)"><td class="memberDirectoryColumn1" width="25%"><div class="memberValue"><h5><a title="Go to member details" onclick="globalUtils.stopEventPropogation(event)" href="https://www.saltspringchamber.com/Sys/PublicProfile/88649602/7006792">Benjamin Moore</a></h5></div><div class="memberValue">Shane Hubenig</div></td><td class="memberDirectoryColumn2" width="25%"></td><td class="memberDirectoryColumn3" width="25%"><div class="memberValue">Construction + Trades, Home + Garden</div></td></tr><tr class="normal" onclick="MemberDirectoryListRenderer.redirectToMemberDetails('https://www.saltspringchamber.com/Sys/PublicProfile/88649665/7006792')" onmouseover="MemberDirectoryListRenderer.highlightRowAndNext(this)" onmouseout="MemberDirectoryListRenderer.normlightRowAndNext(this)"><td class="memberDirectoryColumn1" width="25%"><div class="memberValue"><h5><a title="Go to member details" onclick="globalUtils.stopEventPropogation(event)" href="https://www.saltspringchamber.com/Sys/PublicProfile/88649665/7006792">Beth Whalley Counselling</a></h5></div><div class="memberValue">Beth Whalley</div></td><td class="memberDirectoryColumn2" width="25%"><div class="memberValue"><a onclick="window.open('https://www.bethwhalleycounselling.com/');BonaPage.stopEvent(event);" href="https://www.bethwhalleycounselling.com/" target="_blank">https://www.bethwhalleycounselling.com/</a></div></td><td class="memberDirectoryColumn3" width="25%"><div class="memberValue">Health + Wellness, Spirituality + Personal Growth</div></td></tr><tr class="normal" onclick="MemberDirectoryListRenderer.redirectToMemberDetails('https://www.saltspringchamber.com/Sys/PublicProfile/88649677/7006792')" onmouseover="MemberDirectoryListRenderer.highlightRowAndNext(this)" onmouseout="MemberDirectoryListRenderer.normlightRowAndNext(this)"><td class="memberDirectoryColumn1" width="25%"><div class="memberValue"><h5><a title="Go to member details" onclick="globalUtils.stopEventPropogation(event)" href="https://www.saltspringchamber.com/Sys/PublicProfile/88649677/7006792">Brown Butter Baker</a></h5></div><div class="memberValue">Elsie Brown</div></td><td class="memberDirectoryColumn2" width="25%"><div class="memberValue"><a onclick="window.open('https://www.BrownButterBaker.ca');BonaPage.stopEvent(event);" href="https://www.BrownButterBaker.ca" target="_blank">https://www.BrownButterBaker.ca</a></div></td><td class="memberDirectoryColumn3" width="25%"><div class="memberValue">Events + Hospitality, Food + Drink</div></td></tr><tr class="normal" onclick="MemberDirectoryListRenderer.redirectToMemberDetails('https://www.saltspringchamber.com/Sys/PublicProfile/90002497/7006792')" onmouseover="MemberDirectoryListRenderer.highlightRowAndNext(this)" onmouseout="MemberDirectoryListRenderer.normlightRowAndNext(this)"><td class="memberDirectoryColumn1" width="25%"><div class="memberValue"><h5><a title="Go to member details" onclick="globalUtils.stopEventPropogation(event)" href="https://www.saltspringchamber.com/Sys/PublicProfile/90002497/7006792">Buzzy's Luncheonette</a></h5></div></td><td class="memberDirectoryColumn2" width="25%"><div class="memberValue"><a onclick="window.open('https://www.buzzys.ca/');BonaPage.stopEvent(event);" href="https://www.buzzys.ca/" target="_blank">https://www.buzzys.ca/</a></div></td><td class="memberDirectoryColumn3" width="25%"><div class="memberValue">Food + Drink</div></td></tr><tr class="normal" onclick="MemberDirectoryListRenderer.redirectToMemberDetails('https://www.saltspringchamber.com/Sys/PublicProfile/88649649/7006792')" onmouseover="MemberDirectoryListRenderer.highlightRowAndNext(this)" onmouseout="MemberDirectoryListRenderer.normlightRowAndNext(this)"><td class="memberDirectoryColumn1" width="25%"><div class="memberValue"><h5><a title="Go to member details" onclick="globalUtils.stopEventPropogation(event)" href="https://www.saltspringchamber.com/Sys/PublicProfile/88649649/7006792">Cedar House on the Hill B&amp;B</a></h5></div><div class="memberValue">Brigitte Diebold</div></td><td class="memberDirectoryColumn2" width="25%"><div class="memberValue"><a onclick="window.open('https://www.cedarhouseonthehill.ca/');BonaPage.stopEvent(event);" href="https://www.cedarhouseonthehill.ca/" target="_blank">https://www.cedarhouseonthehill.ca/</a></div></td><td class="memberDirectoryColumn3" width="25%"><div class="memberValue">Accommodation</div></td></tr><tr class="normal" onclick="MemberDirectoryListRenderer.redirectToMemberDetails('https://www.saltspringchamber.com/Sys/PublicProfile/88649628/7006792')" onmouseover="MemberDirectoryListRenderer.highlightRowAndNext(this)" onmouseout="MemberDirectoryListRenderer.normlightRowAndNext(this)"><td class="memberDirectoryColumn1" width="25%"><div class="memberValue"><h5><a title="Go to member details" onclick="globalUtils.stopEventPropogation(event)" href="https://www.saltspringchamber.com/Sys/PublicProfile/88649628/7006792">Celtic Place</a></h5></div></td><td class="memberDirectoryColumn2" width="25%"><div class="memberValue"><a onclick="window.open('https://celticplace.ca/');BonaPage.stopEvent(event);" href="https://celticplace.ca/" target="_blank">https://celticplace.ca/</a></div></td><td class="memberDirectoryColumn3" width="25%"><div class="memberValue">Accommodation</div></td></tr><tr class="normal" onclick="MemberDirectoryListRenderer.redirectToMemberDetails('https://www.saltspringchamber.com/Sys/PublicProfile/88649668/7006792')" onmouseover="MemberDirectoryListRenderer.highlightRowAndNext(this)" onmouseout="MemberDirectoryListRenderer.normlightRowAndNext(this)"><td class="memberDirectoryColumn1" width="25%"><div class="memberValue"><h5><a title="Go to member details" onclick="globalUtils.stopEventPropogation(event)" href="https://www.saltspringchamber.com/Sys/PublicProfile/88649668/7006792">Ciderworks &amp; Salt Spring Apple Company</a></h5></div><div class="memberValue">Peri Lavender</div></td><td class="memberDirectoryColumn2" width="25%"><div class="memberValue"><a onclick="window.open('https://www.saltspringapplecompany.com/');BonaPage.stopEvent(event);" href="https://www.saltspringapplecompany.com/" target="_blank">https://www.saltspringapplecompany.com/</a></div></td><td class="memberDirectoryColumn3" width="25%"><div class="memberValue">Food + Drink</div></td></tr><tr class="normal" onclick="MemberDirectoryListRenderer.redirectToMemberDetails('https://www.saltspringchamber.com/Sys/PublicProfile/88649640/7006792')" onmouseover="MemberDirectoryListRenderer.highlightRowAndNext(this)" onmouseout="MemberDirectoryListRenderer.normlightRowAndNext(this)"><td class="memberDirectoryColumn1" width="25%"><div class="memberValue"><h5><a title="Go to member details" onclick="globalUtils.stopEventPropogation(event)" href="https://www.saltspringchamber.com/Sys/PublicProfile/88649640/7006792">Coast &amp; Kin Photography</a></h5></div></td><td class="memberDirectoryColumn2" width="25%"><div class="memberValue"><a onclick="window.open('https://www.coastandkin.com/');BonaPage.stopEvent(event);" href="https://www.coastandkin.com/" target="_blank">https://www.coastandkin.com/</a></div></td><td class="memberDirectoryColumn3" width="25%"><div class="memberValue">Events + Hospitality, Media + Marketing</div></td></tr><tr class="normal" onclick="MemberDirectoryListRenderer.redirectToMemberDetails('https://www.saltspringchamber.com/Sys/PublicProfile/88649658/7006792')" onmouseover="MemberDirectoryListRenderer.highlightRowAndNext(this)" onmouseout="MemberDirectoryListRenderer.normlightRowAndNext(this)"><td class="memberDirectoryColumn1" width="25%"><div class="memberValue"><h5><a title="Go to member details" onclick="globalUtils.stopEventPropogation(event)" href="https://www.saltspringchamber.com/Sys/PublicProfile/88649658/7006792">Collins House B + B</a></h5></div><div class="memberValue">Dal Brickenden</div></td><td class="memberDirectoryColumn2" width="25%"><div class="memberValue"><a onclick="window.open('http://collinshousessi.com/');BonaPage.stopEvent(event);" href="http://collinshousessi.com/" target="_blank">http://collinshousessi.com/</a></div></td><td class="memberDirectoryColumn3" width="25%"><div class="memberValue">Accommodation</div></td></tr><tr class="normal" onclick="MemberDirectoryListRenderer.redirectToMemberDetails('https://www.saltspringchamber.com/Sys/PublicProfile/88649563/7006792')" onmouseover="MemberDirectoryListRenderer.highlightRowAndNext(this)" onmouseout="MemberDirectoryListRenderer.normlightRowAndNext(this)"><td class="memberDirectoryColumn1" width="25%"><div class="memberValue"><h5><a title="Go to member details" onclick="globalUtils.stopEventPropogation(event)" href="https://www.saltspringchamber.com/Sys/PublicProfile/88649563/7006792">Conscious Equine Connections</a></h5></div><div class="memberValue">Juliana Brossolette</div></td><td class="memberDirectoryColumn2" width="25%"><div class="memberValue"><a onclick="window.open('https://consciousequineconnections.com/');BonaPage.stopEvent(event);" href="https://consciousequineconnections.com/" target="_blank">https://consciousequineconnections.com/</a></div></td><td class="memberDirectoryColumn3" width="25%"><div class="memberValue">Health + Wellness</div></td></tr><tr class="normal" onclick="MemberDirectoryListRenderer.redirectToMemberDetails('https://www.saltspringchamber.com/Sys/PublicProfile/88649626/7006792')" onmouseover="MemberDirectoryListRenderer.highlightRowAndNext(this)" onmouseout="MemberDirectoryListRenderer.normlightRowAndNext(this)"><td class="memberDirectoryColumn1" width="25%"><div class="memberValue"><h5><a title="Go to member details" onclick="globalUtils.stopEventPropogation(event)" href="https://www.saltspringchamber.com/Sys/PublicProfile/88649626/7006792">Country Grocer</a></h5></div></td><td class="memberDirectoryColumn2" width="25%"><div class="memberValue"><a onclick="window.open('https://www.countrygrocer.com/locations/salt-spring-island/');BonaPage.stopEvent(event);" href="https://www.countrygrocer.com/locations/salt-spring-island/" target="_blank">https://www.countrygrocer.com/locations/salt-spring-island/</a></div></td><td class="memberDirectoryColumn3" width="25%"><div class="memberValue">Food + Drink, Retail</div></td></tr><tr class="normal" onclick="MemberDirectoryListRenderer.redirectToMemberDetails('https://www.saltspringchamber.com/Sys/PublicProfile/88649634/7006792')" onmouseover="MemberDirectoryListRenderer.highlightRowAndNext(this)" onmouseout="MemberDirectoryListRenderer.normlightRowAndNext(this)"><td class="memberDirectoryColumn1" width="25%"><div class="memberValue"><h5><a title="Go to member details" onclick="globalUtils.stopEventPropogation(event)" href="https://www.saltspringchamber.com/Sys/PublicProfile/88649634/7006792">Cudmore Media</a></h5></div><div class="memberValue">Brianna Cudmore</div></td><td class="memberDirectoryColumn2" width="25%"><div class="memberValue"><a onclick="window.open('https://www.cudmoremedia.ca/');BonaPage.stopEvent(event);" href="https://www.cudmoremedia.ca/" target="_blank">https://www.cudmoremedia.ca/</a></div></td><td class="memberDirectoryColumn3" width="25%"><div class="memberValue">Business Services, Media + Marketing</div></td></tr><tr class="normal" onclick="MemberDirectoryListRenderer.redirectToMemberDetails('https://www.saltspringchamber.com/Sys/PublicProfile/88649549/7006792')" onmouseover="MemberDirectoryListRenderer.highlightRowAndNext(this)" onmouseout="MemberDirectoryListRenderer.normlightRowAndNext(this)"><td class="memberDirectoryColumn1" width="25%"><div class="memberValue"><h5><a title="Go to member details" onclick="globalUtils.stopEventPropogation(event)" href="https://www.saltspringchamber.com/Sys/PublicProfile/88649549/7006792">Cusheon Lake Resort</a></h5></div></td><td class="memberDirectoryColumn2" width="25%"><div class="memberValue"><a onclick="window.open('https://www.cusheonlake.com/');BonaPage.stopEvent(event);" href="https://www.cusheonlake.com/" target="_blank">https://www.cusheonlake.com/</a></div></td><td class="memberDirectoryColumn3" width="25%"><div class="memberValue">Accommodation</div></td></tr><tr class="normal" onclick="MemberDirectoryListRenderer.redirectToMemberDetails('https://www.saltspringchamber.com/Sys/PublicProfile/88649657/7006792')" onmouseover="MemberDirectoryListRenderer.highlightRowAndNext(this)" onmouseout="MemberDirectoryListRenderer.normlightRowAndNext(this)"><td class="memberDirectoryColumn1" width="25%"><div class="memberValue"><h5><a title="Go to member details" onclick="globalUtils.stopEventPropogation(event)" href="https://www.saltspringchamber.com/Sys/PublicProfile/88649657/7006792">Daffodil Cove Cottage</a></h5></div></td><td class="memberDirectoryColumn2" width="25%"><div class="memberValue"><a onclick="window.open('https://daffodilcovecottage.com/');BonaPage.stopEvent(event);" href="https://daffodilcovecottage.com/" target="_blank">https://daffodilcovecottage.com/</a></div></td><td class="memberDirectoryColumn3" width="25%"><div class="memberValue">Accommodation</div></td></tr><tr class="normal" onclick="MemberDirectoryListRenderer.redirectToMemberDetails('https://www.saltspringchamber.com/Sys/PublicProfile/88649681/7006792')" onmouseover="MemberDirectoryListRenderer.highlightRowAndNext(this)" onmouseout="MemberDirectoryListRenderer.normlightRowAndNext(this)"><td class="memberDirectoryColumn1" width="25%"><div class="memberValue"><h5><a title="Go to member details" onclick="globalUtils.stopEventPropogation(event)" href="https://www.saltspringchamber.com/Sys/PublicProfile/88649681/7006792">Dennis Maguire Architect Inc</a></h5></div><div class="memberValue">Dennis Maguire</div></td><td class="memberDirectoryColumn2" width="25%"></td><td class="memberDirectoryColumn3" width="25%"><div class="memberValue">Construction + Trades, Home + Garden</div></td></tr><tr class="normal" onclick="MemberDirectoryListRenderer.redirectToMemberDetails('https://www.saltspringchamber.com/Sys/PublicProfile/88649621/7006792')" onmouseover="MemberDirectoryListRenderer.highlightRowAndNext(this)" onmouseout="MemberDirectoryListRenderer.normlightRowAndNext(this)"><td class="memberDirectoryColumn1" width="25%"><div class="memberValue"><h5><a title="Go to member details" onclick="globalUtils.stopEventPropogation(event)" href="https://www.saltspringchamber.com/Sys/PublicProfile/88649621/7006792">DNS Farm</a></h5></div></td><td class="memberDirectoryColumn2" width="25%"><div class="memberValue"><a onclick="window.open('https://www.dnsfarmsaltspring.com/');BonaPage.stopEvent(event);" href="https://www.dnsfarmsaltspring.com/" target="_blank">https://www.dnsfarmsaltspring.com/</a></div></td><td class="memberDirectoryColumn3" width="25%"><div class="memberValue">Agriculture</div></td></tr><tr class="normal" onclick="MemberDirectoryListRenderer.redirectToMemberDetails('https://www.saltspringchamber.com/Sys/PublicProfile/88649584/7006792')" onmouseover="MemberDirectoryListRenderer.highlightRowAndNext(this)" onmouseout="MemberDirectoryListRenderer.normlightRowAndNext(this)"><td class="memberDirectoryColumn1" width="25%"><div class="memberValue"><h5><a title="Go to member details" onclick="globalUtils.stopEventPropogation(event)" href="https://www.saltspringchamber.com/Sys/PublicProfile/88649584/7006792">Dorothy Price Yoga/Santosha Yoga Retreats</a></h5></div><div class="memberValue">Dorothy Price</div></td><td class="memberDirectoryColumn2" width="25%"></td><td class="memberDirectoryColumn3" width="25%"><div class="memberValue">Health + Wellness</div></td></tr><tr class="normal" onclick="MemberDirectoryListRenderer.redirectToMemberDetails('https://www.saltspringchamber.com/Sys/PublicProfile/88649613/7006792')" onmouseover="MemberDirectoryListRenderer.highlightRowAndNext(this)" onmouseout="MemberDirectoryListRenderer.normlightRowAndNext(this)"><td class="memberDirectoryColumn1" width="25%"><div class="memberValue"><h5><a title="Go to member details" onclick="globalUtils.stopEventPropogation(event)" href="https://www.saltspringchamber.com/Sys/PublicProfile/88649613/7006792">Dragonfly Art Supplies</a></h5></div></td><td class="memberDirectoryColumn2" width="25%"><div class="memberValue"><a onclick="window.open('https://dragonflyartsupplies.com/');BonaPage.stopEvent(event);" href="https://dragonflyartsupplies.com/" target="_blank">https://dragonflyartsupplies.com/</a></div></td><td class="memberDirectoryColumn3" width="25%"><div class="memberValue">Arts + Culture, Retail</div></td></tr><tr class="normal" onclick="MemberDirectoryListRenderer.redirectToMemberDetails('https://www.saltspringchamber.com/Sys/PublicProfile/88649670/7006792')" onmouseover="MemberDirectoryListRenderer.highlightRowAndNext(this)" onmouseout="MemberDirectoryListRenderer.normlightRowAndNext(this)"><td class="memberDirectoryColumn1" width="25%"><div class="memberValue"><h5><a title="Go to member details" onclick="globalUtils.stopEventPropogation(event)" href="https://www.saltspringchamber.com/Sys/PublicProfile/88649670/7006792">Duck Creek Farm</a></h5></div></td><td class="memberDirectoryColumn2" width="25%"><div class="memberValue"><a onclick="window.open('https://www.duckcreek.ca/');BonaPage.stopEvent(event);" href="https://www.duckcreek.ca/" target="_blank">https://www.duckcreek.ca/</a></div></td><td class="memberDirectoryColumn3" width="25%"><div class="memberValue">Agriculture</div></td></tr><tr class="normal" onclick="MemberDirectoryListRenderer.redirectToMemberDetails('https://www.saltspringchamber.com/Sys/PublicProfile/88649620/7006792')" onmouseover="MemberDirectoryListRenderer.highlightRowAndNext(this)" onmouseout="MemberDirectoryListRenderer.normlightRowAndNext(this)"><td class="memberDirectoryColumn1" width="25%"><div class="memberValue"><h5><a title="Go to member details" onclick="globalUtils.stopEventPropogation(event)" href="https://www.saltspringchamber.com/Sys/PublicProfile/88649620/7006792">Ella VanGaya</a></h5></div><div class="memberValue">Ella VanGaya</div></td><td class="memberDirectoryColumn2" width="25%"></td><td class="memberDirectoryColumn3" width="25%"><div class="memberValue">Entrepreneur</div></td></tr><tr class="normal" onclick="MemberDirectoryListRenderer.redirectToMemberDetails('https://www.saltspringchamber.com/Sys/PublicProfile/88649624/7006792')" onmouseover="MemberDirectoryListRenderer.highlightRowAndNext(this)" onmouseout="MemberDirectoryListRenderer.normlightRowAndNext(this)"><td class="memberDirectoryColumn1" width="25%"><div class="memberValue"><h5><a title="Go to member details" onclick="globalUtils.stopEventPropogation(event)" href="https://www.saltspringchamber.com/Sys/PublicProfile/88649624/7006792">Fiona Walls Personal Real Estate Corporation</a></h5></div><div class="memberValue">Fiona Walls</div></td><td class="memberDirectoryColumn2" width="25%"><div class="memberValue"><a onclick="window.open('https://fionawalls.com/');BonaPage.stopEvent(event);" href="https://fionawalls.com/" target="_blank">https://fionawalls.com/</a></div></td><td class="memberDirectoryColumn3" width="25%"><div class="memberValue">Home + Garden, Real Estate</div></td></tr><tr class="normal" onclick="MemberDirectoryListRenderer.redirectToMemberDetails('https://www.saltspringchamber.com/Sys/PublicProfile/88649550/7006792')" onmouseover="MemberDirectoryListRenderer.highlightRowAndNext(this)" onmouseout="MemberDirectoryListRenderer.normlightRowAndNext(this)"><td class="memberDirectoryColumn1" width="25%"><div class="memberValue"><h5><a title="Go to member details" onclick="globalUtils.stopEventPropogation(event)" href="https://www.saltspringchamber.com/Sys/PublicProfile/88649550/7006792">Fishery and Chips</a></h5></div></td><td class="memberDirectoryColumn2" width="25%"><div class="memberValue"><a onclick="window.open('https://www.saltspringgroup.com/fishery-chips');BonaPage.stopEvent(event);" href="https://www.saltspringgroup.com/fishery-chips" target="_blank">https://www.saltspringgroup.com/fishery-chips</a></div></td><td class="memberDirectoryColumn3" width="25%"><div class="memberValue">Food + Drink</div></td></tr><tr class="normal" onclick="MemberDirectoryListRenderer.redirectToMemberDetails('https://www.saltspringchamber.com/Sys/PublicProfile/88649673/7006792')" onmouseover="MemberDirectoryListRenderer.highlightRowAndNext(this)" onmouseout="MemberDirectoryListRenderer.normlightRowAndNext(this)"><td class="memberDirectoryColumn1" width="25%"><div class="memberValue"><h5><a title="Go to member details" onclick="globalUtils.stopEventPropogation(event)" href="https://www.saltspringchamber.com/Sys/PublicProfile/88649673/7006792">Foxes Board Game Shop</a></h5></div><div class="memberValue">Bryan Dubien</div></td><td class="memberDirectoryColumn2" width="25%"><div class="memberValue"><a onclick="window.open('https://www.facebook.com/foxesboardgameshop/');BonaPage.stopEvent(event);" href="https://www.facebook.com/foxesboardgameshop/" target="_blank">https://www.facebook.com/foxesboardgameshop/</a></div></td><td class="memberDirectoryColumn3" width="25%"><div class="memberValue">Arts + Culture, Retail</div></td></tr><tr class="normal" onclick="MemberDirectoryListRenderer.redirectToMemberDetails('https://www.saltspringchamber.com/Sys/PublicProfile/88649637/7006792')" onmouseover="MemberDirectoryListRenderer.highlightRowAndNext(this)" onmouseout="MemberDirectoryListRenderer.normlightRowAndNext(this)"><td class="memberDirectoryColumn1" width="25%"><div class="memberValue"><h5><a title="Go to member details" onclick="globalUtils.stopEventPropogation(event)" href="https://www.saltspringchamber.com/Sys/PublicProfile/88649637/7006792">Foxglove Farm</a></h5></div></td><td class="memberDirectoryColumn2" width="25%"><div class="memberValue"><a onclick="window.open('https://foxglovefarmbc.com/');BonaPage.stopEvent(event);" href="https://foxglovefarmbc.com/" target="_blank">https://foxglovefarmbc.com/</a></div></td><td class="memberDirectoryColumn3" width="25%"><div class="memberValue">Accommodation, Agriculture</div></td></tr><tr class="normal" onclick="MemberDirectoryListRenderer.redirectToMemberDetails('https://www.saltspringchamber.com/Sys/PublicProfile/88649601/7006792')" onmouseover="MemberDirectoryListRenderer.highlightRowAndNext(this)" onmouseout="MemberDirectoryListRenderer.normlightRowAndNext(this)"><td class="memberDirectoryColumn1" width="25%"><div class="memberValue"><h5><a title="Go to member details" onclick="globalUtils.stopEventPropogation(event)" href="https://www.saltspringchamber.com/Sys/PublicProfile/88649601/7006792">Francis Bread</a></h5></div></td><td class="memberDirectoryColumn2" width="25%"><div class="memberValue"><a onclick="window.open('https://francisbread.com/');BonaPage.stopEvent(event);" href="https://francisbread.com/" target="_blank">https://francisbread.com/</a></div></td><td class="memberDirectoryColumn3" width="25%"><div class="memberValue">Food + Drink</div></td></tr><tr class="normal" onclick="MemberDirectoryListRenderer.redirectToMemberDetails('https://www.saltspringchamber.com/Sys/PublicProfile/93757181/7006792')" onmouseover="MemberDirectoryListRenderer.highlightRowAndNext(this)" onmouseout="MemberDirectoryListRenderer.normlightRowAndNext(this)"><td class="memberDirectoryColumn1" width="25%"><div class="memberValue"><h5><a title="Go to member details" onclick="globalUtils.stopEventPropogation(event)" href="https://www.saltspringchamber.com/Sys/PublicProfile/93757181/7006792">Garden Faire Nursery and Campground</a></h5></div><div class="memberValue">Shirley Talor</div></td><td class="memberDirectoryColumn2" width="25%"><div class="memberValue"><a onclick="window.open('https://gardenfaire.ca/');BonaPage.stopEvent(event);" href="https://gardenfaire.ca/" target="_blank">https://gardenfaire.ca/</a></div></td><td class="memberDirectoryColumn3" width="25%"><div class="memberValue">Accommodation, Retail</div></td></tr><tr class="normal" onclick="MemberDirectoryListRenderer.redirectToMemberDetails('https://www.saltspringchamber.com/Sys/PublicProfile/88649606/7006792')" onmouseover="MemberDirectoryListRenderer.highlightRowAndNext(this)" onmouseout="MemberDirectoryListRenderer.normlightRowAndNext(this)"><td class="memberDirectoryColumn1" width="25%"><div class="memberValue"><h5><a title="Go to member details" onclick="globalUtils.stopEventPropogation(event)" href="https://www.saltspringchamber.com/Sys/PublicProfile/88649606/7006792">Garry Oaks Estate Winery</a></h5></div></td><td class="memberDirectoryColumn2" width="25%"><div class="memberValue"><a onclick="window.open('https://garryoakswinery.com/');BonaPage.stopEvent(event);" href="https://garryoakswinery.com/" target="_blank">https://garryoakswinery.com/</a></div></td><td class="memberDirectoryColumn3" width="25%"><div class="memberValue">Food + Drink</div></td></tr><tr class="normal" onclick="MemberDirectoryListRenderer.redirectToMemberDetails('https://www.saltspringchamber.com/Sys/PublicProfile/88649514/7006792')" onmouseover="MemberDirectoryListRenderer.highlightRowAndNext(this)" onmouseout="MemberDirectoryListRenderer.normlightRowAndNext(this)"><td class="memberDirectoryColumn1" width="25%"><div class="memberValue"><h5><a title="Go to member details" onclick="globalUtils.stopEventPropogation(event)" href="https://www.saltspringchamber.com/Sys/PublicProfile/88649514/7006792">Harbour Air</a></h5></div></td><td class="memberDirectoryColumn2" width="25%"><div class="memberValue"><a onclick="window.open('https://harbourair.com/');BonaPage.stopEvent(event);" href="https://harbourair.com/" target="_blank">https://harbourair.com/</a></div></td><td class="memberDirectoryColumn3" width="25%"><div class="memberValue">Transportation</div></td></tr><tr class="normal" onclick="MemberDirectoryListRenderer.redirectToMemberDetails('https://www.saltspringchamber.com/Sys/PublicProfile/88649618/7006792')" onmouseover="MemberDirectoryListRenderer.highlightRowAndNext(this)" onmouseout="MemberDirectoryListRenderer.normlightRowAndNext(this)"><td class="memberDirectoryColumn1" width="25%"><div class="memberValue"><h5><a title="Go to member details" onclick="globalUtils.stopEventPropogation(event)" href="https://www.saltspringchamber.com/Sys/PublicProfile/88649618/7006792">Harbour Authority of Salt Spring Island</a></h5></div></td><td class="memberDirectoryColumn2" width="25%"><div class="memberValue"><a onclick="window.open('https://saltspringharbours.com/');BonaPage.stopEvent(event);" href="https://saltspringharbours.com/" target="_blank">https://saltspringharbours.com/</a></div></td><td class="memberDirectoryColumn3" width="25%"><div class="memberValue">Recreation, Transportation</div></td></tr><tr class="normal" onclick="MemberDirectoryListRenderer.redirectToMemberDetails('https://www.saltspringchamber.com/Sys/PublicProfile/88649647/7006792')" onmouseover="MemberDirectoryListRenderer.highlightRowAndNext(this)" onmouseout="MemberDirectoryListRenderer.normlightRowAndNext(this)"><td class="memberDirectoryColumn1" width="25%"><div class="memberValue"><h5><a title="Go to member details" onclick="globalUtils.stopEventPropogation(event)" href="https://www.saltspringchamber.com/Sys/PublicProfile/88649647/7006792">Harbour House Hotel</a></h5></div><div class="memberValue">Kelly Armstrong</div></td><td class="memberDirectoryColumn2" width="25%"><div class="memberValue"><a onclick="window.open('https://www.harbourhousessi.com/');BonaPage.stopEvent(event);" href="https://www.harbourhousessi.com/" target="_blank">https://www.harbourhousessi.com/</a></div></td><td class="memberDirectoryColumn3" width="25%"><div class="memberValue">Accommodation, Events + Hospitality, Food + Drink</div></td></tr><tr class="normal" onclick="MemberDirectoryListRenderer.redirectToMemberDetails('https://www.saltspringchamber.com/Sys/PublicProfile/88649687/7006792')" onmouseover="MemberDirectoryListRenderer.highlightRowAndNext(this)" onmouseout="MemberDirectoryListRenderer.normlightRowAndNext(this)"><td class="memberDirectoryColumn1" width="25%"><div class="memberValue"><h5><a title="Go to member details" onclick="globalUtils.stopEventPropogation(event)" href="https://www.saltspringchamber.com/Sys/PublicProfile/88649687/7006792">Harvest Moon Cannabis</a></h5></div></td><td class="memberDirectoryColumn2" width="25%"><div class="memberValue"><a onclick="window.open('https://www.harvestmooncannabis.ca/');BonaPage.stopEvent(event);" href="https://www.harvestmooncannabis.ca/" target="_blank">https://www.harvestmooncannabis.ca/</a></div></td><td class="memberDirectoryColumn3" width="25%"><div class="memberValue">Food + Drink, Recreation</div></td></tr><tr class="normal" onclick="MemberDirectoryListRenderer.redirectToMemberDetails('https://www.saltspringchamber.com/Sys/PublicProfile/88649597/7006792')" onmouseover="MemberDirectoryListRenderer.highlightRowAndNext(this)" onmouseout="MemberDirectoryListRenderer.normlightRowAndNext(this)"><td class="memberDirectoryColumn1" width="25%"><div class="memberValue"><h5><a title="Go to member details" onclick="globalUtils.stopEventPropogation(event)" href="https://www.saltspringchamber.com/Sys/PublicProfile/88649597/7006792">Hastings House Country House Hotel</a></h5></div></td><td class="memberDirectoryColumn2" width="25%"><div class="memberValue"><a onclick="window.open('https://www.hastingshouse.com/');BonaPage.stopEvent(event);" href="https://www.hastingshouse.com/" target="_blank">https://www.hastingshouse.com/</a></div></td><td class="memberDirectoryColumn3" width="25%"><div class="memberValue">Accommodation, Events + Hospitality</div></td></tr><tr class="normal" onclick="MemberDirectoryListRenderer.redirectToMemberDetails('https://www.saltspringchamber.com/Sys/PublicProfile/88649607/7006792')" onmouseover="MemberDirectoryListRenderer.highlightRowAndNext(this)" onmouseout="MemberDirectoryListRenderer.normlightRowAndNext(this)"><td class="memberDirectoryColumn1" width="25%"><div class="memberValue"><h5><a title="Go to member details" onclick="globalUtils.stopEventPropogation(event)" href="https://www.saltspringchamber.com/Sys/PublicProfile/88649607/7006792">Hummingbird Accounting Ltd.</a></h5></div></td><td class="memberDirectoryColumn2" width="25%"></td><td class="memberDirectoryColumn3" width="25%"><div class="memberValue">Business Services, Professional Services</div></td></tr><tr class="normal" onclick="MemberDirectoryListRenderer.redirectToMemberDetails('https://www.saltspringchamber.com/Sys/PublicProfile/88649627/7006792')" onmouseover="MemberDirectoryListRenderer.highlightRowAndNext(this)" onmouseout="MemberDirectoryListRenderer.normlightRowAndNext(this)"><td class="memberDirectoryColumn1" width="25%"><div class="memberValue"><h5><a title="Go to member details" onclick="globalUtils.stopEventPropogation(event)" href="https://www.saltspringchamber.com/Sys/PublicProfile/88649627/7006792">Island Return-It Salt Spring</a></h5></div><div class="memberValue">Sophy Roberge</div></td><td class="memberDirectoryColumn2" width="25%"><div class="memberValue"><a onclick="window.open('https://islandreturnit.com/salt-spring/');BonaPage.stopEvent(event);" href="https://islandreturnit.com/salt-spring/" target="_blank">https://islandreturnit.com/salt-spring/</a></div></td><td class="memberDirectoryColumn3" width="25%"><div class="memberValue">Environmental + Sustainability, Retail</div></td></tr><tr class="normal" onclick="MemberDirectoryListRenderer.redirectToMemberDetails('https://www.saltspringchamber.com/Sys/PublicProfile/88649583/7006792')" onmouseover="MemberDirectoryListRenderer.highlightRowAndNext(this)" onmouseout="MemberDirectoryListRenderer.normlightRowAndNext(this)"><td class="memberDirectoryColumn1" width="25%"><div class="memberValue"><h5><a title="Go to member details" onclick="globalUtils.stopEventPropogation(event)" href="https://www.saltspringchamber.com/Sys/PublicProfile/88649583/7006792">Island Village Builders</a></h5></div></td><td class="memberDirectoryColumn2" width="25%"><div class="memberValue"><a onclick="window.open('https://islandvillagebuilders.ca/');BonaPage.stopEvent(event);" href="https://islandvillagebuilders.ca/" target="_blank">https://islandvillagebuilders.ca/</a></div></td><td class="memberDirectoryColumn3" width="25%"><div class="memberValue">Construction + Trades, Home + Garden</div></td></tr><tr class="normal" onclick="MemberDirectoryListRenderer.redirectToMemberDetails('https://www.saltspringchamber.com/Sys/PublicProfile/88649661/7006792')" onmouseover="MemberDirectoryListRenderer.highlightRowAndNext(this)" onmouseout="MemberDirectoryListRenderer.normlightRowAndNext(this)"><td class="memberDirectoryColumn1" width="25%"><div class="memberValue"><h5><a title="Go to member details" onclick="globalUtils.stopEventPropogation(event)" href="https://www.saltspringchamber.com/Sys/PublicProfile/88649661/7006792">Islandtime Holdings</a></h5></div><div class="memberValue">Todd Cameron Williams</div></td><td class="memberDirectoryColumn2" width="25%"></td><td class="memberDirectoryColumn3" width="25%"></td></tr><tr class="normal" onclick="MemberDirectoryListRenderer.redirectToMemberDetails('https://www.saltspringchamber.com/Sys/PublicProfile/88649630/7006792')" onmouseover="MemberDirectoryListRenderer.highlightRowAndNext(this)" onmouseout="MemberDirectoryListRenderer.normlightRowAndNext(this)"><td class="memberDirectoryColumn1" width="25%"><div class="memberValue"><h5><a title="Go to member details" onclick="globalUtils.stopEventPropogation(event)" href="https://www.saltspringchamber.com/Sys/PublicProfile/88649630/7006792">Jill Louise Campbell Art Gallery</a></h5></div></td><td class="memberDirectoryColumn2" width="25%"><div class="memberValue"><a onclick="window.open('https://www.jilllouisecampbell.com/');BonaPage.stopEvent(event);" href="https://www.jilllouisecampbell.com/" target="_blank">https://www.jilllouisecampbell.com/</a></div></td><td class="memberDirectoryColumn3" width="25%"><div class="memberValue">Arts + Culture</div></td></tr><tr class="normal" onclick="MemberDirectoryListRenderer.redirectToMemberDetails('https://www.saltspringchamber.com/Sys/PublicProfile/88649688/7006792')" onmouseover="MemberDirectoryListRenderer.highlightRowAndNext(this)" onmouseout="MemberDirectoryListRenderer.normlightRowAndNext(this)"><td class="memberDirectoryColumn1" width="25%"><div class="memberValue"><h5><a title="Go to member details" onclick="globalUtils.stopEventPropogation(event)" href="https://www.saltspringchamber.com/Sys/PublicProfile/88649688/7006792">Kutatás Wines</a></h5></div></td><td class="memberDirectoryColumn2" width="25%"><div class="memberValue"><a onclick="window.open('https://kutataswines.com/');BonaPage.stopEvent(event);" href="https://kutataswines.com/" target="_blank">https://kutataswines.com/</a></div></td><td class="memberDirectoryColumn3" width="25%"><div class="memberValue">Food + Drink</div></td></tr><tr class="normal" onclick="MemberDirectoryListRenderer.redirectToMemberDetails('https://www.saltspringchamber.com/Sys/PublicProfile/90783282/7006792')" onmouseover="MemberDirectoryListRenderer.highlightRowAndNext(this)" onmouseout="MemberDirectoryListRenderer.normlightRowAndNext(this)"><td class="memberDirectoryColumn1" width="25%"><div class="memberValue"><h5><a title="Go to member details" onclick="globalUtils.stopEventPropogation(event)" href="https://www.saltspringchamber.com/Sys/PublicProfile/90783282/7006792">Lady Minto Hospital Foundation</a></h5></div></td><td class="memberDirectoryColumn2" width="25%"><div class="memberValue"><a onclick="window.open('https://ladymintofoundation.com/');BonaPage.stopEvent(event);" href="https://ladymintofoundation.com/" target="_blank">https://ladymintofoundation.com/</a></div></td><td class="memberDirectoryColumn3" width="25%"><div class="memberValue">Community + Government, Health + Wellness</div></td></tr><tr class="normal" onclick="MemberDirectoryListRenderer.redirectToMemberDetails('https://www.saltspringchamber.com/Sys/PublicProfile/88649682/7006792')" onmouseover="MemberDirectoryListRenderer.highlightRowAndNext(this)" onmouseout="MemberDirectoryListRenderer.normlightRowAndNext(this)"><td class="memberDirectoryColumn1" width="25%"><div class="memberValue"><h5><a title="Go to member details" onclick="globalUtils.stopEventPropogation(event)" href="https://www.saltspringchamber.com/Sys/PublicProfile/88649682/7006792">Lavender and Black</a></h5></div></td><td class="memberDirectoryColumn2" width="25%"><div class="memberValue"><a onclick="window.open('https://www.lavenderandblack.ca/');BonaPage.stopEvent(event);" href="https://www.lavenderandblack.ca/" target="_blank">https://www.lavenderandblack.ca/</a></div></td><td class="memberDirectoryColumn3" width="25%"><div class="memberValue">Agriculture, Health + Wellness, Recreation</div></td></tr></tbody></table></div>
+        
+      <div class="clearEndContainer"></div></div></div></div></div></div></div></div></div></div></div></div><div class="cornersContainer"><div class="bottomCorners"><!--[if gt IE 6]><!--><div class="r1"><div class="r2"><div class="r3"><div class="r4"><div class="r5"></div></div></div></div></div><!--<![endif]--><div class="c5"></div><div class="c4"></div><div class="c3"></div><div class="c2"></div><div class="c1"></div></div></div></div>
+    
+    <span id="idPagingData2" style="display: inline;">Show:<select onchange="MemberDirectoryListRenderer.pagerChanged(this);"><option value="0">1-50</option><option value="50">51-100</option><option value="100">101-150</option><option value="150">151-166</option></select></span>
+    <input type="hidden" name="FunctionalBlock1$ctl00$ctl00$SelectedMembers" id="FunctionalBlock1_ctl00_ctl00_SelectedMembers">
+  
+
+
+</div>
+
+  <noscript>
+    <div id="FunctionalBlock1_ctl00_noJsMessage_idConfirmWindow" class="commonMessageBox">
+	<div id="FunctionalBlock1_ctl00_noJsMessage_idConfirmWindowStyle" class="confirmWindowWarning messageBox">
+		<div class="cww">
+			<div class="cww1"></div>
+			<div class="cww2"></div>
+			<div class="cww3"></div>
+			<div class="cww4"></div>
+		</div>
+		<div class="cww-inner">
+			<div class="cww-co">
+					<div id="FunctionalBlock1_ctl00_noJsMessage_messageHeader" class="header">JavaScript is not supported</div>
+
+          <div id="FunctionalBlock1_ctl00_noJsMessage_messageText" class="text">JavaScript required. Your web browser either does not support JavaScript, or it is switched off.</div>
+			</div>
+		</div>
+		<div class="cww">
+			<div class="cww4"></div>
+			<div class="cww3"></div>
+			<div class="cww2"></div>
+			<div class="cww1"></div>
+		</div>
+	</div>
+</div>
+
+  </noscript>
+
+  
+<div class="aspNetHidden">
+
+	<input type="hidden" name="__VIEWSTATEGENERATOR" id="__VIEWSTATEGENERATOR" value="2AE9EEA8">
+</div>
+
+<script type="text/javascript">
+//<![CDATA[
+document.getElementById('FunctionalBlock1_ctl00_jsSupportedContainer').style.display = 'block';MemberDirectoryListRenderer.labels.serverLoadingStarted = '<img src="/Admin/html_res/images/asyncloadprogress.gif">Loading...';MemberDirectoryListRenderer.labels.serverLoadingError = 'Loading error&nbsp;';MemberDirectoryListRenderer.labels.serverLoadingErrorAlert = 'Server error while loading data.<br>Please contact us at support@wildapricot.com and let us know what led to this error.<br><br>Sorry for any inconvenience.';MemberDirectoryListRenderer.labels.processingServerData = 'Processing data, please wait...';MemberDirectoryListRenderer.labels.processingCachedData = 'Processing cache...';MemberDirectoryListRenderer.labels.searchingKeywords = 'searching...';MemberDirectoryListRenderer.labels.searchingEmpty = 'loading...';MemberDirectoryListRenderer.labels.displayingFound = 'displaying...';MemberDirectoryListRenderer.labels.pagingTemplate = 'Show:{0}';MemberDirectoryListRenderer.labels.noMembersInDatabase = 'No matching records (only opted-in members are included)';MemberDirectoryListRenderer.labels.noMembersFound = 'No members found.';MemberDirectoryListRenderer.labels.detailsUrlTitle = 'Go to member details';MemberDirectoryListRenderer.labels.viewDetails = 'View details';MemberDirectoryListRenderer.labels.headers.name = 'Name';MemberDirectoryListRenderer.labels.headers.organization = 'Organization';MemberDirectoryListRenderer.labels.headers.level = 'Membership';MemberDirectoryListRenderer.selectedMembersFieldId = 'FunctionalBlock1_ctl00_ctl00_SelectedMembers';MemberDirectoryListRenderer.detailsUrlTemplate = 'https://www.saltspringchamber.com/Sys/PublicProfile/';MemberDirectoryListRenderer.searchBoxId = 'FunctionalBlock1_ctl00_ctl00_search';MemberDirectoryListRenderer.outputBlockId = 'FunctionalBlock1_ctl00_ctl00_memberDirectory';MemberDirectoryListRenderer.titleLabelId = '';MemberDirectoryListRenderer.imgTemplateRelativePath = '/Content/Pictures/UserPicture.ashx';MemberDirectoryListRenderer.titleTemplate = 'Member directory ({0})';MemberDirectoryListRenderer.MemberDirectoryListWebServiceUrl_LoadMembers = 'https://www.saltspringchamber.com/Sys/MemberDirectory/LoadMembers';MemberDirectoryListRenderer.VersionData = null;MemberDirectoryListRenderer.FormId = '7006792';MemberDirectoryListRenderer.init();//]]>
+</script>
+</form></div>
+</div></div>
+</div></div>
+	<!-- /content zone -->
+
+<!-- footer zone -->
+		<div class="zonePlace zoneFooter1">
+<div id="idFooterContentHolder" data-componentid="Footer" class="WaPlaceHolder WaPlaceHolderFooter" style=""><div style=""><div id="id_9lhg56L" data-componentid="9lhg56L" class="WaLayoutContainerOnly" style=""><table cellspacing="0" cellpadding="0" class="WaLayoutTable" style=""><tbody><tr data-componentid="9lhg56L_row" class="WaLayoutRow"><td id="id_jTQFqLd" data-componentid="jTQFqLd" class="WaLayoutItem" style="width:100%;"></td></tr></tbody></table> </div></div>
+</div></div>
+		<div class="zonePlace zoneFooter2">
+<div id="id_Footer1" data-componentid="Footer1" class="WaPlaceHolder WaPlaceHolderFooter1" style="background-color:#003A57;"><div style="padding-top:40px;padding-right:20px;padding-bottom:40px;padding-left:20px;"><div id="id_cREoUYu" data-componentid="cREoUYu" class="WaLayoutContainerOnly" style="background-color:transparent;"><table cellspacing="0" cellpadding="0" class="WaLayoutTable" style=""><tbody><tr data-componentid="cREoUYu_row" class="WaLayoutRow"><td id="id_cbIIjiF" data-componentid="cbIIjiF" class="WaLayoutItem" style="width:34%;"><div id="id_LNKGgBc" class="WaLayoutPlaceHolder placeHolderContainer" data-componentid="LNKGgBc" style=""><div style="padding-right:20px;padding-left:20px;"><div id="id_bR77lun" class="WaGadgetFirst WaGadgetContent  gadgetStyle002" style="" data-componentid="bR77lun"><div class="gadgetStyleBody gadgetContentEditableArea" style="padding-top:0px;padding-right:0px;padding-bottom:0px;padding-left:20px;" data-editablearea="0" data-areaheight="auto">
+<p style=""><strong style=""><font style="font-size: 24px;">Salt Spring Info Centre</font></strong></p>
+
+<p style="font-size: 18px;">infocentre@saltspringchamber.com</p>
+
+<p style="font-size: 18px;"><span><u>FALL HOURS:&nbsp;</u></span></p><p style="font-size: 18px;"><strong></strong><strong>SUN - THURS 11am - 2pm</strong></p><p style="font-size: 18px;"><strong>FRI + SAT : 10am - 1pm</strong></p>
+
+<p style=""><span style="background-color: rgb(54, 56, 57);"><font color="#8C8989" face="Open Sans, Arial, Helvetica, sans-serif"></font></span><font style="font-size: 24px;">250-537-5252</font><br><span style="font-size: 18px;">Toll-free: 1-866-216-2936</span><span style="font-size: 18px; background-color: rgb(54, 56, 57);"><font color="#8C8989" face="Open Sans, Arial, Helvetica, sans-serif"></font></span><br></p></div>
+</div><div id="id_W1SiF9B" class="WaGadget WaGadgetCustomHTML  gadgetStyleNone" style="" data-componentid="W1SiF9B"><div class="gadgetStyleBody " style="" data-areaheight="auto">
+<div style="text-align: center; margin: 30px 0;">
+  <a href="https://lp.constantcontactpages.com/sl/Kh9rOHR" target="_blank" style="text-decoration: none;">
+    <button style="
+      padding: 14px 28px;
+      font-size: 18px;
+      background-color: #0072CE;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    " onmouseover="this.style.backgroundColor='#005fa3'" onmouseout="this.style.backgroundColor='#0072CE'">
+      Sign Up For Our Newsletter!
+    </button>
+  </a>
+</div></div>
+</div><div id="id_9zxUhWC" class="WaGadget WaGadgetContent  gadgetStyle002" style="" data-componentid="9zxUhWC"><div class="gadgetStyleBody gadgetContentEditableArea" style="" data-editablearea="0" data-areaheight="auto">
+<p align="left"><a href="/Website-Policies" target="_blank">Policy Centre</a></p></div>
+</div><div id="id_XQkZQP8" class="WaGadget WaGadgetContent  gadgetStyle002" style="" data-componentid="XQkZQP8"><div class="gadgetStyleBody gadgetContentEditableArea" style="" data-editablearea="0" data-areaheight="auto">
+<div align="left">
+  <a href="/Sys/Login" class="stylizedButton buttonStyle001"><strong>MEMBER LOGIN</strong></a>
+</div></div>
+</div><div id="id_lEMJF2E" class="WaGadgetLast WaGadgetLoginForm  gadgetStyleNone" style="" data-componentid="lEMJF2E"><link rel="stylesheet" type="text/css" href="https://kit-pro.fontawesome.com/releases/latest/css/pro.min.css">
+<div class="loginContainer alignLeft">
+  <div class="loginContainerInner">
+    <a id="id_lEMJF2E_loginLink" class="loginLink">Log in</a>
+    <div id="id_lEMJF2E_loginContainer" class="loginPanel">
+      <div class="loginContainerForm oAuthIsfalse">
+        <div class="loginContainerFormInner">
+          <form method="post" action="https://www.saltspringchamber.com/Sys/Login" id="id_lEMJF2E_form" class="generalLoginBox" data-disableinadminmode="false">
+<input type="hidden" name="ReturnUrl" id="id_lEMJF2E_returnUrl" value="">
+            <input type="hidden" name="CurrentUrl" id="id_lEMJF2E_currentUrl" value="/Our-Members">
+            <input type="hidden" name="browserData" id="id_lEMJF2E_browserField" value="WebKit;Exec Command;Client Cookies Enabled;Platform Compatible;Javascript Enabled;">
+            <div class="loginUserName">
+<div class="loginUserNameTextBox">
+		<input name="email" type="text" maxlength="100" placeholder="Email" id="id_lEMJF2E_userName" tabindex="1" class="emailTextBoxControl">
+	</div>
+</div><div class="loginPassword">
+    <div class="loginPasswordTextBox">
+		<div class="password-wrapper">
+			<input name="password" type="password" placeholder="Password" maxlength="50" id="id_lEMJF2E_password" tabindex="2" class="passwordTextBoxControl" autocomplete="off">
+			<i class="fa fa-eye-slash toggle-password" toggle="#id_lEMJF2E_password"></i>
+		</div>
+    </div>
+</div>
+<script>
+  if (!window.__passwordToggleInitialized) {
+    window.__passwordToggleInitialized = true;
+
+    $(document).ready(function () {
+      $('.toggle-password').each(function () {
+        const $icon = $(this);
+        const selector = $icon.attr('toggle');
+        if (!selector) return;
+
+        const $input = selector.startsWith('#') ? $(selector) : $('#' + selector);
+        if (!$input.length) return;
+
+        $icon.on('click', function () {
+          try {
+            const inputEl = $input[0];
+            const currentType = inputEl.getAttribute('type');
+
+            if (currentType === 'password') {
+              inputEl.setAttribute('type', 'text');
+              $icon.removeClass('fa-eye-slash').addClass('fa-eye');
+            } else {
+              inputEl.setAttribute('type', 'password');
+              $icon.removeClass('fa-eye').addClass('fa-eye-slash');
+            }
+          } catch (err) {
+            console.warn('Password toggle error:', err.message);
+          }
+        });
+      });
+    });
+  }
+</script>
+	  
+             
+    <input id="g-recaptcha-invisible_lEMJF2E" name="g-recaptcha-invisible" value="recaptcha" type="hidden"> 
+    <div id="recapcha_placeholder_lEMJF2E" style="display: none;"><div class="grecaptcha-badge" data-style="none" style="width: 256px; height: 60px; position: fixed; visibility: hidden;"><div class="grecaptcha-logo"><iframe title="reCAPTCHA" width="256" height="60" role="presentation" name="a-t12ji3lh0xjk" frameborder="0" scrolling="no" sandbox="allow-forms allow-popups allow-same-origin allow-scripts allow-top-navigation allow-modals allow-popups-to-escape-sandbox allow-storage-access-by-user-activation" src="https://www.google.com/recaptcha/api2/anchor?ar=1&amp;k=6LfmM_UhAAAAAJSHT-BwkAlQgN0mMViOmaK7oEIV&amp;co=aHR0cHM6Ly93d3cuc2FsdHNwcmluZ2NoYW1iZXIuY29tOjQ0Mw..&amp;hl=en&amp;v=7gg7H51Q-naNfhmCP3_R47ho&amp;theme=light&amp;size=invisible&amp;anchor-ms=20000&amp;execute-ms=30000&amp;cb=6y3fzuyl3gwg"></iframe></div><div class="grecaptcha-error"></div><textarea id="g-recaptcha-response-2" name="g-recaptcha-response" class="g-recaptcha-response" style="width: 250px; height: 40px; border: 1px solid rgb(193, 193, 193); margin: 10px 25px; padding: 0px; resize: none; display: none;"></textarea></div><iframe style="display: none;"></iframe></div>
+    <span id="idReCaptchaValidator_lEMJF2E" errormessage="Please verify that you are not a robot" style="display:none" validatortype="method"></span>
+    <script>
+        $("#idReCaptchaValidator_lEMJF2E").on( "wavalidate", function(event, validationResult) {
+            if (grecaptcha.getResponse(widgetId_lEMJF2E).length == 0){
+                grecaptcha.execute(widgetId_lEMJF2E);	
+                validationResult.shouldStopValidation = true;
+                return;
+            }
+
+            validationResult.result = true;
+        });
+  
+            var widgetId_lEMJF2E;
+
+            var onloadCallback_lEMJF2E = function() {
+                // Renders the HTML element with id 'recapcha_placeholder_lEMJF2E' as a reCAPTCHA widget.
+                // The id of the reCAPTCHA widget is assigned to 'widgetId_lEMJF2E'.
+                widgetId_lEMJF2E = grecaptcha.render('recapcha_placeholder_lEMJF2E', {
+                'sitekey' : '6LfmM_UhAAAAAJSHT-BwkAlQgN0mMViOmaK7oEIV',
+                'size': 'invisible',
+                'callback': function(){
+                    document.getElementById('g-recaptcha-invisible_lEMJF2E').form.submit();
+                },
+                'theme' : 'light'
+            });
+        };
+    </script>
+	
+    <script src="https://www.google.com/recaptcha/api.js?onload=onloadCallback_lEMJF2E&amp;render=explicit" async="" defer=""></script>
+
+  
+      <div class="loginActionRememberMe">
+		<input id="id_lEMJF2E_rememberMe" type="checkbox" name="rememberMe" tabindex="3" class="rememberMeCheckboxControl">
+		<label for="id_lEMJF2E_rememberMe">Remember me</label>
+	</div>
+<div class="loginAction">
+	<input type="submit" name="ctl03$ctl02$loginViewControl$loginControl$Login" value="Log in" id="id_lEMJF2E_loginAction" onclick="if (!WA.isWidgetMode &amp;&amp; !browserInfo.clientCookiesEnabled()) {alert('Warning: browser cookies disabled. Please enable them to use this website.'); return false;}" tabindex="4" class="loginButton loginButtonControl">
+</div><div class="loginPasswordForgot">
+		<a rel="nofollow" href="https://www.saltspringchamber.com/Sys/ResetPasswordRequest">Forgot password</a>
+	</div>
+</form></div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+  jq$(function() {
+    var gadgetId = jq$('#id_lEMJF2E'),
+        containerBox = gadgetId.find('.loginPanel'),
+        loginLink = gadgetId.find('.loginLink'),
+        transitionTime = 300;
+
+    containerBox.isOpening = false;
+
+    loginLink.on('click', function(e) {
+      if (containerBox.css("visibility") == 'visible') {
+        loginLink.removeClass('hover');
+        containerBox.animate({ 'opacity': '0' }, transitionTime, function() {
+          containerBox.css('visibility','hidden');
+          containerBox.css('display','none');
+        });
+      } else {
+        loginLink.addClass('hover');
+        containerBox.isOpening = true;
+        containerBox.css('display','block');
+        containerBox.css('visibility','visible');
+        containerBox.animate({ 'opacity': '1' }, transitionTime, function() {
+          containerBox.isOpening = false;
+        });
+      }
+    });
+
+    containerBox.on('click', function(e) { e.stopPropagation(); });
+
+    jq$('body').on('click', function() {
+      if (containerBox.css("visibility") == 'visible' && !containerBox.isOpening) {
+        loginLink.removeClass('hover');
+        containerBox.animate({ 'opacity': '0' }, transitionTime, function() {
+          containerBox.css('visibility','hidden');
+          containerBox.css('display','none');
+        });
+      }
+    });
+
+    var browserField = document.getElementById('id_lEMJF2E' + '_browserField');
+
+    if (browserField) {
+      browserField.value = browserInfo.getBrowserCapabilitiesData();
+    }
+
+    jq$('#id_lEMJF2E' + '_form').FormValidate();
+    jq$('.WaGadgetLoginForm form').attr('data-disableInAdminMode', 'false');
+  });
+</script>
+</div></div></div></td><td style="" data-componentid="cbIIjiF_separator" class="WaLayoutSeparator"><div style="width: inherit;"></div></td><td id="id_dWZfovD" data-componentid="dWZfovD" class="WaLayoutItem" style="width:34%;"><div id="id_EVclxth" class="WaLayoutPlaceHolder placeHolderContainer" data-componentid="EVclxth" style=""><div style="padding-right:20px;padding-left:20px;"><div id="id_6dyEO8n" class="WaGadgetFirst WaGadgetContent  gadgetStyle002" style="" data-componentid="6dyEO8n"><div class="gadgetStyleBody gadgetContentEditableArea" style="padding-top:0px;padding-right:0px;padding-bottom:0px;padding-left:20px;" data-editablearea="0" data-areaheight="auto">
+<p style=""><strong style=""><font style="font-size: 24px;">Salt Spring Chamber Office</font></strong></p><p style="font-size: 18px;">chamber@saltspringchamber.com</p><p style="font-size: 18px;">Our Office is in remote mode + only&nbsp;<br>available by appointment</p><p style="font-size: 18px;"><strong>Questions? See who to contact <a href="/about" target="_blank">HERE&nbsp;</a></strong></p></div>
+</div><div id="id_B37YOel" class="WaGadget WaGadgetContent  gadgetStyle002" style="" data-componentid="B37YOel"><div class="gadgetStyleBody gadgetContentEditableArea" style="" data-editablearea="0" data-areaheight="auto">
+<img src="data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==" class="WaContentDivider WaContentDivider dividerStyle002" data-wacomponenttype="ContentDivider">We are grateful and humbled to do business on the unceded Coast Salish territories of the Hul’qumi’num and SENĆOŦEN speaking peoples.</div>
+</div><div id="id_CnmzJbx" class="WaGadget WaGadgetSocialProfile  gadgetThemeStyle" style="" data-componentid="CnmzJbx"><div class="gadgetStyleBody " style="" data-areaheight="auto">
+<ul class="orientationHorizontal  alignLeft">
+
+
+<li>
+				<a href="https://www.facebook.com/saltspringchamber" title="Facebook" class="Facebook" target="_blank"></a>
+			</li>
+<li>
+				<a href="https://x.com/wildapricot" title="X" class="X" target="_blank"></a>
+			</li>
+<li>
+				<a href="https://www.instagram.com/saltspringchamber/" title="Instagram" class="Instagram" target="_blank"></a>
+			</li>
+		
+</ul>
+
+</div>
+</div><div id="id_dp7HbSc" class="WaGadgetLast WaGadgetContent  gadgetStyleNone" style="" data-componentid="dp7HbSc"><div class="gadgetStyleBody gadgetContentEditableArea" style="" data-editablearea="0" data-areaheight="auto">
+<script type="text/javascript">try { 
+
+ var _ctct_m = "585ad85d6e9e15174274478b90d18c24"; 
+
+ } catch(e) {}</script></div>
+</div></div></div></td><td style="" data-componentid="dWZfovD_separator" class="WaLayoutSeparator"><div style="width: inherit;"></div></td><td id="id_qx5KZZu" data-componentid="qx5KZZu" class="WaLayoutItem" style="width:31%;"><div id="id_JeejZIl" class="WaLayoutPlaceHolder placeHolderContainer" data-componentid="JeejZIl" style=""><div style="padding-right:20px;padding-left:20px;"><div id="id_SqQeep8" class="WaGadgetFirst WaGadgetContent  gadgetStyle002" style="" data-componentid="SqQeep8"><div class="gadgetStyleBody gadgetContentEditableArea" style="padding-top:0px;padding-right:0px;padding-bottom:0px;padding-left:0px;" data-editablearea="0" data-areaheight="auto">
+<p style=""><font style="font-size: 24px;">121 Lower Ganges Rd<br>Salt Spring Island<br>V8K 2T1</font></p></div>
+</div><div id="id_UzOfDPI" class="WaGadget WaGadgetContent  gadgetStyleNone" style="" data-componentid="UzOfDPI"><div class="gadgetStyleBody gadgetContentEditableArea" style="padding-top:20px;" data-editablearea="0" data-areaheight="auto">
+<p><font color="#f6fafd"><u><strong>Big Thanks to Our Sponsors!</strong></u></font></p></div>
+</div><div id="id_F8ciTEa" class="WaGadget WaGadgetContent  gadgetStyleNone" style="" data-componentid="F8ciTEa"><div class="gadgetStyleBody gadgetContentEditableArea" style="" data-editablearea="0" data-areaheight="auto">
+<p><img src="/resources/Pictures/Island-Savings_ADO-Colour-600x164.jpg" alt="" title="" border="0"><br></p></div>
+</div><div id="id_2u2TdFS" class="WaGadget WaGadgetContent  gadgetStyleNone" style="" data-componentid="2u2TdFS"><div class="gadgetStyleBody gadgetContentEditableArea" style="" data-editablearea="0" data-areaheight="auto">
+<p><img src="/resources/Pictures/COUNTRY_GROCER.jpg" alt="" title="" border="0" width="346" height="173"><br></p></div>
+</div><div id="id_5Gbjs7J" class="WaGadgetLast WaGadgetCustomHTML  gadgetStyleNone" style="" data-componentid="5Gbjs7J"><div class="gadgetStyleBody " style="" data-areaheight="auto">
+<!-- Begin Constant Contact Active Forms -->
+<script> var _ctct_m = "585ad85d6e9e15174274478b90d18c24"; </script>
+<script id="signupScript" src="//static.ctctcdn.com/js/signup-form-widget/current/signup-form-widget.min.js" async="" defer=""></script>
+<!-- End Constant Contact Active Forms --></div>
+</div></div></div></td></tr></tbody></table> </div></div>
+</div></div>
+
+<div class="zonePlace zoneWAbranding">
+				<div class="WABranding">
+<div id="idFooterPoweredByContainer">
+	<span id="idFooterPoweredByWA">
+Powered by <a href="http://www.wildapricot.com" target="_blank">Wild Apricot</a> Membership Software</span>
+</div>
+</div>
+			</div>
+<!-- /footer zone -->
+<div id="idCustomJsContainer" class="cnCustomJsContainer">
+<!-- Begin Constant Contact Active Forms -->
+<script>
+try
+{
+     var _ctct_m = "585ad85d6e9e15174274478b90d18c24"; 
+}
+catch(err)
+{}</script>
+<script id="signupScript" src="//static.ctctcdn.com/js/signup-form-widget/current/signup-form-widget.min.js" async="" defer="">
+try
+{
+    
+}
+catch(err)
+{}</script>
+<!-- End Constant Contact Active Forms --></div>
+</div>
+
+<script type="text/javascript">if (window.BonaPage && BonaPage.setPageState) { BonaPage.setPageState(BonaPage.PAGE_PARSED); }</script><iframe id="createFrameToOpen" style="display: none;"></iframe><span><div id="idPageShadingContainer" style="position: absolute; left: -3700px; top: -3700px; width: 1px; height: 1px; z-index: 7337; overflow: hidden; visibility: hidden; background-color: #FFFFFF; -moz-opacity: 0.73; -khtml-opacity: 0.73; opacity: 0.73;"><div id="idPageShadingWaitMessage" style="display: none; position: absolute; width: 350px; text-align: center;"><img src="/Admin/html_res/images/async-load-progress-01.gif" border="0"><br>&nbsp;<br>&nbsp;&nbsp;<span id="idPageShadingWaitMessageText" style="font-size: 12px; font-weight: bold;">Please wait...</span></div></div></span><div id="cboxOverlay" style="display: none;"></div><div id="colorbox" class="" role="dialog" tabindex="-1" style="display: none;"><div id="cboxWrapper"><div><div id="cboxTopLeft" style="float: left;"></div><div id="cboxTopCenter" style="float: left;"></div><div id="cboxTopRight" style="float: left;"></div></div><div style="clear: left;"><div id="cboxMiddleLeft" style="float: left;"></div><div id="cboxContent" style="float: left;"><div id="cboxTitle" style="float: left;"></div><div id="cboxCurrent" style="float: left;"></div><button type="button" id="cboxPrevious"></button><button type="button" id="cboxNext"></button><button id="cboxSlideshow"></button><div id="cboxLoadingOverlay" style="float: left;"></div><div id="cboxLoadingGraphic" style="float: left;"></div></div><div id="cboxMiddleRight" style="float: left;"></div></div><div style="clear: left;"><div id="cboxBottomLeft" style="float: left;"></div><div id="cboxBottomCenter" style="float: left;"></div><div id="cboxBottomRight" style="float: left;"></div></div></div><div style="position: absolute; width: 9999px; visibility: hidden; display: none;"></div></div><div id="lightboxOverlay" class="lightboxOverlay" style="display: none;"></div><div id="lightbox" class="lightbox" style="display: none;"><div class="wa-lb-nav"><a class="wa-lb-prev"></a><a class="wa-lb-next"></a></div><div class="lb-waIconsContainer"><a class="lb-download"></a><a class="lb-close"></a></div><div class="lb-outerContainer"><div class="lb-container"><img class="lb-image" src="data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw=="><div class="lb-nav"><a class="lb-prev" href=""></a><a class="lb-next" href=""></a></div><div class="lb-loader"><a class="lb-cancel"></a></div></div></div><div class="lb-dataContainer"><div class="lb-data"><div class="lb-details"><span class="lb-caption"></span><span class="lb-number"></span></div></div></div></div><div style="visibility: hidden; position: absolute; width: 100%; top: -10000px; left: 0px; right: 0px; transition: visibility linear 0.3s, opacity 0.3s linear; opacity: 0;"><div style="width: 100%; height: 100%; position: fixed; top: 0px; left: 0px; z-index: 2000000000; background-color: rgb(255, 255, 255); opacity: 0.5;"></div><div style="margin: 0px auto; top: 0px; left: 0px; right: 0px; position: fixed; border: 1px solid rgb(204, 204, 204); z-index: 2000000000; background-color: rgb(255, 255, 255);"><iframe title="recaptcha challenge expires in two minutes" name="c-ol35sfr3njf2" frameborder="0" scrolling="no" sandbox="allow-forms allow-popups allow-same-origin allow-scripts allow-top-navigation allow-modals allow-popups-to-escape-sandbox allow-storage-access-by-user-activation" src="https://www.google.com/recaptcha/api2/bframe?hl=en&amp;v=7gg7H51Q-naNfhmCP3_R47ho&amp;k=6LfmM_UhAAAAAJSHT-BwkAlQgN0mMViOmaK7oEIV&amp;bft=0dAFcWeA4wg50cZT1VEqxawg6HzMBv4v1Hr_owCBnRqYX2MjNvTFlAqwefHO7yYj_ieG0A7FKcACDf1eIAjnnh-ulm_jHDVfPX4g" style="width: 100%; height: 100%;"></iframe></div></div><div style="visibility: hidden; position: absolute; width: 100%; top: -10000px; left: 0px; right: 0px; transition: visibility linear 0.3s, opacity 0.3s linear; opacity: 0;"><div style="width: 100%; height: 100%; position: fixed; top: 0px; left: 0px; z-index: 2000000000; background-color: rgb(255, 255, 255); opacity: 0.5;"></div><div style="margin: 0px auto; top: 0px; left: 0px; right: 0px; position: fixed; border: 1px solid rgb(204, 204, 204); z-index: 2000000000; background-color: rgb(255, 255, 255);"><iframe title="recaptcha challenge expires in two minutes" name="c-8a8zlamkd0ij" frameborder="0" scrolling="no" sandbox="allow-forms allow-popups allow-same-origin allow-scripts allow-top-navigation allow-modals allow-popups-to-escape-sandbox allow-storage-access-by-user-activation" src="https://www.google.com/recaptcha/api2/bframe?hl=en&amp;v=7gg7H51Q-naNfhmCP3_R47ho&amp;k=6LfmM_UhAAAAAJSHT-BwkAlQgN0mMViOmaK7oEIV&amp;bft=0dAFcWeA7fAh68qNuka88eyJasboseFcR2oo4HLCPIAIM1unskvbOLCSTaXQBKMGh0Fnv8hYWoOZR0BA0ui9vDFu6mKn_fYxNaUQ" style="width: 100%; height: 100%;"></iframe></div></div><div style="visibility: hidden; position: absolute; width: 100%; top: -10000px; left: 0px; right: 0px; transition: visibility linear 0.3s, opacity 0.3s linear; opacity: 0;"><div style="width: 100%; height: 100%; position: fixed; top: 0px; left: 0px; z-index: 2000000000; background-color: rgb(255, 255, 255); opacity: 0.5;"></div><div style="margin: 0px auto; top: 0px; left: 0px; right: 0px; position: fixed; border: 1px solid rgb(204, 204, 204); z-index: 2000000000; background-color: rgb(255, 255, 255);"><iframe title="recaptcha challenge expires in two minutes" name="c-t12ji3lh0xjk" frameborder="0" scrolling="no" sandbox="allow-forms allow-popups allow-same-origin allow-scripts allow-top-navigation allow-modals allow-popups-to-escape-sandbox allow-storage-access-by-user-activation" src="https://www.google.com/recaptcha/api2/bframe?hl=en&amp;v=7gg7H51Q-naNfhmCP3_R47ho&amp;k=6LfmM_UhAAAAAJSHT-BwkAlQgN0mMViOmaK7oEIV&amp;bft=0dAFcWeA4JYMz609enXHh_rxeIelr3uCAAbhSaKCMKTmbuEbTt3WHqQabIzF5ptGUq1iDcD30aIe5MbGNVaa1w0AfO5lr04sQofA" style="width: 100%; height: 100%;"></iframe></div></div></body></html>
