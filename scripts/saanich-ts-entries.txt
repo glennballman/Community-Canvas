@@ -1,0 +1,1016 @@
+  {
+    name: "2 Percent Jazz Coffee Inc",
+    phone: "2505088282",
+    website: "http://www.2Percentjazz.com",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "ACCESSIFORGE RETROFIT SOLUTIONS LTD",
+    website: "http://accessiforge.ca",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Active Balance Physiotherapy Studio (Seaport Physiotherapy Inc.)",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "AL Smith",
+    phone: "2502171010",
+    website: "http://www.alsmith.com",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Amica Beechwood Village",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "AML Oceanographic Ltd",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Anacortes Chamber of Commerce",
+    phone: "3602937911",
+    website: "http://www.anacortes.org",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "ARAAZ VISION LTD",
+    website: "http://araazvision.ca",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Arbutus Grove Nursery Ltd",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Ardmore Golf Course",
+    phone: "2506564621",
+    website: "http://www.ardmoregolfcourse.com",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Aria Sync Ventures Ltd",
+    phone: "9893335323",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Association of B.C Land Surveyors",
+    phone: "2506557222",
+    website: "http://www.abcls.ca",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Auto-Mobile Advantage",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Baker Tilly Victoria Ltd",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Barcellona Landscapes",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Barr Yacht Services Ltd",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Barrett Smith Construction Ltd",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Beacon Brewing",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Beacon Community Services",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Beacon Law Centre",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Beacon Sign and Apparel",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Bellrock Benchmarking Inc",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Benson Cabinetry & Millwork2201 Keating X-Road",
+    phone: "7802466422",
+    website: "https://bensoncm.com/",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Benson Cabinetry & Millwork",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Better Business Bureau of Vancouver Island",
+    phone: "2503866348",
+    website: "http://www.bbb.org/en/ca/bc/victoria",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "BGC South Vancouver Island",
+    phone: "2503849133",
+    website: "https://bgcsvi.org/",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Bill Russell & Associates",
+    phone: "2505887577",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Bliss Boutique / Nest & Nook",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Blue Jellyfish SUP Adventures",
+    phone: "9053347360",
+    website: "http://www.bluejellyfishsup.ca",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Bon Chovy Fishing Charters",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "BornaTech Solutions Ltd",
+    phone: "9891261628",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Brackenhurst FarmNorth Saanich",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Brackenhurst Farm",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "British Columbia Aviation Museum",
+    phone: "2506553300",
+    website: "http://www.bcam.net",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "British Columbia Notaries Association",
+    website: "http://www.bcnotaryassociation.ca",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Brunel Technical Solutions Ltd",
+    website: "https://www.bruneltech.com/(250)",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Buddies Toy Store",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Buds Cannabis",
+    phone: "7783512837",
+    website: "https://www.budscannabisbc.com778",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Business Examiner",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Caffeinated Turtle EnterprisesBrentwood Bay",
+    phone: "7784263323",
+    website: "http://www.caffeinatedturtle.ca",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Camcor Diving Inc",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "CamEnt Ltd",
+    phone: "7786781270",
+    website: "http://www.drabtofabwithfibo.ca",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Canadian Western bank",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Capital City Recycling Ltd.PO Box 21",
+    phone: "2506525008",
+    website: "https://ccrvictoria.com/",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Capital City Recycling Ltd",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Casman Projects",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Category 12 Brewing Inc",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Central Saanich Optometry",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Chambers of Commerce Group Insurance Plan",
+    phone: "2506550707",
+    website: "http://www.chambers.ca",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Chef On The Run",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Chomack Construction Ltd",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Christina Woodcock",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Circles MediationNorth Saanich",
+    website: "http://circlesmediation.com",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Circles Mediation",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Citta Construction Ltd",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Claire Meadmore",
+    phone: "2508884561",
+    website: "http://www.justpeachychildcare.ca",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "CLASSICDRIVE RESTORATIONS LTD",
+    website: "http://restoreclassics.ca",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Cloudify Nexus Services Ltd",
+    website: "http://cloudifynexus.ca",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Co-operators - Corcoran Financial Group",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Coastal Heat Pumps",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Coldwell Banker Oceanside",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Commodious Trading Inc",
+    phone: "2506527807",
+    website: "http://commodious.ca",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Community Marine Concepts",
+    phone: "7784320477",
+    website: "http://www.eagalus.ca",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "CommunityPlus - Home Healthcare & Nursing",
+    phone: "2506586508",
+    website: "http://communitypluscare.ca",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "CONVERA FINANCIAL LTD",
+    website: "http://converafinancial.ca",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Cordova Bay Optometry",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Cosmos Energy Consulting Inc",
+    phone: "7784262640",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Country Bee Honey Farm",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Cube Project Management",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Cultvest Apparel Ltd",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Davison & Co",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "de Vine Vineyards",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Departures Travel",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Designer ShearsNorth Saanich",
+    phone: "2502168305",
+    website: "http://www.designershears.com250",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Designer Shears",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Destination Greater",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "DFH Real Estate Ltd",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "District of Central",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Donovan's Piano Service",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Dusanj & Wirk Chartered Professional Accountants",
+    phone: "2505088837",
+    website: "http://www.dusanjwirk.com/",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "ECOSMART KITCHEN SOLUTIONS LTD",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "ECOVENTRA DESIGNS LTD",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "ElevateMaster Services Ltd",
+    website: "http://elevatemaster.ca",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "EMCS Industries Ltd",
+    phone: "2506565366",
+    website: "http://www.emcsindustries.com",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Empire Hydrogen",
+    phone: "7784260911",
+    website: "http://www.empirehydrogen.com778",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Everson Law",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Expedia Cruise Ship Center",
+    phone: "2506565441",
+    website: "http://www.cruiseshipcenters.com/sidney",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Fedril Strategies Inc",
+    phone: "8333337451",
+    website: "http://www.fedrilstrategies.ca1-",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Field Five Farm Ltd",
+    phone: "2508888945",
+    website: "https://fieldfivefarm.ca/",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Finlayson Bonet Architecture",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Fish O Chips",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Focus Hair Design",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "FORGE Technical Solutions",
+    phone: "2508181670",
+    website: "https://forgetechnicalsolutions.ca",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Four Quarters Meats",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Freedom Adventure Bus Society",
+    phone: "2505081808",
+    website: "http://FreedomAdventureBus.com",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Fuller Projects",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Gingerbread Preschool and Daycare Ltd",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Green Mountain Aviation",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "GREENWEAVE MARKET LTD",
+    website: "http://greenweave.ca",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Gulf Islands National Park Reserve, Parks Canada Agency",
+    phone: "2506344267",
+    website: "http://www.pc.gc.ca/gulf",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Habitat Gardencare",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Harbord Insurance Services",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Harbour Haven Marina and Self -Storage",
+    phone: "2508931011",
+    website: "https://sidneymarina.com/",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Harbourview Tree ExpertsPO Box 234Brentwood Bay",
+    phone: "2506529601",
+    website: "http://www.harbourviewtreeexperts.ca/",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Harbourview Tree Experts",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Hear Inc",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Henley & Straub LLP",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "House of Lily Koi",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Hughesman Morris Liversedge, Chartered Professional Accountants",
+    phone: "2506563991",
+    website: "http://www.sidneyaccountants.ca",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "IMEN CORE SYSTEMS LTD",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "IMM Recruitment Ltd",
+    phone: "2505076168",
+    website: "http://immrecruitment.com",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Iris the Visual Group",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Island Marble Ltd",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Island Savings a division of First West Credit Union",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Island Vegetable Co-Operative Association",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Jametec Inc",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Jason Leslie Personal Real Estate Corporation",
+    phone: "2508834848",
+    website: "https://www.realestatevi.ca",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Jencam Transport",
+    phone: "2506558266",
+    website: "http://www.jencamtransport.com",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Jenna Turnbull",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "JN Landscaping Ltd",
+    phone: "2502087852",
+    website: "http://jnlandscaping.ca",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Joe's Family Pharmacy",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Jonathon Dyck",
+    phone: "2503815532",
+    website: "http://victoriafoundation.bc.ca",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Kaemac Services Inc",
+    phone: "2503823111",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Keating Out of School Care Society",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "KPMG LLP",
+    phone: "2504803553",
+    website: "https://kpmg.com/ca/en/home.html",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Kristin Mackenzie Nutrition",
+    phone: "2505447005",
+    website: "http://www.kristinmackenzienutrition.ca",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "L.A. Limousines & Transportation Services",
+    phone: "2503919000",
+    website: "http://www.lalimo.ca1-",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Legion Manor",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Lime Tree Media",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Little Drum Consulting",
+    phone: "2503837008",
+    website: "http://www.littledrum.com",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "LIVINGDESIGN CONSULTING INC",
+    website: "http://livingdesignco.ca",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "LML Cleaning Services",
+    phone: "2504137313",
+    website: "http://www.lmlcleaning.ca",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "LOTUSYNC INNO TRADE LTD",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "LUMIVEX ENERGY LTD",
+    website: "http://lumivexenergy.ca",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "LUNVIX SYSTEMS LTD",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Mark Brajer",
+    phone: "2502179267",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Mark's",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Martin Woollard",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Martinez Veterinary Service Inc",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Mary Winspear Centre",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Mayflower Foods",
+    phone: "2505440944",
+    website: "http://www.mayflowerfoods.ca",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "McKimm & Lott",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "McTavish Academy of Art",
+    phone: "7783510088",
+    website: "http://www.mctavishacademy.ca778",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Medix Holdings Ltd",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Meta Bookkeeping Inc",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Meticulous Detailing Inc",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Michell Excavating Ltd",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "MOLD CORE INNOVATIONS LTD",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Mount Newton Centre2158 Mt. Newton Cross Road",
+    phone: "2506523432",
+    website: "http://www.mountnewtoncentre.org250",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Mount Newton Centre",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Mt Newton Floral",
+    phone: "2506521683",
+    website: "http://www.mtnewton.ca250",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Muffet  and Louisa",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Mulberry SkincareNorth Saanich",
+    phone: "2508827254",
+    website: "http://www.mulberryskincare.ca",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Mulberry Skincare",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "National Bank Financial Inc",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "North Saanich Marina",
+    phone: "2506565558",
+    website: "http://northsaanichmarina.com",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "North Saanich Plumbing Inc",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Oakstead Tree and Property Care Inc",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Ocean Performance Technologies Inc",
+    phone: "2508833313",
+    website: "http://www.oceanperformance.ca",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Ocean Pier Medical Centre",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "OMNILYX DIGITAL INTEGRATION LTD",
+    website: "http://omnilyx.ca",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "One Stop Furniture & Mattress Inc.#",
+    phone: "2506557467",
+    website: "http://onestopfurniture.ca",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "OPTIMAX MANUFACTURING SOLUTIONS LTD",
+    website: "http://optimaxmanufacturing.ca",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Orca Spirit Adventures",
+    phone: "2503838411",
+    website: "https://orcaspirit.com/",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Pacific Coast Commercial Cleaning Inc",
+    phone: "2505442125",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Pacific Heat Pumps",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Pacific Ridge Landscapes Ltd",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Pacifica Real Estate Inc",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Pacificheart Childcare Inc",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Parkbridge Lifestyle (Oceanside) R.V. Resort",
+    phone: "2505440508",
+    website: "http://www.oceansideresortrv.com",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Patio Gardens",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "PBC Solutions",
+    website: "https://pbcsolutions.ca/(778)",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Peace of Mind Home Inspections",
+    phone: "2505082828",
+    website: "http://Pmhi.ca",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Pemberton Holmes",
+    phone: "2506563486",
+    website: "http://www.pembertonholmes.com",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Peninsula Celebrations Society",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Peninsula Co-op",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Peninsula Computer IT Solutions Ltd",
+    phone: "2506863215",
+    website: "http://www.pcsit.com",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Peninsula Family Chiropractic4-7816 E. Saanich Rd",
+    phone: "2506524347",
+    website: "http://www.peninsulachiro.ca",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Peninsula Mini Storage & Container Rentals Ltd",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Peninsula News Review",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Peninsula Panthers Jr. Hockey Club LtdNorth Saanich",
+    phone: "2503280401",
+    website: "http://panthers-hockey.com",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Peninsula Rock Products Ltd",
+    phone: "2506525064",
+    website: "http://none",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Peninsula Streams SocietyNorth Saanich",
+    phone: "2503636480",
+    website: "http://peninsulastreams.ca",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Peninsula Streams Society",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Period Fine Bindings",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Ping Digital Signal Processing Inc",
+    phone: "7783513377",
+    website: "https://www.pingdsp.com/",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Polaris Land Surveying Inc",
+    phone: "2508826767",
+    website: "http://www.plsi.ca",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Powerhouse Precision",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Prince of Whales Whale Watching",
+    phone: "2503834884",
+    website: "http://www.princeofwhales.com",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Quality Inn Waddling Dog",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "QuestPath Solutions Ltd",
+    website: "http://www.questpathsolutions.com",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Quicksilver Software Development Inc",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Rachel Conconi",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Radar Hill Website Design & Marketing",
+    phone: "2504776395",
+    website: "https://www.radarhill.com/",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Raincoast Conservation Foundation",
+    phone: "2506551229",
+    website: "http://www.raincoast.org",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "RAYMONDCAM SMART SECURE SOLUTIONS LTD",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "RBC Gateway Village Branch",
+    phone: "2509535609",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Reg Mooney (Penta Resources Corporation)",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Reid Wealth Management - Raymond James",
+    phone: "2506570702",
+    website: "http://www.raymondjames.ca/deborahreid/",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Rob Botterell, MLA",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Rodco Draperies & Interiors Ltd",
+    phone: "2506564642",
+    website: "http://www.rodcointeriors.com",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "ROGCS CONSTRUCTION SERVICES",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Royal BC Museum",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Saanich Peninsula Artifacts Society o/a Heritage Acres",
+    phone: "2506525522",
+    website: "https://heritageacresbc.com/",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Saanichton Law Group",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Saanichton Village Veterinary Hospital",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "SAMWEST PREFAB SYSTEMS LTD",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "San Juan Islands Visitors Bureau",
+    phone: "3603789551",
+    website: "http://www.visitsanjuans.com",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "SC Henn CPA",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Scotiabank",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Scotty Manufacturing Ltd",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Sea Cider Farm & Ciderhouse",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "About",
+    chamberId: "saanich-peninsula-chamber"
+  },
+  {
+    name: "Contact",
+    chamberId: "saanich-peninsula-chamber"
+  }

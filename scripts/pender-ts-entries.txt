@@ -1,0 +1,372 @@
+  {
+    name: "Across the Watters",
+    description: "Weddings & EventsSpecializing in small town events with big personalities.",
+    chamberId: "pender-island-chamber"
+  },
+  {
+    name: "Ainslie Point Cottage",
+    description: "This cottage is a deluxe oceanfront at the head of Bedwell Harbour.",
+    chamberId: "pender-island-chamber"
+  },
+  {
+    name: "Almost Wild Horticulture",
+    description: "Pender-based, Red Seal Horticultural Certification, Organic practices.",
+    chamberId: "pender-island-chamber"
+  },
+  {
+    name: "Angela Ray Mortgages",
+    description: "Matching client to product requires the experience of a licensed mortgage broker",
+    chamberId: "pender-island-chamber"
+  },
+  {
+    name: "Artisan Homes",
+    description: "General Contractor / Licensed Builder registered with HPO.",
+    chamberId: "pender-island-chamber"
+  },
+  {
+    name: "Be Wildly Natural Studio",
+    description: "Specializing in Photography - including People, Places, Events and Branding.",
+    chamberId: "pender-island-chamber"
+  },
+  {
+    name: "Bee Wild Distillery",
+    description: "Farm-based, small batch craft distillery located on beautiful Pender Island.",
+    chamberId: "pender-island-chamber"
+  },
+  {
+    name: "Big Digem Excavating Ltd",
+    description: "Driveway construction, site excavation, rock walls, land clearing and ponds.",
+    chamberId: "pender-island-chamber"
+  },
+  {
+    name: "Charlene Hall Designs",
+    description: "Handcrafted sterling jewelry featuring semi-precious stones and mixed metals.",
+    chamberId: "pender-island-chamber"
+  },
+  {
+    name: "Clam Bay Farm",
+    description: "A sustainable organic farm on 105 acres overlooking Navy Channel. Since 1874.",
+    chamberId: "pender-island-chamber"
+  },
+  {
+    name: "Clean",
+    description: "Queens of PenderPender Island-based full service cleaning company.",
+    chamberId: "pender-island-chamber"
+  },
+  {
+    name: "Coastal Connection",
+    description: "Zero emissions shopping/delivery service for the Gulf Islands.",
+    chamberId: "pender-island-chamber"
+  },
+  {
+    name: "Coastal Life Realty Ltd",
+    description: "Professional Real Estate & Property Management services on Pender Island.",
+    chamberId: "pender-island-chamber"
+  },
+  {
+    name: "Cocker and Co. Contracting Ltd.General contracting company based on Pender Island serving the Southern Gulf",
+    chamberId: "pender-island-chamber"
+  },
+  {
+    name: "Coho Holdings Ltd",
+    description: "Coho is an industry leader in planning, developing, and concrete pumping.",
+    chamberId: "pender-island-chamber"
+  },
+  {
+    name: "Copper Otter Bar & Grill Ltd",
+    description: "Classic breakfasts, lunches, and upscale dinner service.",
+    chamberId: "pender-island-chamber"
+  },
+  {
+    name: "Cultivate & Evolve Financial",
+    description: "Cultivate + Evolve Financial is owned and operated by Catherine Melville.",
+    chamberId: "pender-island-chamber"
+  },
+  {
+    name: "Darawoodworks",
+    description: "Dave and Alison are both woodturners who turn and create a wide array pieces.",
+    chamberId: "pender-island-chamber"
+  },
+  {
+    name: "Daunne's Esthetics & Education StudioDaunne has been an esthetician for over 35 years and operates from her home spa",
+    chamberId: "pender-island-chamber"
+  },
+  {
+    name: "Debra Bartlett, Coldwell Banker",
+    description: "Ready to relocate to Sidney or the Saanich Peninsula? Talk to Deb.",
+    chamberId: "pender-island-chamber"
+  },
+  {
+    name: "Diane",
+    description: "Cuthbert, RE/MAX Lifestyles Realty",
+    chamberId: "pender-island-chamber"
+  },
+  {
+    name: "Dockside Realty Ltd",
+    description: "Dockside Realty is your go to place for Real Estate on Pender Island!",
+    chamberId: "pender-island-chamber"
+  },
+  {
+    name: "Dog Mermaid Eco Excursions, Kayak Rentals & Retreats",
+    description: "Indigenous-owned Dog Mermaid Eco Excursions, Kayak Rentals, and Retreats.",
+    chamberId: "pender-island-chamber"
+  },
+  {
+    name: "Driftwood Auto",
+    description: "Gas Station & store with lottery, phone cards, drinks, snacks, ATM and more.",
+    chamberId: "pender-island-chamber"
+  },
+  {
+    name: "eSafetyFirst Canada",
+    description: "Leading Canadian provider of online occupational health and safety training.",
+    chamberId: "pender-island-chamber"
+  },
+  {
+    name: "Gravity Insurance Brokers Ltd",
+    description: "Supporting Pender businesses with trusted employee benefits.",
+    chamberId: "pender-island-chamber"
+  },
+  {
+    name: "Gulf Excavating Ltd",
+    description: "Gulf Excavating has been providing concrete to the Gulf Islands since 1976.",
+    chamberId: "pender-island-chamber"
+  },
+  {
+    name: "Gulf Islands Roof Cleaning Ltd",
+    description: "Providing the Island with exceptional roof cleaning services.",
+    chamberId: "pender-island-chamber"
+  },
+  {
+    name: "Heather",
+    description: "Regan, Macdonald RealtyUnmatched love of real estate; knowledge of BC, Vancouver Island and the Gulfs.",
+    chamberId: "pender-island-chamber"
+  },
+  {
+    name: "Hope Bay",
+    description: "CollectiveA creative collective of shops and services in a beautiful oceanfront setting.",
+    chamberId: "pender-island-chamber"
+  },
+  {
+    name: "Hope Catcher Studio",
+    description: "Fine Artist & Creativity MentorArtist run working studio open by appointment.",
+    chamberId: "pender-island-chamber"
+  },
+  {
+    name: "Housing NOW",
+    description: "Fostering community through homeshare in the Southern Gulf & Salt Spring Islands",
+    chamberId: "pender-island-chamber"
+  },
+  {
+    name: "Inisheile Farm",
+    description: "Rare Cotswold sheep, beautiful yarn, and local lamb from our small Pender farm.",
+    chamberId: "pender-island-chamber"
+  },
+  {
+    name: "Island Graphics Ltd",
+    description: "Island Graphics Ltd. is a locally owned and operated design and print shop.",
+    chamberId: "pender-island-chamber"
+  },
+  {
+    name: "Island House & Home",
+    description: "Your do-it-yourself hardware store, with tools, electrical, plumbing and more.",
+    chamberId: "pender-island-chamber"
+  },
+  {
+    name: "Island Legacy",
+    description: "Construction Ltd.Constructing custom homes  and projects with high skills and qualifications.",
+    chamberId: "pender-island-chamber"
+  },
+  {
+    name: "Islandscapes",
+    description: "Professional landscaping and property care services on Pender Island.",
+    chamberId: "pender-island-chamber"
+  },
+  {
+    name: "Islnd Grl Collective",
+    description: "At Islnd Grl Collective you will find clothing, accessories, and much more!",
+    chamberId: "pender-island-chamber"
+  },
+  {
+    name: "Jamieson Electrical Solutions Ltd",
+    description: "Electrical Contractor with over 20 years experience.",
+    chamberId: "pender-island-chamber"
+  },
+  {
+    name: "Kim Pollard Gallery",
+    description: "Showcasing the original works of many talented artists from Pender and beyond.",
+    chamberId: "pender-island-chamber"
+  },
+  {
+    name: "Lightning Taxi",
+    description: "All electric taxis serving the Island.",
+    chamberId: "pender-island-chamber"
+  },
+  {
+    name: "Lisa's Nails and EstheticsA talented team of beauty professionals providing a wide range of services",
+    chamberId: "pender-island-chamber"
+  },
+  {
+    name: "Logan's HideawayTranquil oceanfront cottage with private beach access",
+    chamberId: "pender-island-chamber"
+  },
+  {
+    name: "Looking to Sea Retreats, Rentals, Ecotours",
+    description: "Offering tailored coastal kayaking and rainforest hiking ecotours.",
+    chamberId: "pender-island-chamber"
+  },
+  {
+    name: "LS Woodworks",
+    description: "Specializing in bespoke cabinetry, doors, general carpentry and renovations.",
+    chamberId: "pender-island-chamber"
+  },
+  {
+    name: "Magic Lake Property",
+    description: "Owners' SocietySupporting Magic Lake with community spaces, marina care, and resident advocacy.",
+    chamberId: "pender-island-chamber"
+  },
+  {
+    name: "Maxim Pest Solutions",
+    description: "Offering pest solutions for a wide variety of insects and rodents.",
+    chamberId: "pender-island-chamber"
+  },
+  {
+    name: "Meander Wellbeing",
+    description: "Ready to slow down, reconnect & rejuvenate? Look no further!",
+    chamberId: "pender-island-chamber"
+  },
+  {
+    name: "Medicine Beach Liquor Store",
+    description: "Medicine Beach Liquor Store -  serving the island",
+    chamberId: "pender-island-chamber"
+  },
+  {
+    name: "Melville",
+    description: "Creative StrategyBranding, websites & marketing support for Pender and the Gulf Islands.",
+    chamberId: "pender-island-chamber"
+  },
+  {
+    name: "Mieke Truijen Physiotherapy Clinic",
+    description: "Mieke Truijen, Registered Physiotherapist",
+    chamberId: "pender-island-chamber"
+  },
+  {
+    name: "Mobile DJMobile DJ services for private or community events",
+    chamberId: "pender-island-chamber"
+  },
+  {
+    name: "New Moon Lodge",
+    description: "New Moon Lodge is a private and relaxing B&B on North Pender Island.",
+    chamberId: "pender-island-chamber"
+  },
+  {
+    name: "Nosy Point Bed & Breakfast",
+    description: "Nosy Point B&B is ideally located in the heart of the Pender Island community.",
+    chamberId: "pender-island-chamber"
+  },
+  {
+    name: "Nu-to-Yu Thrift StoreNu-To-Yu is a treasure trove of gently used clothing, accessories, books, ETC",
+    chamberId: "pender-island-chamber"
+  },
+  {
+    name: "Nutritious Life Consulting",
+    description: "Connie Sears, a Registered Holistic Nutritionist.",
+    chamberId: "pender-island-chamber"
+  },
+  {
+    name: "Otter Bay Express",
+    description: "Dependable courier service with a personal touch. White glove deliveries & moves",
+    chamberId: "pender-island-chamber"
+  },
+  {
+    name: "Otter Bay Marina",
+    description: "Marina and bistro, open seasonally. Boat launch, e-bike rentals, store and pool.",
+    chamberId: "pender-island-chamber"
+  },
+  {
+    name: "Pacifique Skin & Scalp Therapy",
+    description: "Advanced natural facial & hair loss treatments on Pender Island (SDȺY¸ES)",
+    chamberId: "pender-island-chamber"
+  },
+  {
+    name: "Parks",
+    description: "Canada - Gulf Islands National Park ReserveGulf Islands National Park Reserve safeguards a portion of the gulf islands.",
+    chamberId: "pender-island-chamber"
+  },
+  {
+    name: "Pay It Forward Mortgages",
+    description: "For all your mortgage needs.",
+    chamberId: "pender-island-chamber"
+  },
+  {
+    name: "PCS Pest Control Services Gulf Islands Ltd.For all your Pest Control needs, give us a call!",
+    chamberId: "pender-island-chamber"
+  },
+  {
+    name: "Pender Chocolates",
+    description: "Artisan Chocolate Shop Cafe at Hope Bay. Hand crafted chocolates, coffee, & more",
+    chamberId: "pender-island-chamber"
+  },
+  {
+    name: "Pender Courier",
+    description: "Daily delivery service between greater Victoria and Pender Island.",
+    chamberId: "pender-island-chamber"
+  },
+  {
+    name: "Pender Island Community Hall",
+    description: "The Pender Island Community Hall hosts an assortment of community events.",
+    chamberId: "pender-island-chamber"
+  },
+  {
+    name: "Pender Island Concert Society",
+    description: "Entertaining the people of Pender Island through musical performances.",
+    chamberId: "pender-island-chamber"
+  },
+  {
+    name: "Pender Island",
+    description: "Farmers' InstituteRuns farmers markets on Wednesdays and Saturdays and hosts the Fall Fair.",
+    chamberId: "pender-island-chamber"
+  },
+  {
+    name: "Pender Island Fire Rescue",
+    description: "Our mission is to save lives, protect property, our environment, and community.",
+    chamberId: "pender-island-chamber"
+  },
+  {
+    name: "Pender Island Food Bank",
+    description: "Pender Island Food Bank was established more than 25 years ago to serve all.",
+    chamberId: "pender-island-chamber"
+  },
+  {
+    name: "Pender Island Golf & Country Club",
+    description: "Open year round, public is welcome to come and enjoy our wonderful course.",
+    chamberId: "pender-island-chamber"
+  },
+  {
+    name: "Pender Island Heating & Cooling",
+    description: "Installation, service and maintenance on all your heating and cooling needs.",
+    chamberId: "pender-island-chamber"
+  },
+  {
+    name: "Pender Island Home",
+    description: "Building CentreHome Hardware Building Centre with all the essentials for island life.",
+    chamberId: "pender-island-chamber"
+  },
+  {
+    name: "Pender Island Massage Therapy",
+    description: "Fanny Quenneville, Registered Massage Therapist.",
+    chamberId: "pender-island-chamber"
+  },
+  {
+    name: "Pender Island Naturals",
+    description: "Pender Island Naturals offers an array of THC & CBD products and accessories.",
+    chamberId: "pender-island-chamber"
+  },
+  {
+    name: "Pender Island Parks & Recreation",
+    description: "Pender Island has 80+ community parks, trails, viewpoints and ocean accesses.",
+    chamberId: "pender-island-chamber"
+  },
+  {
+    name: "About",
+    chamberId: "pender-island-chamber"
+  }
