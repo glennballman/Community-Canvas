@@ -1,0 +1,702 @@
+[
+  {
+    "name": "A Wave Away",
+    "category": "Accommodation"
+  },
+  {
+    "name": "Adriana’s Sandwich Shop",
+    "category": "Food"
+  },
+  {
+    "name": "Adventure Tofino Wildlife Tours",
+    "category": "Tours"
+  },
+  {
+    "name": "Aeriosa Dance Society",
+    "category": "Arts"
+  },
+  {
+    "name": "A-Frame Guiding",
+    "category": "Guiding"
+  },
+  {
+    "name": "Agio & Ardito",
+    "category": "Food"
+  },
+  {
+    "name": "Ahous Adventures",
+    "category": "Tours"
+  },
+  {
+    "name": "Ahousaht Beaded Earrings",
+    "category": "Crafts"
+  },
+  {
+    "name": "Ahousaht First Nation",
+    "category": "Community Services"
+  },
+  {
+    "name": "Ahoy Bags / Heyduck Art & Design",
+    "category": "Arts"
+  },
+  {
+    "name": "Airbnb",
+    "category": "Accommodation"
+  },
+  {
+    "name": "Alberni Adventure Gear",
+    "category": "Rental Services"
+  },
+  {
+    "name": "Alberni Valley Employment Centre - Tofino",
+    "category": "Employment Services"
+  },
+  {
+    "name": "Ali's Surf School",
+    "category": "Sports School"
+  },
+  {
+    "name": "Anchors Inn Waterfront Cabins",
+    "category": "Accommodation"
+  },
+  {
+    "name": "Ancient Cedars Spa",
+    "category": "Spa"
+  },
+  {
+    "name": "Angler's Inn",
+    "category": "Accommodation"
+  },
+  {
+    "name": "Arbutus Health Center",
+    "category": "Health Services"
+  },
+  {
+    "name": "Atleo River Air Service",
+    "category": "Transportation"
+  },
+  {
+    "name": "Aynsley Paints",
+    "category": "Art Supplies"
+  },
+  {
+    "name": "Sacred Stone Spa",
+    "category": "Beauty + Spa"
+  },
+  {
+    "name": "Sadler Surf School",
+    "category": "Surfing + Paddleboarding"
+  },
+  {
+    "name": "Salmon Eye Fishing Charters",
+    "category": "Fishing + Boating"
+  },
+  {
+    "name": "Sand Dollar Guest House",
+    "category": "Inns + BnBs"
+  },
+  {
+    "name": "SandBar Bistro",
+    "category": "Restaurants"
+  },
+  {
+    "name": "Savary Island Pie Company Tofino",
+    "category": "Cafes + Bakeries"
+  },
+  {
+    "name": "Schramm Design",
+    "category": "Design + Marketing"
+  },
+  {
+    "name": "Sea Otter Crane & Freight",
+    "category": "Professional Services"
+  },
+  {
+    "name": "Sea Wench Naturals",
+    "category": "Artisanal Products"
+  },
+  {
+    "name": "Sea Woven",
+    "category": "Specialty Goods"
+  },
+  {
+    "name": "Shed Tofino",
+    "category": "Retail"
+  },
+  {
+    "name": "Shelter Restaurant",
+    "category": "Restaurants"
+  },
+  {
+    "name": "Sienna's Vacation Rentals",
+    "category": "Vacation Rentals"
+  },
+  {
+    "name": "Smallwood Guest House + Suite",
+    "category": "Inns + BnBs"
+  },
+  {
+    "name": "Smashing Glasses Event Rentals",
+    "category": "Event Goods + Services"
+  },
+  {
+    "name": "Societe de developpement economique de la Colombie-Britannique",
+    "category": "Business Resources"
+  },
+  {
+    "name": "Specifically Pacific Designs",
+    "category": "Artisanal Products"
+  },
+  {
+    "name": "Spindrift",
+    "category": "Clothing + Surf"
+  },
+  {
+    "name": "Spirit Eagle Experiences / MV King Cole",
+    "category": "Tour Boat Companies"
+  },
+  {
+    "name": "Stay Tofino",
+    "category": "Vacation Rentals"
+  },
+  {
+    "name": "Stillwater Nature Spa",
+    "category": "Beauty + Spa"
+  },
+  {
+    "name": "Storm Bay B&B",
+    "category": "Inns + BnBs"
+  },
+  {
+    "name": "Storm Surf Shop",
+    "category": "Retail"
+  },
+  {
+    "name": "Stormlight Outfitters",
+    "category": "Outdoor Gear"
+  },
+  {
+    "name": "Summer Hill Guest House",
+    "category": "Inns + BnBs"
+  },
+  {
+    "name": "Surf Grove Campground",
+    "category": "Camping + RV"
+  },
+  {
+    "name": "Surf Junction Campground",
+    "category": "Camping + RV"
+  },
+  {
+    "name": "Surf Sister Surf School",
+    "category": "Surfing + Paddleboarding"
+  },
+  {
+    "name": "Surfrider Pacific Rim",
+    "category": "Community Aid + Connection"
+  },
+  {
+    "name": "Surfside Grill",
+    "category": "Restaurants"
+  },
+  {
+    "name": "Swell Paddle + Surf Tofino",
+    "category": "Surfing + Paddleboarding"
+  },
+  {
+    "name": "Tacofino",
+    "category": ""
+  },
+  {
+    "name": "Taste of Tofino",
+    "category": ""
+  },
+  {
+    "name": "T-bird E-bike Rentals",
+    "category": ""
+  },
+  {
+    "name": "The Bake Shack",
+    "category": ""
+  },
+  {
+    "name": "The Beach Shack",
+    "category": ""
+  },
+  {
+    "name": "The Candy Jar",
+    "category": ""
+  },
+  {
+    "name": "The Candy Jar Bike Rental",
+    "category": ""
+  },
+  {
+    "name": "The Den Refillery",
+    "category": ""
+  },
+  {
+    "name": "The Factory Goods + Gallery",
+    "category": ""
+  },
+  {
+    "name": "The Fish Store",
+    "category": ""
+  },
+  {
+    "name": "The Francis ~ Boutique Inn",
+    "category": ""
+  },
+  {
+    "name": "The Great Room",
+    "category": ""
+  },
+  {
+    "name": "The Hobbyist",
+    "category": ""
+  },
+  {
+    "name": "The Maq Cold Beer, Wine and Spirits",
+    "category": ""
+  },
+  {
+    "name": "The Maq Hotel",
+    "category": ""
+  },
+  {
+    "name": "The Pointe Restaurant",
+    "category": ""
+  },
+  {
+    "name": "The Salty Woodsman Goods Ltd.",
+    "category": ""
+  },
+  {
+    "name": "The Shoreline Tofino",
+    "category": ""
+  },
+  {
+    "name": "The Surf Club",
+    "category": ""
+  },
+  {
+    "name": "The Whale Centre",
+    "category": ""
+  },
+  {
+    "name": "Three Peaks",
+    "category": ""
+  },
+  {
+    "name": "TikiCAB Transportation Company",
+    "category": ""
+  },
+  {
+    "name": "Tin Wis Resort",
+    "category": ""
+  },
+  {
+    "name": "Tla-o-qui-aht Development Corporation",
+    "category": ""
+  },
+  {
+    "name": "Tla-o-qui-aht Tribal Parks",
+    "category": ""
+  },
+  {
+    "name": "Tofino Air",
+    "category": ""
+  },
+  {
+    "name": "Tofino Arts Council",
+    "category": ""
+  },
+  {
+    "name": "Tofino Beach Collective",
+    "category": ""
+  },
+  {
+    "name": "Tofino Bike Co.",
+    "category": ""
+  },
+  {
+    "name": "TOFINO BITTERS",
+    "category": ""
+  },
+  {
+    "name": "Tofino Boating Co.",
+    "category": ""
+  },
+  {
+    "name": "Tofino Breath & Meditation",
+    "category": ""
+  },
+  {
+    "name": "Tofino Brewing Company",
+    "category": ""
+  },
+  {
+    "name": "Tofino Carriage House",
+    "category": ""
+  },
+  {
+    "name": "Tofino Chalet",
+    "category": ""
+  },
+  {
+    "name": "Tofino Clayoquot Heritage Society",
+    "category": ""
+  },
+  {
+    "name": "Tofino Coffee Roasting Co.",
+    "category": ""
+  },
+  {
+    "name": "Tofino Community Food Initiative",
+    "category": ""
+  },
+  {
+    "name": "Tofino Co-op Food Store",
+    "category": ""
+  },
+  {
+    "name": "Tofino Co-op Gas Bar",
+    "category": ""
+  },
+  {
+    "name": "Tofino Co-op Hardware",
+    "category": ""
+  },
+  {
+    "name": "Tofino Delivery",
+    "category": ""
+  },
+  {
+    "name": "Tofino Distillery",
+    "category": ""
+  },
+  {
+    "name": "Tofino DJ Services",
+    "category": ""
+  },
+  {
+    "name": "Tofino Electric Bikes",
+    "category": ""
+  },
+  {
+    "name": "Tofino Event Management Ltd. dba ''Tofino Oyster Festival''",
+    "category": ""
+  },
+  {
+    "name": "Tofino Finishing Company",
+    "category": ""
+  },
+  {
+    "name": "Tofino Fish Guides Ltd",
+    "category": ""
+  },
+  {
+    "name": "Tofino Fishing And Trading Company",
+    "category": ""
+  },
+  {
+    "name": "Tofino Foraging Tours",
+    "category": ""
+  },
+  {
+    "name": "Tofino Gallery of Contemporary Art",
+    "category": ""
+  },
+  {
+    "name": "Tofino General Hospital Foundation",
+    "category": ""
+  },
+  {
+    "name": "Tofino Harbour Authority",
+    "category": ""
+  },
+  {
+    "name": "Tofino Hot Sauce Company",
+    "category": ""
+  },
+  {
+    "name": "Tofino Hummingbird Cottage",
+    "category": ""
+  },
+  {
+    "name": "Tofino Kombucha",
+    "category": ""
+  },
+  {
+    "name": "Tofino Licks",
+    "category": ""
+  },
+  {
+    "name": "Tofino Life Clothing",
+    "category": ""
+  },
+  {
+    "name": "Tofino Lighthouse Inn",
+    "category": ""
+  },
+  {
+    "name": "Tofino Mobile Massage",
+    "category": ""
+  },
+  {
+    "name": "Tofino Motel Harbourview",
+    "category": ""
+  },
+  {
+    "name": "Tofino Nature Kids",
+    "category": ""
+  },
+  {
+    "name": "Tofino Notary",
+    "category": ""
+  },
+  {
+    "name": "Tofino Ocean Adventures",
+    "category": ""
+  },
+  {
+    "name": "Tofino Paddle Surf",
+    "category": ""
+  },
+  {
+    "name": "Tofino Paddlers Inn",
+    "category": ""
+  },
+  {
+    "name": "Tofino Panorama",
+    "category": ""
+  },
+  {
+    "name": "Tofino Power Ltd",
+    "category": ""
+  },
+  {
+    "name": "Tofino Public Market Society",
+    "category": ""
+  },
+  {
+    "name": "Tofino Resort + Marina",
+    "category": ""
+  },
+  {
+    "name": "Tofino Resort + Marina Adventure Centre",
+    "category": ""
+  },
+  {
+    "name": "Tofino Sea Kayaking",
+    "category": ""
+  },
+  {
+    "name": "Tofino Sport Fishing",
+    "category": ""
+  },
+  {
+    "name": "Tofino Surf Adventures",
+    "category": ""
+  },
+  {
+    "name": "Tofino Surf Lifesaving Club",
+    "category": ""
+  },
+  {
+    "name": "Tofino Surf School",
+    "category": ""
+  },
+  {
+    "name": "Tofino Taxi",
+    "category": ""
+  },
+  {
+    "name": "Tofino Tea Company",
+    "category": ""
+  },
+  {
+    "name": "Tofino Therapeutics",
+    "category": ""
+  },
+  {
+    "name": "Tofino Ucluelet Culinary Guild",
+    "category": ""
+  },
+  {
+    "name": "Tofino Vacation Rentals",
+    "category": ""
+  },
+  {
+    "name": "Tofino Veterinary Clinic",
+    "category": ""
+  },
+  {
+    "name": "Tofino Water Taxi",
+    "category": ""
+  },
+  {
+    "name": "Tofino Waterfront Eco Condo",
+    "category": ""
+  },
+  {
+    "name": "Tofino Yoga",
+    "category": ""
+  },
+  {
+    "name": "Tofitian",
+    "category": ""
+  },
+  {
+    "name": "Tonquin Medical Clinic",
+    "category": ""
+  },
+  {
+    "name": "Topinoy",
+    "category": ""
+  },
+  {
+    "name": "Tough City Sushi",
+    "category": ""
+  },
+  {
+    "name": "Treat Yourself Massage",
+    "category": ""
+  },
+  {
+    "name": "Tree Drops",
+    "category": ""
+  },
+  {
+    "name": "Tree House Gift Company",
+    "category": ""
+  },
+  {
+    "name": "Tsawaak RV Resort & Campground",
+    "category": ""
+  },
+  {
+    "name": "Tuff City Radio",
+    "category": ""
+  },
+  {
+    "name": "Tuff City Saunas",
+    "category": ""
+  },
+  {
+    "name": "Tuff Fit at Tofino Resort + Marina",
+    "category": ""
+  },
+  {
+    "name": "Tuff Town Design",
+    "category": ""
+  },
+  {
+    "name": "Tuumook Arts and crafts",
+    "category": ""
+  },
+  {
+    "name": "Two Trees Home & Gift",
+    "category": ""
+  },
+  {
+    "name": "Wahous Wilderness Lodge",
+    "category": "Accommodation"
+  },
+  {
+    "name": "Waters Edge Shoreside Suites",
+    "category": "Accommodation"
+  },
+  {
+    "name": "WeBC",
+    "category": "Business Resources"
+  },
+  {
+    "name": "West Coast Aquatic Safaris",
+    "category": "Tourism"
+  },
+  {
+    "name": "West Coast Campground",
+    "category": "Camping"
+  },
+  {
+    "name": "West Coast Fitness Centre",
+    "category": "Fitness"
+  },
+  {
+    "name": "West Coast Motel On The Harbour",
+    "category": "Accommodation"
+  },
+  {
+    "name": "West Coast Multiplex Society",
+    "category": "Community Services"
+  },
+  {
+    "name": "West Coast Shapes",
+    "category": "Artisan Products"
+  },
+  {
+    "name": "West Coast Sustainable Tourism Association",
+    "category": "Tourism"
+  },
+  {
+    "name": "West Coast Wild",
+    "category": "Tourism"
+  },
+  {
+    "name": "Westcoast Community Resources Society",
+    "category": "Community Services"
+  },
+  {
+    "name": "Westerly News",
+    "category": "Media"
+  },
+  {
+    "name": "Westland Insurance Group",
+    "category": "Insurance"
+  },
+  {
+    "name": "Whaler's Guesthouse - Tofino Hostel",
+    "category": "Accommodation"
+  },
+  {
+    "name": "Whale's Tail Guest Suites",
+    "category": "Accommodation"
+  },
+  {
+    "name": "Wickaninnish Community School Society",
+    "category": "Education"
+  },
+  {
+    "name": "Wickaninnish Elementary School Parent Advisory Council (WEPAC)",
+    "category": "Education"
+  },
+  {
+    "name": "Wickaninnish Inn",
+    "category": "Accommodation"
+  },
+  {
+    "name": "Wild Light Tofino Guest House",
+    "category": "Accommodation"
+  },
+  {
+    "name": "Wild Pacific Trail Society",
+    "category": "Community Services"
+  },
+  {
+    "name": "Wildpod Glamping",
+    "category": "Accommodation"
+  },
+  {
+    "name": "WildSafeBC Pacific Rim",
+    "category": "Community Services"
+  },
+  {
+    "name": "Wildside Grill",
+    "category": "Restaurant"
+  },
+  {
+    "name": "Wolf in the Fog",
+    "category": "Restaurant"
+  }
+]

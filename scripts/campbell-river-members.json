@@ -1,0 +1,992 @@
+[
+  {
+    "name": "99 7fm The River",
+    "url": "https://campbellriverchamber.ca/directory/business/99-7fm-the-river",
+    "category": "MEDIA"
+  },
+  {
+    "name": "A Cut Above Design Group",
+    "url": "https://campbellriverchamber.ca/directory/business/a-cut-above-design-group",
+    "category": "BARBERS"
+  },
+  {
+    "name": "A Wood Bulldozing Ltd",
+    "url": "https://campbellriverchamber.ca/directory/business/a-wood-bulldozing-ltd",
+    "category": "CONSTRUCTION & TRADES, HEAVY EQUIPMENT"
+  },
+  {
+    "name": "Abc Recycling Ltd",
+    "url": "https://campbellriverchamber.ca/directory/business/abc-recycling-ltd",
+    "category": "RECYCLING"
+  },
+  {
+    "name": "Alitis Investment Counsel Inc",
+    "url": "https://campbellriverchamber.ca/directory/business/alitis-investment-counsel-inc",
+    "category": "FINANCE"
+  },
+  {
+    "name": "Allemekinders Company",
+    "url": "https://campbellriverchamber.ca/directory/business/allemekinders-company",
+    "category": "CHARTERED ACCOUNTANTS, FINANCIAL"
+  },
+  {
+    "name": "Anchor Inn Suites",
+    "url": "https://campbellriverchamber.ca/directory/business/anchor-inn-suites",
+    "category": "ACCOMMODATION, HOTEL"
+  },
+  {
+    "name": "Anchor Waterfront Restaurant",
+    "url": "https://campbellriverchamber.ca/directory/business/anchor-waterfront-restaurant",
+    "category": "Cafes/Restaurants/Pubs"
+  },
+  {
+    "name": "Association Francophone De Campbell River",
+    "url": "https://campbellriverchamber.ca/directory/business/association-francophone-de-campbell-river",
+    "category": "FRENCH | SUPPORT SERVICES"
+  },
+  {
+    "name": "Ba Ba Gannouj Restaurant",
+    "url": "https://campbellriverchamber.ca/directory/business/ba-ba-gannouj-restaurant",
+    "category": "CAFES/RESTAURANTS/PUBS"
+  },
+  {
+    "name": "Bailey Western Star Trucks Ltd",
+    "url": "https://campbellriverchamber.ca/directory/business/bailey-western-star-trucks-ltd"
+  },
+  {
+    "name": "Bank Of Montreal",
+    "url": "https://campbellriverchamber.ca/directory/business/bank-of-montreal"
+  },
+  {
+    "name": "Bard Energy Ltd",
+    "url": "https://campbellriverchamber.ca/directory/business/bard-energy-ltd"
+  },
+  {
+    "name": "Bc Chamber Of Commerce",
+    "url": "https://campbellriverchamber.ca/directory/business/bc-chamber-of-commerce"
+  },
+  {
+    "name": "Bc Ferries Campbell River Terminal",
+    "url": "https://campbellriverchamber.ca/directory/business/bc-ferries-campbell-river-terminal"
+  },
+  {
+    "name": "Bc Hydro",
+    "url": "https://campbellriverchamber.ca/directory/business/bc-hydro"
+  },
+  {
+    "name": "Bc Salmon Farmers Association",
+    "url": "https://campbellriverchamber.ca/directory/business/bc-salmon-farmers-association"
+  },
+  {
+    "name": "Berwick By The Sea",
+    "url": "https://campbellriverchamber.ca/directory/business/berwick-by-the-sea"
+  },
+  {
+    "name": "Black Creek Farm Feed",
+    "url": "https://campbellriverchamber.ca/directory/business/black-creek-farm-feed"
+  },
+  {
+    "name": "Brandt Tractor Ltd",
+    "url": "https://campbellriverchamber.ca/directory/business/brandt-tractor-ltd"
+  },
+  {
+    "name": "Brenda Grant Real Estate",
+    "url": "https://campbellriverchamber.ca/directory/business/brenda-grant-real-estate"
+  },
+  {
+    "name": "Broadstreet Properties Ltd",
+    "url": "https://campbellriverchamber.ca/directory/business/broadstreet-properties-ltd"
+  },
+  {
+    "name": "Browns Bay Packing Co Ltd",
+    "url": "https://campbellriverchamber.ca/directory/business/browns-bay-packing-co-ltd"
+  },
+  {
+    "name": "Budget Blinds",
+    "url": "https://campbellriverchamber.ca/directory/business/budget-blinds"
+  },
+  {
+    "name": "Camp Bob Office",
+    "url": "https://campbellriverchamber.ca/directory/business/camp-bob-office"
+  },
+  {
+    "name": "Campbell River Arts Council",
+    "url": "https://campbellriverchamber.ca/directory/business/campbell-river-arts-council"
+  },
+  {
+    "name": "Campbell River Community Foundation",
+    "url": "https://campbellriverchamber.ca/directory/business/campbell-river-community-foundation"
+  },
+  {
+    "name": "Campbell River Creative Industries Council",
+    "url": "https://campbellriverchamber.ca/directory/business/campbell-river-creative-industries-council"
+  },
+  {
+    "name": "Campbell River Fishing Co Ltd",
+    "url": "https://campbellriverchamber.ca/directory/business/campbell-river-fishing-co-ltd"
+  },
+  {
+    "name": "Campbell River Head Injury Support Society",
+    "url": "https://campbellriverchamber.ca/directory/business/campbell-river-head-injury-support-society"
+  },
+  {
+    "name": "Campbell River Honda",
+    "url": "https://campbellriverchamber.ca/directory/business/campbell-river-honda"
+  },
+  {
+    "name": "Campbell River Hospital Foundation",
+    "url": "https://campbellriverchamber.ca/directory/business/campbell-river-hospital-foundation"
+  },
+  {
+    "name": "Campbell River Hot Tubs Ltd",
+    "url": "https://campbellriverchamber.ca/directory/business/campbell-river-hot-tubs-ltd"
+  },
+  {
+    "name": "Campbell River Hyundai",
+    "url": "https://campbellriverchamber.ca/directory/business/campbell-river-hyundai"
+  },
+  {
+    "name": "Campbell River Mirror",
+    "url": "https://campbellriverchamber.ca/directory/business/campbell-river-mirror"
+  },
+  {
+    "name": "Campbell River Salmon Festival",
+    "url": "https://campbellriverchamber.ca/directory/business/campbell-river-salmon-festival"
+  },
+  {
+    "name": "Campbell River Seafood Lockers Ltd",
+    "url": "https://campbellriverchamber.ca/directory/business/campbell-river-seafood-lockers-ltd"
+  },
+  {
+    "name": "Campbell River Seniors Network",
+    "url": "https://campbellriverchamber.ca/directory/business/campbell-river-seniors-network"
+  },
+  {
+    "name": "Campbell River Toyota",
+    "url": "https://campbellriverchamber.ca/directory/business/campbell-river-toyota"
+  },
+  {
+    "name": "Campbell River Whale Watching Adventure Tours",
+    "url": "https://campbellriverchamber.ca/directory/business/campbell-river-whale-watching-adventure-tours"
+  },
+  {
+    "name": "Campbellton Neighbourhood Association",
+    "url": "https://campbellriverchamber.ca/directory/business/campbellton-neighbourhood-association"
+  },
+  {
+    "name": "Canadian Imperial Bank Of Commerce",
+    "url": "https://campbellriverchamber.ca/directory/business/canadian-imperial-bank-of-commerce"
+  },
+  {
+    "name": "Canadian Western Bank",
+    "url": "https://campbellriverchamber.ca/directory/business/canadian-western-bank"
+  },
+  {
+    "name": "Capacity Forest Management Ltd",
+    "url": "https://campbellriverchamber.ca/directory/business/capacity-forest-management-ltd"
+  },
+  {
+    "name": "Cermaq Canada",
+    "url": "https://campbellriverchamber.ca/directory/business/cermaq-canada"
+  },
+  {
+    "name": "Chan Nowosad Boates Inc",
+    "url": "https://campbellriverchamber.ca/directory/business/chan-nowosad-boates-inc"
+  },
+  {
+    "name": "Chances Campbell River",
+    "url": "https://campbellriverchamber.ca/directory/business/chances-campbell-river"
+  },
+  {
+    "name": "Matches",
+    "url": "https://campbellriverchamber.ca/directory/business/matches"
+  },
+  {
+    "name": "Childrens Health Foundation Of Vancouver Island",
+    "url": "https://campbellriverchamber.ca/directory/business/childrens-health-foundation-of-vancouver-island"
+  },
+  {
+    "name": "Qwalayu House",
+    "url": "https://campbellriverchamber.ca/directory/business/qwalayu-house"
+  },
+  {
+    "name": "Chinook Scaffold Systems Ltd",
+    "url": "https://campbellriverchamber.ca/directory/business/chinook-scaffold-systems-ltd"
+  },
+  {
+    "name": "City Of Campbell River",
+    "url": "https://campbellriverchamber.ca/directory/business/city-of-campbell-river"
+  },
+  {
+    "name": "Coast Discovery Inn",
+    "url": "https://campbellriverchamber.ca/directory/business/coast-discovery-inn"
+  },
+  {
+    "name": "D I Restaurant Lounge",
+    "url": "https://campbellriverchamber.ca/directory/business/d-i-restaurant-lounge"
+  },
+  {
+    "name": "Coastal Community Credit Union",
+    "url": "https://campbellriverchamber.ca/directory/business/coastal-community-credit-union"
+  },
+  {
+    "name": "Coastland Veterinary Hospital",
+    "url": "https://campbellriverchamber.ca/directory/business/coastland-veterinary-hospital"
+  },
+  {
+    "name": "Colleen Mcclure Designs",
+    "url": "https://campbellriverchamber.ca/directory/business/colleen-mcclure-designs"
+  },
+  {
+    "name": "Comfort Inn Suites",
+    "url": "https://campbellriverchamber.ca/directory/business/comfort-inn-suites"
+  },
+  {
+    "name": "Communitas Supportive Care Society",
+    "url": "https://campbellriverchamber.ca/directory/business/communitas-supportive-care-society"
+  },
+  {
+    "name": "Comox Airport",
+    "url": "https://campbellriverchamber.ca/directory/business/comox-airport"
+  },
+  {
+    "name": "Costco Wholesale Canada Ltd",
+    "url": "https://campbellriverchamber.ca/directory/business/costco-wholesale-canada-ltd"
+  },
+  {
+    "name": "Cr Beacon Club Society",
+    "url": "https://campbellriverchamber.ca/directory/business/cr-beacon-club-society"
+  },
+  {
+    "name": "Cr Coastline Towing Transport Ltd",
+    "url": "https://campbellriverchamber.ca/directory/business/cr-coastline-towing-transport-ltd"
+  },
+  {
+    "name": "Cr Family Services Society",
+    "url": "https://campbellriverchamber.ca/directory/business/cr-family-services-society"
+  },
+  {
+    "name": "Cr Lawyers",
+    "url": "https://campbellriverchamber.ca/directory/business/cr-lawyers"
+  },
+  {
+    "name": "Crowne Pacific Development Corporation",
+    "url": "https://campbellriverchamber.ca/directory/business/crowne-pacific-development-corporation"
+  },
+  {
+    "name": "Daeco Installations Ltd",
+    "url": "https://campbellriverchamber.ca/directory/business/daeco-installations-ltd"
+  },
+  {
+    "name": "Dent Island Lodge",
+    "url": "https://campbellriverchamber.ca/directory/business/dent-island-lodge"
+  },
+  {
+    "name": "Discovery Community College",
+    "url": "https://campbellriverchamber.ca/directory/business/discovery-community-college"
+  },
+  {
+    "name": "Discovery Foods",
+    "url": "https://campbellriverchamber.ca/directory/business/discovery-foods"
+  },
+  {
+    "name": "Discovery Harbour Fuel Sales",
+    "url": "https://campbellriverchamber.ca/directory/business/discovery-harbour-fuel-sales"
+  },
+  {
+    "name": "Discovery Harbour Marina",
+    "url": "https://campbellriverchamber.ca/directory/business/discovery-harbour-marina"
+  },
+  {
+    "name": "Discovery Launch Water Taxi",
+    "url": "https://campbellriverchamber.ca/directory/business/discovery-launch-water-taxi"
+  },
+  {
+    "name": "Divesafe International",
+    "url": "https://campbellriverchamber.ca/directory/business/divesafe-international"
+  },
+  {
+    "name": "Dodds Furniture And Mattress",
+    "url": "https://campbellriverchamber.ca/directory/business/dodds-furniture-and-mattress"
+  },
+  {
+    "name": "Dogwood Pet Mart",
+    "url": "https://campbellriverchamber.ca/directory/business/dogwood-pet-mart"
+  },
+  {
+    "name": "Dolphins Resort Ltd",
+    "url": "https://campbellriverchamber.ca/directory/business/dolphins-resort-ltd"
+  },
+  {
+    "name": "Dolphins Resort Ltd Anglers Dining Room",
+    "url": "https://campbellriverchamber.ca/directory/business/dolphins-resort-ltd-anglers-dining-room"
+  },
+  {
+    "name": "Duncan Electric Motor Ltd",
+    "url": "https://campbellriverchamber.ca/directory/business/duncan-electric-motor-ltd"
+  },
+  {
+    "name": "Eaglecraft Boats Inc",
+    "url": "https://campbellriverchamber.ca/directory/business/eaglecraft-boats-inc"
+  },
+  {
+    "name": "Econo Ezy Box Storage",
+    "url": "https://campbellriverchamber.ca/directory/business/econo-ezy-box-storage"
+  },
+  {
+    "name": "Entia Environmental Consultants Ltd",
+    "url": "https://campbellriverchamber.ca/directory/business/entia-environmental-consultants-ltd"
+  },
+  {
+    "name": "Excuse Me Hearing",
+    "url": "https://campbellriverchamber.ca/directory/business/excuse-me-hearing"
+  },
+  {
+    "name": "Fishermans Wharf Campbell River Harbour Authority",
+    "url": "https://campbellriverchamber.ca/directory/business/fishermans-wharf-campbell-river-harbour-authority"
+  },
+  {
+    "name": "Form Residence Design House",
+    "url": "https://campbellriverchamber.ca/directory/business/form-residence-design-house"
+  },
+  {
+    "name": "Fortisbc Energy Inc",
+    "url": "https://campbellriverchamber.ca/directory/business/fortisbc-energy-inc"
+  },
+  {
+    "name": "Garat Financial Group Ltd",
+    "url": "https://campbellriverchamber.ca/directory/business/garat-financial-group-ltd"
+  },
+  {
+    "name": "Gerritsen Brooks Appraisals Ltd",
+    "url": "https://campbellriverchamber.ca/directory/business/gerritsen-brooks-appraisals-ltd"
+  },
+  {
+    "name": "Gina Forsyth",
+    "url": "https://campbellriverchamber.ca/directory/business/gina-forsyth"
+  },
+  {
+    "name": "Glacierview Financial Services Ltd",
+    "url": "https://campbellriverchamber.ca/directory/business/glacierview-financial-services-ltd"
+  },
+  {
+    "name": "Gord Knight Ventures Ltd",
+    "url": "https://campbellriverchamber.ca/directory/business/gord-knight-ventures-ltd"
+  },
+  {
+    "name": "Grant Illuminated Signs Ltd",
+    "url": "https://campbellriverchamber.ca/directory/business/grant-illuminated-signs-ltd"
+  },
+  {
+    "name": "Greenways Land Trust",
+    "url": "https://campbellriverchamber.ca/directory/business/greenways-land-trust"
+  },
+  {
+    "name": "Grey River Netting Inc",
+    "url": "https://campbellriverchamber.ca/directory/business/grey-river-netting-inc"
+  },
+  {
+    "name": "Grieg Seafood Bc Ltd",
+    "url": "https://campbellriverchamber.ca/directory/business/grieg-seafood-bc-ltd"
+  },
+  {
+    "name": "Restore Habitat For Humanity Vi North",
+    "url": "https://campbellriverchamber.ca/directory/business/restore-habitat-for-humanity-vi-north"
+  },
+  {
+    "name": "Haig Brown Heritage House",
+    "url": "https://campbellriverchamber.ca/directory/business/haig-brown-heritage-house"
+  },
+  {
+    "name": "Healthyway Natural Foods Market",
+    "url": "https://campbellriverchamber.ca/directory/business/healthyway-natural-foods-market"
+  },
+  {
+    "name": "Herons Landing Hotel",
+    "url": "https://campbellriverchamber.ca/directory/business/herons-landing-hotel"
+  },
+  {
+    "name": "Highland Engineering Services Ltd",
+    "url": "https://campbellriverchamber.ca/directory/business/highland-engineering-services-ltd"
+  },
+  {
+    "name": "Homalco First Nation",
+    "url": "https://campbellriverchamber.ca/directory/business/homalco-first-nation"
+  },
+  {
+    "name": "Homalco Wildlife Tours",
+    "url": "https://campbellriverchamber.ca/directory/business/homalco-wildlife-tours"
+  },
+  {
+    "name": "Home Soulutions Remediation",
+    "url": "https://campbellriverchamber.ca/directory/business/home-soulutions-remediation"
+  },
+  {
+    "name": "Houle Electric Ltd",
+    "url": "https://campbellriverchamber.ca/directory/business/houle-electric-ltd"
+  },
+  {
+    "name": "Immediate Images",
+    "url": "https://campbellriverchamber.ca/directory/business/immediate-images"
+  },
+  {
+    "name": "Immigrant Welcome Centre",
+    "url": "https://campbellriverchamber.ca/directory/business/immigrant-welcome-centre"
+  },
+  {
+    "name": "Industrial Respiratory Systems Ltd",
+    "url": "https://campbellriverchamber.ca/directory/business/industrial-respiratory-systems-ltd"
+  },
+  {
+    "name": "Inland Kenworth",
+    "url": "https://campbellriverchamber.ca/directory/business/inland-kenworth"
+  },
+  {
+    "name": "Iris Visual Group",
+    "url": "https://campbellriverchamber.ca/directory/business/iris-visual-group"
+  },
+  {
+    "name": "Iron River Mechanical Ltd",
+    "url": "https://campbellriverchamber.ca/directory/business/iron-river-mechanical-ltd"
+  },
+  {
+    "name": "Island Funeral Services Ltd",
+    "url": "https://campbellriverchamber.ca/directory/business/island-funeral-services-ltd"
+  },
+  {
+    "name": "Island Ready Mix",
+    "url": "https://campbellriverchamber.ca/directory/business/island-ready-mix"
+  },
+  {
+    "name": "Izco Technology Solutions",
+    "url": "https://campbellriverchamber.ca/directory/business/izco-technology-solutions"
+  },
+  {
+    "name": "Jims Clothes Closet Ltd",
+    "url": "https://campbellriverchamber.ca/directory/business/jims-clothes-closet-ltd"
+  },
+  {
+    "name": "John Howard Society",
+    "url": "https://campbellriverchamber.ca/directory/business/john-howard-society"
+  },
+  {
+    "name": "Kask Graphics",
+    "url": "https://campbellriverchamber.ca/directory/business/kask-graphics"
+  },
+  {
+    "name": "Knight Inlet Lodge",
+    "url": "https://campbellriverchamber.ca/directory/business/knight-inlet-lodge"
+  },
+  {
+    "name": "Kubera Payments Corporation",
+    "url": "https://campbellriverchamber.ca/directory/business/kubera-payments-corporation"
+  },
+  {
+    "name": "Laichwiltach Family Life Society",
+    "url": "https://campbellriverchamber.ca/directory/business/laichwiltach-family-life-society"
+  },
+  {
+    "name": "Lakeland Automotive Ltd",
+    "url": "https://campbellriverchamber.ca/directory/business/lakeland-automotive-ltd"
+  },
+  {
+    "name": "Laurie Clark Tax Consultant",
+    "url": "https://campbellriverchamber.ca/directory/business/laurie-clark-tax-consultant"
+  },
+  {
+    "name": "Lighthouse Contracting",
+    "url": "https://campbellriverchamber.ca/directory/business/lighthouse-contracting"
+  },
+  {
+    "name": "Mae Mae Motel",
+    "url": "https://campbellriverchamber.ca/directory/business/mae-mae-motel"
+  },
+  {
+    "name": "Marine Link Transportation Ltd",
+    "url": "https://campbellriverchamber.ca/directory/business/marine-link-transportation-ltd"
+  },
+  {
+    "name": "Marks Safety Centre Ltd",
+    "url": "https://campbellriverchamber.ca/directory/business/marks-safety-centre-ltd"
+  },
+  {
+    "name": "Mcdonalds Restaurant",
+    "url": "https://campbellriverchamber.ca/directory/business/mcdonalds-restaurant"
+  },
+  {
+    "name": "Melora Life Skills Training Inc",
+    "url": "https://campbellriverchamber.ca/directory/business/melora-life-skills-training-inc"
+  },
+  {
+    "name": "Mental Health Recovery Partners",
+    "url": "https://campbellriverchamber.ca/directory/business/mental-health-recovery-partners"
+  },
+  {
+    "name": "Menzies Transport Ltd",
+    "url": "https://campbellriverchamber.ca/directory/business/menzies-transport-ltd"
+  },
+  {
+    "name": "Mid Island Liquor",
+    "url": "https://campbellriverchamber.ca/directory/business/mid-island-liquor"
+  },
+  {
+    "name": "Mifflin Surveys Ltd",
+    "url": "https://campbellriverchamber.ca/directory/business/mifflin-surveys-ltd"
+  },
+  {
+    "name": "Mnp Llp",
+    "url": "https://campbellriverchamber.ca/directory/business/mnp-llp"
+  },
+  {
+    "name": "Modern Pur Air Comox Valley",
+    "url": "https://campbellriverchamber.ca/directory/business/modern-pur-air-comox-valley"
+  },
+  {
+    "name": "Mowi Canada West",
+    "url": "https://campbellriverchamber.ca/directory/business/mowi-canada-west"
+  },
+  {
+    "name": "Museum At Campbell River",
+    "url": "https://campbellriverchamber.ca/directory/business/museum-at-campbell-river"
+  },
+  {
+    "name": "Nanwakolas Council Society",
+    "url": "https://campbellriverchamber.ca/directory/business/nanwakolas-council-society"
+  },
+  {
+    "name": "Naturally Pacific Resort",
+    "url": "https://campbellriverchamber.ca/directory/business/naturally-pacific-resort"
+  },
+  {
+    "name": "Naturally Pacific Golf Course Driving Range",
+    "url": "https://campbellriverchamber.ca/directory/business/naturally-pacific-golf-course-driving-range"
+  },
+  {
+    "name": "Carve Kitchen Meatery",
+    "url": "https://campbellriverchamber.ca/directory/business/carve-kitchen-meatery"
+  },
+  {
+    "name": "Velocity Lounge Driving Range",
+    "url": "https://campbellriverchamber.ca/directory/business/velocity-lounge-driving-range"
+  },
+  {
+    "name": "North Island College",
+    "url": "https://campbellriverchamber.ca/directory/business/north-island-college"
+  },
+  {
+    "name": "North Island Machine Works",
+    "url": "https://campbellriverchamber.ca/directory/business/north-island-machine-works"
+  },
+  {
+    "name": "North Island Metis Association",
+    "url": "https://campbellriverchamber.ca/directory/business/north-island-metis-association"
+  },
+  {
+    "name": "North Island Nissan",
+    "url": "https://campbellriverchamber.ca/directory/business/north-island-nissan"
+  },
+  {
+    "name": "Nte Discovery Park Ltd",
+    "url": "https://campbellriverchamber.ca/directory/business/nte-discovery-park-ltd"
+  },
+  {
+    "name": "Ocean Pacific Marine Supply",
+    "url": "https://campbellriverchamber.ca/directory/business/ocean-pacific-marine-supply"
+  },
+  {
+    "name": "Oceanfix Ca Ventures Ltd",
+    "url": "https://campbellriverchamber.ca/directory/business/oceanfix-ca-ventures-ltd"
+  },
+  {
+    "name": "Ok Tire Auto Service",
+    "url": "https://campbellriverchamber.ca/directory/business/ok-tire-auto-service"
+  },
+  {
+    "name": "Osprey Electric Ltd",
+    "url": "https://campbellriverchamber.ca/directory/business/osprey-electric-ltd"
+  },
+  {
+    "name": "Oyster Bay Resorts",
+    "url": "https://campbellriverchamber.ca/directory/business/oyster-bay-resorts"
+  },
+  {
+    "name": "Pacific Coastal Airlines Ltd",
+    "url": "https://campbellriverchamber.ca/directory/business/pacific-coastal-airlines-ltd"
+  },
+  {
+    "name": "Pacific Rim Engineered Products",
+    "url": "https://campbellriverchamber.ca/directory/business/pacific-rim-engineered-products"
+  },
+  {
+    "name": "Pacific Wealth Management Ltd",
+    "url": "https://campbellriverchamber.ca/directory/business/pacific-wealth-management-ltd"
+  },
+  {
+    "name": "Pacific Wood Waste Inc",
+    "url": "https://campbellriverchamber.ca/directory/business/pacific-wood-waste-inc"
+  },
+  {
+    "name": "Paladin Security",
+    "url": "https://campbellriverchamber.ca/directory/business/paladin-security"
+  },
+  {
+    "name": "Pbx Data Tech Inc",
+    "url": "https://campbellriverchamber.ca/directory/business/pbx-data-tech-inc"
+  },
+  {
+    "name": "Peninsula Co Op",
+    "url": "https://campbellriverchamber.ca/directory/business/peninsula-co-op"
+  },
+  {
+    "name": "Pharmasave Tc Health Willow Point",
+    "url": "https://campbellriverchamber.ca/directory/business/pharmasave-tc-health-willow-point"
+  },
+  {
+    "name": "Photo Tech Foto Source",
+    "url": "https://campbellriverchamber.ca/directory/business/photo-tech-foto-source"
+  },
+  {
+    "name": "Poseidon Ocean Systems Ltd",
+    "url": "https://campbellriverchamber.ca/directory/business/poseidon-ocean-systems-ltd"
+  },
+  {
+    "name": "Prices Lock Safe",
+    "url": "https://campbellriverchamber.ca/directory/business/prices-lock-safe"
+  },
+  {
+    "name": "Prizm Financial Inc",
+    "url": "https://campbellriverchamber.ca/directory/business/prizm-financial-inc"
+  },
+  {
+    "name": "Quality Designs Ltd",
+    "url": "https://campbellriverchamber.ca/directory/business/quality-designs-ltd"
+  },
+  {
+    "name": "Quality Foods",
+    "url": "https://campbellriverchamber.ca/directory/business/quality-foods"
+  },
+  {
+    "name": "Qaya Way West Transportation",
+    "url": "https://campbellriverchamber.ca/directory/business/qaya-way-west-transportation"
+  },
+  {
+    "name": "Quay West Kitchen Catering Ltd",
+    "url": "https://campbellriverchamber.ca/directory/business/quay-west-kitchen-catering-ltd"
+  },
+  {
+    "name": "Raven Forest Products Ltd",
+    "url": "https://campbellriverchamber.ca/directory/business/raven-forest-products-ltd"
+  },
+  {
+    "name": "Rbc Dominion Securities Inc",
+    "url": "https://campbellriverchamber.ca/directory/business/rbc-dominion-securities-inc"
+  },
+  {
+    "name": "Rbc Royal Bank Of Canada Cr",
+    "url": "https://campbellriverchamber.ca/directory/business/rbc-royal-bank-of-canada-cr"
+  },
+  {
+    "name": "Relish Interiors",
+    "url": "https://campbellriverchamber.ca/directory/business/relish-interiors"
+  },
+  {
+    "name": "Remax Check Realty",
+    "url": "https://campbellriverchamber.ca/directory/business/remax-check-realty"
+  },
+  {
+    "name": "Richs Auto Collision",
+    "url": "https://campbellriverchamber.ca/directory/business/richs-auto-collision"
+  },
+  {
+    "name": "Riptide Pub",
+    "url": "https://campbellriverchamber.ca/directory/business/riptide-pub"
+  },
+  {
+    "name": "River Ink",
+    "url": "https://campbellriverchamber.ca/directory/business/river-ink"
+  },
+  {
+    "name": "Rivercity Inclusion",
+    "url": "https://campbellriverchamber.ca/directory/business/rivercity-inclusion"
+  },
+  {
+    "name": "Rivercity Players Theatre Society",
+    "url": "https://campbellriverchamber.ca/directory/business/rivercity-players-theatre-society"
+  },
+  {
+    "name": "Roam Store Studio",
+    "url": "https://campbellriverchamber.ca/directory/business/roam-store-studio"
+  },
+  {
+    "name": "Roset Lanyon",
+    "url": "https://campbellriverchamber.ca/directory/business/roset-lanyon"
+  },
+  {
+    "name": "Royal Lepage Advance Realty",
+    "url": "https://campbellriverchamber.ca/directory/business/royal-lepage-advance-realty"
+  },
+  {
+    "name": "Safety Net Security",
+    "url": "https://campbellriverchamber.ca/directory/business/safety-net-security"
+  },
+  {
+    "name": "Salmon Point Resort Marina Ltd",
+    "url": "https://campbellriverchamber.ca/directory/business/salmon-point-resort-marina-ltd"
+  },
+  {
+    "name": "Sayward Delivery",
+    "url": "https://campbellriverchamber.ca/directory/business/sayward-delivery"
+  },
+  {
+    "name": "School District 72",
+    "url": "https://campbellriverchamber.ca/directory/business/school-district-72"
+  },
+  {
+    "name": "Sealand Aviation",
+    "url": "https://campbellriverchamber.ca/directory/business/sealand-aviation"
+  },
+  {
+    "name": "Service Canada",
+    "url": "https://campbellriverchamber.ca/directory/business/service-canada"
+  },
+  {
+    "name": "Session Taproom Kitchen",
+    "url": "https://campbellriverchamber.ca/directory/business/session-taproom-kitchen"
+  },
+  {
+    "name": "Session Studio Retail",
+    "url": "https://campbellriverchamber.ca/directory/business/session-studio-retail"
+  },
+  {
+    "name": "Session Spin",
+    "url": "https://campbellriverchamber.ca/directory/business/session-spin"
+  },
+  {
+    "name": "Sharon Korol",
+    "url": "https://campbellriverchamber.ca/directory/business/sharon-korol"
+  },
+  {
+    "name": "Shayla Hall Physiotherapy",
+    "url": "https://campbellriverchamber.ca/directory/business/shayla-hall-physiotherapy"
+  },
+  {
+    "name": "Silver King Lodge",
+    "url": "https://campbellriverchamber.ca/directory/business/silver-king-lodge"
+  },
+  {
+    "name": "Simply Green Environmental Ltd",
+    "url": "https://campbellriverchamber.ca/directory/business/simply-green-environmental-ltd"
+  },
+  {
+    "name": "Skill Trades Bc",
+    "url": "https://campbellriverchamber.ca/directory/business/skill-trades-bc"
+  },
+  {
+    "name": "Small Planet Energy Inc",
+    "url": "https://campbellriverchamber.ca/directory/business/small-planet-energy-inc"
+  },
+  {
+    "name": "Socal Restaurant Lounge",
+    "url": "https://campbellriverchamber.ca/directory/business/socal-restaurant-lounge"
+  },
+  {
+    "name": "Spirit 88 7 Fm Chvi",
+    "url": "https://campbellriverchamber.ca/directory/business/spirit-88-7-fm-chvi"
+  },
+  {
+    "name": "Spr York Holdings",
+    "url": "https://campbellriverchamber.ca/directory/business/spr-york-holdings"
+  },
+  {
+    "name": "St Jeans Cannery Depot Campbell River",
+    "url": "https://campbellriverchamber.ca/directory/business/st-jeans-cannery-depot-campbell-river"
+  },
+  {
+    "name": "Steep Island Lodge",
+    "url": "https://campbellriverchamber.ca/directory/business/steep-island-lodge"
+  },
+  {
+    "name": "Steve Marshall Ford",
+    "url": "https://campbellriverchamber.ca/directory/business/steve-marshall-ford"
+  },
+  {
+    "name": "Steve Shuster Real Estate",
+    "url": "https://campbellriverchamber.ca/directory/business/steve-shuster-real-estate"
+  },
+  {
+    "name": "Strategic Natural Resource Consultants Inc",
+    "url": "https://campbellriverchamber.ca/directory/business/strategic-natural-resource-consultants-inc"
+  },
+  {
+    "name": "Strathcona Park Lodge",
+    "url": "https://campbellriverchamber.ca/directory/business/strathcona-park-lodge"
+  },
+  {
+    "name": "Strathcona Regional District",
+    "url": "https://campbellriverchamber.ca/directory/business/strathcona-regional-district"
+  },
+  {
+    "name": "Stroshin Management",
+    "url": "https://campbellriverchamber.ca/directory/business/stroshin-management"
+  },
+  {
+    "name": "Tap Bookkeeping Solutions Ltd",
+    "url": "https://campbellriverchamber.ca/directory/business/tap-bookkeeping-solutions-ltd"
+  },
+  {
+    "name": "Tayco Paving Company",
+    "url": "https://campbellriverchamber.ca/directory/business/tayco-paving-company"
+  },
+  {
+    "name": "The Eagle 97 3 Fm",
+    "url": "https://campbellriverchamber.ca/directory/business/the-eagle-97-3-fm"
+  },
+  {
+    "name": "The Raven 100 7 Fm Ckcc",
+    "url": "https://campbellriverchamber.ca/directory/business/the-raven-100-7-fm-ckcc"
+  },
+  {
+    "name": "The Samara Circle",
+    "url": "https://campbellriverchamber.ca/directory/business/the-samara-circle"
+  },
+  {
+    "name": "The Update Company",
+    "url": "https://campbellriverchamber.ca/directory/business/the-update-company"
+  },
+  {
+    "name": "Thrifty Foods",
+    "url": "https://campbellriverchamber.ca/directory/business/thrifty-foods"
+  },
+  {
+    "name": "Thunderbird Rv Park Resort",
+    "url": "https://campbellriverchamber.ca/directory/business/thunderbird-rv-park-resort"
+  },
+  {
+    "name": "Tidemark Theatre Society",
+    "url": "https://campbellriverchamber.ca/directory/business/tidemark-theatre-society"
+  },
+  {
+    "name": "Tks Lawyers Mediators",
+    "url": "https://campbellriverchamber.ca/directory/business/tks-lawyers-mediators"
+  },
+  {
+    "name": "Tlowitsis First Nation",
+    "url": "https://campbellriverchamber.ca/directory/business/tlowitsis-first-nation"
+  },
+  {
+    "name": "T Mar Industries",
+    "url": "https://campbellriverchamber.ca/directory/business/t-mar-industries"
+  },
+  {
+    "name": "Tremain Media Inc",
+    "url": "https://campbellriverchamber.ca/directory/business/tremain-media-inc"
+  },
+  {
+    "name": "Tsa Kwa Luten Lodge",
+    "url": "https://campbellriverchamber.ca/directory/business/tsa-kwa-luten-lodge"
+  },
+  {
+    "name": "Tyee Chevrolet Buick Gmc Ltd",
+    "url": "https://campbellriverchamber.ca/directory/business/tyee-chevrolet-buick-gmc-ltd"
+  },
+  {
+    "name": "United Way Central Northern Vancouver Island",
+    "url": "https://campbellriverchamber.ca/directory/business/united-way-central-northern-vancouver-island"
+  },
+  {
+    "name": "Upland Contracting Ltd",
+    "url": "https://campbellriverchamber.ca/directory/business/upland-contracting-ltd"
+  },
+  {
+    "name": "Upland Ready Mix Ltd",
+    "url": "https://campbellriverchamber.ca/directory/business/upland-ready-mix-ltd"
+  },
+  {
+    "name": "Upper Island Counselling Services Society",
+    "url": "https://campbellriverchamber.ca/directory/business/upper-island-counselling-services-society"
+  },
+  {
+    "name": "Vancouver Island Mental Health Society",
+    "url": "https://campbellriverchamber.ca/directory/business/vancouver-island-mental-health-society"
+  },
+  {
+    "name": "Vancouver Island Motorsports Association",
+    "url": "https://campbellriverchamber.ca/directory/business/vancouver-island-motorsports-association"
+  },
+  {
+    "name": "Vancouver Island Real Estate Board",
+    "url": "https://campbellriverchamber.ca/directory/business/vancouver-island-real-estate-board"
+  },
+  {
+    "name": "Vancouver Island Regional Libary",
+    "url": "https://campbellriverchamber.ca/directory/business/vancouver-island-regional-libary"
+  },
+  {
+    "name": "Village Of Sayward",
+    "url": "https://campbellriverchamber.ca/directory/business/village-of-sayward"
+  },
+  {
+    "name": "Waypoint Insurance",
+    "url": "https://campbellriverchamber.ca/directory/business/waypoint-insurance"
+  },
+  {
+    "name": "We Wai Kai First Nation",
+    "url": "https://campbellriverchamber.ca/directory/business/we-wai-kai-first-nation"
+  },
+  {
+    "name": "Wei Wai Kum First Nation",
+    "url": "https://campbellriverchamber.ca/directory/business/wei-wai-kum-first-nation"
+  },
+  {
+    "name": "Wei Wai Kum House Of Treasures Ltd",
+    "url": "https://campbellriverchamber.ca/directory/business/wei-wai-kum-house-of-treasures-ltd"
+  },
+  {
+    "name": "Western Forest Products",
+    "url": "https://campbellriverchamber.ca/directory/business/western-forest-products"
+  },
+  {
+    "name": "Westurban Developments Ltd",
+    "url": "https://campbellriverchamber.ca/directory/business/westurban-developments-ltd"
+  },
+  {
+    "name": "Whiskey Jack Studios",
+    "url": "https://campbellriverchamber.ca/directory/business/whiskey-jack-studios"
+  },
+  {
+    "name": "Whites Diesel Power Marine Inc",
+    "url": "https://campbellriverchamber.ca/directory/business/whites-diesel-power-marine-inc"
+  },
+  {
+    "name": "Willow Point Electric",
+    "url": "https://campbellriverchamber.ca/directory/business/willow-point-electric"
+  },
+  {
+    "name": "Wilsons Transportation Ltd",
+    "url": "https://campbellriverchamber.ca/directory/business/wilsons-transportation-ltd"
+  },
+  {
+    "name": "Wired Electrical Design Ltd",
+    "url": "https://campbellriverchamber.ca/directory/business/wired-electrical-design-ltd"
+  },
+  {
+    "name": "Wisteria Boutique",
+    "url": "https://campbellriverchamber.ca/directory/business/wisteria-boutique"
+  },
+  {
+    "name": "Breathe In Qigong",
+    "url": "https://campbellriverchamber.ca/directory/business/breathe-in-qigong"
+  },
+  {
+    "name": "York Machine Shop Ltd",
+    "url": "https://campbellriverchamber.ca/directory/business/york-machine-shop-ltd"
+  },
+  {
+    "name": "Yyg Interiors",
+    "url": "https://campbellriverchamber.ca/directory/business/yyg-interiors"
+  },
+  {
+    "name": "River City Medical Clinic Not A Walk In Clinic",
+    "url": "https://campbellriverchamber.ca/directory/business/river-city-medical-clinic-not-a-walk-in-clinic"
+  }
+]

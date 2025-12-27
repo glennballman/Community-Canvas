@@ -1,0 +1,23 @@
+[
+  {
+    "name": "Example Business 1",
+    "category": "Retail",
+    "website": "http://www.example1.com",
+    "address": "123 Example St, City, Province, ZIP",
+    "phone": "(123) 456-7890"
+  },
+  {
+    "name": "Example Business 2",
+    "category": "Services",
+    "website": "http://www.example2.com",
+    "address": "456 Sample Ave, City, Province, ZIP",
+    "phone": "(098) 765-4321"
+  },
+  {
+    "name": "Example Business 3",
+    "category": "Hospitality",
+    "website": "http://www.example3.com",
+    "address": "789 Demo Rd, City, Province, ZIP",
+    "phone": "(555) 123-4567"
+  }
+]
