@@ -1,0 +1,467 @@
+{
+  "qualicum-beach-chamber": {
+    "name": "Qualicum Beach",
+    "members": [],
+    "count": 0,
+    "expected": 150,
+    "coverage": 0
+  },
+  "port-alberni-chamber": {
+    "name": "Alberni Valley",
+    "members": [],
+    "count": 0,
+    "expected": 200,
+    "coverage": 0
+  },
+  "sooke-chamber": {
+    "name": "Sooke",
+    "members": [
+      {
+        "name": "Standing Cedars Integrative Health",
+        "category": "Health & Wellness",
+        "address": "#301 - 2015 Sheilds Rd",
+        "phone": "778-583-8182",
+        "website": "https://www.sookeregionchamber.com/members/standing-cedars-integrative-health/",
+        "description": ""
+      },
+      {
+        "name": "Under The Seat Plumbing",
+        "category": "Plumbing & Building Services",
+        "address": "D-6625 Sooke Rd.",
+        "phone": "778-966-7733",
+        "website": "https://www.sookeregionchamber.com/members/under-the-seat-plumbing/",
+        "description": ""
+      },
+      {
+        "name": "Candice Neveu Coaching",
+        "category": "Health & Wellness, Professional Services",
+        "address": "6367 Riverstone Drive",
+        "phone": "12505325041",
+        "website": "https://www.sookeregionchamber.com/members/candice-neveu-coaching/",
+        "description": ""
+      },
+      {
+        "name": "Uptown Creative",
+        "category": "Business Consulting, Marketing",
+        "address": "Sooke",
+        "phone": "17809512530",
+        "website": "https://www.sookeregionchamber.com/members/uptown-creative/",
+        "description": ""
+      },
+      {
+        "name": "Canada’s Best Karate",
+        "category": "Health & Wellness, Sooke Region Chamber of Commerce, Sports & Fitness",
+        "address": "2197 Ottert Point Rd",
+        "phone": "7783653135",
+        "website": "https://www.sookeregionchamber.com/members/canadas-best-karate/",
+        "description": ""
+      },
+      {
+        "name": "At My Place Family Salon",
+        "category": "Hair Salons & Spa",
+        "address": "6662 Eakin Drive",
+        "phone": "778-425-2852",
+        "website": "https://www.sookeregionchamber.com/members/at-my-place-family-salon/",
+        "description": ""
+      },
+      {
+        "name": "Mexico Land Ventures",
+        "category": "Finance, Investment & Insurance, Investment & Insurance, Lawyers - Legal Services, Real Estate, Travel & Recreation",
+        "address": "2840 - #211 Peatt Rd. Langford, BC. V9B 3V4",
+        "phone": "12502173636",
+        "website": "https://www.sookeregionchamber.com/members/mexico-land-ventures/",
+        "description": ""
+      },
+      {
+        "name": "RanBro Enterprises Inc",
+        "category": "Construction & Supplies, Contractors",
+        "address": "",
+        "phone": "250-883-8837",
+        "website": "https://www.sookeregionchamber.com/members/15617/",
+        "description": ""
+      },
+      {
+        "name": "Fresh Cut Mowing",
+        "category": "Landscaping",
+        "address": "9285 Invermuir road",
+        "phone": "2507321387",
+        "website": "https://www.sookeregionchamber.com/members/fresh-cut-mowing/",
+        "description": ""
+      },
+      {
+        "name": "CommunityPlus – Home Healthcare + Nursing",
+        "category": "Health & Wellness, Health Care",
+        "address": "3865 Cactus Place",
+        "phone": "2506586508",
+        "website": "https://www.sookeregionchamber.com/members/communityplus-home-healthcare-nursing-2/",
+        "description": ""
+      },
+      {
+        "name": "Sooke Clean",
+        "category": "Unknown",
+        "address": "203 - 6609 Goodmere Road",
+        "phone": "12508917477",
+        "website": "https://www.sookeregionchamber.com/members/sooke-clean/",
+        "description": ""
+      },
+      {
+        "name": "Silver Jet Events LTD",
+        "category": "Food & Dining, Music, Professional Services",
+        "address": "6113 Kirby Road",
+        "phone": "250-634-5429",
+        "website": "https://www.sookeregionchamber.com/members/silver-jet-events-ltd/",
+        "description": ""
+      },
+      {
+        "name": "Sooke Fitness",
+        "category": "Travel & Recreation",
+        "address": "6625 Sooke Rd",
+        "phone": "2506427111",
+        "website": "https://www.sookeregionchamber.com/members/sooke-fitness-2/",
+        "description": ""
+      },
+      {
+        "name": "YYJ Plumbers-Ackinclose & Son",
+        "category": "Plumbing & Building Services, Professional Services, Sooke Region Chamber of Commerce",
+        "address": "641 Tyler Terrace",
+        "phone": "250-589-5651",
+        "website": "https://www.sookeregionchamber.com/members/yyj-plumbers-ackinclose-son/",
+        "description": ""
+      },
+      {
+        "name": "Bev Berger, Remax Camosun, Westside personal real estate corporation",
+        "category": "Real Estate",
+        "address": "2822 Phillips Rd",
+        "phone": "12504156983",
+        "website": "https://www.sookeregionchamber.com/members/bev-berger-remax-camosun-westside-personal-real-estate-corporation/",
+        "description": ""
+      },
+      {
+        "name": "V I Spectrum Digital & Photographic Ltd",
+        "category": "Advertising, Business-to-Business Services, Fine arts, Marketing, Photography",
+        "address": "6693 Sooke Rd",
+        "phone": "2506429884",
+        "website": "https://www.sookeregionchamber.com/members/v-i-spectrum-digital-photographic-ltd/",
+        "description": ""
+      },
+      {
+        "name": "Tau Wellness Cooperative",
+        "category": "Health & Wellness",
+        "address": "2998 Manzer Road",
+        "phone": "2508001383",
+        "website": "https://www.sookeregionchamber.com/members/tau-wellness-cooperative/",
+        "description": ""
+      },
+      {
+        "name": "Sooke Radio Society",
+        "category": "Sooke Region Chamber of Commerce",
+        "address": "",
+        "phone": "778-676-4829",
+        "website": "https://www.sookeregionchamber.com/members/sooke-radio-society/",
+        "description": ""
+      },
+      {
+        "name": "Sasquatch Heat Pumps",
+        "category": "Electrical Services, Heating",
+        "address": "C-6625 Sooke Road",
+        "phone": "(778) 715-0131",
+        "website": "https://www.sookeregionchamber.com/members/sasquatch-heat-pumps/",
+        "description": ""
+      },
+      {
+        "name": "Island Firearms Safety",
+        "category": "School",
+        "address": "",
+        "phone": "7786786789",
+        "website": "https://www.sookeregionchamber.com/members/mike-holmes/",
+        "description": ""
+      },
+      {
+        "name": "Sooke Detailing",
+        "category": "Automotive, Cleaning Services",
+        "address": "#30, 7450 Butler Rd, Sooke BC",
+        "phone": "778-352-2211",
+        "website": "https://www.sookeregionchamber.com/members/sooke-detailing/",
+        "description": ""
+      },
+      {
+        "name": "West Coast Esthetics Healing Studio",
+        "category": "Health & Wellness",
+        "address": "3166 Robinson Road",
+        "phone": "7786784167",
+        "website": "https://www.sookeregionchamber.com/members/west-coast-esthetics-healing-studio/",
+        "description": ""
+      },
+      {
+        "name": "Chambermade",
+        "category": "Unknown",
+        "address": "",
+        "phone": "",
+        "website": "https://www.sookeregionchamber.com/members/chambermade/",
+        "description": ""
+      },
+      {
+        "name": "Hive & Thrive Consulting",
+        "category": "Business Consulting",
+        "address": "6664 Rhodonite Drive",
+        "phone": "2502138325",
+        "website": "https://www.sookeregionchamber.com/members/hive-thrive-consulting/",
+        "description": ""
+      },
+      {
+        "name": "Earth Dragon TCM",
+        "category": "Acupuncture, Counselling, Health & Wellness",
+        "address": "3166 Robinson Rd, Sooke BC, V9Z 0J9, Canada",
+        "phone": "2502228287",
+        "website": "https://www.sookeregionchamber.com/members/earth-dragon-tcm/",
+        "description": ""
+      },
+      {
+        "name": "BGC South Vancouver Island",
+        "category": "ChildCare, Non-Profit Organizations",
+        "address": "4-961 Dunford Avenue, Victoria V9B 2S4, Canada",
+        "phone": "12503849133",
+        "website": "https://www.sookeregionchamber.com/members/bgc-south-vancouver-island/",
+        "description": ""
+      },
+      {
+        "name": "NOTARIES IN SOOKE",
+        "category": "Lawyers - Legal Services",
+        "address": "P.O. BOX 730, Sooke B.C. V9Z 1H7",
+        "phone": "(250) 642-3318",
+        "website": "https://www.sookeregionchamber.com/members/notaries-in-sooke/",
+        "description": ""
+      },
+      {
+        "name": "Jocelyn Phillips CPA Inc.",
+        "category": "Business Consulting, Financial Consulting (Accounting & Tax)",
+        "address": "NA",
+        "phone": "2508862721",
+        "website": "https://www.sookeregionchamber.com/members/jocelyn-phillips-cpa-inc/",
+        "description": ""
+      },
+      {
+        "name": "Blossom Behaviour Services",
+        "category": "Health & Wellness, Non-Profit Organizations",
+        "address": "2885 Jacklin Rd",
+        "phone": "12505885066",
+        "website": "https://www.sookeregionchamber.com/members/blossom-behaviour-services/",
+        "description": ""
+      }
+    ],
+    "count": 29,
+    "expected": 100,
+    "coverage": 29
+  },
+  "sidney-chamber": {
+    "name": "Sidney BIA",
+    "members": [
+      {
+        "name": "Mary Winspear Centre",
+        "category": "Arts & Culture",
+        "address": "2243 Beacon Avenue, Sidney BC, V8L 1W9",
+        "phone": "(250) 656-0275",
+        "website": "https://distinctlysidney.ca/mary-winspear-centre/",
+        "description": "The Mary Winspear Centre is located just 5 minutes from Victoria International Airport."
+      },
+      {
+        "name": "Sabhai Thai",
+        "category": "Restaurants",
+        "address": "2493 Beacon Avenue Sidney V8L 1X9",
+        "phone": "(250) 655-4085",
+        "website": "https://distinctlysidney.ca/sabhai-thai/",
+        "description": "Sabhai is a family-owned and operated Authentic Thai restaurant."
+      },
+      {
+        "name": "J. Burke & Sons Tobacconists Ltd.",
+        "category": "Shopping & Services",
+        "address": "2373 Beacon Avenue, Sidney BC V8L 1W9",
+        "phone": "(250) 655-1556",
+        "website": "https://distinctlysidney.ca/j-burke-sons-tobacconists-ltd/",
+        "description": "Monday – Saturday 9am – 6am."
+      },
+      {
+        "name": "Eyeland Optical",
+        "category": "Shopping & Services",
+        "address": "2451 Beacon Avenue, Sidney BC V8L 1X7",
+        "phone": "(250) 656-3626",
+        "website": "https://distinctlysidney.ca/eyeland-optical/",
+        "description": "Locally owned, independent eyewear stores featuring patient, professional eye care."
+      },
+      {
+        "name": "Dig This Sidney",
+        "category": "Shopping & Services",
+        "address": "9813 3 St, Sidney, BC V8L 3A6, Canada",
+        "phone": "(778) 426-1998",
+        "website": "https://distinctlysidney.ca/dig-this-sidney/",
+        "description": "Dig This is Sidney’s leading service."
+      },
+      {
+        "name": "The Red Brick Cafe",
+        "category": "Restaurants",
+        "address": "2423 Beacon Ave Sidney, British Columbia V8L1X5",
+        "phone": "(250) 655-1822",
+        "website": "https://distinctlysidney.ca/the-red-brick-cafe/",
+        "description": "Located in the heart of Sidney with a cozy atmosphere."
+      },
+      {
+        "name": "Victoria Distillers",
+        "category": "Restaurants",
+        "address": "9891 Seaport Place, Sidney, BC, Canada",
+        "phone": "(250) 544-8217",
+        "website": "https://distinctlysidney.ca/victoria-distillers/",
+        "description": "Our new hours are Sunday 12pm – 6pm, Monday – Wednesday 12pm – 9pm, Thursday – Saturday 12pm – 10:30pm."
+      },
+      {
+        "name": "2nd Street Studio Hair Design",
+        "category": "Shopping & Services",
+        "address": "9-9843 Second Street, Sidney, BC V8L 3C7",
+        "phone": "(250) 655-0515",
+        "website": "https://distinctlysidney.ca/2nd-street-studio-hair-design/",
+        "description": "Located in Sidney, British Columbia."
+      },
+      {
+        "name": "Yami Sushi",
+        "category": "Restaurants",
+        "address": "101A – 9775 Fourth Street, Sidney BC V8L 2Z8",
+        "phone": "(778) 426-0100",
+        "website": "https://distinctlysidney.ca/yami-sushi/",
+        "description": "At Yami Sushi in Sidney BC we pride ourselves on quality."
+      },
+      {
+        "name": "Adel’s Play N Discovery House",
+        "category": "Shopping & Services",
+        "address": "2146 Beacon Avenue West, Sidney, BC, Canada",
+        "phone": "(250) 655-4888",
+        "website": "https://distinctlysidney.ca/adels-play-n-discovery-house/",
+        "description": "A B.C. licensed group child care facility."
+      }
+    ],
+    "count": 10,
+    "expected": 100,
+    "coverage": 10
+  },
+  "ladysmith-chamber": {
+    "name": "Ladysmith",
+    "members": [],
+    "count": 0,
+    "expected": 80,
+    "coverage": 0
+  },
+  "ucluelet-chamber": {
+    "name": "Ucluelet",
+    "members": [],
+    "count": 0,
+    "expected": 60,
+    "coverage": 0
+  },
+  "port-hardy-chamber": {
+    "name": "Port Hardy",
+    "members": [],
+    "count": 0,
+    "expected": 60,
+    "coverage": 0
+  },
+  "chemainus-chamber": {
+    "name": "Chemainus",
+    "members": [],
+    "count": 0,
+    "expected": 80,
+    "coverage": 0
+  },
+  "cowichan-lake-chamber": {
+    "name": "Cowichan Lake",
+    "members": [
+      {
+        "name": "The Firewood Guys Firewood Co.",
+        "category": "Forestry, Firewood",
+        "address": "Youbou, British Columbia, Canada",
+        "phone": "2505057632",
+        "website": "",
+        "description": ""
+      },
+      {
+        "name": "Kryshelle Love – Triptician Vacation Specialist",
+        "category": "Travel Agent",
+        "address": "",
+        "phone": "(705) 868-6800",
+        "website": "",
+        "description": "Email: kryshelle@triptician.ca"
+      },
+      {
+        "name": "Ts’uubaa-asatx Nation (Lake Cowichan First Nation)",
+        "category": "First Nations, Government",
+        "address": "313B Deer Road, Lake Cowichan, British Columbia, Canada V0R2G0",
+        "phone": "(250) 749-3301",
+        "website": "http://www.lakecowichanfn.ca/",
+        "description": "Email: info@lakecowichanfn.ca"
+      },
+      {
+        "name": "BFL CANADA Risk & Insurance Services Inc.",
+        "category": "Financial Services, Insurance",
+        "address": "Cowichan Valley, British Columbia, Canada V0R2G0",
+        "phone": "1-778-238-0692",
+        "website": "https://www.bflcanada.ca/",
+        "description": "Email: cthomson@bflcanada.ca"
+      },
+      {
+        "name": "Just For Kids After School Care",
+        "category": "Child/Daycare Centre",
+        "address": "Lake Cowichan, British Columbia, Canada",
+        "phone": "250-732-7292",
+        "website": "",
+        "description": "Email: j4kcare@gmail.com"
+      },
+      {
+        "name": "Vancouver Island Economic Alliance (VIEA)",
+        "category": "Business Services, Organizations",
+        "address": "P.O. Box 76, Station ‘A’, Nanaimo, British Columbia, Canada V9R 5K4",
+        "phone": "250-668-5389",
+        "website": "https://viea.ca/",
+        "description": "Email: julie@viea.ca"
+      },
+      {
+        "name": "Valleyshore Plumbing and Heating Ltd.",
+        "category": "Contracting, Heating Services, Plumbing",
+        "address": "PO Box 2062, Lake Cowichan, British Columbia, Canada",
+        "phone": "604-614-8706",
+        "website": "",
+        "description": "Email: office@valleyshoreplumbing.ca"
+      },
+      {
+        "name": "Mesachie Lake Automotive",
+        "category": "Automotive, Retail",
+        "address": "9250 South Shore Road, Mesachie Lake, British Columbia, Canada V0R2N0",
+        "phone": "(250) 932-2723",
+        "website": "https://www.facebook.com/MesachieAuto2016/",
+        "description": "Email: rescuemarket@shaw.ca"
+      },
+      {
+        "name": "CBJ Plumbing",
+        "category": "Contracting, Plumbing",
+        "address": "Lake Cowichan, British Columbia, Canada",
+        "phone": "2262380099",
+        "website": "https://www.cbjplumbing.ca/",
+        "description": "Email: cbjplumbinginc@gmail.com"
+      },
+      {
+        "name": "Home Hardware Lake Cowichan",
+        "category": "Home and Garden, Retail",
+        "address": "68 Cowichan Lake Rd, Lake Cowichan, British Columbia, Canada V0R2G0",
+        "phone": "250-749-4400",
+        "website": "https://www.facebook.com/profile.php?id=100088057861934",
+        "description": "Email: hhlakecowichan@shaw.ca"
+      }
+    ],
+    "count": 10,
+    "expected": 130,
+    "coverage": 8
+  },
+  "port-mcneill-chamber": {
+    "name": "Port McNeill",
+    "members": [],
+    "count": 0,
+    "expected": 40,
+    "coverage": 0
+  }
+}

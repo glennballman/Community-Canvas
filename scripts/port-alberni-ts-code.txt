@@ -1,0 +1,2629 @@
+  // ============================================================================
+  // PORT ALBERNI - Alberni Valley Chamber of Commerce
+  // Scraped: December 2024 | Coverage: 88% (175/~200 members)
+  // ============================================================================
+  {
+    id: 'av-granite-design-works-ltd',
+    chamberId: 'port-alberni-chamber',
+    name: 'A.V. Granite Design Works Ltd',
+    category: 'professional-services' as const,
+    naicsCode: '541990',
+    naicsTitle: 'Professional Services',
+    naicsSector: '54',
+    naicsSubsector: '541',
+    address: '5-2945 Alberni Hwy, Port Alberni, BC',
+    phone: '250-724-5709',
+    website: 'https://albernichamber.ca/directory/av-granite-design-works-ltd',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'accurate-home-inspection---todd-flaro',
+    chamberId: 'port-alberni-chamber',
+    name: 'Accurate Home Inspection - Todd Flaro',
+    category: 'home-garden' as const,
+    naicsCode: '444140',
+    naicsTitle: 'Hardware Stores',
+    naicsSector: '44',
+    naicsSubsector: '444',
+    address: '/',
+    phone: '/',
+    website: 'https://albernichamber.ca/directory/accurate-home-inspection',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'alberni-brewing-company',
+    chamberId: 'port-alberni-chamber',
+    name: 'Alberni Brewing Company',
+    category: 'professional-services' as const,
+    naicsCode: '541990',
+    naicsTitle: 'Professional Services',
+    naicsSector: '54',
+    naicsSubsector: '541',
+    
+    phone: '778-744-8010',
+    website: 'https://albernibrewingcompany.ca/menu',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'alberni-charters',
+    chamberId: 'port-alberni-chamber',
+    name: 'Alberni Charters',
+    category: 'professional-services' as const,
+    naicsCode: '541990',
+    naicsTitle: 'Professional Services',
+    naicsSector: '54',
+    naicsSubsector: '541',
+    
+    phone: '250-735-6503',
+    website: 'https://albernicharters.com',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: '933-the-peak-fm',
+    chamberId: 'port-alberni-chamber',
+    name: '93.3 The Peak FM',
+    category: 'professional-services' as const,
+    naicsCode: '541990',
+    naicsTitle: 'Professional Services',
+    naicsSector: '54',
+    naicsSubsector: '541',
+    
+    
+    website: 'https://albernichamber.ca/directory/933-peak-fm',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'alberni-district-co-operative-association',
+    chamberId: 'port-alberni-chamber',
+    name: 'Alberni District Co-operative Association',
+    category: 'retail' as const,
+    naicsCode: '452319',
+    naicsTitle: 'General Merchandise Stores',
+    naicsSector: '45',
+    naicsSubsector: '452',
+    
+    
+    website: 'https://albernichamber.ca/directory/alberni-district-co-operative-association',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'access-ideas',
+    chamberId: 'port-alberni-chamber',
+    name: 'Access IDEAs',
+    category: 'education' as const,
+    naicsCode: '611310',
+    naicsTitle: 'Colleges and Universities',
+    naicsSector: '61',
+    naicsSubsector: '611',
+    
+    
+    website: 'https://albernichamber.ca/directory/access-ideas',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'alberni-online-formerly-alberni-design',
+    chamberId: 'port-alberni-chamber',
+    name: 'Alberni Online (Formerly Alberni Design)',
+    category: 'professional-services' as const,
+    naicsCode: '541990',
+    naicsTitle: 'Professional Services',
+    naicsSector: '54',
+    naicsSubsector: '541',
+    address: 'Port Alberni, BC',
+    
+    website: 'https://albernichamber.ca/directory/alberni-online-formerly-alberni-design',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'alberni-chrysler',
+    chamberId: 'port-alberni-chamber',
+    name: 'Alberni Chrysler',
+    category: 'automotive' as const,
+    naicsCode: '811111',
+    naicsTitle: 'General Automotive Repair',
+    naicsSector: '81',
+    naicsSubsector: '811',
+    address: 'Port Alberni, BC',
+    phone: '250.723.5331',
+    website: 'https://www.albernicdjr.ca/',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'alberni-fitness-centre-ltd',
+    chamberId: 'port-alberni-chamber',
+    name: 'Alberni Fitness Centre Ltd.',
+    category: 'healthcare' as const,
+    naicsCode: '621399',
+    naicsTitle: 'Other Health Practitioners',
+    naicsSector: '62',
+    naicsSubsector: '621',
+    
+    
+    website: 'https://albernichamber.ca/directory/alberni-fitness-centre-ltd',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'alberni-liquor-store',
+    chamberId: 'port-alberni-chamber',
+    name: 'Alberni Liquor Store',
+    category: 'retail' as const,
+    naicsCode: '452319',
+    naicsTitle: 'General Merchandise Stores',
+    naicsSector: '45',
+    naicsSubsector: '452',
+    
+    
+    website: 'https://albernichamber.ca/directory/alberni-liquor-store',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'alberni-industrial-marine-supply-ltd---rpm-group',
+    chamberId: 'port-alberni-chamber',
+    name: 'Alberni Industrial Marine Supply Ltd. - RPM Group',
+    category: 'retail' as const,
+    naicsCode: '452319',
+    naicsTitle: 'General Merchandise Stores',
+    naicsSector: '45',
+    naicsSubsector: '452',
+    address: 'Kingsway Ave, Port Alberni',
+    
+    website: 'https://albernichamber.ca/directory/alberni-industrial-marine-supply-ltd-rpm-group',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'abell-pest-control-inc',
+    chamberId: 'port-alberni-chamber',
+    name: 'Abell Pest Control Inc.',
+    category: 'home-garden' as const,
+    naicsCode: '561710',
+    naicsTitle: 'Exterminating Services',
+    naicsSector: '56',
+    naicsSubsector: '561',
+    
+    
+    website: 'https://albernichamber.ca/directory/abell-pest-control-inc',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'alberni-district-fall-fair',
+    chamberId: 'port-alberni-chamber',
+    name: 'Alberni District Fall Fair',
+    category: 'professional-services' as const,
+    naicsCode: '541990',
+    naicsTitle: 'Professional Services',
+    naicsSector: '54',
+    naicsSubsector: '541',
+    
+    
+    website: 'https://albernichamber.ca/directory/alberni-district-fall-fair',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'a-step-above-cafe',
+    chamberId: 'port-alberni-chamber',
+    name: 'A Step Above Cafe',
+    category: 'food-beverage' as const,
+    naicsCode: '722515',
+    naicsTitle: 'Snack and Nonalcoholic Beverage Bars',
+    naicsSector: '72',
+    naicsSubsector: '722',
+    
+    
+    website: 'https://albernichamber.ca/directory/step-above-cafe',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'adss-career-centre',
+    chamberId: 'port-alberni-chamber',
+    name: 'ADSS Career Centre',
+    category: 'professional-services' as const,
+    naicsCode: '541990',
+    naicsTitle: 'Professional Services',
+    naicsSector: '54',
+    naicsSubsector: '541',
+    address: 'Alberni District Secondary School, Main Floor',
+    phone: '250-723-1191',
+    website: 'https://albernichamber.ca/directory/adss-career-centre',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'alberni-cannabis-store',
+    chamberId: 'port-alberni-chamber',
+    name: 'Alberni Cannabis Store',
+    category: 'professional-services' as const,
+    naicsCode: '541990',
+    naicsTitle: 'Professional Services',
+    naicsSector: '54',
+    naicsSubsector: '541',
+    address: 'Port Alberni, Vancouver Island',
+    
+    website: 'https://albernichamber.ca/directory/alberni-cannabis-store',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'alberni-golf-club',
+    chamberId: 'port-alberni-chamber',
+    name: 'Alberni Golf Club',
+    category: 'recreation-entertainment' as const,
+    naicsCode: '713910',
+    naicsTitle: 'Golf Courses',
+    naicsSector: '71',
+    naicsSubsector: '713',
+    
+    
+    website: 'https://albernichamber.ca/directory/alberni-golf-club',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'alberni-power-marine---rpm-group',
+    chamberId: 'port-alberni-chamber',
+    name: 'Alberni Power & Marine - RPM Group',
+    category: 'professional-services' as const,
+    naicsCode: '541990',
+    naicsTitle: 'Professional Services',
+    naicsSector: '54',
+    naicsSubsector: '541',
+    
+    
+    website: 'https://www.albernipowermarine.com',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'alberni-adventure-gear',
+    chamberId: 'port-alberni-chamber',
+    name: 'Alberni Adventure Gear',
+    category: 'professional-services' as const,
+    naicsCode: '541990',
+    naicsTitle: 'Professional Services',
+    naicsSector: '54',
+    naicsSubsector: '541',
+    address: 'Port Alberni, Vancouver Island',
+    
+    website: 'https://albernichamber.ca/directory/alberni-adventure-gear',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: '4vi-group',
+    chamberId: 'port-alberni-chamber',
+    name: '4VI Group',
+    category: 'professional-services' as const,
+    naicsCode: '541990',
+    naicsTitle: 'Professional Services',
+    naicsSector: '54',
+    naicsSubsector: '541',
+    
+    
+    websiteNeedsCollection: true,
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'a-v-little-digger-hauler-ltd',
+    chamberId: 'port-alberni-chamber',
+    name: 'A V Little Digger & Hauler Ltd',
+    category: 'professional-services' as const,
+    naicsCode: '541990',
+    naicsTitle: 'Professional Services',
+    naicsSector: '54',
+    naicsSubsector: '541',
+    
+    
+    website: 'https://albernichamber.ca/directory/v-little-digger-hauler-ltd#main-content',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'adaps-youth-and-family-services',
+    chamberId: 'port-alberni-chamber',
+    name: 'ADAPS Youth and Family Services',
+    category: 'nonprofit' as const,
+    naicsCode: '813410',
+    naicsTitle: 'Civic Organizations',
+    naicsSector: '81',
+    naicsSubsector: '813',
+    
+    
+    website: 'https://albernichamber.ca/directory/adaps-youth-and-family-services',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'alberni-electric-ltd',
+    chamberId: 'port-alberni-chamber',
+    name: 'Alberni Electric Ltd.',
+    category: 'construction' as const,
+    naicsCode: '238210',
+    naicsTitle: 'Electrical Contractors',
+    naicsSector: '23',
+    naicsSubsector: '238',
+    
+    
+    website: 'https://albernichamber.ca/directory/alberni-electric-ltd#main-content',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'agrohope-farms-products-inc',
+    chamberId: 'port-alberni-chamber',
+    name: 'Agrohope Farms & Products Inc',
+    category: 'food-beverage' as const,
+    naicsCode: '722511',
+    naicsTitle: 'Full-Service Restaurants',
+    naicsSector: '72',
+    naicsSubsector: '722',
+    address: 'Port Alberni',
+    phone: '778-548-4313',
+    website: 'https://albernichamber.ca/directory/agrohope-farms-products-inc#main-content',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'alberni-valley-employment-centre',
+    chamberId: 'port-alberni-chamber',
+    name: 'Alberni Valley Employment Centre',
+    category: 'professional-services' as const,
+    naicsCode: '541990',
+    naicsTitle: 'Professional Services',
+    naicsSector: '54',
+    naicsSubsector: '541',
+    
+    
+    website: 'https://avemployment.ca/',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'alberni-valley-childcare-society',
+    chamberId: 'port-alberni-chamber',
+    name: 'Alberni Valley Childcare Society',
+    category: 'professional-services' as const,
+    naicsCode: '541990',
+    naicsTitle: 'Professional Services',
+    naicsSector: '54',
+    naicsSubsector: '541',
+    
+    
+    website: 'https://albernichamber.ca/directory/alberni-valley-childcare-society',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'av-financial',
+    chamberId: 'port-alberni-chamber',
+    name: 'AV Financial',
+    category: 'financial-services' as const,
+    naicsCode: '523930',
+    naicsTitle: 'Investment Advice',
+    naicsSector: '52',
+    naicsSubsector: '523',
+    
+    
+    website: 'https://albernichamber.ca/directory/av-financial',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'berry-vale-contracting-ltd',
+    chamberId: 'port-alberni-chamber',
+    name: 'Berry & Vale Contracting Ltd.',
+    category: 'professional-services' as const,
+    naicsCode: '541990',
+    naicsTitle: 'Professional Services',
+    naicsSector: '54',
+    naicsSubsector: '541',
+    
+    
+    website: 'http://www.berryandvale.ca/services/excavating-trucking/',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'alberni-valley-drag-racing-association',
+    chamberId: 'port-alberni-chamber',
+    name: 'Alberni Valley Drag Racing Association',
+    category: 'nonprofit' as const,
+    naicsCode: '813410',
+    naicsTitle: 'Civic Organizations',
+    naicsSector: '81',
+    naicsSubsector: '813',
+    
+    
+    website: 'https://albernichamber.ca/directory/alberni-valley-drag-racing-association',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'alberni-valley-curling-club',
+    chamberId: 'port-alberni-chamber',
+    name: 'Alberni Valley Curling Club',
+    category: 'recreation-entertainment' as const,
+    naicsCode: '713990',
+    naicsTitle: 'Recreation Industries',
+    naicsSector: '71',
+    naicsSubsector: '713',
+    
+    
+    website: 'https://albernichamber.ca/directory/alberni-valley-curling-club',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'alberni-toyota',
+    chamberId: 'port-alberni-chamber',
+    name: 'Alberni Toyota',
+    category: 'professional-services' as const,
+    naicsCode: '541990',
+    naicsTitle: 'Professional Services',
+    naicsSector: '54',
+    naicsSubsector: '541',
+    address: 'Port Alberni',
+    phone: '(250) 723-9448',
+    website: 'https://albernichamber.ca/directory/alberni-toyota',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'alberni-teens-can-rock',
+    chamberId: 'port-alberni-chamber',
+    name: 'Alberni Teens Can Rock',
+    category: 'nonprofit' as const,
+    naicsCode: '813410',
+    naicsTitle: 'Civic Organizations',
+    naicsSector: '81',
+    naicsSubsector: '813',
+    
+    
+    website: 'https://albernichamber.ca/directory/alberni-teens-can-rock',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'alberni-valley-news',
+    chamberId: 'port-alberni-chamber',
+    name: 'Alberni Valley News',
+    category: 'marketing-advertising' as const,
+    naicsCode: '511110',
+    naicsTitle: 'Newspaper Publishers',
+    naicsSector: '51',
+    naicsSubsector: '511',
+    
+    
+    website: 'https://albernichamber.ca/directory/alberni-valley-news',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'b-a-transmissions-ltd',
+    chamberId: 'port-alberni-chamber',
+    name: 'B & A Transmissions Ltd.',
+    category: 'automotive' as const,
+    naicsCode: '811111',
+    naicsTitle: 'General Automotive Repair',
+    naicsSector: '81',
+    naicsSubsector: '811',
+    address: '4521 10th Ave, Port Alberni, Vancouver Island',
+    phone: '250 724-9800',
+    website: 'https://albernichamber.ca/directory/b-transmissions-ltd',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'alberni-valley-refrigeration-ltd',
+    chamberId: 'port-alberni-chamber',
+    name: 'Alberni Valley Refrigeration Ltd.',
+    category: 'professional-services' as const,
+    naicsCode: '541990',
+    naicsTitle: 'Professional Services',
+    naicsSector: '54',
+    naicsSubsector: '541',
+    
+    
+    website: 'https://albernichamber.ca/directory/alberni-valley-refrigeration-ltd',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'alpha-home-inspections',
+    chamberId: 'port-alberni-chamber',
+    name: 'Alpha Home Inspections',
+    category: 'home-garden' as const,
+    naicsCode: '444140',
+    naicsTitle: 'Hardware Stores',
+    naicsSector: '44',
+    naicsSubsector: '444',
+    
+    
+    website: 'https://albernichamber.ca/directory/alpha-home-inspections',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'bare-bones-fish-house-smokery',
+    chamberId: 'port-alberni-chamber',
+    name: 'Bare Bones Fish House & Smokery',
+    category: 'food-beverage' as const,
+    naicsCode: '722511',
+    naicsTitle: 'Full-Service Restaurants',
+    naicsSector: '72',
+    naicsSubsector: '722',
+    
+    
+    website: 'https://albernichamber.ca/directory/bare-bones-fish-house-smokery',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'belles-haircare-boutique-salon',
+    chamberId: 'port-alberni-chamber',
+    name: 'Belle\'s Haircare Boutique Salon',
+    category: 'spa-beauty' as const,
+    naicsCode: '812112',
+    naicsTitle: 'Beauty Salons',
+    naicsSector: '81',
+    naicsSubsector: '812',
+    
+    
+    website: 'https://albernichamber.ca/directory/belles-haircare-boutique-salon',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'alberni-valley-bulldogs-junior-hockey-club',
+    chamberId: 'port-alberni-chamber',
+    name: 'Alberni Valley Bulldogs Junior Hockey Club',
+    category: 'recreation-entertainment' as const,
+    naicsCode: '713940',
+    naicsTitle: 'Fitness Centers',
+    naicsSector: '71',
+    naicsSubsector: '713',
+    
+    
+    website: 'https://albernichamber.ca/directory/alberni-valley-bulldogs-junior-hockey-club',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'alberni-valley-hospice-society',
+    chamberId: 'port-alberni-chamber',
+    name: 'Alberni Valley Hospice Society',
+    category: 'nonprofit' as const,
+    naicsCode: '813410',
+    naicsTitle: 'Civic Organizations',
+    naicsSector: '81',
+    naicsSubsector: '813',
+    
+    
+    website: 'https://albernichamber.ca/directory/alberni-valley-hospice-society',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'animal-ark',
+    chamberId: 'port-alberni-chamber',
+    name: 'Animal Ark',
+    category: 'retail' as const,
+    naicsCode: '452319',
+    naicsTitle: 'General Merchandise Stores',
+    naicsSector: '45',
+    naicsSubsector: '452',
+    
+    
+    website: 'https://albernichamber.ca/directory/animal-ark',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'arrowvale-campground-and-collins-farm',
+    chamberId: 'port-alberni-chamber',
+    name: 'Arrowvale Campground and Collins Farm',
+    category: 'professional-services' as const,
+    naicsCode: '541990',
+    naicsTitle: 'Professional Services',
+    naicsSector: '54',
+    naicsSubsector: '541',
+    address: '67 acre property along the Somass River, Vancouver Island, Alberni Valley',
+    phone: '250-720-7648',
+    website: 'https://albernichamber.ca/directory/arrowvale-campground-and-collins-farm',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'alport-insurance',
+    chamberId: 'port-alberni-chamber',
+    name: 'Alport Insurance',
+    category: 'professional-services' as const,
+    naicsCode: '541990',
+    naicsTitle: 'Professional Services',
+    naicsSector: '54',
+    naicsSubsector: '541',
+    
+    
+    website: 'https://albernichamber.ca/directory/alport-insurance',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'av-home-check',
+    chamberId: 'port-alberni-chamber',
+    name: 'AV Home Check',
+    category: 'professional-services' as const,
+    naicsCode: '541990',
+    naicsTitle: 'Professional Services',
+    naicsSector: '54',
+    naicsSubsector: '541',
+    
+    
+    website: 'https://albernichamber.ca/directory/av-home-check',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'alberni-valley-crossfit',
+    chamberId: 'port-alberni-chamber',
+    name: 'Alberni Valley CrossFit',
+    category: 'professional-services' as const,
+    naicsCode: '541990',
+    naicsTitle: 'Professional Services',
+    naicsSector: '54',
+    naicsSubsector: '541',
+    
+    
+    website: 'https://albernichamber.ca/directory/alberni-valley-crossfit#main-content',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'beaufortbooks',
+    chamberId: 'port-alberni-chamber',
+    name: 'BeaufortBooks',
+    category: 'financial-services' as const,
+    naicsCode: '541211',
+    naicsTitle: 'Offices of CPAs',
+    naicsSector: '54',
+    naicsSubsector: '541',
+    
+    
+    website: 'https://albernichamber.ca/directory/beaufortbooks#main-content',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'artis-orthotics',
+    chamberId: 'port-alberni-chamber',
+    name: 'Artis Orthotics',
+    category: 'professional-services' as const,
+    naicsCode: '541990',
+    naicsTitle: 'Professional Services',
+    naicsSector: '54',
+    naicsSubsector: '541',
+    
+    
+    website: 'https://albernichamber.ca/directory/artis-orthotics',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'best-bed-breakfast',
+    chamberId: 'port-alberni-chamber',
+    name: 'Best Bed & Breakfast',
+    category: 'professional-services' as const,
+    naicsCode: '541990',
+    naicsTitle: 'Professional Services',
+    naicsSector: '54',
+    naicsSubsector: '541',
+    
+    
+    website: 'https://albernichamber.ca/directory/best-bed-breakfast',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'alberni-valley-lions-club',
+    chamberId: 'port-alberni-chamber',
+    name: 'Alberni Valley Lions Club',
+    category: 'nonprofit' as const,
+    naicsCode: '813410',
+    naicsTitle: 'Civic Organizations',
+    naicsSector: '81',
+    naicsSubsector: '813',
+    address: '4277 Stamp Avenue, Port Alberni, British Columbia V9Y 7X8',
+    phone: ',',
+    website: ',',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'bob-kanngiesser',
+    chamberId: 'port-alberni-chamber',
+    name: 'Bob Kanngiesser',
+    category: 'professional-services' as const,
+    naicsCode: '541990',
+    naicsTitle: 'Professional Services',
+    naicsSector: '54',
+    naicsSubsector: '541',
+    
+    
+    website: 'https://albernichamber.ca/directory/bob-kanngiesser',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'bute-street-veterinary-clinic-ltd',
+    chamberId: 'port-alberni-chamber',
+    name: 'Bute Street Veterinary Clinic Ltd.',
+    category: 'professional-services' as const,
+    naicsCode: '541990',
+    naicsTitle: 'Professional Services',
+    naicsSector: '54',
+    naicsSubsector: '541',
+    
+    
+    website: 'https://albernichamber.ca/directory/bute-street-veterinary-clinic-ltd',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'city-of-port-alberni',
+    chamberId: 'port-alberni-chamber',
+    name: 'City Of Port Alberni',
+    category: 'government' as const,
+    naicsCode: '921110',
+    naicsTitle: 'Executive Offices',
+    naicsSector: '92',
+    naicsSubsector: '921',
+    
+    
+    website: 'https://albernichamber.ca/directory/city-port-alberni',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'port-boat-house',
+    chamberId: 'port-alberni-chamber',
+    name: 'Port Boat House',
+    category: 'nonprofit' as const,
+    naicsCode: '813410',
+    naicsTitle: 'Civic Organizations',
+    naicsSector: '81',
+    naicsSubsector: '813',
+    
+    
+    website: 'https://albernichamber.ca/directory/bob-cole',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'business-development-bank',
+    chamberId: 'port-alberni-chamber',
+    name: 'Business Development Bank',
+    category: 'financial-services' as const,
+    naicsCode: '523930',
+    naicsTitle: 'Investment Advice',
+    naicsSector: '52',
+    naicsSubsector: '523',
+    
+    
+    website: 'https://bdc.ca',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'boomerangs-cafe',
+    chamberId: 'port-alberni-chamber',
+    name: 'Boomerangs Cafe',
+    category: 'food-beverage' as const,
+    naicsCode: '722511',
+    naicsTitle: 'Full-Service Restaurants',
+    naicsSector: '72',
+    naicsSubsector: '722',
+    
+    
+    website: 'https://albernichamber.ca/directory/boomerangs-cafe',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'chapel-of-memories-funeral-directors',
+    chamberId: 'port-alberni-chamber',
+    name: 'Chapel of Memories Funeral Directors',
+    category: 'professional-services' as const,
+    naicsCode: '541990',
+    naicsTitle: 'Professional Services',
+    naicsSector: '54',
+    naicsSubsector: '541',
+    address: 'Corner of 6th Avenue and Maitland Street, Port Alberni, Vancouver Island',
+    
+    website: 'https://albernichamber.ca/directory/chapel-memories',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'chims-motel',
+    chamberId: 'port-alberni-chamber',
+    name: 'Chims Motel',
+    category: 'professional-services' as const,
+    naicsCode: '541990',
+    naicsTitle: 'Professional Services',
+    naicsSector: '54',
+    naicsSubsector: '541',
+    address: 'Hwy 4, Port Alberni',
+    
+    website: 'https://albernichamber.ca/directory/chims-motel',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'bmo-bank-of-montreal',
+    chamberId: 'port-alberni-chamber',
+    name: 'BMO Bank of Montreal',
+    category: 'financial-services' as const,
+    naicsCode: '522110',
+    naicsTitle: 'Commercial Banking',
+    naicsSector: '52',
+    naicsSubsector: '522',
+    
+    
+    website: 'https://albernichamber.ca/directory/bmo-bank-montreal',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'brie-and-barrel',
+    chamberId: 'port-alberni-chamber',
+    name: 'Brie and Barrel',
+    category: 'professional-services' as const,
+    naicsCode: '541990',
+    naicsTitle: 'Professional Services',
+    naicsSector: '54',
+    naicsSubsector: '541',
+    
+    
+    website: 'https://albernichamber.ca/directory/brie-and-barrel',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'black-dog-fencing',
+    chamberId: 'port-alberni-chamber',
+    name: 'Black Dog Fencing',
+    category: 'professional-services' as const,
+    naicsCode: '541990',
+    naicsTitle: 'Professional Services',
+    naicsSector: '54',
+    naicsSubsector: '541',
+    
+    
+    website: 'https://albernichamber.ca/directory/black-dog-fencing',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'cedar-wood-lodge-bed-breakfast-inn',
+    chamberId: 'port-alberni-chamber',
+    name: 'Cedar Wood Lodge Bed & Breakfast Inn',
+    category: 'professional-services' as const,
+    naicsCode: '541990',
+    naicsTitle: 'Professional Services',
+    naicsSector: '54',
+    naicsSubsector: '541',
+    address: 'Port Alberni, BC, Canada',
+    
+    website: 'https://albernichamber.ca/directory/cedar-wood-lodge-bed-breakfast-inn',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'best-western-plus-barclay-hotel',
+    chamberId: 'port-alberni-chamber',
+    name: 'Best Western Plus Barclay Hotel',
+    category: 'hospitality' as const,
+    naicsCode: '721110',
+    naicsTitle: 'Hotels and Motels',
+    naicsSector: '72',
+    naicsSubsector: '721',
+    
+    
+    website: 'https://albernichamber.ca/directory/best-western-plus-barclay-hotel',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'cbi-health',
+    chamberId: 'port-alberni-chamber',
+    name: 'CBI Health',
+    category: 'healthcare' as const,
+    naicsCode: '621111',
+    naicsTitle: 'Offices of Physicians',
+    naicsSector: '62',
+    naicsSubsector: '621',
+    
+    
+    website: 'https://albernichamber.ca/directory/cbi-health',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'chars-landing-hall-hostel',
+    chamberId: 'port-alberni-chamber',
+    name: 'Char\'s Landing Hall & Hostel',
+    category: 'professional-services' as const,
+    naicsCode: '541990',
+    naicsTitle: 'Professional Services',
+    naicsSector: '54',
+    naicsSubsector: '541',
+    
+    
+    websiteNeedsCollection: true,
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'clam-bucket-restaurant',
+    chamberId: 'port-alberni-chamber',
+    name: 'Clam Bucket Restaurant',
+    category: 'food-beverage' as const,
+    naicsCode: '722511',
+    naicsTitle: 'Full-Service Restaurants',
+    naicsSector: '72',
+    naicsSubsector: '722',
+    
+    
+    website: 'https://albernichamber.ca/directory/clam-bucket-restaurant',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'china-creek-campground',
+    chamberId: 'port-alberni-chamber',
+    name: 'China Creek Campground',
+    category: 'professional-services' as const,
+    naicsCode: '541990',
+    naicsTitle: 'Professional Services',
+    naicsSector: '54',
+    naicsSubsector: '541',
+    address: 'China Creek Campground, Port Alberni, Vancouver Island, BC',
+    
+    website: 'https://albernichamber.ca/directory/china-creek-campground',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'broken-islands-lodge',
+    chamberId: 'port-alberni-chamber',
+    name: 'Broken Islands Lodge',
+    category: 'hospitality' as const,
+    naicsCode: '721110',
+    naicsTitle: 'Hotels and Motels',
+    naicsSector: '72',
+    naicsSubsector: '721',
+    
+    
+    website: 'https://albernichamber.ca/directory/broken-islands-lodge',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'boston-pizza',
+    chamberId: 'port-alberni-chamber',
+    name: 'Boston Pizza',
+    category: 'food-beverage' as const,
+    naicsCode: '722511',
+    naicsTitle: 'Full-Service Restaurants',
+    naicsSector: '72',
+    naicsSubsector: '722',
+    
+    
+    website: 'https://albernichamber.ca/directory/boston-pizza',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'the-card-corner-games',
+    chamberId: 'port-alberni-chamber',
+    name: 'The Card Corner & Games',
+    category: 'retail' as const,
+    naicsCode: '452319',
+    naicsTitle: 'General Merchandise Stores',
+    naicsSector: '45',
+    naicsSubsector: '452',
+    
+    
+    website: 'https://albernichamber.ca/directory/card-corner-and-games',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'clarkstone-dearin-notary-corporation',
+    chamberId: 'port-alberni-chamber',
+    name: 'Clarkstone & Dearin Notary Corporation',
+    category: 'legal-services' as const,
+    naicsCode: '541120',
+    naicsTitle: 'Offices of Notaries',
+    naicsSector: '54',
+    naicsSubsector: '541',
+    
+    phone: '(250) 723-9747',
+    website: 'https://albernichamber.ca/directory/clarkstone-dearin-notary-corporation',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'catalyst-port-alberni---a-paper-excellence-company',
+    chamberId: 'port-alberni-chamber',
+    name: 'Catalyst Port Alberni - A Paper Excellence Company',
+    category: 'manufacturing' as const,
+    naicsCode: '332710',
+    naicsTitle: 'Machine Shops',
+    naicsSector: '33',
+    naicsSubsector: '332',
+    address: 'Located at the head of picturesque Alberni Inlet, British Columbia',
+    
+    website: 'https://albernichamber.ca/directory/catalyst-port-alberni-paper-excellence-company',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'cherry-creek-cidery',
+    chamberId: 'port-alberni-chamber',
+    name: 'Cherry Creek Cidery',
+    category: 'professional-services' as const,
+    naicsCode: '541990',
+    naicsTitle: 'Professional Services',
+    naicsSector: '54',
+    naicsSubsector: '541',
+    
+    
+    websiteNeedsCollection: true,
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'chances-rimrock-entertainment',
+    chamberId: 'port-alberni-chamber',
+    name: 'Chances RimRock Entertainment',
+    category: 'professional-services' as const,
+    naicsCode: '541990',
+    naicsTitle: 'Professional Services',
+    naicsSector: '54',
+    naicsSubsector: '541',
+    
+    
+    website: 'https://albernichamber.ca/directory/chances-rimrock-entertainment',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'canadian-tire',
+    chamberId: 'port-alberni-chamber',
+    name: 'Canadian Tire',
+    category: 'retail' as const,
+    naicsCode: '452319',
+    naicsTitle: 'General Merchandise Stores',
+    naicsSector: '45',
+    naicsSubsector: '452',
+    
+    
+    website: 'https://albernichamber.ca/directory/canadian-tire',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'coastal-community-credit-union',
+    chamberId: 'port-alberni-chamber',
+    name: 'Coastal Community Credit Union',
+    category: 'financial-services' as const,
+    naicsCode: '523930',
+    naicsTitle: 'Investment Advice',
+    naicsSector: '52',
+    naicsSubsector: '523',
+    
+    
+    website: 'https://albernichamber.ca/directory/coastal-community-credit-union',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'don-woodfin-log-transport',
+    chamberId: 'port-alberni-chamber',
+    name: 'Don Woodfin Log Transport',
+    category: 'recreation-entertainment' as const,
+    naicsCode: '713940',
+    naicsTitle: 'Fitness Centers',
+    naicsSector: '71',
+    naicsSubsector: '713',
+    
+    
+    website: 'https://albernichamber.ca/directory/don-woodfin-log-transport',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'coleman-rv-and-campground',
+    chamberId: 'port-alberni-chamber',
+    name: 'Coleman RV and Campground',
+    category: 'professional-services' as const,
+    naicsCode: '541990',
+    naicsTitle: 'Professional Services',
+    naicsSector: '54',
+    naicsSubsector: '541',
+    
+    
+    website: 'https://albernichamber.ca/directory/coleman-rv-and-campground',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'community-futures-alberni-clayoquot',
+    chamberId: 'port-alberni-chamber',
+    name: 'Community Futures Alberni Clayoquot',
+    category: 'nonprofit' as const,
+    naicsCode: '813410',
+    naicsTitle: 'Civic Organizations',
+    naicsSector: '81',
+    naicsSubsector: '813',
+    
+    
+    website: 'https://albernichamber.ca/directory/community-futures-alberni-clayoquot',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'd-d-clean-exteriors-ltd',
+    chamberId: 'port-alberni-chamber',
+    name: 'D & D Clean Exteriors Ltd.',
+    category: 'professional-services' as const,
+    naicsCode: '541990',
+    naicsTitle: 'Professional Services',
+    naicsSector: '54',
+    naicsSubsector: '541',
+    
+    
+    website: 'https://cleanexteriors.ca',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'cmha-port-alberni',
+    chamberId: 'port-alberni-chamber',
+    name: 'CMHA-Port Alberni',
+    category: 'healthcare' as const,
+    naicsCode: '621111',
+    naicsTitle: 'Offices of Physicians',
+    naicsSector: '62',
+    naicsSubsector: '621',
+    
+    
+    website: 'https://albernichamber.ca/directory/cmha-port-alberni',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'connect-hearing',
+    chamberId: 'port-alberni-chamber',
+    name: 'Connect Hearing',
+    category: 'professional-services' as const,
+    naicsCode: '541990',
+    naicsTitle: 'Professional Services',
+    naicsSector: '54',
+    naicsSubsector: '541',
+    
+    
+    website: 'https://albernichamber.ca/directory/connect-hearing',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'cypress-restaurant-lounge',
+    chamberId: 'port-alberni-chamber',
+    name: 'Cypress Restaurant & Lounge',
+    category: 'food-beverage' as const,
+    naicsCode: '722511',
+    naicsTitle: 'Full-Service Restaurants',
+    naicsSector: '72',
+    naicsSubsector: '722',
+    
+    
+    websiteNeedsCollection: true,
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'eagles-nest-restaurant',
+    chamberId: 'port-alberni-chamber',
+    name: 'Eagle\'s Nest Restaurant',
+    category: 'food-beverage' as const,
+    naicsCode: '722511',
+    naicsTitle: 'Full-Service Restaurants',
+    naicsSector: '72',
+    naicsSubsector: '722',
+    
+    
+    website: 'https://albernichamber.ca/directory/eagles-nest-restaurant',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'coleman-meadows-farm',
+    chamberId: 'port-alberni-chamber',
+    name: 'Coleman Meadows Farm',
+    category: 'professional-services' as const,
+    naicsCode: '541990',
+    naicsTitle: 'Professional Services',
+    naicsSector: '54',
+    naicsSubsector: '541',
+    address: 'Coleman Road, Alberni Valley',
+    
+    websiteNeedsCollection: true,
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'dewayne-parfitt',
+    chamberId: 'port-alberni-chamber',
+    name: 'Dewayne Parfitt',
+    category: 'professional-services' as const,
+    naicsCode: '541990',
+    naicsTitle: 'Professional Services',
+    naicsSector: '54',
+    naicsSubsector: '541',
+    
+    
+    website: 'https://albernichamber.ca/directory/dewayne-parfitt',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'community-arts-council-of-the-alberni-valley',
+    chamberId: 'port-alberni-chamber',
+    name: 'Community Arts Council of the Alberni Valley',
+    category: 'nonprofit' as const,
+    naicsCode: '711110',
+    naicsTitle: 'Theater Companies',
+    naicsSector: '71',
+    naicsSubsector: '711',
+    address: 'Harbour Quay',
+    
+    website: 'https://alberniarts.com',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'comox-valley-airport-yqq',
+    chamberId: 'port-alberni-chamber',
+    name: 'Comox Valley Airport (YQQ)',
+    category: 'professional-services' as const,
+    naicsCode: '541990',
+    naicsTitle: 'Professional Services',
+    naicsSector: '54',
+    naicsSubsector: '541',
+    
+    
+    website: 'https://albernichamber.ca/directory/comox-valley-airport-yqq',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'cloud-city-apparel-co',
+    chamberId: 'port-alberni-chamber',
+    name: 'Cloud City Apparel Co.',
+    category: 'professional-services' as const,
+    naicsCode: '541990',
+    naicsTitle: 'Professional Services',
+    naicsSector: '54',
+    naicsSubsector: '541',
+    
+    
+    website: 'https://albernichamber.ca/directory/cloud-city-apparel-co#main-content',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'coombs-country-candy',
+    chamberId: 'port-alberni-chamber',
+    name: 'Coombs Country Candy',
+    category: 'food-beverage' as const,
+    naicsCode: '722511',
+    naicsTitle: 'Full-Service Restaurants',
+    naicsSector: '72',
+    naicsSubsector: '722',
+    
+    
+    website: 'https://albernichamber.ca/directory/coombs-country-candy',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'denis-francoeur-backhoeing-ltd',
+    chamberId: 'port-alberni-chamber',
+    name: 'Denis Francoeur Backhoeing Ltd.',
+    category: 'professional-services' as const,
+    naicsCode: '541990',
+    naicsTitle: 'Professional Services',
+    naicsSector: '54',
+    naicsSubsector: '541',
+    
+    
+    website: 'https://www.we-dig-it.net',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'cokely-wire-rope-ltd',
+    chamberId: 'port-alberni-chamber',
+    name: 'Cokely Wire Rope Ltd.',
+    category: 'professional-services' as const,
+    naicsCode: '541990',
+    naicsTitle: 'Professional Services',
+    naicsSector: '54',
+    naicsSubsector: '541',
+    
+    
+    website: 'https://albernichamber.ca/directory/cokely-wire-rope-ltd',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'dog-mountain-brewing',
+    chamberId: 'port-alberni-chamber',
+    name: 'Dog Mountain Brewing',
+    category: 'professional-services' as const,
+    naicsCode: '541990',
+    naicsTitle: 'Professional Services',
+    naicsSector: '54',
+    naicsSubsector: '541',
+    address: 'Port Alberni, BC',
+    
+    website: 'https://albernichamber.ca/directory/dog-mountain-brewing',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'clydesdale-automotive-ltd',
+    chamberId: 'port-alberni-chamber',
+    name: 'Clydesdale Automotive Ltd.',
+    category: 'professional-services' as const,
+    naicsCode: '541990',
+    naicsTitle: 'Professional Services',
+    naicsSector: '54',
+    naicsSubsector: '541',
+    
+    phone: '250 720-3836',
+    website: 'https://albernichamber.ca/directory/clydesdale-automotive-ltd',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'de-vries-fine-woodworking-inc',
+    chamberId: 'port-alberni-chamber',
+    name: 'De Vries Fine Woodworking Inc.',
+    category: 'professional-services' as const,
+    naicsCode: '541990',
+    naicsTitle: 'Professional Services',
+    naicsSector: '54',
+    naicsSubsector: '541',
+    
+    
+    website: 'https://albernichamber.ca/directory/de-vries-fine-woodworking-inc#main-content',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'edward-jones',
+    chamberId: 'port-alberni-chamber',
+    name: 'Edward Jones',
+    category: 'financial-services' as const,
+    naicsCode: '523930',
+    naicsTitle: 'Investment Advice',
+    naicsSector: '52',
+    naicsSubsector: '523',
+    
+    
+    website: 'https://albernichamber.ca/directory/edward-jones',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'coleman-road-shingle-mill',
+    chamberId: 'port-alberni-chamber',
+    name: 'Coleman Road Shingle Mill',
+    category: 'professional-services' as const,
+    naicsCode: '541990',
+    naicsTitle: 'Professional Services',
+    naicsSector: '54',
+    naicsSubsector: '541',
+    
+    
+    website: 'https://albernichamber.ca/directory/coleman-road-shingle-mill#main-content',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'elite-dance-academy',
+    chamberId: 'port-alberni-chamber',
+    name: 'Elite Dance Academy',
+    category: 'professional-services' as const,
+    naicsCode: '541990',
+    naicsTitle: 'Professional Services',
+    naicsSector: '54',
+    naicsSubsector: '541',
+    
+    
+    website: 'https://albernichamber.ca/directory/elite-dance-academy#main-content',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'driftwood-restaurant',
+    chamberId: 'port-alberni-chamber',
+    name: 'Driftwood Restaurant',
+    category: 'food-beverage' as const,
+    naicsCode: '722511',
+    naicsTitle: 'Full-Service Restaurants',
+    naicsSector: '72',
+    naicsSubsector: '722',
+    
+    
+    website: 'https://albernichamber.ca/directory/driftwood-restaurant',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'compass-mobile-therapeutics',
+    chamberId: 'port-alberni-chamber',
+    name: 'Compass Mobile Therapeutics',
+    category: 'professional-services' as const,
+    naicsCode: '541990',
+    naicsTitle: 'Professional Services',
+    naicsSector: '54',
+    naicsSubsector: '541',
+    
+    
+    website: 'https://albernichamber.ca/directory/compass-mobile-therapeutics#main-content',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'jack-roland',
+    chamberId: 'port-alberni-chamber',
+    name: 'Jack Roland',
+    category: 'real-estate' as const,
+    naicsCode: '531210',
+    naicsTitle: 'Real Estate Agents',
+    naicsSector: '53',
+    naicsSubsector: '531',
+    
+    
+    website: 'https://albernichamber.ca/directory/jack-roland#main-content',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'immediate-images-inc',
+    chamberId: 'port-alberni-chamber',
+    name: 'Immediate Images Inc.',
+    category: 'professional-services' as const,
+    naicsCode: '541990',
+    naicsTitle: 'Professional Services',
+    naicsSector: '54',
+    naicsSubsector: '541',
+    
+    
+    website: 'https://immediateimages.com/footprint.html',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'hospitality-inn',
+    chamberId: 'port-alberni-chamber',
+    name: 'Hospitality Inn',
+    category: 'hospitality' as const,
+    naicsCode: '721110',
+    naicsTitle: 'Hotels and Motels',
+    naicsSector: '72',
+    naicsSubsector: '721',
+    
+    
+    website: 'https://albernichamber.ca/directory/hospitality-inn',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'finishing-touches',
+    chamberId: 'port-alberni-chamber',
+    name: 'Finishing Touches',
+    category: 'professional-services' as const,
+    naicsCode: '541990',
+    naicsTitle: 'Professional Services',
+    naicsSector: '54',
+    naicsSubsector: '541',
+    
+    
+    website: 'https://albernichamber.ca/directory/finishing-touches',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'gayles-fashions',
+    chamberId: 'port-alberni-chamber',
+    name: 'Gayle\'s Fashions',
+    category: 'professional-services' as const,
+    naicsCode: '541990',
+    naicsTitle: 'Professional Services',
+    naicsSector: '54',
+    naicsSubsector: '541',
+    address: 'Kingsway Crossing, Port Alberni, Vancouver Island, British Columbia, Canada',
+    phone: '/',
+    website: 'https://albernichamber.ca/directory/gayles-fashions',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'hupacasath-first-nation',
+    chamberId: 'port-alberni-chamber',
+    name: 'Hupacasath First Nation',
+    category: 'professional-services' as const,
+    naicsCode: '541990',
+    naicsTitle: 'Professional Services',
+    naicsSector: '54',
+    naicsSubsector: '541',
+    
+    
+    website: 'https://albernichamber.ca/directory/hupacasath-first-nation',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'iris-the-visual-group',
+    chamberId: 'port-alberni-chamber',
+    name: 'Iris the Visual Group',
+    category: 'professional-services' as const,
+    naicsCode: '541990',
+    naicsTitle: 'Professional Services',
+    naicsSector: '54',
+    naicsSubsector: '541',
+    
+    
+    website: 'https://albernichamber.ca/directory/iris-visual-group',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'flandangles-kitchen-gift',
+    chamberId: 'port-alberni-chamber',
+    name: 'Flandangles Kitchen & Gift',
+    category: 'retail' as const,
+    naicsCode: '452319',
+    naicsTitle: 'General Merchandise Stores',
+    naicsSector: '45',
+    naicsSubsector: '452',
+    address: 'Port Alberni, BC',
+    
+    website: 'https://albernichamber.ca/directory/flandangles-kitchen-gift',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'fish-and-duck-sproat-lake-resort',
+    chamberId: 'port-alberni-chamber',
+    name: 'Fish and Duck Sproat Lake Resort',
+    category: 'hospitality' as const,
+    naicsCode: '721199',
+    naicsTitle: 'All Other Traveler Accommodation',
+    naicsSector: '72',
+    naicsSubsector: '721',
+    
+    
+    website: 'https://albernichamber.ca/directory/fish-and-duck-sproat-lake-resort',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'hfn-group-of-businesses',
+    chamberId: 'port-alberni-chamber',
+    name: 'HFN Group of Businesses',
+    category: 'professional-services' as const,
+    naicsCode: '541990',
+    naicsTitle: 'Professional Services',
+    naicsSector: '54',
+    naicsSubsector: '541',
+    
+    
+    website: 'https://albernichamber.ca/directory/hfn-group-businesses',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'graphics-factory-printing-signs',
+    chamberId: 'port-alberni-chamber',
+    name: 'Graphics Factory, Printing & Signs',
+    category: 'professional-services' as const,
+    naicsCode: '541990',
+    naicsTitle: 'Professional Services',
+    naicsSector: '54',
+    naicsSubsector: '541',
+    address: '3157 2nd Avenue, Uptown Port Alberni',
+    
+    website: 'https://albernichamber.ca/directory/graphics-factory-printing-signs',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'gone-fishin',
+    chamberId: 'port-alberni-chamber',
+    name: 'Gone Fishin\'',
+    category: 'retail' as const,
+    naicsCode: '452319',
+    naicsTitle: 'General Merchandise Stores',
+    naicsSector: '45',
+    naicsSubsector: '452',
+    
+    phone: '250-723-1172, 250-758-7726, 250-334-2007, 778-455-1414',
+    website: 'https://albernichamber.ca/directory/gone-fishin',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'island-express-bus-inc',
+    chamberId: 'port-alberni-chamber',
+    name: 'Island Express Bus Inc.',
+    category: 'recreation-entertainment' as const,
+    naicsCode: '713940',
+    naicsTitle: 'Fitness Centers',
+    naicsSector: '71',
+    naicsSubsector: '713',
+    
+    
+    website: 'https://www.islandlinkbus.com',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'ineo-employment-counselling',
+    chamberId: 'port-alberni-chamber',
+    name: 'INEO Employment Counselling',
+    category: 'professional-services' as const,
+    naicsCode: '541990',
+    naicsTitle: 'Professional Services',
+    naicsSector: '54',
+    naicsSubsector: '541',
+    
+    
+    website: 'https://albernichamber.ca/directory/ineo-employment-counselling',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'foxy-box-laser-and-wax-bar---port-alberni',
+    chamberId: 'port-alberni-chamber',
+    name: 'Foxy Box Laser and Wax Bar - Port Alberni',
+    category: 'spa-beauty' as const,
+    naicsCode: '812112',
+    naicsTitle: 'Beauty Salons',
+    naicsSector: '81',
+    naicsSubsector: '812',
+    
+    
+    website: 'https://albernichamber.ca/directory/foxy-box-laser-and-wax-bar-port-alberni',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'huu-ay-aht-government-office',
+    chamberId: 'port-alberni-chamber',
+    name: 'Huu-ay-aht Government Office',
+    category: 'government' as const,
+    naicsCode: '921110',
+    naicsTitle: 'Executive Offices',
+    naicsSector: '92',
+    naicsSubsector: '921',
+    
+    
+    website: 'https://albernichamber.ca/directory/huu-ay-aht-government-office',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'innov8-digital-solutions',
+    chamberId: 'port-alberni-chamber',
+    name: 'Innov8 Digital Solutions',
+    category: 'it-technology' as const,
+    naicsCode: '541512',
+    naicsTitle: 'Computer Systems Design',
+    naicsSector: '54',
+    naicsSubsector: '541',
+    
+    
+    website: 'https://albernichamber.ca/directory/innov8-digital-solutions',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'grassroots-cafe-inc',
+    chamberId: 'port-alberni-chamber',
+    name: 'Grassroots Cafe Inc.',
+    category: 'professional-services' as const,
+    naicsCode: '541990',
+    naicsTitle: 'Professional Services',
+    naicsSector: '54',
+    naicsSubsector: '541',
+    
+    
+    website: 'https://albernichamber.ca/directory/grassroots-cafe-inc#main-content',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'harbour-pharmacy',
+    chamberId: 'port-alberni-chamber',
+    name: 'Harbour Pharmacy',
+    category: 'retail' as const,
+    naicsCode: '452319',
+    naicsTitle: 'General Merchandise Stores',
+    naicsSector: '45',
+    naicsSubsector: '452',
+    address: '/',
+    phone: '/',
+    website: 'https://albernichamber.ca/directory/harbour-pharmacy#main-content',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'huu-ay-aht-first-nations',
+    chamberId: 'port-alberni-chamber',
+    name: 'Huu-ay-aht First Nations',
+    category: 'professional-services' as const,
+    naicsCode: '541990',
+    naicsTitle: 'Professional Services',
+    naicsSector: '54',
+    naicsSubsector: '541',
+    
+    
+    website: 'https://albernichamber.ca/directory/huu-ay-aht-first-nations',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'formula-photographic-inc',
+    chamberId: 'port-alberni-chamber',
+    name: 'Formula Photographic Inc.',
+    category: 'professional-services' as const,
+    naicsCode: '541990',
+    naicsTitle: 'Professional Services',
+    naicsSector: '54',
+    naicsSubsector: '541',
+    
+    
+    website: 'https://albernichamber.ca/directory/formula-photographic-inc#main-content',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'esafetyfirst-canada',
+    chamberId: 'port-alberni-chamber',
+    name: 'eSafetyFirst Canada',
+    category: 'professional-services' as const,
+    naicsCode: '541990',
+    naicsTitle: 'Professional Services',
+    naicsSector: '54',
+    naicsSubsector: '541',
+    
+    
+    website: 'https://albernichamber.ca/directory/esafetyfirst-canada',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'enex-fuels',
+    chamberId: 'port-alberni-chamber',
+    name: 'Enex Fuels',
+    category: 'professional-services' as const,
+    naicsCode: '541990',
+    naicsTitle: 'Professional Services',
+    naicsSector: '54',
+    naicsSubsector: '541',
+    
+    
+    website: 'https://albernichamber.ca/directory/enex-fuels',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'island-cleaning-supplies',
+    chamberId: 'port-alberni-chamber',
+    name: 'Island Cleaning Supplies',
+    category: 'professional-services' as const,
+    naicsCode: '541990',
+    naicsTitle: 'Professional Services',
+    naicsSector: '54',
+    naicsSubsector: '541',
+    
+    
+    website: 'https://albernichamber.ca/directory/island-cleaning-supplies',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'full-circle-consultancy',
+    chamberId: 'port-alberni-chamber',
+    name: 'Full Circle Consultancy',
+    category: 'professional-services' as const,
+    naicsCode: '541990',
+    naicsTitle: 'Professional Services',
+    naicsSector: '54',
+    naicsSubsector: '541',
+    
+    
+    website: 'https://albernichamber.ca/directory/full-circle-consultancy#main-content',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'knuline-transportation',
+    chamberId: 'port-alberni-chamber',
+    name: 'Knuline Transportation',
+    category: 'professional-services' as const,
+    naicsCode: '541990',
+    naicsTitle: 'Professional Services',
+    naicsSector: '54',
+    naicsSubsector: '541',
+    
+    
+    website: 'https://albernichamber.ca/directory/knuline-transportation',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'living-forest-oceanside-campground-and-rv-park',
+    chamberId: 'port-alberni-chamber',
+    name: 'Living Forest Oceanside Campground and RV Park',
+    category: 'professional-services' as const,
+    naicsCode: '541990',
+    naicsTitle: 'Professional Services',
+    naicsSector: '54',
+    naicsSubsector: '541',
+    address: 'Nanaimo, British Columbia, Canada',
+    
+    website: 'https://albernichamber.ca/directory/living-forest-oceanside-campground-and-rv-park',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'mcdonalds-restaurant',
+    chamberId: 'port-alberni-chamber',
+    name: 'McDonald\'s Restaurant',
+    category: 'food-beverage' as const,
+    naicsCode: '722511',
+    naicsTitle: 'Full-Service Restaurants',
+    naicsSector: '72',
+    naicsSubsector: '722',
+    
+    
+    website: 'https://albernichamber.ca/directory/mcdonalds-restaurant',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'mcgill-and-associates-engineering-ltd',
+    chamberId: 'port-alberni-chamber',
+    name: 'McGill and Associates Engineering Ltd.',
+    category: 'professional-services' as const,
+    naicsCode: '541990',
+    naicsTitle: 'Professional Services',
+    naicsSector: '54',
+    naicsSubsector: '541',
+    
+    
+    website: 'https://albernichamber.ca/directory/mcgill-and-associates-engineering-ltd#main-content',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'la-rain-tree-inc',
+    chamberId: 'port-alberni-chamber',
+    name: 'LA Rain Tree Inc',
+    category: 'professional-services' as const,
+    naicsCode: '541990',
+    naicsTitle: 'Professional Services',
+    naicsSector: '54',
+    naicsSubsector: '541',
+    
+    phone: '250-735-8840',
+    website: 'https://albernichamber.ca/directory/la-rain-tree-inc',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'live-to-surf-inc',
+    chamberId: 'port-alberni-chamber',
+    name: 'Live to Surf Inc.',
+    category: 'retail' as const,
+    naicsCode: '452319',
+    naicsTitle: 'General Merchandise Stores',
+    naicsSector: '45',
+    naicsSubsector: '452',
+    
+    
+    website: 'https://albernichamber.ca/directory/live-surf-inc',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'ldg-electrical-limited',
+    chamberId: 'port-alberni-chamber',
+    name: 'LDG Electrical Limited',
+    category: 'construction' as const,
+    naicsCode: '238210',
+    naicsTitle: 'Electrical Contractors',
+    naicsSector: '23',
+    naicsSubsector: '238',
+    address: 'Port Alberni, BC',
+    
+    website: 'https://albernichamber.ca/directory/ldg-electrical-limited',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'mnp-llp',
+    chamberId: 'port-alberni-chamber',
+    name: 'MNP LLP',
+    category: 'professional-services' as const,
+    naicsCode: '541990',
+    naicsTitle: 'Professional Services',
+    naicsSector: '54',
+    naicsSubsector: '541',
+    
+    
+    website: 'https://albernichamber.ca/directory/mnp-llp#main-content',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'mclean-mill-national-historic-site',
+    chamberId: 'port-alberni-chamber',
+    name: 'McLean Mill National Historic Site',
+    category: 'professional-services' as const,
+    naicsCode: '541990',
+    naicsTitle: 'Professional Services',
+    naicsSector: '54',
+    naicsSubsector: '541',
+    
+    
+    website: 'https://albernichamber.ca/directory/mclean-mill-national-historic-site',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'lb-woodchoppers-ltd',
+    chamberId: 'port-alberni-chamber',
+    name: 'L.B. Woodchoppers Ltd',
+    category: 'professional-services' as const,
+    naicsCode: '541990',
+    naicsTitle: 'Professional Services',
+    naicsSector: '54',
+    naicsSubsector: '541',
+    
+    
+    website: 'https://albernichamber.ca/directory/lb-woodchoppers-ltd',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'jowseys-furniture-mattresses',
+    chamberId: 'port-alberni-chamber',
+    name: 'Jowsey\'s Furniture & Mattresses',
+    category: 'professional-services' as const,
+    naicsCode: '541990',
+    naicsTitle: 'Professional Services',
+    naicsSector: '54',
+    naicsSubsector: '541',
+    address: '/',
+    phone: '/',
+    website: 'http://www.jowseys.ca/?fbclid=IwAR1CcY8DIbFCKmnSmSyrEc80Mpc_wpIjVI6wbQlr1Bn50zyeAeZdX54u11A',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'little-bavaria-restaurant',
+    chamberId: 'port-alberni-chamber',
+    name: 'Little Bavaria Restaurant',
+    category: 'food-beverage' as const,
+    naicsCode: '722511',
+    naicsTitle: 'Full-Service Restaurants',
+    naicsSector: '72',
+    naicsSubsector: '722',
+    address: '/',
+    phone: '/',
+    website: 'https://albernichamber.ca/directory/little-bavaria-restaurant',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'mcintosh-norton-williams-cgas',
+    chamberId: 'port-alberni-chamber',
+    name: 'McIntosh Norton Williams CGA\'s',
+    category: 'professional-services' as const,
+    naicsCode: '541990',
+    naicsTitle: 'Professional Services',
+    naicsSector: '54',
+    naicsSubsector: '541',
+    
+    
+    website: 'https://albernichamber.ca/directory/mcintosh-norton-williams-cgas',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'literacy-alberni-society',
+    chamberId: 'port-alberni-chamber',
+    name: 'Literacy Alberni Society',
+    category: 'education' as const,
+    naicsCode: '611310',
+    naicsTitle: 'Colleges and Universities',
+    naicsSector: '61',
+    naicsSubsector: '611',
+    address: 'Port Alberni, BC',
+    
+    website: 'https://albernichamber.ca/directory/literacy-alberni-society',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'kal-tire',
+    chamberId: 'port-alberni-chamber',
+    name: 'Kal Tire',
+    category: 'automotive' as const,
+    naicsCode: '441320',
+    naicsTitle: 'Tire Dealers',
+    naicsSector: '44',
+    naicsSubsector: '441',
+    
+    
+    website: 'https://albernichamber.ca/directory/kal-tire',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'javen-simon-roofing',
+    chamberId: 'port-alberni-chamber',
+    name: 'Javen Simon Roofing',
+    category: 'professional-services' as const,
+    naicsCode: '541990',
+    naicsTitle: 'Professional Services',
+    naicsSector: '54',
+    naicsSubsector: '541',
+    
+    
+    website: 'https://albernichamber.ca/directory/javen-simon-roofing',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'medix-bc',
+    chamberId: 'port-alberni-chamber',
+    name: 'Medix BC',
+    category: 'professional-services' as const,
+    naicsCode: '541990',
+    naicsTitle: 'Professional Services',
+    naicsSector: '54',
+    naicsSubsector: '541',
+    
+    
+    website: 'https://albernichamber.ca/directory/medix-bc',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'klubhouse-for-kids',
+    chamberId: 'port-alberni-chamber',
+    name: 'Klubhouse for Kids',
+    category: 'retail' as const,
+    naicsCode: '452319',
+    naicsTitle: 'General Merchandise Stores',
+    naicsSector: '45',
+    naicsSubsector: '452',
+    
+    
+    website: 'https://albernichamber.ca/directory/klubhouse-kids',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'jims-clothes-closet',
+    chamberId: 'port-alberni-chamber',
+    name: 'Jim\'s Clothes Closet',
+    category: 'professional-services' as const,
+    naicsCode: '541990',
+    naicsTitle: 'Professional Services',
+    naicsSector: '54',
+    naicsSubsector: '541',
+    
+    
+    website: 'https://albernichamber.ca/directory/jims-clothes-closet#main-content',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'magnolia-childcare-society',
+    chamberId: 'port-alberni-chamber',
+    name: 'Magnolia Childcare Society',
+    category: 'professional-services' as const,
+    naicsCode: '541990',
+    naicsTitle: 'Professional Services',
+    naicsSector: '54',
+    naicsSubsector: '541',
+    
+    
+    website: 'https://albernichamber.ca/directory/magnolia-childcare-society',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'meals-on-wheels',
+    chamberId: 'port-alberni-chamber',
+    name: 'Meals on Wheels',
+    category: 'professional-services' as const,
+    naicsCode: '541990',
+    naicsTitle: 'Professional Services',
+    naicsSector: '54',
+    naicsSubsector: '541',
+    
+    
+    website: 'https://albernichamber.ca/directory/meals-wheels',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'jiffy-lube',
+    chamberId: 'port-alberni-chamber',
+    name: 'Jiffy Lube',
+    category: 'automotive' as const,
+    naicsCode: '811111',
+    naicsTitle: 'General Automotive Repair',
+    naicsSector: '81',
+    naicsSubsector: '811',
+    
+    
+    website: 'https://albernichamber.ca/directory/jiffy-lube',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'metrix-appraisals-ltd',
+    chamberId: 'port-alberni-chamber',
+    name: 'Metrix Appraisals Ltd.',
+    category: 'real-estate' as const,
+    naicsCode: '531210',
+    naicsTitle: 'Real Estate Agents',
+    naicsSector: '53',
+    naicsSubsector: '531',
+    
+    
+    website: 'https://albernichamber.ca/directory/metrix-appraisals-ltd#main-content',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'lady-rose-marine-services',
+    chamberId: 'port-alberni-chamber',
+    name: 'Lady Rose Marine Services',
+    category: 'transportation' as const,
+    naicsCode: '488390',
+    naicsTitle: 'Marine Cargo Handling',
+    naicsSector: '48',
+    naicsSubsector: '488',
+    
+    
+    website: 'https://albernichamber.ca/directory/lady-rose-marine-services',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'limitless-automation-company',
+    chamberId: 'port-alberni-chamber',
+    name: 'Limitless Automation Company',
+    category: 'automotive' as const,
+    naicsCode: '811111',
+    naicsTitle: 'General Automotive Repair',
+    naicsSector: '81',
+    naicsSubsector: '811',
+    
+    
+    website: 'https://albernichamber.ca/directory/limitless-automation-company#main-content',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'pastimes-sports-bar-grill',
+    chamberId: 'port-alberni-chamber',
+    name: 'Pastimes Sports Bar & Grill',
+    category: 'recreation-entertainment' as const,
+    naicsCode: '713940',
+    naicsTitle: 'Fitness Centers',
+    naicsSector: '71',
+    naicsSubsector: '713',
+    address: 'Best Western Plus Barclay Hotel, Port Alberni, Canada',
+    
+    website: 'https://albernichamber.ca/directory/pastimes-sports-bar-grill',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'names-and-numbers',
+    chamberId: 'port-alberni-chamber',
+    name: 'Names and Numbers',
+    category: 'professional-services' as const,
+    naicsCode: '541990',
+    naicsTitle: 'Professional Services',
+    naicsSector: '54',
+    naicsSubsector: '541',
+    
+    
+    website: 'https://albernichamber.ca/directory/names-and-numbers',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'pachena-bay-campground',
+    chamberId: 'port-alberni-chamber',
+    name: 'Pachena Bay Campground',
+    category: 'professional-services' as const,
+    naicsCode: '541990',
+    naicsTitle: 'Professional Services',
+    naicsSector: '54',
+    naicsSubsector: '541',
+    
+    
+    website: 'https://albernichamber.ca/directory/pachena-bay-campground',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'mountain-view-bakery',
+    chamberId: 'port-alberni-chamber',
+    name: 'Mountain View Bakery',
+    category: 'food-beverage' as const,
+    naicsCode: '722515',
+    naicsTitle: 'Snack and Nonalcoholic Beverage Bars',
+    naicsSector: '72',
+    naicsSubsector: '722',
+    
+    
+    website: 'https://albernichamber.ca/directory/mountain-view-bakery',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'nature-impact-incorporated',
+    chamberId: 'port-alberni-chamber',
+    name: 'Nature Impact Incorporated',
+    category: 'healthcare' as const,
+    naicsCode: '621399',
+    naicsTitle: 'Other Health Practitioners',
+    naicsSector: '62',
+    naicsSubsector: '621',
+    address: 'Port Alberni, BC',
+    
+    website: 'https://albernichamber.ca/directory/nature-impact-incorporated',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'parks-canada---pacific-rim-national-park-reserve',
+    chamberId: 'port-alberni-chamber',
+    name: 'Parks Canada - Pacific Rim National Park Reserve',
+    category: 'professional-services' as const,
+    naicsCode: '541990',
+    naicsTitle: 'Professional Services',
+    naicsSector: '54',
+    naicsSubsector: '541',
+    
+    
+    website: 'https://albernichamber.ca/directory/parks-canada-pacific-rim-national-park-reserve',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'mobius-books-ltd',
+    chamberId: 'port-alberni-chamber',
+    name: 'Mobius Books Ltd',
+    category: 'retail' as const,
+    naicsCode: '452319',
+    naicsTitle: 'General Merchandise Stores',
+    naicsSector: '45',
+    naicsSubsector: '452',
+    
+    
+    website: 'https://albernichamber.ca/directory/mobius-books-ltd',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'norcan-electrical-systems-inc',
+    chamberId: 'port-alberni-chamber',
+    name: 'Norcan Electrical Systems Inc.',
+    category: 'construction' as const,
+    naicsCode: '238210',
+    naicsTitle: 'Electrical Contractors',
+    naicsSector: '23',
+    naicsSubsector: '238',
+    
+    
+    website: 'https://albernichamber.ca/directory/norcan-electrical-systems-inc',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'nextgen-automation-formerly-ags-business-systems-i',
+    chamberId: 'port-alberni-chamber',
+    name: 'NextGen Automation (Formerly AGS Business Systems Inc.)',
+    category: 'professional-services' as const,
+    naicsCode: '541990',
+    naicsTitle: 'Professional Services',
+    naicsSector: '54',
+    naicsSubsector: '541',
+    
+    
+    website: 'https://albernichamber.ca/directory/nextgen-automation-formerly-ags-business-systems-inc',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'pachena-bay-gas-bar',
+    chamberId: 'port-alberni-chamber',
+    name: 'Pachena Bay Gas Bar',
+    category: 'professional-services' as const,
+    naicsCode: '541990',
+    naicsTitle: 'Professional Services',
+    naicsSector: '54',
+    naicsSubsector: '541',
+    address: 'Anacla Village, 5 km from Bamfield',
+    
+    website: 'https://albernichamber.ca/directory/pachena-bay-gas-bar',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'panago',
+    chamberId: 'port-alberni-chamber',
+    name: 'Panago',
+    category: 'professional-services' as const,
+    naicsCode: '541990',
+    naicsTitle: 'Professional Services',
+    naicsSector: '54',
+    naicsSubsector: '541',
+    
+    
+    website: 'https://albernichamber.ca/directory/panago',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'port-alberni-association-for-community-living-paac',
+    chamberId: 'port-alberni-chamber',
+    name: 'Port Alberni Association for Community Living (P.A.A.C.L)',
+    category: 'nonprofit' as const,
+    naicsCode: '813410',
+    naicsTitle: 'Civic Organizations',
+    naicsSector: '81',
+    naicsSubsector: '813',
+    
+    
+    website: 'https://albernichamber.ca/directory/port-alberni-association-community-living-paacl',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'pescadores-bistro',
+    chamberId: 'port-alberni-chamber',
+    name: 'Pescadores Bistro',
+    category: 'food-beverage' as const,
+    naicsCode: '722511',
+    naicsTitle: 'Full-Service Restaurants',
+    naicsSector: '72',
+    naicsSubsector: '722',
+    
+    
+    website: 'https://albernichamber.ca/directory/pescadores-bistro',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'murphys-sport-fishing',
+    chamberId: 'port-alberni-chamber',
+    name: 'Murphy\'s Sport Fishing',
+    category: 'recreation-entertainment' as const,
+    naicsCode: '713940',
+    naicsTitle: 'Fitness Centers',
+    naicsSector: '71',
+    naicsSubsector: '713',
+    
+    
+    website: 'https://albernichamber.ca/directory/murphys-sport-fishing',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'pacific-fraser-bay-sourcing-inc',
+    chamberId: 'port-alberni-chamber',
+    name: 'Pacific Fraser Bay Sourcing Inc',
+    category: 'professional-services' as const,
+    naicsCode: '541990',
+    naicsTitle: 'Professional Services',
+    naicsSector: '54',
+    naicsSubsector: '541',
+    
+    
+    websiteNeedsCollection: true,
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'nanaimo-airport-commission',
+    chamberId: 'port-alberni-chamber',
+    name: 'Nanaimo Airport Commission',
+    category: 'professional-services' as const,
+    naicsCode: '541990',
+    naicsTitle: 'Professional Services',
+    naicsSector: '54',
+    naicsSubsector: '541',
+    
+    
+    website: 'https://albernichamber.ca/directory/nanaimo-airport-commission',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'pacific-chevrolet-buick-gmc',
+    chamberId: 'port-alberni-chamber',
+    name: 'Pacific Chevrolet Buick GMC',
+    category: 'automotive' as const,
+    naicsCode: '811111',
+    naicsTitle: 'General Automotive Repair',
+    naicsSector: '81',
+    naicsSubsector: '811',
+    
+    
+    websiteNeedsCollection: true,
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'pathways-leadership-coaching',
+    chamberId: 'port-alberni-chamber',
+    name: 'Pathways Leadership Coaching',
+    category: 'professional-services' as const,
+    naicsCode: '541990',
+    naicsTitle: 'Professional Services',
+    naicsSector: '54',
+    naicsSubsector: '541',
+    
+    
+    website: 'https://albernichamber.ca/directory/pathways-leadership-coaching',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'north-island-college---port-alberni-campus',
+    chamberId: 'port-alberni-chamber',
+    name: 'North Island College - Port Alberni Campus',
+    category: 'education' as const,
+    naicsCode: '611310',
+    naicsTitle: 'Colleges and Universities',
+    naicsSector: '61',
+    naicsSubsector: '611',
+    
+    
+    website: 'https://albernichamber.ca/directory/north-island-college-port-alberni-campus',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'oli-your-island-realtor---remax-mid-island-realty',
+    chamberId: 'port-alberni-chamber',
+    name: 'Oli Your Island REALTOR® - RE/MAX Mid-Island Realty',
+    category: 'real-estate' as const,
+    naicsCode: '531210',
+    naicsTitle: 'Real Estate Agents',
+    naicsSector: '53',
+    naicsSubsector: '531',
+    
+    phone: '250-731-6342',
+    websiteNeedsCollection: true,
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'pinto-goods-refillery',
+    chamberId: 'port-alberni-chamber',
+    name: 'Pinto Goods & Refillery',
+    category: 'professional-services' as const,
+    naicsCode: '541990',
+    naicsTitle: 'Professional Services',
+    naicsSector: '54',
+    naicsSubsector: '541',
+    
+    
+    websiteNeedsCollection: true,
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'passion-plumbing-heating-ltd',
+    chamberId: 'port-alberni-chamber',
+    name: 'Passion Plumbing & Heating Ltd',
+    category: 'professional-services' as const,
+    naicsCode: '541990',
+    naicsTitle: 'Professional Services',
+    naicsSector: '54',
+    naicsSubsector: '541',
+    
+    
+    website: 'https://albernichamber.ca/directory/passion-plumbing-heating-ltd#main-content',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'noteable-music',
+    chamberId: 'port-alberni-chamber',
+    name: 'Noteable Music',
+    category: 'professional-services' as const,
+    naicsCode: '541990',
+    naicsTitle: 'Professional Services',
+    naicsSector: '54',
+    naicsSubsector: '541',
+    address: 'Port Alberni, BC',
+    
+    website: 'https://albernichamber.ca/directory/noteable-music',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'outdoor-lovers-b-b',
+    chamberId: 'port-alberni-chamber',
+    name: 'Outdoor Lovers B & B',
+    category: 'professional-services' as const,
+    naicsCode: '541990',
+    naicsTitle: 'Professional Services',
+    naicsSector: '54',
+    naicsSubsector: '541',
+    
+    
+    websiteNeedsCollection: true,
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  },
+  {
+    id: 'port-alberni-community-action-team',
+    chamberId: 'port-alberni-chamber',
+    name: 'Port Alberni Community Action Team',
+    category: 'professional-services' as const,
+    naicsCode: '541990',
+    naicsTitle: 'Professional Services',
+    naicsSector: '54',
+    naicsSubsector: '541',
+    
+    
+    website: 'https://albernichamber.ca/directory/port-alberni-community-action-team',
+    municipality: 'Port Alberni',
+    region: 'Alberni-Clayoquot'
+  }

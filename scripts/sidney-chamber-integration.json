@@ -1,0 +1,122 @@
+[
+  {
+    "id": "mary-winspear-centre",
+    "chamberId": "sidney-chamber",
+    "name": "Mary Winspear Centre",
+    "category": "nonprofit",
+    "naicsCode": "711110",
+    "naicsDescription": "Theater Companies",
+    "address": "2243 Beacon Avenue, Sidney BC, V8L 1W9",
+    "phone": "(250) 656-0275",
+    "website": "https://distinctlysidney.ca/mary-winspear-centre/",
+    "description": ""
+  },
+  {
+    "id": "sabhai-thai",
+    "chamberId": "sidney-chamber",
+    "name": "Sabhai Thai",
+    "category": "food-beverage",
+    "naicsCode": "722511",
+    "naicsDescription": "Full-Service Restaurants",
+    "address": "2493 Beacon Avenue Sidney V8L 1X9",
+    "phone": "(250) 655-4085",
+    "website": "https://distinctlysidney.ca/sabhai-thai/",
+    "description": ""
+  },
+  {
+    "id": "j-burke-sons-tobacconists-ltd",
+    "chamberId": "sidney-chamber",
+    "name": "J. Burke & Sons Tobacconists Ltd.",
+    "category": "retail",
+    "naicsCode": "452319",
+    "naicsDescription": "General Merchandise Stores",
+    "address": "2373 Beacon Avenue, Sidney BC V8L 1W9",
+    "phone": "(250) 655-1556",
+    "website": "https://distinctlysidney.ca/j-burke-sons-tobacconists-ltd/",
+    "description": ""
+  },
+  {
+    "id": "eyeland-optical",
+    "chamberId": "sidney-chamber",
+    "name": "Eyeland Optical",
+    "category": "retail",
+    "naicsCode": "452319",
+    "naicsDescription": "General Merchandise Stores",
+    "address": "2451 Beacon Avenue, Sidney BC V8L 1X7",
+    "phone": "(250) 656-3626",
+    "website": "https://distinctlysidney.ca/eyeland-optical/",
+    "description": ""
+  },
+  {
+    "id": "dig-this-sidney",
+    "chamberId": "sidney-chamber",
+    "name": "Dig This Sidney",
+    "category": "retail",
+    "naicsCode": "452319",
+    "naicsDescription": "General Merchandise Stores",
+    "address": "9813 3 St, Sidney, BC V8L 3A6, Canada",
+    "phone": "(778) 426-1998",
+    "website": "https://distinctlysidney.ca/dig-this-sidney/",
+    "description": ""
+  },
+  {
+    "id": "the-red-brick-cafe",
+    "chamberId": "sidney-chamber",
+    "name": "The Red Brick Cafe",
+    "category": "food-beverage",
+    "naicsCode": "722511",
+    "naicsDescription": "Full-Service Restaurants",
+    "address": "2423 Beacon Ave Sidney, British Columbia V8L1X5",
+    "phone": "(250) 655-1822",
+    "website": "https://distinctlysidney.ca/the-red-brick-cafe/",
+    "description": ""
+  },
+  {
+    "id": "victoria-distillers",
+    "chamberId": "sidney-chamber",
+    "name": "Victoria Distillers",
+    "category": "food-beverage",
+    "naicsCode": "722511",
+    "naicsDescription": "Full-Service Restaurants",
+    "address": "9891 Seaport Place, Sidney, BC, Canada",
+    "phone": "(250) 544-8217",
+    "website": "https://distinctlysidney.ca/victoria-distillers/",
+    "description": ""
+  },
+  {
+    "id": "2nd-street-studio-hair-design",
+    "chamberId": "sidney-chamber",
+    "name": "2nd Street Studio Hair Design",
+    "category": "retail",
+    "naicsCode": "452319",
+    "naicsDescription": "General Merchandise Stores",
+    "address": "9-9843 Second Street, Sidney, BC V8L 3C7",
+    "phone": "(250) 655-0515",
+    "website": "https://distinctlysidney.ca/2nd-street-studio-hair-design/",
+    "description": ""
+  },
+  {
+    "id": "yami-sushi",
+    "chamberId": "sidney-chamber",
+    "name": "Yami Sushi",
+    "category": "food-beverage",
+    "naicsCode": "722511",
+    "naicsDescription": "Full-Service Restaurants",
+    "address": "101A – 9775 Fourth Street, Sidney BC V8L 2Z8",
+    "phone": "(778) 426-0100",
+    "website": "https://distinctlysidney.ca/yami-sushi/",
+    "description": ""
+  },
+  {
+    "id": "adels-play-n-discovery-house",
+    "chamberId": "sidney-chamber",
+    "name": "Adel’s Play N Discovery House",
+    "category": "retail",
+    "naicsCode": "452319",
+    "naicsDescription": "General Merchandise Stores",
+    "address": "2146 Beacon Avenue West, Sidney, BC, Canada",
+    "phone": "(250) 655-4888",
+    "website": "https://distinctlysidney.ca/adels-play-n-discovery-house/",
+    "description": ""
+  }
+]

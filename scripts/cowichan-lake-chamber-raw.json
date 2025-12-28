@@ -1,0 +1,58 @@
+[
+  {
+    "name": "The Firewood Guys Firewood Co.",
+    "category": "Forestry, Firewood",
+    "address": "Youbou, British Columbia, Canada",
+    "phone": "2505057632",
+    "website": "",
+    "chamberId": "cowichan-lake-chamber"
+  },
+  {
+    "name": "Kryshelle Love – Triptician Vacation Specialist",
+    "category": "Travel Agent",
+    "address": "",
+    "phone": "(705) 868-6800",
+    "website": "mailto:kryshelle@triptician.ca",
+    "chamberId": "cowichan-lake-chamber"
+  },
+  {
+    "name": "Ts’uubaa-asatx Nation (Lake Cowichan First Nation)",
+    "category": "First Nations, Government",
+    "address": "313B Deer Road, Lake Cowichan, British Columbia, Canada V0R2G0",
+    "phone": "(250) 749-3301",
+    "website": "http://www.lakecowichanfn.ca/",
+    "chamberId": "cowichan-lake-chamber"
+  },
+  {
+    "name": "BFL CANADA Risk & Insurance Services Inc.",
+    "category": "Financial Services, Insurance",
+    "address": "Cowichan Valley, British Columbia, Canada V0R2G0",
+    "phone": "1-778-238-0692",
+    "website": "https://www.bflcanada.ca/",
+    "chamberId": "cowichan-lake-chamber"
+  },
+  {
+    "name": "Just For Kids After School Care",
+    "category": "Child/Daycare Centre",
+    "address": "Lake Cowichan, British Columbia, Canada",
+    "phone": "250-732-7292",
+    "website": "mailto:j4kcare@gmail.com",
+    "chamberId": "cowichan-lake-chamber"
+  },
+  {
+    "name": "Vancouver Island Economic Alliance (VIEA)",
+    "category": "Business Services, Organizations",
+    "address": "P.O. Box 76, Station ‘A’, Nanaimo, British Columbia, Canada V9R 5K4",
+    "phone": "250-668-5389",
+    "website": "https://viea.ca/",
+    "chamberId": "cowichan-lake-chamber"
+  },
+  {
+    "name": "Valleyshore Plumbing and Heating Ltd.",
+    "category": "Contracting, Heating Services, Plumbing",
+    "address": "PO Box 2062, Lake Cowichan, British Columbia, Canada",
+    "phone": "604-614-8706",
+    "website": "mailto:office@valleyshoreplumbing.ca",
+    "chamberId": "cowichan-lake-chamber"
+  }
+]

@@ -1,0 +1,90 @@
+[
+  {
+    "name": "100 Percent Cannabis Ltd.",
+    "category": "Cannabis Retail",
+    "address": "5 311 Hemlock Street, Port McNeill, BC",
+    "phone": "1-250-956-0420",
+    "website": "https://www.100percentcannabis.ca/",
+    "chamberId": "port-mcneill-chamber"
+  },
+  {
+    "name": "21 Degrees Mechanical LTD",
+    "category": "HVAC Installation",
+    "address": "1868 Fern Road, Courtenay, BC V9J 1W8",
+    "phone": "250-334-2100",
+    "website": "https://21deg.com/",
+    "chamberId": "port-mcneill-chamber"
+  },
+  {
+    "name": "3D Cleaning Etc",
+    "category": "Cleaning Service",
+    "address": "2077 Chelan Crescent, Port McNeill, BC",
+    "phone": "250-230-0080",
+    "website": "",
+    "chamberId": "port-mcneill-chamber"
+  },
+  {
+    "name": "43K Wilderness Solutions",
+    "category": "Consulting",
+    "address": "# 5 E 1705 Campbell Way, Port McNeill, BC",
+    "phone": "250-230-2087",
+    "website": "https://www.43k.ca/",
+    "chamberId": "port-mcneill-chamber"
+  },
+  {
+    "name": "460 Realty",
+    "category": "Real Estate",
+    "address": "2142 Northland Road",
+    "phone": "250-956-4642",
+    "website": "https://www.460realty.com/",
+    "chamberId": "port-mcneill-chamber"
+  },
+  {
+    "name": "49 North Helicopters LTD",
+    "category": "Helicopter Charter Service",
+    "address": "2200 Airport Drive, Campbell River, BC",
+    "phone": "250-926-9292",
+    "website": "https://49northhelicopters.com/",
+    "chamberId": "port-mcneill-chamber"
+  },
+  {
+    "name": "A. Bucci Photography",
+    "category": "Photography",
+    "address": "775 Lanqvist Road, Port McNeill, BC",
+    "phone": "778-551-7110",
+    "website": "https://www.abucciphotography.com/",
+    "chamberId": "port-mcneill-chamber"
+  },
+  {
+    "name": "Abernethy Contracting",
+    "category": "Construction & Equipment",
+    "address": "1997 Mine Road, Port McNeill, BC",
+    "phone": "250-949-0307",
+    "website": "",
+    "chamberId": "port-mcneill-chamber"
+  },
+  {
+    "name": "Absolutely Grape U-Brew",
+    "category": "Retail U-Brew",
+    "address": "b-423 Pioneer Hill Drive, Port McNeill, BC",
+    "phone": "250-956-4112",
+    "website": "https://absolutelygrapeubrew.com/",
+    "chamberId": "port-mcneill-chamber"
+  },
+  {
+    "name": "ACE Courier",
+    "category": "Courier",
+    "address": "423 Pioneer Hill Drive, Port McNeill, BC",
+    "phone": "250-949-7844",
+    "website": "https://www.acecourier.ca/",
+    "chamberId": "port-mcneill-chamber"
+  },
+  {
+    "name": "Ainsworth Inc.",
+    "category": "HVAC & DDC Controls",
+    "address": "3057 B Barons Road, Nanaimo, BC",
+    "phone": "604-574-7790",
+    "website": "http://www.escautomation.com/locations/vancouver-island",
+    "chamberId": "port-mcneill-chamber"
+  }
+]

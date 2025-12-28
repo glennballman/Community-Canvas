@@ -1,0 +1,82 @@
+[
+  {
+    "name": "Mary Winspear Centre",
+    "category": "Arts & Culture",
+    "address": "2243 Beacon Avenue, Sidney BC, V8L 1W9",
+    "phone": "(250) 656-0275",
+    "website": "https://distinctlysidney.ca/mary-winspear-centre/",
+    "chamberId": "sidney-chamber"
+  },
+  {
+    "name": "Sabhai Thai",
+    "category": "Restaurants",
+    "address": "2493 Beacon Avenue Sidney V8L 1X9",
+    "phone": "(250) 655-4085",
+    "website": "https://distinctlysidney.ca/sabhai-thai/",
+    "chamberId": "sidney-chamber"
+  },
+  {
+    "name": "J. Burke & Sons Tobacconists Ltd.",
+    "category": "Shopping & Services",
+    "address": "2373 Beacon Avenue, Sidney BC V8L 1W9",
+    "phone": "(250) 655-1556",
+    "website": "https://distinctlysidney.ca/j-burke-sons-tobacconists-ltd/",
+    "chamberId": "sidney-chamber"
+  },
+  {
+    "name": "Eyeland Optical",
+    "category": "Shopping & Services",
+    "address": "2451 Beacon Avenue, Sidney BC V8L 1X7",
+    "phone": "(250) 656-3626",
+    "website": "https://distinctlysidney.ca/eyeland-optical/",
+    "chamberId": "sidney-chamber"
+  },
+  {
+    "name": "Dig This Sidney",
+    "category": "Shopping & Services",
+    "address": "9813 3 St, Sidney, BC V8L 3A6, Canada",
+    "phone": "(778) 426-1998",
+    "website": "https://distinctlysidney.ca/dig-this-sidney/",
+    "chamberId": "sidney-chamber"
+  },
+  {
+    "name": "The Red Brick Cafe",
+    "category": "Restaurants",
+    "address": "2423 Beacon Ave Sidney, British Columbia V8L1X5",
+    "phone": "(250) 655-1822",
+    "website": "https://distinctlysidney.ca/the-red-brick-cafe/",
+    "chamberId": "sidney-chamber"
+  },
+  {
+    "name": "Victoria Distillers",
+    "category": "Restaurants",
+    "address": "9891 Seaport Place, Sidney, BC, Canada",
+    "phone": "(250) 544-8217",
+    "website": "https://distinctlysidney.ca/victoria-distillers/",
+    "chamberId": "sidney-chamber"
+  },
+  {
+    "name": "2nd Street Studio Hair Design",
+    "category": "Shopping & Services",
+    "address": "9-9843 Second Street, Sidney, BC V8L 3C7",
+    "phone": "(250) 655-0515",
+    "website": "https://distinctlysidney.ca/2nd-street-studio-hair-design/",
+    "chamberId": "sidney-chamber"
+  },
+  {
+    "name": "Yami Sushi",
+    "category": "Restaurants",
+    "address": "101A – 9775 Fourth Street, Sidney BC V8L 2Z8",
+    "phone": "(778) 426-0100",
+    "website": "https://distinctlysidney.ca/yami-sushi/",
+    "chamberId": "sidney-chamber"
+  },
+  {
+    "name": "Adel’s Play N Discovery House",
+    "category": "Shopping & Services",
+    "address": "2146 Beacon Avenue West, Sidney, BC, Canada",
+    "phone": "(250) 655-4888",
+    "website": "https://distinctlysidney.ca/adels-play-n-discovery-house/",
+    "chamberId": "sidney-chamber"
+  }
+]

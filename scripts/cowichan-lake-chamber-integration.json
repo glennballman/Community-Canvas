@@ -1,0 +1,86 @@
+[
+  {
+    "id": "the-firewood-guys-firewood-co",
+    "chamberId": "cowichan-lake-chamber",
+    "name": "The Firewood Guys Firewood Co.",
+    "category": "professional-services",
+    "naicsCode": "541990",
+    "naicsDescription": "Professional Services",
+    "address": "Youbou, British Columbia, Canada",
+    "phone": "2505057632",
+    "website": "",
+    "description": ""
+  },
+  {
+    "id": "kryshelle-love-triptician-vacation-specialist",
+    "chamberId": "cowichan-lake-chamber",
+    "name": "Kryshelle Love – Triptician Vacation Specialist",
+    "category": "tourism",
+    "naicsCode": "561510",
+    "naicsDescription": "Travel Agencies",
+    "address": "",
+    "phone": "(705) 868-6800",
+    "website": "mailto:kryshelle@triptician.ca",
+    "description": ""
+  },
+  {
+    "id": "tsuubaa-asatx-nation-lake-cowichan-first-nation",
+    "chamberId": "cowichan-lake-chamber",
+    "name": "Ts’uubaa-asatx Nation (Lake Cowichan First Nation)",
+    "category": "government",
+    "naicsCode": "921110",
+    "naicsDescription": "Executive Offices",
+    "address": "313B Deer Road, Lake Cowichan, British Columbia, Canada V0R2G0",
+    "phone": "(250) 749-3301",
+    "website": "http://www.lakecowichanfn.ca/",
+    "description": ""
+  },
+  {
+    "id": "bfl-canada-risk-insurance-services-inc",
+    "chamberId": "cowichan-lake-chamber",
+    "name": "BFL CANADA Risk & Insurance Services Inc.",
+    "category": "financial-services",
+    "naicsCode": "523930",
+    "naicsDescription": "Investment Advice",
+    "address": "Cowichan Valley, British Columbia, Canada V0R2G0",
+    "phone": "1-778-238-0692",
+    "website": "https://www.bflcanada.ca/",
+    "description": ""
+  },
+  {
+    "id": "just-for-kids-after-school-care",
+    "chamberId": "cowichan-lake-chamber",
+    "name": "Just For Kids After School Care",
+    "category": "professional-services",
+    "naicsCode": "541990",
+    "naicsDescription": "Professional Services",
+    "address": "Lake Cowichan, British Columbia, Canada",
+    "phone": "250-732-7292",
+    "website": "mailto:j4kcare@gmail.com",
+    "description": ""
+  },
+  {
+    "id": "vancouver-island-economic-alliance-viea",
+    "chamberId": "cowichan-lake-chamber",
+    "name": "Vancouver Island Economic Alliance (VIEA)",
+    "category": "professional-services",
+    "naicsCode": "541990",
+    "naicsDescription": "Professional Services",
+    "address": "P.O. Box 76, Station ‘A’, Nanaimo, British Columbia, Canada V9R 5K4",
+    "phone": "250-668-5389",
+    "website": "https://viea.ca/",
+    "description": ""
+  },
+  {
+    "id": "valleyshore-plumbing-and-heating-ltd",
+    "chamberId": "cowichan-lake-chamber",
+    "name": "Valleyshore Plumbing and Heating Ltd.",
+    "category": "construction",
+    "naicsCode": "238220",
+    "naicsDescription": "Plumbing Contractors",
+    "address": "PO Box 2062, Lake Cowichan, British Columbia, Canada",
+    "phone": "604-614-8706",
+    "website": "mailto:office@valleyshoreplumbing.ca",
+    "description": ""
+  }
+]
