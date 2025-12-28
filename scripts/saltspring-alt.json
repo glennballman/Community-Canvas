@@ -1,0 +1,447 @@
+[
+  {
+    "name": "Apple Photo",
+    "website": "http://applephoto.ca/",
+    "category": "photography"
+  },
+  {
+    "name": "Artcraft Gallery",
+    "website": "http://ssartscouncil.com/artcraft/",
+    "category": "arts-culture"
+  },
+  {
+    "name": "Barb's Bakery & Bistro",
+    "website": "",
+    "category": "food-beverage"
+  },
+  {
+    "name": "Salt Spring Bike Rentals and Repair Service",
+    "website": "http://www.outspokinbikeshop.com/",
+    "category": "recreation"
+  },
+  {
+    "name": "Cosmo Knives",
+    "website": "http://www.cosmoknives.com/",
+    "category": "manufacturing"
+  },
+  {
+    "name": "Country Grocer",
+    "website": "http://www.countrygrocer.com/",
+    "category": "grocery"
+  },
+  {
+    "name": "Fever Tree Trading",
+    "website": "http://fevertree.ca/",
+    "category": "retail"
+  },
+  {
+    "name": "Embe Bakery",
+    "website": "http://www.embebakery.com/",
+    "category": "food-beverage"
+  },
+  {
+    "name": "Fernwood Cafe",
+    "website": "http://www.fernwoodcafe.com/",
+    "category": "restaurant"
+  },
+  {
+    "name": "Harlans Chocolates",
+    "website": "https://harlansfinechocolates.ca/",
+    "category": "food-beverage"
+  },
+  {
+    "name": "Green Acres Resort",
+    "website": "https://saltspringislandresort.com/",
+    "category": "accommodation"
+  },
+  {
+    "name": "Golden Shield Qi-Gong",
+    "website": "http://www.jingui-bc.com/",
+    "category": "healthcare"
+  },
+  {
+    "name": "Interchill Records",
+    "website": "http://interchill.com/",
+    "category": "arts-culture"
+  },
+  {
+    "name": "Island Escapades Kayaking",
+    "website": "http://www.islandescapades.com/",
+    "category": "recreation"
+  },
+  {
+    "name": "Islands Bookkeeping",
+    "website": "http://www.islandsbookkeeping.com/",
+    "category": "accounting"
+  },
+  {
+    "name": "Island Savings Credit Union",
+    "website": "http://iscu.com/",
+    "category": "banking-finance"
+  },
+  {
+    "name": "Kmax Multimedia and Web Design",
+    "website": "http://www.kmaxmultimedia.com/",
+    "category": "it-technology"
+  },
+  {
+    "name": "Lakeside Gardens Resort",
+    "website": "http://www.lakesidegardensresort.com/",
+    "category": "accommodation"
+  },
+  {
+    "name": "Kathryn Nimetz Deep Tissue Massage",
+    "website": "http://www.saltspringmassagestudio.com/",
+    "category": "spa-beauty"
+  },
+  {
+    "name": "Martinus Fine Jewelry",
+    "website": "http://martinus-gold.com/",
+    "category": "retail"
+  },
+  {
+    "name": "Morningside Organic Cafe & Bookstore",
+    "website": "http://morningsideorganic.com/",
+    "category": "restaurant"
+  },
+  {
+    "name": "North End Fitness",
+    "website": "http://northendfit.ca/",
+    "category": "fitness-wellness"
+  },
+  {
+    "name": "Oona McOuat Celtic Harp",
+    "website": "http://www.oonamcouat.com/",
+    "category": "arts-culture"
+  },
+  {
+    "name": "Pomodoro Pizza & More",
+    "website": "http://www.pomodoropizza.net/",
+    "category": "restaurant"
+  },
+  {
+    "name": "Rainbow Road Trading Company",
+    "website": "http://www.rainbowroadtrading.com/",
+    "category": "retail"
+  },
+  {
+    "name": "Salt Spring Adventure Co.",
+    "website": "http://saltspringadventures.com/",
+    "category": "recreation"
+  },
+  {
+    "name": "Salt Spring Books",
+    "website": "",
+    "category": "retail"
+  },
+  {
+    "name": "Salt Spring Center of Yoga",
+    "website": "https://www.saltspringcentre.com/",
+    "category": "fitness-wellness"
+  },
+  {
+    "name": "Salt Spring Design",
+    "website": "http://www.saltspringdesign.com/",
+    "category": "it-technology"
+  },
+  {
+    "name": "Salt Spring Dentist",
+    "website": "http://saltspringdentist.com/",
+    "category": "dental"
+  },
+  {
+    "name": "SaltSpring Gardening Service",
+    "website": "https://saltspringgardening.com/",
+    "category": "landscaping"
+  },
+  {
+    "name": "Salt Spring Gelato",
+    "website": "http://www.saltspringgelato.com/",
+    "category": "food-beverage"
+  },
+  {
+    "name": "Salt Spring Golf Club",
+    "website": "http://www.saltspringgolf.com/",
+    "category": "recreation"
+  },
+  {
+    "name": "Salt Spring Spa Resort",
+    "website": "http://www.saltspringspa.com/",
+    "category": "accommodation"
+  },
+  {
+    "name": "Salt Spring Vineyards",
+    "website": "http://www.saltspringvineyards.com/",
+    "category": "winery-brewery"
+  },
+  {
+    "name": "Salt Spring Property Real Estate",
+    "website": "https://saltspringproperty.com/",
+    "category": "real-estate"
+  },
+  {
+    "name": "Salt Spring Island Reflexology",
+    "website": "http://www.massagesaltspring.com/",
+    "category": "spa-beauty"
+  },
+  {
+    "name": "Salt Spring Shiatsu Massage",
+    "website": "http://saltspring-massage.com/",
+    "category": "spa-beauty"
+  },
+  {
+    "name": "The Salt Spring Way B&B",
+    "website": "http://www.saltspringway.com/",
+    "category": "accommodation"
+  },
+  {
+    "name": "The Treehouse Cafe",
+    "website": "http://www.treehousecafe.ca/",
+    "category": "restaurant"
+  },
+  {
+    "name": "Thrifty Foods",
+    "website": "http://www.thriftyfoods.ca/",
+    "category": "grocery"
+  },
+  {
+    "name": "Treasures of the Heart",
+    "website": "http://www.treasuresoftheheart.ca/",
+    "category": "retail"
+  },
+  {
+    "name": "Uri Cogan",
+    "website": "http://www.uricogan.com/",
+    "category": "arts-culture"
+  },
+  {
+    "name": "West of the Moon",
+    "website": "http://www.westmoonkids.com/",
+    "category": "retail"
+  },
+  {
+    "name": "Windhorse Centre",
+    "website": "http://www.windhorsecentre.com/",
+    "category": "healthcare"
+  },
+  {
+    "name": "St. Mary Lake Resort",
+    "website": "http://www.stmarylakeresort.com/",
+    "category": "accommodation"
+  },
+  {
+    "name": "Salt Spring Island Carriage House",
+    "website": "http://www.saltspringcarriagehouse.com/",
+    "category": "accommodation"
+  },
+  {
+    "name": "The Fulford Inn",
+    "website": "http://www.fulfordinn.com/",
+    "category": "accommodation"
+  },
+  {
+    "name": "The Roost B&B",
+    "website": "http://www.theroostatganges.com/",
+    "category": "accommodation"
+  },
+  {
+    "name": "The Villas at Vesuvius",
+    "website": "http://www.vesuviusvillas.com/",
+    "category": "accommodation"
+  },
+  {
+    "name": "Salt Spring NatureWorks",
+    "website": "http://www.saltspringnatureworks.ca/",
+    "category": "retail"
+  },
+  {
+    "name": "Ptetzel Motors",
+    "website": "",
+    "category": "automotive"
+  },
+  {
+    "name": "Murakami Motors",
+    "website": "",
+    "category": "automotive"
+  },
+  {
+    "name": "Ganges Massage Therapy",
+    "website": "http://saltspringmassagetherapy.com/",
+    "category": "spa-beauty"
+  },
+  {
+    "name": "Pura Vida Oceanside Massage",
+    "website": "http://www.rmt-saltspring.com/",
+    "category": "spa-beauty"
+  },
+  {
+    "name": "Core Inn Youth Project",
+    "website": "http://saltspringcommunityservices.ca/core-inn-youth-centre/",
+    "category": "charity-nonprofit"
+  },
+  {
+    "name": "Beacon Community Center",
+    "website": "http://www.beaconcs.ca/",
+    "category": "government"
+  },
+  {
+    "name": "Farmers Institute",
+    "website": "http://ssifi.org/",
+    "category": "charity-nonprofit"
+  },
+  {
+    "name": "SaltSpring Island Conservancy",
+    "website": "https://saltspringconservancy.ca/",
+    "category": "charity-nonprofit"
+  },
+  {
+    "name": "Parks & Rec",
+    "website": "http://www.crd.bc.ca/ssiparc/",
+    "category": "government"
+  },
+  {
+    "name": "Ganges Yoga Studio",
+    "website": "http://gangesyogastudio.com/",
+    "category": "fitness-wellness"
+  },
+  {
+    "name": "Artspring Gallery",
+    "website": "http://www.artspring.ca/",
+    "category": "arts-culture"
+  },
+  {
+    "name": "Pegasus Gallery",
+    "website": "http://www.pegasusgallery.ca/",
+    "category": "arts-culture"
+  },
+  {
+    "name": "Salt Spring Studio Tour",
+    "website": "http://saltspringstudiotour.com/",
+    "category": "arts-culture"
+  },
+  {
+    "name": "Salt Spring Island Sailing Club",
+    "website": "http://www.saltspringsailing.ca/",
+    "category": "recreation"
+  },
+  {
+    "name": "Salt Spring Tennis Association",
+    "website": "",
+    "category": "recreation"
+  },
+  {
+    "name": "Island Pathways",
+    "website": "http://www.islandpathways.ca/",
+    "category": "charity-nonprofit"
+  },
+  {
+    "name": "SkyTech Photo",
+    "website": "https://www.skytechphoto.ca/",
+    "category": "photography"
+  },
+  {
+    "name": "Lady Minto Hospital",
+    "website": "https://www.islandhealth.ca/our-locations/hospitals-health-centre-locations/lady-minto-gulf-islands-hospital",
+    "category": "healthcare"
+  },
+  {
+    "name": "Gulf Islands Veterinary Clinic",
+    "website": "http://www.gulfislandvet.com/",
+    "category": "pets"
+  },
+  {
+    "name": "Salt Spring Island SPCA",
+    "website": "https://spca.bc.ca/locations/salt-spring-island/",
+    "category": "charity-nonprofit"
+  },
+  {
+    "name": "BC Ferries",
+    "website": "http://www.bcferries.ca/",
+    "category": "transit"
+  },
+  {
+    "name": "Ganges Faerie Mini Shuttle",
+    "website": "",
+    "category": "taxi-rideshare"
+  },
+  {
+    "name": "Gulf Islands Water Taxi",
+    "website": "http://www.saltspring.com/watertaxi/",
+    "category": "transit"
+  },
+  {
+    "name": "Harbour Air Seaplanes",
+    "website": "http://www.harbour-air.com/",
+    "category": "transit"
+  },
+  {
+    "name": "Kenmore Air",
+    "website": "http://www.kenmoreair.com/",
+    "category": "transit"
+  },
+  {
+    "name": "Salt Spring Air",
+    "website": "http://www.saltspringair.com/",
+    "category": "transit"
+  },
+  {
+    "name": "Salt Spring Marine Car and Truck Rental",
+    "website": "",
+    "category": "automotive"
+  },
+  {
+    "name": "Seair Seaplanes",
+    "website": "http://www.seairseaplanes.com/",
+    "category": "transit"
+  },
+  {
+    "name": "Silver Shadow Taxi Ltd.",
+    "website": "",
+    "category": "taxi-rideshare"
+  },
+  {
+    "name": "Vancouver Launch Services",
+    "website": "http://www.vancouverlaunchservices.com/",
+    "category": "transit"
+  },
+  {
+    "name": "Salt Spring Harbour Authority",
+    "website": "",
+    "category": "government"
+  },
+  {
+    "name": "Salt Spring Marina Ltd.",
+    "website": "",
+    "category": "recreation"
+  },
+  {
+    "name": "Ganges Marina",
+    "website": "",
+    "category": "recreation"
+  },
+  {
+    "name": "Angel Cottage B&B",
+    "website": "http://www.angelcottage.ca/",
+    "category": "accommodation"
+  },
+  {
+    "name": "Cusheon Lake Resort",
+    "website": "http://www.cusheonlake.com/",
+    "category": "accommodation"
+  },
+  {
+    "name": "The Beach House",
+    "website": "http://www.beachhousesaltspring.com/",
+    "category": "accommodation"
+  },
+  {
+    "name": "Dr. Lorraine Machell Dentist",
+    "website": "",
+    "category": "dental"
+  },
+  {
+    "name": "Dr. Richard Hayden Dentist",
+    "website": "http://www.haydendentistry.com/",
+    "category": "dental"
+  }
+]
