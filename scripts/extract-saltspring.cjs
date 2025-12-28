@@ -1,0 +1,58 @@
+const fs = require('fs');
+
+// Members extracted from the Chamber page based on the markdown table
+// The page shows 166 members. Let me extract what we can see.
+const members = [
+  { name: "Above The Narrows Bed and Breakfast", website: "https://abovethenarrows.com/", industry: "Accommodation" },
+  { name: "All Islands Septic", website: "", industry: "Construction + Trades, Home + Garden" },
+  { name: "Andrea Palframan: Websites & Communication", website: "https://andreapalframan.com/", industry: "Business Services, Media + Marketing" },
+  { name: "Anna J. Pugh Law Corporation", website: "https://saltspringlaw.ca/", industry: "Professional Services" },
+  { name: "Araucana Grove", website: "", industry: "Recreation" },
+  { name: "Arbutus View Thermal Spa", website: "https://www.arbutusview.com/", industry: "Health + Wellness, Recreation" },
+  { name: "ArtSpring", website: "https://artspring.ca/", industry: "Arts + Culture" },
+  { name: "Atelier Jacobsen Jensen", website: "https://pauljacobsenjensen.com/", industry: "Arts + Culture" },
+  { name: "Auntie Pesto's", website: "https://auntiepestos.com/", industry: "Food + Drink" },
+  { name: "Beacon Community Services", website: "https://beaconcs.ca/", industry: "Community + Government" },
+  { name: "Benjamin Moore", website: "", industry: "Construction + Trades, Home + Garden" },
+  { name: "Beth Whalley Counselling", website: "https://www.bethwhalleycounselling.com/", industry: "Health + Wellness, Spirituality + Personal Growth" },
+  { name: "Brown Butter Baker", website: "https://www.BrownButterBaker.ca", industry: "Events + Hospitality, Food + Drink" },
+  { name: "Buzzy's Luncheonette", website: "https://www.buzzys.ca/", industry: "Food + Drink" },
+  { name: "Cedar House on the Hill B&B", website: "https://www.cedarhouseonthehill.ca/", industry: "Accommodation" },
+  { name: "Celtic Place", website: "https://celticplace.ca/", industry: "Accommodation" },
+  { name: "Ciderworks & Salt Spring Apple Company", website: "https://www.saltspringapplecompany.com/", industry: "Food + Drink" },
+  { name: "Coast & Kin Photography", website: "https://www.coastandkin.com/", industry: "Events + Hospitality, Media + Marketing" },
+  { name: "Collins House B + B", website: "http://collinshousessi.com/", industry: "Accommodation" },
+  { name: "Conscious Equine Connections", website: "https://consciousequineconnections.com/", industry: "Health + Wellness" },
+  { name: "Country Grocer", website: "https://www.countrygrocer.com/locations/salt-spring-island/", industry: "Food + Drink, Retail" },
+  { name: "Cudmore Media", website: "https://www.cudmoremedia.ca/", industry: "Business Services, Media + Marketing" },
+  { name: "Cusheon Lake Resort", website: "https://www.cusheonlake.com/", industry: "Accommodation" },
+  { name: "Daffodil Cove Cottage", website: "https://daffodilcovecottage.com/", industry: "Accommodation" },
+  { name: "Dennis Maguire Architect Inc", website: "", industry: "Construction + Trades, Home + Garden" },
+  { name: "DNS Farm", website: "https://www.dnsfarmsaltspring.com/", industry: "Agriculture" },
+  { name: "Dorothy Price Yoga/Santosha Yoga Retreats", website: "", industry: "Health + Wellness" },
+  { name: "Dragonfly Art Supplies", website: "https://dragonflyartsupplies.com/", industry: "Arts + Culture, Retail" },
+  { name: "Duck Creek Farm", website: "https://www.duckcreek.ca/", industry: "Agriculture" },
+  { name: "Ella VanGaya", website: "", industry: "Entrepreneur" },
+  { name: "Fiona Walls Personal Real Estate Corporation", website: "https://fionawalls.com/", industry: "Home + Garden, Real Estate" },
+  { name: "Fishery and Chips", website: "https://www.saltspringgroup.com/fishery-chips", industry: "Food + Drink" },
+  { name: "Foxes Board Game Shop", website: "https://www.facebook.com/foxesboardgameshop/", industry: "Arts + Culture, Retail" },
+  { name: "Foxglove Farm", website: "https://foxglovefarmbc.com/", industry: "Accommodation, Agriculture" },
+  { name: "Francis Bread", website: "https://francisbread.com/", industry: "Food + Drink" },
+  { name: "Garden Faire Nursery and Campground", website: "https://gardenfaire.ca/", industry: "Accommodation, Retail" },
+  { name: "Garry Oaks Estate Winery", website: "https://garryoakswinery.com/", industry: "Food + Drink" },
+  { name: "Harbour Air", website: "https://harbourair.com/", industry: "Transportation" },
+  { name: "Harbour Authority of Salt Spring Island", website: "https://saltspringharbours.com/", industry: "Recreation, Transportation" },
+  { name: "Harbour House Hotel", website: "https://www.harbourhousessi.com/", industry: "Accommodation, Events + Hospitality, Food + Drink" },
+  { name: "Harvest Moon Cannabis", website: "https://www.harvestmooncannabis.ca/", industry: "Food + Drink, Recreation" },
+  { name: "Hastings House Country House Hotel", website: "https://www.hastingshouse.com/", industry: "Accommodation, Events + Hospitality" },
+  { name: "Hummingbird Accounting Ltd.", website: "", industry: "Business Services, Professional Services" },
+  { name: "Island Return-It Salt Spring", website: "https://islandreturnit.com/salt-spring/", industry: "Environmental + Sustainability, Retail" },
+  { name: "Island Village Builders", website: "https://islandvillagebuilders.ca/", industry: "Construction + Trades, Home + Garden" },
+  { name: "Jill Louise Campbell Art Gallery", website: "https://www.jilllouisecampbell.com/", industry: "Arts + Culture" },
+  { name: "Kutatás Wines", website: "", industry: "Food + Drink" },
+];
+
+console.log('Partial extraction:', members.length, 'members');
+console.log('Need to fetch more pages...');
+
+fs.writeFileSync('scripts/saltspring-partial.json', JSON.stringify(members, null, 2));
