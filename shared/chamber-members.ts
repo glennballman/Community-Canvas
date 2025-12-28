@@ -904,7 +904,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSubsector: "453",
     naicsSector: "44-45",
     naicsTitle: "All Other Miscellaneous Store Retailers",
-    municipality: "Langford",
+    municipality: "West Shore",
     region: "Capital",
   },
   {
@@ -918,7 +918,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSubsector: "611",
     naicsSector: "61",
     naicsTitle: "Educational Services",
-    municipality: "Colwood",
+    municipality: "West Shore",
     region: "Capital",
     crossReference: {
       dataset: "schools",
@@ -75423,7 +75423,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "54",
     naicsTitle: "Environmental Consulting",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -75442,7 +75442,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "54",
     naicsTitle: "All Other Professional Services",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -75461,7 +75461,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "52",
     naicsTitle: "Insurance Agencies and Brokerages",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -75480,7 +75480,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "81",
     naicsTitle: "Civic and Social Organizations",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -75499,7 +75499,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "54",
     naicsTitle: "All Other Professional Services",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -75518,7 +75518,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "54",
     naicsTitle: "All Other Professional Services",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -75537,7 +75537,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "54",
     naicsTitle: "Advertising Agencies",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -75556,7 +75556,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "54",
     naicsTitle: "All Other Professional Services",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -75575,7 +75575,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "54",
     naicsTitle: "All Other Professional Services",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -75594,7 +75594,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "71",
     naicsTitle: "Theatre and Dance Companies",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -75613,7 +75613,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "52",
     naicsTitle: "Commercial Banking",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -75632,7 +75632,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "54",
     naicsTitle: "Veterinary Services",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -75651,7 +75651,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "81",
     naicsTitle: "Funeral Homes and Services",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -75670,7 +75670,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "52",
     naicsTitle: "Commercial Banking",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -75689,7 +75689,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "54",
     naicsTitle: "Offices of Lawyers",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -75708,7 +75708,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "44",
     naicsTitle: "Supermarkets and Grocery Stores",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -75727,7 +75727,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "62",
     naicsTitle: "Miscellaneous Health Practitioners",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -75746,7 +75746,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "52",
     naicsTitle: "Commercial Banking",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -75765,7 +75765,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "54",
     naicsTitle: "Administrative Management Consulting",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -75784,7 +75784,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "71",
     naicsTitle: "Fitness and Recreation Centres",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -75803,7 +75803,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "62",
     naicsTitle: "Offices of Physicians",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -75822,7 +75822,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "54",
     naicsTitle: "All Other Professional Services",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -75841,7 +75841,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "72",
     naicsTitle: "Hotels and Motels",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -75860,7 +75860,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "54",
     naicsTitle: "All Other Professional Services",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -75879,7 +75879,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "54",
     naicsTitle: "Administrative Management Consulting",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -75898,7 +75898,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "54",
     naicsTitle: "All Other Professional Services",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -75917,7 +75917,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "54",
     naicsTitle: "Offices of Certified Public Accountants",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -75936,7 +75936,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "54",
     naicsTitle: "All Other Professional Services",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -75955,7 +75955,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "52",
     naicsTitle: "Commercial Banking",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -75974,7 +75974,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "54",
     naicsTitle: "Administrative Management Consulting",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -75993,7 +75993,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "52",
     naicsTitle: "Insurance Agencies and Brokerages",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -76012,7 +76012,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "54",
     naicsTitle: "Administrative Management Consulting",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -76031,7 +76031,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "72",
     naicsTitle: "Hotels and Motels",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -76050,7 +76050,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "54",
     naicsTitle: "Administrative Management Consulting",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -76069,7 +76069,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "54",
     naicsTitle: "Advertising Agencies",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -76088,7 +76088,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "54",
     naicsTitle: "All Other Professional Services",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -76107,7 +76107,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "54",
     naicsTitle: "Offices of Certified Public Accountants",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -76126,7 +76126,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "62",
     naicsTitle: "Miscellaneous Health Practitioners",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -76145,7 +76145,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "54",
     naicsTitle: "All Other Professional Services",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -76164,7 +76164,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "54",
     naicsTitle: "Computer Systems Design Services",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -76183,7 +76183,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "54",
     naicsTitle: "All Other Professional Services",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -76202,7 +76202,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "54",
     naicsTitle: "Offices of Certified Public Accountants",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -76221,7 +76221,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "62",
     naicsTitle: "Miscellaneous Health Practitioners",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -76240,7 +76240,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "71",
     naicsTitle: "Theatre and Dance Companies",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -76259,7 +76259,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "54",
     naicsTitle: "All Other Professional Services",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -76278,7 +76278,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "62",
     naicsTitle: "Offices of Optometrists",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -76297,7 +76297,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "54",
     naicsTitle: "Environmental Consulting",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -76316,7 +76316,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "54",
     naicsTitle: "Computer Systems Design Services",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -76335,7 +76335,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "54",
     naicsTitle: "All Other Professional Services",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -76354,7 +76354,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "54",
     naicsTitle: "All Other Professional Services",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -76373,7 +76373,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "54",
     naicsTitle: "All Other Professional Services",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -76392,7 +76392,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "81",
     naicsTitle: "General Automotive Repair",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -76411,7 +76411,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "54",
     naicsTitle: "All Other Professional Services",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -76430,7 +76430,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "81",
     naicsTitle: "General Automotive Repair",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -76449,7 +76449,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "23",
     naicsTitle: "Commercial Building Construction",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -76468,7 +76468,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "54",
     naicsTitle: "Environmental Consulting",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -76487,7 +76487,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "54",
     naicsTitle: "All Other Professional Services",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -76506,7 +76506,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "54",
     naicsTitle: "All Other Professional Services",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -76525,7 +76525,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "23",
     naicsTitle: "Commercial Building Construction",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -76544,7 +76544,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "71",
     naicsTitle: "Theatre and Dance Companies",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -76563,7 +76563,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "81",
     naicsTitle: "General Automotive Repair",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -76582,7 +76582,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "56",
     naicsTitle: "Landscaping Services",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -76601,7 +76601,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "54",
     naicsTitle: "All Other Professional Services",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -76620,7 +76620,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "56",
     naicsTitle: "Landscaping Services",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -76639,7 +76639,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "54",
     naicsTitle: "All Other Professional Services",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -76658,7 +76658,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "54",
     naicsTitle: "All Other Professional Services",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -76677,7 +76677,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "52",
     naicsTitle: "Commercial Banking",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -76696,7 +76696,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "54",
     naicsTitle: "Engineering Services",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -76715,7 +76715,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "23",
     naicsTitle: "Commercial Building Construction",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -76734,7 +76734,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "81",
     naicsTitle: "General Automotive Repair",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -76753,7 +76753,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "23",
     naicsTitle: "Commercial Building Construction",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -76772,7 +76772,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "81",
     naicsTitle: "General Automotive Repair",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -76791,7 +76791,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "54",
     naicsTitle: "Advertising Agencies",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -76810,7 +76810,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "53",
     naicsTitle: "Offices of Real Estate Agents",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -76829,7 +76829,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "23",
     naicsTitle: "Electrical Contractors",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -76848,7 +76848,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "52",
     naicsTitle: "Commercial Banking",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -76867,7 +76867,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "54",
     naicsTitle: "All Other Professional Services",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -76886,7 +76886,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "54",
     naicsTitle: "All Other Professional Services",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -76905,7 +76905,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "32",
     naicsTitle: "Commercial Printing",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -76924,7 +76924,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "54",
     naicsTitle: "All Other Professional Services",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -76943,7 +76943,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "54",
     naicsTitle: "Advertising Agencies",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -76962,7 +76962,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "54",
     naicsTitle: "All Other Professional Services",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -76981,7 +76981,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "54",
     naicsTitle: "All Other Professional Services",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -77000,7 +77000,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "81",
     naicsTitle: "General Automotive Repair",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -77019,7 +77019,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "81",
     naicsTitle: "Barber Shops",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -77038,7 +77038,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "54",
     naicsTitle: "All Other Professional Services",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -77057,7 +77057,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "54",
     naicsTitle: "All Other Professional Services",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -77076,7 +77076,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "23",
     naicsTitle: "Residential Remodelers",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -77095,7 +77095,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "54",
     naicsTitle: "Computer Systems Design Services",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -77114,7 +77114,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "23",
     naicsTitle: "Commercial Building Construction",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -77133,7 +77133,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "56",
     naicsTitle: "Janitorial Services",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -77152,7 +77152,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "92",
     naicsTitle: "Executive Offices",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -77171,7 +77171,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "56",
     naicsTitle: "Landscaping Services",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -77190,7 +77190,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "54",
     naicsTitle: "All Other Professional Services",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -77209,7 +77209,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "92",
     naicsTitle: "Executive Offices",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -77228,7 +77228,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "54",
     naicsTitle: "All Other Professional Services",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -77247,7 +77247,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "81",
     naicsTitle: "Civic and Social Organizations",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -77266,7 +77266,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "71",
     naicsTitle: "Theatre and Dance Companies",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -77285,7 +77285,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "81",
     naicsTitle: "General Automotive Repair",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -77304,7 +77304,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "54",
     naicsTitle: "All Other Professional Services",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -77323,7 +77323,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "81",
     naicsTitle: "Civic and Social Organizations",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -77342,7 +77342,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "54",
     naicsTitle: "All Other Professional Services",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -77361,7 +77361,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "54",
     naicsTitle: "All Other Professional Services",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -77380,7 +77380,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "81",
     naicsTitle: "Civic and Social Organizations",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -77399,7 +77399,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "81",
     naicsTitle: "Civic and Social Organizations",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -77418,7 +77418,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "92",
     naicsTitle: "Executive Offices",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -77437,7 +77437,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "71",
     naicsTitle: "Theatre and Dance Companies",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -77456,7 +77456,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "71",
     naicsTitle: "Theatre and Dance Companies",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -77475,7 +77475,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "61",
     naicsTitle: "Elementary and Secondary Schools",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -77494,7 +77494,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "44",
     naicsTitle: "Department Stores",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -77513,7 +77513,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "81",
     naicsTitle: "General Automotive Repair",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -77532,7 +77532,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "54",
     naicsTitle: "All Other Professional Services",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -77551,7 +77551,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "81",
     naicsTitle: "General Automotive Repair",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -77570,7 +77570,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "81",
     naicsTitle: "Civic and Social Organizations",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -77589,7 +77589,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "81",
     naicsTitle: "Civic and Social Organizations",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -77608,7 +77608,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "81",
     naicsTitle: "Civic and Social Organizations",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -77627,7 +77627,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "81",
     naicsTitle: "Civic and Social Organizations",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -77646,7 +77646,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "54",
     naicsTitle: "Environmental Consulting",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -77665,7 +77665,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "92",
     naicsTitle: "Executive Offices",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -77684,7 +77684,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "81",
     naicsTitle: "General Automotive Repair",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -77703,7 +77703,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "81",
     naicsTitle: "Civic and Social Organizations",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -77722,7 +77722,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "54",
     naicsTitle: "All Other Professional Services",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -77741,7 +77741,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "54",
     naicsTitle: "All Other Professional Services",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -77760,7 +77760,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "11",
     naicsTitle: "Agriculture and Farming",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -77779,7 +77779,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "54",
     naicsTitle: "All Other Professional Services",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -77798,7 +77798,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "54",
     naicsTitle: "All Other Professional Services",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -77817,7 +77817,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "61",
     naicsTitle: "Elementary and Secondary Schools",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -77836,7 +77836,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "54",
     naicsTitle: "All Other Professional Services",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -77855,7 +77855,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "61",
     naicsTitle: "Elementary and Secondary Schools",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -77874,7 +77874,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "54",
     naicsTitle: "All Other Professional Services",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -77893,7 +77893,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "54",
     naicsTitle: "All Other Professional Services",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -77912,7 +77912,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "61",
     naicsTitle: "Elementary and Secondary Schools",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -77931,7 +77931,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "54",
     naicsTitle: "All Other Professional Services",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -77950,7 +77950,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "61",
     naicsTitle: "Elementary and Secondary Schools",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -77969,7 +77969,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "54",
     naicsTitle: "All Other Professional Services",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -77988,7 +77988,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "54",
     naicsTitle: "All Other Professional Services",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -78007,7 +78007,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "81",
     naicsTitle: "Civic and Social Organizations",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -78026,7 +78026,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "92",
     naicsTitle: "Executive Offices",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -78045,7 +78045,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "81",
     naicsTitle: "Civic and Social Organizations",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -78064,7 +78064,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "71",
     naicsTitle: "Theatre and Dance Companies",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -78083,7 +78083,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "81",
     naicsTitle: "General Automotive Repair",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -78102,7 +78102,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "71",
     naicsTitle: "Theatre and Dance Companies",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -78121,7 +78121,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "81",
     naicsTitle: "General Automotive Repair",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -78140,7 +78140,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "54",
     naicsTitle: "Computer Systems Design Services",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -78159,7 +78159,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "81",
     naicsTitle: "General Automotive Repair",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -78178,7 +78178,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "81",
     naicsTitle: "Civic and Social Organizations",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -78197,7 +78197,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "81",
     naicsTitle: "Civic and Social Organizations",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -78216,7 +78216,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "54",
     naicsTitle: "All Other Professional Services",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -78235,7 +78235,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "81",
     naicsTitle: "Civic and Social Organizations",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -78254,7 +78254,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "81",
     naicsTitle: "Civic and Social Organizations",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -78273,7 +78273,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "54",
     naicsTitle: "All Other Professional Services",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -78292,7 +78292,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "81",
     naicsTitle: "Civic and Social Organizations",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -78311,7 +78311,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "54",
     naicsTitle: "All Other Professional Services",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -78330,7 +78330,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "31",
     naicsTitle: "Wineries",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -78349,7 +78349,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "72",
     naicsTitle: "Full-Service Restaurants",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -78368,7 +78368,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "72",
     naicsTitle: "Full-Service Restaurants",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -78387,7 +78387,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "71",
     naicsTitle: "Recreation Industries",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -78406,7 +78406,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "54",
     naicsTitle: "All Other Professional Services",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -78425,7 +78425,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "54",
     naicsTitle: "All Other Professional Services",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -78444,7 +78444,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "54",
     naicsTitle: "All Other Professional Services",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -78463,7 +78463,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "44",
     naicsTitle: "Department Stores",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -78482,7 +78482,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "72",
     naicsTitle: "Full-Service Restaurants",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -78501,7 +78501,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "54",
     naicsTitle: "All Other Professional Services",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -78520,7 +78520,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "81",
     naicsTitle: "Civic and Social Organizations",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -78539,7 +78539,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "54",
     naicsTitle: "All Other Professional Services",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -78558,7 +78558,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "72",
     naicsTitle: "Full-Service Restaurants",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -78577,7 +78577,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "72",
     naicsTitle: "Full-Service Restaurants",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -78596,7 +78596,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "72",
     naicsTitle: "Full-Service Restaurants",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -78615,7 +78615,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "72",
     naicsTitle: "Full-Service Restaurants",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -78634,7 +78634,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "54",
     naicsTitle: "All Other Professional Services",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -78653,7 +78653,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "54",
     naicsTitle: "All Other Professional Services",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -78672,7 +78672,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "11",
     naicsTitle: "Finfish Fishing",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -78691,7 +78691,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "54",
     naicsTitle: "All Other Professional Services",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -78710,7 +78710,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "72",
     naicsTitle: "Hotels and Motels",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -78729,7 +78729,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "56",
     naicsTitle: "Tour Operators",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -78748,7 +78748,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "54",
     naicsTitle: "All Other Professional Services",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -78767,7 +78767,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "72",
     naicsTitle: "Full-Service Restaurants",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -78786,7 +78786,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "72",
     naicsTitle: "Hotels and Motels",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -78805,7 +78805,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "54",
     naicsTitle: "All Other Professional Services",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -78824,7 +78824,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "72",
     naicsTitle: "Hotels and Motels",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -78843,7 +78843,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "54",
     naicsTitle: "All Other Professional Services",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -78862,7 +78862,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "54",
     naicsTitle: "All Other Professional Services",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
   {
@@ -78881,7 +78881,7 @@ export const chamberMembers: ChamberMember[] = [
     naicsSector: "56",
     naicsTitle: "Tour Operators",
     municipality: "West Shore",
-    region: "Capital Regional District",
+    region: "Capital",
     memberSince: 2024,
   },
 ] as const satisfies readonly ChamberMember[];
