@@ -1038,5 +1038,341 @@
     "phone": "",
     "website": "https://www.parksvillechamber.com/member-business-directory/clothing/1540-wilde-and-sparrow",
     "category": "Shopping"
+  },
+  {
+    "name": "Monk Art Gallery & Studio",
+    "address": "151A Morison Avenue, Parksville, B.C., Canada, V9P 2H6",
+    "city": "Parksville",
+    "phone": "",
+    "website": "https://www.parksvillechamber.com/member-business-directory/arts-a-culture/1610-monk-art-gallery-studio",
+    "category": "Attractions"
+  },
+  {
+    "name": "E.C.H.O. Players",
+    "address": "110 W. 2nd Avenue, Qualicum Beach, BC, Canada",
+    "city": "Qualicum Beach",
+    "phone": "",
+    "website": "https://www.parksvillechamber.com/member-business-directory/entertainment/theatre/1030-e-c-h-o-players",
+    "category": "Attractions"
+  },
+  {
+    "name": "Horne Lake Caves",
+    "address": "3905 Horne Lake Caves Road, Horne Lake, BC, Canada, V9K 2L7",
+    "city": "Horne Lake",
+    "phone": "",
+    "website": "https://www.parksvillechamber.com/member-business-directory/sports-a-recreation/tours/1500-horne-lake-caves-campground-outdoor-centre",
+    "category": "Attractions"
+  },
+  {
+    "name": "Fast Time Grand Prix",
+    "address": "1460 Springhill Road, Parksville, B.C., Canada",
+    "city": "Parksville",
+    "phone": "",
+    "website": "https://www.parksvillechamber.com/member-business-directory/attractions/1767-fast-time-grand-prix",
+    "category": "Attractions"
+  },
+  {
+    "name": "Parksville Museum & Archives",
+    "address": "1245 East Island Highway, Parksville, B.C., Canada, V9P 2E5",
+    "city": "Parksville",
+    "phone": "",
+    "website": "https://www.parksvillechamber.com/member-business-directory/arts-a-culture/1584-parksville-museum",
+    "category": "Attractions"
+  },
+  {
+    "name": "Sexessories",
+    "address": "#4-102 E. Island Highway",
+    "city": "Parksville",
+    "phone": "",
+    "website": "https://www.parksvillechamber.com/member-business-directory/retail-specialty/1670-sexessories",
+    "category": "Retail Specialty"
+  },
+  {
+    "name": "Wembley Mall",
+    "address": "Box 29 - 826 W. Island Highway",
+    "city": "Parksville",
+    "phone": "",
+    "website": "https://www.parksvillechamber.com/member-business-directory/retail-specialty/1917-wembley-mall",
+    "category": "Retail Specialty"
+  },
+  {
+    "name": "Classic Kitchens & Design",
+    "address": "Box 1462",
+    "city": "Parksville",
+    "phone": "",
+    "website": "https://www.parksvillechamber.com/member-business-directory/retail-specialty/987-classic-kitchens-design",
+    "category": "Retail Specialty"
+  },
+  {
+    "name": "Kaya Connection",
+    "address": "101-124 Craig Street",
+    "city": "Parksville",
+    "phone": "",
+    "website": "https://www.parksvillechamber.com/member-business-directory/2250-kaya-connection",
+    "category": "Retail Specialty"
+  },
+  {
+    "name": "Suds & Duds Laundromat",
+    "address": "301-562 East Island Highway",
+    "city": "Parksville",
+    "phone": "",
+    "website": "https://www.parksvillechamber.com/member-business-directory/cleaning/1802-suds-duds-laundromat",
+    "category": "Clothing"
+  },
+  {
+    "name": "The Kit and Kaboodle Trading Company",
+    "address": "851 Lakes Blvd",
+    "city": "Parksville",
+    "phone": "",
+    "website": "https://www.parksvillechamber.com/member-business-directory/clothing/1953-the-kit-and-kaboodle-trading-company",
+    "category": "Clothing"
+  },
+  {
+    "name": "West Coast Tees",
+    "address": "#4 160 Corfield Street",
+    "city": "Parksville",
+    "phone": "",
+    "website": "https://www.parksvillechamber.com/member-business-directory/clothing/2174-westcoastees",
+    "category": "Clothing"
+  },
+  {
+    "name": "BumbleBaby Boutique",
+    "address": "109 Hirst Avenue",
+    "city": "Parksville",
+    "phone": "",
+    "website": "https://www.parksvillechamber.com/member-business-directory/clothing/2216-bumblebaby-boutique",
+    "category": "Clothing"
+  },
+  {
+    "name": "Mi by Kiyo Salon",
+    "address": "#1 - 120 Alberni Highway",
+    "city": "Parksville",
+    "phone": "",
+    "website": "https://www.parksvillechamber.com/member-business-directory/personal-care/hair-salon/1457-mi-by-kiyo-salon",
+    "category": "Personal Care"
+  },
+  {
+    "name": "Lesley's Esthetics & Accessories",
+    "address": "P.O. Box 153",
+    "city": "Parksville",
+    "phone": "",
+    "website": "https://www.parksvillechamber.com/member-business-directory/personal-care/esthetics/1108-lesley-s-esthetics-accessories",
+    "category": "Personal Care"
+  },
+  {
+    "name": "Urban Edge Hair Group",
+    "address": "#3 - 180 Craig Street",
+    "city": "Parksville",
+    "phone": "",
+    "website": "https://www.parksvillechamber.com/member-business-directory/personal-care/hair-salon/1471-urban-edge-hair-group",
+    "category": "Personal Care"
+  },
+  {
+    "name": "RDN Recreation & Parks Department",
+    "address": "Oceanside Place",
+    "city": "Parksville",
+    "phone": "",
+    "website": "https://www.parksvillechamber.com/member-business-directory/entertainment/1227-rdn-recreation-parks-department",
+    "category": "Sports & Recreation"
+  },
+  {
+    "name": "Riptide Lagoon Adventure Golf",
+    "address": "1000 Resort Dr, P.O. Box 855",
+    "city": "Parksville",
+    "phone": "",
+    "website": "https://www.parksvillechamber.com/member-business-directory/entertainment/1234-riptide-lagoon-adventure-golf",
+    "category": "Sports & Recreation"
+  },
+  {
+    "name": "Parksville Curling Club",
+    "address": "193 Island Highway East",
+    "city": "Parksville",
+    "phone": "",
+    "website": "https://www.parksvillechamber.com/member-business-directory/associations-a-organizations/1882-parksville-curling-club",
+    "category": "Sports & Recreation"
+  },
+  {
+    "name": "Adventuress Sea Kayaking",
+    "address": "",
+    "city": "Parksville",
+    "phone": "",
+    "website": "https://www.parksvillechamber.com/member-business-directory/sports-a-recreation/921-adventuress-sea-kayaking",
+    "category": "Sports & Recreation"
+  },
+  {
+    "name": "Innovate Dance Arts Ltd.",
+    "address": "115-425 Stanford Avenue East",
+    "city": "Parksville",
+    "phone": "",
+    "website": "https://www.parksvillechamber.com/member-business-directory/2113-innovate-dance-arts-ltd",
+    "category": "Sports & Recreation"
+  },
+  {
+    "name": "Special Olympics BC – Oceanside",
+    "address": "408 First Avenue West",
+    "city": "Qualicum Beach",
+    "phone": "",
+    "website": "https://www.parksvillechamber.com/member-business-directory/associations-a-organizations/1950-special-olympics-oceanside",
+    "category": "Sports & Recreation"
+  },
+  {
+    "name": "Paradise Acres Ranch",
+    "address": "1085 Paradise Place",
+    "city": "Parksville",
+    "phone": "",
+    "website": "https://www.parksvillechamber.com/member-business-directory/sports-a-recreation/equestrian/1644-paradise-acres-ranch",
+    "category": "Sports & Recreation"
+  },
+  {
+    "name": "Isle Golf Cars",
+    "address": "#6 - 969 Fairdowne Road",
+    "city": "Parksville",
+    "phone": "",
+    "website": "https://www.parksvillechamber.com/member-business-directory/sports-a-recreation/1094-isle-golf-cars",
+    "category": "Sports & Recreation"
+  },
+  {
+    "name": "Cascadia Martial Arts",
+    "address": "#22-826 Island Highway West",
+    "city": "Parksville",
+    "phone": "",
+    "website": "https://www.parksvillechamber.com/member-business-directory/sports-a-recreation/1196-cascadia-martial-arts",
+    "category": "Sports & Recreation"
+  },
+  {
+    "name": "Qualicum Beach Memorial Golf Club",
+    "address": "469 Memorial Avenue",
+    "city": "Qualicum Beach",
+    "phone": "",
+    "website": "https://www.parksvillechamber.com/member-business-directory/sports-a-recreation/1217-qualicum-beach-memorial-golf-club",
+    "category": "Sports & Recreation"
+  },
+  {
+    "name": "Geeks on the Beach - Web Agency",
+    "address": "941 Terrien Way",
+    "city": "Parksville",
+    "phone": "",
+    "website": "https://www.parksvillechamber.com/member-business-directory/internet/web-design/1054-geeks-on-the-beach-web-agency",
+    "category": "Media & Communications"
+  },
+  {
+    "name": "Island Radio Ltd. (The Beach)",
+    "address": "4550 Wellington Road",
+    "city": "Nanaimo",
+    "phone": "",
+    "website": "https://www.parksvillechamber.com/member-business-directory/media-a-communications/1091-island-radio-ltd-the-beach",
+    "category": "Media & Communications"
+  },
+  {
+    "name": "Island Pacific Telecommunication Solutions",
+    "address": "Unit 5 1020 Herring Gull Way",
+    "city": "Parksville",
+    "phone": "",
+    "website": "https://www.parksvillechamber.com/member-business-directory/media-a-communications/1090-island-pacific-telecommunication-solutions",
+    "category": "Media & Communications"
+  },
+  {
+    "name": "Podio Studio",
+    "address": "182 Memorial Avenue",
+    "city": "Parksville",
+    "phone": "",
+    "website": "https://www.parksvillechamber.com/member-business-directory/2282-podio-studio",
+    "category": "Media & Communications"
+  },
+  {
+    "name": "Kestrel Helicopters Ltd.",
+    "address": "1364 Meadowood Way",
+    "city": "Qualicum Beach",
+    "phone": "",
+    "website": "https://www.parksvillechamber.com/member-business-directory/transportation/air-services/1101-kestrel-helicopters-ltd",
+    "category": "Transportation"
+  },
+  {
+    "name": "Sunwest Helicopters Ltd.",
+    "address": "#4 - 1000 Ravensbourne Lane",
+    "city": "Qualicum Beach",
+    "phone": "",
+    "website": "https://www.parksvillechamber.com/member-business-directory/transportation/air-services/1276-sunwest-helicopters-ltd",
+    "category": "Transportation"
+  },
+  {
+    "name": "Island Chauffeur",
+    "address": "667 Temple St",
+    "city": "Parksville",
+    "phone": "",
+    "website": "https://www.parksvillechamber.com/member-business-directory/transportation/shuttle-service/1085-island-chauffeur",
+    "category": "Transportation"
+  },
+  {
+    "name": "Comox Valley Airport",
+    "address": "1250 Knight Road",
+    "city": "Comox",
+    "phone": "",
+    "website": "https://www.parksvillechamber.com/member-business-directory/associations-a-organizations/2032-comox-valley-airport",
+    "category": "Transportation"
+  },
+  {
+    "name": "uRide",
+    "address": "274 Algoma St S",
+    "city": "Thunder Bay",
+    "phone": "",
+    "website": "https://www.parksvillechamber.com/member-business-directory/transportation/2233-uride",
+    "category": "Transportation"
+  },
+  {
+    "name": "Nanaimo Airport Commission",
+    "address": "3350 Spitfire Road",
+    "city": "Cassidy",
+    "phone": "",
+    "website": "https://www.parksvillechamber.com/member-business-directory/transportation/2185-nanaimo-airport-commission",
+    "category": "Transportation"
+  },
+  {
+    "name": "Waste Connections of Parksville",
+    "address": "1151 Herring Gull Way",
+    "city": "Parksville",
+    "phone": "",
+    "website": "https://www.parksvillechamber.com/member-business-directory/wasterecycling/1322-progressive-waste-solutions/visit",
+    "category": "Waste & Recycling"
+  },
+  {
+    "name": "Oceanside Waste Removal",
+    "address": "Coomnbs",
+    "city": "B.C.",
+    "phone": "",
+    "website": "https://www.parksvillechamber.com/member-business-directory/2303-oceanside-waste-removal/visit",
+    "category": "Waste & Recycling"
+  },
+  {
+    "name": "Harbour Authority of French Creek",
+    "address": "1055 Lee Road, Parksville, BC, Canada, V9P 2E1",
+    "city": "Parksville",
+    "phone": "",
+    "website": "https://www.parksvillechamber.com/member-business-directory/governmentutilities/1067-harbour-authority-of-french-creek",
+    "category": "Government & Utilities"
+  },
+  {
+    "name": "City of Parksville",
+    "address": "130 Jensen Ave. E., PO Box 1390, Parksville, BC, Canada, V9P 2H3",
+    "city": "Parksville",
+    "phone": "",
+    "website": "https://www.parksvillechamber.com/member-business-directory/governmentutilities/985-city-of-parksville",
+    "category": "Government & Utilities"
+  },
+  {
+    "name": "R.C.M.P.",
+    "address": "727 West Island Hwy, Parksville, BC, Canada, V9P 1B9",
+    "city": "Parksville",
+    "phone": "",
+    "website": "https://www.parksvillechamber.com/member-business-directory/governmentutilities/1222-r-c-m-p",
+    "category": "Government & Utilities"
+  },
+  {
+    "name": "Adam Walker M.L.A.",
+    "address": "Unit A, 184 W. 2nd Ave., Qualicum Beach, B.C., V9K 2T5",
+    "city": "Qualicum Beach",
+    "phone": "",
+    "website": "https://www.parksvillechamber.com/member-business-directory/governmentutilities/2148-adam-walker-m-l-a",
+    "category": "Government & Utilities"
   }
 ]
