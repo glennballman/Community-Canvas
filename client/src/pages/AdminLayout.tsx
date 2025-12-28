@@ -9,7 +9,8 @@ import {
   FileText,
   Activity,
   Globe,
-  Radio
+  Radio,
+  Store
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -22,6 +23,7 @@ const NAV_ITEMS = [
   { path: "/admin", label: "OVERVIEW", icon: LayoutDashboard },
   { path: "/admin/geo", label: "GEOGRAPHIC VIEW", icon: Globe },
   { path: "/admin/infrastructure", label: "INFRASTRUCTURE", icon: Radio },
+  { path: "/admin/chambers", label: "CHAMBERS", icon: Store },
   { path: "/admin/matrix", label: "SOURCE MATRIX", icon: Grid3X3 },
   { path: "/admin/sources", label: "MANAGE SOURCES", icon: Database },
   { path: "/admin/logs", label: "SCRAPE LOGS", icon: FileText },
