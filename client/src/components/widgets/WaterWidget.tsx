@@ -1,10 +1,14 @@
 import { Droplets } from 'lucide-react';
 import { StatusCard, StatusItem } from '../StatusCard';
 import { StatusBadge } from '../StatusBadge';
-import { SnapshotData } from '@shared/schema';
+
+interface WaterItem {
+  value: string;
+  value_citation?: string;
+}
 
 interface WaterWidgetProps {
-  data: SnapshotData['real_time_status_updates']['water_sewer_alerts'];
+  data: WaterItem[];
 }
 
 export function WaterWidget({ data }: WaterWidgetProps) {

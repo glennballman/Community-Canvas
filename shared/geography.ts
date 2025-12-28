@@ -1,4 +1,4 @@
-export type GeoLevel = "planet" | "country" | "province" | "region" | "municipality";
+export type GeoLevel = "planet" | "country" | "province" | "region" | "municipality" | "community" | "address";
 
 export interface GeoNode {
   id: string;

@@ -39,6 +39,6 @@ export const insertSnapshotSchema = createInsertSchema(snapshots).pick({
 });
 
 export type Snapshot = typeof snapshots.$inferSelect;
-export type InsertSnapshot = z.infer<typeof insertSnapshotSchema>;
+export type InsertSnapshot = typeof snapshots.$inferInsert;
 export type SnapshotData = z.infer<typeof snapshotDataSchema>;
 export type StatusEntry = z.infer<typeof statusEntrySchema>;

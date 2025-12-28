@@ -1,10 +1,14 @@
 import { Zap } from 'lucide-react';
 import { StatusCard, StatusItem } from '../StatusCard';
 import { StatusBadge } from '../StatusBadge';
-import { SnapshotData } from '@shared/schema';
+
+interface HydroItem {
+  value: string;
+  value_citation?: string;
+}
 
 interface HydroWidgetProps {
-  data: SnapshotData['real_time_status_updates']['bc_hydro_outages'];
+  data: HydroItem[];
 }
 
 export function HydroWidget({ data }: HydroWidgetProps) {

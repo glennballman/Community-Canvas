@@ -1,10 +1,15 @@
 import { Truck } from 'lucide-react';
 import { StatusCard, StatusItem } from '../StatusCard';
 import { StatusBadge } from '../StatusBadge';
-import { SnapshotData } from '@shared/schema';
+
+interface RoadItem {
+  road_name: string;
+  status: string;
+  status_citation?: string;
+}
 
 interface RoadWidgetProps {
-  data: SnapshotData['real_time_status_updates']['road_conditions'];
+  data: RoadItem[];
 }
 
 export function RoadWidget({ data }: RoadWidgetProps) {

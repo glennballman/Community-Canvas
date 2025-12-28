@@ -1,10 +1,14 @@
 import { AlertTriangle, Info } from 'lucide-react';
-import { StatusCard } from '../StatusCard';
-import { SnapshotData } from '@shared/schema';
 import { cn } from '@/lib/utils';
 
+interface Alert {
+  value: string;
+  value_citation?: string;
+  severity?: "info" | "warning" | "critical";
+}
+
 interface AlertWidgetProps {
-  data: SnapshotData['real_time_status_updates']['active_alerts'];
+  data: Alert[];
 }
 
 export function AlertWidget({ data }: AlertWidgetProps) {

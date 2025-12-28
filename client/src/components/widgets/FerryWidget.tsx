@@ -1,10 +1,17 @@
 import { Ship } from 'lucide-react';
 import { StatusCard, StatusItem } from '../StatusCard';
 import { StatusBadge } from '../StatusBadge';
-import { SnapshotData } from '@shared/schema';
+
+interface FerryItem {
+  ferry_line: string;
+  route: string;
+  route_citation?: string;
+  status: string;
+  status_citation?: string;
+}
 
 interface FerryWidgetProps {
-  data: SnapshotData['real_time_status_updates']['ferry_schedules'];
+  data: FerryItem[];
 }
 
 export function FerryWidget({ data }: FerryWidgetProps) {
