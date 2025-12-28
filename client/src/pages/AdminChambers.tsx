@@ -2,6 +2,8 @@ import { useMemo, useState } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { 
   Search,
   CheckCircle,
@@ -9,7 +11,12 @@ import {
   Briefcase,
   Store,
   Globe,
-  Link2
+  Link2,
+  ChevronDown,
+  ChevronRight,
+  MapPin,
+  X,
+  Filter
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { BC_CHAMBERS_OF_COMMERCE, type ChamberOfCommerce } from "@shared/chambers-of-commerce";
@@ -59,11 +66,164 @@ interface ChamberWithMatch extends ChamberOfCommerce {
   matchedRegion: GeoNode | null;
 }
 
+interface GeoFilterPanelProps {
+  selectedRegions: Set<string>;
+  selectedMunicipalities: Set<string>;
+  onToggleRegion: (regionId: string) => void;
+  onToggleMunicipality: (muniId: string, regionId: string) => void;
+  onClearAll: () => void;
+  chamberCountByRegion: Record<string, number>;
+  chamberCountByMuni: Record<string, number>;
+  memberCountByRegion: Record<string, number>;
+  memberCountByMuni: Record<string, number>;
+}
+
+function GeoFilterPanel({
+  selectedRegions,
+  selectedMunicipalities,
+  onToggleRegion,
+  onToggleMunicipality,
+  onClearAll,
+  chamberCountByRegion,
+  chamberCountByMuni,
+  memberCountByRegion,
+  memberCountByMuni
+}: GeoFilterPanelProps) {
+  const [expandedRegions, setExpandedRegions] = useState<Set<string>>(new Set());
+  
+  const toggleExpand = (regionId: string) => {
+    setExpandedRegions(prev => {
+      const next = new Set(prev);
+      if (next.has(regionId)) {
+        next.delete(regionId);
+      } else {
+        next.add(regionId);
+      }
+      return next;
+    });
+  };
+
+  const totalSelected = selectedRegions.size + selectedMunicipalities.size;
+  const regions = GEO_HIERARCHY.children || [];
+
+  return (
+    <div className="flex flex-col h-full border-r border-border/30">
+      <div className="p-3 border-b border-border/30 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <Filter className="w-3 h-3 text-muted-foreground" />
+          <span className="text-[10px] font-bold tracking-wider text-muted-foreground">GEOGRAPHY FILTER</span>
+        </div>
+        {totalSelected > 0 && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onClearAll}
+            className="h-6 px-2 text-[10px] text-muted-foreground"
+            data-testid="button-clear-geo-filter"
+          >
+            <X className="w-3 h-3 mr-1" />
+            CLEAR ({totalSelected})
+          </Button>
+        )}
+      </div>
+      <ScrollArea className="flex-1">
+        <div className="p-2">
+          {regions.map(region => {
+            const isExpanded = expandedRegions.has(region.id);
+            const isRegionSelected = selectedRegions.has(region.id);
+            const municipalities = region.children || [];
+            const selectedMunisInRegion = municipalities.filter(m => selectedMunicipalities.has(m.id)).length;
+            const chamberCount = chamberCountByRegion[region.id] || 0;
+            const memberCount = memberCountByRegion[region.id] || 0;
+            
+            const checkState: "checked" | "unchecked" | "indeterminate" = 
+              isRegionSelected ? "checked" : 
+              selectedMunisInRegion > 0 ? "indeterminate" : "unchecked";
+
+            return (
+              <div key={region.id} className="mb-1">
+                <div 
+                  className="flex items-center gap-1 py-1 px-1 rounded hover-elevate cursor-pointer"
+                  data-testid={`geo-region-${region.id}`}
+                >
+                  <button
+                    onClick={() => toggleExpand(region.id)}
+                    className="p-0.5"
+                    data-testid={`button-expand-${region.id}`}
+                  >
+                    {isExpanded ? (
+                      <ChevronDown className="w-3 h-3 text-muted-foreground" />
+                    ) : (
+                      <ChevronRight className="w-3 h-3 text-muted-foreground" />
+                    )}
+                  </button>
+                  <Checkbox
+                    checked={checkState === "checked"}
+                    data-state={checkState}
+                    onCheckedChange={() => onToggleRegion(region.id)}
+                    className="h-3 w-3"
+                    data-testid={`checkbox-region-${region.id}`}
+                  />
+                  <span 
+                    className="text-[10px] font-medium flex-1 truncate"
+                    onClick={() => toggleExpand(region.id)}
+                  >
+                    {region.shortName || region.name}
+                  </span>
+                  {chamberCount > 0 && (
+                    <Badge variant="outline" className="text-[8px] h-4 px-1 bg-indigo-500/10 text-indigo-400 border-indigo-500/30">
+                      {chamberCount}
+                    </Badge>
+                  )}
+                </div>
+                
+                {isExpanded && municipalities.length > 0 && (
+                  <div className="ml-5 border-l border-border/30 pl-2">
+                    {municipalities.map(muni => {
+                      const isMuniSelected = selectedMunicipalities.has(muni.id) || isRegionSelected;
+                      const muniChamberCount = chamberCountByMuni[muni.id] || 0;
+                      const muniMemberCount = memberCountByMuni[muni.id] || 0;
+                      
+                      return (
+                        <div 
+                          key={muni.id}
+                          className="flex items-center gap-1 py-0.5 px-1 rounded hover-elevate"
+                          data-testid={`geo-muni-${muni.id}`}
+                        >
+                          <Checkbox
+                            checked={isMuniSelected}
+                            disabled={isRegionSelected}
+                            onCheckedChange={() => onToggleMunicipality(muni.id, region.id)}
+                            className="h-3 w-3"
+                            data-testid={`checkbox-muni-${muni.id}`}
+                          />
+                          <span className="text-[9px] text-muted-foreground flex-1 truncate">
+                            {muni.shortName || muni.name}
+                          </span>
+                          {muniChamberCount > 0 && (
+                            <span className="text-[8px] text-indigo-400">{muniChamberCount}</span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </ScrollArea>
+    </div>
+  );
+}
+
 export default function AdminChambers() {
   const [chamberSearch, setChamberSearch] = useState("");
   const [memberSearch, setMemberSearch] = useState("");
   const [memberNaicsFilter, setMemberNaicsFilter] = useState<string>("all");
   const [activeTab, setActiveTab] = useState("chambers");
+  const [selectedRegions, setSelectedRegions] = useState<Set<string>>(new Set());
+  const [selectedMunicipalities, setSelectedMunicipalities] = useState<Set<string>>(new Set());
 
   const chamberWithMatches: ChamberWithMatch[] = useMemo(() => {
     return BC_CHAMBERS_OF_COMMERCE.map(chamber => {
@@ -77,10 +237,65 @@ export default function AdminChambers() {
     });
   }, []);
 
+  const chamberCountByRegion = useMemo(() => {
+    const counts: Record<string, number> = {};
+    chamberWithMatches.forEach(c => {
+      if (c.matchedRegion) {
+        counts[c.matchedRegion.id] = (counts[c.matchedRegion.id] || 0) + 1;
+      }
+    });
+    return counts;
+  }, [chamberWithMatches]);
+
+  const chamberCountByMuni = useMemo(() => {
+    const counts: Record<string, number> = {};
+    chamberWithMatches.forEach(c => {
+      if (c.matchedMunicipality) {
+        counts[c.matchedMunicipality.id] = (counts[c.matchedMunicipality.id] || 0) + 1;
+      }
+    });
+    return counts;
+  }, [chamberWithMatches]);
+
+  const memberCountByRegion = useMemo(() => {
+    const counts: Record<string, number> = {};
+    chamberMembers.forEach(m => {
+      const regionId = m.region?.toLowerCase().replace(/\s+/g, '-');
+      if (regionId) {
+        counts[regionId] = (counts[regionId] || 0) + 1;
+      }
+    });
+    return counts;
+  }, []);
+
+  const memberCountByMuni = useMemo(() => {
+    const counts: Record<string, number> = {};
+    chamberMembers.forEach(m => {
+      const muni = findMatchingMunicipality(m.municipality);
+      if (muni) {
+        counts[muni.id] = (counts[muni.id] || 0) + 1;
+      }
+    });
+    return counts;
+  }, []);
+
+  const hasGeoFilter = selectedRegions.size > 0 || selectedMunicipalities.size > 0;
+
   const filteredChambers = useMemo(() => {
-    if (!chamberSearch) return chamberWithMatches;
+    let filtered = chamberWithMatches;
+    
+    if (hasGeoFilter) {
+      filtered = filtered.filter(c => {
+        if (c.matchedRegion && selectedRegions.has(c.matchedRegion.id)) return true;
+        if (c.matchedMunicipality && selectedMunicipalities.has(c.matchedMunicipality.id)) return true;
+        if (c.matchedMunicipality && c.matchedMunicipality.parentId && selectedRegions.has(c.matchedMunicipality.parentId)) return true;
+        return false;
+      });
+    }
+    
+    if (!chamberSearch) return filtered;
     const search = chamberSearch.toLowerCase();
-    return chamberWithMatches.filter(c => 
+    return filtered.filter(c => 
       c.name.toLowerCase().includes(search) ||
       c.municipality?.toLowerCase().includes(search) ||
       c.region?.toLowerCase().includes(search) ||
@@ -89,7 +304,7 @@ export default function AdminChambers() {
       c.notes?.toLowerCase().includes(search) ||
       c.website?.toLowerCase().includes(search)
     );
-  }, [chamberWithMatches, chamberSearch]);
+  }, [chamberWithMatches, chamberSearch, selectedRegions, selectedMunicipalities, hasGeoFilter]);
 
   const chamberStats = useMemo(() => {
     const matched = chamberWithMatches.filter(c => c.matchedMunicipality).length;
@@ -117,6 +332,18 @@ export default function AdminChambers() {
   const filteredMembers = useMemo(() => {
     let filtered = chamberMembers;
     
+    if (hasGeoFilter) {
+      filtered = filtered.filter(m => {
+        const regionId = m.region?.toLowerCase().replace(/\s+/g, '-');
+        if (regionId && selectedRegions.has(regionId)) return true;
+        
+        const muni = findMatchingMunicipality(m.municipality);
+        if (muni && selectedMunicipalities.has(muni.id)) return true;
+        if (muni && muni.parentId && selectedRegions.has(muni.parentId)) return true;
+        return false;
+      });
+    }
+    
     if (memberNaicsFilter !== "all") {
       filtered = filtered.filter(m => m.naicsSubsector === memberNaicsFilter);
     }
@@ -142,7 +369,7 @@ export default function AdminChambers() {
         website.includes(search) ||
         subsectorLabel.includes(search);
     });
-  }, [memberSearch, memberNaicsFilter]);
+  }, [memberSearch, memberNaicsFilter, selectedRegions, selectedMunicipalities, hasGeoFilter]);
 
   const memberStats = useMemo(() => {
     const byNaicsSubsector: Record<string, number> = {};
@@ -169,6 +396,45 @@ export default function AdminChambers() {
     };
   }, []);
 
+  const handleToggleRegion = (regionId: string) => {
+    setSelectedRegions(prev => {
+      const next = new Set(prev);
+      if (next.has(regionId)) {
+        next.delete(regionId);
+      } else {
+        next.add(regionId);
+        const region = (GEO_HIERARCHY.children || []).find(r => r.id === regionId);
+        if (region) {
+          setSelectedMunicipalities(prevMunis => {
+            const nextMunis = new Set(prevMunis);
+            (region.children || []).forEach(m => nextMunis.delete(m.id));
+            return nextMunis;
+          });
+        }
+      }
+      return next;
+    });
+  };
+
+  const handleToggleMunicipality = (muniId: string, regionId: string) => {
+    if (selectedRegions.has(regionId)) return;
+    
+    setSelectedMunicipalities(prev => {
+      const next = new Set(prev);
+      if (next.has(muniId)) {
+        next.delete(muniId);
+      } else {
+        next.add(muniId);
+      }
+      return next;
+    });
+  };
+
+  const handleClearAll = () => {
+    setSelectedRegions(new Set());
+    setSelectedMunicipalities(new Set());
+  };
+
   return (
     <div className="h-full flex flex-col font-mono">
       <div className="border-b border-border/50 p-4">
@@ -181,235 +447,259 @@ export default function AdminChambers() {
           <Badge variant="outline" className="text-[10px] bg-emerald-500/10 text-emerald-400 border-emerald-500/30">
             {memberStats.total.toLocaleString()} MEMBERS
           </Badge>
+          {hasGeoFilter && (
+            <Badge variant="outline" className="text-[10px] bg-blue-500/10 text-blue-400 border-blue-500/30">
+              <MapPin className="w-3 h-3 mr-1" />
+              {selectedRegions.size + selectedMunicipalities.size} LOCATIONS SELECTED
+            </Badge>
+          )}
         </div>
         <p className="text-[10px] text-muted-foreground mt-1">
           BC Chambers of Commerce and verified member directories with NAICS industry classifications
         </p>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden">
-        <TabsList className="w-full justify-start rounded-none border-b border-border/30 bg-transparent p-0 h-auto">
-          <TabsTrigger 
-            value="chambers" 
-            className="rounded-none border-b-2 border-transparent data-[state=active]:border-indigo-400 data-[state=active]:bg-transparent px-4 py-2 text-xs"
-            data-testid="tab-chambers"
-          >
-            CHAMBERS ({chamberStats.total})
-          </TabsTrigger>
-          <TabsTrigger 
-            value="members" 
-            className="rounded-none border-b-2 border-transparent data-[state=active]:border-emerald-400 data-[state=active]:bg-transparent px-4 py-2 text-xs"
-            data-testid="tab-members"
-          >
-            MEMBERS ({memberStats.total.toLocaleString()})
-          </TabsTrigger>
-        </TabsList>
+      <div className="flex-1 flex overflow-hidden">
+        <div className="w-64 flex-shrink-0">
+          <GeoFilterPanel
+            selectedRegions={selectedRegions}
+            selectedMunicipalities={selectedMunicipalities}
+            onToggleRegion={handleToggleRegion}
+            onToggleMunicipality={handleToggleMunicipality}
+            onClearAll={handleClearAll}
+            chamberCountByRegion={chamberCountByRegion}
+            chamberCountByMuni={chamberCountByMuni}
+            memberCountByRegion={memberCountByRegion}
+            memberCountByMuni={memberCountByMuni}
+          />
+        </div>
 
-        <TabsContent value="chambers" className="flex-1 overflow-hidden m-0 flex flex-col data-[state=inactive]:hidden">
-          <div className="p-3 border-b border-border/30 flex items-center gap-4">
-            <div className="relative flex-1 max-w-sm">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground" />
-              <Input
-                placeholder="Search chambers of commerce..."
-                value={chamberSearch}
-                onChange={e => setChamberSearch(e.target.value)}
-                className="pl-8 h-8 text-xs bg-background/50"
-                data-testid="input-chamber-search"
-              />
-            </div>
-            <div className="flex gap-2 text-[10px] text-muted-foreground flex-wrap">
-              <span className="text-green-400">{chamberStats.matched} MATCHED</span>
-              <span className="text-blue-400">{chamberStats.withWebsite} WEBSITES</span>
-              <span className="text-cyan-400">{chamberStats.withPhone} PHONE</span>
-              <span className="text-amber-400">{chamberStats.withMembers} MEMBER DATA</span>
-            </div>
-          </div>
-          <ScrollArea className="flex-1">
-            <div className="p-3">
-              <table className="w-full text-xs">
-                <thead>
-                  <tr className="text-[10px] text-muted-foreground border-b border-border/30">
-                    <th className="text-left py-2 px-2">CHAMBER</th>
-                    <th className="text-left py-2 px-2">REGION</th>
-                    <th className="text-left py-2 px-2">SOURCE MUNICIPALITY</th>
-                    <th className="text-left py-2 px-2">MATCHED TO</th>
-                    <th className="text-left py-2 px-2">CONTACT</th>
-                    <th className="text-left py-2 px-2">DETAILS</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredChambers.map(chamber => (
-                    <tr 
-                      key={chamber.id} 
-                      className="border-b border-border/20 hover-elevate"
-                      data-testid={`row-chamber-${chamber.id}`}
-                    >
-                      <td className="py-2 px-2">
-                        <div className="flex items-center gap-2">
-                          <Briefcase className="w-3 h-3 text-indigo-400" />
-                          <div>
-                            <div className="font-medium">{chamber.name}</div>
-                            {chamber.location.address && <div className="text-[10px] text-muted-foreground">{chamber.location.address}</div>}
-                            <div className="text-[10px] text-muted-foreground">{chamber.location.lat.toFixed(4)}, {chamber.location.lng.toFixed(4)}</div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="py-2 px-2">
-                        <Badge variant="outline" className="text-[8px] bg-indigo-500/10 text-indigo-400 border-indigo-500/30">
-                          {chamber.region}
-                        </Badge>
-                      </td>
-                      <td className="py-2 px-2 text-muted-foreground">{chamber.municipality}</td>
-                      <td className="py-2 px-2">
-                        {chamber.matchedMunicipality ? (
-                          <div className="flex items-center gap-1 text-green-400">
-                            <CheckCircle className="w-3 h-3" />
-                            <span>{chamber.matchedMunicipality.name}</span>
-                          </div>
-                        ) : chamber.matchedRegion ? (
-                          <span className="text-yellow-400">(region only)</span>
-                        ) : (
-                          <div className="flex items-center gap-1 text-red-400">
-                            <XCircle className="w-3 h-3" />
-                            <span>No match</span>
-                          </div>
-                        )}
-                      </td>
-                      <td className="py-2 px-2">
-                        <div className="text-[10px]">
-                          {chamber.phone && <div className="text-muted-foreground">{chamber.phone}</div>}
-                          {chamber.email && <div className="text-muted-foreground">{chamber.email}</div>}
-                          {chamber.website && <div className="text-blue-400/70 truncate max-w-[150px]">{chamber.website.replace(/^https?:\/\//, '')}</div>}
-                        </div>
-                      </td>
-                      <td className="py-2 px-2">
-                        <div className="text-[10px]">
-                          {chamber.founded && <div className="text-muted-foreground">Est. {chamber.founded}</div>}
-                          {chamber.members && <div className="text-cyan-400">{chamber.members} members</div>}
-                          {chamber.notes && <div className="text-muted-foreground/70 truncate max-w-[180px]">{chamber.notes}</div>}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </ScrollArea>
-        </TabsContent>
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden">
+            <TabsList className="w-full justify-start rounded-none border-b border-border/30 bg-transparent p-0 h-auto">
+              <TabsTrigger 
+                value="chambers" 
+                className="rounded-none border-b-2 border-transparent data-[state=active]:border-indigo-400 data-[state=active]:bg-transparent px-4 py-2 text-xs"
+                data-testid="tab-chambers"
+              >
+                CHAMBERS ({hasGeoFilter ? filteredChambers.length : chamberStats.total})
+              </TabsTrigger>
+              <TabsTrigger 
+                value="members" 
+                className="rounded-none border-b-2 border-transparent data-[state=active]:border-emerald-400 data-[state=active]:bg-transparent px-4 py-2 text-xs"
+                data-testid="tab-members"
+              >
+                MEMBERS ({hasGeoFilter ? filteredMembers.length.toLocaleString() : memberStats.total.toLocaleString()})
+              </TabsTrigger>
+            </TabsList>
 
-        <TabsContent value="members" className="flex-1 overflow-hidden m-0 flex flex-col data-[state=inactive]:hidden">
-          <div className="p-3 border-b border-border/30 flex items-center gap-4 flex-wrap">
-            <div className="relative flex-1 max-w-sm">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground" />
-              <Input
-                placeholder="Search members..."
-                value={memberSearch}
-                onChange={e => setMemberSearch(e.target.value)}
-                className="pl-8 h-8 text-xs bg-background/50"
-                data-testid="input-member-search"
-              />
-            </div>
-            <select
-              value={memberNaicsFilter}
-              onChange={e => setMemberNaicsFilter(e.target.value)}
-              className="h-8 text-xs bg-background/50 border border-border/50 rounded-md px-2"
-              data-testid="select-member-naics"
-            >
-              <option value="all">All Industries ({memberStats.total.toLocaleString()})</option>
-              {memberStats.usedSubsectors.map(subsector => (
-                <option key={subsector} value={subsector}>
-                  {subsector}: {naicsSubsectorLabels[subsector] || 'Unknown'} ({memberStats.byNaicsSubsector[subsector] || 0})
-                </option>
-              ))}
-            </select>
-            <div className="flex gap-2 text-[10px] text-muted-foreground flex-wrap">
-              <span className="text-emerald-400">{memberStats.withWebsite} WITH WEBSITE</span>
-              <span className="text-amber-400">{memberStats.needsWebsite} NEEDS WEBSITE</span>
-              <span className="text-cyan-400">{memberStats.withCrossRef} CROSS-REF</span>
-            </div>
-          </div>
-          <ScrollArea className="flex-1">
-            <div className="p-3">
-              <table className="w-full text-xs">
-                <thead>
-                  <tr className="text-[10px] text-muted-foreground border-b border-border/30">
-                    <th className="text-left py-2 px-2">BUSINESS</th>
-                    <th className="text-left py-2 px-2">NAICS INDUSTRY</th>
-                    <th className="text-left py-2 px-2">CHAMBER</th>
-                    <th className="text-left py-2 px-2">LOCATION</th>
-                    <th className="text-left py-2 px-2">WEBSITE</th>
-                    <th className="text-left py-2 px-2">CROSS-REF</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredMembers.map(member => (
-                    <tr 
-                      key={member.id} 
-                      className="border-b border-border/20 hover-elevate"
-                      data-testid={`row-member-${member.id}`}
-                    >
-                      <td className="py-2 px-2">
-                        <div className="flex items-center gap-2">
-                          <Store className="w-3 h-3 text-emerald-400" />
-                          <div>
-                            <div className="font-medium text-foreground">{member.businessName}</div>
-                            {member.description && <div className="text-[10px] text-muted-foreground truncate max-w-[200px]">{member.description}</div>}
-                          </div>
-                        </div>
-                      </td>
-                      <td className="py-2 px-2">
-                        <div className="text-[10px]">
-                          <Badge variant="outline" className="text-[8px] bg-emerald-500/10 text-emerald-400 border-emerald-500/30">
-                            {member.naicsSubsector}: {naicsSubsectorLabels[member.naicsSubsector || ''] || 'Unknown'}
-                          </Badge>
-                          <div className="text-[9px] text-muted-foreground mt-0.5">{member.naicsTitle}</div>
-                        </div>
-                      </td>
-                      <td className="py-2 px-2">
-                        <span className="text-indigo-400 text-[10px]">{member.chamberId}</span>
-                      </td>
-                      <td className="py-2 px-2">
-                        <div className="text-[10px]">
-                          <div className="text-foreground">{member.municipality}</div>
-                          <div className="text-muted-foreground">{member.region}</div>
-                        </div>
-                      </td>
-                      <td className="py-2 px-2">
-                        {member.website ? (
-                          <a 
-                            href={member.website} 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            className="flex items-center gap-1 text-blue-400 hover:text-blue-300 text-[10px]"
-                            data-testid={`link-member-website-${member.id}`}
-                          >
-                            <Globe className="w-3 h-3" />
-                            <span className="truncate max-w-[120px]">{member.website.replace(/^https?:\/\//, '').replace(/\/$/, '')}</span>
-                          </a>
-                        ) : member.websiteNeedsCollection ? (
-                          <span className="text-amber-400/70 text-[10px]">Needs collection</span>
-                        ) : (
-                          <span className="text-muted-foreground/50 text-[10px]">-</span>
-                        )}
-                      </td>
-                      <td className="py-2 px-2">
-                        {member.crossReference ? (
-                          <div className="flex items-center gap-1 text-cyan-400 text-[10px]">
-                            <Link2 className="w-3 h-3" />
-                            <span>{member.crossReference.dataset}</span>
-                          </div>
-                        ) : (
-                          <span className="text-muted-foreground/50 text-[10px]">-</span>
-                        )}
-                      </td>
-                    </tr>
+            <TabsContent value="chambers" className="flex-1 overflow-hidden m-0 flex flex-col data-[state=inactive]:hidden">
+              <div className="p-3 border-b border-border/30 flex items-center gap-4">
+                <div className="relative flex-1 max-w-sm">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground" />
+                  <Input
+                    placeholder="Search chambers of commerce..."
+                    value={chamberSearch}
+                    onChange={e => setChamberSearch(e.target.value)}
+                    className="pl-8 h-8 text-xs bg-background/50"
+                    data-testid="input-chamber-search"
+                  />
+                </div>
+                <div className="flex gap-2 text-[10px] text-muted-foreground flex-wrap">
+                  <span className="text-green-400">{chamberStats.matched} MATCHED</span>
+                  <span className="text-blue-400">{chamberStats.withWebsite} WEBSITES</span>
+                  <span className="text-cyan-400">{chamberStats.withPhone} PHONE</span>
+                  <span className="text-amber-400">{chamberStats.withMembers} MEMBER DATA</span>
+                </div>
+              </div>
+              <ScrollArea className="flex-1">
+                <div className="p-3">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="text-[10px] text-muted-foreground border-b border-border/30">
+                        <th className="text-left py-2 px-2">CHAMBER</th>
+                        <th className="text-left py-2 px-2">REGION</th>
+                        <th className="text-left py-2 px-2">SOURCE MUNICIPALITY</th>
+                        <th className="text-left py-2 px-2">MATCHED TO</th>
+                        <th className="text-left py-2 px-2">CONTACT</th>
+                        <th className="text-left py-2 px-2">DETAILS</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredChambers.map(chamber => (
+                        <tr 
+                          key={chamber.id} 
+                          className="border-b border-border/20 hover-elevate"
+                          data-testid={`row-chamber-${chamber.id}`}
+                        >
+                          <td className="py-2 px-2">
+                            <div className="flex items-center gap-2">
+                              <Briefcase className="w-3 h-3 text-indigo-400" />
+                              <div>
+                                <div className="font-medium">{chamber.name}</div>
+                                {chamber.location.address && <div className="text-[10px] text-muted-foreground">{chamber.location.address}</div>}
+                                <div className="text-[10px] text-muted-foreground">{chamber.location.lat.toFixed(4)}, {chamber.location.lng.toFixed(4)}</div>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="py-2 px-2">
+                            <Badge variant="outline" className="text-[8px] bg-indigo-500/10 text-indigo-400 border-indigo-500/30">
+                              {chamber.region}
+                            </Badge>
+                          </td>
+                          <td className="py-2 px-2 text-muted-foreground">{chamber.municipality}</td>
+                          <td className="py-2 px-2">
+                            {chamber.matchedMunicipality ? (
+                              <div className="flex items-center gap-1 text-green-400">
+                                <CheckCircle className="w-3 h-3" />
+                                <span>{chamber.matchedMunicipality.name}</span>
+                              </div>
+                            ) : chamber.matchedRegion ? (
+                              <span className="text-yellow-400">(region only)</span>
+                            ) : (
+                              <div className="flex items-center gap-1 text-red-400">
+                                <XCircle className="w-3 h-3" />
+                                <span>No match</span>
+                              </div>
+                            )}
+                          </td>
+                          <td className="py-2 px-2">
+                            <div className="text-[10px]">
+                              {chamber.phone && <div className="text-muted-foreground">{chamber.phone}</div>}
+                              {chamber.email && <div className="text-muted-foreground">{chamber.email}</div>}
+                              {chamber.website && <div className="text-blue-400/70 truncate max-w-[150px]">{chamber.website.replace(/^https?:\/\//, '')}</div>}
+                            </div>
+                          </td>
+                          <td className="py-2 px-2">
+                            <div className="text-[10px]">
+                              {chamber.founded && <div className="text-muted-foreground">Est. {chamber.founded}</div>}
+                              {chamber.members && <div className="text-cyan-400">{chamber.members} members</div>}
+                              {chamber.notes && <div className="text-muted-foreground/70 truncate max-w-[180px]">{chamber.notes}</div>}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </ScrollArea>
+            </TabsContent>
+
+            <TabsContent value="members" className="flex-1 overflow-hidden m-0 flex flex-col data-[state=inactive]:hidden">
+              <div className="p-3 border-b border-border/30 flex items-center gap-4 flex-wrap">
+                <div className="relative flex-1 max-w-sm">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground" />
+                  <Input
+                    placeholder="Search members..."
+                    value={memberSearch}
+                    onChange={e => setMemberSearch(e.target.value)}
+                    className="pl-8 h-8 text-xs bg-background/50"
+                    data-testid="input-member-search"
+                  />
+                </div>
+                <select
+                  value={memberNaicsFilter}
+                  onChange={e => setMemberNaicsFilter(e.target.value)}
+                  className="h-8 text-xs bg-background/50 border border-border/50 rounded-md px-2"
+                  data-testid="select-member-naics"
+                >
+                  <option value="all">All Industries ({memberStats.total.toLocaleString()})</option>
+                  {memberStats.usedSubsectors.map(subsector => (
+                    <option key={subsector} value={subsector}>
+                      {subsector}: {naicsSubsectorLabels[subsector] || 'Unknown'} ({memberStats.byNaicsSubsector[subsector] || 0})
+                    </option>
                   ))}
-                </tbody>
-              </table>
-            </div>
-          </ScrollArea>
-        </TabsContent>
-      </Tabs>
+                </select>
+                <div className="flex gap-2 text-[10px] text-muted-foreground flex-wrap">
+                  <span className="text-emerald-400">{memberStats.withWebsite} WITH WEBSITE</span>
+                  <span className="text-amber-400">{memberStats.needsWebsite} NEEDS WEBSITE</span>
+                  <span className="text-cyan-400">{memberStats.withCrossRef} CROSS-REF</span>
+                </div>
+              </div>
+              <ScrollArea className="flex-1">
+                <div className="p-3">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="text-[10px] text-muted-foreground border-b border-border/30">
+                        <th className="text-left py-2 px-2">BUSINESS</th>
+                        <th className="text-left py-2 px-2">NAICS INDUSTRY</th>
+                        <th className="text-left py-2 px-2">CHAMBER</th>
+                        <th className="text-left py-2 px-2">LOCATION</th>
+                        <th className="text-left py-2 px-2">WEBSITE</th>
+                        <th className="text-left py-2 px-2">CROSS-REF</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredMembers.map(member => (
+                        <tr 
+                          key={member.id} 
+                          className="border-b border-border/20 hover-elevate"
+                          data-testid={`row-member-${member.id}`}
+                        >
+                          <td className="py-2 px-2">
+                            <div className="flex items-center gap-2">
+                              <Store className="w-3 h-3 text-emerald-400" />
+                              <div>
+                                <div className="font-medium text-foreground">{member.businessName}</div>
+                                {member.description && <div className="text-[10px] text-muted-foreground truncate max-w-[200px]">{member.description}</div>}
+                              </div>
+                            </div>
+                          </td>
+                          <td className="py-2 px-2">
+                            <div className="text-[10px]">
+                              <Badge variant="outline" className="text-[8px] bg-emerald-500/10 text-emerald-400 border-emerald-500/30">
+                                {member.naicsSubsector}: {naicsSubsectorLabels[member.naicsSubsector || ''] || 'Unknown'}
+                              </Badge>
+                              <div className="text-[9px] text-muted-foreground mt-0.5">{member.naicsTitle}</div>
+                            </div>
+                          </td>
+                          <td className="py-2 px-2">
+                            <span className="text-indigo-400 text-[10px]">{member.chamberId}</span>
+                          </td>
+                          <td className="py-2 px-2">
+                            <div className="text-[10px]">
+                              <div className="text-foreground">{member.municipality}</div>
+                              <div className="text-muted-foreground">{member.region}</div>
+                            </div>
+                          </td>
+                          <td className="py-2 px-2">
+                            {member.website ? (
+                              <a 
+                                href={member.website} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-1 text-blue-400 hover:text-blue-300 text-[10px]"
+                                data-testid={`link-member-website-${member.id}`}
+                              >
+                                <Globe className="w-3 h-3" />
+                                <span className="truncate max-w-[120px]">{member.website.replace(/^https?:\/\//, '').replace(/\/$/, '')}</span>
+                              </a>
+                            ) : member.websiteNeedsCollection ? (
+                              <span className="text-amber-400/70 text-[10px]">Needs collection</span>
+                            ) : (
+                              <span className="text-muted-foreground/50 text-[10px]">-</span>
+                            )}
+                          </td>
+                          <td className="py-2 px-2">
+                            {member.crossReference ? (
+                              <div className="flex items-center gap-1 text-cyan-400 text-[10px]">
+                                <Link2 className="w-3 h-3" />
+                                <span>{member.crossReference.dataset}</span>
+                              </div>
+                            ) : (
+                              <span className="text-muted-foreground/50 text-[10px]">-</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </ScrollArea>
+            </TabsContent>
+          </Tabs>
+        </div>
+      </div>
     </div>
   );
 }
