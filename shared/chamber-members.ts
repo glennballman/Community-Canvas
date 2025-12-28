@@ -175,7 +175,6 @@ export const chamberMembers = [
 
   // Greater Vancouver Board of Trade - Major businesses
   // Note: GVBOT has 5,000+ members - listing key/notable members
-  {
     id: "gvbot-member-001",
     chamberId: "greater-vancouver-board-of-trade",
     businessName: "TELUS Corporation",
@@ -188,8 +187,6 @@ export const chamberMembers = [
     naicsTitle: "Telecommunications",
     municipality: "Vancouver",
     region: "Metro Vancouver",
-  },
-  {
     id: "gvbot-member-002",
     chamberId: "greater-vancouver-board-of-trade",
     businessName: "Lululemon Athletica",
@@ -203,8 +200,6 @@ export const chamberMembers = [
     naicsTitle: "All Other Miscellaneous Store Retailers",
     municipality: "Vancouver",
     region: "Metro Vancouver",
-  },
-  {
     id: "gvbot-member-003",
     chamberId: "greater-vancouver-board-of-trade",
     businessName: "Hootsuite Inc.",
@@ -218,8 +213,6 @@ export const chamberMembers = [
     naicsTitle: "Computer Systems Design Services",
     municipality: "Vancouver",
     region: "Metro Vancouver",
-  },
-  {
     id: "gvbot-member-004",
     chamberId: "greater-vancouver-board-of-trade",
     businessName: "BC Hydro",
@@ -232,8 +225,6 @@ export const chamberMembers = [
     naicsTitle: "Utilities",
     municipality: "Vancouver",
     region: "Metro Vancouver",
-  },
-  {
     id: "gvbot-member-005",
     chamberId: "greater-vancouver-board-of-trade",
     businessName: "Port of Vancouver",
@@ -247,8 +238,6 @@ export const chamberMembers = [
     naicsTitle: "Port and Harbor Operations",
     municipality: "Vancouver",
     region: "Metro Vancouver",
-  },
-  {
     id: "gvbot-member-006",
     chamberId: "greater-vancouver-board-of-trade",
     businessName: "Vancouver International Airport",
@@ -265,8 +254,6 @@ export const chamberMembers = [
       dataset: "aviation",
       id: "cyvr",
     },
-  },
-  {
     id: "gvbot-member-007",
     chamberId: "greater-vancouver-board-of-trade",
     businessName: "HSBC Bank Canada",
@@ -279,8 +266,6 @@ export const chamberMembers = [
     naicsTitle: "Credit Intermediation and Related Activities",
     municipality: "Vancouver",
     region: "Metro Vancouver",
-  },
-  {
     id: "gvbot-member-008",
     chamberId: "greater-vancouver-board-of-trade",
     businessName: "Deloitte LLP",
@@ -294,8 +279,6 @@ export const chamberMembers = [
     naicsTitle: "Offices of Certified Public Accountants",
     municipality: "Vancouver",
     region: "Metro Vancouver",
-  },
-  {
     id: "gvbot-member-009",
     chamberId: "greater-vancouver-board-of-trade",
     businessName: "Fasken Martineau DuMoulin LLP",
@@ -308,8 +291,6 @@ export const chamberMembers = [
     naicsTitle: "Offices of Lawyers",
     municipality: "Vancouver",
     region: "Metro Vancouver",
-  },
-  {
     id: "gvbot-member-010",
     chamberId: "greater-vancouver-board-of-trade",
     businessName: "Electronic Arts Canada",
@@ -340,8 +321,6 @@ export const chamberMembers = [
     naicsTitle: "Computer Systems Design Services",
     municipality: "Burnaby",
     region: "Metro Vancouver",
-  },
-  {
     id: "burnaby-bot-member-002",
     chamberId: "burnaby-board-of-trade",
     businessName: "Metropolis at Metrotown",
@@ -355,8 +334,6 @@ export const chamberMembers = [
     naicsTitle: "All Other Miscellaneous Store Retailers",
     municipality: "Burnaby",
     region: "Metro Vancouver",
-  },
-  {
     id: "burnaby-bot-member-003",
     chamberId: "burnaby-board-of-trade",
     businessName: "BCIT - British Columbia Institute of Technology",
@@ -373,8 +350,6 @@ export const chamberMembers = [
       dataset: "schools",
       id: "bcit-burnaby",
     },
-  },
-  {
     id: "burnaby-bot-member-004",
     chamberId: "burnaby-board-of-trade",
     businessName: "Simon Fraser University",
@@ -391,8 +366,6 @@ export const chamberMembers = [
       dataset: "schools",
       id: "sfu",
     },
-  },
-  {
     id: "burnaby-bot-member-005",
     chamberId: "burnaby-board-of-trade",
     businessName: "Burnaby Hospital",
@@ -409,10 +382,8 @@ export const chamberMembers = [
       dataset: "emergency-services",
       id: "burnaby-hospital",
     },
-  },
 
   // Surrey Board of Trade
-  {
     id: "surrey-bot-member-001",
     chamberId: "surrey-white-rock-board-of-trade",
     businessName: "Coast Capital Savings",
@@ -426,8 +397,6 @@ export const chamberMembers = [
     naicsTitle: "Credit Intermediation and Related Activities",
     municipality: "Surrey",
     region: "Metro Vancouver",
-  },
-  {
     id: "surrey-bot-member-002",
     chamberId: "surrey-white-rock-board-of-trade",
     businessName: "Simon Fraser University - Surrey Campus",
@@ -440,8 +409,6 @@ export const chamberMembers = [
     naicsTitle: "Educational Services",
     municipality: "Surrey",
     region: "Metro Vancouver",
-  },
-  {
     id: "surrey-bot-member-003",
     chamberId: "surrey-white-rock-board-of-trade",
     businessName: "Kwantlen Polytechnic University",
@@ -458,8 +425,6 @@ export const chamberMembers = [
       dataset: "schools",
       id: "kpu-surrey",
     },
-  },
-  {
     id: "surrey-bot-member-004",
     chamberId: "surrey-white-rock-board-of-trade",
     businessName: "Surrey Memorial Hospital",
@@ -476,8 +441,6 @@ export const chamberMembers = [
       dataset: "emergency-services",
       id: "surrey-memorial",
     },
-  },
-  {
     id: "surrey-bot-member-005",
     chamberId: "surrey-white-rock-board-of-trade",
     businessName: "Nordel Crossing Shopping Centre",
@@ -510,8 +473,6 @@ export const chamberMembers = [
       dataset: "aviation",
       id: "cyvr",
     },
-  },
-  {
     id: "richmond-coc-member-002",
     chamberId: "richmond-chamber-of-commerce",
     businessName: "Aberdeen Centre",
@@ -525,8 +486,6 @@ export const chamberMembers = [
     naicsTitle: "All Other Miscellaneous Store Retailers",
     municipality: "Richmond",
     region: "Metro Vancouver",
-  },
-  {
     id: "richmond-coc-member-003",
     chamberId: "richmond-chamber-of-commerce",
     businessName: "Richmond Hospital",
@@ -543,8 +502,6 @@ export const chamberMembers = [
       dataset: "emergency-services",
       id: "richmond-hospital",
     },
-  },
-  {
     id: "richmond-coc-member-004",
     chamberId: "richmond-chamber-of-commerce",
     businessName: "London Drugs",
@@ -558,8 +515,6 @@ export const chamberMembers = [
     naicsTitle: "Pharmacies and Drug Stores",
     municipality: "Richmond",
     region: "Metro Vancouver",
-  },
-  {
     id: "richmond-coc-member-005",
     chamberId: "richmond-chamber-of-commerce",
     businessName: "Steveston Harbour Authority",
@@ -597,8 +552,6 @@ export const chamberMembers = [
       dataset: "aviation",
       id: "cyxx",
     },
-  },
-  {
     id: "abbotsford-coc-member-002",
     chamberId: "abbotsford-chamber-of-commerce",
     businessName: "University of the Fraser Valley",
@@ -615,8 +568,6 @@ export const chamberMembers = [
       dataset: "schools",
       id: "ufv-abbotsford",
     },
-  },
-  {
     id: "abbotsford-coc-member-003",
     chamberId: "abbotsford-chamber-of-commerce",
     businessName: "Abbotsford Regional Hospital",
@@ -633,8 +584,6 @@ export const chamberMembers = [
       dataset: "emergency-services",
       id: "abbotsford-regional",
     },
-  },
-  {
     id: "abbotsford-coc-member-004",
     chamberId: "abbotsford-chamber-of-commerce",
     businessName: "Save-On-Foods",
@@ -647,8 +596,6 @@ export const chamberMembers = [
     naicsTitle: "Supermarkets and Other Grocery Stores",
     municipality: "Abbotsford",
     region: "Fraser Valley",
-  },
-  {
     id: "abbotsford-coc-member-005",
     chamberId: "abbotsford-chamber-of-commerce",
     businessName: "Vedder Transport Ltd.",
@@ -666,10 +613,8 @@ export const chamberMembers = [
       dataset: "ground-transport",
       id: "vedder-transport",
     },
-  },
 
   // Chilliwack Chamber of Commerce
-  {
     id: "chilliwack-coc-member-001",
     chamberId: "chilliwack-chamber-of-commerce",
     businessName: "Chilliwack General Hospital",
@@ -686,8 +631,6 @@ export const chamberMembers = [
       dataset: "emergency-services",
       id: "chilliwack-general",
     },
-  },
-  {
     id: "chilliwack-coc-member-002",
     chamberId: "chilliwack-chamber-of-commerce",
     businessName: "University of the Fraser Valley - Chilliwack",
@@ -700,8 +643,6 @@ export const chamberMembers = [
     naicsTitle: "Educational Services",
     municipality: "Chilliwack",
     region: "Fraser Valley",
-  },
-  {
     id: "chilliwack-coc-member-003",
     chamberId: "chilliwack-chamber-of-commerce",
     businessName: "Chilliwack Airport",
@@ -718,8 +659,6 @@ export const chamberMembers = [
       dataset: "aviation",
       id: "cycw",
     },
-  },
-  {
     id: "chilliwack-coc-member-004",
     chamberId: "chilliwack-chamber-of-commerce",
     businessName: "Cottonwood Mall",
@@ -752,8 +691,6 @@ export const chamberMembers = [
       dataset: "aviation",
       id: "cyhe",
     },
-  },
-  {
     id: "hope-coc-member-002",
     chamberId: "hope-chamber-of-commerce",
     businessName: "Kawkawa Lake Resort",
@@ -766,8 +703,6 @@ export const chamberMembers = [
     municipality: "Hope",
     region: "Fraser Valley",
     websiteNeedsCollection: true,
-  },
-  {
     id: "hope-coc-member-003",
     chamberId: "hope-chamber-of-commerce",
     businessName: "Othello Tunnels Adventure",
@@ -802,8 +737,6 @@ export const chamberMembers = [
     naicsTitle: "Performing Arts, Spectator Sports, Related",
     municipality: "Victoria",
     region: "Capital",
-  },
-  {
     id: "victoria-coc-member-002",
     chamberId: "greater-victoria-chamber",
     businessName: "The Fairmont Empress",
@@ -817,8 +750,6 @@ export const chamberMembers = [
     naicsTitle: "Accommodation",
     municipality: "Victoria",
     region: "Capital",
-  },
-  {
     id: "victoria-coc-member-003",
     chamberId: "greater-victoria-chamber",
     businessName: "BC Ferries",
@@ -836,8 +767,6 @@ export const chamberMembers = [
       dataset: "marine",
       id: "bc-ferries",
     },
-  },
-  {
     id: "victoria-coc-member-004",
     chamberId: "greater-victoria-chamber",
     businessName: "University of Victoria",
@@ -854,8 +783,6 @@ export const chamberMembers = [
       dataset: "schools",
       id: "uvic",
     },
-  },
-  {
     id: "victoria-coc-member-005",
     chamberId: "greater-victoria-chamber",
     businessName: "Victoria General Hospital",
@@ -872,8 +799,6 @@ export const chamberMembers = [
       dataset: "emergency-services",
       id: "victoria-general",
     },
-  },
-  {
     id: "victoria-coc-member-006",
     chamberId: "greater-victoria-chamber",
     businessName: "Bluebird Cabs",
@@ -890,10 +815,8 @@ export const chamberMembers = [
       dataset: "taxi-services",
       id: "bluebird-victoria",
     },
-  },
 
   // WestShore Chamber of Commerce
-  {
     id: "westshore-coc-member-001",
     chamberId: "westshore-chamber",
     businessName: "Westshore Town Centre",
@@ -906,8 +829,6 @@ export const chamberMembers = [
     naicsTitle: "All Other Miscellaneous Store Retailers",
     municipality: "Langford",
     region: "Capital",
-  },
-  {
     id: "westshore-coc-member-002",
     chamberId: "westshore-chamber",
     businessName: "Royal Roads University",
@@ -924,10 +845,8 @@ export const chamberMembers = [
       dataset: "schools",
       id: "royal-roads",
     },
-  },
 
   // Sooke Region Chamber of Commerce
-  {
     id: "sooke-coc-member-001",
     chamberId: "sooke-chamber",
     businessName: "Sooke Harbour House",
@@ -941,8 +860,6 @@ export const chamberMembers = [
     municipality: "Sooke",
     region: "Capital",
     websiteNeedsCollection: true,
-  },
-  {
     id: "sooke-coc-member-002",
     chamberId: "sooke-chamber",
     businessName: "Wild Coast Tofino",
@@ -972,8 +889,6 @@ export const chamberMembers = [
     naicsTitle: "Support Activities for Agriculture and Forestry",
     municipality: "Salt Spring Island",
     region: "Capital",
-  },
-  {
     id: "saltspring-coc-member-002",
     chamberId: "salt-spring-chamber",
     businessName: "Harbour House Hotel",
@@ -986,8 +901,6 @@ export const chamberMembers = [
     naicsTitle: "Accommodation",
     municipality: "Salt Spring Island",
     region: "Capital",
-  },
-  {
     id: "saltspring-coc-member-003",
     chamberId: "salt-spring-chamber",
     businessName: "Salt Spring Taxi",
@@ -1020,8 +933,6 @@ export const chamberMembers = [
     naicsTitle: "Accommodation",
     municipality: "Pender Island",
     region: "Capital",
-  },
-  {
     id: "pender-coc-member-002",
     chamberId: "pender-island-chamber",
     businessName: "Pender Island Kayak Adventures",
@@ -1051,8 +962,6 @@ export const chamberMembers = [
     naicsTitle: "Accommodation",
     municipality: "Port Renfrew",
     region: "Capital",
-  },
-  {
     id: "portrenfrew-coc-member-002",
     chamberId: "port-renfrew-chamber",
     businessName: "West Coast Trail Lodge",
@@ -1090,8 +999,6 @@ export const chamberMembers = [
       dataset: "schools",
       id: "viu-nanaimo",
     },
-  },
-  {
     id: "nanaimo-coc-member-002",
     chamberId: "greater-nanaimo-chamber",
     businessName: "Nanaimo Regional General Hospital",
@@ -1108,8 +1015,6 @@ export const chamberMembers = [
       dataset: "emergency-services",
       id: "nanaimo-regional",
     },
-  },
-  {
     id: "nanaimo-coc-member-003",
     chamberId: "greater-nanaimo-chamber",
     businessName: "Nanaimo Airport",
@@ -1126,8 +1031,6 @@ export const chamberMembers = [
       dataset: "aviation",
       id: "cycd",
     },
-  },
-  {
     id: "nanaimo-coc-member-004",
     chamberId: "greater-nanaimo-chamber",
     businessName: "A.C. Taxi",
@@ -1144,10 +1047,8 @@ export const chamberMembers = [
       dataset: "taxi-services",
       id: "ac-taxi-nanaimo",
     },
-  },
 
   // Comox Valley Chamber of Commerce
-  {
     id: "comox-coc-member-001",
     chamberId: "comox-valley-chamber",
     businessName: "CFB Comox",
@@ -1165,8 +1066,6 @@ export const chamberMembers = [
       dataset: "aviation",
       id: "cyqq",
     },
-  },
-  {
     id: "comox-coc-member-002",
     chamberId: "comox-valley-chamber",
     businessName: "Mount Washington Alpine Resort",
@@ -1180,8 +1079,6 @@ export const chamberMembers = [
     naicsTitle: "Amusement, Gambling, and Recreation Industries",
     municipality: "Comox Valley",
     region: "Comox Valley",
-  },
-  {
     id: "comox-coc-member-003",
     chamberId: "comox-valley-chamber",
     businessName: "North Island Hospital - Comox Valley",
@@ -1214,8 +1111,6 @@ export const chamberMembers = [
       dataset: "aviation",
       id: "cybl",
     },
-  },
-  {
     id: "campbell-coc-member-002",
     chamberId: "campbell-river-chamber",
     businessName: "Campbell River Hospital",
@@ -1232,8 +1127,6 @@ export const chamberMembers = [
       dataset: "emergency-services",
       id: "campbell-river-hospital",
     },
-  },
-  {
     id: "campbell-coc-member-003",
     chamberId: "campbell-river-chamber",
     businessName: "Discovery Passage Sea Kayaking",
@@ -1267,8 +1160,6 @@ export const chamberMembers = [
       dataset: "aviation",
       id: "cyzt",
     },
-  },
-  {
     id: "porthardy-coc-member-002",
     chamberId: "port-hardy-chamber",
     businessName: "BC Ferries - Port Hardy Terminal",
@@ -1286,8 +1177,6 @@ export const chamberMembers = [
       dataset: "marine",
       id: "bc-ferries-port-hardy",
     },
-  },
-  {
     id: "porthardy-coc-member-003",
     chamberId: "port-hardy-chamber",
     businessName: "Port Hardy Hospital",
@@ -1321,8 +1210,6 @@ export const chamberMembers = [
       dataset: "marine",
       id: "lady-rose",
     },
-  },
-  {
     id: "alberni-coc-member-002",
     chamberId: "port-alberni-chamber",
     businessName: "Alberni Pacific Railway",
@@ -1340,8 +1227,6 @@ export const chamberMembers = [
       dataset: "ground-transport",
       id: "alberni-pacific-railway",
     },
-  },
-  {
     id: "alberni-coc-member-003",
     chamberId: "port-alberni-chamber",
     businessName: "West Coast General Hospital",
@@ -1371,8 +1256,6 @@ export const chamberMembers = [
     naicsTitle: "Executive, Legislative, General Government",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-coc-member-002",
     chamberId: "tofino-chamber",
     businessName: "Wickaninnish Inn",
@@ -1386,8 +1269,6 @@ export const chamberMembers = [
     naicsTitle: "Accommodation",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-coc-member-003",
     chamberId: "tofino-chamber",
     businessName: "Tofino Air",
@@ -1405,8 +1286,6 @@ export const chamberMembers = [
       dataset: "aviation",
       id: "tofino-harbour-sph",
     },
-  },
-  {
     id: "tofino-coc-member-004",
     chamberId: "tofino-chamber",
     businessName: "Storm Watching",
@@ -1420,8 +1299,6 @@ export const chamberMembers = [
     naicsTitle: "Food Services and Drinking Places",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-coc-member-005",
     chamberId: "tofino-chamber",
     businessName: "Tofino Taxi",
@@ -1454,8 +1331,6 @@ export const chamberMembers = [
     naicsTitle: "Accommodation",
     municipality: "Ucluelet",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "ucluelet-coc-member-002",
     chamberId: "ucluelet-chamber",
     businessName: "Wild Pacific Trail Society",
@@ -1469,8 +1344,6 @@ export const chamberMembers = [
     naicsTitle: "Religious, Grantmaking, Civic, Professional Orgs",
     municipality: "Ucluelet",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "ucluelet-coc-member-003",
     chamberId: "ucluelet-chamber",
     businessName: "Ucluelet Taxi",
@@ -1502,8 +1375,6 @@ export const chamberMembers = [
     municipality: "Bamfield",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "bamfield-coc-member-002",
     chamberId: "bamfield-chamber",
     businessName: "Bamfield Boat Rentals",
@@ -1516,8 +1387,6 @@ export const chamberMembers = [
     municipality: "Bamfield",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "bamfield-coc-member-003",
     chamberId: "bamfield-chamber",
     businessName: "Bamfield Bound Lodge",
@@ -1530,8 +1399,6 @@ export const chamberMembers = [
     municipality: "Bamfield",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "bamfield-coc-member-004",
     chamberId: "bamfield-chamber",
     businessName: "Bamfield Builders Supply",
@@ -1545,8 +1412,6 @@ export const chamberMembers = [
     municipality: "Bamfield",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "bamfield-coc-member-005",
     chamberId: "bamfield-chamber",
     businessName: "Bamfield Community School Association",
@@ -1560,8 +1425,6 @@ export const chamberMembers = [
     naicsTitle: "Educational Services",
     municipality: "Bamfield",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "bamfield-coc-member-006",
     chamberId: "bamfield-chamber",
     businessName: "Bamfield Electric",
@@ -1574,8 +1437,6 @@ export const chamberMembers = [
     municipality: "Bamfield",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "bamfield-coc-member-007",
     chamberId: "bamfield-chamber",
     businessName: "Bamfield Harbour Authority",
@@ -1593,8 +1454,6 @@ export const chamberMembers = [
       id: "bamfield-harbour-authority",
     },
     websiteNeedsCollection: true,
-  },
-  {
     id: "bamfield-coc-member-008",
     chamberId: "bamfield-chamber",
     businessName: "Bamfield Marine Sciences Centre",
@@ -1612,8 +1471,6 @@ export const chamberMembers = [
       dataset: "schools",
       id: "bamfield-marine-sciences",
     },
-  },
-  {
     id: "bamfield-coc-member-009",
     chamberId: "bamfield-chamber",
     businessName: "Bamfield Mercantile & Marine",
@@ -1627,8 +1484,6 @@ export const chamberMembers = [
     municipality: "Bamfield",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "bamfield-coc-member-010",
     chamberId: "bamfield-chamber",
     businessName: "Bamfield Point Resort",
@@ -1641,8 +1496,6 @@ export const chamberMembers = [
     municipality: "Bamfield",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "bamfield-coc-member-011",
     chamberId: "bamfield-chamber",
     businessName: "Bamfield Water Taxi",
@@ -1660,8 +1513,6 @@ export const chamberMembers = [
       id: "bamfield-water-taxi",
     },
     websiteNeedsCollection: true,
-  },
-  {
     id: "bamfield-coc-member-012",
     chamberId: "bamfield-chamber",
     businessName: "Breakers Marine",
@@ -1675,8 +1526,6 @@ export const chamberMembers = [
     municipality: "Bamfield",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "bamfield-coc-member-013",
     chamberId: "bamfield-chamber",
     businessName: "Colibri Landing",
@@ -1689,8 +1538,6 @@ export const chamberMembers = [
     municipality: "Bamfield",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "bamfield-coc-member-014",
     chamberId: "bamfield-chamber",
     businessName: "Eileen Scott Centennial Park & Campground",
@@ -1704,8 +1551,6 @@ export const chamberMembers = [
     municipality: "Bamfield",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "bamfield-coc-member-015",
     chamberId: "bamfield-chamber",
     businessName: "Emerald Ocean Charters",
@@ -1719,8 +1564,6 @@ export const chamberMembers = [
     municipality: "Bamfield",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "bamfield-coc-member-016",
     chamberId: "bamfield-chamber",
     businessName: "Flora's Restaurant",
@@ -1734,8 +1577,6 @@ export const chamberMembers = [
     naicsTitle: "Food Services and Drinking Places",
     municipality: "Bamfield",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "bamfield-coc-member-017",
     chamberId: "bamfield-chamber",
     businessName: "Harbourside Lodge",
@@ -1749,8 +1590,6 @@ export const chamberMembers = [
     municipality: "Bamfield",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "bamfield-coc-member-018",
     chamberId: "bamfield-chamber",
     businessName: "Imperial Eagle Lodge",
@@ -1764,8 +1603,6 @@ export const chamberMembers = [
     naicsTitle: "Accommodation",
     municipality: "Bamfield",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "bamfield-coc-member-019",
     chamberId: "bamfield-chamber",
     businessName: "Inlet Express",
@@ -1779,8 +1616,6 @@ export const chamberMembers = [
     municipality: "Bamfield",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "bamfield-coc-member-020",
     chamberId: "bamfield-chamber",
     businessName: "Lady Rose Marine Services",
@@ -1798,8 +1633,6 @@ export const chamberMembers = [
       dataset: "marine",
       id: "lady-rose-marine",
     },
-  },
-  {
     id: "bamfield-coc-member-021",
     chamberId: "bamfield-chamber",
     businessName: "Lucky Lander Marine Services",
@@ -1813,8 +1646,6 @@ export const chamberMembers = [
     municipality: "Bamfield",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "bamfield-coc-member-022",
     chamberId: "bamfield-chamber",
     businessName: "McKay Bay Lodge",
@@ -1828,8 +1659,6 @@ export const chamberMembers = [
     naicsTitle: "Accommodation",
     municipality: "Bamfield",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "bamfield-coc-member-023",
     chamberId: "bamfield-chamber",
     businessName: "Mills Landing Cottages & Charters",
@@ -1843,8 +1672,6 @@ export const chamberMembers = [
     naicsTitle: "Accommodation",
     municipality: "Bamfield",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "bamfield-coc-member-024",
     chamberId: "bamfield-chamber",
     businessName: "Pacific Rim Wastewater Solutions",
@@ -1857,8 +1684,6 @@ export const chamberMembers = [
     municipality: "Bamfield",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "bamfield-coc-member-025",
     chamberId: "bamfield-chamber",
     businessName: "Pacific Seaplanes",
@@ -1872,8 +1697,6 @@ export const chamberMembers = [
     naicsTitle: "Air Transportation",
     municipality: "Bamfield",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "bamfield-coc-member-026",
     chamberId: "bamfield-chamber",
     businessName: "Pacific Sounds Lodge",
@@ -1887,8 +1710,6 @@ export const chamberMembers = [
     naicsTitle: "Accommodation",
     municipality: "Bamfield",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "bamfield-coc-member-027",
     chamberId: "bamfield-chamber",
     businessName: "Parks Canada - Pacific Rim National Park Reserve",
@@ -1902,8 +1723,6 @@ export const chamberMembers = [
     naicsTitle: "Executive, Legislative, General Government",
     municipality: "Bamfield",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "bamfield-coc-member-028",
     chamberId: "bamfield-chamber",
     businessName: "Seabeam Lodge",
@@ -1916,8 +1735,6 @@ export const chamberMembers = [
     naicsTitle: "Accommodation",
     municipality: "Bamfield",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "bamfield-coc-member-029",
     chamberId: "bamfield-chamber",
     businessName: "The Bamfield Cabin",
@@ -1930,8 +1747,6 @@ export const chamberMembers = [
     naicsTitle: "Accommodation",
     municipality: "Bamfield",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "bamfield-coc-member-030",
     chamberId: "bamfield-chamber",
     businessName: "Way Inn",
@@ -1945,8 +1760,6 @@ export const chamberMembers = [
     municipality: "Bamfield",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "bamfield-coc-member-031",
     chamberId: "bamfield-chamber",
     businessName: "West Coast Trail Express",
@@ -1960,8 +1773,6 @@ export const chamberMembers = [
     naicsTitle: "Transit and Ground Passenger Transportation",
     municipality: "Bamfield",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "bamfield-coc-member-032",
     chamberId: "bamfield-chamber",
     businessName: "Woods End Landing Cottages",
@@ -2121,7 +1932,6 @@ export const chamberMembers = [
 
 
   // Duncan Cowichan Chamber of Commerce
-  {
     id: "duncan-coc-member-001",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Cowichan District Hospital",
@@ -2134,8 +1944,6 @@ export const chamberMembers = [
     naicsTitle: "Ambulatory Health Care Services",
     municipality: "Duncan",
     region: "Cowichan Valley",
-  },
-  {
     id: "duncan-coc-member-002",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Cowichan Valley Museum",
@@ -2148,8 +1956,6 @@ export const chamberMembers = [
     naicsTitle: "Performing Arts, Spectator Sports, Related",
     municipality: "Duncan",
     region: "Cowichan Valley",
-  },
-  {
     id: "duncan-coc-member-003",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Cowichan Tribes",
@@ -2186,8 +1992,6 @@ export const chamberMembers = [
       dataset: "schools",
       id: "ubc-okanagan",
     },
-  },
-  {
     id: "kelowna-coc-member-002",
     chamberId: "kelowna-chamber",
     businessName: "Kelowna General Hospital",
@@ -2204,8 +2008,6 @@ export const chamberMembers = [
       dataset: "emergency-services",
       id: "kelowna-general",
     },
-  },
-  {
     id: "kelowna-coc-member-003",
     chamberId: "kelowna-chamber",
     businessName: "Kelowna International Airport",
@@ -2222,8 +2024,6 @@ export const chamberMembers = [
       dataset: "aviation",
       id: "cylw",
     },
-  },
-  {
     id: "kelowna-coc-member-004",
     chamberId: "kelowna-chamber",
     businessName: "Mission Hill Family Estate Winery",
@@ -2237,8 +2037,6 @@ export const chamberMembers = [
     naicsTitle: "Breweries",
     municipality: "West Kelowna",
     region: "Central Okanagan",
-  },
-  {
     id: "kelowna-coc-member-005",
     chamberId: "kelowna-chamber",
     businessName: "Kelowna Cabs",
@@ -2254,10 +2052,8 @@ export const chamberMembers = [
       dataset: "taxi-services",
       id: "kelowna-cabs",
     },
-  },
 
   // Vernon Chamber of Commerce
-  {
     id: "vernon-coc-member-001",
     chamberId: "vernon-chamber",
     businessName: "Vernon Jubilee Hospital",
@@ -2270,8 +2066,6 @@ export const chamberMembers = [
     naicsTitle: "Ambulatory Health Care Services",
     municipality: "Vernon",
     region: "North Okanagan",
-  },
-  {
     id: "vernon-coc-member-002",
     chamberId: "vernon-chamber",
     businessName: "Silver Star Mountain Resort",
@@ -2285,8 +2079,6 @@ export const chamberMembers = [
     naicsTitle: "Amusement, Gambling, and Recreation Industries",
     municipality: "Vernon",
     region: "North Okanagan",
-  },
-  {
     id: "vernon-coc-member-003",
     chamberId: "vernon-chamber",
     businessName: "Vernon Regional Airport",
@@ -2302,10 +2094,8 @@ export const chamberMembers = [
       dataset: "aviation",
       id: "cyvk",
     },
-  },
 
   // Penticton Chamber of Commerce
-  {
     id: "penticton-coc-member-001",
     chamberId: "penticton-chamber",
     businessName: "Penticton Regional Hospital",
@@ -2318,8 +2108,6 @@ export const chamberMembers = [
     naicsTitle: "Ambulatory Health Care Services",
     municipality: "Penticton",
     region: "Okanagan-Similkameen",
-  },
-  {
     id: "penticton-coc-member-002",
     chamberId: "penticton-chamber",
     businessName: "Penticton Airport",
@@ -2335,8 +2123,6 @@ export const chamberMembers = [
       dataset: "aviation",
       id: "cyyf",
     },
-  },
-  {
     id: "penticton-coc-member-003",
     chamberId: "penticton-chamber",
     businessName: "Penticton Lakeside Resort",
@@ -2373,8 +2159,6 @@ export const chamberMembers = [
       dataset: "schools",
       id: "tru",
     },
-  },
-  {
     id: "kamloops-coc-member-002",
     chamberId: "kamloops-chamber",
     businessName: "Royal Inland Hospital",
@@ -2391,8 +2175,6 @@ export const chamberMembers = [
       dataset: "emergency-services",
       id: "royal-inland",
     },
-  },
-  {
     id: "kamloops-coc-member-003",
     chamberId: "kamloops-chamber",
     businessName: "Kamloops Airport",
@@ -2409,8 +2191,6 @@ export const chamberMembers = [
       dataset: "aviation",
       id: "cyka",
     },
-  },
-  {
     id: "kamloops-coc-member-004",
     chamberId: "kamloops-chamber",
     businessName: "Sun Peaks Resort",
@@ -2440,8 +2220,6 @@ export const chamberMembers = [
     naicsTitle: "Ambulatory Health Care Services",
     municipality: "Salmon Arm",
     region: "Columbia-Shuswap",
-  },
-  {
     id: "salmon-arm-coc-member-002",
     chamberId: "salmon-arm-chamber",
     businessName: "Salmon Arm Airport",
@@ -2457,10 +2235,8 @@ export const chamberMembers = [
       dataset: "aviation",
       id: "czam",
     },
-  },
 
   // Revelstoke Chamber of Commerce
-  {
     id: "revelstoke-coc-member-001",
     chamberId: "revelstoke-chamber",
     businessName: "Revelstoke Mountain Resort",
@@ -2474,8 +2250,6 @@ export const chamberMembers = [
     naicsTitle: "Amusement, Gambling, and Recreation Industries",
     municipality: "Revelstoke",
     region: "Columbia-Shuswap",
-  },
-  {
     id: "revelstoke-coc-member-002",
     chamberId: "revelstoke-chamber",
     businessName: "Queen Victoria Hospital",
@@ -2488,8 +2262,6 @@ export const chamberMembers = [
     naicsTitle: "Ambulatory Health Care Services",
     municipality: "Revelstoke",
     region: "Columbia-Shuswap",
-  },
-  {
     id: "revelstoke-coc-member-003",
     chamberId: "revelstoke-chamber",
     businessName: "Parks Canada - Rogers Pass",
@@ -2520,8 +2292,6 @@ export const chamberMembers = [
     naicsTitle: "Amusement, Gambling, and Recreation Industries",
     municipality: "Golden",
     region: "Columbia-Shuswap",
-  },
-  {
     id: "golden-coc-member-002",
     chamberId: "golden-chamber",
     businessName: "Golden & District Hospital",
@@ -2534,8 +2304,6 @@ export const chamberMembers = [
     naicsTitle: "Ambulatory Health Care Services",
     municipality: "Golden",
     region: "Columbia-Shuswap",
-  },
-  {
     id: "golden-coc-member-003",
     chamberId: "golden-chamber",
     businessName: "Mount 7 Taxi",
@@ -2571,8 +2339,6 @@ export const chamberMembers = [
     naicsTitle: "Ambulatory Health Care Services",
     municipality: "Williams Lake",
     region: "Cariboo",
-  },
-  {
     id: "williams-lake-coc-member-002",
     chamberId: "williams-lake-chamber",
     businessName: "Williams Lake Airport",
@@ -2588,8 +2354,6 @@ export const chamberMembers = [
       dataset: "aviation",
       id: "cywl",
     },
-  },
-  {
     id: "williams-lake-coc-member-003",
     chamberId: "williams-lake-chamber",
     businessName: "Williams Lake Stampede",
@@ -2619,8 +2383,6 @@ export const chamberMembers = [
     naicsTitle: "Ambulatory Health Care Services",
     municipality: "Quesnel",
     region: "Cariboo",
-  },
-  {
     id: "quesnel-coc-member-002",
     chamberId: "quesnel-chamber",
     businessName: "Quesnel Airport",
@@ -2636,14 +2398,12 @@ export const chamberMembers = [
       dataset: "aviation",
       id: "cyqz",
     },
-  },
 
   // ============================================================================
   // NORTHERN BC
   // ============================================================================
 
   // Prince George Chamber of Commerce
-  {
     id: "pg-coc-member-001",
     chamberId: "prince-george-chamber",
     businessName: "University of Northern British Columbia",
@@ -2660,8 +2420,6 @@ export const chamberMembers = [
       dataset: "schools",
       id: "unbc",
     },
-  },
-  {
     id: "pg-coc-member-002",
     chamberId: "prince-george-chamber",
     businessName: "University Hospital of Northern BC",
@@ -2678,8 +2436,6 @@ export const chamberMembers = [
       dataset: "emergency-services",
       id: "uhnbc",
     },
-  },
-  {
     id: "pg-coc-member-003",
     chamberId: "prince-george-chamber",
     businessName: "Prince George Airport",
@@ -2696,8 +2452,6 @@ export const chamberMembers = [
       dataset: "aviation",
       id: "cyxs",
     },
-  },
-  {
     id: "pg-coc-member-004",
     chamberId: "prince-george-chamber",
     businessName: "Canfor Corporation",
@@ -2710,8 +2464,6 @@ export const chamberMembers = [
     naicsTitle: "Logging",
     municipality: "Prince George",
     region: "Fraser-Fort George",
-  },
-  {
     id: "pg-coc-member-005",
     chamberId: "prince-george-chamber",
     businessName: "CN Rail - Prince George Yard",
@@ -2729,10 +2481,8 @@ export const chamberMembers = [
       dataset: "ground-transport",
       id: "cn-prince-george",
     },
-  },
 
   // Fort St. John Chamber of Commerce
-  {
     id: "fsj-coc-member-001",
     chamberId: "fort-st-john-chamber",
     businessName: "Northern Lights College",
@@ -2749,8 +2499,6 @@ export const chamberMembers = [
       dataset: "schools",
       id: "nlc-fsj",
     },
-  },
-  {
     id: "fsj-coc-member-002",
     chamberId: "fort-st-john-chamber",
     businessName: "Fort St. John Hospital",
@@ -2763,8 +2511,6 @@ export const chamberMembers = [
     naicsTitle: "Ambulatory Health Care Services",
     municipality: "Fort St. John",
     region: "Peace River",
-  },
-  {
     id: "fsj-coc-member-003",
     chamberId: "fort-st-john-chamber",
     businessName: "Fort St. John Airport",
@@ -2781,10 +2527,8 @@ export const chamberMembers = [
       dataset: "aviation",
       id: "cyxj",
     },
-  },
 
   // Terrace Chamber of Commerce
-  {
     id: "terrace-coc-member-001",
     chamberId: "terrace-chamber",
     businessName: "Mills Memorial Hospital",
@@ -2797,8 +2541,6 @@ export const chamberMembers = [
     naicsTitle: "Ambulatory Health Care Services",
     municipality: "Terrace",
     region: "Kitimat-Stikine",
-  },
-  {
     id: "terrace-coc-member-002",
     chamberId: "terrace-chamber",
     businessName: "Northwest Regional Airport (Terrace)",
@@ -2815,8 +2557,6 @@ export const chamberMembers = [
       dataset: "aviation",
       id: "cyxt",
     },
-  },
-  {
     id: "terrace-coc-member-003",
     chamberId: "terrace-chamber",
     businessName: "Coast Mountain College - Terrace",
@@ -2833,10 +2573,8 @@ export const chamberMembers = [
       dataset: "schools",
       id: "cmc-terrace",
     },
-  },
 
   // Kitimat Chamber of Commerce
-  {
     id: "kitimat-coc-member-001",
     chamberId: "kitimat-chamber",
     businessName: "Rio Tinto Alcan - Kitimat Smelter",
@@ -2850,8 +2588,6 @@ export const chamberMembers = [
     naicsTitle: "Fabricated Metal Product Manufacturing",
     municipality: "Kitimat",
     region: "Kitimat-Stikine",
-  },
-  {
     id: "kitimat-coc-member-002",
     chamberId: "kitimat-chamber",
     businessName: "LNG Canada",
@@ -2865,8 +2601,6 @@ export const chamberMembers = [
     naicsTitle: "Utilities",
     municipality: "Kitimat",
     region: "Kitimat-Stikine",
-  },
-  {
     id: "kitimat-coc-member-003",
     chamberId: "kitimat-chamber",
     businessName: "Kitimat General Hospital",
@@ -2900,8 +2634,6 @@ export const chamberMembers = [
       dataset: "marine",
       id: "port-prince-rupert",
     },
-  },
-  {
     id: "prupert-coc-member-002",
     chamberId: "prince-rupert-chamber",
     businessName: "BC Ferries - Prince Rupert Terminal",
@@ -2919,8 +2651,6 @@ export const chamberMembers = [
       dataset: "marine",
       id: "bc-ferries-prince-rupert",
     },
-  },
-  {
     id: "prupert-coc-member-003",
     chamberId: "prince-rupert-chamber",
     businessName: "Prince Rupert Regional Hospital",
@@ -2953,8 +2683,6 @@ export const chamberMembers = [
     naicsTitle: "Ambulatory Health Care Services",
     municipality: "Nelson",
     region: "Central Kootenay",
-  },
-  {
     id: "nelson-coc-member-002",
     chamberId: "nelson-chamber",
     businessName: "Selkirk College",
@@ -2971,8 +2699,6 @@ export const chamberMembers = [
       dataset: "schools",
       id: "selkirk-nelson",
     },
-  },
-  {
     id: "nelson-coc-member-003",
     chamberId: "nelson-chamber",
     businessName: "Whitewater Ski Resort",
@@ -2986,8 +2712,6 @@ export const chamberMembers = [
     naicsTitle: "Amusement, Gambling, and Recreation Industries",
     municipality: "Nelson",
     region: "Central Kootenay",
-  },
-  {
     id: "nelson-coc-member-004",
     chamberId: "nelson-chamber",
     businessName: "Glacier Cabs Nelson",
@@ -3023,8 +2747,6 @@ export const chamberMembers = [
       dataset: "emergency-services",
       id: "east-kootenay-regional",
     },
-  },
-  {
     id: "cranbrook-coc-member-002",
     chamberId: "cranbrook-chamber",
     businessName: "Canadian Rockies International Airport",
@@ -3041,8 +2763,6 @@ export const chamberMembers = [
       dataset: "aviation",
       id: "cyxc",
     },
-  },
-  {
     id: "cranbrook-coc-member-003",
     chamberId: "cranbrook-chamber",
     businessName: "College of the Rockies",
@@ -3059,10 +2779,8 @@ export const chamberMembers = [
       dataset: "schools",
       id: "cotr-cranbrook",
     },
-  },
 
   // Fernie Chamber of Commerce
-  {
     id: "fernie-coc-member-001",
     chamberId: "fernie-chamber",
     businessName: "Fernie Alpine Resort",
@@ -3076,8 +2794,6 @@ export const chamberMembers = [
     naicsTitle: "Amusement, Gambling, and Recreation Industries",
     municipality: "Fernie",
     region: "East Kootenay",
-  },
-  {
     id: "fernie-coc-member-002",
     chamberId: "fernie-chamber",
     businessName: "Elk Valley Hospital",
@@ -3090,8 +2806,6 @@ export const chamberMembers = [
     naicsTitle: "Ambulatory Health Care Services",
     municipality: "Fernie",
     region: "East Kootenay",
-  },
-  {
     id: "fernie-coc-member-003",
     chamberId: "fernie-chamber",
     businessName: "Teck Resources - Coal Mountain",
@@ -3122,8 +2836,6 @@ export const chamberMembers = [
     naicsTitle: "Fabricated Metal Product Manufacturing",
     municipality: "Trail",
     region: "Kootenay Boundary",
-  },
-  {
     id: "trail-coc-member-002",
     chamberId: "trail-chamber",
     businessName: "Kootenay Boundary Regional Hospital",
@@ -3136,8 +2848,6 @@ export const chamberMembers = [
     naicsTitle: "Ambulatory Health Care Services",
     municipality: "Trail",
     region: "Kootenay Boundary",
-  },
-  {
     id: "trail-coc-member-003",
     chamberId: "trail-chamber",
     businessName: "Rossland Red Mountain Resort",
@@ -3172,8 +2882,6 @@ export const chamberMembers = [
     naicsTitle: "Amusement, Gambling, and Recreation Industries",
     municipality: "Whistler",
     region: "Squamish-Lillooet",
-  },
-  {
     id: "whistler-coc-member-002",
     chamberId: "whistler-chamber",
     businessName: "Tourism Whistler",
@@ -3187,8 +2895,6 @@ export const chamberMembers = [
     naicsTitle: "Food Services and Drinking Places",
     municipality: "Whistler",
     region: "Squamish-Lillooet",
-  },
-  {
     id: "whistler-coc-member-003",
     chamberId: "whistler-chamber",
     businessName: "Fairmont Chateau Whistler",
@@ -3202,8 +2908,6 @@ export const chamberMembers = [
     naicsTitle: "Accommodation",
     municipality: "Whistler",
     region: "Squamish-Lillooet",
-  },
-  {
     id: "whistler-coc-member-004",
     chamberId: "whistler-chamber",
     businessName: "Whistler Health Care Centre",
@@ -3216,8 +2920,6 @@ export const chamberMembers = [
     naicsTitle: "Ambulatory Health Care Services",
     municipality: "Whistler",
     region: "Squamish-Lillooet",
-  },
-  {
     id: "whistler-coc-member-005",
     chamberId: "whistler-chamber",
     businessName: "Whistler Taxis",
@@ -3250,8 +2952,6 @@ export const chamberMembers = [
     naicsTitle: "Food Services and Drinking Places",
     municipality: "Squamish",
     region: "Squamish-Lillooet",
-  },
-  {
     id: "squamish-coc-member-002",
     chamberId: "squamish-chamber",
     businessName: "Quest University Canada",
@@ -3264,8 +2964,6 @@ export const chamberMembers = [
     naicsTitle: "Educational Services",
     municipality: "Squamish",
     region: "Squamish-Lillooet",
-  },
-  {
     id: "squamish-coc-member-003",
     chamberId: "squamish-chamber",
     businessName: "Squamish General Hospital",
@@ -3278,8 +2976,6 @@ export const chamberMembers = [
     naicsTitle: "Ambulatory Health Care Services",
     municipality: "Squamish",
     region: "Squamish-Lillooet",
-  },
-  {
     id: "squamish-coc-member-004",
     chamberId: "squamish-chamber",
     businessName: "Squamish Airport",
@@ -3295,14 +2991,12 @@ export const chamberMembers = [
       dataset: "aviation",
       id: "cyse",
     },
-  },
 
   // ============================================================================
   // SUNSHINE COAST
   // ============================================================================
 
   // Sechelt Chamber of Commerce
-  {
     id: "sechelt-coc-member-001",
     chamberId: "sechelt-chamber",
     businessName: "Sechelt Hospital (St. Mary's)",
@@ -3315,8 +3009,6 @@ export const chamberMembers = [
     naicsTitle: "Ambulatory Health Care Services",
     municipality: "Sechelt",
     region: "Sunshine Coast",
-  },
-  {
     id: "sechelt-coc-member-002",
     chamberId: "sechelt-chamber",
     businessName: "Sechelt Airport",
@@ -3332,8 +3024,6 @@ export const chamberMembers = [
       dataset: "aviation",
       id: "caa7",
     },
-  },
-  {
     id: "sechelt-coc-member-003",
     chamberId: "sechelt-chamber",
     businessName: "Sechelt Taxi",
@@ -3365,8 +3055,6 @@ export const chamberMembers = [
     naicsTitle: "Ambulatory Health Care Services",
     municipality: "Powell River",
     region: "Powell River",
-  },
-  {
     id: "powell-river-coc-member-002",
     chamberId: "powell-river-chamber",
     businessName: "Powell River Airport",
@@ -3382,8 +3070,6 @@ export const chamberMembers = [
       dataset: "aviation",
       id: "cypw",
     },
-  },
-  {
     id: "powell-river-coc-member-003",
     chamberId: "powell-river-chamber",
     businessName: "BC Ferries - Powell River Terminal",
@@ -3400,14 +3086,12 @@ export const chamberMembers = [
       dataset: "marine",
       id: "bc-ferries-powell-river",
     },
-  },
 
   // ============================================================================
   // ADDITIONAL METRO VANCOUVER MEMBERS
   // ============================================================================
 
   // More Greater Vancouver Board of Trade members
-  {
     id: "gvbot-member-011",
     chamberId: "greater-vancouver-board-of-trade",
     businessName: "RBC Royal Bank of Canada",
@@ -3420,8 +3104,6 @@ export const chamberMembers = [
     naicsTitle: "Credit Intermediation and Related Activities",
     municipality: "Vancouver",
     region: "Metro Vancouver",
-  },
-  {
     id: "gvbot-member-012",
     chamberId: "greater-vancouver-board-of-trade",
     businessName: "ICBC - Insurance Corporation of BC",
@@ -3434,8 +3116,6 @@ export const chamberMembers = [
     naicsTitle: "Insurance Agencies and Brokerages",
     municipality: "North Vancouver",
     region: "Metro Vancouver",
-  },
-  {
     id: "gvbot-member-013",
     chamberId: "greater-vancouver-board-of-trade",
     businessName: "Finning International",
@@ -3449,8 +3129,6 @@ export const chamberMembers = [
     naicsTitle: "Fabricated Metal Product Manufacturing",
     municipality: "Vancouver",
     region: "Metro Vancouver",
-  },
-  {
     id: "gvbot-member-014",
     chamberId: "greater-vancouver-board-of-trade",
     businessName: "BC Investment Management Corporation (BCI)",
@@ -3464,8 +3142,6 @@ export const chamberMembers = [
     naicsTitle: "Credit Intermediation and Related Activities",
     municipality: "Vancouver",
     region: "Metro Vancouver",
-  },
-  {
     id: "gvbot-member-015",
     chamberId: "greater-vancouver-board-of-trade",
     businessName: "Teck Resources Limited",
@@ -3478,8 +3154,6 @@ export const chamberMembers = [
     naicsTitle: "Mining (except Oil and Gas)",
     municipality: "Vancouver",
     region: "Metro Vancouver",
-  },
-  {
     id: "gvbot-member-016",
     chamberId: "greater-vancouver-board-of-trade",
     businessName: "Ledcor Group",
@@ -3492,8 +3166,6 @@ export const chamberMembers = [
     naicsTitle: "Construction of Buildings",
     municipality: "Vancouver",
     region: "Metro Vancouver",
-  },
-  {
     id: "gvbot-member-017",
     chamberId: "greater-vancouver-board-of-trade",
     businessName: "TransLink",
@@ -3510,8 +3182,6 @@ export const chamberMembers = [
       dataset: "ground-transport",
       id: "translink",
     },
-  },
-  {
     id: "gvbot-member-018",
     chamberId: "greater-vancouver-board-of-trade",
     businessName: "Vancouver Convention Centre",
@@ -3524,8 +3194,6 @@ export const chamberMembers = [
     naicsTitle: "Motion Picture and Sound Recording Industries",
     municipality: "Vancouver",
     region: "Metro Vancouver",
-  },
-  {
     id: "gvbot-member-019",
     chamberId: "greater-vancouver-board-of-trade",
     businessName: "Shoppers Drug Mart",
@@ -3538,8 +3206,6 @@ export const chamberMembers = [
     naicsTitle: "Pharmacies and Drug Stores",
     municipality: "Vancouver",
     region: "Metro Vancouver",
-  },
-  {
     id: "gvbot-member-020",
     chamberId: "greater-vancouver-board-of-trade",
     businessName: "KPMG LLP",
@@ -3569,8 +3235,6 @@ export const chamberMembers = [
     naicsTitle: "Credit Intermediation and Related Activities",
     municipality: "North Vancouver",
     region: "Metro Vancouver",
-  },
-  {
     id: "northvan-coc-member-002",
     chamberId: "north-vancouver-chamber",
     businessName: "Capilano University",
@@ -3587,8 +3251,6 @@ export const chamberMembers = [
       dataset: "schools",
       id: "capilano-university",
     },
-  },
-  {
     id: "northvan-coc-member-003",
     chamberId: "north-vancouver-chamber",
     businessName: "Lions Gate Hospital",
@@ -3605,8 +3267,6 @@ export const chamberMembers = [
       dataset: "emergency-services",
       id: "lions-gate-hospital",
     },
-  },
-  {
     id: "northvan-coc-member-004",
     chamberId: "north-vancouver-chamber",
     businessName: "FortisBC",
@@ -3619,8 +3279,6 @@ export const chamberMembers = [
     naicsTitle: "Utilities",
     municipality: "Surrey",
     region: "Metro Vancouver",
-  },
-  {
     id: "northvan-coc-member-005",
     chamberId: "north-vancouver-chamber",
     businessName: "Grouse Mountain Resorts",
@@ -3633,8 +3291,6 @@ export const chamberMembers = [
     naicsTitle: "Amusement, Gambling, and Recreation Industries",
     municipality: "North Vancouver",
     region: "Metro Vancouver",
-  },
-  {
     id: "northvan-coc-member-006",
     chamberId: "north-vancouver-chamber",
     businessName: "Seaspan Shipyards",
@@ -3668,8 +3324,6 @@ export const chamberMembers = [
       dataset: "emergency-services",
       id: "eagle-ridge-hospital",
     },
-  },
-  {
     id: "tricities-coc-member-002",
     chamberId: "tri-cities-chamber",
     businessName: "Douglas College - Coquitlam",
@@ -3686,8 +3340,6 @@ export const chamberMembers = [
       dataset: "schools",
       id: "douglas-coquitlam",
     },
-  },
-  {
     id: "tricities-coc-member-003",
     chamberId: "tri-cities-chamber",
     businessName: "Coquitlam Centre",
@@ -3700,8 +3352,6 @@ export const chamberMembers = [
     naicsTitle: "All Other Miscellaneous Store Retailers",
     municipality: "Coquitlam",
     region: "Metro Vancouver",
-  },
-  {
     id: "tricities-coc-member-004",
     chamberId: "tri-cities-chamber",
     businessName: "Golbey Levine Lawyers",
@@ -3729,8 +3379,6 @@ export const chamberMembers = [
     naicsTitle: "Tobacco Stores",
     municipality: "Delta",
     region: "Metro Vancouver",
-  },
-  {
     id: "delta-coc-member-002",
     chamberId: "delta-chamber-of-commerce",
     businessName: "Tsawwassen Mills",
@@ -3743,8 +3391,6 @@ export const chamberMembers = [
     naicsTitle: "All Other Miscellaneous Store Retailers",
     municipality: "Delta",
     region: "Metro Vancouver",
-  },
-  {
     id: "delta-coc-member-003",
     chamberId: "delta-chamber-of-commerce",
     businessName: "BC Ferries - Tsawwassen Terminal",
@@ -3762,8 +3408,6 @@ export const chamberMembers = [
       dataset: "marine",
       id: "bc-ferries-tsawwassen",
     },
-  },
-  {
     id: "delta-coc-member-004",
     chamberId: "delta-chamber-of-commerce",
     businessName: "Boundary Bay Airport",
@@ -3780,10 +3424,8 @@ export const chamberMembers = [
       dataset: "aviation",
       id: "czbb",
     },
-  },
 
   // New Westminster Chamber members
-  {
     id: "newwest-coc-member-001",
     chamberId: "new-westminster-chamber",
     businessName: "Royal Columbian Hospital",
@@ -3800,8 +3442,6 @@ export const chamberMembers = [
       dataset: "emergency-services",
       id: "royal-columbian",
     },
-  },
-  {
     id: "newwest-coc-member-002",
     chamberId: "new-westminster-chamber",
     businessName: "Douglas College",
@@ -3818,8 +3458,6 @@ export const chamberMembers = [
       dataset: "schools",
       id: "douglas-new-west",
     },
-  },
-  {
     id: "newwest-coc-member-003",
     chamberId: "new-westminster-chamber",
     businessName: "Anvil Centre",
@@ -3852,8 +3490,6 @@ export const chamberMembers = [
     naicsTitle: "Motion Picture and Sound Recording Industries",
     municipality: "Abbotsford",
     region: "Fraser Valley",
-  },
-  {
     id: "abbotsford-coc-member-007",
     chamberId: "abbotsford-chamber-of-commerce",
     businessName: "Abbotsford Police Department",
@@ -3870,8 +3506,6 @@ export const chamberMembers = [
       dataset: "emergency-services",
       id: "abbotsford-police",
     },
-  },
-  {
     id: "abbotsford-coc-member-008",
     chamberId: "abbotsford-chamber-of-commerce",
     businessName: "Cascade Aerospace",
@@ -3885,8 +3519,6 @@ export const chamberMembers = [
     naicsTitle: "Air Transportation",
     municipality: "Abbotsford",
     region: "Fraser Valley",
-  },
-  {
     id: "abbotsford-coc-member-009",
     chamberId: "abbotsford-chamber-of-commerce",
     businessName: "Minter Country Garden Store",
@@ -3919,8 +3551,6 @@ export const chamberMembers = [
       dataset: "emergency-services",
       id: "langley-memorial",
     },
-  },
-  {
     id: "langley-coc-member-002",
     chamberId: "langley-chamber-of-commerce",
     businessName: "Trinity Western University",
@@ -3937,8 +3567,6 @@ export const chamberMembers = [
       dataset: "schools",
       id: "twu",
     },
-  },
-  {
     id: "langley-coc-member-003",
     chamberId: "langley-chamber-of-commerce",
     businessName: "Langley Airport",
@@ -3955,8 +3583,6 @@ export const chamberMembers = [
       dataset: "aviation",
       id: "cynj",
     },
-  },
-  {
     id: "langley-coc-member-004",
     chamberId: "langley-chamber-of-commerce",
     businessName: "Cascades Casino Langley",
@@ -3969,8 +3595,6 @@ export const chamberMembers = [
     naicsTitle: "Motion Picture and Sound Recording Industries",
     municipality: "Langley",
     region: "Fraser Valley",
-  },
-  {
     id: "langley-coc-member-005",
     chamberId: "langley-chamber-of-commerce",
     businessName: "Langley Cabs",
@@ -4002,8 +3626,6 @@ export const chamberMembers = [
     naicsTitle: "Ambulatory Health Care Services",
     municipality: "Mission",
     region: "Fraser Valley",
-  },
-  {
     id: "mission-coc-member-002",
     chamberId: "mission-chamber-of-commerce",
     businessName: "West Coast Express - Mission Station",
@@ -4021,14 +3643,12 @@ export const chamberMembers = [
       dataset: "ground-transport",
       id: "wce-mission",
     },
-  },
 
   // ============================================================================
   // ADDITIONAL VANCOUVER ISLAND MEMBERS
   // ============================================================================
 
   // More Nanaimo Chamber members
-  {
     id: "nanaimo-coc-member-005",
     chamberId: "greater-nanaimo-chamber",
     businessName: "Woodgrove Centre",
@@ -4042,8 +3662,6 @@ export const chamberMembers = [
     naicsTitle: "All Other Miscellaneous Store Retailers",
     municipality: "Nanaimo",
     region: "Cowichan Valley",
-  },
-  {
     id: "nanaimo-coc-member-006",
     chamberId: "greater-nanaimo-chamber",
     businessName: "Nanaimo Port Authority",
@@ -4060,8 +3678,6 @@ export const chamberMembers = [
       dataset: "marine",
       id: "port-nanaimo",
     },
-  },
-  {
     id: "nanaimo-coc-member-007",
     chamberId: "greater-nanaimo-chamber",
     businessName: "BC Ferries - Departure Bay Terminal",
@@ -4078,8 +3694,6 @@ export const chamberMembers = [
       dataset: "marine",
       id: "bc-ferries-departure-bay",
     },
-  },
-  {
     id: "nanaimo-coc-member-008",
     chamberId: "greater-nanaimo-chamber",
     businessName: "Harbour Air Seaplanes",
@@ -4097,10 +3711,8 @@ export const chamberMembers = [
       dataset: "aviation",
       id: "nanaimo-harbour-sph",
     },
-  },
 
   // Parksville & Qualicum Beach
-  {
     id: "parksville-coc-member-001",
     chamberId: "parksville-chamber",
     businessName: "Tigh-Na-Mara Seaside Spa Resort",
@@ -4114,8 +3726,6 @@ export const chamberMembers = [
     naicsTitle: "Accommodation",
     municipality: "Parksville",
     region: "Nanaimo",
-  },
-  {
     id: "parksville-coc-member-002",
     chamberId: "parksville-chamber",
     businessName: "Parksville Community Centre",
@@ -4132,8 +3742,6 @@ export const chamberMembers = [
       dataset: "community-facilities",
       id: "parksville-community-centre",
     },
-  },
-  {
     id: "qualicum-coc-member-001",
     chamberId: "qualicum-beach-chamber",
     businessName: "Qualicum Beach Inn",
@@ -4162,8 +3770,6 @@ export const chamberMembers = [
     naicsTitle: "Ambulatory Health Care Services",
     municipality: "Port McNeill",
     region: "Mount Waddington",
-  },
-  {
     id: "portmcneill-coc-member-002",
     chamberId: "port-mcneill-chamber",
     businessName: "Port McNeill Airport",
@@ -4179,8 +3785,6 @@ export const chamberMembers = [
       id: "cymp",
     },
     websiteNeedsCollection: true,
-  },
-  {
     id: "alertbay-coc-member-001",
     chamberId: "alert-bay-chamber",
     businessName: "U'mista Cultural Centre",
@@ -4194,8 +3798,6 @@ export const chamberMembers = [
     naicsTitle: "Performing Arts, Spectator Sports, Related",
     municipality: "Alert Bay",
     region: "Mount Waddington",
-  },
-  {
     id: "alertbay-coc-member-002",
     chamberId: "alert-bay-chamber",
     businessName: "'Namgis First Nation",
@@ -4224,8 +3826,6 @@ export const chamberMembers = [
     naicsTitle: "Ambulatory Health Care Services",
     municipality: "Lake Cowichan",
     region: "Cowichan Valley",
-  },
-  {
     id: "cowichanlake-coc-member-002",
     chamberId: "cowichan-lake-chamber",
     businessName: "Kaatza Station Museum",
@@ -4258,8 +3858,6 @@ export const chamberMembers = [
       id: "ladysmith-gotaxi",
     },
     websiteNeedsCollection: true,
-  },
-  {
     id: "ladysmith-coc-member-002",
     chamberId: "ladysmith-chamber",
     businessName: "Transfer Beach Park",
@@ -4272,8 +3870,6 @@ export const chamberMembers = [
     municipality: "Ladysmith",
     region: "Cowichan Valley",
     websiteNeedsCollection: true,
-  },
-  {
     id: "chemainus-coc-member-001",
     chamberId: "chemainus-chamber",
     businessName: "Chemainus Theatre Festival",
@@ -4311,8 +3907,6 @@ export const chamberMembers = [
       dataset: "schools",
       id: "okanagan-college-kelowna",
     },
-  },
-  {
     id: "kelowna-coc-member-007",
     chamberId: "kelowna-chamber",
     businessName: "Big White Ski Resort",
@@ -4326,8 +3920,6 @@ export const chamberMembers = [
     naicsTitle: "Amusement, Gambling, and Recreation Industries",
     municipality: "Kelowna",
     region: "Central Okanagan",
-  },
-  {
     id: "kelowna-coc-member-008",
     chamberId: "kelowna-chamber",
     businessName: "Orchard Park Shopping Centre",
@@ -4340,8 +3932,6 @@ export const chamberMembers = [
     naicsTitle: "All Other Miscellaneous Store Retailers",
     municipality: "Kelowna",
     region: "Central Okanagan",
-  },
-  {
     id: "kelowna-coc-member-009",
     chamberId: "kelowna-chamber",
     businessName: "Quails' Gate Winery",
@@ -4375,8 +3965,6 @@ export const chamberMembers = [
       dataset: "municipal-offices",
       id: "west-kelowna-city-hall",
     },
-  },
-  {
     id: "westkelowna-coc-member-002",
     chamberId: "west-kelowna-board-of-trade",
     businessName: "Gorman Bros. Lumber",
@@ -4406,8 +3994,6 @@ export const chamberMembers = [
     naicsTitle: "Breweries",
     municipality: "Summerland",
     region: "Okanagan-Similkameen",
-  },
-  {
     id: "summerland-coc-member-002",
     chamberId: "summerland-chamber",
     businessName: "Kettle Valley Steam Railway",
@@ -4425,10 +4011,8 @@ export const chamberMembers = [
       dataset: "ground-transport",
       id: "kettle-valley-steam",
     },
-  },
 
   // Armstrong/Enderby
-  {
     id: "armstrong-coc-member-001",
     chamberId: "armstrong-spallumcheen-chamber",
     businessName: "Interior Provincial Exhibition (IPE)",
@@ -4442,8 +4026,6 @@ export const chamberMembers = [
     naicsTitle: "Motion Picture and Sound Recording Industries",
     municipality: "Armstrong",
     region: "North Okanagan",
-  },
-  {
     id: "enderby-coc-member-001",
     chamberId: "enderby-chamber",
     businessName: "Enderby Cliff",
@@ -4473,8 +4055,6 @@ export const chamberMembers = [
     municipality: "Princeton",
     region: "Okanagan-Similkameen",
     websiteNeedsCollection: true,
-  },
-  {
     id: "similkameen-coc-member-001",
     chamberId: "similkameen-chamber",
     businessName: "Cawston Farmers Market",
@@ -4513,8 +4093,6 @@ export const chamberMembers = [
       dataset: "ground-transport",
       id: "kamloops-heritage-railway",
     },
-  },
-  {
     id: "kamloops-coc-member-006",
     chamberId: "kamloops-chamber",
     businessName: "Sandman Centre",
@@ -4528,8 +4106,6 @@ export const chamberMembers = [
     naicsTitle: "Motion Picture and Sound Recording Industries",
     municipality: "Kamloops",
     region: "Thompson-Nicola",
-  },
-  {
     id: "kamloops-coc-member-007",
     chamberId: "kamloops-chamber",
     businessName: "Kami Cabs",
@@ -4561,8 +4137,6 @@ export const chamberMembers = [
     naicsTitle: "Ambulatory Health Care Services",
     municipality: "Merritt",
     region: "Thompson-Nicola",
-  },
-  {
     id: "merritt-coc-member-002",
     chamberId: "merritt-chamber",
     businessName: "Merritt Mountain Music Festival",
@@ -4593,8 +4167,6 @@ export const chamberMembers = [
     naicsTitle: "Executive, Legislative, General Government",
     municipality: "Clearwater",
     region: "Thompson-Nicola",
-  },
-  {
     id: "clearwater-coc-member-002",
     chamberId: "clearwater-chamber",
     businessName: "Dr. Helmcken Memorial Hospital",
@@ -4607,8 +4179,6 @@ export const chamberMembers = [
     naicsTitle: "Ambulatory Health Care Services",
     municipality: "Clearwater",
     region: "Thompson-Nicola",
-  },
-  {
     id: "sunpeaks-coc-member-001",
     chamberId: "sun-peaks-chamber",
     businessName: "Sun Peaks Grand Hotel",
@@ -4637,8 +4207,6 @@ export const chamberMembers = [
     naicsTitle: "American Indian and Alaska Native Tribal Governments",
     municipality: "Lytton",
     region: "Thompson-Nicola",
-  },
-  {
     id: "desertmesa-coc-member-001",
     chamberId: "corridor-chamber",
     businessName: "Historic Hat Creek Ranch",
@@ -4672,8 +4240,6 @@ export const chamberMembers = [
     naicsTitle: "Religious, Grantmaking, Civic, Professional Orgs",
     municipality: "Williams Lake",
     region: "Cariboo",
-  },
-  {
     id: "williams-lake-coc-member-005",
     chamberId: "williams-lake-chamber",
     businessName: "Town Taxi Williams Lake",
@@ -4705,8 +4271,6 @@ export const chamberMembers = [
     naicsTitle: "Ambulatory Health Care Services",
     municipality: "100 Mile House",
     region: "Cariboo",
-  },
-  {
     id: "southcariboo-coc-member-002",
     chamberId: "south-cariboo-chamber",
     businessName: "108 Mile Ranch Resort",
@@ -4739,8 +4303,6 @@ export const chamberMembers = [
     naicsTitle: "Performing Arts, Spectator Sports, Related",
     municipality: "Prince George",
     region: "Fraser-Fort George",
-  },
-  {
     id: "pg-coc-member-007",
     chamberId: "prince-george-chamber",
     businessName: "Prince George Cougars",
@@ -4754,8 +4316,6 @@ export const chamberMembers = [
     naicsTitle: "Motion Picture and Sound Recording Industries",
     municipality: "Prince George",
     region: "Fraser-Fort George",
-  },
-  {
     id: "pg-coc-member-008",
     chamberId: "prince-george-chamber",
     businessName: "Prince George Taxi",
@@ -4787,8 +4347,6 @@ export const chamberMembers = [
     naicsTitle: "Amusement, Gambling, and Recreation Industries",
     municipality: "Fort St. John",
     region: "Peace River",
-  },
-  {
     id: "fsj-coc-member-005",
     chamberId: "fort-st-john-chamber",
     businessName: "Teco Taxi",
@@ -4821,8 +4379,6 @@ export const chamberMembers = [
     municipality: "Dawson Creek",
     region: "Peace River",
     websiteNeedsCollection: true,
-  },
-  {
     id: "dawson-creek-coc-member-002",
     chamberId: "dawson-creek-chamber",
     businessName: "Dawson Creek & District Hospital",
@@ -4869,8 +4425,6 @@ export const chamberMembers = [
     naicsTitle: "Motion Picture and Sound Recording Industries",
     municipality: "Vanderhoof",
     region: "Bulkley-Nechako",
-  },
-  {
     id: "vanderhoof-coc-member-002",
     chamberId: "vanderhoof-chamber",
     businessName: "St. John Hospital",
@@ -4899,8 +4453,6 @@ export const chamberMembers = [
     naicsTitle: "Ambulatory Health Care Services",
     municipality: "Burns Lake",
     region: "Bulkley-Nechako",
-  },
-  {
     id: "burnslake-coc-member-002",
     chamberId: "burns-lake-chamber",
     businessName: "Burns Lake Airport",
@@ -4932,8 +4484,6 @@ export const chamberMembers = [
     naicsTitle: "Ambulatory Health Care Services",
     municipality: "Smithers",
     region: "Bulkley-Nechako",
-  },
-  {
     id: "smithers-coc-member-002",
     chamberId: "smithers-chamber",
     businessName: "Smithers Regional Airport",
@@ -4949,8 +4499,6 @@ export const chamberMembers = [
       dataset: "aviation",
       id: "cyyd",
     },
-  },
-  {
     id: "smithers-coc-member-003",
     chamberId: "smithers-chamber",
     businessName: "Hudson Bay Mountain",
@@ -4981,8 +4529,6 @@ export const chamberMembers = [
     naicsTitle: "Executive, Legislative, General Government",
     municipality: "Stewart",
     region: "Kitimat-Stikine",
-  },
-  {
     id: "stewart-coc-member-002",
     chamberId: "stewart-chamber",
     businessName: "Stewart Historical Museum",
@@ -5016,8 +4562,6 @@ export const chamberMembers = [
     naicsTitle: "Accommodation",
     municipality: "Nelson",
     region: "Central Kootenay",
-  },
-  {
     id: "nelson-coc-member-006",
     chamberId: "nelson-chamber",
     businessName: "Nelson Brewing Company",
@@ -5048,8 +4592,6 @@ export const chamberMembers = [
     naicsTitle: "Performing Arts, Spectator Sports, Related",
     municipality: "Cranbrook",
     region: "East Kootenay",
-  },
-  {
     id: "cranbrook-coc-member-005",
     chamberId: "cranbrook-chamber",
     businessName: "Star Taxi Cranbrook",
@@ -5081,8 +4623,6 @@ export const chamberMembers = [
     naicsTitle: "Amusement, Gambling, and Recreation Industries",
     municipality: "Kimberley",
     region: "East Kootenay",
-  },
-  {
     id: "kimberley-coc-member-002",
     chamberId: "kimberley-chamber",
     businessName: "Kimberley Underground Mining Railway",
@@ -5113,8 +4653,6 @@ export const chamberMembers = [
     municipality: "Sparwood",
     region: "East Kootenay",
     websiteNeedsCollection: true,
-  },
-  {
     id: "elkford-coc-member-001",
     chamberId: "elkford-chamber",
     businessName: "Elkford Community Conference Centre",
@@ -5143,8 +4681,6 @@ export const chamberMembers = [
     naicsTitle: "Amusement, Gambling, and Recreation Industries",
     municipality: "Invermere",
     region: "East Kootenay",
-  },
-  {
     id: "invermere-coc-member-002",
     chamberId: "columbia-valley-chamber",
     businessName: "Radium Hot Springs",
@@ -5157,8 +4693,6 @@ export const chamberMembers = [
     naicsTitle: "Amusement, Gambling, and Recreation Industries",
     municipality: "Radium Hot Springs",
     region: "East Kootenay",
-  },
-  {
     id: "invermere-coc-member-003",
     chamberId: "columbia-valley-chamber",
     businessName: "Invermere & District Hospital",
@@ -5188,8 +4722,6 @@ export const chamberMembers = [
     naicsTitle: "Religious, Grantmaking, Civic, Professional Orgs",
     municipality: "Creston",
     region: "Central Kootenay",
-  },
-  {
     id: "creston-coc-member-002",
     chamberId: "creston-valley-chamber",
     businessName: "Columbia Brewery",
@@ -5219,8 +4751,6 @@ export const chamberMembers = [
     naicsTitle: "Amusement, Gambling, and Recreation Industries",
     municipality: "Nakusp",
     region: "Central Kootenay",
-  },
-  {
     id: "nakusp-coc-member-002",
     chamberId: "nakusp-chamber",
     businessName: "Arrow Lakes Hospital",
@@ -5253,8 +4783,6 @@ export const chamberMembers = [
       dataset: "aviation",
       id: "cycg",
     },
-  },
-  {
     id: "castlegar-coc-member-002",
     chamberId: "castlegar-chamber",
     businessName: "Selkirk College - Castlegar",
@@ -5271,14 +4799,12 @@ export const chamberMembers = [
       dataset: "schools",
       id: "selkirk-castlegar",
     },
-  },
 
   // ============================================================================
   // ADDITIONAL SEA-TO-SKY MEMBERS
   // ============================================================================
 
   // More Whistler members
-  {
     id: "whistler-coc-member-006",
     chamberId: "whistler-chamber",
     businessName: "Peak 2 Peak Gondola",
@@ -5292,8 +4818,6 @@ export const chamberMembers = [
     naicsTitle: "Amusement, Gambling, and Recreation Industries",
     municipality: "Whistler",
     region: "Squamish-Lillooet",
-  },
-  {
     id: "whistler-coc-member-007",
     chamberId: "whistler-chamber",
     businessName: "Audain Art Museum",
@@ -5307,8 +4831,6 @@ export const chamberMembers = [
     naicsTitle: "Performing Arts, Spectator Sports, Related",
     municipality: "Whistler",
     region: "Squamish-Lillooet",
-  },
-  {
     id: "whistler-coc-member-008",
     chamberId: "whistler-chamber",
     businessName: "Scandinave Spa Whistler",
@@ -5339,8 +4861,6 @@ export const chamberMembers = [
     naicsTitle: "Performing Arts, Spectator Sports, Related",
     municipality: "Squamish",
     region: "Squamish-Lillooet",
-  },
-  {
     id: "squamish-coc-member-006",
     chamberId: "squamish-chamber",
     businessName: "Squamish Taxi",
@@ -5372,8 +4892,6 @@ export const chamberMembers = [
     naicsTitle: "Accommodation",
     municipality: "Pemberton",
     region: "Squamish-Lillooet",
-  },
-  {
     id: "pemberton-coc-member-002",
     chamberId: "pemberton-chamber",
     businessName: "Pemberton Music Festival",
@@ -5403,8 +4921,6 @@ export const chamberMembers = [
     naicsTitle: "Performing Arts, Spectator Sports, Related",
     municipality: "Lillooet",
     region: "Squamish-Lillooet",
-  },
-  {
     id: "lillooet-coc-member-002",
     chamberId: "lillooet-chamber",
     businessName: "St'at'imc Nation",
@@ -5437,8 +4953,6 @@ export const chamberMembers = [
     naicsTitle: "Port and Harbor Operations",
     municipality: "Gibsons",
     region: "Sunshine Coast",
-  },
-  {
     id: "gibsons-coc-member-002",
     chamberId: "gibsons-chamber",
     businessName: "BC Ferries - Langdale Terminal",
@@ -5456,10 +4970,8 @@ export const chamberMembers = [
       dataset: "marine",
       id: "bc-ferries-langdale",
     },
-  },
 
   // More Powell River members
-  {
     id: "powell-river-coc-member-004",
     chamberId: "powell-river-chamber",
     businessName: "Townsite Heritage Society",
@@ -5473,8 +4985,6 @@ export const chamberMembers = [
     naicsTitle: "Religious, Grantmaking, Civic, Professional Orgs",
     municipality: "Powell River",
     region: "Powell River",
-  },
-  {
     id: "powell-river-coc-member-005",
     chamberId: "powell-river-chamber",
     businessName: "Powell River Taxi",
@@ -5506,8 +5016,6 @@ export const chamberMembers = [
     naicsTitle: "Accommodation",
     municipality: "Madeira Park",
     region: "Sunshine Coast",
-  },
-  {
     id: "penderharbour-coc-member-002",
     chamberId: "pender-harbour-chamber",
     businessName: "Pender Harbour Health Centre",
@@ -5542,8 +5050,6 @@ export const chamberMembers = [
     naicsTitle: "Offices of Lawyers",
     municipality: "Vancouver",
     region: "Metro Vancouver",
-  },
-  {
     id: "gvbot-member-023",
     chamberId: "greater-vancouver-board-of-trade",
     businessName: "McCarthy Tetrault LLP",
@@ -5557,8 +5063,6 @@ export const chamberMembers = [
     naicsTitle: "Offices of Lawyers",
     municipality: "Vancouver",
     region: "Metro Vancouver",
-  },
-  {
     id: "gvbot-member-024",
     chamberId: "greater-vancouver-board-of-trade",
     businessName: "Blake, Cassels & Graydon LLP",
@@ -5572,8 +5076,6 @@ export const chamberMembers = [
     naicsTitle: "Offices of Lawyers",
     municipality: "Vancouver",
     region: "Metro Vancouver",
-  },
-  {
     id: "victoria-coc-member-020",
     chamberId: "greater-victoria-chamber",
     businessName: "Cox Taylor",
@@ -5604,8 +5106,6 @@ export const chamberMembers = [
     naicsTitle: "Offices of Certified Public Accountants",
     municipality: "Vancouver",
     region: "Metro Vancouver",
-  },
-  {
     id: "gvbot-member-026",
     chamberId: "greater-vancouver-board-of-trade",
     businessName: "PricewaterhouseCoopers (PwC)",
@@ -5619,8 +5119,6 @@ export const chamberMembers = [
     naicsTitle: "Offices of Certified Public Accountants",
     municipality: "Vancouver",
     region: "Metro Vancouver",
-  },
-  {
     id: "gvbot-member-027",
     chamberId: "greater-vancouver-board-of-trade",
     businessName: "Ernst & Young (EY)",
@@ -5634,8 +5132,6 @@ export const chamberMembers = [
     naicsTitle: "Offices of Certified Public Accountants",
     municipality: "Vancouver",
     region: "Metro Vancouver",
-  },
-  {
     id: "gvbot-member-028",
     chamberId: "greater-vancouver-board-of-trade",
     businessName: "MNP LLP",
@@ -5665,8 +5161,6 @@ export const chamberMembers = [
     naicsTitle: "Credit Intermediation and Related Activities",
     municipality: "Vancouver",
     region: "Metro Vancouver",
-  },
-  {
     id: "gvbot-member-030",
     chamberId: "greater-vancouver-board-of-trade",
     businessName: "Bank of Montreal (BMO)",
@@ -5679,8 +5173,6 @@ export const chamberMembers = [
     naicsTitle: "Credit Intermediation and Related Activities",
     municipality: "Vancouver",
     region: "Metro Vancouver",
-  },
-  {
     id: "gvbot-member-031",
     chamberId: "greater-vancouver-board-of-trade",
     businessName: "Scotiabank",
@@ -5693,8 +5185,6 @@ export const chamberMembers = [
     naicsTitle: "Credit Intermediation and Related Activities",
     municipality: "Vancouver",
     region: "Metro Vancouver",
-  },
-  {
     id: "gvbot-member-033",
     chamberId: "greater-vancouver-board-of-trade",
     businessName: "Vancity Credit Union",
@@ -5708,8 +5198,6 @@ export const chamberMembers = [
     naicsTitle: "Credit Intermediation and Related Activities",
     municipality: "Vancouver",
     region: "Metro Vancouver",
-  },
-  {
     id: "gvbot-member-034",
     chamberId: "greater-vancouver-board-of-trade",
     businessName: "Coast Capital Savings",
@@ -5723,8 +5211,6 @@ export const chamberMembers = [
     naicsTitle: "Credit Intermediation and Related Activities",
     municipality: "Surrey",
     region: "Metro Vancouver",
-  },
-  {
     id: "kelowna-coc-member-010",
     chamberId: "kelowna-chamber",
     businessName: "First West Credit Union",
@@ -5738,8 +5224,6 @@ export const chamberMembers = [
     naicsTitle: "Credit Intermediation and Related Activities",
     municipality: "Kelowna",
     region: "Central Okanagan",
-  },
-  {
     id: "victoria-coc-member-007",
     chamberId: "greater-victoria-chamber",
     businessName: "Island Savings Credit Union",
@@ -5769,8 +5253,6 @@ export const chamberMembers = [
     naicsTitle: "Insurance Agencies and Brokerages",
     municipality: "Vancouver",
     region: "Metro Vancouver",
-  },
-  {
     id: "gvbot-member-036",
     chamberId: "greater-vancouver-board-of-trade",
     businessName: "Sun Life Financial",
@@ -5783,8 +5265,6 @@ export const chamberMembers = [
     naicsTitle: "Insurance Agencies and Brokerages",
     municipality: "Vancouver",
     region: "Metro Vancouver",
-  },
-  {
     id: "gvbot-member-037",
     chamberId: "greater-vancouver-board-of-trade",
     businessName: "Intact Insurance",
@@ -5797,8 +5277,6 @@ export const chamberMembers = [
     naicsTitle: "Insurance Agencies and Brokerages",
     municipality: "Vancouver",
     region: "Metro Vancouver",
-  },
-  {
     id: "surrey-coc-member-005",
     chamberId: "surrey-white-rock-board-of-trade",
     businessName: "Westland Insurance",
@@ -5832,8 +5310,6 @@ export const chamberMembers = [
     naicsTitle: "All Other Miscellaneous Store Retailers",
     municipality: "Richmond",
     region: "Metro Vancouver",
-  },
-  {
     id: "gvbot-member-039",
     chamberId: "greater-vancouver-board-of-trade",
     businessName: "Save-On-Foods",
@@ -5846,8 +5322,6 @@ export const chamberMembers = [
     naicsTitle: "Supermarkets and Other Grocery Stores",
     municipality: "Langley",
     region: "Metro Vancouver",
-  },
-  {
     id: "gvbot-member-040",
     chamberId: "greater-vancouver-board-of-trade",
     businessName: "Thrifty Foods",
@@ -5860,8 +5334,6 @@ export const chamberMembers = [
     naicsTitle: "Supermarkets and Other Grocery Stores",
     municipality: "Victoria",
     region: "Capital",
-  },
-  {
     id: "gvbot-member-041",
     chamberId: "greater-vancouver-board-of-trade",
     businessName: "Choices Markets",
@@ -5875,8 +5347,6 @@ export const chamberMembers = [
     naicsTitle: "Supermarkets and Other Grocery Stores",
     municipality: "Vancouver",
     region: "Metro Vancouver",
-  },
-  {
     id: "gvbot-member-042",
     chamberId: "greater-vancouver-board-of-trade",
     businessName: "Nesters Market",
@@ -5889,8 +5359,6 @@ export const chamberMembers = [
     naicsTitle: "Supermarkets and Other Grocery Stores",
     municipality: "Vancouver",
     region: "Metro Vancouver",
-  },
-  {
     id: "gvbot-member-043",
     chamberId: "greater-vancouver-board-of-trade",
     businessName: "T&T Supermarket",
@@ -5904,8 +5372,6 @@ export const chamberMembers = [
     naicsTitle: "Supermarkets and Other Grocery Stores",
     municipality: "Richmond",
     region: "Metro Vancouver",
-  },
-  {
     id: "gvbot-member-044",
     chamberId: "greater-vancouver-board-of-trade",
     businessName: "H Mart",
@@ -5935,8 +5401,6 @@ export const chamberMembers = [
     naicsTitle: "Hardware Stores",
     municipality: "Various",
     region: "Metro Vancouver",
-  },
-  {
     id: "gvbot-member-046",
     chamberId: "greater-vancouver-board-of-trade",
     businessName: "RONA",
@@ -5970,8 +5434,6 @@ export const chamberMembers = [
     naicsTitle: "Breweries",
     municipality: "West Kelowna",
     region: "Central Okanagan",
-  },
-  {
     id: "kelowna-coc-member-012",
     chamberId: "kelowna-chamber",
     businessName: "Summerhill Pyramid Winery",
@@ -5985,8 +5447,6 @@ export const chamberMembers = [
     naicsTitle: "Breweries",
     municipality: "Kelowna",
     region: "Central Okanagan",
-  },
-  {
     id: "penticton-coc-member-010",
     chamberId: "penticton-chamber",
     businessName: "Hester Creek Estate Winery",
@@ -5999,8 +5459,6 @@ export const chamberMembers = [
     naicsTitle: "Breweries",
     municipality: "Oliver",
     region: "Okanagan-Similkameen",
-  },
-  {
     id: "penticton-coc-member-004",
     chamberId: "penticton-chamber",
     businessName: "Burrowing Owl Estate Winery",
@@ -6013,8 +5471,6 @@ export const chamberMembers = [
     naicsTitle: "Breweries",
     municipality: "Oliver",
     region: "Okanagan-Similkameen",
-  },
-  {
     id: "gvbot-member-047",
     chamberId: "greater-vancouver-board-of-trade",
     businessName: "Stanley Park Brewing",
@@ -6028,8 +5484,6 @@ export const chamberMembers = [
     naicsTitle: "Breweries",
     municipality: "Vancouver",
     region: "Metro Vancouver",
-  },
-  {
     id: "gvbot-member-048",
     chamberId: "greater-vancouver-board-of-trade",
     businessName: "Phillips Brewing & Malting",
@@ -6043,8 +5497,6 @@ export const chamberMembers = [
     naicsTitle: "Breweries",
     municipality: "Victoria",
     region: "Capital",
-  },
-  {
     id: "victoria-coc-member-008",
     chamberId: "greater-victoria-chamber",
     businessName: "Victoria Distillers",
@@ -6058,8 +5510,6 @@ export const chamberMembers = [
     naicsTitle: "Breweries",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "victoria-coc-member-009",
     chamberId: "greater-victoria-chamber",
     businessName: "Church & State Wines",
@@ -6090,8 +5540,6 @@ export const chamberMembers = [
     naicsTitle: "Full-Service Restaurants",
     municipality: "Vancouver",
     region: "Metro Vancouver",
-  },
-  {
     id: "gvbot-member-050",
     chamberId: "greater-vancouver-board-of-trade",
     businessName: "Earls Kitchen + Bar",
@@ -6105,8 +5553,6 @@ export const chamberMembers = [
     naicsTitle: "Full-Service Restaurants",
     municipality: "Vancouver",
     region: "Metro Vancouver",
-  },
-  {
     id: "gvbot-member-051",
     chamberId: "greater-vancouver-board-of-trade",
     businessName: "White Spot Restaurants",
@@ -6120,8 +5566,6 @@ export const chamberMembers = [
     naicsTitle: "Full-Service Restaurants",
     municipality: "Vancouver",
     region: "Metro Vancouver",
-  },
-  {
     id: "gvbot-member-052",
     chamberId: "greater-vancouver-board-of-trade",
     businessName: "Toptable Group",
@@ -6135,8 +5579,6 @@ export const chamberMembers = [
     naicsTitle: "Full-Service Restaurants",
     municipality: "Vancouver",
     region: "Metro Vancouver",
-  },
-  {
     id: "gvbot-member-053",
     chamberId: "greater-vancouver-board-of-trade",
     businessName: "Glowbal Restaurant Group",
@@ -6169,8 +5611,6 @@ export const chamberMembers = [
     naicsTitle: "Computer Systems Design Services",
     municipality: "Vancouver",
     region: "Metro Vancouver",
-  },
-  {
     id: "gvbot-member-055",
     chamberId: "greater-vancouver-board-of-trade",
     businessName: "Amazon Web Services (AWS)",
@@ -6184,8 +5624,6 @@ export const chamberMembers = [
     naicsTitle: "Computer Systems Design Services",
     municipality: "Vancouver",
     region: "Metro Vancouver",
-  },
-  {
     id: "gvbot-member-056",
     chamberId: "greater-vancouver-board-of-trade",
     businessName: "SAP Canada",
@@ -6199,8 +5637,6 @@ export const chamberMembers = [
     naicsTitle: "Computer Systems Design Services",
     municipality: "Vancouver",
     region: "Metro Vancouver",
-  },
-  {
     id: "gvbot-member-058",
     chamberId: "greater-vancouver-board-of-trade",
     businessName: "Shaw Communications",
@@ -6213,8 +5649,6 @@ export const chamberMembers = [
     naicsTitle: "Telecommunications",
     municipality: "Vancouver",
     region: "Metro Vancouver",
-  },
-  {
     id: "gvbot-member-059",
     chamberId: "greater-vancouver-board-of-trade",
     businessName: "Electronic Arts (EA) Canada",
@@ -6228,8 +5662,6 @@ export const chamberMembers = [
     naicsTitle: "Computer Systems Design Services",
     municipality: "Burnaby",
     region: "Metro Vancouver",
-  },
-  {
     id: "burnaby-bot-member-010",
     chamberId: "burnaby-board-of-trade",
     businessName: "Nintendo of Canada",
@@ -6243,8 +5675,6 @@ export const chamberMembers = [
     naicsTitle: "Computer Systems Design Services",
     municipality: "Vancouver",
     region: "Metro Vancouver",
-  },
-  {
     id: "victoria-coc-member-010",
     chamberId: "greater-victoria-chamber",
     businessName: "Schneider Electric",
@@ -6278,8 +5708,6 @@ export const chamberMembers = [
     naicsTitle: "Ambulatory Health Care Services",
     municipality: "Burnaby",
     region: "Metro Vancouver",
-  },
-  {
     id: "gvbot-member-061",
     chamberId: "greater-vancouver-board-of-trade",
     businessName: "TELUS Health",
@@ -6293,8 +5721,6 @@ export const chamberMembers = [
     naicsTitle: "Ambulatory Health Care Services",
     municipality: "Vancouver",
     region: "Metro Vancouver",
-  },
-  {
     id: "gvbot-member-062",
     chamberId: "greater-vancouver-board-of-trade",
     businessName: "Canuck Place Children's Hospice",
@@ -6308,8 +5734,6 @@ export const chamberMembers = [
     naicsTitle: "Ambulatory Health Care Services",
     municipality: "Vancouver",
     region: "Metro Vancouver",
-  },
-  {
     id: "victoria-coc-member-011",
     chamberId: "greater-victoria-chamber",
     businessName: "Victoria Hospice",
@@ -6339,8 +5763,6 @@ export const chamberMembers = [
     naicsTitle: "Pharmacies and Drug Stores",
     municipality: "Langley",
     region: "Metro Vancouver",
-  },
-  {
     id: "victoria-coc-member-012",
     chamberId: "greater-victoria-chamber",
     businessName: "Medicine Shoppe Canada",
@@ -6373,8 +5795,6 @@ export const chamberMembers = [
     naicsTitle: "Real Estate",
     municipality: "Burnaby",
     region: "Metro Vancouver",
-  },
-  {
     id: "gvbot-member-065",
     chamberId: "greater-vancouver-board-of-trade",
     businessName: "Wesgroup Properties",
@@ -6388,8 +5808,6 @@ export const chamberMembers = [
     naicsTitle: "Real Estate",
     municipality: "Vancouver",
     region: "Metro Vancouver",
-  },
-  {
     id: "gvbot-member-066",
     chamberId: "greater-vancouver-board-of-trade",
     businessName: "PC Urban Properties",
@@ -6403,8 +5821,6 @@ export const chamberMembers = [
     naicsTitle: "Real Estate",
     municipality: "Vancouver",
     region: "Metro Vancouver",
-  },
-  {
     id: "gvbot-member-067",
     chamberId: "greater-vancouver-board-of-trade",
     businessName: "Graham Construction",
@@ -6417,8 +5833,6 @@ export const chamberMembers = [
     naicsTitle: "Construction of Buildings",
     municipality: "Vancouver",
     region: "Metro Vancouver",
-  },
-  {
     id: "gvbot-member-068",
     chamberId: "greater-vancouver-board-of-trade",
     businessName: "EllisDon",
@@ -6431,8 +5845,6 @@ export const chamberMembers = [
     naicsTitle: "Construction of Buildings",
     municipality: "Vancouver",
     region: "Metro Vancouver",
-  },
-  {
     id: "gvbot-member-069",
     chamberId: "greater-vancouver-board-of-trade",
     businessName: "PCL Construction",
@@ -6469,8 +5881,6 @@ export const chamberMembers = [
       dataset: "marine",
       id: "gct-deltaport",
     },
-  },
-  {
     id: "gvbot-member-071",
     chamberId: "greater-vancouver-board-of-trade",
     businessName: "DP World Vancouver",
@@ -6484,8 +5894,6 @@ export const chamberMembers = [
     naicsTitle: "Truck Transportation",
     municipality: "Vancouver",
     region: "Metro Vancouver",
-  },
-  {
     id: "gvbot-member-072",
     chamberId: "greater-vancouver-board-of-trade",
     businessName: "YVR Airport Authority",
@@ -6502,8 +5910,6 @@ export const chamberMembers = [
       dataset: "aviation",
       id: "cyvr",
     },
-  },
-  {
     id: "victoria-coc-member-013",
     chamberId: "greater-victoria-chamber",
     businessName: "Victoria Airport Authority",
@@ -6520,7 +5926,6 @@ export const chamberMembers = [
       dataset: "aviation",
       id: "cyyj",
     },
-  },
 
   },
 
@@ -6542,8 +5947,6 @@ export const chamberMembers = [
     naicsTitle: "American Indian and Alaska Native Tribal Governments",
     municipality: "Vancouver",
     region: "Metro Vancouver",
-  },
-  {
     id: "gvbot-member-074",
     chamberId: "greater-vancouver-board-of-trade",
     businessName: "Squamish Nation Enterprises",
@@ -6557,8 +5960,6 @@ export const chamberMembers = [
     municipality: "North Vancouver",
     region: "Metro Vancouver",
     websiteNeedsCollection: true,
-  },
-  {
     id: "gvbot-member-075",
     chamberId: "greater-vancouver-board-of-trade",
     businessName: "Tsleil-Waututh Nation",
@@ -6571,8 +5972,6 @@ export const chamberMembers = [
     naicsTitle: "American Indian and Alaska Native Tribal Governments",
     municipality: "North Vancouver",
     region: "Metro Vancouver",
-  },
-  {
     id: "victoria-coc-member-014",
     chamberId: "greater-victoria-chamber",
     businessName: "Songhees Nation",
@@ -6585,8 +5984,6 @@ export const chamberMembers = [
     naicsTitle: "American Indian and Alaska Native Tribal Governments",
     municipality: "Victoria",
     region: "Capital",
-  },
-  {
     id: "victoria-coc-member-015",
     chamberId: "greater-victoria-chamber",
     businessName: "Esquimalt Nation",
@@ -6599,8 +5996,6 @@ export const chamberMembers = [
     naicsTitle: "American Indian and Alaska Native Tribal Governments",
     municipality: "Esquimalt",
     region: "Capital",
-  },
-  {
     id: "nanaimo-coc-member-009",
     chamberId: "greater-nanaimo-chamber",
     businessName: "Snuneymuxw First Nation",
@@ -6613,8 +6008,6 @@ export const chamberMembers = [
     naicsTitle: "American Indian and Alaska Native Tribal Governments",
     municipality: "Nanaimo",
     region: "Cowichan Valley",
-  },
-  {
     id: "pg-coc-member-009",
     chamberId: "prince-george-chamber",
     businessName: "Lheidli T'enneh First Nation",
@@ -6627,8 +6020,6 @@ export const chamberMembers = [
     naicsTitle: "American Indian and Alaska Native Tribal Governments",
     municipality: "Prince George",
     region: "Fraser-Fort George",
-  },
-  {
     id: "terrace-coc-member-010",
     chamberId: "terrace-chamber",
     businessName: "Kitselas First Nation",
@@ -6641,8 +6032,6 @@ export const chamberMembers = [
     naicsTitle: "American Indian and Alaska Native Tribal Governments",
     municipality: "Terrace",
     region: "Kitimat-Stikine",
-  },
-  {
     id: "terrace-coc-member-004",
     chamberId: "terrace-chamber",
     businessName: "Kitsumkalum First Nation",
@@ -6675,8 +6064,6 @@ export const chamberMembers = [
     naicsTitle: "Executive, Legislative, General Government",
     municipality: "Burnaby",
     region: "Metro Vancouver",
-  },
-  {
     id: "victoria-coc-member-016",
     chamberId: "greater-victoria-chamber",
     businessName: "Capital Regional District",
@@ -6710,8 +6097,6 @@ export const chamberMembers = [
     naicsTitle: "Performing Arts, Spectator Sports, Related",
     municipality: "Skidegate",
     region: "North Coast",
-  },
-  {
     id: "haidagwaii-coc-member-002",
     chamberId: "haida-gwaii-chamber",
     businessName: "Gwaii Haanas National Park Reserve",
@@ -6725,8 +6110,6 @@ export const chamberMembers = [
     naicsTitle: "Executive, Legislative, General Government",
     municipality: "Skidegate",
     region: "North Coast",
-  },
-  {
     id: "haidagwaii-coc-member-003",
     chamberId: "haida-gwaii-chamber",
     businessName: "Sandspit Airport",
@@ -6742,8 +6125,6 @@ export const chamberMembers = [
       id: "cyzp",
     },
     websiteNeedsCollection: true,
-  },
-  {
     id: "haidagwaii-coc-member-004",
     chamberId: "haida-gwaii-chamber",
     businessName: "BC Ferries - Skidegate Terminal",
@@ -6760,8 +6141,6 @@ export const chamberMembers = [
       dataset: "marine",
       id: "bc-ferries-skidegate",
     },
-  },
-  {
     id: "haidagwaii-coc-member-005",
     chamberId: "haida-gwaii-chamber",
     businessName: "Masset Hospital",
@@ -6794,8 +6173,6 @@ export const chamberMembers = [
     naicsTitle: "Engineering Services",
     municipality: "Vancouver",
     region: "Metro Vancouver",
-  },
-  {
     id: "gvbot-member-079",
     chamberId: "greater-vancouver-board-of-trade",
     businessName: "Stantec",
@@ -6808,8 +6185,6 @@ export const chamberMembers = [
     naicsTitle: "Engineering Services",
     municipality: "Vancouver",
     region: "Metro Vancouver",
-  },
-  {
     id: "gvbot-member-080",
     chamberId: "greater-vancouver-board-of-trade",
     businessName: "AECOM",
@@ -6822,8 +6197,6 @@ export const chamberMembers = [
     naicsTitle: "Engineering Services",
     municipality: "Vancouver",
     region: "Metro Vancouver",
-  },
-  {
     id: "gvbot-member-081",
     chamberId: "greater-vancouver-board-of-trade",
     businessName: "Associated Engineering",
@@ -6836,8 +6209,6 @@ export const chamberMembers = [
     naicsTitle: "Engineering Services",
     municipality: "Burnaby",
     region: "Metro Vancouver",
-  },
-  {
     id: "gvbot-member-082",
     chamberId: "greater-vancouver-board-of-trade",
     businessName: "Hatch Ltd.",
@@ -6867,8 +6238,6 @@ export const chamberMembers = [
     naicsTitle: "Construction of Buildings",
     municipality: "Vancouver",
     region: "Metro Vancouver",
-  },
-  {
     id: "gvbot-member-084",
     chamberId: "greater-vancouver-board-of-trade",
     businessName: "DIALOG",
@@ -6882,8 +6251,6 @@ export const chamberMembers = [
     naicsTitle: "Construction of Buildings",
     municipality: "Vancouver",
     region: "Metro Vancouver",
-  },
-  {
     id: "gvbot-member-085",
     chamberId: "greater-vancouver-board-of-trade",
     businessName: "Henriquez Partners Architects",
@@ -6914,8 +6281,6 @@ export const chamberMembers = [
     naicsTitle: "Publishing Industries",
     municipality: "Burnaby",
     region: "Metro Vancouver",
-  },
-  {
     id: "gvbot-member-087",
     chamberId: "greater-vancouver-board-of-trade",
     businessName: "CTV Vancouver",
@@ -6929,8 +6294,6 @@ export const chamberMembers = [
     naicsTitle: "Publishing Industries",
     municipality: "Vancouver",
     region: "Metro Vancouver",
-  },
-  {
     id: "gvbot-member-088",
     chamberId: "greater-vancouver-board-of-trade",
     businessName: "CBC Vancouver",
@@ -6944,8 +6307,6 @@ export const chamberMembers = [
     naicsTitle: "Publishing Industries",
     municipality: "Vancouver",
     region: "Metro Vancouver",
-  },
-  {
     id: "gvbot-member-089",
     chamberId: "greater-vancouver-board-of-trade",
     businessName: "Vancouver Sun / The Province",
@@ -6959,8 +6320,6 @@ export const chamberMembers = [
     naicsTitle: "Publishing Industries",
     municipality: "Vancouver",
     region: "Metro Vancouver",
-  },
-  {
     id: "victoria-coc-member-017",
     chamberId: "greater-victoria-chamber",
     businessName: "Times Colonist",
@@ -6974,8 +6333,6 @@ export const chamberMembers = [
     naicsTitle: "Publishing Industries",
     municipality: "Victoria",
     region: "Capital",
-  },
-  {
     id: "kelowna-coc-member-014",
     chamberId: "kelowna-chamber",
     businessName: "Kelowna Capital News",
@@ -7013,8 +6370,6 @@ export const chamberMembers = [
       dataset: "community-facilities",
       id: "bc-place",
     },
-  },
-  {
     id: "gvbot-member-091",
     chamberId: "greater-vancouver-board-of-trade",
     businessName: "Rogers Arena",
@@ -7032,8 +6387,6 @@ export const chamberMembers = [
       dataset: "community-facilities",
       id: "rogers-arena",
     },
-  },
-  {
     id: "victoria-coc-member-018",
     chamberId: "greater-victoria-chamber",
     businessName: "Save-On-Foods Memorial Centre",
@@ -7051,8 +6404,6 @@ export const chamberMembers = [
       dataset: "community-facilities",
       id: "save-on-memorial-centre",
     },
-  },
-  {
     id: "kelowna-coc-member-015",
     chamberId: "kelowna-chamber",
     businessName: "Prospera Place",
@@ -7087,8 +6438,6 @@ export const chamberMembers = [
     naicsTitle: "Support Activities for Agriculture and Forestry",
     municipality: "Abbotsford",
     region: "Fraser Valley",
-  },
-  {
     id: "abbotsford-coc-member-011",
     chamberId: "abbotsford-chamber-of-commerce",
     businessName: "BC Chicken Marketing Board",
@@ -7102,8 +6451,6 @@ export const chamberMembers = [
     naicsTitle: "Support Activities for Agriculture and Forestry",
     municipality: "Abbotsford",
     region: "Fraser Valley",
-  },
-  {
     id: "chilliwack-coc-member-010",
     chamberId: "chilliwack-chamber-of-commerce",
     businessName: "BC Dairy Association",
@@ -7117,8 +6464,6 @@ export const chamberMembers = [
     naicsTitle: "Support Activities for Agriculture and Forestry",
     municipality: "Burnaby",
     region: "Metro Vancouver",
-  },
-  {
     id: "kelowna-coc-member-016",
     chamberId: "kelowna-chamber",
     businessName: "BC Tree Fruits",
@@ -7132,8 +6477,6 @@ export const chamberMembers = [
     naicsTitle: "Support Activities for Agriculture and Forestry",
     municipality: "Kelowna",
     region: "Central Okanagan",
-  },
-  {
     id: "penticton-coc-member-005",
     chamberId: "penticton-chamber",
     businessName: "BC Cherry Association",
@@ -7166,8 +6509,6 @@ export const chamberMembers = [
     naicsTitle: "Mining (except Oil and Gas)",
     municipality: "Vancouver",
     region: "Metro Vancouver",
-  },
-  {
     id: "gvbot-member-093",
     chamberId: "greater-vancouver-board-of-trade",
     businessName: "Imperial Metals Corporation",
@@ -7180,8 +6521,6 @@ export const chamberMembers = [
     naicsTitle: "Mining (except Oil and Gas)",
     municipality: "Vancouver",
     region: "Metro Vancouver",
-  },
-  {
     id: "gvbot-member-094",
     chamberId: "greater-vancouver-board-of-trade",
     businessName: "Eldorado Gold Corporation",
@@ -7209,8 +6548,6 @@ export const chamberMembers = [
     naicsTitle: "Logging",
     municipality: "Vancouver",
     region: "Metro Vancouver",
-  },
-  {
     id: "pg-coc-member-012",
     chamberId: "prince-george-chamber",
     businessName: "Mercer International",
@@ -7247,8 +6584,6 @@ export const chamberMembers = [
       dataset: "schools",
       id: "ubc-vancouver",
     },
-  },
-  {
     id: "gvbot-member-097",
     chamberId: "greater-vancouver-board-of-trade",
     businessName: "British Columbia Institute of Technology (BCIT)",
@@ -7265,10 +6600,7 @@ export const chamberMembers = [
       dataset: "schools",
       id: "bcit-burnaby",
     },
-  },
 
-  },
-  {
     id: "victoria-coc-member-021",
     chamberId: "greater-victoria-chamber",
     businessName: "Camosun College",
@@ -7285,12 +6617,9 @@ export const chamberMembers = [
       dataset: "schools",
       id: "camosun-victoria",
     },
-  },
 
   },
 
-  },
-  {
     id: "pg-coc-member-014",
     chamberId: "prince-george-chamber",
     businessName: "College of New Caledonia",
@@ -7307,7 +6636,6 @@ export const chamberMembers = [
       dataset: "schools",
       id: "cnc-prince-george",
     },
-  },
 
   },
 
@@ -7329,8 +6657,6 @@ export const chamberMembers = [
     naicsTitle: "All Other Miscellaneous Store Retailers",
     municipality: "West Vancouver",
     region: "Metro Vancouver",
-  },
-  {
     id: "westvancouver-member-002",
     chamberId: "west-vancouver-chamber",
     businessName: "Hollyburn Country Club",
@@ -7343,8 +6669,6 @@ export const chamberMembers = [
     naicsTitle: "Amusement, Gambling, and Recreation Industries",
     municipality: "West Vancouver",
     region: "Metro Vancouver",
-  },
-  {
     id: "westvancouver-member-003",
     chamberId: "west-vancouver-chamber",
     businessName: "West Vancouver Memorial Library",
@@ -7357,8 +6681,6 @@ export const chamberMembers = [
     naicsTitle: "Executive, Legislative, General Government",
     municipality: "West Vancouver",
     region: "Metro Vancouver",
-  },
-  {
     id: "westvancouver-member-004",
     chamberId: "west-vancouver-chamber",
     businessName: "Lions Gate Hospital",
@@ -7375,8 +6697,6 @@ export const chamberMembers = [
       dataset: "emergency-services",
       id: "lions-gate-hospital",
     },
-  },
-  {
     id: "westvancouver-member-005",
     chamberId: "west-vancouver-chamber",
     businessName: "Cypress Mountain",
@@ -7408,8 +6728,6 @@ export const chamberMembers = [
     naicsTitle: "Motion Picture and Sound Recording Industries",
     municipality: "Surrey",
     region: "Metro Vancouver",
-  },
-  {
     id: "cloverdale-member-002",
     chamberId: "cloverdale-district-chamber",
     businessName: "Cloverdale Paint",
@@ -7423,8 +6741,6 @@ export const chamberMembers = [
     naicsTitle: "All Other Miscellaneous Store Retailers",
     municipality: "Surrey",
     region: "Metro Vancouver",
-  },
-  {
     id: "cloverdale-member-003",
     chamberId: "cloverdale-district-chamber",
     businessName: "Shannon Oaks Winery",
@@ -7437,8 +6753,6 @@ export const chamberMembers = [
     naicsTitle: "Breweries",
     municipality: "Surrey",
     region: "Metro Vancouver",
-  },
-  {
     id: "cloverdale-member-004",
     chamberId: "cloverdale-district-chamber",
     businessName: "Cloverdale Pharmacy",
@@ -7451,8 +6765,6 @@ export const chamberMembers = [
     naicsTitle: "Pharmacies and Drug Stores",
     municipality: "Surrey",
     region: "Metro Vancouver",
-  },
-  {
     id: "cloverdale-member-005",
     chamberId: "cloverdale-district-chamber",
     businessName: "Cloverdale Veterinary Hospital",
@@ -7487,8 +6799,6 @@ export const chamberMembers = [
       dataset: "aviation",
       id: "cypq",
     },
-  },
-  {
     id: "mapleridge-member-002",
     chamberId: "maple-ridge-pitt-meadows-chamber",
     businessName: "Golden Ears Provincial Park",
@@ -7501,8 +6811,6 @@ export const chamberMembers = [
     naicsTitle: "Amusement, Gambling, and Recreation Industries",
     municipality: "Maple Ridge",
     region: "Metro Vancouver",
-  },
-  {
     id: "mapleridge-member-003",
     chamberId: "maple-ridge-pitt-meadows-chamber",
     businessName: "Haney Place Mall",
@@ -7515,8 +6823,6 @@ export const chamberMembers = [
     naicsTitle: "All Other Miscellaneous Store Retailers",
     municipality: "Maple Ridge",
     region: "Metro Vancouver",
-  },
-  {
     id: "mapleridge-member-004",
     chamberId: "maple-ridge-pitt-meadows-chamber",
     businessName: "Ridge Meadows Hospital",
@@ -7533,8 +6839,6 @@ export const chamberMembers = [
       dataset: "emergency-services",
       id: "ridge-meadows-hospital",
     },
-  },
-  {
     id: "mapleridge-member-005",
     chamberId: "maple-ridge-pitt-meadows-chamber",
     businessName: "Maple Ridge Chrysler Jeep Dodge",
@@ -7547,8 +6851,6 @@ export const chamberMembers = [
     naicsTitle: "Automobile Dealers",
     municipality: "Maple Ridge",
     region: "Metro Vancouver",
-  },
-  {
     id: "mapleridge-member-006",
     chamberId: "maple-ridge-pitt-meadows-chamber",
     businessName: "Kanaka Creek Coffee",
@@ -7579,8 +6881,6 @@ export const chamberMembers = [
     naicsTitle: "American Indian and Alaska Native Tribal Governments",
     municipality: "Agassiz",
     region: "Fraser Valley",
-  },
-  {
     id: "agassiz-member-002",
     chamberId: "agassiz-chamber",
     businessName: "Mountain Prison",
@@ -7593,8 +6893,6 @@ export const chamberMembers = [
     naicsTitle: "Executive, Legislative, General Government",
     municipality: "Agassiz",
     region: "Fraser Valley",
-  },
-  {
     id: "agassiz-member-003",
     chamberId: "agassiz-chamber",
     businessName: "Cheam First Nation",
@@ -7607,8 +6905,6 @@ export const chamberMembers = [
     naicsTitle: "American Indian and Alaska Native Tribal Governments",
     municipality: "Agassiz",
     region: "Fraser Valley",
-  },
-  {
     id: "agassiz-member-004",
     chamberId: "agassiz-chamber",
     businessName: "Agassiz-Harrison Observer",
@@ -7621,8 +6917,6 @@ export const chamberMembers = [
     naicsTitle: "Publishing Industries",
     municipality: "Agassiz",
     region: "Fraser Valley",
-  },
-  {
     id: "agassiz-member-005",
     chamberId: "agassiz-chamber",
     businessName: "Agassiz Foods",
@@ -7653,8 +6947,6 @@ export const chamberMembers = [
     naicsTitle: "Accommodation",
     municipality: "Harrison Hot Springs",
     region: "Fraser Valley",
-  },
-  {
     id: "harrison-member-002",
     chamberId: "harrison-hot-springs-chamber",
     businessName: "Harrison Lake Hotel",
@@ -7667,8 +6959,6 @@ export const chamberMembers = [
     naicsTitle: "Accommodation",
     municipality: "Harrison Hot Springs",
     region: "Fraser Valley",
-  },
-  {
     id: "harrison-member-003",
     chamberId: "harrison-hot-springs-chamber",
     businessName: "Sasquatch Provincial Park",
@@ -7681,8 +6971,6 @@ export const chamberMembers = [
     naicsTitle: "Amusement, Gambling, and Recreation Industries",
     municipality: "Harrison Hot Springs",
     region: "Fraser Valley",
-  },
-  {
     id: "harrison-member-004",
     chamberId: "harrison-hot-springs-chamber",
     businessName: "Harrison Eco Tours",
@@ -7695,8 +6983,6 @@ export const chamberMembers = [
     naicsTitle: "Food Services and Drinking Places",
     municipality: "Harrison Hot Springs",
     region: "Fraser Valley",
-  },
-  {
     id: "harrison-member-005",
     chamberId: "harrison-hot-springs-chamber",
     businessName: "Black Forest Steak & Schnitzel",
@@ -7731,8 +7017,6 @@ export const chamberMembers = [
       dataset: "aviation",
       id: "cyyj",
     },
-  },
-  {
     id: "sidney-member-002",
     chamberId: "sidney-chamber",
     businessName: "BC Ferries - Swartz Bay Terminal",
@@ -7749,8 +7033,6 @@ export const chamberMembers = [
       dataset: "marine",
       id: "swartz-bay-terminal",
     },
-  },
-  {
     id: "sidney-member-003",
     chamberId: "sidney-chamber",
     businessName: "Mary Winspear Centre",
@@ -7763,8 +7045,6 @@ export const chamberMembers = [
     naicsTitle: "Motion Picture and Sound Recording Industries",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "sidney-member-004",
     chamberId: "sidney-chamber",
     businessName: "Shaw Centre for the Salish Sea",
@@ -7777,8 +7057,6 @@ export const chamberMembers = [
     naicsTitle: "Performing Arts, Spectator Sports, Related",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "sidney-member-005",
     chamberId: "sidney-chamber",
     businessName: "Sidney Pharmacy",
@@ -7791,8 +7069,6 @@ export const chamberMembers = [
     naicsTitle: "Pharmacies and Drug Stores",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "sidney-member-006",
     chamberId: "sidney-chamber",
     businessName: "Washington State Ferries - Sidney Terminal",
@@ -7823,8 +7099,6 @@ export const chamberMembers = [
     naicsTitle: "Breweries",
     municipality: "Lake Country",
     region: "Central Okanagan",
-  },
-  {
     id: "lakecountry-member-002",
     chamberId: "lake-country-chamber",
     businessName: "Arrowleaf Cellars",
@@ -7837,8 +7111,6 @@ export const chamberMembers = [
     naicsTitle: "Breweries",
     municipality: "Lake Country",
     region: "Central Okanagan",
-  },
-  {
     id: "lakecountry-member-003",
     chamberId: "lake-country-chamber",
     businessName: "The Jammery",
@@ -7851,8 +7123,6 @@ export const chamberMembers = [
     naicsTitle: "Food Services and Drinking Places",
     municipality: "Lake Country",
     region: "Central Okanagan",
-  },
-  {
     id: "lakecountry-member-004",
     chamberId: "lake-country-chamber",
     businessName: "Lake Country Museum",
@@ -7865,8 +7135,6 @@ export const chamberMembers = [
     naicsTitle: "Performing Arts, Spectator Sports, Related",
     municipality: "Lake Country",
     region: "Central Okanagan",
-  },
-  {
     id: "lakecountry-member-005",
     chamberId: "lake-country-chamber",
     businessName: "Oyama Zipline Adventure Park",
@@ -7897,8 +7165,6 @@ export const chamberMembers = [
     naicsTitle: "Breweries",
     municipality: "Peachland",
     region: "Central Okanagan",
-  },
-  {
     id: "peachland-member-002",
     chamberId: "peachland-chamber",
     businessName: "Peachland View Homes",
@@ -7911,8 +7177,6 @@ export const chamberMembers = [
     naicsTitle: "Real Estate",
     municipality: "Peachland",
     region: "Central Okanagan",
-  },
-  {
     id: "peachland-member-003",
     chamberId: "peachland-chamber",
     businessName: "Peachland Museum",
@@ -7925,8 +7189,6 @@ export const chamberMembers = [
     naicsTitle: "Performing Arts, Spectator Sports, Related",
     municipality: "Peachland",
     region: "Central Okanagan",
-  },
-  {
     id: "peachland-member-004",
     chamberId: "peachland-chamber",
     businessName: "Bliss Bakery Peachland",
@@ -7939,8 +7201,6 @@ export const chamberMembers = [
     naicsTitle: "Food Services and Drinking Places",
     municipality: "Peachland",
     region: "Central Okanagan",
-  },
-  {
     id: "peachland-member-005",
     chamberId: "peachland-chamber",
     businessName: "Peachland Pharmacy",
@@ -7971,8 +7231,6 @@ export const chamberMembers = [
     naicsTitle: "Breweries",
     municipality: "Oliver",
     region: "Okanagan-Similkameen",
-  },
-  {
     id: "southokanagan-member-002",
     chamberId: "south-okanagan-chamber",
     businessName: "Burrowing Owl Estate Winery",
@@ -7985,8 +7243,6 @@ export const chamberMembers = [
     naicsTitle: "Breweries",
     municipality: "Oliver",
     region: "Okanagan-Similkameen",
-  },
-  {
     id: "southokanagan-member-003",
     chamberId: "south-okanagan-chamber",
     businessName: "Osoyoos Desert Centre",
@@ -7999,8 +7255,6 @@ export const chamberMembers = [
     naicsTitle: "Performing Arts, Spectator Sports, Related",
     municipality: "Osoyoos",
     region: "Okanagan-Similkameen",
-  },
-  {
     id: "southokanagan-member-004",
     chamberId: "south-okanagan-chamber",
     businessName: "Watermark Beach Resort",
@@ -8013,8 +7267,6 @@ export const chamberMembers = [
     naicsTitle: "Accommodation",
     municipality: "Osoyoos",
     region: "Okanagan-Similkameen",
-  },
-  {
     id: "southokanagan-member-005",
     chamberId: "south-okanagan-chamber",
     businessName: "Osoyoos Indian Band",
@@ -8045,8 +7297,6 @@ export const chamberMembers = [
     naicsTitle: "Amusement, Gambling, and Recreation Industries",
     municipality: "Sicamous",
     region: "Columbia-Shuswap",
-  },
-  {
     id: "sicamous-member-002",
     chamberId: "sicamous-chamber",
     businessName: "Sicamous Creek Campground",
@@ -8059,8 +7309,6 @@ export const chamberMembers = [
     naicsTitle: "Accommodation",
     municipality: "Sicamous",
     region: "Columbia-Shuswap",
-  },
-  {
     id: "sicamous-member-003",
     chamberId: "sicamous-chamber",
     businessName: "Twin Anchors Houseboat Vacations",
@@ -8073,8 +7321,6 @@ export const chamberMembers = [
     naicsTitle: "Food Services and Drinking Places",
     municipality: "Sicamous",
     region: "Columbia-Shuswap",
-  },
-  {
     id: "sicamous-member-004",
     chamberId: "sicamous-chamber",
     businessName: "Sicamous IGA",
@@ -8087,8 +7333,6 @@ export const chamberMembers = [
     naicsTitle: "Supermarkets and Other Grocery Stores",
     municipality: "Sicamous",
     region: "Columbia-Shuswap",
-  },
-  {
     id: "sicamous-member-005",
     chamberId: "sicamous-chamber",
     businessName: "Three Valley Gap Heritage Ghost Town",
@@ -8119,8 +7363,6 @@ export const chamberMembers = [
     naicsTitle: "Supermarkets and Other Grocery Stores",
     municipality: "Barriere",
     region: "Thompson-Nicola",
-  },
-  {
     id: "barriere-member-002",
     chamberId: "barriere-chamber",
     businessName: "North Thompson Times",
@@ -8133,8 +7375,6 @@ export const chamberMembers = [
     naicsTitle: "Publishing Industries",
     municipality: "Barriere",
     region: "Thompson-Nicola",
-  },
-  {
     id: "barriere-member-003",
     chamberId: "barriere-chamber",
     businessName: "Barriere & District Health Centre",
@@ -8147,8 +7387,6 @@ export const chamberMembers = [
     naicsTitle: "Ambulatory Health Care Services",
     municipality: "Barriere",
     region: "Thompson-Nicola",
-  },
-  {
     id: "barriere-member-004",
     chamberId: "barriere-chamber",
     businessName: "Dunn Lake Resort",
@@ -8161,8 +7399,6 @@ export const chamberMembers = [
     naicsTitle: "Accommodation",
     municipality: "Barriere",
     region: "Thompson-Nicola",
-  },
-  {
     id: "barriere-member-005",
     chamberId: "barriere-chamber",
     businessName: "Simpcw First Nation",
@@ -8193,8 +7429,6 @@ export const chamberMembers = [
     naicsTitle: "Mining (except Oil and Gas)",
     municipality: "Logan Lake",
     region: "Thompson-Nicola",
-  },
-  {
     id: "loganlake-member-002",
     chamberId: "logan-lake-chamber",
     businessName: "Logan Lake Community Centre",
@@ -8207,8 +7441,6 @@ export const chamberMembers = [
     naicsTitle: "Amusement, Gambling, and Recreation Industries",
     municipality: "Logan Lake",
     region: "Thompson-Nicola",
-  },
-  {
     id: "loganlake-member-003",
     chamberId: "logan-lake-chamber",
     businessName: "Logan Lake TV Society",
@@ -8221,8 +7453,6 @@ export const chamberMembers = [
     naicsTitle: "Telecommunications",
     municipality: "Logan Lake",
     region: "Thompson-Nicola",
-  },
-  {
     id: "loganlake-member-004",
     chamberId: "logan-lake-chamber",
     businessName: "Logan Lake Pharmacy",
@@ -8235,8 +7465,6 @@ export const chamberMembers = [
     naicsTitle: "Pharmacies and Drug Stores",
     municipality: "Logan Lake",
     region: "Thompson-Nicola",
-  },
-  {
     id: "loganlake-member-005",
     chamberId: "logan-lake-chamber",
     businessName: "Logan Lake IGA",
@@ -8267,8 +7495,6 @@ export const chamberMembers = [
     naicsTitle: "Performing Arts, Spectator Sports, Related",
     municipality: "Clinton",
     region: "Cariboo",
-  },
-  {
     id: "clinton-member-002",
     chamberId: "clinton-chamber",
     businessName: "Big Bar Guest Ranch",
@@ -8281,8 +7507,6 @@ export const chamberMembers = [
     naicsTitle: "Accommodation",
     municipality: "Clinton",
     region: "Cariboo",
-  },
-  {
     id: "clinton-member-003",
     chamberId: "clinton-chamber",
     businessName: "Clinton IGA",
@@ -8295,8 +7519,6 @@ export const chamberMembers = [
     naicsTitle: "Supermarkets and Other Grocery Stores",
     municipality: "Clinton",
     region: "Cariboo",
-  },
-  {
     id: "clinton-member-004",
     chamberId: "clinton-chamber",
     businessName: "Clinton Emporium",
@@ -8309,8 +7531,6 @@ export const chamberMembers = [
     naicsTitle: "All Other Miscellaneous Store Retailers",
     municipality: "Clinton",
     region: "Cariboo",
-  },
-  {
     id: "clinton-member-005",
     chamberId: "clinton-chamber",
     businessName: "Clinton Ball",
@@ -8341,8 +7561,6 @@ export const chamberMembers = [
     naicsTitle: "Food Services and Drinking Places",
     municipality: "Valemount",
     region: "Fraser-Fort George",
-  },
-  {
     id: "valemount-member-002",
     chamberId: "valemount-chamber",
     businessName: "Mount Robson Provincial Park",
@@ -8355,8 +7573,6 @@ export const chamberMembers = [
     naicsTitle: "Amusement, Gambling, and Recreation Industries",
     municipality: "Valemount",
     region: "Fraser-Fort George",
-  },
-  {
     id: "valemount-member-003",
     chamberId: "valemount-chamber",
     businessName: "Best Western Plus Valemount",
@@ -8369,8 +7585,6 @@ export const chamberMembers = [
     naicsTitle: "Accommodation",
     municipality: "Valemount",
     region: "Fraser-Fort George",
-  },
-  {
     id: "valemount-member-004",
     chamberId: "valemount-chamber",
     businessName: "Valemount IGA",
@@ -8383,8 +7597,6 @@ export const chamberMembers = [
     naicsTitle: "Supermarkets and Other Grocery Stores",
     municipality: "Valemount",
     region: "Fraser-Fort George",
-  },
-  {
     id: "valemount-member-005",
     chamberId: "valemount-chamber",
     businessName: "Simpcw Resources Group",
@@ -8416,8 +7628,6 @@ export const chamberMembers = [
     naicsTitle: "Performing Arts, Spectator Sports, Related",
     municipality: "McBride",
     region: "Fraser-Fort George",
-  },
-  {
     id: "mcbride-member-002",
     chamberId: "mcbride-chamber",
     businessName: "McBride IGA",
@@ -8430,8 +7640,6 @@ export const chamberMembers = [
     naicsTitle: "Supermarkets and Other Grocery Stores",
     municipality: "McBride",
     region: "Fraser-Fort George",
-  },
-  {
     id: "mcbride-member-003",
     chamberId: "mcbride-chamber",
     businessName: "Robson Valley Times",
@@ -8444,8 +7652,6 @@ export const chamberMembers = [
     naicsTitle: "Publishing Industries",
     municipality: "McBride",
     region: "Fraser-Fort George",
-  },
-  {
     id: "mcbride-member-004",
     chamberId: "mcbride-chamber",
     businessName: "Ancient Forest/Chun T'oh Whudujut",
@@ -8458,8 +7664,6 @@ export const chamberMembers = [
     naicsTitle: "Amusement, Gambling, and Recreation Industries",
     municipality: "McBride",
     region: "Fraser-Fort George",
-  },
-  {
     id: "mcbride-member-005",
     chamberId: "mcbride-chamber",
     businessName: "McBride Pharmacy",
@@ -8490,8 +7694,6 @@ export const chamberMembers = [
     naicsTitle: "Performing Arts, Spectator Sports, Related",
     municipality: "Fort St. James",
     region: "Bulkley-Nechako",
-  },
-  {
     id: "ftstjames-member-002",
     chamberId: "fort-st-james-chamber",
     businessName: "Nak'azdli Whut'en",
@@ -8504,8 +7706,6 @@ export const chamberMembers = [
     naicsTitle: "American Indian and Alaska Native Tribal Governments",
     municipality: "Fort St. James",
     region: "Bulkley-Nechako",
-  },
-  {
     id: "ftstjames-member-003",
     chamberId: "fort-st-james-chamber",
     businessName: "Fort St. James IGA",
@@ -8518,8 +7718,6 @@ export const chamberMembers = [
     naicsTitle: "Supermarkets and Other Grocery Stores",
     municipality: "Fort St. James",
     region: "Bulkley-Nechako",
-  },
-  {
     id: "ftstjames-member-004",
     chamberId: "fort-st-james-chamber",
     businessName: "Stuart Lake Hospital",
@@ -8532,8 +7730,6 @@ export const chamberMembers = [
     naicsTitle: "Ambulatory Health Care Services",
     municipality: "Fort St. James",
     region: "Bulkley-Nechako",
-  },
-  {
     id: "ftstjames-member-005",
     chamberId: "fort-st-james-chamber",
     businessName: "Sowchea Bay Resort",
@@ -8564,8 +7760,6 @@ export const chamberMembers = [
     naicsTitle: "Mining (except Oil and Gas)",
     municipality: "Fraser Lake",
     region: "Bulkley-Nechako",
-  },
-  {
     id: "fraserlake-member-002",
     chamberId: "fraser-lake-chamber",
     businessName: "Fraser Lake IGA",
@@ -8578,8 +7772,6 @@ export const chamberMembers = [
     naicsTitle: "Supermarkets and Other Grocery Stores",
     municipality: "Fraser Lake",
     region: "Bulkley-Nechako",
-  },
-  {
     id: "fraserlake-member-003",
     chamberId: "fraser-lake-chamber",
     businessName: "Stellat'en First Nation",
@@ -8592,8 +7784,6 @@ export const chamberMembers = [
     naicsTitle: "American Indian and Alaska Native Tribal Governments",
     municipality: "Fraser Lake",
     region: "Bulkley-Nechako",
-  },
-  {
     id: "fraserlake-member-004",
     chamberId: "fraser-lake-chamber",
     businessName: "Fraser Lake & District Museum",
@@ -8606,8 +7796,6 @@ export const chamberMembers = [
     naicsTitle: "Performing Arts, Spectator Sports, Related",
     municipality: "Fraser Lake",
     region: "Bulkley-Nechako",
-  },
-  {
     id: "fraserlake-member-005",
     chamberId: "fraser-lake-chamber",
     businessName: "Fraser Lake Pharmacy",
@@ -8638,8 +7826,6 @@ export const chamberMembers = [
     naicsTitle: "Logging",
     municipality: "Houston",
     region: "Bulkley-Nechako",
-  },
-  {
     id: "houston-member-002",
     chamberId: "houston-chamber",
     businessName: "Houston IGA",
@@ -8652,8 +7838,6 @@ export const chamberMembers = [
     naicsTitle: "Supermarkets and Other Grocery Stores",
     municipality: "Houston",
     region: "Bulkley-Nechako",
-  },
-  {
     id: "houston-member-003",
     chamberId: "houston-chamber",
     businessName: "Houston Health Centre",
@@ -8666,8 +7850,6 @@ export const chamberMembers = [
     naicsTitle: "Ambulatory Health Care Services",
     municipality: "Houston",
     region: "Bulkley-Nechako",
-  },
-  {
     id: "houston-member-004",
     chamberId: "houston-chamber",
     businessName: "Houston & District Museum",
@@ -8680,8 +7862,6 @@ export const chamberMembers = [
     naicsTitle: "Performing Arts, Spectator Sports, Related",
     municipality: "Houston",
     region: "Bulkley-Nechako",
-  },
-  {
     id: "houston-member-005",
     chamberId: "houston-chamber",
     businessName: "Skin Tyee First Nation",
@@ -8712,8 +7892,6 @@ export const chamberMembers = [
     naicsTitle: "Mining (except Oil and Gas)",
     municipality: "Chetwynd",
     region: "Peace River",
-  },
-  {
     id: "chetwynd-member-002",
     chamberId: "chetwynd-chamber",
     businessName: "Chetwynd IGA",
@@ -8726,8 +7904,6 @@ export const chamberMembers = [
     naicsTitle: "Supermarkets and Other Grocery Stores",
     municipality: "Chetwynd",
     region: "Peace River",
-  },
-  {
     id: "chetwynd-member-003",
     chamberId: "chetwynd-chamber",
     businessName: "Chetwynd & District Hospital",
@@ -8740,8 +7916,6 @@ export const chamberMembers = [
     naicsTitle: "Ambulatory Health Care Services",
     municipality: "Chetwynd",
     region: "Peace River",
-  },
-  {
     id: "chetwynd-member-004",
     chamberId: "chetwynd-chamber",
     businessName: "Northern Lights College - Chetwynd",
@@ -8758,8 +7932,6 @@ export const chamberMembers = [
       dataset: "schools",
       id: "nlc-chetwynd",
     },
-  },
-  {
     id: "chetwynd-member-005",
     chamberId: "chetwynd-chamber",
     businessName: "Chainsaw Sculpture Trail",
@@ -8794,8 +7966,6 @@ export const chamberMembers = [
       dataset: "municipal-offices",
       id: "fort-nelson-city-hall",
     },
-  },
-  {
     id: "fortnelson-member-002",
     chamberId: "fort-nelson-chamber",
     businessName: "Fort Nelson Airport",
@@ -8812,8 +7982,6 @@ export const chamberMembers = [
       dataset: "aviation",
       id: "cyye",
     },
-  },
-  {
     id: "fortnelson-member-003",
     chamberId: "fort-nelson-chamber",
     businessName: "Fort Nelson General Hospital",
@@ -8830,8 +7998,6 @@ export const chamberMembers = [
       dataset: "emergency-services",
       id: "fort-nelson-general-hospital",
     },
-  },
-  {
     id: "fortnelson-member-004",
     chamberId: "fort-nelson-chamber",
     businessName: "Fort Nelson First Nation",
@@ -8844,8 +8010,6 @@ export const chamberMembers = [
     naicsTitle: "American Indian and Alaska Native Tribal Governments",
     municipality: "Fort Nelson",
     region: "Northern Rockies",
-  },
-  {
     id: "fortnelson-member-005",
     chamberId: "fort-nelson-chamber",
     businessName: "Northern Rockies Museum of Culture and Heritage",
@@ -8882,8 +8046,6 @@ export const chamberMembers = [
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-002",
     chamberId: "tofino-chamber",
     businessName: "Alberni-Clayoquot Regional District",
@@ -8898,8 +8060,6 @@ export const chamberMembers = [
     municipality: "Port Alberni",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-003",
     chamberId: "tofino-chamber",
     businessName: "Anchor Cove Vacation Rental",
@@ -8914,8 +8074,6 @@ export const chamberMembers = [
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-004",
     chamberId: "tofino-chamber",
     businessName: "Aqua Pacific Ventures Ltd",
@@ -8930,8 +8088,6 @@ export const chamberMembers = [
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-005",
     chamberId: "tofino-chamber",
     businessName: "Aroma Bistro",
@@ -8946,8 +8102,6 @@ export const chamberMembers = [
     municipality: "Ucluelet",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-006",
     chamberId: "tofino-chamber",
     businessName: "Art of the Day Studios",
@@ -8962,8 +8116,6 @@ export const chamberMembers = [
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-007",
     chamberId: "tofino-chamber",
     businessName: "Atleo Air Ltd.",
@@ -8983,8 +8135,6 @@ export const chamberMembers = [
       id: "caq3",
     },
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-008",
     chamberId: "tofino-chamber",
     businessName: "Atleo River Air Service Ltd.",
@@ -9017,8 +8167,6 @@ export const chamberMembers = [
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-010",
     chamberId: "tofino-chamber",
     businessName: "Backbone Tofino",
@@ -9033,8 +8181,6 @@ export const chamberMembers = [
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-011",
     chamberId: "tofino-chamber",
     businessName: "Bard's Yard Studios",
@@ -9049,8 +8195,6 @@ export const chamberMembers = [
     municipality: "Ucluelet",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-012",
     chamberId: "tofino-chamber",
     businessName: "Beach Shack - Vacation Rental",
@@ -9065,8 +8209,6 @@ export const chamberMembers = [
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-013",
     chamberId: "tofino-chamber",
     businessName: "Bella Pacifica Resort & Campground",
@@ -9081,8 +8223,6 @@ export const chamberMembers = [
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-014",
     chamberId: "tofino-chamber",
     businessName: "Best Western Tin Wis Resort",
@@ -9098,8 +8238,6 @@ export const chamberMembers = [
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-015",
     chamberId: "tofino-chamber",
     businessName: "Black Bear Printing & Embroidery",
@@ -9114,8 +8252,6 @@ export const chamberMembers = [
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-016",
     chamberId: "tofino-chamber",
     businessName: "Black Rock Oceanfront Resort",
@@ -9131,8 +8267,6 @@ export const chamberMembers = [
     municipality: "Ucluelet",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-017",
     chamberId: "tofino-chamber",
     businessName: "Boat Basin Foundation",
@@ -9146,8 +8280,6 @@ export const chamberMembers = [
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-018",
     chamberId: "tofino-chamber",
     businessName: "Bottom Line Admin Services",
@@ -9162,8 +8294,6 @@ export const chamberMembers = [
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-019",
     chamberId: "tofino-chamber",
     businessName: "Briar's Loft Vacation Rental",
@@ -9178,8 +8308,6 @@ export const chamberMembers = [
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-020",
     chamberId: "tofino-chamber",
     businessName: "Browning Pass Charters",
@@ -9212,8 +8340,6 @@ export const chamberMembers = [
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-022",
     chamberId: "tofino-chamber",
     businessName: "Canadian Princess Lodge",
@@ -9229,8 +8355,6 @@ export const chamberMembers = [
     municipality: "Ucluelet",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-023",
     chamberId: "tofino-chamber",
     businessName: "Caravan Restaurant",
@@ -9245,8 +8369,6 @@ export const chamberMembers = [
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-024",
     chamberId: "tofino-chamber",
     businessName: "Cedar Beauty Salon & Spa",
@@ -9261,8 +8383,6 @@ export const chamberMembers = [
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-025",
     chamberId: "tofino-chamber",
     businessName: "Chesterman Beach B&B",
@@ -9277,8 +8397,6 @@ export const chamberMembers = [
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-026",
     chamberId: "tofino-chamber",
     businessName: "Chocolate Tofino",
@@ -9293,8 +8411,6 @@ export const chamberMembers = [
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-027",
     chamberId: "tofino-chamber",
     businessName: "Clayoquot Adventures",
@@ -9308,8 +8424,6 @@ export const chamberMembers = [
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-028",
     chamberId: "tofino-chamber",
     businessName: "Clayoquot Biosphere Trust",
@@ -9324,8 +8438,6 @@ export const chamberMembers = [
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-029",
     chamberId: "tofino-chamber",
     businessName: "Clayoquot Connections",
@@ -9340,8 +8452,6 @@ export const chamberMembers = [
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-030",
     chamberId: "tofino-chamber",
     businessName: "Clayoquot Sound Oyster Festival",
@@ -9355,8 +8465,6 @@ export const chamberMembers = [
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-031",
     chamberId: "tofino-chamber",
     businessName: "Clayoquot Wilderness Lodge",
@@ -9372,8 +8480,6 @@ export const chamberMembers = [
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-032",
     chamberId: "tofino-chamber",
     businessName: "Coastal Bliss Adventures",
@@ -9388,8 +8494,6 @@ export const chamberMembers = [
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-033",
     chamberId: "tofino-chamber",
     businessName: "Coastal Kitchen",
@@ -9404,8 +8508,6 @@ export const chamberMembers = [
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-034",
     chamberId: "tofino-chamber",
     businessName: "Co-op Radio CJRP 92.7",
@@ -9420,8 +8522,6 @@ export const chamberMembers = [
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-035",
     chamberId: "tofino-chamber",
     businessName: "Common Loaf Bake Shop",
@@ -9436,8 +8536,6 @@ export const chamberMembers = [
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-036",
     chamberId: "tofino-chamber",
     businessName: "Community Housing Solutions Society",
@@ -9451,8 +8549,6 @@ export const chamberMembers = [
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-037",
     chamberId: "tofino-chamber",
     businessName: "Comtox Renovations Ltd.",
@@ -9467,8 +8563,6 @@ export const chamberMembers = [
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-038",
     chamberId: "tofino-chamber",
     businessName: "Cox Bay Beach Resort",
@@ -9483,8 +8577,6 @@ export const chamberMembers = [
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-039",
     chamberId: "tofino-chamber",
     businessName: "Crystal Cove Beach Resort",
@@ -9517,8 +8609,6 @@ export const chamberMembers = [
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-041",
     chamberId: "tofino-chamber",
     businessName: "District of Tofino",
@@ -9537,8 +8627,6 @@ export const chamberMembers = [
       id: "tofino-district-office",
     },
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-042",
     chamberId: "tofino-chamber",
     businessName: "District of Ucluelet",
@@ -9553,8 +8641,6 @@ export const chamberMembers = [
     municipality: "Ucluelet",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-043",
     chamberId: "tofino-chamber",
     businessName: "Dolphin Motel",
@@ -9569,8 +8655,6 @@ export const chamberMembers = [
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-044",
     chamberId: "tofino-chamber",
     businessName: "Drift Home Tofino",
@@ -9585,8 +8669,6 @@ export const chamberMembers = [
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-045",
     chamberId: "tofino-chamber",
     businessName: "Driftwood Carving Studio",
@@ -9620,8 +8702,6 @@ export const chamberMembers = [
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-047",
     chamberId: "tofino-chamber",
     businessName: "Edge to Edge Marathon",
@@ -9635,8 +8715,6 @@ export const chamberMembers = [
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-048",
     chamberId: "tofino-chamber",
     businessName: "Electric Beach Creative Studio",
@@ -9651,8 +8729,6 @@ export const chamberMembers = [
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-049",
     chamberId: "tofino-chamber",
     businessName: "Ecolodge - Okeanos Tofino",
@@ -9685,8 +8761,6 @@ export const chamberMembers = [
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-051",
     chamberId: "tofino-chamber",
     businessName: "FishyBiz Seafood",
@@ -9701,8 +8775,6 @@ export const chamberMembers = [
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-052",
     chamberId: "tofino-chamber",
     businessName: "Float House",
@@ -9717,8 +8789,6 @@ export const chamberMembers = [
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-053",
     chamberId: "tofino-chamber",
     businessName: "Flyhalf Brewing",
@@ -9751,8 +8821,6 @@ export const chamberMembers = [
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-055",
     chamberId: "tofino-chamber",
     businessName: "Glass Ark Gallery",
@@ -9767,8 +8835,6 @@ export const chamberMembers = [
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-056",
     chamberId: "tofino-chamber",
     businessName: "Glass Beach Cottages",
@@ -9783,8 +8849,6 @@ export const chamberMembers = [
     municipality: "Ucluelet",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-057",
     chamberId: "tofino-chamber",
     businessName: "Goldline Whale Watching",
@@ -9817,8 +8881,6 @@ export const chamberMembers = [
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-059",
     chamberId: "tofino-chamber",
     businessName: "Harbour Ventures Ltd.",
@@ -9833,8 +8895,6 @@ export const chamberMembers = [
     municipality: "Ucluelet",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-060",
     chamberId: "tofino-chamber",
     businessName: "Himwitsa Lodge",
@@ -9850,8 +8910,6 @@ export const chamberMembers = [
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-061",
     chamberId: "tofino-chamber",
     businessName: "Hollyhock Acupuncture",
@@ -9866,8 +8924,6 @@ export const chamberMembers = [
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-062",
     chamberId: "tofino-chamber",
     businessName: "House of Himwitsa",
@@ -9901,8 +8957,6 @@ export const chamberMembers = [
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-064",
     chamberId: "tofino-chamber",
     businessName: "Indigenous Adventures Tofino",
@@ -9918,8 +8972,6 @@ export const chamberMembers = [
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-065",
     chamberId: "tofino-chamber",
     businessName: "Inn at Tough City",
@@ -9934,8 +8986,6 @@ export const chamberMembers = [
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-066",
     chamberId: "tofino-chamber",
     businessName: "Island Cove Resort",
@@ -9969,8 +9019,6 @@ export const chamberMembers = [
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-068",
     chamberId: "tofino-chamber",
     businessName: "Jara Energy Healing",
@@ -9985,8 +9033,6 @@ export const chamberMembers = [
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-069",
     chamberId: "tofino-chamber",
     businessName: "Joe's Tacos + Beer",
@@ -10001,8 +9047,6 @@ export const chamberMembers = [
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-070",
     chamberId: "tofino-chamber",
     businessName: "Jiggers Fish & Chips",
@@ -10035,8 +9079,6 @@ export const chamberMembers = [
     municipality: "Ucluelet",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-072",
     chamberId: "tofino-chamber",
     businessName: "Lil Ronnie's Wing Shack",
@@ -10051,8 +9093,6 @@ export const chamberMembers = [
     municipality: "Ucluelet",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-073",
     chamberId: "tofino-chamber",
     businessName: "Live to Surf",
@@ -10068,8 +9108,6 @@ export const chamberMembers = [
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-074",
     chamberId: "tofino-chamber",
     businessName: "Long Beach Golf Course",
@@ -10084,8 +9122,6 @@ export const chamberMembers = [
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-075",
     chamberId: "tofino-chamber",
     businessName: "Long Beach Lodge Resort",
@@ -10101,8 +9137,6 @@ export const chamberMembers = [
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-076",
     chamberId: "tofino-chamber",
     businessName: "Long Beach Nature Tours",
@@ -10135,8 +9169,6 @@ export const chamberMembers = [
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-078",
     chamberId: "tofino-chamber",
     businessName: "Marisol at the Beach",
@@ -10151,8 +9183,6 @@ export const chamberMembers = [
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-079",
     chamberId: "tofino-chamber",
     businessName: "Matterson House Suites",
@@ -10167,8 +9197,6 @@ export const chamberMembers = [
     municipality: "Ucluelet",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-080",
     chamberId: "tofino-chamber",
     businessName: "Middle Beach Lodge",
@@ -10183,8 +9211,6 @@ export const chamberMembers = [
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-081",
     chamberId: "tofino-chamber",
     businessName: "Mike's West Coast",
@@ -10199,8 +9225,6 @@ export const chamberMembers = [
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-082",
     chamberId: "tofino-chamber",
     businessName: "Morning Mist Guesthouse",
@@ -10233,8 +9257,6 @@ export const chamberMembers = [
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-084",
     chamberId: "tofino-chamber",
     businessName: "Norwoods Restaurant",
@@ -10249,8 +9271,6 @@ export const chamberMembers = [
     municipality: "Ucluelet",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-085",
     chamberId: "tofino-chamber",
     businessName: "Nutwood Ventures Inc",
@@ -10283,8 +9303,6 @@ export const chamberMembers = [
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-087",
     chamberId: "tofino-chamber",
     businessName: "Ocean Village Beach Resort",
@@ -10299,8 +9317,6 @@ export const chamberMembers = [
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-088",
     chamberId: "tofino-chamber",
     businessName: "Offshore Fishing Adventures",
@@ -10315,8 +9331,6 @@ export const chamberMembers = [
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-089",
     chamberId: "tofino-chamber",
     businessName: "Old Growth Cedar Woodworks",
@@ -10349,8 +9363,6 @@ export const chamberMembers = [
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-091",
     chamberId: "tofino-chamber",
     businessName: "Pacific Rim Distilling",
@@ -10381,8 +9393,6 @@ export const chamberMembers = [
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-094",
     chamberId: "tofino-chamber",
     businessName: "Pacific Sands Beach Resort",
@@ -10398,8 +9408,6 @@ export const chamberMembers = [
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-095",
     chamberId: "tofino-chamber",
     businessName: "Paddleboard Tofino",
@@ -10414,8 +9422,6 @@ export const chamberMembers = [
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-096",
     chamberId: "tofino-chamber",
     businessName: "Peak Lodge Ucluelet",
@@ -10448,8 +9454,6 @@ export const chamberMembers = [
     municipality: "Ucluelet",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-098",
     chamberId: "tofino-chamber",
     businessName: "Rainforest Spa",
@@ -10464,8 +9468,6 @@ export const chamberMembers = [
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-099",
     chamberId: "tofino-chamber",
     businessName: "Rancho Tofino",
@@ -10480,8 +9482,6 @@ export const chamberMembers = [
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-100",
     chamberId: "tofino-chamber",
     businessName: "Rare Earth Wedding & Events",
@@ -10496,8 +9496,6 @@ export const chamberMembers = [
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-101",
     chamberId: "tofino-chamber",
     businessName: "Remote Passages Marine Excursions",
@@ -10512,8 +9510,6 @@ export const chamberMembers = [
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-102",
     chamberId: "tofino-chamber",
     businessName: "Remote Passages Sea Kayaking",
@@ -10528,8 +9524,6 @@ export const chamberMembers = [
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-103",
     chamberId: "tofino-chamber",
     businessName: "Rhino Coffee House",
@@ -10544,8 +9538,6 @@ export const chamberMembers = [
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-104",
     chamberId: "tofino-chamber",
     businessName: "Roy Henry Vickers Gallery",
@@ -10579,8 +9571,6 @@ export const chamberMembers = [
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-106",
     chamberId: "tofino-chamber",
     businessName: "Sadler Surf School",
@@ -10595,8 +9585,6 @@ export const chamberMembers = [
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-107",
     chamberId: "tofino-chamber",
     businessName: "Salmon Eye Fishing Charters",
@@ -10611,8 +9599,6 @@ export const chamberMembers = [
     municipality: "Ucluelet",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-108",
     chamberId: "tofino-chamber",
     businessName: "Savary Island Pie Company Tofino",
@@ -10627,8 +9613,6 @@ export const chamberMembers = [
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-109",
     chamberId: "tofino-chamber",
     businessName: "Sea Otter Crane & Freight",
@@ -10643,8 +9627,6 @@ export const chamberMembers = [
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-110",
     chamberId: "tofino-chamber",
     businessName: "Shelter Restaurant",
@@ -10660,8 +9642,6 @@ export const chamberMembers = [
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-111",
     chamberId: "tofino-chamber",
     businessName: "Storm Surf Shop",
@@ -10676,8 +9656,6 @@ export const chamberMembers = [
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-112",
     chamberId: "tofino-chamber",
     businessName: "Surf Grove Campground",
@@ -10693,8 +9671,6 @@ export const chamberMembers = [
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-113",
     chamberId: "tofino-chamber",
     businessName: "Surf Sister Surf School",
@@ -10729,8 +9705,6 @@ export const chamberMembers = [
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-115",
     chamberId: "tofino-chamber",
     businessName: "The Candy Jar",
@@ -10745,8 +9719,6 @@ export const chamberMembers = [
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-116",
     chamberId: "tofino-chamber",
     businessName: "The Fish Store",
@@ -10761,8 +9733,6 @@ export const chamberMembers = [
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-117",
     chamberId: "tofino-chamber",
     businessName: "The Great Room",
@@ -10777,8 +9747,6 @@ export const chamberMembers = [
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-118",
     chamberId: "tofino-chamber",
     businessName: "The Pointe Restaurant",
@@ -10794,8 +9762,6 @@ export const chamberMembers = [
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-119",
     chamberId: "tofino-chamber",
     businessName: "The Whale Centre",
@@ -10810,8 +9776,6 @@ export const chamberMembers = [
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-120",
     chamberId: "tofino-chamber",
     businessName: "TikiCAB Transportation Company",
@@ -10827,8 +9791,6 @@ export const chamberMembers = [
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-121",
     chamberId: "tofino-chamber",
     businessName: "Tin Wis Resort",
@@ -10844,8 +9806,6 @@ export const chamberMembers = [
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-122",
     chamberId: "tofino-chamber",
     businessName: "Tla-o-qui-aht Tribal Parks",
@@ -10862,8 +9822,6 @@ export const chamberMembers = [
   },
 
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-124",
     chamberId: "tofino-chamber",
     businessName: "Tofino Arts Council",
@@ -10877,8 +9835,6 @@ export const chamberMembers = [
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-125",
     chamberId: "tofino-chamber",
     businessName: "Tofino Bike Co.",
@@ -10893,8 +9849,6 @@ export const chamberMembers = [
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-126",
     chamberId: "tofino-chamber",
     businessName: "Tofino Botanical Gardens",
@@ -10909,8 +9863,6 @@ export const chamberMembers = [
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-127",
     chamberId: "tofino-chamber",
     businessName: "Tofino Brewing Company",
@@ -10926,8 +9878,6 @@ export const chamberMembers = [
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-128",
     chamberId: "tofino-chamber",
     businessName: "Tofino Bus - Island Express",
@@ -10947,8 +9897,6 @@ export const chamberMembers = [
       id: "tofino-bus",
     },
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-129",
     chamberId: "tofino-chamber",
     businessName: "Tofino Clayworks",
@@ -10963,8 +9911,6 @@ export const chamberMembers = [
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-130",
     chamberId: "tofino-chamber",
     businessName: "Tofino Co-op",
@@ -10979,8 +9925,6 @@ export const chamberMembers = [
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-131",
     chamberId: "tofino-chamber",
     businessName: "Tofino Expeditions",
@@ -10995,8 +9939,6 @@ export const chamberMembers = [
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-132",
     chamberId: "tofino-chamber",
     businessName: "Tofino General Hospital",
@@ -11015,8 +9957,6 @@ export const chamberMembers = [
       id: "tofino-general-hospital",
     },
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-133",
     chamberId: "tofino-chamber",
     businessName: "Tofino Paddle Surf",
@@ -11031,8 +9971,6 @@ export const chamberMembers = [
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-134",
     chamberId: "tofino-chamber",
     businessName: "Tofino Pharmacy",
@@ -11046,8 +9984,6 @@ export const chamberMembers = [
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-135",
     chamberId: "tofino-chamber",
     businessName: "Tofino Photography",
@@ -11061,8 +9997,6 @@ export const chamberMembers = [
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-136",
     chamberId: "tofino-chamber",
     businessName: "Tofino Resort + Marina",
@@ -11082,8 +10016,6 @@ export const chamberMembers = [
       id: "tofino-public-dock",
     },
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-137",
     chamberId: "tofino-chamber",
     businessName: "Tofino Sea Kayaking",
@@ -11098,8 +10030,6 @@ export const chamberMembers = [
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-138",
     chamberId: "tofino-chamber",
     businessName: "Tofino Shuttle",
@@ -11114,8 +10044,6 @@ export const chamberMembers = [
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-139",
     chamberId: "tofino-chamber",
     businessName: "Tofino Surf Adventures",
@@ -11152,8 +10080,6 @@ export const chamberMembers = [
     municipality: "Ucluelet",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-142",
     chamberId: "tofino-chamber",
     businessName: "Ucluelet Campground",
@@ -11168,8 +10094,6 @@ export const chamberMembers = [
     municipality: "Ucluelet",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-143",
     chamberId: "tofino-chamber",
     businessName: "Ukee Poke",
@@ -11202,8 +10126,6 @@ export const chamberMembers = [
     municipality: "Nanaimo",
     region: "Central Vancouver Island",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-145",
     chamberId: "tofino-chamber",
     businessName: "Vancouver Island Regional Library",
@@ -11217,8 +10139,6 @@ export const chamberMembers = [
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-146",
     chamberId: "tofino-chamber",
     businessName: "Vancouver Island Soaring Centre Ltd.",
@@ -11234,8 +10154,6 @@ export const chamberMembers = [
     municipality: "Port Alberni",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-147",
     chamberId: "tofino-chamber",
     businessName: "ViewWest Vacation Rentals",
@@ -11250,8 +10168,6 @@ export const chamberMembers = [
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-148",
     chamberId: "tofino-chamber",
     businessName: "Vista Hermosa",
@@ -11284,8 +10200,6 @@ export const chamberMembers = [
     municipality: "Ucluelet",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-150",
     chamberId: "tofino-chamber",
     businessName: "West Coast Aquatic Safaris",
@@ -11300,8 +10214,6 @@ export const chamberMembers = [
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-151",
     chamberId: "tofino-chamber",
     businessName: "West Coast Fitness Centre",
@@ -11316,8 +10228,6 @@ export const chamberMembers = [
     municipality: "Ucluelet",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-152",
     chamberId: "tofino-chamber",
     businessName: "West Coast Motel On The Harbour",
@@ -11332,8 +10242,6 @@ export const chamberMembers = [
     municipality: "Ucluelet",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-153",
     chamberId: "tofino-chamber",
     businessName: "Westerly News",
@@ -11348,8 +10256,6 @@ export const chamberMembers = [
     municipality: "Ucluelet",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-154",
     chamberId: "tofino-chamber",
     businessName: "Westland Insurance Group",
@@ -11363,8 +10269,6 @@ export const chamberMembers = [
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-155",
     chamberId: "tofino-chamber",
     businessName: "Whaler's Guesthouse - Tofino Hostel",
@@ -11396,8 +10300,6 @@ export const chamberMembers = [
     municipality: "Ucluelet",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-158",
     chamberId: "tofino-chamber",
     businessName: "Wildpod Glamping",
@@ -11413,8 +10315,6 @@ export const chamberMembers = [
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-159",
     chamberId: "tofino-chamber",
     businessName: "Wildside Grill",
@@ -11429,8 +10329,6 @@ export const chamberMembers = [
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
     websiteNeedsCollection: true,
-  },
-  {
     id: "tofino-member-160",
     chamberId: "tofino-chamber",
     businessName: "Wolf in the Fog",
@@ -11489,8 +10387,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2007,
-  },
-  {
     id: "victoria-member-002",
     chamberId: "greater-victoria-chamber",
     businessName: "Robin Hood Inn and Suites",
@@ -11507,8 +10403,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2014,
-  },
-  {
     id: "victoria-member-003",
     chamberId: "greater-victoria-chamber",
     businessName: "Swans Hotel",
@@ -11525,8 +10419,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 1993,
-  },
-  {
     id: "victoria-member-004",
     chamberId: "greater-victoria-chamber",
     businessName: "Days Inn Victoria Uptown",
@@ -11543,8 +10435,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 1981,
-  },
-  {
     id: "victoria-member-005",
     chamberId: "greater-victoria-chamber",
     businessName: "Royal Scot Hotel & Suites",
@@ -11561,8 +10451,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 1979,
-  },
-  {
     id: "victoria-member-006",
     chamberId: "greater-victoria-chamber",
     businessName: "Sea Breeze Lodge",
@@ -11579,8 +10467,6 @@ export const chamberMembers = [
     municipality: "Hornby Island",
     region: "Comox Valley",
     memberSince: 2021,
-  },
-  {
     id: "victoria-member-007",
     chamberId: "greater-victoria-chamber",
     businessName: "The Vic, Ascend Hotel Collection",
@@ -11597,8 +10483,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2023,
-  },
-  {
     id: "victoria-member-008",
     chamberId: "greater-victoria-chamber",
     businessName: "Oswego Hotel",
@@ -11615,8 +10499,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2007,
-  },
-  {
     id: "victoria-member-009",
     chamberId: "greater-victoria-chamber",
     businessName: "Bedford Regency Hotel",
@@ -11633,8 +10515,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 1994,
-  },
-  {
     id: "victoria-member-010",
     chamberId: "greater-victoria-chamber",
     businessName: "Days Inn Victoria on the Harbour",
@@ -11670,8 +10550,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 1961,
-  },
-  {
     id: "victoria-member-012",
     chamberId: "greater-victoria-chamber",
     businessName: "Victoria Marriott Inner Harbour",
@@ -11688,8 +10566,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2004,
-  },
-  {
     id: "victoria-member-013",
     chamberId: "greater-victoria-chamber",
     businessName: "Clive's Classic Lounge",
@@ -11706,8 +10582,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 1974,
-  },
-  {
     id: "victoria-member-014",
     chamberId: "greater-victoria-chamber",
     businessName: "Boom + Batten Restaurant and Cafe",
@@ -11724,8 +10598,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2025,
-  },
-  {
     id: "victoria-member-015",
     chamberId: "greater-victoria-chamber",
     businessName: "Milestones Restaurant",
@@ -11740,8 +10612,6 @@ export const chamberMembers = [
     naicsTitle: "Full-Service Restaurants",
     municipality: "Victoria",
     region: "Capital Regional District",
-  },
-  {
     id: "victoria-member-016",
     chamberId: "greater-victoria-chamber",
     businessName: "Spinnakers Brewpub & Guesthouses",
@@ -11758,8 +10628,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 1990,
-  },
-  {
     id: "victoria-member-017",
     chamberId: "greater-victoria-chamber",
     businessName: "10 Acres Group of Restaurants",
@@ -11776,8 +10644,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2003,
-  },
-  {
     id: "victoria-member-018",
     chamberId: "greater-victoria-chamber",
     businessName: "Keg Steakhouse & Bar",
@@ -11818,8 +10684,6 @@ export const chamberMembers = [
       dataset: "municipal-offices",
       id: "sooke-district",
     },
-  },
-  {
     id: "victoria-member-021",
     chamberId: "greater-victoria-chamber",
     businessName: "City of Colwood",
@@ -11840,8 +10704,6 @@ export const chamberMembers = [
       dataset: "municipal-offices",
       id: "colwood-city",
     },
-  },
-  {
     id: "victoria-member-022",
     chamberId: "greater-victoria-chamber",
     businessName: "BC Transit",
@@ -11862,10 +10724,8 @@ export const chamberMembers = [
       dataset: "ground-transport",
       id: "bc-transit",
     },
-  },
 
   // BANKS & CREDIT UNIONS
-  {
     id: "victoria-member-023",
     chamberId: "greater-victoria-chamber",
     businessName: "TD Canada Trust",
@@ -11883,8 +10743,6 @@ export const chamberMembers = [
     region: "Capital Regional District",
     memberSince: 1913,
     featured: true,
-  },
-  {
     id: "victoria-member-024",
     chamberId: "greater-victoria-chamber",
     businessName: "RBC Financial Group - Commercial Financial Services",
@@ -11902,8 +10760,6 @@ export const chamberMembers = [
     region: "Capital Regional District",
     memberSince: 1902,
     featured: true,
-  },
-  {
     id: "victoria-member-025",
     chamberId: "greater-victoria-chamber",
     businessName: "CIBC - Canadian Imperial Bank of Commerce",
@@ -11921,8 +10777,6 @@ export const chamberMembers = [
     region: "Capital Regional District",
     memberSince: 1901,
     featured: true,
-  },
-  {
     id: "victoria-member-026",
     chamberId: "greater-victoria-chamber",
     businessName: "Scotiabank",
@@ -11938,8 +10792,6 @@ export const chamberMembers = [
     region: "Capital Regional District",
     memberSince: 1913,
     featured: true,
-  },
-  {
     id: "victoria-member-027",
     chamberId: "greater-victoria-chamber",
     businessName: "Coast Capital Savings - Tillicum",
@@ -11956,8 +10808,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2011,
-  },
-  {
     id: "victoria-member-028",
     chamberId: "greater-victoria-chamber",
     businessName: "Coast Capital Savings - Westshore",
@@ -11993,8 +10843,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2025,
-  },
-  {
     id: "victoria-member-030",
     chamberId: "greater-victoria-chamber",
     businessName: "Pearlman Lindholm",
@@ -12011,8 +10859,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 1961,
-  },
-  {
     id: "victoria-member-031",
     chamberId: "greater-victoria-chamber",
     businessName: "Velletta Pedersen Christie Lawyers",
@@ -12029,8 +10875,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2024,
-  },
-  {
     id: "victoria-member-032",
     chamberId: "greater-victoria-chamber",
     businessName: "McConnan, Bion, O'Connor & Peterson",
@@ -12047,8 +10891,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 1976,
-  },
-  {
     id: "victoria-member-033",
     chamberId: "greater-victoria-chamber",
     businessName: "Johns Southward LLP",
@@ -12064,8 +10906,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 1998,
-  },
-  {
     id: "victoria-member-034",
     chamberId: "greater-victoria-chamber",
     businessName: "Juniper Law",
@@ -12082,8 +10922,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2023,
-  },
-  {
     id: "victoria-member-035",
     chamberId: "greater-victoria-chamber",
     businessName: "Mack Law Group LLP",
@@ -12119,8 +10957,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2018,
-  },
-  {
     id: "victoria-member-037",
     chamberId: "greater-victoria-chamber",
     businessName: "Peter B. Gustavson School of Business",
@@ -12156,8 +10992,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 1990,
-  },
-  {
     id: "victoria-member-039",
     chamberId: "greater-victoria-chamber",
     businessName: "Miniature World",
@@ -12174,8 +11008,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2023,
-  },
-  {
     id: "victoria-member-040",
     chamberId: "greater-victoria-chamber",
     businessName: "A Taste of Victoria Food Tours Inc.",
@@ -12192,8 +11024,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2017,
-  },
-  {
     id: "victoria-member-041",
     chamberId: "greater-victoria-chamber",
     businessName: "Victoria Butterfly Gardens",
@@ -12210,8 +11040,6 @@ export const chamberMembers = [
     municipality: "Central Saanich",
     region: "Capital Regional District",
     memberSince: 2008,
-  },
-  {
     id: "victoria-member-042",
     chamberId: "greater-victoria-chamber",
     businessName: "The Butchart Gardens",
@@ -12248,8 +11076,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2013,
-  },
-  {
     id: "victoria-member-044",
     chamberId: "greater-victoria-chamber",
     businessName: "RMC Chartered Professional Accountants LLP",
@@ -12266,8 +11092,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2025,
-  },
-  {
     id: "victoria-member-045",
     chamberId: "greater-victoria-chamber",
     businessName: "Cameron Izard Snell LLP, Chartered Professional Accountants",
@@ -12284,8 +11108,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2007,
-  },
-  {
     id: "victoria-member-046",
     chamberId: "greater-victoria-chamber",
     businessName: "Hutcheson & Co. CPA LLP",
@@ -12302,8 +11124,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2024,
-  },
-  {
     id: "victoria-member-047",
     chamberId: "greater-victoria-chamber",
     businessName: "Ounsted & Company",
@@ -12339,8 +11159,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 1891,
-  },
-  {
     id: "victoria-member-049",
     chamberId: "greater-victoria-chamber",
     businessName: "RE/MAX Generation",
@@ -12357,8 +11175,6 @@ export const chamberMembers = [
     municipality: "Lake Cowichan",
     region: "Cowichan Valley",
     memberSince: 1998,
-  },
-  {
     id: "victoria-member-050",
     chamberId: "greater-victoria-chamber",
     businessName: "Clover Residential Ltd.",
@@ -12375,8 +11191,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2002,
-  },
-  {
     id: "victoria-member-051",
     chamberId: "greater-victoria-chamber",
     businessName: "The Agency",
@@ -12393,8 +11207,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2021,
-  },
-  {
     id: "victoria-member-052",
     chamberId: "greater-victoria-chamber",
     businessName: "Macdonald Realty Ltd",
@@ -12432,8 +11244,6 @@ export const chamberMembers = [
     region: "Capital Regional District",
     memberSince: 1987,
     featured: true,
-  },
-  {
     id: "victoria-member-054",
     chamberId: "greater-victoria-chamber",
     businessName: "MAC Reno Design Build Ltd.",
@@ -12450,8 +11260,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2003,
-  },
-  {
     id: "victoria-member-055",
     chamberId: "greater-victoria-chamber",
     businessName: "Torrell Homes Ltd",
@@ -12467,8 +11275,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2025,
-  },
-  {
     id: "victoria-member-056",
     chamberId: "greater-victoria-chamber",
     businessName: "Soni & Sons Construction",
@@ -12484,8 +11290,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2025,
-  },
-  {
     id: "victoria-member-057",
     chamberId: "greater-victoria-chamber",
     businessName: "Smartway Restoration Ltd.",
@@ -12501,8 +11305,6 @@ export const chamberMembers = [
     municipality: "Langford",
     region: "Capital Regional District",
     memberSince: 2018,
-  },
-  {
     id: "victoria-member-058",
     chamberId: "greater-victoria-chamber",
     businessName: "Adrian Lise Drywall Ltd.",
@@ -12518,8 +11320,6 @@ export const chamberMembers = [
     region: "Capital Regional District",
     memberSince: 2010,
     websiteNeedsCollection: true,
-  },
-  {
     id: "victoria-member-059",
     chamberId: "greater-victoria-chamber",
     businessName: "Terrascape Designs Ltd.",
@@ -12556,8 +11356,6 @@ export const chamberMembers = [
     region: "Capital Regional District",
     memberSince: 1981,
     featured: true,
-  },
-  {
     id: "victoria-member-061",
     chamberId: "greater-victoria-chamber",
     businessName: "Acera Insurance - Uptown",
@@ -12573,8 +11371,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 1981,
-  },
-  {
     id: "victoria-member-062",
     chamberId: "greater-victoria-chamber",
     businessName: "HUB International Ltd.",
@@ -12591,8 +11387,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 1993,
-  },
-  {
     id: "victoria-member-063",
     chamberId: "greater-victoria-chamber",
     businessName: "Coastal Community Credit Union & Insurance Services",
@@ -12609,8 +11403,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2014,
-  },
-  {
     id: "victoria-member-064",
     chamberId: "greater-victoria-chamber",
     businessName: "Seafirst Insurance Brokers",
@@ -12648,8 +11440,6 @@ export const chamberMembers = [
     region: "Capital Regional District",
     memberSince: 1981,
     featured: true,
-  },
-  {
     id: "victoria-member-066",
     chamberId: "greater-victoria-chamber",
     businessName: "Daxtech IT Solutions",
@@ -12666,8 +11456,6 @@ export const chamberMembers = [
     municipality: "Langford",
     region: "Capital Regional District",
     memberSince: 2011,
-  },
-  {
     id: "victoria-member-067",
     chamberId: "greater-victoria-chamber",
     businessName: "Micron Computing",
@@ -12683,8 +11471,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2016,
-  },
-  {
     id: "victoria-member-068",
     chamberId: "greater-victoria-chamber",
     businessName: "ITConnect Business Solutions",
@@ -12700,8 +11486,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2025,
-  },
-  {
     id: "victoria-member-069",
     chamberId: "greater-victoria-chamber",
     businessName: "Vancouver Island Information Systems Ltd.",
@@ -12718,8 +11502,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2016,
-  },
-  {
     id: "victoria-member-070",
     chamberId: "greater-victoria-chamber",
     businessName: "SeniorTech Academy LTD",
@@ -12754,8 +11536,6 @@ export const chamberMembers = [
     municipality: "Saanich",
     region: "Capital Regional District",
     memberSince: 2008,
-  },
-  {
     id: "victoria-member-072",
     chamberId: "greater-victoria-chamber",
     businessName: "Anytime Fitness - McKenzie",
@@ -12772,8 +11552,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2017,
-  },
-  {
     id: "victoria-member-073",
     chamberId: "greater-victoria-chamber",
     businessName: "DermaLight Clinic",
@@ -12790,8 +11568,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2024,
-  },
-  {
     id: "victoria-member-074",
     chamberId: "greater-victoria-chamber",
     businessName: "Speed Mechanics Sports Performance & Consulting Ltd.",
@@ -12808,8 +11584,6 @@ export const chamberMembers = [
     municipality: "Saanich",
     region: "Capital Regional District",
     memberSince: 2025,
-  },
-  {
     id: "victoria-member-075",
     chamberId: "greater-victoria-chamber",
     businessName: "Clairmont Conditioning",
@@ -12846,8 +11620,6 @@ export const chamberMembers = [
     municipality: "Langford",
     region: "Capital Regional District",
     memberSince: 2015,
-  },
-  {
     id: "victoria-member-077",
     chamberId: "greater-victoria-chamber",
     businessName: "Westgrove Law Corporation",
@@ -12864,8 +11636,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2025,
-  },
-  {
     id: "victoria-member-078",
     chamberId: "greater-victoria-chamber",
     businessName: "Discovery Economic Consulting",
@@ -12881,8 +11651,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 1990,
-  },
-  {
     id: "victoria-member-079",
     chamberId: "greater-victoria-chamber",
     businessName: "IMM Recruitment Ltd.",
@@ -12917,8 +11685,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2001,
-  },
-  {
     id: "victoria-member-081",
     chamberId: "greater-victoria-chamber",
     businessName: "McElvaine Investment Management Ltd",
@@ -12935,8 +11701,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2024,
-  },
-  {
     id: "victoria-member-082",
     chamberId: "greater-victoria-chamber",
     businessName: "DesignWealth",
@@ -12953,8 +11717,6 @@ export const chamberMembers = [
     municipality: "Langford",
     region: "Capital Regional District",
     memberSince: 2020,
-  },
-  {
     id: "victoria-member-083",
     chamberId: "greater-victoria-chamber",
     businessName: "FrontierCFO",
@@ -12971,8 +11733,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2023,
-  },
-  {
     id: "victoria-member-084",
     chamberId: "greater-victoria-chamber",
     businessName: "Osborne Partners Ltd.",
@@ -12988,8 +11748,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2024,
-  },
-  {
     id: "victoria-member-085",
     chamberId: "greater-victoria-chamber",
     businessName: "Financial Management Institute - Victoria Chapter",
@@ -13005,8 +11763,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2022,
-  },
-  {
     id: "victoria-member-086",
     chamberId: "greater-victoria-chamber",
     businessName: "Rumsey Consulting Ltd",
@@ -13060,8 +11816,6 @@ export const chamberMembers = [
     municipality: "Esquimalt",
     region: "Capital Regional District",
     memberSince: 1980,
-  },
-  {
     id: "victoria-member-104",
     chamberId: "greater-victoria-chamber",
     businessName: "Vancouver Island Construction Association (VICA)",
@@ -13078,8 +11832,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 1986,
-  },
-  {
     id: "victoria-member-105",
     chamberId: "greater-victoria-chamber",
     businessName: "Saanich Peninsula Chamber of Commerce",
@@ -13096,8 +11848,6 @@ export const chamberMembers = [
     municipality: "Sidney",
     region: "Capital Regional District",
     memberSince: 1980,
-  },
-  {
     id: "victoria-member-106",
     chamberId: "greater-victoria-chamber",
     businessName: "Ironworkers Local 97",
@@ -13114,8 +11864,6 @@ export const chamberMembers = [
     municipality: "Maple Ridge",
     region: "Metro Vancouver",
     memberSince: 2015,
-  },
-  {
     id: "victoria-member-107",
     chamberId: "greater-victoria-chamber",
     businessName: "Orbus Business Networks Inc.",
@@ -13162,8 +11910,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2025,
-  },
-  {
     id: "victoria-member-118",
     chamberId: "greater-victoria-chamber",
     businessName: "Monalo.io",
@@ -13180,8 +11926,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2022,
-  },
-  {
     id: "victoria-member-119",
     chamberId: "greater-victoria-chamber",
     businessName: "Flynn Digital Plus",
@@ -13197,8 +11941,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2025,
-  },
-  {
     id: "victoria-member-120",
     chamberId: "greater-victoria-chamber",
     businessName: "Webmax Canada",
@@ -13215,8 +11957,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2025,
-  },
-  {
     id: "victoria-member-121",
     chamberId: "greater-victoria-chamber",
     businessName: "RFDM Solutions",
@@ -13252,8 +11992,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 1954,
-  },
-  {
     id: "victoria-member-123",
     chamberId: "greater-victoria-chamber",
     businessName: "CHEK News",
@@ -13289,8 +12027,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 1987,
-  },
-  {
     id: "victoria-member-126",
     chamberId: "greater-victoria-chamber",
     businessName: "The Narwhal News Society",
@@ -13330,8 +12066,6 @@ export const chamberMembers = [
     municipality: "Langford",
     region: "Capital Regional District",
     memberSince: 1980,
-  },
-  {
     id: "victoria-member-132",
     chamberId: "greater-victoria-chamber",
     businessName: "Wheaton Chevrolet Buick Cadillac GMC Ltd.",
@@ -13348,8 +12082,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2007,
-  },
-  {
     id: "victoria-member-133",
     chamberId: "greater-victoria-chamber",
     businessName: "Genesis Victoria",
@@ -13366,8 +12098,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2019,
-  },
-  {
     id: "victoria-member-134",
     chamberId: "greater-victoria-chamber",
     businessName: "Galaxy Motors",
@@ -13384,8 +12114,6 @@ export const chamberMembers = [
     municipality: "Langford",
     region: "Capital Regional District",
     memberSince: 2013,
-  },
-  {
     id: "victoria-member-135",
     chamberId: "greater-victoria-chamber",
     businessName: "Jim Pattison Subaru Victoria",
@@ -13432,8 +12160,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2010,
-  },
-  {
     id: "victoria-member-146",
     chamberId: "greater-victoria-chamber",
     businessName: "number TEN architectural group",
@@ -13450,8 +12176,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2007,
-  },
-  {
     id: "victoria-member-147",
     chamberId: "greater-victoria-chamber",
     businessName: "Thinkspace Architecture Planning Interior Design Ltd.",
@@ -13468,8 +12192,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2025,
-  },
-  {
     id: "victoria-member-148",
     chamberId: "greater-victoria-chamber",
     businessName: "Waymark Architecture",
@@ -13486,8 +12208,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2018,
-  },
-  {
     id: "victoria-member-149",
     chamberId: "greater-victoria-chamber",
     businessName: "Alan Lowe Architect Inc",
@@ -13589,8 +12309,6 @@ export const chamberMembers = [
     municipality: "Central Saanich",
     region: "Capital Regional District",
     memberSince: 2019,
-  },
-  {
     id: "victoria-member-178",
     chamberId: "greater-victoria-chamber",
     businessName: "Concert Properties",
@@ -13607,8 +12325,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2012,
-  },
-  {
     id: "victoria-member-179",
     chamberId: "greater-victoria-chamber",
     businessName: "T-Bone Construction",
@@ -13625,8 +12341,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2021,
-  },
-  {
     id: "victoria-member-180",
     chamberId: "greater-victoria-chamber",
     businessName: "Backyard Bungalows Inc.",
@@ -13676,8 +12390,6 @@ export const chamberMembers = [
     municipality: "Sooke",
     region: "Capital Regional District",
     memberSince: 2024,
-  },
-  {
     id: "victoria-member-193",
     chamberId: "greater-victoria-chamber",
     businessName: "Evergreen Wellness",
@@ -13694,8 +12406,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 1999,
-  },
-  {
     id: "victoria-member-194",
     chamberId: "greater-victoria-chamber",
     businessName: "Victoria Primary Care",
@@ -13710,8 +12420,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2020,
-  },
-  {
     id: "victoria-member-195",
     chamberId: "greater-victoria-chamber",
     businessName: "Yarrow Medical",
@@ -13751,8 +12459,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2016,
-  },
-  {
     id: "victoria-member-202",
     chamberId: "greater-victoria-chamber",
     businessName: "Berwick Retirement Communities",
@@ -13769,8 +12475,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 1970,
-  },
-  {
     id: "victoria-member-203",
     chamberId: "greater-victoria-chamber",
     businessName: "Amica Douglas House",
@@ -13811,8 +12515,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2018,
-  },
-  {
     id: "victoria-member-210",
     chamberId: "greater-victoria-chamber",
     businessName: "James Bay Dental",
@@ -13829,8 +12531,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2022,
-  },
-  {
     id: "victoria-member-211",
     chamberId: "greater-victoria-chamber",
     businessName: "Pacific Rim Dental Centre",
@@ -13847,8 +12547,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2025,
-  },
-  {
     id: "victoria-member-212",
     chamberId: "greater-victoria-chamber",
     businessName: "Pacifica Dental",
@@ -13865,8 +12563,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2024,
-  },
-  {
     id: "victoria-member-213",
     chamberId: "greater-victoria-chamber",
     businessName: "Dr. Chris Hildebrand",
@@ -13881,8 +12577,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2020,
-  },
-  {
     id: "victoria-member-214",
     chamberId: "greater-victoria-chamber",
     businessName: "Dr. E.R. Laver Inc., Dentist",
@@ -13916,8 +12610,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2011,
-  },
-  {
     id: "victoria-member-216",
     chamberId: "greater-victoria-chamber",
     businessName: "WCG Services",
@@ -13934,8 +12626,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 1994,
-  },
-  {
     id: "victoria-member-217",
     chamberId: "greater-victoria-chamber",
     businessName: "Agilus Work Solutions",
@@ -13952,8 +12642,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 1997,
-  },
-  {
     id: "victoria-member-218",
     chamberId: "greater-victoria-chamber",
     businessName: "WorkLink Employment Society",
@@ -13969,8 +12657,6 @@ export const chamberMembers = [
     municipality: "Langford",
     region: "Capital Regional District",
     memberSince: 2005,
-  },
-  {
     id: "victoria-member-219",
     chamberId: "greater-victoria-chamber",
     businessName: "Chamber Group Insurance - Johnston Group",
@@ -14006,8 +12692,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2006,
-  },
-  {
     id: "victoria-member-221",
     chamberId: "greater-victoria-chamber",
     businessName: "Imagine Wireless Inc.",
@@ -14024,8 +12708,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2022,
-  },
-  {
     id: "victoria-member-222",
     chamberId: "greater-victoria-chamber",
     businessName: "M.O.H. Productions Ltd.",
@@ -14060,8 +12742,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 1962,
-  },
-  {
     id: "victoria-member-224",
     chamberId: "greater-victoria-chamber",
     businessName: "Nicola Wealth",
@@ -14078,8 +12758,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2024,
-  },
-  {
     id: "victoria-member-225",
     chamberId: "greater-victoria-chamber",
     businessName: "DeLuca Veale Investment Counsel Inc.",
@@ -14096,8 +12774,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2018,
-  },
-  {
     id: "victoria-member-226",
     chamberId: "greater-victoria-chamber",
     businessName: "Investia Financial Services Inc.",
@@ -14113,8 +12789,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2024,
-  },
-  {
     id: "victoria-member-227",
     chamberId: "greater-victoria-chamber",
     businessName: "Edward Jones - Sadi Koray Demircan",
@@ -14150,8 +12824,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 1981,
-  },
-  {
     id: "victoria-member-229",
     chamberId: "greater-victoria-chamber",
     businessName: "Fine Floral Designs",
@@ -14168,8 +12840,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2005,
-  },
-  {
     id: "victoria-member-230",
     chamberId: "greater-victoria-chamber",
     businessName: "Fawn & Flora Greenscapes",
@@ -14200,8 +12870,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2006,
-  },
-  {
     id: "victoria-member-232",
     chamberId: "greater-victoria-chamber",
     businessName: "Wildwood Outdoor Living Centre",
@@ -14218,8 +12886,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2012,
-  },
-  {
     id: "victoria-member-233",
     chamberId: "greater-victoria-chamber",
     businessName: "Larix Landscape",
@@ -14235,8 +12901,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2025,
-  },
-  {
     id: "victoria-member-234",
     chamberId: "greater-victoria-chamber",
     businessName: "Blenkinsop Community Agricultural Centre",
@@ -14253,8 +12917,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2022,
-  },
-  {
     id: "victoria-member-235",
     chamberId: "greater-victoria-chamber",
     businessName: "Canadian Tire Hillside",
@@ -14290,8 +12952,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2003,
-  },
-  {
     id: "victoria-member-237",
     chamberId: "greater-victoria-chamber",
     businessName: "Swept Space Incorporated",
@@ -14308,8 +12968,6 @@ export const chamberMembers = [
     municipality: "Langford",
     region: "Capital Regional District",
     memberSince: 2021,
-  },
-  {
     id: "victoria-member-238",
     chamberId: "greater-victoria-chamber",
     businessName: "Scandinavian Building Services",
@@ -14325,8 +12983,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2022,
-  },
-  {
     id: "victoria-member-239",
     chamberId: "greater-victoria-chamber",
     businessName: "Master Care Janitorial and Facility Services",
@@ -14342,8 +12998,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2000,
-  },
-  {
     id: "victoria-member-240",
     chamberId: "greater-victoria-chamber",
     businessName: "Bright Clean Commercial Cleaning Victoria",
@@ -14391,8 +13045,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 1999,
-  },
-  {
     id: "victoria-member-253",
     chamberId: "greater-victoria-chamber",
     businessName: "Red Barn Market",
@@ -14409,8 +13061,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2019,
-  },
-  {
     id: "victoria-member-254",
     chamberId: "greater-victoria-chamber",
     businessName: "Thrifty Foods",
@@ -14427,8 +13077,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 1981,
-  },
-  {
     id: "victoria-member-255",
     chamberId: "greater-victoria-chamber",
     businessName: "Cloud Produce, Inc.",
@@ -14442,8 +13090,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2025,
-  },
-  {
     id: "victoria-member-256",
     chamberId: "greater-victoria-chamber",
     businessName: "Country Grocer - Salt Spring Island",
@@ -14489,8 +13135,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2021,
-  },
-  {
     id: "victoria-member-266",
     chamberId: "greater-victoria-chamber",
     businessName: "Read Jones Christoffersen Ltd.",
@@ -14507,8 +13151,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 1972,
-  },
-  {
     id: "victoria-member-267",
     chamberId: "greater-victoria-chamber",
     businessName: "Stantec Consulting Ltd.",
@@ -14525,8 +13167,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2002,
-  },
-  {
     id: "victoria-member-268",
     chamberId: "greater-victoria-chamber",
     businessName: "Mavericks BC",
@@ -14543,8 +13183,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2019,
-  },
-  {
     id: "victoria-member-269",
     chamberId: "greater-victoria-chamber",
     businessName: "McElhanney",
@@ -14593,8 +13231,6 @@ export const chamberMembers = [
     municipality: "Langford",
     region: "Capital Regional District",
     memberSince: 2015,
-  },
-  {
     id: "victoria-member-282",
     chamberId: "greater-victoria-chamber",
     businessName: "Maximum Express Courier, Freight & Logistics",
@@ -14611,8 +13247,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2004,
-  },
-  {
     id: "victoria-member-283",
     chamberId: "greater-victoria-chamber",
     businessName: "National Courier Service Ltd.",
@@ -14629,8 +13263,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2004,
-  },
-  {
     id: "victoria-member-284",
     chamberId: "greater-victoria-chamber",
     businessName: "You Move Me - Vancouver Island",
@@ -14666,8 +13298,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2002,
-  },
-  {
     id: "victoria-member-286",
     chamberId: "greater-victoria-chamber",
     businessName: "Paul Mara Jewellers",
@@ -14684,8 +13314,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2004,
-  },
-  {
     id: "victoria-member-287",
     chamberId: "greater-victoria-chamber",
     businessName: "Flux and Stone Jewelry",
@@ -14702,8 +13330,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2024,
-  },
-  {
     id: "victoria-member-288",
     chamberId: "greater-victoria-chamber",
     businessName: "Violette",
@@ -14739,8 +13365,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2004,
-  },
-  {
     id: "victoria-member-290",
     chamberId: "greater-victoria-chamber",
     businessName: "L.A. Limousines Inc.",
@@ -14775,8 +13399,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2001,
-  },
-  {
     id: "victoria-member-292",
     chamberId: "greater-victoria-chamber",
     businessName: "First Memorial Funeral Services and The Garden of Memories",
@@ -14793,8 +13415,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2018,
-  },
-  {
     id: "victoria-member-293",
     chamberId: "greater-victoria-chamber",
     businessName: "McCall Gardens Funeral and Cremation Service",
@@ -14811,8 +13431,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 1962,
-  },
-  {
     id: "victoria-member-294",
     chamberId: "greater-victoria-chamber",
     businessName: "Earth's Option - Cremation & Burial Services",
@@ -14829,8 +13447,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2023,
-  },
-  {
     id: "victoria-member-295",
     chamberId: "greater-victoria-chamber",
     businessName: "First Memorial Funeral Services",
@@ -14866,8 +13482,6 @@ export const chamberMembers = [
     municipality: "Esquimalt",
     region: "Capital Regional District",
     memberSince: 2016,
-  },
-  {
     id: "victoria-member-297",
     chamberId: "greater-victoria-chamber",
     businessName: "Origin Bakery",
@@ -14884,8 +13498,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2020,
-  },
-  {
     id: "victoria-member-298",
     chamberId: "greater-victoria-chamber",
     businessName: "Ooh La La Cupcakes + Cakes",
@@ -14921,8 +13533,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2020,
-  },
-  {
     id: "victoria-member-300",
     chamberId: "greater-victoria-chamber",
     businessName: "Pacificanna - James Bay",
@@ -14939,8 +13549,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2022,
-  },
-  {
     id: "victoria-member-301",
     chamberId: "greater-victoria-chamber",
     businessName: "Pacificanna - Jubilee",
@@ -14956,8 +13564,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2021,
-  },
-  {
     id: "victoria-member-302",
     chamberId: "greater-victoria-chamber",
     businessName: "Cloud Nine",
@@ -14992,8 +13598,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2024,
-  },
-  {
     id: "victoria-member-304",
     chamberId: "greater-victoria-chamber",
     businessName: "Pedego Electric Bikes Victoria",
@@ -15010,8 +13614,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2022,
-  },
-  {
     id: "victoria-member-305",
     chamberId: "greater-victoria-chamber",
     businessName: "Bird Canada Scooters Inc",
@@ -15028,8 +13630,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2025,
-  },
-  {
     id: "victoria-member-306",
     chamberId: "greater-victoria-chamber",
     businessName: "Russ Hay's The Bicycle Shop",
@@ -15046,8 +13646,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 1984,
-  },
-  {
     id: "victoria-member-307",
     chamberId: "greater-victoria-chamber",
     businessName: "velofix Victoria",
@@ -15064,8 +13662,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2017,
-  },
-  {
     id: "victoria-member-308",
     chamberId: "greater-victoria-chamber",
     businessName: "Schwalbe Tires North America Inc",
@@ -15105,8 +13701,6 @@ export const chamberMembers = [
     municipality: "Langford",
     region: "Capital Regional District",
     memberSince: 2022,
-  },
-  {
     id: "victoria-member-313",
     chamberId: "greater-victoria-chamber",
     businessName: "Thomson Roof Treatment Ltd.",
@@ -15122,8 +13716,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2011,
-  },
-  {
     id: "victoria-member-314",
     chamberId: "greater-victoria-chamber",
     businessName: "Aero Services",
@@ -15140,8 +13732,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2018,
-  },
-  {
     id: "victoria-member-315",
     chamberId: "greater-victoria-chamber",
     businessName: "Voila Cleaning Services Victoria",
@@ -15177,8 +13767,6 @@ export const chamberMembers = [
     municipality: "Langford",
     region: "Capital Regional District",
     memberSince: 2016,
-  },
-  {
     id: "victoria-member-317",
     chamberId: "greater-victoria-chamber",
     businessName: "Maycock Eyecare",
@@ -15195,8 +13783,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2010,
-  },
-  {
     id: "victoria-member-318",
     chamberId: "greater-victoria-chamber",
     businessName: "Mayfair Optometric Clinic",
@@ -15213,8 +13799,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 1996,
-  },
-  {
     id: "victoria-member-319",
     chamberId: "greater-victoria-chamber",
     businessName: "Goo Goo Goggles",
@@ -15231,8 +13815,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2008,
-  },
-  {
     id: "victoria-member-320",
     chamberId: "greater-victoria-chamber",
     businessName: "Costco Wholesale Langford",
@@ -15267,8 +13849,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2025,
-  },
-  {
     id: "victoria-member-322",
     chamberId: "greater-victoria-chamber",
     businessName: "Food For Thought Catering",
@@ -15285,8 +13865,6 @@ export const chamberMembers = [
     municipality: "Langford",
     region: "Capital Regional District",
     memberSince: 2007,
-  },
-  {
     id: "victoria-member-323",
     chamberId: "greater-victoria-chamber",
     businessName: "The Bubble Bus Company Inc",
@@ -15303,8 +13881,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2024,
-  },
-  {
     id: "victoria-member-324",
     chamberId: "greater-victoria-chamber",
     businessName: "This Week's Lunch",
@@ -15321,8 +13897,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2024,
-  },
-  {
     id: "victoria-member-325",
     chamberId: "greater-victoria-chamber",
     businessName: "Songhees Events & Catering",
@@ -15358,8 +13932,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2019,
-  },
-  {
     id: "victoria-member-327",
     chamberId: "greater-victoria-chamber",
     businessName: "Sager's Interiors",
@@ -15376,8 +13948,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 1996,
-  },
-  {
     id: "victoria-member-328",
     chamberId: "greater-victoria-chamber",
     businessName: "Resthouse",
@@ -15394,8 +13964,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2022,
-  },
-  {
     id: "victoria-member-329",
     chamberId: "greater-victoria-chamber",
     businessName: "Luxe Home Interiors",
@@ -15412,8 +13980,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2004,
-  },
-  {
     id: "victoria-member-330",
     chamberId: "greater-victoria-chamber",
     businessName: "Avenue One Furniture Company",
@@ -15449,8 +14015,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2002,
-  },
-  {
     id: "victoria-member-332",
     chamberId: "greater-victoria-chamber",
     businessName: "Oscar & Libby's",
@@ -15486,8 +14050,6 @@ export const chamberMembers = [
     municipality: "View Royal",
     region: "Capital Regional District",
     memberSince: 2008,
-  },
-  {
     id: "victoria-member-334",
     chamberId: "greater-victoria-chamber",
     businessName: "Victoria Golf Club",
@@ -15501,8 +14063,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2006,
-  },
-  {
     id: "victoria-member-335",
     chamberId: "greater-victoria-chamber",
     businessName: "Corporation of the District of Saanich",
@@ -15518,8 +14078,6 @@ export const chamberMembers = [
     municipality: "Saanich",
     region: "Capital Regional District",
     memberSince: 2019,
-  },
-  {
     id: "victoria-member-336",
     chamberId: "greater-victoria-chamber",
     businessName: "Cedar Hill Golf Course",
@@ -15536,8 +14094,6 @@ export const chamberMembers = [
     municipality: "Saanich",
     region: "Capital Regional District",
     memberSince: 2012,
-  },
-  {
     id: "victoria-member-337",
     chamberId: "greater-victoria-chamber",
     businessName: "Olympic View Golf Club",
@@ -15596,8 +14152,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2021,
-  },
-  {
     id: "victoria-member-344",
     chamberId: "greater-victoria-chamber",
     businessName: "AC Design",
@@ -15633,8 +14187,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2023,
-  },
-  {
     id: "victoria-member-346",
     chamberId: "greater-victoria-chamber",
     businessName: "MW Custom Home Painting",
@@ -15648,8 +14200,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2020,
-  },
-  {
     id: "victoria-member-347",
     chamberId: "greater-victoria-chamber",
     businessName: "Nhan Pham Interior Design",
@@ -15666,8 +14216,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2025,
-  },
-  {
     id: "victoria-member-348",
     chamberId: "greater-victoria-chamber",
     businessName: "Paboom Home Imports",
@@ -15702,8 +14250,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 1991,
-  },
-  {
     id: "victoria-member-350",
     chamberId: "greater-victoria-chamber",
     businessName: "Premium Living Victoria",
@@ -15720,8 +14266,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2020,
-  },
-  {
     id: "victoria-member-351",
     chamberId: "greater-victoria-chamber",
     businessName: "Tedford Overhead Doors & Gates Ltd.",
@@ -15738,8 +14282,6 @@ export const chamberMembers = [
     municipality: "Saanich",
     region: "Capital Regional District",
     memberSince: 2005,
-  },
-  {
     id: "victoria-member-352",
     chamberId: "greater-victoria-chamber",
     businessName: "BC Tub Liners/Fenwick Bath",
@@ -15821,8 +14363,6 @@ export const chamberMembers = [
     municipality: "Langford",
     region: "Capital Regional District",
     memberSince: 2020,
-  },
-  {
     id: "victoria-member-362",
     chamberId: "greater-victoria-chamber",
     businessName: "IPB Consulting Services",
@@ -15838,8 +14378,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2009,
-  },
-  {
     id: "victoria-member-363",
     chamberId: "greater-victoria-chamber",
     businessName: "Doublet Management Consulting Ltd.",
@@ -15856,8 +14394,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2023,
-  },
-  {
     id: "victoria-member-364",
     chamberId: "greater-victoria-chamber",
     businessName: "Seabrook Strategies Incorporated",
@@ -15922,8 +14458,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 1978,
-  },
-  {
     id: "victoria-member-376",
     chamberId: "greater-victoria-chamber",
     businessName: "Bolen Books",
@@ -15940,8 +14474,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 1979,
-  },
-  {
     id: "victoria-member-377",
     chamberId: "greater-victoria-chamber",
     businessName: "Russell Books",
@@ -15979,8 +14511,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2021,
-  },
-  {
     id: "victoria-member-380",
     chamberId: "greater-victoria-chamber",
     businessName: "Uber Canada",
@@ -16022,8 +14552,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 1977,
-  },
-  {
     id: "victoria-member-387",
     chamberId: "greater-victoria-chamber",
     businessName: "Moka House Cook Street",
@@ -16040,8 +14568,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2019,
-  },
-  {
     id: "victoria-member-388",
     chamberId: "greater-victoria-chamber",
     businessName: "Oughtred Coffee & Tea Ltd.",
@@ -16058,8 +14584,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 1987,
-  },
-  {
     id: "victoria-member-389",
     chamberId: "greater-victoria-chamber",
     businessName: "Silk Road Tea",
@@ -16076,8 +14600,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2013,
-  },
-  {
     id: "victoria-member-390",
     chamberId: "greater-victoria-chamber",
     businessName: "Indigenous Roots Coffee Company Inc.",
@@ -16150,8 +14672,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2023,
-  },
-  {
     id: "victoria-member-423",
     chamberId: "greater-victoria-chamber",
     businessName: "Alpha Select Production Services Inc",
@@ -16168,8 +14688,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2025,
-  },
-  {
     id: "victoria-member-424",
     chamberId: "greater-victoria-chamber",
     businessName: "Pacific Opera Victoria",
@@ -16185,8 +14703,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2007,
-  },
-  {
     id: "victoria-member-425",
     chamberId: "greater-victoria-chamber",
     businessName: "Victoria Symphony",
@@ -16222,8 +14738,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2020,
-  },
-  {
     id: "victoria-member-427",
     chamberId: "greater-victoria-chamber",
     businessName: "City Green Solutions Society",
@@ -16240,8 +14754,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2008,
-  },
-  {
     id: "victoria-member-428",
     chamberId: "greater-victoria-chamber",
     businessName: "Rockland Scientific",
@@ -16258,8 +14770,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2019,
-  },
-  {
     id: "victoria-member-429",
     chamberId: "greater-victoria-chamber",
     businessName: "Tire Stewardship BC",
@@ -16276,8 +14786,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2015,
-  },
-  {
     id: "victoria-member-430",
     chamberId: "greater-victoria-chamber",
     businessName: "Island EHS",
@@ -16449,8 +14957,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2022,
-  },
-  {
     id: "victoria-member-488",
     chamberId: "greater-victoria-chamber",
     businessName: "Salus Systems",
@@ -16500,8 +15006,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2022,
-  },
-  {
     id: "victoria-member-502",
     chamberId: "greater-victoria-chamber",
     businessName: "Rainhouse Manufacturing Canada Ltd",
@@ -16518,8 +15022,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2023,
-  },
-  {
     id: "victoria-member-503",
     chamberId: "greater-victoria-chamber",
     businessName: "Reliable Controls Corporation",
@@ -16536,8 +15038,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2003,
-  },
-  {
     id: "victoria-member-504",
     chamberId: "greater-victoria-chamber",
     businessName: "FibraNova Composites Ltd.",
@@ -16554,8 +15054,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2025,
-  },
-  {
     id: "victoria-member-505",
     chamberId: "greater-victoria-chamber",
     businessName: "RE-LY Metal",
@@ -16591,8 +15089,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 1983,
-  },
-  {
     id: "victoria-member-507",
     chamberId: "greater-victoria-chamber",
     businessName: "Oak Bay Marine Group",
@@ -16609,8 +15105,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 1969,
-  },
-  {
     id: "victoria-member-508",
     chamberId: "greater-victoria-chamber",
     businessName: "Clipper Navigation Ltd.",
@@ -16627,8 +15121,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 1995,
-  },
-  {
     id: "victoria-member-509",
     chamberId: "greater-victoria-chamber",
     businessName: "Victoria International Marina",
@@ -16683,8 +15175,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2013,
-  },
-  {
     id: "victoria-member-526",
     chamberId: "greater-victoria-chamber",
     businessName: "Notaries on Douglas",
@@ -16701,8 +15191,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2024,
-  },
-  {
     id: "victoria-member-527",
     chamberId: "greater-victoria-chamber",
     businessName: "Karen Graham Notary Public",
@@ -16719,8 +15207,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2024,
-  },
-  {
     id: "victoria-member-528",
     chamberId: "greater-victoria-chamber",
     businessName: "Lisa Stevenson Notary Public",
@@ -16814,8 +15300,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2008,
-  },
-  {
     id: "victoria-member-562",
     chamberId: "greater-victoria-chamber",
     businessName: "Penny Farthing Pub",
@@ -16832,8 +15316,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2003,
-  },
-  {
     id: "victoria-member-563",
     chamberId: "greater-victoria-chamber",
     businessName: "Artemis Whiskey Bar",
@@ -16850,8 +15332,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2025,
-  },
-  {
     id: "victoria-member-564",
     chamberId: "greater-victoria-chamber",
     businessName: "Irish Times Pub",
@@ -16893,8 +15373,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2024,
-  },
-  {
     id: "victoria-member-571",
     chamberId: "greater-victoria-chamber",
     businessName: "Shoppers Drug Mart #269, Royal Oak",
@@ -16911,8 +15389,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2022,
-  },
-  {
     id: "victoria-member-572",
     chamberId: "greater-victoria-chamber",
     businessName: "Heart Pharmacy Group",
@@ -16949,8 +15425,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2016,
-  },
-  {
     id: "victoria-member-575",
     chamberId: "greater-victoria-chamber",
     businessName: "Beetle Auto Service Ltd",
@@ -16967,8 +15441,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2020,
-  },
-  {
     id: "victoria-member-576",
     chamberId: "greater-victoria-chamber",
     businessName: "Kustom & All-Ways Towing",
@@ -16985,8 +15457,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2020,
-  },
-  {
     id: "victoria-member-577",
     chamberId: "greater-victoria-chamber",
     businessName: "Tommy's Auto Upholstery and Accessories",
@@ -17003,8 +15473,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2017,
-  },
-  {
     id: "victoria-member-578",
     chamberId: "greater-victoria-chamber",
     businessName: "Fairfield Auto Repair Ltd",
@@ -17021,8 +15489,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2016,
-  },
-  {
     id: "victoria-member-579",
     chamberId: "greater-victoria-chamber",
     businessName: "Wilson & Proctor Ltd.",
@@ -17063,8 +15529,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2017,
-  },
-  {
     id: "victoria-member-585",
     chamberId: "greater-victoria-chamber",
     businessName: "Harris Green Liquor",
@@ -17081,8 +15545,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2024,
-  },
-  {
     id: "victoria-member-586",
     chamberId: "greater-victoria-chamber",
     businessName: "Momease Baby Boutique",
@@ -17137,8 +15599,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2025,
-  },
-  {
     id: "victoria-member-603",
     chamberId: "greater-victoria-chamber",
     businessName: "Songhees Tours",
@@ -17155,8 +15615,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2022,
-  },
-  {
     id: "victoria-member-604",
     chamberId: "greater-victoria-chamber",
     businessName: "Orca Spirit Adventures",
@@ -17173,8 +15631,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2011,
-  },
-  {
     id: "victoria-member-605",
     chamberId: "greater-victoria-chamber",
     businessName: "Off The Eaten Track",
@@ -17244,8 +15700,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 1989,
-  },
-  {
     id: "victoria-member-635",
     chamberId: "greater-victoria-chamber",
     businessName: "Art Gallery of Greater Victoria",
@@ -17262,8 +15716,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2007,
-  },
-  {
     id: "victoria-member-636",
     chamberId: "greater-victoria-chamber",
     businessName: "Red Art Gallery",
@@ -17321,8 +15773,6 @@ export const chamberMembers = [
     municipality: "Central Saanich",
     region: "Capital Regional District",
     memberSince: 2022,
-  },
-  {
     id: "victoria-member-657",
     chamberId: "greater-victoria-chamber",
     businessName: "Vancouver Island Brewing",
@@ -17339,8 +15789,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 1993,
-  },
-  {
     id: "victoria-member-658",
     chamberId: "greater-victoria-chamber",
     businessName: "Phillips Brewing & Malting Co.",
@@ -17357,8 +15805,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2020,
-  },
-  {
     id: "victoria-member-659",
     chamberId: "greater-victoria-chamber",
     businessName: "Fizz Non-Alc Bottle Shop",
@@ -17476,8 +15922,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2005,
-  },
-  {
     id: "victoria-member-716",
     chamberId: "greater-victoria-chamber",
     businessName: "Trapeze Communications Inc.",
@@ -17494,8 +15938,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2011,
-  },
-  {
     id: "victoria-member-717",
     chamberId: "greater-victoria-chamber",
     businessName: "It's Local Marketing",
@@ -17512,8 +15954,6 @@ export const chamberMembers = [
     municipality: "Langford",
     region: "Capital Regional District",
     memberSince: 2024,
-  },
-  {
     id: "victoria-member-718",
     chamberId: "greater-victoria-chamber",
     businessName: "TaskerMatch Inc.",
@@ -17610,8 +16050,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2008,
-  },
-  {
     id: "victoria-member-742",
     chamberId: "greater-victoria-chamber",
     businessName: "Evergrowth Coaching - Adam Quiney",
@@ -17628,8 +16066,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2014,
-  },
-  {
     id: "victoria-member-743",
     chamberId: "greater-victoria-chamber",
     businessName: "Bellrock Benchmarking Inc.",
@@ -17646,8 +16082,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2021,
-  },
-  {
     id: "victoria-member-744",
     chamberId: "greater-victoria-chamber",
     businessName: "Veritas Collective Ltd.",
@@ -17664,8 +16098,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2025,
-  },
-  {
     id: "victoria-member-745",
     chamberId: "greater-victoria-chamber",
     businessName: "Calberlah Consulting",
@@ -17731,8 +16163,6 @@ export const chamberMembers = [
     municipality: "Saanich",
     region: "Capital Regional District",
     memberSince: 2023,
-  },
-  {
     id: "victoria-member-758",
     chamberId: "greater-victoria-chamber",
     businessName: "Rifflandia Entertainment Company Inc",
@@ -17768,8 +16198,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2011,
-  },
-  {
     id: "victoria-member-760",
     chamberId: "greater-victoria-chamber",
     businessName: "Kwassen Productions Inc",
@@ -17786,8 +16214,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2022,
-  },
-  {
     id: "victoria-member-761",
     chamberId: "greater-victoria-chamber",
     businessName: "Vancouver Island South Film & Media Commission",
@@ -17804,8 +16230,6 @@ export const chamberMembers = [
     municipality: "Langford",
     region: "Capital Regional District",
     memberSince: 1980,
-  },
-  {
     id: "victoria-member-762",
     chamberId: "greater-victoria-chamber",
     businessName: "All Story Films",
@@ -17907,8 +16331,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2021,
-  },
-  {
     id: "victoria-member-790",
     chamberId: "greater-victoria-chamber",
     businessName: "Samya Spa",
@@ -17925,8 +16347,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2024,
-  },
-  {
     id: "victoria-member-791",
     chamberId: "greater-victoria-chamber",
     businessName: "Hairmetto Industries Ltd.",
@@ -17943,8 +16363,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2025,
-  },
-  {
     id: "victoria-member-792",
     chamberId: "greater-victoria-chamber",
     businessName: "Luxe Luster Box Ltd.",
@@ -17961,8 +16379,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2025,
-  },
-  {
     id: "victoria-member-793",
     chamberId: "greater-victoria-chamber",
     businessName: "Akai Hair Design and Level Up Salon Suites",
@@ -18042,8 +16458,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2020,
-  },
-  {
     id: "victoria-member-830",
     chamberId: "greater-victoria-chamber",
     businessName: "Pho Tru - Vietnamese",
@@ -18060,8 +16474,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2019,
-  },
-  {
     id: "victoria-member-831",
     chamberId: "greater-victoria-chamber",
     businessName: "Moxie's Grill & Bar",
@@ -18211,8 +16623,6 @@ export const chamberMembers = [
     municipality: "Vancouver",
     region: "Metro Vancouver",
     memberSince: 2019,
-  },
-  {
     id: "victoria-member-924",
     chamberId: "greater-victoria-chamber",
     businessName: "SSA Marine",
@@ -18282,8 +16692,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2020,
-  },
-  {
     id: "victoria-member-940",
     chamberId: "greater-victoria-chamber",
     businessName: "You Are What's Good",
@@ -18300,8 +16708,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2024,
-  },
-  {
     id: "victoria-member-941",
     chamberId: "greater-victoria-chamber",
     businessName: "Skyscraper Source Media Inc.",
@@ -18318,8 +16724,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2017,
-  },
-  {
     id: "victoria-member-942",
     chamberId: "greater-victoria-chamber",
     businessName: "Constant Contact",
@@ -18387,8 +16791,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2016,
-  },
-  {
     id: "victoria-member-971",
     chamberId: "greater-victoria-chamber",
     businessName: "Marcia McNeil of Pulver Crawford Munroe LLP",
@@ -18405,8 +16807,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2013,
-  },
-  {
     id: "victoria-member-972",
     chamberId: "greater-victoria-chamber",
     businessName: "Marigold Law Group",
@@ -18423,8 +16823,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2024,
-  },
-  {
     id: "victoria-member-973",
     chamberId: "greater-victoria-chamber",
     businessName: "Mulroney and Company Barristers & Solicitors",
@@ -18632,8 +17030,6 @@ export const chamberMembers = [
     municipality: "Langford",
     region: "Capital Regional District",
     memberSince: 2012,
-  },
-  {
     id: "victoria-member-1075",
     chamberId: "greater-victoria-chamber",
     businessName: "Bekatec Online Solutions Inc",
@@ -18650,8 +17046,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2021,
-  },
-  {
     id: "victoria-member-1076",
     chamberId: "greater-victoria-chamber",
     businessName: "Gameplan Media",
@@ -18687,8 +17081,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2017,
-  },
-  {
     id: "victoria-member-1078",
     chamberId: "greater-victoria-chamber",
     businessName: "Commissionaires Victoria the Islands and Yukon (CVIY)",
@@ -18705,8 +17097,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 1995,
-  },
-  {
     id: "victoria-member-1079",
     chamberId: "greater-victoria-chamber",
     businessName: "Thorn Security Ltd.",
@@ -18723,8 +17113,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2025,
-  },
-  {
     id: "victoria-member-1080",
     chamberId: "greater-victoria-chamber",
     businessName: "Websec Information Security Services Inc.",
@@ -18741,8 +17129,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2017,
-  },
-  {
     id: "victoria-member-1081",
     chamberId: "greater-victoria-chamber",
     businessName: "Themis Security Services Ltd.",
@@ -18804,8 +17190,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2023,
-  },
-  {
     id: "victoria-member-1090",
     chamberId: "greater-victoria-chamber",
     businessName: "Outlooks For Men",
@@ -18822,8 +17206,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 1999,
-  },
-  {
     id: "victoria-member-1091",
     chamberId: "greater-victoria-chamber",
     businessName: "Lifestyles West",
@@ -18840,8 +17222,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2021,
-  },
-  {
     id: "victoria-member-1092",
     chamberId: "greater-victoria-chamber",
     businessName: "One Tooth Activewear Victoria",
@@ -18858,8 +17238,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2006,
-  },
-  {
     id: "victoria-member-1093",
     chamberId: "greater-victoria-chamber",
     businessName: "Upcycle Clothing Collective",
@@ -18876,8 +17254,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2022,
-  },
-  {
     id: "victoria-member-1094",
     chamberId: "greater-victoria-chamber",
     businessName: "W & J Wilson Ltd.",
@@ -19069,8 +17445,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2025,
-  },
-  {
     id: "victoria-member-1140",
     chamberId: "greater-victoria-chamber",
     businessName: "Falcon Gymnastics",
@@ -19427,8 +17801,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Capital Regional District",
     memberSince: 2024,
-  },
-  {
     id: "victoria-member-1286",
     chamberId: "greater-victoria-chamber",
     businessName: "Victoria Bullion Exchange",
@@ -19505,8 +17877,6 @@ export const chamberMembers = [
     municipality: "Langford",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0002",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Affinity Hearing",
@@ -19520,8 +17890,6 @@ export const chamberMembers = [
     municipality: "Langford",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0003",
     chamberId: "duncan-cowichan-chamber",
     businessName: "A Healthier You Homeopathic Clinic",
@@ -19535,8 +17903,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0004",
     chamberId: "duncan-cowichan-chamber",
     businessName: "AI Bookkeeping Service",
@@ -19550,8 +17916,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0005",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Airwave Sign Co.",
@@ -19565,8 +17929,6 @@ export const chamberMembers = [
     municipality: "Cowichan Valley",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0006",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Alliance of BC Modern Treaty Nations",
@@ -19580,8 +17942,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0007",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Alphonsus Fagan Barrister & Solicitor",
@@ -19595,8 +17955,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0008",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Alpine Dental Health",
@@ -19610,8 +17968,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0009",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Arbutus Grove Motel",
@@ -19625,8 +17981,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0010",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Arbutus Meadows Pet Services Inc.",
@@ -19640,8 +17994,6 @@ export const chamberMembers = [
     municipality: "Chemainus",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0011",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Around the World Books",
@@ -19655,8 +18007,6 @@ export const chamberMembers = [
     municipality: "Langford",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0012",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Ascentric Plumbing Inc.",
@@ -19670,8 +18020,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0013",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Associates' Community Practice",
@@ -19685,8 +18033,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0014",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Aubaines - Budget Thrift Store",
@@ -19700,8 +18046,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0015",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Australia New Zealand Association of BC",
@@ -19714,8 +18058,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0016",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Avonlea Farm",
@@ -19729,8 +18071,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0017",
     chamberId: "duncan-cowichan-chamber",
     businessName: "AWL Industries Ltd.",
@@ -19744,8 +18084,6 @@ export const chamberMembers = [
     municipality: "Cobble Hill",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0018",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Axe and Grind Duncan",
@@ -19759,8 +18097,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0019",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Artisan Craft Market",
@@ -19774,8 +18110,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0020",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Art Mann Gallery",
@@ -19789,8 +18123,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0021",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Amica Beechwood Village",
@@ -19804,8 +18136,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0022",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Antonio's Pork Crackling",
@@ -19819,8 +18149,6 @@ export const chamberMembers = [
     municipality: "Cobble Hill",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0023",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Amalgamated Transit Union Local 1596",
@@ -19833,8 +18161,6 @@ export const chamberMembers = [
     municipality: "Cowichan Valley",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0024",
     chamberId: "duncan-cowichan-chamber",
     businessName: "A1 Appliance Repair",
@@ -19848,8 +18174,6 @@ export const chamberMembers = [
     municipality: "Mill Bay",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0025",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Albatross Forge",
@@ -19863,8 +18187,6 @@ export const chamberMembers = [
     municipality: "Youbou",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0026",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Adler Caulking Ltd",
@@ -19878,8 +18200,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0027",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Alchemilla",
@@ -19893,8 +18213,6 @@ export const chamberMembers = [
     municipality: "Cowichan Valley",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0028",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Aldea Services Inc",
@@ -19908,8 +18226,6 @@ export const chamberMembers = [
     municipality: "Lake Cowichan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0029",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Alohi Sea Moss",
@@ -19923,8 +18239,6 @@ export const chamberMembers = [
     municipality: "Salt Spring Island",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0030",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Aprilaire Farms",
@@ -19938,8 +18252,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0031",
     chamberId: "duncan-cowichan-chamber",
     businessName: "At Home with Sherry",
@@ -19953,8 +18265,6 @@ export const chamberMembers = [
     municipality: "Cowichan Valley",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0032",
     chamberId: "duncan-cowichan-chamber",
     businessName: "BC Hydro",
@@ -19967,8 +18277,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0033",
     chamberId: "duncan-cowichan-chamber",
     businessName: "BC Assessment Authority",
@@ -19982,8 +18290,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0034",
     chamberId: "duncan-cowichan-chamber",
     businessName: "BC Transit",
@@ -19997,8 +18303,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0035",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Best Western Plus Cowichan Valley Inn",
@@ -20012,8 +18316,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0036",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Boal Housemoving Ltd.",
@@ -20027,8 +18329,6 @@ export const chamberMembers = [
     municipality: "Nanaimo",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0037",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Black Douglas Scottish Pub",
@@ -20042,8 +18342,6 @@ export const chamberMembers = [
     municipality: "Cobble Hill",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0038",
     chamberId: "duncan-cowichan-chamber",
     businessName: "BMO Bank of Montreal",
@@ -20057,8 +18355,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0039",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Box Office Espresso",
@@ -20072,8 +18368,6 @@ export const chamberMembers = [
     municipality: "Mill Bay",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0040",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Brentwood Bay Resort and Spa",
@@ -20087,8 +18381,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0041",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Bridgemans Bistro",
@@ -20102,8 +18394,6 @@ export const chamberMembers = [
     municipality: "Cowichan Bay",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0042",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Brown Bros. Ford",
@@ -20117,8 +18407,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0043",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Buckerfields",
@@ -20132,8 +18420,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0044",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Burn it Up",
@@ -20147,8 +18433,6 @@ export const chamberMembers = [
     municipality: "Lake Cowichan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0045",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Burnt Bridge Cidery and Cafe",
@@ -20162,8 +18446,6 @@ export const chamberMembers = [
     municipality: "Lake Cowichan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0046",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Butterfield Plumbing",
@@ -20177,8 +18459,6 @@ export const chamberMembers = [
     municipality: "Shawnigan Lake",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0047",
     chamberId: "duncan-cowichan-chamber",
     businessName: "BIM Construction Ltd.",
@@ -20192,8 +18472,6 @@ export const chamberMembers = [
     municipality: "Shawnigan Lake",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0048",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Bodycare Creations",
@@ -20207,8 +18485,6 @@ export const chamberMembers = [
     municipality: "Cobble Hill",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0049",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Blossom Village B&B",
@@ -20222,8 +18498,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0050",
     chamberId: "duncan-cowichan-chamber",
     businessName: "BC School Trustees Association",
@@ -20237,8 +18511,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0051",
     chamberId: "duncan-cowichan-chamber",
     businessName: "BambooHR",
@@ -20252,8 +18524,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0052",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Botanical Gardens of the Cowichan Valley",
@@ -20267,8 +18537,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0053",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Bloor Property Maintenance & Consulting",
@@ -20282,8 +18550,6 @@ export const chamberMembers = [
     municipality: "Cobble Hill",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0054",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Boyd Lodge B&B",
@@ -20297,8 +18563,6 @@ export const chamberMembers = [
     municipality: "Mill Bay",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0055",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Brian Faulkner Insurance Services",
@@ -20312,8 +18576,6 @@ export const chamberMembers = [
     municipality: "Mill Bay",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0056",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Broere Consulting",
@@ -20327,8 +18589,6 @@ export const chamberMembers = [
     municipality: "North Cowichan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0057",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Bruce's Kitchen",
@@ -20342,8 +18602,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0058",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Buffy Chicken",
@@ -20357,8 +18615,6 @@ export const chamberMembers = [
     municipality: "Chemainus",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0059",
     chamberId: "duncan-cowichan-chamber",
     businessName: "BC Ferries",
@@ -20372,8 +18628,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0060",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Backyard Bounty Urban Farm",
@@ -20387,8 +18641,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0061",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Bessie's Boutique",
@@ -20402,8 +18654,6 @@ export const chamberMembers = [
     municipality: "Cowichan Bay",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0062",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Blue Raven Advisory",
@@ -20417,8 +18667,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0063",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Boston Pizza - Duncan",
@@ -20432,8 +18680,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0064",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Canadian Tire Duncan",
@@ -20447,8 +18693,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0065",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Catalyst Paper Corporation",
@@ -20462,8 +18706,6 @@ export const chamberMembers = [
     municipality: "Crofton",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0066",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Century 21 In The Cow",
@@ -20477,8 +18719,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0067",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Chemainus Theatre Festival",
@@ -20492,8 +18732,6 @@ export const chamberMembers = [
     municipality: "Chemainus",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0068",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Cherry Point Vineyards",
@@ -20507,8 +18745,6 @@ export const chamberMembers = [
     municipality: "Cobble Hill",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0069",
     chamberId: "duncan-cowichan-chamber",
     businessName: "CIBC Duncan",
@@ -20522,8 +18758,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0070",
     chamberId: "duncan-cowichan-chamber",
     businessName: "City of Duncan",
@@ -20537,8 +18771,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0071",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Cobble Hill Improvement District",
@@ -20552,8 +18784,6 @@ export const chamberMembers = [
     municipality: "Cobble Hill",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0072",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Coast Capital Savings",
@@ -20567,8 +18797,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0073",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Coast Collective Art Centre",
@@ -20582,8 +18810,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0074",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Coldwell Banker Oceanside Real Estate",
@@ -20597,8 +18823,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0075",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Community Futures Cowichan",
@@ -20612,8 +18836,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0076",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Core Wellness",
@@ -20627,8 +18849,6 @@ export const chamberMembers = [
     municipality: "Shawnigan Lake",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0077",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Costco Wholesale Duncan",
@@ -20642,8 +18862,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0078",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Country Grocer Cobble Hill",
@@ -20657,8 +18875,6 @@ export const chamberMembers = [
     municipality: "Cobble Hill",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0079",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Country Grocer - Duncan",
@@ -20672,8 +18888,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0080",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Cowichan Aquatic Centre",
@@ -20687,8 +18901,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0081",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Cowichan Bay Kayak",
@@ -20702,8 +18914,6 @@ export const chamberMembers = [
     municipality: "Cowichan Bay",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0082",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Cowichan Bay Seafood",
@@ -20717,8 +18927,6 @@ export const chamberMembers = [
     municipality: "Cowichan Bay",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0083",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Cowichan Bay Shipyard Ltd.",
@@ -20732,8 +18940,6 @@ export const chamberMembers = [
     municipality: "Cowichan Bay",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0084",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Cowichan Canoe and Kayak Club",
@@ -20747,8 +18953,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0085",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Cowichan Community Centre",
@@ -20762,8 +18966,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0086",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Cowichan Creamery",
@@ -20777,8 +18979,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0087",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Cowichan District Hospital Foundation",
@@ -20792,8 +18992,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0088",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Cowichan Doorworks",
@@ -20807,8 +19005,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0089",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Cowichan Estuary Nature Centre",
@@ -20822,8 +19018,6 @@ export const chamberMembers = [
     municipality: "Cowichan Bay",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0090",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Cowichan Folk Guild",
@@ -20837,8 +19031,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0091",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Cowichan Golf Course",
@@ -20852,8 +19044,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0092",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Cowichan Green Community",
@@ -20867,8 +19057,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0093",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Cowichan Home Support Services",
@@ -20882,8 +19070,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0094",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Cowichan Housing Association",
@@ -20897,8 +19083,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0095",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Cowichan Lake and River Stewardship Society",
@@ -20912,8 +19096,6 @@ export const chamberMembers = [
     municipality: "Lake Cowichan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0096",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Cowichan Lake Community Services",
@@ -20927,8 +19109,6 @@ export const chamberMembers = [
     municipality: "Lake Cowichan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0097",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Cowichan Lake District Chamber of Commerce",
@@ -20942,8 +19122,6 @@ export const chamberMembers = [
     municipality: "Lake Cowichan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0098",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Cowichan Lodge",
@@ -20957,8 +19135,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0099",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Cowichan Music Festival",
@@ -20972,8 +19148,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0100",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Cowichan Neighbourhood House Association",
@@ -20987,8 +19161,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0101",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Cowichan News Leader Pictorial",
@@ -21002,8 +19174,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0102",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Cowichan Petroleum",
@@ -21017,8 +19187,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0103",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Cowichan Search and Rescue",
@@ -21032,8 +19200,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0104",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Cowichan Sportsplex",
@@ -21047,8 +19213,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0105",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Cowichan Station Schoolhouse Gallery",
@@ -21062,8 +19226,6 @@ export const chamberMembers = [
     municipality: "Cowichan Valley",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0106",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Cowichan Tourism",
@@ -21077,8 +19239,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0107",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Cowichan Trading",
@@ -21108,8 +19268,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0110",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Cowichan Valley Automotive",
@@ -21123,8 +19281,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0111",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Cowichan Valley Basket Society",
@@ -21138,8 +19294,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0112",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Cowichan Valley Brewing",
@@ -21153,8 +19307,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0113",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Cowichan Valley Funeral Home",
@@ -21168,8 +19320,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0114",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Cowichan Valley Historical Society",
@@ -21183,8 +19333,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0115",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Cowichan Valley Hospice",
@@ -21197,8 +19345,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0116",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Cowichan Valley Kiwanis",
@@ -21211,8 +19357,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0117",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Cowichan Valley Museum & Archives",
@@ -21226,8 +19370,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0118",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Cowichan Valley Naturalists' Society",
@@ -21240,8 +19382,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0119",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Cowichan Valley Open Learning Cooperative",
@@ -21255,8 +19395,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0120",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Cowichan Valley Physiotherapy",
@@ -21270,8 +19408,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0121",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Cowichan Valley Regional District",
@@ -21285,8 +19421,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0122",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Cowichan Valley School District 79",
@@ -21300,8 +19434,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0123",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Cowichan Valley Therapeutic Riding Association",
@@ -21315,8 +19447,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0124",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Cowichan Valley Trail Stewardship Society",
@@ -21329,8 +19459,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0125",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Cowichan Valley Visitor Centre",
@@ -21344,8 +19472,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0126",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Cowichan Wooden Boat Society",
@@ -21359,8 +19485,6 @@ export const chamberMembers = [
     municipality: "Cowichan Bay",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0127",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Craig Street Brew Pub",
@@ -21374,8 +19498,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0128",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Crofton Hotel",
@@ -21389,8 +19511,6 @@ export const chamberMembers = [
     municipality: "Crofton",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0129",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Crown Isle Resort and Golf Community",
@@ -21404,8 +19524,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0130",
     chamberId: "duncan-cowichan-chamber",
     businessName: "CVR Midstream",
@@ -21419,8 +19537,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0131",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Dairy Queen - Duncan",
@@ -21434,8 +19550,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0132",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Damali Lavender & Winery",
@@ -21449,8 +19563,6 @@ export const chamberMembers = [
     municipality: "Cobble Hill",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0133",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Dawson Design",
@@ -21464,8 +19576,6 @@ export const chamberMembers = [
     municipality: "Cobble Hill",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0134",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Deerholme Farm",
@@ -21479,8 +19589,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0135",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Delta Hotels Victoria Ocean Pointe Resort",
@@ -21494,8 +19602,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0136",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Dickinson Law Office",
@@ -21509,8 +19615,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0137",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Discovery Coffee",
@@ -21524,8 +19628,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0138",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Diversified Transportation Ltd.",
@@ -21539,8 +19641,6 @@ export const chamberMembers = [
     municipality: "Cobble Hill",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0139",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Dolce Vita Ristorante",
@@ -21554,8 +19654,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0140",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Dominion Hotel",
@@ -21568,8 +19666,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0141",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Done Rite Electrical Services",
@@ -21583,8 +19679,6 @@ export const chamberMembers = [
     municipality: "Cowichan Valley",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0142",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Double A RV Rentals",
@@ -21598,8 +19692,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0143",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Douglas Street Legal Centre",
@@ -21613,8 +19705,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0144",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Dr. Allan Burgmann Inc.",
@@ -21628,8 +19718,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0145",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Dr. Ed Day Inc.",
@@ -21643,8 +19731,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0146",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Dragonfly Journeys",
@@ -21658,8 +19744,6 @@ export const chamberMembers = [
     municipality: "Cowichan Bay",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0147",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Dream Decor & Design Inc.",
@@ -21673,8 +19757,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0148",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Driftwood Mall",
@@ -21688,8 +19770,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0149",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Duck Soup Inn",
@@ -21703,8 +19783,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0150",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Duncan Aboriginal Friendship Society",
@@ -21717,8 +19795,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0151",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Duncan Auto Recyclers",
@@ -21732,8 +19808,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0152",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Duncan Business Improvement Association",
@@ -21746,8 +19820,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0153",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Duncan Chamber of Commerce",
@@ -21761,8 +19833,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0154",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Duncan Christian Reformed Church",
@@ -21776,8 +19846,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0155",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Duncan City Square",
@@ -21790,8 +19858,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0156",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Duncan Cowichan Festival Society",
@@ -21805,8 +19871,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0157",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Duncan Cowichan United Church",
@@ -21820,8 +19884,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0158",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Duncan Garage Cafe & Bakery",
@@ -21835,8 +19897,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0159",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Duncan Iron Works",
@@ -21850,8 +19910,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0160",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Duncan Lanes",
@@ -21865,8 +19923,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0161",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Duncan McDonald Chrysler",
@@ -21880,8 +19936,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0162",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Duncan Meadows Golf Course",
@@ -21895,8 +19949,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0163",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Duncan Taoist Tai Chi",
@@ -21909,8 +19961,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0164",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Duncan True Value Hardware",
@@ -21924,8 +19974,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0165",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Duncan Youth & Family Drug Abuse Clinic",
@@ -21939,8 +19987,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0166",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Dwell Smart",
@@ -21954,8 +20000,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0167",
     chamberId: "duncan-cowichan-chamber",
     businessName: "D'Lish Cafe",
@@ -21969,8 +20013,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0168",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Earnest Ice Cream",
@@ -21983,8 +20025,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0169",
     chamberId: "duncan-cowichan-chamber",
     businessName: "East West Furniture",
@@ -21998,8 +20038,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0170",
     chamberId: "duncan-cowichan-chamber",
     businessName: "EcoStar Solarwind",
@@ -22013,8 +20051,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0171",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Edward Jones - Duncan",
@@ -22028,8 +20064,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0172",
     chamberId: "duncan-cowichan-chamber",
     businessName: "El Mercadito Latin Foods",
@@ -22043,8 +20077,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0173",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Elements Protection",
@@ -22058,8 +20090,6 @@ export const chamberMembers = [
     municipality: "Cobble Hill",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0174",
     chamberId: "duncan-cowichan-chamber",
     businessName: "ELM Group",
@@ -22073,8 +20103,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0175",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Enmar Enterprises Ltd.",
@@ -22088,8 +20116,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0176",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Encompass Supply Chain Solutions",
@@ -22103,8 +20129,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0177",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Epic Events by Lisa Faye",
@@ -22118,8 +20142,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0178",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Erin Chicken Ltd.",
@@ -22132,8 +20154,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0179",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Estate Winery at Venturi-Schulze",
@@ -22147,8 +20167,6 @@ export const chamberMembers = [
     municipality: "Cobble Hill",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0180",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Evolving Ink",
@@ -22162,8 +20180,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0181",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Executive Business Solutions",
@@ -22177,8 +20193,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0182",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Exodus Delivery",
@@ -22192,8 +20206,6 @@ export const chamberMembers = [
     municipality: "Cowichan Valley",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0183",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Falcon Plastics Ltd.",
@@ -22207,8 +20219,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0184",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Farmhouse Brewing Co.",
@@ -22222,8 +20232,6 @@ export const chamberMembers = [
     municipality: "Cowichan Bay",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0185",
     chamberId: "duncan-cowichan-chamber",
     businessName: "FastSigns",
@@ -22237,8 +20245,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0186",
     chamberId: "duncan-cowichan-chamber",
     businessName: "FBDB Law",
@@ -22252,8 +20258,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0187",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Fiesta Mexicana",
@@ -22267,8 +20271,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0188",
     chamberId: "duncan-cowichan-chamber",
     businessName: "First Nations Emergency Services Society",
@@ -22282,8 +20284,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0189",
     chamberId: "duncan-cowichan-chamber",
     businessName: "First West Credit Union",
@@ -22297,8 +20297,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0190",
     chamberId: "duncan-cowichan-chamber",
     businessName: "FlyViSensing",
@@ -22312,8 +20310,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0191",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Food Bank Cowichan",
@@ -22327,8 +20323,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0192",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Footloose Catering",
@@ -22342,8 +20336,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0193",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Forest Discoveries Centre",
@@ -22357,8 +20349,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0194",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Forsyth Heritage Building Assessments Ltd.",
@@ -22372,8 +20362,6 @@ export const chamberMembers = [
     municipality: "Lake Cowichan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0195",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Fortis BC",
@@ -22387,8 +20375,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0196",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Foxglove Farm & Garden Supply",
@@ -22402,8 +20388,6 @@ export const chamberMembers = [
     municipality: "Chemainus",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0197",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Frances Chicken",
@@ -22417,8 +20401,6 @@ export const chamberMembers = [
     municipality: "Cowichan Valley",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0198",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Frank & Ernest Beers",
@@ -22432,8 +20414,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0199",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Fuller Building",
@@ -22446,8 +20426,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0200",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Fundy Treasures",
@@ -22461,8 +20439,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0201",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Gallery on First",
@@ -22476,8 +20452,6 @@ export const chamberMembers = [
     municipality: "Ladysmith",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0202",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Genoa Bay Cafe",
@@ -22491,8 +20465,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0203",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Genoa Bay Marina",
@@ -22506,8 +20478,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0204",
     chamberId: "duncan-cowichan-chamber",
     businessName: "GFL Environmental",
@@ -22521,8 +20491,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0205",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Giant Pumpkin Growing Co.",
@@ -22536,8 +20504,6 @@ export const chamberMembers = [
     municipality: "Ladysmith",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0206",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Glenora Store & Gas",
@@ -22551,8 +20517,6 @@ export const chamberMembers = [
     municipality: "Cobble Hill",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0207",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Go Fish - Duncan",
@@ -22566,8 +20530,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0208",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Godfrey-Brownell Vineyards",
@@ -22581,8 +20543,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0209",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Good Fella's Pizza",
@@ -22596,8 +20556,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0210",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Gordon's Blending Bar",
@@ -22611,8 +20569,6 @@ export const chamberMembers = [
     municipality: "Cowichan Bay",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0211",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Graphic Plus",
@@ -22626,8 +20582,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0212",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Great Canadian Gaming Corporation",
@@ -22640,8 +20594,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0213",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Green Clean",
@@ -22655,8 +20607,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0214",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Green Frog Garden Centre",
@@ -22670,8 +20620,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0215",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Grit Fitness",
@@ -22685,8 +20633,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0216",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Grounds for Coffee",
@@ -22700,8 +20646,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0217",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Habitat for Humanity Vancouver Island North",
@@ -22715,8 +20659,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0218",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Halalt First Nation",
@@ -22730,8 +20672,6 @@ export const chamberMembers = [
     municipality: "Chemainus",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0219",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Halpenny Insurance",
@@ -22745,8 +20685,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0220",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Hands on Clothing Company Ltd.",
@@ -22760,8 +20698,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0221",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Hazelwood Herb Farm",
@@ -22775,8 +20711,6 @@ export const chamberMembers = [
     municipality: "Cobble Hill",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0222",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Heart & Soil Organics",
@@ -22790,8 +20724,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0223",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Highland Pacific Golf",
@@ -22805,8 +20737,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0224",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Hill Heating and Air Conditioning",
@@ -22820,8 +20750,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0225",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Hillary's Cheese",
@@ -22835,8 +20763,6 @@ export const chamberMembers = [
     municipality: "Cowichan Bay",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0226",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Hillside Fish and Chips",
@@ -22850,8 +20776,6 @@ export const chamberMembers = [
     municipality: "Cobble Hill",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0227",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Hilltop Law",
@@ -22865,8 +20789,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0228",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Holt Renfrew",
@@ -22880,8 +20802,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0229",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Home Hardware - Duncan",
@@ -22895,8 +20815,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0230",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Homemakers",
@@ -22910,8 +20828,6 @@ export const chamberMembers = [
     municipality: "Shawnigan Lake",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0231",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Home Instead",
@@ -22925,8 +20841,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0232",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Hot House Pizza",
@@ -22940,8 +20854,6 @@ export const chamberMembers = [
     municipality: "Langford",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0233",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Hudson",
@@ -22955,8 +20867,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0234",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Hunt Club",
@@ -22970,8 +20880,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0235",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Hwulmuhw Mustimuhw Community Developments Corporation",
@@ -22985,8 +20893,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0236",
     chamberId: "duncan-cowichan-chamber",
     businessName: "ICBC Claim Centre",
@@ -23000,8 +20906,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0237",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Il Falcone Neighbourhood Pub",
@@ -23015,8 +20919,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0238",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Impact Solar",
@@ -23030,8 +20932,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0239",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Independent Grocers Alliance",
@@ -23044,8 +20944,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0240",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Inglis Electric Ltd.",
@@ -23059,8 +20957,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0241",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Inky Octopus",
@@ -23074,8 +20970,6 @@ export const chamberMembers = [
     municipality: "Lake Cowichan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0242",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Island Blue Print Co. Ltd.",
@@ -23089,8 +20983,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0243",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Island Clinical Counselling & Assessment",
@@ -23104,8 +20996,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0244",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Island Coastal Economic Trust",
@@ -23119,8 +21009,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0245",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Island Health",
@@ -23134,8 +21022,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0246",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Island Home Building Supplies",
@@ -23149,8 +21035,6 @@ export const chamberMembers = [
     municipality: "Lake Cowichan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0247",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Island Internet Services",
@@ -23164,8 +21048,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0248",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Island Savings",
@@ -23179,8 +21061,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0249",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Island Savings Insurance Services",
@@ -23194,8 +21074,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0250",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Island Temperature Controls Inc.",
@@ -23209,8 +21087,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0251",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Island Transformer Ltd.",
@@ -23224,8 +21100,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0252",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Island Wildlife Natural Care Centre",
@@ -23239,8 +21113,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0253",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Island Women's Resource Network",
@@ -23253,8 +21125,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0254",
     chamberId: "duncan-cowichan-chamber",
     businessName: "J & B Project Management",
@@ -23268,8 +21138,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0255",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Jack Chicken Inc",
@@ -23283,8 +21151,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0256",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Janes Your Independent Grocer",
@@ -23298,8 +21164,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0257",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Jaybone Marketing Inc.",
@@ -23313,8 +21177,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0258",
     chamberId: "duncan-cowichan-chamber",
     businessName: "JenStar Enterprises Ltd.",
@@ -23328,8 +21190,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0259",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Jim Chicken Inc.",
@@ -23342,8 +21202,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0260",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Jinglepot Poultry Processing",
@@ -23357,8 +21215,6 @@ export const chamberMembers = [
     municipality: "Nanaimo",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0261",
     chamberId: "duncan-cowichan-chamber",
     businessName: "JJ's Wonton Noodle House",
@@ -23372,8 +21228,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0262",
     chamberId: "duncan-cowichan-chamber",
     businessName: "JNR Contracting",
@@ -23387,8 +21241,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0263",
     chamberId: "duncan-cowichan-chamber",
     businessName: "John & Janes Esthetics School",
@@ -23402,8 +21254,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0264",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Judy Hill Gallery",
@@ -23417,8 +21267,6 @@ export const chamberMembers = [
     municipality: "Cowichan Bay",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0265",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Just Kilts Scotland Ltd.",
@@ -23432,8 +21280,6 @@ export const chamberMembers = [
     municipality: "Cobble Hill",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0266",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Katelyn's Dream",
@@ -23446,8 +21292,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0267",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Kathy Chicken Inc.",
@@ -23460,8 +21304,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0268",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Kaywinnet",
@@ -23475,8 +21317,6 @@ export const chamberMembers = [
     municipality: "Lake Cowichan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0269",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Kellco Enterprises Ltd.",
@@ -23490,8 +21330,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0270",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Kim Chicken Inc.",
@@ -23504,8 +21342,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0271",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Kiwanis Village Lodge Duncan",
@@ -23519,8 +21355,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0272",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Knossos & Mykonos Greek Restaurant",
@@ -23534,8 +21368,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0273",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Koksilah Station",
@@ -23549,8 +21381,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0274",
     chamberId: "duncan-cowichan-chamber",
     businessName: "KPMG",
@@ -23564,8 +21394,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0275",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Kunzite Ventures Inc.",
@@ -23579,8 +21407,6 @@ export const chamberMembers = [
     municipality: "Lake Cowichan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0276",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Kwik Kerb",
@@ -23594,8 +21420,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0277",
     chamberId: "duncan-cowichan-chamber",
     businessName: "L&K Insurance Services",
@@ -23609,8 +21433,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0278",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Lake Cowichan Hotel",
@@ -23624,8 +21446,6 @@ export const chamberMembers = [
     municipality: "Lake Cowichan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0279",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Lake Cowichan Youth & Family Centre",
@@ -23639,8 +21459,6 @@ export const chamberMembers = [
     municipality: "Lake Cowichan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0280",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Lakeshore Farms",
@@ -23654,8 +21472,6 @@ export const chamberMembers = [
     municipality: "Lake Cowichan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0281",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Laketown Ranch",
@@ -23669,8 +21485,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0282",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Lanthorn Real Estate Ltd.",
@@ -23684,8 +21498,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0283",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Larry's Gutters & Exteriors Ltd.",
@@ -23699,8 +21511,6 @@ export const chamberMembers = [
     municipality: "Mill Bay",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0284",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Laser Quest Victoria",
@@ -23714,8 +21524,6 @@ export const chamberMembers = [
     municipality: "Langford",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0285",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Ledcor Construction",
@@ -23729,8 +21537,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0286",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Lee Chicken Inc.",
@@ -23743,8 +21549,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0287",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Legend's Trading Co. Ltd.",
@@ -23758,8 +21562,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0288",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Lighthouse Bridal",
@@ -23773,8 +21575,6 @@ export const chamberMembers = [
     municipality: "Crofton",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0289",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Lions Club - Duncan",
@@ -23787,8 +21587,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0290",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Little Big Box Store",
@@ -23802,8 +21600,6 @@ export const chamberMembers = [
     municipality: "Lake Cowichan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0291",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Living Forest Oceanside Campground",
@@ -23817,8 +21613,6 @@ export const chamberMembers = [
     municipality: "Nanaimo",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0292",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Lobster Man Market",
@@ -23832,8 +21626,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0293",
     chamberId: "duncan-cowichan-chamber",
     businessName: "London Drugs - Duncan",
@@ -23847,8 +21639,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0294",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Long Chicken Inc.",
@@ -23861,8 +21651,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0295",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Loop Distillery & Winery",
@@ -23876,8 +21664,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0296",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Lowe's",
@@ -23891,8 +21677,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0297",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Lumber Kings",
@@ -23906,8 +21690,6 @@ export const chamberMembers = [
     municipality: "Shawnigan Lake",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0298",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Lyall, Fife & Company",
@@ -23921,8 +21703,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0299",
     chamberId: "duncan-cowichan-chamber",
     businessName: "M&K Insurance Services Ltd.",
@@ -23936,8 +21716,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0300",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Mabel Chicken",
@@ -23950,8 +21728,6 @@ export const chamberMembers = [
     municipality: "Cowichan Valley",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0301",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Madrone Environmental Services Ltd.",
@@ -23965,8 +21741,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0302",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Malaspina University-College",
@@ -23980,8 +21754,6 @@ export const chamberMembers = [
     municipality: "Nanaimo",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0303",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Malahat Chalet",
@@ -23995,8 +21767,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0304",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Malahat First Nation",
@@ -24010,8 +21780,6 @@ export const chamberMembers = [
     municipality: "Mill Bay",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0305",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Malahat Legion Branch 134",
@@ -24025,8 +21793,6 @@ export const chamberMembers = [
     municipality: "Mill Bay",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0306",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Malahat SkyWalk",
@@ -24040,8 +21806,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0307",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Mangosteen Kitchen + Bar",
@@ -24055,8 +21819,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0308",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Maple Bay Marina",
@@ -24070,8 +21832,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0309",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Maple Bay Rowing Club",
@@ -24084,8 +21844,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0310",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Mariposa Natural Market",
@@ -24099,8 +21857,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0311",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Mark's Work Wearhouse",
@@ -24114,8 +21870,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0312",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Mary's Chicken",
@@ -24128,8 +21882,6 @@ export const chamberMembers = [
     municipality: "Cowichan Valley",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0313",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Masthead Restaurant & Marina",
@@ -24143,8 +21895,6 @@ export const chamberMembers = [
     municipality: "Cowichan Bay",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0314",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Maurice's Auto Body",
@@ -24158,8 +21908,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0315",
     chamberId: "duncan-cowichan-chamber",
     businessName: "McDonald's - Duncan",
@@ -24173,8 +21921,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0316",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Melia Garden",
@@ -24188,8 +21934,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0317",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Merridale Estate Cidery",
@@ -24203,8 +21947,6 @@ export const chamberMembers = [
     municipality: "Cobble Hill",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0318",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Mid Island Consumer Services Cooperative",
@@ -24218,8 +21960,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0319",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Mill Bay Fire Department",
@@ -24233,8 +21973,6 @@ export const chamberMembers = [
     municipality: "Mill Bay",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0320",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Mill Bay Garden Club",
@@ -24247,8 +21985,6 @@ export const chamberMembers = [
     municipality: "Mill Bay",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0321",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Mill Bay Motors",
@@ -24262,8 +21998,6 @@ export const chamberMembers = [
     municipality: "Mill Bay",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0322",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Mind and Sole",
@@ -24277,8 +22011,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0323",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Mobius Physiotherapy & Massage",
@@ -24292,8 +22024,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0324",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Modern Builders Supplies Ltd.",
@@ -24307,8 +22037,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0325",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Mondala Farm",
@@ -24321,8 +22049,6 @@ export const chamberMembers = [
     municipality: "Cobble Hill",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0326",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Money Mart",
@@ -24336,8 +22062,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0327",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Moss Chicken Inc.",
@@ -24350,8 +22074,6 @@ export const chamberMembers = [
     municipality: "Cowichan Valley",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0328",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Mountain Man Brewing",
@@ -24365,8 +22087,6 @@ export const chamberMembers = [
     municipality: "Lake Cowichan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0329",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Mudgirls Natural Building Collective",
@@ -24380,8 +22100,6 @@ export const chamberMembers = [
     municipality: "Cowichan Valley",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0330",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Municipality of North Cowichan",
@@ -24395,8 +22113,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0331",
     chamberId: "duncan-cowichan-chamber",
     businessName: "My-Chosen Cafe",
@@ -24410,8 +22126,6 @@ export const chamberMembers = [
     municipality: "Mill Bay",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0332",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Nanaimo Yacht Club",
@@ -24425,8 +22139,6 @@ export const chamberMembers = [
     municipality: "Nanaimo",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0333",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Nancy's Chicken Inc.",
@@ -24439,8 +22151,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0334",
     chamberId: "duncan-cowichan-chamber",
     businessName: "NAPA Auto Parts - Duncan",
@@ -24454,8 +22164,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0335",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Nations Teleservices",
@@ -24469,8 +22177,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0336",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Native Brotherhood of British Columbia",
@@ -24483,8 +22189,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0337",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Neat Acoustics",
@@ -24498,8 +22202,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0338",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Networking Jackson",
@@ -24513,8 +22215,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0339",
     chamberId: "duncan-cowichan-chamber",
     businessName: "New Haven Learning Centre",
@@ -24528,8 +22228,6 @@ export const chamberMembers = [
     municipality: "Mill Bay",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0340",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Nightingale Counselling",
@@ -24543,8 +22241,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0341",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Northgate Tire & Auto Service",
@@ -24558,8 +22254,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0342",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Northern Trust",
@@ -24572,8 +22266,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0343",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Notch Hill Forestry Consulting Ltd.",
@@ -24587,8 +22279,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0344",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Nucleus Foundation",
@@ -24601,8 +22291,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0345",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Ocean Soul Surf Shop",
@@ -24616,8 +22304,6 @@ export const chamberMembers = [
     municipality: "Lake Cowichan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0346",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Old Farm Market",
@@ -24631,8 +22317,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0347",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Old Town Bakery",
@@ -24646,8 +22330,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0348",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Olive Branch Cafe",
@@ -24661,8 +22343,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0349",
     chamberId: "duncan-cowichan-chamber",
     businessName: "One Fern Media",
@@ -24676,8 +22356,6 @@ export const chamberMembers = [
     municipality: "Cowichan Valley",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0350",
     chamberId: "duncan-cowichan-chamber",
     businessName: "One Percent Realty",
@@ -24691,8 +22369,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0351",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Open Sky Strategies",
@@ -24706,8 +22382,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0352",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Opportunity Youth",
@@ -24720,8 +22394,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0353",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Otter Point Builders",
@@ -24735,8 +22407,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0354",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Our Lady of Lourdes",
@@ -24750,8 +22420,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0355",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Pacific Coastal Airlines",
@@ -24765,8 +22433,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0356",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Pacific Coastal Real Estate",
@@ -24780,8 +22446,6 @@ export const chamberMembers = [
     municipality: "Lake Cowichan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0357",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Pacific Heating & Cooling Ltd.",
@@ -24795,8 +22459,6 @@ export const chamberMembers = [
     municipality: "Cobble Hill",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0358",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Painted Chicken Ranch",
@@ -24810,8 +22472,6 @@ export const chamberMembers = [
     municipality: "Cobble Hill",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0359",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Painted Turtle Restaurant",
@@ -24825,8 +22485,6 @@ export const chamberMembers = [
     municipality: "Cowichan Bay",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0360",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Panago Pizza",
@@ -24840,8 +22498,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0361",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Paper Birch Publishing",
@@ -24855,8 +22511,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0362",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Paradise Fun Park",
@@ -24870,8 +22524,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0363",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Pat's Chicken Inc.",
@@ -24884,8 +22536,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0364",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Paul Chicken Inc.",
@@ -24898,8 +22548,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0365",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Peerless Road Industrial Park",
@@ -24912,8 +22560,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0366",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Peninsula Pest Control",
@@ -24927,8 +22573,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0367",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Penny Chicken Inc.",
@@ -24941,8 +22585,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0368",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Pet Valu Duncan",
@@ -24956,8 +22598,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0369",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Philip J. Anderson & Co.",
@@ -24971,8 +22611,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0370",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Pineapple Express Adventures",
@@ -24986,8 +22624,6 @@ export const chamberMembers = [
     municipality: "Lake Cowichan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0371",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Pizza Hut Duncan",
@@ -25001,8 +22637,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0372",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Popcorn Monkey",
@@ -25016,8 +22650,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0373",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Port Renfrew",
@@ -25030,8 +22662,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0374",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Prestige Oceanfront Resort",
@@ -25045,8 +22675,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0375",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Prima Strada Pizzeria",
@@ -25060,8 +22688,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0376",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Project Literacy",
@@ -25075,8 +22701,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0377",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Providence Farm",
@@ -25090,8 +22714,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0378",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Purolator Courier",
@@ -25105,8 +22727,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0379",
     chamberId: "duncan-cowichan-chamber",
     businessName: "QA Wetlands Inc.",
@@ -25120,8 +22740,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0380",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Quality Foods - Duncan",
@@ -25135,8 +22753,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0381",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Quattro on Fourth",
@@ -25150,8 +22766,6 @@ export const chamberMembers = [
     municipality: "Ladysmith",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0382",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Quw'utsun' Cultural and Conference Centre",
@@ -25165,8 +22779,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0383",
     chamberId: "duncan-cowichan-chamber",
     businessName: "R.A. Rice Insurance Agencies Ltd.",
@@ -25180,8 +22792,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0384",
     chamberId: "duncan-cowichan-chamber",
     businessName: "RBC Royal Bank",
@@ -25195,8 +22805,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0385",
     chamberId: "duncan-cowichan-chamber",
     businessName: "RE/MAX Anchor Realty",
@@ -25210,8 +22818,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0386",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Real Canadian Superstore - Duncan",
@@ -25225,8 +22831,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0387",
     chamberId: "duncan-cowichan-chamber",
     businessName: "RecycleSmart Solutions",
@@ -25240,8 +22844,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0388",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Red Arrow Brewing",
@@ -25255,8 +22857,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0389",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Renfrew Legal",
@@ -25270,8 +22870,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0390",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Renk Building Supplies",
@@ -25285,8 +22883,6 @@ export const chamberMembers = [
     municipality: "Lake Cowichan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0391",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Riverbottom Farms",
@@ -25300,8 +22896,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0392",
     chamberId: "duncan-cowichan-chamber",
     businessName: "River Stone Community Church",
@@ -25315,8 +22909,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0393",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Riverside Dental Office",
@@ -25330,8 +22922,6 @@ export const chamberMembers = [
     municipality: "Lake Cowichan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0394",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Robert Allan Ltd.",
@@ -25345,8 +22935,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0395",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Rock Bay Square",
@@ -25359,8 +22947,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0396",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Rocky Creek Winery",
@@ -25374,8 +22960,6 @@ export const chamberMembers = [
     municipality: "Cowichan Bay",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0397",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Rookery Market",
@@ -25389,8 +22973,6 @@ export const chamberMembers = [
     municipality: "Chemainus",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0398",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Rotary Club of Duncan",
@@ -25403,8 +22985,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0399",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Royal LePage Pacific Rim Realty",
@@ -25418,8 +22998,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0400",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Sampler's Craft Market",
@@ -25433,8 +23011,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0401",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Scotiabank Duncan",
@@ -25448,8 +23024,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0402",
     chamberId: "duncan-cowichan-chamber",
     businessName: "SD 79 - Cowichan Valley",
@@ -25463,8 +23037,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0403",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Seaside Bar & Grill",
@@ -25478,8 +23050,6 @@ export const chamberMembers = [
     municipality: "Cowichan Bay",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0404",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Service Canada",
@@ -25493,8 +23063,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0405",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Shawnigan Focus Community Association",
@@ -25507,8 +23075,6 @@ export const chamberMembers = [
     municipality: "Shawnigan Lake",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0406",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Shawnigan Lake Athletic Association",
@@ -25521,8 +23087,6 @@ export const chamberMembers = [
     municipality: "Shawnigan Lake",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0407",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Shawnigan Lake Community Association",
@@ -25536,8 +23100,6 @@ export const chamberMembers = [
     municipality: "Shawnigan Lake",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0408",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Shawnigan Lake Community Centre",
@@ -25551,8 +23113,6 @@ export const chamberMembers = [
     municipality: "Shawnigan Lake",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0409",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Shawnigan Lake Fire Department",
@@ -25566,8 +23126,6 @@ export const chamberMembers = [
     municipality: "Shawnigan Lake",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0410",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Shawnigan Lake Museum",
@@ -25581,8 +23139,6 @@ export const chamberMembers = [
     municipality: "Shawnigan Lake",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0411",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Shawnigan Lake School",
@@ -25596,8 +23152,6 @@ export const chamberMembers = [
     municipality: "Shawnigan Lake",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0412",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Shaw Cable",
@@ -25611,8 +23165,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0413",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Sherwood Business Machines",
@@ -25626,8 +23178,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0414",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Shoppers Drug Mart - Duncan",
@@ -25641,8 +23191,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0415",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Sierra Chicken Inc.",
@@ -25655,8 +23203,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0416",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Silver Bridge Inn",
@@ -25670,8 +23216,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0417",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Simply Organized YQQ",
@@ -25685,8 +23229,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0418",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Site Seeing Tours",
@@ -25700,8 +23242,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0419",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Sixty Six Signs",
@@ -25715,8 +23255,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0420",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Slegg Building Materials Ltd.",
@@ -25730,8 +23268,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0421",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Small Town Bakehouse",
@@ -25745,8 +23281,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0422",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Smith's Insurance",
@@ -25760,8 +23294,6 @@ export const chamberMembers = [
     municipality: "Chemainus",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0423",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Smits & Associates",
@@ -25775,8 +23307,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0424",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Snaw-Naw-As First Nation",
@@ -25790,8 +23320,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0425",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Sobeys Liquor",
@@ -25805,8 +23333,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0426",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Soft Fruit Growers",
@@ -25819,8 +23345,6 @@ export const chamberMembers = [
     municipality: "Cowichan Valley",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0427",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Somenos Marsh Wildlife Society",
@@ -25833,8 +23357,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0428",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Something's Fishy",
@@ -25848,8 +23370,6 @@ export const chamberMembers = [
     municipality: "Cowichan Bay",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0429",
     chamberId: "duncan-cowichan-chamber",
     businessName: "South Cowichan Community Policing",
@@ -25862,8 +23382,6 @@ export const chamberMembers = [
     municipality: "Mill Bay",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0430",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Southend Grocer",
@@ -25877,8 +23395,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0431",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Southern Railway of BC",
@@ -25892,8 +23408,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0432",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Spark Chicken Inc.",
@@ -25906,8 +23420,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0433",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Spinnakers Gastro Brewpub",
@@ -25921,8 +23433,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0434",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Sprott Shaw Community College",
@@ -25936,8 +23446,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0435",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Starbucks Coffee - Duncan",
@@ -25951,8 +23459,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0436",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Staycation",
@@ -25966,8 +23472,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0437",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Stel's Bakery",
@@ -25981,8 +23485,6 @@ export const chamberMembers = [
     municipality: "Lake Cowichan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0438",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Stz'uminus First Nation",
@@ -25996,8 +23498,6 @@ export const chamberMembers = [
     municipality: "Ladysmith",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0439",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Style Chicken",
@@ -26010,8 +23510,6 @@ export const chamberMembers = [
     municipality: "Cowichan Valley",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0440",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Subway - Duncan",
@@ -26025,8 +23523,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0441",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Sun Peaks Grand Hotel",
@@ -26040,8 +23536,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0442",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Sunnyside Naturals",
@@ -26055,8 +23549,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0443",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Sunrise Chicken Inc.",
@@ -26069,8 +23561,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0444",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Sunset Poultry",
@@ -26083,8 +23573,6 @@ export const chamberMembers = [
     municipality: "Cowichan Valley",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0445",
     chamberId: "duncan-cowichan-chamber",
     businessName: "T&R Contracting Ltd.",
@@ -26098,8 +23586,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0446",
     chamberId: "duncan-cowichan-chamber",
     businessName: "TD Canada Trust Duncan",
@@ -26113,8 +23599,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0447",
     chamberId: "duncan-cowichan-chamber",
     businessName: "TeleMiracle Media Inc.",
@@ -26128,8 +23612,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0448",
     chamberId: "duncan-cowichan-chamber",
     businessName: "TELUS",
@@ -26142,8 +23624,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0449",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Terence Chicken Inc.",
@@ -26156,8 +23636,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0450",
     chamberId: "duncan-cowichan-chamber",
     businessName: "That's A Wrap Catering",
@@ -26171,8 +23649,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0451",
     chamberId: "duncan-cowichan-chamber",
     businessName: "The Bistro",
@@ -26186,8 +23662,6 @@ export const chamberMembers = [
     municipality: "Lake Cowichan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0452",
     chamberId: "duncan-cowichan-chamber",
     businessName: "The Brick",
@@ -26201,8 +23675,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0453",
     chamberId: "duncan-cowichan-chamber",
     businessName: "The Canadian Bar Association",
@@ -26215,8 +23687,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0454",
     chamberId: "duncan-cowichan-chamber",
     businessName: "The Chocolate Tofino",
@@ -26230,8 +23700,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0455",
     chamberId: "duncan-cowichan-chamber",
     businessName: "The Citizen",
@@ -26245,8 +23713,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0456",
     chamberId: "duncan-cowichan-chamber",
     businessName: "The Cowichan Sweater",
@@ -26259,8 +23725,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0457",
     chamberId: "duncan-cowichan-chamber",
     businessName: "The District Pub & Eatery",
@@ -26274,8 +23738,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0458",
     chamberId: "duncan-cowichan-chamber",
     businessName: "The Flying Pig Vancouver Island",
@@ -26289,8 +23751,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0459",
     chamberId: "duncan-cowichan-chamber",
     businessName: "The Good Planet Company",
@@ -26304,8 +23764,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0460",
     chamberId: "duncan-cowichan-chamber",
     businessName: "The Hearth Restaurant",
@@ -26319,8 +23777,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0461",
     chamberId: "duncan-cowichan-chamber",
     businessName: "The Masthead Restaurant",
@@ -26334,8 +23790,6 @@ export const chamberMembers = [
     municipality: "Cowichan Bay",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0462",
     chamberId: "duncan-cowichan-chamber",
     businessName: "The Old Farm Market",
@@ -26349,8 +23803,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0463",
     chamberId: "duncan-cowichan-chamber",
     businessName: "The Original Chicken Ranch",
@@ -26363,8 +23815,6 @@ export const chamberMembers = [
     municipality: "Cowichan Valley",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0464",
     chamberId: "duncan-cowichan-chamber",
     businessName: "The Outlook Inn",
@@ -26378,8 +23828,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0465",
     chamberId: "duncan-cowichan-chamber",
     businessName: "The Painted Dog Design",
@@ -26393,8 +23841,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0466",
     chamberId: "duncan-cowichan-chamber",
     businessName: "The Poultry Company",
@@ -26407,8 +23853,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0467",
     chamberId: "duncan-cowichan-chamber",
     businessName: "The Tec",
@@ -26422,8 +23866,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0468",
     chamberId: "duncan-cowichan-chamber",
     businessName: "The UPS Store",
@@ -26437,8 +23879,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0469",
     chamberId: "duncan-cowichan-chamber",
     businessName: "The Upholstery Shop",
@@ -26452,8 +23892,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0470",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Tim Chicken Inc.",
@@ -26466,8 +23904,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0471",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Tim Hortons - Duncan",
@@ -26481,8 +23917,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0472",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Tinhorn Creek Vineyards",
@@ -26496,8 +23930,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0473",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Tire Pros Duncan",
@@ -26511,8 +23943,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0474",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Tofino Bus - Island Express",
@@ -26526,8 +23956,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0475",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Tom Chicken Inc.",
@@ -26540,8 +23968,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0476",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Town of Ladysmith",
@@ -26555,8 +23981,6 @@ export const chamberMembers = [
     municipality: "Ladysmith",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0477",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Town of Lake Cowichan",
@@ -26570,8 +23994,6 @@ export const chamberMembers = [
     municipality: "Lake Cowichan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0478",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Traction Guest",
@@ -26584,8 +24006,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0479",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Trans Canada Chrysler",
@@ -26599,8 +24019,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0480",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Trans Canada Trail",
@@ -26613,8 +24031,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0481",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Treeline Construction Ltd.",
@@ -26628,8 +24044,6 @@ export const chamberMembers = [
     municipality: "Shawnigan Lake",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0482",
     chamberId: "duncan-cowichan-chamber",
     businessName: "True Grain Bread",
@@ -26643,8 +24057,6 @@ export const chamberMembers = [
     municipality: "Cowichan Bay",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0483",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Tube Chicken Inc.",
@@ -26657,8 +24069,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0484",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Tyee Chicken Inc.",
@@ -26671,8 +24081,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0485",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Urban Forest Bistro",
@@ -26686,8 +24094,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0486",
     chamberId: "duncan-cowichan-chamber",
     businessName: "UMedia Productions",
@@ -26700,8 +24106,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0487",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Unsworth Vineyards",
@@ -26715,8 +24119,6 @@ export const chamberMembers = [
     municipality: "Mill Bay",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0488",
     chamberId: "duncan-cowichan-chamber",
     businessName: "United Floors",
@@ -26730,8 +24132,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0489",
     chamberId: "duncan-cowichan-chamber",
     businessName: "UPLIFT Women's Business Summit",
@@ -26744,8 +24144,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0490",
     chamberId: "duncan-cowichan-chamber",
     businessName: "VERA Industrial Access Inc.",
@@ -26759,8 +24157,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0491",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Veridis Plumbing and Heating",
@@ -26774,8 +24170,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0492",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Van Isle Cowichan RV Park and Campground",
@@ -26789,8 +24183,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0493",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Valley Seniors Organization",
@@ -26804,8 +24196,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0494",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Vancouver Island Event Catering",
@@ -26819,8 +24209,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0495",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Valley Vines to Wines",
@@ -26834,8 +24222,6 @@ export const chamberMembers = [
     municipality: "Mill Bay",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0496",
     chamberId: "duncan-cowichan-chamber",
     businessName: "VIP Property Restorations Ltd.",
@@ -26849,8 +24235,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0497",
     chamberId: "duncan-cowichan-chamber",
     businessName: "VITVca Vancouver Island Internet Television",
@@ -26864,8 +24248,6 @@ export const chamberMembers = [
     municipality: "Chemainus",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0498",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Violet Wild Cannabis Co",
@@ -26879,8 +24261,6 @@ export const chamberMembers = [
     municipality: "Chemainus",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0499",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Valley Health and Fitness",
@@ -26894,8 +24274,6 @@ export const chamberMembers = [
     municipality: "Cobble Hill",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0500",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Volunteer Cowichan",
@@ -26909,8 +24287,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0501",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Valley Floors Carpet One",
@@ -26924,8 +24300,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0502",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Vancouver Island Regional Library",
@@ -26939,8 +24313,6 @@ export const chamberMembers = [
     municipality: "Nanaimo",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0503",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Valley Life Insurance Solutions Inc.",
@@ -26954,8 +24326,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0504",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Vancouver Island Economic Alliance",
@@ -26969,8 +24339,6 @@ export const chamberMembers = [
     municipality: "Nanaimo",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0505",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Vigneti Zanatta Winery",
@@ -26984,8 +24352,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0506",
     chamberId: "duncan-cowichan-chamber",
     businessName: "VI Labour Services",
@@ -26999,8 +24365,6 @@ export const chamberMembers = [
     municipality: "Lake Cowichan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0507",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Visionary Glass",
@@ -27014,8 +24378,6 @@ export const chamberMembers = [
     municipality: "Shawnigan Lake",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0508",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Vancouver Island University",
@@ -27029,8 +24391,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0509",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Vancouver Island Real Estate Board",
@@ -27044,8 +24404,6 @@ export const chamberMembers = [
     municipality: "Nanaimo",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0510",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Warmland Strategy",
@@ -27059,8 +24417,6 @@ export const chamberMembers = [
     municipality: "North Cowichan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0511",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Walk N Roll Adventures & Obedience",
@@ -27074,8 +24430,6 @@ export const chamberMembers = [
     municipality: "Cowichan Valley",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0512",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Warmland Tours",
@@ -27089,8 +24443,6 @@ export const chamberMembers = [
     municipality: "Cowichan Bay",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0513",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Westwick & Associates Inc.",
@@ -27104,8 +24456,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0514",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Wellnessnews Vancouver Island",
@@ -27119,8 +24469,6 @@ export const chamberMembers = [
     municipality: "Nanaimo",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0515",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Wind and Wave",
@@ -27134,8 +24482,6 @@ export const chamberMembers = [
     municipality: "Lake Cowichan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0516",
     chamberId: "duncan-cowichan-chamber",
     businessName: "West Coast Cones",
@@ -27149,8 +24495,6 @@ export const chamberMembers = [
     municipality: "Mill Bay",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0517",
     chamberId: "duncan-cowichan-chamber",
     businessName: "WorkBC Cowichan / ETHOS Career Management Group Ltd.",
@@ -27164,8 +24508,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0518",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Worthy Island Investments",
@@ -27179,8 +24521,6 @@ export const chamberMembers = [
     municipality: "Cowichan Bay",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0519",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Westcom Business Solutions Inc.",
@@ -27194,8 +24534,6 @@ export const chamberMembers = [
     municipality: "Victoria",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0520",
     chamberId: "duncan-cowichan-chamber",
     businessName: "White Pacific Services Inc.",
@@ -27209,8 +24547,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0521",
     chamberId: "duncan-cowichan-chamber",
     businessName: "West Coast Rental",
@@ -27224,8 +24560,6 @@ export const chamberMembers = [
     municipality: "Cobble Hill",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0522",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Wishes",
@@ -27239,8 +24573,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0523",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Wall Street Clothing",
@@ -27254,8 +24586,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0524",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Westview Power Ltd",
@@ -27269,8 +24599,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0525",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Windsor Plywood",
@@ -27284,8 +24612,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0526",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Westland Insurance Group Ltd.",
@@ -27299,8 +24625,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0527",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Waste Connections of Canada",
@@ -27314,8 +24638,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0528",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Westisle Heating & Cooling",
@@ -27329,8 +24651,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0529",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Wild Poppy Market",
@@ -27344,8 +24664,6 @@ export const chamberMembers = [
     municipality: "Ladysmith",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0530",
     chamberId: "duncan-cowichan-chamber",
     businessName: "WCK Enterprises Inc",
@@ -27359,8 +24677,6 @@ export const chamberMembers = [
     municipality: "Cobble Hill",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0531",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Westfalian Bakery and Cafe",
@@ -27374,8 +24690,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0532",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Westcoastees",
@@ -27389,8 +24703,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0533",
     chamberId: "duncan-cowichan-chamber",
     businessName: "WORTHY South Island",
@@ -27403,8 +24715,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0534",
     chamberId: "duncan-cowichan-chamber",
     businessName: "We're All Sharing Together",
@@ -27418,8 +24728,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0535",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Westholme Tea Company",
@@ -27433,8 +24741,6 @@ export const chamberMembers = [
     municipality: "Duncan",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0536",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Xanadu Estate",
@@ -27448,8 +24754,6 @@ export const chamberMembers = [
     municipality: "Cobble Hill",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0537",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Yeshi Foods Inc",
@@ -27463,8 +24767,6 @@ export const chamberMembers = [
     municipality: "Mill Bay",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0538",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Youbou Bar and Grill",
@@ -27478,8 +24780,6 @@ export const chamberMembers = [
     municipality: "Youbou",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0539",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Yellow Point Cranberries",
@@ -27493,8 +24793,6 @@ export const chamberMembers = [
     municipality: "Ladysmith",
     region: "Cowichan Valley Regional District",
     memberSince: 2024,
-  },
-  {
     id: "duncan-cowichan-member-0540",
     chamberId: "duncan-cowichan-chamber",
     businessName: "Yellowstone Log Salvage Ltd",
@@ -27528,8 +24826,6 @@ export const chamberMembers = [
     naicsTitle: "Full-Service Restaurants",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-2",
     chamberId: "saanich-peninsula-chamber",
     businessName: "ACCESSIFORGE RETROFIT SOLUTIONS LTD",
@@ -27541,8 +24837,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-3",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Active Balance Physiotherapy Studio (Seaport Physiotherapy Inc.)",
@@ -27553,8 +24847,6 @@ export const chamberMembers = [
     naicsTitle: "All Other Miscellaneous Ambulatory Health Care Services",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-4",
     chamberId: "saanich-peninsula-chamber",
     businessName: "AL Smith",
@@ -27567,8 +24859,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-5",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Amica Beechwood Village",
@@ -27579,8 +24869,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-6",
     chamberId: "saanich-peninsula-chamber",
     businessName: "AML Oceanographic Ltd",
@@ -27591,8 +24879,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-7",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Anacortes Chamber of Commerce",
@@ -27605,8 +24891,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-8",
     chamberId: "saanich-peninsula-chamber",
     businessName: "ARAAZ VISION LTD",
@@ -27618,8 +24902,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-9",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Arbutus Grove Nursery Ltd",
@@ -27630,8 +24912,6 @@ export const chamberMembers = [
     naicsTitle: "Other Food Crops Grown Under Cover",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-10",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Ardmore Golf Course",
@@ -27644,8 +24924,6 @@ export const chamberMembers = [
     naicsTitle: "Golf Courses and Country Clubs",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-11",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Aria Sync Ventures Ltd",
@@ -27657,8 +24935,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-12",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Association of B.C Land Surveyors",
@@ -27671,8 +24947,6 @@ export const chamberMembers = [
     naicsTitle: "Engineering Services",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-13",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Auto-Mobile Advantage",
@@ -27683,8 +24957,6 @@ export const chamberMembers = [
     naicsTitle: "New Car Dealers",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-14",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Baker Tilly Victoria Ltd",
@@ -27695,8 +24967,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-15",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Barcellona Landscapes",
@@ -27707,8 +24977,6 @@ export const chamberMembers = [
     naicsTitle: "Landscaping Services",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-16",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Barr Yacht Services Ltd",
@@ -27719,8 +24987,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-17",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Barrett Smith Construction Ltd",
@@ -27731,8 +24997,6 @@ export const chamberMembers = [
     naicsTitle: "Commercial and Institutional Building Construction",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-18",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Beacon Brewing",
@@ -27743,8 +25007,6 @@ export const chamberMembers = [
     naicsTitle: "Wineries",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-19",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Beacon Community Services",
@@ -27755,8 +25017,6 @@ export const chamberMembers = [
     naicsTitle: "Grantmaking Foundations",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-20",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Beacon Law Centre",
@@ -27767,8 +25027,6 @@ export const chamberMembers = [
     naicsTitle: "Offices of Lawyers",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-21",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Beacon Sign and Apparel",
@@ -27779,8 +25037,6 @@ export const chamberMembers = [
     naicsTitle: "Commercial Printing",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-22",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Bellrock Benchmarking Inc",
@@ -27791,8 +25047,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-23",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Benson Cabinetry & Millwork2201 Keating X-Road",
@@ -27805,8 +25059,6 @@ export const chamberMembers = [
     naicsTitle: "Taxi Service",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-24",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Benson Cabinetry & Millwork",
@@ -27817,8 +25069,6 @@ export const chamberMembers = [
     naicsTitle: "Taxi Service",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-25",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Better Business Bureau of Vancouver Island",
@@ -27831,8 +25081,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-26",
     chamberId: "saanich-peninsula-chamber",
     businessName: "BGC South Vancouver Island",
@@ -27845,8 +25093,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-27",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Bill Russell & Associates",
@@ -27858,8 +25104,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-28",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Bliss Boutique / Nest & Nook",
@@ -27870,8 +25114,6 @@ export const chamberMembers = [
     naicsTitle: "All Other General Merchandise Stores",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-29",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Blue Jellyfish SUP Adventures",
@@ -27884,8 +25126,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-30",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Bon Chovy Fishing Charters",
@@ -27896,8 +25136,6 @@ export const chamberMembers = [
     naicsTitle: "Theater Companies and Dinner Theaters",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-31",
     chamberId: "saanich-peninsula-chamber",
     businessName: "BornaTech Solutions Ltd",
@@ -27909,8 +25147,6 @@ export const chamberMembers = [
     naicsTitle: "Computer Systems Design Services",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-32",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Brackenhurst FarmNorth Saanich",
@@ -27921,8 +25157,6 @@ export const chamberMembers = [
     naicsTitle: "Other Food Crops Grown Under Cover",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-33",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Brackenhurst Farm",
@@ -27933,8 +25167,6 @@ export const chamberMembers = [
     naicsTitle: "Other Food Crops Grown Under Cover",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-34",
     chamberId: "saanich-peninsula-chamber",
     businessName: "British Columbia Aviation Museum",
@@ -27947,8 +25179,6 @@ export const chamberMembers = [
     naicsTitle: "Theater Companies and Dinner Theaters",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-35",
     chamberId: "saanich-peninsula-chamber",
     businessName: "British Columbia Notaries Association",
@@ -27960,8 +25190,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-36",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Brunel Technical Solutions Ltd",
@@ -27973,8 +25201,6 @@ export const chamberMembers = [
     naicsTitle: "Computer Systems Design Services",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-37",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Buddies Toy Store",
@@ -27985,8 +25211,6 @@ export const chamberMembers = [
     naicsTitle: "All Other General Merchandise Stores",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-38",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Buds Cannabis",
@@ -27999,8 +25223,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-39",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Business Examiner",
@@ -28011,8 +25233,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-40",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Caffeinated Turtle EnterprisesBrentwood Bay",
@@ -28025,8 +25245,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-41",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Camcor Diving Inc",
@@ -28037,8 +25255,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-42",
     chamberId: "saanich-peninsula-chamber",
     businessName: "CamEnt Ltd",
@@ -28051,8 +25267,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-43",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Canadian Western bank",
@@ -28063,8 +25277,6 @@ export const chamberMembers = [
     naicsTitle: "Commercial Banking",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-44",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Capital City Recycling Ltd.PO Box 21",
@@ -28077,8 +25289,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-45",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Capital City Recycling Ltd",
@@ -28089,8 +25299,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-46",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Casman Projects",
@@ -28101,8 +25309,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-47",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Category 12 Brewing Inc",
@@ -28113,8 +25319,6 @@ export const chamberMembers = [
     naicsTitle: "Wineries",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-48",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Central Saanich Optometry",
@@ -28125,8 +25329,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-49",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Chambers of Commerce Group Insurance Plan",
@@ -28139,8 +25341,6 @@ export const chamberMembers = [
     naicsTitle: "Insurance Agencies and Brokerages",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-50",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Chef On The Run",
@@ -28151,8 +25351,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-51",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Chomack Construction Ltd",
@@ -28163,8 +25361,6 @@ export const chamberMembers = [
     naicsTitle: "Commercial and Institutional Building Construction",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-52",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Christina Woodcock",
@@ -28175,8 +25371,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-53",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Circles MediationNorth Saanich",
@@ -28188,8 +25382,6 @@ export const chamberMembers = [
     naicsTitle: "Advertising Agencies",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-54",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Circles Mediation",
@@ -28200,8 +25392,6 @@ export const chamberMembers = [
     naicsTitle: "Advertising Agencies",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-55",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Citta Construction Ltd",
@@ -28212,8 +25402,6 @@ export const chamberMembers = [
     naicsTitle: "Commercial and Institutional Building Construction",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-56",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Claire Meadmore",
@@ -28226,8 +25414,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-57",
     chamberId: "saanich-peninsula-chamber",
     businessName: "CLASSICDRIVE RESTORATIONS LTD",
@@ -28239,8 +25425,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-58",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Cloudify Nexus Services Ltd",
@@ -28252,8 +25436,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-59",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Co-operators - Corcoran Financial Group",
@@ -28264,8 +25446,6 @@ export const chamberMembers = [
     naicsTitle: "Offices of Certified Public Accountants",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-60",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Coastal Heat Pumps",
@@ -28276,8 +25456,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-61",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Coldwell Banker Oceanside",
@@ -28288,8 +25466,6 @@ export const chamberMembers = [
     naicsTitle: "Commercial Banking",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-62",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Commodious Trading Inc",
@@ -28302,8 +25478,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-63",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Community Marine Concepts",
@@ -28316,8 +25490,6 @@ export const chamberMembers = [
     naicsTitle: "Marinas",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-64",
     chamberId: "saanich-peninsula-chamber",
     businessName: "CommunityPlus - Home Healthcare & Nursing",
@@ -28330,8 +25502,6 @@ export const chamberMembers = [
     naicsTitle: "All Other Miscellaneous Ambulatory Health Care Services",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-65",
     chamberId: "saanich-peninsula-chamber",
     businessName: "CONVERA FINANCIAL LTD",
@@ -28343,8 +25513,6 @@ export const chamberMembers = [
     naicsTitle: "Offices of Certified Public Accountants",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-66",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Cordova Bay Optometry",
@@ -28355,8 +25523,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-67",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Cosmos Energy Consulting Inc",
@@ -28368,8 +25534,6 @@ export const chamberMembers = [
     naicsTitle: "Administrative Management Consulting Services",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-68",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Country Bee Honey Farm",
@@ -28380,8 +25544,6 @@ export const chamberMembers = [
     naicsTitle: "Other Food Crops Grown Under Cover",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-69",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Cube Project Management",
@@ -28392,8 +25554,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-70",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Cultvest Apparel Ltd",
@@ -28404,8 +25564,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-71",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Davison & Co",
@@ -28416,8 +25574,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-72",
     chamberId: "saanich-peninsula-chamber",
     businessName: "de Vine Vineyards",
@@ -28428,8 +25584,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-73",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Departures Travel",
@@ -28440,8 +25594,6 @@ export const chamberMembers = [
     naicsTitle: "Theater Companies and Dinner Theaters",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-74",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Designer ShearsNorth Saanich",
@@ -28454,8 +25606,6 @@ export const chamberMembers = [
     naicsTitle: "Advertising Agencies",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-75",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Designer Shears",
@@ -28466,8 +25616,6 @@ export const chamberMembers = [
     naicsTitle: "Advertising Agencies",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-76",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Destination Greater",
@@ -28478,8 +25626,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-77",
     chamberId: "saanich-peninsula-chamber",
     businessName: "DFH Real Estate Ltd",
@@ -28490,8 +25636,6 @@ export const chamberMembers = [
     naicsTitle: "Offices of Real Estate Agents and Brokers",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-78",
     chamberId: "saanich-peninsula-chamber",
     businessName: "District of Central",
@@ -28502,8 +25646,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-79",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Donovan's Piano Service",
@@ -28514,8 +25656,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-80",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Dusanj & Wirk Chartered Professional Accountants",
@@ -28528,8 +25668,6 @@ export const chamberMembers = [
     naicsTitle: "Offices of Certified Public Accountants",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-81",
     chamberId: "saanich-peninsula-chamber",
     businessName: "ECOSMART KITCHEN SOLUTIONS LTD",
@@ -28540,8 +25678,6 @@ export const chamberMembers = [
     naicsTitle: "Full-Service Restaurants",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-82",
     chamberId: "saanich-peninsula-chamber",
     businessName: "ECOVENTRA DESIGNS LTD",
@@ -28552,8 +25688,6 @@ export const chamberMembers = [
     naicsTitle: "Advertising Agencies",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-83",
     chamberId: "saanich-peninsula-chamber",
     businessName: "ElevateMaster Services Ltd",
@@ -28565,8 +25699,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-84",
     chamberId: "saanich-peninsula-chamber",
     businessName: "EMCS Industries Ltd",
@@ -28579,8 +25711,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-85",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Empire Hydrogen",
@@ -28593,8 +25723,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-86",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Everson Law",
@@ -28605,8 +25733,6 @@ export const chamberMembers = [
     naicsTitle: "Offices of Lawyers",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-87",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Expedia Cruise Ship Center",
@@ -28619,8 +25745,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-88",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Fedril Strategies Inc",
@@ -28633,8 +25757,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-89",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Field Five Farm Ltd",
@@ -28647,8 +25769,6 @@ export const chamberMembers = [
     naicsTitle: "Other Food Crops Grown Under Cover",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-90",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Finlayson Bonet Architecture",
@@ -28659,8 +25779,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-91",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Fish O Chips",
@@ -28671,8 +25789,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-92",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Focus Hair Design",
@@ -28683,8 +25799,6 @@ export const chamberMembers = [
     naicsTitle: "Barber Shops",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-93",
     chamberId: "saanich-peninsula-chamber",
     businessName: "FORGE Technical Solutions",
@@ -28697,8 +25811,6 @@ export const chamberMembers = [
     naicsTitle: "Computer Systems Design Services",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-94",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Four Quarters Meats",
@@ -28709,8 +25821,6 @@ export const chamberMembers = [
     naicsTitle: "Theater Companies and Dinner Theaters",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-95",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Freedom Adventure Bus Society",
@@ -28723,8 +25833,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-96",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Fuller Projects",
@@ -28735,8 +25843,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-97",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Gingerbread Preschool and Daycare Ltd",
@@ -28747,8 +25853,6 @@ export const chamberMembers = [
     naicsTitle: "New Car Dealers",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-98",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Green Mountain Aviation",
@@ -28759,8 +25863,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-99",
     chamberId: "saanich-peninsula-chamber",
     businessName: "GREENWEAVE MARKET LTD",
@@ -28772,8 +25874,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-100",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Gulf Islands National Park Reserve, Parks Canada Agency",
@@ -28786,8 +25886,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-101",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Habitat Gardencare",
@@ -28798,8 +25896,6 @@ export const chamberMembers = [
     naicsTitle: "Landscaping Services",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-102",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Harbord Insurance Services",
@@ -28810,8 +25906,6 @@ export const chamberMembers = [
     naicsTitle: "Insurance Agencies and Brokerages",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-103",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Harbour Haven Marina and Self -Storage",
@@ -28824,8 +25918,6 @@ export const chamberMembers = [
     naicsTitle: "Marinas",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-104",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Harbourview Tree ExpertsPO Box 234Brentwood Bay",
@@ -28838,8 +25930,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-105",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Harbourview Tree Experts",
@@ -28850,8 +25940,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-106",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Hear Inc",
@@ -28862,8 +25950,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-107",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Henley & Straub LLP",
@@ -28874,8 +25960,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-108",
     chamberId: "saanich-peninsula-chamber",
     businessName: "House of Lily Koi",
@@ -28886,8 +25970,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-109",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Hughesman Morris Liversedge, Chartered Professional Accountants",
@@ -28900,8 +25982,6 @@ export const chamberMembers = [
     naicsTitle: "Offices of Certified Public Accountants",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-110",
     chamberId: "saanich-peninsula-chamber",
     businessName: "IMEN CORE SYSTEMS LTD",
@@ -28912,8 +25992,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-111",
     chamberId: "saanich-peninsula-chamber",
     businessName: "IMM Recruitment Ltd",
@@ -28926,8 +26004,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-112",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Iris the Visual Group",
@@ -28938,8 +26014,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-113",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Island Marble Ltd",
@@ -28950,8 +26024,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-114",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Island Savings a division of First West Credit Union",
@@ -28962,8 +26034,6 @@ export const chamberMembers = [
     naicsTitle: "Commercial Banking",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-115",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Island Vegetable Co-Operative Association",
@@ -28974,8 +26044,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-116",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Jametec Inc",
@@ -28986,8 +26054,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-117",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Jason Leslie Personal Real Estate Corporation",
@@ -29000,8 +26066,6 @@ export const chamberMembers = [
     naicsTitle: "Offices of Real Estate Agents and Brokers",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-118",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Jencam Transport",
@@ -29014,8 +26078,6 @@ export const chamberMembers = [
     naicsTitle: "Golf Courses and Country Clubs",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-119",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Jenna Turnbull",
@@ -29026,8 +26088,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-120",
     chamberId: "saanich-peninsula-chamber",
     businessName: "JN Landscaping Ltd",
@@ -29040,8 +26100,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-121",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Joe's Family Pharmacy",
@@ -29052,8 +26110,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-122",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Jonathon Dyck",
@@ -29066,8 +26122,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-123",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Kaemac Services Inc",
@@ -29079,8 +26133,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-124",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Keating Out of School Care Society",
@@ -29091,8 +26143,6 @@ export const chamberMembers = [
     naicsTitle: "New Car Dealers",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-125",
     chamberId: "saanich-peninsula-chamber",
     businessName: "KPMG LLP",
@@ -29105,8 +26155,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-126",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Kristin Mackenzie Nutrition",
@@ -29119,8 +26167,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-127",
     chamberId: "saanich-peninsula-chamber",
     businessName: "L.A. Limousines & Transportation Services",
@@ -29133,8 +26179,6 @@ export const chamberMembers = [
     naicsTitle: "Golf Courses and Country Clubs",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-128",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Legion Manor",
@@ -29145,8 +26189,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-129",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Lime Tree Media",
@@ -29157,8 +26199,6 @@ export const chamberMembers = [
     naicsTitle: "Advertising Agencies",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-130",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Little Drum Consulting",
@@ -29171,8 +26211,6 @@ export const chamberMembers = [
     naicsTitle: "Administrative Management Consulting Services",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-131",
     chamberId: "saanich-peninsula-chamber",
     businessName: "LIVINGDESIGN CONSULTING INC",
@@ -29184,8 +26222,6 @@ export const chamberMembers = [
     naicsTitle: "Advertising Agencies",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-132",
     chamberId: "saanich-peninsula-chamber",
     businessName: "LML Cleaning Services",
@@ -29198,8 +26234,6 @@ export const chamberMembers = [
     naicsTitle: "Janitorial Services",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-133",
     chamberId: "saanich-peninsula-chamber",
     businessName: "LOTUSYNC INNO TRADE LTD",
@@ -29210,8 +26244,6 @@ export const chamberMembers = [
     naicsTitle: "Hotels and Motels",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-134",
     chamberId: "saanich-peninsula-chamber",
     businessName: "LUMIVEX ENERGY LTD",
@@ -29223,8 +26255,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-135",
     chamberId: "saanich-peninsula-chamber",
     businessName: "LUNVIX SYSTEMS LTD",
@@ -29235,8 +26265,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-136",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Mark Brajer",
@@ -29248,8 +26276,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-137",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Mark's",
@@ -29260,8 +26286,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-138",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Martin Woollard",
@@ -29272,8 +26296,6 @@ export const chamberMembers = [
     naicsTitle: "Theater Companies and Dinner Theaters",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-139",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Martinez Veterinary Service Inc",
@@ -29284,8 +26306,6 @@ export const chamberMembers = [
     naicsTitle: "Veterinary Services",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-140",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Mary Winspear Centre",
@@ -29296,8 +26316,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-141",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Mayflower Foods",
@@ -29310,8 +26328,6 @@ export const chamberMembers = [
     naicsTitle: "Full-Service Restaurants",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-142",
     chamberId: "saanich-peninsula-chamber",
     businessName: "McKimm & Lott",
@@ -29322,8 +26338,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-143",
     chamberId: "saanich-peninsula-chamber",
     businessName: "McTavish Academy of Art",
@@ -29336,8 +26350,6 @@ export const chamberMembers = [
     naicsTitle: "Elementary and Secondary Schools",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-144",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Medix Holdings Ltd",
@@ -29348,8 +26360,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-145",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Meta Bookkeeping Inc",
@@ -29360,8 +26370,6 @@ export const chamberMembers = [
     naicsTitle: "Offices of Certified Public Accountants",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-146",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Meticulous Detailing Inc",
@@ -29372,8 +26380,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-147",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Michell Excavating Ltd",
@@ -29384,8 +26390,6 @@ export const chamberMembers = [
     naicsTitle: "General Freight Trucking, Local",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-148",
     chamberId: "saanich-peninsula-chamber",
     businessName: "MOLD CORE INNOVATIONS LTD",
@@ -29396,8 +26400,6 @@ export const chamberMembers = [
     naicsTitle: "Hotels and Motels",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-149",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Mount Newton Centre2158 Mt. Newton Cross Road",
@@ -29410,8 +26412,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-150",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Mount Newton Centre",
@@ -29422,8 +26422,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-151",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Mt Newton Floral",
@@ -29436,8 +26434,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-152",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Muffet  and Louisa",
@@ -29448,8 +26444,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-153",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Mulberry SkincareNorth Saanich",
@@ -29462,8 +26456,6 @@ export const chamberMembers = [
     naicsTitle: "New Car Dealers",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-154",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Mulberry Skincare",
@@ -29474,8 +26466,6 @@ export const chamberMembers = [
     naicsTitle: "New Car Dealers",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-155",
     chamberId: "saanich-peninsula-chamber",
     businessName: "National Bank Financial Inc",
@@ -29486,8 +26476,6 @@ export const chamberMembers = [
     naicsTitle: "Offices of Certified Public Accountants",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-156",
     chamberId: "saanich-peninsula-chamber",
     businessName: "North Saanich Marina",
@@ -29500,8 +26488,6 @@ export const chamberMembers = [
     naicsTitle: "Marinas",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-157",
     chamberId: "saanich-peninsula-chamber",
     businessName: "North Saanich Plumbing Inc",
@@ -29512,8 +26498,6 @@ export const chamberMembers = [
     naicsTitle: "Plumbing, Heating, and Air-Conditioning Contractors",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-158",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Oakstead Tree and Property Care Inc",
@@ -29524,8 +26508,6 @@ export const chamberMembers = [
     naicsTitle: "Offices of Real Estate Agents and Brokers",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-159",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Ocean Performance Technologies Inc",
@@ -29538,8 +26520,6 @@ export const chamberMembers = [
     naicsTitle: "Computer Systems Design Services",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-160",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Ocean Pier Medical Centre",
@@ -29550,8 +26530,6 @@ export const chamberMembers = [
     naicsTitle: "All Other Miscellaneous Ambulatory Health Care Services",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-161",
     chamberId: "saanich-peninsula-chamber",
     businessName: "OMNILYX DIGITAL INTEGRATION LTD",
@@ -29563,8 +26541,6 @@ export const chamberMembers = [
     naicsTitle: "Computer Systems Design Services",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-162",
     chamberId: "saanich-peninsula-chamber",
     businessName: "One Stop Furniture & Mattress Inc.#",
@@ -29577,8 +26553,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-163",
     chamberId: "saanich-peninsula-chamber",
     businessName: "OPTIMAX MANUFACTURING SOLUTIONS LTD",
@@ -29590,8 +26564,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-164",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Orca Spirit Adventures",
@@ -29604,8 +26576,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-165",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Pacific Coast Commercial Cleaning Inc",
@@ -29617,8 +26587,6 @@ export const chamberMembers = [
     naicsTitle: "Janitorial Services",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-166",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Pacific Heat Pumps",
@@ -29629,8 +26597,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-167",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Pacific Ridge Landscapes Ltd",
@@ -29641,8 +26607,6 @@ export const chamberMembers = [
     naicsTitle: "Landscaping Services",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-168",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Pacifica Real Estate Inc",
@@ -29653,8 +26617,6 @@ export const chamberMembers = [
     naicsTitle: "Offices of Real Estate Agents and Brokers",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-169",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Pacificheart Childcare Inc",
@@ -29665,8 +26627,6 @@ export const chamberMembers = [
     naicsTitle: "New Car Dealers",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-170",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Parkbridge Lifestyle (Oceanside) R.V. Resort",
@@ -29679,8 +26639,6 @@ export const chamberMembers = [
     naicsTitle: "Hotels and Motels",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-171",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Patio Gardens",
@@ -29691,8 +26649,6 @@ export const chamberMembers = [
     naicsTitle: "Landscaping Services",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-172",
     chamberId: "saanich-peninsula-chamber",
     businessName: "PBC Solutions",
@@ -29704,8 +26660,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-173",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Peace of Mind Home Inspections",
@@ -29718,8 +26672,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-174",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Pemberton Holmes",
@@ -29732,8 +26684,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-175",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Peninsula Celebrations Society",
@@ -29744,8 +26694,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-176",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Peninsula Co-op",
@@ -29756,8 +26704,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-177",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Peninsula Computer IT Solutions Ltd",
@@ -29770,8 +26716,6 @@ export const chamberMembers = [
     naicsTitle: "Computer Systems Design Services",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-178",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Peninsula Family Chiropractic4-7816 E. Saanich Rd",
@@ -29784,8 +26728,6 @@ export const chamberMembers = [
     naicsTitle: "All Other Miscellaneous Ambulatory Health Care Services",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-179",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Peninsula Mini Storage & Container Rentals Ltd",
@@ -29796,8 +26738,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-180",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Peninsula News Review",
@@ -29808,8 +26748,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-181",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Peninsula Panthers Jr. Hockey Club LtdNorth Saanich",
@@ -29822,8 +26760,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-182",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Peninsula Rock Products Ltd",
@@ -29836,8 +26772,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-183",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Peninsula Streams SocietyNorth Saanich",
@@ -29850,8 +26784,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-184",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Peninsula Streams Society",
@@ -29862,8 +26794,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-185",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Period Fine Bindings",
@@ -29874,8 +26804,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-186",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Ping Digital Signal Processing Inc",
@@ -29888,8 +26816,6 @@ export const chamberMembers = [
     naicsTitle: "Computer Systems Design Services",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-187",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Polaris Land Surveying Inc",
@@ -29902,8 +26828,6 @@ export const chamberMembers = [
     naicsTitle: "Engineering Services",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-188",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Powerhouse Precision",
@@ -29914,8 +26838,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-189",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Prince of Whales Whale Watching",
@@ -29928,8 +26850,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-190",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Quality Inn Waddling Dog",
@@ -29940,8 +26860,6 @@ export const chamberMembers = [
     naicsTitle: "Hotels and Motels",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-191",
     chamberId: "saanich-peninsula-chamber",
     businessName: "QuestPath Solutions Ltd",
@@ -29953,8 +26871,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-192",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Quicksilver Software Development Inc",
@@ -29965,8 +26881,6 @@ export const chamberMembers = [
     naicsTitle: "Computer Systems Design Services",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-193",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Rachel Conconi",
@@ -29977,8 +26891,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-194",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Radar Hill Website Design & Marketing",
@@ -29991,8 +26903,6 @@ export const chamberMembers = [
     naicsTitle: "Computer Systems Design Services",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-195",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Raincoast Conservation Foundation",
@@ -30005,8 +26915,6 @@ export const chamberMembers = [
     naicsTitle: "Grantmaking Foundations",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-196",
     chamberId: "saanich-peninsula-chamber",
     businessName: "RAYMONDCAM SMART SECURE SOLUTIONS LTD",
@@ -30017,8 +26925,6 @@ export const chamberMembers = [
     naicsTitle: "Theater Companies and Dinner Theaters",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-197",
     chamberId: "saanich-peninsula-chamber",
     businessName: "RBC Gateway Village Branch",
@@ -30030,8 +26936,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-198",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Reg Mooney (Penta Resources Corporation)",
@@ -30042,8 +26946,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-199",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Reid Wealth Management - Raymond James",
@@ -30056,8 +26958,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-200",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Rob Botterell, MLA",
@@ -30068,8 +26968,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-201",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Rodco Draperies & Interiors Ltd",
@@ -30082,8 +26980,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-202",
     chamberId: "saanich-peninsula-chamber",
     businessName: "ROGCS CONSTRUCTION SERVICES",
@@ -30094,8 +26990,6 @@ export const chamberMembers = [
     naicsTitle: "Commercial and Institutional Building Construction",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-203",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Royal BC Museum",
@@ -30106,8 +27000,6 @@ export const chamberMembers = [
     naicsTitle: "Theater Companies and Dinner Theaters",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-204",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Saanich Peninsula Artifacts Society o/a Heritage Acres",
@@ -30120,8 +27012,6 @@ export const chamberMembers = [
     naicsTitle: "Theater Companies and Dinner Theaters",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-205",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Saanichton Law Group",
@@ -30132,8 +27022,6 @@ export const chamberMembers = [
     naicsTitle: "Offices of Lawyers",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-206",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Saanichton Village Veterinary Hospital",
@@ -30144,8 +27032,6 @@ export const chamberMembers = [
     naicsTitle: "Veterinary Services",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-207",
     chamberId: "saanich-peninsula-chamber",
     businessName: "SAMWEST PREFAB SYSTEMS LTD",
@@ -30156,8 +27042,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-208",
     chamberId: "saanich-peninsula-chamber",
     businessName: "San Juan Islands Visitors Bureau",
@@ -30170,8 +27054,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-209",
     chamberId: "saanich-peninsula-chamber",
     businessName: "SC Henn CPA",
@@ -30182,8 +27064,6 @@ export const chamberMembers = [
     naicsTitle: "Offices of Certified Public Accountants",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-210",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Scotiabank",
@@ -30194,8 +27074,6 @@ export const chamberMembers = [
     naicsTitle: "Commercial Banking",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-211",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Scotty Manufacturing Ltd",
@@ -30206,8 +27084,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Sidney",
     region: "Capital",
-  },
-  {
     id: "saanich-peninsula-member-212",
     chamberId: "saanich-peninsula-chamber",
     businessName: "Sea Cider Farm & Ciderhouse",
@@ -30237,8 +27113,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Pender Island",
     region: "Capital",
-  },
-  {
     id: "pender-island-member-2",
     chamberId: "pender-island-chamber",
     businessName: "Ainslie Point Cottage",
@@ -30250,8 +27124,6 @@ export const chamberMembers = [
     naicsTitle: "Hotels and Motels",
     municipality: "Pender Island",
     region: "Capital",
-  },
-  {
     id: "pender-island-member-3",
     chamberId: "pender-island-chamber",
     businessName: "Almost Wild Horticulture",
@@ -30263,8 +27135,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Pender Island",
     region: "Capital",
-  },
-  {
     id: "pender-island-member-4",
     chamberId: "pender-island-chamber",
     businessName: "Angela Ray Mortgages",
@@ -30276,8 +27146,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Pender Island",
     region: "Capital",
-  },
-  {
     id: "pender-island-member-5",
     chamberId: "pender-island-chamber",
     businessName: "Artisan Homes",
@@ -30289,8 +27157,6 @@ export const chamberMembers = [
     naicsTitle: "Commercial and Institutional Building Construction",
     municipality: "Pender Island",
     region: "Capital",
-  },
-  {
     id: "pender-island-member-6",
     chamberId: "pender-island-chamber",
     businessName: "Be Wildly Natural Studio",
@@ -30302,8 +27168,6 @@ export const chamberMembers = [
     naicsTitle: "Commercial Photography",
     municipality: "Pender Island",
     region: "Capital",
-  },
-  {
     id: "pender-island-member-7",
     chamberId: "pender-island-chamber",
     businessName: "Bee Wild Distillery",
@@ -30315,8 +27179,6 @@ export const chamberMembers = [
     naicsTitle: "Wineries",
     municipality: "Pender Island",
     region: "Capital",
-  },
-  {
     id: "pender-island-member-8",
     chamberId: "pender-island-chamber",
     businessName: "Big Digem Excavating Ltd",
@@ -30328,8 +27190,6 @@ export const chamberMembers = [
     naicsTitle: "Commercial and Institutional Building Construction",
     municipality: "Pender Island",
     region: "Capital",
-  },
-  {
     id: "pender-island-member-9",
     chamberId: "pender-island-chamber",
     businessName: "Charlene Hall Designs",
@@ -30341,8 +27201,6 @@ export const chamberMembers = [
     naicsTitle: "Advertising Agencies",
     municipality: "Pender Island",
     region: "Capital",
-  },
-  {
     id: "pender-island-member-10",
     chamberId: "pender-island-chamber",
     businessName: "Clam Bay Farm",
@@ -30354,8 +27212,6 @@ export const chamberMembers = [
     naicsTitle: "Other Food Crops Grown Under Cover",
     municipality: "Pender Island",
     region: "Capital",
-  },
-  {
     id: "pender-island-member-11",
     chamberId: "pender-island-chamber",
     businessName: "Clean",
@@ -30367,8 +27223,6 @@ export const chamberMembers = [
     naicsTitle: "Janitorial Services",
     municipality: "Pender Island",
     region: "Capital",
-  },
-  {
     id: "pender-island-member-12",
     chamberId: "pender-island-chamber",
     businessName: "Coastal Connection",
@@ -30380,8 +27234,6 @@ export const chamberMembers = [
     naicsTitle: "All Other General Merchandise Stores",
     municipality: "Pender Island",
     region: "Capital",
-  },
-  {
     id: "pender-island-member-13",
     chamberId: "pender-island-chamber",
     businessName: "Coastal Life Realty Ltd",
@@ -30393,8 +27245,6 @@ export const chamberMembers = [
     naicsTitle: "Offices of Real Estate Agents and Brokers",
     municipality: "Pender Island",
     region: "Capital",
-  },
-  {
     id: "pender-island-member-14",
     chamberId: "pender-island-chamber",
     businessName: "Cocker and Co. Contracting Ltd.General contracting company based on Pender Island serving the Southern Gulf",
@@ -30405,8 +27255,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Pender Island",
     region: "Capital",
-  },
-  {
     id: "pender-island-member-15",
     chamberId: "pender-island-chamber",
     businessName: "Coho Holdings Ltd",
@@ -30418,8 +27266,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Pender Island",
     region: "Capital",
-  },
-  {
     id: "pender-island-member-16",
     chamberId: "pender-island-chamber",
     businessName: "Copper Otter Bar & Grill Ltd",
@@ -30431,8 +27277,6 @@ export const chamberMembers = [
     naicsTitle: "Full-Service Restaurants",
     municipality: "Pender Island",
     region: "Capital",
-  },
-  {
     id: "pender-island-member-17",
     chamberId: "pender-island-chamber",
     businessName: "Cultivate & Evolve Financial",
@@ -30444,8 +27288,6 @@ export const chamberMembers = [
     naicsTitle: "Offices of Certified Public Accountants",
     municipality: "Pender Island",
     region: "Capital",
-  },
-  {
     id: "pender-island-member-18",
     chamberId: "pender-island-chamber",
     businessName: "Darawoodworks",
@@ -30457,8 +27299,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Pender Island",
     region: "Capital",
-  },
-  {
     id: "pender-island-member-19",
     chamberId: "pender-island-chamber",
     businessName: "Daunne's Esthetics & Education StudioDaunne has been an esthetician for over 35 years and operates from her home spa",
@@ -30469,8 +27309,6 @@ export const chamberMembers = [
     naicsTitle: "Barber Shops",
     municipality: "Pender Island",
     region: "Capital",
-  },
-  {
     id: "pender-island-member-20",
     chamberId: "pender-island-chamber",
     businessName: "Debra Bartlett, Coldwell Banker",
@@ -30482,8 +27320,6 @@ export const chamberMembers = [
     naicsTitle: "Commercial Banking",
     municipality: "Pender Island",
     region: "Capital",
-  },
-  {
     id: "pender-island-member-21",
     chamberId: "pender-island-chamber",
     businessName: "Diane",
@@ -30495,8 +27331,6 @@ export const chamberMembers = [
     naicsTitle: "Offices of Real Estate Agents and Brokers",
     municipality: "Pender Island",
     region: "Capital",
-  },
-  {
     id: "pender-island-member-22",
     chamberId: "pender-island-chamber",
     businessName: "Dockside Realty Ltd",
@@ -30508,8 +27342,6 @@ export const chamberMembers = [
     naicsTitle: "Offices of Real Estate Agents and Brokers",
     municipality: "Pender Island",
     region: "Capital",
-  },
-  {
     id: "pender-island-member-23",
     chamberId: "pender-island-chamber",
     businessName: "Dog Mermaid Eco Excursions, Kayak Rentals & Retreats",
@@ -30521,8 +27353,6 @@ export const chamberMembers = [
     naicsTitle: "Professional Organizations",
     municipality: "Pender Island",
     region: "Capital",
-  },
-  {
     id: "pender-island-member-24",
     chamberId: "pender-island-chamber",
     businessName: "Driftwood Auto",
@@ -30534,8 +27364,6 @@ export const chamberMembers = [
     naicsTitle: "New Car Dealers",
     municipality: "Pender Island",
     region: "Capital",
-  },
-  {
     id: "pender-island-member-25",
     chamberId: "pender-island-chamber",
     businessName: "eSafetyFirst Canada",
@@ -30547,8 +27375,6 @@ export const chamberMembers = [
     naicsTitle: "All Other Miscellaneous Ambulatory Health Care Services",
     municipality: "Pender Island",
     region: "Capital",
-  },
-  {
     id: "pender-island-member-26",
     chamberId: "pender-island-chamber",
     businessName: "Gravity Insurance Brokers Ltd",
@@ -30560,8 +27386,6 @@ export const chamberMembers = [
     naicsTitle: "Insurance Agencies and Brokerages",
     municipality: "Pender Island",
     region: "Capital",
-  },
-  {
     id: "pender-island-member-27",
     chamberId: "pender-island-chamber",
     businessName: "Gulf Excavating Ltd",
@@ -30573,8 +27397,6 @@ export const chamberMembers = [
     naicsTitle: "General Freight Trucking, Local",
     municipality: "Pender Island",
     region: "Capital",
-  },
-  {
     id: "pender-island-member-28",
     chamberId: "pender-island-chamber",
     businessName: "Gulf Islands Roof Cleaning Ltd",
@@ -30586,8 +27408,6 @@ export const chamberMembers = [
     naicsTitle: "Janitorial Services",
     municipality: "Pender Island",
     region: "Capital",
-  },
-  {
     id: "pender-island-member-29",
     chamberId: "pender-island-chamber",
     businessName: "Heather",
@@ -30599,8 +27419,6 @@ export const chamberMembers = [
     naicsTitle: "Offices of Real Estate Agents and Brokers",
     municipality: "Pender Island",
     region: "Capital",
-  },
-  {
     id: "pender-island-member-30",
     chamberId: "pender-island-chamber",
     businessName: "Hope Bay",
@@ -30612,8 +27430,6 @@ export const chamberMembers = [
     naicsTitle: "Advertising Agencies",
     municipality: "Pender Island",
     region: "Capital",
-  },
-  {
     id: "pender-island-member-31",
     chamberId: "pender-island-chamber",
     businessName: "Hope Catcher Studio",
@@ -30625,8 +27441,6 @@ export const chamberMembers = [
     naicsTitle: "Theater Companies and Dinner Theaters",
     municipality: "Pender Island",
     region: "Capital",
-  },
-  {
     id: "pender-island-member-32",
     chamberId: "pender-island-chamber",
     businessName: "Housing NOW",
@@ -30638,8 +27452,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Pender Island",
     region: "Capital",
-  },
-  {
     id: "pender-island-member-33",
     chamberId: "pender-island-chamber",
     businessName: "Inisheile Farm",
@@ -30651,8 +27463,6 @@ export const chamberMembers = [
     naicsTitle: "Other Food Crops Grown Under Cover",
     municipality: "Pender Island",
     region: "Capital",
-  },
-  {
     id: "pender-island-member-34",
     chamberId: "pender-island-chamber",
     businessName: "Island Graphics Ltd",
@@ -30664,8 +27474,6 @@ export const chamberMembers = [
     naicsTitle: "Advertising Agencies",
     municipality: "Pender Island",
     region: "Capital",
-  },
-  {
     id: "pender-island-member-35",
     chamberId: "pender-island-chamber",
     businessName: "Island House & Home",
@@ -30677,8 +27485,6 @@ export const chamberMembers = [
     naicsTitle: "Plumbing, Heating, and Air-Conditioning Contractors",
     municipality: "Pender Island",
     region: "Capital",
-  },
-  {
     id: "pender-island-member-36",
     chamberId: "pender-island-chamber",
     businessName: "Island Legacy",
@@ -30690,8 +27496,6 @@ export const chamberMembers = [
     naicsTitle: "Commercial and Institutional Building Construction",
     municipality: "Pender Island",
     region: "Capital",
-  },
-  {
     id: "pender-island-member-37",
     chamberId: "pender-island-chamber",
     businessName: "Islandscapes",
@@ -30703,8 +27507,6 @@ export const chamberMembers = [
     naicsTitle: "Offices of Real Estate Agents and Brokers",
     municipality: "Pender Island",
     region: "Capital",
-  },
-  {
     id: "pender-island-member-38",
     chamberId: "pender-island-chamber",
     businessName: "Islnd Grl Collective",
@@ -30716,8 +27518,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Pender Island",
     region: "Capital",
-  },
-  {
     id: "pender-island-member-39",
     chamberId: "pender-island-chamber",
     businessName: "Jamieson Electrical Solutions Ltd",
@@ -30729,8 +27529,6 @@ export const chamberMembers = [
     naicsTitle: "Commercial and Institutional Building Construction",
     municipality: "Pender Island",
     region: "Capital",
-  },
-  {
     id: "pender-island-member-40",
     chamberId: "pender-island-chamber",
     businessName: "Kim Pollard Gallery",
@@ -30742,8 +27540,6 @@ export const chamberMembers = [
     naicsTitle: "Theater Companies and Dinner Theaters",
     municipality: "Pender Island",
     region: "Capital",
-  },
-  {
     id: "pender-island-member-41",
     chamberId: "pender-island-chamber",
     businessName: "Lightning Taxi",
@@ -30755,8 +27551,6 @@ export const chamberMembers = [
     naicsTitle: "Offices of Certified Public Accountants",
     municipality: "Pender Island",
     region: "Capital",
-  },
-  {
     id: "pender-island-member-42",
     chamberId: "pender-island-chamber",
     businessName: "Lisa's Nails and EstheticsA talented team of beauty professionals providing a wide range of services",
@@ -30767,8 +27561,6 @@ export const chamberMembers = [
     naicsTitle: "Barber Shops",
     municipality: "Pender Island",
     region: "Capital",
-  },
-  {
     id: "pender-island-member-43",
     chamberId: "pender-island-chamber",
     businessName: "Logan's HideawayTranquil oceanfront cottage with private beach access",
@@ -30779,8 +27571,6 @@ export const chamberMembers = [
     naicsTitle: "Hotels and Motels",
     municipality: "Pender Island",
     region: "Capital",
-  },
-  {
     id: "pender-island-member-44",
     chamberId: "pender-island-chamber",
     businessName: "Looking to Sea Retreats, Rentals, Ecotours",
@@ -30792,8 +27582,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Pender Island",
     region: "Capital",
-  },
-  {
     id: "pender-island-member-45",
     chamberId: "pender-island-chamber",
     businessName: "LS Woodworks",
@@ -30805,8 +27593,6 @@ export const chamberMembers = [
     naicsTitle: "New Car Dealers",
     municipality: "Pender Island",
     region: "Capital",
-  },
-  {
     id: "pender-island-member-46",
     chamberId: "pender-island-chamber",
     businessName: "Magic Lake Property",
@@ -30818,8 +27604,6 @@ export const chamberMembers = [
     naicsTitle: "Offices of Real Estate Agents and Brokers",
     municipality: "Pender Island",
     region: "Capital",
-  },
-  {
     id: "pender-island-member-47",
     chamberId: "pender-island-chamber",
     businessName: "Maxim Pest Solutions",
@@ -30831,8 +27615,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Pender Island",
     region: "Capital",
-  },
-  {
     id: "pender-island-member-48",
     chamberId: "pender-island-chamber",
     businessName: "Meander Wellbeing",
@@ -30844,8 +27626,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Pender Island",
     region: "Capital",
-  },
-  {
     id: "pender-island-member-49",
     chamberId: "pender-island-chamber",
     businessName: "Medicine Beach Liquor Store",
@@ -30857,8 +27637,6 @@ export const chamberMembers = [
     naicsTitle: "All Other General Merchandise Stores",
     municipality: "Pender Island",
     region: "Capital",
-  },
-  {
     id: "pender-island-member-50",
     chamberId: "pender-island-chamber",
     businessName: "Melville",
@@ -30870,8 +27648,6 @@ export const chamberMembers = [
     naicsTitle: "Computer Systems Design Services",
     municipality: "Pender Island",
     region: "Capital",
-  },
-  {
     id: "pender-island-member-51",
     chamberId: "pender-island-chamber",
     businessName: "Mieke Truijen Physiotherapy Clinic",
@@ -30883,8 +27659,6 @@ export const chamberMembers = [
     naicsTitle: "All Other Miscellaneous Ambulatory Health Care Services",
     municipality: "Pender Island",
     region: "Capital",
-  },
-  {
     id: "pender-island-member-52",
     chamberId: "pender-island-chamber",
     businessName: "Mobile DJMobile DJ services for private or community events",
@@ -30895,8 +27669,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Pender Island",
     region: "Capital",
-  },
-  {
     id: "pender-island-member-53",
     chamberId: "pender-island-chamber",
     businessName: "New Moon Lodge",
@@ -30908,8 +27680,6 @@ export const chamberMembers = [
     naicsTitle: "Hotels and Motels",
     municipality: "Pender Island",
     region: "Capital",
-  },
-  {
     id: "pender-island-member-54",
     chamberId: "pender-island-chamber",
     businessName: "Nosy Point Bed & Breakfast",
@@ -30921,8 +27691,6 @@ export const chamberMembers = [
     naicsTitle: "Hotels and Motels",
     municipality: "Pender Island",
     region: "Capital",
-  },
-  {
     id: "pender-island-member-55",
     chamberId: "pender-island-chamber",
     businessName: "Nu-to-Yu Thrift StoreNu-To-Yu is a treasure trove of gently used clothing, accessories, books, ETC",
@@ -30933,8 +27701,6 @@ export const chamberMembers = [
     naicsTitle: "All Other General Merchandise Stores",
     municipality: "Pender Island",
     region: "Capital",
-  },
-  {
     id: "pender-island-member-56",
     chamberId: "pender-island-chamber",
     businessName: "Nutritious Life Consulting",
@@ -30946,8 +27712,6 @@ export const chamberMembers = [
     naicsTitle: "Administrative Management Consulting Services",
     municipality: "Pender Island",
     region: "Capital",
-  },
-  {
     id: "pender-island-member-57",
     chamberId: "pender-island-chamber",
     businessName: "Otter Bay Express",
@@ -30959,8 +27723,6 @@ export const chamberMembers = [
     naicsTitle: "Couriers and Express Delivery Services",
     municipality: "Pender Island",
     region: "Capital",
-  },
-  {
     id: "pender-island-member-58",
     chamberId: "pender-island-chamber",
     businessName: "Otter Bay Marina",
@@ -30972,8 +27734,6 @@ export const chamberMembers = [
     naicsTitle: "Full-Service Restaurants",
     municipality: "Pender Island",
     region: "Capital",
-  },
-  {
     id: "pender-island-member-59",
     chamberId: "pender-island-chamber",
     businessName: "Pacifique Skin & Scalp Therapy",
@@ -30985,8 +27745,6 @@ export const chamberMembers = [
     naicsTitle: "All Other Miscellaneous Ambulatory Health Care Services",
     municipality: "Pender Island",
     region: "Capital",
-  },
-  {
     id: "pender-island-member-60",
     chamberId: "pender-island-chamber",
     businessName: "Parks",
@@ -30998,8 +27756,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Pender Island",
     region: "Capital",
-  },
-  {
     id: "pender-island-member-61",
     chamberId: "pender-island-chamber",
     businessName: "Pay It Forward Mortgages",
@@ -31011,8 +27767,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Pender Island",
     region: "Capital",
-  },
-  {
     id: "pender-island-member-62",
     chamberId: "pender-island-chamber",
     businessName: "PCS Pest Control Services Gulf Islands Ltd.For all your Pest Control needs, give us a call!",
@@ -31023,8 +27777,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Pender Island",
     region: "Capital",
-  },
-  {
     id: "pender-island-member-63",
     chamberId: "pender-island-chamber",
     businessName: "Pender Chocolates",
@@ -31036,8 +27788,6 @@ export const chamberMembers = [
     naicsTitle: "Full-Service Restaurants",
     municipality: "Pender Island",
     region: "Capital",
-  },
-  {
     id: "pender-island-member-64",
     chamberId: "pender-island-chamber",
     businessName: "Pender Courier",
@@ -31049,8 +27799,6 @@ export const chamberMembers = [
     naicsTitle: "Couriers and Express Delivery Services",
     municipality: "Pender Island",
     region: "Capital",
-  },
-  {
     id: "pender-island-member-65",
     chamberId: "pender-island-chamber",
     businessName: "Pender Island Community Hall",
@@ -31062,8 +27810,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Pender Island",
     region: "Capital",
-  },
-  {
     id: "pender-island-member-66",
     chamberId: "pender-island-chamber",
     businessName: "Pender Island Concert Society",
@@ -31075,8 +27821,6 @@ export const chamberMembers = [
     naicsTitle: "Theater Companies and Dinner Theaters",
     municipality: "Pender Island",
     region: "Capital",
-  },
-  {
     id: "pender-island-member-67",
     chamberId: "pender-island-chamber",
     businessName: "Pender Island",
@@ -31088,8 +27832,6 @@ export const chamberMembers = [
     naicsTitle: "Other Food Crops Grown Under Cover",
     municipality: "Pender Island",
     region: "Capital",
-  },
-  {
     id: "pender-island-member-68",
     chamberId: "pender-island-chamber",
     businessName: "Pender Island Fire Rescue",
@@ -31101,8 +27843,6 @@ export const chamberMembers = [
     naicsTitle: "Offices of Real Estate Agents and Brokers",
     municipality: "Pender Island",
     region: "Capital",
-  },
-  {
     id: "pender-island-member-69",
     chamberId: "pender-island-chamber",
     businessName: "Pender Island Food Bank",
@@ -31114,8 +27854,6 @@ export const chamberMembers = [
     naicsTitle: "Full-Service Restaurants",
     municipality: "Pender Island",
     region: "Capital",
-  },
-  {
     id: "pender-island-member-70",
     chamberId: "pender-island-chamber",
     businessName: "Pender Island Golf & Country Club",
@@ -31127,8 +27865,6 @@ export const chamberMembers = [
     naicsTitle: "Golf Courses and Country Clubs",
     municipality: "Pender Island",
     region: "Capital",
-  },
-  {
     id: "pender-island-member-71",
     chamberId: "pender-island-chamber",
     businessName: "Pender Island Heating & Cooling",
@@ -31140,8 +27876,6 @@ export const chamberMembers = [
     naicsTitle: "Plumbing, Heating, and Air-Conditioning Contractors",
     municipality: "Pender Island",
     region: "Capital",
-  },
-  {
     id: "pender-island-member-72",
     chamberId: "pender-island-chamber",
     businessName: "Pender Island Home",
@@ -31153,8 +27887,6 @@ export const chamberMembers = [
     naicsTitle: "Commercial and Institutional Building Construction",
     municipality: "Pender Island",
     region: "Capital",
-  },
-  {
     id: "pender-island-member-73",
     chamberId: "pender-island-chamber",
     businessName: "Pender Island Massage Therapy",
@@ -31166,8 +27898,6 @@ export const chamberMembers = [
     naicsTitle: "All Other Miscellaneous Ambulatory Health Care Services",
     municipality: "Pender Island",
     region: "Capital",
-  },
-  {
     id: "pender-island-member-74",
     chamberId: "pender-island-chamber",
     businessName: "Pender Island Naturals",
@@ -31179,8 +27909,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Pender Island",
     region: "Capital",
-  },
-  {
     id: "pender-island-member-75",
     chamberId: "pender-island-chamber",
     businessName: "Pender Island Parks & Recreation",
@@ -31207,8 +27935,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-2",
     chamberId: "tofino-chamber",
     businessName: "Adriana’s Sandwich Shop",
@@ -31219,8 +27945,6 @@ export const chamberMembers = [
     naicsTitle: "All Other Miscellaneous Store Retailers",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-3",
     chamberId: "tofino-chamber",
     businessName: "Adventure Tofino Wildlife Tours",
@@ -31231,8 +27955,6 @@ export const chamberMembers = [
     naicsTitle: "Tour Operators",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-4",
     chamberId: "tofino-chamber",
     businessName: "Aeriosa Dance Society",
@@ -31243,8 +27965,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-5",
     chamberId: "tofino-chamber",
     businessName: "A-Frame Guiding",
@@ -31255,8 +27975,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-6",
     chamberId: "tofino-chamber",
     businessName: "Agio & Ardito",
@@ -31267,8 +27985,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-7",
     chamberId: "tofino-chamber",
     businessName: "Ahous Adventures",
@@ -31279,8 +27995,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-8",
     chamberId: "tofino-chamber",
     businessName: "Ahousaht Beaded Earrings",
@@ -31291,8 +28005,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-9",
     chamberId: "tofino-chamber",
     businessName: "Ahousaht First Nation",
@@ -31303,8 +28015,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-10",
     chamberId: "tofino-chamber",
     businessName: "Ahoy Bags / Heyduck Art & Design",
@@ -31315,8 +28025,6 @@ export const chamberMembers = [
     naicsTitle: "Art Dealers",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-11",
     chamberId: "tofino-chamber",
     businessName: "Airbnb",
@@ -31327,8 +28035,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-12",
     chamberId: "tofino-chamber",
     businessName: "Alberni Adventure Gear",
@@ -31339,8 +28045,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-13",
     chamberId: "tofino-chamber",
     businessName: "Alberni Valley Employment Centre - Tofino",
@@ -31351,8 +28055,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-14",
     chamberId: "tofino-chamber",
     businessName: "Ali's Surf School",
@@ -31363,8 +28065,6 @@ export const chamberMembers = [
     naicsTitle: "Sports Instruction",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-15",
     chamberId: "tofino-chamber",
     businessName: "Anchors Inn Waterfront Cabins",
@@ -31375,8 +28075,6 @@ export const chamberMembers = [
     naicsTitle: "Hotels and Motels",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-16",
     chamberId: "tofino-chamber",
     businessName: "Ancient Cedars Spa",
@@ -31387,8 +28085,6 @@ export const chamberMembers = [
     naicsTitle: "Other Personal Care Services",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-17",
     chamberId: "tofino-chamber",
     businessName: "Angler's Inn",
@@ -31399,8 +28095,6 @@ export const chamberMembers = [
     naicsTitle: "Hotels and Motels",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-18",
     chamberId: "tofino-chamber",
     businessName: "Arbutus Health Center",
@@ -31411,8 +28105,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-19",
     chamberId: "tofino-chamber",
     businessName: "Atleo River Air Service",
@@ -31423,8 +28115,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-20",
     chamberId: "tofino-chamber",
     businessName: "Aynsley Paints",
@@ -31435,8 +28125,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-21",
     chamberId: "tofino-chamber",
     businessName: "Bad Dog Tofino",
@@ -31447,8 +28135,6 @@ export const chamberMembers = [
     naicsTitle: "Full-Service Restaurants",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-22",
     chamberId: "tofino-chamber",
     businessName: "Base Camp Adventure Rentals",
@@ -31459,8 +28145,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-23",
     chamberId: "tofino-chamber",
     businessName: "Basic Goodness Pizzeria",
@@ -31471,8 +28155,6 @@ export const chamberMembers = [
     naicsTitle: "Full-Service Restaurants",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-24",
     chamberId: "tofino-chamber",
     businessName: "Beach Break Lodge B&B",
@@ -31483,8 +28165,6 @@ export const chamberMembers = [
     naicsTitle: "Hotels and Motels",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-25",
     chamberId: "tofino-chamber",
     businessName: "Beaches Grocery",
@@ -31495,8 +28175,6 @@ export const chamberMembers = [
     naicsTitle: "Supermarkets and Other Grocery Stores",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-26",
     chamberId: "tofino-chamber",
     businessName: "Bean at the Cove",
@@ -31507,8 +28185,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-27",
     chamberId: "tofino-chamber",
     businessName: "BEAR Bierhaus",
@@ -31519,8 +28195,6 @@ export const chamberMembers = [
     naicsTitle: "Full-Service Restaurants",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-28",
     chamberId: "tofino-chamber",
     businessName: "Bear Hill Bookkeeping",
@@ -31531,8 +28205,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-29",
     chamberId: "tofino-chamber",
     businessName: "Bella Pacifica Campground",
@@ -31543,8 +28215,6 @@ export const chamberMembers = [
     naicsTitle: "RV Parks and Campgrounds",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-30",
     chamberId: "tofino-chamber",
     businessName: "Big Hen’s Home Improvements LTD",
@@ -31555,8 +28225,6 @@ export const chamberMembers = [
     naicsTitle: "Commercial and Institutional Building Construction",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-31",
     chamberId: "tofino-chamber",
     businessName: "Bloom Surf Shack",
@@ -31567,8 +28235,6 @@ export const chamberMembers = [
     naicsTitle: "Sports Instruction",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-32",
     chamberId: "tofino-chamber",
     businessName: "Blue Crush Concierge",
@@ -31579,8 +28245,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-33",
     chamberId: "tofino-chamber",
     businessName: "Body Soul Tofino",
@@ -31591,8 +28255,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-34",
     chamberId: "tofino-chamber",
     businessName: "Brite Collective",
@@ -31603,8 +28265,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-35",
     chamberId: "tofino-chamber",
     businessName: "Browning Pass Place",
@@ -31615,8 +28275,6 @@ export const chamberMembers = [
     naicsTitle: "Hotels and Motels",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-36",
     chamberId: "tofino-chamber",
     businessName: "Browns Socialhouse Tofino",
@@ -31627,8 +28285,6 @@ export const chamberMembers = [
     naicsTitle: "Full-Service Restaurants",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-37",
     chamberId: "tofino-chamber",
     businessName: "By the Sea Massage & Bodywork",
@@ -31639,8 +28295,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-38",
     chamberId: "tofino-chamber",
     businessName: "Cabins At Terrace Beach",
@@ -31651,8 +28305,6 @@ export const chamberMembers = [
     naicsTitle: "Hotels and Motels",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-39",
     chamberId: "tofino-chamber",
     businessName: "Cafe at The MAQ",
@@ -31663,8 +28315,6 @@ export const chamberMembers = [
     naicsTitle: "Snack and Coffee Shops",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-40",
     chamberId: "tofino-chamber",
     businessName: "Cameron Ocean Adventures",
@@ -31675,8 +28325,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-41",
     chamberId: "tofino-chamber",
     businessName: "Camosun College Culinary Arts",
@@ -31687,8 +28335,6 @@ export const chamberMembers = [
     naicsTitle: "Art Dealers",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-42",
     chamberId: "tofino-chamber",
     businessName: "Canadian Cancer Society British Columbia",
@@ -31699,8 +28345,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-43",
     chamberId: "tofino-chamber",
     businessName: "Canadian Princess Lodge & Marina",
@@ -31711,8 +28355,6 @@ export const chamberMembers = [
     naicsTitle: "Hotels and Motels",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-44",
     chamberId: "tofino-chamber",
     businessName: "Caravan Beach Shop",
@@ -31723,8 +28365,6 @@ export const chamberMembers = [
     naicsTitle: "All Other Miscellaneous Store Retailers",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-45",
     chamberId: "tofino-chamber",
     businessName: "Carving on the Edge Festival",
@@ -31735,8 +28375,6 @@ export const chamberMembers = [
     naicsTitle: "New Car Dealers",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-46",
     chamberId: "tofino-chamber",
     businessName: "Cedar & Sand Bookkeeping",
@@ -31747,8 +28385,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-47",
     chamberId: "tofino-chamber",
     businessName: "Cedar House Creations",
@@ -31759,8 +28395,6 @@ export const chamberMembers = [
     naicsTitle: "All Other Miscellaneous Store Retailers",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-48",
     chamberId: "tofino-chamber",
     businessName: "Cermaq Canada Ltd.",
@@ -31771,8 +28405,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-49",
     chamberId: "tofino-chamber",
     businessName: "Charter Tofino",
@@ -31796,8 +28428,6 @@ export const chamberMembers = [
     naicsTitle: "Hotels and Motels",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-52",
     chamberId: "tofino-chamber",
     businessName: "Chesterman House",
@@ -31808,8 +28438,6 @@ export const chamberMembers = [
     naicsTitle: "Hotels and Motels",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-53",
     chamberId: "tofino-chamber",
     businessName: "Chinook Vacation Rentals",
@@ -31833,8 +28461,6 @@ export const chamberMembers = [
     naicsTitle: "Art Dealers",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-56",
     chamberId: "tofino-chamber",
     businessName: "Clarity Apothecary",
@@ -31845,8 +28471,6 @@ export const chamberMembers = [
     naicsTitle: "All Other Miscellaneous Store Retailers",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-57",
     chamberId: "tofino-chamber",
     businessName: "Clayoquot Action",
@@ -31870,8 +28494,6 @@ export const chamberMembers = [
     naicsTitle: "Hotels and Motels",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-60",
     chamberId: "tofino-chamber",
     businessName: "Clayoquot Retreat",
@@ -31882,8 +28504,6 @@ export const chamberMembers = [
     naicsTitle: "Hotels and Motels",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-61",
     chamberId: "tofino-chamber",
     businessName: "Clayoquot Sound Community Theatre Association",
@@ -31894,8 +28514,6 @@ export const chamberMembers = [
     naicsTitle: "Art Dealers",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-62",
     chamberId: "tofino-chamber",
     businessName: "Clayoquot Wild Tours",
@@ -31919,8 +28537,6 @@ export const chamberMembers = [
     naicsTitle: "Charter Fishing",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-65",
     chamberId: "tofino-chamber",
     businessName: "Coastal Charters",
@@ -31931,8 +28547,6 @@ export const chamberMembers = [
     naicsTitle: "Charter Boats",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-66",
     chamberId: "tofino-chamber",
     businessName: "Coastal Community Credit Union",
@@ -31943,8 +28557,6 @@ export const chamberMembers = [
     naicsTitle: "Credit Unions",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-67",
     chamberId: "tofino-chamber",
     businessName: "Coastal Queer Alliance",
@@ -31955,8 +28567,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-68",
     chamberId: "tofino-chamber",
     businessName: "Coastal Restoration Society",
@@ -31967,8 +28577,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-69",
     chamberId: "tofino-chamber",
     businessName: "Coastal Rides",
@@ -31979,8 +28587,6 @@ export const chamberMembers = [
     naicsTitle: "General Freight Trucking",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-70",
     chamberId: "tofino-chamber",
     businessName: "Coastal Shred Academy",
@@ -31991,8 +28597,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-71",
     chamberId: "tofino-chamber",
     businessName: "Cobble Wood & Bird Sanctuary Guest Houses",
@@ -32003,8 +28607,6 @@ export const chamberMembers = [
     naicsTitle: "Hotels and Motels",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-72",
     chamberId: "tofino-chamber",
     businessName: "Cocofino Yogurt LTD.",
@@ -32015,8 +28617,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-73",
     chamberId: "tofino-chamber",
     businessName: "Commercial Bear Viewing Association of BC",
@@ -32040,8 +28640,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-76",
     chamberId: "tofino-chamber",
     businessName: "Comox Valley Airport",
@@ -32052,8 +28650,6 @@ export const chamberMembers = [
     naicsTitle: "General Freight Trucking",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-77",
     chamberId: "tofino-chamber",
     businessName: "Cougar Annie's Garden / Boat Basin Foundation",
@@ -32077,8 +28673,6 @@ export const chamberMembers = [
     naicsTitle: "Offices of Lawyers",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-80",
     chamberId: "tofino-chamber",
     businessName: "Creative Emily Studio & Consultancy",
@@ -32089,8 +28683,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-81",
     chamberId: "tofino-chamber",
     businessName: "Creative Salmon Co. Ltd.",
@@ -32114,8 +28706,6 @@ export const chamberMembers = [
     naicsTitle: "Sports Instruction",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-84",
     chamberId: "tofino-chamber",
     businessName: "Daylight Cannabis",
@@ -32152,8 +28742,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-89",
     chamberId: "tofino-chamber",
     businessName: "Dr. James Jameson",
@@ -32164,8 +28752,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-90",
     chamberId: "tofino-chamber",
     businessName: "Dream State Design (Wave Web Studio)",
@@ -32176,8 +28762,6 @@ export const chamberMembers = [
     naicsTitle: "Graphic Design Services",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-91",
     chamberId: "tofino-chamber",
     businessName: "Drift MFG Co.",
@@ -32188,8 +28772,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-92",
     chamberId: "tofino-chamber",
     businessName: "Driftwood Café",
@@ -32200,8 +28782,6 @@ export const chamberMembers = [
     naicsTitle: "Snack and Coffee Shops",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-93",
     chamberId: "tofino-chamber",
     businessName: "Driftwood Gift Shop",
@@ -32212,8 +28792,6 @@ export const chamberMembers = [
     naicsTitle: "All Other Miscellaneous Store Retailers",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-94",
     chamberId: "tofino-chamber",
     businessName: "Duffin Cove Oceanfront Lodging",
@@ -32224,8 +28802,6 @@ export const chamberMembers = [
     naicsTitle: "Hotels and Motels",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-95",
     chamberId: "tofino-chamber",
     businessName: "Elope Tofino",
@@ -32236,8 +28812,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-96",
     chamberId: "tofino-chamber",
     businessName: "Epic Pharmacy",
@@ -32248,8 +28822,6 @@ export const chamberMembers = [
     naicsTitle: "Pharmacies and Drug Stores",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-97",
     chamberId: "tofino-chamber",
     businessName: "Evergreen Co.",
@@ -32260,8 +28832,6 @@ export const chamberMembers = [
     naicsTitle: "All Other Miscellaneous Store Retailers",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-98",
     chamberId: "tofino-chamber",
     businessName: "Evo Car Share",
@@ -32272,8 +28842,6 @@ export const chamberMembers = [
     naicsTitle: "New Car Dealers",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-99",
     chamberId: "tofino-chamber",
     businessName: "Export Navigator",
@@ -32284,8 +28852,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-100",
     chamberId: "tofino-chamber",
     businessName: "Flow FlyFishing",
@@ -32296,8 +28862,6 @@ export const chamberMembers = [
     naicsTitle: "Charter Fishing",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-101",
     chamberId: "tofino-chamber",
     businessName: "For Keeps Shop",
@@ -32308,8 +28872,6 @@ export const chamberMembers = [
     naicsTitle: "All Other Miscellaneous Store Retailers",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-102",
     chamberId: "tofino-chamber",
     businessName: "Forest & Waves Yoga Studio",
@@ -32320,8 +28882,6 @@ export const chamberMembers = [
     naicsTitle: "Fitness and Recreational Sports Centers",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-103",
     chamberId: "tofino-chamber",
     businessName: "fox fold",
@@ -32332,8 +28892,6 @@ export const chamberMembers = [
     naicsTitle: "All Other Miscellaneous Store Retailers",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-104",
     chamberId: "tofino-chamber",
     businessName: "FoxiPrint Inc.",
@@ -32344,8 +28902,6 @@ export const chamberMembers = [
     naicsTitle: "Commercial Printing",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-105",
     chamberId: "tofino-chamber",
     businessName: "Fred Tibbs Strata Accommodation",
@@ -32356,8 +28912,6 @@ export const chamberMembers = [
     naicsTitle: "Hotels and Motels",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-106",
     chamberId: "tofino-chamber",
     businessName: "Friends Of Clayoquot Sound",
@@ -32368,8 +28922,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-107",
     chamberId: "tofino-chamber",
     businessName: "Gaia Grocery",
@@ -32380,8 +28932,6 @@ export const chamberMembers = [
     naicsTitle: "Supermarkets and Other Grocery Stores",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-108",
     chamberId: "tofino-chamber",
     businessName: "Gibsons in Tofino",
@@ -32392,8 +28942,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-109",
     chamberId: "tofino-chamber",
     businessName: "go2HR",
@@ -32404,8 +28952,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-110",
     chamberId: "tofino-chamber",
     businessName: "Gold Coast Retreat",
@@ -32416,8 +28962,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-111",
     chamberId: "tofino-chamber",
     businessName: "Green Land Projects Inc.",
@@ -32428,8 +28972,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-112",
     chamberId: "tofino-chamber",
     businessName: "Green Waves",
@@ -32440,8 +28982,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-113",
     chamberId: "tofino-chamber",
     businessName: "Habit Clothing",
@@ -32452,8 +28992,6 @@ export const chamberMembers = [
     naicsTitle: "Sports Instruction",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-114",
     chamberId: "tofino-chamber",
     businessName: "Harbour Air",
@@ -32464,8 +29002,6 @@ export const chamberMembers = [
     naicsTitle: "General Freight Trucking",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-115",
     chamberId: "tofino-chamber",
     businessName: "Harbourview Coffeehouse",
@@ -32476,8 +29012,6 @@ export const chamberMembers = [
     naicsTitle: "Snack and Coffee Shops",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-116",
     chamberId: "tofino-chamber",
     businessName: "Heartwood Kitchen",
@@ -32488,8 +29022,6 @@ export const chamberMembers = [
     naicsTitle: "Full-Service Restaurants",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-117",
     chamberId: "tofino-chamber",
     businessName: "Hello Nature Adventure Tours",
@@ -32500,8 +29032,6 @@ export const chamberMembers = [
     naicsTitle: "Tour Operators",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-118",
     chamberId: "tofino-chamber",
     businessName: "Henry Nolla's Carving Shed",
@@ -32512,8 +29042,6 @@ export const chamberMembers = [
     naicsTitle: "Art Dealers",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-119",
     chamberId: "tofino-chamber",
     businessName: "Hilltop Haven",
@@ -32563,8 +29091,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-126",
     chamberId: "tofino-chamber",
     businessName: "Jeju Restaurant",
@@ -32575,8 +29101,6 @@ export const chamberMembers = [
     naicsTitle: "Full-Service Restaurants",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-127",
     chamberId: "tofino-chamber",
     businessName: "Jen McLeod Photography",
@@ -32587,8 +29111,6 @@ export const chamberMembers = [
     naicsTitle: "Commercial Photography",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-128",
     chamberId: "tofino-chamber",
     businessName: "Jeremy Koreski Gallery",
@@ -32599,8 +29121,6 @@ export const chamberMembers = [
     naicsTitle: "Art Dealers",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-129",
     chamberId: "tofino-chamber",
     businessName: "Joyride Branding",
@@ -32611,8 +29131,6 @@ export const chamberMembers = [
     naicsTitle: "Supermarkets and Other Grocery Stores",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-130",
     chamberId: "tofino-chamber",
     businessName: "LA Grocery",
@@ -32623,8 +29141,6 @@ export const chamberMembers = [
     naicsTitle: "Supermarkets and Other Grocery Stores",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-131",
     chamberId: "tofino-chamber",
     businessName: "LANDOLT FINANCIAL GROUP INC.",
@@ -32635,8 +29151,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-132",
     chamberId: "tofino-chamber",
     businessName: "Lara Palmer Creative",
@@ -32647,8 +29161,6 @@ export const chamberMembers = [
     naicsTitle: "Art Dealers",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-133",
     chamberId: "tofino-chamber",
     businessName: "Lisa Fletcher Jewellery",
@@ -32659,8 +29171,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-134",
     chamberId: "tofino-chamber",
     businessName: "Lisa Hack Coaching",
@@ -32671,8 +29181,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-135",
     chamberId: "tofino-chamber",
     businessName: "Little Beach Resort",
@@ -32683,8 +29191,6 @@ export const chamberMembers = [
     naicsTitle: "Resort Hotels",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-136",
     chamberId: "tofino-chamber",
     businessName: "Liv Beau Studio",
@@ -32695,8 +29201,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-137",
     chamberId: "tofino-chamber",
     businessName: "Live To Surf - The Original Tofino Surf Shop",
@@ -32707,8 +29211,6 @@ export const chamberMembers = [
     naicsTitle: "Sports Instruction",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-138",
     chamberId: "tofino-chamber",
     businessName: "Long Beach Campground",
@@ -32745,8 +29247,6 @@ export const chamberMembers = [
     naicsTitle: "Sports Instruction",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-143",
     chamberId: "tofino-chamber",
     businessName: "Lost Shoe Campground",
@@ -32757,8 +29257,6 @@ export const chamberMembers = [
     naicsTitle: "RV Parks and Campgrounds",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-144",
     chamberId: "tofino-chamber",
     businessName: "LoveCraft Gallery",
@@ -32769,8 +29267,6 @@ export const chamberMembers = [
     naicsTitle: "Art Dealers",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-145",
     chamberId: "tofino-chamber",
     businessName: "Lux.Fino Luxury Events",
@@ -32781,8 +29277,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-146",
     chamberId: "tofino-chamber",
     businessName: "MacKenzie Beach Resort",
@@ -32793,8 +29287,6 @@ export const chamberMembers = [
     naicsTitle: "Hotels and Motels",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-147",
     chamberId: "tofino-chamber",
     businessName: "MacKenzie Beach Resort Campground",
@@ -32805,8 +29297,6 @@ export const chamberMembers = [
     naicsTitle: "Resort Hotels",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-148",
     chamberId: "tofino-chamber",
     businessName: "Marcie DeWitt Consulting",
@@ -32817,8 +29307,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-149",
     chamberId: "tofino-chamber",
     businessName: "Mark Hobson Gallery",
@@ -32829,8 +29317,6 @@ export const chamberMembers = [
     naicsTitle: "Art Dealers",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-150",
     chamberId: "tofino-chamber",
     businessName: "Marnie Recker Photography",
@@ -32841,8 +29327,6 @@ export const chamberMembers = [
     naicsTitle: "Commercial Photography",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-151",
     chamberId: "tofino-chamber",
     businessName: "Meares Island water taxi LTD.",
@@ -32853,8 +29337,6 @@ export const chamberMembers = [
     naicsTitle: "Charter Boats",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-152",
     chamberId: "tofino-chamber",
     businessName: "Meares Retreat Waterfront B&B",
@@ -32865,8 +29347,6 @@ export const chamberMembers = [
     naicsTitle: "Hotels and Motels",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-153",
     chamberId: "tofino-chamber",
     businessName: "Meares Vista Inn",
@@ -32877,8 +29357,6 @@ export const chamberMembers = [
     naicsTitle: "Hotels and Motels",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-154",
     chamberId: "tofino-chamber",
     businessName: "Merge Curated Goods",
@@ -32889,8 +29367,6 @@ export const chamberMembers = [
     naicsTitle: "All Other Miscellaneous Store Retailers",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-155",
     chamberId: "tofino-chamber",
     businessName: "Method Marine Supply",
@@ -32914,8 +29390,6 @@ export const chamberMembers = [
     naicsTitle: "Snack and Coffee Shops",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-158",
     chamberId: "tofino-chamber",
     businessName: "Moon Jelly Bathhouse",
@@ -32926,8 +29400,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-159",
     chamberId: "tofino-chamber",
     businessName: "Moss and Milk",
@@ -32938,8 +29410,6 @@ export const chamberMembers = [
     naicsTitle: "Art Dealers",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-160",
     chamberId: "tofino-chamber",
     businessName: "MSA+D (Mallory Stuckel Architecture + Design)",
@@ -32950,8 +29420,6 @@ export const chamberMembers = [
     naicsTitle: "Supermarkets and Other Grocery Stores",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-161",
     chamberId: "tofino-chamber",
     businessName: "Naas Foods",
@@ -32962,8 +29430,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-162",
     chamberId: "tofino-chamber",
     businessName: "Nanaimo Airport Commission",
@@ -32974,8 +29440,6 @@ export const chamberMembers = [
     naicsTitle: "General Freight Trucking",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-163",
     chamberId: "tofino-chamber",
     businessName: "Natural Elements Vacation Rentals",
@@ -32986,8 +29450,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-164",
     chamberId: "tofino-chamber",
     businessName: "Nomad Adventure Guides",
@@ -32998,8 +29460,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-165",
     chamberId: "tofino-chamber",
     businessName: "North Island College",
@@ -33010,8 +29470,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-166",
     chamberId: "tofino-chamber",
     businessName: "Nuu-chah-nulth Tribal Council- Nuu-chah-nulth Employment and Training Program",
@@ -33022,8 +29480,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-167",
     chamberId: "tofino-chamber",
     businessName: "Obee Fishing",
@@ -33047,8 +29503,6 @@ export const chamberMembers = [
     naicsTitle: "Art Dealers",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-170",
     chamberId: "tofino-chamber",
     businessName: "Octopus Event Promotions",
@@ -33059,8 +29513,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-171",
     chamberId: "tofino-chamber",
     businessName: "OFF THE LIP",
@@ -33071,8 +29523,6 @@ export const chamberMembers = [
     naicsTitle: "Sports Instruction",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-172",
     chamberId: "tofino-chamber",
     businessName: "Oliwa Enterprises Ltd",
@@ -33083,8 +29533,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-173",
     chamberId: "tofino-chamber",
     businessName: "Ombre Restaurant",
@@ -33095,8 +29543,6 @@ export const chamberMembers = [
     naicsTitle: "Full-Service Restaurants",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-174",
     chamberId: "tofino-chamber",
     businessName: "Ordinary Corner Nursery",
@@ -33107,8 +29553,6 @@ export const chamberMembers = [
     naicsTitle: "All Other Miscellaneous Store Retailers",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-175",
     chamberId: "tofino-chamber",
     businessName: "Otus Rent A Car",
@@ -33119,8 +29563,6 @@ export const chamberMembers = [
     naicsTitle: "New Car Dealers",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-176",
     chamberId: "tofino-chamber",
     businessName: "Pacific Coast Retreats",
@@ -33131,8 +29573,6 @@ export const chamberMembers = [
     naicsTitle: "Hotels and Motels",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-177",
     chamberId: "tofino-chamber",
     businessName: "Pacific Coastal Airlines",
@@ -33143,8 +29583,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-178",
     chamberId: "tofino-chamber",
     businessName: "Pacific Rim Arts Society",
@@ -33155,8 +29593,6 @@ export const chamberMembers = [
     naicsTitle: "Art Dealers",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-179",
     chamberId: "tofino-chamber",
     businessName: "Pacific Rim Event Planning",
@@ -33167,8 +29603,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-180",
     chamberId: "tofino-chamber",
     businessName: "Pacific Rim Hospice Society",
@@ -33206,8 +29640,6 @@ export const chamberMembers = [
     naicsTitle: "Sports Instruction",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-186",
     chamberId: "tofino-chamber",
     businessName: "Paddle West Kayaking",
@@ -33218,8 +29650,6 @@ export const chamberMembers = [
     naicsTitle: "Recreational Goods Rental",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-187",
     chamberId: "tofino-chamber",
     businessName: "Picnic Charcuterie",
@@ -33230,8 +29660,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-188",
     chamberId: "tofino-chamber",
     businessName: "Pint Size Productions",
@@ -33242,8 +29670,6 @@ export const chamberMembers = [
     naicsTitle: "Radio Stations",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-189",
     chamberId: "tofino-chamber",
     businessName: "Pluvio Dining Room",
@@ -33254,8 +29680,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-190",
     chamberId: "tofino-chamber",
     businessName: "Pluvio Restaurant and Rooms",
@@ -33266,8 +29690,6 @@ export const chamberMembers = [
     naicsTitle: "Full-Service Restaurants",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-191",
     chamberId: "tofino-chamber",
     businessName: "Poblanos Mexican Eatery",
@@ -33278,8 +29700,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-192",
     chamberId: "tofino-chamber",
     businessName: "Pollen & Company",
@@ -33306,8 +29726,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-198",
     chamberId: "tofino-chamber",
     businessName: "ReMax Mid-Island Realty",
@@ -33333,8 +29751,6 @@ export const chamberMembers = [
     naicsTitle: "Sports Instruction",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-203",
     chamberId: "tofino-chamber",
     businessName: "ROAR Coffee & Shop",
@@ -33345,8 +29761,6 @@ export const chamberMembers = [
     naicsTitle: "Snack and Coffee Shops",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-204",
     chamberId: "tofino-chamber",
     businessName: "ROAR Tofino",
@@ -33357,8 +29771,6 @@ export const chamberMembers = [
     naicsTitle: "Snack and Coffee Shops",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-205",
     chamberId: "tofino-chamber",
     businessName: "Rockfish Art",
@@ -33369,8 +29781,6 @@ export const chamberMembers = [
     naicsTitle: "Art Dealers",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-206",
     chamberId: "tofino-chamber",
     businessName: "Rosas Jewellery Tofino",
@@ -33394,8 +29804,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-209",
     chamberId: "tofino-chamber",
     businessName: "RTown Network Long Beach",
@@ -33406,8 +29814,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-210",
     chamberId: "tofino-chamber",
     businessName: "Rubio",
@@ -33433,8 +29839,6 @@ export const chamberMembers = [
     naicsTitle: "Hotels and Motels",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-215",
     chamberId: "tofino-chamber",
     businessName: "SandBar Bistro",
@@ -33471,8 +29875,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-220",
     chamberId: "tofino-chamber",
     businessName: "Sea Woven",
@@ -33483,8 +29885,6 @@ export const chamberMembers = [
     naicsTitle: "Art Dealers",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-221",
     chamberId: "tofino-chamber",
     businessName: "Shed Tofino",
@@ -33508,8 +29908,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-224",
     chamberId: "tofino-chamber",
     businessName: "Smallwood Guest House + Suite",
@@ -33520,8 +29918,6 @@ export const chamberMembers = [
     naicsTitle: "Hotels and Motels",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-225",
     chamberId: "tofino-chamber",
     businessName: "Smashing Glasses Event Rentals",
@@ -33532,8 +29928,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-226",
     chamberId: "tofino-chamber",
     businessName: "Societe de developpement economique de la Colombie-Britannique",
@@ -33544,8 +29938,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-227",
     chamberId: "tofino-chamber",
     businessName: "Specifically Pacific Designs",
@@ -33556,8 +29948,6 @@ export const chamberMembers = [
     naicsTitle: "Supermarkets and Other Grocery Stores",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-228",
     chamberId: "tofino-chamber",
     businessName: "Spindrift",
@@ -33568,8 +29958,6 @@ export const chamberMembers = [
     naicsTitle: "Snack and Coffee Shops",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-229",
     chamberId: "tofino-chamber",
     businessName: "Spirit Eagle Experiences / MV King Cole",
@@ -33580,8 +29968,6 @@ export const chamberMembers = [
     naicsTitle: "Tour Operators",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-230",
     chamberId: "tofino-chamber",
     businessName: "Stay Tofino",
@@ -33592,8 +29978,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-231",
     chamberId: "tofino-chamber",
     businessName: "Stillwater Nature Spa",
@@ -33604,8 +29988,6 @@ export const chamberMembers = [
     naicsTitle: "Other Personal Care Services",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-232",
     chamberId: "tofino-chamber",
     businessName: "Storm Bay B&B",
@@ -33629,8 +30011,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-235",
     chamberId: "tofino-chamber",
     businessName: "Summer Hill Guest House",
@@ -33667,8 +30047,6 @@ export const chamberMembers = [
     naicsTitle: "Sports Instruction",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-240",
     chamberId: "tofino-chamber",
     businessName: "Surfside Grill",
@@ -33679,8 +30057,6 @@ export const chamberMembers = [
     naicsTitle: "Full-Service Restaurants",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-241",
     chamberId: "tofino-chamber",
     businessName: "Swell Paddle + Surf Tofino",
@@ -33704,8 +30080,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-244",
     chamberId: "tofino-chamber",
     businessName: "T-bird E-bike Rentals",
@@ -33716,8 +30090,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-245",
     chamberId: "tofino-chamber",
     businessName: "The Bake Shack",
@@ -33728,8 +30100,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-246",
     chamberId: "tofino-chamber",
     businessName: "The Beach Shack",
@@ -33753,8 +30123,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-249",
     chamberId: "tofino-chamber",
     businessName: "The Den Refillery",
@@ -33765,8 +30133,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-250",
     chamberId: "tofino-chamber",
     businessName: "The Factory Goods + Gallery",
@@ -33803,8 +30169,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-255",
     chamberId: "tofino-chamber",
     businessName: "The Maq Cold Beer, Wine and Spirits",
@@ -33815,8 +30179,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-256",
     chamberId: "tofino-chamber",
     businessName: "The Maq Hotel",
@@ -33840,8 +30202,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-259",
     chamberId: "tofino-chamber",
     businessName: "The Shoreline Tofino",
@@ -33852,8 +30212,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-260",
     chamberId: "tofino-chamber",
     businessName: "The Surf Club",
@@ -33919,8 +30277,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-272",
     chamberId: "tofino-chamber",
     businessName: "Tofino Boating Co.",
@@ -33931,8 +30287,6 @@ export const chamberMembers = [
     naicsTitle: "Boat Dealers",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-273",
     chamberId: "tofino-chamber",
     businessName: "Tofino Breath & Meditation",
@@ -33956,8 +30310,6 @@ export const chamberMembers = [
     naicsTitle: "New Car Dealers",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-276",
     chamberId: "tofino-chamber",
     businessName: "Tofino Chalet",
@@ -33968,8 +30320,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-277",
     chamberId: "tofino-chamber",
     businessName: "Tofino Clayoquot Heritage Society",
@@ -33980,8 +30330,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-278",
     chamberId: "tofino-chamber",
     businessName: "Tofino Coffee Roasting Co.",
@@ -33992,8 +30340,6 @@ export const chamberMembers = [
     naicsTitle: "Snack and Coffee Shops",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-279",
     chamberId: "tofino-chamber",
     businessName: "Tofino Community Food Initiative",
@@ -34004,8 +30350,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-280",
     chamberId: "tofino-chamber",
     businessName: "Tofino Co-op Food Store",
@@ -34016,8 +30360,6 @@ export const chamberMembers = [
     naicsTitle: "All Other Miscellaneous Store Retailers",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-281",
     chamberId: "tofino-chamber",
     businessName: "Tofino Co-op Gas Bar",
@@ -34028,8 +30370,6 @@ export const chamberMembers = [
     naicsTitle: "Drinking Places",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-282",
     chamberId: "tofino-chamber",
     businessName: "Tofino Co-op Hardware",
@@ -34040,8 +30380,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-283",
     chamberId: "tofino-chamber",
     businessName: "Tofino Delivery",
@@ -34052,8 +30390,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-284",
     chamberId: "tofino-chamber",
     businessName: "Tofino Distillery",
@@ -34064,8 +30400,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-285",
     chamberId: "tofino-chamber",
     businessName: "Tofino DJ Services",
@@ -34076,8 +30410,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-286",
     chamberId: "tofino-chamber",
     businessName: "Tofino Electric Bikes",
@@ -34088,8 +30420,6 @@ export const chamberMembers = [
     naicsTitle: "Electrical Contractors",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-287",
     chamberId: "tofino-chamber",
     businessName: "Tofino Event Management Ltd. dba 'Tofino Oyster Festival'",
@@ -34100,8 +30430,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-288",
     chamberId: "tofino-chamber",
     businessName: "Tofino Finishing Company",
@@ -34112,8 +30440,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-289",
     chamberId: "tofino-chamber",
     businessName: "Tofino Fish Guides Ltd",
@@ -34124,8 +30450,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-290",
     chamberId: "tofino-chamber",
     businessName: "Tofino Fishing And Trading Company",
@@ -34136,8 +30460,6 @@ export const chamberMembers = [
     naicsTitle: "Charter Fishing",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-291",
     chamberId: "tofino-chamber",
     businessName: "Tofino Foraging Tours",
@@ -34148,8 +30470,6 @@ export const chamberMembers = [
     naicsTitle: "Tour Operators",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-292",
     chamberId: "tofino-chamber",
     businessName: "Tofino Gallery of Contemporary Art",
@@ -34160,8 +30480,6 @@ export const chamberMembers = [
     naicsTitle: "Art Dealers",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-293",
     chamberId: "tofino-chamber",
     businessName: "Tofino General Hospital Foundation",
@@ -34172,8 +30490,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-294",
     chamberId: "tofino-chamber",
     businessName: "Tofino Harbour Authority",
@@ -34184,8 +30500,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-295",
     chamberId: "tofino-chamber",
     businessName: "Tofino Hot Sauce Company",
@@ -34196,8 +30510,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-296",
     chamberId: "tofino-chamber",
     businessName: "Tofino Hummingbird Cottage",
@@ -34208,8 +30520,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-297",
     chamberId: "tofino-chamber",
     businessName: "Tofino Kombucha",
@@ -34220,8 +30530,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-298",
     chamberId: "tofino-chamber",
     businessName: "Tofino Licks",
@@ -34232,8 +30540,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-299",
     chamberId: "tofino-chamber",
     businessName: "Tofino Life Clothing",
@@ -34244,8 +30550,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-300",
     chamberId: "tofino-chamber",
     businessName: "Tofino Lighthouse Inn",
@@ -34256,8 +30560,6 @@ export const chamberMembers = [
     naicsTitle: "Hotels and Motels",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-301",
     chamberId: "tofino-chamber",
     businessName: "Tofino Mobile Massage",
@@ -34268,8 +30570,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-302",
     chamberId: "tofino-chamber",
     businessName: "Tofino Motel Harbourview",
@@ -34280,8 +30580,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-303",
     chamberId: "tofino-chamber",
     businessName: "Tofino Nature Kids",
@@ -34292,8 +30590,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-304",
     chamberId: "tofino-chamber",
     businessName: "Tofino Notary",
@@ -34304,8 +30600,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-305",
     chamberId: "tofino-chamber",
     businessName: "Tofino Ocean Adventures",
@@ -34329,8 +30623,6 @@ export const chamberMembers = [
     naicsTitle: "Hotels and Motels",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-308",
     chamberId: "tofino-chamber",
     businessName: "Tofino Panorama",
@@ -34341,8 +30633,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-309",
     chamberId: "tofino-chamber",
     businessName: "Tofino Power Ltd",
@@ -34353,8 +30643,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-310",
     chamberId: "tofino-chamber",
     businessName: "Tofino Public Market Society",
@@ -34404,8 +30692,6 @@ export const chamberMembers = [
     naicsTitle: "Sports Instruction",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-317",
     chamberId: "tofino-chamber",
     businessName: "Tofino Surf School",
@@ -34429,8 +30715,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-320",
     chamberId: "tofino-chamber",
     businessName: "Tofino Therapeutics",
@@ -34441,8 +30725,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-321",
     chamberId: "tofino-chamber",
     businessName: "Tofino Ucluelet Culinary Guild",
@@ -34453,8 +30735,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-322",
     chamberId: "tofino-chamber",
     businessName: "Tofino Vacation Rentals",
@@ -34465,8 +30745,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-323",
     chamberId: "tofino-chamber",
     businessName: "Tofino Veterinary Clinic",
@@ -34477,8 +30755,6 @@ export const chamberMembers = [
     naicsTitle: "Offices of Physicians",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-324",
     chamberId: "tofino-chamber",
     businessName: "Tofino Water Taxi",
@@ -34489,8 +30765,6 @@ export const chamberMembers = [
     naicsTitle: "Taxi Service",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-325",
     chamberId: "tofino-chamber",
     businessName: "Tofino Waterfront Eco Condo",
@@ -34501,8 +30775,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-326",
     chamberId: "tofino-chamber",
     businessName: "Tofino Yoga",
@@ -34513,8 +30785,6 @@ export const chamberMembers = [
     naicsTitle: "Fitness and Recreational Sports Centers",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-327",
     chamberId: "tofino-chamber",
     businessName: "Tofitian",
@@ -34525,8 +30795,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-328",
     chamberId: "tofino-chamber",
     businessName: "Tonquin Medical Clinic",
@@ -34537,8 +30805,6 @@ export const chamberMembers = [
     naicsTitle: "Offices of Physicians",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-329",
     chamberId: "tofino-chamber",
     businessName: "Topinoy",
@@ -34549,8 +30815,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-330",
     chamberId: "tofino-chamber",
     businessName: "Tough City Sushi",
@@ -34561,8 +30825,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-331",
     chamberId: "tofino-chamber",
     businessName: "Treat Yourself Massage",
@@ -34573,8 +30835,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-332",
     chamberId: "tofino-chamber",
     businessName: "Tree Drops",
@@ -34585,8 +30845,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-333",
     chamberId: "tofino-chamber",
     businessName: "Tree House Gift Company",
@@ -34597,8 +30855,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-334",
     chamberId: "tofino-chamber",
     businessName: "Tsawaak RV Resort & Campground",
@@ -34609,8 +30865,6 @@ export const chamberMembers = [
     naicsTitle: "Resort Hotels",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-335",
     chamberId: "tofino-chamber",
     businessName: "Tuff City Radio",
@@ -34621,8 +30875,6 @@ export const chamberMembers = [
     naicsTitle: "Radio Stations",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-336",
     chamberId: "tofino-chamber",
     businessName: "Tuff City Saunas",
@@ -34633,8 +30885,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-337",
     chamberId: "tofino-chamber",
     businessName: "Tuff Fit at Tofino Resort + Marina",
@@ -34645,8 +30895,6 @@ export const chamberMembers = [
     naicsTitle: "Resort Hotels",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-338",
     chamberId: "tofino-chamber",
     businessName: "Tuff Town Design",
@@ -34657,8 +30905,6 @@ export const chamberMembers = [
     naicsTitle: "Graphic Design Services",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-339",
     chamberId: "tofino-chamber",
     businessName: "Tuumook Arts and crafts",
@@ -34669,8 +30915,6 @@ export const chamberMembers = [
     naicsTitle: "Art Dealers",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-340",
     chamberId: "tofino-chamber",
     businessName: "Two Trees Home & Gift",
@@ -34711,8 +30955,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-349",
     chamberId: "tofino-chamber",
     businessName: "Venical Holdings Ltd.",
@@ -34777,8 +31019,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-360",
     chamberId: "tofino-chamber",
     businessName: "West Coast Shapes",
@@ -34789,8 +31029,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-361",
     chamberId: "tofino-chamber",
     businessName: "West Coast Sustainable Tourism Association",
@@ -34801,8 +31039,6 @@ export const chamberMembers = [
     naicsTitle: "Tour Operators",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-362",
     chamberId: "tofino-chamber",
     businessName: "West Coast Wild",
@@ -34813,8 +31049,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-363",
     chamberId: "tofino-chamber",
     businessName: "Westcoast Community Resources Society",
@@ -34840,8 +31074,6 @@ export const chamberMembers = [
     naicsTitle: "Scenic and Sightseeing Transportation, Water",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-368",
     chamberId: "tofino-chamber",
     businessName: "Wickaninnish Community School Society",
@@ -34852,8 +31084,6 @@ export const chamberMembers = [
     naicsTitle: "Hotels and Motels",
     municipality: "Tofino",
     region: "Alberni-Clayoquot",
-  },
-  {
     id: "tofino-member-369",
     chamberId: "tofino-chamber",
     businessName: "Wickaninnish Elementary School Parent Advisory Council (WEPAC)",
@@ -34910,8 +31140,6 @@ export const chamberMembers = [
     naicsTitle: "Radio Stations",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-2",
     chamberId: "campbell-river-chamber",
     businessName: "A Cut Above Design Group",
@@ -34923,8 +31151,6 @@ export const chamberMembers = [
     naicsTitle: "Drinking Places",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-3",
     chamberId: "campbell-river-chamber",
     businessName: "A Wood Bulldozing Ltd",
@@ -34936,8 +31162,6 @@ export const chamberMembers = [
     naicsTitle: "Commercial and Institutional Building Construction",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-4",
     chamberId: "campbell-river-chamber",
     businessName: "Abc Recycling Ltd",
@@ -34949,8 +31173,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-5",
     chamberId: "campbell-river-chamber",
     businessName: "Alitis Investment Counsel Inc",
@@ -34962,8 +31184,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-6",
     chamberId: "campbell-river-chamber",
     businessName: "Allemekinders Company",
@@ -34975,8 +31195,6 @@ export const chamberMembers = [
     naicsTitle: "Charter Boats",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-7",
     chamberId: "campbell-river-chamber",
     businessName: "Anchor Inn Suites",
@@ -34988,8 +31206,6 @@ export const chamberMembers = [
     naicsTitle: "Hotels and Motels",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-8",
     chamberId: "campbell-river-chamber",
     businessName: "Anchor Waterfront Restaurant",
@@ -35001,8 +31217,6 @@ export const chamberMembers = [
     naicsTitle: "Full-Service Restaurants",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-9",
     chamberId: "campbell-river-chamber",
     businessName: "Association Francophone De Campbell River",
@@ -35014,8 +31228,6 @@ export const chamberMembers = [
     naicsTitle: "Business Associations",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-10",
     chamberId: "campbell-river-chamber",
     businessName: "Ba Ba Gannouj Restaurant",
@@ -35027,8 +31239,6 @@ export const chamberMembers = [
     naicsTitle: "Full-Service Restaurants",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-11",
     chamberId: "campbell-river-chamber",
     businessName: "Bailey Western Star Trucks Ltd",
@@ -35040,8 +31250,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-12",
     chamberId: "campbell-river-chamber",
     businessName: "Bank Of Montreal",
@@ -35053,8 +31261,6 @@ export const chamberMembers = [
     naicsTitle: "Commercial Banking",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-13",
     chamberId: "campbell-river-chamber",
     businessName: "Bard Energy Ltd",
@@ -35066,8 +31272,6 @@ export const chamberMembers = [
     naicsTitle: "Drinking Places",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-14",
     chamberId: "campbell-river-chamber",
     businessName: "Bc Chamber Of Commerce",
@@ -35079,8 +31283,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-15",
     chamberId: "campbell-river-chamber",
     businessName: "Bc Ferries Campbell River Terminal",
@@ -35092,8 +31294,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-16",
     chamberId: "campbell-river-chamber",
     businessName: "Bc Hydro",
@@ -35105,8 +31305,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-17",
     chamberId: "campbell-river-chamber",
     businessName: "Bc Salmon Farmers Association",
@@ -35118,8 +31316,6 @@ export const chamberMembers = [
     naicsTitle: "Business Associations",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-18",
     chamberId: "campbell-river-chamber",
     businessName: "Berwick By The Sea",
@@ -35131,8 +31327,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-19",
     chamberId: "campbell-river-chamber",
     businessName: "Black Creek Farm Feed",
@@ -35144,8 +31338,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-20",
     chamberId: "campbell-river-chamber",
     businessName: "Brandt Tractor Ltd",
@@ -35157,8 +31349,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-21",
     chamberId: "campbell-river-chamber",
     businessName: "Brenda Grant Real Estate",
@@ -35170,8 +31360,6 @@ export const chamberMembers = [
     naicsTitle: "Offices of Real Estate Agents",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-22",
     chamberId: "campbell-river-chamber",
     businessName: "Broadstreet Properties Ltd",
@@ -35183,8 +31371,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-23",
     chamberId: "campbell-river-chamber",
     businessName: "Browns Bay Packing Co Ltd",
@@ -35196,8 +31382,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-24",
     chamberId: "campbell-river-chamber",
     businessName: "Budget Blinds",
@@ -35209,8 +31393,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-25",
     chamberId: "campbell-river-chamber",
     businessName: "Camp Bob Office",
@@ -35222,8 +31404,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-26",
     chamberId: "campbell-river-chamber",
     businessName: "Campbell River Arts Council",
@@ -35235,8 +31415,6 @@ export const chamberMembers = [
     naicsTitle: "Art Dealers",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-27",
     chamberId: "campbell-river-chamber",
     businessName: "Campbell River Community Foundation",
@@ -35248,8 +31426,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-28",
     chamberId: "campbell-river-chamber",
     businessName: "Campbell River Creative Industries Council",
@@ -35261,8 +31437,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-29",
     chamberId: "campbell-river-chamber",
     businessName: "Campbell River Fishing Co Ltd",
@@ -35274,8 +31448,6 @@ export const chamberMembers = [
     naicsTitle: "Charter Fishing",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-30",
     chamberId: "campbell-river-chamber",
     businessName: "Campbell River Head Injury Support Society",
@@ -35287,8 +31459,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-31",
     chamberId: "campbell-river-chamber",
     businessName: "Campbell River Honda",
@@ -35300,8 +31470,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-32",
     chamberId: "campbell-river-chamber",
     businessName: "Campbell River Hospital Foundation",
@@ -35313,8 +31481,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-33",
     chamberId: "campbell-river-chamber",
     businessName: "Campbell River Hot Tubs Ltd",
@@ -35326,8 +31492,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-34",
     chamberId: "campbell-river-chamber",
     businessName: "Campbell River Hyundai",
@@ -35339,8 +31503,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-35",
     chamberId: "campbell-river-chamber",
     businessName: "Campbell River Mirror",
@@ -35352,8 +31514,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-36",
     chamberId: "campbell-river-chamber",
     businessName: "Campbell River Salmon Festival",
@@ -35365,8 +31525,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-37",
     chamberId: "campbell-river-chamber",
     businessName: "Campbell River Seafood Lockers Ltd",
@@ -35378,8 +31536,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-38",
     chamberId: "campbell-river-chamber",
     businessName: "Campbell River Seniors Network",
@@ -35391,8 +31547,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-39",
     chamberId: "campbell-river-chamber",
     businessName: "Campbell River Toyota",
@@ -35404,8 +31558,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-40",
     chamberId: "campbell-river-chamber",
     businessName: "Campbell River Whale Watching Adventure Tours",
@@ -35417,8 +31569,6 @@ export const chamberMembers = [
     naicsTitle: "Tour Operators",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-41",
     chamberId: "campbell-river-chamber",
     businessName: "Campbellton Neighbourhood Association",
@@ -35430,8 +31580,6 @@ export const chamberMembers = [
     naicsTitle: "Business Associations",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-42",
     chamberId: "campbell-river-chamber",
     businessName: "Canadian Imperial Bank Of Commerce",
@@ -35443,8 +31591,6 @@ export const chamberMembers = [
     naicsTitle: "Commercial Banking",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-43",
     chamberId: "campbell-river-chamber",
     businessName: "Canadian Western Bank",
@@ -35456,8 +31602,6 @@ export const chamberMembers = [
     naicsTitle: "Commercial Banking",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-44",
     chamberId: "campbell-river-chamber",
     businessName: "Capacity Forest Management Ltd",
@@ -35469,8 +31613,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-45",
     chamberId: "campbell-river-chamber",
     businessName: "Cermaq Canada",
@@ -35482,8 +31624,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-46",
     chamberId: "campbell-river-chamber",
     businessName: "Chan Nowosad Boates Inc",
@@ -35495,8 +31635,6 @@ export const chamberMembers = [
     naicsTitle: "Boat Dealers",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-47",
     chamberId: "campbell-river-chamber",
     businessName: "Chances Campbell River",
@@ -35508,8 +31646,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-48",
     chamberId: "campbell-river-chamber",
     businessName: "Matches",
@@ -35521,8 +31657,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-49",
     chamberId: "campbell-river-chamber",
     businessName: "Childrens Health Foundation Of Vancouver Island",
@@ -35534,8 +31668,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-50",
     chamberId: "campbell-river-chamber",
     businessName: "Qwalayu House",
@@ -35547,8 +31679,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-51",
     chamberId: "campbell-river-chamber",
     businessName: "Chinook Scaffold Systems Ltd",
@@ -35560,8 +31690,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-52",
     chamberId: "campbell-river-chamber",
     businessName: "City Of Campbell River",
@@ -35573,8 +31701,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-53",
     chamberId: "campbell-river-chamber",
     businessName: "Coast Discovery Inn",
@@ -35586,8 +31712,6 @@ export const chamberMembers = [
     naicsTitle: "Hotels and Motels",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-54",
     chamberId: "campbell-river-chamber",
     businessName: "D I Restaurant Lounge",
@@ -35599,8 +31723,6 @@ export const chamberMembers = [
     naicsTitle: "Full-Service Restaurants",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-55",
     chamberId: "campbell-river-chamber",
     businessName: "Coastal Community Credit Union",
@@ -35612,8 +31734,6 @@ export const chamberMembers = [
     naicsTitle: "Credit Unions",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-56",
     chamberId: "campbell-river-chamber",
     businessName: "Coastland Veterinary Hospital",
@@ -35625,8 +31745,6 @@ export const chamberMembers = [
     naicsTitle: "Veterinary Services",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-57",
     chamberId: "campbell-river-chamber",
     businessName: "Colleen Mcclure Designs",
@@ -35638,8 +31756,6 @@ export const chamberMembers = [
     naicsTitle: "Graphic Design Services",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-58",
     chamberId: "campbell-river-chamber",
     businessName: "Comfort Inn Suites",
@@ -35651,8 +31767,6 @@ export const chamberMembers = [
     naicsTitle: "Hotels and Motels",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-59",
     chamberId: "campbell-river-chamber",
     businessName: "Communitas Supportive Care Society",
@@ -35664,8 +31778,6 @@ export const chamberMembers = [
     naicsTitle: "New Car Dealers",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-60",
     chamberId: "campbell-river-chamber",
     businessName: "Comox Airport",
@@ -35677,8 +31789,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-61",
     chamberId: "campbell-river-chamber",
     businessName: "Costco Wholesale Canada Ltd",
@@ -35690,8 +31800,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-62",
     chamberId: "campbell-river-chamber",
     businessName: "Cr Beacon Club Society",
@@ -35703,8 +31811,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-63",
     chamberId: "campbell-river-chamber",
     businessName: "Cr Coastline Towing Transport Ltd",
@@ -35716,8 +31822,6 @@ export const chamberMembers = [
     naicsTitle: "General Freight Trucking",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-64",
     chamberId: "campbell-river-chamber",
     businessName: "Cr Family Services Society",
@@ -35729,8 +31833,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-65",
     chamberId: "campbell-river-chamber",
     businessName: "Cr Lawyers",
@@ -35742,8 +31844,6 @@ export const chamberMembers = [
     naicsTitle: "Offices of Lawyers",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-66",
     chamberId: "campbell-river-chamber",
     businessName: "Crowne Pacific Development Corporation",
@@ -35755,8 +31855,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-67",
     chamberId: "campbell-river-chamber",
     businessName: "Daeco Installations Ltd",
@@ -35768,8 +31866,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-68",
     chamberId: "campbell-river-chamber",
     businessName: "Dent Island Lodge",
@@ -35781,8 +31877,6 @@ export const chamberMembers = [
     naicsTitle: "Hotels and Motels",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-69",
     chamberId: "campbell-river-chamber",
     businessName: "Discovery Community College",
@@ -35794,8 +31888,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-70",
     chamberId: "campbell-river-chamber",
     businessName: "Discovery Foods",
@@ -35807,8 +31899,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-71",
     chamberId: "campbell-river-chamber",
     businessName: "Discovery Harbour Fuel Sales",
@@ -35820,8 +31910,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-72",
     chamberId: "campbell-river-chamber",
     businessName: "Discovery Harbour Marina",
@@ -35833,8 +31921,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-73",
     chamberId: "campbell-river-chamber",
     businessName: "Discovery Launch Water Taxi",
@@ -35846,8 +31932,6 @@ export const chamberMembers = [
     naicsTitle: "Taxi Service",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-74",
     chamberId: "campbell-river-chamber",
     businessName: "Divesafe International",
@@ -35859,8 +31943,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-75",
     chamberId: "campbell-river-chamber",
     businessName: "Dodds Furniture And Mattress",
@@ -35872,8 +31954,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-76",
     chamberId: "campbell-river-chamber",
     businessName: "Dogwood Pet Mart",
@@ -35885,8 +31965,6 @@ export const chamberMembers = [
     naicsTitle: "Art Dealers",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-77",
     chamberId: "campbell-river-chamber",
     businessName: "Dolphins Resort Ltd",
@@ -35898,8 +31976,6 @@ export const chamberMembers = [
     naicsTitle: "Resort Hotels",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-78",
     chamberId: "campbell-river-chamber",
     businessName: "Dolphins Resort Ltd Anglers Dining Room",
@@ -35911,8 +31987,6 @@ export const chamberMembers = [
     naicsTitle: "Resort Hotels",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-79",
     chamberId: "campbell-river-chamber",
     businessName: "Duncan Electric Motor Ltd",
@@ -35924,8 +31998,6 @@ export const chamberMembers = [
     naicsTitle: "Electrical Contractors",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-80",
     chamberId: "campbell-river-chamber",
     businessName: "Eaglecraft Boats Inc",
@@ -35937,8 +32009,6 @@ export const chamberMembers = [
     naicsTitle: "Boat Dealers",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-81",
     chamberId: "campbell-river-chamber",
     businessName: "Econo Ezy Box Storage",
@@ -35950,8 +32020,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-82",
     chamberId: "campbell-river-chamber",
     businessName: "Entia Environmental Consultants Ltd",
@@ -35963,8 +32031,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-83",
     chamberId: "campbell-river-chamber",
     businessName: "Excuse Me Hearing",
@@ -35976,8 +32042,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-84",
     chamberId: "campbell-river-chamber",
     businessName: "Fishermans Wharf Campbell River Harbour Authority",
@@ -35989,8 +32053,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-85",
     chamberId: "campbell-river-chamber",
     businessName: "Form Residence Design House",
@@ -36002,8 +32064,6 @@ export const chamberMembers = [
     naicsTitle: "Graphic Design Services",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-86",
     chamberId: "campbell-river-chamber",
     businessName: "Fortisbc Energy Inc",
@@ -36015,8 +32075,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-87",
     chamberId: "campbell-river-chamber",
     businessName: "Garat Financial Group Ltd",
@@ -36028,8 +32086,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-88",
     chamberId: "campbell-river-chamber",
     businessName: "Gerritsen Brooks Appraisals Ltd",
@@ -36041,8 +32097,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-89",
     chamberId: "campbell-river-chamber",
     businessName: "Gina Forsyth",
@@ -36054,8 +32108,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-90",
     chamberId: "campbell-river-chamber",
     businessName: "Glacierview Financial Services Ltd",
@@ -36067,8 +32119,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-91",
     chamberId: "campbell-river-chamber",
     businessName: "Gord Knight Ventures Ltd",
@@ -36080,8 +32130,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-92",
     chamberId: "campbell-river-chamber",
     businessName: "Grant Illuminated Signs Ltd",
@@ -36093,8 +32141,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-93",
     chamberId: "campbell-river-chamber",
     businessName: "Greenways Land Trust",
@@ -36106,8 +32152,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-94",
     chamberId: "campbell-river-chamber",
     businessName: "Grey River Netting Inc",
@@ -36119,8 +32163,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-95",
     chamberId: "campbell-river-chamber",
     businessName: "Grieg Seafood Bc Ltd",
@@ -36132,8 +32174,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-96",
     chamberId: "campbell-river-chamber",
     businessName: "Restore Habitat For Humanity Vi North",
@@ -36145,8 +32185,6 @@ export const chamberMembers = [
     naicsTitle: "All Other Miscellaneous Store Retailers",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-97",
     chamberId: "campbell-river-chamber",
     businessName: "Haig Brown Heritage House",
@@ -36158,8 +32196,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-98",
     chamberId: "campbell-river-chamber",
     businessName: "Healthyway Natural Foods Market",
@@ -36171,8 +32207,6 @@ export const chamberMembers = [
     naicsTitle: "Supermarkets and Other Grocery Stores",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-99",
     chamberId: "campbell-river-chamber",
     businessName: "Herons Landing Hotel",
@@ -36184,8 +32218,6 @@ export const chamberMembers = [
     naicsTitle: "Hotels and Motels",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-100",
     chamberId: "campbell-river-chamber",
     businessName: "Highland Engineering Services Ltd",
@@ -36197,8 +32229,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-101",
     chamberId: "campbell-river-chamber",
     businessName: "Homalco First Nation",
@@ -36210,8 +32240,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-102",
     chamberId: "campbell-river-chamber",
     businessName: "Homalco Wildlife Tours",
@@ -36223,8 +32251,6 @@ export const chamberMembers = [
     naicsTitle: "Tour Operators",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-103",
     chamberId: "campbell-river-chamber",
     businessName: "Home Soulutions Remediation",
@@ -36236,8 +32262,6 @@ export const chamberMembers = [
     naicsTitle: "Radio Stations",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-104",
     chamberId: "campbell-river-chamber",
     businessName: "Houle Electric Ltd",
@@ -36249,8 +32273,6 @@ export const chamberMembers = [
     naicsTitle: "Electrical Contractors",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-105",
     chamberId: "campbell-river-chamber",
     businessName: "Immediate Images",
@@ -36262,8 +32284,6 @@ export const chamberMembers = [
     naicsTitle: "Radio Stations",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-106",
     chamberId: "campbell-river-chamber",
     businessName: "Immigrant Welcome Centre",
@@ -36275,8 +32295,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-107",
     chamberId: "campbell-river-chamber",
     businessName: "Industrial Respiratory Systems Ltd",
@@ -36288,8 +32306,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-108",
     chamberId: "campbell-river-chamber",
     businessName: "Inland Kenworth",
@@ -36301,8 +32317,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-109",
     chamberId: "campbell-river-chamber",
     businessName: "Iris Visual Group",
@@ -36314,8 +32328,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-110",
     chamberId: "campbell-river-chamber",
     businessName: "Iron River Mechanical Ltd",
@@ -36327,8 +32339,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-111",
     chamberId: "campbell-river-chamber",
     businessName: "Island Funeral Services Ltd",
@@ -36340,8 +32350,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-112",
     chamberId: "campbell-river-chamber",
     businessName: "Island Ready Mix",
@@ -36353,8 +32361,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-113",
     chamberId: "campbell-river-chamber",
     businessName: "Izco Technology Solutions",
@@ -36366,8 +32372,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-114",
     chamberId: "campbell-river-chamber",
     businessName: "Jims Clothes Closet Ltd",
@@ -36379,8 +32383,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-115",
     chamberId: "campbell-river-chamber",
     businessName: "John Howard Society",
@@ -36392,8 +32394,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-116",
     chamberId: "campbell-river-chamber",
     businessName: "Kask Graphics",
@@ -36405,8 +32405,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-117",
     chamberId: "campbell-river-chamber",
     businessName: "Knight Inlet Lodge",
@@ -36418,8 +32416,6 @@ export const chamberMembers = [
     naicsTitle: "Hotels and Motels",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-118",
     chamberId: "campbell-river-chamber",
     businessName: "Kubera Payments Corporation",
@@ -36431,8 +32427,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-119",
     chamberId: "campbell-river-chamber",
     businessName: "Laichwiltach Family Life Society",
@@ -36444,8 +32438,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-120",
     chamberId: "campbell-river-chamber",
     businessName: "Lakeland Automotive Ltd",
@@ -36457,8 +32449,6 @@ export const chamberMembers = [
     naicsTitle: "New Car Dealers",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-121",
     chamberId: "campbell-river-chamber",
     businessName: "Laurie Clark Tax Consultant",
@@ -36470,8 +32460,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-122",
     chamberId: "campbell-river-chamber",
     businessName: "Lighthouse Contracting",
@@ -36483,8 +32471,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-123",
     chamberId: "campbell-river-chamber",
     businessName: "Mae Mae Motel",
@@ -36496,8 +32482,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-124",
     chamberId: "campbell-river-chamber",
     businessName: "Marine Link Transportation Ltd",
@@ -36509,8 +32493,6 @@ export const chamberMembers = [
     naicsTitle: "Boat Dealers",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-125",
     chamberId: "campbell-river-chamber",
     businessName: "Marks Safety Centre Ltd",
@@ -36522,8 +32504,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-126",
     chamberId: "campbell-river-chamber",
     businessName: "Mcdonalds Restaurant",
@@ -36535,8 +32515,6 @@ export const chamberMembers = [
     naicsTitle: "Full-Service Restaurants",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-127",
     chamberId: "campbell-river-chamber",
     businessName: "Melora Life Skills Training Inc",
@@ -36548,8 +32526,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-128",
     chamberId: "campbell-river-chamber",
     businessName: "Mental Health Recovery Partners",
@@ -36561,8 +32537,6 @@ export const chamberMembers = [
     naicsTitle: "Art Dealers",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-129",
     chamberId: "campbell-river-chamber",
     businessName: "Menzies Transport Ltd",
@@ -36574,8 +32548,6 @@ export const chamberMembers = [
     naicsTitle: "General Freight Trucking",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-130",
     chamberId: "campbell-river-chamber",
     businessName: "Mid Island Liquor",
@@ -36587,8 +32559,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-131",
     chamberId: "campbell-river-chamber",
     businessName: "Mifflin Surveys Ltd",
@@ -36600,8 +32570,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-132",
     chamberId: "campbell-river-chamber",
     businessName: "Mnp Llp",
@@ -36613,8 +32581,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-133",
     chamberId: "campbell-river-chamber",
     businessName: "Modern Pur Air Comox Valley",
@@ -36626,8 +32592,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-134",
     chamberId: "campbell-river-chamber",
     businessName: "Mowi Canada West",
@@ -36639,8 +32603,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-135",
     chamberId: "campbell-river-chamber",
     businessName: "Museum At Campbell River",
@@ -36652,8 +32614,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-136",
     chamberId: "campbell-river-chamber",
     businessName: "Nanwakolas Council Society",
@@ -36665,8 +32625,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-137",
     chamberId: "campbell-river-chamber",
     businessName: "Naturally Pacific Resort",
@@ -36678,8 +32636,6 @@ export const chamberMembers = [
     naicsTitle: "Resort Hotels",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-138",
     chamberId: "campbell-river-chamber",
     businessName: "Naturally Pacific Golf Course Driving Range",
@@ -36691,8 +32647,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-139",
     chamberId: "campbell-river-chamber",
     businessName: "Carve Kitchen Meatery",
@@ -36704,8 +32658,6 @@ export const chamberMembers = [
     naicsTitle: "New Car Dealers",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-140",
     chamberId: "campbell-river-chamber",
     businessName: "Velocity Lounge Driving Range",
@@ -36717,8 +32669,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-141",
     chamberId: "campbell-river-chamber",
     businessName: "North Island College",
@@ -36730,8 +32680,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-142",
     chamberId: "campbell-river-chamber",
     businessName: "North Island Machine Works",
@@ -36743,8 +32691,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-143",
     chamberId: "campbell-river-chamber",
     businessName: "North Island Metis Association",
@@ -36756,8 +32702,6 @@ export const chamberMembers = [
     naicsTitle: "Business Associations",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-144",
     chamberId: "campbell-river-chamber",
     businessName: "North Island Nissan",
@@ -36769,8 +32713,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-145",
     chamberId: "campbell-river-chamber",
     businessName: "Nte Discovery Park Ltd",
@@ -36782,8 +32724,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-146",
     chamberId: "campbell-river-chamber",
     businessName: "Ocean Pacific Marine Supply",
@@ -36795,8 +32735,6 @@ export const chamberMembers = [
     naicsTitle: "Boat Dealers",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-147",
     chamberId: "campbell-river-chamber",
     businessName: "Oceanfix Ca Ventures Ltd",
@@ -36808,8 +32746,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-148",
     chamberId: "campbell-river-chamber",
     businessName: "Ok Tire Auto Service",
@@ -36821,8 +32757,6 @@ export const chamberMembers = [
     naicsTitle: "New Car Dealers",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-149",
     chamberId: "campbell-river-chamber",
     businessName: "Osprey Electric Ltd",
@@ -36834,8 +32768,6 @@ export const chamberMembers = [
     naicsTitle: "Electrical Contractors",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-150",
     chamberId: "campbell-river-chamber",
     businessName: "Oyster Bay Resorts",
@@ -36847,8 +32779,6 @@ export const chamberMembers = [
     naicsTitle: "Resort Hotels",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-151",
     chamberId: "campbell-river-chamber",
     businessName: "Pacific Coastal Airlines Ltd",
@@ -36860,8 +32790,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-152",
     chamberId: "campbell-river-chamber",
     businessName: "Pacific Rim Engineered Products",
@@ -36873,8 +32801,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-153",
     chamberId: "campbell-river-chamber",
     businessName: "Pacific Wealth Management Ltd",
@@ -36886,8 +32812,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-154",
     chamberId: "campbell-river-chamber",
     businessName: "Pacific Wood Waste Inc",
@@ -36899,8 +32823,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-155",
     chamberId: "campbell-river-chamber",
     businessName: "Paladin Security",
@@ -36912,8 +32834,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-156",
     chamberId: "campbell-river-chamber",
     businessName: "Pbx Data Tech Inc",
@@ -36925,8 +32845,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-157",
     chamberId: "campbell-river-chamber",
     businessName: "Peninsula Co Op",
@@ -36938,8 +32856,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-158",
     chamberId: "campbell-river-chamber",
     businessName: "Pharmasave Tc Health Willow Point",
@@ -36951,8 +32867,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-159",
     chamberId: "campbell-river-chamber",
     businessName: "Photo Tech Foto Source",
@@ -36964,8 +32878,6 @@ export const chamberMembers = [
     naicsTitle: "Commercial Photography",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-160",
     chamberId: "campbell-river-chamber",
     businessName: "Poseidon Ocean Systems Ltd",
@@ -36977,8 +32889,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-161",
     chamberId: "campbell-river-chamber",
     businessName: "Prices Lock Safe",
@@ -36990,8 +32900,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-162",
     chamberId: "campbell-river-chamber",
     businessName: "Prizm Financial Inc",
@@ -37003,8 +32911,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-163",
     chamberId: "campbell-river-chamber",
     businessName: "Quality Designs Ltd",
@@ -37016,8 +32922,6 @@ export const chamberMembers = [
     naicsTitle: "Graphic Design Services",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-164",
     chamberId: "campbell-river-chamber",
     businessName: "Quality Foods",
@@ -37029,8 +32933,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-165",
     chamberId: "campbell-river-chamber",
     businessName: "Qaya Way West Transportation",
@@ -37042,8 +32944,6 @@ export const chamberMembers = [
     naicsTitle: "General Freight Trucking",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-166",
     chamberId: "campbell-river-chamber",
     businessName: "Quay West Kitchen Catering Ltd",
@@ -37055,8 +32955,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-167",
     chamberId: "campbell-river-chamber",
     businessName: "Raven Forest Products Ltd",
@@ -37068,8 +32966,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-168",
     chamberId: "campbell-river-chamber",
     businessName: "Rbc Dominion Securities Inc",
@@ -37081,8 +32977,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-169",
     chamberId: "campbell-river-chamber",
     businessName: "Rbc Royal Bank Of Canada Cr",
@@ -37094,8 +32988,6 @@ export const chamberMembers = [
     naicsTitle: "Commercial Banking",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-170",
     chamberId: "campbell-river-chamber",
     businessName: "Relish Interiors",
@@ -37107,8 +32999,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-171",
     chamberId: "campbell-river-chamber",
     businessName: "Remax Check Realty",
@@ -37120,8 +33010,6 @@ export const chamberMembers = [
     naicsTitle: "Offices of Real Estate Agents",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-172",
     chamberId: "campbell-river-chamber",
     businessName: "Richs Auto Collision",
@@ -37133,8 +33021,6 @@ export const chamberMembers = [
     naicsTitle: "New Car Dealers",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-173",
     chamberId: "campbell-river-chamber",
     businessName: "Riptide Pub",
@@ -37146,8 +33032,6 @@ export const chamberMembers = [
     naicsTitle: "Drinking Places",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-174",
     chamberId: "campbell-river-chamber",
     businessName: "River Ink",
@@ -37159,8 +33043,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-175",
     chamberId: "campbell-river-chamber",
     businessName: "Rivercity Inclusion",
@@ -37172,8 +33054,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-176",
     chamberId: "campbell-river-chamber",
     businessName: "Rivercity Players Theatre Society",
@@ -37185,8 +33065,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-177",
     chamberId: "campbell-river-chamber",
     businessName: "Roam Store Studio",
@@ -37198,8 +33076,6 @@ export const chamberMembers = [
     naicsTitle: "All Other Miscellaneous Store Retailers",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-178",
     chamberId: "campbell-river-chamber",
     businessName: "Roset Lanyon",
@@ -37211,8 +33087,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-179",
     chamberId: "campbell-river-chamber",
     businessName: "Royal Lepage Advance Realty",
@@ -37224,8 +33098,6 @@ export const chamberMembers = [
     naicsTitle: "Offices of Real Estate Agents",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-180",
     chamberId: "campbell-river-chamber",
     businessName: "Safety Net Security",
@@ -37237,8 +33109,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-181",
     chamberId: "campbell-river-chamber",
     businessName: "Salmon Point Resort Marina Ltd",
@@ -37250,8 +33120,6 @@ export const chamberMembers = [
     naicsTitle: "Resort Hotels",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-182",
     chamberId: "campbell-river-chamber",
     businessName: "Sayward Delivery",
@@ -37263,8 +33131,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-183",
     chamberId: "campbell-river-chamber",
     businessName: "School District 72",
@@ -37276,8 +33142,6 @@ export const chamberMembers = [
     naicsTitle: "Elementary and Secondary Schools",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-184",
     chamberId: "campbell-river-chamber",
     businessName: "Sealand Aviation",
@@ -37289,8 +33153,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-185",
     chamberId: "campbell-river-chamber",
     businessName: "Service Canada",
@@ -37302,8 +33164,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-186",
     chamberId: "campbell-river-chamber",
     businessName: "Session Taproom Kitchen",
@@ -37315,8 +33175,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-187",
     chamberId: "campbell-river-chamber",
     businessName: "Session Studio Retail",
@@ -37328,8 +33186,6 @@ export const chamberMembers = [
     naicsTitle: "All Other Miscellaneous Store Retailers",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-188",
     chamberId: "campbell-river-chamber",
     businessName: "Session Spin",
@@ -37341,8 +33197,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-189",
     chamberId: "campbell-river-chamber",
     businessName: "Sharon Korol",
@@ -37354,8 +33208,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-190",
     chamberId: "campbell-river-chamber",
     businessName: "Shayla Hall Physiotherapy",
@@ -37367,8 +33219,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-191",
     chamberId: "campbell-river-chamber",
     businessName: "Silver King Lodge",
@@ -37380,8 +33230,6 @@ export const chamberMembers = [
     naicsTitle: "Hotels and Motels",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-192",
     chamberId: "campbell-river-chamber",
     businessName: "Simply Green Environmental Ltd",
@@ -37393,8 +33241,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-193",
     chamberId: "campbell-river-chamber",
     businessName: "Skill Trades Bc",
@@ -37406,8 +33252,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-194",
     chamberId: "campbell-river-chamber",
     businessName: "Small Planet Energy Inc",
@@ -37419,8 +33263,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-195",
     chamberId: "campbell-river-chamber",
     businessName: "Socal Restaurant Lounge",
@@ -37432,8 +33274,6 @@ export const chamberMembers = [
     naicsTitle: "Full-Service Restaurants",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-196",
     chamberId: "campbell-river-chamber",
     businessName: "Spirit 88 7 Fm Chvi",
@@ -37445,8 +33285,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-197",
     chamberId: "campbell-river-chamber",
     businessName: "Spr York Holdings",
@@ -37458,8 +33296,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-198",
     chamberId: "campbell-river-chamber",
     businessName: "St Jeans Cannery Depot Campbell River",
@@ -37471,8 +33307,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-199",
     chamberId: "campbell-river-chamber",
     businessName: "Steep Island Lodge",
@@ -37484,8 +33318,6 @@ export const chamberMembers = [
     naicsTitle: "Hotels and Motels",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-200",
     chamberId: "campbell-river-chamber",
     businessName: "Steve Marshall Ford",
@@ -37497,8 +33329,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-201",
     chamberId: "campbell-river-chamber",
     businessName: "Steve Shuster Real Estate",
@@ -37510,8 +33340,6 @@ export const chamberMembers = [
     naicsTitle: "Offices of Real Estate Agents",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-202",
     chamberId: "campbell-river-chamber",
     businessName: "Strategic Natural Resource Consultants Inc",
@@ -37523,8 +33351,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-203",
     chamberId: "campbell-river-chamber",
     businessName: "Strathcona Park Lodge",
@@ -37536,8 +33362,6 @@ export const chamberMembers = [
     naicsTitle: "Hotels and Motels",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-204",
     chamberId: "campbell-river-chamber",
     businessName: "Strathcona Regional District",
@@ -37549,8 +33373,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-205",
     chamberId: "campbell-river-chamber",
     businessName: "Stroshin Management",
@@ -37562,8 +33384,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-206",
     chamberId: "campbell-river-chamber",
     businessName: "Tap Bookkeeping Solutions Ltd",
@@ -37575,8 +33395,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-207",
     chamberId: "campbell-river-chamber",
     businessName: "Tayco Paving Company",
@@ -37588,8 +33406,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-208",
     chamberId: "campbell-river-chamber",
     businessName: "The Eagle 97 3 Fm",
@@ -37601,8 +33417,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-209",
     chamberId: "campbell-river-chamber",
     businessName: "The Raven 100 7 Fm Ckcc",
@@ -37614,8 +33428,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-210",
     chamberId: "campbell-river-chamber",
     businessName: "The Samara Circle",
@@ -37627,8 +33439,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-211",
     chamberId: "campbell-river-chamber",
     businessName: "The Update Company",
@@ -37640,8 +33450,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-212",
     chamberId: "campbell-river-chamber",
     businessName: "Thrifty Foods",
@@ -37653,8 +33461,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-213",
     chamberId: "campbell-river-chamber",
     businessName: "Thunderbird Rv Park Resort",
@@ -37666,8 +33472,6 @@ export const chamberMembers = [
     naicsTitle: "Resort Hotels",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-214",
     chamberId: "campbell-river-chamber",
     businessName: "Tidemark Theatre Society",
@@ -37679,8 +33483,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-215",
     chamberId: "campbell-river-chamber",
     businessName: "Tks Lawyers Mediators",
@@ -37692,8 +33494,6 @@ export const chamberMembers = [
     naicsTitle: "Offices of Lawyers",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-216",
     chamberId: "campbell-river-chamber",
     businessName: "Tlowitsis First Nation",
@@ -37705,8 +33505,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-217",
     chamberId: "campbell-river-chamber",
     businessName: "T Mar Industries",
@@ -37718,8 +33516,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-218",
     chamberId: "campbell-river-chamber",
     businessName: "Tremain Media Inc",
@@ -37731,8 +33527,6 @@ export const chamberMembers = [
     naicsTitle: "Radio Stations",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-219",
     chamberId: "campbell-river-chamber",
     businessName: "Tsa Kwa Luten Lodge",
@@ -37744,8 +33538,6 @@ export const chamberMembers = [
     naicsTitle: "Hotels and Motels",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-220",
     chamberId: "campbell-river-chamber",
     businessName: "Tyee Chevrolet Buick Gmc Ltd",
@@ -37757,8 +33549,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-221",
     chamberId: "campbell-river-chamber",
     businessName: "United Way Central Northern Vancouver Island",
@@ -37770,8 +33560,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-222",
     chamberId: "campbell-river-chamber",
     businessName: "Upland Contracting Ltd",
@@ -37783,8 +33571,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-223",
     chamberId: "campbell-river-chamber",
     businessName: "Upland Ready Mix Ltd",
@@ -37796,8 +33582,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-224",
     chamberId: "campbell-river-chamber",
     businessName: "Upper Island Counselling Services Society",
@@ -37809,8 +33593,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-225",
     chamberId: "campbell-river-chamber",
     businessName: "Vancouver Island Mental Health Society",
@@ -37822,8 +33604,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-226",
     chamberId: "campbell-river-chamber",
     businessName: "Vancouver Island Motorsports Association",
@@ -37835,8 +33615,6 @@ export const chamberMembers = [
     naicsTitle: "Business Associations",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-227",
     chamberId: "campbell-river-chamber",
     businessName: "Vancouver Island Real Estate Board",
@@ -37848,8 +33626,6 @@ export const chamberMembers = [
     naicsTitle: "Offices of Real Estate Agents",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-228",
     chamberId: "campbell-river-chamber",
     businessName: "Vancouver Island Regional Libary",
@@ -37861,8 +33637,6 @@ export const chamberMembers = [
     naicsTitle: "Drinking Places",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-229",
     chamberId: "campbell-river-chamber",
     businessName: "Village Of Sayward",
@@ -37874,8 +33648,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-230",
     chamberId: "campbell-river-chamber",
     businessName: "Waypoint Insurance",
@@ -37887,8 +33659,6 @@ export const chamberMembers = [
     naicsTitle: "Insurance Agencies and Brokerages",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-231",
     chamberId: "campbell-river-chamber",
     businessName: "We Wai Kai First Nation",
@@ -37900,8 +33670,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-232",
     chamberId: "campbell-river-chamber",
     businessName: "Wei Wai Kum First Nation",
@@ -37913,8 +33681,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-233",
     chamberId: "campbell-river-chamber",
     businessName: "Wei Wai Kum House Of Treasures Ltd",
@@ -37926,8 +33692,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-234",
     chamberId: "campbell-river-chamber",
     businessName: "Western Forest Products",
@@ -37939,8 +33703,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-235",
     chamberId: "campbell-river-chamber",
     businessName: "Westurban Developments Ltd",
@@ -37952,8 +33714,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-236",
     chamberId: "campbell-river-chamber",
     businessName: "Whiskey Jack Studios",
@@ -37965,8 +33725,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-237",
     chamberId: "campbell-river-chamber",
     businessName: "Whites Diesel Power Marine Inc",
@@ -37978,8 +33736,6 @@ export const chamberMembers = [
     naicsTitle: "Boat Dealers",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-238",
     chamberId: "campbell-river-chamber",
     businessName: "Willow Point Electric",
@@ -37991,8 +33747,6 @@ export const chamberMembers = [
     naicsTitle: "Electrical Contractors",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-239",
     chamberId: "campbell-river-chamber",
     businessName: "Wilsons Transportation Ltd",
@@ -38004,8 +33758,6 @@ export const chamberMembers = [
     naicsTitle: "General Freight Trucking",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-240",
     chamberId: "campbell-river-chamber",
     businessName: "Wired Electrical Design Ltd",
@@ -38017,8 +33769,6 @@ export const chamberMembers = [
     naicsTitle: "Electrical Contractors",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-241",
     chamberId: "campbell-river-chamber",
     businessName: "Wisteria Boutique",
@@ -38030,8 +33780,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-242",
     chamberId: "campbell-river-chamber",
     businessName: "Breathe In Qigong",
@@ -38043,8 +33791,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-243",
     chamberId: "campbell-river-chamber",
     businessName: "York Machine Shop Ltd",
@@ -38056,8 +33802,6 @@ export const chamberMembers = [
     naicsTitle: "All Other Miscellaneous Store Retailers",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-244",
     chamberId: "campbell-river-chamber",
     businessName: "Yyg Interiors",
@@ -38069,8 +33813,6 @@ export const chamberMembers = [
     naicsTitle: "Unclassified",
     municipality: "Campbell River",
     region: "Strathcona",
-  },
-  {
     id: "campbell-river-member-245",
     chamberId: "campbell-river-chamber",
     businessName: "River City Medical Clinic Not A Walk In Clinic",
