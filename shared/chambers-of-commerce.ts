@@ -247,16 +247,18 @@ export const BC_CHAMBERS_OF_COMMERCE: ChamberOfCommerce[] = [
   },
   {
     id: "maple-ridge-pitt-meadows-chamber",
-    name: "Maple Ridge Pitt Meadows Chamber of Commerce",
+    name: "Ridge Meadows Chamber of Commerce",
     municipality: "Maple Ridge",
     region: "Fraser Valley",
     location: {
-      address: "Maple Ridge",
+      address: "#6 - 20214 Lougheed Highway, Maple Ridge, BC V2X 2P7",
       lat: 49.2193,
       lng: -122.5984
     },
+    phone: "(604) 457-4599",
     website: "https://www.ridgemeadowschamber.com",
-    notes: "Serving Maple Ridge and Pitt Meadows."
+    members: "507",
+    notes: "Serving Maple Ridge and Pitt Meadows. Target 530 members by 2025."
   },
   {
     id: "hope-chamber-of-commerce",
@@ -408,8 +410,11 @@ export const BC_CHAMBERS_OF_COMMERCE: ChamberOfCommerce[] = [
       lat: 48.7787,
       lng: -123.7079
     },
+    phone: "(250) 748-1111",
     website: "https://www.duncancc.bc.ca",
-    notes: "Serving entire Cowichan Valley including Duncan, Chemainus, Mill Bay, Cobble Hill, Shawnigan Lake."
+    founded: 1908,
+    members: "600+",
+    notes: "Largest business org in Cowichan Valley. Operates Cowichan Regional Visitor Centre."
   },
   {
     id: "ladysmith-chamber",
@@ -661,6 +666,7 @@ export const BC_CHAMBERS_OF_COMMERCE: ChamberOfCommerce[] = [
     },
     founded: 2000,
     website: "https://www.portrenfrewchamber.com",
+    members: "40+",
     notes: "West Coast Trail terminus. Tall Trees Capital. Avatar Grove."
   },
 
@@ -673,12 +679,14 @@ export const BC_CHAMBERS_OF_COMMERCE: ChamberOfCommerce[] = [
     municipality: "Kelowna",
     region: "Central Okanagan",
     location: {
-      address: "Kelowna",
+      address: "Kelowna, BC",
       lat: 49.8863,
       lng: -119.4966
     },
     website: "https://www.kelownachamber.org",
-    notes: "Central Okanagan's main business chamber."
+    founded: 1906,
+    members: "1,000",
+    notes: "50+ networking events annually. Top 40 Under 40, Business Excellence Awards."
   },
   {
     id: "west-kelowna-board-of-trade",
@@ -740,6 +748,7 @@ export const BC_CHAMBERS_OF_COMMERCE: ChamberOfCommerce[] = [
     },
     phone: "(250) 545-0771",
     website: "https://www.vernonchamber.ca",
+    members: "600+",
     notes: "Serving Vernon and North Okanagan."
   },
   {
@@ -778,12 +787,15 @@ export const BC_CHAMBERS_OF_COMMERCE: ChamberOfCommerce[] = [
     municipality: "Penticton",
     region: "Okanagan-Similkameen",
     location: {
-      address: "Penticton",
+      address: "185 Lakeshore Drive West, Penticton, BC V2A 1B7",
       lat: 49.4991,
       lng: -119.5937
     },
+    phone: "778-476-3111",
+    email: "admin@penticton.org",
     website: "https://www.penticton.org",
-    notes: "Serving Penticton and wine country."
+    members: "475",
+    notes: "Certified by Chamber Accreditation Council of Canada."
   },
   {
     id: "south-okanagan-chamber",
@@ -1094,11 +1106,13 @@ export const BC_CHAMBERS_OF_COMMERCE: ChamberOfCommerce[] = [
     municipality: "Prince George",
     region: "Fraser-Fort George",
     location: {
-      address: "Prince George",
+      address: "890 Vancouver Street, Prince George, BC V2L 2P5",
       lat: 53.9171,
       lng: -122.7497
     },
-    website: "https://www.pgcoc.org",
+    phone: "(250) 562-2454",
+    website: "https://www.pgchamber.bc.ca",
+    members: "850+",
     notes: "Northern BC's largest city. Forestry and resource hub."
   },
   {
@@ -1212,8 +1226,11 @@ export const BC_CHAMBERS_OF_COMMERCE: ChamberOfCommerce[] = [
       lng: -127.1700
     },
     phone: "(250) 847-5072",
-    website: "https://www.smitherschamber.com",
-    notes: "Bulkley Valley. Alpine town."
+    email: "info@smitherschamber.com",
+    website: "https://smitherschamber.com",
+    founded: 1924,
+    members: "200+",
+    notes: "Centennial in 2024. Operates Smithers Visitor Centre. Bulkley Valley."
   },
 
   // ============================================================================
@@ -1231,7 +1248,8 @@ export const BC_CHAMBERS_OF_COMMERCE: ChamberOfCommerce[] = [
     },
     email: "info@fsjchamber.com",
     website: "https://www.fsjchamber.com",
-    notes: "North Peace Region including Taylor, Prophet River, Hudson's Hope."
+    members: "400",
+    notes: "60+ years. North Peace Region: Taylor, Prophet River, Hudson's Hope, Clayhurst."
   },
   {
     id: "dawson-creek-chamber",
