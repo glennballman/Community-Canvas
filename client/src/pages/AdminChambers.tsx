@@ -20,23 +20,44 @@ import {
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { BC_CHAMBERS_OF_COMMERCE, type ChamberOfCommerce } from "@shared/chambers-of-commerce";
-import { chamberMembers, type ChamberMember } from "@shared/chamber-members";
+import { chamberMembers } from "@shared/chamber-members";
 import { naicsSubsectorLabels } from "@shared/naics-codes";
 import { GEO_HIERARCHY, type GeoNode } from "@shared/geography";
+
+const bcProvince = GEO_HIERARCHY["bc"];
+const regionIds = bcProvince?.children || [];
+
+function getRegions(): GeoNode[] {
+  return regionIds.map(id => GEO_HIERARCHY[id]).filter((n): n is GeoNode => !!n);
+}
+
+function getMunicipalities(regionId: string): GeoNode[] {
+  const region = GEO_HIERARCHY[regionId];
+  if (!region?.children) return [];
+  return region.children.map(id => GEO_HIERARCHY[id]).filter((n): n is GeoNode => !!n);
+}
 
 function findMatchingMunicipality(name: string | undefined): GeoNode | null {
   if (!name) return null;
   const searchName = name.toLowerCase();
   
-  for (const region of GEO_HIERARCHY.children || []) {
-    for (const muni of region.children || []) {
+  for (const regionId of regionIds) {
+    const region = GEO_HIERARCHY[regionId];
+    if (!region?.children) continue;
+    for (const muniId of region.children) {
+      const muni = GEO_HIERARCHY[muniId];
+      if (!muni) continue;
       if (muni.shortName?.toLowerCase() === searchName) return muni;
       if (muni.name.toLowerCase() === searchName) return muni;
     }
   }
   
-  for (const region of GEO_HIERARCHY.children || []) {
-    for (const muni of region.children || []) {
+  for (const regionId of regionIds) {
+    const region = GEO_HIERARCHY[regionId];
+    if (!region?.children) continue;
+    for (const muniId of region.children) {
+      const muni = GEO_HIERARCHY[muniId];
+      if (!muni) continue;
       const cleaned = muni.name
         .replace(/^(City of|District of|Town of|Village of|Township of|Resort Municipality of|District Municipality of|Island Municipality of)\s+/i, '')
         .toLowerCase();
@@ -53,7 +74,9 @@ function findMatchingMunicipality(name: string | undefined): GeoNode | null {
 
 function findMatchingRegion(regionId: string | undefined): GeoNode | null {
   if (!regionId) return null;
-  for (const region of GEO_HIERARCHY.children || []) {
+  for (const id of regionIds) {
+    const region = GEO_HIERARCHY[id];
+    if (!region) continue;
     if (region.id === regionId) return region;
     const cleanedName = region.name.toLowerCase().replace(/\s+/g, '-');
     if (cleanedName === regionId.toLowerCase()) return region;
@@ -86,8 +109,6 @@ function GeoFilterPanel({
   onClearAll,
   chamberCountByRegion,
   chamberCountByMuni,
-  memberCountByRegion,
-  memberCountByMuni
 }: GeoFilterPanelProps) {
   const [expandedRegions, setExpandedRegions] = useState<Set<string>>(new Set());
   
@@ -104,7 +125,7 @@ function GeoFilterPanel({
   };
 
   const totalSelected = selectedRegions.size + selectedMunicipalities.size;
-  const regions = GEO_HIERARCHY.children || [];
+  const regions = getRegions();
 
   return (
     <div className="flex flex-col h-full border-r border-border/30">
@@ -131,10 +152,9 @@ function GeoFilterPanel({
           {regions.map(region => {
             const isExpanded = expandedRegions.has(region.id);
             const isRegionSelected = selectedRegions.has(region.id);
-            const municipalities = region.children || [];
+            const municipalities = getMunicipalities(region.id);
             const selectedMunisInRegion = municipalities.filter(m => selectedMunicipalities.has(m.id)).length;
             const chamberCount = chamberCountByRegion[region.id] || 0;
-            const memberCount = memberCountByRegion[region.id] || 0;
             
             const checkState: "checked" | "unchecked" | "indeterminate" = 
               isRegionSelected ? "checked" : 
@@ -182,7 +202,6 @@ function GeoFilterPanel({
                     {municipalities.map(muni => {
                       const isMuniSelected = selectedMunicipalities.has(muni.id) || isRegionSelected;
                       const muniChamberCount = chamberCountByMuni[muni.id] || 0;
-                      const muniMemberCount = memberCountByMuni[muni.id] || 0;
                       
                       return (
                         <div 
@@ -403,14 +422,12 @@ export default function AdminChambers() {
         next.delete(regionId);
       } else {
         next.add(regionId);
-        const region = (GEO_HIERARCHY.children || []).find(r => r.id === regionId);
-        if (region) {
-          setSelectedMunicipalities(prevMunis => {
-            const nextMunis = new Set(prevMunis);
-            (region.children || []).forEach(m => nextMunis.delete(m.id));
-            return nextMunis;
-          });
-        }
+        const municipalities = getMunicipalities(regionId);
+        setSelectedMunicipalities(prevMunis => {
+          const nextMunis = new Set(prevMunis);
+          municipalities.forEach(m => nextMunis.delete(m.id));
+          return nextMunis;
+        });
       }
       return next;
     });
