@@ -1406,22 +1406,22 @@ export default function AdminInfrastructure() {
     if (!memberSearch) return filtered;
     const search = memberSearch.toLowerCase();
     return filtered.filter(m => {
-      const businessName = m.businessName.toLowerCase();
+      const businessName = m.businessName?.toLowerCase() || '';
       const naicsTitle = m.naicsTitle?.toLowerCase() || '';
-      const subcategory = m.subcategory?.toLowerCase();
-      const description = m.description?.toLowerCase();
-      const municipality = m.municipality?.toLowerCase();
-      const region = m.region?.toLowerCase();
-      const website = m.website?.toLowerCase();
+      const subcategory = m.subcategory?.toLowerCase() || '';
+      const description = m.description?.toLowerCase() || '';
+      const municipality = m.municipality?.toLowerCase() || '';
+      const region = m.region?.toLowerCase() || '';
+      const website = m.website?.toLowerCase() || '';
       const subsectorLabel = naicsSubsectorLabels[m.naicsSubsector || '']?.toLowerCase() || '';
       
       return businessName.includes(search) ||
         naicsTitle.includes(search) ||
-        (subcategory && subcategory.includes(search)) ||
-        (description && description.includes(search)) ||
-        (municipality && municipality.includes(search)) ||
-        (region && region.includes(search)) ||
-        (website && website.includes(search)) ||
+        subcategory.includes(search) ||
+        description.includes(search) ||
+        municipality.includes(search) ||
+        region.includes(search) ||
+        website.includes(search) ||
         subsectorLabel.includes(search);
     });
   }, [memberSearch, memberNaicsFilter]);
