@@ -1,55 +1,99 @@
-const FirecrawlApp = require('@mendable/firecrawl-js').default;
+const Firecrawl = require('@mendable/firecrawl-js').default;
 const fs = require('fs');
 
-async function main() {
-  const app = new FirecrawlApp({ apiKey: process.env.FIRECRAWL_API_KEY });
+const API_KEY = process.env.FIRECRAWL_API_KEY;
+const firecrawl = new Firecrawl({ apiKey: API_KEY });
+
+async function scrapeComoxValley() {
+  const allMembers = [];
+  const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
   
-  console.log('Scraping Comox Valley Chamber...');
+  // Try main directory first
+  console.log('Scraping Comox Valley Chamber directory...');
   
-  // Map the site first
-  const mapResult = await app.mapUrl('https://www.comoxvalleychamber.com');
-  const memberPages = mapResult.links?.filter(l => 
-    l.toLowerCase().includes('member') || 
-    l.toLowerCase().includes('directory') ||
-    l.toLowerCase().includes('business')
-  ) || [];
+  // Scrape the main corporate directory page
+  const mainUrl = 'https://comoxvalleychamber.com/membership-directory/corporate';
   
-  console.log('Member-related pages:', memberPages.length);
-  memberPages.slice(0, 5).forEach(p => console.log('  ' + p));
-  
-  // Find the directory URL
-  const directoryUrl = memberPages.find(p => p.includes('directory')) || 
-                       memberPages.find(p => p.includes('member')) ||
-                       'https://www.comoxvalleychamber.com/member-directory/';
-  
-  console.log('\nScraping:', directoryUrl);
-  
-  const result = await app.scrapeUrl(directoryUrl, {
-    formats: ['extract'],
-    extract: {
-      schema: {
-        type: 'object',
-        properties: {
-          members: {
-            type: 'array',
-            items: {
-              type: 'object',
-              properties: {
-                name: { type: 'string' },
-                category: { type: 'string' }
+  try {
+    const result = await firecrawl.scrapeUrl(mainUrl, {
+      formats: ['extract'],
+      extract: {
+        schema: {
+          type: 'object',
+          properties: {
+            members: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  businessName: { type: 'string' },
+                  address: { type: 'string' },
+                  phone: { type: 'string' },
+                  website: { type: 'string' },
+                  description: { type: 'string' }
+                }
               }
             }
           }
-        }
-      },
-      prompt: 'Extract ALL business members from this chamber directory.'
-    },
-    waitFor: 8000
-  });
+        },
+        prompt: 'Extract ALL business member listings from this chamber of commerce directory. For each business, get the company name, address, phone number, website URL, and any description.'
+      }
+    });
+    
+    if (result.extract?.members) {
+      allMembers.push(...result.extract.members);
+      console.log(`Main page: ${result.extract.members.length} members`);
+    }
+  } catch (err) {
+    console.log('Main page error:', err.message);
+  }
   
-  const members = result.extract?.members || [];
-  console.log(`Found ${members.length} members`);
-  fs.writeFileSync('scripts/comox-members.json', JSON.stringify(members, null, 2));
+  // Try alphabetical pages (ChamberMaster often has /corporate?search=A format)
+  for (const letter of letters) {
+    const url = `https://web.comoxvalleychamber.com/allcategories?search=${letter}`;
+    console.log(`Trying ${letter}...`);
+    
+    try {
+      const result = await firecrawl.scrapeUrl(url, {
+        formats: ['extract'],
+        extract: {
+          schema: {
+            type: 'object',
+            properties: {
+              members: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    businessName: { type: 'string' },
+                    address: { type: 'string' },
+                    phone: { type: 'string' },
+                    website: { type: 'string' }
+                  }
+                }
+              }
+            }
+          },
+          prompt: 'Extract ALL business names and contact details from this chamber directory page.'
+        }
+      });
+      
+      if (result.extract?.members?.length > 0) {
+        allMembers.push(...result.extract.members);
+        console.log(`  Letter ${letter}: ${result.extract.members.length} members`);
+      }
+      
+      // Rate limiting
+      await new Promise(r => setTimeout(r, 1500));
+      
+    } catch (err) {
+      console.log(`  ${letter}: ${err.message}`);
+    }
+  }
+  
+  console.log(`\nTotal raw members: ${allMembers.length}`);
+  fs.writeFileSync('scripts/comox-raw.json', JSON.stringify(allMembers, null, 2));
+  console.log('Saved to scripts/comox-raw.json');
 }
 
-main().catch(console.error);
+scrapeComoxValley().catch(console.error);
