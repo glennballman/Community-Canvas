@@ -78890,7 +78890,7 @@ export const chamberMembers: ChamberMember[] = [
   // ==========================================================================
   {
     id: "saltspring-member-001",
-    chamberId: "saltspring-chamber",
+    chamberId: "salt-spring-chamber",
     businessName: "Above The Narrows Bed and Breakfast",
     category: "accommodation",
     subcategory: undefined,
@@ -78909,7 +78909,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saltspring-member-002",
-    chamberId: "saltspring-chamber",
+    chamberId: "salt-spring-chamber",
     businessName: "All Islands Septic",
     category: "construction",
     subcategory: undefined,
@@ -78928,7 +78928,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saltspring-member-003",
-    chamberId: "saltspring-chamber",
+    chamberId: "salt-spring-chamber",
     businessName: "Andrea Palframan : Websites & Communication",
     category: "consulting",
     subcategory: undefined,
@@ -78947,7 +78947,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saltspring-member-004",
-    chamberId: "saltspring-chamber",
+    chamberId: "salt-spring-chamber",
     businessName: "Anna J. Pugh Law Corporation",
     category: "consulting",
     subcategory: undefined,
@@ -78966,7 +78966,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saltspring-member-005",
-    chamberId: "saltspring-chamber",
+    chamberId: "salt-spring-chamber",
     businessName: "Araucana Grove",
     category: "recreation",
     subcategory: undefined,
@@ -78985,7 +78985,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saltspring-member-006",
-    chamberId: "saltspring-chamber",
+    chamberId: "salt-spring-chamber",
     businessName: "Arbutus View Thermal Spa",
     category: "healthcare",
     subcategory: undefined,
@@ -79004,7 +79004,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saltspring-member-007",
-    chamberId: "saltspring-chamber",
+    chamberId: "salt-spring-chamber",
     businessName: "ArtSpring",
     category: "arts-culture",
     subcategory: undefined,
@@ -79023,7 +79023,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saltspring-member-008",
-    chamberId: "saltspring-chamber",
+    chamberId: "salt-spring-chamber",
     businessName: "Atelier Jacobsen Jensen",
     category: "arts-culture",
     subcategory: undefined,
@@ -79042,7 +79042,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saltspring-member-009",
-    chamberId: "saltspring-chamber",
+    chamberId: "salt-spring-chamber",
     businessName: "Auntie Pesto's",
     category: "food-beverage",
     subcategory: undefined,
@@ -79061,7 +79061,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saltspring-member-010",
-    chamberId: "saltspring-chamber",
+    chamberId: "salt-spring-chamber",
     businessName: "Beacon Community Services",
     category: "government",
     subcategory: undefined,
@@ -79080,7 +79080,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saltspring-member-011",
-    chamberId: "saltspring-chamber",
+    chamberId: "salt-spring-chamber",
     businessName: "Benjamin Moore",
     category: "construction",
     subcategory: undefined,
@@ -79099,7 +79099,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saltspring-member-012",
-    chamberId: "saltspring-chamber",
+    chamberId: "salt-spring-chamber",
     businessName: "Beth Whalley Counselling",
     category: "healthcare",
     subcategory: undefined,
@@ -79118,7 +79118,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saltspring-member-013",
-    chamberId: "saltspring-chamber",
+    chamberId: "salt-spring-chamber",
     businessName: "Brown Butter Baker",
     category: "hospitality",
     subcategory: undefined,
@@ -79137,7 +79137,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saltspring-member-014",
-    chamberId: "saltspring-chamber",
+    chamberId: "salt-spring-chamber",
     businessName: "Buzzy's Luncheonette",
     category: "food-beverage",
     subcategory: undefined,
@@ -79156,7 +79156,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saltspring-member-015",
-    chamberId: "saltspring-chamber",
+    chamberId: "salt-spring-chamber",
     businessName: "Cedar House on the Hill B&B",
     category: "accommodation",
     subcategory: undefined,
@@ -79175,7 +79175,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saltspring-member-016",
-    chamberId: "saltspring-chamber",
+    chamberId: "salt-spring-chamber",
     businessName: "Celtic Place",
     category: "accommodation",
     subcategory: undefined,
@@ -79194,7 +79194,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saltspring-member-017",
-    chamberId: "saltspring-chamber",
+    chamberId: "salt-spring-chamber",
     businessName: "Ciderworks & Salt Spring Apple Company",
     category: "food-beverage",
     subcategory: undefined,
@@ -79213,7 +79213,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saltspring-member-018",
-    chamberId: "saltspring-chamber",
+    chamberId: "salt-spring-chamber",
     businessName: "Coast & Kin Photography",
     category: "hospitality",
     subcategory: undefined,
@@ -79232,7 +79232,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saltspring-member-019",
-    chamberId: "saltspring-chamber",
+    chamberId: "salt-spring-chamber",
     businessName: "Collins House B + B",
     category: "accommodation",
     subcategory: undefined,
@@ -79251,7 +79251,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saltspring-member-020",
-    chamberId: "saltspring-chamber",
+    chamberId: "salt-spring-chamber",
     businessName: "Conscious Equine Connections",
     category: "healthcare",
     subcategory: undefined,
@@ -79270,7 +79270,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saltspring-member-021",
-    chamberId: "saltspring-chamber",
+    chamberId: "salt-spring-chamber",
     businessName: "Country Grocer",
     category: "food-beverage",
     subcategory: undefined,
@@ -79289,7 +79289,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saltspring-member-022",
-    chamberId: "saltspring-chamber",
+    chamberId: "salt-spring-chamber",
     businessName: "Cudmore Media",
     category: "consulting",
     subcategory: undefined,
@@ -79308,7 +79308,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saltspring-member-023",
-    chamberId: "saltspring-chamber",
+    chamberId: "salt-spring-chamber",
     businessName: "Cusheon Lake Resort",
     category: "accommodation",
     subcategory: undefined,
@@ -79327,7 +79327,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saltspring-member-024",
-    chamberId: "saltspring-chamber",
+    chamberId: "salt-spring-chamber",
     businessName: "Daffodil Cove Cottage",
     category: "accommodation",
     subcategory: undefined,
@@ -79346,7 +79346,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saltspring-member-025",
-    chamberId: "saltspring-chamber",
+    chamberId: "salt-spring-chamber",
     businessName: "Dennis Maguire Architect Inc",
     category: "construction",
     subcategory: undefined,
@@ -79365,7 +79365,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saltspring-member-026",
-    chamberId: "saltspring-chamber",
+    chamberId: "salt-spring-chamber",
     businessName: "DNS Farm",
     category: "agriculture",
     subcategory: undefined,
@@ -79384,7 +79384,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saltspring-member-027",
-    chamberId: "saltspring-chamber",
+    chamberId: "salt-spring-chamber",
     businessName: "Dorothy Price Yoga/Santosha Yoga Retreats",
     category: "healthcare",
     subcategory: undefined,
@@ -79403,7 +79403,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saltspring-member-028",
-    chamberId: "saltspring-chamber",
+    chamberId: "salt-spring-chamber",
     businessName: "Dragonfly Art Supplies",
     category: "arts-culture",
     subcategory: undefined,
@@ -79422,7 +79422,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saltspring-member-029",
-    chamberId: "saltspring-chamber",
+    chamberId: "salt-spring-chamber",
     businessName: "Duck Creek Farm",
     category: "agriculture",
     subcategory: undefined,
@@ -79441,7 +79441,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saltspring-member-030",
-    chamberId: "saltspring-chamber",
+    chamberId: "salt-spring-chamber",
     businessName: "Ella VanGaya",
     category: "consulting",
     subcategory: undefined,
@@ -79460,7 +79460,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saltspring-member-031",
-    chamberId: "saltspring-chamber",
+    chamberId: "salt-spring-chamber",
     businessName: "Fiona Walls Personal Real Estate Corporation",
     category: "home-services",
     subcategory: undefined,
@@ -79479,7 +79479,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saltspring-member-032",
-    chamberId: "saltspring-chamber",
+    chamberId: "salt-spring-chamber",
     businessName: "Fishery and Chips",
     category: "food-beverage",
     subcategory: undefined,
@@ -79498,7 +79498,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saltspring-member-033",
-    chamberId: "saltspring-chamber",
+    chamberId: "salt-spring-chamber",
     businessName: "Foxes Board Game Shop",
     category: "arts-culture",
     subcategory: undefined,
@@ -79517,7 +79517,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saltspring-member-034",
-    chamberId: "saltspring-chamber",
+    chamberId: "salt-spring-chamber",
     businessName: "Foxglove Farm",
     category: "accommodation",
     subcategory: undefined,
@@ -79536,7 +79536,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saltspring-member-035",
-    chamberId: "saltspring-chamber",
+    chamberId: "salt-spring-chamber",
     businessName: "Francis Bread",
     category: "food-beverage",
     subcategory: undefined,
@@ -79555,7 +79555,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saltspring-member-036",
-    chamberId: "saltspring-chamber",
+    chamberId: "salt-spring-chamber",
     businessName: "Garden Faire Nursery and Campground",
     category: "accommodation",
     subcategory: undefined,
@@ -79574,7 +79574,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saltspring-member-037",
-    chamberId: "saltspring-chamber",
+    chamberId: "salt-spring-chamber",
     businessName: "Garry Oaks Estate Winery",
     category: "food-beverage",
     subcategory: undefined,
@@ -79593,7 +79593,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saltspring-member-038",
-    chamberId: "saltspring-chamber",
+    chamberId: "salt-spring-chamber",
     businessName: "Harbour Air",
     category: "transit",
     subcategory: undefined,
@@ -79612,7 +79612,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saltspring-member-039",
-    chamberId: "saltspring-chamber",
+    chamberId: "salt-spring-chamber",
     businessName: "Harbour Authority of Salt Spring Island",
     category: "recreation",
     subcategory: undefined,
@@ -79631,7 +79631,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saltspring-member-040",
-    chamberId: "saltspring-chamber",
+    chamberId: "salt-spring-chamber",
     businessName: "Harbour House Hotel",
     category: "accommodation",
     subcategory: undefined,
@@ -79650,7 +79650,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saltspring-member-041",
-    chamberId: "saltspring-chamber",
+    chamberId: "salt-spring-chamber",
     businessName: "Harvest Moon Cannabis",
     category: "food-beverage",
     subcategory: undefined,
@@ -79669,7 +79669,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saltspring-member-042",
-    chamberId: "saltspring-chamber",
+    chamberId: "salt-spring-chamber",
     businessName: "Hastings House Country House Hotel",
     category: "accommodation",
     subcategory: undefined,
@@ -79688,7 +79688,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saltspring-member-043",
-    chamberId: "saltspring-chamber",
+    chamberId: "salt-spring-chamber",
     businessName: "Hummingbird Accounting Ltd.",
     category: "consulting",
     subcategory: undefined,
@@ -79707,7 +79707,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saltspring-member-044",
-    chamberId: "saltspring-chamber",
+    chamberId: "salt-spring-chamber",
     businessName: "Island Return-It Salt Spring",
     category: "environmental",
     subcategory: undefined,
@@ -79726,7 +79726,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saltspring-member-045",
-    chamberId: "saltspring-chamber",
+    chamberId: "salt-spring-chamber",
     businessName: "Island Village Builders",
     category: "construction",
     subcategory: undefined,
@@ -79745,7 +79745,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saltspring-member-046",
-    chamberId: "saltspring-chamber",
+    chamberId: "salt-spring-chamber",
     businessName: "Islandtime Holdings",
     category: "other",
     subcategory: undefined,
@@ -79764,7 +79764,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saltspring-member-047",
-    chamberId: "saltspring-chamber",
+    chamberId: "salt-spring-chamber",
     businessName: "Jill Louise Campbell Art Gallery",
     category: "arts-culture",
     subcategory: undefined,
@@ -79783,7 +79783,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saltspring-member-048",
-    chamberId: "saltspring-chamber",
+    chamberId: "salt-spring-chamber",
     businessName: "Kutatás Wines",
     category: "food-beverage",
     subcategory: undefined,
@@ -79802,7 +79802,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saltspring-member-049",
-    chamberId: "saltspring-chamber",
+    chamberId: "salt-spring-chamber",
     businessName: "Lady Minto Hospital Foundation",
     category: "government",
     subcategory: undefined,
@@ -79821,7 +79821,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saltspring-member-050",
-    chamberId: "saltspring-chamber",
+    chamberId: "salt-spring-chamber",
     businessName: "Lavender and Black",
     category: "agriculture",
     subcategory: undefined,
@@ -79840,7 +79840,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saltspring-member-051",
-    chamberId: "saltspring-chamber",
+    chamberId: "salt-spring-chamber",
     businessName: "Sign Up For Our Newsletter!",
     category: "other",
     subcategory: undefined,
