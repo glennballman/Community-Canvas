@@ -1,0 +1,478 @@
+{
+  "timestamp": "2025-12-28T19:52:28.289Z",
+  "totalChambers": 59,
+  "results": [
+    {
+      "id": "delta-chamber-of-commerce",
+      "website": "https://www.deltachamber.ca",
+      "memberCount": "",
+      "source": "",
+      "confidence": "low",
+      "rawText": ""
+    },
+    {
+      "id": "north-vancouver-chamber",
+      "website": "https://www.nvchamber.ca",
+      "memberCount": "",
+      "source": "",
+      "confidence": "low",
+      "rawText": ""
+    },
+    {
+      "id": "west-vancouver-chamber",
+      "website": "https://www.westvanchamber.com",
+      "memberCount": "",
+      "source": "",
+      "confidence": "low",
+      "rawText": ""
+    },
+    {
+      "id": "cloverdale-district-chamber",
+      "website": "https://www.cloverdalechamber.ca",
+      "memberCount": "",
+      "source": "",
+      "confidence": "low",
+      "rawText": ""
+    },
+    {
+      "id": "new-westminster-chamber",
+      "website": "https://www.newwestchamber.com",
+      "memberCount": "",
+      "source": "",
+      "confidence": "low",
+      "rawText": ""
+    },
+    {
+      "id": "chilliwack-chamber-of-commerce",
+      "website": "https://www.chilliwackchamber.com",
+      "memberCount": "",
+      "source": "",
+      "confidence": "low",
+      "rawText": ""
+    },
+    {
+      "id": "maple-ridge-pitt-meadows-chamber",
+      "website": "https://www.ridgemeadowschamber.com",
+      "memberCount": "",
+      "source": "",
+      "confidence": "low",
+      "rawText": ""
+    },
+    {
+      "id": "harrison-hot-springs-chamber",
+      "website": "https://www.tourharrison.com",
+      "memberCount": "",
+      "source": "",
+      "confidence": "low",
+      "rawText": ""
+    },
+    {
+      "id": "sooke-chamber",
+      "website": "https://www.sookeregionchamber.com",
+      "memberCount": "",
+      "source": "",
+      "confidence": "low",
+      "rawText": ""
+    },
+    {
+      "id": "pender-island-chamber",
+      "website": "https://www.penderislandchamber.com",
+      "memberCount": "",
+      "source": "",
+      "confidence": "low",
+      "rawText": ""
+    },
+    {
+      "id": "duncan-cowichan-chamber",
+      "website": "https://www.duncancc.bc.ca",
+      "memberCount": "over 600 members",
+      "source": "Homepage",
+      "confidence": "high",
+      "rawText": "With over 600 members, the Duncan Cowichan Chamber of Commerce provides networking, promotional and professional development opportunities to businesses, individuals and organizations in Cowichan."
+    },
+    {
+      "id": "ladysmith-chamber",
+      "website": "https://www.ladysmithcofc.com",
+      "memberCount": "over 600 members",
+      "source": "Homepage",
+      "confidence": "high",
+      "rawText": "With over 600 members, the Duncan Cowichan Chamber of Commerce provides networking, promotional and professional development opportunities to businesses, individuals and organizations in Cowichan."
+    },
+    {
+      "id": "chemainus-chamber",
+      "website": "https://www.chemainus.bc.ca",
+      "memberCount": "over 600 members",
+      "source": "Homepage",
+      "confidence": "high",
+      "rawText": "With over 600 members, the Duncan Cowichan Chamber of Commerce provides networking, promotional and professional development opportunities to businesses, individuals and organizations in Cowichan."
+    },
+    {
+      "id": "cowichan-lake-chamber",
+      "website": "https://www.cowichanlake.ca",
+      "memberCount": "over 600 members",
+      "source": "Homepage",
+      "confidence": "high",
+      "rawText": "With over 600 members, the Duncan Cowichan Chamber of Commerce provides networking, promotional and professional development opportunities to businesses, individuals and organizations in Cowichan."
+    },
+    {
+      "id": "qualicum-beach-chamber",
+      "website": "https://www.qualicum.bc.ca",
+      "memberCount": "over 600 members",
+      "source": "Homepage",
+      "confidence": "high",
+      "rawText": "With over 600 members, the Duncan Cowichan Chamber of Commerce provides networking, promotional and professional development opportunities to businesses, individuals and organizations in Cowichan."
+    },
+    {
+      "id": "port-hardy-chamber",
+      "website": "https://www.porthardychamber.com",
+      "memberCount": "over 600 members",
+      "source": "Homepage",
+      "confidence": "high",
+      "rawText": "With over 600 members, the Duncan Cowichan Chamber of Commerce provides networking, promotional and professional development opportunities to businesses, individuals and organizations in Cowichan."
+    },
+    {
+      "id": "port-mcneill-chamber",
+      "website": "https://www.portmcneillchamber.com",
+      "memberCount": "over 600 members",
+      "source": "Homepage",
+      "confidence": "high",
+      "rawText": "With over 600 members, the Duncan Cowichan Chamber of Commerce provides networking, promotional and professional development opportunities to businesses, individuals and organizations in Cowichan."
+    },
+    {
+      "id": "port-alberni-chamber",
+      "website": "https://www.albernichamber.ca",
+      "memberCount": "over 600 members",
+      "source": "Homepage",
+      "confidence": "high",
+      "rawText": "With over 600 members, the Duncan Cowichan Chamber of Commerce provides networking, promotional and professional development opportunities to businesses, individuals and organizations in Cowichan."
+    },
+    {
+      "id": "ucluelet-chamber",
+      "website": "https://www.uclueletchamber.com",
+      "memberCount": "over 600 members",
+      "source": "Homepage",
+      "confidence": "high",
+      "rawText": "With over 600 members, the Duncan Cowichan Chamber of Commerce provides networking, promotional and professional development opportunities to businesses, individuals and organizations in Cowichan."
+    },
+    {
+      "id": "bamfield-chamber",
+      "website": "https://www.bamfieldchamber.com",
+      "memberCount": "over 600 members",
+      "source": "Homepage",
+      "confidence": "high",
+      "rawText": "With over 600 members, the Duncan Cowichan Chamber of Commerce provides networking, promotional and professional development opportunities to businesses, individuals and organizations in Cowichan."
+    },
+    {
+      "id": "port-renfrew-chamber",
+      "website": "https://www.portrenfrewchamber.com",
+      "memberCount": "over 40 members",
+      "source": "About page",
+      "confidence": "high",
+      "rawText": "We are a member driven, non-for-profit organization made up of over 40 local small and medium businesses."
+    },
+    {
+      "id": "kelowna-chamber",
+      "website": "https://www.kelownachamber.org",
+      "memberCount": "over 40 members",
+      "source": "About page",
+      "confidence": "high",
+      "rawText": "We are a member driven, non-for-profit organization made up of over 40 local small and medium businesses."
+    },
+    {
+      "id": "lake-country-chamber",
+      "website": "https://www.lakecountrychamber.com",
+      "memberCount": "over 40 members",
+      "source": "About page",
+      "confidence": "high",
+      "rawText": "We are a member driven, non-for-profit organization made up of over 40 local small and medium businesses."
+    },
+    {
+      "id": "peachland-chamber",
+      "website": "https://www.peachlandchamber.com",
+      "memberCount": "over 40 members",
+      "source": "About page",
+      "confidence": "high",
+      "rawText": "We are a member driven, non-for-profit organization made up of over 40 local small and medium businesses."
+    },
+    {
+      "id": "vernon-chamber",
+      "website": "https://www.vernonchamber.ca",
+      "memberCount": "over 40 members",
+      "source": "About page",
+      "confidence": "high",
+      "rawText": "We are a member driven, non-for-profit organization made up of over 40 local small and medium businesses."
+    },
+    {
+      "id": "armstrong-spallumcheen-chamber",
+      "website": "https://www.aschamber.com",
+      "memberCount": "over 40 members",
+      "source": "About page",
+      "confidence": "high",
+      "rawText": "We are a member driven, non-for-profit organization made up of over 40 local small and medium businesses."
+    },
+    {
+      "id": "penticton-chamber",
+      "website": "https://www.penticton.org",
+      "memberCount": "over 40 members",
+      "source": "About page",
+      "confidence": "high",
+      "rawText": "We are a member driven, non-for-profit organization made up of over 40 local small and medium businesses."
+    },
+    {
+      "id": "south-okanagan-chamber",
+      "website": "https://www.sochamber.ca",
+      "memberCount": "over 40 members",
+      "source": "About page",
+      "confidence": "high",
+      "rawText": "We are a member driven, non-for-profit organization made up of over 40 local small and medium businesses."
+    },
+    {
+      "id": "summerland-chamber",
+      "website": "https://www.summerlandchamber.com",
+      "memberCount": "over 40 members",
+      "source": "About page",
+      "confidence": "high",
+      "rawText": "We are a member driven, non-for-profit organization made up of over 40 local small and medium businesses."
+    },
+    {
+      "id": "similkameen-chamber",
+      "website": "https://www.similkameencountry.org",
+      "memberCount": "over 40 members",
+      "source": "About page",
+      "confidence": "high",
+      "rawText": "We are a member driven, non-for-profit organization made up of over 40 local small and medium businesses."
+    },
+    {
+      "id": "princeton-chamber",
+      "website": "https://www.princetonchamber.ca",
+      "memberCount": "30,000+ businesses",
+      "source": "Homepage",
+      "confidence": "high",
+      "rawText": "Join 30,000+ businesses already saving on employee benefits."
+    },
+    {
+      "id": "salmon-arm-chamber",
+      "website": "https://www.sachamber.bc.ca",
+      "memberCount": "30,000+ businesses",
+      "source": "Homepage",
+      "confidence": "high",
+      "rawText": "Join 30,000+ businesses already saving on employee benefits."
+    },
+    {
+      "id": "golden-chamber",
+      "website": "https://www.goldenchamber.bc.ca",
+      "memberCount": "30,000+ businesses",
+      "source": "Homepage",
+      "confidence": "high",
+      "rawText": "Join 30,000+ businesses already saving on employee benefits."
+    },
+    {
+      "id": "merritt-chamber",
+      "website": "https://www.merrittchamber.com",
+      "memberCount": "30,000+ businesses",
+      "source": "Homepage",
+      "confidence": "high",
+      "rawText": "Join 30,000+ businesses already saving on employee benefits."
+    },
+    {
+      "id": "clearwater-chamber",
+      "website": "https://www.clearwaterbcchamber.com",
+      "memberCount": "30,000+ businesses",
+      "source": "Homepage",
+      "confidence": "high",
+      "rawText": "Join 30,000+ businesses already saving on employee benefits."
+    },
+    {
+      "id": "lytton-chamber",
+      "website": "https://www.lyttonchamber.ca",
+      "memberCount": "30,000+ businesses",
+      "source": "Homepage",
+      "confidence": "high",
+      "rawText": "Join 30,000+ businesses already saving on employee benefits."
+    },
+    {
+      "id": "corridor-chamber",
+      "website": "https://www.corridorchamber.ca",
+      "memberCount": "30,000+ businesses",
+      "source": "Homepage",
+      "confidence": "high",
+      "rawText": "Join 30,000+ businesses already saving on employee benefits."
+    },
+    {
+      "id": "prince-george-chamber",
+      "website": "https://www.pgchamber.bc.ca",
+      "memberCount": "30,000+ businesses",
+      "source": "Homepage",
+      "confidence": "high",
+      "rawText": "Join 30,000+ businesses already saving on employee benefits."
+    },
+    {
+      "id": "valemount-chamber",
+      "website": "https://www.valemountchamber.com",
+      "memberCount": "30,000+ businesses",
+      "source": "Homepage",
+      "confidence": "high",
+      "rawText": "Join 30,000+ businesses already saving on employee benefits."
+    },
+    {
+      "id": "mcbride-chamber",
+      "website": "https://www.mcbridechamber.com",
+      "memberCount": "30,000+ businesses",
+      "source": "Homepage",
+      "confidence": "high",
+      "rawText": "Join 30,000+ businesses already saving on employee benefits."
+    },
+    {
+      "id": "vanderhoof-chamber",
+      "website": "https://www.vanderhoofchamber.com",
+      "memberCount": "",
+      "source": "",
+      "confidence": "low",
+      "rawText": ""
+    },
+    {
+      "id": "burns-lake-chamber",
+      "website": "https://www.burnslakechamber.com",
+      "memberCount": "",
+      "source": "",
+      "confidence": "low",
+      "rawText": ""
+    },
+    {
+      "id": "houston-chamber",
+      "website": "https://www.houstonchamber.ca",
+      "memberCount": "",
+      "source": "",
+      "confidence": "low",
+      "rawText": ""
+    },
+    {
+      "id": "smithers-chamber",
+      "website": "https://www.smitherschamber.com",
+      "memberCount": "",
+      "source": "",
+      "confidence": "low",
+      "rawText": ""
+    },
+    {
+      "id": "fort-st-john-chamber",
+      "website": "https://www.fsjchamber.com",
+      "memberCount": "",
+      "source": "",
+      "confidence": "low",
+      "rawText": ""
+    },
+    {
+      "id": "dawson-creek-chamber",
+      "website": "https://www.dawsoncreekchamber.ca",
+      "memberCount": "",
+      "source": "",
+      "confidence": "low",
+      "rawText": ""
+    },
+    {
+      "id": "tumbler-ridge-chamber",
+      "website": "https://www.tumblerridgechamber.com",
+      "memberCount": "",
+      "source": "",
+      "confidence": "low",
+      "rawText": ""
+    },
+    {
+      "id": "chetwynd-chamber",
+      "website": "https://www.chetwyndchamber.ca",
+      "memberCount": "",
+      "source": "",
+      "confidence": "low",
+      "rawText": ""
+    },
+    {
+      "id": "fort-nelson-chamber",
+      "website": "https://www.fortnelsonchamber.com",
+      "memberCount": "",
+      "source": "",
+      "confidence": "low",
+      "rawText": ""
+    },
+    {
+      "id": "kitimat-chamber",
+      "website": "https://www.kitimatchamber.ca",
+      "memberCount": "",
+      "source": "",
+      "confidence": "low",
+      "rawText": ""
+    },
+    {
+      "id": "kimberley-chamber",
+      "website": "https://www.kimberleychamber.com",
+      "memberCount": "600+",
+      "source": "Homepage",
+      "confidence": "high",
+      "rawText": "The Squamish Chamber of Commerce is the largest and oldest business organization in Squamish. The Chamber supports members by providing access to affordable training, marketing opportunities, business development tools, networking and exclusive discounts."
+    },
+    {
+      "id": "columbia-valley-chamber",
+      "website": "https://www.cvchamber.ca",
+      "memberCount": "600+",
+      "source": "Homepage",
+      "confidence": "high",
+      "rawText": "The Squamish Chamber of Commerce is the largest and oldest business organization in Squamish. The Chamber supports members by providing access to affordable training, marketing opportunities, business development tools, networking and exclusive discounts."
+    },
+    {
+      "id": "creston-valley-chamber",
+      "website": "https://www.crestonvalleychamber.com",
+      "memberCount": "600+",
+      "source": "Homepage",
+      "confidence": "high",
+      "rawText": "The Squamish Chamber of Commerce is the largest and oldest business organization in Squamish. The Chamber supports members by providing access to affordable training, marketing opportunities, business development tools, networking and exclusive discounts."
+    },
+    {
+      "id": "castlegar-chamber",
+      "website": "https://www.chamber.castlegar.com",
+      "memberCount": "600+",
+      "source": "Homepage",
+      "confidence": "high",
+      "rawText": "The Squamish Chamber of Commerce is the largest and oldest business organization in Squamish. The Chamber supports members by providing access to affordable training, marketing opportunities, business development tools, networking and exclusive discounts."
+    },
+    {
+      "id": "squamish-chamber",
+      "website": "https://www.squamishchamber.com",
+      "memberCount": "600+",
+      "source": "Homepage",
+      "confidence": "high",
+      "rawText": "The Squamish Chamber of Commerce is the largest and oldest business organization in Squamish. The Chamber supports members by providing access to affordable training, marketing opportunities, business development tools, networking and exclusive discounts."
+    },
+    {
+      "id": "lillooet-chamber",
+      "website": "https://www.lillooetchamber.com",
+      "memberCount": "600+",
+      "source": "Homepage",
+      "confidence": "high",
+      "rawText": "The Squamish Chamber of Commerce is the largest and oldest business organization in Squamish. The Chamber supports members by providing access to affordable training, marketing opportunities, business development tools, networking and exclusive discounts."
+    },
+    {
+      "id": "gibsons-chamber",
+      "website": "https://www.gibsonschamber.com",
+      "memberCount": "600+",
+      "source": "Homepage",
+      "confidence": "high",
+      "rawText": "The Squamish Chamber of Commerce is the largest and oldest business organization in Squamish. The Chamber supports members by providing access to affordable training, marketing opportunities, business development tools, networking and exclusive discounts."
+    },
+    {
+      "id": "pender-harbour-chamber",
+      "website": "https://www.penderharbour.ca",
+      "memberCount": "600+",
+      "source": "Homepage",
+      "confidence": "high",
+      "rawText": "The Squamish Chamber of Commerce is the largest and oldest business organization in Squamish. The Chamber supports members by providing access to affordable training, marketing opportunities, business development tools, networking and exclusive discounts."
+    },
+    {
+      "id": "powell-river-chamber",
+      "website": "https://www.powellriverchamber.com",
+      "memberCount": "600+",
+      "source": "Homepage",
+      "confidence": "high",
+      "rawText": "The Squamish Chamber of Commerce is the largest and oldest business organization in Squamish. The Chamber supports members by providing access to affordable training, marketing opportunities, business development tools, networking and exclusive discounts."
+    }
+  ]
+}
