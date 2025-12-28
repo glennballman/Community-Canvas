@@ -1,0 +1,977 @@
+[
+  {
+    "businessName": "Decorate Langford",
+    "address": "",
+    "phone": ""
+  },
+  {
+    "businessName": "Westshore Chamber of Commerce",
+    "address": "2830 Aldwynd Road, Victoria, BC V9B 357",
+    "phone": "(250) 478-1130"
+  },
+  {
+    "businessName": "Acera Insurance",
+    "address": "203-345C Latoria Blvd, Victoria, BC V9C 4L8",
+    "phone": "(250) 595-5212"
+  },
+  {
+    "businessName": "WorkLink Employment Society",
+    "address": "3179 Jacklin Rd, #202, Victoria, BC V9B 3Y7",
+    "phone": "(250) 478-9525"
+  },
+  {
+    "businessName": "100.3 The Q and The Zone 91.3",
+    "address": "2750 Quadra St - Top Floor, Victoria, BC V8L 6B1",
+    "phone": "(250) 475-0100"
+  },
+  {
+    "businessName": "Puroclean Restoration Victoria",
+    "address": "832 McCallum Road, Unit 114, Langford, BC V9B 7A8",
+    "phone": "(250) 588-2366"
+  },
+  {
+    "businessName": "Signs of the Times Enterprises, Inc.",
+    "address": "PO Box 37003 Millstream PO, Victoria, BC V9B 0E8",
+    "phone": "(250) 383-8380"
+  },
+  {
+    "businessName": "Think Local First",
+    "address": "PO Box 38014 794 Fort Street, Victoria, BC V8W 2N2",
+    "phone": "(250) 812-3186"
+  },
+  {
+    "businessName": "Keycorp Group of Companies",
+    "address": "#116-967 Langford Parkway, Langford, BC V9B 0A5",
+    "phone": "(250) 384-8024"
+  },
+  {
+    "businessName": "Almostronaut Creative",
+    "address": "Sooke, BC",
+    "phone": "(250) 514-0922"
+  },
+  {
+    "businessName": "Mortgages by Gary Nagra",
+    "address": "519-2840 Peatt Rd, Victoria, BC V9B 3V5",
+    "phone": "(250) 508-8278"
+  },
+  {
+    "businessName": "Dog Grooming by Renata",
+    "address": "491- B Burnside Rd East, Victoria, BC V8T 2X3",
+    "phone": "(250) 884-4271"
+  },
+  {
+    "businessName": "Hatley Memorial Gardens",
+    "address": "2050 Sooke Rd, Victoria, BC V9B 1W3",
+    "phone": "(250) 478-1754"
+  },
+  {
+    "businessName": "Co-operators - Corcoran Financial Group Ltd.",
+    "address": "101-2455 Millstream Rd, Victoria, BC V9b3r5",
+    "phone": "(250) 478-5644"
+  },
+  {
+    "businessName": "Morley Hanson Law Corporation",
+    "address": "101 - 837 Burdett Avenue, Victoria, BC V8W 1B3",
+    "phone": "250-978-7995"
+  },
+  {
+    "businessName": "devEdge Internet Marketing",
+    "address": "2878 Leigh Road, Victoria, BC V9B 4G3",
+    "phone": "(250) 516-4327"
+  },
+  {
+    "businessName": "A New Dawn Red Light Therapy",
+    "address": "111-689 Hoffman Ave, Langford, BC V9B4Z1",
+    "phone": "(587) 583-9670"
+  },
+  {
+    "businessName": "National Bank of Canada",
+    "address": "1201 Douglas St, Victoria, BC V8W 2E6",
+    "phone": "(250) 580-0272"
+  },
+  {
+    "businessName": "Janklin Consulting",
+    "address": "Victoria, BC V9C 0P7",
+    "phone": "(778) 350-2019"
+  },
+  {
+    "businessName": "Wellness Regeneration",
+    "address": "203 - 6609 Goodmere Road, Sooke, BC V9Z 1P5",
+    "phone": "(250) 891-7477"
+  },
+  {
+    "businessName": "FYi doctors",
+    "address": "Unit 120-17 Helmcken Road, Victoria, BC V8Z 5G5",
+    "phone": "(250) 478-6811"
+  },
+  {
+    "businessName": "BC-Alta Development",
+    "address": "539 Delora Drive, Colwood, BC V9C 0M2",
+    "phone": "(587) 586-5224"
+  },
+  {
+    "businessName": "Innov8 Digital Solutions",
+    "address": "575 Bay Street, Victoria, BC V8T 1P5",
+    "phone": "(250) 940-4291"
+  },
+  {
+    "businessName": "The Langford Business Center",
+    "address": "211-2840 Peatt Road, Victoria, BC V9B 3V5",
+    "phone": "(778) 400-4223"
+  },
+  {
+    "businessName": "Cybersalt Consulting",
+    "address": "3486 Metchosin Road, Victoria, BC V9C 2B2",
+    "phone": "(250) 858-8066"
+  },
+  {
+    "businessName": "Island Savings",
+    "address": "2917 Jacklin Road, Victoria, BC V9B 3Y6",
+    "phone": "(250) 915-1296"
+  },
+  {
+    "businessName": "Bentley Siu Redmond, Professional Accountants",
+    "address": "515-2840 Peatt Rd., Victoria, BC V9B 3V4",
+    "phone": "(250) 590-8346"
+  },
+  {
+    "businessName": "bWEST Interactive",
+    "address": "615 Hoffman Avenue, Victoria, BC V9B 5V1",
+    "phone": "(250) 508-7761"
+  },
+  {
+    "businessName": "Kent McFadyen: Coldwell Banker Oceanside",
+    "address": "#117 - 662 Goldstream Ave, Langford, BC",
+    "phone": ""
+  },
+  {
+    "businessName": "Business Consultant at Peninsula Canada",
+    "address": "Langford, BC",
+    "phone": "(250) 216-6114"
+  },
+  {
+    "businessName": "Waypoint Insurance (formerly FX Insurance Brokers Ltd.)",
+    "address": "Unit 114 - 3218 Jacklin Road, Victoria, BC V9B 0J5",
+    "phone": "(250) 888-8891"
+  },
+  {
+    "businessName": "Peloton Technologies (formerly KIS Payments Consultants Inc.)",
+    "address": "#21-4800 Island Hwy N, Nanaimo, BC V9T 1W6",
+    "phone": "(250) 418-5612"
+  },
+  {
+    "businessName": "Inner Health Massage Therapy",
+    "address": "2715 Winster Road, Victoria, BC V9B 3P4",
+    "phone": "(250) 478-9787"
+  },
+  {
+    "businessName": "Beyond Barriers Consulting",
+    "address": "3561 Pritchard Creek Road, Langford, BC V9C 0L1",
+    "phone": "(250) 893-4669"
+  },
+  {
+    "businessName": "First Impressions",
+    "address": "Victoria, BC V9B 0A4",
+    "phone": "(250) 818-0530"
+  },
+  {
+    "businessName": "WeBC",
+    "address": "201-1726 Dolphin Ave, Kelowna, BC V1Y 9R9",
+    "phone": "(250) 868-3454"
+  },
+  {
+    "businessName": "Gaidelis & Company, CPA",
+    "address": "Langford, BC",
+    "phone": "(778) 945-3000"
+  },
+  {
+    "businessName": "West Shore Family Naturopathic Ltd.",
+    "address": "2885 Peatt Rd., Victoria, BC V9B 3V7",
+    "phone": "(250) 474-6361"
+  },
+  {
+    "businessName": "Lynxedge Solutions",
+    "address": "201 – 3542 Blanshard Street, Victoria, BC V8X 1W3",
+    "phone": "(778) 402-9222"
+  },
+  {
+    "businessName": "FORGE Technical Solutions",
+    "address": "355 Catherine Street, Victoria, BC V9A3S9",
+    "phone": "(250) 818-1670"
+  },
+  {
+    "businessName": "Merizzi Ramsbottom & Forster",
+    "address": "1325 Bear Mountain Parkway, Suite 105, Victoria, BC V9B 6T8",
+    "phone": "(778) 677-8772"
+  },
+  {
+    "businessName": "Milton Green CPAs",
+    "address": "8650 Baird Road, Victoria, BC V9B 0B2",
+    "phone": "(250) 590-7343"
+  },
+  {
+    "businessName": "Homewood Health",
+    "address": "Units 200 + 300, 1405 Stinson Way, Victoria, BC V8Z 3W8",
+    "phone": "(250) 800-8382"
+  },
+  {
+    "businessName": "Koda Studios",
+    "address": "4563 Maple Road, Victoria, BC V9B 0C4",
+    "phone": "(250) 808-2453"
+  },
+  {
+    "businessName": "Turner Lane Development Corporation",
+    "address": "100-650 Goldstream Ave, Victoria, BC V9B 2W8",
+    "phone": "(250) 474-0893"
+  },
+  {
+    "businessName": "Landvision Group",
+    "address": "Unit 106 15585 24 Ave, Surrey, BC V4A 2J4",
+    "phone": "(604) 512-9040"
+  },
+  {
+    "businessName": "Island Tigers Energy Corporation (ITEC)",
+    "address": "#179 - 2945 Jacklin Road, Suite 417, Victoria, BC V9B 6J9",
+    "phone": "(778) 584-4773"
+  },
+  {
+    "businessName": "WESTLINK COMMUNICATIONS INC.",
+    "address": "2120 Nicklaus Drive, Langford, BC V9B 6T3",
+    "phone": "(250) 812-5838"
+  },
+  {
+    "businessName": "Beautifully Inclusive",
+    "address": "Victoria, BC",
+    "phone": "(778) 678-7384"
+  },
+  {
+    "businessName": "RE-LY Metal",
+    "address": "102 - 931 Dunford Avenue, Victoria, BC V9B 2S4",
+    "phone": "(250) 885-1332"
+  },
+  {
+    "businessName": "Island Junk Solutions Ltd.",
+    "address": "3418 Pattison Way, Victoria, BC V9C 4K9",
+    "phone": "(778) 966-5865"
+  },
+  {
+    "businessName": "Gardener For Hire Services Ltd.",
+    "address": "3340 Metchosin Road, Victoria, BC V9C 2A6",
+    "phone": "(250) 818-0611"
+  },
+  {
+    "businessName": "Stay At Home Elevating",
+    "address": "PO Box 47027 Victoria, RPO WESTSHORE, LANGFORD, BC V9B 5T2",
+    "phone": "(250) 391-8166"
+  },
+  {
+    "businessName": "Osprey Tree Service",
+    "address": "PO Box 27051 RPO, Victoria, BC V9B 5S4",
+    "phone": "(250) 474-7993"
+  },
+  {
+    "businessName": "DC Drywall Contractors",
+    "address": "1759 Mortimer St, Victoria, BC V8P 3A9",
+    "phone": "(780) 953-4901"
+  },
+  {
+    "businessName": "Dupuis Energy Inc",
+    "address": "7957 Lochside Drive, Saanichton, BC V9M 1V6",
+    "phone": "(250) 858-6743"
+  },
+  {
+    "businessName": "Pacific Coast Floor Coverings",
+    "address": "100 - 2374 Millstream Road, Victoria, BC V9B 3R3",
+    "phone": "(250) 474-0411"
+  },
+  {
+    "businessName": "Joe Newell Architect Inc",
+    "address": "2 - 101 Presley Place, Victoria, BC V9B 0S4",
+    "phone": "(250) 382-4240"
+  },
+  {
+    "businessName": "Kendall Builders Ltd.",
+    "address": "4275 Panorama Dr., Victoria, BC V8X 4X9",
+    "phone": "(250) 818-0611"
+  },
+  {
+    "businessName": "West Shore Environmental Services Limited Partnership",
+    "address": "103 - 859 Orono Avenue, Victoria, BC V9B 2T9",
+    "phone": "(250) 478-2187"
+  },
+  {
+    "businessName": "ROGCS CONSTRUCTION SERVICES",
+    "address": "4641 West Saanich Rd, Victoria, BC V8Z 3G7",
+    "phone": "(250) 634-6221"
+  },
+  {
+    "businessName": "Bricklok Surfacing & Landscaping",
+    "address": "Unit 105B - 859 Orono Ave., Langford, BC V9B 2T9",
+    "phone": "(250) 382-5012"
+  },
+  {
+    "businessName": "Westhills Land Corp.",
+    "address": "1290 Langford Parkway, Victoria, BC V9B 0A5",
+    "phone": "(250) 383-9281"
+  },
+  {
+    "businessName": "Tomei Landscaping",
+    "address": "1123 Goldstream Avenue, Victoria, BC V9B 2Y9",
+    "phone": "(250) 710-0337"
+  },
+  {
+    "businessName": "Luxterior Floors & Home Solutions Inc",
+    "address": "Langford, BC",
+    "phone": "(236) 544-8444"
+  },
+  {
+    "businessName": "Fullylinked Systems Inc.",
+    "address": "2101 Bishops Gate, Victoria, BC V9B 6R4",
+    "phone": "(250) 590-6655"
+  },
+  {
+    "businessName": "Capital Electrical Systems 2013 Ltd.",
+    "address": "PO Box 06, Victoria, BC V8M 1R2",
+    "phone": "(250) 883-8634"
+  },
+  {
+    "businessName": "Westshore Structural Engineering Ltd.",
+    "address": "215 - 737 Goldstream Avenue, Victoria, BC V9B 2X4",
+    "phone": "(250) 585-1360"
+  },
+  {
+    "businessName": "Keycorp Group of Companies",
+    "address": "#116-967 Langford Parkway, Langford, BC V9B 0A5",
+    "phone": "(250) 384-8024"
+  },
+  {
+    "businessName": "Independent Concrete Ltd.",
+    "address": "765 Industrial Way, Victoria, BC V9B 6E2",
+    "phone": "(250) 478-0555"
+  },
+  {
+    "businessName": "Scorpion Mechanical",
+    "address": "482 Hansen Avenue, Victoria, BC V9B 5V2",
+    "phone": "(604) 715-8312"
+  },
+  {
+    "businessName": "Vista Masonry and Construction Ltd.",
+    "address": "584 Tena Pl, Victoria, BC V9C 1M7",
+    "phone": "(778) 533-0708"
+  },
+  {
+    "businessName": "McIlvaney Riley Land Surveying Inc",
+    "address": "113 - 2244 Sooke Road, Victoria, BC V9B 1X1",
+    "phone": "(250) 474-5538"
+  },
+  {
+    "businessName": "Price's Lock & Safe - Westshore Division",
+    "address": "120-2806 Jacklin Rd, Langford, BC V9B 5A4",
+    "phone": "(250) 391-5557"
+  },
+  {
+    "businessName": "Colwood Peak Homes Ltd.",
+    "address": "#150-1120 Bridgeport Road, Richmond, BC V6X 1T2",
+    "phone": "(604) 629-8899"
+  },
+  {
+    "businessName": "JKL Electrical",
+    "address": "24041 - 4420 West Saanich Rd., Victoria, BC V8Z 3E9",
+    "phone": "(250) 661-3305"
+  },
+  {
+    "businessName": "Capital City Paving Ltd.",
+    "address": "840 Industrial Way, Victoria, BC V9B 6E2",
+    "phone": "(250) 652-3626"
+  },
+  {
+    "businessName": "Abstract Developments",
+    "address": "301-1106 Cook St., Victoria, BC V8V 3Z9",
+    "phone": "(250) 883-5579"
+  },
+  {
+    "businessName": "Northridge Excavating Ltd.",
+    "address": "132 - 2930 Amy Rd, Victoria, BC V9B 0B2",
+    "phone": "(250) 479-4373"
+  },
+  {
+    "businessName": "Tran Sign 2022 Ltd.",
+    "address": "2920 Jacklin Road, Victoria, BC V9B 3Y5",
+    "phone": "(250) 478-9531"
+  },
+  {
+    "businessName": "Blackfin Doors & Gates",
+    "address": "108-3372 Luxton Rd, Langford, BC V9C 0T8",
+    "phone": "(778) 486-3787"
+  },
+  {
+    "businessName": "Pacific Viking Group Properties Inc",
+    "address": "205-774 Goldstream Ave, Victoria, BC V9B 2X3",
+    "phone": "(250) 382-5599"
+  },
+  {
+    "businessName": "York Excavating Ltd.",
+    "address": "1784 Millstream Road, Victoria, BC V9B 6E4",
+    "phone": "(250) 478-7178"
+  },
+  {
+    "businessName": "Marion Machine Inc.",
+    "address": "1005 Dunford Rd, Langford, BC V9B 2S4",
+    "phone": "(250) 474-2390"
+  },
+  {
+    "businessName": "Action Door Service Inc.",
+    "address": "685 Taylor Way, Victoria, BC V9B 6E3",
+    "phone": "(250) 383-2795"
+  },
+  {
+    "businessName": "Spawn Cycles Inc.",
+    "address": "108-4342 West Shore Parkway, Langford, BC V9K 5Z1",
+    "phone": "(888) 604-2453"
+  },
+  {
+    "businessName": "FortisBC",
+    "address": "1027 Langford Parkway, Langford, BC V9B 2N7",
+    "phone": "1-888-224-2710"
+  },
+  {
+    "businessName": "VINYL X SUNDECK SOLUTIONS",
+    "address": "PO Box 37025 Millstream RPO, Victoria, BC V9B 0E8",
+    "phone": "(250) 580-0581"
+  },
+  {
+    "businessName": "Gordon N Gordon Interiors",
+    "address": "845 Orono Ave, Langford, BC V9B 2T9",
+    "phone": "(250) 474-2100"
+  },
+  {
+    "businessName": "Fixit Asphalt Ltd",
+    "address": "512 Lone Tree Place, Victoria, BC V9B 6G9",
+    "phone": "(250) 686-0962"
+  },
+  {
+    "businessName": "0817011 BC LTD - G&S Construction",
+    "address": "513 Gurunanak Lane, Victoria, BC V9C 0M2",
+    "phone": "(250) 818-9251"
+  },
+  {
+    "businessName": "Loving Tender Cleaning Inc",
+    "address": "Langford, BC",
+    "phone": "(250) 661-6160"
+  },
+  {
+    "businessName": "Victoria Contracting & Municipal Maintenance Corp",
+    "address": "112-1010 McCallum Road, Victoria, BC V9B 4C6",
+    "phone": "(250) 474-2688"
+  },
+  {
+    "businessName": "Jola Landscaping",
+    "address": "599 Cottyn Way, Victoria, BC V9C 0B7",
+    "phone": "(250) 885-0566"
+  },
+  {
+    "businessName": "WorkLink Employment Society",
+    "address": "3179 Jacklin Rd, #202, Victoria, BC V9B 3Y7",
+    "phone": "(250) 478-9525"
+  },
+  {
+    "businessName": "YMCA-YWCA of Vancouver Island",
+    "address": "202-1314 Lakepoint Way, Victoria, BC V9B 0S2",
+    "phone": "(250) 386-7511"
+  },
+  {
+    "businessName": "Town of View Royal",
+    "address": "45 View Royal Road, Victoria, BC V9B 1A6",
+    "phone": "(250) 479-6800"
+  },
+  {
+    "businessName": "Better Business Bureau of Vancouver Island",
+    "address": "220 - 1175 Cook Street, Victoria, BC V8V 4A1",
+    "phone": "(250) 386-6348"
+  },
+  {
+    "businessName": "Vancouver Island Construction Association",
+    "address": "#211 – 611 Discovery Street, Victoria, BC V8T 5G4",
+    "phone": "(250) 388-6471"
+  },
+  {
+    "businessName": "Conservative Party of BC",
+    "address": "327 - 1434 Ironwood Street, Campbell River, BC V9W 5T5",
+    "phone": "(604) 771-6690"
+  },
+  {
+    "businessName": "THRIVE Social Services",
+    "address": "1095 McKenzie Ave - 4th Floor, Victoria, BC V8P 2L5",
+    "phone": "(250) 995-5521"
+  },
+  {
+    "businessName": "Woofability Group",
+    "address": "4497 Prospect Lake Road, Victoria, BC V9E 1J3",
+    "phone": "(250) 686-2527"
+  },
+  {
+    "businessName": "Children's Health Foundation of Vancouver Island",
+    "address": "345 Wale Road, Victoria, BC V9B 6X2",
+    "phone": "(250) 940-4950"
+  },
+  {
+    "businessName": "The Village Initiative",
+    "address": "Victoria, BC",
+    "phone": "(250) 686-9209"
+  },
+  {
+    "businessName": "Greater Victoria Chamber of Commerce",
+    "address": "201C - 633 Courtney St, Victoria, BC V8W 1B9",
+    "phone": "(250) 383-7191"
+  },
+  {
+    "businessName": "The Extreme Outreach Society",
+    "address": "284 Helmcken Rd #102, Victoria, BC V9B 1T2",
+    "phone": "(250) 384-2064"
+  },
+  {
+    "businessName": "Rotary Club of WestShore",
+    "address": "PO Box 28016, RPO Westshore, Victoria, BC V9B 6K8",
+    "phone": "(250) 378-0712"
+  },
+  {
+    "businessName": "City of Colwood",
+    "address": "3300 Wishart Road, Victoria, BC V9C 1R1",
+    "phone": "(250) 478-5999"
+  },
+  {
+    "businessName": "West Shore Arts Council",
+    "address": "Victoria, BC",
+    "phone": "(250) 474-4411"
+  },
+  {
+    "businessName": "Juan de Fuca Performing Arts Centre Society",
+    "address": "Colwood, BC V9C 2J6",
+    "phone": "(250) 360-7653"
+  },
+  {
+    "businessName": "Lester B. Pearson College Of The Pacific",
+    "address": "650 Pearson College Drive, Victoria, BC V9C 4H7",
+    "phone": "(250) 858-2689"
+  },
+  {
+    "businessName": "WIN Resale Shops",
+    "address": "#2 - 310 Goldstream Ave, Victoria, BC V9B 2W3",
+    "phone": "(250) 480-4006"
+  },
+  {
+    "businessName": "University of Victoria, Co-op and Career Centre",
+    "address": "3800 Finnerty Road, Victoria, BC V8P 5C2",
+    "phone": "(250) 721-6581"
+  },
+  {
+    "businessName": "WeBC",
+    "address": "201-1726 Dolphin Ave, Kelowna, BC V1Y 9R9",
+    "phone": "(250) 868-3454"
+  },
+  {
+    "businessName": "M'akola Group of Societies",
+    "address": "104-550 Goldstream Avenue, Victoria, BC V9B 2W7",
+    "phone": "(250) 590-0204"
+  },
+  {
+    "businessName": "Esquimalt-Saanich-Sooke Conservative Association",
+    "address": "179-2945 Jacklin Road PO Box 404, Victoria, BC V9B 6J9",
+    "phone": "(250) 800-9235"
+  },
+  {
+    "businessName": "Funding for Life Society",
+    "address": "Mill Bay, BC V8H 1A2",
+    "phone": "(250) 920-5225"
+  },
+  {
+    "businessName": "ReImagine West Shore Community Society",
+    "address": "Victoria, BC V9C 1P7",
+    "phone": "(250) 857-7821"
+  },
+  {
+    "businessName": "Victoria Hospitals Foundation",
+    "address": "Wilson Block 1952 Bay St, Victoria, BC V8R 1J8",
+    "phone": "(250) 519-1750"
+  },
+  {
+    "businessName": "Royal Canadian Legion - Prince Edward Branch #91",
+    "address": "761 Station Avenue, Victoria, BC V9B 2S1",
+    "phone": "(250) 478-1828"
+  },
+  {
+    "businessName": "New Roads Therapeutic Recovery Community by Our Place",
+    "address": "94 Talcott Road, Victoria, BC V9B 6L9",
+    "phone": "(250) 383-3182"
+  },
+  {
+    "businessName": "West Shore Parks & Recreation",
+    "address": "1767 Island Highway, Victoria, BC V9B 1J1",
+    "phone": "(250) 478-8384"
+  },
+  {
+    "businessName": "Think Local First",
+    "address": "PO Box 38014 794 Fort Street, Victoria, BC V8W 2N2",
+    "phone": "(250) 812-3186"
+  },
+  {
+    "businessName": "Pacific Centre Family Services Association",
+    "address": "324 Goldstream Ave, Victoria, BC V9B 2W3",
+    "phone": "(250) 478-8357"
+  },
+  {
+    "businessName": "Greater Victoria Festival Society",
+    "address": "602-620 View Street, Victoria, BC V8W1G6",
+    "phone": "(250) 382-3111"
+  },
+  {
+    "businessName": "Sooke Region Chamber of Commerce",
+    "address": "Unit #1A, 6631 Sooke Road, Seaview Business Centre, Sooke, BC V9Z 0A3",
+    "phone": "(250) 642-6112"
+  },
+  {
+    "businessName": "Esquimalt Chamber of Commerce",
+    "address": "Victoria, BC",
+    "phone": "(250) 388-4728"
+  },
+  {
+    "businessName": "Metchosin Farmers' Institute",
+    "address": "1040 Marwood Avenue, Victoria, BC V9C 3C4",
+    "phone": "(250) 478-2759"
+  },
+  {
+    "businessName": "Darlene Rotchford, MLA for Esquimalt-Colwood",
+    "address": "104-1497 Admirals Rd, Victoria, BC V9A 2P8",
+    "phone": "(250) 952-5885"
+  },
+  {
+    "businessName": "JA British Columbia",
+    "address": "360-475 West Georgia Street, Vancouver, BC V6B 4M9",
+    "phone": "604-688-3887 ext. 230"
+  },
+  {
+    "businessName": "Royal Roads University",
+    "address": "2005 Sooke Road, Victoria, BC V9B 5Y2",
+    "phone": "(250) 391-2511"
+  },
+  {
+    "businessName": "Code Ninjas Westshore",
+    "address": "890 Goldstream Ave, Victoria, BC V9B 2X9",
+    "phone": "(778) 265-2633"
+  },
+  {
+    "businessName": "Jenn's Little Bears Early Childhood Education Centre",
+    "address": "623 Kelly Rd, Victoria, BC V9B 2A6",
+    "phone": "(250) 478-8999"
+  },
+  {
+    "businessName": "Jeff Kibble, Member of Parliament",
+    "address": "202-814 Goldstream Avenue, Langford, BC V9B 2X9",
+    "phone": "(250) 434-8138"
+  },
+  {
+    "businessName": "Easter Seals BC/Yukon",
+    "address": "132-328 Wale Road, Victoria, BC V9B 0J8",
+    "phone": "(800) 818-4483"
+  },
+  {
+    "businessName": "Camosun College",
+    "address": "4461 Interurban Rd, Victoria, BC V9E 2C1",
+    "phone": "(250) 370-3000"
+  },
+  {
+    "businessName": "Cherish Community Living Ltd.",
+    "address": "100-917 Avrill Road, Langford, BC V9B 0T2",
+    "phone": "(250) 478-4431"
+  },
+  {
+    "businessName": "Sooke School District #62",
+    "address": "3143 Jacklin Road, Victoria, BC V9B 5R1",
+    "phone": "(250) 474-9800"
+  },
+  {
+    "businessName": "BGC South Vancouver Island",
+    "address": "4-961 Dunford Avenue, Victoria, BC V9B 2S4",
+    "phone": "(250) 384-9133"
+  },
+  {
+    "businessName": "Saanich Peninsula Chamber of Commerce",
+    "address": "10382 Pat Bay Highway, Victoria, BC V8L 5S8",
+    "phone": "(250) 656-3616"
+  },
+  {
+    "businessName": "Connections Place Clubhouse",
+    "address": "1803 Douglas Street, Unit 103, Victoria, BC V8T 5C3",
+    "phone": "(250) 483-3748"
+  },
+  {
+    "businessName": "City of Langford",
+    "address": "2nd Floor, 877 Goldstream Ave, Langford, BC V9B 2X8",
+    "phone": "(250) 478-7882"
+  },
+  {
+    "businessName": "Brookes Westshore Schools Society",
+    "address": "1939 Sooke Rd, Victoria, BC V9B 1W2",
+    "phone": "(250) 929-0506"
+  },
+  {
+    "businessName": "Victoria Conservatory of Music",
+    "address": "210 - 1314 Lakepoint Way, Langford, BC V9B 0L9",
+    "phone": "(250) 386-5311"
+  },
+  {
+    "businessName": "Fateh Care Charity",
+    "address": "791 Cameo St, Victoria, BC V8X 4M3",
+    "phone": "(587) 889-2700"
+  },
+  {
+    "businessName": "The South Island Prosperity Partnership",
+    "address": "901-747 Fort St, Victoria, BC V8W 3E9",
+    "phone": "(778) 265-8128"
+  },
+  {
+    "businessName": "Service Canada",
+    "address": "3179 Jacklin Road, Victoria, BC V9B 3Y7",
+    "phone": "(800) 622-6232"
+  },
+  {
+    "businessName": "Orbus Business Networks Inc.",
+    "address": "PO Box 48022, Victoria, BC V8Z 7H5",
+    "phone": "(250) 388-4933"
+  },
+  {
+    "businessName": "Adventure Awaits Childcare",
+    "address": "3326 Painter Road, Colwood, BC V9C 2H8",
+    "phone": "(250) 858 - 8154"
+  },
+  {
+    "businessName": "John Howard Society of Victoria",
+    "address": "100 - 637 Bay Street, Victoria, BC V8T 5L2",
+    "phone": "(250) 386-3428"
+  },
+  {
+    "businessName": "Sooke Family Resource Society",
+    "address": "100 - 6672 Wadams Way, Sooke, BC V9Z 0H3",
+    "phone": "(250) 642-5152"
+  },
+  {
+    "businessName": "Destination Greater Victoria",
+    "address": "812 Wharf St - Visitor Centre, Victoria, BC V8W 1T3",
+    "phone": "(250) 953-2033"
+  },
+  {
+    "businessName": "Indigenous Perspectives Society: Centre of Excellence in Community Education",
+    "address": "664 Granderson Rd, Langford, BC V9B 2R8",
+    "phone": "(250) 391-0007"
+  },
+  {
+    "businessName": "Inter-Cultural Association of Greater Victoria",
+    "address": "#102 - 808 Douglas Street, Victoria, BC V8W 2B6",
+    "phone": "(250) 388-4728"
+  },
+  {
+    "businessName": "Youth for Christ Victoria",
+    "address": "#112 - 2244 Sooke Rd., Victoria, BC V9B 1X1",
+    "phone": "(250) 383-3182"
+  },
+  {
+    "businessName": "Belmont Park Pre-School Society",
+    "address": "301 Zealous Crescent, Victoria, BC V9C 1H6",
+    "phone": "(250) 474-6678"
+  },
+  {
+    "businessName": "Saunders Family Centre",
+    "address": "Victoria, BC",
+    "phone": ""
+  },
+  {
+    "businessName": "Ryes & Shine Craft Distillery",
+    "address": "103 - 2323 Millstream Road, Langford, BC V9B 6L2",
+    "phone": "(778) 734-2026"
+  },
+  {
+    "businessName": "Rhino Coffee House and Lounge",
+    "address": "111-2840 Peatt Road, Victoria, BC V9B 3V5",
+    "phone": "(250) 514-1396"
+  },
+  {
+    "businessName": "Three Gringos Mexican Grill",
+    "address": "113 - 735 Goldstream Avenue, Victoria, BC V9C 1N1",
+    "phone": "(250) 391-4047"
+  },
+  {
+    "businessName": "Highland Pacific Golf",
+    "address": "450 Creed Rd, Victoria, BC V9B 6C9",
+    "phone": "(250) 478-4653"
+  },
+  {
+    "businessName": "The Crazy Cookie House",
+    "address": "4105 Metchosin Road, Victoria, BC V9C 3Z6",
+    "phone": "(250) 686-6536"
+  },
+  {
+    "businessName": "Big Wheel Burger",
+    "address": "2945 Jacklin Rd Unit 610, Langford, BC V9B 5E3",
+    "phone": "(250) 590-2850"
+  },
+  {
+    "businessName": "Elements Casino Victoria",
+    "address": "1708 Island Hwy, Victoria, BC V9B 1H8",
+    "phone": "(250) 391-0311"
+  },
+  {
+    "businessName": "The Stick's Roastoreum",
+    "address": "6711 Eustace Road, Sooke, BC V9Z 0P7",
+    "phone": "(250) 642-5635"
+  },
+  {
+    "businessName": "Floyd's Diner - Langford",
+    "address": "101-721 Station Avenue, Langford, BC V9B 2S1",
+    "phone": "(778) 440-1200"
+  },
+  {
+    "businessName": "Emporia",
+    "address": "737 Goldstream Avenue, Victoria, BC V9B 5T2",
+    "phone": "(778) 445-4546"
+  },
+  {
+    "businessName": "Olympic View Golf Club & Table Nineteen",
+    "address": "643 Latoria Road, Victoria, BC V9C 3A3",
+    "phone": "(250) 474-3673"
+  },
+  {
+    "businessName": "This Week's Lunch",
+    "address": "105-1120 Yates St, Victoria, BC V8V 3M9",
+    "phone": "(778) 977-2206"
+  },
+  {
+    "businessName": "Yuchen Coffeehouse Inc (Serious Coffee View Royal)",
+    "address": "1703 Island Highway, Victoria, BC V9B 1J1",
+    "phone": "(778) 430-5282"
+  },
+  {
+    "businessName": "Goodview Family Restaurant",
+    "address": "102-310 Wale Road, Victoria, BC V9B 0J8",
+    "phone": "(250) 474-0822"
+  },
+  {
+    "businessName": "The Outpost Board Game Cafe Inc.",
+    "address": "109-2850 Peatt Road, Langford, BC V9B 6Z2",
+    "phone": "(250) 915-7779"
+  },
+  {
+    "businessName": "Royal Canadian Legion - Prince Edward Branch #91",
+    "address": "761 Station Avenue, Victoria, BC V9B 2S1",
+    "phone": "(250) 478-1828"
+  },
+  {
+    "businessName": "Poncho's Cafe & Catering",
+    "address": "115-755 Goldstream Avenue, Langford, BC V9B 0H9",
+    "phone": "(778) 430-5510"
+  },
+  {
+    "businessName": "Urban Forage",
+    "address": "Victoria , BC",
+    "phone": "(250) 889-9779"
+  },
+  {
+    "businessName": "Four Points by Sheraton Victoria Gateway",
+    "address": "829 McCallum Road, Victoria, BC V9B 6W6",
+    "phone": "(250) 474-6063"
+  },
+  {
+    "businessName": "House of Boateng Food Inc.",
+    "address": "105 - 2854 Peatt Road, Victoria, BC V9B 0W3",
+    "phone": "(778) 432-2233"
+  },
+  {
+    "businessName": "Decorate Langford",
+    "address": "",
+    "phone": ""
+  },
+  {
+    "businessName": "WestShore Chamber of Commerce",
+    "address": "2830 Aldwynd Road, Victoria, BC V9B 357",
+    "phone": "(250) 478-1130"
+  },
+  {
+    "businessName": "Expedia Cruises",
+    "address": "748 Goldstream Avenue, Victoria, BC V9B 2X3",
+    "phone": "(250) 474-2744"
+  },
+  {
+    "businessName": "EMR Vacation Rentals Inc",
+    "address": "1117 Monica Terrace, Victoria, BC V9C 3V2",
+    "phone": "(250) 483-6790"
+  },
+  {
+    "businessName": "TravelOnly",
+    "address": "BC",
+    "phone": "(902) 222-9796"
+  },
+  {
+    "businessName": "Island FanCon",
+    "address": "26-118 Aldersmith Place, Victoria, BC V9A 7M9",
+    "phone": "(778) 584-6163"
+  },
+  {
+    "businessName": "Greater Victoria Festival Society",
+    "address": "602-620 View Street, Victoria, BC V8W 1G6",
+    "phone": "(250) 382-3111"
+  },
+  {
+    "businessName": "A Taste Of Victoria Food Tours",
+    "address": "Victoria, BC",
+    "phone": "(250) 893-9815"
+  },
+  {
+    "businessName": "Destination Greater Victoria",
+    "address": "812 Wharf St - Visitor Centre, Victoria, BC V8W 1T3",
+    "phone": "(250) 953-2033"
+  },
+  {
+    "businessName": "The Crazy Cookie House",
+    "address": "4105 Metchosin Road, Victoria, BC V9C 3Z6",
+    "phone": "(250) 686-6536"
+  },
+  {
+    "businessName": "Sandman Hotel Victoria",
+    "address": "2852 Douglas Ave, Victoria, BC V8T 4M5",
+    "phone": "(250) 388-0788"
+  },
+  {
+    "businessName": "Four Points by Sheraton Victoria Gateway",
+    "address": "829 McCallum Road, Victoria, BC V9B 6W6",
+    "phone": "(250) 474-6063"
+  },
+  {
+    "businessName": "Pedder Bay Marina",
+    "address": "#12 - 925 Pedder Bay Drive, Victoria, BC V9C 4H1",
+    "phone": "(250) 478-1771"
+  },
+  {
+    "businessName": "Elements Casino Victoria",
+    "address": "1708 Island Hwy, Victoria, BC V9B 1H8",
+    "phone": "(250) 391-0311"
+  },
+  {
+    "businessName": "Fairways Hotel on the Mountain",
+    "address": "1376 Lynburne Place, Langford, BC V9B 6S1",
+    "phone": "(778) 401-2020"
+  },
+  {
+    "businessName": "Fort Rodd Hill and Fisgard Lighthouse National Historic Sites",
+    "address": "603 Fort Rodd Hill Road, Victoria, BC V9C 2W8",
+    "phone": "(250) 478-5849"
+  },
+  {
+    "businessName": "The Wilson's Group of Companies",
+    "address": "1925 Blanshard St, Victoria, BC V8T 4J2",
+    "phone": "(250) 754-2545"
+  },
+  {
+    "businessName": "Tourism Cafe Canada",
+    "address": "815 Deal Street, Comox, BC V9M 1A9",
+    "phone": "(250) 941-7702"
+  }
+]
