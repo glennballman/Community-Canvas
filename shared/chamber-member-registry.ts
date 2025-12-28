@@ -1,8 +1,12 @@
 import { ChamberMemberSchema, ChamberMemberArraySchema, type ChamberMember, type BusinessCategory } from './chamber-member-schema';
 import portAlberniData from '../data/chambers/port-alberni.json';
+import ladysmithData from '../data/chambers/ladysmith.json';
+import portHardyData from '../data/chambers/port-hardy.json';
 
 const chamberDataFiles: Record<string, unknown[]> = {
   'port-alberni-chamber': portAlberniData as unknown[],
+  'ladysmith-chamber': ladysmithData as unknown[],
+  'port-hardy-chamber': portHardyData as unknown[],
 };
 
 let validatedMembers: ChamberMember[] | null = null;
