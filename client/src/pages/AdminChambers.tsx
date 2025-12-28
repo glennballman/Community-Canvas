@@ -16,8 +16,12 @@ import {
   ChevronRight,
   MapPin,
   X,
-  Filter
+  Filter,
+  ClipboardCheck,
+  AlertCircle,
+  CheckCircle2
 } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
 import { BC_CHAMBERS_OF_COMMERCE, type ChamberOfCommerce } from "@shared/chambers-of-commerce";
 import { chamberMembers } from "@shared/chamber-members";
@@ -415,6 +419,67 @@ export default function AdminChambers() {
     };
   }, []);
 
+  interface AuditRow {
+    chamber: ChamberWithMatch;
+    expectedMembers: number | null;
+    actualMembers: number;
+    coverage: number;
+    status: 'complete' | 'partial' | 'none' | 'unknown';
+  }
+
+  const auditData = useMemo((): AuditRow[] => {
+    return chamberWithMatches.map(chamber => {
+      const expectedMembersRaw = chamber.members;
+      const expectedMembers = expectedMembersRaw ? parseInt(String(expectedMembersRaw), 10) : null;
+      const actualMembers = memberStats.byChamber[chamber.id] || 0;
+      
+      let coverage = 0;
+      let status: 'complete' | 'partial' | 'none' | 'unknown' = 'unknown';
+      
+      if (expectedMembers && expectedMembers > 0) {
+        coverage = Math.min(100, (actualMembers / expectedMembers) * 100);
+        if (coverage >= 80) status = 'complete';
+        else if (coverage > 0) status = 'partial';
+        else status = 'none';
+      } else if (actualMembers > 0) {
+        coverage = 100;
+        status = 'complete';
+      } else {
+        status = 'none';
+      }
+      
+      return {
+        chamber,
+        expectedMembers,
+        actualMembers,
+        coverage,
+        status
+      };
+    });
+  }, [chamberWithMatches, memberStats.byChamber]);
+
+  const filteredAuditData = useMemo(() => {
+    if (!hasGeoFilter) return auditData;
+    return auditData.filter(row => {
+      const c = row.chamber;
+      if (c.matchedRegion && selectedRegions.has(c.matchedRegion.id)) return true;
+      if (c.matchedMunicipality && selectedMunicipalities.has(c.matchedMunicipality.id)) return true;
+      if (c.matchedMunicipality && c.matchedMunicipality.parentId && selectedRegions.has(c.matchedMunicipality.parentId)) return true;
+      return false;
+    });
+  }, [auditData, hasGeoFilter, selectedRegions, selectedMunicipalities]);
+
+  const auditStats = useMemo(() => {
+    const data = filteredAuditData;
+    const complete = data.filter(r => r.status === 'complete').length;
+    const partial = data.filter(r => r.status === 'partial').length;
+    const none = data.filter(r => r.status === 'none').length;
+    const unknown = data.filter(r => r.status === 'unknown').length;
+    const totalExpected = data.reduce((sum, r) => sum + (r.expectedMembers || 0), 0);
+    const totalActual = data.reduce((sum, r) => sum + r.actualMembers, 0);
+    return { complete, partial, none, unknown, totalExpected, totalActual, total: data.length };
+  }, [filteredAuditData]);
+
   const handleToggleRegion = (regionId: string) => {
     setSelectedRegions(prev => {
       const next = new Set(prev);
@@ -507,6 +572,13 @@ export default function AdminChambers() {
                 data-testid="tab-members"
               >
                 MEMBERS ({hasGeoFilter ? filteredMembers.length.toLocaleString() : memberStats.total.toLocaleString()})
+              </TabsTrigger>
+              <TabsTrigger 
+                value="audit" 
+                className="rounded-none border-b-2 border-transparent data-[state=active]:border-amber-400 data-[state=active]:bg-transparent px-4 py-2 text-xs"
+                data-testid="tab-audit"
+              >
+                AUDIT ({hasGeoFilter ? filteredAuditData.length : auditStats.total})
               </TabsTrigger>
             </TabsList>
 
@@ -705,6 +777,126 @@ export default function AdminChambers() {
                               </div>
                             ) : (
                               <span className="text-muted-foreground/50 text-[10px]">-</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </ScrollArea>
+            </TabsContent>
+
+            <TabsContent value="audit" className="flex-1 overflow-hidden m-0 flex flex-col data-[state=inactive]:hidden">
+              <div className="p-3 border-b border-border/30 flex items-center gap-4 flex-wrap">
+                <div className="flex gap-4 text-[10px] flex-wrap">
+                  <div className="flex items-center gap-1">
+                    <CheckCircle2 className="w-3 h-3 text-green-400" />
+                    <span className="text-green-400">{auditStats.complete} COMPLETE (80%+)</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <AlertCircle className="w-3 h-3 text-amber-400" />
+                    <span className="text-amber-400">{auditStats.partial} PARTIAL</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <XCircle className="w-3 h-3 text-red-400" />
+                    <span className="text-red-400">{auditStats.none} NONE</span>
+                  </div>
+                </div>
+                <div className="text-[10px] text-muted-foreground ml-auto">
+                  {auditStats.totalActual.toLocaleString()} / {auditStats.totalExpected.toLocaleString()} MEMBERS COLLECTED
+                </div>
+              </div>
+              <ScrollArea className="flex-1">
+                <div className="p-3">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="text-[10px] text-muted-foreground border-b border-border/30">
+                        <th className="text-left py-2 px-2">CHAMBER</th>
+                        <th className="text-left py-2 px-2">REGION</th>
+                        <th className="text-left py-2 px-2">MUNICIPALITY</th>
+                        <th className="text-right py-2 px-2">EXPECTED</th>
+                        <th className="text-right py-2 px-2">ACTUAL</th>
+                        <th className="text-left py-2 px-2 w-32">COVERAGE</th>
+                        <th className="text-left py-2 px-2">STATUS</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredAuditData.map(row => (
+                        <tr 
+                          key={row.chamber.id} 
+                          className="border-b border-border/20 hover-elevate"
+                          data-testid={`row-audit-${row.chamber.id}`}
+                        >
+                          <td className="py-2 px-2">
+                            <div className="flex items-center gap-2">
+                              <ClipboardCheck className="w-3 h-3 text-amber-400" />
+                              <div>
+                                <div className="font-medium">{row.chamber.name}</div>
+                                {row.chamber.website && (
+                                  <a 
+                                    href={row.chamber.website} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="text-[10px] text-blue-400/70 hover:text-blue-400"
+                                  >
+                                    {row.chamber.website.replace(/^https?:\/\//, '').replace(/\/$/, '')}
+                                  </a>
+                                )}
+                              </div>
+                            </div>
+                          </td>
+                          <td className="py-2 px-2">
+                            <Badge variant="outline" className="text-[8px] bg-indigo-500/10 text-indigo-400 border-indigo-500/30">
+                              {row.chamber.region}
+                            </Badge>
+                          </td>
+                          <td className="py-2 px-2 text-muted-foreground text-[10px]">
+                            {row.chamber.matchedMunicipality?.name || row.chamber.municipality || '-'}
+                          </td>
+                          <td className="py-2 px-2 text-right">
+                            {row.expectedMembers !== null ? (
+                              <span className="text-cyan-400">{row.expectedMembers}</span>
+                            ) : (
+                              <span className="text-muted-foreground/50">-</span>
+                            )}
+                          </td>
+                          <td className="py-2 px-2 text-right">
+                            <span className={row.actualMembers > 0 ? "text-emerald-400 font-medium" : "text-muted-foreground/50"}>
+                              {row.actualMembers > 0 ? row.actualMembers : '-'}
+                            </span>
+                          </td>
+                          <td className="py-2 px-2">
+                            <div className="flex items-center gap-2">
+                              <Progress 
+                                value={row.coverage} 
+                                className="h-1.5 flex-1"
+                              />
+                              <span className="text-[9px] text-muted-foreground w-8 text-right">
+                                {row.coverage.toFixed(0)}%
+                              </span>
+                            </div>
+                          </td>
+                          <td className="py-2 px-2">
+                            {row.status === 'complete' && (
+                              <Badge variant="outline" className="text-[8px] bg-green-500/10 text-green-400 border-green-500/30">
+                                COMPLETE
+                              </Badge>
+                            )}
+                            {row.status === 'partial' && (
+                              <Badge variant="outline" className="text-[8px] bg-amber-500/10 text-amber-400 border-amber-500/30">
+                                PARTIAL
+                              </Badge>
+                            )}
+                            {row.status === 'none' && (
+                              <Badge variant="outline" className="text-[8px] bg-red-500/10 text-red-400 border-red-500/30">
+                                NONE
+                              </Badge>
+                            )}
+                            {row.status === 'unknown' && (
+                              <Badge variant="outline" className="text-[8px] bg-gray-500/10 text-gray-400 border-gray-500/30">
+                                UNKNOWN
+                              </Badge>
                             )}
                           </td>
                         </tr>
