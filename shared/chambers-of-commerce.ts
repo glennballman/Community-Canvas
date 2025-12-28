@@ -69,7 +69,8 @@ export const BC_CHAMBERS_OF_COMMERCE: ChamberOfCommerce[] = [
       lng: -122.8490
     },
     website: "https://www.sswrchamberofcommerce.ca",
-    notes: "Formed from merger of Surrey and White Rock chambers. Trade Accelerator Program (TAP)."
+    members: "3,000+",
+    notes: "Formed from merger of Surrey and White Rock chambers. Trade Accelerator Program (TAP). Top 10 largest in Canada."
   },
   {
     id: "richmond-chamber-of-commerce",
@@ -84,6 +85,7 @@ export const BC_CHAMBERS_OF_COMMERCE: ChamberOfCommerce[] = [
     phone: "(604) 278-2822",
     website: "https://www.richmondchamber.ca",
     founded: 1925,
+    members: "700-1,000",
     notes: "Celebrating 100 years of service. Annual Business Excellence Awards."
   },
   {
@@ -133,12 +135,15 @@ export const BC_CHAMBERS_OF_COMMERCE: ChamberOfCommerce[] = [
     municipality: "Coquitlam",
     region: "Metro Vancouver",
     location: {
-      address: "Coquitlam",
+      address: "#205 - 2773 Barnet Highway, Coquitlam, BC V3B 1C2",
       lat: 49.2838,
       lng: -122.7932
     },
+    phone: "(604) 464-2716",
     website: "https://www.tricitieschamber.com",
-    notes: "Serving Coquitlam, Port Coquitlam, and Port Moody."
+    founded: 1971,
+    members: "1,300+",
+    notes: "Serving Coquitlam, Port Coquitlam, Port Moody, Anmore, and Belcarra."
   },
   {
     id: "cloverdale-district-chamber",
@@ -146,12 +151,15 @@ export const BC_CHAMBERS_OF_COMMERCE: ChamberOfCommerce[] = [
     municipality: "Surrey",
     region: "Metro Vancouver",
     location: {
-      address: "Cloverdale, Surrey",
+      address: "5738 176 St, Surrey, BC V3S 4C8",
       lat: 49.1044,
       lng: -122.7239
     },
+    phone: "(604) 574-9802",
+    email: "info@cloverdalechamber.ca",
     website: "https://www.cloverdalechamber.ca",
-    notes: "Serving Cloverdale district of Surrey."
+    founded: 1949,
+    notes: "Serving Cloverdale, Clayton, and Campbell Heights since 1949."
   },
   {
     id: "new-westminster-chamber",
@@ -159,12 +167,14 @@ export const BC_CHAMBERS_OF_COMMERCE: ChamberOfCommerce[] = [
     municipality: "New Westminster",
     region: "Metro Vancouver",
     location: {
-      address: "New Westminster",
+      address: "201-309 Sixth Street, New Westminster, BC V3L 3A7",
       lat: 49.2057,
       lng: -122.9110
     },
+    phone: "(604) 521-7781",
     website: "https://www.newwestchamber.com",
-    notes: "Serving New Westminster business community."
+    founded: 1883,
+    notes: "One of BC's oldest chambers. Serving New Westminster business community."
   },
 
   // ============================================================================
@@ -209,12 +219,15 @@ export const BC_CHAMBERS_OF_COMMERCE: ChamberOfCommerce[] = [
     municipality: "Langley",
     region: "Fraser Valley",
     location: {
-      address: "Langley",
+      address: "207 - 8047 199 Street, Langley, BC V2Y 0E2",
       lat: 49.1044,
       lng: -122.6608
     },
+    phone: "(604) 371-3770",
     website: "https://www.langleychamber.com",
-    notes: "Serving Langley City and Township."
+    founded: 1931,
+    members: "1,100+",
+    notes: "BC's Fastest-Growing Chamber 2025. Nearly 70% small businesses."
   },
   {
     id: "mission-chamber-of-commerce",
@@ -226,8 +239,11 @@ export const BC_CHAMBERS_OF_COMMERCE: ChamberOfCommerce[] = [
       lat: 49.1329,
       lng: -122.3095
     },
+    phone: "(604) 826-6914",
     website: "https://www.missionchamber.bc.ca",
-    notes: "Serving Mission and district."
+    founded: 1893,
+    members: "425+",
+    notes: "BC's 4th Board of Trade. 70% of members have 5 or fewer employees."
   },
   {
     id: "maple-ridge-pitt-meadows-chamber",
@@ -248,12 +264,15 @@ export const BC_CHAMBERS_OF_COMMERCE: ChamberOfCommerce[] = [
     municipality: "Hope",
     region: "Fraser Valley",
     location: {
-      address: "Hope",
+      address: "P.O. Box 588, Hope, BC V0X 1L0",
       lat: 49.3858,
       lng: -121.4419
     },
+    phone: "(604) 869-2021",
+    email: "info@hopechamber.ca",
     website: "https://www.hopechamber.ca",
-    notes: "Gateway to the Fraser Canyon."
+    members: "100+",
+    notes: "Gateway to the Fraser Canyon. Serves Laidlaw to Boston Bar."
   },
   {
     id: "harrison-hot-springs-chamber",
@@ -306,11 +325,13 @@ export const BC_CHAMBERS_OF_COMMERCE: ChamberOfCommerce[] = [
     municipality: "Langford",
     region: "Capital",
     location: {
-      address: "Langford",
+      address: "2830 Aldwynd Road, Victoria, BC V9B 3S7",
       lat: 48.4506,
       lng: -123.5058
     },
+    phone: "(250) 478-1130",
     website: "https://www.westshore.bc.ca",
+    members: "500+",
     notes: "Serving Langford, Colwood, View Royal, Metchosin, Highlands."
   },
   {
@@ -445,13 +466,15 @@ export const BC_CHAMBERS_OF_COMMERCE: ChamberOfCommerce[] = [
     municipality: "Nanaimo",
     region: "Nanaimo",
     location: {
-      address: "Nanaimo",
+      address: "2133 Bowen Rd, Nanaimo, BC V9S 1H8",
       lat: 49.1659,
       lng: -123.9401
     },
     phone: "(250) 756-1191",
+    email: "memberservices@nanaimochamber.bc.ca",
     website: "https://www.nanaimochamber.bc.ca",
-    notes: "Third largest on Vancouver Island."
+    members: "730+",
+    notes: "Third largest on Vancouver Island. Hosts annual Business Expo."
   },
   {
     id: "parksville-chamber",
@@ -511,14 +534,15 @@ export const BC_CHAMBERS_OF_COMMERCE: ChamberOfCommerce[] = [
     municipality: "Campbell River",
     region: "Strathcona",
     location: {
-      address: "Campbell River",
+      address: "900 Alder Street, Campbell River, BC V9W 2P6",
       lat: 50.0244,
       lng: -125.2475
     },
     phone: "(250) 287-4636",
-    email: "admin@campbellriverchamber.ca",
+    email: "exdir@crchamber.ca",
     website: "https://www.campbellriverchamber.ca",
-    notes: "Salmon Capital of the World. Gateway to Discovery Islands."
+    members: "250+",
+    notes: "Salmon Capital of the World. Gateway to Discovery Islands. 30+ cost-saving programs."
   },
 
   // ============================================================================
@@ -864,7 +888,9 @@ export const BC_CHAMBERS_OF_COMMERCE: ChamberOfCommerce[] = [
     phone: "(250) 837-5345",
     email: "info@revelstokechamber.com",
     website: "https://www.revelstokechamber.com",
-    notes: "Business and Visitor Information Centre."
+    founded: 1895,
+    members: "440+",
+    notes: "BC's fastest-growing chamber 2024 (29.5% growth). 129+ years in operation."
   },
   {
     id: "golden-chamber",
@@ -895,8 +921,10 @@ export const BC_CHAMBERS_OF_COMMERCE: ChamberOfCommerce[] = [
       lat: 50.6745,
       lng: -120.3273
     },
+    phone: "(250) 372-7722",
     website: "https://www.kamloopschamber.ca",
     founded: 1896,
+    members: "700+",
     notes: "Serving Thompson Valley since 1896. Visitor information center."
   },
   {
@@ -1279,13 +1307,16 @@ export const BC_CHAMBERS_OF_COMMERCE: ChamberOfCommerce[] = [
     municipality: "Terrace",
     region: "Kitimat-Stikine",
     location: {
-      address: "4554 Lazelle Avenue, Terrace, BC V8G 1S2",
+      address: "3224 Kalum Street, Terrace, BC V8G 2N1",
       lat: 54.5182,
       lng: -128.6037
     },
     phone: "(250) 635-2063",
+    email: "admin@terracechamber.com",
     website: "https://www.terracechamber.com",
-    notes: "Serving Terrace and Northwest BC."
+    founded: 1927,
+    members: "280+",
+    notes: "Serving Terrace, Thornhill, and Northwest BC since 1927."
   },
   {
     id: "kitimat-chamber",
@@ -1324,13 +1355,16 @@ export const BC_CHAMBERS_OF_COMMERCE: ChamberOfCommerce[] = [
     municipality: "Prince Rupert",
     region: "North Coast",
     location: {
-      address: "515 3rd Avenue West, Prince Rupert, BC V8J 1L9",
+      address: "100-515 3rd Ave West, Prince Rupert, BC V8J 1L9",
       lat: 54.3150,
       lng: -130.3208
     },
     phone: "(250) 624-2296",
-    website: "https://www.princerupertchamber.ca",
-    notes: "Deep-sea port. BC Ferries northern terminus."
+    email: "info@princerupertchamber.ca",
+    website: "https://www.rupertchamber.ca",
+    founded: 1908,
+    members: "300",
+    notes: "Deep-sea port. BC Ferries northern terminus. Originally Board of Trade."
   },
 
   // ============================================================================
@@ -1342,12 +1376,15 @@ export const BC_CHAMBERS_OF_COMMERCE: ChamberOfCommerce[] = [
     municipality: "Cranbrook",
     region: "East Kootenay",
     location: {
-      address: "Cranbrook",
+      address: "2279 Cranbrook St N, Cranbrook, BC V1C 3T3",
       lat: 49.5097,
       lng: -115.7689
     },
+    phone: "(250) 426-5914",
     website: "https://www.cranbrookchamber.com",
-    notes: "Largest city in East Kootenay."
+    founded: 1910,
+    members: "450+",
+    notes: "Largest city in East Kootenay. All business sizes and sectors represented."
   },
   {
     id: "kimberley-chamber",
@@ -1448,12 +1485,13 @@ export const BC_CHAMBERS_OF_COMMERCE: ChamberOfCommerce[] = [
     municipality: "Nelson",
     region: "Central Kootenay",
     location: {
-      address: "Nelson",
+      address: "Nelson, BC",
       lat: 49.4928,
       lng: -117.2948
     },
     website: "https://www.discovernelson.com",
-    notes: "Queen City. Heritage downtown. Cultural hub."
+    members: "500+",
+    notes: "Queen City. Heritage downtown. Serving Nelson, Harrop/Procter, Balfour, Ainsworth."
   },
   {
     id: "trail-chamber",
@@ -1530,12 +1568,14 @@ export const BC_CHAMBERS_OF_COMMERCE: ChamberOfCommerce[] = [
     municipality: "Squamish",
     region: "Squamish-Lillooet",
     location: {
-      address: "Squamish",
+      address: "#102, 38551 Loggers Lane, Squamish, BC V8B 0H2",
       lat: 49.7016,
       lng: -123.1558
     },
+    phone: "(604) 815-4990",
+    email: "admin@squamishchamber.com",
     website: "https://www.squamishchamber.com",
-    notes: "Outdoor recreation capital. Sea to Sky Gondola."
+    notes: "Largest and oldest business organization in Squamish. Outdoor recreation capital."
   },
   {
     id: "pemberton-chamber",
