@@ -6,6 +6,8 @@ import { z } from "zod";
 import FirecrawlApp from '@mendable/firecrawl-js';
 import { runChamberAudit } from "@shared/chamber-audit";
 import { buildNAICSTree, getMembersByNAICSCode, getMembersBySector, getMembersBySubsector } from "@shared/naics-hierarchy";
+import { BC_CHAMBERS_OF_COMMERCE } from "@shared/chambers-of-commerce";
+import { chamberMembers } from "@shared/chamber-members";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -151,6 +153,38 @@ export async function registerRoutes(
     } catch (error) {
       console.error("NAICS code members error:", error);
       res.status(500).json({ message: "Failed to get code members" });
+    }
+  });
+
+  app.get("/api/chambers/locations", async (req, res) => {
+    try {
+      const memberCountByChamberId = new Map<string, number>();
+      for (const member of chamberMembers) {
+        const count = memberCountByChamberId.get(member.chamberId) || 0;
+        memberCountByChamberId.set(member.chamberId, count + 1);
+      }
+
+      const locations = BC_CHAMBERS_OF_COMMERCE.map(chamber => ({
+        id: chamber.id,
+        name: chamber.name,
+        lat: chamber.location.lat,
+        lng: chamber.location.lng,
+        memberCount: memberCountByChamberId.get(chamber.id) || 0,
+      })).filter(c => c.memberCount > 0);
+
+      res.json(locations);
+    } catch (error) {
+      console.error("Chamber locations error:", error);
+      res.status(500).json({ message: "Failed to get chamber locations" });
+    }
+  });
+
+  app.get("/api/config/mapbox-token", async (req, res) => {
+    const token = process.env.MAPBOX_ACCESS_TOKEN;
+    if (token) {
+      res.json({ token });
+    } else {
+      res.status(404).json({ message: "Mapbox token not configured" });
     }
   });
 
