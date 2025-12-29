@@ -1,5 +1,6 @@
-import { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMemo, useState, useRef, useEffect } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { queryClient, apiRequest } from "@/lib/queryClient";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -564,6 +565,75 @@ export default function AdminChambers() {
   const { data: progressData } = useQuery<{ progressList: ChamberProgress[]; summary: ChamberProgressSummary }>({
     queryKey: ['/api/admin/chamber-progress'],
   });
+
+  // Fetch chamber overrides
+  interface ChamberOverride {
+    chamberId: string;
+    expectedMembers: number | null;
+    estimatedMembers: number | null;
+  }
+  const { data: overridesData } = useQuery<ChamberOverride[]>({
+    queryKey: ['/api/admin/chamber-overrides'],
+  });
+  const overridesMap = useMemo(() => {
+    const map = new Map<string, ChamberOverride>();
+    for (const o of overridesData || []) {
+      map.set(o.chamberId, o);
+    }
+    return map;
+  }, [overridesData]);
+
+  // Inline editing state
+  const [editingCell, setEditingCell] = useState<{ chamberId: string; field: 'expected' | 'estimated' } | null>(null);
+  const [editValue, setEditValue] = useState<string>('');
+  const editInputRef = useRef<HTMLInputElement>(null);
+
+  // Save override mutation
+  const saveOverrideMutation = useMutation({
+    mutationFn: async ({ chamberId, expectedMembers, estimatedMembers }: { chamberId: string; expectedMembers?: number | null; estimatedMembers?: number | null }) => {
+      const response = await apiRequest('PUT', `/api/admin/chamber-overrides/${chamberId}`, {
+        expectedMembers,
+        estimatedMembers,
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/chamber-overrides'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/chamber-progress'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/chambers/locations'] });
+      setEditingCell(null);
+    },
+  });
+
+  // Handle starting edit
+  const startEdit = (chamberId: string, field: 'expected' | 'estimated', currentValue: number | null) => {
+    setEditingCell({ chamberId, field });
+    setEditValue(currentValue?.toString() || '');
+  };
+
+  // Handle save edit
+  const saveEdit = (chamberId: string, field: 'expected' | 'estimated') => {
+    const numValue = editValue.trim() === '' ? null : parseInt(editValue, 10);
+    if (editValue.trim() !== '' && isNaN(numValue as number)) {
+      setEditingCell(null);
+      return;
+    }
+    
+    const existing = overridesMap.get(chamberId);
+    saveOverrideMutation.mutate({
+      chamberId,
+      expectedMembers: field === 'expected' ? numValue : (existing?.expectedMembers ?? undefined),
+      estimatedMembers: field === 'estimated' ? numValue : (existing?.estimatedMembers ?? undefined),
+    });
+  };
+
+  // Focus input when editing starts
+  useEffect(() => {
+    if (editingCell && editInputRef.current) {
+      editInputRef.current.focus();
+      editInputRef.current.select();
+    }
+  }, [editingCell]);
 
   const progressList = progressData?.progressList || [];
   const progressSummary = progressData?.summary || {
@@ -1164,17 +1234,61 @@ export default function AdminChambers() {
                               </span>
                             </td>
                             <td className="py-2 px-2 text-right">
-                              {row.expectedMembers !== null ? (
-                                <span className="text-cyan-400">{row.expectedMembers}</span>
+                              {editingCell?.chamberId === row.chamberId && editingCell?.field === 'expected' ? (
+                                <input
+                                  ref={editInputRef}
+                                  type="number"
+                                  value={editValue}
+                                  onChange={(e) => setEditValue(e.target.value)}
+                                  onBlur={() => saveEdit(row.chamberId, 'expected')}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') saveEdit(row.chamberId, 'expected');
+                                    if (e.key === 'Escape') setEditingCell(null);
+                                  }}
+                                  className="w-16 h-6 px-1 text-right text-xs bg-cyan-950 border border-cyan-400 rounded focus:outline-none focus:ring-1 focus:ring-cyan-400 text-cyan-400"
+                                  data-testid={`input-expected-${row.chamberId}`}
+                                />
                               ) : (
-                                <span className="text-muted-foreground/50">-</span>
+                                <button
+                                  onClick={() => startEdit(row.chamberId, 'expected', overridesMap.get(row.chamberId)?.expectedMembers ?? row.expectedMembers)}
+                                  className="hover:bg-cyan-500/20 px-1 py-0.5 rounded cursor-pointer transition-colors"
+                                  data-testid={`button-edit-expected-${row.chamberId}`}
+                                >
+                                  {(overridesMap.get(row.chamberId)?.expectedMembers ?? row.expectedMembers) !== null ? (
+                                    <span className="text-cyan-400">{overridesMap.get(row.chamberId)?.expectedMembers ?? row.expectedMembers}</span>
+                                  ) : (
+                                    <span className="text-muted-foreground/50">-</span>
+                                  )}
+                                </button>
                               )}
                             </td>
                             <td className="py-2 px-2 text-right">
-                              {row.expectedMembers === null ? (
-                                <span className="text-orange-400/70">{row.estimatedMembers}</span>
+                              {editingCell?.chamberId === row.chamberId && editingCell?.field === 'estimated' ? (
+                                <input
+                                  ref={editInputRef}
+                                  type="number"
+                                  value={editValue}
+                                  onChange={(e) => setEditValue(e.target.value)}
+                                  onBlur={() => saveEdit(row.chamberId, 'estimated')}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') saveEdit(row.chamberId, 'estimated');
+                                    if (e.key === 'Escape') setEditingCell(null);
+                                  }}
+                                  className="w-16 h-6 px-1 text-right text-xs bg-orange-950 border border-orange-400 rounded focus:outline-none focus:ring-1 focus:ring-orange-400 text-orange-400"
+                                  data-testid={`input-estimated-${row.chamberId}`}
+                                />
                               ) : (
-                                <span className="text-muted-foreground/50">-</span>
+                                <button
+                                  onClick={() => startEdit(row.chamberId, 'estimated', overridesMap.get(row.chamberId)?.estimatedMembers ?? row.estimatedMembers)}
+                                  className="hover:bg-orange-500/20 px-1 py-0.5 rounded cursor-pointer transition-colors"
+                                  data-testid={`button-edit-estimated-${row.chamberId}`}
+                                >
+                                  {(overridesMap.get(row.chamberId)?.expectedMembers ?? row.expectedMembers) === null ? (
+                                    <span className="text-orange-400/70">{overridesMap.get(row.chamberId)?.estimatedMembers ?? row.estimatedMembers}</span>
+                                  ) : (
+                                    <span className="text-muted-foreground/50">-</span>
+                                  )}
+                                </button>
                               )}
                             </td>
                             <td className="py-2 px-2 text-right">

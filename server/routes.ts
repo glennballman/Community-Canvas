@@ -165,9 +165,33 @@ export async function registerRoutes(
         memberCountByChamberId.set(member.chamberId, count + 1);
       }
 
-      // Get progress status for each chamber
+      // Get progress status for each chamber with overrides applied
       const progressList = getChamberProgressList();
-      const statusByChamberId = new Map(progressList.map(p => [p.chamberId, p.status]));
+      const overrides = await storage.getChamberOverrides();
+      const overridesMap = new Map(overrides.map(o => [o.chamberId, o]));
+      
+      // Calculate status with overrides
+      const statusByChamberId = new Map<string, string>();
+      for (const p of progressList) {
+        const override = overridesMap.get(p.chamberId);
+        if (override && p.actualMembers > 0) {
+          const expectedMembers = override.expectedMembers ?? p.expectedMembers;
+          const estimatedMembers = override.estimatedMembers ?? p.estimatedMembers;
+          const MEMBER_THRESHOLD = 30;
+          const PERCENT_COMPLETE_THRESHOLD = 80;
+          const hasSufficientMembers = p.actualMembers >= MEMBER_THRESHOLD;
+          const targetMembers = expectedMembers !== null ? expectedMembers : estimatedMembers;
+          const percentComplete = targetMembers > 0 ? Math.floor((p.actualMembers / targetMembers) * 100) : 0;
+          const hasSufficientPercentComplete = percentComplete >= PERCENT_COMPLETE_THRESHOLD;
+          if (hasSufficientMembers && hasSufficientPercentComplete) {
+            statusByChamberId.set(p.chamberId, 'completed');
+          } else {
+            statusByChamberId.set(p.chamberId, 'partial');
+          }
+        } else {
+          statusByChamberId.set(p.chamberId, p.status);
+        }
+      }
 
       const locations = BC_CHAMBERS_OF_COMMERCE.map(chamber => ({
         id: chamber.id,
@@ -176,6 +200,7 @@ export async function registerRoutes(
         lng: chamber.location.lng,
         memberCount: memberCountByChamberId.get(chamber.id) || 0,
         status: statusByChamberId.get(chamber.id) || 'pending',
+        website: chamber.website || null,
       })).filter(c => c.memberCount > 0);
 
       res.json(locations);
@@ -197,8 +222,61 @@ export async function registerRoutes(
   app.get("/api/admin/chamber-progress", async (req, res) => {
     try {
       const progressList = getChamberProgressList();
-      const summary = getChamberProgressSummary();
-      res.json({ progressList, summary });
+      const overrides = await storage.getChamberOverrides();
+      const overridesMap = new Map(overrides.map(o => [o.chamberId, o]));
+      
+      // Apply overrides to progress list and recalculate status
+      const adjustedProgressList = progressList.map(p => {
+        const override = overridesMap.get(p.chamberId);
+        if (!override) return p;
+        
+        const expectedMembers = override.expectedMembers ?? p.expectedMembers;
+        const estimatedMembers = override.estimatedMembers ?? p.estimatedMembers;
+        
+        // Recalculate status based on overrides
+        const MEMBER_THRESHOLD = 30;
+        const PERCENT_COMPLETE_THRESHOLD = 80;
+        const partialReasons: ('below_member_threshold' | 'below_percent_complete')[] = [];
+        let status = p.status;
+        
+        if (p.actualMembers > 0) {
+          const hasSufficientMembers = p.actualMembers >= MEMBER_THRESHOLD;
+          const targetMembers = expectedMembers !== null ? expectedMembers : estimatedMembers;
+          const percentComplete = targetMembers > 0 ? Math.floor((p.actualMembers / targetMembers) * 100) : 0;
+          const hasSufficientPercentComplete = percentComplete >= PERCENT_COMPLETE_THRESHOLD;
+          
+          if (!hasSufficientMembers) partialReasons.push('below_member_threshold');
+          if (!hasSufficientPercentComplete) partialReasons.push('below_percent_complete');
+          
+          if (hasSufficientMembers && hasSufficientPercentComplete) {
+            status = 'completed';
+          } else {
+            status = 'partial';
+          }
+        }
+        
+        return {
+          ...p,
+          expectedMembers,
+          estimatedMembers,
+          status,
+          partialReasons,
+        };
+      });
+      
+      // Recalculate summary based on adjusted list
+      const summary = {
+        total: adjustedProgressList.length,
+        completed: adjustedProgressList.filter(p => p.status === 'completed').length,
+        partial: adjustedProgressList.filter(p => p.status === 'partial').length,
+        pending: adjustedProgressList.filter(p => p.status === 'pending').length,
+        inProgress: adjustedProgressList.filter(p => p.status === 'in_progress').length,
+        blocked: adjustedProgressList.filter(p => p.status === 'blocked').length,
+        completedPercentage: adjustedProgressList.length > 0 ? Math.round((adjustedProgressList.filter(p => p.status === 'completed').length / adjustedProgressList.length) * 100) : 0,
+        neededForThreshold: Math.max(0, Math.ceil(adjustedProgressList.length * 0.8) - adjustedProgressList.filter(p => p.status === 'completed').length),
+      };
+      
+      res.json({ progressList: adjustedProgressList, summary });
     } catch (error) {
       console.error("Chamber progress error:", error);
       res.status(500).json({ message: "Failed to get chamber progress" });
@@ -212,6 +290,35 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Chamber progress summary error:", error);
       res.status(500).json({ message: "Failed to get chamber progress summary" });
+    }
+  });
+
+  // Chamber overrides endpoints
+  app.get("/api/admin/chamber-overrides", async (req, res) => {
+    try {
+      const overrides = await storage.getChamberOverrides();
+      res.json(overrides);
+    } catch (error) {
+      console.error("Chamber overrides error:", error);
+      res.status(500).json({ message: "Failed to get chamber overrides" });
+    }
+  });
+
+  app.put("/api/admin/chamber-overrides/:chamberId", async (req, res) => {
+    try {
+      const { chamberId } = req.params;
+      const { expectedMembers, estimatedMembers } = req.body;
+      
+      const override = await storage.upsertChamberOverride(
+        chamberId,
+        expectedMembers !== undefined ? expectedMembers : null,
+        estimatedMembers !== undefined ? estimatedMembers : null
+      );
+      
+      res.json(override);
+    } catch (error) {
+      console.error("Chamber override update error:", error);
+      res.status(500).json({ message: "Failed to update chamber override" });
     }
   });
 

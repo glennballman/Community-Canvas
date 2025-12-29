@@ -1,14 +1,19 @@
 import { db } from "./db";
 import {
   snapshots,
+  chamberOverrides,
   type InsertSnapshot,
-  type Snapshot
+  type Snapshot,
+  type ChamberOverride
 } from "@shared/schema";
 import { eq, desc } from "drizzle-orm";
 
 export interface IStorage {
   getLatestSnapshot(location: string): Promise<Snapshot | undefined>;
   createSnapshot(snapshot: InsertSnapshot): Promise<Snapshot>;
+  getChamberOverrides(): Promise<ChamberOverride[]>;
+  getChamberOverride(chamberId: string): Promise<ChamberOverride | undefined>;
+  upsertChamberOverride(chamberId: string, expectedMembers: number | null, estimatedMembers: number | null): Promise<ChamberOverride>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -28,6 +33,41 @@ export class DatabaseStorage implements IStorage {
       .values(insertSnapshot)
       .returning();
     return results[0];
+  }
+
+  async getChamberOverrides(): Promise<ChamberOverride[]> {
+    return await db.select().from(chamberOverrides);
+  }
+
+  async getChamberOverride(chamberId: string): Promise<ChamberOverride | undefined> {
+    const results = await db
+      .select()
+      .from(chamberOverrides)
+      .where(eq(chamberOverrides.chamberId, chamberId))
+      .limit(1);
+    return results[0];
+  }
+
+  async upsertChamberOverride(chamberId: string, expectedMembers: number | null, estimatedMembers: number | null): Promise<ChamberOverride> {
+    const existing = await this.getChamberOverride(chamberId);
+    if (existing) {
+      const results = await db
+        .update(chamberOverrides)
+        .set({ 
+          expectedMembers, 
+          estimatedMembers,
+          updatedAt: new Date()
+        })
+        .where(eq(chamberOverrides.chamberId, chamberId))
+        .returning();
+      return results[0];
+    } else {
+      const results = await db
+        .insert(chamberOverrides)
+        .values({ chamberId, expectedMembers, estimatedMembers })
+        .returning();
+      return results[0];
+    }
   }
 }
 

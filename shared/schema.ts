@@ -1,4 +1,4 @@
-import { pgTable, text, serial, timestamp, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, jsonb, integer } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -42,3 +42,15 @@ export type Snapshot = typeof snapshots.$inferSelect;
 export type InsertSnapshot = typeof snapshots.$inferInsert;
 export type SnapshotData = z.infer<typeof snapshotDataSchema>;
 export type StatusEntry = z.infer<typeof statusEntrySchema>;
+
+// Chamber member count overrides (Expected/Estimated manual edits)
+export const chamberOverrides = pgTable("chamber_overrides", {
+  chamberId: text("chamber_id").primaryKey(),
+  expectedMembers: integer("expected_members"),
+  estimatedMembers: integer("estimated_members"),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertChamberOverrideSchema = createInsertSchema(chamberOverrides);
+export type ChamberOverride = typeof chamberOverrides.$inferSelect;
+export type InsertChamberOverride = z.infer<typeof insertChamberOverrideSchema>;

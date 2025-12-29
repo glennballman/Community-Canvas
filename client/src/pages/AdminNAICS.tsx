@@ -53,6 +53,7 @@ interface ChamberLocation {
   lng: number;
   memberCount: number;
   status: 'pending' | 'in_progress' | 'partial' | 'completed' | 'blocked';
+  website: string | null;
 }
 
 type ViewLevel = "tree" | "sector" | "subsector" | "industry";
@@ -472,11 +473,15 @@ export function ChamberMapFull() {
       el.style.boxShadow = "0 2px 4px rgba(0,0,0,0.3)";
       el.style.cursor = "pointer";
 
+      const nameHtml = chamber.website 
+        ? `<a href="${chamber.website}" target="_blank" rel="noopener noreferrer" style="color: #0ea5e9; text-decoration: underline; font-weight: bold;">${chamber.name}</a>`
+        : `<strong>${chamber.name}</strong>`;
+      
       const marker = new mapboxgl.Marker(el)
         .setLngLat([chamber.lng, chamber.lat])
         .setPopup(
           new mapboxgl.Popup({ offset: 15 }).setHTML(
-            `<div style="font-size:12px; color: #1a1a1a;"><strong>${chamber.name}</strong><br/>${formatMemberCount(chamber.memberCount)} members<br/><span style="color: ${chamber.status === 'completed' ? '#22c55e' : '#3b82f6'}; font-weight: 600;">${statusLabel}</span></div>`
+            `<div style="font-size:12px; color: #1a1a1a;">${nameHtml}<br/>${formatMemberCount(chamber.memberCount)} members<br/><span style="color: ${chamber.status === 'completed' ? '#22c55e' : '#3b82f6'}; font-weight: 600;">${statusLabel}</span></div>`
           )
         )
         .addTo(map.current!);
