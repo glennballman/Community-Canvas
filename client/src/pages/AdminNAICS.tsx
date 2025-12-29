@@ -208,15 +208,15 @@ function SectorPieChartFull({ sectors }: { sectors: NAICSSectorNode[] }) {
         <PieChartIcon className="w-4 h-4 text-muted-foreground" />
         <h3 className="text-sm font-semibold">Members by Sector</h3>
       </div>
-      <div className="h-[280px]">
+      <div className="h-[400px]">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie
               data={data}
               cx="50%"
               cy="50%"
-              innerRadius={60}
-              outerRadius={120}
+              innerRadius={80}
+              outerRadius={160}
               paddingAngle={1}
               dataKey="value"
             >
