@@ -4,6 +4,7 @@ import { storage } from "./storage";
 import { api } from "@shared/routes";
 import { z } from "zod";
 import FirecrawlApp from '@mendable/firecrawl-js';
+import { runChamberAudit } from "@shared/chamber-audit";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -90,6 +91,16 @@ export async function registerRoutes(
     } catch (err) {
       console.error("Refresh error:", err);
       res.status(500).json({ message: "Failed to refresh data: " + (err as Error).message });
+    }
+  });
+
+  app.get("/api/admin/chamber-audit", async (req, res) => {
+    try {
+      const auditResults = runChamberAudit();
+      res.json(auditResults);
+    } catch (error) {
+      console.error("Chamber audit error:", error);
+      res.status(500).json({ message: "Failed to run chamber audit" });
     }
   });
 
