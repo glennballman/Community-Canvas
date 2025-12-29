@@ -313,7 +313,7 @@ function GrowthChart() {
               tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 8 }}
               tickLine={{ stroke: 'hsl(var(--border))' }}
               axisLine={{ stroke: 'hsl(var(--border))' }}
-              interval={1}
+              interval={0}
               angle={-60}
               textAnchor="end"
               height={70}
