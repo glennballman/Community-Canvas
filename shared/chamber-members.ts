@@ -88145,7 +88145,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-001",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "1909 Kitchen",
     category: "restaurants",
     subcategory: "Restaurants",
@@ -88158,7 +88158,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-002",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Ace Carpentry",
     category: "construction-trades",
     subcategory: "Construction + Trades",
@@ -88171,7 +88171,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-003",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Adrenaline Fishing Charters",
     category: "fishing-boating-outdoor-gear",
     subcategory: "Fishing + Boating + Outdoor Gear",
@@ -88184,7 +88184,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-004",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Adventure Tofino Whale Watching",
     category: "tour-boat-companies",
     subcategory: "Tour Boat Companies",
@@ -88197,7 +88197,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-005",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Alberni Valley News",
     category: "news-radio",
     subcategory: "News + Radio",
@@ -88210,7 +88210,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-006",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "All Things Pop",
     category: "giftshops",
     subcategory: "Giftshops",
@@ -88223,7 +88223,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-007",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Anchor West Coast Designs",
     category: "artisanal-products",
     subcategory: "Artisanal Products",
@@ -88236,7 +88236,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-008",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Arainn Mhor Vacation Rental",
     category: "vacation-rentals",
     subcategory: "Vacation Rentals",
@@ -88249,7 +88249,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-009",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Armada Property Management",
     category: "real-estate-development",
     subcategory: "Real Estate + Development",
@@ -88262,7 +88262,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-010",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Around The Rock Watersports",
     category: "water",
     subcategory: "Water",
@@ -88275,7 +88275,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-011",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Atleo Air",
     category: "air",
     subcategory: "Air",
@@ -88288,7 +88288,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-012",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Atleo River Air",
     category: "air",
     subcategory: "Air",
@@ -88301,7 +88301,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-013",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Authentically Upcycled",
     category: "local-creations",
     subcategory: "Local Creations",
@@ -88314,7 +88314,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-014",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Bamfield Kayak Centre",
     category: "kayaking",
     subcategory: "Kayaking",
@@ -88327,7 +88327,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-015",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Banfield Marine",
     category: "construction-trades",
     subcategory: "Construction + Trades",
@@ -88340,7 +88340,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-016",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "BC Ferries",
     category: "water",
     subcategory: "Water",
@@ -88353,7 +88353,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-017",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Bella Pacifica Campground & Cabins",
     category: "camping-rv",
     subcategory: "Camping + RV",
@@ -88366,7 +88366,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-018",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Best Western Tin Wis Resort",
     category: "resorts-hotels",
     subcategory: "Resorts + Hotels",
@@ -88379,7 +88379,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-019",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Big Daddies Pizza",
     category: "restaurants",
     subcategory: "Restaurants",
@@ -88392,7 +88392,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-020",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Black Bear Bread Co",
     category: "cafes-bakeries",
     subcategory: "Cafes + Bakeries",
@@ -88405,7 +88405,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-021",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Black Bear Essentials",
     category: "specialty-goods",
     subcategory: "Specialty Goods",
@@ -88418,7 +88418,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-022",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Black Rock Oceanfront Resort",
     category: "resorts-hotels",
     subcategory: "Resorts + Hotels",
@@ -88431,7 +88431,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-023",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Bruhwiler Surf School",
     category: "surfing-paddleboarding",
     subcategory: "Surfing + Paddleboarding",
@@ -88444,7 +88444,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-024",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Burnfield Ventures Ltd.",
     category: "professional-services",
     subcategory: "Professional Services",
@@ -88457,7 +88457,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-025",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Calm Water Adventures",
     category: "water",
     subcategory: "Water",
@@ -88470,7 +88470,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-026",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Canadian Princess Fishing Lodge",
     category: "resorts-hotels",
     subcategory: "Resorts + Hotels",
@@ -88483,7 +88483,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-027",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Catface Music Festival",
     category: "events-festivals",
     subcategory: "Events + Festivals",
@@ -88496,7 +88496,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-028",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Cer Tofino",
     category: "beauty-spa",
     subcategory: "Beauty + Spa",
@@ -88509,7 +88509,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-029",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Chesterman Beach B&B",
     category: "inns-bnbs",
     subcategory: "Inns + BnBs",
@@ -88522,7 +88522,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-030",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Chris Fry Photography",
     category: "photographers",
     subcategory: "Photographers",
@@ -88535,7 +88535,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-031",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Clayoquot Adventures",
     category: "exploring",
     subcategory: "Exploring",
@@ -88548,7 +88548,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-032",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Clayoquot Biosphere Trust",
     category: "community-aid-connection",
     subcategory: "Community Aid + Connection",
@@ -88561,7 +88561,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-033",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Clayoquot Connections",
     category: "tour-boat-companies",
     subcategory: "Tour Boat Companies",
@@ -88574,7 +88574,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-034",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Clayoquot Oyster Company",
     category: "restaurants",
     subcategory: "Restaurants",
@@ -88587,7 +88587,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-035",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Clayoquot Salmon Festival",
     category: "events-festivals",
     subcategory: "Events + Festivals",
@@ -88600,7 +88600,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-036",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Clayoquot Sound Oyster Company",
     category: "restaurants",
     subcategory: "Restaurants",
@@ -88613,7 +88613,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-037",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Clayoquot Ventures Tofino Resort + Marina",
     category: "resorts-hotels",
     subcategory: "Resorts + Hotels",
@@ -88626,7 +88626,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-038",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Clayoquot Wilderness Resort",
     category: "resorts-hotels",
     subcategory: "Resorts + Hotels",
@@ -88639,7 +88639,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-039",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Coastal Bliss Adventures",
     category: "surfing-paddleboarding",
     subcategory: "Surfing + Paddleboarding",
@@ -88652,7 +88652,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-040",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Coastal Properties",
     category: "real-estate-development",
     subcategory: "Real Estate + Development",
@@ -88665,7 +88665,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-041",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Cody Delong Photography",
     category: "photographers",
     subcategory: "Photographers",
@@ -88678,7 +88678,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-042",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Coldwell Banker Westerlund Realty",
     category: "real-estate-development",
     subcategory: "Real Estate + Development",
@@ -88691,7 +88691,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-043",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Common Loaf Bake Shop",
     category: "cafes-bakeries",
     subcategory: "Cafes + Bakeries",
@@ -88704,7 +88704,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-044",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Community Futures Clayoquot Biosphere",
     category: "business-resources",
     subcategory: "Business Resources",
@@ -88717,7 +88717,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-045",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Cox Bay Beach Resort",
     category: "resorts-hotels",
     subcategory: "Resorts + Hotels",
@@ -88730,7 +88730,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-046",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Crystal Cove Beach Resort",
     category: "resorts-hotels",
     subcategory: "Resorts + Hotels",
@@ -88743,7 +88743,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-047",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Darwin's Cafe",
     category: "cafes-bakeries",
     subcategory: "Cafes + Bakeries",
@@ -88756,7 +88756,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-048",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Deja Brew Cafe",
     category: "cafes-bakeries",
     subcategory: "Cafes + Bakeries",
@@ -88769,7 +88769,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-049",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Destination BC - Tourism Vancouver Island",
     category: "business-resources",
     subcategory: "Business Resources",
@@ -88782,7 +88782,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-050",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "District of Tofino",
     category: "business-resources",
     subcategory: "Business Resources",
@@ -88795,7 +88795,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-051",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "District of Ucluelet",
     category: "business-resources",
     subcategory: "Business Resources",
@@ -88808,7 +88808,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-052",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Dockside Smoked Fish Store",
     category: "food-to-go",
     subcategory: "Food to-go",
@@ -88821,7 +88821,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-053",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Dolphin Motel Tofino",
     category: "motels-hostels",
     subcategory: "Motels + Hostels",
@@ -88834,7 +88834,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-054",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Drift Tofino",
     category: "giftshops",
     subcategory: "Giftshops",
@@ -88847,7 +88847,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-055",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Eagle Aerie Gallery",
     category: "galleries",
     subcategory: "Galleries",
@@ -88860,7 +88860,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-056",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "East Coast Surf School",
     category: "surfing-paddleboarding",
     subcategory: "Surfing + Paddleboarding",
@@ -88873,7 +88873,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-057",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Ecoventures",
     category: "tour-boat-companies",
     subcategory: "Tour Boat Companies",
@@ -88886,7 +88886,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-058",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Edge of the Earth Restaurant",
     category: "restaurants",
     subcategory: "Restaurants",
@@ -88899,7 +88899,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-059",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Evolve Healing Arts",
     category: "beauty-spa",
     subcategory: "Beauty + Spa",
@@ -88912,7 +88912,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-060",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Finn Tofino",
     category: "restaurants",
     subcategory: "Restaurants",
@@ -88925,7 +88925,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-061",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "First Street Dock",
     category: "water",
     subcategory: "Water",
@@ -88938,7 +88938,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-062",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Fishfarm Ventures Inc.",
     category: "fishing-boating-outdoor-gear",
     subcategory: "Fishing + Boating + Outdoor Gear",
@@ -88951,7 +88951,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-063",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Floathouse Poke",
     category: "restaurants",
     subcategory: "Restaurants",
@@ -88964,7 +88964,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-064",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Fly North Charters",
     category: "air",
     subcategory: "Air",
@@ -88977,7 +88977,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-065",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Ford's Cove Harbour Authority",
     category: "water",
     subcategory: "Water",
@@ -88990,7 +88990,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-066",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Glasswaves Studio & Gallery",
     category: "galleries",
     subcategory: "Galleries",
@@ -89003,7 +89003,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-067",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Goldmine Surf Shop",
     category: "surfing-paddleboarding",
     subcategory: "Surfing + Paddleboarding",
@@ -89016,7 +89016,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-068",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Gorge Tofino",
     category: "clothing-surf",
     subcategory: "Clothing + Surf",
@@ -89029,7 +89029,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-069",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Graeme Fowler Surfboards",
     category: "surfing-paddleboarding",
     subcategory: "Surfing + Paddleboarding",
@@ -89042,7 +89042,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-070",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Handy Mart Ucluelet",
     category: "groceries",
     subcategory: "Groceries",
@@ -89055,7 +89055,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-071",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Harbour Authority of Tofino",
     category: "water",
     subcategory: "Water",
@@ -89068,7 +89068,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-072",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Hatch Design",
     category: "design-marketing",
     subcategory: "Design + Marketing",
@@ -89081,7 +89081,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-073",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Hinterland Vacation Rentals",
     category: "vacation-rentals",
     subcategory: "Vacation Rentals",
@@ -89094,7 +89094,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-074",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "HiTide Coffee House",
     category: "cafes-bakeries",
     subcategory: "Cafes + Bakeries",
@@ -89107,7 +89107,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-075",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "House of Himwitsa",
     category: "galleries",
     subcategory: "Galleries",
@@ -89120,7 +89120,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-076",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Howler Brewing Company",
     category: "breweries-distilleries",
     subcategory: "Breweries + Distilleries",
@@ -89133,7 +89133,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-077",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Inn at Tough City",
     category: "inns-bnbs",
     subcategory: "Inns + BnBs",
@@ -89146,7 +89146,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-078",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "IRIS the Visual Group",
     category: "professional-services",
     subcategory: "Professional Services",
@@ -89159,7 +89159,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-079",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Island Coast Mobile Welding and Fabrication Inc",
     category: "construction-trades",
     subcategory: "Construction + Trades",
@@ -89172,7 +89172,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-080",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Island Village Properties",
     category: "real-estate-development",
     subcategory: "Real Estate + Development",
@@ -89185,7 +89185,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-081",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Jamie's Whaling Station",
     category: "tour-boat-companies",
     subcategory: "Tour Boat Companies",
@@ -89198,7 +89198,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-082",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Janine Croxall Holistic Therapy",
     category: "beauty-spa",
     subcategory: "Beauty + Spa",
@@ -89211,7 +89211,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-083",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Jeju Restaurant",
     category: "restaurants",
     subcategory: "Restaurants",
@@ -89224,7 +89224,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-084",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Jen McLeod Photography",
     category: "photographers",
     subcategory: "Photographers",
@@ -89237,7 +89237,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-085",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Jeremy Koreski Gallery",
     category: "galleries",
     subcategory: "Galleries",
@@ -89250,7 +89250,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-086",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Joyride Branding",
     category: "design-marketing",
     subcategory: "Design + Marketing",
@@ -89263,7 +89263,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-087",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "LA Grocery",
     category: "groceries",
     subcategory: "Groceries",
@@ -89276,7 +89276,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-088",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "LANDOLT FINANCIAL GROUP INC.",
     category: "accounting-banking-legal",
     subcategory: "Accounting + Banking + Legal",
@@ -89289,7 +89289,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-089",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Lara Palmer Creative",
     category: "artists",
     subcategory: "Artists",
@@ -89302,7 +89302,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-090",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Lisa Fletcher Jewellery",
     category: "jewellery",
     subcategory: "Jewellery",
@@ -89315,7 +89315,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-091",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Lisa Hack Coaching",
     category: "professional-services",
     subcategory: "Professional Services",
@@ -89328,7 +89328,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-092",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Little Beach Resort",
     category: "resorts-hotels",
     subcategory: "Resorts + Hotels",
@@ -89341,7 +89341,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-093",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Liv Beau Studio",
     category: "artists",
     subcategory: "Artists",
@@ -89354,7 +89354,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-094",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Live To Surf - The Original Tofino Surf Shop",
     category: "clothing-surf",
     subcategory: "Clothing + Surf",
@@ -89367,7 +89367,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-095",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Long Beach Campground",
     category: "camping-rv",
     subcategory: "Camping + RV",
@@ -89380,7 +89380,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-096",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Long Beach Golf Course",
     category: "golfing",
     subcategory: "Golfing",
@@ -89393,7 +89393,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-097",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Long Beach Haven B&B",
     category: "inns-bnbs",
     subcategory: "Inns + BnBs",
@@ -89406,7 +89406,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-098",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Long Beach Lodge Resort",
     category: "resorts-hotels",
     subcategory: "Resorts + Hotels",
@@ -89419,7 +89419,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-099",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Long Beach Surf Shop",
     category: "surfing-paddleboarding",
     subcategory: "Surfing + Paddleboarding",
@@ -89432,7 +89432,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-100",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Lost Shoe Campground",
     category: "camping-rv",
     subcategory: "Camping + RV",
@@ -89445,7 +89445,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-101",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "LoveCraft Gallery",
     category: "galleries",
     subcategory: "Galleries",
@@ -89458,7 +89458,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-102",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Lux.Fino Luxury Events",
     category: "event-planning-promotion",
     subcategory: "Event Planning + Promotion",
@@ -89471,7 +89471,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-103",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "MacKenzie Beach Resort",
     category: "resorts-hotels",
     subcategory: "Resorts + Hotels",
@@ -89484,7 +89484,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-104",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Mackenzie Beach Resort Campground",
     category: "camping-rv",
     subcategory: "Camping + RV",
@@ -89497,7 +89497,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-105",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Marcie DeWitt Consulting",
     category: "consultants",
     subcategory: "Consultants",
@@ -89510,7 +89510,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-106",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Mark Hobson Gallery",
     category: "galleries",
     subcategory: "Galleries",
@@ -89523,7 +89523,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-107",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Marnie Recker Photography",
     category: "photographers",
     subcategory: "Photographers",
@@ -89536,7 +89536,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-108",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Meares Island Water Taxi LTD.",
     category: "water",
     subcategory: "Water",
@@ -89549,7 +89549,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-109",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Meares Retreat Waterfront B&B",
     category: "inns-bnbs",
     subcategory: "Inns + BnBs",
@@ -89562,7 +89562,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-110",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Meares Vista Inn",
     category: "inns-bnbs",
     subcategory: "Inns + BnBs",
@@ -89575,7 +89575,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-111",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Merge Curated Goods",
     category: "giftshops",
     subcategory: "Giftshops",
@@ -89588,7 +89588,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-112",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Method Marine Supply",
     category: "fishing-boating-outdoor-gear",
     subcategory: "Fishing + Boating + Outdoor Gear",
@@ -89601,7 +89601,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-113",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Middle Beach Lodge",
     category: "resorts-hotels",
     subcategory: "Resorts + Hotels",
@@ -89614,7 +89614,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-114",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Mizu Mizu Cafe",
     category: "cafes-bakeries",
     subcategory: "Cafes + Bakeries",
@@ -89627,7 +89627,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-115",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Moon Jelly Bathhouse",
     category: "beauty-spa",
     subcategory: "Beauty + Spa",
@@ -89640,7 +89640,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-116",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Moss and Milk",
     category: "cafes-bakeries",
     subcategory: "Cafes + Bakeries",
@@ -89653,7 +89653,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-117",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "MSA+D (Mallory Stuckel Architecture + Design)",
     category: "architects",
     subcategory: "Architects",
@@ -89666,7 +89666,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-118",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Naas Foods",
     category: "food-to-go",
     subcategory: "Food to-go",
@@ -89679,7 +89679,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-119",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Nanaimo Airport Commission",
     category: "air",
     subcategory: "Air",
@@ -89692,7 +89692,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-120",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Natural Elements Vacation Rentals",
     category: "vacation-rentals",
     subcategory: "Vacation Rentals",
@@ -89705,7 +89705,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-121",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Nomad Adventure Guides",
     category: "exploring",
     subcategory: "Exploring",
@@ -89718,7 +89718,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-122",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "North Island College",
     category: "education",
     subcategory: "Education",
@@ -89731,7 +89731,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-123",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Nuu-chah-nulth Tribal Council",
     category: "business-resources",
     subcategory: "Business Resources",
@@ -89744,7 +89744,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-124",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Obee Fishing",
     category: "fishing-boating-outdoor-gear",
     subcategory: "Fishing + Boating + Outdoor Gear",
@@ -89757,7 +89757,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-125",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Ocean Village Beach Resort",
     category: "resorts-hotels",
     subcategory: "Resorts + Hotels",
@@ -89770,7 +89770,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-126",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "O'Connell Arts Company",
     category: "artists",
     subcategory: "Artists",
@@ -89783,7 +89783,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-127",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Octopus Event Promotions",
     category: "event-planning-promotion",
     subcategory: "Event Planning + Promotion",
@@ -89796,7 +89796,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-128",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "OFF THE LIP",
     category: "surfing-paddleboarding",
     subcategory: "Surfing + Paddleboarding",
@@ -89809,7 +89809,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-129",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Oliwa Enterprises Ltd",
     category: "construction-trades",
     subcategory: "Construction + Trades",
@@ -89822,7 +89822,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-130",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Ombre Restaurant",
     category: "restaurants",
     subcategory: "Restaurants",
@@ -89835,7 +89835,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-131",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Ordinary Corner Nursery",
     category: "giftshops",
     subcategory: "Giftshops",
@@ -89848,7 +89848,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-132",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Otus Rent A Car",
     category: "business-resources",
     subcategory: "Business Resources",
@@ -89861,7 +89861,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-133",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Pacific Coast Retreats",
     category: "vacation-rentals",
     subcategory: "Vacation Rentals",
@@ -89874,7 +89874,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-134",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Pacific Coastal Airlines",
     category: "air",
     subcategory: "Air",
@@ -89887,7 +89887,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-135",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Pacific Rim Arts Society",
     category: "community-aid-connection",
     subcategory: "Community Aid + Connection",
@@ -89900,7 +89900,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-136",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Pacific Rim Event Planning",
     category: "event-planning-promotion",
     subcategory: "Event Planning + Promotion",
@@ -89913,7 +89913,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-137",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Pacific Rim Hospice Society",
     category: "community-aid-connection",
     subcategory: "Community Aid + Connection",
@@ -89926,7 +89926,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-138",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Pacific Rim National Park Reserve",
     category: "exploring",
     subcategory: "Exploring",
@@ -89939,7 +89939,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-139",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Pacific Rim Navigators",
     category: "water",
     subcategory: "Water",
@@ -89952,7 +89952,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-140",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Pacific Rim Whale Festival",
     category: "events-festivals",
     subcategory: "Events + Festivals",
@@ -89965,7 +89965,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-141",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Pacific Sands Beach Resort",
     category: "resorts-hotels",
     subcategory: "Resorts + Hotels",
@@ -89978,7 +89978,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-142",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Pacific Surf School",
     category: "surfing-paddleboarding",
     subcategory: "Surfing + Paddleboarding",
@@ -89991,7 +89991,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-143",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Paddle West Kayaking",
     category: "kayaking",
     subcategory: "Kayaking",
@@ -90004,7 +90004,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-144",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Picnic Charcuterie",
     category: "food-to-go",
     subcategory: "Food to-go",
@@ -90017,7 +90017,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-145",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Pint Size Productions",
     category: "design-marketing",
     subcategory: "Design + Marketing",
@@ -90030,7 +90030,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-146",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Pluvio Dining Room",
     category: "restaurants",
     subcategory: "Restaurants",
@@ -90043,7 +90043,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-147",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Pluvio Restaurant and Rooms",
     category: "restaurants",
     subcategory: "Restaurants",
@@ -90056,7 +90056,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-148",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Poblanos Mexican Eatery",
     category: "restaurants",
     subcategory: "Restaurants",
@@ -90069,7 +90069,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-149",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Pollen & Company",
     category: "event-goods-services",
     subcategory: "Event Goods + Services",
@@ -90082,7 +90082,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-150",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Raincoast Education Society",
     category: "education",
     subcategory: "Education",
@@ -90095,7 +90095,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-151",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Rainforest Spa",
     category: "beauty-spa",
     subcategory: "Beauty + Spa",
@@ -90108,7 +90108,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-152",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Rancho Tofino",
     category: "restaurants",
     subcategory: "Restaurants",
@@ -90121,7 +90121,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-153",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Rare Earth Wedding & Events",
     category: "event-planning-promotion",
     subcategory: "Event Planning + Promotion",
@@ -90134,7 +90134,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-154",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Redd Fish Restoration Society",
     category: "environment",
     subcategory: "Environment",
@@ -90147,7 +90147,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-155",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "ReMax Mid-Island Realty",
     category: "real-estate-development",
     subcategory: "Real Estate + Development",
@@ -90160,7 +90160,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-156",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Remote Passages Marine Excursions",
     category: "tour-boat-companies",
     subcategory: "Tour Boat Companies",
@@ -90173,7 +90173,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-157",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Remote Passages Sea Kayaking",
     category: "kayaking",
     subcategory: "Kayaking",
@@ -90186,7 +90186,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-158",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Rhino Coffee House",
     category: "cafes-bakeries",
     subcategory: "Cafes + Bakeries",
@@ -90199,7 +90199,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-159",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Rising Tide Surf Society",
     category: "surfing-paddleboarding",
     subcategory: "Surfing + Paddleboarding",
@@ -90212,7 +90212,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-160",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "ROAR Coffee & Shop",
     category: "cafes-bakeries",
     subcategory: "Cafes + Bakeries",
@@ -90225,7 +90225,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-161",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "ROAR Tofino",
     category: "clothing-surf",
     subcategory: "Clothing + Surf",
@@ -90238,7 +90238,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-162",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Rockfish Art",
     category: "artists",
     subcategory: "Artists",
@@ -90251,7 +90251,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-163",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Rosas Jewellery Tofino",
     category: "jewellery",
     subcategory: "Jewellery",
@@ -90264,7 +90264,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-164",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Roy Henry Vickers Gallery",
     category: "galleries",
     subcategory: "Galleries",
@@ -90277,7 +90277,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-165",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Royal Canadian Legion Branch 65",
     category: "community-aid-connection",
     subcategory: "Community Aid + Connection",
@@ -90290,7 +90290,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-166",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "RTown Network Long Beach",
     category: "news-radio",
     subcategory: "News + Radio",
@@ -90303,7 +90303,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-167",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Rubio",
     category: "clothing-surf",
     subcategory: "Clothing + Surf",
@@ -90316,7 +90316,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-168",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Sacred Stone Spa",
     category: "beauty-spa",
     subcategory: "Beauty + Spa",
@@ -90329,7 +90329,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-169",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Sadler Surf School",
     category: "surfing-paddleboarding",
     subcategory: "Surfing + Paddleboarding",
@@ -90342,7 +90342,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-170",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Salmon Eye Fishing Charters",
     category: "fishing-boating-outdoor-gear",
     subcategory: "Fishing + Boating + Outdoor Gear",
@@ -90355,7 +90355,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-171",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Sand Dollar Guest House",
     category: "inns-bnbs",
     subcategory: "Inns + BnBs",
@@ -90368,7 +90368,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-172",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "SandBar Bistro",
     category: "restaurants",
     subcategory: "Restaurants",
@@ -90381,7 +90381,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-173",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Savary Island Pie Company Tofino",
     category: "cafes-bakeries",
     subcategory: "Cafes + Bakeries",
@@ -90394,7 +90394,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-174",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Schramm Design",
     category: "architects",
     subcategory: "Architects",
@@ -90407,7 +90407,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-175",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Sea Otter Crane & Freight",
     category: "construction-trades",
     subcategory: "Construction + Trades",
@@ -90420,7 +90420,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-176",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Sea Wench Naturals",
     category: "local-creations",
     subcategory: "Local Creations",
@@ -90433,7 +90433,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-177",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Sea Woven",
     category: "artists",
     subcategory: "Artists",
@@ -90446,7 +90446,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-178",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Shed Tofino",
     category: "restaurants",
     subcategory: "Restaurants",
@@ -90459,7 +90459,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-179",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Shelter Restaurant",
     category: "restaurants",
     subcategory: "Restaurants",
@@ -90472,7 +90472,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-180",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Sienna's Vacation Rentals",
     category: "vacation-rentals",
     subcategory: "Vacation Rentals",
@@ -90485,7 +90485,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-181",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Smallwood Guest House + Suite",
     category: "inns-bnbs",
     subcategory: "Inns + BnBs",
@@ -90498,7 +90498,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-182",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Smashing Glasses Event Rentals",
     category: "event-goods-services",
     subcategory: "Event Goods + Services",
@@ -90511,7 +90511,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-183",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Specifically Pacific Designs",
     category: "design-marketing",
     subcategory: "Design + Marketing",
@@ -90524,7 +90524,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-184",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Spindrift",
     category: "vacation-rentals",
     subcategory: "Vacation Rentals",
@@ -90537,7 +90537,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-185",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Spirit Eagle Experiences / MV King Cole",
     category: "tour-boat-companies",
     subcategory: "Tour Boat Companies",
@@ -90550,7 +90550,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-186",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Stay Tofino",
     category: "vacation-rentals",
     subcategory: "Vacation Rentals",
@@ -90563,7 +90563,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-187",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Stillwater Nature Spa",
     category: "beauty-spa",
     subcategory: "Beauty + Spa",
@@ -90576,7 +90576,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-188",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Storm Bay B&B",
     category: "inns-bnbs",
     subcategory: "Inns + BnBs",
@@ -90589,7 +90589,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-189",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Storm Surf Shop",
     category: "surfing-paddleboarding",
     subcategory: "Surfing + Paddleboarding",
@@ -90602,7 +90602,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-190",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Stormlight Outfitters",
     category: "fishing-boating-outdoor-gear",
     subcategory: "Fishing + Boating + Outdoor Gear",
@@ -90615,7 +90615,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-191",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Summer Hill Guest House",
     category: "inns-bnbs",
     subcategory: "Inns + BnBs",
@@ -90628,7 +90628,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-192",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Surf Grove Campground",
     category: "camping-rv",
     subcategory: "Camping + RV",
@@ -90641,7 +90641,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-193",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Surf Junction Campground",
     category: "camping-rv",
     subcategory: "Camping + RV",
@@ -90654,7 +90654,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-194",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Surf Sister Surf School",
     category: "surfing-paddleboarding",
     subcategory: "Surfing + Paddleboarding",
@@ -90667,7 +90667,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-195",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Surfrider Pacific Rim",
     category: "environment",
     subcategory: "Environment",
@@ -90680,7 +90680,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-196",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Tacofino",
     category: "restaurants",
     subcategory: "Restaurants",
@@ -90693,7 +90693,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-197",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Taste of Tofino",
     category: "exploring",
     subcategory: "Exploring",
@@ -90706,7 +90706,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-198",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "T-bird E-bike Rentals",
     category: "biking",
     subcategory: "Biking",
@@ -90719,7 +90719,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-199",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "The Bake Shack",
     category: "cafes-bakeries",
     subcategory: "Cafes + Bakeries",
@@ -90732,7 +90732,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-200",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "The Beach Shack",
     category: "restaurants",
     subcategory: "Restaurants",
@@ -90745,7 +90745,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-201",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "The Candy Jar",
     category: "treats-ice-cream",
     subcategory: "Treats + Ice Cream",
@@ -90758,7 +90758,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-202",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "The Candy Jar Bike Rental",
     category: "biking",
     subcategory: "Biking",
@@ -90771,7 +90771,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-203",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "The Den Refillery",
     category: "specialty-goods",
     subcategory: "Specialty Goods",
@@ -90784,7 +90784,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-204",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "The Factory Goods + Gallery",
     category: "galleries",
     subcategory: "Galleries",
@@ -90797,7 +90797,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-205",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "The Fish Store",
     category: "food-to-go",
     subcategory: "Food to-go",
@@ -90810,7 +90810,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-206",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "The Francis ~ Boutique Inn",
     category: "inns-bnbs",
     subcategory: "Inns + BnBs",
@@ -90823,7 +90823,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-207",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "The Great Room",
     category: "restaurants",
     subcategory: "Restaurants",
@@ -90836,7 +90836,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-208",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "The Hobbyist",
     category: "local-creations",
     subcategory: "Local Creations",
@@ -90849,7 +90849,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-209",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "The Maq Cold Beer, Wine and Spirits",
     category: "liquor-store",
     subcategory: "Liquor Store",
@@ -90862,7 +90862,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-210",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "The Maq Hotel",
     category: "motels-hostels",
     subcategory: "Motels + Hostels",
@@ -90875,7 +90875,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-211",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "The Pointe Restaurant",
     category: "restaurants",
     subcategory: "Restaurants",
@@ -90888,7 +90888,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-212",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "The Salty Woodsman Goods Ltd.",
     category: "local-creations",
     subcategory: "Local Creations",
@@ -90901,7 +90901,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-213",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "The Shoreline Tofino",
     category: "resorts-hotels",
     subcategory: "Resorts + Hotels",
@@ -90914,7 +90914,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-214",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "The Surf Club",
     category: "surfing-paddleboarding",
     subcategory: "Surfing + Paddleboarding",
@@ -90927,7 +90927,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-215",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "The Whale Centre",
     category: "giftshops",
     subcategory: "Giftshops",
@@ -90940,7 +90940,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-216",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Three Peaks",
     category: "real-estate-development",
     subcategory: "Real Estate + Development",
@@ -90953,7 +90953,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-217",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "TikiCAB Transportation Company",
     category: "business-resources",
     subcategory: "Business Resources",
@@ -90966,7 +90966,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-218",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Tin Wis Resort",
     category: "resorts-hotels",
     subcategory: "Resorts + Hotels",
@@ -90979,7 +90979,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-219",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Tla-o-qui-aht Development Corporation",
     category: "business-resources",
     subcategory: "Business Resources",
@@ -90992,7 +90992,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-220",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Tla-o-qui-aht Tribal Parks",
     category: "exploring",
     subcategory: "Exploring",
@@ -91005,7 +91005,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-221",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Tofino Air",
     category: "air",
     subcategory: "Air",
@@ -91018,7 +91018,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-222",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Tofino Arts Council",
     category: "community-aid-connection",
     subcategory: "Community Aid + Connection",
@@ -91031,7 +91031,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-223",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Tofino Beach Collective",
     category: "giftshops",
     subcategory: "Giftshops",
@@ -91044,7 +91044,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-224",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Tofino Bike Co.",
     category: "biking",
     subcategory: "Biking",
@@ -91057,7 +91057,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-225",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "TOFINO BITTERS",
     category: "breweries-distilleries",
     subcategory: "Breweries + Distilleries",
@@ -91070,7 +91070,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-226",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Tofino Boating Co.",
     category: "tour-boat-companies",
     subcategory: "Tour Boat Companies",
@@ -91083,7 +91083,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-227",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Tofino Breath & Meditation",
     category: "fitness",
     subcategory: "Fitness",
@@ -91096,7 +91096,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-228",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Tofino Brewing Company",
     category: "breweries-distilleries",
     subcategory: "Breweries + Distilleries",
@@ -91109,7 +91109,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-229",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Tofino Bus",
     category: "business-resources",
     subcategory: "Business Resources",
@@ -91122,7 +91122,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-230",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Tofino Clayoquot Heritage Society",
     category: "community-aid-connection",
     subcategory: "Community Aid + Connection",
@@ -91135,7 +91135,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-231",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Tofino Co-Op",
     category: "groceries",
     subcategory: "Groceries",
@@ -91148,7 +91148,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-232",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Tofino Distillery",
     category: "breweries-distilleries",
     subcategory: "Breweries + Distilleries",
@@ -91161,7 +91161,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-233",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Tofino Expeditions",
     category: "kayaking",
     subcategory: "Kayaking",
@@ -91174,7 +91174,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-234",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Tofino Film Festival",
     category: "events-festivals",
     subcategory: "Events + Festivals",
@@ -91187,7 +91187,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-235",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Tofino Fitness",
     category: "fitness",
     subcategory: "Fitness",
@@ -91200,7 +91200,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-236",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Tofino Food & Wine Festival",
     category: "events-festivals",
     subcategory: "Events + Festivals",
@@ -91213,7 +91213,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-237",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Tofino General Hospital",
     category: "community-aid-connection",
     subcategory: "Community Aid + Connection",
@@ -91226,7 +91226,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-238",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Tofino Golf",
     category: "golfing",
     subcategory: "Golfing",
@@ -91239,7 +91239,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-239",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Tofino Hot Springs Cove Adventures",
     category: "tour-boat-companies",
     subcategory: "Tour Boat Companies",
@@ -91252,7 +91252,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-240",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Tofino Paddle Surf",
     category: "surfing-paddleboarding",
     subcategory: "Surfing + Paddleboarding",
@@ -91265,7 +91265,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-241",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Tofino Photography Tours",
     category: "exploring",
     subcategory: "Exploring",
@@ -91278,7 +91278,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-242",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Tofino Resort + Marina",
     category: "resorts-hotels",
     subcategory: "Resorts + Hotels",
@@ -91291,7 +91291,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-243",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Tofino Sea Kayaking",
     category: "kayaking",
     subcategory: "Kayaking",
@@ -91304,7 +91304,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-244",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Tofino Surf Adventures",
     category: "surfing-paddleboarding",
     subcategory: "Surfing + Paddleboarding",
@@ -91317,7 +91317,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-245",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Tofino Traveller B&B",
     category: "inns-bnbs",
     subcategory: "Inns + BnBs",
@@ -91330,7 +91330,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-246",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Tofino Ucluelet Culinary Guild",
     category: "community-aid-connection",
     subcategory: "Community Aid + Connection",
@@ -91343,7 +91343,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-247",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Tofino Winery",
     category: "breweries-distilleries",
     subcategory: "Breweries + Distilleries",
@@ -91356,7 +91356,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-248",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Tofino-Long Beach Chamber of Commerce",
     category: "business-resources",
     subcategory: "Business Resources",
@@ -91369,7 +91369,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-249",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Tofitian Media",
     category: "design-marketing",
     subcategory: "Design + Marketing",
@@ -91382,7 +91382,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-250",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Tough City Sushi",
     category: "restaurants",
     subcategory: "Restaurants",
@@ -91395,7 +91395,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-251",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Ucluelet Aquarium",
     category: "exploring",
     subcategory: "Exploring",
@@ -91408,7 +91408,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-252",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Ucluelet Campground",
     category: "camping-rv",
     subcategory: "Camping + RV",
@@ -91421,7 +91421,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-253",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Ukee Poke",
     category: "restaurants",
     subcategory: "Restaurants",
@@ -91434,7 +91434,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-254",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Vancouver Island Economic Alliance (VIEA)",
     category: "business-resources",
     subcategory: "Business Resources",
@@ -91447,7 +91447,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-255",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Vancouver Island Real Estate Board",
     category: "real-estate-development",
     subcategory: "Real Estate + Development",
@@ -91460,7 +91460,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-256",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Vancouver Island Regional Library",
     category: "education",
     subcategory: "Education",
@@ -91473,7 +91473,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-257",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Vancouver Island Soaring Centre Ltd.",
     category: "scenic-flights",
     subcategory: "Scenic Flights",
@@ -91486,7 +91486,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-258",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Vancouver Island Vacation Rentals",
     category: "vacation-rentals",
     subcategory: "Vacation Rentals",
@@ -91499,7 +91499,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-259",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Venical Holdings Ltd.",
     category: "real-estate-development",
     subcategory: "Real Estate + Development",
@@ -91512,7 +91512,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-260",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "ViewWest Vacation Rentals",
     category: "vacation-rentals",
     subcategory: "Vacation Rentals",
@@ -91525,7 +91525,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-261",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Vista Hermosa",
     category: "restaurants",
     subcategory: "Restaurants",
@@ -91538,7 +91538,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-262",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Wahous Wilderness Lodge",
     category: "resorts-hotels",
     subcategory: "Resorts + Hotels",
@@ -91551,7 +91551,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-263",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Waters Edge Shoreside Suites",
     category: "resorts-hotels",
     subcategory: "Resorts + Hotels",
@@ -91564,7 +91564,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-264",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "WeBC",
     category: "business-resources",
     subcategory: "Business Resources",
@@ -91577,7 +91577,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-265",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "West Coast Aquatic Safaris",
     category: "tour-boat-companies",
     subcategory: "Tour Boat Companies",
@@ -91590,7 +91590,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-266",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "West Coast Campground",
     category: "camping-rv",
     subcategory: "Camping + RV",
@@ -91603,7 +91603,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-267",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "West Coast Fitness Centre",
     category: "fitness",
     subcategory: "Fitness",
@@ -91616,7 +91616,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-268",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "West Coast Motel On The Harbour",
     category: "motels-hostels",
     subcategory: "Motels + Hostels",
@@ -91629,7 +91629,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-269",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "West Coast Multiplex Society",
     category: "community-aid-connection",
     subcategory: "Community Aid + Connection",
@@ -91642,7 +91642,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-270",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "West Coast Shapes",
     category: "surfing-paddleboarding",
     subcategory: "Surfing + Paddleboarding",
@@ -91655,7 +91655,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-271",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "West Coast Sustainable Tourism Association",
     category: "business-resources",
     subcategory: "Business Resources",
@@ -91668,7 +91668,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-272",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "West Coast Wild",
     category: "exploring",
     subcategory: "Exploring",
@@ -91681,7 +91681,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-273",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Westcoast Community Resources Society",
     category: "community-aid-connection",
     subcategory: "Community Aid + Connection",
@@ -91694,7 +91694,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-274",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Westerly News",
     category: "news-radio",
     subcategory: "News + Radio",
@@ -91707,7 +91707,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-275",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Westland Insurance Group",
     category: "career-insurance",
     subcategory: "Career + Insurance",
@@ -91720,7 +91720,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-276",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Whaler's Guesthouse - Tofino Hostel",
     category: "motels-hostels",
     subcategory: "Motels + Hostels",
@@ -91733,7 +91733,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-277",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Whale's Tail Guest Suites",
     category: "inns-bnbs",
     subcategory: "Inns + BnBs",
@@ -91746,7 +91746,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-278",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Wickaninnish Community School Society",
     category: "education",
     subcategory: "Education",
@@ -91759,7 +91759,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-279",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Wickaninnish Elementary School Parent Advisory Council (WEPAC)",
     category: "education",
     subcategory: "Education",
@@ -91772,7 +91772,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-280",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Wickaninnish Inn",
     category: "resorts-hotels",
     subcategory: "Resorts + Hotels",
@@ -91785,7 +91785,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-281",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Wild Light Tofino Guest House",
     category: "inns-bnbs",
     subcategory: "Inns + BnBs",
@@ -91798,7 +91798,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-282",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Wild Pacific Trail Society",
     category: "exploring",
     subcategory: "Exploring",
@@ -91811,7 +91811,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-283",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Wildpod Glamping",
     category: "camping-rv",
     subcategory: "Camping + RV",
@@ -91824,7 +91824,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-284",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "WildSafeBC Pacific Rim",
     category: "environment",
     subcategory: "Environment",
@@ -91837,7 +91837,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-285",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Wildside Grill",
     category: "restaurants",
     subcategory: "Restaurants",
@@ -91850,7 +91850,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-286",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Wolf in the Fog",
     category: "restaurants",
     subcategory: "Restaurants",
@@ -91863,7 +91863,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "tof-287",
-    chamberId: "tofino-long-beach-chamber",
+    chamberId: "tofino-chamber",
     businessName: "Zoe's at North Beach",
     category: "inns-bnbs",
     subcategory: "Inns + BnBs",
