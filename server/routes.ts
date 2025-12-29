@@ -165,12 +165,17 @@ export async function registerRoutes(
         memberCountByChamberId.set(member.chamberId, count + 1);
       }
 
+      // Get progress status for each chamber
+      const progressList = getChamberProgressList();
+      const statusByChamberId = new Map(progressList.map(p => [p.chamberId, p.status]));
+
       const locations = BC_CHAMBERS_OF_COMMERCE.map(chamber => ({
         id: chamber.id,
         name: chamber.name,
         lat: chamber.location.lat,
         lng: chamber.location.lng,
         memberCount: memberCountByChamberId.get(chamber.id) || 0,
+        status: statusByChamberId.get(chamber.id) || 'pending',
       })).filter(c => c.memberCount > 0);
 
       res.json(locations);

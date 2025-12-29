@@ -52,6 +52,7 @@ interface ChamberLocation {
   lat: number;
   lng: number;
   memberCount: number;
+  status: 'pending' | 'in_progress' | 'partial' | 'completed' | 'blocked';
 }
 
 type ViewLevel = "tree" | "sector" | "subsector" | "industry";
@@ -454,11 +455,18 @@ export function ChamberMapFull() {
     chambers.forEach((chamber) => {
       const size = Math.max(8, Math.min(20, 6 + Math.sqrt(chamber.memberCount) * 2));
       
+      // Color based on completion status: green for completed, blue for others
+      const markerColor = chamber.status === 'completed' 
+        ? "hsl(145, 70%, 45%)"  // Green for completed
+        : "hsl(210, 70%, 50%)"; // Blue for partial/pending
+      
+      const statusLabel = chamber.status === 'completed' ? 'COMPLETED' : 'IN PROGRESS';
+      
       const el = document.createElement("div");
       el.className = "chamber-marker";
       el.style.width = `${size}px`;
       el.style.height = `${size}px`;
-      el.style.backgroundColor = "hsl(210, 70%, 50%)";
+      el.style.backgroundColor = markerColor;
       el.style.borderRadius = "50%";
       el.style.border = "2px solid white";
       el.style.boxShadow = "0 2px 4px rgba(0,0,0,0.3)";
@@ -468,7 +476,7 @@ export function ChamberMapFull() {
         .setLngLat([chamber.lng, chamber.lat])
         .setPopup(
           new mapboxgl.Popup({ offset: 15 }).setHTML(
-            `<div style="font-size:12px; color: #1a1a1a;"><strong>${chamber.name}</strong><br/>${formatMemberCount(chamber.memberCount)} members</div>`
+            `<div style="font-size:12px; color: #1a1a1a;"><strong>${chamber.name}</strong><br/>${formatMemberCount(chamber.memberCount)} members<br/><span style="color: ${chamber.status === 'completed' ? '#22c55e' : '#3b82f6'}; font-weight: 600;">${statusLabel}</span></div>`
           )
         )
         .addTo(map.current!);
