@@ -310,13 +310,13 @@ function GrowthChart() {
             <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
             <XAxis 
               dataKey="dateLabel" 
-              tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 9 }}
+              tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 8 }}
               tickLine={{ stroke: 'hsl(var(--border))' }}
               axisLine={{ stroke: 'hsl(var(--border))' }}
-              interval={6}
-              angle={-45}
+              interval={1}
+              angle={-60}
               textAnchor="end"
-              height={60}
+              height={70}
             />
             <YAxis 
               yAxisId="left"
