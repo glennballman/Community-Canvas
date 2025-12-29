@@ -93574,7 +93574,7 @@ export const chamberMembers: ChamberMember[] = [
   // ============================================================================
   {
     id: "so-standing-cedars-health",
-    chamberId: "sooke-region-chamber",
+    chamberId: "sooke-chamber",
     businessName: "Standing Cedars Integrative Health",
     category: "healthcare",
     subcategory: "Integrative Health",
@@ -93587,7 +93587,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "so-under-seat-plumbing",
-    chamberId: "sooke-region-chamber",
+    chamberId: "sooke-chamber",
     businessName: "Under The Seat Plumbing",
     category: "plumbing",
     subcategory: "Plumbing",
@@ -93600,7 +93600,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "so-candice-neveu-coaching",
-    chamberId: "sooke-region-chamber",
+    chamberId: "sooke-chamber",
     businessName: "Candice Neveu Coaching",
     category: "consulting",
     subcategory: "Life Coaching",
@@ -93613,7 +93613,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "so-uptown-creative",
-    chamberId: "sooke-region-chamber",
+    chamberId: "sooke-chamber",
     businessName: "Uptown Creative",
     category: "marketing",
     subcategory: "Marketing",
@@ -93626,7 +93626,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "so-canadas-best-karate",
-    chamberId: "sooke-region-chamber",
+    chamberId: "sooke-chamber",
     businessName: "Canada's Best Karate",
     category: "recreation",
     subcategory: "Martial Arts",
@@ -93639,7 +93639,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "so-at-my-place-salon",
-    chamberId: "sooke-region-chamber",
+    chamberId: "sooke-chamber",
     businessName: "At My Place Family Salon",
     category: "spa-beauty",
     subcategory: "Hair Salon",
@@ -93652,7 +93652,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "so-mexico-land-ventures",
-    chamberId: "sooke-region-chamber",
+    chamberId: "sooke-chamber",
     businessName: "Mexico Land Ventures",
     category: "real-estate",
     subcategory: "International Real Estate",
@@ -93665,7 +93665,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "so-ranbro-enterprises",
-    chamberId: "sooke-region-chamber",
+    chamberId: "sooke-chamber",
     businessName: "RanBro Enterprises Inc",
     category: "construction",
     subcategory: "General Contractor",
@@ -93678,7 +93678,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "so-fresh-cut-mowing",
-    chamberId: "sooke-region-chamber",
+    chamberId: "sooke-chamber",
     businessName: "Fresh Cut Mowing",
     category: "landscaping",
     subcategory: "Lawn Care",
@@ -93691,7 +93691,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "so-communityplus-healthcare",
-    chamberId: "sooke-region-chamber",
+    chamberId: "sooke-chamber",
     businessName: "CommunityPlus Home Healthcare + Nursing",
     category: "healthcare",
     subcategory: "Home Healthcare",
@@ -93704,7 +93704,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "so-sooke-clean",
-    chamberId: "sooke-region-chamber",
+    chamberId: "sooke-chamber",
     businessName: "Sooke Clean",
     category: "cleaning",
     subcategory: "Cleaning Services",
@@ -93717,7 +93717,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "so-silver-jet-events",
-    chamberId: "sooke-region-chamber",
+    chamberId: "sooke-chamber",
     businessName: "Silver Jet Events LTD",
     category: "entertainment",
     subcategory: "Events",
@@ -93730,7 +93730,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "so-sooke-fitness",
-    chamberId: "sooke-region-chamber",
+    chamberId: "sooke-chamber",
     businessName: "Sooke Fitness",
     category: "recreation",
     subcategory: "Gym",
@@ -93743,7 +93743,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "so-yyj-plumbers",
-    chamberId: "sooke-region-chamber",
+    chamberId: "sooke-chamber",
     businessName: "YYJ Plumbers-Ackinclose & Son",
     category: "plumbing",
     subcategory: "Plumbing",
@@ -93756,7 +93756,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "so-bev-berger-remax",
-    chamberId: "sooke-region-chamber",
+    chamberId: "sooke-chamber",
     businessName: "Bev Berger, Remax Camosun",
     category: "real-estate",
     subcategory: "Real Estate Agent",
@@ -93769,7 +93769,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "so-vi-spectrum",
-    chamberId: "sooke-region-chamber",
+    chamberId: "sooke-chamber",
     businessName: "V I Spectrum Digital & Photographic Ltd",
     category: "photography",
     subcategory: "Photography",
@@ -93782,7 +93782,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "so-tau-wellness",
-    chamberId: "sooke-region-chamber",
+    chamberId: "sooke-chamber",
     businessName: "Tau Wellness Cooperative",
     category: "healthcare",
     subcategory: "Wellness",
@@ -93795,7 +93795,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "so-sooke-radio-society",
-    chamberId: "sooke-region-chamber",
+    chamberId: "sooke-chamber",
     businessName: "Sooke Radio Society",
     category: "media",
     subcategory: "Community Radio",
@@ -93808,7 +93808,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "so-sasquatch-heat-pumps",
-    chamberId: "sooke-region-chamber",
+    chamberId: "sooke-chamber",
     businessName: "Sasquatch Heat Pumps",
     category: "hvac",
     subcategory: "Heat Pumps",
@@ -93821,7 +93821,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "so-island-firearms-safety",
-    chamberId: "sooke-region-chamber",
+    chamberId: "sooke-chamber",
     businessName: "Island Firearms Safety",
     category: "education",
     subcategory: "Safety Training",
@@ -93834,7 +93834,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "so-sooke-detailing",
-    chamberId: "sooke-region-chamber",
+    chamberId: "sooke-chamber",
     businessName: "Sooke Detailing",
     category: "automotive",
     subcategory: "Auto Detailing",
@@ -93847,7 +93847,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "so-west-coast-esthetics",
-    chamberId: "sooke-region-chamber",
+    chamberId: "sooke-chamber",
     businessName: "West Coast Esthetics Healing Studio",
     category: "spa-beauty",
     subcategory: "Esthetics",
@@ -93860,7 +93860,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "so-hive-thrive-consulting",
-    chamberId: "sooke-region-chamber",
+    chamberId: "sooke-chamber",
     businessName: "Hive & Thrive Consulting",
     category: "consulting",
     subcategory: "Business Consulting",
@@ -93873,7 +93873,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "so-earth-dragon-tcm",
-    chamberId: "sooke-region-chamber",
+    chamberId: "sooke-chamber",
     businessName: "Earth Dragon TCM",
     category: "healthcare",
     subcategory: "Traditional Chinese Medicine",
@@ -93886,7 +93886,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "so-bgc-south-vi",
-    chamberId: "sooke-region-chamber",
+    chamberId: "sooke-chamber",
     businessName: "BGC South Vancouver Island",
     category: "charity-nonprofit",
     subcategory: "Youth Services",
@@ -93899,7 +93899,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "so-notaries-in-sooke",
-    chamberId: "sooke-region-chamber",
+    chamberId: "sooke-chamber",
     businessName: "Notaries in Sooke",
     category: "legal",
     subcategory: "Notary Public",
@@ -93912,7 +93912,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "so-jocelyn-phillips-cpa",
-    chamberId: "sooke-region-chamber",
+    chamberId: "sooke-chamber",
     businessName: "Jocelyn Phillips CPA Inc.",
     category: "accounting",
     subcategory: "CPA",
@@ -93925,7 +93925,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "so-blossom-behaviour",
-    chamberId: "sooke-region-chamber",
+    chamberId: "sooke-chamber",
     businessName: "Blossom Behaviour Services",
     category: "healthcare",
     subcategory: "Behaviour Services",
@@ -93938,7 +93938,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "so-west-coast-grill",
-    chamberId: "sooke-region-chamber",
+    chamberId: "sooke-chamber",
     businessName: "West Coast Grill",
     category: "restaurant",
     subcategory: "Restaurant",
@@ -93951,7 +93951,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "so-stickleback-eatery",
-    chamberId: "sooke-region-chamber",
+    chamberId: "sooke-chamber",
     businessName: "Stickleback Westcoast Eatery",
     category: "restaurant",
     subcategory: "Restaurant",
@@ -93964,7 +93964,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "so-stick-in-mud",
-    chamberId: "sooke-region-chamber",
+    chamberId: "sooke-chamber",
     businessName: "The Stick In the Mud Roastoreum",
     category: "food-beverage",
     subcategory: "Coffee Roaster",
@@ -93977,7 +93977,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "so-sooke-2-for-1-pizza",
-    chamberId: "sooke-region-chamber",
+    chamberId: "sooke-chamber",
     businessName: "Sooke 2 For 1 Pizza",
     category: "restaurant",
     subcategory: "Pizza",
@@ -93990,7 +93990,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "so-subway-sooke",
-    chamberId: "sooke-region-chamber",
+    chamberId: "sooke-chamber",
     businessName: "Mitgar Enterprises Ltd (Subway)",
     category: "restaurant",
     subcategory: "Fast Food",
@@ -94003,7 +94003,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "so-cafe-vosino",
-    chamberId: "sooke-region-chamber",
+    chamberId: "sooke-chamber",
     businessName: "Cafe Vosino",
     category: "food-beverage",
     subcategory: "Cafe",
@@ -94016,7 +94016,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "so-east-sooke-eats",
-    chamberId: "sooke-region-chamber",
+    chamberId: "sooke-chamber",
     businessName: "East Sooke Eats",
     category: "restaurant",
     subcategory: "Restaurant",
@@ -94029,7 +94029,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "so-jess-wageman-homes",
-    chamberId: "sooke-region-chamber",
+    chamberId: "sooke-chamber",
     businessName: "Jess Wageman Homes",
     category: "real-estate",
     subcategory: "Real Estate Agent",
@@ -94042,7 +94042,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "so-tim-ayres-realestate",
-    chamberId: "sooke-region-chamber",
+    chamberId: "sooke-chamber",
     businessName: "Tim Ayres Personal Real Estate Corp.",
     category: "real-estate",
     subcategory: "Real Estate Agent",
@@ -94055,7 +94055,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "so-pemberton-holmes",
-    chamberId: "sooke-region-chamber",
+    chamberId: "sooke-chamber",
     businessName: "Pemberton Holmes Ltd.",
     category: "real-estate",
     subcategory: "Real Estate Brokerage",
@@ -94068,7 +94068,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "so-mackenzie-edwards",
-    chamberId: "sooke-region-chamber",
+    chamberId: "sooke-chamber",
     businessName: "Mackenzie Edwards (Realtor)",
     category: "real-estate",
     subcategory: "Real Estate Agent",
@@ -94081,7 +94081,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "so-modern-mortgage-group",
-    chamberId: "sooke-region-chamber",
+    chamberId: "sooke-chamber",
     businessName: "Modern Mortgage Group",
     category: "banking-finance",
     subcategory: "Mortgage Broker",
@@ -94094,7 +94094,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "so-kim-barbe-realestate",
-    chamberId: "sooke-region-chamber",
+    chamberId: "sooke-chamber",
     businessName: "Kim Barbe-Engel Volkers Real Estate",
     category: "real-estate",
     subcategory: "Real Estate Agent",
@@ -94107,7 +94107,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "so-keycorp-consulting",
-    chamberId: "sooke-region-chamber",
+    chamberId: "sooke-chamber",
     businessName: "Keycorp Consulting Ltd",
     category: "consulting",
     subcategory: "Business Consulting",
@@ -94120,7 +94120,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "so-cheri-sutherland-remax",
-    chamberId: "sooke-region-chamber",
+    chamberId: "sooke-chamber",
     businessName: "Cheri Sutherland - REMAX",
     category: "real-estate",
     subcategory: "Real Estate Agent",
@@ -94133,7 +94133,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "so-terry-langridge-financial",
-    chamberId: "sooke-region-chamber",
+    chamberId: "sooke-chamber",
     businessName: "Terry Langridge Complete Financial Services",
     category: "banking-finance",
     subcategory: "Financial Planning",
@@ -94146,7 +94146,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "so-koumparos-consulting",
-    chamberId: "sooke-region-chamber",
+    chamberId: "sooke-chamber",
     businessName: "Koumparos Consulting & Accounting Inc",
     category: "accounting",
     subcategory: "Accounting",
@@ -94159,7 +94159,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "so-mason-financial",
-    chamberId: "sooke-region-chamber",
+    chamberId: "sooke-chamber",
     businessName: "Mason Financial",
     category: "banking-finance",
     subcategory: "Financial Services",
@@ -94172,7 +94172,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "so-maxxam-insurance",
-    chamberId: "sooke-region-chamber",
+    chamberId: "sooke-chamber",
     businessName: "Maxxam Insurance & Realty",
     category: "insurance",
     subcategory: "Insurance",
@@ -94185,7 +94185,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "so-hub-international",
-    chamberId: "sooke-region-chamber",
+    chamberId: "sooke-chamber",
     businessName: "HUB International Ins",
     category: "insurance",
     subcategory: "Insurance",
@@ -94198,7 +94198,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "so-experior-financial",
-    chamberId: "sooke-region-chamber",
+    chamberId: "sooke-chamber",
     businessName: "Experior Financial Group (Barb Dunn)",
     category: "banking-finance",
     subcategory: "Financial Services",
@@ -94211,7 +94211,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "so-digital-progressive-bookkeeping",
-    chamberId: "sooke-region-chamber",
+    chamberId: "sooke-chamber",
     businessName: "Digital Progressive Bookkeeping Ltd",
     category: "accounting",
     subcategory: "Bookkeeping",
@@ -94224,7 +94224,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "so-coast-capital",
-    chamberId: "sooke-region-chamber",
+    chamberId: "sooke-chamber",
     businessName: "Coast Capital Savings",
     category: "banking-finance",
     subcategory: "Credit Union",
@@ -94237,7 +94237,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "so-totangi-properties",
-    chamberId: "sooke-region-chamber",
+    chamberId: "sooke-chamber",
     businessName: "Totangi Properties Ltd.",
     category: "construction",
     subcategory: "Property Development",
@@ -94250,7 +94250,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "so-sooke-home-hardware",
-    chamberId: "sooke-region-chamber",
+    chamberId: "sooke-chamber",
     businessName: "Sooke Home Hardware",
     category: "hardware-supplies",
     subcategory: "Hardware Store",
@@ -94263,7 +94263,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "so-hhs-drilling-blasting",
-    chamberId: "sooke-region-chamber",
+    chamberId: "sooke-chamber",
     businessName: "H.H.S. Drilling & Blasting",
     category: "construction",
     subcategory: "Drilling & Blasting",
@@ -94276,7 +94276,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "so-distinct-concrete",
-    chamberId: "sooke-region-chamber",
+    chamberId: "sooke-chamber",
     businessName: "Distinct Concrete Solutions Ltd.",
     category: "construction",
     subcategory: "Concrete",
@@ -94289,7 +94289,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "so-forest-lumber-cooperage",
-    chamberId: "sooke-region-chamber",
+    chamberId: "sooke-chamber",
     businessName: "Forest Lumber & Cooperage Ltd",
     category: "forestry-logging",
     subcategory: "Lumber",
@@ -94302,7 +94302,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "so-dependable-construction",
-    chamberId: "sooke-region-chamber",
+    chamberId: "sooke-chamber",
     businessName: "Dependable Construction",
     category: "construction",
     subcategory: "General Contractor",
@@ -94315,7 +94315,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "so-black-fern-plumbing",
-    chamberId: "sooke-region-chamber",
+    chamberId: "sooke-chamber",
     businessName: "Black Fern Plumbing and Gas",
     category: "plumbing",
     subcategory: "Plumbing & Gas",
@@ -94328,7 +94328,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "so-butler-brothers-supplies",
-    chamberId: "sooke-region-chamber",
+    chamberId: "sooke-chamber",
     businessName: "Butler Brothers Supplies Ltd",
     category: "hardware-supplies",
     subcategory: "Building Supplies",
@@ -94341,7 +94341,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "so-butler-concrete-aggregate",
-    chamberId: "sooke-region-chamber",
+    chamberId: "sooke-chamber",
     businessName: "Butler Concrete & Aggregate Ltd",
     category: "construction",
     subcategory: "Concrete & Aggregate",
@@ -94354,7 +94354,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "so-western-foods",
-    chamberId: "sooke-region-chamber",
+    chamberId: "sooke-chamber",
     businessName: "Western Foods",
     category: "grocery",
     subcategory: "Grocery Store",
@@ -94367,7 +94367,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "so-village-food-markets",
-    chamberId: "sooke-region-chamber",
+    chamberId: "sooke-chamber",
     businessName: "Village Food Markets",
     category: "grocery",
     subcategory: "Grocery Store",
@@ -94380,7 +94380,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "so-sooke-region-museum",
-    chamberId: "sooke-region-chamber",
+    chamberId: "sooke-chamber",
     businessName: "Sooke Region Museum",
     category: "arts-culture",
     subcategory: "Museum",
@@ -94393,7 +94393,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "so-sooke-sweet-pop-shoppe",
-    chamberId: "sooke-region-chamber",
+    chamberId: "sooke-chamber",
     businessName: "Sooke Sweet & Pop Shoppe",
     category: "retail",
     subcategory: "Candy Shop",
@@ -94406,7 +94406,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "so-sea-of-bloom",
-    chamberId: "sooke-region-chamber",
+    chamberId: "sooke-chamber",
     businessName: "A Sea of Bloom",
     category: "florist",
     subcategory: "Florist",
@@ -94419,7 +94419,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "so-rotary-club-sooke",
-    chamberId: "sooke-region-chamber",
+    chamberId: "sooke-chamber",
     businessName: "Rotary Club of Sooke",
     category: "charity-nonprofit",
     subcategory: "Service Club",
@@ -94432,7 +94432,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "so-virl",
-    chamberId: "sooke-region-chamber",
+    chamberId: "sooke-chamber",
     businessName: "Vancouver Island Regional Library",
     category: "government",
     subcategory: "Library",
@@ -94445,7 +94445,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "so-westcoast-sprouts-childcare",
-    chamberId: "sooke-region-chamber",
+    chamberId: "sooke-chamber",
     businessName: "Westcoast Sprouts Childcare",
     category: "childcare",
     subcategory: "Childcare",
@@ -94458,7 +94458,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "so-sooke-moon-wellness",
-    chamberId: "sooke-region-chamber",
+    chamberId: "sooke-chamber",
     businessName: "Sooke Moon Community Wellness Society",
     category: "charity-nonprofit",
     subcategory: "Wellness",
@@ -94471,7 +94471,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "so-sooke-shelter-society",
-    chamberId: "sooke-region-chamber",
+    chamberId: "sooke-chamber",
     businessName: "Sooke Shelter Society",
     category: "charity-nonprofit",
     subcategory: "Social Services",
@@ -94484,7 +94484,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "so-sooke-options",
-    chamberId: "sooke-region-chamber",
+    chamberId: "sooke-chamber",
     businessName: "Sooke Options for Community Living",
     category: "charity-nonprofit",
     subcategory: "Community Services",
@@ -94497,7 +94497,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "so-sooke-lions",
-    chamberId: "sooke-region-chamber",
+    chamberId: "sooke-chamber",
     businessName: "Sooke Lions",
     category: "charity-nonprofit",
     subcategory: "Service Club",
@@ -94510,7 +94510,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "so-sooke-communities-health",
-    chamberId: "sooke-region-chamber",
+    chamberId: "sooke-chamber",
     businessName: "Sooke Region Communities Health Network",
     category: "healthcare",
     subcategory: "Health Network",
@@ -94523,7 +94523,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "so-sea-to-tree-wellness",
-    chamberId: "sooke-region-chamber",
+    chamberId: "sooke-chamber",
     businessName: "Sea to Tree Health & Wellness Ltd",
     category: "healthcare",
     subcategory: "Wellness",
@@ -94536,7 +94536,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "so-westside-hair-studio",
-    chamberId: "sooke-region-chamber",
+    chamberId: "sooke-chamber",
     businessName: "Westside Hair Studio",
     category: "spa-beauty",
     subcategory: "Hair Salon",
@@ -94549,7 +94549,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "so-vibe-hair-studio",
-    chamberId: "sooke-region-chamber",
+    chamberId: "sooke-chamber",
     businessName: "Vibe Hair Studio",
     category: "spa-beauty",
     subcategory: "Hair Salon",
@@ -94562,7 +94562,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "so-coastal-nails",
-    chamberId: "sooke-region-chamber",
+    chamberId: "sooke-chamber",
     businessName: "Coastal Nails",
     category: "spa-beauty",
     subcategory: "Nail Salon",
@@ -94575,7 +94575,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "so-barbs-barbershop",
-    chamberId: "sooke-region-chamber",
+    chamberId: "sooke-chamber",
     businessName: "Barb's Barbershop Inc",
     category: "spa-beauty",
     subcategory: "Barbershop",
@@ -94588,7 +94588,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "so-district-of-sooke",
-    chamberId: "sooke-region-chamber",
+    chamberId: "sooke-chamber",
     businessName: "District of Sooke",
     category: "government",
     subcategory: "Municipal Government",
@@ -94601,7 +94601,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "so-sooke-fire-rescue",
-    chamberId: "sooke-region-chamber",
+    chamberId: "sooke-chamber",
     businessName: "Sooke Fire Rescue",
     category: "government",
     subcategory: "Fire Department",
@@ -94614,7 +94614,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "so-rcmp-sooke",
-    chamberId: "sooke-region-chamber",
+    chamberId: "sooke-chamber",
     businessName: "RCMP Sooke Detachment",
     category: "government",
     subcategory: "Police",
@@ -94627,7 +94627,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "so-sooke-news-mirror",
-    chamberId: "sooke-region-chamber",
+    chamberId: "sooke-chamber",
     businessName: "Sooke News Mirror",
     category: "media",
     subcategory: "Newspaper",
@@ -94640,7 +94640,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "so-sooke-pocket-news",
-    chamberId: "sooke-region-chamber",
+    chamberId: "sooke-chamber",
     businessName: "Sooke Pocket News",
     category: "media",
     subcategory: "Community News",
