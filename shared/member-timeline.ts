@@ -69,7 +69,24 @@ function getMemberDates(): Map<string, string> {
 }
 
 /**
+ * Get all dates in a range
+ */
+function getDateRange(startDate: string, endDate: string): string[] {
+  const dates: string[] = [];
+  const current = new Date(startDate + 'T00:00:00');
+  const end = new Date(endDate + 'T00:00:00');
+  
+  while (current <= end) {
+    dates.push(formatDateISO(current));
+    current.setDate(current.getDate() + 1);
+  }
+  
+  return dates;
+}
+
+/**
  * Get daily member addition data for charting
+ * Extended date range: Dec 23, 2025 to March 30, 2026
  */
 export function getMemberTimelineData(): DailyMemberData[] {
   const memberDates = getMemberDates();
@@ -84,12 +101,15 @@ export function getMemberTimelineData(): DailyMemberData[] {
     dailyCounts.set(date, (dailyCounts.get(date) || 0) + 1);
   }
   
-  // Sort dates and compute cumulative
-  const sortedDates = Array.from(dailyCounts.keys()).sort();
+  // Extended date range: Dec 23, 2025 to March 30, 2026
+  const startDate = '2025-12-23';
+  const endDate = '2026-03-30';
+  const allDates = getDateRange(startDate, endDate);
+  
   const result: DailyMemberData[] = [];
   let cumulative = 0;
   
-  for (const date of sortedDates) {
+  for (const date of allDates) {
     const added = dailyCounts.get(date) || 0;
     cumulative += added;
     result.push({
