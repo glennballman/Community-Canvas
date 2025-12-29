@@ -1,6 +1,13 @@
 import { chamberMembers } from './chamber-members';
 import { BC_CHAMBERS_OF_COMMERCE } from './chambers-of-commerce';
 
+export interface MissingFieldEntry {
+  memberId: string;
+  businessName: string;
+  chamberId: string;
+  field: string;
+}
+
 export interface AuditResult {
   timestamp: string;
   summary: {
@@ -13,6 +20,7 @@ export interface AuditResult {
     naicsCoverage: number;
     orphanedIds: number;
     duplicateIds: number;
+    missingRequiredFields: number;
   };
   memberCountReconciliation: {
     totalFromFile: number;
@@ -22,6 +30,7 @@ export interface AuditResult {
   };
   orphanedChamberIds: Array<{ chamberId: string; memberCount: number }>;
   duplicateMemberIds: Array<{ id: string; count: number }>;
+  missingRequiredFields: MissingFieldEntry[];
   chambersWithoutMembers: string[];
   naicsAnalysis: {
     overall: { total: number; withNaics: number; percentage: number };
@@ -34,6 +43,7 @@ export interface AuditResult {
     memberCount?: number;
     id?: string;
     count?: number;
+    field?: string;
     file?: string;
     jsonCount?: number;
     tsCount?: number;
@@ -54,6 +64,7 @@ export function runChamberAudit(): AuditResult {
       naicsCoverage: 0,
       orphanedIds: 0,
       duplicateIds: 0,
+      missingRequiredFields: 0,
     },
     memberCountReconciliation: {
       totalFromFile: 0,
@@ -63,6 +74,7 @@ export function runChamberAudit(): AuditResult {
     },
     orphanedChamberIds: [],
     duplicateMemberIds: [],
+    missingRequiredFields: [],
     chambersWithoutMembers: [],
     naicsAnalysis: {
       overall: { total: 0, withNaics: 0, percentage: 0 },
@@ -94,7 +106,34 @@ export function runChamberAudit(): AuditResult {
       naicsByChamber[member.chamberId].withNaics++;
       totalWithNaics++;
     }
+
+    if (!member.id || member.id === 'undefined') {
+      results.missingRequiredFields.push({
+        memberId: member.id || 'unknown',
+        businessName: member.businessName || 'unknown',
+        chamberId: member.chamberId || 'unknown',
+        field: 'id',
+      });
+    }
+    if (!member.businessName) {
+      results.missingRequiredFields.push({
+        memberId: member.id || 'unknown',
+        businessName: 'missing',
+        chamberId: member.chamberId || 'unknown',
+        field: 'businessName',
+      });
+    }
+    if (!member.chamberId) {
+      results.missingRequiredFields.push({
+        memberId: member.id || 'unknown',
+        businessName: member.businessName || 'unknown',
+        chamberId: 'missing',
+        field: 'chamberId',
+      });
+    }
   });
+
+  results.summary.missingRequiredFields = results.missingRequiredFields.length;
 
   results.memberCountReconciliation.byChamberId = chamberCounts;
   const sumByChamber = Object.values(chamberCounts).reduce((a, b) => a + b, 0);
@@ -175,6 +214,20 @@ export function runChamberAudit(): AuditResult {
         type: 'DUPLICATE_MEMBER_ID',
         id: d.id,
         count: d.count,
+      });
+    });
+  }
+
+  if (results.missingRequiredFields.length > 0) {
+    const fieldCounts: Record<string, number> = {};
+    results.missingRequiredFields.forEach((m) => {
+      fieldCounts[m.field] = (fieldCounts[m.field] || 0) + 1;
+    });
+    Object.entries(fieldCounts).forEach(([field, count]) => {
+      results.issues.push({
+        type: 'MISSING_REQUIRED_FIELD',
+        field,
+        count,
       });
     });
   }
