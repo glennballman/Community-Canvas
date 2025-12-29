@@ -476,11 +476,12 @@ export default function AdminChambers() {
     return Math.min(100, Math.floor((row.actualMembers / row.expectedMembers) * 100));
   };
 
+  // Operational order: pending first (work to start), then in_progress, partial, completed, blocked
   const statusOrder: Record<ChamberProgressStatus, number> = {
-    'completed': 0,
-    'partial': 1,
-    'in_progress': 2,
-    'pending': 3,
+    'pending': 0,
+    'in_progress': 1,
+    'partial': 2,
+    'completed': 3,
     'blocked': 4
   };
 
@@ -919,51 +920,65 @@ export default function AdminChambers() {
                   </div>
                 </div>
                 <div className="flex-1 overflow-hidden flex flex-col">
-                  <div className="sticky top-0 z-10 bg-background border-b border-border/30">
+                  <div className="sticky top-0 z-50 bg-background border-b border-border/30">
                     <table className="w-full text-xs">
                       <thead>
                         <tr className="text-[10px] text-muted-foreground">
-                          <th 
-                            className="text-left py-2 px-2 cursor-pointer hover-elevate select-none"
-                            onClick={() => handleProgressSort('status')}
-                          >
-                            <div className="flex items-center">STATUS{getSortIcon('status')}</div>
+                          <th className="text-left py-2 px-2">
+                            <button 
+                              className="flex items-center cursor-pointer select-none opacity-80 hover:opacity-100 transition-opacity"
+                              onClick={() => handleProgressSort('status')}
+                            >
+                              STATUS{getSortIcon('status')}
+                            </button>
                           </th>
-                          <th 
-                            className="text-left py-2 px-2 cursor-pointer hover-elevate select-none"
-                            onClick={() => handleProgressSort('chamber')}
-                          >
-                            <div className="flex items-center">CHAMBER{getSortIcon('chamber')}</div>
+                          <th className="text-left py-2 px-2">
+                            <button 
+                              className="flex items-center cursor-pointer select-none opacity-80 hover:opacity-100 transition-opacity"
+                              onClick={() => handleProgressSort('chamber')}
+                            >
+                              CHAMBER{getSortIcon('chamber')}
+                            </button>
                           </th>
-                          <th 
-                            className="text-left py-2 px-2 cursor-pointer hover-elevate select-none"
-                            onClick={() => handleProgressSort('region')}
-                          >
-                            <div className="flex items-center">REGION{getSortIcon('region')}</div>
+                          <th className="text-left py-2 px-2">
+                            <button 
+                              className="flex items-center cursor-pointer select-none opacity-80 hover:opacity-100 transition-opacity"
+                              onClick={() => handleProgressSort('region')}
+                            >
+                              REGION{getSortIcon('region')}
+                            </button>
                           </th>
-                          <th 
-                            className="text-right py-2 px-2 cursor-pointer hover-elevate select-none"
-                            onClick={() => handleProgressSort('members')}
-                          >
-                            <div className="flex items-center justify-end">MEMBERS{getSortIcon('members')}</div>
+                          <th className="text-right py-2 px-2">
+                            <button 
+                              className="flex items-center justify-end cursor-pointer select-none opacity-80 hover:opacity-100 transition-opacity ml-auto"
+                              onClick={() => handleProgressSort('members')}
+                            >
+                              MEMBERS{getSortIcon('members')}
+                            </button>
                           </th>
-                          <th 
-                            className="text-right py-2 px-2 cursor-pointer hover-elevate select-none"
-                            onClick={() => handleProgressSort('expected')}
-                          >
-                            <div className="flex items-center justify-end">EXPECTED{getSortIcon('expected')}</div>
+                          <th className="text-right py-2 px-2">
+                            <button 
+                              className="flex items-center justify-end cursor-pointer select-none opacity-80 hover:opacity-100 transition-opacity ml-auto"
+                              onClick={() => handleProgressSort('expected')}
+                            >
+                              EXPECTED{getSortIcon('expected')}
+                            </button>
                           </th>
-                          <th 
-                            className="text-right py-2 px-2 cursor-pointer hover-elevate select-none"
-                            onClick={() => handleProgressSort('percentComplete')}
-                          >
-                            <div className="flex items-center justify-end">% COLL{getSortIcon('percentComplete')}</div>
+                          <th className="text-right py-2 px-2">
+                            <button 
+                              className="flex items-center justify-end cursor-pointer select-none opacity-80 hover:opacity-100 transition-opacity ml-auto"
+                              onClick={() => handleProgressSort('percentComplete')}
+                            >
+                              % COLL{getSortIcon('percentComplete')}
+                            </button>
                           </th>
-                          <th 
-                            className="text-right py-2 px-2 cursor-pointer hover-elevate select-none"
-                            onClick={() => handleProgressSort('naics')}
-                          >
-                            <div className="flex items-center justify-end">NAICS %{getSortIcon('naics')}</div>
+                          <th className="text-right py-2 px-2">
+                            <button 
+                              className="flex items-center justify-end cursor-pointer select-none opacity-80 hover:opacity-100 transition-opacity ml-auto"
+                              onClick={() => handleProgressSort('naics')}
+                            >
+                              NAICS %{getSortIcon('naics')}
+                            </button>
                           </th>
                           <th className="text-left py-2 px-2">ISSUES</th>
                         </tr>
