@@ -919,165 +919,167 @@ export default function AdminChambers() {
                     Completion criteria: 30+ members AND 80%+ NAICS coverage. Partial = has data but does not meet both criteria.
                   </div>
                 </div>
-                <div className="flex-1 overflow-hidden flex flex-col">
-                  <div className="sticky top-0 z-50 bg-background border-b border-border/30">
-                    <table className="w-full text-xs">
-                      <thead>
-                        <tr className="text-[10px] text-muted-foreground">
-                          <th className="text-left py-2 px-2">
-                            <button 
-                              className="flex items-center cursor-pointer select-none opacity-80 hover:opacity-100 transition-opacity"
-                              onClick={() => handleProgressSort('status')}
-                            >
-                              STATUS{getSortIcon('status')}
-                            </button>
-                          </th>
-                          <th className="text-left py-2 px-2">
-                            <button 
-                              className="flex items-center cursor-pointer select-none opacity-80 hover:opacity-100 transition-opacity"
-                              onClick={() => handleProgressSort('chamber')}
-                            >
-                              CHAMBER{getSortIcon('chamber')}
-                            </button>
-                          </th>
-                          <th className="text-left py-2 px-2">
-                            <button 
-                              className="flex items-center cursor-pointer select-none opacity-80 hover:opacity-100 transition-opacity"
-                              onClick={() => handleProgressSort('region')}
-                            >
-                              REGION{getSortIcon('region')}
-                            </button>
-                          </th>
-                          <th className="text-right py-2 px-2">
-                            <button 
-                              className="flex items-center justify-end cursor-pointer select-none opacity-80 hover:opacity-100 transition-opacity ml-auto"
-                              onClick={() => handleProgressSort('members')}
-                            >
-                              MEMBERS{getSortIcon('members')}
-                            </button>
-                          </th>
-                          <th className="text-right py-2 px-2">
-                            <button 
-                              className="flex items-center justify-end cursor-pointer select-none opacity-80 hover:opacity-100 transition-opacity ml-auto"
-                              onClick={() => handleProgressSort('expected')}
-                            >
-                              EXPECTED{getSortIcon('expected')}
-                            </button>
-                          </th>
-                          <th className="text-right py-2 px-2">
-                            <button 
-                              className="flex items-center justify-end cursor-pointer select-none opacity-80 hover:opacity-100 transition-opacity ml-auto"
-                              onClick={() => handleProgressSort('percentComplete')}
-                            >
-                              % COLL{getSortIcon('percentComplete')}
-                            </button>
-                          </th>
-                          <th className="text-right py-2 px-2">
-                            <button 
-                              className="flex items-center justify-end cursor-pointer select-none opacity-80 hover:opacity-100 transition-opacity ml-auto"
-                              onClick={() => handleProgressSort('naics')}
-                            >
-                              NAICS %{getSortIcon('naics')}
-                            </button>
-                          </th>
-                          <th className="text-left py-2 px-2">ISSUES</th>
-                        </tr>
-                      </thead>
-                    </table>
-                  </div>
-                  <ScrollArea className="flex-1">
-                    <div className="p-3 pt-0">
-                      <table className="w-full text-xs">
-                        <tbody>
-                          {sortedProgressList.map(row => {
-                            const pctComplete = getPercentComplete(row);
-                            return (
-                              <tr 
-                                key={row.chamberId} 
-                                className="border-b border-border/20 hover-elevate"
-                                data-testid={`row-progress-${row.chamberId}`}
-                              >
-                                <td className="py-2 px-2">
-                                  <div className="flex items-center gap-1.5">
-                                    {getStatusIcon(row.status)}
-                                    <Badge variant="outline" className={`text-[8px] ${getStatusBadgeClass(row.status)}`}>
-                                      {row.status.toUpperCase().replace('_', ' ')}
+                <ScrollArea className="flex-1">
+                  <table className="w-full text-xs" style={{ tableLayout: 'fixed' }}>
+                    <colgroup>
+                      <col style={{ width: '100px' }} />
+                      <col style={{ width: '220px' }} />
+                      <col style={{ width: '120px' }} />
+                      <col style={{ width: '70px' }} />
+                      <col style={{ width: '70px' }} />
+                      <col style={{ width: '60px' }} />
+                      <col style={{ width: '60px' }} />
+                      <col />
+                    </colgroup>
+                    <thead className="sticky top-0 z-50 bg-background">
+                      <tr className="text-[10px] text-muted-foreground border-b border-border/30">
+                        <th className="text-left py-2 px-2">
+                          <button 
+                            className="flex items-center cursor-pointer select-none opacity-80 hover:opacity-100 transition-opacity"
+                            onClick={() => handleProgressSort('status')}
+                          >
+                            STATUS{getSortIcon('status')}
+                          </button>
+                        </th>
+                        <th className="text-left py-2 px-2">
+                          <button 
+                            className="flex items-center cursor-pointer select-none opacity-80 hover:opacity-100 transition-opacity"
+                            onClick={() => handleProgressSort('chamber')}
+                          >
+                            CHAMBER{getSortIcon('chamber')}
+                          </button>
+                        </th>
+                        <th className="text-left py-2 px-2">
+                          <button 
+                            className="flex items-center cursor-pointer select-none opacity-80 hover:opacity-100 transition-opacity"
+                            onClick={() => handleProgressSort('region')}
+                          >
+                            REGION{getSortIcon('region')}
+                          </button>
+                        </th>
+                        <th className="text-right py-2 px-2">
+                          <button 
+                            className="flex items-center justify-end cursor-pointer select-none opacity-80 hover:opacity-100 transition-opacity ml-auto"
+                            onClick={() => handleProgressSort('members')}
+                          >
+                            MEMBERS{getSortIcon('members')}
+                          </button>
+                        </th>
+                        <th className="text-right py-2 px-2">
+                          <button 
+                            className="flex items-center justify-end cursor-pointer select-none opacity-80 hover:opacity-100 transition-opacity ml-auto"
+                            onClick={() => handleProgressSort('expected')}
+                          >
+                            EXPECTED{getSortIcon('expected')}
+                          </button>
+                        </th>
+                        <th className="text-right py-2 px-2">
+                          <button 
+                            className="flex items-center justify-end cursor-pointer select-none opacity-80 hover:opacity-100 transition-opacity ml-auto"
+                            onClick={() => handleProgressSort('percentComplete')}
+                          >
+                            % COLL{getSortIcon('percentComplete')}
+                          </button>
+                        </th>
+                        <th className="text-right py-2 px-2">
+                          <button 
+                            className="flex items-center justify-end cursor-pointer select-none opacity-80 hover:opacity-100 transition-opacity ml-auto"
+                            onClick={() => handleProgressSort('naics')}
+                          >
+                            NAICS{getSortIcon('naics')}
+                          </button>
+                        </th>
+                        <th className="text-left py-2 px-2">ISSUES</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {sortedProgressList.map(row => {
+                        const pctComplete = getPercentComplete(row);
+                        return (
+                          <tr 
+                            key={row.chamberId} 
+                            className="border-b border-border/20 hover-elevate"
+                            data-testid={`row-progress-${row.chamberId}`}
+                          >
+                            <td className="py-2 px-2">
+                              <div className="flex items-center gap-1.5">
+                                {getStatusIcon(row.status)}
+                                <Badge variant="outline" className={`text-[8px] ${getStatusBadgeClass(row.status)}`}>
+                                  {row.status.toUpperCase().replace('_', ' ')}
+                                </Badge>
+                              </div>
+                            </td>
+                            <td className="py-2 px-2">
+                              <div className="flex items-center gap-2">
+                                <ClipboardCheck className="w-3 h-3 text-amber-400 flex-shrink-0" />
+                                <div className="min-w-0">
+                                  <div className="font-medium truncate">{row.chamberName}</div>
+                                  <div className="text-[10px] text-muted-foreground truncate">{row.municipality}</div>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="py-2 px-2">
+                              <Badge variant="outline" className="text-[8px] bg-indigo-500/10 text-indigo-400 border-indigo-500/30">
+                                {row.region}
+                              </Badge>
+                            </td>
+                            <td className="py-2 px-2 text-right">
+                              <span className={row.actualMembers >= 30 ? "text-emerald-400 font-medium" : row.actualMembers > 0 ? "text-yellow-400" : "text-muted-foreground/50"}>
+                                {row.actualMembers > 0 ? row.actualMembers : '-'}
+                              </span>
+                            </td>
+                            <td className="py-2 px-2 text-right">
+                              {row.expectedMembers !== null ? (
+                                <span className="text-cyan-400">{row.expectedMembers}</span>
+                              ) : (
+                                <span className="text-muted-foreground/50">-</span>
+                              )}
+                            </td>
+                            <td className="py-2 px-2 text-right">
+                              {pctComplete !== null ? (
+                                <span className={pctComplete >= 80 ? "text-emerald-400 font-medium" : pctComplete >= 50 ? "text-yellow-400" : "text-orange-400"}>
+                                  {pctComplete}%
+                                </span>
+                              ) : (
+                                <span className="text-muted-foreground/50">-</span>
+                              )}
+                            </td>
+                            <td className="py-2 px-2 text-right">
+                              {row.naicsCoverage !== null ? (
+                                <span className={row.naicsCoverage >= 80 ? "text-emerald-400 font-medium" : row.naicsCoverage > 0 ? "text-yellow-400" : "text-muted-foreground"}>
+                                  {row.naicsCoverage}%
+                                </span>
+                              ) : (
+                                <span className="text-muted-foreground/50">N/A</span>
+                              )}
+                            </td>
+                            <td className="py-2 px-2">
+                              {row.partialReasons.length > 0 ? (
+                                <div className="flex flex-wrap gap-1">
+                                  {row.partialReasons.map(reason => (
+                                    <Badge 
+                                      key={reason} 
+                                      variant="outline" 
+                                      className="text-[7px] bg-yellow-500/5 text-yellow-400/80 border-yellow-500/20"
+                                    >
+                                      {getPartialReasonText(reason)}
                                     </Badge>
-                                  </div>
-                                </td>
-                                <td className="py-2 px-2">
-                                  <div className="flex items-center gap-2">
-                                    <ClipboardCheck className="w-3 h-3 text-amber-400" />
-                                    <div>
-                                      <div className="font-medium">{row.chamberName}</div>
-                                      <div className="text-[10px] text-muted-foreground">{row.municipality}</div>
-                                    </div>
-                                  </div>
-                                </td>
-                                <td className="py-2 px-2">
-                                  <Badge variant="outline" className="text-[8px] bg-indigo-500/10 text-indigo-400 border-indigo-500/30">
-                                    {row.region}
-                                  </Badge>
-                                </td>
-                                <td className="py-2 px-2 text-right">
-                                  <span className={row.actualMembers >= 30 ? "text-emerald-400 font-medium" : row.actualMembers > 0 ? "text-yellow-400" : "text-muted-foreground/50"}>
-                                    {row.actualMembers > 0 ? row.actualMembers : '-'}
-                                  </span>
-                                </td>
-                                <td className="py-2 px-2 text-right">
-                                  {row.expectedMembers !== null ? (
-                                    <span className="text-cyan-400">{row.expectedMembers}</span>
-                                  ) : (
-                                    <span className="text-muted-foreground/50">-</span>
-                                  )}
-                                </td>
-                                <td className="py-2 px-2 text-right">
-                                  {pctComplete !== null ? (
-                                    <span className={pctComplete >= 80 ? "text-emerald-400 font-medium" : pctComplete >= 50 ? "text-yellow-400" : "text-orange-400"}>
-                                      {pctComplete}%
-                                    </span>
-                                  ) : (
-                                    <span className="text-muted-foreground/50">-</span>
-                                  )}
-                                </td>
-                                <td className="py-2 px-2 text-right">
-                                  {row.naicsCoverage !== null ? (
-                                    <span className={row.naicsCoverage >= 80 ? "text-emerald-400 font-medium" : row.naicsCoverage > 0 ? "text-yellow-400" : "text-muted-foreground"}>
-                                      {row.naicsCoverage}%
-                                    </span>
-                                  ) : (
-                                    <span className="text-muted-foreground/50">N/A</span>
-                                  )}
-                                </td>
-                                <td className="py-2 px-2">
-                                  {row.partialReasons.length > 0 ? (
-                                    <div className="flex flex-wrap gap-1">
-                                      {row.partialReasons.map(reason => (
-                                        <Badge 
-                                          key={reason} 
-                                          variant="outline" 
-                                          className="text-[7px] bg-yellow-500/5 text-yellow-400/80 border-yellow-500/20"
-                                        >
-                                          {getPartialReasonText(reason)}
-                                        </Badge>
-                                      ))}
-                                    </div>
-                                  ) : row.status === 'completed' ? (
-                                    <span className="text-[10px] text-green-400/70">All criteria met</span>
-                                  ) : row.status === 'pending' ? (
-                                    <span className="text-[10px] text-muted-foreground/50">Not started</span>
-                                  ) : null}
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
-                  </ScrollArea>
-                </div>
+                                  ))}
+                                </div>
+                              ) : row.status === 'completed' ? (
+                                <span className="text-[10px] text-green-400/70">All criteria met</span>
+                              ) : row.status === 'pending' ? (
+                                <span className="text-[10px] text-muted-foreground/50">Not started</span>
+                              ) : null}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </ScrollArea>
               </div>
-              <div className="w-[400px] border-l border-border/30 flex-shrink-0">
+              <div className="w-[1200px] border-l border-border/30 flex-shrink-0">
                 <ChamberMapFull />
               </div>
             </TabsContent>
