@@ -1985,139 +1985,139 @@ export const chamberMembers: ChamberMember[] = [
   // 133 verified members
   // ============================================================================
 
-  { name: "Fleming & Company, CPA", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Victoria, BC", phone: "(250) 388-5155", website: "https://flemingcpas.ca", naicsCode: "541211", naicsSubsector: "Offices of Certified Public Accountants", naicsSector: "Professional, Scientific, and Technical Services", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "Bear Mountain Accounting Services Ltd.", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Langford, BC", phone: "(250) 391-0220", naicsCode: "541211", naicsSubsector: "Offices of Certified Public Accountants", naicsSector: "Professional, Scientific, and Technical Services", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "Marren Tax & Accounting Services", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Victoria, BC", phone: "(250) 391-1181", naicsCode: "541211", naicsSubsector: "Offices of Certified Public Accountants", naicsSector: "Professional, Scientific, and Technical Services", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "Bentley Siu Redmond, Professional Accountants", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Langford, BC", phone: "(250) 474-4564", naicsCode: "541211", naicsSubsector: "Offices of Certified Public Accountants", naicsSector: "Professional, Scientific, and Technical Services", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "Gaidelis & Company, CPA", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Victoria, BC", phone: "(250) 388-9423", naicsCode: "541211", naicsSubsector: "Offices of Certified Public Accountants", naicsSector: "Professional, Scientific, and Technical Services", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "Koumparos Consulting & Accounting Inc.", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Victoria, BC", phone: "(250) 474-5556", naicsCode: "541211", naicsSubsector: "Offices of Certified Public Accountants", naicsSector: "Professional, Scientific, and Technical Services", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "Baker Tilly Victoria Ltd.", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Victoria, BC", phone: "(250) 388-4414", naicsCode: "541211", naicsSubsector: "Offices of Certified Public Accountants", naicsSector: "Professional, Scientific, and Technical Services", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "Pewarchuk CPA Inc.", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Victoria, BC", phone: "(250) 479-3343", naicsCode: "541211", naicsSubsector: "Offices of Certified Public Accountants", naicsSector: "Professional, Scientific, and Technical Services", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "Equity Books", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Victoria, BC", phone: "(250) 818-1998", naicsCode: "541211", naicsSubsector: "Offices of Certified Public Accountants", naicsSector: "Professional, Scientific, and Technical Services", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "Vancity Credit Union", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Langford, BC", phone: "(604) 877-7000", website: "https://vancity.com", naicsCode: "522110", naicsSubsector: "Commercial Banking", naicsSector: "Finance and Insurance", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "National Bank of Canada", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Langford, BC", phone: "(250) 391-6000", naicsCode: "522110", naicsSubsector: "Commercial Banking", naicsSector: "Finance and Insurance", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "Coastal Community Credit Union", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "752A Goldstream Ave, Langford, BC", phone: "1-888-741-1010", website: "https://cccu.ca", naicsCode: "522110", naicsSubsector: "Commercial Banking", naicsSector: "Finance and Insurance", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "Bank of Montreal Westshore", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Langford, BC", phone: "(250) 391-2200", naicsCode: "522110", naicsSubsector: "Commercial Banking", naicsSector: "Finance and Insurance", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "Island Savings", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Langford, BC", phone: "(250) 385-4728", naicsCode: "522110", naicsSubsector: "Commercial Banking", naicsSector: "Finance and Insurance", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "RBC Royal Bank", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Langford, BC", phone: "(250) 356-4000", naicsCode: "522110", naicsSubsector: "Commercial Banking", naicsSector: "Finance and Insurance", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "Morley Hanson Law Corporation", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Victoria, BC", phone: "(250) 478-6031", naicsCode: "541110", naicsSubsector: "Offices of Lawyers", naicsSector: "Professional, Scientific, and Technical Services", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "Lextegic Law Corporation", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Langford, BC", phone: "(250) 391-9090", naicsCode: "541110", naicsSubsector: "Offices of Lawyers", naicsSector: "Professional, Scientific, and Technical Services", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "Mary Ann E. MacKenzie Law Corporation", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Victoria, BC", phone: "(250) 478-2101", naicsCode: "541110", naicsSubsector: "Offices of Lawyers", naicsSector: "Professional, Scientific, and Technical Services", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "Vangenne & Company Law Corporation", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Victoria, BC", phone: "(250) 388-6655", naicsCode: "541110", naicsSubsector: "Offices of Lawyers", naicsSector: "Professional, Scientific, and Technical Services", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "Pearson & Company", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Victoria, BC", phone: "(250) 388-4444", naicsCode: "541110", naicsSubsector: "Offices of Lawyers", naicsSector: "Professional, Scientific, and Technical Services", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "Merizzi Ramsbottom & Forster", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Langford, BC", phone: "(250) 478-7900", naicsCode: "541110", naicsSubsector: "Offices of Lawyers", naicsSector: "Professional, Scientific, and Technical Services", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "Farley Martin Notaries Public Inc.", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Victoria, BC", phone: "(250) 386-3311", naicsCode: "541110", naicsSubsector: "Offices of Lawyers", naicsSector: "Professional, Scientific, and Technical Services", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "Pearlman Lindholm", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Victoria, BC V9B 2W8", phone: "(250) 388-4433", website: "https://pearlmanlindholm.com", naicsCode: "541110", naicsSubsector: "Offices of Lawyers", naicsSector: "Professional, Scientific, and Technical Services", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "Kent McFadyen: Coldwell Banker Oceanside", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Victoria, BC", phone: "(250) 893-9889", naicsCode: "531210", naicsSubsector: "Offices of Real Estate Agents and Brokers", naicsSector: "Real Estate and Rental and Leasing", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "Cheryl Barnes Real Estate", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Victoria, BC", phone: "(250) 889-8847", naicsCode: "531210", naicsSubsector: "Offices of Real Estate Agents and Brokers", naicsSector: "Real Estate and Rental and Leasing", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "Macdonald Real Estate Services Ltd.", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Victoria, BC", phone: "(250) 477-0131", naicsCode: "531210", naicsSubsector: "Offices of Real Estate Agents and Brokers", naicsSector: "Real Estate and Rental and Leasing", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "Nick Honour - The Agency", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Victoria, BC", phone: "(250) 888-8007", naicsCode: "531210", naicsSubsector: "Offices of Real Estate Agents and Brokers", naicsSector: "Real Estate and Rental and Leasing", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "Trudy Maken Real Estate", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Victoria, BC", phone: "(250) 661-5753", naicsCode: "531210", naicsSubsector: "Offices of Real Estate Agents and Brokers", naicsSector: "Real Estate and Rental and Leasing", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "Paul Brum - RE/MAX Camosun", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Victoria, BC", phone: "(250) 889-8847", naicsCode: "531210", naicsSubsector: "Offices of Real Estate Agents and Brokers", naicsSector: "Real Estate and Rental and Leasing", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "RE/MAX Camosun Westshore - Branch Office", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Langford, BC", phone: "(250) 474-4800", naicsCode: "531210", naicsSubsector: "Offices of Real Estate Agents and Brokers", naicsSector: "Real Estate and Rental and Leasing", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "Auxilium Mortgage Corporation", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "#16-Unit 211, 2840 Peatt Road, Langford, BC V9B 3V4", phone: "(250) 590-6520", website: "https://auxiliummortgage.com", naicsCode: "531210", naicsSubsector: "Offices of Real Estate Agents and Brokers", naicsSector: "Real Estate and Rental and Leasing", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "Acera Insurance", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "#203-345C Latoria Blvd, Victoria, BC V9C 4L8", phone: "(250) 595-5212", website: "https://acera.ca", naicsCode: "524210", naicsSubsector: "Insurance Agencies and Brokerages", naicsSector: "Finance and Insurance", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "RDF Group", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "#204-830 Shamrock Street, Victoria, BC V8X 2V1", phone: "(250) 383-9866", website: "https://rdfgroup.ca", naicsCode: "524210", naicsSubsector: "Insurance Agencies and Brokerages", naicsSector: "Finance and Insurance", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "Waypoint Insurance (formerly FX Insurance Brokers Ltd.)", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Unit 114 - 3218 Jacklin Road, Victoria, BC V9B 0J5", phone: "(250) 888-8891", website: "https://waypoint.ca", naicsCode: "524210", naicsSubsector: "Insurance Agencies and Brokerages", naicsSector: "Finance and Insurance", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "Prosperity Planning", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "122-2871 Jacklin Road, Victoria, BC V9B 0P3", phone: "(250) 818-2616", website: "https://prosperity-planning.com", naicsCode: "524210", naicsSubsector: "Insurance Agencies and Brokerages", naicsSector: "Finance and Insurance", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "Combined Insurance", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "107 - 1208 Wharf Street, Victoria, BC V9A 3B9", phone: "(250) 732-0986", website: "https://livingbenefitsvi.com", naicsCode: "524210", naicsSubsector: "Insurance Agencies and Brokerages", naicsSector: "Finance and Insurance", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "Mandala Center for Health & Wellness", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "215-611 Brookside Road, Victoria, BC V9C 4K2", phone: "(250) 590-2501", website: "https://mandalahealthcenter.com", naicsCode: "621399", naicsSubsector: "Offices of All Other Miscellaneous Health Practitioners", naicsSector: "Health Care and Social Assistance", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "IRIS Optometrists & Opticians (655 EYECARE Inc.)", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "109 - 693 Hoffman Ave, Victoria, BC V9B 4X1", phone: "(250) 478-0213", website: "https://iris.ca", naicsCode: "621399", naicsSubsector: "Offices of All Other Miscellaneous Health Practitioners", naicsSector: "Health Care and Social Assistance", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "Eye Etiquette Optical Boutique Ltd.", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "189-2401C Millstream Rd., Victoria, BC", phone: "(250) 474-1941", website: "https://eyeetiquetteoptical.ca", naicsCode: "621399", naicsSubsector: "Offices of All Other Miscellaneous Health Practitioners", naicsSector: "Health Care and Social Assistance", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "West Shore Family Naturopathic Ltd.", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "2885 Peatt Rd., Victoria, BC V9B 3V7", phone: "(250) 474-6361", website: "https://westshorefamilynaturopathic.com", naicsCode: "621399", naicsSubsector: "Offices of All Other Miscellaneous Health Practitioners", naicsSector: "Health Care and Social Assistance", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "Compass Mobile Therapeutics Inc.", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Victoria, BC", phone: "(778) 744-8401", website: "https://compassmassage.ca", naicsCode: "621399", naicsSubsector: "Offices of All Other Miscellaneous Health Practitioners", naicsSector: "Health Care and Social Assistance", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "Float House Westshore", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "106 - 2871 Jacklin Rd, Victoria, BC V9B 5R8", phone: "(778) 433-6655", website: "https://floathousevictoria.com", naicsCode: "621399", naicsSubsector: "Offices of All Other Miscellaneous Health Practitioners", naicsSector: "Health Care and Social Assistance", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "WestEnd Chiropractic & Massage", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Victoria, BC", phone: "(250) 474-5667", naicsCode: "621399", naicsSubsector: "Offices of All Other Miscellaneous Health Practitioners", naicsSector: "Health Care and Social Assistance", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "Replenish Spa", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Langford, BC", phone: "(250) 391-8877", naicsCode: "621399", naicsSubsector: "Offices of All Other Miscellaneous Health Practitioners", naicsSector: "Health Care and Social Assistance", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "Puroclean Restoration Victoria", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "832 McCallum Road, Unit 114, Langford, BC V9B 7A8", phone: "(250) 588-2366", website: "https://puroclean.ca/Victoria", naicsCode: "236220", naicsSubsector: "Commercial and Institutional Building Construction", naicsSector: "Construction", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "ROGCS Construction Services", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "4641 West Saanich Rd, Victoria, BC V8Z 3G7", phone: "(250) 634-6221", website: "https://rogcs.ca", naicsCode: "236220", naicsSubsector: "Commercial and Institutional Building Construction", naicsSector: "Construction", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "Kendall Builders Ltd.", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "4275 Panorama Dr., Victoria, BC V8X 4X9", phone: "(250) 818-0611", naicsCode: "236220", naicsSubsector: "Commercial and Institutional Building Construction", naicsSector: "Construction", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "Rolling Tides Construction Inc.", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "201 - 630 Goldstream Ave., Victoria, BC V9B 2W8", phone: "(250) 590-5051", website: "https://rollingtidesconstruction.ca", naicsCode: "236220", naicsSubsector: "Commercial and Institutional Building Construction", naicsSector: "Construction", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "Vancouver Island Construction Association", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Victoria, BC", phone: "(250) 382-9711", website: "https://vicabc.ca", naicsCode: "236220", naicsSubsector: "Commercial and Institutional Building Construction", naicsSector: "Construction", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "WA Architects", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "104 - 3212 Jacklin Road, Victoria, BC V9B 0J5", phone: "(604) 685-3529", website: "https://wa-arch.ca", naicsCode: "541310", naicsSubsector: "Architectural Services", naicsSector: "Professional, Scientific, and Technical Services", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "McIlvaney Riley Land Surveying Inc", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "113 - 2244 Sooke Road, Victoria, BC V9B 1X1", phone: "(250) 474-5538", naicsCode: "541330", naicsSubsector: "Engineering Services", naicsSector: "Professional, Scientific, and Technical Services", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "Turner Lane Development Corporation", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Victoria, BC", phone: "(250) 220-9177", naicsCode: "236117", naicsSubsector: "New Housing For-Sale Builders", naicsSector: "Construction", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "Landvision Group", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Victoria, BC", phone: "(250) 220-8866", naicsCode: "236117", naicsSubsector: "New Housing For-Sale Builders", naicsSector: "Construction", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "Westshore Town Centre", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "2945 Jacklin Road, Langford, BC V9B 3Y1", phone: "(250) 474-1511", website: "https://westshoretowncentre.com", naicsCode: "452990", naicsSubsector: "All Other General Merchandise Stores", naicsSector: "Retail Trade", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "Fountain Tire (Langford) Ltd", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Langford, BC", phone: "(250) 478-5051", naicsCode: "441110", naicsSubsector: "New Car Dealers", naicsSector: "Retail Trade", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "Greggs Furniture & Upholstery Ltd.", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Langford, BC", phone: "(250) 478-6655", naicsCode: "452990", naicsSubsector: "All Other General Merchandise Stores", naicsSector: "Retail Trade", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "Beautifully Inclusive", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Victoria, BC", phone: "(250) 516-1122", naicsCode: "452990", naicsSubsector: "All Other General Merchandise Stores", naicsSector: "Retail Trade", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "RE-LY Metal", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Victoria, BC", phone: "(250) 391-8855", naicsCode: "331110", naicsSubsector: "Iron and Steel Mills and Ferroalloy Manufacturing", naicsSector: "Manufacturing", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "Island Junk Solutions Ltd.", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Langford, BC", phone: "(250) 516-3636", naicsCode: "238220", naicsSubsector: "Plumbing, Heating, and Air-Conditioning Contractors", naicsSector: "Construction", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "The Crazy Cookie House", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Langford, BC", phone: "(250) 590-5224", naicsCode: "722511", naicsSubsector: "Full-Service Restaurants", naicsSector: "Accommodation and Food Services", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "Ryes & Shine Craft Distillery", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Langford, BC", phone: "(250) 590-4442", naicsCode: "312130", naicsSubsector: "Wineries", naicsSector: "Manufacturing", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "Rhino Coffee House and Lounge", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Langford, BC", phone: "(778) 265-6966", naicsCode: "722511", naicsSubsector: "Full-Service Restaurants", naicsSector: "Accommodation and Food Services", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "Three Gringos Mexican Grill", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Langford, BC", phone: "(250) 590-5990", naicsCode: "722511", naicsSubsector: "Full-Service Restaurants", naicsSector: "Accommodation and Food Services", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "Big Wheel Burger", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Langford, BC", phone: "(250) 590-8989", website: "https://bigwheelburger.com", naicsCode: "722511", naicsSubsector: "Full-Service Restaurants", naicsSector: "Accommodation and Food Services", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "Highland Pacific Golf", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "450 Creed Road, Victoria, BC V9B 6V5", phone: "(250) 478-4653", website: "https://highlandpacificgolf.com", naicsCode: "713940", naicsSubsector: "Fitness and Recreational Sports Centers", naicsSector: "Arts, Entertainment, and Recreation", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "Expedia Cruises", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Victoria, BC", phone: "(250) 478-8002", naicsCode: "561510", naicsSubsector: "Travel Agencies", naicsSector: "Administrative and Support and Waste Management", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "EMR Vacation Rentals Inc", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Victoria, BC", phone: "(250) 592-5107", naicsCode: "721110", naicsSubsector: "Hotels (except Casino Hotels) and Motels", naicsSector: "Accommodation and Food Services", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "TravelOnly", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Victoria, BC", phone: "(250) 516-0881", naicsCode: "561510", naicsSubsector: "Travel Agencies", naicsSector: "Administrative and Support and Waste Management", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "Island FanCon", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Victoria, BC", naicsCode: "711310", naicsSubsector: "Promoters of Performing Arts, Sports, and Similar Events with Facilities", naicsSector: "Arts, Entertainment, and Recreation", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "Greater Victoria Festival Society", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Victoria, BC", phone: "(250) 383-4627", naicsCode: "711310", naicsSubsector: "Promoters of Performing Arts, Sports, and Similar Events with Facilities", naicsSector: "Arts, Entertainment, and Recreation", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "A Taste Of Victoria Food Tours", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Victoria, BC", phone: "(250) 590-8811", website: "https://atasteofvictoria.com", naicsCode: "561510", naicsSubsector: "Travel Agencies", naicsSector: "Administrative and Support and Waste Management", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "Town of View Royal", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "45 View Royal Avenue, Victoria, BC V9B 1A6", phone: "(250) 479-6800", website: "https://viewroyal.ca", naicsCode: "921110", naicsSubsector: "Executive Offices", naicsSector: "Public Administration", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "City of Langford", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "877 Goldstream Avenue, Langford, BC V9B 2X8", phone: "(250) 478-7882", website: "https://langford.ca", naicsCode: "921110", naicsSubsector: "Executive Offices", naicsSector: "Public Administration", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "City of Colwood", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "3300 Wishart Road, Colwood, BC V9C 1R1", phone: "(250) 478-5999", website: "https://colwood.ca", naicsCode: "921110", naicsSubsector: "Executive Offices", naicsSector: "Public Administration", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "District of Metchosin", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "4450 Happy Valley Road, Metchosin, BC V9C 3Z3", phone: "(250) 474-3167", website: "https://metchosin.ca", naicsCode: "921110", naicsSubsector: "Executive Offices", naicsSector: "Public Administration", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "District of Highlands", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "1980 Millstream Road, Victoria, BC V9B 6H1", phone: "(250) 474-1773", website: "https://highlands.ca", naicsCode: "921110", naicsSubsector: "Executive Offices", naicsSector: "Public Administration", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "WorkLink Employment Society", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "764 Goldstream Avenue, Langford, BC V9B 2X3", phone: "(250) 478-9525", website: "https://worklink.bc.ca", naicsCode: "813319", naicsSubsector: "Other Social Advocacy Organizations", naicsSector: "Other Services (except Public Administration)", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "100.3 The Q and The Zone 91.3", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Victoria, BC", phone: "(250) 475-6611", naicsCode: "515112", naicsSubsector: "Radio Stations", naicsSector: "Information", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "WESTLINK Communications Inc.", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Victoria, BC", phone: "(250) 391-0600", naicsCode: "541512", naicsSubsector: "Computer Systems Design Services", naicsSector: "Professional, Scientific, and Technical Services", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "Island Tigers Energy Corporation (ITEC)", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Victoria, BC", phone: "(250) 590-6500", naicsCode: "221122", naicsSubsector: "Electric Power Distribution", naicsSector: "Utilities", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "Better Business Bureau of Vancouver Island", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Victoria, BC", phone: "(250) 386-6348", website: "https://bbb.org", naicsCode: "813910", naicsSubsector: "Business Associations", naicsSector: "Other Services (except Public Administration)", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "YMCA-YWCA of Vancouver Island", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Victoria, BC", phone: "(250) 386-7511", website: "https://vancouverislandy.ca", naicsCode: "813319", naicsSubsector: "Other Social Advocacy Organizations", naicsSector: "Other Services (except Public Administration)", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "Carla Frenkel Photography", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Victoria, BC", phone: "(250) 889-5577", naicsCode: "541921", naicsSubsector: "Photography Studios, Portrait", naicsSector: "Professional, Scientific, and Technical Services", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "Signs Now Victoria", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Victoria, BC", phone: "(250) 361-1555", naicsCode: "541890", naicsSubsector: "Other Services Related to Advertising", naicsSector: "Professional, Scientific, and Technical Services", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "Advanced Collision", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Langford, BC", phone: "(250) 478-4581", naicsCode: "441110", naicsSubsector: "New Car Dealers", naicsSector: "Retail Trade", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "Budget Brake and Muffler", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Langford, BC", phone: "(250) 474-1922", naicsCode: "441110", naicsSubsector: "New Car Dealers", naicsSector: "Retail Trade", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "Victoria Hyundai", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Victoria, BC", phone: "(250) 995-2277", naicsCode: "441110", naicsSubsector: "New Car Dealers", naicsSector: "Retail Trade", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "Harris Mazda", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Victoria, BC", phone: "(250) 385-2253", naicsCode: "441110", naicsSubsector: "New Car Dealers", naicsSector: "Retail Trade", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "Goldstream Feed & Tack", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Langford, BC", phone: "(250) 478-7411", naicsCode: "452990", naicsSubsector: "All Other General Merchandise Stores", naicsSector: "Retail Trade", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "Victoria West Coast Gardens", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Victoria, BC", phone: "(250) 474-6141", naicsCode: "561730", naicsSubsector: "Landscaping Services", naicsSector: "Administrative and Support and Waste Management", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "Buckerfields Langford", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Langford, BC", phone: "(250) 478-1877", naicsCode: "452990", naicsSubsector: "All Other General Merchandise Stores", naicsSector: "Retail Trade", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "Slegg Building Materials", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Langford, BC", phone: "(250) 478-3318", naicsCode: "444110", naicsSubsector: "Home Centers", naicsSector: "Retail Trade", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "Home Depot Langford", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Langford, BC", phone: "(250) 391-1888", naicsCode: "452990", naicsSubsector: "All Other General Merchandise Stores", naicsSector: "Retail Trade", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "Canadian Tire Langford", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Langford, BC", phone: "(250) 475-4277", naicsCode: "452990", naicsSubsector: "All Other General Merchandise Stores", naicsSector: "Retail Trade", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "Costco Wholesale Langford", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Langford, BC V9B 6X2", phone: "(250) 391-6002", naicsCode: "452990", naicsSubsector: "All Other General Merchandise Stores", naicsSector: "Retail Trade", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "Walmart Langford", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Langford, BC", phone: "(250) 474-2022", naicsCode: "452990", naicsSubsector: "All Other General Merchandise Stores", naicsSector: "Retail Trade", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "Westshore Electric Ltd.", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Langford, BC", phone: "(250) 474-2020", naicsCode: "238220", naicsSubsector: "Plumbing, Heating, and Air-Conditioning Contractors", naicsSector: "Construction", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "Island Plumbing & Mechanical Ltd.", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Langford, BC", phone: "(250) 478-1145", naicsCode: "238220", naicsSubsector: "Plumbing, Heating, and Air-Conditioning Contractors", naicsSector: "Construction", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "Westshore Mechanical Ltd.", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Victoria, BC", phone: "(250) 391-9911", naicsCode: "238220", naicsSubsector: "Plumbing, Heating, and Air-Conditioning Contractors", naicsSector: "Construction", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "ABC Roofing", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Victoria, BC", phone: "(250) 478-3221", naicsCode: "238220", naicsSubsector: "Plumbing, Heating, and Air-Conditioning Contractors", naicsSector: "Construction", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "Nu-Look Renovations", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Langford, BC", phone: "(250) 478-4700", naicsCode: "236220", naicsSubsector: "Commercial and Institutional Building Construction", naicsSector: "Construction", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "Langford Dental", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Langford, BC", phone: "(250) 478-4242", naicsCode: "621111", naicsSubsector: "Offices of Physicians (Except Mental Health Specialists)", naicsSector: "Health Care and Social Assistance", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "Goldstream Family Dental", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Langford, BC", phone: "(250) 478-6030", naicsCode: "621111", naicsSubsector: "Offices of Physicians (Except Mental Health Specialists)", naicsSector: "Health Care and Social Assistance", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "Langford Walk-In Clinic", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Langford, BC", phone: "(250) 478-5522", naicsCode: "621111", naicsSubsector: "Offices of Physicians (Except Mental Health Specialists)", naicsSector: "Health Care and Social Assistance", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "Shoppers Drug Mart Langford", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Langford, BC", phone: "(250) 474-6311", naicsCode: "446110", naicsSubsector: "Pharmacies and Drug Stores", naicsSector: "Retail Trade", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "Pharmasave Langford", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Langford, BC", phone: "(250) 478-6811", naicsCode: "446110", naicsSubsector: "Pharmacies and Drug Stores", naicsSector: "Retail Trade", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "Belmont Secondary School", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Langford, BC", naicsCode: "611110", naicsSubsector: "Elementary and Secondary Schools", naicsSector: "Educational Services", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "Royal Bay Secondary School", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Colwood, BC", naicsCode: "611110", naicsSubsector: "Elementary and Secondary Schools", naicsSector: "Educational Services", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "Spencer Middle School", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Langford, BC", naicsCode: "611110", naicsSubsector: "Elementary and Secondary Schools", naicsSector: "Educational Services", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "Westshore Centre for Learning and Training", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Langford, BC", phone: "(250) 391-4545", naicsCode: "611110", naicsSubsector: "Elementary and Secondary Schools", naicsSector: "Educational Services", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "Kids & Company Langford", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Langford, BC", phone: "(250) 590-4543", naicsCode: "624410", naicsSubsector: "Child Day Care Services", naicsSector: "Health Care and Social Assistance", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "Montana's Langford", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Langford, BC", phone: "(250) 478-4478", naicsCode: "722511", naicsSubsector: "Full-Service Restaurants", naicsSector: "Accommodation and Food Services", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "Boston Pizza Langford", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Langford, BC", phone: "(250) 391-7222", naicsCode: "722511", naicsSubsector: "Full-Service Restaurants", naicsSector: "Accommodation and Food Services", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "Browns Socialhouse Langford", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Langford, BC", phone: "(778) 265-6122", naicsCode: "722511", naicsSubsector: "Full-Service Restaurants", naicsSector: "Accommodation and Food Services", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "Cactus Club Cafe Langford", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Langford, BC", phone: "(778) 265-7727", naicsCode: "722511", naicsSubsector: "Full-Service Restaurants", naicsSector: "Accommodation and Food Services", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "Original Joe's Restaurant Langford", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Langford, BC", phone: "(250) 590-5637", naicsCode: "722511", naicsSubsector: "Full-Service Restaurants", naicsSector: "Accommodation and Food Services", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "White Spot Langford", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Langford, BC", phone: "(250) 474-9277", naicsCode: "722511", naicsSubsector: "Full-Service Restaurants", naicsSector: "Accommodation and Food Services", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "Starbucks Langford", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Langford, BC", naicsCode: "722511", naicsSubsector: "Full-Service Restaurants", naicsSector: "Accommodation and Food Services", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "Tim Hortons Langford", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Langford, BC", naicsCode: "722511", naicsSubsector: "Full-Service Restaurants", naicsSector: "Accommodation and Food Services", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "Juan de Fuca Recreation Centre", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "1767 Island Highway, Victoria, BC V9B 1J1", phone: "(250) 478-8384", website: "https://westshorerecreation.ca", naicsCode: "713940", naicsSubsector: "Fitness and Recreational Sports Centers", naicsSector: "Arts, Entertainment, and Recreation", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "Bear Mountain Golf Resort", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "1999 Country Club Way, Victoria, BC V9B 6R3", phone: "(250) 391-7160", website: "https://bearmountain.ca", naicsCode: "713940", naicsSubsector: "Fitness and Recreational Sports Centers", naicsSector: "Arts, Entertainment, and Recreation", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "GoodLife Fitness Langford", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Langford, BC", phone: "(250) 391-4544", naicsCode: "713940", naicsSubsector: "Fitness and Recreational Sports Centers", naicsSector: "Arts, Entertainment, and Recreation", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "Anytime Fitness Langford", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Langford, BC", phone: "(250) 590-5555", naicsCode: "713940", naicsSubsector: "Fitness and Recreational Sports Centers", naicsSector: "Arts, Entertainment, and Recreation", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "Q Centre Arena", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Colwood, BC", phone: "(250) 478-8384", naicsCode: "713940", naicsSubsector: "Fitness and Recreational Sports Centers", naicsSector: "Arts, Entertainment, and Recreation", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "Westin Bear Mountain Golf Resort & Spa", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "1999 Country Club Way, Victoria, BC V9B 6R3", phone: "(250) 391-7160", website: "https://bearmountain.ca", naicsCode: "721110", naicsSubsector: "Hotels (except Casino Hotels) and Motels", naicsSector: "Accommodation and Food Services", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "Executive Suites Hotel & Conference Centre", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "2750 Saunders Road, Victoria, BC V9B 4V3", phone: "(250) 391-4400", naicsCode: "721110", naicsSubsector: "Hotels (except Casino Hotels) and Motels", naicsSector: "Accommodation and Food Services", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "Holiday Inn Express Langford", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Langford, BC", phone: "(250) 478-7111", naicsCode: "721110", naicsSubsector: "Hotels (except Casino Hotels) and Motels", naicsSector: "Accommodation and Food Services", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "Best Western Plus Langford", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Langford, BC", phone: "(250) 391-6000", naicsCode: "721110", naicsSubsector: "Hotels (except Casino Hotels) and Motels", naicsSector: "Accommodation and Food Services", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "WestShore Chamber of Commerce", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "100 - 2830 Aldwynd Road, Langford, BC V9B 3S7", phone: "(250) 478-1130", website: "https://westshore.bc.ca", naicsCode: "813910", naicsSubsector: "Business Associations", naicsSector: "Other Services (except Public Administration)", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "Habitat for Humanity Victoria", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Victoria, BC", phone: "(250) 480-7688", naicsCode: "813319", naicsSubsector: "Other Social Advocacy Organizations", naicsSector: "Other Services (except Public Administration)", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "Goldstream Food Bank", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Langford, BC", phone: "(250) 474-4649", naicsCode: "813319", naicsSubsector: "Other Social Advocacy Organizations", naicsSector: "Other Services (except Public Administration)", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "Westshore Community Church", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Langford, BC", phone: "(250) 478-4888", naicsCode: "813110", naicsSubsector: "Religious Organizations", naicsSector: "Other Services (except Public Administration)", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
-  { name: "Victoria Native Friendship Centre", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Victoria, BC", phone: "(250) 384-3211", naicsCode: "813319", naicsSubsector: "Other Social Advocacy Organizations", naicsSector: "Other Services (except Public Administration)", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-100", businessName: "Fleming & Company, CPA", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Victoria, BC", phone: "(250) 388-5155", website: "https://flemingcpas.ca", naicsCode: "541211", naicsSubsector: "Offices of Certified Public Accountants", naicsSector: "Professional, Scientific, and Technical Services", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-101", businessName: "Bear Mountain Accounting Services Ltd.", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Langford, BC", phone: "(250) 391-0220", naicsCode: "541211", naicsSubsector: "Offices of Certified Public Accountants", naicsSector: "Professional, Scientific, and Technical Services", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-102", businessName: "Marren Tax & Accounting Services", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Victoria, BC", phone: "(250) 391-1181", naicsCode: "541211", naicsSubsector: "Offices of Certified Public Accountants", naicsSector: "Professional, Scientific, and Technical Services", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-103", businessName: "Bentley Siu Redmond, Professional Accountants", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Langford, BC", phone: "(250) 474-4564", naicsCode: "541211", naicsSubsector: "Offices of Certified Public Accountants", naicsSector: "Professional, Scientific, and Technical Services", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-104", businessName: "Gaidelis & Company, CPA", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Victoria, BC", phone: "(250) 388-9423", naicsCode: "541211", naicsSubsector: "Offices of Certified Public Accountants", naicsSector: "Professional, Scientific, and Technical Services", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-105", businessName: "Koumparos Consulting & Accounting Inc.", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Victoria, BC", phone: "(250) 474-5556", naicsCode: "541211", naicsSubsector: "Offices of Certified Public Accountants", naicsSector: "Professional, Scientific, and Technical Services", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-106", businessName: "Baker Tilly Victoria Ltd.", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Victoria, BC", phone: "(250) 388-4414", naicsCode: "541211", naicsSubsector: "Offices of Certified Public Accountants", naicsSector: "Professional, Scientific, and Technical Services", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-107", businessName: "Pewarchuk CPA Inc.", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Victoria, BC", phone: "(250) 479-3343", naicsCode: "541211", naicsSubsector: "Offices of Certified Public Accountants", naicsSector: "Professional, Scientific, and Technical Services", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-108", businessName: "Equity Books", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Victoria, BC", phone: "(250) 818-1998", naicsCode: "541211", naicsSubsector: "Offices of Certified Public Accountants", naicsSector: "Professional, Scientific, and Technical Services", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-109", businessName: "Vancity Credit Union", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Langford, BC", phone: "(604) 877-7000", website: "https://vancity.com", naicsCode: "522110", naicsSubsector: "Commercial Banking", naicsSector: "Finance and Insurance", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-110", businessName: "National Bank of Canada", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Langford, BC", phone: "(250) 391-6000", naicsCode: "522110", naicsSubsector: "Commercial Banking", naicsSector: "Finance and Insurance", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-111", businessName: "Coastal Community Credit Union", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "752A Goldstream Ave, Langford, BC", phone: "1-888-741-1010", website: "https://cccu.ca", naicsCode: "522110", naicsSubsector: "Commercial Banking", naicsSector: "Finance and Insurance", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-112", businessName: "Bank of Montreal Westshore", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Langford, BC", phone: "(250) 391-2200", naicsCode: "522110", naicsSubsector: "Commercial Banking", naicsSector: "Finance and Insurance", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-113", businessName: "Island Savings", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Langford, BC", phone: "(250) 385-4728", naicsCode: "522110", naicsSubsector: "Commercial Banking", naicsSector: "Finance and Insurance", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-114", businessName: "RBC Royal Bank", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Langford, BC", phone: "(250) 356-4000", naicsCode: "522110", naicsSubsector: "Commercial Banking", naicsSector: "Finance and Insurance", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-115", businessName: "Morley Hanson Law Corporation", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Victoria, BC", phone: "(250) 478-6031", naicsCode: "541110", naicsSubsector: "Offices of Lawyers", naicsSector: "Professional, Scientific, and Technical Services", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-116", businessName: "Lextegic Law Corporation", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Langford, BC", phone: "(250) 391-9090", naicsCode: "541110", naicsSubsector: "Offices of Lawyers", naicsSector: "Professional, Scientific, and Technical Services", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-117", businessName: "Mary Ann E. MacKenzie Law Corporation", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Victoria, BC", phone: "(250) 478-2101", naicsCode: "541110", naicsSubsector: "Offices of Lawyers", naicsSector: "Professional, Scientific, and Technical Services", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-118", businessName: "Vangenne & Company Law Corporation", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Victoria, BC", phone: "(250) 388-6655", naicsCode: "541110", naicsSubsector: "Offices of Lawyers", naicsSector: "Professional, Scientific, and Technical Services", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-119", businessName: "Pearson & Company", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Victoria, BC", phone: "(250) 388-4444", naicsCode: "541110", naicsSubsector: "Offices of Lawyers", naicsSector: "Professional, Scientific, and Technical Services", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-120", businessName: "Merizzi Ramsbottom & Forster", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Langford, BC", phone: "(250) 478-7900", naicsCode: "541110", naicsSubsector: "Offices of Lawyers", naicsSector: "Professional, Scientific, and Technical Services", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-121", businessName: "Farley Martin Notaries Public Inc.", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Victoria, BC", phone: "(250) 386-3311", naicsCode: "541110", naicsSubsector: "Offices of Lawyers", naicsSector: "Professional, Scientific, and Technical Services", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-122", businessName: "Pearlman Lindholm", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Victoria, BC V9B 2W8", phone: "(250) 388-4433", website: "https://pearlmanlindholm.com", naicsCode: "541110", naicsSubsector: "Offices of Lawyers", naicsSector: "Professional, Scientific, and Technical Services", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-123", businessName: "Kent McFadyen: Coldwell Banker Oceanside", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Victoria, BC", phone: "(250) 893-9889", naicsCode: "531210", naicsSubsector: "Offices of Real Estate Agents and Brokers", naicsSector: "Real Estate and Rental and Leasing", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-124", businessName: "Cheryl Barnes Real Estate", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Victoria, BC", phone: "(250) 889-8847", naicsCode: "531210", naicsSubsector: "Offices of Real Estate Agents and Brokers", naicsSector: "Real Estate and Rental and Leasing", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-125", businessName: "Macdonald Real Estate Services Ltd.", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Victoria, BC", phone: "(250) 477-0131", naicsCode: "531210", naicsSubsector: "Offices of Real Estate Agents and Brokers", naicsSector: "Real Estate and Rental and Leasing", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-126", businessName: "Nick Honour - The Agency", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Victoria, BC", phone: "(250) 888-8007", naicsCode: "531210", naicsSubsector: "Offices of Real Estate Agents and Brokers", naicsSector: "Real Estate and Rental and Leasing", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-127", businessName: "Trudy Maken Real Estate", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Victoria, BC", phone: "(250) 661-5753", naicsCode: "531210", naicsSubsector: "Offices of Real Estate Agents and Brokers", naicsSector: "Real Estate and Rental and Leasing", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-128", businessName: "Paul Brum - RE/MAX Camosun", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Victoria, BC", phone: "(250) 889-8847", naicsCode: "531210", naicsSubsector: "Offices of Real Estate Agents and Brokers", naicsSector: "Real Estate and Rental and Leasing", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-129", businessName: "RE/MAX Camosun Westshore - Branch Office", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Langford, BC", phone: "(250) 474-4800", naicsCode: "531210", naicsSubsector: "Offices of Real Estate Agents and Brokers", naicsSector: "Real Estate and Rental and Leasing", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-130", businessName: "Auxilium Mortgage Corporation", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "#16-Unit 211, 2840 Peatt Road, Langford, BC V9B 3V4", phone: "(250) 590-6520", website: "https://auxiliummortgage.com", naicsCode: "531210", naicsSubsector: "Offices of Real Estate Agents and Brokers", naicsSector: "Real Estate and Rental and Leasing", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-131", businessName: "Acera Insurance", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "#203-345C Latoria Blvd, Victoria, BC V9C 4L8", phone: "(250) 595-5212", website: "https://acera.ca", naicsCode: "524210", naicsSubsector: "Insurance Agencies and Brokerages", naicsSector: "Finance and Insurance", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-132", businessName: "RDF Group", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "#204-830 Shamrock Street, Victoria, BC V8X 2V1", phone: "(250) 383-9866", website: "https://rdfgroup.ca", naicsCode: "524210", naicsSubsector: "Insurance Agencies and Brokerages", naicsSector: "Finance and Insurance", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-133", businessName: "Waypoint Insurance (formerly FX Insurance Brokers Ltd.)", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Unit 114 - 3218 Jacklin Road, Victoria, BC V9B 0J5", phone: "(250) 888-8891", website: "https://waypoint.ca", naicsCode: "524210", naicsSubsector: "Insurance Agencies and Brokerages", naicsSector: "Finance and Insurance", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-134", businessName: "Prosperity Planning", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "122-2871 Jacklin Road, Victoria, BC V9B 0P3", phone: "(250) 818-2616", website: "https://prosperity-planning.com", naicsCode: "524210", naicsSubsector: "Insurance Agencies and Brokerages", naicsSector: "Finance and Insurance", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-135", businessName: "Combined Insurance", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "107 - 1208 Wharf Street, Victoria, BC V9A 3B9", phone: "(250) 732-0986", website: "https://livingbenefitsvi.com", naicsCode: "524210", naicsSubsector: "Insurance Agencies and Brokerages", naicsSector: "Finance and Insurance", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-136", businessName: "Mandala Center for Health & Wellness", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "215-611 Brookside Road, Victoria, BC V9C 4K2", phone: "(250) 590-2501", website: "https://mandalahealthcenter.com", naicsCode: "621399", naicsSubsector: "Offices of All Other Miscellaneous Health Practitioners", naicsSector: "Health Care and Social Assistance", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-137", businessName: "IRIS Optometrists & Opticians (655 EYECARE Inc.)", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "109 - 693 Hoffman Ave, Victoria, BC V9B 4X1", phone: "(250) 478-0213", website: "https://iris.ca", naicsCode: "621399", naicsSubsector: "Offices of All Other Miscellaneous Health Practitioners", naicsSector: "Health Care and Social Assistance", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-138", businessName: "Eye Etiquette Optical Boutique Ltd.", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "189-2401C Millstream Rd., Victoria, BC", phone: "(250) 474-1941", website: "https://eyeetiquetteoptical.ca", naicsCode: "621399", naicsSubsector: "Offices of All Other Miscellaneous Health Practitioners", naicsSector: "Health Care and Social Assistance", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-139", businessName: "West Shore Family Naturopathic Ltd.", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "2885 Peatt Rd., Victoria, BC V9B 3V7", phone: "(250) 474-6361", website: "https://westshorefamilynaturopathic.com", naicsCode: "621399", naicsSubsector: "Offices of All Other Miscellaneous Health Practitioners", naicsSector: "Health Care and Social Assistance", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-140", businessName: "Compass Mobile Therapeutics Inc.", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Victoria, BC", phone: "(778) 744-8401", website: "https://compassmassage.ca", naicsCode: "621399", naicsSubsector: "Offices of All Other Miscellaneous Health Practitioners", naicsSector: "Health Care and Social Assistance", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-141", businessName: "Float House Westshore", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "106 - 2871 Jacklin Rd, Victoria, BC V9B 5R8", phone: "(778) 433-6655", website: "https://floathousevictoria.com", naicsCode: "621399", naicsSubsector: "Offices of All Other Miscellaneous Health Practitioners", naicsSector: "Health Care and Social Assistance", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-142", businessName: "WestEnd Chiropractic & Massage", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Victoria, BC", phone: "(250) 474-5667", naicsCode: "621399", naicsSubsector: "Offices of All Other Miscellaneous Health Practitioners", naicsSector: "Health Care and Social Assistance", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-143", businessName: "Replenish Spa", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Langford, BC", phone: "(250) 391-8877", naicsCode: "621399", naicsSubsector: "Offices of All Other Miscellaneous Health Practitioners", naicsSector: "Health Care and Social Assistance", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-144", businessName: "Puroclean Restoration Victoria", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "832 McCallum Road, Unit 114, Langford, BC V9B 7A8", phone: "(250) 588-2366", website: "https://puroclean.ca/Victoria", naicsCode: "236220", naicsSubsector: "Commercial and Institutional Building Construction", naicsSector: "Construction", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-145", businessName: "ROGCS Construction Services", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "4641 West Saanich Rd, Victoria, BC V8Z 3G7", phone: "(250) 634-6221", website: "https://rogcs.ca", naicsCode: "236220", naicsSubsector: "Commercial and Institutional Building Construction", naicsSector: "Construction", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-146", businessName: "Kendall Builders Ltd.", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "4275 Panorama Dr., Victoria, BC V8X 4X9", phone: "(250) 818-0611", naicsCode: "236220", naicsSubsector: "Commercial and Institutional Building Construction", naicsSector: "Construction", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-147", businessName: "Rolling Tides Construction Inc.", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "201 - 630 Goldstream Ave., Victoria, BC V9B 2W8", phone: "(250) 590-5051", website: "https://rollingtidesconstruction.ca", naicsCode: "236220", naicsSubsector: "Commercial and Institutional Building Construction", naicsSector: "Construction", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-148", businessName: "Vancouver Island Construction Association", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Victoria, BC", phone: "(250) 382-9711", website: "https://vicabc.ca", naicsCode: "236220", naicsSubsector: "Commercial and Institutional Building Construction", naicsSector: "Construction", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-149", businessName: "WA Architects", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "104 - 3212 Jacklin Road, Victoria, BC V9B 0J5", phone: "(604) 685-3529", website: "https://wa-arch.ca", naicsCode: "541310", naicsSubsector: "Architectural Services", naicsSector: "Professional, Scientific, and Technical Services", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-150", businessName: "McIlvaney Riley Land Surveying Inc", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "113 - 2244 Sooke Road, Victoria, BC V9B 1X1", phone: "(250) 474-5538", naicsCode: "541330", naicsSubsector: "Engineering Services", naicsSector: "Professional, Scientific, and Technical Services", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-151", businessName: "Turner Lane Development Corporation", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Victoria, BC", phone: "(250) 220-9177", naicsCode: "236117", naicsSubsector: "New Housing For-Sale Builders", naicsSector: "Construction", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-152", businessName: "Landvision Group", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Victoria, BC", phone: "(250) 220-8866", naicsCode: "236117", naicsSubsector: "New Housing For-Sale Builders", naicsSector: "Construction", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-153", businessName: "Westshore Town Centre", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "2945 Jacklin Road, Langford, BC V9B 3Y1", phone: "(250) 474-1511", website: "https://westshoretowncentre.com", naicsCode: "452990", naicsSubsector: "All Other General Merchandise Stores", naicsSector: "Retail Trade", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-154", businessName: "Fountain Tire (Langford) Ltd", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Langford, BC", phone: "(250) 478-5051", naicsCode: "441110", naicsSubsector: "New Car Dealers", naicsSector: "Retail Trade", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-155", businessName: "Greggs Furniture & Upholstery Ltd.", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Langford, BC", phone: "(250) 478-6655", naicsCode: "452990", naicsSubsector: "All Other General Merchandise Stores", naicsSector: "Retail Trade", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-156", businessName: "Beautifully Inclusive", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Victoria, BC", phone: "(250) 516-1122", naicsCode: "452990", naicsSubsector: "All Other General Merchandise Stores", naicsSector: "Retail Trade", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-157", businessName: "RE-LY Metal", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Victoria, BC", phone: "(250) 391-8855", naicsCode: "331110", naicsSubsector: "Iron and Steel Mills and Ferroalloy Manufacturing", naicsSector: "Manufacturing", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-158", businessName: "Island Junk Solutions Ltd.", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Langford, BC", phone: "(250) 516-3636", naicsCode: "238220", naicsSubsector: "Plumbing, Heating, and Air-Conditioning Contractors", naicsSector: "Construction", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-159", businessName: "The Crazy Cookie House", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Langford, BC", phone: "(250) 590-5224", naicsCode: "722511", naicsSubsector: "Full-Service Restaurants", naicsSector: "Accommodation and Food Services", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-160", businessName: "Ryes & Shine Craft Distillery", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Langford, BC", phone: "(250) 590-4442", naicsCode: "312130", naicsSubsector: "Wineries", naicsSector: "Manufacturing", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-161", businessName: "Rhino Coffee House and Lounge", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Langford, BC", phone: "(778) 265-6966", naicsCode: "722511", naicsSubsector: "Full-Service Restaurants", naicsSector: "Accommodation and Food Services", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-162", businessName: "Three Gringos Mexican Grill", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Langford, BC", phone: "(250) 590-5990", naicsCode: "722511", naicsSubsector: "Full-Service Restaurants", naicsSector: "Accommodation and Food Services", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-163", businessName: "Big Wheel Burger", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Langford, BC", phone: "(250) 590-8989", website: "https://bigwheelburger.com", naicsCode: "722511", naicsSubsector: "Full-Service Restaurants", naicsSector: "Accommodation and Food Services", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-164", businessName: "Highland Pacific Golf", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "450 Creed Road, Victoria, BC V9B 6V5", phone: "(250) 478-4653", website: "https://highlandpacificgolf.com", naicsCode: "713940", naicsSubsector: "Fitness and Recreational Sports Centers", naicsSector: "Arts, Entertainment, and Recreation", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-165", businessName: "Expedia Cruises", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Victoria, BC", phone: "(250) 478-8002", naicsCode: "561510", naicsSubsector: "Travel Agencies", naicsSector: "Administrative and Support and Waste Management", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-166", businessName: "EMR Vacation Rentals Inc", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Victoria, BC", phone: "(250) 592-5107", naicsCode: "721110", naicsSubsector: "Hotels (except Casino Hotels) and Motels", naicsSector: "Accommodation and Food Services", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-167", businessName: "TravelOnly", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Victoria, BC", phone: "(250) 516-0881", naicsCode: "561510", naicsSubsector: "Travel Agencies", naicsSector: "Administrative and Support and Waste Management", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-168", businessName: "Island FanCon", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Victoria, BC", naicsCode: "711310", naicsSubsector: "Promoters of Performing Arts, Sports, and Similar Events with Facilities", naicsSector: "Arts, Entertainment, and Recreation", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-169", businessName: "Greater Victoria Festival Society", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Victoria, BC", phone: "(250) 383-4627", naicsCode: "711310", naicsSubsector: "Promoters of Performing Arts, Sports, and Similar Events with Facilities", naicsSector: "Arts, Entertainment, and Recreation", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-170", businessName: "A Taste Of Victoria Food Tours", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Victoria, BC", phone: "(250) 590-8811", website: "https://atasteofvictoria.com", naicsCode: "561510", naicsSubsector: "Travel Agencies", naicsSector: "Administrative and Support and Waste Management", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-171", businessName: "Town of View Royal", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "45 View Royal Avenue, Victoria, BC V9B 1A6", phone: "(250) 479-6800", website: "https://viewroyal.ca", naicsCode: "921110", naicsSubsector: "Executive Offices", naicsSector: "Public Administration", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-172", businessName: "City of Langford", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "877 Goldstream Avenue, Langford, BC V9B 2X8", phone: "(250) 478-7882", website: "https://langford.ca", naicsCode: "921110", naicsSubsector: "Executive Offices", naicsSector: "Public Administration", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-173", businessName: "City of Colwood", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "3300 Wishart Road, Colwood, BC V9C 1R1", phone: "(250) 478-5999", website: "https://colwood.ca", naicsCode: "921110", naicsSubsector: "Executive Offices", naicsSector: "Public Administration", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-174", businessName: "District of Metchosin", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "4450 Happy Valley Road, Metchosin, BC V9C 3Z3", phone: "(250) 474-3167", website: "https://metchosin.ca", naicsCode: "921110", naicsSubsector: "Executive Offices", naicsSector: "Public Administration", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-175", businessName: "District of Highlands", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "1980 Millstream Road, Victoria, BC V9B 6H1", phone: "(250) 474-1773", website: "https://highlands.ca", naicsCode: "921110", naicsSubsector: "Executive Offices", naicsSector: "Public Administration", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-176", businessName: "WorkLink Employment Society", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "764 Goldstream Avenue, Langford, BC V9B 2X3", phone: "(250) 478-9525", website: "https://worklink.bc.ca", naicsCode: "813319", naicsSubsector: "Other Social Advocacy Organizations", naicsSector: "Other Services (except Public Administration)", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-177", businessName: "100.3 The Q and The Zone 91.3", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Victoria, BC", phone: "(250) 475-6611", naicsCode: "515112", naicsSubsector: "Radio Stations", naicsSector: "Information", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-178", businessName: "WESTLINK Communications Inc.", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Victoria, BC", phone: "(250) 391-0600", naicsCode: "541512", naicsSubsector: "Computer Systems Design Services", naicsSector: "Professional, Scientific, and Technical Services", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-179", businessName: "Island Tigers Energy Corporation (ITEC)", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Victoria, BC", phone: "(250) 590-6500", naicsCode: "221122", naicsSubsector: "Electric Power Distribution", naicsSector: "Utilities", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-180", businessName: "Better Business Bureau of Vancouver Island", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Victoria, BC", phone: "(250) 386-6348", website: "https://bbb.org", naicsCode: "813910", naicsSubsector: "Business Associations", naicsSector: "Other Services (except Public Administration)", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-181", businessName: "YMCA-YWCA of Vancouver Island", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Victoria, BC", phone: "(250) 386-7511", website: "https://vancouverislandy.ca", naicsCode: "813319", naicsSubsector: "Other Social Advocacy Organizations", naicsSector: "Other Services (except Public Administration)", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-182", businessName: "Carla Frenkel Photography", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Victoria, BC", phone: "(250) 889-5577", naicsCode: "541921", naicsSubsector: "Photography Studios, Portrait", naicsSector: "Professional, Scientific, and Technical Services", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-183", businessName: "Signs Now Victoria", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Victoria, BC", phone: "(250) 361-1555", naicsCode: "541890", naicsSubsector: "Other Services Related to Advertising", naicsSector: "Professional, Scientific, and Technical Services", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-184", businessName: "Advanced Collision", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Langford, BC", phone: "(250) 478-4581", naicsCode: "441110", naicsSubsector: "New Car Dealers", naicsSector: "Retail Trade", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-185", businessName: "Budget Brake and Muffler", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Langford, BC", phone: "(250) 474-1922", naicsCode: "441110", naicsSubsector: "New Car Dealers", naicsSector: "Retail Trade", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-186", businessName: "Victoria Hyundai", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Victoria, BC", phone: "(250) 995-2277", naicsCode: "441110", naicsSubsector: "New Car Dealers", naicsSector: "Retail Trade", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-187", businessName: "Harris Mazda", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Victoria, BC", phone: "(250) 385-2253", naicsCode: "441110", naicsSubsector: "New Car Dealers", naicsSector: "Retail Trade", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-188", businessName: "Goldstream Feed & Tack", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Langford, BC", phone: "(250) 478-7411", naicsCode: "452990", naicsSubsector: "All Other General Merchandise Stores", naicsSector: "Retail Trade", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-189", businessName: "Victoria West Coast Gardens", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Victoria, BC", phone: "(250) 474-6141", naicsCode: "561730", naicsSubsector: "Landscaping Services", naicsSector: "Administrative and Support and Waste Management", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-190", businessName: "Buckerfields Langford", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Langford, BC", phone: "(250) 478-1877", naicsCode: "452990", naicsSubsector: "All Other General Merchandise Stores", naicsSector: "Retail Trade", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-191", businessName: "Slegg Building Materials", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Langford, BC", phone: "(250) 478-3318", naicsCode: "444110", naicsSubsector: "Home Centers", naicsSector: "Retail Trade", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-192", businessName: "Home Depot Langford", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Langford, BC", phone: "(250) 391-1888", naicsCode: "452990", naicsSubsector: "All Other General Merchandise Stores", naicsSector: "Retail Trade", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-193", businessName: "Canadian Tire Langford", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Langford, BC", phone: "(250) 475-4277", naicsCode: "452990", naicsSubsector: "All Other General Merchandise Stores", naicsSector: "Retail Trade", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-194", businessName: "Costco Wholesale Langford", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Langford, BC V9B 6X2", phone: "(250) 391-6002", naicsCode: "452990", naicsSubsector: "All Other General Merchandise Stores", naicsSector: "Retail Trade", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-195", businessName: "Walmart Langford", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Langford, BC", phone: "(250) 474-2022", naicsCode: "452990", naicsSubsector: "All Other General Merchandise Stores", naicsSector: "Retail Trade", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-196", businessName: "Westshore Electric Ltd.", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Langford, BC", phone: "(250) 474-2020", naicsCode: "238220", naicsSubsector: "Plumbing, Heating, and Air-Conditioning Contractors", naicsSector: "Construction", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-197", businessName: "Island Plumbing & Mechanical Ltd.", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Langford, BC", phone: "(250) 478-1145", naicsCode: "238220", naicsSubsector: "Plumbing, Heating, and Air-Conditioning Contractors", naicsSector: "Construction", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-198", businessName: "Westshore Mechanical Ltd.", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Victoria, BC", phone: "(250) 391-9911", naicsCode: "238220", naicsSubsector: "Plumbing, Heating, and Air-Conditioning Contractors", naicsSector: "Construction", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-199", businessName: "ABC Roofing", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Victoria, BC", phone: "(250) 478-3221", naicsCode: "238220", naicsSubsector: "Plumbing, Heating, and Air-Conditioning Contractors", naicsSector: "Construction", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-200", businessName: "Nu-Look Renovations", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Langford, BC", phone: "(250) 478-4700", naicsCode: "236220", naicsSubsector: "Commercial and Institutional Building Construction", naicsSector: "Construction", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-201", businessName: "Langford Dental", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Langford, BC", phone: "(250) 478-4242", naicsCode: "621111", naicsSubsector: "Offices of Physicians (Except Mental Health Specialists)", naicsSector: "Health Care and Social Assistance", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-202", businessName: "Goldstream Family Dental", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Langford, BC", phone: "(250) 478-6030", naicsCode: "621111", naicsSubsector: "Offices of Physicians (Except Mental Health Specialists)", naicsSector: "Health Care and Social Assistance", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-203", businessName: "Langford Walk-In Clinic", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Langford, BC", phone: "(250) 478-5522", naicsCode: "621111", naicsSubsector: "Offices of Physicians (Except Mental Health Specialists)", naicsSector: "Health Care and Social Assistance", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-204", businessName: "Shoppers Drug Mart Langford", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Langford, BC", phone: "(250) 474-6311", naicsCode: "446110", naicsSubsector: "Pharmacies and Drug Stores", naicsSector: "Retail Trade", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-205", businessName: "Pharmasave Langford", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Langford, BC", phone: "(250) 478-6811", naicsCode: "446110", naicsSubsector: "Pharmacies and Drug Stores", naicsSector: "Retail Trade", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-206", businessName: "Belmont Secondary School", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Langford, BC", naicsCode: "611110", naicsSubsector: "Elementary and Secondary Schools", naicsSector: "Educational Services", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-207", businessName: "Royal Bay Secondary School", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Colwood, BC", naicsCode: "611110", naicsSubsector: "Elementary and Secondary Schools", naicsSector: "Educational Services", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-208", businessName: "Spencer Middle School", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Langford, BC", naicsCode: "611110", naicsSubsector: "Elementary and Secondary Schools", naicsSector: "Educational Services", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-209", businessName: "Westshore Centre for Learning and Training", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Langford, BC", phone: "(250) 391-4545", naicsCode: "611110", naicsSubsector: "Elementary and Secondary Schools", naicsSector: "Educational Services", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-210", businessName: "Kids & Company Langford", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Langford, BC", phone: "(250) 590-4543", naicsCode: "624410", naicsSubsector: "Child Day Care Services", naicsSector: "Health Care and Social Assistance", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-211", businessName: "Montana's Langford", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Langford, BC", phone: "(250) 478-4478", naicsCode: "722511", naicsSubsector: "Full-Service Restaurants", naicsSector: "Accommodation and Food Services", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-212", businessName: "Boston Pizza Langford", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Langford, BC", phone: "(250) 391-7222", naicsCode: "722511", naicsSubsector: "Full-Service Restaurants", naicsSector: "Accommodation and Food Services", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-213", businessName: "Browns Socialhouse Langford", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Langford, BC", phone: "(778) 265-6122", naicsCode: "722511", naicsSubsector: "Full-Service Restaurants", naicsSector: "Accommodation and Food Services", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-214", businessName: "Cactus Club Cafe Langford", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Langford, BC", phone: "(778) 265-7727", naicsCode: "722511", naicsSubsector: "Full-Service Restaurants", naicsSector: "Accommodation and Food Services", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-215", businessName: "Original Joe's Restaurant Langford", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Langford, BC", phone: "(250) 590-5637", naicsCode: "722511", naicsSubsector: "Full-Service Restaurants", naicsSector: "Accommodation and Food Services", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-216", businessName: "White Spot Langford", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Langford, BC", phone: "(250) 474-9277", naicsCode: "722511", naicsSubsector: "Full-Service Restaurants", naicsSector: "Accommodation and Food Services", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-217", businessName: "Starbucks Langford", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Langford, BC", naicsCode: "722511", naicsSubsector: "Full-Service Restaurants", naicsSector: "Accommodation and Food Services", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-218", businessName: "Tim Hortons Langford", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Langford, BC", naicsCode: "722511", naicsSubsector: "Full-Service Restaurants", naicsSector: "Accommodation and Food Services", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-219", businessName: "Juan de Fuca Recreation Centre", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "1767 Island Highway, Victoria, BC V9B 1J1", phone: "(250) 478-8384", website: "https://westshorerecreation.ca", naicsCode: "713940", naicsSubsector: "Fitness and Recreational Sports Centers", naicsSector: "Arts, Entertainment, and Recreation", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-220", businessName: "Bear Mountain Golf Resort", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "1999 Country Club Way, Victoria, BC V9B 6R3", phone: "(250) 391-7160", website: "https://bearmountain.ca", naicsCode: "713940", naicsSubsector: "Fitness and Recreational Sports Centers", naicsSector: "Arts, Entertainment, and Recreation", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-221", businessName: "GoodLife Fitness Langford", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Langford, BC", phone: "(250) 391-4544", naicsCode: "713940", naicsSubsector: "Fitness and Recreational Sports Centers", naicsSector: "Arts, Entertainment, and Recreation", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-222", businessName: "Anytime Fitness Langford", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Langford, BC", phone: "(250) 590-5555", naicsCode: "713940", naicsSubsector: "Fitness and Recreational Sports Centers", naicsSector: "Arts, Entertainment, and Recreation", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-223", businessName: "Q Centre Arena", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Colwood, BC", phone: "(250) 478-8384", naicsCode: "713940", naicsSubsector: "Fitness and Recreational Sports Centers", naicsSector: "Arts, Entertainment, and Recreation", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-224", businessName: "Westin Bear Mountain Golf Resort & Spa", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "1999 Country Club Way, Victoria, BC V9B 6R3", phone: "(250) 391-7160", website: "https://bearmountain.ca", naicsCode: "721110", naicsSubsector: "Hotels (except Casino Hotels) and Motels", naicsSector: "Accommodation and Food Services", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-225", businessName: "Executive Suites Hotel & Conference Centre", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "2750 Saunders Road, Victoria, BC V9B 4V3", phone: "(250) 391-4400", naicsCode: "721110", naicsSubsector: "Hotels (except Casino Hotels) and Motels", naicsSector: "Accommodation and Food Services", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-226", businessName: "Holiday Inn Express Langford", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Langford, BC", phone: "(250) 478-7111", naicsCode: "721110", naicsSubsector: "Hotels (except Casino Hotels) and Motels", naicsSector: "Accommodation and Food Services", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-227", businessName: "Best Western Plus Langford", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Langford, BC", phone: "(250) 391-6000", naicsCode: "721110", naicsSubsector: "Hotels (except Casino Hotels) and Motels", naicsSector: "Accommodation and Food Services", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-228", businessName: "WestShore Chamber of Commerce", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "100 - 2830 Aldwynd Road, Langford, BC V9B 3S7", phone: "(250) 478-1130", website: "https://westshore.bc.ca", naicsCode: "813910", naicsSubsector: "Business Associations", naicsSector: "Other Services (except Public Administration)", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-229", businessName: "Habitat for Humanity Victoria", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Victoria, BC", phone: "(250) 480-7688", naicsCode: "813319", naicsSubsector: "Other Social Advocacy Organizations", naicsSector: "Other Services (except Public Administration)", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-230", businessName: "Goldstream Food Bank", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Langford, BC", phone: "(250) 474-4649", naicsCode: "813319", naicsSubsector: "Other Social Advocacy Organizations", naicsSector: "Other Services (except Public Administration)", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-231", businessName: "Westshore Community Church", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Langford, BC", phone: "(250) 478-4888", naicsCode: "813110", naicsSubsector: "Religious Organizations", naicsSector: "Other Services (except Public Administration)", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
+  { id: "westshore-member-232", businessName: "Victoria Native Friendship Centre", chamberId: "westshore-chamber", chamberName: "WestShore Chamber of Commerce", address: "Victoria, BC", phone: "(250) 384-3211", naicsCode: "813319", naicsSubsector: "Other Social Advocacy Organizations", naicsSector: "Other Services (except Public Administration)", verified: true, source: "Official WestShore Chamber Directory (web.westshore.bc.ca)" },
 
 
   // Duncan Cowichan Chamber of Commerce
@@ -65880,7 +65880,7 @@ export const chamberMembers: ChamberMember[] = [
     memberSince: 2024,
   },
   {
-    id: "westshore-member-100",
+    id: "westshore-member-300",
     chamberId: "westshore-chamber",
     businessName: "Woofability Group",
     category: "other",
@@ -65899,7 +65899,7 @@ export const chamberMembers: ChamberMember[] = [
     memberSince: 2024,
   },
   {
-    id: "westshore-member-101",
+    id: "westshore-member-301",
     chamberId: "westshore-chamber",
     businessName: "Children's Health Foundation of Vancouver Island",
     category: "charity-nonprofit",
@@ -65918,7 +65918,7 @@ export const chamberMembers: ChamberMember[] = [
     memberSince: 2024,
   },
   {
-    id: "westshore-member-102",
+    id: "westshore-member-302",
     chamberId: "westshore-chamber",
     businessName: "The Village Initiative",
     category: "other",
@@ -65937,7 +65937,7 @@ export const chamberMembers: ChamberMember[] = [
     memberSince: 2024,
   },
   {
-    id: "westshore-member-103",
+    id: "westshore-member-303",
     chamberId: "westshore-chamber",
     businessName: "Greater Victoria Chamber of Commerce",
     category: "other",
@@ -65956,7 +65956,7 @@ export const chamberMembers: ChamberMember[] = [
     memberSince: 2024,
   },
   {
-    id: "westshore-member-104",
+    id: "westshore-member-304",
     chamberId: "westshore-chamber",
     businessName: "The Extreme Outreach Society",
     category: "charity-nonprofit",
@@ -65975,7 +65975,7 @@ export const chamberMembers: ChamberMember[] = [
     memberSince: 2024,
   },
   {
-    id: "westshore-member-105",
+    id: "westshore-member-305",
     chamberId: "westshore-chamber",
     businessName: "Rotary Club of WestShore",
     category: "charity-nonprofit",
@@ -65994,7 +65994,7 @@ export const chamberMembers: ChamberMember[] = [
     memberSince: 2024,
   },
   {
-    id: "westshore-member-106",
+    id: "westshore-member-306",
     chamberId: "westshore-chamber",
     businessName: "City of Colwood",
     category: "government",
@@ -66013,7 +66013,7 @@ export const chamberMembers: ChamberMember[] = [
     memberSince: 2024,
   },
   {
-    id: "westshore-member-107",
+    id: "westshore-member-307",
     chamberId: "westshore-chamber",
     businessName: "West Shore Arts Council",
     category: "arts-culture",
@@ -66032,7 +66032,7 @@ export const chamberMembers: ChamberMember[] = [
     memberSince: 2024,
   },
   {
-    id: "westshore-member-108",
+    id: "westshore-member-308",
     chamberId: "westshore-chamber",
     businessName: "Juan de Fuca Performing Arts Centre Society",
     category: "arts-culture",
@@ -66051,7 +66051,7 @@ export const chamberMembers: ChamberMember[] = [
     memberSince: 2024,
   },
   {
-    id: "westshore-member-109",
+    id: "westshore-member-309",
     chamberId: "westshore-chamber",
     businessName: "Lester B. Pearson College Of The Pacific",
     category: "education",
@@ -66070,7 +66070,7 @@ export const chamberMembers: ChamberMember[] = [
     memberSince: 2024,
   },
   {
-    id: "westshore-member-110",
+    id: "westshore-member-310",
     chamberId: "westshore-chamber",
     businessName: "WIN Resale Shops",
     category: "retail",
@@ -66089,7 +66089,7 @@ export const chamberMembers: ChamberMember[] = [
     memberSince: 2024,
   },
   {
-    id: "westshore-member-111",
+    id: "westshore-member-311",
     chamberId: "westshore-chamber",
     businessName: "University of Victoria, Co-op and Career Centre",
     category: "automotive",
@@ -66108,7 +66108,7 @@ export const chamberMembers: ChamberMember[] = [
     memberSince: 2024,
   },
   {
-    id: "westshore-member-112",
+    id: "westshore-member-312",
     chamberId: "westshore-chamber",
     businessName: "M'akola Group of Societies",
     category: "other",
@@ -66127,7 +66127,7 @@ export const chamberMembers: ChamberMember[] = [
     memberSince: 2024,
   },
   {
-    id: "westshore-member-113",
+    id: "westshore-member-313",
     chamberId: "westshore-chamber",
     businessName: "Esquimalt-Saanich-Sooke Conservative Association",
     category: "automotive",
@@ -66146,7 +66146,7 @@ export const chamberMembers: ChamberMember[] = [
     memberSince: 2024,
   },
   {
-    id: "westshore-member-114",
+    id: "westshore-member-314",
     chamberId: "westshore-chamber",
     businessName: "Funding for Life Society",
     category: "charity-nonprofit",
@@ -66165,7 +66165,7 @@ export const chamberMembers: ChamberMember[] = [
     memberSince: 2024,
   },
   {
-    id: "westshore-member-115",
+    id: "westshore-member-315",
     chamberId: "westshore-chamber",
     businessName: "ReImagine West Shore Community Society",
     category: "charity-nonprofit",
@@ -66184,7 +66184,7 @@ export const chamberMembers: ChamberMember[] = [
     memberSince: 2024,
   },
   {
-    id: "westshore-member-116",
+    id: "westshore-member-316",
     chamberId: "westshore-chamber",
     businessName: "Victoria Hospitals Foundation",
     category: "charity-nonprofit",
@@ -66203,7 +66203,7 @@ export const chamberMembers: ChamberMember[] = [
     memberSince: 2024,
   },
   {
-    id: "westshore-member-117",
+    id: "westshore-member-317",
     chamberId: "westshore-chamber",
     businessName: "Royal Canadian Legion - Prince Edward Branch #91",
     category: "charity-nonprofit",
@@ -66222,7 +66222,7 @@ export const chamberMembers: ChamberMember[] = [
     memberSince: 2024,
   },
   {
-    id: "westshore-member-118",
+    id: "westshore-member-318",
     chamberId: "westshore-chamber",
     businessName: "New Roads Therapeutic Recovery Community by Our Place",
     category: "environmental",
@@ -66241,7 +66241,7 @@ export const chamberMembers: ChamberMember[] = [
     memberSince: 2024,
   },
   {
-    id: "westshore-member-119",
+    id: "westshore-member-319",
     chamberId: "westshore-chamber",
     businessName: "West Shore Parks & Recreation",
     category: "government",
@@ -66260,7 +66260,7 @@ export const chamberMembers: ChamberMember[] = [
     memberSince: 2024,
   },
   {
-    id: "westshore-member-120",
+    id: "westshore-member-320",
     chamberId: "westshore-chamber",
     businessName: "Pacific Centre Family Services Association",
     category: "automotive",
@@ -66279,7 +66279,7 @@ export const chamberMembers: ChamberMember[] = [
     memberSince: 2024,
   },
   {
-    id: "westshore-member-121",
+    id: "westshore-member-321",
     chamberId: "westshore-chamber",
     businessName: "Greater Victoria Festival Society",
     category: "charity-nonprofit",
@@ -66298,7 +66298,7 @@ export const chamberMembers: ChamberMember[] = [
     memberSince: 2024,
   },
   {
-    id: "westshore-member-122",
+    id: "westshore-member-322",
     chamberId: "westshore-chamber",
     businessName: "Sooke Region Chamber of Commerce",
     category: "other",
@@ -66317,7 +66317,7 @@ export const chamberMembers: ChamberMember[] = [
     memberSince: 2024,
   },
   {
-    id: "westshore-member-123",
+    id: "westshore-member-323",
     chamberId: "westshore-chamber",
     businessName: "Esquimalt Chamber of Commerce",
     category: "other",
@@ -66336,7 +66336,7 @@ export const chamberMembers: ChamberMember[] = [
     memberSince: 2024,
   },
   {
-    id: "westshore-member-124",
+    id: "westshore-member-324",
     chamberId: "westshore-chamber",
     businessName: "Metchosin Farmers' Institute",
     category: "agriculture",
@@ -66355,7 +66355,7 @@ export const chamberMembers: ChamberMember[] = [
     memberSince: 2024,
   },
   {
-    id: "westshore-member-125",
+    id: "westshore-member-325",
     chamberId: "westshore-chamber",
     businessName: "Darlene Rotchford, MLA for Esquimalt-Colwood",
     category: "other",
@@ -66374,7 +66374,7 @@ export const chamberMembers: ChamberMember[] = [
     memberSince: 2024,
   },
   {
-    id: "westshore-member-126",
+    id: "westshore-member-326",
     chamberId: "westshore-chamber",
     businessName: "JA British Columbia",
     category: "other",
@@ -66393,7 +66393,7 @@ export const chamberMembers: ChamberMember[] = [
     memberSince: 2024,
   },
   {
-    id: "westshore-member-127",
+    id: "westshore-member-327",
     chamberId: "westshore-chamber",
     businessName: "Royal Roads University",
     category: "education",
@@ -66412,7 +66412,7 @@ export const chamberMembers: ChamberMember[] = [
     memberSince: 2024,
   },
   {
-    id: "westshore-member-128",
+    id: "westshore-member-328",
     chamberId: "westshore-chamber",
     businessName: "Code Ninjas Westshore",
     category: "other",
@@ -66431,7 +66431,7 @@ export const chamberMembers: ChamberMember[] = [
     memberSince: 2024,
   },
   {
-    id: "westshore-member-129",
+    id: "westshore-member-329",
     chamberId: "westshore-chamber",
     businessName: "Jenn's Little Bears Early Childhood Education Centre",
     category: "education",
@@ -66450,7 +66450,7 @@ export const chamberMembers: ChamberMember[] = [
     memberSince: 2024,
   },
   {
-    id: "westshore-member-130",
+    id: "westshore-member-330",
     chamberId: "westshore-chamber",
     businessName: "Jeff Kibble, Member of Parliament",
     category: "other",
@@ -66469,7 +66469,7 @@ export const chamberMembers: ChamberMember[] = [
     memberSince: 2024,
   },
   {
-    id: "westshore-member-131",
+    id: "westshore-member-331",
     chamberId: "westshore-chamber",
     businessName: "Easter Seals BC/Yukon",
     category: "other",
@@ -66488,7 +66488,7 @@ export const chamberMembers: ChamberMember[] = [
     memberSince: 2024,
   },
   {
-    id: "westshore-member-132",
+    id: "westshore-member-332",
     chamberId: "westshore-chamber",
     businessName: "Camosun College",
     category: "education",
@@ -66507,7 +66507,7 @@ export const chamberMembers: ChamberMember[] = [
     memberSince: 2024,
   },
   {
-    id: "westshore-member-133",
+    id: "westshore-member-333",
     chamberId: "westshore-chamber",
     businessName: "Cherish Community Living Ltd.",
     category: "other",
@@ -66526,7 +66526,7 @@ export const chamberMembers: ChamberMember[] = [
     memberSince: 2024,
   },
   {
-    id: "westshore-member-134",
+    id: "westshore-member-334",
     chamberId: "westshore-chamber",
     businessName: "Sooke School District #62",
     category: "education",
@@ -66545,7 +66545,7 @@ export const chamberMembers: ChamberMember[] = [
     memberSince: 2024,
   },
   {
-    id: "westshore-member-135",
+    id: "westshore-member-335",
     chamberId: "westshore-chamber",
     businessName: "BGC South Vancouver Island",
     category: "other",
@@ -66564,7 +66564,7 @@ export const chamberMembers: ChamberMember[] = [
     memberSince: 2024,
   },
   {
-    id: "westshore-member-136",
+    id: "westshore-member-336",
     chamberId: "westshore-chamber",
     businessName: "Saanich Peninsula Chamber of Commerce",
     category: "other",
@@ -66583,7 +66583,7 @@ export const chamberMembers: ChamberMember[] = [
     memberSince: 2024,
   },
   {
-    id: "westshore-member-137",
+    id: "westshore-member-337",
     chamberId: "westshore-chamber",
     businessName: "Connections Place Clubhouse",
     category: "charity-nonprofit",
@@ -66602,7 +66602,7 @@ export const chamberMembers: ChamberMember[] = [
     memberSince: 2024,
   },
   {
-    id: "westshore-member-138",
+    id: "westshore-member-338",
     chamberId: "westshore-chamber",
     businessName: "City of Langford",
     category: "government",
@@ -66621,7 +66621,7 @@ export const chamberMembers: ChamberMember[] = [
     memberSince: 2024,
   },
   {
-    id: "westshore-member-139",
+    id: "westshore-member-339",
     chamberId: "westshore-chamber",
     businessName: "Brookes Westshore Schools Society",
     category: "charity-nonprofit",
@@ -66640,7 +66640,7 @@ export const chamberMembers: ChamberMember[] = [
     memberSince: 2024,
   },
   {
-    id: "westshore-member-140",
+    id: "westshore-member-340",
     chamberId: "westshore-chamber",
     businessName: "Victoria Conservatory of Music",
     category: "arts-culture",
@@ -66659,7 +66659,7 @@ export const chamberMembers: ChamberMember[] = [
     memberSince: 2024,
   },
   {
-    id: "westshore-member-141",
+    id: "westshore-member-341",
     chamberId: "westshore-chamber",
     businessName: "Fateh Care Charity",
     category: "automotive",
@@ -66678,7 +66678,7 @@ export const chamberMembers: ChamberMember[] = [
     memberSince: 2024,
   },
   {
-    id: "westshore-member-142",
+    id: "westshore-member-342",
     chamberId: "westshore-chamber",
     businessName: "The South Island Prosperity Partnership",
     category: "arts-culture",
@@ -66697,7 +66697,7 @@ export const chamberMembers: ChamberMember[] = [
     memberSince: 2024,
   },
   {
-    id: "westshore-member-143",
+    id: "westshore-member-343",
     chamberId: "westshore-chamber",
     businessName: "Service Canada",
     category: "automotive",
@@ -66716,7 +66716,7 @@ export const chamberMembers: ChamberMember[] = [
     memberSince: 2024,
   },
   {
-    id: "westshore-member-144",
+    id: "westshore-member-344",
     chamberId: "westshore-chamber",
     businessName: "Orbus Business Networks Inc.",
     category: "it-technology",
@@ -66735,7 +66735,7 @@ export const chamberMembers: ChamberMember[] = [
     memberSince: 2024,
   },
   {
-    id: "westshore-member-145",
+    id: "westshore-member-345",
     chamberId: "westshore-chamber",
     businessName: "Adventure Awaits Childcare",
     category: "automotive",
@@ -66754,7 +66754,7 @@ export const chamberMembers: ChamberMember[] = [
     memberSince: 2024,
   },
   {
-    id: "westshore-member-146",
+    id: "westshore-member-346",
     chamberId: "westshore-chamber",
     businessName: "John Howard Society of Victoria",
     category: "charity-nonprofit",
@@ -66773,7 +66773,7 @@ export const chamberMembers: ChamberMember[] = [
     memberSince: 2024,
   },
   {
-    id: "westshore-member-147",
+    id: "westshore-member-347",
     chamberId: "westshore-chamber",
     businessName: "Sooke Family Resource Society",
     category: "charity-nonprofit",
@@ -66792,7 +66792,7 @@ export const chamberMembers: ChamberMember[] = [
     memberSince: 2024,
   },
   {
-    id: "westshore-member-148",
+    id: "westshore-member-348",
     chamberId: "westshore-chamber",
     businessName: "Destination Greater Victoria",
     category: "other",
@@ -66811,7 +66811,7 @@ export const chamberMembers: ChamberMember[] = [
     memberSince: 2024,
   },
   {
-    id: "westshore-member-149",
+    id: "westshore-member-349",
     chamberId: "westshore-chamber",
     businessName: "Indigenous Perspectives Society: Centre of Excellence in Community Education",
     category: "charity-nonprofit",
@@ -66830,7 +66830,7 @@ export const chamberMembers: ChamberMember[] = [
     memberSince: 2024,
   },
   {
-    id: "westshore-member-150",
+    id: "westshore-member-350",
     chamberId: "westshore-chamber",
     businessName: "Inter-Cultural Association of Greater Victoria",
     category: "charity-nonprofit",
@@ -66849,7 +66849,7 @@ export const chamberMembers: ChamberMember[] = [
     memberSince: 2024,
   },
   {
-    id: "westshore-member-151",
+    id: "westshore-member-351",
     chamberId: "westshore-chamber",
     businessName: "Youth for Christ Victoria",
     category: "other",
@@ -66868,7 +66868,7 @@ export const chamberMembers: ChamberMember[] = [
     memberSince: 2024,
   },
   {
-    id: "westshore-member-152",
+    id: "westshore-member-352",
     chamberId: "westshore-chamber",
     businessName: "Belmont Park Pre-School Society",
     category: "charity-nonprofit",
@@ -66887,7 +66887,7 @@ export const chamberMembers: ChamberMember[] = [
     memberSince: 2024,
   },
   {
-    id: "westshore-member-153",
+    id: "westshore-member-353",
     chamberId: "westshore-chamber",
     businessName: "Saunders Family Centre",
     category: "other",
@@ -66906,7 +66906,7 @@ export const chamberMembers: ChamberMember[] = [
     memberSince: 2024,
   },
   {
-    id: "westshore-member-154",
+    id: "westshore-member-354",
     chamberId: "westshore-chamber",
     businessName: "Ryes & Shine Craft Distillery",
     category: "winery-brewery",
@@ -66925,7 +66925,7 @@ export const chamberMembers: ChamberMember[] = [
     memberSince: 2024,
   },
   {
-    id: "westshore-member-155",
+    id: "westshore-member-355",
     chamberId: "westshore-chamber",
     businessName: "Rhino Coffee House and Lounge",
     category: "restaurant",
@@ -66944,7 +66944,7 @@ export const chamberMembers: ChamberMember[] = [
     memberSince: 2024,
   },
   {
-    id: "westshore-member-156",
+    id: "westshore-member-356",
     chamberId: "westshore-chamber",
     businessName: "Three Gringos Mexican Grill",
     category: "restaurant",
@@ -66963,7 +66963,7 @@ export const chamberMembers: ChamberMember[] = [
     memberSince: 2024,
   },
   {
-    id: "westshore-member-157",
+    id: "westshore-member-357",
     chamberId: "westshore-chamber",
     businessName: "Highland Pacific Golf",
     category: "recreation",
@@ -66982,7 +66982,7 @@ export const chamberMembers: ChamberMember[] = [
     memberSince: 2024,
   },
   {
-    id: "westshore-member-158",
+    id: "westshore-member-358",
     chamberId: "westshore-chamber",
     businessName: "The Crazy Cookie House",
     category: "other",
@@ -67001,7 +67001,7 @@ export const chamberMembers: ChamberMember[] = [
     memberSince: 2024,
   },
   {
-    id: "westshore-member-159",
+    id: "westshore-member-359",
     chamberId: "westshore-chamber",
     businessName: "Big Wheel Burger",
     category: "other",
@@ -67020,7 +67020,7 @@ export const chamberMembers: ChamberMember[] = [
     memberSince: 2024,
   },
   {
-    id: "westshore-member-160",
+    id: "westshore-member-360",
     chamberId: "westshore-chamber",
     businessName: "Elements Casino Victoria",
     category: "other",
@@ -67039,7 +67039,7 @@ export const chamberMembers: ChamberMember[] = [
     memberSince: 2024,
   },
   {
-    id: "westshore-member-161",
+    id: "westshore-member-361",
     chamberId: "westshore-chamber",
     businessName: "The Stick's Roastoreum",
     category: "retail",
@@ -67058,7 +67058,7 @@ export const chamberMembers: ChamberMember[] = [
     memberSince: 2024,
   },
   {
-    id: "westshore-member-162",
+    id: "westshore-member-362",
     chamberId: "westshore-chamber",
     businessName: "Floyd's Diner - Langford",
     category: "restaurant",
@@ -67077,7 +67077,7 @@ export const chamberMembers: ChamberMember[] = [
     memberSince: 2024,
   },
   {
-    id: "westshore-member-163",
+    id: "westshore-member-363",
     chamberId: "westshore-chamber",
     businessName: "Emporia",
     category: "other",
@@ -67096,7 +67096,7 @@ export const chamberMembers: ChamberMember[] = [
     memberSince: 2024,
   },
   {
-    id: "westshore-member-164",
+    id: "westshore-member-364",
     chamberId: "westshore-chamber",
     businessName: "Olympic View Golf Club & Table Nineteen",
     category: "charity-nonprofit",
@@ -67115,7 +67115,7 @@ export const chamberMembers: ChamberMember[] = [
     memberSince: 2024,
   },
   {
-    id: "westshore-member-165",
+    id: "westshore-member-365",
     chamberId: "westshore-chamber",
     businessName: "This Week's Lunch",
     category: "other",
@@ -67134,7 +67134,7 @@ export const chamberMembers: ChamberMember[] = [
     memberSince: 2024,
   },
   {
-    id: "westshore-member-166",
+    id: "westshore-member-366",
     chamberId: "westshore-chamber",
     businessName: "Yuchen Coffeehouse Inc (Serious Coffee View Royal)",
     category: "restaurant",
@@ -67153,7 +67153,7 @@ export const chamberMembers: ChamberMember[] = [
     memberSince: 2024,
   },
   {
-    id: "westshore-member-167",
+    id: "westshore-member-367",
     chamberId: "westshore-chamber",
     businessName: "Goodview Family Restaurant",
     category: "restaurant",
@@ -67172,7 +67172,7 @@ export const chamberMembers: ChamberMember[] = [
     memberSince: 2024,
   },
   {
-    id: "westshore-member-168",
+    id: "westshore-member-368",
     chamberId: "westshore-chamber",
     businessName: "The Outpost Board Game Cafe Inc.",
     category: "restaurant",
@@ -67191,7 +67191,7 @@ export const chamberMembers: ChamberMember[] = [
     memberSince: 2024,
   },
   {
-    id: "westshore-member-169",
+    id: "westshore-member-369",
     chamberId: "westshore-chamber",
     businessName: "Poncho's Cafe & Catering",
     category: "food-beverage",
@@ -67210,7 +67210,7 @@ export const chamberMembers: ChamberMember[] = [
     memberSince: 2024,
   },
   {
-    id: "westshore-member-170",
+    id: "westshore-member-370",
     chamberId: "westshore-chamber",
     businessName: "Urban Forage",
     category: "other",
@@ -67229,7 +67229,7 @@ export const chamberMembers: ChamberMember[] = [
     memberSince: 2024,
   },
   {
-    id: "westshore-member-171",
+    id: "westshore-member-371",
     chamberId: "westshore-chamber",
     businessName: "Four Points by Sheraton Victoria Gateway",
     category: "other",
@@ -67248,7 +67248,7 @@ export const chamberMembers: ChamberMember[] = [
     memberSince: 2024,
   },
   {
-    id: "westshore-member-172",
+    id: "westshore-member-372",
     chamberId: "westshore-chamber",
     businessName: "House of Boateng Food Inc.",
     category: "fishing-marine",
@@ -67267,7 +67267,7 @@ export const chamberMembers: ChamberMember[] = [
     memberSince: 2024,
   },
   {
-    id: "westshore-member-173",
+    id: "westshore-member-373",
     chamberId: "westshore-chamber",
     businessName: "Expedia Cruises",
     category: "other",
@@ -67286,7 +67286,7 @@ export const chamberMembers: ChamberMember[] = [
     memberSince: 2024,
   },
   {
-    id: "westshore-member-174",
+    id: "westshore-member-374",
     chamberId: "westshore-chamber",
     businessName: "EMR Vacation Rentals Inc",
     category: "accommodation",
@@ -67305,7 +67305,7 @@ export const chamberMembers: ChamberMember[] = [
     memberSince: 2024,
   },
   {
-    id: "westshore-member-175",
+    id: "westshore-member-375",
     chamberId: "westshore-chamber",
     businessName: "TravelOnly",
     category: "hospitality",
@@ -67324,7 +67324,7 @@ export const chamberMembers: ChamberMember[] = [
     memberSince: 2024,
   },
   {
-    id: "westshore-member-176",
+    id: "westshore-member-376",
     chamberId: "westshore-chamber",
     businessName: "Island FanCon",
     category: "other",
@@ -67343,7 +67343,7 @@ export const chamberMembers: ChamberMember[] = [
     memberSince: 2024,
   },
   {
-    id: "westshore-member-177",
+    id: "westshore-member-377",
     chamberId: "westshore-chamber",
     businessName: "A Taste Of Victoria Food Tours",
     category: "food-beverage",
@@ -67362,7 +67362,7 @@ export const chamberMembers: ChamberMember[] = [
     memberSince: 2024,
   },
   {
-    id: "westshore-member-178",
+    id: "westshore-member-378",
     chamberId: "westshore-chamber",
     businessName: "Sandman Hotel Victoria",
     category: "accommodation",
@@ -67381,7 +67381,7 @@ export const chamberMembers: ChamberMember[] = [
     memberSince: 2024,
   },
   {
-    id: "westshore-member-179",
+    id: "westshore-member-379",
     chamberId: "westshore-chamber",
     businessName: "Pedder Bay Marina",
     category: "other",
@@ -67400,7 +67400,7 @@ export const chamberMembers: ChamberMember[] = [
     memberSince: 2024,
   },
   {
-    id: "westshore-member-180",
+    id: "westshore-member-380",
     chamberId: "westshore-chamber",
     businessName: "Fairways Hotel on the Mountain",
     category: "accommodation",
@@ -67419,7 +67419,7 @@ export const chamberMembers: ChamberMember[] = [
     memberSince: 2024,
   },
   {
-    id: "westshore-member-181",
+    id: "westshore-member-381",
     chamberId: "westshore-chamber",
     businessName: "Fort Rodd Hill and Fisgard Lighthouse National Historic Sites",
     category: "other",
@@ -67438,7 +67438,7 @@ export const chamberMembers: ChamberMember[] = [
     memberSince: 2024,
   },
   {
-    id: "westshore-member-182",
+    id: "westshore-member-382",
     chamberId: "westshore-chamber",
     businessName: "The Wilson's Group of Companies",
     category: "other",
@@ -67457,7 +67457,7 @@ export const chamberMembers: ChamberMember[] = [
     memberSince: 2024,
   },
   {
-    id: "westshore-member-183",
+    id: "westshore-member-383",
     chamberId: "westshore-chamber",
     businessName: "Tourism Cafe Canada",
     category: "hospitality",
@@ -80073,7 +80073,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "nanoose-economic-development-corporation",
     chamberId: "parksville-chamber",
-    name: "Nanoose Economic Development Corporation",
+    businessName: "Nanoose Economic Development Corporation",
     category: "hospitality",
     naicsCode: "721110",
     naicsDescription: "Hotels and Motels",
@@ -80085,7 +80085,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "bayside-resort-ascend-hotel-collection",
     chamberId: "parksville-chamber",
-    name: "Bayside Resort, Ascend Hotel Collection",
+    businessName: "Bayside Resort, Ascend Hotel Collection",
     category: "hospitality",
     naicsCode: "721110",
     naicsDescription: "Hotels and Motels",
@@ -80097,7 +80097,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "surfside-rv-resort",
     chamberId: "parksville-chamber",
-    name: "Surfside RV Resort",
+    businessName: "Surfside RV Resort",
     category: "hospitality",
     naicsCode: "721110",
     naicsDescription: "Hotels and Motels",
@@ -80109,7 +80109,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "pacific-shores-resort",
     chamberId: "parksville-chamber",
-    name: "Pacific Shores Resort",
+    businessName: "Pacific Shores Resort",
     category: "hospitality",
     naicsCode: "721110",
     naicsDescription: "Hotels and Motels",
@@ -80121,7 +80121,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "nanoose-creek-campground",
     chamberId: "parksville-chamber",
-    name: "Nanoose Creek Campground",
+    businessName: "Nanoose Creek Campground",
     category: "hospitality",
     naicsCode: "721110",
     naicsDescription: "Hotels and Motels",
@@ -80133,7 +80133,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "madrona-beach-resort",
     chamberId: "parksville-chamber",
-    name: "Madrona Beach Resort",
+    businessName: "Madrona Beach Resort",
     category: "hospitality",
     naicsCode: "721110",
     naicsDescription: "Hotels and Motels",
@@ -80145,7 +80145,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "beach-acres-resort",
     chamberId: "parksville-chamber",
-    name: "Beach Acres Resort",
+    businessName: "Beach Acres Resort",
     category: "hospitality",
     naicsCode: "721110",
     naicsDescription: "Hotels and Motels",
@@ -80157,7 +80157,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "oceanside-village-resort",
     chamberId: "parksville-chamber",
-    name: "Oceanside Village Resort",
+    businessName: "Oceanside Village Resort",
     category: "hospitality",
     naicsCode: "721110",
     naicsDescription: "Hotels and Motels",
@@ -80169,7 +80169,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "ocean-trails-resort",
     chamberId: "parksville-chamber",
-    name: "Ocean Trails Resort",
+    businessName: "Ocean Trails Resort",
     category: "hospitality",
     naicsCode: "721110",
     naicsDescription: "Hotels and Motels",
@@ -80181,7 +80181,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "riverbend-rv-resort-and-cottages",
     chamberId: "parksville-chamber",
-    name: "Riverbend R.V. Resort and Cottages",
+    businessName: "Riverbend R.V. Resort and Cottages",
     category: "hospitality",
     naicsCode: "721110",
     naicsDescription: "Hotels and Motels",
@@ -80193,7 +80193,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "sunrise-ridge-resort",
     chamberId: "parksville-chamber",
-    name: "Sunrise Ridge Resort",
+    businessName: "Sunrise Ridge Resort",
     category: "hospitality",
     naicsCode: "721110",
     naicsDescription: "Hotels and Motels",
@@ -80205,7 +80205,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "the-beach-club-resort",
     chamberId: "parksville-chamber",
-    name: "The Beach Club Resort",
+    businessName: "The Beach Club Resort",
     category: "hospitality",
     naicsCode: "721110",
     naicsDescription: "Hotels and Motels",
@@ -80217,7 +80217,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "tigh-na-mara-seaside-spa-resort-conference-centre",
     chamberId: "parksville-chamber",
-    name: "Tigh-Na-Mara Seaside Spa Resort Conference Centre",
+    businessName: "Tigh-Na-Mara Seaside Spa Resort Conference Centre",
     category: "hospitality",
     naicsCode: "721110",
     naicsDescription: "Hotels and Motels",
@@ -80229,7 +80229,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "ocean-sands-resort",
     chamberId: "parksville-chamber",
-    name: "Ocean Sands Resort",
+    businessName: "Ocean Sands Resort",
     category: "hospitality",
     naicsCode: "721110",
     naicsDescription: "Hotels and Motels",
@@ -80241,7 +80241,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "whiskey-creek-campground",
     chamberId: "parksville-chamber",
-    name: "Whiskey Creek Campground",
+    businessName: "Whiskey Creek Campground",
     category: "hospitality",
     naicsCode: "721110",
     naicsDescription: "Hotels and Motels",
@@ -80253,7 +80253,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "royal-canadian-legion-mt-arrowsmith-branch-no-49",
     chamberId: "parksville-chamber",
-    name: "Royal Canadian Legion Mt. Arrowsmith Branch No. 49",
+    businessName: "Royal Canadian Legion Mt. Arrowsmith Branch No. 49",
     category: "nonprofit",
     naicsCode: "813410",
     naicsDescription: "Civic and Social Organizations",
@@ -80265,7 +80265,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "parksville-beach-festival-society",
     chamberId: "parksville-chamber",
-    name: "Parksville Beach Festival Society",
+    businessName: "Parksville Beach Festival Society",
     category: "nonprofit",
     naicsCode: "813410",
     naicsDescription: "Civic and Social Organizations",
@@ -80277,7 +80277,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "north-island-wildlife-recovery-centre",
     chamberId: "parksville-chamber",
-    name: "North Island Wildlife Recovery Centre",
+    businessName: "North Island Wildlife Recovery Centre",
     category: "nonprofit",
     naicsCode: "813410",
     naicsDescription: "Civic and Social Organizations",
@@ -80289,7 +80289,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "oceanside-hospice-society",
     chamberId: "parksville-chamber",
-    name: "Oceanside Hospice Society",
+    businessName: "Oceanside Hospice Society",
     category: "nonprofit",
     naicsCode: "813410",
     naicsDescription: "Civic and Social Organizations",
@@ -80301,7 +80301,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "the-salvation-army",
     chamberId: "parksville-chamber",
-    name: "The Salvation Army",
+    businessName: "The Salvation Army",
     category: "nonprofit",
     naicsCode: "813410",
     naicsDescription: "Civic and Social Organizations",
@@ -80313,7 +80313,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "milner-gardens-woodland",
     chamberId: "parksville-chamber",
-    name: "Milner Gardens & Woodland",
+    businessName: "Milner Gardens & Woodland",
     category: "nonprofit",
     naicsCode: "813410",
     naicsDescription: "Civic and Social Organizations",
@@ -80325,7 +80325,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "community-futures-development-corp",
     chamberId: "parksville-chamber",
-    name: "Community Futures Development Corp.",
+    businessName: "Community Futures Development Corp.",
     category: "nonprofit",
     naicsCode: "813410",
     naicsDescription: "Civic and Social Organizations",
@@ -80337,7 +80337,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "central-vancouver-island-multicultural-society",
     chamberId: "parksville-chamber",
-    name: "Central Vancouver Island Multicultural Society",
+    businessName: "Central Vancouver Island Multicultural Society",
     category: "nonprofit",
     naicsCode: "813410",
     naicsDescription: "Civic and Social Organizations",
@@ -80349,7 +80349,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "parksville-qualicum-beach-tourism-association",
     chamberId: "parksville-chamber",
-    name: "Parksville Qualicum Beach Tourism Association",
+    businessName: "Parksville Qualicum Beach Tourism Association",
     category: "nonprofit",
     naicsCode: "813410",
     naicsDescription: "Civic and Social Organizations",
@@ -80361,7 +80361,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "inclusion-parksville",
     chamberId: "parksville-chamber",
-    name: "Inclusion Parksville",
+    businessName: "Inclusion Parksville",
     category: "nonprofit",
     naicsCode: "813410",
     naicsDescription: "Civic and Social Organizations",
@@ -80373,7 +80373,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "oceanside-community-arts-council",
     chamberId: "parksville-chamber",
-    name: "Oceanside Community Arts Council",
+    businessName: "Oceanside Community Arts Council",
     category: "nonprofit",
     naicsCode: "813410",
     naicsDescription: "Civic and Social Organizations",
@@ -80385,7 +80385,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "forward-house-community-society",
     chamberId: "parksville-chamber",
-    name: "Forward House Community Society",
+    businessName: "Forward House Community Society",
     category: "nonprofit",
     naicsCode: "813410",
     naicsDescription: "Civic and Social Organizations",
@@ -80397,7 +80397,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "arrowsmith-agricultural-association",
     chamberId: "parksville-chamber",
-    name: "Arrowsmith Agricultural Association",
+    businessName: "Arrowsmith Agricultural Association",
     category: "nonprofit",
     naicsCode: "813410",
     naicsDescription: "Civic and Social Organizations",
@@ -80409,7 +80409,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "oceanside-womens-business-network",
     chamberId: "parksville-chamber",
-    name: "Oceanside Women's Business Network",
+    businessName: "Oceanside Women's Business Network",
     category: "nonprofit",
     naicsCode: "813410",
     naicsDescription: "Civic and Social Organizations",
@@ -80421,7 +80421,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "karen-stewart-law-corporation",
     chamberId: "parksville-chamber",
-    name: "Karen Stewart Law Corporation",
+    businessName: "Karen Stewart Law Corporation",
     category: "professional-services",
     naicsCode: "541611",
     naicsDescription: "Administrative Management Consulting",
@@ -80433,7 +80433,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "jorgensen-osmond-ltd",
     chamberId: "parksville-chamber",
-    name: "Jorgensen Osmond Ltd.",
+    businessName: "Jorgensen Osmond Ltd.",
     category: "professional-services",
     naicsCode: "541611",
     naicsDescription: "Administrative Management Consulting",
@@ -80445,7 +80445,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "koers-associates-engineering-ltd",
     chamberId: "parksville-chamber",
-    name: "Koers & Associates Engineering Ltd.",
+    businessName: "Koers & Associates Engineering Ltd.",
     category: "professional-services",
     naicsCode: "541611",
     naicsDescription: "Administrative Management Consulting",
@@ -80457,7 +80457,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "herold-engineering-ltd",
     chamberId: "parksville-chamber",
-    name: "Herold Engineering Ltd.",
+    businessName: "Herold Engineering Ltd.",
     category: "professional-services",
     naicsCode: "541611",
     naicsDescription: "Administrative Management Consulting",
@@ -80469,7 +80469,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "thomas-company",
     chamberId: "parksville-chamber",
-    name: "Thomas & Company",
+    businessName: "Thomas & Company",
     category: "professional-services",
     naicsCode: "541611",
     naicsDescription: "Administrative Management Consulting",
@@ -80481,7 +80481,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "je-anderson-associates",
     chamberId: "parksville-chamber",
-    name: "J.E. Anderson & Associates",
+    businessName: "J.E. Anderson & Associates",
     category: "professional-services",
     naicsCode: "541611",
     naicsDescription: "Administrative Management Consulting",
@@ -80493,7 +80493,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "davis-avis-randall",
     chamberId: "parksville-chamber",
-    name: "Davis Avis Randall",
+    businessName: "Davis Avis Randall",
     category: "professional-services",
     naicsCode: "541611",
     naicsDescription: "Administrative Management Consulting",
@@ -80505,7 +80505,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "timberlake-jones-engineering",
     chamberId: "parksville-chamber",
-    name: "Timberlake-Jones Engineering",
+    businessName: "Timberlake-Jones Engineering",
     category: "professional-services",
     naicsCode: "541611",
     naicsDescription: "Administrative Management Consulting",
@@ -80517,7 +80517,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "robbins-notaries",
     chamberId: "parksville-chamber",
-    name: "Robbins Notaries",
+    businessName: "Robbins Notaries",
     category: "professional-services",
     naicsCode: "541611",
     naicsDescription: "Administrative Management Consulting",
@@ -80529,7 +80529,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "vancouver-island-dental-specialists",
     chamberId: "parksville-chamber",
-    name: "Vancouver Island Dental Specialists",
+    businessName: "Vancouver Island Dental Specialists",
     category: "professional-services",
     naicsCode: "541611",
     naicsDescription: "Administrative Management Consulting",
@@ -80541,7 +80541,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "seaside-smile-clinic",
     chamberId: "parksville-chamber",
-    name: "Seaside Smile Clinic",
+    businessName: "Seaside Smile Clinic",
     category: "professional-services",
     naicsCode: "541611",
     naicsDescription: "Administrative Management Consulting",
@@ -80553,7 +80553,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "lfk-law",
     chamberId: "parksville-chamber",
-    name: "LFK Law",
+    businessName: "LFK Law",
     category: "professional-services",
     naicsCode: "541611",
     naicsDescription: "Administrative Management Consulting",
@@ -80565,7 +80565,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "adriana-blanco-law-corporation",
     chamberId: "parksville-chamber",
-    name: "Adriana Blanco Law Corporation",
+    businessName: "Adriana Blanco Law Corporation",
     category: "professional-services",
     naicsCode: "541611",
     naicsDescription: "Administrative Management Consulting",
@@ -80577,7 +80577,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "nanoose-bay-dental",
     chamberId: "parksville-chamber",
-    name: "Nanoose Bay Dental",
+    businessName: "Nanoose Bay Dental",
     category: "professional-services",
     naicsCode: "541611",
     naicsDescription: "Administrative Management Consulting",
@@ -80589,7 +80589,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "french-creek-seafood-ltd",
     chamberId: "parksville-chamber",
-    name: "French Creek Seafood Ltd.",
+    businessName: "French Creek Seafood Ltd.",
     category: "food-beverage",
     naicsCode: "722511",
     naicsDescription: "Full-Service Restaurants",
@@ -80601,7 +80601,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "the-old-country-market",
     chamberId: "parksville-chamber",
-    name: "The Old Country Market",
+    businessName: "The Old Country Market",
     category: "food-beverage",
     naicsCode: "722511",
     naicsDescription: "Full-Service Restaurants",
@@ -80613,7 +80613,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "springford-farm",
     chamberId: "parksville-chamber",
-    name: "Springford Farm",
+    businessName: "Springford Farm",
     category: "food-beverage",
     naicsCode: "722511",
     naicsDescription: "Full-Service Restaurants",
@@ -80625,7 +80625,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "thrifty-foods",
     chamberId: "parksville-chamber",
-    name: "Thrifty Foods",
+    businessName: "Thrifty Foods",
     category: "food-beverage",
     naicsCode: "722511",
     naicsDescription: "Full-Service Restaurants",
@@ -80637,7 +80637,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "mcdonalds-restaurants-of-canada",
     chamberId: "parksville-chamber",
-    name: "McDonald's Restaurants of Canada",
+    businessName: "McDonald's Restaurants of Canada",
     category: "food-beverage",
     naicsCode: "722511",
     naicsDescription: "Full-Service Restaurants",
@@ -80649,7 +80649,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "farm-to-fire-pizza",
     chamberId: "parksville-chamber",
-    name: "Farm to Fire Pizza",
+    businessName: "Farm to Fire Pizza",
     category: "food-beverage",
     naicsCode: "722511",
     naicsDescription: "Full-Service Restaurants",
@@ -80661,7 +80661,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "qualicum-beach-farmers-market",
     chamberId: "parksville-chamber",
-    name: "Qualicum Beach Farmers Market",
+    businessName: "Qualicum Beach Farmers Market",
     category: "food-beverage",
     naicsCode: "722511",
     naicsDescription: "Full-Service Restaurants",
@@ -80673,7 +80673,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "quality-foods-parksville",
     chamberId: "parksville-chamber",
-    name: "Quality Foods Parksville",
+    businessName: "Quality Foods Parksville",
     category: "food-beverage",
     naicsCode: "722511",
     naicsDescription: "Full-Service Restaurants",
@@ -80685,7 +80685,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "coyote-coffee-corp",
     chamberId: "parksville-chamber",
-    name: "Coyote Coffee Corp",
+    businessName: "Coyote Coffee Corp",
     category: "food-beverage",
     naicsCode: "722511",
     naicsDescription: "Full-Service Restaurants",
@@ -80697,7 +80697,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "little-qualicum-cheeseworks",
     chamberId: "parksville-chamber",
-    name: "Little Qualicum Cheeseworks",
+    businessName: "Little Qualicum Cheeseworks",
     category: "food-beverage",
     naicsCode: "722511",
     naicsDescription: "Full-Service Restaurants",
@@ -80709,7 +80709,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "subway",
     chamberId: "parksville-chamber",
-    name: "Subway",
+    businessName: "Subway",
     category: "food-beverage",
     naicsCode: "722511",
     naicsDescription: "Full-Service Restaurants",
@@ -80721,7 +80721,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "rolling-cones-ice-cream",
     chamberId: "parksville-chamber",
-    name: "Rolling Cones Ice Cream",
+    businessName: "Rolling Cones Ice Cream",
     category: "food-beverage",
     naicsCode: "722511",
     naicsDescription: "Full-Service Restaurants",
@@ -80733,7 +80733,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "mount-arrowsmith-brewing",
     chamberId: "parksville-chamber",
-    name: "Mount Arrowsmith Brewing",
+    businessName: "Mount Arrowsmith Brewing",
     category: "food-beverage",
     naicsCode: "722511",
     naicsDescription: "Full-Service Restaurants",
@@ -80745,7 +80745,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "iris-optical",
     chamberId: "parksville-chamber",
-    name: "IRIS Optical",
+    businessName: "IRIS Optical",
     category: "healthcare",
     naicsCode: "621111",
     naicsDescription: "Offices of Physicians",
@@ -80757,7 +80757,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "pharmasave-health-centre-024",
     chamberId: "parksville-chamber",
-    name: "Pharmasave Health Centre #024",
+    businessName: "Pharmasave Health Centre #024",
     category: "healthcare",
     naicsCode: "621111",
     naicsDescription: "Offices of Physicians",
@@ -80769,7 +80769,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "universal-college-of-reflexology",
     chamberId: "parksville-chamber",
-    name: "Universal College of Reflexology",
+    businessName: "Universal College of Reflexology",
     category: "healthcare",
     naicsCode: "621111",
     naicsDescription: "Offices of Physicians",
@@ -80781,7 +80781,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "medicine-shoppe-pharmacy-168",
     chamberId: "parksville-chamber",
-    name: "Medicine Shoppe Pharmacy #168",
+    businessName: "Medicine Shoppe Pharmacy #168",
     category: "healthcare",
     naicsCode: "621111",
     naicsDescription: "Offices of Physicians",
@@ -80793,7 +80793,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "parksville-physiotherapy-corporation",
     chamberId: "parksville-chamber",
-    name: "Parksville Physiotherapy Corporation",
+    businessName: "Parksville Physiotherapy Corporation",
     category: "healthcare",
     naicsCode: "621111",
     naicsDescription: "Offices of Physicians",
@@ -80805,7 +80805,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "life-support-assisted-living",
     chamberId: "parksville-chamber",
-    name: "Life Support Assisted Living",
+    businessName: "Life Support Assisted Living",
     category: "healthcare",
     naicsCode: "621111",
     naicsDescription: "Offices of Physicians",
@@ -80817,7 +80817,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "bodyworks-fitness",
     chamberId: "parksville-chamber",
-    name: "Bodyworks Fitness",
+    businessName: "Bodyworks Fitness",
     category: "healthcare",
     naicsCode: "621111",
     naicsDescription: "Offices of Physicians",
@@ -80829,7 +80829,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "arrowsmith-health-care-society",
     chamberId: "parksville-chamber",
-    name: "Arrowsmith Health Care Society",
+    businessName: "Arrowsmith Health Care Society",
     category: "healthcare",
     naicsCode: "621111",
     naicsDescription: "Offices of Physicians",
@@ -80841,7 +80841,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "tablet-pharmacy-parksville-compounding",
     chamberId: "parksville-chamber",
-    name: "Tablet Pharmacy Parksville & Compounding",
+    businessName: "Tablet Pharmacy Parksville & Compounding",
     category: "healthcare",
     naicsCode: "621111",
     naicsDescription: "Offices of Physicians",
@@ -80853,7 +80853,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "oceanside-c-weed",
     chamberId: "parksville-chamber",
-    name: "Oceanside C Weed",
+    businessName: "Oceanside C Weed",
     category: "healthcare",
     naicsCode: "621111",
     naicsDescription: "Offices of Physicians",
@@ -80865,7 +80865,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "bonaventure-support-services",
     chamberId: "parksville-chamber",
-    name: "Bonaventure Support Services",
+    businessName: "Bonaventure Support Services",
     category: "healthcare",
     naicsCode: "621111",
     naicsDescription: "Offices of Physicians",
@@ -80877,7 +80877,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "island-community-counselling",
     chamberId: "parksville-chamber",
-    name: "Island Community Counselling",
+    businessName: "Island Community Counselling",
     category: "healthcare",
     naicsCode: "621111",
     naicsDescription: "Offices of Physicians",
@@ -80889,7 +80889,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "addy-power-ltd",
     chamberId: "parksville-chamber",
-    name: "Addy Power Ltd.",
+    businessName: "Addy Power Ltd.",
     category: "construction",
     naicsCode: "236220",
     naicsDescription: "Commercial and Institutional Building Construction",
@@ -80901,7 +80901,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "rebath",
     chamberId: "parksville-chamber",
-    name: "REBATH",
+    businessName: "REBATH",
     category: "construction",
     naicsCode: "236220",
     naicsDescription: "Commercial and Institutional Building Construction",
@@ -80913,7 +80913,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "propacific-restorations-dkc",
     chamberId: "parksville-chamber",
-    name: "ProPacific Restorations DKC",
+    businessName: "ProPacific Restorations DKC",
     category: "construction",
     naicsCode: "236220",
     naicsDescription: "Commercial and Institutional Building Construction",
@@ -80925,7 +80925,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "heidelberg-materials",
     chamberId: "parksville-chamber",
-    name: "Heidelberg Materials",
+    businessName: "Heidelberg Materials",
     category: "construction",
     naicsCode: "236220",
     naicsDescription: "Commercial and Institutional Building Construction",
@@ -80937,7 +80937,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "bayshore-construction-inc",
     chamberId: "parksville-chamber",
-    name: "Bayshore Construction Inc.",
+    businessName: "Bayshore Construction Inc.",
     category: "construction",
     naicsCode: "236220",
     naicsDescription: "Commercial and Institutional Building Construction",
@@ -80949,7 +80949,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "the-whole-show-restorations-inc",
     chamberId: "parksville-chamber",
-    name: "The Whole Show Restorations Inc.",
+    businessName: "The Whole Show Restorations Inc.",
     category: "construction",
     naicsCode: "236220",
     naicsDescription: "Commercial and Institutional Building Construction",
@@ -80961,7 +80961,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "dave-bedard-sons-contracting-ltd",
     chamberId: "parksville-chamber",
-    name: "Dave Bedard & Sons Contracting Ltd.",
+    businessName: "Dave Bedard & Sons Contracting Ltd.",
     category: "construction",
     naicsCode: "236220",
     naicsDescription: "Commercial and Institutional Building Construction",
@@ -80973,7 +80973,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "van-roc-interiors-ltd",
     chamberId: "parksville-chamber",
-    name: "Van-Roc Interiors Ltd.",
+    businessName: "Van-Roc Interiors Ltd.",
     category: "construction",
     naicsCode: "236220",
     naicsDescription: "Commercial and Institutional Building Construction",
@@ -80985,7 +80985,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "oceanside-development-construction-assoc",
     chamberId: "parksville-chamber",
-    name: "Oceanside Development & Construction Assoc.",
+    businessName: "Oceanside Development & Construction Assoc.",
     category: "construction",
     naicsCode: "236220",
     naicsDescription: "Commercial and Institutional Building Construction",
@@ -80997,7 +80997,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "osprey-electric-ltd",
     chamberId: "parksville-chamber",
-    name: "Osprey Electric Ltd.",
+    businessName: "Osprey Electric Ltd.",
     category: "construction",
     naicsCode: "236220",
     naicsDescription: "Commercial and Institutional Building Construction",
@@ -81009,7 +81009,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "island-premier-contracting-ltd",
     chamberId: "parksville-chamber",
-    name: "Island Premier Contracting Ltd.",
+    businessName: "Island Premier Contracting Ltd.",
     category: "construction",
     naicsCode: "236220",
     naicsDescription: "Commercial and Institutional Building Construction",
@@ -81021,7 +81021,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "built-contracting-ltd",
     chamberId: "parksville-chamber",
-    name: "Built Contracting Ltd.",
+    businessName: "Built Contracting Ltd.",
     category: "construction",
     naicsCode: "236220",
     naicsDescription: "Commercial and Institutional Building Construction",
@@ -81033,7 +81033,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "consider-it-energy",
     chamberId: "parksville-chamber",
-    name: "Consider It Energy",
+    businessName: "Consider It Energy",
     category: "construction",
     naicsCode: "236220",
     naicsDescription: "Commercial and Institutional Building Construction",
@@ -81045,7 +81045,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "in-the-dirt-contracting",
     chamberId: "parksville-chamber",
-    name: "In the Dirt Contracting",
+    businessName: "In the Dirt Contracting",
     category: "construction",
     naicsCode: "236220",
     naicsDescription: "Commercial and Institutional Building Construction",
@@ -81057,7 +81057,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "speedy-glass",
     chamberId: "parksville-chamber",
-    name: "Speedy Glass",
+    businessName: "Speedy Glass",
     category: "home-garden",
     naicsCode: "444140",
     naicsDescription: "Hardware Stores",
@@ -81069,7 +81069,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "sunbelt-rentals-of-canada-inc",
     chamberId: "parksville-chamber",
-    name: "Sunbelt Rentals of Canada Inc.",
+    businessName: "Sunbelt Rentals of Canada Inc.",
     category: "home-garden",
     naicsCode: "444140",
     naicsDescription: "Hardware Stores",
@@ -81081,7 +81081,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "weatherwise-home-garden-supplies-ltd",
     chamberId: "parksville-chamber",
-    name: "WeatherWise Home & Garden Supplies Ltd.",
+    businessName: "WeatherWise Home & Garden Supplies Ltd.",
     category: "home-garden",
     naicsCode: "444140",
     naicsDescription: "Hardware Stores",
@@ -81093,7 +81093,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "oceanside-u-lock-mini-storage",
     chamberId: "parksville-chamber",
-    name: "Oceanside U-Lock Mini Storage",
+    businessName: "Oceanside U-Lock Mini Storage",
     category: "home-garden",
     naicsCode: "444140",
     naicsDescription: "Hardware Stores",
@@ -81105,7 +81105,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "our-glass-shop",
     chamberId: "parksville-chamber",
-    name: "Our Glass Shop",
+    businessName: "Our Glass Shop",
     category: "home-garden",
     naicsCode: "444140",
     naicsDescription: "Hardware Stores",
@@ -81117,7 +81117,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "coast-glass-ltd-coast-closets",
     chamberId: "parksville-chamber",
-    name: "Coast Glass Ltd. & Coast Closets",
+    businessName: "Coast Glass Ltd. & Coast Closets",
     category: "home-garden",
     naicsCode: "444140",
     naicsDescription: "Hardware Stores",
@@ -81129,7 +81129,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "roto-rooter",
     chamberId: "parksville-chamber",
-    name: "Roto Rooter",
+    businessName: "Roto Rooter",
     category: "home-garden",
     naicsCode: "444140",
     naicsDescription: "Hardware Stores",
@@ -81141,7 +81141,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "united-floors-parksville",
     chamberId: "parksville-chamber",
-    name: "United Floors | Parksville",
+    businessName: "United Floors | Parksville",
     category: "home-garden",
     naicsCode: "444140",
     naicsDescription: "Hardware Stores",
@@ -81153,7 +81153,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "castle-carpet-one-floor-home",
     chamberId: "parksville-chamber",
-    name: "Castle Carpet One Floor & Home",
+    businessName: "Castle Carpet One Floor & Home",
     category: "home-garden",
     naicsCode: "444140",
     naicsDescription: "Hardware Stores",
@@ -81165,7 +81165,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "mid-island-cabinets-ltd",
     chamberId: "parksville-chamber",
-    name: "Mid-Island Cabinets Ltd",
+    businessName: "Mid-Island Cabinets Ltd",
     category: "home-garden",
     naicsCode: "444140",
     naicsDescription: "Hardware Stores",
@@ -81177,7 +81177,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "parksville-home-hardware",
     chamberId: "parksville-chamber",
-    name: "Parksville Home Hardware",
+    businessName: "Parksville Home Hardware",
     category: "home-garden",
     naicsCode: "444140",
     naicsDescription: "Hardware Stores",
@@ -81189,7 +81189,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "the-parksville-qualicum-beach-news",
     chamberId: "parksville-chamber",
-    name: "The Parksville Qualicum Beach News",
+    businessName: "The Parksville Qualicum Beach News",
     category: "automotive",
     naicsCode: "441110",
     naicsDescription: "New Car Dealers",
@@ -81201,7 +81201,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "coastal-community-credit-union",
     chamberId: "parksville-chamber",
-    name: "Coastal Community Credit Union",
+    businessName: "Coastal Community Credit Union",
     category: "automotive",
     naicsCode: "441110",
     naicsDescription: "New Car Dealers",
@@ -81213,7 +81213,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "riptide-graphics",
     chamberId: "parksville-chamber",
-    name: "Riptide Graphics",
+    businessName: "Riptide Graphics",
     category: "automotive",
     naicsCode: "441110",
     naicsDescription: "New Car Dealers",
@@ -81225,7 +81225,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "460-realty",
     chamberId: "parksville-chamber",
-    name: "460 Realty",
+    businessName: "460 Realty",
     category: "real-estate",
     naicsCode: "531210",
     naicsDescription: "Offices of Real Estate Agents",
@@ -81237,7 +81237,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "susan-forrest---realtor-royal-lepage-parksville-qu",
     chamberId: "parksville-chamber",
-    name: "Susan Forrest - Realtor Royal LePage Parksville-Qualicum Beach Realty",
+    businessName: "Susan Forrest - Realtor Royal LePage Parksville-Qualicum Beach Realty",
     category: "real-estate",
     naicsCode: "531210",
     naicsDescription: "Offices of Real Estate Agents",
@@ -81249,7 +81249,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "lindsay-associates---ian-lindsay-personal-real-est",
     chamberId: "parksville-chamber",
-    name: "LINDSAY & Associates - Ian Lindsay, Personal Real Estate Corporation",
+    businessName: "LINDSAY & Associates - Ian Lindsay, Personal Real Estate Corporation",
     category: "real-estate",
     naicsCode: "531210",
     naicsDescription: "Offices of Real Estate Agents",
@@ -81261,7 +81261,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "kevin-clayton",
     chamberId: "parksville-chamber",
-    name: "Kevin Clayton",
+    businessName: "Kevin Clayton",
     category: "real-estate",
     naicsCode: "531210",
     naicsDescription: "Offices of Real Estate Agents",
@@ -81273,7 +81273,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "remax-first-realty",
     chamberId: "parksville-chamber",
-    name: "RE/MAX First Realty",
+    businessName: "RE/MAX First Realty",
     category: "real-estate",
     naicsCode: "531210",
     naicsDescription: "Offices of Real Estate Agents",
@@ -81285,7 +81285,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "royal-lepage-parksville-qualicum-beach-realty",
     chamberId: "parksville-chamber",
-    name: "Royal LePage Parksville-Qualicum Beach Realty",
+    businessName: "Royal LePage Parksville-Qualicum Beach Realty",
     category: "real-estate",
     naicsCode: "531210",
     naicsDescription: "Offices of Real Estate Agents",
@@ -81297,7 +81297,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "vivien-sears-remax-first-realty",
     chamberId: "parksville-chamber",
-    name: "Vivien Sears, RE/MAX First Realty",
+    businessName: "Vivien Sears, RE/MAX First Realty",
     category: "real-estate",
     naicsCode: "531210",
     naicsDescription: "Offices of Real Estate Agents",
@@ -81309,7 +81309,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "matt-breedlove",
     chamberId: "parksville-chamber",
-    name: "Matt Breedlove",
+    businessName: "Matt Breedlove",
     category: "real-estate",
     naicsCode: "531210",
     naicsDescription: "Offices of Real Estate Agents",
@@ -81321,7 +81321,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "avison-young---jon-walters",
     chamberId: "parksville-chamber",
-    name: "Avison Young - Jon Walters",
+    businessName: "Avison Young - Jon Walters",
     category: "real-estate",
     naicsCode: "531210",
     naicsDescription: "Offices of Real Estate Agents",
@@ -81333,7 +81333,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "joyce-cline-royal-lepage-parksville-qualicum-beach",
     chamberId: "parksville-chamber",
-    name: "Joyce Cline  Royal LePage Parksville-Qualicum Beach Realty",
+    businessName: "Joyce Cline  Royal LePage Parksville-Qualicum Beach Realty",
     category: "real-estate",
     naicsCode: "531210",
     naicsDescription: "Offices of Real Estate Agents",
@@ -81345,7 +81345,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "alana-jackson",
     chamberId: "parksville-chamber",
-    name: "Alana Jackson",
+    businessName: "Alana Jackson",
     category: "real-estate",
     naicsCode: "531210",
     naicsDescription: "Offices of Real Estate Agents",
@@ -81357,7 +81357,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "meghan-walker-realtor",
     chamberId: "parksville-chamber",
-    name: "Meghan Walker REALTOR®",
+    businessName: "Meghan Walker REALTOR®",
     category: "real-estate",
     naicsCode: "531210",
     naicsDescription: "Offices of Real Estate Agents",
@@ -81369,7 +81369,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "evans-essential-home-inspections",
     chamberId: "parksville-chamber",
-    name: "Evans Essential Home Inspections",
+    businessName: "Evans Essential Home Inspections",
     category: "real-estate",
     naicsCode: "531210",
     naicsDescription: "Offices of Real Estate Agents",
@@ -81381,7 +81381,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "melanie-peake-personal-real-estate-corporation",
     chamberId: "parksville-chamber",
-    name: "Melanie Peake, Personal Real Estate Corporation",
+    businessName: "Melanie Peake, Personal Real Estate Corporation",
     category: "real-estate",
     naicsCode: "531210",
     naicsDescription: "Offices of Real Estate Agents",
@@ -81393,7 +81393,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "integral-wealth-insurance-agents-ltd",
     chamberId: "parksville-chamber",
-    name: "Integral Wealth Insurance Agents Ltd.",
+    businessName: "Integral Wealth Insurance Agents Ltd.",
     category: "financial-services",
     naicsCode: "523930",
     naicsDescription: "Investment Advice",
@@ -81405,7 +81405,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "royal-bank-of-canada",
     chamberId: "parksville-chamber",
-    name: "Royal Bank of Canada",
+    businessName: "Royal Bank of Canada",
     category: "financial-services",
     naicsCode: "523930",
     naicsDescription: "Investment Advice",
@@ -81417,7 +81417,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "mps-chartered-professional-accountants",
     chamberId: "parksville-chamber",
-    name: "MPS Chartered Professional Accountants",
+    businessName: "MPS Chartered Professional Accountants",
     category: "financial-services",
     naicsCode: "523930",
     naicsDescription: "Investment Advice",
@@ -81429,7 +81429,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "sabo-jang-co-ltd",
     chamberId: "parksville-chamber",
-    name: "Sabo, Jang & Co. Ltd.",
+    businessName: "Sabo, Jang & Co. Ltd.",
     category: "financial-services",
     naicsCode: "523930",
     naicsDescription: "Investment Advice",
@@ -81441,7 +81441,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "bank-of-montreal",
     chamberId: "parksville-chamber",
-    name: "Bank of Montreal",
+    businessName: "Bank of Montreal",
     category: "financial-services",
     naicsCode: "523930",
     naicsDescription: "Investment Advice",
@@ -81453,7 +81453,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "scotiabank",
     chamberId: "parksville-chamber",
-    name: "Scotiabank",
+    businessName: "Scotiabank",
     category: "financial-services",
     naicsCode: "523930",
     naicsDescription: "Investment Advice",
@@ -81465,7 +81465,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "rocksolid-bookkeeping-inc",
     chamberId: "parksville-chamber",
-    name: "RockSolid Bookkeeping Inc.",
+    businessName: "RockSolid Bookkeeping Inc.",
     category: "financial-services",
     naicsCode: "523930",
     naicsDescription: "Investment Advice",
@@ -81477,7 +81477,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "business-development-bank-of-canada",
     chamberId: "parksville-chamber",
-    name: "Business Development Bank of Canada",
+    businessName: "Business Development Bank of Canada",
     category: "financial-services",
     naicsCode: "523930",
     naicsDescription: "Investment Advice",
@@ -81489,7 +81489,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "robbins-company-chartered-professional-accountants",
     chamberId: "parksville-chamber",
-    name: "Robbins & Company Chartered Professional Accountants",
+    businessName: "Robbins & Company Chartered Professional Accountants",
     category: "financial-services",
     naicsCode: "523930",
     naicsDescription: "Investment Advice",
@@ -81501,7 +81501,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "sand-dollar-mortgage-corp",
     chamberId: "parksville-chamber",
-    name: "Sand Dollar Mortgage Corp.",
+    businessName: "Sand Dollar Mortgage Corp.",
     category: "financial-services",
     naicsCode: "523930",
     naicsDescription: "Investment Advice",
@@ -81513,7 +81513,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "ia-private-wealth",
     chamberId: "parksville-chamber",
-    name: "iA Private Wealth",
+    businessName: "iA Private Wealth",
     category: "financial-services",
     naicsCode: "523930",
     naicsDescription: "Investment Advice",
@@ -81525,7 +81525,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "my-bookkeeper---cari-mclean",
     chamberId: "parksville-chamber",
-    name: "My Bookkeeper - Cari McLean",
+    businessName: "My Bookkeeper - Cari McLean",
     category: "financial-services",
     naicsCode: "523930",
     naicsDescription: "Investment Advice",
@@ -81537,7 +81537,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "one-ocean-wealth-a-div-of-leede-financial",
     chamberId: "parksville-chamber",
-    name: "One Ocean Wealth a div. of Leede Financial",
+    businessName: "One Ocean Wealth a div. of Leede Financial",
     category: "financial-services",
     naicsCode: "523930",
     naicsDescription: "Investment Advice",
@@ -81549,7 +81549,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "mystic-lotus",
     chamberId: "parksville-chamber",
-    name: "Mystic Lotus",
+    businessName: "Mystic Lotus",
     category: "retail",
     naicsCode: "452319",
     naicsDescription: "All Other General Merchandise Stores",
@@ -81561,7 +81561,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "mercedes-lane",
     chamberId: "parksville-chamber",
-    name: "Mercedes Lane",
+    businessName: "Mercedes Lane",
     category: "retail",
     naicsCode: "452319",
     naicsDescription: "All Other General Merchandise Stores",
@@ -81573,7 +81573,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "island-cleaning-supplies",
     chamberId: "parksville-chamber",
-    name: "Island Cleaning Supplies",
+    businessName: "Island Cleaning Supplies",
     category: "retail",
     naicsCode: "452319",
     naicsDescription: "All Other General Merchandise Stores",
@@ -81585,7 +81585,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "close-to-you-boutique",
     chamberId: "parksville-chamber",
-    name: "Close to You Boutique",
+    businessName: "Close to You Boutique",
     category: "retail",
     naicsCode: "452319",
     naicsDescription: "All Other General Merchandise Stores",
@@ -81597,7 +81597,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "arrowsmith-potters-guild",
     chamberId: "parksville-chamber",
-    name: "Arrowsmith Potters Guild",
+    businessName: "Arrowsmith Potters Guild",
     category: "retail",
     naicsCode: "452319",
     naicsDescription: "All Other General Merchandise Stores",
@@ -81609,7 +81609,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "paulan-jewellery",
     chamberId: "parksville-chamber",
-    name: "Paulan Jewellery",
+    businessName: "Paulan Jewellery",
     category: "retail",
     naicsCode: "452319",
     naicsDescription: "All Other General Merchandise Stores",
@@ -81621,7 +81621,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "wilde-and-sparrow",
     chamberId: "parksville-chamber",
-    name: "Wilde and Sparrow",
+    businessName: "Wilde and Sparrow",
     category: "retail",
     naicsCode: "452319",
     naicsDescription: "All Other General Merchandise Stores",
@@ -81633,7 +81633,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "monk-art-gallery-studio",
     chamberId: "parksville-chamber",
-    name: "Monk Art Gallery & Studio",
+    businessName: "Monk Art Gallery & Studio",
     category: "professional-services",
     naicsCode: "541611",
     naicsDescription: "Administrative Management Consulting",
@@ -81645,7 +81645,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "echo-players",
     chamberId: "parksville-chamber",
-    name: "E.C.H.O. Players",
+    businessName: "E.C.H.O. Players",
     category: "professional-services",
     naicsCode: "541611",
     naicsDescription: "Administrative Management Consulting",
@@ -81657,7 +81657,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "horne-lake-caves",
     chamberId: "parksville-chamber",
-    name: "Horne Lake Caves",
+    businessName: "Horne Lake Caves",
     category: "professional-services",
     naicsCode: "541611",
     naicsDescription: "Administrative Management Consulting",
@@ -81669,7 +81669,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "fast-time-grand-prix",
     chamberId: "parksville-chamber",
-    name: "Fast Time Grand Prix",
+    businessName: "Fast Time Grand Prix",
     category: "professional-services",
     naicsCode: "541611",
     naicsDescription: "Administrative Management Consulting",
@@ -81681,7 +81681,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "parksville-museum-archives",
     chamberId: "parksville-chamber",
-    name: "Parksville Museum & Archives",
+    businessName: "Parksville Museum & Archives",
     category: "professional-services",
     naicsCode: "541611",
     naicsDescription: "Administrative Management Consulting",
@@ -81693,7 +81693,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "sexessories",
     chamberId: "parksville-chamber",
-    name: "Sexessories",
+    businessName: "Sexessories",
     category: "retail",
     naicsCode: "452319",
     naicsDescription: "All Other General Merchandise Stores",
@@ -81705,7 +81705,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "wembley-mall",
     chamberId: "parksville-chamber",
-    name: "Wembley Mall",
+    businessName: "Wembley Mall",
     category: "retail",
     naicsCode: "452319",
     naicsDescription: "All Other General Merchandise Stores",
@@ -81717,7 +81717,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "classic-kitchens-design",
     chamberId: "parksville-chamber",
-    name: "Classic Kitchens & Design",
+    businessName: "Classic Kitchens & Design",
     category: "retail",
     naicsCode: "452319",
     naicsDescription: "All Other General Merchandise Stores",
@@ -81729,7 +81729,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "kaya-connection",
     chamberId: "parksville-chamber",
-    name: "Kaya Connection",
+    businessName: "Kaya Connection",
     category: "retail",
     naicsCode: "452319",
     naicsDescription: "All Other General Merchandise Stores",
@@ -81741,7 +81741,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "suds-duds-laundromat",
     chamberId: "parksville-chamber",
-    name: "Suds & Duds Laundromat",
+    businessName: "Suds & Duds Laundromat",
     category: "professional-services",
     naicsCode: "541611",
     naicsDescription: "Administrative Management Consulting",
@@ -81753,7 +81753,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "the-kit-and-kaboodle-trading-company",
     chamberId: "parksville-chamber",
-    name: "The Kit and Kaboodle Trading Company",
+    businessName: "The Kit and Kaboodle Trading Company",
     category: "professional-services",
     naicsCode: "541611",
     naicsDescription: "Administrative Management Consulting",
@@ -81765,7 +81765,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "west-coast-tees",
     chamberId: "parksville-chamber",
-    name: "West Coast Tees",
+    businessName: "West Coast Tees",
     category: "professional-services",
     naicsCode: "541611",
     naicsDescription: "Administrative Management Consulting",
@@ -81777,7 +81777,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "bumblebaby-boutique",
     chamberId: "parksville-chamber",
-    name: "BumbleBaby Boutique",
+    businessName: "BumbleBaby Boutique",
     category: "professional-services",
     naicsCode: "541611",
     naicsDescription: "Administrative Management Consulting",
@@ -81789,7 +81789,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "mi-by-kiyo-salon",
     chamberId: "parksville-chamber",
-    name: "Mi by Kiyo Salon",
+    businessName: "Mi by Kiyo Salon",
     category: "automotive",
     naicsCode: "441110",
     naicsDescription: "New Car Dealers",
@@ -81801,7 +81801,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "lesleys-esthetics-accessories",
     chamberId: "parksville-chamber",
-    name: "Lesley's Esthetics & Accessories",
+    businessName: "Lesley's Esthetics & Accessories",
     category: "automotive",
     naicsCode: "441110",
     naicsDescription: "New Car Dealers",
@@ -81813,7 +81813,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "urban-edge-hair-group",
     chamberId: "parksville-chamber",
-    name: "Urban Edge Hair Group",
+    businessName: "Urban Edge Hair Group",
     category: "automotive",
     naicsCode: "441110",
     naicsDescription: "New Car Dealers",
@@ -81825,7 +81825,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "rdn-recreation-parks-department",
     chamberId: "parksville-chamber",
-    name: "RDN Recreation & Parks Department",
+    businessName: "RDN Recreation & Parks Department",
     category: "recreation-entertainment",
     naicsCode: "713940",
     naicsDescription: "Fitness and Recreational Sports Centers",
@@ -81837,7 +81837,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "riptide-lagoon-adventure-golf",
     chamberId: "parksville-chamber",
-    name: "Riptide Lagoon Adventure Golf",
+    businessName: "Riptide Lagoon Adventure Golf",
     category: "recreation-entertainment",
     naicsCode: "713940",
     naicsDescription: "Fitness and Recreational Sports Centers",
@@ -81849,7 +81849,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "parksville-curling-club",
     chamberId: "parksville-chamber",
-    name: "Parksville Curling Club",
+    businessName: "Parksville Curling Club",
     category: "recreation-entertainment",
     naicsCode: "713940",
     naicsDescription: "Fitness and Recreational Sports Centers",
@@ -81861,7 +81861,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "adventuress-sea-kayaking",
     chamberId: "parksville-chamber",
-    name: "Adventuress Sea Kayaking",
+    businessName: "Adventuress Sea Kayaking",
     category: "recreation-entertainment",
     naicsCode: "713940",
     naicsDescription: "Fitness and Recreational Sports Centers",
@@ -81873,7 +81873,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "innovate-dance-arts-ltd",
     chamberId: "parksville-chamber",
-    name: "Innovate Dance Arts Ltd.",
+    businessName: "Innovate Dance Arts Ltd.",
     category: "recreation-entertainment",
     naicsCode: "713940",
     naicsDescription: "Fitness and Recreational Sports Centers",
@@ -81885,7 +81885,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "special-olympics-bc-oceanside",
     chamberId: "parksville-chamber",
-    name: "Special Olympics BC – Oceanside",
+    businessName: "Special Olympics BC – Oceanside",
     category: "recreation-entertainment",
     naicsCode: "713940",
     naicsDescription: "Fitness and Recreational Sports Centers",
@@ -81897,7 +81897,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "paradise-acres-ranch",
     chamberId: "parksville-chamber",
-    name: "Paradise Acres Ranch",
+    businessName: "Paradise Acres Ranch",
     category: "recreation-entertainment",
     naicsCode: "713940",
     naicsDescription: "Fitness and Recreational Sports Centers",
@@ -81909,7 +81909,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "isle-golf-cars",
     chamberId: "parksville-chamber",
-    name: "Isle Golf Cars",
+    businessName: "Isle Golf Cars",
     category: "recreation-entertainment",
     naicsCode: "713940",
     naicsDescription: "Fitness and Recreational Sports Centers",
@@ -81921,7 +81921,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "cascadia-martial-arts",
     chamberId: "parksville-chamber",
-    name: "Cascadia Martial Arts",
+    businessName: "Cascadia Martial Arts",
     category: "recreation-entertainment",
     naicsCode: "713940",
     naicsDescription: "Fitness and Recreational Sports Centers",
@@ -81933,7 +81933,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "qualicum-beach-memorial-golf-club",
     chamberId: "parksville-chamber",
-    name: "Qualicum Beach Memorial Golf Club",
+    businessName: "Qualicum Beach Memorial Golf Club",
     category: "recreation-entertainment",
     naicsCode: "713940",
     naicsDescription: "Fitness and Recreational Sports Centers",
@@ -81945,7 +81945,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "geeks-on-the-beach---web-agency",
     chamberId: "parksville-chamber",
-    name: "Geeks on the Beach - Web Agency",
+    businessName: "Geeks on the Beach - Web Agency",
     category: "marketing-advertising",
     naicsCode: "541810",
     naicsDescription: "Advertising Agencies",
@@ -81957,7 +81957,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "island-radio-ltd-the-beach",
     chamberId: "parksville-chamber",
-    name: "Island Radio Ltd. (The Beach)",
+    businessName: "Island Radio Ltd. (The Beach)",
     category: "marketing-advertising",
     naicsCode: "541810",
     naicsDescription: "Advertising Agencies",
@@ -81969,7 +81969,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "island-pacific-telecommunication-solutions",
     chamberId: "parksville-chamber",
-    name: "Island Pacific Telecommunication Solutions",
+    businessName: "Island Pacific Telecommunication Solutions",
     category: "marketing-advertising",
     naicsCode: "541810",
     naicsDescription: "Advertising Agencies",
@@ -81981,7 +81981,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "podio-studio",
     chamberId: "parksville-chamber",
-    name: "Podio Studio",
+    businessName: "Podio Studio",
     category: "marketing-advertising",
     naicsCode: "541810",
     naicsDescription: "Advertising Agencies",
@@ -81993,7 +81993,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "kestrel-helicopters-ltd",
     chamberId: "parksville-chamber",
-    name: "Kestrel Helicopters Ltd.",
+    businessName: "Kestrel Helicopters Ltd.",
     category: "transportation",
     naicsCode: "484110",
     naicsDescription: "General Freight Trucking, Local",
@@ -82005,7 +82005,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "sunwest-helicopters-ltd",
     chamberId: "parksville-chamber",
-    name: "Sunwest Helicopters Ltd.",
+    businessName: "Sunwest Helicopters Ltd.",
     category: "transportation",
     naicsCode: "484110",
     naicsDescription: "General Freight Trucking, Local",
@@ -82017,7 +82017,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "island-chauffeur",
     chamberId: "parksville-chamber",
-    name: "Island Chauffeur",
+    businessName: "Island Chauffeur",
     category: "transportation",
     naicsCode: "484110",
     naicsDescription: "General Freight Trucking, Local",
@@ -82029,7 +82029,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "comox-valley-airport",
     chamberId: "parksville-chamber",
-    name: "Comox Valley Airport",
+    businessName: "Comox Valley Airport",
     category: "transportation",
     naicsCode: "484110",
     naicsDescription: "General Freight Trucking, Local",
@@ -82041,7 +82041,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "uride",
     chamberId: "parksville-chamber",
-    name: "uRide",
+    businessName: "uRide",
     category: "transportation",
     naicsCode: "484110",
     naicsDescription: "General Freight Trucking, Local",
@@ -82053,7 +82053,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "nanaimo-airport-commission",
     chamberId: "parksville-chamber",
-    name: "Nanaimo Airport Commission",
+    businessName: "Nanaimo Airport Commission",
     category: "transportation",
     naicsCode: "484110",
     naicsDescription: "General Freight Trucking, Local",
@@ -82065,7 +82065,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "waste-connections-of-parksville",
     chamberId: "parksville-chamber",
-    name: "Waste Connections of Parksville",
+    businessName: "Waste Connections of Parksville",
     category: "professional-services",
     naicsCode: "541611",
     naicsDescription: "Administrative Management Consulting",
@@ -82077,7 +82077,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "oceanside-waste-removal",
     chamberId: "parksville-chamber",
-    name: "Oceanside Waste Removal",
+    businessName: "Oceanside Waste Removal",
     category: "professional-services",
     naicsCode: "541611",
     naicsDescription: "Administrative Management Consulting",
@@ -82089,7 +82089,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "harbour-authority-of-french-creek",
     chamberId: "parksville-chamber",
-    name: "Harbour Authority of French Creek",
+    businessName: "Harbour Authority of French Creek",
     category: "it-technology",
     naicsCode: "541512",
     naicsDescription: "Computer Systems Design Services",
@@ -82101,7 +82101,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "city-of-parksville",
     chamberId: "parksville-chamber",
-    name: "City of Parksville",
+    businessName: "City of Parksville",
     category: "it-technology",
     naicsCode: "541512",
     naicsDescription: "Computer Systems Design Services",
@@ -82113,7 +82113,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "rcmp",
     chamberId: "parksville-chamber",
-    name: "R.C.M.P.",
+    businessName: "R.C.M.P.",
     category: "it-technology",
     naicsCode: "541512",
     naicsDescription: "Computer Systems Design Services",
@@ -82125,7 +82125,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "adam-walker-mla",
     chamberId: "parksville-chamber",
-    name: "Adam Walker M.L.A.",
+    businessName: "Adam Walker M.L.A.",
     category: "it-technology",
     naicsCode: "541512",
     naicsDescription: "Computer Systems Design Services",
@@ -82137,7 +82137,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "off-the-hook---grab-go",
     chamberId: "parksville-chamber",
-    name: "Off the Hook - Grab & Go",
+    businessName: "Off the Hook - Grab & Go",
     category: "food-beverage",
     naicsCode: "722511",
     naicsDescription: "Full-Service Restaurants",
@@ -82149,7 +82149,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "united-floors",
     chamberId: "parksville-chamber",
-    name: "United Floors",
+    businessName: "United Floors",
     category: "home-garden",
     naicsCode: "444140",
     naicsDescription: "Hardware Stores",
@@ -82161,7 +82161,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "call-keri-cleaning-services",
     chamberId: "parksville-chamber",
-    name: "Call Keri Cleaning Services",
+    businessName: "Call Keri Cleaning Services",
     category: "home-garden",
     naicsCode: "444140",
     naicsDescription: "Hardware Stores",
@@ -82173,7 +82173,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "choices-market",
     chamberId: "parksville-chamber",
-    name: "Choices Market",
+    businessName: "Choices Market",
     category: "food-beverage",
     naicsCode: "722511",
     naicsDescription: "Full-Service Restaurants",
@@ -82185,7 +82185,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "motiontide-media",
     chamberId: "parksville-chamber",
-    name: "Motiontide Media",
+    businessName: "Motiontide Media",
     category: "marketing-advertising",
     naicsCode: "541810",
     naicsDescription: "Advertising Agencies",
@@ -82197,7 +82197,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "black-goose-inn",
     chamberId: "parksville-chamber",
-    name: "Black Goose Inn",
+    businessName: "Black Goose Inn",
     category: "food-beverage",
     naicsCode: "722511",
     naicsDescription: "Full-Service Restaurants",
@@ -82209,7 +82209,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "musically-inclined-guitar-studio",
     chamberId: "parksville-chamber",
-    name: "Musically Inclined Guitar Studio",
+    businessName: "Musically Inclined Guitar Studio",
     category: "professional-services",
     naicsCode: "541611",
     naicsDescription: "Administrative Management Consulting",
@@ -82221,7 +82221,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "paramount-orchids",
     chamberId: "parksville-chamber",
-    name: "Paramount Orchids",
+    businessName: "Paramount Orchids",
     category: "professional-services",
     naicsCode: "541611",
     naicsDescription: "Administrative Management Consulting",
@@ -82233,7 +82233,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "christina-carolyn-services-inc",
     chamberId: "parksville-chamber",
-    name: "Christina Carolyn Services Inc.",
+    businessName: "Christina Carolyn Services Inc.",
     category: "professional-services",
     naicsCode: "541611",
     naicsDescription: "Administrative Management Consulting",
@@ -82245,7 +82245,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "bee-happy-cleaning",
     chamberId: "parksville-chamber",
-    name: "Bee Happy! Cleaning",
+    businessName: "Bee Happy! Cleaning",
     category: "home-garden",
     naicsCode: "444140",
     naicsDescription: "Hardware Stores",
@@ -82257,7 +82257,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "budget-blinds",
     chamberId: "parksville-chamber",
-    name: "Budget Blinds",
+    businessName: "Budget Blinds",
     category: "home-garden",
     naicsCode: "444140",
     naicsDescription: "Hardware Stores",
@@ -82269,7 +82269,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "arbutus-rv-marine-sales-ltd",
     chamberId: "parksville-chamber",
-    name: "Arbutus RV & Marine Sales Ltd.",
+    businessName: "Arbutus RV & Marine Sales Ltd.",
     category: "automotive",
     naicsCode: "441110",
     naicsDescription: "New Car Dealers",
@@ -82281,7 +82281,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "driving-force",
     chamberId: "parksville-chamber",
-    name: "Driving Force",
+    businessName: "Driving Force",
     category: "automotive",
     naicsCode: "441110",
     naicsDescription: "New Car Dealers",
@@ -82293,7 +82293,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "fireside-books",
     chamberId: "parksville-chamber",
-    name: "Fireside Books",
+    businessName: "Fireside Books",
     category: "professional-services",
     naicsCode: "541611",
     naicsDescription: "Administrative Management Consulting",
@@ -82305,7 +82305,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "vancouver-island-university-elder-college",
     chamberId: "parksville-chamber",
-    name: "Vancouver Island University Elder College",
+    businessName: "Vancouver Island University Elder College",
     category: "education",
     naicsCode: "611310",
     naicsDescription: "Colleges and Universities",
@@ -82317,7 +82317,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "simple-home-edit",
     chamberId: "parksville-chamber",
-    name: "Simple Home Edit",
+    businessName: "Simple Home Edit",
     category: "professional-services",
     naicsCode: "541611",
     naicsDescription: "Administrative Management Consulting",
@@ -82329,7 +82329,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "sterling-seafood-ltd",
     chamberId: "parksville-chamber",
-    name: "Sterling Seafood Ltd.",
+    businessName: "Sterling Seafood Ltd.",
     category: "food-beverage",
     naicsCode: "722511",
     naicsDescription: "Full-Service Restaurants",
@@ -82341,7 +82341,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "bigger-picture-painting-inc",
     chamberId: "parksville-chamber",
-    name: "Bigger Picture Painting Inc.",
+    businessName: "Bigger Picture Painting Inc.",
     category: "professional-services",
     naicsCode: "541611",
     naicsDescription: "Administrative Management Consulting",
@@ -82353,7 +82353,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "patricks-projects",
     chamberId: "parksville-chamber",
-    name: "Patrick's Projects",
+    businessName: "Patrick's Projects",
     category: "professional-services",
     naicsCode: "541611",
     naicsDescription: "Administrative Management Consulting",
@@ -82365,7 +82365,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "parksville-autopro",
     chamberId: "parksville-chamber",
-    name: "Parksville AutoPro",
+    businessName: "Parksville AutoPro",
     category: "automotive",
     naicsCode: "441110",
     naicsDescription: "New Car Dealers",
@@ -82377,7 +82377,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "vancouver-island-economic-alliance-viea",
     chamberId: "parksville-chamber",
-    name: "Vancouver Island Economic Alliance (VIEA)",
+    businessName: "Vancouver Island Economic Alliance (VIEA)",
     category: "professional-services",
     naicsCode: "541611",
     naicsDescription: "Administrative Management Consulting",
@@ -82389,7 +82389,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "parksville-qualicum-community-foundation",
     chamberId: "parksville-chamber",
-    name: "Parksville Qualicum Community Foundation",
+    businessName: "Parksville Qualicum Community Foundation",
     category: "nonprofit",
     naicsCode: "813410",
     naicsDescription: "Civic and Social Organizations",
@@ -82401,7 +82401,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "the-truffle-farm-inc",
     chamberId: "parksville-chamber",
-    name: "The Truffle Farm Inc.",
+    businessName: "The Truffle Farm Inc.",
     category: "professional-services",
     naicsCode: "541611",
     naicsDescription: "Administrative Management Consulting",
@@ -82413,7 +82413,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "lan-vietnamese-restaurant",
     chamberId: "parksville-chamber",
-    name: "Lan Vietnamese Restaurant",
+    businessName: "Lan Vietnamese Restaurant",
     category: "food-beverage",
     naicsCode: "722511",
     naicsDescription: "Full-Service Restaurants",
@@ -82425,7 +82425,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "school-district-69",
     chamberId: "parksville-chamber",
-    name: "School District #69",
+    businessName: "School District #69",
     category: "education",
     naicsCode: "611310",
     naicsDescription: "Colleges and Universities",
@@ -82437,7 +82437,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "coombs-country-campground",
     chamberId: "parksville-chamber",
-    name: "Coombs Country Campground",
+    businessName: "Coombs Country Campground",
     category: "professional-services",
     naicsCode: "541611",
     naicsDescription: "Administrative Management Consulting",
@@ -82449,7 +82449,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "society-of-organized-services",
     chamberId: "parksville-chamber",
-    name: "Society of Organized Services",
+    businessName: "Society of Organized Services",
     category: "nonprofit",
     naicsCode: "813410",
     naicsDescription: "Civic and Social Organizations",
@@ -82461,7 +82461,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "cloverdale-paint",
     chamberId: "parksville-chamber",
-    name: "Cloverdale Paint",
+    businessName: "Cloverdale Paint",
     category: "home-garden",
     naicsCode: "444140",
     naicsDescription: "Hardware Stores",
@@ -82473,7 +82473,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "qualicum-beach-inn",
     chamberId: "parksville-chamber",
-    name: "Qualicum Beach Inn",
+    businessName: "Qualicum Beach Inn",
     category: "hospitality",
     naicsCode: "721110",
     naicsDescription: "Hotels and Motels",
@@ -82485,7 +82485,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "ez-vape-parksville",
     chamberId: "parksville-chamber",
-    name: "EZ-Vape Parksville",
+    businessName: "EZ-Vape Parksville",
     category: "professional-services",
     naicsCode: "541611",
     naicsDescription: "Administrative Management Consulting",
@@ -82497,7 +82497,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "spunkys-motorcycle-shop",
     chamberId: "parksville-chamber",
-    name: "Spunky's Motorcycle Shop",
+    businessName: "Spunky's Motorcycle Shop",
     category: "automotive",
     naicsCode: "441110",
     naicsDescription: "New Car Dealers",
@@ -82509,7 +82509,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "cascadia-liquor-nanoose-bay",
     chamberId: "parksville-chamber",
-    name: "Cascadia Liquor Nanoose Bay",
+    businessName: "Cascadia Liquor Nanoose Bay",
     category: "food-beverage",
     naicsCode: "722511",
     naicsDescription: "Full-Service Restaurants",
@@ -82521,7 +82521,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "boston-pizza-parksville",
     chamberId: "parksville-chamber",
-    name: "Boston Pizza Parksville",
+    businessName: "Boston Pizza Parksville",
     category: "food-beverage",
     naicsCode: "722511",
     naicsDescription: "Full-Service Restaurants",
@@ -82533,7 +82533,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "rusted-rake-farm",
     chamberId: "parksville-chamber",
-    name: "Rusted Rake Farm",
+    businessName: "Rusted Rake Farm",
     category: "professional-services",
     naicsCode: "541611",
     naicsDescription: "Administrative Management Consulting",
@@ -82545,7 +82545,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "island-wealth-management",
     chamberId: "parksville-chamber",
-    name: "Island Wealth Management",
+    businessName: "Island Wealth Management",
     category: "financial-services",
     naicsCode: "523930",
     naicsDescription: "Investment Advice",
@@ -82557,7 +82557,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "canadian-sleeping-barrels",
     chamberId: "parksville-chamber",
-    name: "Canadian Sleeping Barrels",
+    businessName: "Canadian Sleeping Barrels",
     category: "home-garden",
     naicsCode: "444140",
     naicsDescription: "Hardware Stores",
@@ -82569,7 +82569,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "parksville-community-centre",
     chamberId: "parksville-chamber",
-    name: "Parksville Community Centre",
+    businessName: "Parksville Community Centre",
     category: "it-technology",
     naicsCode: "541512",
     naicsDescription: "Computer Systems Design Services",
@@ -82581,7 +82581,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "party-with-dalen-entertainment",
     chamberId: "parksville-chamber",
-    name: "Party With Dalen Entertainment",
+    businessName: "Party With Dalen Entertainment",
     category: "recreation-entertainment",
     naicsCode: "713940",
     naicsDescription: "Fitness and Recreational Sports Centers",
@@ -82593,7 +82593,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "shore",
     chamberId: "parksville-chamber",
-    name: "Shore",
+    businessName: "Shore",
     category: "food-beverage",
     naicsCode: "722511",
     naicsDescription: "Full-Service Restaurants",
@@ -82605,7 +82605,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "nanoose-bay-cafe",
     chamberId: "parksville-chamber",
-    name: "Nanoose Bay Cafe",
+    businessName: "Nanoose Bay Cafe",
     category: "food-beverage",
     naicsCode: "722511",
     naicsDescription: "Full-Service Restaurants",
@@ -82617,7 +82617,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "myceo",
     chamberId: "parksville-chamber",
-    name: "myCEO",
+    businessName: "myCEO",
     category: "professional-services",
     naicsCode: "541611",
     naicsDescription: "Administrative Management Consulting",
@@ -82629,7 +82629,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "chances-rimrock-gaming-centre",
     chamberId: "parksville-chamber",
-    name: "Chances RimRock Gaming Centre",
+    businessName: "Chances RimRock Gaming Centre",
     category: "recreation-entertainment",
     naicsCode: "713940",
     naicsDescription: "Fitness and Recreational Sports Centers",
@@ -82641,7 +82641,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "geitzlers-cutting-edge",
     chamberId: "parksville-chamber",
-    name: "Geitzler's Cutting Edge",
+    businessName: "Geitzler's Cutting Edge",
     category: "professional-services",
     naicsCode: "541611",
     naicsDescription: "Administrative Management Consulting",
@@ -82653,7 +82653,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "vancouver-island-real-estate-board",
     chamberId: "parksville-chamber",
-    name: "Vancouver Island Real Estate Board",
+    businessName: "Vancouver Island Real Estate Board",
     category: "real-estate",
     naicsCode: "531210",
     naicsDescription: "Offices of Real Estate Agents",
@@ -82665,7 +82665,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "alpha-strategy-media-inc",
     chamberId: "parksville-chamber",
-    name: "Alpha Strategy Media Inc.",
+    businessName: "Alpha Strategy Media Inc.",
     category: "it-technology",
     naicsCode: "541512",
     naicsDescription: "Computer Systems Design Services",
@@ -82677,7 +82677,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "emerald-coast-design-creations",
     chamberId: "parksville-chamber",
-    name: "Emerald Coast Design & Creations",
+    businessName: "Emerald Coast Design & Creations",
     category: "marketing-advertising",
     naicsCode: "541810",
     naicsDescription: "Advertising Agencies",
@@ -82689,7 +82689,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "harbourside-sprayfoam",
     chamberId: "parksville-chamber",
-    name: "Harbourside Sprayfoam",
+    businessName: "Harbourside Sprayfoam",
     category: "construction",
     naicsCode: "236220",
     naicsDescription: "Commercial and Institutional Building Construction",
@@ -82701,7 +82701,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "parksville-district-chamber-of-commerce",
     chamberId: "parksville-chamber",
-    name: "Parksville & District Chamber of Commerce",
+    businessName: "Parksville & District Chamber of Commerce",
     category: "professional-services",
     naicsCode: "541611",
     naicsDescription: "Administrative Management Consulting",
@@ -82713,7 +82713,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "grant-investments-of-raymond-james",
     chamberId: "parksville-chamber",
-    name: "Grant Investments of Raymond James",
+    businessName: "Grant Investments of Raymond James",
     category: "financial-services",
     naicsCode: "523930",
     naicsDescription: "Investment Advice",
@@ -82725,7 +82725,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "pizza-pizza",
     chamberId: "parksville-chamber",
-    name: "Pizza Pizza",
+    businessName: "Pizza Pizza",
     category: "food-beverage",
     naicsCode: "722511",
     naicsDescription: "Full-Service Restaurants",
@@ -82737,7 +82737,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "evoke-floral",
     chamberId: "parksville-chamber",
-    name: "Evoke Floral",
+    businessName: "Evoke Floral",
     category: "retail",
     naicsCode: "452319",
     naicsDescription: "All Other General Merchandise Stores",
@@ -82749,7 +82749,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "eu-zen-healing-arts",
     chamberId: "parksville-chamber",
-    name: "Eu-Zen Healing Arts",
+    businessName: "Eu-Zen Healing Arts",
     category: "professional-services",
     naicsCode: "541611",
     naicsDescription: "Administrative Management Consulting",
@@ -82761,7 +82761,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "afk-bookkeeping-services",
     chamberId: "parksville-chamber",
-    name: "AFK Bookkeeping Services",
+    businessName: "AFK Bookkeeping Services",
     category: "financial-services",
     naicsCode: "523930",
     naicsDescription: "Investment Advice",
@@ -82773,7 +82773,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "sarpinos-pizzeria",
     chamberId: "parksville-chamber",
-    name: "Sarpino's Pizzeria",
+    businessName: "Sarpino's Pizzeria",
     category: "food-beverage",
     naicsCode: "722511",
     naicsDescription: "Full-Service Restaurants",
@@ -82785,7 +82785,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "cedar-street-designs-inc",
     chamberId: "parksville-chamber",
-    name: "Cedar Street Designs Inc.",
+    businessName: "Cedar Street Designs Inc.",
     category: "home-garden",
     naicsCode: "444140",
     naicsDescription: "Hardware Stores",
@@ -82797,7 +82797,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "buckerfields",
     chamberId: "parksville-chamber",
-    name: "Buckerfield's",
+    businessName: "Buckerfield's",
     category: "professional-services",
     naicsCode: "541611",
     naicsDescription: "Administrative Management Consulting",
@@ -82809,7 +82809,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "misguided-spirits-craft-distillery",
     chamberId: "parksville-chamber",
-    name: "Misguided Spirits Craft Distillery",
+    businessName: "Misguided Spirits Craft Distillery",
     category: "professional-services",
     naicsCode: "541611",
     naicsDescription: "Administrative Management Consulting",
@@ -82821,7 +82821,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "arbutus-meadows-farm",
     chamberId: "parksville-chamber",
-    name: "Arbutus Meadows Farm",
+    businessName: "Arbutus Meadows Farm",
     category: "recreation-entertainment",
     naicsCode: "713940",
     naicsDescription: "Fitness and Recreational Sports Centers",
@@ -82833,7 +82833,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "lemon-balm-lane",
     chamberId: "parksville-chamber",
-    name: "Lemon Balm Lane",
+    businessName: "Lemon Balm Lane",
     category: "retail",
     naicsCode: "452319",
     naicsDescription: "All Other General Merchandise Stores",
@@ -82845,7 +82845,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "special-olympics-oceanside",
     chamberId: "parksville-chamber",
-    name: "Special Olympics Oceanside",
+    businessName: "Special Olympics Oceanside",
     category: "nonprofit",
     naicsCode: "813410",
     naicsDescription: "Civic and Social Organizations",
@@ -82857,7 +82857,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "errington-pet-lodge",
     chamberId: "parksville-chamber",
-    name: "Errington Pet Lodge",
+    businessName: "Errington Pet Lodge",
     category: "professional-services",
     naicsCode: "541611",
     naicsDescription: "Administrative Management Consulting",
@@ -82869,7 +82869,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "janette-hooper-software-and-cruises",
     chamberId: "parksville-chamber",
-    name: "Janette Hooper Software and Cruises",
+    businessName: "Janette Hooper Software and Cruises",
     category: "it-technology",
     naicsCode: "541512",
     naicsDescription: "Computer Systems Design Services",
@@ -82881,7 +82881,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "pentlatch-gallery",
     chamberId: "parksville-chamber",
-    name: "Pentlatch Gallery",
+    businessName: "Pentlatch Gallery",
     category: "professional-services",
     naicsCode: "541611",
     naicsDescription: "Administrative Management Consulting",
@@ -82893,7 +82893,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "bc-spca",
     chamberId: "parksville-chamber",
-    name: "BC SPCA",
+    businessName: "BC SPCA",
     category: "automotive",
     naicsCode: "441110",
     naicsDescription: "New Car Dealers",
@@ -82905,7 +82905,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "aspengrove-school",
     chamberId: "parksville-chamber",
-    name: "Aspengrove School",
+    businessName: "Aspengrove School",
     category: "education",
     naicsCode: "611310",
     naicsDescription: "Colleges and Universities",
@@ -82917,7 +82917,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "rickys-parksville",
     chamberId: "parksville-chamber",
-    name: "Ricky's Parksville",
+    businessName: "Ricky's Parksville",
     category: "food-beverage",
     naicsCode: "722511",
     naicsDescription: "Full-Service Restaurants",
@@ -82929,7 +82929,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "harris-oceanside-chevrolet-buick-gmc-ltd",
     chamberId: "parksville-chamber",
-    name: "Harris Oceanside Chevrolet Buick GMC Ltd.",
+    businessName: "Harris Oceanside Chevrolet Buick GMC Ltd.",
     category: "automotive",
     naicsCode: "441110",
     naicsDescription: "New Car Dealers",
@@ -82941,7 +82941,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "bosleys-pet-food-plus",
     chamberId: "parksville-chamber",
-    name: "Bosley's Pet Food Plus",
+    businessName: "Bosley's Pet Food Plus",
     category: "professional-services",
     naicsCode: "541611",
     naicsDescription: "Administrative Management Consulting",
@@ -82953,7 +82953,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "bridles-bits-more-feed-tack",
     chamberId: "parksville-chamber",
-    name: "Bridles & Bits & More Feed & Tack",
+    businessName: "Bridles & Bits & More Feed & Tack",
     category: "retail",
     naicsCode: "452319",
     naicsDescription: "All Other General Merchandise Stores",
@@ -82965,7 +82965,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "mid-island-labour-ponds-water-gardens",
     chamberId: "parksville-chamber",
-    name: "Mid Island Labour, Ponds & Water Gardens",
+    businessName: "Mid Island Labour, Ponds & Water Gardens",
     category: "home-garden",
     naicsCode: "444140",
     naicsDescription: "Hardware Stores",
@@ -82977,7 +82977,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "indaba-trading-ltd",
     chamberId: "parksville-chamber",
-    name: "Indaba Trading Ltd",
+    businessName: "Indaba Trading Ltd",
     category: "retail",
     naicsCode: "452319",
     naicsDescription: "All Other General Merchandise Stores",
@@ -82989,7 +82989,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "parksville-adult-literacy-society",
     chamberId: "parksville-chamber",
-    name: "Parksville Adult Literacy Society",
+    businessName: "Parksville Adult Literacy Society",
     category: "it-technology",
     naicsCode: "541512",
     naicsDescription: "Computer Systems Design Services",
@@ -83001,7 +83001,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "arrowsmith-lodge",
     chamberId: "parksville-chamber",
-    name: "Arrowsmith Lodge",
+    businessName: "Arrowsmith Lodge",
     category: "automotive",
     naicsCode: "441110",
     naicsDescription: "New Car Dealers",
@@ -83013,7 +83013,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "lease-link-canada",
     chamberId: "parksville-chamber",
-    name: "Lease Link Canada",
+    businessName: "Lease Link Canada",
     category: "professional-services",
     naicsCode: "541611",
     naicsDescription: "Administrative Management Consulting",
@@ -83025,7 +83025,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "mount-arrowsmith-biosphere-region",
     chamberId: "parksville-chamber",
-    name: "Mount Arrowsmith Biosphere Region",
+    businessName: "Mount Arrowsmith Biosphere Region",
     category: "professional-services",
     naicsCode: "541611",
     naicsDescription: "Administrative Management Consulting",
@@ -83037,7 +83037,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "big-boys-toys-ltd",
     chamberId: "parksville-chamber",
-    name: "Big Boy's Toys Ltd.",
+    businessName: "Big Boy's Toys Ltd.",
     category: "professional-services",
     naicsCode: "541611",
     naicsDescription: "Administrative Management Consulting",
@@ -83049,7 +83049,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "oceanside-makerspace-society",
     chamberId: "parksville-chamber",
-    name: "Oceanside Makerspace Society",
+    businessName: "Oceanside Makerspace Society",
     category: "nonprofit",
     naicsCode: "813410",
     naicsDescription: "Civic and Social Organizations",
@@ -83061,7 +83061,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "pathfinder-camp-resort-parksville",
     chamberId: "parksville-chamber",
-    name: "Pathfinder Camp Resort Parksville",
+    businessName: "Pathfinder Camp Resort Parksville",
     category: "professional-services",
     naicsCode: "541611",
     naicsDescription: "Administrative Management Consulting",
@@ -83073,7 +83073,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "crown-mansion",
     chamberId: "parksville-chamber",
-    name: "Crown Mansion",
+    businessName: "Crown Mansion",
     category: "hospitality",
     naicsCode: "721110",
     naicsDescription: "Hotels and Motels",
@@ -83085,7 +83085,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "career-centre",
     chamberId: "parksville-chamber",
-    name: "Career Centre",
+    businessName: "Career Centre",
     category: "automotive",
     naicsCode: "441110",
     naicsDescription: "New Car Dealers",
@@ -83097,7 +83097,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "bgc-central-vancouver-island",
     chamberId: "parksville-chamber",
-    name: "BGC Central Vancouver Island",
+    businessName: "BGC Central Vancouver Island",
     category: "nonprofit",
     naicsCode: "813410",
     naicsDescription: "Civic and Social Organizations",
@@ -83109,7 +83109,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "life-cycle-botanics-ltd",
     chamberId: "parksville-chamber",
-    name: "Life Cycle Botanics Ltd.",
+    businessName: "Life Cycle Botanics Ltd.",
     category: "professional-services",
     naicsCode: "541611",
     naicsDescription: "Administrative Management Consulting",
@@ -83121,7 +83121,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "drywex-solutions-ltd",
     chamberId: "parksville-chamber",
-    name: "Drywex Solutions Ltd.",
+    businessName: "Drywex Solutions Ltd.",
     category: "home-garden",
     naicsCode: "444140",
     naicsDescription: "Hardware Stores",
@@ -83133,7 +83133,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "shannon-motors",
     chamberId: "parksville-chamber",
-    name: "Shannon Motors",
+    businessName: "Shannon Motors",
     category: "automotive",
     naicsCode: "441110",
     naicsDescription: "New Car Dealers",
@@ -83145,7 +83145,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "sustain-collective-wellness-company",
     chamberId: "parksville-chamber",
-    name: "Sustain Collective Wellness Company",
+    businessName: "Sustain Collective Wellness Company",
     category: "healthcare",
     naicsCode: "621111",
     naicsDescription: "Offices of Physicians",
@@ -83157,7 +83157,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "craftys-crystals",
     chamberId: "parksville-chamber",
-    name: "Crafty's Crystals",
+    businessName: "Crafty's Crystals",
     category: "retail",
     naicsCode: "452319",
     naicsDescription: "All Other General Merchandise Stores",
@@ -83169,7 +83169,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "complete-window-services",
     chamberId: "parksville-chamber",
-    name: "Complete Window Services",
+    businessName: "Complete Window Services",
     category: "home-garden",
     naicsCode: "444140",
     naicsDescription: "Hardware Stores",
@@ -83181,7 +83181,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "gray-point-acupuncture-and-phytotherapy",
     chamberId: "parksville-chamber",
-    name: "Gray Point Acupuncture and Phytotherapy",
+    businessName: "Gray Point Acupuncture and Phytotherapy",
     category: "healthcare",
     naicsCode: "621111",
     naicsDescription: "Offices of Physicians",
@@ -83193,7 +83193,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "the-kit-and-kaboodle-trading-company-consignment-s",
     chamberId: "parksville-chamber",
-    name: "The Kit and Kaboodle Trading Company Consignment Stores",
+    businessName: "The Kit and Kaboodle Trading Company Consignment Stores",
     category: "professional-services",
     naicsCode: "541611",
     naicsDescription: "Administrative Management Consulting",
@@ -83205,7 +83205,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "sanitech-mid-island",
     chamberId: "parksville-chamber",
-    name: "SaniTECH Mid Island",
+    businessName: "SaniTECH Mid Island",
     category: "home-garden",
     naicsCode: "444140",
     naicsDescription: "Hardware Stores",
@@ -83217,7 +83217,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "lav-service-ltd-dba-french-creek-shell",
     chamberId: "parksville-chamber",
-    name: "L.A.V. Service Ltd. dba French Creek Shell",
+    businessName: "L.A.V. Service Ltd. dba French Creek Shell",
     category: "professional-services",
     naicsCode: "541611",
     naicsDescription: "Administrative Management Consulting",
@@ -83229,7 +83229,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "diane-campbell-interiors",
     chamberId: "parksville-chamber",
-    name: "Diane Campbell Interiors",
+    businessName: "Diane Campbell Interiors",
     category: "home-garden",
     naicsCode: "444140",
     naicsDescription: "Hardware Stores",
@@ -83241,7 +83241,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "mid-island-pharmacy",
     chamberId: "parksville-chamber",
-    name: "Mid-Island Pharmacy",
+    businessName: "Mid-Island Pharmacy",
     category: "healthcare",
     naicsCode: "621111",
     naicsDescription: "Offices of Physicians",
@@ -83253,7 +83253,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "timeless-events-party-rentals-ltd",
     chamberId: "parksville-chamber",
-    name: "Timeless Events & Party Rentals Ltd.",
+    businessName: "Timeless Events & Party Rentals Ltd.",
     category: "professional-services",
     naicsCode: "541611",
     naicsDescription: "Administrative Management Consulting",
@@ -83265,7 +83265,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "sea-summit-bookshop",
     chamberId: "parksville-chamber",
-    name: "Sea & Summit Bookshop",
+    businessName: "Sea & Summit Bookshop",
     category: "retail",
     naicsCode: "452319",
     naicsDescription: "All Other General Merchandise Stores",
@@ -83277,7 +83277,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "vital-e-enterprises",
     chamberId: "parksville-chamber",
-    name: "Vital-E Enterprises",
+    businessName: "Vital-E Enterprises",
     category: "home-garden",
     naicsCode: "444140",
     naicsDescription: "Hardware Stores",
@@ -83289,7 +83289,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "tammy-miles",
     chamberId: "parksville-chamber",
-    name: "Tammy Miles",
+    businessName: "Tammy Miles",
     category: "professional-services",
     naicsCode: "541611",
     naicsDescription: "Administrative Management Consulting",
@@ -83301,7 +83301,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "seaside-rv-sales-service-ltd",
     chamberId: "parksville-chamber",
-    name: "Seaside RV Sales & Service Ltd.",
+    businessName: "Seaside RV Sales & Service Ltd.",
     category: "professional-services",
     naicsCode: "541611",
     naicsDescription: "Administrative Management Consulting",
@@ -83313,7 +83313,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "nanaimo-district-hospital-foundation",
     chamberId: "parksville-chamber",
-    name: "Nanaimo & District Hospital Foundation",
+    businessName: "Nanaimo & District Hospital Foundation",
     category: "nonprofit",
     naicsCode: "813410",
     naicsDescription: "Civic and Social Organizations",
@@ -83325,7 +83325,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "yates-memorial-services",
     chamberId: "parksville-chamber",
-    name: "Yates Memorial Services",
+    businessName: "Yates Memorial Services",
     category: "professional-services",
     naicsCode: "541611",
     naicsDescription: "Administrative Management Consulting",
@@ -83337,7 +83337,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "cascadia-liquor-parksville",
     chamberId: "parksville-chamber",
-    name: "Cascadia Liquor Parksville",
+    businessName: "Cascadia Liquor Parksville",
     category: "food-beverage",
     naicsCode: "722511",
     naicsDescription: "Full-Service Restaurants",
@@ -83349,7 +83349,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "westcoastees",
     chamberId: "parksville-chamber",
-    name: "Westcoastees",
+    businessName: "Westcoastees",
     category: "retail",
     naicsCode: "452319",
     naicsDescription: "All Other General Merchandise Stores",
@@ -83361,7 +83361,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "vancouver-island-university",
     chamberId: "parksville-chamber",
-    name: "Vancouver Island University",
+    businessName: "Vancouver Island University",
     category: "education",
     naicsCode: "611310",
     naicsDescription: "Colleges and Universities",
@@ -83373,7 +83373,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "yvonne-acheson-art",
     chamberId: "parksville-chamber",
-    name: "Yvonne Acheson Art",
+    businessName: "Yvonne Acheson Art",
     category: "recreation-entertainment",
     naicsCode: "713940",
     naicsDescription: "Fitness and Recreational Sports Centers",
@@ -83385,7 +83385,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "pq-self-storage",
     chamberId: "parksville-chamber",
-    name: "PQ Self Storage",
+    businessName: "PQ Self Storage",
     category: "professional-services",
     naicsCode: "541611",
     naicsDescription: "Administrative Management Consulting",
@@ -83397,7 +83397,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "aqua-clear-water-systems-ltd",
     chamberId: "parksville-chamber",
-    name: "Aqua Clear Water Systems Ltd.",
+    businessName: "Aqua Clear Water Systems Ltd.",
     category: "home-garden",
     naicsCode: "444140",
     naicsDescription: "Hardware Stores",
@@ -83409,7 +83409,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "west-oaks-childcare-ltd",
     chamberId: "parksville-chamber",
-    name: "West Oaks Childcare Ltd.",
+    businessName: "West Oaks Childcare Ltd.",
     category: "automotive",
     naicsCode: "441110",
     naicsDescription: "New Car Dealers",
@@ -83421,7 +83421,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "mid-island-co-op-administration-office",
     chamberId: "parksville-chamber",
-    name: "Mid Island Co-op Administration Office",
+    businessName: "Mid Island Co-op Administration Office",
     category: "professional-services",
     naicsCode: "541611",
     naicsDescription: "Administrative Management Consulting",
@@ -83433,7 +83433,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "park-sands-beach-resort",
     chamberId: "parksville-chamber",
-    name: "Park Sands Beach Resort",
+    businessName: "Park Sands Beach Resort",
     category: "hospitality",
     naicsCode: "721110",
     naicsDescription: "Hotels and Motels",
@@ -83445,7 +83445,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "pacific-palms-rv-resort",
     chamberId: "parksville-chamber",
-    name: "Pacific Palms RV Resort",
+    businessName: "Pacific Palms RV Resort",
     category: "hospitality",
     naicsCode: "721110",
     naicsDescription: "Hotels and Motels",
@@ -83457,7 +83457,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "travelodge-parksville",
     chamberId: "parksville-chamber",
-    name: "Travelodge Parksville",
+    businessName: "Travelodge Parksville",
     category: "hospitality",
     naicsCode: "721110",
     naicsDescription: "Hotels and Motels",
@@ -83469,7 +83469,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "caroline-dalton",
     chamberId: "parksville-chamber",
-    name: "Caroline Dalton",
+    businessName: "Caroline Dalton",
     category: "healthcare",
     naicsCode: "621111",
     naicsDescription: "Offices of Physicians",
@@ -83481,7 +83481,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "rotary-club-of-parksville",
     chamberId: "parksville-chamber",
-    name: "Rotary Club of Parksville",
+    businessName: "Rotary Club of Parksville",
     category: "nonprofit",
     naicsCode: "813410",
     naicsDescription: "Civic and Social Organizations",
@@ -83493,7 +83493,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "shervin-communications-inc",
     chamberId: "parksville-chamber",
-    name: "Shervin Communications Inc.",
+    businessName: "Shervin Communications Inc.",
     category: "marketing-advertising",
     naicsCode: "541810",
     naicsDescription: "Advertising Agencies",
@@ -83505,7 +83505,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "artis-orthotics",
     chamberId: "parksville-chamber",
-    name: "Artis Orthotics",
+    businessName: "Artis Orthotics",
     category: "healthcare",
     naicsCode: "621111",
     naicsDescription: "Offices of Physicians",
@@ -83517,7 +83517,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "mnp-llp",
     chamberId: "parksville-chamber",
-    name: "MNP LLP",
+    businessName: "MNP LLP",
     category: "financial-services",
     naicsCode: "523930",
     naicsDescription: "Investment Advice",
@@ -83529,7 +83529,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "basics-beyond-wellness",
     chamberId: "parksville-chamber",
-    name: "Basics & Beyond Wellness",
+    businessName: "Basics & Beyond Wellness",
     category: "healthcare",
     naicsCode: "621111",
     naicsDescription: "Offices of Physicians",
@@ -83541,7 +83541,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "parksville-chrysler-dodge-jeep",
     chamberId: "parksville-chamber",
-    name: "Parksville Chrysler Dodge Jeep",
+    businessName: "Parksville Chrysler Dodge Jeep",
     category: "automotive",
     naicsCode: "441110",
     naicsDescription: "New Car Dealers",
@@ -83553,7 +83553,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "vancouver-island-regional-library",
     chamberId: "parksville-chamber",
-    name: "Vancouver Island Regional Library",
+    businessName: "Vancouver Island Regional Library",
     category: "professional-services",
     naicsCode: "541611",
     naicsDescription: "Administrative Management Consulting",
@@ -83565,7 +83565,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "oceanside-building-learning-together-society",
     chamberId: "parksville-chamber",
-    name: "Oceanside Building Learning Together Society",
+    businessName: "Oceanside Building Learning Together Society",
     category: "nonprofit",
     naicsCode: "813410",
     naicsDescription: "Civic and Social Organizations",
@@ -83577,7 +83577,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "terminal-auto-body-parksville",
     chamberId: "parksville-chamber",
-    name: "Terminal Auto Body Parksville",
+    businessName: "Terminal Auto Body Parksville",
     category: "automotive",
     naicsCode: "441110",
     naicsDescription: "New Car Dealers",
@@ -83589,7 +83589,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "evergreen-hospitality-group",
     chamberId: "parksville-chamber",
-    name: "Evergreen Hospitality Group",
+    businessName: "Evergreen Hospitality Group",
     category: "hospitality",
     naicsCode: "721110",
     naicsDescription: "Hotels and Motels",
@@ -83601,7 +83601,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "kalvas",
     chamberId: "parksville-chamber",
-    name: "Kalvas",
+    businessName: "Kalvas",
     category: "food-beverage",
     naicsCode: "722511",
     naicsDescription: "Full-Service Restaurants",
@@ -83613,7 +83613,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "norms-plumbing-heating-and-ac",
     chamberId: "parksville-chamber",
-    name: "Norm's Plumbing, Heating and A/C",
+    businessName: "Norm's Plumbing, Heating and A/C",
     category: "professional-services",
     naicsCode: "541611",
     naicsDescription: "Administrative Management Consulting",
@@ -83625,7 +83625,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "united-way-central-northern-vancouver-island",
     chamberId: "parksville-chamber",
-    name: "United Way Central & Northern Vancouver Island",
+    businessName: "United Way Central & Northern Vancouver Island",
     category: "nonprofit",
     naicsCode: "813410",
     naicsDescription: "Civic and Social Organizations",
@@ -83637,7 +83637,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "bbb-of-vancouver-island",
     chamberId: "parksville-chamber",
-    name: "BBB of Vancouver Island",
+    businessName: "BBB of Vancouver Island",
     category: "professional-services",
     naicsCode: "541611",
     naicsDescription: "Administrative Management Consulting",
@@ -83649,7 +83649,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "m-n-mattress-shop-ltd",
     chamberId: "parksville-chamber",
-    name: "M & N Mattress Shop Ltd.",
+    businessName: "M & N Mattress Shop Ltd.",
     category: "home-garden",
     naicsCode: "444140",
     naicsDescription: "Hardware Stores",
@@ -83661,7 +83661,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "northstar-propane",
     chamberId: "parksville-chamber",
-    name: "Northstar Propane",
+    businessName: "Northstar Propane",
     category: "professional-services",
     naicsCode: "541611",
     naicsDescription: "Administrative Management Consulting",
@@ -83673,7 +83673,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "strategic-performance-management-group-inc",
     chamberId: "parksville-chamber",
-    name: "Strategic Performance Management Group Inc.",
+    businessName: "Strategic Performance Management Group Inc.",
     category: "professional-services",
     naicsCode: "541611",
     naicsDescription: "Administrative Management Consulting",
@@ -83685,7 +83685,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "lighthouse-country-business-association",
     chamberId: "parksville-chamber",
-    name: "Lighthouse Country Business Association",
+    businessName: "Lighthouse Country Business Association",
     category: "nonprofit",
     naicsCode: "813410",
     naicsDescription: "Civic and Social Organizations",
@@ -83697,7 +83697,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "true-north-coaching",
     chamberId: "parksville-chamber",
-    name: "True North Coaching",
+    businessName: "True North Coaching",
     category: "professional-services",
     naicsCode: "541611",
     naicsDescription: "Administrative Management Consulting",
@@ -83709,7 +83709,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "nextgen-automation",
     chamberId: "parksville-chamber",
-    name: "NextGen Automation",
+    businessName: "NextGen Automation",
     category: "professional-services",
     naicsCode: "541611",
     naicsDescription: "Administrative Management Consulting",
@@ -83721,7 +83721,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "parksville-downtown-business-association",
     chamberId: "parksville-chamber",
-    name: "Parksville Downtown Business Association",
+    businessName: "Parksville Downtown Business Association",
     category: "nonprofit",
     naicsCode: "813410",
     naicsDescription: "Civic and Social Organizations",
@@ -83733,7 +83733,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "parks-west-business-products-2015-inc",
     chamberId: "parksville-chamber",
-    name: "Parks West Business Products (2015) Inc.",
+    businessName: "Parks West Business Products (2015) Inc.",
     category: "professional-services",
     naicsCode: "541611",
     naicsDescription: "Administrative Management Consulting",
@@ -83745,7 +83745,7 @@ export const chamberMembers: ChamberMember[] = [
   {
     id: "bravenet-marketing",
     chamberId: "parksville-chamber",
-    name: "Bravenet Marketing",
+    businessName: "Bravenet Marketing",
     category: "professional-services",
     naicsCode: "541611",
     naicsDescription: "Administrative Management Consulting",
