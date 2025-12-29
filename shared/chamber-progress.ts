@@ -18,7 +18,8 @@ export type ChamberProgressStatus = 'pending' | 'in_progress' | 'partial' | 'com
 export type PartialReason = 
   | 'below_member_threshold'    // Less than 30 members
   | 'below_naics_threshold'     // Less than 80% NAICS coverage
-  | 'missing_expected_count';   // No expected member count entered
+  | 'missing_expected_count'    // No expected member count entered
+  | 'below_percent_complete';   // Less than 80% of expected members collected
 
 export interface ChamberProgress {
   chamberId: string;
@@ -124,6 +125,9 @@ function calculateNaicsCoverage(chamberId: string): { total: number; withNaics: 
   return { total, withNaics, percentage };
 }
 
+// Minimum threshold for % Complete to be considered "completed"
+const PERCENT_COMPLETE_THRESHOLD = 80;
+
 /**
  * Determine the status and partial reasons for a chamber
  */
@@ -144,6 +148,14 @@ function determineStatus(
   const hasSufficientNaics = naicsCoverage !== null && naicsCoverage >= NAICS_THRESHOLD;
   const hasExpectedCount = expectedMembers !== null && expectedMembers > 0;
   
+  // Calculate % Complete if we have expected count
+  let percentComplete: number | null = null;
+  let hasSufficientPercentComplete = true;
+  if (hasExpectedCount && expectedMembers !== null) {
+    percentComplete = Math.floor((actualMembers / expectedMembers) * 100);
+    hasSufficientPercentComplete = percentComplete >= PERCENT_COMPLETE_THRESHOLD;
+  }
+  
   // Build partial reasons
   if (!hasSufficientMembers) {
     partialReasons.push('below_member_threshold');
@@ -154,10 +166,13 @@ function determineStatus(
   if (!hasExpectedCount) {
     partialReasons.push('missing_expected_count');
   }
+  if (hasExpectedCount && !hasSufficientPercentComplete) {
+    partialReasons.push('below_percent_complete');
+  }
   
   // Determine status
-  // COMPLETED only if: 30+ members AND 80%+ NAICS coverage
-  if (hasSufficientMembers && hasSufficientNaics) {
+  // COMPLETED only if: 30+ members AND 80%+ NAICS coverage AND (no expected count OR 80%+ of expected collected)
+  if (hasSufficientMembers && hasSufficientNaics && hasSufficientPercentComplete) {
     return { status: 'completed', partialReasons: [] };
   }
   
@@ -272,7 +287,9 @@ export function getPartialReasonText(reason: PartialReason): string {
     case 'below_naics_threshold':
       return `Less than ${NAICS_THRESHOLD}% NAICS coverage`;
     case 'missing_expected_count':
-      return 'Expected member count not entered';
+      return 'Missing expected count';
+    case 'below_percent_complete':
+      return `Below ${PERCENT_COMPLETE_THRESHOLD}% collected`;
     default:
       return reason;
   }

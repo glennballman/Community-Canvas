@@ -978,7 +978,7 @@ export default function AdminChambers() {
                             className="flex items-center justify-end cursor-pointer select-none opacity-80 hover:opacity-100 transition-opacity ml-auto"
                             onClick={() => handleProgressSort('percentComplete')}
                           >
-                            % COLL{getSortIcon('percentComplete')}
+                            % COMPLETE{getSortIcon('percentComplete')}
                           </button>
                         </th>
                         <th className="text-right py-2 px-2">
