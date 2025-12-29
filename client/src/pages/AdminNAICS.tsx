@@ -197,7 +197,6 @@ function SectorPieChartFull({ sectors }: { sectors: NAICSSectorNode[] }) {
   
   const data = sortedSectors.map(s => ({
     name: s.title,
-    shortName: s.title.length > 20 ? s.title.substring(0, 17) + "..." : s.title,
     value: s.memberCount,
     code: s.code,
     percent: ((s.memberCount / totalMembers) * 100).toFixed(1),
@@ -209,15 +208,15 @@ function SectorPieChartFull({ sectors }: { sectors: NAICSSectorNode[] }) {
         <PieChartIcon className="w-4 h-4 text-muted-foreground" />
         <h3 className="text-sm font-semibold">Members by Sector</h3>
       </div>
-      <div className="flex-1 min-h-0">
+      <div className="h-[180px]">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie
               data={data}
               cx="50%"
-              cy="45%"
-              innerRadius="30%"
-              outerRadius="70%"
+              cy="50%"
+              innerRadius={35}
+              outerRadius={75}
               paddingAngle={1}
               dataKey="value"
             >
@@ -231,24 +230,26 @@ function SectorPieChartFull({ sectors }: { sectors: NAICSSectorNode[] }) {
                 backgroundColor: "hsl(var(--card))",
                 border: "1px solid hsl(var(--border))",
                 borderRadius: "6px",
-                fontSize: "11px",
+                fontSize: "12px",
               }}
             />
           </PieChart>
         </ResponsiveContainer>
       </div>
-      <div className="grid grid-cols-1 gap-0.5 mt-2 max-h-[40%] overflow-auto">
-        {data.map((item, idx) => (
-          <div key={item.code} className="flex items-center gap-1.5 text-[9px]">
-            <div
-              className="w-2 h-2 rounded-full shrink-0"
-              style={{ backgroundColor: CHART_COLORS[idx % CHART_COLORS.length] }}
-            />
-            <span className="truncate flex-1 text-muted-foreground">{item.shortName}</span>
-            <span className="text-muted-foreground/70">{item.percent}%</span>
-          </div>
-        ))}
-      </div>
+      <ScrollArea className="flex-1 mt-2">
+        <div className="space-y-1 pr-2">
+          {data.map((item, idx) => (
+            <div key={item.code} className="flex items-center gap-2 text-[11px]">
+              <div
+                className="w-2.5 h-2.5 rounded-full shrink-0"
+                style={{ backgroundColor: CHART_COLORS[idx % CHART_COLORS.length] }}
+              />
+              <span className="flex-1 text-muted-foreground leading-tight">{item.name}</span>
+              <span className="text-muted-foreground/70 shrink-0">{item.percent}%</span>
+            </div>
+          ))}
+        </div>
+      </ScrollArea>
     </Card>
   );
 }
@@ -257,7 +258,6 @@ function TopSubsectorsChartFull({ sectors }: { sectors: NAICSSectorNode[] }) {
   const allSubsectors = sectors.flatMap(s => 
     s.subsectors.map(sub => ({
       name: sub.title,
-      shortName: sub.title.length > 25 ? sub.title.substring(0, 22) + "..." : sub.title,
       count: sub.memberCount,
       code: sub.code,
     }))
@@ -275,33 +275,31 @@ function TopSubsectorsChartFull({ sectors }: { sectors: NAICSSectorNode[] }) {
           {sorted.length} total
         </Badge>
       </div>
-      <div className="flex-1 min-h-0">
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={top15} layout="vertical" margin={{ left: 0, right: 10, top: 5, bottom: 5 }}>
-            <XAxis type="number" tick={{ fontSize: 9 }} />
-            <YAxis
-              type="category"
-              dataKey="shortName"
-              tick={{ fontSize: 9 }}
-              width={100}
-            />
-            <Tooltip
-              formatter={(value: number) => [formatMemberCount(value), "Members"]}
-              labelFormatter={(label) => {
-                const item = top15.find(t => t.shortName === label);
-                return item?.name || label;
-              }}
-              contentStyle={{
-                backgroundColor: "hsl(var(--card))",
-                border: "1px solid hsl(var(--border))",
-                borderRadius: "6px",
-                fontSize: "11px",
-              }}
-            />
-            <Bar dataKey="count" fill="hsl(210, 70%, 50%)" radius={[0, 4, 4, 0]} />
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
+      <ScrollArea className="flex-1">
+        <div className="space-y-1.5 pr-2">
+          {top15.map((item, idx) => {
+            const maxCount = top15[0]?.count || 1;
+            const widthPercent = (item.count / maxCount) * 100;
+            return (
+              <div key={item.code} className="space-y-0.5">
+                <div className="flex items-center justify-between text-[11px]">
+                  <span className="text-muted-foreground leading-tight">{item.name}</span>
+                  <span className="text-muted-foreground/70 shrink-0 ml-2">{formatMemberCount(item.count)}</span>
+                </div>
+                <div className="h-4 bg-muted/30 rounded overflow-hidden">
+                  <div
+                    className="h-full rounded"
+                    style={{
+                      width: `${widthPercent}%`,
+                      backgroundColor: CHART_COLORS[idx % CHART_COLORS.length],
+                    }}
+                  />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </ScrollArea>
     </Card>
   );
 }
