@@ -26,8 +26,21 @@ import {
   Target,
   ArrowUpDown,
   ArrowUp,
-  ArrowDown
+  ArrowDown,
+  TrendingUp
 } from "lucide-react";
+import {
+  ComposedChart,
+  Bar,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Legend,
+} from "recharts";
+import { getMemberTimelineSummary } from "@shared/member-timeline";
 import { ChamberMapFull } from "./AdminNAICS";
 import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
@@ -245,6 +258,115 @@ function GeoFilterPanel({
           })}
         </div>
       </ScrollArea>
+    </div>
+  );
+}
+
+function GrowthChart() {
+  const timelineSummary = useMemo(() => getMemberTimelineSummary(), []);
+  
+  return (
+    <div className="flex-1 flex flex-col p-4 gap-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <TrendingUp className="w-5 h-5 text-cyan-400" />
+          <h2 className="text-sm font-medium">Members Added Over Time</h2>
+        </div>
+        <div className="flex items-center gap-4 text-[10px]">
+          <div className="flex items-center gap-1">
+            <div className="w-3 h-3 bg-cyan-500 rounded-sm" />
+            <span className="text-muted-foreground">Daily Additions</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <div className="w-3 h-0.5 bg-emerald-400" />
+            <span className="text-muted-foreground">Cumulative Total</span>
+          </div>
+        </div>
+      </div>
+      
+      <div className="flex gap-4 text-[10px] bg-muted/30 rounded p-3">
+        <div className="flex flex-col">
+          <span className="text-muted-foreground">Total Members</span>
+          <span className="text-lg font-medium text-emerald-400">{timelineSummary.totalMembers.toLocaleString()}</span>
+        </div>
+        <div className="flex flex-col">
+          <span className="text-muted-foreground">Days Tracked</span>
+          <span className="text-lg font-medium">{timelineSummary.totalDays}</span>
+        </div>
+        <div className="flex flex-col">
+          <span className="text-muted-foreground">Avg/Day</span>
+          <span className="text-lg font-medium text-cyan-400">{timelineSummary.avgPerDay.toLocaleString()}</span>
+        </div>
+        <div className="flex flex-col">
+          <span className="text-muted-foreground">Peak Day</span>
+          <span className="text-lg font-medium text-amber-400">{timelineSummary.maxDay.toLocaleString()}</span>
+          <span className="text-muted-foreground">{timelineSummary.maxDayLabel}</span>
+        </div>
+      </div>
+      
+      <div className="flex-1 min-h-[400px]">
+        <ResponsiveContainer width="100%" height="100%">
+          <ComposedChart data={timelineSummary.data} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
+            <XAxis 
+              dataKey="dateLabel" 
+              tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }}
+              tickLine={{ stroke: 'hsl(var(--border))' }}
+              axisLine={{ stroke: 'hsl(var(--border))' }}
+            />
+            <YAxis 
+              yAxisId="left"
+              tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }}
+              tickLine={{ stroke: 'hsl(var(--border))' }}
+              axisLine={{ stroke: 'hsl(var(--border))' }}
+              label={{ 
+                value: 'Daily Additions', 
+                angle: -90, 
+                position: 'insideLeft',
+                style: { fill: 'hsl(var(--muted-foreground))', fontSize: 10 }
+              }}
+            />
+            <YAxis 
+              yAxisId="right"
+              orientation="right"
+              tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }}
+              tickLine={{ stroke: 'hsl(var(--border))' }}
+              axisLine={{ stroke: 'hsl(var(--border))' }}
+              label={{ 
+                value: 'Cumulative Total', 
+                angle: 90, 
+                position: 'insideRight',
+                style: { fill: 'hsl(var(--muted-foreground))', fontSize: 10 }
+              }}
+            />
+            <Tooltip 
+              contentStyle={{ 
+                backgroundColor: 'hsl(var(--background))',
+                border: '1px solid hsl(var(--border))',
+                borderRadius: '6px',
+                fontSize: 11
+              }}
+              labelStyle={{ color: 'hsl(var(--foreground))' }}
+            />
+            <Bar 
+              yAxisId="left"
+              dataKey="added" 
+              fill="hsl(188 95% 43%)"
+              radius={[4, 4, 0, 0]}
+              name="Members Added"
+            />
+            <Line 
+              yAxisId="right"
+              type="monotone" 
+              dataKey="cumulative" 
+              stroke="hsl(160 84% 39%)"
+              strokeWidth={2}
+              dot={false}
+              name="Cumulative Total"
+            />
+          </ComposedChart>
+        </ResponsiveContainer>
+      </div>
     </div>
   );
 }
@@ -667,6 +789,13 @@ export default function AdminChambers() {
               >
                 PROGRESS ({hasGeoFilter ? filteredProgressList.length : progressSummary.total})
               </TabsTrigger>
+              <TabsTrigger 
+                value="growth" 
+                className="rounded-none border-b-2 border-transparent data-[state=active]:border-cyan-400 data-[state=active]:bg-transparent px-4 py-2 text-xs"
+                data-testid="tab-growth"
+              >
+                GROWTH
+              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="chambers" className="flex-1 overflow-hidden m-0 flex flex-col data-[state=inactive]:hidden">
@@ -1082,6 +1211,10 @@ export default function AdminChambers() {
               <div className="w-[1200px] border-l border-border/30 flex-shrink-0">
                 <ChamberMapFull />
               </div>
+            </TabsContent>
+
+            <TabsContent value="growth" className="flex-1 overflow-hidden m-0 flex flex-col data-[state=inactive]:hidden">
+              <GrowthChart />
             </TabsContent>
           </Tabs>
         </div>

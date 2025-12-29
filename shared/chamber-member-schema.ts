@@ -113,6 +113,7 @@ export const ChamberMemberSchema = z.object({
   region: z.string().optional(),
   memberSince: z.number().optional(),
   featured: z.boolean().optional(),
+  dateAdded: z.string().optional(),  // ISO date string (YYYY-MM-DD) when member was added to database
 }).transform((data) => ({
   ...data,
   businessName: data.businessName || data.name || '',

@@ -165,6 +165,7 @@ export interface ChamberMember {
   region: string;
   memberSince?: number;                 // Year joined chamber
   featured?: boolean;                   // Premium/featured member
+  dateAdded?: string;                   // ISO date string (YYYY-MM-DD) when member was added
 }
 
 // Chamber member directory - organized by chamber
