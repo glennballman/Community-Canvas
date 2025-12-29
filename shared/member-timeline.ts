@@ -87,9 +87,11 @@ function getDateRange(startDate: string, endDate: string): string[] {
 /**
  * Get daily member addition data for charting
  * Extended date range: Dec 23, 2025 to March 30, 2026
+ * Cumulative line stops at today's date
  */
 export function getMemberTimelineData(): DailyMemberData[] {
   const memberDates = getMemberDates();
+  const today = formatDateISO(new Date());
   
   // Count members per day
   const dailyCounts = new Map<string, number>();
@@ -112,12 +114,15 @@ export function getMemberTimelineData(): DailyMemberData[] {
   for (const date of allDates) {
     const added = dailyCounts.get(date) || 0;
     cumulative += added;
+    
+    // For future dates, set cumulative to null (line won't render)
+    const isFuture = date > today;
     result.push({
       date,
       dateLabel: formatDateLabel(date),
       added,
-      cumulative,
-    });
+      cumulative: isFuture ? null : cumulative,
+    } as DailyMemberData);
   }
   
   return result;
@@ -129,13 +134,19 @@ export function getMemberTimelineData(): DailyMemberData[] {
 export function getMemberTimelineSummary() {
   const data = getMemberTimelineData();
   const totalMembers = chamberMembers.length;
-  const totalDays = data.length;
-  const avgPerDay = totalDays > 0 ? Math.round(totalMembers / totalDays) : 0;
+  
+  // Calculate days elapsed since Dec 23, 2025
+  const startDate = new Date('2025-12-23T00:00:00');
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const daysElapsed = Math.max(1, Math.floor((today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1);
+  
+  const avgPerDay = Math.round(totalMembers / daysElapsed);
   const maxDay = data.reduce((max, d) => d.added > max.added ? d : max, { added: 0, date: '', dateLabel: '', cumulative: 0 });
   
   return {
     totalMembers,
-    totalDays,
+    totalDays: daysElapsed,
     avgPerDay,
     maxDay: maxDay.added,
     maxDayLabel: maxDay.dateLabel,
