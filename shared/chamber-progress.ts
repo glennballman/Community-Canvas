@@ -118,7 +118,8 @@ function calculateNaicsCoverage(chamberId: string): { total: number; withNaics: 
   }
   
   const withNaics = members.filter(m => m.naicsCode && m.naicsCode.length > 0).length;
-  const percentage = Math.round((withNaics / total) * 100);
+  // Use floor to be conservative - don't round up to 80% if below threshold
+  const percentage = Math.floor((withNaics / total) * 100);
   
   return { total, withNaics, percentage };
 }

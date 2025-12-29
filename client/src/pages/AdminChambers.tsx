@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -19,7 +20,10 @@ import {
   Filter,
   ClipboardCheck,
   AlertCircle,
-  CheckCircle2
+  CheckCircle2,
+  Clock,
+  Ban,
+  Target
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
@@ -27,6 +31,7 @@ import { BC_CHAMBERS_OF_COMMERCE, type ChamberOfCommerce } from "@shared/chamber
 import { chamberMembers } from "@shared/chamber-members";
 import { naicsSubsectorLabels } from "@shared/naics-codes";
 import { GEO_HIERARCHY, type GeoNode } from "@shared/geography";
+import type { ChamberProgress, ChamberProgressSummary, ChamberProgressStatus, PartialReason } from "@shared/chamber-progress";
 
 const bcProvince = GEO_HIERARCHY["bc"];
 const regionIds = bcProvince?.children || [];
@@ -419,66 +424,72 @@ export default function AdminChambers() {
     };
   }, []);
 
-  interface AuditRow {
-    chamber: ChamberWithMatch;
-    expectedMembers: number | null;
-    actualMembers: number;
-    coverage: number;
-    status: 'complete' | 'partial' | 'none' | 'unknown';
-  }
+  const { data: progressData } = useQuery<{ progressList: ChamberProgress[]; summary: ChamberProgressSummary }>({
+    queryKey: ['/api/admin/chamber-progress'],
+  });
 
-  const auditData = useMemo((): AuditRow[] => {
-    return chamberWithMatches.map(chamber => {
-      const expectedMembersRaw = chamber.members;
-      const expectedMembers = expectedMembersRaw ? parseInt(String(expectedMembersRaw), 10) : null;
-      const actualMembers = memberStats.byChamber[chamber.id] || 0;
-      
-      let coverage = 0;
-      let status: 'complete' | 'partial' | 'none' | 'unknown' = 'unknown';
-      
-      if (expectedMembers && expectedMembers > 0) {
-        coverage = Math.min(100, (actualMembers / expectedMembers) * 100);
-        if (coverage >= 80) status = 'complete';
-        else if (coverage > 0) status = 'partial';
-        else status = 'none';
-      } else if (actualMembers > 0) {
-        coverage = 100;
-        status = 'complete';
-      } else {
-        status = 'none';
-      }
-      
-      return {
-        chamber,
-        expectedMembers,
-        actualMembers,
-        coverage,
-        status
-      };
-    });
-  }, [chamberWithMatches, memberStats.byChamber]);
+  const progressList = progressData?.progressList || [];
+  const progressSummary = progressData?.summary || {
+    total: 0, completed: 0, partial: 0, pending: 0, inProgress: 0, blocked: 0,
+    completedPercentage: 0, neededForThreshold: 0
+  };
 
-  const filteredAuditData = useMemo(() => {
-    if (!hasGeoFilter) return auditData;
-    return auditData.filter(row => {
-      const c = row.chamber;
-      if (c.matchedRegion && selectedRegions.has(c.matchedRegion.id)) return true;
-      if (c.matchedMunicipality && selectedMunicipalities.has(c.matchedMunicipality.id)) return true;
-      if (c.matchedMunicipality && c.matchedMunicipality.parentId && selectedRegions.has(c.matchedMunicipality.parentId)) return true;
+  const filteredProgressList = useMemo(() => {
+    if (!hasGeoFilter) return progressList;
+    return progressList.filter(p => {
+      const chamber = chamberWithMatches.find(c => c.id === p.chamberId);
+      if (!chamber) return false;
+      if (chamber.matchedRegion && selectedRegions.has(chamber.matchedRegion.id)) return true;
+      if (chamber.matchedMunicipality && selectedMunicipalities.has(chamber.matchedMunicipality.id)) return true;
+      if (chamber.matchedMunicipality && chamber.matchedMunicipality.parentId && selectedRegions.has(chamber.matchedMunicipality.parentId)) return true;
       return false;
     });
-  }, [auditData, hasGeoFilter, selectedRegions, selectedMunicipalities]);
+  }, [progressList, hasGeoFilter, selectedRegions, selectedMunicipalities, chamberWithMatches]);
 
-  const auditStats = useMemo(() => {
-    const data = filteredAuditData;
-    const complete = data.filter(r => r.status === 'complete').length;
-    const partial = data.filter(r => r.status === 'partial').length;
-    const none = data.filter(r => r.status === 'none').length;
-    const unknown = data.filter(r => r.status === 'unknown').length;
-    const totalExpected = data.reduce((sum, r) => sum + (r.expectedMembers || 0), 0);
-    const totalActual = data.reduce((sum, r) => sum + r.actualMembers, 0);
-    return { complete, partial, none, unknown, totalExpected, totalActual, total: data.length };
-  }, [filteredAuditData]);
+  const filteredProgressSummary = useMemo(() => {
+    const data = filteredProgressList;
+    return {
+      total: data.length,
+      completed: data.filter(p => p.status === 'completed').length,
+      partial: data.filter(p => p.status === 'partial').length,
+      pending: data.filter(p => p.status === 'pending').length,
+      inProgress: data.filter(p => p.status === 'in_progress').length,
+      blocked: data.filter(p => p.status === 'blocked').length,
+      completedPercentage: data.length > 0 ? Math.round((data.filter(p => p.status === 'completed').length / data.length) * 100) : 0,
+      neededForThreshold: Math.max(0, Math.ceil(data.length * 0.8) - data.filter(p => p.status === 'completed').length)
+    };
+  }, [filteredProgressList]);
+
+  const getStatusIcon = (status: ChamberProgressStatus) => {
+    switch (status) {
+      case 'completed': return <CheckCircle2 className="w-3 h-3 text-green-400" />;
+      case 'partial': return <AlertCircle className="w-3 h-3 text-yellow-400" />;
+      case 'pending': return <Clock className="w-3 h-3 text-gray-400" />;
+      case 'in_progress': return <Target className="w-3 h-3 text-blue-400" />;
+      case 'blocked': return <Ban className="w-3 h-3 text-red-400" />;
+      default: return null;
+    }
+  };
+
+  const getStatusBadgeClass = (status: ChamberProgressStatus) => {
+    switch (status) {
+      case 'completed': return 'bg-green-500/10 text-green-400 border-green-500/30';
+      case 'partial': return 'bg-yellow-500/10 text-yellow-400 border-yellow-500/30';
+      case 'pending': return 'bg-gray-500/10 text-gray-400 border-gray-500/30';
+      case 'in_progress': return 'bg-blue-500/10 text-blue-400 border-blue-500/30';
+      case 'blocked': return 'bg-red-500/10 text-red-400 border-red-500/30';
+      default: return 'bg-gray-500/10 text-gray-400 border-gray-500/30';
+    }
+  };
+
+  const getPartialReasonText = (reason: PartialReason) => {
+    switch (reason) {
+      case 'below_member_threshold': return 'Less than 30 members';
+      case 'below_naics_threshold': return 'Less than 80% NAICS';
+      case 'missing_expected_count': return 'Missing expected count';
+      default: return reason;
+    }
+  };
 
   const handleToggleRegion = (regionId: string) => {
     setSelectedRegions(prev => {
@@ -578,7 +589,7 @@ export default function AdminChambers() {
                 className="rounded-none border-b-2 border-transparent data-[state=active]:border-amber-400 data-[state=active]:bg-transparent px-4 py-2 text-xs"
                 data-testid="tab-audit"
               >
-                AUDIT ({hasGeoFilter ? filteredAuditData.length : auditStats.total})
+                PROGRESS ({hasGeoFilter ? filteredProgressList.length : progressSummary.total})
               </TabsTrigger>
             </TabsList>
 
@@ -788,23 +799,47 @@ export default function AdminChambers() {
             </TabsContent>
 
             <TabsContent value="audit" className="flex-1 overflow-hidden m-0 flex flex-col data-[state=inactive]:hidden">
-              <div className="p-3 border-b border-border/30 flex items-center gap-4 flex-wrap">
-                <div className="flex gap-4 text-[10px] flex-wrap">
-                  <div className="flex items-center gap-1">
-                    <CheckCircle2 className="w-3 h-3 text-green-400" />
-                    <span className="text-green-400">{auditStats.complete} COMPLETE (80%+)</span>
+              <div className="p-3 border-b border-border/30">
+                <div className="flex items-center gap-4 flex-wrap mb-3">
+                  <div className="flex gap-4 text-[10px] flex-wrap">
+                    <div className="flex items-center gap-1">
+                      <CheckCircle2 className="w-3 h-3 text-green-400" />
+                      <span className="text-green-400">{filteredProgressSummary.completed} COMPLETED</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3 text-yellow-400" />
+                      <span className="text-yellow-400">{filteredProgressSummary.partial} PARTIAL</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Clock className="w-3 h-3 text-gray-400" />
+                      <span className="text-gray-400">{filteredProgressSummary.pending} PENDING</span>
+                    </div>
+                    {filteredProgressSummary.inProgress > 0 && (
+                      <div className="flex items-center gap-1">
+                        <Target className="w-3 h-3 text-blue-400" />
+                        <span className="text-blue-400">{filteredProgressSummary.inProgress} IN PROGRESS</span>
+                      </div>
+                    )}
+                    {filteredProgressSummary.blocked > 0 && (
+                      <div className="flex items-center gap-1">
+                        <Ban className="w-3 h-3 text-red-400" />
+                        <span className="text-red-400">{filteredProgressSummary.blocked} BLOCKED</span>
+                      </div>
+                    )}
                   </div>
-                  <div className="flex items-center gap-1">
-                    <AlertCircle className="w-3 h-3 text-amber-400" />
-                    <span className="text-amber-400">{auditStats.partial} PARTIAL</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <XCircle className="w-3 h-3 text-red-400" />
-                    <span className="text-red-400">{auditStats.none} NONE</span>
+                  <div className="ml-auto flex items-center gap-3">
+                    <div className="text-[10px] text-muted-foreground">
+                      {filteredProgressSummary.completedPercentage}% COMPLETE
+                    </div>
+                    {filteredProgressSummary.neededForThreshold > 0 && (
+                      <Badge variant="outline" className="text-[8px] bg-amber-500/10 text-amber-400 border-amber-500/30">
+                        {filteredProgressSummary.neededForThreshold} MORE FOR 80% THRESHOLD
+                      </Badge>
+                    )}
                   </div>
                 </div>
-                <div className="text-[10px] text-muted-foreground ml-auto">
-                  {auditStats.totalActual.toLocaleString()} / {auditStats.totalExpected.toLocaleString()} MEMBERS COLLECTED
+                <div className="text-[9px] text-muted-foreground bg-muted/30 rounded px-2 py-1.5">
+                  Completion criteria: 30+ members AND 80%+ NAICS coverage. Partial = has data but does not meet both criteria.
                 </div>
               </div>
               <ScrollArea className="flex-1">
@@ -812,47 +847,48 @@ export default function AdminChambers() {
                   <table className="w-full text-xs">
                     <thead>
                       <tr className="text-[10px] text-muted-foreground border-b border-border/30">
+                        <th className="text-left py-2 px-2">STATUS</th>
                         <th className="text-left py-2 px-2">CHAMBER</th>
                         <th className="text-left py-2 px-2">REGION</th>
-                        <th className="text-left py-2 px-2">MUNICIPALITY</th>
+                        <th className="text-right py-2 px-2">MEMBERS</th>
                         <th className="text-right py-2 px-2">EXPECTED</th>
-                        <th className="text-right py-2 px-2">ACTUAL</th>
-                        <th className="text-left py-2 px-2 w-32">COVERAGE</th>
-                        <th className="text-left py-2 px-2">STATUS</th>
+                        <th className="text-right py-2 px-2">NAICS %</th>
+                        <th className="text-left py-2 px-2">ISSUES</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {filteredAuditData.map(row => (
+                      {filteredProgressList.map(row => (
                         <tr 
-                          key={row.chamber.id} 
+                          key={row.chamberId} 
                           className="border-b border-border/20 hover-elevate"
-                          data-testid={`row-audit-${row.chamber.id}`}
+                          data-testid={`row-progress-${row.chamberId}`}
                         >
+                          <td className="py-2 px-2">
+                            <div className="flex items-center gap-1.5">
+                              {getStatusIcon(row.status)}
+                              <Badge variant="outline" className={`text-[8px] ${getStatusBadgeClass(row.status)}`}>
+                                {row.status.toUpperCase().replace('_', ' ')}
+                              </Badge>
+                            </div>
+                          </td>
                           <td className="py-2 px-2">
                             <div className="flex items-center gap-2">
                               <ClipboardCheck className="w-3 h-3 text-amber-400" />
                               <div>
-                                <div className="font-medium">{row.chamber.name}</div>
-                                {row.chamber.website && (
-                                  <a 
-                                    href={row.chamber.website} 
-                                    target="_blank" 
-                                    rel="noopener noreferrer"
-                                    className="text-[10px] text-blue-400/70 hover:text-blue-400"
-                                  >
-                                    {row.chamber.website.replace(/^https?:\/\//, '').replace(/\/$/, '')}
-                                  </a>
-                                )}
+                                <div className="font-medium">{row.chamberName}</div>
+                                <div className="text-[10px] text-muted-foreground">{row.municipality}</div>
                               </div>
                             </div>
                           </td>
                           <td className="py-2 px-2">
                             <Badge variant="outline" className="text-[8px] bg-indigo-500/10 text-indigo-400 border-indigo-500/30">
-                              {row.chamber.region}
+                              {row.region}
                             </Badge>
                           </td>
-                          <td className="py-2 px-2 text-muted-foreground text-[10px]">
-                            {row.chamber.matchedMunicipality?.name || row.chamber.municipality || '-'}
+                          <td className="py-2 px-2 text-right">
+                            <span className={row.actualMembers >= 30 ? "text-emerald-400 font-medium" : row.actualMembers > 0 ? "text-yellow-400" : "text-muted-foreground/50"}>
+                              {row.actualMembers > 0 ? row.actualMembers : '-'}
+                            </span>
                           </td>
                           <td className="py-2 px-2 text-right">
                             {row.expectedMembers !== null ? (
@@ -862,42 +898,32 @@ export default function AdminChambers() {
                             )}
                           </td>
                           <td className="py-2 px-2 text-right">
-                            <span className={row.actualMembers > 0 ? "text-emerald-400 font-medium" : "text-muted-foreground/50"}>
-                              {row.actualMembers > 0 ? row.actualMembers : '-'}
-                            </span>
-                          </td>
-                          <td className="py-2 px-2">
-                            <div className="flex items-center gap-2">
-                              <Progress 
-                                value={row.coverage} 
-                                className="h-1.5 flex-1"
-                              />
-                              <span className="text-[9px] text-muted-foreground w-8 text-right">
-                                {row.coverage.toFixed(0)}%
+                            {row.naicsCoverage !== null ? (
+                              <span className={row.naicsCoverage >= 80 ? "text-emerald-400 font-medium" : row.naicsCoverage > 0 ? "text-yellow-400" : "text-muted-foreground"}>
+                                {row.naicsCoverage}%
                               </span>
-                            </div>
+                            ) : (
+                              <span className="text-muted-foreground/50">N/A</span>
+                            )}
                           </td>
                           <td className="py-2 px-2">
-                            {row.status === 'complete' && (
-                              <Badge variant="outline" className="text-[8px] bg-green-500/10 text-green-400 border-green-500/30">
-                                COMPLETE
-                              </Badge>
-                            )}
-                            {row.status === 'partial' && (
-                              <Badge variant="outline" className="text-[8px] bg-amber-500/10 text-amber-400 border-amber-500/30">
-                                PARTIAL
-                              </Badge>
-                            )}
-                            {row.status === 'none' && (
-                              <Badge variant="outline" className="text-[8px] bg-red-500/10 text-red-400 border-red-500/30">
-                                NONE
-                              </Badge>
-                            )}
-                            {row.status === 'unknown' && (
-                              <Badge variant="outline" className="text-[8px] bg-gray-500/10 text-gray-400 border-gray-500/30">
-                                UNKNOWN
-                              </Badge>
-                            )}
+                            {row.partialReasons.length > 0 ? (
+                              <div className="flex flex-wrap gap-1">
+                                {row.partialReasons.map(reason => (
+                                  <Badge 
+                                    key={reason} 
+                                    variant="outline" 
+                                    className="text-[7px] bg-yellow-500/5 text-yellow-400/80 border-yellow-500/20"
+                                  >
+                                    {getPartialReasonText(reason)}
+                                  </Badge>
+                                ))}
+                              </div>
+                            ) : row.status === 'completed' ? (
+                              <span className="text-[10px] text-green-400/70">All criteria met</span>
+                            ) : row.status === 'pending' ? (
+                              <span className="text-[10px] text-muted-foreground/50">Not started</span>
+                            ) : null}
                           </td>
                         </tr>
                       ))}
