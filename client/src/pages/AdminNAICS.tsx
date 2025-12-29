@@ -292,6 +292,115 @@ function ChamberMap() {
   );
 }
 
+function ChamberMapFull() {
+  const mapContainer = useRef<HTMLDivElement>(null);
+  const map = useRef<mapboxgl.Map | null>(null);
+  const markersRef = useRef<mapboxgl.Marker[]>([]);
+  const [mapLoaded, setMapLoaded] = useState(false);
+
+  const { data: tokenData } = useQuery<{ token: string }>({
+    queryKey: ["/api/config/mapbox-token"],
+  });
+
+  const { data: chambers } = useQuery<ChamberLocation[]>({
+    queryKey: ["/api/chambers/locations"],
+  });
+
+  useEffect(() => {
+    if (!mapContainer.current || map.current || !tokenData?.token) return;
+
+    mapboxgl.accessToken = tokenData.token;
+    
+    map.current = new mapboxgl.Map({
+      container: mapContainer.current,
+      style: "mapbox://styles/mapbox/dark-v11",
+      center: [-125.5, 54.0],
+      zoom: 4.8,
+    });
+
+    map.current.addControl(new mapboxgl.NavigationControl(), "top-right");
+
+    map.current.on("load", () => {
+      setMapLoaded(true);
+    });
+
+    return () => {
+      markersRef.current.forEach(m => m.remove());
+      markersRef.current = [];
+      map.current?.remove();
+      map.current = null;
+    };
+  }, [tokenData?.token]);
+
+  useEffect(() => {
+    if (!map.current || !mapLoaded || !chambers) return;
+
+    markersRef.current.forEach(m => m.remove());
+    markersRef.current = [];
+
+    chambers.forEach((chamber) => {
+      const size = Math.max(8, Math.min(20, 6 + Math.sqrt(chamber.memberCount) * 2));
+      
+      const el = document.createElement("div");
+      el.className = "chamber-marker";
+      el.style.width = `${size}px`;
+      el.style.height = `${size}px`;
+      el.style.backgroundColor = "hsl(210, 70%, 50%)";
+      el.style.borderRadius = "50%";
+      el.style.border = "2px solid white";
+      el.style.boxShadow = "0 2px 4px rgba(0,0,0,0.3)";
+      el.style.cursor = "pointer";
+
+      const marker = new mapboxgl.Marker(el)
+        .setLngLat([chamber.lng, chamber.lat])
+        .setPopup(
+          new mapboxgl.Popup({ offset: 15 }).setHTML(
+            `<div style="font-size:12px; color: #1a1a1a;"><strong>${chamber.name}</strong><br/>${formatMemberCount(chamber.memberCount)} members</div>`
+          )
+        )
+        .addTo(map.current!);
+      
+      markersRef.current.push(marker);
+    });
+  }, [chambers, mapLoaded]);
+
+  const totalMembers = chambers?.reduce((sum, c) => sum + c.memberCount, 0) || 0;
+
+  return (
+    <div className="h-full flex flex-col">
+      <div className="p-3 border-b border-border/50 flex items-center gap-2">
+        <Map className="w-4 h-4 text-muted-foreground" />
+        <h2 className="text-sm font-bold tracking-wide">BC CHAMBER MAP</h2>
+        <div className="ml-auto flex items-center gap-2">
+          {chambers && (
+            <>
+              <Badge variant="outline" className="text-[10px]">
+                {chambers.length} chambers
+              </Badge>
+              <Badge variant="secondary" className="text-[10px]">
+                {formatMemberCount(totalMembers)} members
+              </Badge>
+            </>
+          )}
+        </div>
+      </div>
+      <div className="flex-1 relative">
+        {!tokenData?.token ? (
+          <div className="absolute inset-0 bg-muted/30 flex items-center justify-center">
+            <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+          </div>
+        ) : (
+          <div
+            ref={mapContainer}
+            className="absolute inset-0"
+            data-testid="map-chamber-locations-full"
+          />
+        )}
+      </div>
+    </div>
+  );
+}
+
 function TreeNodeSector({
   sector,
   isExpanded,
@@ -669,7 +778,7 @@ export default function AdminNAICS() {
   return (
     <div className="h-full flex bg-background">
       {/* Left Column - Tree Browser */}
-      <div className="w-[45%] flex flex-col border-r border-border/50">
+      <div className="w-[35%] flex flex-col border-r border-border/50">
         <div className="p-3 border-b border-border/50">
           <div className="flex items-center justify-between gap-2 mb-2">
             <div>
@@ -739,17 +848,21 @@ export default function AdminNAICS() {
         </ScrollArea>
       </div>
 
-      {/* Right Column - Visualizations */}
-      <div className="flex-1 p-4 overflow-auto">
-        <div className="space-y-4">
+      {/* Middle Column - Charts */}
+      <div className="w-[30%] p-3 overflow-auto border-r border-border/50">
+        <div className="space-y-3">
           {tree && tree.sectors.length > 0 && (
             <>
               <SectorPieChart sectors={tree.sectors} />
               <TopSubsectorsChart sectors={tree.sectors} />
             </>
           )}
-          <ChamberMap />
         </div>
+      </div>
+
+      {/* Right Column - Map */}
+      <div className="flex-1 flex flex-col">
+        <ChamberMapFull />
       </div>
     </div>
   );
