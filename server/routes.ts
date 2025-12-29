@@ -4,6 +4,8 @@ import { storage } from "./storage";
 import { api } from "@shared/routes";
 import { z } from "zod";
 import FirecrawlApp from '@mendable/firecrawl-js';
+import fs from "fs";
+import path from "path";
 import { runChamberAudit } from "@shared/chamber-audit";
 import { buildNAICSTree, getMembersByNAICSCode, getMembersBySector, getMembersBySubsector } from "@shared/naics-hierarchy";
 import { BC_CHAMBERS_OF_COMMERCE } from "@shared/chambers-of-commerce";
@@ -319,6 +321,55 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Chamber override update error:", error);
       res.status(500).json({ message: "Failed to update chamber override" });
+    }
+  });
+
+  // Allowlist of valid documentation files for security
+  const ALLOWED_DOC_FILES = ['DATA_COLLECTION.md', 'ARCHITECTURE.md', 'index.md'];
+  
+  // Serve raw documentation files - uses strict allowlist for security
+  app.get("/docs/:filename", (req, res) => {
+    const { filename } = req.params;
+    
+    // Validate against allowlist - prevents directory traversal and arbitrary file access
+    if (!ALLOWED_DOC_FILES.includes(filename)) {
+      return res.status(404).json({ message: "Documentation file not found" });
+    }
+    
+    const filePath = path.join(process.cwd(), 'docs', filename);
+    
+    try {
+      // Verify file exists and is within docs directory
+      const realPath = fs.realpathSync(filePath);
+      const docsDir = fs.realpathSync(path.join(process.cwd(), 'docs'));
+      
+      if (!realPath.startsWith(docsDir)) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      const content = fs.readFileSync(realPath, 'utf-8');
+      res.setHeader('Content-Type', 'text/markdown; charset=utf-8');
+      res.setHeader('Cache-Control', 'public, max-age=300'); // 5 min cache
+      res.send(content);
+    } catch (error) {
+      console.error("Doc file read error:", error);
+      return res.status(404).json({ message: "Documentation file not found" });
+    }
+  });
+
+  // List available documentation files
+  app.get("/api/docs", (req, res) => {
+    try {
+      const files = ALLOWED_DOC_FILES.map(f => ({
+        name: f,
+        path: `/docs/${f}`,
+        title: f.replace('.md', '').replace(/_/g, ' ')
+      }));
+      
+      res.json({ files });
+    } catch (error) {
+      console.error("Docs list error:", error);
+      res.status(500).json({ message: "Failed to list documentation files" });
     }
   });
 

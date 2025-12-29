@@ -11,7 +11,8 @@ import {
   Globe,
   Radio,
   Store,
-  TreePine
+  TreePine,
+  Book
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -30,6 +31,7 @@ const NAV_ITEMS = [
   { path: "/admin/sources", label: "MANAGE SOURCES", icon: Database },
   { path: "/admin/logs", label: "SCRAPE LOGS", icon: FileText },
   { path: "/admin/settings", label: "SETTINGS", icon: Settings },
+  { path: "/admin/docs", label: "DOCUMENTATION", icon: Book },
 ];
 
 export default function AdminLayout({ children }: AdminLayoutProps) {

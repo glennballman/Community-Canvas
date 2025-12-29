@@ -14,6 +14,7 @@ import AdminNAICS from "@/pages/AdminNAICS";
 import AdminSources from "@/pages/AdminSources";
 import AdminLogs from "@/pages/AdminLogs";
 import AdminSettings from "@/pages/AdminSettings";
+import Documentation from "@/pages/Documentation";
 import NotFound from "@/pages/not-found";
 
 function AdminRoutes() {
@@ -29,6 +30,7 @@ function AdminRoutes() {
         <Route path="/admin/sources" component={AdminSources} />
         <Route path="/admin/logs" component={AdminLogs} />
         <Route path="/admin/settings" component={AdminSettings} />
+        <Route path="/admin/docs" component={Documentation} />
         <Route component={NotFound} />
       </Switch>
     </AdminLayout>
