@@ -405,7 +405,7 @@ function ChamberMap() {
   );
 }
 
-function ChamberMapFull() {
+export function ChamberMapFull() {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const markersRef = useRef<mapboxgl.Marker[]>([]);

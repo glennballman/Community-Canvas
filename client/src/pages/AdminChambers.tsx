@@ -23,8 +23,12 @@ import {
   CheckCircle2,
   Clock,
   Ban,
-  Target
+  Target,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown
 } from "lucide-react";
+import { ChamberMapFull } from "./AdminNAICS";
 import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
 import { BC_CHAMBERS_OF_COMMERCE, type ChamberOfCommerce } from "@shared/chambers-of-commerce";
@@ -245,6 +249,9 @@ function GeoFilterPanel({
   );
 }
 
+type ProgressSortKey = 'status' | 'chamber' | 'region' | 'members' | 'expected' | 'percentComplete' | 'naics';
+type SortDirection = 'asc' | 'desc';
+
 export default function AdminChambers() {
   const [chamberSearch, setChamberSearch] = useState("");
   const [memberSearch, setMemberSearch] = useState("");
@@ -252,6 +259,8 @@ export default function AdminChambers() {
   const [activeTab, setActiveTab] = useState("chambers");
   const [selectedRegions, setSelectedRegions] = useState<Set<string>>(new Set());
   const [selectedMunicipalities, setSelectedMunicipalities] = useState<Set<string>>(new Set());
+  const [progressSortKey, setProgressSortKey] = useState<ProgressSortKey>('status');
+  const [progressSortDir, setProgressSortDir] = useState<SortDirection>('asc');
 
   const chamberWithMatches: ChamberWithMatch[] = useMemo(() => {
     return BC_CHAMBERS_OF_COMMERCE.map(chamber => {
@@ -459,6 +468,72 @@ export default function AdminChambers() {
       neededForThreshold: Math.max(0, Math.ceil(data.length * 0.8) - data.filter(p => p.status === 'completed').length)
     };
   }, [filteredProgressList]);
+
+  // Calculate % complete (members vs expected) - returns null if < 30 members
+  const getPercentComplete = (row: ChamberProgress): number | null => {
+    if (row.actualMembers < 30) return null;
+    if (!row.expectedMembers || row.expectedMembers === 0) return null;
+    return Math.min(100, Math.floor((row.actualMembers / row.expectedMembers) * 100));
+  };
+
+  const statusOrder: Record<ChamberProgressStatus, number> = {
+    'completed': 0,
+    'partial': 1,
+    'in_progress': 2,
+    'pending': 3,
+    'blocked': 4
+  };
+
+  const sortedProgressList = useMemo(() => {
+    const sorted = [...filteredProgressList];
+    sorted.sort((a, b) => {
+      let cmp = 0;
+      switch (progressSortKey) {
+        case 'status':
+          cmp = statusOrder[a.status] - statusOrder[b.status];
+          break;
+        case 'chamber':
+          cmp = a.chamberName.localeCompare(b.chamberName);
+          break;
+        case 'region':
+          cmp = a.region.localeCompare(b.region);
+          break;
+        case 'members':
+          cmp = a.actualMembers - b.actualMembers;
+          break;
+        case 'expected':
+          cmp = (a.expectedMembers || 0) - (b.expectedMembers || 0);
+          break;
+        case 'percentComplete': {
+          const pctA = getPercentComplete(a) ?? -1;
+          const pctB = getPercentComplete(b) ?? -1;
+          cmp = pctA - pctB;
+          break;
+        }
+        case 'naics':
+          cmp = (a.naicsCoverage || 0) - (b.naicsCoverage || 0);
+          break;
+      }
+      return progressSortDir === 'asc' ? cmp : -cmp;
+    });
+    return sorted;
+  }, [filteredProgressList, progressSortKey, progressSortDir]);
+
+  const handleProgressSort = (key: ProgressSortKey) => {
+    if (progressSortKey === key) {
+      setProgressSortDir(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      setProgressSortKey(key);
+      setProgressSortDir('asc');
+    }
+  };
+
+  const getSortIcon = (key: ProgressSortKey) => {
+    if (progressSortKey !== key) return <ArrowUpDown className="w-3 h-3 ml-1 opacity-30" />;
+    return progressSortDir === 'asc' 
+      ? <ArrowUp className="w-3 h-3 ml-1" />
+      : <ArrowDown className="w-3 h-3 ml-1" />;
+  };
 
   const getStatusIcon = (status: ChamberProgressStatus) => {
     switch (status) {
@@ -798,139 +873,198 @@ export default function AdminChambers() {
               </ScrollArea>
             </TabsContent>
 
-            <TabsContent value="audit" className="flex-1 overflow-hidden m-0 flex flex-col data-[state=inactive]:hidden">
-              <div className="p-3 border-b border-border/30">
-                <div className="flex items-center gap-4 flex-wrap mb-3">
-                  <div className="flex gap-4 text-[10px] flex-wrap">
-                    <div className="flex items-center gap-1">
-                      <CheckCircle2 className="w-3 h-3 text-green-400" />
-                      <span className="text-green-400">{filteredProgressSummary.completed} COMPLETED</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <AlertCircle className="w-3 h-3 text-yellow-400" />
-                      <span className="text-yellow-400">{filteredProgressSummary.partial} PARTIAL</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Clock className="w-3 h-3 text-gray-400" />
-                      <span className="text-gray-400">{filteredProgressSummary.pending} PENDING</span>
-                    </div>
-                    {filteredProgressSummary.inProgress > 0 && (
+            <TabsContent value="audit" className="flex-1 overflow-hidden m-0 flex data-[state=inactive]:hidden">
+              <div className="flex-1 flex flex-col min-w-0">
+                <div className="p-3 border-b border-border/30">
+                  <div className="flex items-center gap-4 flex-wrap mb-3">
+                    <div className="flex gap-4 text-[10px] flex-wrap">
                       <div className="flex items-center gap-1">
-                        <Target className="w-3 h-3 text-blue-400" />
-                        <span className="text-blue-400">{filteredProgressSummary.inProgress} IN PROGRESS</span>
+                        <CheckCircle2 className="w-3 h-3 text-green-400" />
+                        <span className="text-green-400">{filteredProgressSummary.completed} COMPLETED</span>
                       </div>
-                    )}
-                    {filteredProgressSummary.blocked > 0 && (
                       <div className="flex items-center gap-1">
-                        <Ban className="w-3 h-3 text-red-400" />
-                        <span className="text-red-400">{filteredProgressSummary.blocked} BLOCKED</span>
+                        <AlertCircle className="w-3 h-3 text-yellow-400" />
+                        <span className="text-yellow-400">{filteredProgressSummary.partial} PARTIAL</span>
                       </div>
-                    )}
+                      <div className="flex items-center gap-1">
+                        <Clock className="w-3 h-3 text-gray-400" />
+                        <span className="text-gray-400">{filteredProgressSummary.pending} PENDING</span>
+                      </div>
+                      {filteredProgressSummary.inProgress > 0 && (
+                        <div className="flex items-center gap-1">
+                          <Target className="w-3 h-3 text-blue-400" />
+                          <span className="text-blue-400">{filteredProgressSummary.inProgress} IN PROGRESS</span>
+                        </div>
+                      )}
+                      {filteredProgressSummary.blocked > 0 && (
+                        <div className="flex items-center gap-1">
+                          <Ban className="w-3 h-3 text-red-400" />
+                          <span className="text-red-400">{filteredProgressSummary.blocked} BLOCKED</span>
+                        </div>
+                      )}
+                    </div>
+                    <div className="ml-auto flex items-center gap-3">
+                      <div className="text-[10px] text-muted-foreground">
+                        {filteredProgressSummary.completedPercentage}% COMPLETE
+                      </div>
+                      {filteredProgressSummary.neededForThreshold > 0 && (
+                        <Badge variant="outline" className="text-[8px] bg-amber-500/10 text-amber-400 border-amber-500/30">
+                          {filteredProgressSummary.neededForThreshold} MORE FOR 80% THRESHOLD
+                        </Badge>
+                      )}
+                    </div>
                   </div>
-                  <div className="ml-auto flex items-center gap-3">
-                    <div className="text-[10px] text-muted-foreground">
-                      {filteredProgressSummary.completedPercentage}% COMPLETE
-                    </div>
-                    {filteredProgressSummary.neededForThreshold > 0 && (
-                      <Badge variant="outline" className="text-[8px] bg-amber-500/10 text-amber-400 border-amber-500/30">
-                        {filteredProgressSummary.neededForThreshold} MORE FOR 80% THRESHOLD
-                      </Badge>
-                    )}
+                  <div className="text-[9px] text-muted-foreground bg-muted/30 rounded px-2 py-1.5">
+                    Completion criteria: 30+ members AND 80%+ NAICS coverage. Partial = has data but does not meet both criteria.
                   </div>
                 </div>
-                <div className="text-[9px] text-muted-foreground bg-muted/30 rounded px-2 py-1.5">
-                  Completion criteria: 30+ members AND 80%+ NAICS coverage. Partial = has data but does not meet both criteria.
+                <div className="flex-1 overflow-hidden flex flex-col">
+                  <div className="sticky top-0 z-10 bg-background border-b border-border/30">
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="text-[10px] text-muted-foreground">
+                          <th 
+                            className="text-left py-2 px-2 cursor-pointer hover-elevate select-none"
+                            onClick={() => handleProgressSort('status')}
+                          >
+                            <div className="flex items-center">STATUS{getSortIcon('status')}</div>
+                          </th>
+                          <th 
+                            className="text-left py-2 px-2 cursor-pointer hover-elevate select-none"
+                            onClick={() => handleProgressSort('chamber')}
+                          >
+                            <div className="flex items-center">CHAMBER{getSortIcon('chamber')}</div>
+                          </th>
+                          <th 
+                            className="text-left py-2 px-2 cursor-pointer hover-elevate select-none"
+                            onClick={() => handleProgressSort('region')}
+                          >
+                            <div className="flex items-center">REGION{getSortIcon('region')}</div>
+                          </th>
+                          <th 
+                            className="text-right py-2 px-2 cursor-pointer hover-elevate select-none"
+                            onClick={() => handleProgressSort('members')}
+                          >
+                            <div className="flex items-center justify-end">MEMBERS{getSortIcon('members')}</div>
+                          </th>
+                          <th 
+                            className="text-right py-2 px-2 cursor-pointer hover-elevate select-none"
+                            onClick={() => handleProgressSort('expected')}
+                          >
+                            <div className="flex items-center justify-end">EXPECTED{getSortIcon('expected')}</div>
+                          </th>
+                          <th 
+                            className="text-right py-2 px-2 cursor-pointer hover-elevate select-none"
+                            onClick={() => handleProgressSort('percentComplete')}
+                          >
+                            <div className="flex items-center justify-end">% COLL{getSortIcon('percentComplete')}</div>
+                          </th>
+                          <th 
+                            className="text-right py-2 px-2 cursor-pointer hover-elevate select-none"
+                            onClick={() => handleProgressSort('naics')}
+                          >
+                            <div className="flex items-center justify-end">NAICS %{getSortIcon('naics')}</div>
+                          </th>
+                          <th className="text-left py-2 px-2">ISSUES</th>
+                        </tr>
+                      </thead>
+                    </table>
+                  </div>
+                  <ScrollArea className="flex-1">
+                    <div className="p-3 pt-0">
+                      <table className="w-full text-xs">
+                        <tbody>
+                          {sortedProgressList.map(row => {
+                            const pctComplete = getPercentComplete(row);
+                            return (
+                              <tr 
+                                key={row.chamberId} 
+                                className="border-b border-border/20 hover-elevate"
+                                data-testid={`row-progress-${row.chamberId}`}
+                              >
+                                <td className="py-2 px-2">
+                                  <div className="flex items-center gap-1.5">
+                                    {getStatusIcon(row.status)}
+                                    <Badge variant="outline" className={`text-[8px] ${getStatusBadgeClass(row.status)}`}>
+                                      {row.status.toUpperCase().replace('_', ' ')}
+                                    </Badge>
+                                  </div>
+                                </td>
+                                <td className="py-2 px-2">
+                                  <div className="flex items-center gap-2">
+                                    <ClipboardCheck className="w-3 h-3 text-amber-400" />
+                                    <div>
+                                      <div className="font-medium">{row.chamberName}</div>
+                                      <div className="text-[10px] text-muted-foreground">{row.municipality}</div>
+                                    </div>
+                                  </div>
+                                </td>
+                                <td className="py-2 px-2">
+                                  <Badge variant="outline" className="text-[8px] bg-indigo-500/10 text-indigo-400 border-indigo-500/30">
+                                    {row.region}
+                                  </Badge>
+                                </td>
+                                <td className="py-2 px-2 text-right">
+                                  <span className={row.actualMembers >= 30 ? "text-emerald-400 font-medium" : row.actualMembers > 0 ? "text-yellow-400" : "text-muted-foreground/50"}>
+                                    {row.actualMembers > 0 ? row.actualMembers : '-'}
+                                  </span>
+                                </td>
+                                <td className="py-2 px-2 text-right">
+                                  {row.expectedMembers !== null ? (
+                                    <span className="text-cyan-400">{row.expectedMembers}</span>
+                                  ) : (
+                                    <span className="text-muted-foreground/50">-</span>
+                                  )}
+                                </td>
+                                <td className="py-2 px-2 text-right">
+                                  {pctComplete !== null ? (
+                                    <span className={pctComplete >= 80 ? "text-emerald-400 font-medium" : pctComplete >= 50 ? "text-yellow-400" : "text-orange-400"}>
+                                      {pctComplete}%
+                                    </span>
+                                  ) : (
+                                    <span className="text-muted-foreground/50">-</span>
+                                  )}
+                                </td>
+                                <td className="py-2 px-2 text-right">
+                                  {row.naicsCoverage !== null ? (
+                                    <span className={row.naicsCoverage >= 80 ? "text-emerald-400 font-medium" : row.naicsCoverage > 0 ? "text-yellow-400" : "text-muted-foreground"}>
+                                      {row.naicsCoverage}%
+                                    </span>
+                                  ) : (
+                                    <span className="text-muted-foreground/50">N/A</span>
+                                  )}
+                                </td>
+                                <td className="py-2 px-2">
+                                  {row.partialReasons.length > 0 ? (
+                                    <div className="flex flex-wrap gap-1">
+                                      {row.partialReasons.map(reason => (
+                                        <Badge 
+                                          key={reason} 
+                                          variant="outline" 
+                                          className="text-[7px] bg-yellow-500/5 text-yellow-400/80 border-yellow-500/20"
+                                        >
+                                          {getPartialReasonText(reason)}
+                                        </Badge>
+                                      ))}
+                                    </div>
+                                  ) : row.status === 'completed' ? (
+                                    <span className="text-[10px] text-green-400/70">All criteria met</span>
+                                  ) : row.status === 'pending' ? (
+                                    <span className="text-[10px] text-muted-foreground/50">Not started</span>
+                                  ) : null}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </ScrollArea>
                 </div>
               </div>
-              <ScrollArea className="flex-1">
-                <div className="p-3">
-                  <table className="w-full text-xs">
-                    <thead>
-                      <tr className="text-[10px] text-muted-foreground border-b border-border/30">
-                        <th className="text-left py-2 px-2">STATUS</th>
-                        <th className="text-left py-2 px-2">CHAMBER</th>
-                        <th className="text-left py-2 px-2">REGION</th>
-                        <th className="text-right py-2 px-2">MEMBERS</th>
-                        <th className="text-right py-2 px-2">EXPECTED</th>
-                        <th className="text-right py-2 px-2">NAICS %</th>
-                        <th className="text-left py-2 px-2">ISSUES</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredProgressList.map(row => (
-                        <tr 
-                          key={row.chamberId} 
-                          className="border-b border-border/20 hover-elevate"
-                          data-testid={`row-progress-${row.chamberId}`}
-                        >
-                          <td className="py-2 px-2">
-                            <div className="flex items-center gap-1.5">
-                              {getStatusIcon(row.status)}
-                              <Badge variant="outline" className={`text-[8px] ${getStatusBadgeClass(row.status)}`}>
-                                {row.status.toUpperCase().replace('_', ' ')}
-                              </Badge>
-                            </div>
-                          </td>
-                          <td className="py-2 px-2">
-                            <div className="flex items-center gap-2">
-                              <ClipboardCheck className="w-3 h-3 text-amber-400" />
-                              <div>
-                                <div className="font-medium">{row.chamberName}</div>
-                                <div className="text-[10px] text-muted-foreground">{row.municipality}</div>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="py-2 px-2">
-                            <Badge variant="outline" className="text-[8px] bg-indigo-500/10 text-indigo-400 border-indigo-500/30">
-                              {row.region}
-                            </Badge>
-                          </td>
-                          <td className="py-2 px-2 text-right">
-                            <span className={row.actualMembers >= 30 ? "text-emerald-400 font-medium" : row.actualMembers > 0 ? "text-yellow-400" : "text-muted-foreground/50"}>
-                              {row.actualMembers > 0 ? row.actualMembers : '-'}
-                            </span>
-                          </td>
-                          <td className="py-2 px-2 text-right">
-                            {row.expectedMembers !== null ? (
-                              <span className="text-cyan-400">{row.expectedMembers}</span>
-                            ) : (
-                              <span className="text-muted-foreground/50">-</span>
-                            )}
-                          </td>
-                          <td className="py-2 px-2 text-right">
-                            {row.naicsCoverage !== null ? (
-                              <span className={row.naicsCoverage >= 80 ? "text-emerald-400 font-medium" : row.naicsCoverage > 0 ? "text-yellow-400" : "text-muted-foreground"}>
-                                {row.naicsCoverage}%
-                              </span>
-                            ) : (
-                              <span className="text-muted-foreground/50">N/A</span>
-                            )}
-                          </td>
-                          <td className="py-2 px-2">
-                            {row.partialReasons.length > 0 ? (
-                              <div className="flex flex-wrap gap-1">
-                                {row.partialReasons.map(reason => (
-                                  <Badge 
-                                    key={reason} 
-                                    variant="outline" 
-                                    className="text-[7px] bg-yellow-500/5 text-yellow-400/80 border-yellow-500/20"
-                                  >
-                                    {getPartialReasonText(reason)}
-                                  </Badge>
-                                ))}
-                              </div>
-                            ) : row.status === 'completed' ? (
-                              <span className="text-[10px] text-green-400/70">All criteria met</span>
-                            ) : row.status === 'pending' ? (
-                              <span className="text-[10px] text-muted-foreground/50">Not started</span>
-                            ) : null}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </ScrollArea>
+              <div className="w-[400px] border-l border-border/30 flex-shrink-0">
+                <ChamberMapFull />
+              </div>
             </TabsContent>
           </Tabs>
         </div>
