@@ -48,61 +48,83 @@ export interface ChamberProgressSummary {
   neededForThreshold: number;  // How many more needed to reach 80% (86 chambers)
 }
 
-// Expected member counts for chambers (can be updated via UI)
-// This would typically be stored in database, but for now we use a map
-const expectedMemberCounts: Record<string, number> = {
-  // Large chambers with known member counts from their websites
-  'greater-vancouver-board-of-trade': 5000,
-  'burnaby-board-of-trade': 1100,
-  'surrey-white-rock-board-of-trade': 3000,
-  'richmond-chamber-of-commerce': 800,
-  'delta-chamber-of-commerce': 450,
-  'kelowna-chamber-of-commerce': 1200,
-  'greater-victoria-chamber-of-commerce': 1500,
-  'kamloops-chamber-of-commerce': 700,
-  'prince-george-chamber-of-commerce': 600,
-  'nanaimo-chamber-of-commerce': 800,
-  'abbotsford-chamber-of-commerce': 700,
-  'chilliwack-chamber-of-commerce': 600,
-  'langley-chamber-of-commerce': 500,
-  'mission-chamber-of-commerce': 200,
-  'maple-ridge-pitt-meadows-chamber': 300,
-  'tri-cities-chamber-of-commerce': 600,
-  'new-westminster-chamber': 300,
-  'comox-valley-chamber-of-commerce': 500,
-  'campbell-river-chamber-of-commerce': 350,
-  'penticton-chamber-of-commerce': 450,
-  'vernon-chamber-of-commerce': 500,
-  'salmon-arm-chamber-of-commerce': 300,
-  'cranbrook-chamber-of-commerce': 300,
-  'nelson-chamber-of-commerce': 280,
-  'trail-chamber-of-commerce': 200,
-  'castlegar-chamber-of-commerce': 150,
-  'revelstoke-chamber-of-commerce': 200,
-  'golden-chamber-of-commerce': 150,
-  'fernie-chamber-of-commerce': 200,
-  'whistler-chamber-of-commerce': 600,
-  'squamish-chamber-of-commerce': 300,
-  'powell-river-chamber-of-commerce': 200,
-  'sechelt-chamber-of-commerce': 200,
-  'gibsons-chamber-of-commerce': 150,
-  'williams-lake-chamber-of-commerce': 250,
-  'quesnel-chamber-of-commerce': 200,
-  'prince-rupert-chamber-of-commerce': 200,
-  'terrace-chamber-of-commerce': 250,
-  'kitimat-chamber-of-commerce': 150,
-  'fort-st-john-chamber-of-commerce': 350,
-  'dawson-creek-chamber-of-commerce': 200,
-  'parksville-qualicum-chamber': 400,
-  'duncan-cowichan-chamber-of-commerce': 350,
-  'ladysmith-chamber-of-commerce': 150,
-  'port-alberni-chamber-of-commerce': 250,
-  'tofino-long-beach-chamber-of-commerce': 200,
-  'ucluelet-chamber-of-commerce': 100,
-  'port-hardy-chamber-of-commerce': 150,
-  'merritt-chamber-of-commerce': 150,
-  'hope-chamber-of-commerce': 150,
-};
+/**
+ * Parse member count string from chamber metadata (e.g., "5,000+", "300-400", "500")
+ * Returns the lower bound or single value as a number
+ */
+function parseMemberString(memberStr: string | undefined): number | null {
+  if (!memberStr) return null;
+  
+  // Remove commas and trim
+  const cleaned = memberStr.replace(/,/g, '').trim();
+  
+  // Handle range format "300-400" - take the upper value
+  if (cleaned.includes('-')) {
+    const parts = cleaned.split('-');
+    const upper = parseInt(parts[1].replace(/[^\d]/g, ''), 10);
+    if (!isNaN(upper)) return upper;
+  }
+  
+  // Handle "500+" format - extract number
+  const num = parseInt(cleaned.replace(/[^\d]/g, ''), 10);
+  return isNaN(num) ? null : num;
+}
+
+/**
+ * Get region tier for default expected member count
+ * Metro: 400, Regional city: 250, Small town: 120, Remote: 60
+ */
+function getRegionTierDefault(region: string): number {
+  const metroRegions = ['Metro Vancouver', 'Capital Regional District'];
+  const regionalCityRegions = ['Central Okanagan', 'Thompson-Nicola', 'Fraser Valley', 'Nanaimo'];
+  
+  if (metroRegions.includes(region)) return 400;
+  if (regionalCityRegions.includes(region)) return 250;
+  
+  // Check for "Greater" or major city patterns
+  if (region.includes('Greater') || region.includes('Okanagan') || region.includes('Kootenay')) return 200;
+  
+  // Remote/small communities
+  return 120;
+}
+
+/**
+ * Auto-generate expected member counts for all chambers
+ * Priority: 1) Parse metadata members string, 2) actual count × 1.2, 3) region tier default
+ */
+function generateExpectedMemberCounts(): Record<string, number> {
+  const counts: Record<string, number> = {};
+  
+  // Count actual members per chamber
+  const actualCounts = new Map<string, number>();
+  for (const member of chamberMembers) {
+    actualCounts.set(member.chamberId, (actualCounts.get(member.chamberId) || 0) + 1);
+  }
+  
+  for (const chamber of BC_CHAMBERS_OF_COMMERCE) {
+    const actualCount = actualCounts.get(chamber.id) || 0;
+    
+    // Try to parse from metadata first
+    const parsedFromMetadata = parseMemberString(chamber.members);
+    
+    if (parsedFromMetadata !== null && parsedFromMetadata >= 40) {
+      // Use metadata value if available and reasonable
+      counts[chamber.id] = parsedFromMetadata;
+    } else if (actualCount > 0) {
+      // Use actual count × 1.2, rounded to nearest 10, minimum 40
+      const estimated = Math.max(40, Math.ceil((actualCount * 1.2) / 10) * 10);
+      counts[chamber.id] = estimated;
+    } else {
+      // Fall back to region tier default
+      counts[chamber.id] = getRegionTierDefault(chamber.region);
+    }
+  }
+  
+  return counts;
+}
+
+// Auto-generated expected member counts for all chambers
+const expectedMemberCounts: Record<string, number> = generateExpectedMemberCounts();
 
 // Minimum thresholds for completion
 const MEMBER_THRESHOLD = 30;
