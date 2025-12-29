@@ -377,7 +377,7 @@ function GrowthChart() {
   );
 }
 
-type ProgressSortKey = 'status' | 'chamber' | 'region' | 'members' | 'expected' | 'percentComplete';
+type ProgressSortKey = 'status' | 'chamber' | 'region' | 'members' | 'expected' | 'estimated' | 'percentComplete';
 type SortDirection = 'asc' | 'desc';
 
 export default function AdminChambers() {
@@ -597,11 +597,12 @@ export default function AdminChambers() {
     };
   }, [filteredProgressList]);
 
-  // Calculate % complete (members vs expected) - returns null if < 30 members
+  // Calculate % complete (members vs target: Expected if available, else Estimated)
   const getPercentComplete = (row: ChamberProgress): number | null => {
     if (row.actualMembers < 30) return null;
-    if (!row.expectedMembers || row.expectedMembers === 0) return null;
-    return Math.min(100, Math.floor((row.actualMembers / row.expectedMembers) * 100));
+    const target = row.expectedMembers ?? row.estimatedMembers;
+    if (!target || target === 0) return null;
+    return Math.min(100, Math.floor((row.actualMembers / target) * 100));
   };
 
   // Operational order: pending first (work to start), then in_progress, partial, completed, blocked
@@ -632,6 +633,9 @@ export default function AdminChambers() {
           break;
         case 'expected':
           cmp = (a.expectedMembers || 0) - (b.expectedMembers || 0);
+          break;
+        case 'estimated':
+          cmp = a.estimatedMembers - b.estimatedMembers;
           break;
         case 'percentComplete': {
           const pctA = getPercentComplete(a) ?? -1;
@@ -686,8 +690,7 @@ export default function AdminChambers() {
   const getPartialReasonText = (reason: PartialReason) => {
     switch (reason) {
       case 'below_member_threshold': return 'Less than 30 members';
-      case 'missing_expected_count': return 'Missing expected count';
-      case 'below_percent_complete': return 'Below 80% of expected';
+      case 'below_percent_complete': return 'Below 80% of target';
       default: return reason;
     }
   };
@@ -1048,19 +1051,20 @@ export default function AdminChambers() {
                     </div>
                   </div>
                   <div className="text-[9px] text-muted-foreground bg-muted/30 rounded px-2 py-1.5">
-                    Completion criteria: 30+ members AND 80%+ of Expected members collected. Partial = has data but does not meet both criteria.
+                    Completion criteria: 30+ members AND 80%+ of target (Expected if available, else Estimated). Partial = has data but does not meet criteria.
                   </div>
                 </div>
                 <ScrollArea className="flex-1">
                   <table className="w-full text-xs" style={{ tableLayout: 'fixed' }}>
                     <colgroup>
-                      <col style={{ width: '12%' }} />
-                      <col style={{ width: '24%' }} />
-                      <col style={{ width: '14%' }} />
-                      <col style={{ width: '10%' }} />
-                      <col style={{ width: '10%' }} />
                       <col style={{ width: '10%' }} />
                       <col style={{ width: '20%' }} />
+                      <col style={{ width: '12%' }} />
+                      <col style={{ width: '8%' }} />
+                      <col style={{ width: '9%' }} />
+                      <col style={{ width: '9%' }} />
+                      <col style={{ width: '8%' }} />
+                      <col style={{ width: '24%' }} />
                     </colgroup>
                     <thead className="sticky top-0 z-50 bg-background">
                       <tr className="text-[10px] text-muted-foreground border-b border-border/30">
@@ -1102,6 +1106,14 @@ export default function AdminChambers() {
                             onClick={() => handleProgressSort('expected')}
                           >
                             EXPECTED{getSortIcon('expected')}
+                          </button>
+                        </th>
+                        <th className="text-right py-2 px-2">
+                          <button 
+                            className="flex items-center justify-end cursor-pointer select-none opacity-80 hover:opacity-100 transition-opacity ml-auto"
+                            onClick={() => handleProgressSort('estimated')}
+                          >
+                            ESTIMATED{getSortIcon('estimated')}
                           </button>
                         </th>
                         <th className="text-right py-2 px-2">
@@ -1157,6 +1169,9 @@ export default function AdminChambers() {
                               ) : (
                                 <span className="text-muted-foreground/50">-</span>
                               )}
+                            </td>
+                            <td className="py-2 px-2 text-right">
+                              <span className="text-orange-400/70">{row.estimatedMembers}</span>
                             </td>
                             <td className="py-2 px-2 text-right">
                               {pctComplete !== null ? (

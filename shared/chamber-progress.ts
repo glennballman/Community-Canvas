@@ -19,8 +19,7 @@ export type ChamberProgressStatus = 'pending' | 'in_progress' | 'partial' | 'com
 
 export type PartialReason = 
   | 'below_member_threshold'    // Less than 30 members
-  | 'missing_expected_count'    // No expected member count entered
-  | 'below_percent_complete';   // Less than 80% of expected members collected
+  | 'below_percent_complete';   // Less than 80% of target (Expected or Estimated)
 
 export interface ChamberProgress {
   chamberId: string;
@@ -29,7 +28,8 @@ export interface ChamberProgress {
   municipality: string;
   status: ChamberProgressStatus;
   actualMembers: number;
-  expectedMembers: number | null;  // null means not yet entered
+  expectedMembers: number | null;  // From official website/source
+  estimatedMembers: number;        // Our calculation (actual × 1.2 or region default)
   naicsCoverage: number | null;    // null when expected is missing or no members
   partialReasons: PartialReason[];
   lastUpdated: string | null;
@@ -89,10 +89,26 @@ function getRegionTierDefault(region: string): number {
 }
 
 /**
- * Auto-generate expected member counts for all chambers
- * Priority: 1) Parse metadata members string, 2) actual count × 1.2, 3) region tier default
+ * Get expected member counts from official sources (website metadata)
  */
-function generateExpectedMemberCounts(): Record<string, number> {
+function getExpectedMemberCounts(): Record<string, number> {
+  const counts: Record<string, number> = {};
+  
+  for (const chamber of BC_CHAMBERS_OF_COMMERCE) {
+    const parsedFromMetadata = parseMemberString(chamber.members);
+    if (parsedFromMetadata !== null && parsedFromMetadata >= 40) {
+      counts[chamber.id] = parsedFromMetadata;
+    }
+  }
+  
+  return counts;
+}
+
+/**
+ * Get estimated member counts (our calculations)
+ * Uses actual count × 1.2 or region tier default
+ */
+function getEstimatedMemberCounts(): Record<string, number> {
   const counts: Record<string, number> = {};
   
   // Count actual members per chamber
@@ -104,16 +120,9 @@ function generateExpectedMemberCounts(): Record<string, number> {
   for (const chamber of BC_CHAMBERS_OF_COMMERCE) {
     const actualCount = actualCounts.get(chamber.id) || 0;
     
-    // Try to parse from metadata first
-    const parsedFromMetadata = parseMemberString(chamber.members);
-    
-    if (parsedFromMetadata !== null && parsedFromMetadata >= 40) {
-      // Use metadata value if available and reasonable
-      counts[chamber.id] = parsedFromMetadata;
-    } else if (actualCount > 0) {
+    if (actualCount > 0) {
       // Use actual count × 1.2, rounded to nearest 10, minimum 40
-      const estimated = Math.max(40, Math.ceil((actualCount * 1.2) / 10) * 10);
-      counts[chamber.id] = estimated;
+      counts[chamber.id] = Math.max(40, Math.ceil((actualCount * 1.2) / 10) * 10);
     } else {
       // Fall back to region tier default
       counts[chamber.id] = getRegionTierDefault(chamber.region);
@@ -123,8 +132,10 @@ function generateExpectedMemberCounts(): Record<string, number> {
   return counts;
 }
 
-// Auto-generated expected member counts for all chambers
-const expectedMemberCounts: Record<string, number> = generateExpectedMemberCounts();
+// Expected = from official website sources
+const expectedMemberCounts: Record<string, number> = getExpectedMemberCounts();
+// Estimated = our calculations
+const estimatedMemberCounts: Record<string, number> = getEstimatedMemberCounts();
 
 // Minimum thresholds for completion
 const MEMBER_THRESHOLD = 30;
@@ -152,11 +163,12 @@ const PERCENT_COMPLETE_THRESHOLD = 80;
 
 /**
  * Determine the status and partial reasons for a chamber
- * Completion: 30+ members AND 80%+ of Expected members collected
+ * Completion: 30+ members AND 80%+ of target (Expected if available, else Estimated)
  */
 function determineStatus(
   actualMembers: number,
-  expectedMembers: number | null
+  expectedMembers: number | null,
+  estimatedMembers: number
 ): { status: ChamberProgressStatus; partialReasons: PartialReason[] } {
   const partialReasons: PartialReason[] = [];
   
@@ -167,28 +179,22 @@ function determineStatus(
   
   // Check each criterion
   const hasSufficientMembers = actualMembers >= MEMBER_THRESHOLD;
-  const hasExpectedCount = expectedMembers !== null && expectedMembers > 0;
   
-  // Calculate % Complete if we have expected count
-  let hasSufficientPercentComplete = false;
-  if (hasExpectedCount && expectedMembers !== null) {
-    const percentComplete = Math.floor((actualMembers / expectedMembers) * 100);
-    hasSufficientPercentComplete = percentComplete >= PERCENT_COMPLETE_THRESHOLD;
-  }
+  // Use Expected if available, otherwise use Estimated
+  const targetMembers = expectedMembers !== null ? expectedMembers : estimatedMembers;
+  const percentComplete = Math.floor((actualMembers / targetMembers) * 100);
+  const hasSufficientPercentComplete = percentComplete >= PERCENT_COMPLETE_THRESHOLD;
   
   // Build partial reasons
   if (!hasSufficientMembers) {
     partialReasons.push('below_member_threshold');
   }
-  if (!hasExpectedCount) {
-    partialReasons.push('missing_expected_count');
-  }
-  if (hasExpectedCount && !hasSufficientPercentComplete) {
+  if (!hasSufficientPercentComplete) {
     partialReasons.push('below_percent_complete');
   }
   
   // Determine status
-  // COMPLETED only if: 30+ members AND 80%+ of expected collected
+  // COMPLETED only if: 30+ members AND 80%+ of target collected
   if (hasSufficientMembers && hasSufficientPercentComplete) {
     return { status: 'completed', partialReasons: [] };
   }
@@ -206,10 +212,12 @@ export function getChamberProgressList(): ChamberProgress[] {
   for (const chamber of BC_CHAMBERS_OF_COMMERCE) {
     const naicsData = calculateNaicsCoverage(chamber.id);
     const expectedMembers = expectedMemberCounts[chamber.id] || null;
+    const estimatedMembers = estimatedMemberCounts[chamber.id] || getRegionTierDefault(chamber.region);
     
     const { status, partialReasons } = determineStatus(
       naicsData.total,
-      expectedMembers
+      expectedMembers,
+      estimatedMembers
     );
     
     progressList.push({
@@ -220,6 +228,7 @@ export function getChamberProgressList(): ChamberProgress[] {
       status,
       actualMembers: naicsData.total,
       expectedMembers,
+      estimatedMembers,
       naicsCoverage: naicsData.percentage,
       partialReasons,
       lastUpdated: naicsData.total > 0 ? new Date().toISOString() : null,
@@ -300,10 +309,8 @@ export function getPartialReasonText(reason: PartialReason): string {
   switch (reason) {
     case 'below_member_threshold':
       return `Less than ${MEMBER_THRESHOLD} members`;
-    case 'missing_expected_count':
-      return 'Missing expected count';
     case 'below_percent_complete':
-      return `Below ${PERCENT_COMPLETE_THRESHOLD}% collected`;
+      return `Below ${PERCENT_COMPLETE_THRESHOLD}% of target`;
     default:
       return reason;
   }
