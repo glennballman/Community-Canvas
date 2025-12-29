@@ -8,6 +8,7 @@ import { runChamberAudit } from "@shared/chamber-audit";
 import { buildNAICSTree, getMembersByNAICSCode, getMembersBySector, getMembersBySubsector } from "@shared/naics-hierarchy";
 import { BC_CHAMBERS_OF_COMMERCE } from "@shared/chambers-of-commerce";
 import { chamberMembers } from "@shared/chamber-members";
+import { getChamberProgressList, getChamberProgressSummary } from "@shared/chamber-progress";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -185,6 +186,27 @@ export async function registerRoutes(
       res.json({ token });
     } else {
       res.status(404).json({ message: "Mapbox token not configured" });
+    }
+  });
+
+  app.get("/api/admin/chamber-progress", async (req, res) => {
+    try {
+      const progressList = getChamberProgressList();
+      const summary = getChamberProgressSummary();
+      res.json({ progressList, summary });
+    } catch (error) {
+      console.error("Chamber progress error:", error);
+      res.status(500).json({ message: "Failed to get chamber progress" });
+    }
+  });
+
+  app.get("/api/admin/chamber-progress/summary", async (req, res) => {
+    try {
+      const summary = getChamberProgressSummary();
+      res.json(summary);
+    } catch (error) {
+      console.error("Chamber progress summary error:", error);
+      res.status(500).json({ message: "Failed to get chamber progress summary" });
     }
   });
 
