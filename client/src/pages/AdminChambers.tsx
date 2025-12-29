@@ -1171,7 +1171,11 @@ export default function AdminChambers() {
                               )}
                             </td>
                             <td className="py-2 px-2 text-right">
-                              <span className="text-orange-400/70">{row.estimatedMembers}</span>
+                              {row.expectedMembers === null ? (
+                                <span className="text-orange-400/70">{row.estimatedMembers}</span>
+                              ) : (
+                                <span className="text-muted-foreground/50">-</span>
+                              )}
                             </td>
                             <td className="py-2 px-2 text-right">
                               {pctComplete !== null ? (
