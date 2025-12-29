@@ -101,7 +101,8 @@ export const BC_CHAMBERS_OF_COMMERCE: ChamberOfCommerce[] = [
     email: "admin@deltachamber.ca",
     website: "https://www.deltachamber.ca",
     founded: 1910,
-    notes: "Originally Board of Trade, became Chamber in 1961."
+    members: "450+",
+    notes: "Originally Board of Trade (1910), became Chamber in 1961."
   },
   {
     id: "north-vancouver-chamber",
@@ -174,7 +175,8 @@ export const BC_CHAMBERS_OF_COMMERCE: ChamberOfCommerce[] = [
     phone: "(604) 521-7781",
     website: "https://www.newwestchamber.com",
     founded: 1883,
-    notes: "One of BC's oldest chambers. Serving New Westminster business community."
+    members: "240",
+    notes: "One of BC's oldest chambers (141+ years). Exploring merger with Tri-Cities/Burnaby."
   },
 
   // ============================================================================
@@ -194,7 +196,7 @@ export const BC_CHAMBERS_OF_COMMERCE: ChamberOfCommerce[] = [
     email: "hello@abbotsfordchamber.com",
     website: "https://www.abbotsfordchamber.com",
     founded: 1913,
-    members: "700",
+    members: "800",
     notes: "Nationally accredited. Agriculture, ag-tech, aerospace focus."
   },
   {
@@ -211,7 +213,8 @@ export const BC_CHAMBERS_OF_COMMERCE: ChamberOfCommerce[] = [
     email: "info@chilliwackchamber.com",
     website: "https://www.chilliwackchamber.com",
     founded: 1903,
-    notes: "Originally Board of Trade. 120+ years in operation."
+    members: "500+",
+    notes: "4th fastest-growing in Canada 2024 (8.6% growth). 120+ years in operation."
   },
   {
     id: "langley-chamber-of-commerce",
@@ -511,7 +514,8 @@ export const BC_CHAMBERS_OF_COMMERCE: ChamberOfCommerce[] = [
     email: "chamber@qualicum.bc.ca",
     website: "https://www.qualicum.bc.ca",
     founded: 1927,
-    notes: "Voice of Business since 1927. Operates Visitor Centre."
+    members: "200",
+    notes: "Voice of Business since 1927. Operates Visitor Centre. Growing membership."
   },
 
   // ============================================================================
@@ -608,6 +612,7 @@ export const BC_CHAMBERS_OF_COMMERCE: ChamberOfCommerce[] = [
     phone: "(250) 724-6535",
     email: "office@albernichamber.ca",
     website: "https://www.albernichamber.ca",
+    members: "320",
     notes: "Gateway to West Coast. MV Frances Barkley heritage vessel."
   },
   {
@@ -714,7 +719,8 @@ export const BC_CHAMBERS_OF_COMMERCE: ChamberOfCommerce[] = [
     },
     phone: "(250) 766-5670",
     website: "https://www.lakecountrychamber.com",
-    notes: "Business Excellence Awards. Workshops and networking events."
+    members: "265+",
+    notes: "77% growth 2016-2018. Business Excellence Awards."
   },
   {
     id: "peachland-chamber",
@@ -748,8 +754,8 @@ export const BC_CHAMBERS_OF_COMMERCE: ChamberOfCommerce[] = [
     },
     phone: "(250) 545-0771",
     website: "https://www.vernonchamber.ca",
-    members: "600+",
-    notes: "Serving Vernon and North Okanagan."
+    members: "700",
+    notes: "10th fastest-growing in Canada 2025. Serving Vernon and North Okanagan."
   },
   {
     id: "armstrong-spallumcheen-chamber",
@@ -775,7 +781,8 @@ export const BC_CHAMBERS_OF_COMMERCE: ChamberOfCommerce[] = [
       lng: -119.1400
     },
     phone: "(250) 838-6727",
-    notes: "Shuswap River community."
+    members: "59",
+    notes: "Shuswap River community. 200+ businesses in the area."
   },
 
   // ============================================================================
@@ -811,6 +818,7 @@ export const BC_CHAMBERS_OF_COMMERCE: ChamberOfCommerce[] = [
     email: "admin@sochamber.ca",
     website: "https://www.sochamber.ca",
     founded: 2009,
+    members: "300",
     notes: "Amalgamation of Oliver, Osoyoos, Okanagan Falls chambers."
   },
   {
@@ -826,7 +834,8 @@ export const BC_CHAMBERS_OF_COMMERCE: ChamberOfCommerce[] = [
     phone: "(250) 494-2686",
     website: "https://www.summerlandchamber.com",
     founded: 1908,
-    notes: "Economic development and tourism focus."
+    members: "700+",
+    notes: "Only BC chamber where every business license holder is automatically a member. Top 25 largest in BC."
   },
   {
     id: "similkameen-chamber",
@@ -871,8 +880,10 @@ export const BC_CHAMBERS_OF_COMMERCE: ChamberOfCommerce[] = [
       lng: -119.2908
     },
     phone: "(250) 832-6247",
-    website: "https://www.sachamber.bc.ca",
-    notes: "Serving Salmon Arm and Shuswap."
+    email: "admin@sachamber.bc.ca",
+    website: "https://sachamber.bc.ca",
+    members: "300+",
+    notes: "50+ new members in 2024. Serving Salmon Arm and Shuswap region."
   },
   {
     id: "sicamous-chamber",
@@ -917,7 +928,9 @@ export const BC_CHAMBERS_OF_COMMERCE: ChamberOfCommerce[] = [
     phone: "(250) 344-7125",
     email: "info@goldenchamber.bc.ca",
     website: "https://www.goldenchamber.bc.ca",
-    notes: "Gateway to six national parks."
+    founded: 1979,
+    members: "215",
+    notes: "Gateway to six national parks. Business & Community Excellence Awards."
   },
 
   // ============================================================================
@@ -965,6 +978,7 @@ export const BC_CHAMBERS_OF_COMMERCE: ChamberOfCommerce[] = [
     phone: "(250) 674-3530",
     email: "info@clearwaterbcchamber.com",
     website: "https://www.clearwaterbcchamber.com",
+    members: "64+",
     notes: "Gateway to Wells Gray Provincial Park."
   },
   {
@@ -1081,6 +1095,7 @@ export const BC_CHAMBERS_OF_COMMERCE: ChamberOfCommerce[] = [
     phone: "(250) 395-6124",
     email: "manager@southcariboochamber.org",
     website: "https://www.southcariboochamber.org",
+    members: "85+",
     notes: "Cross-country skiing hub. 100 Mile House and area."
   },
   {
@@ -1157,7 +1172,8 @@ export const BC_CHAMBERS_OF_COMMERCE: ChamberOfCommerce[] = [
     },
     phone: "(250) 567-2124",
     website: "https://www.vanderhoofchamber.com",
-    notes: "Geographic centre of BC."
+    members: "150+",
+    notes: "Geographic centre of BC. Visitor info centre."
   },
   {
     id: "fort-st-james-chamber",
@@ -1186,7 +1202,8 @@ export const BC_CHAMBERS_OF_COMMERCE: ChamberOfCommerce[] = [
     phone: "(250) 692-3773",
     website: "https://www.burnslakechamber.com",
     founded: 1927,
-    notes: "Nearly 100 years old. Lakes District."
+    members: "136",
+    notes: "Nearly 100 years old. Lakes District. Local gift certificate program."
   },
   {
     id: "houston-chamber",
@@ -1333,8 +1350,8 @@ export const BC_CHAMBERS_OF_COMMERCE: ChamberOfCommerce[] = [
     email: "admin@terracechamber.com",
     website: "https://www.terracechamber.com",
     founded: 1927,
-    members: "280+",
-    notes: "Serving Terrace, Thornhill, and Northwest BC since 1927."
+    members: "350",
+    notes: "Serving Terrace, Thornhill, and Northwest BC since 1927. 350+ business networking."
   },
   {
     id: "kitimat-chamber",
@@ -1476,6 +1493,7 @@ export const BC_CHAMBERS_OF_COMMERCE: ChamberOfCommerce[] = [
     phone: "(250) 342-2844",
     email: "info@cvchamber.ca",
     website: "https://www.cvchamber.ca",
+    members: "325-350",
     notes: "Serves Invermere, Radium Hot Springs, Panorama, Fairmont, Canal Flats, Wilmer, Edgewater."
   },
   {
@@ -1491,7 +1509,9 @@ export const BC_CHAMBERS_OF_COMMERCE: ChamberOfCommerce[] = [
     phone: "(250) 428-5151",
     email: "hello@crestonvalleychamber.com",
     website: "https://www.crestonvalleychamber.com",
-    notes: "Kootenay Lake south. Agriculture and orchards."
+    founded: 1935,
+    members: "140",
+    notes: "Originally Creston Board of Trade. Kootenay Lake south. Agriculture and orchards."
   },
 
   // ============================================================================
@@ -1538,9 +1558,11 @@ export const BC_CHAMBERS_OF_COMMERCE: ChamberOfCommerce[] = [
       lat: 49.3256,
       lng: -117.6592
     },
+    phone: "(250) 365-6313",
     founded: 1946,
     website: "https://www.chamber.castlegar.com",
-    notes: "Named BC's best chamber in 2018. 'The Confluence' mass timber building."
+    members: "95+",
+    notes: "Named BC's best chamber in 2018. 'The Confluence' mass timber building. Opened new tourism building Aug 2024."
   },
   {
     id: "nakusp-chamber",
@@ -1593,6 +1615,8 @@ export const BC_CHAMBERS_OF_COMMERCE: ChamberOfCommerce[] = [
     phone: "(604) 815-4990",
     email: "admin@squamishchamber.com",
     website: "https://www.squamishchamber.com",
+    founded: 1934,
+    members: "300+",
     notes: "Largest and oldest business organization in Squamish. Outdoor recreation capital."
   },
   {
