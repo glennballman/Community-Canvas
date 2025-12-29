@@ -1,5 +1,5 @@
 import { chamberMembers } from './chamber-members';
-import { chambersOfCommerce } from './chambers-of-commerce';
+import { BC_CHAMBERS_OF_COMMERCE } from './chambers-of-commerce';
 
 export interface AuditResult {
   timestamp: string;
@@ -110,7 +110,7 @@ export function runChamberAudit(): AuditResult {
   });
   results.summary.duplicateIds = results.duplicateMemberIds.length;
 
-  const registryChamberIds = new Set(chambersOfCommerce.map((c) => c.id));
+  const registryChamberIds = new Set(BC_CHAMBERS_OF_COMMERCE.map((c) => c.id));
   results.summary.totalChambers = registryChamberIds.size;
 
   const memberChamberIds = new Set(Object.keys(chamberCounts));
