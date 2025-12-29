@@ -10,6 +10,7 @@ import AdminMatrix from "@/pages/AdminMatrix";
 import AdminGeo from "@/pages/AdminGeo";
 import AdminInfrastructure from "@/pages/AdminInfrastructure";
 import AdminChambers from "@/pages/AdminChambers";
+import AdminNAICS from "@/pages/AdminNAICS";
 import AdminSources from "@/pages/AdminSources";
 import AdminLogs from "@/pages/AdminLogs";
 import AdminSettings from "@/pages/AdminSettings";
@@ -24,6 +25,7 @@ function AdminRoutes() {
         <Route path="/admin/geo" component={AdminGeo} />
         <Route path="/admin/infrastructure" component={AdminInfrastructure} />
         <Route path="/admin/chambers" component={AdminChambers} />
+        <Route path="/admin/naics" component={AdminNAICS} />
         <Route path="/admin/sources" component={AdminSources} />
         <Route path="/admin/logs" component={AdminLogs} />
         <Route path="/admin/settings" component={AdminSettings} />

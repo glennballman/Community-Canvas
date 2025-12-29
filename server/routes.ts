@@ -5,6 +5,7 @@ import { api } from "@shared/routes";
 import { z } from "zod";
 import FirecrawlApp from '@mendable/firecrawl-js';
 import { runChamberAudit } from "@shared/chamber-audit";
+import { buildNAICSTree, getMembersByNAICSCode, getMembersBySector, getMembersBySubsector } from "@shared/naics-hierarchy";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -101,6 +102,55 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Chamber audit error:", error);
       res.status(500).json({ message: "Failed to run chamber audit" });
+    }
+  });
+
+  app.get("/api/naics/tree", async (req, res) => {
+    try {
+      const tree = buildNAICSTree();
+      res.json(tree);
+    } catch (error) {
+      console.error("NAICS tree error:", error);
+      res.status(500).json({ message: "Failed to build NAICS tree" });
+    }
+  });
+
+  app.get("/api/naics/sector/:sectorCode/members", async (req, res) => {
+    try {
+      const { sectorCode } = req.params;
+      const page = parseInt(req.query.page as string) || 1;
+      const pageSize = parseInt(req.query.pageSize as string) || 50;
+      const result = getMembersBySector(sectorCode, page, pageSize);
+      res.json(result);
+    } catch (error) {
+      console.error("NAICS sector members error:", error);
+      res.status(500).json({ message: "Failed to get sector members" });
+    }
+  });
+
+  app.get("/api/naics/subsector/:subsectorCode/members", async (req, res) => {
+    try {
+      const { subsectorCode } = req.params;
+      const page = parseInt(req.query.page as string) || 1;
+      const pageSize = parseInt(req.query.pageSize as string) || 50;
+      const result = getMembersBySubsector(subsectorCode, page, pageSize);
+      res.json(result);
+    } catch (error) {
+      console.error("NAICS subsector members error:", error);
+      res.status(500).json({ message: "Failed to get subsector members" });
+    }
+  });
+
+  app.get("/api/naics/code/:naicsCode/members", async (req, res) => {
+    try {
+      const { naicsCode } = req.params;
+      const page = parseInt(req.query.page as string) || 1;
+      const pageSize = parseInt(req.query.pageSize as string) || 50;
+      const result = getMembersByNAICSCode(naicsCode, page, pageSize);
+      res.json(result);
+    } catch (error) {
+      console.error("NAICS code members error:", error);
+      res.status(500).json({ message: "Failed to get code members" });
     }
   });
 
