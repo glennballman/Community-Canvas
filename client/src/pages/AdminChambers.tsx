@@ -377,7 +377,7 @@ function GrowthChart() {
   );
 }
 
-type ProgressSortKey = 'status' | 'chamber' | 'region' | 'members' | 'expected' | 'percentComplete' | 'naics';
+type ProgressSortKey = 'status' | 'chamber' | 'region' | 'members' | 'expected' | 'percentComplete';
 type SortDirection = 'asc' | 'desc';
 
 export default function AdminChambers() {
@@ -639,9 +639,6 @@ export default function AdminChambers() {
           cmp = pctA - pctB;
           break;
         }
-        case 'naics':
-          cmp = (a.naicsCoverage || 0) - (b.naicsCoverage || 0);
-          break;
       }
       return progressSortDir === 'asc' ? cmp : -cmp;
     });
@@ -689,8 +686,8 @@ export default function AdminChambers() {
   const getPartialReasonText = (reason: PartialReason) => {
     switch (reason) {
       case 'below_member_threshold': return 'Less than 30 members';
-      case 'below_naics_threshold': return 'Less than 80% NAICS';
       case 'missing_expected_count': return 'Missing expected count';
+      case 'below_percent_complete': return 'Below 80% of expected';
       default: return reason;
     }
   };
@@ -1051,20 +1048,19 @@ export default function AdminChambers() {
                     </div>
                   </div>
                   <div className="text-[9px] text-muted-foreground bg-muted/30 rounded px-2 py-1.5">
-                    Completion criteria: 30+ members AND 80%+ NAICS coverage. Partial = has data but does not meet both criteria.
+                    Completion criteria: 30+ members AND 80%+ of Expected members collected. Partial = has data but does not meet both criteria.
                   </div>
                 </div>
                 <ScrollArea className="flex-1">
                   <table className="w-full text-xs" style={{ tableLayout: 'fixed' }}>
                     <colgroup>
                       <col style={{ width: '12%' }} />
-                      <col style={{ width: '22%' }} />
+                      <col style={{ width: '24%' }} />
                       <col style={{ width: '14%' }} />
                       <col style={{ width: '10%' }} />
                       <col style={{ width: '10%' }} />
-                      <col style={{ width: '8%' }} />
-                      <col style={{ width: '8%' }} />
-                      <col style={{ width: '16%' }} />
+                      <col style={{ width: '10%' }} />
+                      <col style={{ width: '20%' }} />
                     </colgroup>
                     <thead className="sticky top-0 z-50 bg-background">
                       <tr className="text-[10px] text-muted-foreground border-b border-border/30">
@@ -1114,14 +1110,6 @@ export default function AdminChambers() {
                             onClick={() => handleProgressSort('percentComplete')}
                           >
                             % COMPLETE{getSortIcon('percentComplete')}
-                          </button>
-                        </th>
-                        <th className="text-right py-2 px-2">
-                          <button 
-                            className="flex items-center justify-end cursor-pointer select-none opacity-80 hover:opacity-100 transition-opacity ml-auto"
-                            onClick={() => handleProgressSort('naics')}
-                          >
-                            NAICS{getSortIcon('naics')}
                           </button>
                         </th>
                         <th className="text-left py-2 px-2">ISSUES</th>
@@ -1177,15 +1165,6 @@ export default function AdminChambers() {
                                 </span>
                               ) : (
                                 <span className="text-muted-foreground/50">-</span>
-                              )}
-                            </td>
-                            <td className="py-2 px-2 text-right">
-                              {row.naicsCoverage !== null ? (
-                                <span className={row.naicsCoverage >= 80 ? "text-emerald-400 font-medium" : row.naicsCoverage > 0 ? "text-yellow-400" : "text-muted-foreground"}>
-                                  {row.naicsCoverage}%
-                                </span>
-                              ) : (
-                                <span className="text-muted-foreground/50">N/A</span>
                               )}
                             </td>
                             <td className="py-2 px-2">

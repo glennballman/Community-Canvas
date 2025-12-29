@@ -3,11 +3,13 @@
  * Tracks the status of chamber member database building workflow
  * 
  * Completion Criteria:
- * - COMPLETED: 30+ members AND 80%+ NAICS coverage
+ * - COMPLETED: 30+ members AND 80%+ of Expected members collected
  * - PARTIAL: Has some data but doesn't meet both criteria
  * - PENDING: No member data yet
  * - IN_PROGRESS: Currently being worked on
  * - BLOCKED: Known impediment (no public directory, etc.)
+ * 
+ * Note: NAICS coverage is expected to be 100% for all entries but is NOT part of completion criteria
  */
 
 import { BC_CHAMBERS_OF_COMMERCE } from './chambers-of-commerce';
@@ -17,7 +19,6 @@ export type ChamberProgressStatus = 'pending' | 'in_progress' | 'partial' | 'com
 
 export type PartialReason = 
   | 'below_member_threshold'    // Less than 30 members
-  | 'below_naics_threshold'     // Less than 80% NAICS coverage
   | 'missing_expected_count'    // No expected member count entered
   | 'below_percent_complete';   // Less than 80% of expected members collected
 
@@ -105,7 +106,6 @@ const expectedMemberCounts: Record<string, number> = {
 
 // Minimum thresholds for completion
 const MEMBER_THRESHOLD = 30;
-const NAICS_THRESHOLD = 80;
 
 /**
  * Calculate NAICS coverage for a chamber
@@ -130,11 +130,11 @@ const PERCENT_COMPLETE_THRESHOLD = 80;
 
 /**
  * Determine the status and partial reasons for a chamber
+ * Completion: 30+ members AND 80%+ of Expected members collected
  */
 function determineStatus(
   actualMembers: number,
-  expectedMembers: number | null,
-  naicsCoverage: number | null
+  expectedMembers: number | null
 ): { status: ChamberProgressStatus; partialReasons: PartialReason[] } {
   const partialReasons: PartialReason[] = [];
   
@@ -145,23 +145,18 @@ function determineStatus(
   
   // Check each criterion
   const hasSufficientMembers = actualMembers >= MEMBER_THRESHOLD;
-  const hasSufficientNaics = naicsCoverage !== null && naicsCoverage >= NAICS_THRESHOLD;
   const hasExpectedCount = expectedMembers !== null && expectedMembers > 0;
   
   // Calculate % Complete if we have expected count
-  let percentComplete: number | null = null;
-  let hasSufficientPercentComplete = true;
+  let hasSufficientPercentComplete = false;
   if (hasExpectedCount && expectedMembers !== null) {
-    percentComplete = Math.floor((actualMembers / expectedMembers) * 100);
+    const percentComplete = Math.floor((actualMembers / expectedMembers) * 100);
     hasSufficientPercentComplete = percentComplete >= PERCENT_COMPLETE_THRESHOLD;
   }
   
   // Build partial reasons
   if (!hasSufficientMembers) {
     partialReasons.push('below_member_threshold');
-  }
-  if (naicsCoverage !== null && !hasSufficientNaics) {
-    partialReasons.push('below_naics_threshold');
   }
   if (!hasExpectedCount) {
     partialReasons.push('missing_expected_count');
@@ -171,8 +166,8 @@ function determineStatus(
   }
   
   // Determine status
-  // COMPLETED only if: 30+ members AND 80%+ NAICS coverage AND (no expected count OR 80%+ of expected collected)
-  if (hasSufficientMembers && hasSufficientNaics && hasSufficientPercentComplete) {
+  // COMPLETED only if: 30+ members AND 80%+ of expected collected
+  if (hasSufficientMembers && hasSufficientPercentComplete) {
     return { status: 'completed', partialReasons: [] };
   }
   
@@ -192,8 +187,7 @@ export function getChamberProgressList(): ChamberProgress[] {
     
     const { status, partialReasons } = determineStatus(
       naicsData.total,
-      expectedMembers,
-      naicsData.percentage
+      expectedMembers
     );
     
     progressList.push({
@@ -284,8 +278,6 @@ export function getPartialReasonText(reason: PartialReason): string {
   switch (reason) {
     case 'below_member_threshold':
       return `Less than ${MEMBER_THRESHOLD} members`;
-    case 'below_naics_threshold':
-      return `Less than ${NAICS_THRESHOLD}% NAICS coverage`;
     case 'missing_expected_count':
       return 'Missing expected count';
     case 'below_percent_complete':
