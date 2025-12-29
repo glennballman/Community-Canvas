@@ -922,14 +922,14 @@ export default function AdminChambers() {
                 <ScrollArea className="flex-1">
                   <table className="w-full text-xs" style={{ tableLayout: 'fixed' }}>
                     <colgroup>
-                      <col style={{ width: '100px' }} />
-                      <col style={{ width: '220px' }} />
-                      <col style={{ width: '120px' }} />
-                      <col style={{ width: '70px' }} />
-                      <col style={{ width: '70px' }} />
-                      <col style={{ width: '60px' }} />
-                      <col style={{ width: '60px' }} />
-                      <col />
+                      <col style={{ width: '12%' }} />
+                      <col style={{ width: '22%' }} />
+                      <col style={{ width: '14%' }} />
+                      <col style={{ width: '10%' }} />
+                      <col style={{ width: '10%' }} />
+                      <col style={{ width: '8%' }} />
+                      <col style={{ width: '8%' }} />
+                      <col style={{ width: '16%' }} />
                     </colgroup>
                     <thead className="sticky top-0 z-50 bg-background">
                       <tr className="text-[10px] text-muted-foreground border-b border-border/30">
