@@ -191,6 +191,121 @@ function TopSubsectorsChart({ sectors }: { sectors: NAICSSectorNode[] }) {
   );
 }
 
+function SectorPieChartFull({ sectors }: { sectors: NAICSSectorNode[] }) {
+  const sortedSectors = [...sectors].sort((a, b) => b.memberCount - a.memberCount);
+  const totalMembers = sortedSectors.reduce((sum, s) => sum + s.memberCount, 0);
+  
+  const data = sortedSectors.map(s => ({
+    name: s.title,
+    shortName: s.title.length > 20 ? s.title.substring(0, 17) + "..." : s.title,
+    value: s.memberCount,
+    code: s.code,
+    percent: ((s.memberCount / totalMembers) * 100).toFixed(1),
+  }));
+
+  return (
+    <Card className="flex-1 flex flex-col p-3">
+      <div className="flex items-center gap-2 mb-2">
+        <PieChartIcon className="w-4 h-4 text-muted-foreground" />
+        <h3 className="text-sm font-semibold">Members by Sector</h3>
+      </div>
+      <div className="flex-1 min-h-0">
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart>
+            <Pie
+              data={data}
+              cx="50%"
+              cy="45%"
+              innerRadius="30%"
+              outerRadius="70%"
+              paddingAngle={1}
+              dataKey="value"
+            >
+              {data.map((_, index) => (
+                <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+              ))}
+            </Pie>
+            <Tooltip
+              formatter={(value: number, name: string) => [formatMemberCount(value), name]}
+              contentStyle={{
+                backgroundColor: "hsl(var(--card))",
+                border: "1px solid hsl(var(--border))",
+                borderRadius: "6px",
+                fontSize: "11px",
+              }}
+            />
+          </PieChart>
+        </ResponsiveContainer>
+      </div>
+      <div className="grid grid-cols-1 gap-0.5 mt-2 max-h-[40%] overflow-auto">
+        {data.map((item, idx) => (
+          <div key={item.code} className="flex items-center gap-1.5 text-[9px]">
+            <div
+              className="w-2 h-2 rounded-full shrink-0"
+              style={{ backgroundColor: CHART_COLORS[idx % CHART_COLORS.length] }}
+            />
+            <span className="truncate flex-1 text-muted-foreground">{item.shortName}</span>
+            <span className="text-muted-foreground/70">{item.percent}%</span>
+          </div>
+        ))}
+      </div>
+    </Card>
+  );
+}
+
+function TopSubsectorsChartFull({ sectors }: { sectors: NAICSSectorNode[] }) {
+  const allSubsectors = sectors.flatMap(s => 
+    s.subsectors.map(sub => ({
+      name: sub.title,
+      shortName: sub.title.length > 25 ? sub.title.substring(0, 22) + "..." : sub.title,
+      count: sub.memberCount,
+      code: sub.code,
+    }))
+  );
+  
+  const sorted = allSubsectors.sort((a, b) => b.count - a.count);
+  const top15 = sorted.slice(0, 15);
+
+  return (
+    <Card className="flex-1 flex flex-col p-3">
+      <div className="flex items-center gap-2 mb-2">
+        <BarChart3 className="w-4 h-4 text-muted-foreground" />
+        <h3 className="text-sm font-semibold">Top Subsectors</h3>
+        <Badge variant="secondary" className="text-[9px] ml-auto">
+          {sorted.length} total
+        </Badge>
+      </div>
+      <div className="flex-1 min-h-0">
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={top15} layout="vertical" margin={{ left: 0, right: 10, top: 5, bottom: 5 }}>
+            <XAxis type="number" tick={{ fontSize: 9 }} />
+            <YAxis
+              type="category"
+              dataKey="shortName"
+              tick={{ fontSize: 9 }}
+              width={100}
+            />
+            <Tooltip
+              formatter={(value: number) => [formatMemberCount(value), "Members"]}
+              labelFormatter={(label) => {
+                const item = top15.find(t => t.shortName === label);
+                return item?.name || label;
+              }}
+              contentStyle={{
+                backgroundColor: "hsl(var(--card))",
+                border: "1px solid hsl(var(--border))",
+                borderRadius: "6px",
+                fontSize: "11px",
+              }}
+            />
+            <Bar dataKey="count" fill="hsl(210, 70%, 50%)" radius={[0, 4, 4, 0]} />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+    </Card>
+  );
+}
+
 function ChamberMap() {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
@@ -777,29 +892,24 @@ export default function AdminNAICS() {
 
   return (
     <div className="h-full flex bg-background">
-      {/* Left Column - Tree Browser */}
-      <div className="w-[35%] flex flex-col border-r border-border/50">
-        <div className="p-3 border-b border-border/50">
-          <div className="flex items-center justify-between gap-2 mb-2">
-            <div>
-              <h1 className="text-sm font-bold tracking-wide">NAICS EXPLORER</h1>
-              <p className="text-[10px] text-muted-foreground">
-                Industry Classification Codes
-              </p>
-            </div>
+      {/* Column 1 - Tree Browser (narrow) */}
+      <div className="w-[17%] flex flex-col border-r border-border/50">
+        <div className="p-2 border-b border-border/50">
+          <div className="flex items-center justify-between gap-1 mb-1.5">
+            <h1 className="text-[11px] font-bold tracking-wide">NAICS</h1>
             {tree && (
-              <Badge variant="outline" className="text-[10px]">
-                {formatMemberCount(tree.totalMembers)} businesses
+              <Badge variant="outline" className="text-[9px] px-1">
+                {formatMemberCount(tree.totalMembers)}
               </Badge>
             )}
           </div>
           <div className="relative">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+            <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground" />
             <Input
               placeholder="Search..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-8 text-xs h-8"
+              className="pl-7 text-[10px] h-7"
               data-testid="input-search-naics"
             />
           </div>
@@ -808,7 +918,7 @@ export default function AdminNAICS() {
         <ScrollArea className="flex-1">
           {isLoading ? (
             <div className="flex items-center justify-center h-32">
-              <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+              <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
             </div>
           ) : (
             <div className="divide-y divide-border/30">
@@ -848,19 +958,21 @@ export default function AdminNAICS() {
         </ScrollArea>
       </div>
 
-      {/* Middle Column - Charts */}
-      <div className="w-[30%] p-3 overflow-auto border-r border-border/50">
-        <div className="space-y-3">
-          {tree && tree.sectors.length > 0 && (
-            <>
-              <SectorPieChart sectors={tree.sectors} />
-              <TopSubsectorsChart sectors={tree.sectors} />
-            </>
-          )}
-        </div>
+      {/* Column 2 - Pie Chart (full height) */}
+      <div className="w-[20%] p-3 flex flex-col border-r border-border/50">
+        {tree && tree.sectors.length > 0 && (
+          <SectorPieChartFull sectors={tree.sectors} />
+        )}
       </div>
 
-      {/* Right Column - Map */}
+      {/* Column 3 - Bar Chart (full height) */}
+      <div className="w-[23%] p-3 flex flex-col border-r border-border/50">
+        {tree && tree.sectors.length > 0 && (
+          <TopSubsectorsChartFull sectors={tree.sectors} />
+        )}
+      </div>
+
+      {/* Column 4 - Map (frozen as requested) */}
       <div className="flex-1 flex flex-col">
         <ChamberMapFull />
       </div>
