@@ -334,6 +334,7 @@ function GrowthChart() {
             <YAxis 
               yAxisId="right"
               orientation="right"
+              domain={[0, 100000]}
               tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }}
               tickLine={{ stroke: 'hsl(var(--border))' }}
               axisLine={{ stroke: 'hsl(var(--border))' }}
