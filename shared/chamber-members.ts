@@ -1075,7 +1075,7 @@ export const chamberMembers: ChamberMember[] = [
   // Nanaimo Chamber of Commerce
   {
     id: "nanaimo-coc-member-001",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Vancouver Island University",
     website: "https://www.viu.ca",
     category: "education",
@@ -1093,7 +1093,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-coc-member-002",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Nanaimo Regional General Hospital",
     website: "https://www.islandhealth.ca",
     category: "healthcare",
@@ -1111,7 +1111,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-coc-member-003",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Nanaimo Airport",
     website: "https://www.nanaimoairport.com",
     category: "aviation",
@@ -1129,7 +1129,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-coc-member-004",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "A.C. Taxi",
     website: "https://www.actaxi.ca",
     category: "taxi-rideshare",
@@ -4030,7 +4030,7 @@ export const chamberMembers: ChamberMember[] = [
   // More Nanaimo Chamber members
   {
     id: "nanaimo-coc-member-005",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Woodgrove Centre",
     website: "https://www.woodgrovecentre.com",
     category: "retail",
@@ -4045,7 +4045,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-coc-member-006",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Nanaimo Port Authority",
     website: "https://www.npa.ca",
     category: "fishing-marine",
@@ -4063,7 +4063,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-coc-member-007",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "BC Ferries - Departure Bay Terminal",
     website: "https://www.bcferries.com",
     category: "transit",
@@ -4081,7 +4081,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-coc-member-008",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Harbour Air Seaplanes",
     website: "https://www.harbourair.com",
     category: "aviation",
@@ -6632,7 +6632,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-coc-member-009",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Snuneymuxw First Nation",
     website: "https://www.snuneymuxw.ca",
     category: "first-nations",
@@ -7433,7 +7433,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-coc-member-010",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Vancouver Island University",
     website: "https://www.viu.ca",
     category: "education",
@@ -43339,7 +43339,7 @@ export const chamberMembers: ChamberMember[] = [
   // ==========================================================================
   {
     id: "nanaimo-member-001",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "AC Taxi",
     category: "taxi-rideshare",
     subcategory: undefined,
@@ -43358,7 +43358,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-002",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Adam Hawryluk - Flawless Financing",
     category: "banking-finance",
     subcategory: undefined,
@@ -43377,7 +43377,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-003",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Affirmative Financial Corp.",
     category: "banking-finance",
     subcategory: undefined,
@@ -43396,7 +43396,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-004",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "AKG Canada",
     category: "other",
     subcategory: undefined,
@@ -43415,7 +43415,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-005",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Alpine Pacific Agencies",
     category: "other",
     subcategory: undefined,
@@ -43434,7 +43434,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-006",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Andre's Electronic Experts",
     category: "other",
     subcategory: undefined,
@@ -43453,7 +43453,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-007",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Arbutus Fire Protection Ltd",
     category: "marketing-advertising",
     subcategory: undefined,
@@ -43472,7 +43472,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-008",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Arbutus Tools Ltd.",
     category: "other",
     subcategory: undefined,
@@ -43491,7 +43491,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-009",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Ashley Travel",
     category: "other",
     subcategory: undefined,
@@ -43510,7 +43510,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-010",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Aspengrove School",
     category: "education",
     subcategory: undefined,
@@ -43529,7 +43529,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-011",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Astera's Greek Taverna",
     category: "other",
     subcategory: undefined,
@@ -43548,7 +43548,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-012",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Ayers Repairs Ltd.",
     category: "other",
     subcategory: undefined,
@@ -43567,7 +43567,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-013",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "A Taste of Learning",
     category: "education",
     subcategory: undefined,
@@ -43586,7 +43586,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-014",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "A Vivid Edge Salon Spa",
     category: "spa-beauty",
     subcategory: undefined,
@@ -43605,7 +43605,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-015",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Aarsen Gutters Corp",
     category: "other",
     subcategory: undefined,
@@ -43624,7 +43624,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-016",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Acera Insurance",
     category: "insurance",
     subcategory: undefined,
@@ -43643,7 +43643,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-017",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Ackroyd Financial Services Inc",
     category: "automotive",
     subcategory: undefined,
@@ -43662,7 +43662,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-018",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Aegis Records Management",
     category: "environmental",
     subcategory: undefined,
@@ -43681,7 +43681,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-019",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "AESTHETICPRO SOLUTIONS INC",
     category: "marketing-advertising",
     subcategory: undefined,
@@ -43700,7 +43700,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-020",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "AIE Management Inc.",
     category: "other",
     subcategory: undefined,
@@ -43719,7 +43719,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-021",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Alanova Solutions",
     category: "other",
     subcategory: undefined,
@@ -43738,7 +43738,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-022",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Alexandra's Nanaimo",
     category: "other",
     subcategory: undefined,
@@ -43757,7 +43757,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-023",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Aligned Kitchen and Cabinets",
     category: "accommodation",
     subcategory: undefined,
@@ -43776,7 +43776,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-024",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Alison Kuenzig",
     category: "other",
     subcategory: undefined,
@@ -43795,7 +43795,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-025",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "All Canada Moving",
     category: "trucking-freight",
     subcategory: undefined,
@@ -43814,7 +43814,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-026",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Almost Famous Laser Corp",
     category: "other",
     subcategory: undefined,
@@ -43833,7 +43833,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-027",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Alpha Strategy Media Inc.",
     category: "media",
     subcategory: undefined,
@@ -43852,7 +43852,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-028",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Andrea Paris Real Estate",
     category: "real-estate",
     subcategory: undefined,
@@ -43871,7 +43871,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-029",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Anushka Chauhan",
     category: "other",
     subcategory: undefined,
@@ -43890,7 +43890,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-030",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Aquilla Archaeology Ltd.",
     category: "other",
     subcategory: undefined,
@@ -43909,7 +43909,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-031",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Arbonne",
     category: "other",
     subcategory: undefined,
@@ -43928,7 +43928,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-032",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Ardent Properties Inc.",
     category: "marketing-advertising",
     subcategory: undefined,
@@ -43947,7 +43947,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-033",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Armia Zaheer",
     category: "other",
     subcategory: undefined,
@@ -43966,7 +43966,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-034",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Art 10 Gallery",
     category: "arts-culture",
     subcategory: undefined,
@@ -43985,7 +43985,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-035",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Artez Photography Corporation",
     category: "arts-culture",
     subcategory: undefined,
@@ -44004,7 +44004,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-036",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "ArtWonder",
     category: "arts-culture",
     subcategory: undefined,
@@ -44023,7 +44023,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-037",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Ashdown Capital - Nanaimo",
     category: "banking-finance",
     subcategory: undefined,
@@ -44042,7 +44042,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-038",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Aspen Films",
     category: "other",
     subcategory: undefined,
@@ -44061,7 +44061,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-039",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "atelier Pearl",
     category: "other",
     subcategory: undefined,
@@ -44080,7 +44080,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-040",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "![GrowthZone - Membership Management Software",
     category: "it-technology",
     subcategory: undefined,
@@ -44099,7 +44099,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-041",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Scroll to top",
     category: "other",
     subcategory: undefined,
@@ -44118,7 +44118,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-042",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "B Gallant Homes",
     category: "real-estate",
     subcategory: undefined,
@@ -44137,7 +44137,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-043",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Baker Supply Ltd.",
     category: "other",
     subcategory: undefined,
@@ -44156,7 +44156,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-044",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Ballenas Housing Society",
     category: "charity-nonprofit",
     subcategory: undefined,
@@ -44175,7 +44175,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-045",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "BC Green Business",
     category: "environmental",
     subcategory: undefined,
@@ -44194,7 +44194,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-046",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "BC SPCA Nanaimo & District Branch",
     category: "other",
     subcategory: undefined,
@@ -44213,7 +44213,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-047",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Benjamin D. Bruner",
     category: "other",
     subcategory: undefined,
@@ -44232,7 +44232,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-048",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "NanaimoBC",
     category: "other",
     subcategory: undefined,
@@ -44251,7 +44251,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-049",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Benson View Veterinary Hospital",
     category: "healthcare",
     subcategory: undefined,
@@ -44270,7 +44270,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-050",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Berwick on the Lake",
     category: "other",
     subcategory: undefined,
@@ -44289,7 +44289,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-051",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Best Western Northgate Inn",
     category: "accommodation",
     subcategory: undefined,
@@ -44308,7 +44308,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-052",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Bethlehem Centre Society",
     category: "charity-nonprofit",
     subcategory: undefined,
@@ -44327,7 +44327,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-053",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Better Business Bureau VI",
     category: "other",
     subcategory: undefined,
@@ -44346,7 +44346,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-054",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "BGC Central Vancouver Island",
     category: "other",
     subcategory: undefined,
@@ -44365,7 +44365,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-055",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Big Island Cleaning Ltd.",
     category: "cleaning-janitorial",
     subcategory: undefined,
@@ -44384,7 +44384,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-056",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "BMO Bank of Montreal (North Nanaimo)",
     category: "banking-finance",
     subcategory: undefined,
@@ -44403,7 +44403,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-057",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "BMO Bank of Montreal (Terminal Park B...",
     category: "banking-finance",
     subcategory: undefined,
@@ -44422,7 +44422,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-058",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "BMO Bank of Montreal (Terminal Park Branch)",
     category: "banking-finance",
     subcategory: undefined,
@@ -44441,7 +44441,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-059",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Body Tempo Health and Fitness Inc.",
     category: "fitness-wellness",
     subcategory: undefined,
@@ -44460,7 +44460,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-060",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Bonaventure Support Services Ltd.",
     category: "automotive",
     subcategory: undefined,
@@ -44479,7 +44479,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-061",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Bothwell Cheese Inc. dba Paradise Isl...",
     category: "other",
     subcategory: undefined,
@@ -44498,7 +44498,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-062",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Bothwell Cheese Inc. dba Paradise Island Foods",
     category: "food-beverage",
     subcategory: undefined,
@@ -44517,7 +44517,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-063",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Bravenet Marketing",
     category: "grocery",
     subcategory: undefined,
@@ -44536,7 +44536,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-064",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Brickyard Physiotherapy",
     category: "healthcare",
     subcategory: undefined,
@@ -44555,7 +44555,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-065",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Browns Socialhouse Restaurant",
     category: "restaurant",
     subcategory: undefined,
@@ -44574,7 +44574,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-066",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Budget Car, Truck & Self Storage Rent...",
     category: "automotive",
     subcategory: undefined,
@@ -44593,7 +44593,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-067",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Budget Car, Truck & Self Storage Rentals - Devon Transport Ltd.",
     category: "automotive",
     subcategory: undefined,
@@ -44612,7 +44612,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-068",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Burke Group (Vancouver Island)",
     category: "other",
     subcategory: undefined,
@@ -44631,7 +44631,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-069",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Business Development Bank of Canada",
     category: "banking-finance",
     subcategory: undefined,
@@ -44650,7 +44650,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-070",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Barnes Capital Wealth Management",
     category: "banking-finance",
     subcategory: undefined,
@@ -44669,7 +44669,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-071",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Bartlett Tree Experts",
     category: "arts-culture",
     subcategory: undefined,
@@ -44688,7 +44688,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-072",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "BC Cancer Foundation - Vancouver Isla...",
     category: "charity-nonprofit",
     subcategory: undefined,
@@ -44707,7 +44707,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-073",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "BC Cancer Foundation - Vancouver Island",
     category: "charity-nonprofit",
     subcategory: undefined,
@@ -44726,7 +44726,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-074",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "BC Government",
     category: "government",
     subcategory: undefined,
@@ -44745,7 +44745,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-075",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "BCAA - Evolve E-Bike and E-Scooter Sh...",
     category: "other",
     subcategory: undefined,
@@ -44764,7 +44764,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-076",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "BCAA - Evolve E-Bike and E-Scooter Share",
     category: "other",
     subcategory: undefined,
@@ -44783,7 +44783,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-077",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "BD Mitchell Prosthetic & Orthotic Ser...",
     category: "it-technology",
     subcategory: undefined,
@@ -44802,7 +44802,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-078",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "BD Mitchell Prosthetic & Orthotic Services Ltd",
     category: "automotive",
     subcategory: undefined,
@@ -44821,7 +44821,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-079",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Beachside Bookkeeping Services",
     category: "accounting",
     subcategory: undefined,
@@ -44840,7 +44840,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-080",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Belmont Holdings",
     category: "other",
     subcategory: undefined,
@@ -44859,7 +44859,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-081",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Better Mousetrap",
     category: "other",
     subcategory: undefined,
@@ -44878,7 +44878,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-082",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Beyond Programs Ltd",
     category: "marketing-advertising",
     subcategory: undefined,
@@ -44897,7 +44897,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-083",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Big Brothers Big Sisters of Central V...",
     category: "other",
     subcategory: undefined,
@@ -44916,7 +44916,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-084",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Big Brothers Big Sisters of Central Vancouver Island",
     category: "other",
     subcategory: undefined,
@@ -44935,7 +44935,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-085",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Black and White Special Event Rentals",
     category: "entertainment",
     subcategory: undefined,
@@ -44954,7 +44954,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-086",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Black Moon Alchemy",
     category: "other",
     subcategory: undefined,
@@ -44973,7 +44973,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-087",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Blaise The Trail Inc. / Women of Infl...",
     category: "other",
     subcategory: undefined,
@@ -44992,7 +44992,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-088",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Blaise The Trail Inc. / Women of Influence Nanaimo",
     category: "other",
     subcategory: undefined,
@@ -45011,7 +45011,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-089",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Blessing Ighofewo Carlos",
     category: "automotive",
     subcategory: undefined,
@@ -45030,7 +45030,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-090",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Boostani",
     category: "other",
     subcategory: undefined,
@@ -45049,7 +45049,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-091",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Bramble & Bay",
     category: "other",
     subcategory: undefined,
@@ -45068,7 +45068,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-092",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Breze Salon and Spa Ltd.",
     category: "spa-beauty",
     subcategory: undefined,
@@ -45087,7 +45087,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-093",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Brix+Mortar SocialHouse",
     category: "other",
     subcategory: undefined,
@@ -45106,7 +45106,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-094",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Brooks Landing Centre Inc.",
     category: "other",
     subcategory: undefined,
@@ -45125,7 +45125,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-095",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Budget Blinds of Nanaimo",
     category: "other",
     subcategory: undefined,
@@ -45144,7 +45144,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-096",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Caledonia Fire Protection Ltd.",
     category: "marketing-advertising",
     subcategory: undefined,
@@ -45163,7 +45163,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-097",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Canadian Corps of Commissionaires",
     category: "other",
     subcategory: undefined,
@@ -45182,7 +45182,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-098",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Canadian Home Builders Association - ...",
     category: "charity-nonprofit",
     subcategory: undefined,
@@ -45201,7 +45201,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-099",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Canadian Home Builders Association - Vancouver Island",
     category: "charity-nonprofit",
     subcategory: undefined,
@@ -45220,7 +45220,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-100",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Canadian Western Bank",
     category: "banking-finance",
     subcategory: undefined,
@@ -45239,7 +45239,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-101",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Casino Nanaimo",
     category: "other",
     subcategory: undefined,
@@ -45258,7 +45258,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-102",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Central Vancouver Island Multicultura...",
     category: "other",
     subcategory: undefined,
@@ -45277,7 +45277,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-103",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Central Vancouver Island Multicultural Society (CVIMS)",
     category: "charity-nonprofit",
     subcategory: undefined,
@@ -45296,7 +45296,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-104",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Central Walk Woodgrove Shopping Centr...",
     category: "retail",
     subcategory: undefined,
@@ -45315,7 +45315,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-105",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Central Walk Woodgrove Shopping Centre Inc.",
     category: "retail",
     subcategory: undefined,
@@ -45334,7 +45334,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-106",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Chatwin Engineering Ltd",
     category: "engineering",
     subcategory: undefined,
@@ -45353,7 +45353,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-107",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Children's Health Foundation of Vanco...",
     category: "charity-nonprofit",
     subcategory: undefined,
@@ -45372,7 +45372,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-108",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Children's Health Foundation of Vancouver Island",
     category: "charity-nonprofit",
     subcategory: undefined,
@@ -45391,7 +45391,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-109",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Chinook Scaffold Systems Ltd.",
     category: "other",
     subcategory: undefined,
@@ -45410,7 +45410,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-110",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "CIBC Port Place Shopping Center",
     category: "retail",
     subcategory: undefined,
@@ -45429,7 +45429,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-111",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Circle B Mobile Home Towing Ltd. and ...",
     category: "towing",
     subcategory: undefined,
@@ -45448,7 +45448,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-112",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Circle B Mobile Home Towing Ltd. and Pilot Car Service",
     category: "automotive",
     subcategory: undefined,
@@ -45467,7 +45467,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-113",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Classic Care Carpet & Upholstery Clea...",
     category: "automotive",
     subcategory: undefined,
@@ -45486,7 +45486,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-114",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Classic Care Carpet & Upholstery Cleaning",
     category: "automotive",
     subcategory: undefined,
@@ -45505,7 +45505,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-115",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Coast Bastion Hotel",
     category: "accommodation",
     subcategory: undefined,
@@ -45524,7 +45524,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-116",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Coast Canada Construction",
     category: "construction",
     subcategory: undefined,
@@ -45543,7 +45543,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-117",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Coast Capital Savings Credit Union",
     category: "banking-finance",
     subcategory: undefined,
@@ -45562,7 +45562,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-118",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Coastal Community Credit Union",
     category: "banking-finance",
     subcategory: undefined,
@@ -45581,7 +45581,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-119",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Coastal Community Credit Union (Bowen...",
     category: "banking-finance",
     subcategory: undefined,
@@ -45600,7 +45600,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-120",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Coastal Community Credit Union (Bowen Branch)",
     category: "banking-finance",
     subcategory: undefined,
@@ -45619,7 +45619,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-121",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Coastal Community Credit Union (Hammo...",
     category: "banking-finance",
     subcategory: undefined,
@@ -45638,7 +45638,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-122",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Coastal Community Credit Union (Hammond Bay)",
     category: "banking-finance",
     subcategory: undefined,
@@ -45657,7 +45657,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-123",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Coastal Community Credit Union (South...",
     category: "banking-finance",
     subcategory: undefined,
@@ -45676,7 +45676,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-124",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Coastal Community Credit Union (Southgate)",
     category: "banking-finance",
     subcategory: undefined,
@@ -45695,7 +45695,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-125",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Coastal Energy Ltd.",
     category: "other",
     subcategory: undefined,
@@ -45714,7 +45714,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-126",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Coastline Electrical and Plumbing Ltd...",
     category: "electrical",
     subcategory: undefined,
@@ -45733,7 +45733,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-127",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Columbia Bakery Ltd",
     category: "food-beverage",
     subcategory: undefined,
@@ -45752,7 +45752,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-128",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Community Futures Central Island",
     category: "it-technology",
     subcategory: undefined,
@@ -45771,7 +45771,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-129",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Costco Wholesale 155",
     category: "other",
     subcategory: undefined,
@@ -45790,7 +45790,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-130",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Cottonwood Golf Course",
     category: "recreation",
     subcategory: undefined,
@@ -45809,7 +45809,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-131",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Country Club Centre",
     category: "charity-nonprofit",
     subcategory: undefined,
@@ -45828,7 +45828,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-132",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Crimson Coast Dance Society",
     category: "arts-culture",
     subcategory: undefined,
@@ -45847,7 +45847,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-133",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Cross & Company, Chartered Profession...",
     category: "arts-culture",
     subcategory: undefined,
@@ -45866,7 +45866,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-134",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Cross & Company, Chartered Professional Accountants",
     category: "accounting",
     subcategory: undefined,
@@ -45885,7 +45885,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-135",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Cable Bay Estates Ltd.",
     category: "taxi-rideshare",
     subcategory: undefined,
@@ -45904,7 +45904,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-136",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Caliber Leadership Systems Inc.",
     category: "other",
     subcategory: undefined,
@@ -45923,7 +45923,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-137",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Camargue Properties",
     category: "marketing-advertising",
     subcategory: undefined,
@@ -45942,7 +45942,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-138",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Canadian Cypress Inc.",
     category: "marketing-advertising",
     subcategory: undefined,
@@ -45961,7 +45961,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-139",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Canadian HAZ-MAT Environmental LTD",
     category: "environmental",
     subcategory: undefined,
@@ -45980,7 +45980,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-140",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Canadian Indigenous Art Inc.",
     category: "arts-culture",
     subcategory: undefined,
@@ -45999,7 +45999,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-141",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Candy Boy foods corp/ Bar Luna",
     category: "food-beverage",
     subcategory: undefined,
@@ -46018,7 +46018,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-142",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Canning Consulting",
     category: "consulting",
     subcategory: undefined,
@@ -46037,7 +46037,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-143",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Caties Hot Dilled Beans",
     category: "other",
     subcategory: undefined,
@@ -46056,7 +46056,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-144",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "CBRE Limited",
     category: "it-technology",
     subcategory: undefined,
@@ -46075,7 +46075,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-145",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Cedar & Silk Picnics",
     category: "other",
     subcategory: undefined,
@@ -46094,7 +46094,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-146",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Cedar Opportunities BC Society (Coco ...",
     category: "charity-nonprofit",
     subcategory: undefined,
@@ -46113,7 +46113,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-147",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Cedar Opportunities BC Society (Coco Cafe)",
     category: "charity-nonprofit",
     subcategory: undefined,
@@ -46132,7 +46132,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-148",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Celtic Performing Arts \\| CUE CONSULTI...",
     category: "arts-culture",
     subcategory: undefined,
@@ -46151,7 +46151,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-149",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Celtic Performing Arts \\| CUE CONSULTING",
     category: "arts-culture",
     subcategory: undefined,
@@ -46170,7 +46170,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-150",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Centre for Experiential Learning (VIU...",
     category: "education",
     subcategory: undefined,
@@ -46189,7 +46189,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-151",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Chartwell Residences",
     category: "arts-culture",
     subcategory: undefined,
@@ -46208,7 +46208,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-152",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Checkers Fudge",
     category: "other",
     subcategory: undefined,
@@ -46227,7 +46227,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-153",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Chester Fields Inc.",
     category: "other",
     subcategory: undefined,
@@ -46246,7 +46246,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-154",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Chinook Business Advisory Ltd.",
     category: "banking-finance",
     subcategory: undefined,
@@ -46265,7 +46265,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-155",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Christine Whitbeck Real Estate",
     category: "it-technology",
     subcategory: undefined,
@@ -46284,7 +46284,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-156",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Clay Tree Society",
     category: "charity-nonprofit",
     subcategory: undefined,
@@ -46303,7 +46303,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-157",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Clayton Consulting",
     category: "consulting",
     subcategory: undefined,
@@ -46322,7 +46322,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-158",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Clove and Oak",
     category: "other",
     subcategory: undefined,
@@ -46341,7 +46341,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-159",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Coaltown Thrift & Vintage",
     category: "other",
     subcategory: undefined,
@@ -46360,7 +46360,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-160",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Coast Mountain Construction Ltd.",
     category: "construction",
     subcategory: undefined,
@@ -46379,7 +46379,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-161",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Coast2Coast HR",
     category: "other",
     subcategory: undefined,
@@ -46398,7 +46398,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-162",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Coastal Community Insurance Services ...",
     category: "automotive",
     subcategory: undefined,
@@ -46417,7 +46417,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-163",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Coastal Community Insurance Services (2007) Ltd.",
     category: "automotive",
     subcategory: undefined,
@@ -46436,7 +46436,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-164",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Coastal Karma Candles",
     category: "other",
     subcategory: undefined,
@@ -46455,7 +46455,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-165",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Coastal Water Store",
     category: "retail",
     subcategory: undefined,
@@ -46474,7 +46474,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-166",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "CODEHARBOR SOLUTIONS LTD.",
     category: "other",
     subcategory: undefined,
@@ -46493,7 +46493,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-167",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Cold Front Gelato",
     category: "other",
     subcategory: undefined,
@@ -46512,7 +46512,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-168",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Collaborative Law Corporation",
     category: "legal",
     subcategory: undefined,
@@ -46531,7 +46531,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-169",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Comfort Keepers",
     category: "other",
     subcategory: undefined,
@@ -46550,7 +46550,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-170",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Community Partnerships (VIU)",
     category: "arts-culture",
     subcategory: undefined,
@@ -46569,7 +46569,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-171",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Conan Graham (Self Employed - consult...",
     category: "other",
     subcategory: undefined,
@@ -46588,7 +46588,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-172",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Conan Graham (Self Employed - consulting & advisory)",
     category: "banking-finance",
     subcategory: undefined,
@@ -46607,7 +46607,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-173",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "ConnectED Global Education Associates...",
     category: "education",
     subcategory: undefined,
@@ -46626,7 +46626,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-174",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "ConnectED Global Education Associates Inc",
     category: "education",
     subcategory: undefined,
@@ -46645,7 +46645,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-175",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Conservative Party of Canada - Nanaim...",
     category: "arts-culture",
     subcategory: undefined,
@@ -46664,7 +46664,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-176",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Conservative Party of Canada - Nanaimo Ladysmith Electoral District Association",
     category: "arts-culture",
     subcategory: undefined,
@@ -46683,7 +46683,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-177",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Cooperators - Odimega Financial Group...",
     category: "banking-finance",
     subcategory: undefined,
@@ -46702,7 +46702,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-178",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Cooperators - Odimega Financial Group Ltd.",
     category: "banking-finance",
     subcategory: undefined,
@@ -46721,7 +46721,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-179",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Cori Lynn's Floral Design",
     category: "marketing-advertising",
     subcategory: undefined,
@@ -46740,7 +46740,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-180",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Courtney Sanh - Mortgage Broker",
     category: "banking-finance",
     subcategory: undefined,
@@ -46759,7 +46759,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-181",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Courtyard by Marriott Nanaimo",
     category: "other",
     subcategory: undefined,
@@ -46778,7 +46778,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-182",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Crossroads Pregnancy Centre",
     category: "marketing-advertising",
     subcategory: undefined,
@@ -46797,7 +46797,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-183",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "CULTURACRAFT BOUTIQUE LTD.",
     category: "retail",
     subcategory: undefined,
@@ -46816,7 +46816,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-184",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Curva- Voom",
     category: "automotive",
     subcategory: undefined,
@@ -46835,7 +46835,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-185",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Dallen's Dream Team Society",
     category: "charity-nonprofit",
     subcategory: undefined,
@@ -46854,7 +46854,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-186",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "DenMar Electric Ltd",
     category: "other",
     subcategory: undefined,
@@ -46873,7 +46873,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-187",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Departure Bay Automotive Service Cent...",
     category: "arts-culture",
     subcategory: undefined,
@@ -46892,7 +46892,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-188",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Departure Bay Automotive Service Centre (Ferris Holdings Inc.)",
     category: "arts-culture",
     subcategory: undefined,
@@ -46911,7 +46911,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-189",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Discovery Community College",
     category: "education",
     subcategory: undefined,
@@ -46930,7 +46930,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-190",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Doane Services Limited Partnership",
     category: "arts-culture",
     subcategory: undefined,
@@ -46949,7 +46949,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-191",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "25 Cavan St, Nanaimo, BC V9R 2T9",
     category: "other",
     subcategory: undefined,
@@ -46968,7 +46968,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-192",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Dog n' Suds",
     category: "other",
     subcategory: undefined,
@@ -46987,7 +46987,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-193",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Dollars & Cents Bottle Sorting Facili...",
     category: "other",
     subcategory: undefined,
@@ -47006,7 +47006,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-194",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Dollars & Cents Bottle Sorting Facility",
     category: "it-technology",
     subcategory: undefined,
@@ -47025,7 +47025,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-195",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Dougan Irwin & Associates CPA's",
     category: "accounting",
     subcategory: undefined,
@@ -47044,7 +47044,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-196",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Dr M Lang & Dr R M Renner Inc",
     category: "other",
     subcategory: undefined,
@@ -47063,7 +47063,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-197",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Dr. Farshid Feizi Inc. (Brickyard Den...",
     category: "other",
     subcategory: undefined,
@@ -47082,7 +47082,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-198",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Dr. Farshid Feizi Inc. (Brickyard Dental Clinic & Pacific One Dental)",
     category: "dental",
     subcategory: undefined,
@@ -47101,7 +47101,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-199",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Datasphere Dynamics Inc.",
     category: "it-technology",
     subcategory: undefined,
@@ -47120,7 +47120,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-200",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "DGH Enterprises King Kauna Hawaiian S...",
     category: "marketing-advertising",
     subcategory: undefined,
@@ -47139,7 +47139,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-201",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "DGH Enterprises King Kauna Hawaiian Shirts",
     category: "marketing-advertising",
     subcategory: undefined,
@@ -47158,7 +47158,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-202",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Downtown Nanaimo Business Association",
     category: "charity-nonprofit",
     subcategory: undefined,
@@ -47177,7 +47177,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-203",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Dr. Christina Stasia",
     category: "other",
     subcategory: undefined,
@@ -47196,7 +47196,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-204",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Dr. Karen-Marie Elah Perry",
     category: "other",
     subcategory: undefined,
@@ -47215,7 +47215,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-205",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Driven Island Agencies Ltd dba Insure...",
     category: "insurance",
     subcategory: undefined,
@@ -47234,7 +47234,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-206",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Driven Island Agencies Ltd dba InsureLine Brokers (Driven)",
     category: "insurance",
     subcategory: undefined,
@@ -47253,7 +47253,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-207",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Dualistic Unity Media Inc.",
     category: "it-technology",
     subcategory: undefined,
@@ -47272,7 +47272,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-208",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Edgewood Treatment Center",
     category: "other",
     subcategory: undefined,
@@ -47291,7 +47291,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-209",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Erickson Roofing Ltd.",
     category: "roofing",
     subcategory: undefined,
@@ -47310,7 +47310,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-210",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "ETHOS Career Mgmt. Group Ltd.",
     category: "automotive",
     subcategory: undefined,
@@ -47329,7 +47329,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-211",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Eagle Point Dental",
     category: "dental",
     subcategory: undefined,
@@ -47348,7 +47348,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-212",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Easter Seals BC/Yukon",
     category: "other",
     subcategory: undefined,
@@ -47367,7 +47367,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-213",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Eden Gardens- Nanaimo Travellers Lodg...",
     category: "other",
     subcategory: undefined,
@@ -47386,7 +47386,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-214",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Eden Gardens- Nanaimo Travellers Lodge Society",
     category: "accommodation",
     subcategory: undefined,
@@ -47405,7 +47405,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-215",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Elite Image Design & Print",
     category: "it-technology",
     subcategory: undefined,
@@ -47424,7 +47424,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-216",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Ephemera and Co",
     category: "other",
     subcategory: undefined,
@@ -47443,7 +47443,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-217",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Eric Quao",
     category: "other",
     subcategory: undefined,
@@ -47462,7 +47462,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-218",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "eSafetyFirst Canada",
     category: "other",
     subcategory: undefined,
@@ -47481,7 +47481,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-219",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Fabris McIver Hornquist & Radcliffe (...",
     category: "other",
     subcategory: undefined,
@@ -47500,7 +47500,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-220",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Fabris McIver Hornquist & Radcliffe (565098 BC Ltd.)",
     category: "other",
     subcategory: undefined,
@@ -47519,7 +47519,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-221",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Faculty of Trades and Applied Technol...",
     category: "it-technology",
     subcategory: undefined,
@@ -47538,7 +47538,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-222",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Faculty of Trades and Applied Technology (VIU)",
     category: "it-technology",
     subcategory: undefined,
@@ -47557,7 +47557,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-223",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Flying Fish",
     category: "other",
     subcategory: undefined,
@@ -47576,7 +47576,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-224",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Full Scope Rehabilitation Services In...",
     category: "automotive",
     subcategory: undefined,
@@ -47595,7 +47595,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-225",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Full Scope Rehabilitation Services Inc.",
     category: "automotive",
     subcategory: undefined,
@@ -47614,7 +47614,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-226",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Fawcett Mattress Co Nanaimo",
     category: "other",
     subcategory: undefined,
@@ -47633,7 +47633,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-227",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Fitness World Nanaimo",
     category: "fitness-wellness",
     subcategory: undefined,
@@ -47652,7 +47652,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-228",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Flamez Chicken",
     category: "other",
     subcategory: undefined,
@@ -47671,7 +47671,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-229",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Footprints Security Patrol Inc",
     category: "it-technology",
     subcategory: undefined,
@@ -47690,7 +47690,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-230",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Foster Heating & Cooling",
     category: "heating-cooling",
     subcategory: undefined,
@@ -47709,7 +47709,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-231",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "FTC Property Services ltd",
     category: "automotive",
     subcategory: undefined,
@@ -47728,7 +47728,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-232",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Funk Revival",
     category: "other",
     subcategory: undefined,
@@ -47747,7 +47747,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-233",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Garry Revesz",
     category: "other",
     subcategory: undefined,
@@ -47766,7 +47766,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-234",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Glacial Bay Organic Clay Inc.",
     category: "other",
     subcategory: undefined,
@@ -47785,7 +47785,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-235",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "GME Machinery Inc.",
     category: "other",
     subcategory: undefined,
@@ -47804,7 +47804,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-236",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Grant Illuminated Signs",
     category: "other",
     subcategory: undefined,
@@ -47823,7 +47823,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-237",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Great Canadian Oil Change",
     category: "automotive",
     subcategory: undefined,
@@ -47842,7 +47842,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-238",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "G KRONSTAL CONSULTING",
     category: "consulting",
     subcategory: undefined,
@@ -47861,7 +47861,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-239",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "G. Gamble, BC Land Surveyor",
     category: "automotive",
     subcategory: undefined,
@@ -47880,7 +47880,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-240",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "G.O.A.T Support Services",
     category: "automotive",
     subcategory: undefined,
@@ -47899,7 +47899,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-241",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Galaxy Motors",
     category: "other",
     subcategory: undefined,
@@ -47918,7 +47918,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-242",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Glened Dairies (1988) Ltd.",
     category: "other",
     subcategory: undefined,
@@ -47937,7 +47937,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-243",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Glitter Girls Hair & Body Bling",
     category: "it-technology",
     subcategory: undefined,
@@ -47956,7 +47956,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-244",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Global Public Affairs",
     category: "restaurant",
     subcategory: undefined,
@@ -47975,7 +47975,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-245",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Gord & Louisa Coyne",
     category: "other",
     subcategory: undefined,
@@ -47994,7 +47994,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-246",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Gordon’s Homes Sales Ltd.",
     category: "real-estate",
     subcategory: undefined,
@@ -48013,7 +48013,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-247",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Green Staff Home Care",
     category: "automotive",
     subcategory: undefined,
@@ -48032,7 +48032,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-248",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Greg Yaceyko Professional Corporation",
     category: "marketing-advertising",
     subcategory: undefined,
@@ -48051,7 +48051,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-249",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Grumpy Goat Soaps LTD.",
     category: "other",
     subcategory: undefined,
@@ -48070,7 +48070,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-250",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Guava Apparel / Om Boys Apparel",
     category: "it-technology",
     subcategory: undefined,
@@ -48089,7 +48089,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-251",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "GusGus Beaded Designs",
     category: "marketing-advertising",
     subcategory: undefined,
@@ -48108,7 +48108,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-252",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "HA PHOTOGRAPHY",
     category: "photography",
     subcategory: undefined,
@@ -48127,7 +48127,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-253",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Habitat For Humanity Mid-Vancouver Is...",
     category: "it-technology",
     subcategory: undefined,
@@ -48146,7 +48146,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-254",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Habitat For Humanity Mid-Vancouver Island",
     category: "it-technology",
     subcategory: undefined,
@@ -48165,7 +48165,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-255",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Harbour Air Seaplanes",
     category: "other",
     subcategory: undefined,
@@ -48184,7 +48184,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-256",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Harbour Chandler Ltd.",
     category: "other",
     subcategory: undefined,
@@ -48203,7 +48203,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-257",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Harbour Dance Studios",
     category: "arts-culture",
     subcategory: undefined,
@@ -48222,7 +48222,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-258",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Harris Kia",
     category: "other",
     subcategory: undefined,
@@ -48241,7 +48241,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-259",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Hartmann & Co. Furniture",
     category: "arts-culture",
     subcategory: undefined,
@@ -48260,7 +48260,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-260",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Haven Society",
     category: "charity-nonprofit",
     subcategory: undefined,
@@ -48279,7 +48279,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-261",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Hazelwood Group of Companies",
     category: "other",
     subcategory: undefined,
@@ -48298,7 +48298,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-262",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Heath Law LLP",
     category: "legal",
     subcategory: undefined,
@@ -48317,7 +48317,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-263",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Helijet International Inc.",
     category: "other",
     subcategory: undefined,
@@ -48336,7 +48336,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-264",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Herold Engineering Ltd.",
     category: "engineering",
     subcategory: undefined,
@@ -48355,7 +48355,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-265",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Hired Guns Creative",
     category: "arts-culture",
     subcategory: undefined,
@@ -48374,7 +48374,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-266",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Hub City Paving, Division of Lafarge ...",
     category: "construction",
     subcategory: undefined,
@@ -48393,7 +48393,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-267",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Hub City Paving, Division of Lafarge Canada Inc.",
     category: "construction",
     subcategory: undefined,
@@ -48412,7 +48412,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-268",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Hyland Homes Ltd",
     category: "real-estate",
     subcategory: undefined,
@@ -48431,7 +48431,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-269",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "H2 Accelerator",
     category: "other",
     subcategory: undefined,
@@ -48450,7 +48450,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-270",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Habendum Holdings",
     category: "other",
     subcategory: undefined,
@@ -48469,7 +48469,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-271",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Happy Pedals SEO Audits & Copywriting",
     category: "it-technology",
     subcategory: undefined,
@@ -48488,7 +48488,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-272",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Harbourside Sprayfoam",
     category: "marketing-advertising",
     subcategory: undefined,
@@ -48507,7 +48507,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-273",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Heather and Earth oils",
     category: "arts-culture",
     subcategory: undefined,
@@ -48526,7 +48526,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-274",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Hector de Jesus Alcala Amora",
     category: "other",
     subcategory: undefined,
@@ -48545,7 +48545,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-275",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Home Saver Depot",
     category: "other",
     subcategory: undefined,
@@ -48564,7 +48564,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-276",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Houle Electric",
     category: "other",
     subcategory: undefined,
@@ -48583,7 +48583,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-277",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "HTEC",
     category: "other",
     subcategory: undefined,
@@ -48602,7 +48602,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-278",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Hub International Insurance Brokers",
     category: "insurance",
     subcategory: undefined,
@@ -48621,7 +48621,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-279",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Huddy Buddies",
     category: "other",
     subcategory: undefined,
@@ -48640,7 +48640,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-280",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Hunters 3D Creations",
     category: "other",
     subcategory: undefined,
@@ -48659,7 +48659,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-281",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Industrial Plastics & Paints- Plastic...",
     category: "manufacturing",
     subcategory: undefined,
@@ -48678,7 +48678,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-282",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Industrial Plastics & Paints- Plastics Store",
     category: "manufacturing",
     subcategory: undefined,
@@ -48697,7 +48697,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-283",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Inn On Long Lake",
     category: "accommodation",
     subcategory: undefined,
@@ -48716,7 +48716,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-284",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Innov8 Digital Solutions",
     category: "accommodation",
     subcategory: undefined,
@@ -48735,7 +48735,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-285",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Integral Securities (Old City Quarter...",
     category: "arts-culture",
     subcategory: undefined,
@@ -48754,7 +48754,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-286",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Integral Securities (Old City Quarter Investment)",
     category: "arts-culture",
     subcategory: undefined,
@@ -48773,7 +48773,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-287",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Intraworks IT Management",
     category: "it-technology",
     subcategory: undefined,
@@ -48792,7 +48792,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-288",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "ISL Customs Brokers, A division of Su...",
     category: "optometry",
     subcategory: undefined,
@@ -48811,7 +48811,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-289",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "ISL Customs Brokers, A division of Summit International Trade Services Inc.",
     category: "automotive",
     subcategory: undefined,
@@ -48830,7 +48830,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-290",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Island Chemical Express",
     category: "courier-delivery",
     subcategory: undefined,
@@ -48849,7 +48849,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-291",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Island Communications Ltd",
     category: "other",
     subcategory: undefined,
@@ -48868,7 +48868,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-292",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Island Crisis Care Society",
     category: "automotive",
     subcategory: undefined,
@@ -48887,7 +48887,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-293",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Island Red Cedar Construction Ltd.",
     category: "construction",
     subcategory: undefined,
@@ -48906,7 +48906,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-294",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Island Savings - A Division of First...",
     category: "optometry",
     subcategory: undefined,
@@ -48925,7 +48925,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-295",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Island Savings - A Division of First West Credit Union",
     category: "banking-finance",
     subcategory: undefined,
@@ -48944,7 +48944,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-296",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Island Urban Indigenous Wellness Soci...",
     category: "first-nations",
     subcategory: undefined,
@@ -48963,7 +48963,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-297",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Island Urban Indigenous Wellness Society",
     category: "charity-nonprofit",
     subcategory: undefined,
@@ -48982,7 +48982,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-298",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "![ICON Radio",
     category: "media",
     subcategory: undefined,
@@ -49001,7 +49001,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-299",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "IG Wealth Management",
     category: "banking-finance",
     subcategory: undefined,
@@ -49020,7 +49020,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-300",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Immigrant Employment Council of Briti...",
     category: "it-technology",
     subcategory: undefined,
@@ -49039,7 +49039,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-301",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Immigrant Employment Council of British Columbia",
     category: "it-technology",
     subcategory: undefined,
@@ -49058,7 +49058,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-302",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "INCHARACTER COSTUME & NOVELTIES",
     category: "other",
     subcategory: undefined,
@@ -49077,7 +49077,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-303",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Increase Web Design and Marketing",
     category: "grocery",
     subcategory: undefined,
@@ -49096,7 +49096,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-304",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "InkFree BC Initiative Society",
     category: "charity-nonprofit",
     subcategory: undefined,
@@ -49115,7 +49115,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-305",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Input Cowork",
     category: "other",
     subcategory: undefined,
@@ -49134,7 +49134,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-306",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "InWater Technologies",
     category: "it-technology",
     subcategory: undefined,
@@ -49153,7 +49153,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-307",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "IRIS The Visual Group",
     category: "other",
     subcategory: undefined,
@@ -49172,7 +49172,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-308",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Ironworks Cafe & Creperie",
     category: "restaurant",
     subcategory: undefined,
@@ -49191,7 +49191,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-309",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Island Clinical Counselling Ltd.",
     category: "healthcare",
     subcategory: undefined,
@@ -49210,7 +49210,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-310",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Island Design Excellence Awards (IDEA...",
     category: "marketing-advertising",
     subcategory: undefined,
@@ -49229,7 +49229,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-311",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "VictoriaBCV9S 1H8",
     category: "other",
     subcategory: undefined,
@@ -49248,7 +49248,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-312",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Island EcoEnergy Heating and Cooling",
     category: "environmental",
     subcategory: undefined,
@@ -49267,7 +49267,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-313",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Island Heights Construction Ltd.",
     category: "construction",
     subcategory: undefined,
@@ -49286,7 +49286,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-314",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Island Junk Solutions Nanaimo Ltd",
     category: "other",
     subcategory: undefined,
@@ -49305,7 +49305,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-315",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Island Karaoke",
     category: "other",
     subcategory: undefined,
@@ -49324,7 +49324,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-316",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Island Office Coffee Services",
     category: "automotive",
     subcategory: undefined,
@@ -49343,7 +49343,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-317",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Island Storm Marketing",
     category: "grocery",
     subcategory: undefined,
@@ -49362,7 +49362,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-318",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Island West Maintenance",
     category: "other",
     subcategory: undefined,
@@ -49381,7 +49381,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-319",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "It's Simple",
     category: "it-technology",
     subcategory: undefined,
@@ -49400,7 +49400,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-320",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "J.C. Word Assist Ltd.",
     category: "other",
     subcategory: undefined,
@@ -49419,7 +49419,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-321",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "JE Anderson & Associates",
     category: "other",
     subcategory: undefined,
@@ -49438,7 +49438,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-322",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "JENEAN VIOLET",
     category: "other",
     subcategory: undefined,
@@ -49457,7 +49457,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-323",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "John R. Manning Law Corp.",
     category: "legal",
     subcategory: undefined,
@@ -49476,7 +49476,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-324",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "John Ruttan",
     category: "other",
     subcategory: undefined,
@@ -49495,7 +49495,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-325",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Johnston Franklin Bishop",
     category: "retail",
     subcategory: undefined,
@@ -49514,7 +49514,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-326",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Joy Cameron",
     category: "other",
     subcategory: undefined,
@@ -49533,7 +49533,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-327",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Jason Zhang Notary Corporation",
     category: "legal",
     subcategory: undefined,
@@ -49552,7 +49552,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-328",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Jesson Marketing & Consulting",
     category: "consulting",
     subcategory: undefined,
@@ -49571,7 +49571,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-329",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "John Howard Society of Victoria",
     category: "charity-nonprofit",
     subcategory: undefined,
@@ -49590,7 +49590,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-330",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Joseph Boateng",
     category: "fishing-marine",
     subcategory: undefined,
@@ -49609,7 +49609,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-331",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "julia Protz Real Estate",
     category: "marketing-advertising",
     subcategory: undefined,
@@ -49628,7 +49628,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-332",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Kal Tire",
     category: "automotive",
     subcategory: undefined,
@@ -49647,7 +49647,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-333",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "KD Beausoleil & Company Inc. (CPA's)",
     category: "accounting",
     subcategory: undefined,
@@ -49666,7 +49666,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-334",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Ken Hammer & Associates",
     category: "other",
     subcategory: undefined,
@@ -49685,7 +49685,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-335",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Kiwanis Village",
     category: "charity-nonprofit",
     subcategory: undefined,
@@ -49704,7 +49704,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-336",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Kiyo Salon & Day Spa Inc.",
     category: "spa-beauty",
     subcategory: undefined,
@@ -49723,7 +49723,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-337",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Kuehnel Wealth \\| Raymond James",
     category: "banking-finance",
     subcategory: undefined,
@@ -49742,7 +49742,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-338",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Katelyn Kurtz",
     category: "other",
     subcategory: undefined,
@@ -49761,7 +49761,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-339",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Kelland Foods Holdings Ltd.",
     category: "food-beverage",
     subcategory: undefined,
@@ -49780,7 +49780,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-340",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Kev's Vintage",
     category: "other",
     subcategory: undefined,
@@ -49799,7 +49799,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-341",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Kitties & Cream",
     category: "it-technology",
     subcategory: undefined,
@@ -49818,7 +49818,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-342",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Klassy KReations",
     category: "other",
     subcategory: undefined,
@@ -49837,7 +49837,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-343",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Kpn Contracting",
     category: "other",
     subcategory: undefined,
@@ -49856,7 +49856,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-344",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "KVTN Design",
     category: "marketing-advertising",
     subcategory: undefined,
@@ -49875,7 +49875,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-345",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Kw'umut Lelum Foundation",
     category: "charity-nonprofit",
     subcategory: undefined,
@@ -49894,7 +49894,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-346",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "L & E Excavating Ltd.",
     category: "other",
     subcategory: undefined,
@@ -49913,7 +49913,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-347",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Laird Wheaton GM",
     category: "other",
     subcategory: undefined,
@@ -49932,7 +49932,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-348",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "L'Association des Francophones de Nan...",
     category: "charity-nonprofit",
     subcategory: undefined,
@@ -49951,7 +49951,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-349",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "L'Association des Francophones de Nanaimo",
     category: "charity-nonprofit",
     subcategory: undefined,
@@ -49970,7 +49970,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-350",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Lewkowich Engineering Associates Ltd.",
     category: "engineering",
     subcategory: undefined,
@@ -49989,7 +49989,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-351",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Living Forest Campground/RV Park",
     category: "automotive",
     subcategory: undefined,
@@ -50008,7 +50008,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-352",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Loaves & Fishes Community Food Bank S...",
     category: "banking-finance",
     subcategory: undefined,
@@ -50027,7 +50027,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-353",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Loaves & Fishes Community Food Bank Society",
     category: "banking-finance",
     subcategory: undefined,
@@ -50046,7 +50046,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-354",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "London Drugs (Nanaimo N)",
     category: "other",
     subcategory: undefined,
@@ -50065,7 +50065,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-355",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "London Drugs (Port Place)",
     category: "other",
     subcategory: undefined,
@@ -50084,7 +50084,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-356",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Long Lake Sports & Orthopaedic Physio...",
     category: "recreation",
     subcategory: undefined,
@@ -50103,7 +50103,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-357",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Long Lake Sports & Orthopaedic Physiotherapist Corp.",
     category: "recreation",
     subcategory: undefined,
@@ -50122,7 +50122,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-358",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Lady Tarot",
     category: "other",
     subcategory: undefined,
@@ -50141,7 +50141,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-359",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Lango Living Ltd.",
     category: "other",
     subcategory: undefined,
@@ -50160,7 +50160,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-360",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Larkin Boyle Therapy",
     category: "healthcare",
     subcategory: undefined,
@@ -50179,7 +50179,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-361",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "La-Z-Boy Nanaimo",
     category: "other",
     subcategory: undefined,
@@ -50198,7 +50198,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-362",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "leafhome",
     category: "other",
     subcategory: undefined,
@@ -50217,7 +50217,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-363",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Leaving Legacy Live",
     category: "other",
     subcategory: undefined,
@@ -50236,7 +50236,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-364",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Lendlab Mortgage Inc.",
     category: "banking-finance",
     subcategory: undefined,
@@ -50255,7 +50255,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-365",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Les Éditions boudidi",
     category: "it-technology",
     subcategory: undefined,
@@ -50274,7 +50274,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-366",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Level Leadership",
     category: "other",
     subcategory: undefined,
@@ -50293,7 +50293,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-367",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "LIDA Construction",
     category: "construction",
     subcategory: undefined,
@@ -50312,7 +50312,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-368",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Life Well Led",
     category: "other",
     subcategory: undefined,
@@ -50331,7 +50331,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-369",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Lisa Marie Barron",
     category: "restaurant",
     subcategory: undefined,
@@ -50350,7 +50350,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-370",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Literacy Central Vancouver Island",
     category: "it-technology",
     subcategory: undefined,
@@ -50369,7 +50369,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-371",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Little George's Local Guys Food (B.I....",
     category: "food-beverage",
     subcategory: undefined,
@@ -50388,7 +50388,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-372",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Little George's Local Guys Food (B.I.G)",
     category: "food-beverage",
     subcategory: undefined,
@@ -50407,7 +50407,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-373",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Little Weasel Beads",
     category: "it-technology",
     subcategory: undefined,
@@ -50426,7 +50426,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-374",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "LogoWest Promotional Products",
     category: "marketing-advertising",
     subcategory: undefined,
@@ -50445,7 +50445,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-375",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Lucid",
     category: "other",
     subcategory: undefined,
@@ -50464,7 +50464,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-376",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Luxbuilt Legacy Homes",
     category: "real-estate",
     subcategory: undefined,
@@ -50483,7 +50483,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-377",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Madrona Imaging Inc.",
     category: "other",
     subcategory: undefined,
@@ -50502,7 +50502,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-378",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Madsen Centre Massage Therapy Clinic",
     category: "healthcare",
     subcategory: undefined,
@@ -50521,7 +50521,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-379",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Marilyn Sullivan",
     category: "other",
     subcategory: undefined,
@@ -50540,7 +50540,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-380",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Marine Parts Supply of Canada",
     category: "arts-culture",
     subcategory: undefined,
@@ -50559,7 +50559,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-381",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Marshall & Associates",
     category: "other",
     subcategory: undefined,
@@ -50578,7 +50578,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-382",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Mazzei Electric Ltd.",
     category: "other",
     subcategory: undefined,
@@ -50597,7 +50597,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-383",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "MC Volts Electric Inc.",
     category: "other",
     subcategory: undefined,
@@ -50616,7 +50616,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-384",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "McDonalds Restaurants",
     category: "restaurant",
     subcategory: undefined,
@@ -50635,7 +50635,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-385",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Medicine Shoppe Pharmacy #332",
     category: "pharmacy",
     subcategory: undefined,
@@ -50654,7 +50654,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-386",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Michelle L. Greves Law Corporation (d...",
     category: "legal",
     subcategory: undefined,
@@ -50673,7 +50673,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-387",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Michelle L. Greves Law Corporation (dba Selby Law)",
     category: "legal",
     subcategory: undefined,
@@ -50692,7 +50692,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-388",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Mid Island Auto Collision Ltd",
     category: "automotive",
     subcategory: undefined,
@@ -50711,7 +50711,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-389",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Mid Island Co-op",
     category: "other",
     subcategory: undefined,
@@ -50730,7 +50730,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-390",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "MidIsland U-Lock Mini Storage",
     category: "storage",
     subcategory: undefined,
@@ -50749,7 +50749,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-391",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Milner Group Ventures Inc.",
     category: "other",
     subcategory: undefined,
@@ -50768,7 +50768,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-392",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Milton Street Public House",
     category: "restaurant",
     subcategory: undefined,
@@ -50787,7 +50787,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-393",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "MNP LLP",
     category: "other",
     subcategory: undefined,
@@ -50806,7 +50806,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-394",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Mobalign Services Inc.",
     category: "automotive",
     subcategory: undefined,
@@ -50825,7 +50825,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-395",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Mont & Walker Law Corporation",
     category: "legal",
     subcategory: undefined,
@@ -50844,7 +50844,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-396",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Mosaic Forest Management",
     category: "other",
     subcategory: undefined,
@@ -50863,7 +50863,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-397",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Mosaic Information Technologies Ltd.",
     category: "it-technology",
     subcategory: undefined,
@@ -50882,7 +50882,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-398",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Madeleine Francis Massage Therapy",
     category: "healthcare",
     subcategory: undefined,
@@ -50901,7 +50901,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-399",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Maggie's Treats",
     category: "other",
     subcategory: undefined,
@@ -50920,7 +50920,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-400",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Mahle House Restaurant",
     category: "restaurant",
     subcategory: undefined,
@@ -50939,7 +50939,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-401",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Marban Construction and Design Inc.",
     category: "construction",
     subcategory: undefined,
@@ -50958,7 +50958,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-402",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Marie Burrows \\*PREC",
     category: "marketing-advertising",
     subcategory: undefined,
@@ -50977,7 +50977,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-403",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Marmot Heating & Cooling",
     category: "heating-cooling",
     subcategory: undefined,
@@ -50996,7 +50996,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-404",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Marmot Recovery Foundation",
     category: "charity-nonprofit",
     subcategory: undefined,
@@ -51015,7 +51015,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-405",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Marna MacLaggan",
     category: "other",
     subcategory: undefined,
@@ -51034,7 +51034,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-406",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Member of Parliament Tamara Kronis",
     category: "other",
     subcategory: undefined,
@@ -51053,7 +51053,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-407",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Mexico Land Ventures",
     category: "other",
     subcategory: undefined,
@@ -51072,7 +51072,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-408",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Mighty Pines Cocktail Co.",
     category: "other",
     subcategory: undefined,
@@ -51091,7 +51091,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-409",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Mindsai Creative",
     category: "arts-culture",
     subcategory: undefined,
@@ -51110,7 +51110,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-410",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Minute Men Moving & Storage Ltd.",
     category: "storage",
     subcategory: undefined,
@@ -51129,7 +51129,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-411",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "MLA George Anderson",
     category: "other",
     subcategory: undefined,
@@ -51148,7 +51148,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-412",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "MobileKlinik Nanaimo",
     category: "other",
     subcategory: undefined,
@@ -51167,7 +51167,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-413",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Modal Logic Business Solutions Inc.",
     category: "other",
     subcategory: undefined,
@@ -51186,7 +51186,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-414",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Nanoose BayBC",
     category: "other",
     subcategory: undefined,
@@ -51205,7 +51205,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-415",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Mom's Big Cookie",
     category: "other",
     subcategory: undefined,
@@ -51224,7 +51224,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-416",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Mood Cannabis Co",
     category: "cannabis",
     subcategory: undefined,
@@ -51243,7 +51243,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-417",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Morningstar Golf Club",
     category: "charity-nonprofit",
     subcategory: undefined,
@@ -51262,7 +51262,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-418",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "M-Team Construction Plus Inc.",
     category: "construction",
     subcategory: undefined,
@@ -51281,7 +51281,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-419",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Mufiz Ahmed",
     category: "other",
     subcategory: undefined,
@@ -51300,7 +51300,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-420",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "My Undies",
     category: "other",
     subcategory: undefined,
@@ -51319,7 +51319,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-421",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Nanaimo & District Hospital Foundatio...",
     category: "healthcare",
     subcategory: undefined,
@@ -51338,7 +51338,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-422",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Nanaimo & District Hospital Foundation",
     category: "charity-nonprofit",
     subcategory: undefined,
@@ -51357,7 +51357,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-423",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Nanaimo & District Museum",
     category: "arts-culture",
     subcategory: undefined,
@@ -51376,7 +51376,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-424",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Nanaimo & Voyager Magazine",
     category: "media",
     subcategory: undefined,
@@ -51395,7 +51395,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-425",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Nanaimo Airport Commission",
     category: "other",
     subcategory: undefined,
@@ -51414,7 +51414,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-426",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Nanaimo Art Gallery",
     category: "arts-culture",
     subcategory: undefined,
@@ -51433,7 +51433,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-427",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Nanaimo Association for Community Liv...",
     category: "charity-nonprofit",
     subcategory: undefined,
@@ -51452,7 +51452,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-428",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Nanaimo Association for Community Living",
     category: "charity-nonprofit",
     subcategory: undefined,
@@ -51471,7 +51471,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-429",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Nanaimo Blues Society",
     category: "charity-nonprofit",
     subcategory: undefined,
@@ -51490,7 +51490,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-430",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Nanaimo Buccaneers Hockey Club Ltd.",
     category: "charity-nonprofit",
     subcategory: undefined,
@@ -51509,7 +51509,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-431",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Nanaimo Business Services",
     category: "automotive",
     subcategory: undefined,
@@ -51528,7 +51528,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-432",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "![Nanaimo Child Development Centre",
     category: "other",
     subcategory: undefined,
@@ -51547,7 +51547,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-433",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Nanaimo Clippers Hockey Club",
     category: "charity-nonprofit",
     subcategory: undefined,
@@ -51566,7 +51566,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-434",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Nanaimo Community Hospice Society",
     category: "charity-nonprofit",
     subcategory: undefined,
@@ -51585,7 +51585,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-435",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Nanaimo Curling Club",
     category: "charity-nonprofit",
     subcategory: undefined,
@@ -51604,7 +51604,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-436",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Nanaimo Foodshare Society",
     category: "charity-nonprofit",
     subcategory: undefined,
@@ -51623,7 +51623,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-437",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Nanaimo Forest Products Ltd.",
     category: "marketing-advertising",
     subcategory: undefined,
@@ -51642,7 +51642,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-438",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Nanaimo Golf Club",
     category: "charity-nonprofit",
     subcategory: undefined,
@@ -51661,7 +51661,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-439",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Nanaimo Hearing Clinic",
     category: "healthcare",
     subcategory: undefined,
@@ -51680,7 +51680,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-440",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Nanaimo Honda Cars",
     category: "automotive",
     subcategory: undefined,
@@ -51699,7 +51699,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-441",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Nanaimo Hospitality Association",
     category: "charity-nonprofit",
     subcategory: undefined,
@@ -51718,7 +51718,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-442",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Nanaimo Ladysmith School District 68",
     category: "education",
     subcategory: undefined,
@@ -51737,7 +51737,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-443",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Nanaimo Ladysmith Schools Foundation",
     category: "charity-nonprofit",
     subcategory: undefined,
@@ -51756,7 +51756,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-444",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Nanaimo Minor Hockey Association",
     category: "charity-nonprofit",
     subcategory: undefined,
@@ -51775,7 +51775,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-445",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Nanaimo News Bulletin, Black Press Me...",
     category: "marketing-advertising",
     subcategory: undefined,
@@ -51794,7 +51794,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-446",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Nanaimo News Bulletin, Black Press Media",
     category: "marketing-advertising",
     subcategory: undefined,
@@ -51813,7 +51813,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-447",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Nanaimo Port Authority (Port of Nanai...",
     category: "it-technology",
     subcategory: undefined,
@@ -51832,7 +51832,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-448",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Nanaimo Port Authority (Port of Nanaimo)",
     category: "it-technology",
     subcategory: undefined,
@@ -51851,7 +51851,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-449",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Nanaimo Seniors Village (Cedar Tree I...",
     category: "seniors",
     subcategory: undefined,
@@ -51870,7 +51870,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-450",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Nanaimo Seniors Village (Cedar Tree Investment Canada)",
     category: "banking-finance",
     subcategory: undefined,
@@ -51889,7 +51889,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-451",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Nanaimo Youth Services Association",
     category: "automotive",
     subcategory: undefined,
@@ -51908,7 +51908,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-452",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Nash Home Hardware",
     category: "hardware-supplies",
     subcategory: undefined,
@@ -51927,7 +51927,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-453",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Navacord\\`",
     category: "other",
     subcategory: undefined,
@@ -51946,7 +51946,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-454",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "New Horizons Christian Church",
     category: "religious",
     subcategory: undefined,
@@ -51965,7 +51965,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-455",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Newcastle Marina",
     category: "other",
     subcategory: undefined,
@@ -51984,7 +51984,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-456",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "NextGen Automation",
     category: "automotive",
     subcategory: undefined,
@@ -52003,7 +52003,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-457",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Nicol Street Pawnbrokers Ltd.",
     category: "other",
     subcategory: undefined,
@@ -52022,7 +52022,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-458",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Norm's Plumbing and Heating",
     category: "heating-cooling",
     subcategory: undefined,
@@ -52041,7 +52041,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-459",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Northgate Liquor Store (Whale Enterpr...",
     category: "marketing-advertising",
     subcategory: undefined,
@@ -52060,7 +52060,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-460",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Northgate Liquor Store (Whale Enterprises Ltd.)",
     category: "marketing-advertising",
     subcategory: undefined,
@@ -52079,7 +52079,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-461",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Nanaimo & Area Land Trust",
     category: "other",
     subcategory: undefined,
@@ -52098,7 +52098,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-462",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Nanaimo Brain Injury Society",
     category: "charity-nonprofit",
     subcategory: undefined,
@@ -52117,7 +52117,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-463",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Nanaimo Buyers Club",
     category: "charity-nonprofit",
     subcategory: undefined,
@@ -52136,7 +52136,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-464",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Nanaimo Chrysler Dodge Jeep Ram Ltd",
     category: "other",
     subcategory: undefined,
@@ -52155,7 +52155,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-465",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Nanaimo Conservatory of Music",
     category: "arts-culture",
     subcategory: undefined,
@@ -52174,7 +52174,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-466",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Nanaimo Foundation",
     category: "charity-nonprofit",
     subcategory: undefined,
@@ -52193,7 +52193,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-467",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Nanaimo International Film Screening",
     category: "other",
     subcategory: undefined,
@@ -52212,7 +52212,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-468",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Nanaimo International Jazz Festival",
     category: "other",
     subcategory: undefined,
@@ -52231,7 +52231,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-469",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Nanaimo Neighbourhood Welcome",
     category: "other",
     subcategory: undefined,
@@ -52250,7 +52250,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-470",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Visit Website",
     category: "it-technology",
     subcategory: undefined,
@@ -52269,7 +52269,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-471",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Nanaimo NightOwls (and Bars!) Basebal...",
     category: "restaurant",
     subcategory: undefined,
@@ -52288,7 +52288,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-472",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Nanaimo NightOwls (and Bars!) Baseball Club",
     category: "charity-nonprofit",
     subcategory: undefined,
@@ -52307,7 +52307,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-473",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Nanaimo Paddling Centre",
     category: "other",
     subcategory: undefined,
@@ -52326,7 +52326,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-474",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Nanaimo Prosperity Corporation",
     category: "it-technology",
     subcategory: undefined,
@@ -52345,7 +52345,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-475",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Nanaimo Watergardens",
     category: "other",
     subcategory: undefined,
@@ -52364,7 +52364,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-476",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Nanaimo Women's Business Network Soci...",
     category: "it-technology",
     subcategory: undefined,
@@ -52383,7 +52383,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-477",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Nanaimo Women's Business Network Society",
     category: "charity-nonprofit",
     subcategory: undefined,
@@ -52402,7 +52402,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-478",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Nanaimo Yacht Club",
     category: "charity-nonprofit",
     subcategory: undefined,
@@ -52421,7 +52421,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-479",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Nanaimo-Lantzville NDP Electoral Dist...",
     category: "other",
     subcategory: undefined,
@@ -52440,7 +52440,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-480",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Nanaimo-Lantzville NDP Electoral District Association",
     category: "charity-nonprofit",
     subcategory: undefined,
@@ -52459,7 +52459,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-481",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Nanaimonet.com",
     category: "other",
     subcategory: undefined,
@@ -52478,7 +52478,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-482",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Nanoose Bay Cafe",
     category: "restaurant",
     subcategory: undefined,
@@ -52497,7 +52497,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-483",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Natural Resources Training Group",
     category: "education",
     subcategory: undefined,
@@ -52516,7 +52516,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-484",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Neota Hypnotherapy",
     category: "healthcare",
     subcategory: undefined,
@@ -52535,7 +52535,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-485",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Neway Traffic Management Ltd.",
     category: "other",
     subcategory: undefined,
@@ -52554,7 +52554,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-486",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "NEXT IMPACT Press",
     category: "marketing-advertising",
     subcategory: undefined,
@@ -52573,7 +52573,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-487",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Nexus Patient and Community Care Soci...",
     category: "automotive",
     subcategory: undefined,
@@ -52592,7 +52592,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-488",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Nexus Patient and Community Care Society",
     category: "automotive",
     subcategory: undefined,
@@ -52611,7 +52611,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-489",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "NIYIEM studio",
     category: "arts-culture",
     subcategory: undefined,
@@ -52630,7 +52630,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-490",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "NKPG",
     category: "other",
     subcategory: undefined,
@@ -52649,7 +52649,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-491",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Noje Creative",
     category: "arts-culture",
     subcategory: undefined,
@@ -52668,7 +52668,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-492",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Northfield Massage Therapy",
     category: "healthcare",
     subcategory: undefined,
@@ -52687,7 +52687,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-493",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Northstar Propane Ltd.",
     category: "marketing-advertising",
     subcategory: undefined,
@@ -52706,7 +52706,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-494",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Nurse Next Door",
     category: "other",
     subcategory: undefined,
@@ -52725,7 +52725,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-495",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Nu-Star Heating and Cooling",
     category: "heating-cooling",
     subcategory: undefined,
@@ -52744,7 +52744,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-496",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Ocean's Edge Orthodontics",
     category: "other",
     subcategory: undefined,
@@ -52763,7 +52763,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-497",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Oceanside Church International",
     category: "religious",
     subcategory: undefined,
@@ -52782,7 +52782,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-498",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Oneaftereight Design Studio",
     category: "arts-culture",
     subcategory: undefined,
@@ -52801,7 +52801,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-499",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Ono Trading Co DBA Ono Work & Safety",
     category: "other",
     subcategory: undefined,
@@ -52820,7 +52820,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-500",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Open Connection",
     category: "other",
     subcategory: undefined,
@@ -52839,7 +52839,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-501",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Origin at Longwood",
     category: "other",
     subcategory: undefined,
@@ -52858,7 +52858,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-502",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Oceanside Security & Patrol Inc",
     category: "it-technology",
     subcategory: undefined,
@@ -52877,7 +52877,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-503",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Off The Hook Surf Turf Smokery",
     category: "other",
     subcategory: undefined,
@@ -52896,7 +52896,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-504",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Openland Developments Ltd.",
     category: "other",
     subcategory: undefined,
@@ -52915,7 +52915,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-505",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Pacific Station Notaries",
     category: "other",
     subcategory: undefined,
@@ -52934,7 +52934,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-506",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "PacificCARE Family Enrichment Society",
     category: "automotive",
     subcategory: undefined,
@@ -52953,7 +52953,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-507",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Park Place Law (Kaine Law Corporation...",
     category: "legal",
     subcategory: undefined,
@@ -52972,7 +52972,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-508",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Parkway Storage",
     category: "storage",
     subcategory: undefined,
@@ -52991,7 +52991,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-509",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Partnership Group - Sponsorship Speci...",
     category: "arts-culture",
     subcategory: undefined,
@@ -53010,7 +53010,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-510",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Partnership Group - Sponsorship Specialists",
     category: "arts-culture",
     subcategory: undefined,
@@ -53029,7 +53029,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-511",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Payworks",
     category: "other",
     subcategory: undefined,
@@ -53048,7 +53048,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-512",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Penta Transport Ltd.",
     category: "other",
     subcategory: undefined,
@@ -53067,7 +53067,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-513",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Pest Doctor",
     category: "medical",
     subcategory: undefined,
@@ -53086,7 +53086,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-514",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Petroglyph Development Group",
     category: "pets",
     subcategory: undefined,
@@ -53105,7 +53105,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-515",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Pheasant Hill Homes Ltd.",
     category: "real-estate",
     subcategory: undefined,
@@ -53124,7 +53124,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-516",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Pro Elvis Jumpsuits",
     category: "it-technology",
     subcategory: undefined,
@@ -53143,7 +53143,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-517",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Proline Management",
     category: "marketing-advertising",
     subcategory: undefined,
@@ -53162,7 +53162,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-518",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Pacific Awnings",
     category: "other",
     subcategory: undefined,
@@ -53181,7 +53181,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-519",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Pacific Coastal Airlines",
     category: "other",
     subcategory: undefined,
@@ -53200,7 +53200,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-520",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Pacific Pearl Dental Hygiene Clinic I...",
     category: "dental",
     subcategory: undefined,
@@ -53219,7 +53219,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-521",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Pacific Pearl Dental Hygiene Clinic Inc",
     category: "dental",
     subcategory: undefined,
@@ -53238,7 +53238,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-522",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Pacific Sierra - Roofing Services",
     category: "automotive",
     subcategory: undefined,
@@ -53257,7 +53257,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-523",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Pacifica Housing Advisory Association",
     category: "banking-finance",
     subcategory: undefined,
@@ -53276,7 +53276,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-524",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "PacificSport Vancouver Island",
     category: "other",
     subcategory: undefined,
@@ -53295,7 +53295,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-525",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Pack on Track",
     category: "other",
     subcategory: undefined,
@@ -53314,7 +53314,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-526",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Pactow Transport Service",
     category: "automotive",
     subcategory: undefined,
@@ -53333,7 +53333,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-527",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Paladin Security",
     category: "it-technology",
     subcategory: undefined,
@@ -53352,7 +53352,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-528",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Parker Marine Nanaimo Ltd.",
     category: "fishing-marine",
     subcategory: undefined,
@@ -53371,7 +53371,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-529",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Paws and More",
     category: "other",
     subcategory: undefined,
@@ -53390,7 +53390,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-530",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Pawsitive Touch Canine Massage",
     category: "it-technology",
     subcategory: undefined,
@@ -53409,7 +53409,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-531",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Peggy Janssens",
     category: "other",
     subcategory: undefined,
@@ -53428,7 +53428,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-532",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Pelagic Techologies",
     category: "it-technology",
     subcategory: undefined,
@@ -53447,7 +53447,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-533",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Peter Durovic",
     category: "pets",
     subcategory: undefined,
@@ -53466,7 +53466,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-534",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Phase Two Holdings Inc",
     category: "other",
     subcategory: undefined,
@@ -53485,7 +53485,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-535",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Positively Vegan Society",
     category: "charity-nonprofit",
     subcategory: undefined,
@@ -53504,7 +53504,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-536",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Pride Painting Ltd",
     category: "marketing-advertising",
     subcategory: undefined,
@@ -53523,7 +53523,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-537",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Principle Property Group inc.",
     category: "marketing-advertising",
     subcategory: undefined,
@@ -53542,7 +53542,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-538",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Property Sales Vancouver Island",
     category: "marketing-advertising",
     subcategory: undefined,
@@ -53561,7 +53561,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-539",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "ProSafe Solutions",
     category: "marketing-advertising",
     subcategory: undefined,
@@ -53580,7 +53580,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-540",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Proshine",
     category: "marketing-advertising",
     subcategory: undefined,
@@ -53599,7 +53599,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-541",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Pure Island Air Inc.",
     category: "other",
     subcategory: undefined,
@@ -53618,7 +53618,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-542",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Pye Design",
     category: "marketing-advertising",
     subcategory: undefined,
@@ -53637,7 +53637,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-543",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Quality Foods (5th St)",
     category: "food-beverage",
     subcategory: undefined,
@@ -53656,7 +53656,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-544",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Quality Foods (Bowen Rd)",
     category: "food-beverage",
     subcategory: undefined,
@@ -53675,7 +53675,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-545",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Quality Foods (Turner Rd)",
     category: "food-beverage",
     subcategory: undefined,
@@ -53694,7 +53694,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-546",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Quarterway Childcare Centre",
     category: "arts-culture",
     subcategory: undefined,
@@ -53713,7 +53713,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-547",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "QuantumLeaf AI Inc.",
     category: "other",
     subcategory: undefined,
@@ -53732,7 +53732,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-548",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Ramada Nanaimo Inn & Suites Inc.",
     category: "accommodation",
     subcategory: undefined,
@@ -53751,7 +53751,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-549",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Ramsay Lampman Rhodes",
     category: "other",
     subcategory: undefined,
@@ -53770,7 +53770,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-550",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "RBC - Royal Bank of Canada (Brooks La...",
     category: "banking-finance",
     subcategory: undefined,
@@ -53789,7 +53789,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-551",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "RBC - Royal Bank of Canada (Brooks Landing)",
     category: "banking-finance",
     subcategory: undefined,
@@ -53808,7 +53808,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-552",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "RBC - Royal Bank of Canada (Commercia...",
     category: "banking-finance",
     subcategory: undefined,
@@ -53827,7 +53827,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-553",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "RBC - Royal Bank of Canada (Commercial Banking)",
     category: "banking-finance",
     subcategory: undefined,
@@ -53846,7 +53846,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-554",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "RBC - Royal Bank of Canada (Downtown)",
     category: "banking-finance",
     subcategory: undefined,
@@ -53865,7 +53865,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-555",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "RBC - Royal Bank of Canada (Woodgrove...",
     category: "banking-finance",
     subcategory: undefined,
@@ -53884,7 +53884,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-556",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "RBC Dominion Securities",
     category: "banking-finance",
     subcategory: undefined,
@@ -53903,7 +53903,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-557",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "RCMSAR Station 27 (Nanaimo Marine Res...",
     category: "fishing-marine",
     subcategory: undefined,
@@ -53922,7 +53922,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-558",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "RCMSAR Station 27 (Nanaimo Marine Rescue Society)",
     category: "charity-nonprofit",
     subcategory: undefined,
@@ -53941,7 +53941,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-559",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Rise & Align Pilates Co.",
     category: "fitness-wellness",
     subcategory: undefined,
@@ -53960,7 +53960,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-560",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Rockmoor Wealth Management",
     category: "banking-finance",
     subcategory: undefined,
@@ -53979,7 +53979,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-561",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Roden & Associates (Chartered Profess...",
     category: "arts-culture",
     subcategory: undefined,
@@ -53998,7 +53998,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-562",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Roden & Associates (Chartered Professional Accountants)",
     category: "accounting",
     subcategory: undefined,
@@ -54017,7 +54017,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-563",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Royal LePage - Nanaimo Realty - Barry...",
     category: "real-estate",
     subcategory: undefined,
@@ -54036,7 +54036,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-564",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Royal LePage - Nanaimo Realty - Barry Clark, CEO, Travis Carmichael, President",
     category: "automotive",
     subcategory: undefined,
@@ -54055,7 +54055,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-565",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Russ Burke",
     category: "other",
     subcategory: undefined,
@@ -54074,7 +54074,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-566",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "R.W. (Bob) Wall Contracting Ltd.",
     category: "other",
     subcategory: undefined,
@@ -54093,7 +54093,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-567",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "RE/MAX of Nanaimo (Susan McGougan)",
     category: "other",
     subcategory: undefined,
@@ -54112,7 +54112,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-568",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "RE/MAX Rental Pros",
     category: "marketing-advertising",
     subcategory: undefined,
@@ -54131,7 +54131,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-569",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Red Girl Rising",
     category: "other",
     subcategory: undefined,
@@ -54150,7 +54150,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-570",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Reena's Handicraft",
     category: "other",
     subcategory: undefined,
@@ -54169,7 +54169,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-571",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Rewind MedSpa",
     category: "spa-beauty",
     subcategory: undefined,
@@ -54188,7 +54188,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-572",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Rhea Singh - Vancouver Island Univers...",
     category: "other",
     subcategory: undefined,
@@ -54207,7 +54207,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-573",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Rhea Singh - Vancouver Island University",
     category: "education",
     subcategory: undefined,
@@ -54226,7 +54226,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-574",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Rhinebank Manufacturing & Trading",
     category: "banking-finance",
     subcategory: undefined,
@@ -54245,7 +54245,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-575",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Rita & Rachel Cousins Mortgage Broker...",
     category: "banking-finance",
     subcategory: undefined,
@@ -54264,7 +54264,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-576",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Rita & Rachel Cousins Mortgage Brokers",
     category: "banking-finance",
     subcategory: undefined,
@@ -54283,7 +54283,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-577",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Robbins & Company, CPAs",
     category: "accounting",
     subcategory: undefined,
@@ -54302,7 +54302,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-578",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Root Interiors Ltd",
     category: "other",
     subcategory: undefined,
@@ -54321,7 +54321,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-579",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Rotary Area 40 - 5 Club Partnership C...",
     category: "arts-culture",
     subcategory: undefined,
@@ -54340,7 +54340,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-580",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Rotary Area 40 - 5 Club Partnership Committee",
     category: "arts-culture",
     subcategory: undefined,
@@ -54359,7 +54359,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-581",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Roundabout Community Arts Centre",
     category: "arts-culture",
     subcategory: undefined,
@@ -54378,7 +54378,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-582",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Ruffell & Brown",
     category: "other",
     subcategory: undefined,
@@ -54397,7 +54397,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-583",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Ryes & Shine Craft Distillery",
     category: "winery-brewery",
     subcategory: undefined,
@@ -54416,7 +54416,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-584",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Scotiabank (Commercial St.)",
     category: "banking-finance",
     subcategory: undefined,
@@ -54435,7 +54435,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-585",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Scotiabank (Nored Plaza)",
     category: "banking-finance",
     subcategory: undefined,
@@ -54454,7 +54454,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-586",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Seacliff Properties/Fairwinds Golf Cl...",
     category: "marketing-advertising",
     subcategory: undefined,
@@ -54473,7 +54473,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-587",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Seacliff Properties/Fairwinds Golf Club/FW Enterprises Ltd.",
     category: "charity-nonprofit",
     subcategory: undefined,
@@ -54492,7 +54492,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-588",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "SEAMOR Marine Ltd.",
     category: "fishing-marine",
     subcategory: undefined,
@@ -54511,7 +54511,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-589",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Seaspan Ferries Corp.",
     category: "spa-beauty",
     subcategory: undefined,
@@ -54530,7 +54530,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-590",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Securco Services Inc.",
     category: "automotive",
     subcategory: undefined,
@@ -54549,7 +54549,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-591",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Service Canada",
     category: "automotive",
     subcategory: undefined,
@@ -54568,7 +54568,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-592",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Seven Sails Dental Centre (Dr John Ol...",
     category: "dental",
     subcategory: undefined,
@@ -54587,7 +54587,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-593",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Seven Sails Dental Centre (Dr John Olesen Inc.)",
     category: "dental",
     subcategory: undefined,
@@ -54606,7 +54606,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-594",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Shannon's Urban Style Salon",
     category: "spa-beauty",
     subcategory: undefined,
@@ -54625,7 +54625,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-595",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Shape Properties Management",
     category: "marketing-advertising",
     subcategory: undefined,
@@ -54644,7 +54644,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-596",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Sheila Malcolmson (MLA Nanaimo)",
     category: "other",
     subcategory: undefined,
@@ -54663,7 +54663,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-597",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "SignAge",
     category: "printing",
     subcategory: undefined,
@@ -54682,7 +54682,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-598",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Smythe Insolvency Inc.",
     category: "other",
     subcategory: undefined,
@@ -54701,7 +54701,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-599",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Snip & Stitch Sewing Centre Ltd.",
     category: "it-technology",
     subcategory: undefined,
@@ -54720,7 +54720,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-600",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Snuneymuxw First Nation",
     category: "first-nations",
     subcategory: undefined,
@@ -54739,7 +54739,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-601",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Splitsville",
     category: "it-technology",
     subcategory: undefined,
@@ -54758,7 +54758,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-602",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Sprott Shaw College",
     category: "education",
     subcategory: undefined,
@@ -54777,7 +54777,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-603",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "St Jean's Cannery and Smokehouse",
     category: "other",
     subcategory: undefined,
@@ -54796,7 +54796,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-604",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Stamford Properties Ltd.",
     category: "marketing-advertising",
     subcategory: undefined,
@@ -54815,7 +54815,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-605",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Stones Marine Centre Inc.",
     category: "fishing-marine",
     subcategory: undefined,
@@ -54834,7 +54834,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-606",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Strong Nations Publishing Inc.",
     category: "media",
     subcategory: undefined,
@@ -54853,7 +54853,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-607",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Supreme Self Storage",
     category: "marketing-advertising",
     subcategory: undefined,
@@ -54872,7 +54872,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-608",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Syryus Solutions Ltd.",
     category: "other",
     subcategory: undefined,
@@ -54891,7 +54891,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-609",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Saigon kitchen/ My Jolly Treats",
     category: "food-beverage",
     subcategory: undefined,
@@ -54910,7 +54910,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-610",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "SALAR KESHT VERDANT FARMS LTD.",
     category: "agriculture",
     subcategory: undefined,
@@ -54929,7 +54929,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-611",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Sands & Associates",
     category: "other",
     subcategory: undefined,
@@ -54948,7 +54948,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-612",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Sara Daneshpazhooh",
     category: "other",
     subcategory: undefined,
@@ -54967,7 +54967,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-613",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Sarah Bowman Portraits",
     category: "it-technology",
     subcategory: undefined,
@@ -54986,7 +54986,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-614",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Save On Foods (Country Club)",
     category: "charity-nonprofit",
     subcategory: undefined,
@@ -55005,7 +55005,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-615",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Scotia Wealth Management - The Greena...",
     category: "banking-finance",
     subcategory: undefined,
@@ -55024,7 +55024,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-616",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Scotia Wealth Management - The Greenard Group",
     category: "banking-finance",
     subcategory: undefined,
@@ -55043,7 +55043,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-617",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Sea Captain Marine Surveyor Inc.",
     category: "automotive",
     subcategory: undefined,
@@ -55062,7 +55062,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-618",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Sea Wolves Men's Cancer Pack",
     category: "other",
     subcategory: undefined,
@@ -55081,7 +55081,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-619",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Seair Seaplanes",
     category: "other",
     subcategory: undefined,
@@ -55100,7 +55100,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-620",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Seaside Smile Clinic",
     category: "healthcare",
     subcategory: undefined,
@@ -55119,7 +55119,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-621",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "SeeHowSupport",
     category: "other",
     subcategory: undefined,
@@ -55138,7 +55138,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-622",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Seniors 101",
     category: "seniors",
     subcategory: undefined,
@@ -55157,7 +55157,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-623",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "ServiceXCEL Heating and Cooling",
     category: "automotive",
     subcategory: undefined,
@@ -55176,7 +55176,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-624",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Shervin Communications",
     category: "automotive",
     subcategory: undefined,
@@ -55195,7 +55195,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-625",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "SmashGrrrl",
     category: "other",
     subcategory: undefined,
@@ -55214,7 +55214,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-626",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Smoke Rings Cigar and Tobacco Company",
     category: "other",
     subcategory: undefined,
@@ -55233,7 +55233,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-627",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Snowline Solutions Inc.",
     category: "other",
     subcategory: undefined,
@@ -55252,7 +55252,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-628",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Sonja Kathleen Spaetzel Corporation",
     category: "spa-beauty",
     subcategory: undefined,
@@ -55271,7 +55271,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-629",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "SOSHYANT SAFETY LTD.",
     category: "other",
     subcategory: undefined,
@@ -55290,7 +55290,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-630",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Sparkling Legacy Home Services Inc.",
     category: "automotive",
     subcategory: undefined,
@@ -55309,7 +55309,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-631",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Speak Easy Communication & Education",
     category: "education",
     subcategory: undefined,
@@ -55328,7 +55328,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-632",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "St. Paul's Anglican Church",
     category: "religious",
     subcategory: undefined,
@@ -55347,7 +55347,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-633",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Stacie Chappell Consulting",
     category: "consulting",
     subcategory: undefined,
@@ -55366,7 +55366,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-634",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Starfish Coaching & Consulting",
     category: "consulting",
     subcategory: undefined,
@@ -55385,7 +55385,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-635",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Steve Marshall Ford Lincoln",
     category: "other",
     subcategory: undefined,
@@ -55404,7 +55404,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-636",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "STOR-X Organizing Systems",
     category: "other",
     subcategory: undefined,
@@ -55423,7 +55423,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-637",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Student Affairs (VIU)",
     category: "other",
     subcategory: undefined,
@@ -55442,7 +55442,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-638",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Studio to stage performing arts",
     category: "arts-culture",
     subcategory: undefined,
@@ -55461,7 +55461,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-639",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Successful Transitions",
     category: "it-technology",
     subcategory: undefined,
@@ -55480,7 +55480,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-640",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Sum Consulting Ltd.",
     category: "consulting",
     subcategory: undefined,
@@ -55499,7 +55499,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-641",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Sun Porch Homes Ltd.",
     category: "real-estate",
     subcategory: undefined,
@@ -55518,7 +55518,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-642",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Synced-CFO Solutions Ltd.",
     category: "other",
     subcategory: undefined,
@@ -55537,7 +55537,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-643",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Tarmac Tyres Ltd",
     category: "other",
     subcategory: undefined,
@@ -55556,7 +55556,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-644",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Taste of BC",
     category: "other",
     subcategory: undefined,
@@ -55575,7 +55575,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-645",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Taylor Made Bookkeeping Solutions Inc...",
     category: "accounting",
     subcategory: undefined,
@@ -55594,7 +55594,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-646",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "TD Canada Trust (Dufferin Cres)",
     category: "other",
     subcategory: undefined,
@@ -55613,7 +55613,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-647",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "TD Canada Trust (Longwood Station)",
     category: "other",
     subcategory: undefined,
@@ -55632,7 +55632,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-648",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "TD Canada Trust (Port Place)",
     category: "other",
     subcategory: undefined,
@@ -55651,7 +55651,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-649",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "TD Canada Trust (Terminal Park)",
     category: "other",
     subcategory: undefined,
@@ -55670,7 +55670,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-650",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Tempo Dance Academy",
     category: "arts-culture",
     subcategory: undefined,
@@ -55689,7 +55689,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-651",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "The Leadership Society of Vancouver I...",
     category: "charity-nonprofit",
     subcategory: undefined,
@@ -55708,7 +55708,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-652",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "The Leadership Society of Vancouver Island (LVI)",
     category: "charity-nonprofit",
     subcategory: undefined,
@@ -55727,7 +55727,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-653",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "The Port Theatre",
     category: "arts-culture",
     subcategory: undefined,
@@ -55746,7 +55746,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-654",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "The Powder Coaters",
     category: "other",
     subcategory: undefined,
@@ -55765,7 +55765,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-655",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "The Salvation Army",
     category: "other",
     subcategory: undefined,
@@ -55784,7 +55784,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-656",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Thurmeier, Rick",
     category: "other",
     subcategory: undefined,
@@ -55803,7 +55803,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-657",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Tigh-Na-Mara Seaside Spa Resort & Con...",
     category: "accommodation",
     subcategory: undefined,
@@ -55822,7 +55822,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-658",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Tigh-Na-Mara Seaside Spa Resort & Conference Centre",
     category: "accommodation",
     subcategory: undefined,
@@ -55841,7 +55841,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-659",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Tourism Nanaimo",
     category: "hospitality",
     subcategory: undefined,
@@ -55860,7 +55860,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-660",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Trio Accounting Solutions Ltd.",
     category: "accounting",
     subcategory: undefined,
@@ -55879,7 +55879,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-661",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Trojan Collision",
     category: "automotive",
     subcategory: undefined,
@@ -55898,7 +55898,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-662",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Tsolum & Tsable Environmental Ltd.",
     category: "environmental",
     subcategory: undefined,
@@ -55917,7 +55917,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-663",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Twin Peaks Plumbing Ltd.",
     category: "plumbing",
     subcategory: undefined,
@@ -55936,7 +55936,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-664",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Tablet Pharmacy",
     category: "pharmacy",
     subcategory: undefined,
@@ -55955,7 +55955,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-665",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Tactical Medical Service",
     category: "automotive",
     subcategory: undefined,
@@ -55974,7 +55974,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-666",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "TallSky Consulting Group LLP",
     category: "consulting",
     subcategory: undefined,
@@ -55993,7 +55993,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-667",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Taryn’s Cloth Creations",
     category: "other",
     subcategory: undefined,
@@ -56012,7 +56012,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-668",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Teachable Moments Daycare",
     category: "automotive",
     subcategory: undefined,
@@ -56031,7 +56031,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-669",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Teresa Hauca (0851779 BC Ltd)",
     category: "other",
     subcategory: undefined,
@@ -56050,7 +56050,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-670",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "TerraWest Environmental Consulting",
     category: "consulting",
     subcategory: undefined,
@@ -56069,7 +56069,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-671",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Tha Shak Clothing / Oceanside Freeze ...",
     category: "retail",
     subcategory: undefined,
@@ -56088,7 +56088,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-672",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Tha Shak Clothing / Oceanside Freeze Dried Candy",
     category: "retail",
     subcategory: undefined,
@@ -56107,7 +56107,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-673",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "The Botanist's Daughter Floral Design",
     category: "marketing-advertising",
     subcategory: undefined,
@@ -56126,7 +56126,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-674",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "The Brick Chick",
     category: "other",
     subcategory: undefined,
@@ -56145,7 +56145,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-675",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "The Copper Chestnut",
     category: "other",
     subcategory: undefined,
@@ -56164,7 +56164,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-676",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "The Digital Crew",
     category: "it-technology",
     subcategory: undefined,
@@ -56183,7 +56183,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-677",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "The Geekery",
     category: "other",
     subcategory: undefined,
@@ -56202,7 +56202,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-678",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "The Grand Hotel - Hotel Nanaimo Holdi...",
     category: "accommodation",
     subcategory: undefined,
@@ -56221,7 +56221,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-679",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "The Grand Hotel - Hotel Nanaimo Holdings",
     category: "accommodation",
     subcategory: undefined,
@@ -56240,7 +56240,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-680",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "The Men's Centre",
     category: "other",
     subcategory: undefined,
@@ -56259,7 +56259,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-681",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "The Nanaimo Arts Council",
     category: "arts-culture",
     subcategory: undefined,
@@ -56278,7 +56278,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-682",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "The Pulse Accounting Services Ltd.",
     category: "accounting",
     subcategory: undefined,
@@ -56297,7 +56297,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-683",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "The Salvation Army New Hope Centre",
     category: "other",
     subcategory: undefined,
@@ -56316,7 +56316,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-684",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Therapy Place Counselling Group",
     category: "healthcare",
     subcategory: undefined,
@@ -56335,7 +56335,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-685",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Thoma and Co Designs Inc.",
     category: "marketing-advertising",
     subcategory: undefined,
@@ -56354,7 +56354,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-686",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Touchworks Communications Inc.",
     category: "other",
     subcategory: undefined,
@@ -56373,7 +56373,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-687",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Transition City Fitness Club",
     category: "charity-nonprofit",
     subcategory: undefined,
@@ -56392,7 +56392,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-688",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Trew Beginnings Clinic",
     category: "accommodation",
     subcategory: undefined,
@@ -56411,7 +56411,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-689",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Trollers Fish & Chips",
     category: "other",
     subcategory: undefined,
@@ -56430,7 +56430,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-690",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Truckzone",
     category: "other",
     subcategory: undefined,
@@ -56449,7 +56449,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-691",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Trustmode Consulting",
     category: "consulting",
     subcategory: undefined,
@@ -56468,7 +56468,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-692",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "United Floors",
     category: "it-technology",
     subcategory: undefined,
@@ -56487,7 +56487,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-693",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "United Way British Columbia \\| Central...",
     category: "it-technology",
     subcategory: undefined,
@@ -56506,7 +56506,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-694",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "United Way British Columbia \\| Central & Northern Vancouver Island",
     category: "it-technology",
     subcategory: undefined,
@@ -56525,7 +56525,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-695",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Ultimate Cleaning And Building Mainte...",
     category: "cleaning-janitorial",
     subcategory: undefined,
@@ -56544,7 +56544,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-696",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Ultimate Cleaning And Building Maintenance Corp.",
     category: "cleaning-janitorial",
     subcategory: undefined,
@@ -56563,7 +56563,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-697",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Uncharted Chocolate",
     category: "arts-culture",
     subcategory: undefined,
@@ -56582,7 +56582,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-698",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Uplift Engagement Communications Inc.",
     category: "other",
     subcategory: undefined,
@@ -56601,7 +56601,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-699",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Upsmash Media",
     category: "media",
     subcategory: undefined,
@@ -56620,7 +56620,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-700",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "V.I. Vocational & Rehab. Services",
     category: "automotive",
     subcategory: undefined,
@@ -56639,7 +56639,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-701",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Van Osch Innovation Ltd.",
     category: "accommodation",
     subcategory: undefined,
@@ -56658,7 +56658,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-702",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Vancouver Island Conference Centre",
     category: "other",
     subcategory: undefined,
@@ -56677,7 +56677,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-703",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Vancouver Island Crisis Society",
     category: "charity-nonprofit",
     subcategory: undefined,
@@ -56696,7 +56696,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-704",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Vancouver Island Exhibition Associati...",
     category: "it-technology",
     subcategory: undefined,
@@ -56715,7 +56715,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-705",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Vancouver Island Exhibition Association",
     category: "charity-nonprofit",
     subcategory: undefined,
@@ -56734,7 +56734,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-706",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Vancouver Island Mack Ltd.",
     category: "other",
     subcategory: undefined,
@@ -56753,7 +56753,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-707",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Vancouver Island Phyto",
     category: "other",
     subcategory: undefined,
@@ -56772,7 +56772,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-708",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Vancouver Island Real Estate Board",
     category: "real-estate",
     subcategory: undefined,
@@ -56791,7 +56791,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-709",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "![Vancouver Island Symphony",
     category: "other",
     subcategory: undefined,
@@ -56810,7 +56810,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-710",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "VI Granite and Quartz Countertops Ltd...",
     category: "arts-culture",
     subcategory: undefined,
@@ -56829,7 +56829,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-711",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "VIFC Limited Partnership",
     category: "arts-culture",
     subcategory: undefined,
@@ -56848,7 +56848,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-712",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Vinyl Record Guru Music Consulting",
     category: "arts-culture",
     subcategory: undefined,
@@ -56867,7 +56867,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-713",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Viraat BK Thammanna",
     category: "other",
     subcategory: undefined,
@@ -56886,7 +56886,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-714",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "VitaCare Natural Health Clinic",
     category: "automotive",
     subcategory: undefined,
@@ -56905,7 +56905,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-715",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "VIU - Students' Union, Vancouver Is...",
     category: "other",
     subcategory: undefined,
@@ -56924,7 +56924,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-716",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "VIU - Students' Union, Vancouver Island University",
     category: "education",
     subcategory: undefined,
@@ -56943,7 +56943,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-717",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "VP Academic and Provost, Vancouver I...",
     category: "marketing-advertising",
     subcategory: undefined,
@@ -56962,7 +56962,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-718",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "VP Academic and Provost, Vancouver Island University",
     category: "education",
     subcategory: undefined,
@@ -56981,7 +56981,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-719",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Van Kam Freightways Ltd",
     category: "trucking-freight",
     subcategory: undefined,
@@ -57000,7 +57000,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-720",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Vancouver Island Construction Associa...",
     category: "construction",
     subcategory: undefined,
@@ -57019,7 +57019,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-721",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Vancouver Island Construction Association (VICA)",
     category: "charity-nonprofit",
     subcategory: undefined,
@@ -57038,7 +57038,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-722",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Vancouver Island Military Museum",
     category: "arts-culture",
     subcategory: undefined,
@@ -57057,7 +57057,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-723",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Vancouver Island Refillery",
     category: "other",
     subcategory: undefined,
@@ -57076,7 +57076,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-724",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Vancouver Island Regional Library",
     category: "other",
     subcategory: undefined,
@@ -57095,7 +57095,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-725",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Vancouver Island Sculpting Studio",
     category: "arts-culture",
     subcategory: undefined,
@@ -57114,7 +57114,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-726",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Vats consulting Inc.",
     category: "consulting",
     subcategory: undefined,
@@ -57133,7 +57133,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-727",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "VEGAIN Nutrition Inc.",
     category: "it-technology",
     subcategory: undefined,
@@ -57152,7 +57152,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-728",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Verra Creative Inc.",
     category: "arts-culture",
     subcategory: undefined,
@@ -57171,7 +57171,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-729",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "VI Inspections",
     category: "other",
     subcategory: undefined,
@@ -57190,7 +57190,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-730",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Vi Olin Investments Inc.",
     category: "banking-finance",
     subcategory: undefined,
@@ -57209,7 +57209,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-731",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "VI Print Services Ltd.",
     category: "automotive",
     subcategory: undefined,
@@ -57228,7 +57228,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-732",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "VI Shine Exterior Detailing",
     category: "automotive",
     subcategory: undefined,
@@ -57247,7 +57247,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-733",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "VIU - Vancouver Island University",
     category: "education",
     subcategory: undefined,
@@ -57266,7 +57266,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-734",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "VORTEX STEEL ARTISANS LTD.",
     category: "arts-culture",
     subcategory: undefined,
@@ -57285,7 +57285,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-735",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "WAVE 102.3 FM Radio,The WOLF 106.9 Ra...",
     category: "media",
     subcategory: undefined,
@@ -57304,7 +57304,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-736",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "WAVE 102.3 FM Radio,The WOLF 106.9 Radio, Nanaimo News NOW",
     category: "media",
     subcategory: undefined,
@@ -57323,7 +57323,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-737",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "WeBC",
     category: "other",
     subcategory: undefined,
@@ -57342,7 +57342,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-738",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Wellington Pub Beer & Wine Store Ltd",
     category: "restaurant",
     subcategory: undefined,
@@ -57361,7 +57361,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-739",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Wellnessnews Vancouver Island",
     category: "fitness-wellness",
     subcategory: undefined,
@@ -57380,7 +57380,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-740",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Western Maritime Institute",
     category: "education",
     subcategory: undefined,
@@ -57399,7 +57399,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-741",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Westland Insurance",
     category: "insurance",
     subcategory: undefined,
@@ -57418,7 +57418,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-742",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Westmark Construction Ltd.",
     category: "construction",
     subcategory: undefined,
@@ -57437,7 +57437,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-743",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Westshore Structural Engineering Ltd",
     category: "engineering",
     subcategory: undefined,
@@ -57456,7 +57456,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-744",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "WildPlay Element Parks",
     category: "other",
     subcategory: undefined,
@@ -57475,7 +57475,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-745",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "West Coast Factory Direct Hot Tubs",
     category: "manufacturing",
     subcategory: undefined,
@@ -57494,7 +57494,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-746",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "West Coast Helicopters",
     category: "other",
     subcategory: undefined,
@@ -57513,7 +57513,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-747",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Westcom Business Solutions Inc.",
     category: "other",
     subcategory: undefined,
@@ -57532,7 +57532,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-748",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Western Canada Marine Response Corp.",
     category: "fishing-marine",
     subcategory: undefined,
@@ -57551,7 +57551,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-749",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Western Forest Products Inc.",
     category: "marketing-advertising",
     subcategory: undefined,
@@ -57570,7 +57570,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-750",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "White Spot Restaurant - North Nanaimo",
     category: "it-technology",
     subcategory: undefined,
@@ -57589,7 +57589,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-751",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Wilson's Group of Companies/Smith Tra...",
     category: "it-technology",
     subcategory: undefined,
@@ -57608,7 +57608,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-752",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Wilson's Group of Companies/Smith Transportation",
     category: "it-technology",
     subcategory: undefined,
@@ -57627,7 +57627,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-753",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Winding Road Counselling and Therapy ...",
     category: "healthcare",
     subcategory: undefined,
@@ -57646,7 +57646,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-754",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Winding Road Counselling and Therapy Services",
     category: "automotive",
     subcategory: undefined,
@@ -57665,7 +57665,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-755",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Woodgrove Chrysler",
     category: "other",
     subcategory: undefined,
@@ -57684,7 +57684,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-756",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Young Professionals of Nanaimo",
     category: "marketing-advertising",
     subcategory: undefined,
@@ -57703,7 +57703,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-757",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Yamelst Designs",
     category: "marketing-advertising",
     subcategory: undefined,
@@ -57722,7 +57722,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-758",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Yaskow Bookkeeping and Taxes Inc.",
     category: "accounting",
     subcategory: undefined,
@@ -57741,7 +57741,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "nanaimo-member-759",
-    chamberId: "nanaimo-chamber",
+    chamberId: "greater-nanaimo-chamber",
     businessName: "Yellow Submarine Plumbing & Rooter",
     category: "fishing-marine",
     subcategory: undefined,
@@ -74766,7 +74766,7 @@ export const chamberMembers: ChamberMember[] = [
   // ==========================================================================
   {
     id: "saanich-peninsula-member-001",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "2 Percent Jazz Coffee Inc",
     category: "other",
     subcategory: undefined,
@@ -74785,7 +74785,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-002",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "ACCESSIFORGE RETROFIT SOLUTIONS LTD",
     category: "other",
     subcategory: undefined,
@@ -74804,7 +74804,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-003",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Active Balance Physiotherapy Studio (Seaport Physiotherapy Inc.)",
     category: "other",
     subcategory: undefined,
@@ -74823,7 +74823,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-004",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "AL Smith",
     category: "other",
     subcategory: undefined,
@@ -74842,7 +74842,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-005",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Amica Beechwood Village",
     category: "other",
     subcategory: undefined,
@@ -74861,7 +74861,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-006",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "AML Oceanographic Ltd300A - 2261 Keating Cross RoadSaanichton",
     category: "other",
     subcategory: undefined,
@@ -74880,7 +74880,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-007",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "AML Oceanographic Ltd",
     category: "other",
     subcategory: undefined,
@@ -74899,7 +74899,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-008",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Anacortes Chamber of Commerce",
     category: "other",
     subcategory: undefined,
@@ -74918,7 +74918,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-009",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "ARAAZ VISION LTD",
     category: "other",
     subcategory: undefined,
@@ -74937,7 +74937,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-010",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Arbutus Grove Nursery Ltd9721 West Saanich RdSidneyBC",
     category: "other",
     subcategory: undefined,
@@ -74956,7 +74956,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-011",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Arbutus Grove Nursery Ltd",
     category: "other",
     subcategory: undefined,
@@ -74975,7 +74975,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-012",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Ardmore Golf Course",
     category: "other",
     subcategory: undefined,
@@ -74994,7 +74994,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-013",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Aria Sync Ventures Ltd",
     category: "other",
     subcategory: undefined,
@@ -75013,7 +75013,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-014",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Association of B.C Land Surveyors",
     category: "other",
     subcategory: undefined,
@@ -75032,7 +75032,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-015",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Auto-Mobile Advantage",
     category: "other",
     subcategory: undefined,
@@ -75051,7 +75051,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-016",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Baker Tilly Victoria Ltd",
     category: "other",
     subcategory: undefined,
@@ -75070,7 +75070,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-017",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Barcellona Landscapes",
     category: "other",
     subcategory: undefined,
@@ -75089,7 +75089,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-018",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Barr Yacht Services Ltd",
     category: "other",
     subcategory: undefined,
@@ -75108,7 +75108,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-019",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Barrett Smith Construction Ltd",
     category: "other",
     subcategory: undefined,
@@ -75127,7 +75127,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-020",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Beacon Brewing",
     category: "other",
     subcategory: undefined,
@@ -75146,7 +75146,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-021",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Beacon Community Services",
     category: "other",
     subcategory: undefined,
@@ -75165,7 +75165,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-022",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Beacon Inn at",
     category: "other",
     subcategory: undefined,
@@ -75184,7 +75184,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-023",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Beacon Law Centre",
     category: "other",
     subcategory: undefined,
@@ -75203,7 +75203,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-024",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Beacon Sign and Apparel#18 2075 Henry W Ave",
     category: "other",
     subcategory: undefined,
@@ -75222,7 +75222,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-025",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Beacon Sign and Apparel",
     category: "other",
     subcategory: undefined,
@@ -75241,7 +75241,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-026",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Bellrock Benchmarking Inc",
     category: "other",
     subcategory: undefined,
@@ -75260,7 +75260,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-027",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Benson Cabinetry & Millwork2201 Keating X-RoadSaanichtonBC",
     category: "other",
     subcategory: undefined,
@@ -75279,7 +75279,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-028",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Benson Cabinetry & Millwork",
     category: "other",
     subcategory: undefined,
@@ -75298,7 +75298,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-029",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Better Business Bureau of Vancouver Island",
     category: "other",
     subcategory: undefined,
@@ -75317,7 +75317,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-030",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "BGC South Vancouver Island",
     category: "other",
     subcategory: undefined,
@@ -75336,7 +75336,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-031",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Bill Russell & Associates",
     category: "other",
     subcategory: undefined,
@@ -75355,7 +75355,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-032",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Bliss Boutique / Nest & Nook",
     category: "other",
     subcategory: undefined,
@@ -75374,7 +75374,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-033",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Blue Jellyfish SUP AdventuresSidneyBC",
     category: "other",
     subcategory: undefined,
@@ -75393,7 +75393,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-034",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Blue Jellyfish SUP Adventures",
     category: "other",
     subcategory: undefined,
@@ -75412,7 +75412,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-035",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Bon Chovy Fishing Charters",
     category: "other",
     subcategory: undefined,
@@ -75431,7 +75431,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-036",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "BornaTech Solutions Ltd",
     category: "other",
     subcategory: undefined,
@@ -75450,7 +75450,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-037",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Brackenhurst FarmNorth SaanichBC",
     category: "other",
     subcategory: undefined,
@@ -75469,7 +75469,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-038",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Brackenhurst Farm",
     category: "other",
     subcategory: undefined,
@@ -75488,7 +75488,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-039",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "British Columbia Aviation Museum",
     category: "other",
     subcategory: undefined,
@@ -75507,7 +75507,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-040",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "British Columbia Notaries Association",
     category: "other",
     subcategory: undefined,
@@ -75526,7 +75526,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-041",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Brunel Technical Solutions LtdSidneyBC",
     category: "other",
     subcategory: undefined,
@@ -75545,7 +75545,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-042",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Brunel Technical Solutions Ltd",
     category: "other",
     subcategory: undefined,
@@ -75564,7 +75564,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-043",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Buddies Toy Store",
     category: "other",
     subcategory: undefined,
@@ -75583,7 +75583,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-044",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Buds Cannabis",
     category: "other",
     subcategory: undefined,
@@ -75602,7 +75602,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-045",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Business Examiner",
     category: "other",
     subcategory: undefined,
@@ -75621,7 +75621,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-046",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Butchart Gardens, The",
     category: "other",
     subcategory: undefined,
@@ -75640,7 +75640,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-047",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Caffeinated Turtle EnterprisesBrentwood BayBC",
     category: "other",
     subcategory: undefined,
@@ -75659,7 +75659,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-048",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Caffeinated Turtle Enterprises",
     category: "other",
     subcategory: undefined,
@@ -75678,7 +75678,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-049",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Camcor Diving Inc.10223 McDonald Park RoadSidney",
     category: "other",
     subcategory: undefined,
@@ -75697,7 +75697,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-050",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Camcor Diving Inc",
     category: "other",
     subcategory: undefined,
@@ -75716,7 +75716,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-051",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "CamEnt Ltd",
     category: "other",
     subcategory: undefined,
@@ -75735,7 +75735,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-052",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Canadian Western bank",
     category: "other",
     subcategory: undefined,
@@ -75754,7 +75754,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-053",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Capital City Recycling Ltd.PO Box 21SaanichtonBC",
     category: "other",
     subcategory: undefined,
@@ -75773,7 +75773,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-054",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Capital City Recycling Ltd",
     category: "other",
     subcategory: undefined,
@@ -75792,7 +75792,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-055",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Casman Projects",
     category: "other",
     subcategory: undefined,
@@ -75811,7 +75811,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-056",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Category 12 Brewing Inc.Unit C - 2200 Keating Cross RdSaanichtonBC",
     category: "other",
     subcategory: undefined,
@@ -75830,7 +75830,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-057",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Category 12 Brewing Inc",
     category: "other",
     subcategory: undefined,
@@ -75849,7 +75849,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-058",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Central Saanich Optometry",
     category: "other",
     subcategory: undefined,
@@ -75868,7 +75868,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-059",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Chambers of Commerce Group Insurance Plan",
     category: "other",
     subcategory: undefined,
@@ -75887,7 +75887,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-060",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Chef On The Run9781B Second StSidneyBC",
     category: "other",
     subcategory: undefined,
@@ -75906,7 +75906,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-061",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Chef On The Run",
     category: "other",
     subcategory: undefined,
@@ -75925,7 +75925,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-062",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Chomack Construction Ltd.8881 Forest Park DrNorth SaanichBC",
     category: "other",
     subcategory: undefined,
@@ -75944,7 +75944,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-063",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Chomack Construction Ltd",
     category: "other",
     subcategory: undefined,
@@ -75963,7 +75963,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-064",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Christina Woodcock",
     category: "other",
     subcategory: undefined,
@@ -75982,7 +75982,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-065",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Circles MediationNorth SaanichBC",
     category: "other",
     subcategory: undefined,
@@ -76001,7 +76001,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-066",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Circles Mediation",
     category: "other",
     subcategory: undefined,
@@ -76020,7 +76020,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-067",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Citta Construction Ltd",
     category: "other",
     subcategory: undefined,
@@ -76039,7 +76039,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-068",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Claire Meadmore",
     category: "other",
     subcategory: undefined,
@@ -76058,7 +76058,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-069",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "CLASSICDRIVE RESTORATIONS LTD",
     category: "other",
     subcategory: undefined,
@@ -76077,7 +76077,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-070",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Cloudify Nexus Services Ltd",
     category: "other",
     subcategory: undefined,
@@ -76096,7 +76096,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-071",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Co-operators - Corcoran Financial Group",
     category: "other",
     subcategory: undefined,
@@ -76115,7 +76115,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-072",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Coastal Heat Pumps",
     category: "other",
     subcategory: undefined,
@@ -76134,7 +76134,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-073",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Coldwell Banker Oceanside",
     category: "other",
     subcategory: undefined,
@@ -76153,7 +76153,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-074",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Commodious Trading Inc",
     category: "other",
     subcategory: undefined,
@@ -76172,7 +76172,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-075",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Community Marine Concepts",
     category: "other",
     subcategory: undefined,
@@ -76191,7 +76191,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-076",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "CommunityPlus - Home Healthcare & Nursing",
     category: "other",
     subcategory: undefined,
@@ -76210,7 +76210,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-077",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "CONVERA FINANCIAL LTD",
     category: "other",
     subcategory: undefined,
@@ -76229,7 +76229,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-078",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Cordova Bay Optometry5325 Cordova Bay Rd. #127Victoria",
     category: "other",
     subcategory: undefined,
@@ -76248,7 +76248,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-079",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Cordova Bay Optometry",
     category: "other",
     subcategory: undefined,
@@ -76267,7 +76267,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-080",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Cosmos Energy Consulting IncSaanichtonBC",
     category: "other",
     subcategory: undefined,
@@ -76286,7 +76286,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-081",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Cosmos Energy Consulting Inc",
     category: "other",
     subcategory: undefined,
@@ -76305,7 +76305,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-082",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Country Bee Honey Farm6440 West Saanich RoadVictoria",
     category: "other",
     subcategory: undefined,
@@ -76324,7 +76324,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-083",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Country Bee Honey Farm",
     category: "other",
     subcategory: undefined,
@@ -76343,7 +76343,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-084",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Cube Project ManagementPO 612 SaanichtonSaanichtonBC",
     category: "other",
     subcategory: undefined,
@@ -76362,7 +76362,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-085",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Cube Project Management",
     category: "other",
     subcategory: undefined,
@@ -76381,7 +76381,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-086",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Cultvest Apparel Ltd",
     category: "other",
     subcategory: undefined,
@@ -76400,7 +76400,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-087",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Davison & Co#101, 1625 OAK BAY AVE.VictoriaBC",
     category: "other",
     subcategory: undefined,
@@ -76419,7 +76419,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-088",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Davison & Co",
     category: "other",
     subcategory: undefined,
@@ -76438,7 +76438,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-089",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "de Vine Vineyards6181B Old West Saanich RdSaanichtonBC",
     category: "other",
     subcategory: undefined,
@@ -76457,7 +76457,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-090",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "de Vine Vineyards",
     category: "other",
     subcategory: undefined,
@@ -76476,7 +76476,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-091",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Departures Travel",
     category: "other",
     subcategory: undefined,
@@ -76495,7 +76495,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-092",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Designer ShearsNorth SaanichBC",
     category: "other",
     subcategory: undefined,
@@ -76514,7 +76514,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-093",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Designer Shears",
     category: "other",
     subcategory: undefined,
@@ -76533,7 +76533,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-094",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Destination Greater VictoriaVictoriaBC",
     category: "other",
     subcategory: undefined,
@@ -76552,7 +76552,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-095",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Destination Greater",
     category: "other",
     subcategory: undefined,
@@ -76571,7 +76571,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-096",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "DFH Real Estate Ltd",
     category: "other",
     subcategory: undefined,
@@ -76590,7 +76590,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-097",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "District of Central Saanich1903 Mount Newton Cross RdSaanichtonBC",
     category: "other",
     subcategory: undefined,
@@ -76609,7 +76609,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-098",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "District of Central",
     category: "other",
     subcategory: undefined,
@@ -76628,7 +76628,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-099",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Donovan's Piano Service7754 Bruce Gordon PlSaanichtonBC",
     category: "other",
     subcategory: undefined,
@@ -76647,7 +76647,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-100",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Donovan's Piano Service",
     category: "other",
     subcategory: undefined,
@@ -76666,7 +76666,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-101",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Dusanj & Wirk Chartered Professional Accountants",
     category: "other",
     subcategory: undefined,
@@ -76685,7 +76685,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-102",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "ECOSMART KITCHEN SOLUTIONS LTD",
     category: "other",
     subcategory: undefined,
@@ -76704,7 +76704,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-103",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "ECOVENTRA DESIGNS LTD",
     category: "other",
     subcategory: undefined,
@@ -76723,7 +76723,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-104",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "ElevateMaster Services Ltd",
     category: "other",
     subcategory: undefined,
@@ -76742,7 +76742,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-105",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "EMCS Industries Ltd",
     category: "other",
     subcategory: undefined,
@@ -76761,7 +76761,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-106",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Empire Hydrogen",
     category: "other",
     subcategory: undefined,
@@ -76780,7 +76780,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-107",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Everson Law",
     category: "other",
     subcategory: undefined,
@@ -76799,7 +76799,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-108",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Expedia Cruise Ship Center",
     category: "other",
     subcategory: undefined,
@@ -76818,7 +76818,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-109",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Fedril Strategies Inc.SidneyBC",
     category: "other",
     subcategory: undefined,
@@ -76837,7 +76837,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-110",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Fedril Strategies Inc",
     category: "other",
     subcategory: undefined,
@@ -76856,7 +76856,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-111",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Field Five Farm Ltd",
     category: "other",
     subcategory: undefined,
@@ -76875,7 +76875,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-112",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Finlayson Bonet Architecture4 - 7855 East Saanich RdSaanichtonBC",
     category: "other",
     subcategory: undefined,
@@ -76894,7 +76894,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-113",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Finlayson Bonet Architecture",
     category: "other",
     subcategory: undefined,
@@ -76913,7 +76913,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-114",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Fish O Chips",
     category: "other",
     subcategory: undefined,
@@ -76932,7 +76932,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-115",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Focus Hair Design",
     category: "other",
     subcategory: undefined,
@@ -76951,7 +76951,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-116",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "FORGE Technical SolutionsVictoriaBC",
     category: "other",
     subcategory: undefined,
@@ -76970,7 +76970,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-117",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "FORGE Technical Solutions",
     category: "other",
     subcategory: undefined,
@@ -76989,7 +76989,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-118",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Four Quarters Meats",
     category: "other",
     subcategory: undefined,
@@ -77008,7 +77008,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-119",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Freedom Adventure Bus Society",
     category: "other",
     subcategory: undefined,
@@ -77027,7 +77027,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-120",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Fuller Projects2123 James White Blvd. WSidneyBC",
     category: "other",
     subcategory: undefined,
@@ -77046,7 +77046,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-121",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Fuller Projects",
     category: "other",
     subcategory: undefined,
@@ -77065,7 +77065,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-122",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Gingerbread Preschool and Daycare Ltd",
     category: "other",
     subcategory: undefined,
@@ -77084,7 +77084,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-123",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Greater Victoria Chamber of Commerce100 –",
     category: "other",
     subcategory: undefined,
@@ -77103,7 +77103,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-124",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Greater Victoria Chamber of Commerce",
     category: "other",
     subcategory: undefined,
@@ -77122,7 +77122,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-125",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Green Mountain Aviation",
     category: "other",
     subcategory: undefined,
@@ -77141,7 +77141,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-126",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "GREENWEAVE MARKET LTD.VictoriaBC",
     category: "other",
     subcategory: undefined,
@@ -77160,7 +77160,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-127",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "GREENWEAVE MARKET LTD",
     category: "other",
     subcategory: undefined,
@@ -77179,7 +77179,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-128",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Gulf Islands National Park Reserve, Parks Canada Agency",
     category: "other",
     subcategory: undefined,
@@ -77198,7 +77198,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-129",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Habitat Gardencare SidneySidneyBC",
     category: "other",
     subcategory: undefined,
@@ -77217,7 +77217,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-130",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Habitat Gardencare",
     category: "other",
     subcategory: undefined,
@@ -77236,7 +77236,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-131",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Harbord Insurance Services",
     category: "other",
     subcategory: undefined,
@@ -77255,7 +77255,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-132",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Harbour Haven Marina and Self -Storage",
     category: "other",
     subcategory: undefined,
@@ -77274,7 +77274,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-133",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Harbourview Tree ExpertsPO Box 234Brentwood BayBC",
     category: "other",
     subcategory: undefined,
@@ -77293,7 +77293,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-134",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Harbourview Tree Experts",
     category: "other",
     subcategory: undefined,
@@ -77312,7 +77312,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-135",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Hear Inc.7159A West Saanich RoadBrentwood BayBC",
     category: "other",
     subcategory: undefined,
@@ -77331,7 +77331,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-136",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Hear Inc",
     category: "other",
     subcategory: undefined,
@@ -77350,7 +77350,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-137",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Henley & Straub LLP",
     category: "other",
     subcategory: undefined,
@@ -77369,7 +77369,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-138",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "House of Lily Koi2507 C Beacon AveSidney B.C. V8L-1Y",
     category: "other",
     subcategory: undefined,
@@ -77388,7 +77388,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-139",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "House of Lily Koi",
     category: "other",
     subcategory: undefined,
@@ -77407,7 +77407,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-140",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Hughesman Morris Liversedge, Chartered Professional Accountants",
     category: "other",
     subcategory: undefined,
@@ -77426,7 +77426,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-141",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "IG Wealth Mangement - Victoria Metro",
     category: "other",
     subcategory: undefined,
@@ -77445,7 +77445,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-142",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "IMEN CORE SYSTEMS LTD",
     category: "other",
     subcategory: undefined,
@@ -77464,7 +77464,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-143",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "IMM Recruitment Ltd",
     category: "other",
     subcategory: undefined,
@@ -77483,7 +77483,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-144",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Iris the Visual Group",
     category: "other",
     subcategory: undefined,
@@ -77502,7 +77502,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-145",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Island Marble Ltd",
     category: "other",
     subcategory: undefined,
@@ -77521,7 +77521,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-146",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Island Savings a division of First West Credit Union",
     category: "other",
     subcategory: undefined,
@@ -77540,7 +77540,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-147",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Island Vegetable Co-Operative Association6680 A Mirah Road",
     category: "other",
     subcategory: undefined,
@@ -77559,7 +77559,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-148",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Island Vegetable Co-Operative Association",
     category: "other",
     subcategory: undefined,
@@ -77578,7 +77578,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-149",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Jametec Inc",
     category: "other",
     subcategory: undefined,
@@ -77597,7 +77597,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-150",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Jason Leslie Personal Real Estate Corporation",
     category: "other",
     subcategory: undefined,
@@ -77616,7 +77616,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-151",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Jencam Transport",
     category: "other",
     subcategory: undefined,
@@ -77635,7 +77635,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-152",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Jenna Turnbull",
     category: "other",
     subcategory: undefined,
@@ -77654,7 +77654,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-153",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "JN Landscaping Ltd",
     category: "other",
     subcategory: undefined,
@@ -77673,7 +77673,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-154",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Joe's Family Pharmacy",
     category: "other",
     subcategory: undefined,
@@ -77692,7 +77692,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-155",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Jonathon Dyck",
     category: "other",
     subcategory: undefined,
@@ -77711,7 +77711,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-156",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Kaemac Services Inc",
     category: "other",
     subcategory: undefined,
@@ -77730,7 +77730,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-157",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Keating Out of School Care Society6843 Central Saanich Rd",
     category: "other",
     subcategory: undefined,
@@ -77749,7 +77749,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-158",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Keating Out of School Care Society",
     category: "other",
     subcategory: undefined,
@@ -77768,7 +77768,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-159",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "KPMG LLP",
     category: "other",
     subcategory: undefined,
@@ -77787,7 +77787,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-160",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Kristin Mackenzie NutritionSidneyBC",
     category: "other",
     subcategory: undefined,
@@ -77806,7 +77806,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-161",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Kristin Mackenzie Nutrition",
     category: "other",
     subcategory: undefined,
@@ -77825,7 +77825,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-162",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "L.A. Limousines & Transportation ServicesVictoriaBC",
     category: "other",
     subcategory: undefined,
@@ -77844,7 +77844,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-163",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "L.A. Limousines & Transportation Services",
     category: "other",
     subcategory: undefined,
@@ -77863,7 +77863,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-164",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Legion Manor Victoria7601 East Saanich Road, 100SaanichtonBC",
     category: "other",
     subcategory: undefined,
@@ -77882,7 +77882,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-165",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Legion Manor",
     category: "other",
     subcategory: undefined,
@@ -77901,7 +77901,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-166",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Lime Tree Media3450 Uptown Boulevard",
     category: "other",
     subcategory: undefined,
@@ -77920,7 +77920,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-167",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Lime Tree Media",
     category: "other",
     subcategory: undefined,
@@ -77939,7 +77939,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-168",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Little Drum Consulting",
     category: "other",
     subcategory: undefined,
@@ -77958,7 +77958,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-169",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "LIVINGDESIGN CONSULTING INC.VictoriaBC",
     category: "other",
     subcategory: undefined,
@@ -77977,7 +77977,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-170",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "LIVINGDESIGN CONSULTING INC",
     category: "other",
     subcategory: undefined,
@@ -77996,7 +77996,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-171",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "LML Cleaning ServicesSidneyBC",
     category: "other",
     subcategory: undefined,
@@ -78015,7 +78015,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-172",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "LML Cleaning Services",
     category: "other",
     subcategory: undefined,
@@ -78034,7 +78034,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-173",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "LOTUSYNC INNO TRADE LTD",
     category: "other",
     subcategory: undefined,
@@ -78053,7 +78053,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-174",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "LUMIVEX ENERGY LTD",
     category: "other",
     subcategory: undefined,
@@ -78072,7 +78072,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-175",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "LUNVIX SYSTEMS LTD",
     category: "other",
     subcategory: undefined,
@@ -78091,7 +78091,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-176",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Mark Brajer",
     category: "other",
     subcategory: undefined,
@@ -78110,7 +78110,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-177",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Mark's",
     category: "other",
     subcategory: undefined,
@@ -78129,7 +78129,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-178",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Martin Woollard",
     category: "other",
     subcategory: undefined,
@@ -78148,7 +78148,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-179",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Martinez Veterinary Service Inc",
     category: "other",
     subcategory: undefined,
@@ -78167,7 +78167,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-180",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Mary Winspear Centre",
     category: "other",
     subcategory: undefined,
@@ -78186,7 +78186,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-181",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Mayflower Foods",
     category: "other",
     subcategory: undefined,
@@ -78205,7 +78205,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-182",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "McKimm & Lott",
     category: "other",
     subcategory: undefined,
@@ -78224,7 +78224,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-183",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "McTavish Academy of Art",
     category: "other",
     subcategory: undefined,
@@ -78243,7 +78243,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-184",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Medix Holdings Ltd",
     category: "other",
     subcategory: undefined,
@@ -78262,7 +78262,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-185",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Meta Bookkeeping Inc.2127 James White Blvd WSidneyBC",
     category: "other",
     subcategory: undefined,
@@ -78281,7 +78281,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-186",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Meta Bookkeeping Inc",
     category: "other",
     subcategory: undefined,
@@ -78300,7 +78300,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-187",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Meticulous Detailing Inc.3082 Island View RdSaanichtonBC",
     category: "other",
     subcategory: undefined,
@@ -78319,7 +78319,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-188",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Meticulous Detailing Inc",
     category: "other",
     subcategory: undefined,
@@ -78338,7 +78338,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-189",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Michell Excavating Ltd.7473 East Saanich RdSaanichtonBC",
     category: "other",
     subcategory: undefined,
@@ -78357,7 +78357,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-190",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Michell Excavating Ltd",
     category: "other",
     subcategory: undefined,
@@ -78376,7 +78376,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-191",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "MOLD CORE INNOVATIONS LTD",
     category: "other",
     subcategory: undefined,
@@ -78395,7 +78395,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-192",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Mount Newton Centre2158 Mt. Newton Cross RoadSaanichtonBC",
     category: "other",
     subcategory: undefined,
@@ -78414,7 +78414,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-193",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Mount Newton Centre",
     category: "other",
     subcategory: undefined,
@@ -78433,7 +78433,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-194",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Mt Newton Floral",
     category: "other",
     subcategory: undefined,
@@ -78452,7 +78452,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-195",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Muffet  and Louisa",
     category: "other",
     subcategory: undefined,
@@ -78471,7 +78471,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-196",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Mulberry SkincareNorth SaanichBC",
     category: "other",
     subcategory: undefined,
@@ -78490,7 +78490,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-197",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Mulberry Skincare",
     category: "other",
     subcategory: undefined,
@@ -78509,7 +78509,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-198",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "National Bank Financial Inc",
     category: "other",
     subcategory: undefined,
@@ -78528,7 +78528,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-199",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "North Saanich Marina",
     category: "other",
     subcategory: undefined,
@@ -78547,7 +78547,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-200",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "North Saanich Plumbing Inc8508 Aldouce TerraceNorth SaanichBC",
     category: "other",
     subcategory: undefined,
@@ -78566,7 +78566,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-201",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "North Saanich Plumbing Inc",
     category: "other",
     subcategory: undefined,
@@ -78585,7 +78585,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-202",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Oakstead Tree and Property Care Inc.7040 West Saanich RdBrentwood Bay",
     category: "other",
     subcategory: undefined,
@@ -78604,7 +78604,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-203",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Oakstead Tree and Property Care Inc",
     category: "other",
     subcategory: undefined,
@@ -78623,7 +78623,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-204",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Ocean Performance Technologies IncSaanichtonBC",
     category: "other",
     subcategory: undefined,
@@ -78642,7 +78642,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-205",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Ocean Performance Technologies Inc",
     category: "other",
     subcategory: undefined,
@@ -78661,7 +78661,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-206",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Ocean Pier Medical Centre",
     category: "other",
     subcategory: undefined,
@@ -78680,7 +78680,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-207",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "OMNILYX DIGITAL INTEGRATION LTD",
     category: "other",
     subcategory: undefined,
@@ -78699,7 +78699,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-208",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "One Stop Furniture & Mattress Inc.#",
     category: "other",
     subcategory: undefined,
@@ -78718,7 +78718,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-209",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "OPTIMAX MANUFACTURING SOLUTIONS LTD",
     category: "other",
     subcategory: undefined,
@@ -78737,7 +78737,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-210",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Orca Spirit Adventures",
     category: "other",
     subcategory: undefined,
@@ -78756,7 +78756,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-211",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Pacific Coast Commercial Cleaning Inc",
     category: "other",
     subcategory: undefined,
@@ -78775,7 +78775,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-212",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Pacific Heat Pumps",
     category: "other",
     subcategory: undefined,
@@ -78794,7 +78794,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-213",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Pacific Ridge Landscapes LtdPO Box 2151Sidney PO Main, BC",
     category: "other",
     subcategory: undefined,
@@ -78813,7 +78813,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-214",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Pacific Ridge Landscapes Ltd",
     category: "other",
     subcategory: undefined,
@@ -78832,7 +78832,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-215",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Pacifica Real Estate Inc",
     category: "other",
     subcategory: undefined,
@@ -78851,7 +78851,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-216",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Pacificheart Childcare Inc",
     category: "other",
     subcategory: undefined,
@@ -78870,7 +78870,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-217",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Parkbridge Lifestyle (Oceanside) R.V. Resort",
     category: "other",
     subcategory: undefined,
@@ -78889,7 +78889,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-218",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Patio Gardens6536 West Saanich RdSaanichtonBC",
     category: "other",
     subcategory: undefined,
@@ -78908,7 +78908,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-219",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Patio Gardens",
     category: "other",
     subcategory: undefined,
@@ -78927,7 +78927,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-220",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "PBC Solutions",
     category: "other",
     subcategory: undefined,
@@ -78946,7 +78946,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-221",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Peace of Mind Home Inspections",
     category: "other",
     subcategory: undefined,
@@ -78965,7 +78965,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-222",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Pemberton Holmes",
     category: "other",
     subcategory: undefined,
@@ -78984,7 +78984,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-223",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Peninsula Celebrations Society",
     category: "other",
     subcategory: undefined,
@@ -79003,7 +79003,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-224",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Peninsula Co-opD100-2261 Keating X RdSaanichtonBC",
     category: "other",
     subcategory: undefined,
@@ -79022,7 +79022,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-225",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Peninsula Co-op",
     category: "other",
     subcategory: undefined,
@@ -79041,7 +79041,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-226",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Peninsula Computer IT Solutions Ltd.SidneyBC",
     category: "other",
     subcategory: undefined,
@@ -79060,7 +79060,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-227",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Peninsula Computer IT Solutions Ltd",
     category: "other",
     subcategory: undefined,
@@ -79079,7 +79079,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-228",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Peninsula Family Chiropractic4-7816 E. Saanich RdSaanichtonBC",
     category: "other",
     subcategory: undefined,
@@ -79098,7 +79098,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-229",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Peninsula Family Chiropractic",
     category: "other",
     subcategory: undefined,
@@ -79117,7 +79117,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-230",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Peninsula Mini Storage & Container Rentals Ltd",
     category: "other",
     subcategory: undefined,
@@ -79136,7 +79136,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-231",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Peninsula News Review",
     category: "other",
     subcategory: undefined,
@@ -79155,7 +79155,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-232",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Peninsula Panthers Jr. Hockey Club LtdNorth SaanichBC",
     category: "other",
     subcategory: undefined,
@@ -79174,7 +79174,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-233",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Peninsula Panthers Jr. Hockey Club Ltd",
     category: "other",
     subcategory: undefined,
@@ -79193,7 +79193,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-234",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Peninsula Rock Products Ltd.VictoriaBC",
     category: "other",
     subcategory: undefined,
@@ -79212,7 +79212,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-235",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Peninsula Rock Products Ltd",
     category: "other",
     subcategory: undefined,
@@ -79231,7 +79231,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-236",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Peninsula Streams SocietyNorth SaanichBC",
     category: "other",
     subcategory: undefined,
@@ -79250,7 +79250,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-237",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Peninsula Streams Society",
     category: "other",
     subcategory: undefined,
@@ -79269,7 +79269,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-238",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Period Fine Bindings2019 Oak Bay AvenueVictoriaBC",
     category: "other",
     subcategory: undefined,
@@ -79288,7 +79288,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-239",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Period Fine Bindings",
     category: "other",
     subcategory: undefined,
@@ -79307,7 +79307,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-240",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Ping Digital Signal Processing Inc",
     category: "other",
     subcategory: undefined,
@@ -79326,7 +79326,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-241",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Polaris Land Surveying Inc",
     category: "other",
     subcategory: undefined,
@@ -79345,7 +79345,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-242",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Powerhouse Precision6685B MIRAH RDCentral SaanichBCV8M 1Z4,CA(250)652",
     category: "other",
     subcategory: undefined,
@@ -79364,7 +79364,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-243",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Powerhouse Precision",
     category: "other",
     subcategory: undefined,
@@ -79383,7 +79383,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-244",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Prince of Whales Whale Watching",
     category: "other",
     subcategory: undefined,
@@ -79402,7 +79402,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-245",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Quality Inn Waddling Dog2476 Mount Newton Cross RdSaanichtonBC",
     category: "other",
     subcategory: undefined,
@@ -79421,7 +79421,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-246",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Quality Inn Waddling Dog",
     category: "other",
     subcategory: undefined,
@@ -79440,7 +79440,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-247",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "QuestPath Solutions Ltd",
     category: "other",
     subcategory: undefined,
@@ -79459,7 +79459,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-248",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Quicksilver Software Development Inc",
     category: "other",
     subcategory: undefined,
@@ -79478,7 +79478,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-249",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Rachel Conconi",
     category: "other",
     subcategory: undefined,
@@ -79497,7 +79497,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-250",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Radar Hill Website Design & Marketing",
     category: "other",
     subcategory: undefined,
@@ -79516,7 +79516,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-251",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Raincoast Conservation Foundation",
     category: "other",
     subcategory: undefined,
@@ -79535,7 +79535,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-252",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "RAYMONDCAM SMART SECURE SOLUTIONS LTD",
     category: "other",
     subcategory: undefined,
@@ -79554,7 +79554,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-253",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "RBC Gateway Village Branch",
     category: "other",
     subcategory: undefined,
@@ -79573,7 +79573,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-254",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Reg Mooney (Penta Resources Corporation)8607 SentinelNorth SaanichBC",
     category: "other",
     subcategory: undefined,
@@ -79592,7 +79592,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-255",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Reg Mooney (Penta Resources Corporation)",
     category: "other",
     subcategory: undefined,
@@ -79611,7 +79611,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-256",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Reid Wealth Management - Raymond James",
     category: "other",
     subcategory: undefined,
@@ -79630,7 +79630,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-257",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Rob Botterell, MLA",
     category: "other",
     subcategory: undefined,
@@ -79649,7 +79649,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-258",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Rodco Draperies & Interiors Ltd",
     category: "other",
     subcategory: undefined,
@@ -79668,7 +79668,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-259",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "ROGCS CONSTRUCTION SERVICES4641 West Saanich RdSaanichBC",
     category: "other",
     subcategory: undefined,
@@ -79687,7 +79687,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-260",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "ROGCS CONSTRUCTION SERVICES",
     category: "other",
     subcategory: undefined,
@@ -79706,7 +79706,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-261",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Rotary Club of Sidneyc/o 701 Towner Park RoadNorth SaanichBC",
     category: "other",
     subcategory: undefined,
@@ -79725,7 +79725,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-262",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Rotary Club of",
     category: "other",
     subcategory: undefined,
@@ -79744,7 +79744,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-263",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Rotary Club of Sidney by the SeaSidneyBC",
     category: "other",
     subcategory: undefined,
@@ -79763,7 +79763,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-264",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Rotary Club of Sidney by the Sea",
     category: "other",
     subcategory: undefined,
@@ -79782,7 +79782,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-265",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Royal BC Museum675-Belleville StreetVictoriaBC",
     category: "other",
     subcategory: undefined,
@@ -79801,7 +79801,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-266",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Royal BC Museum",
     category: "other",
     subcategory: undefined,
@@ -79820,7 +79820,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-267",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Saanich Peninsula Artifacts Society o/a Heritage Acres",
     category: "other",
     subcategory: undefined,
@@ -79839,7 +79839,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-268",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Saanichton Law Group6 -7855 East Saanich Road",
     category: "other",
     subcategory: undefined,
@@ -79858,7 +79858,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-269",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Saanichton Law Group",
     category: "other",
     subcategory: undefined,
@@ -79877,7 +79877,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-270",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Saanichton Village Veterinary Hospital",
     category: "other",
     subcategory: undefined,
@@ -79896,7 +79896,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-271",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "SAMWEST PREFAB SYSTEMS LTD",
     category: "other",
     subcategory: undefined,
@@ -79915,7 +79915,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-272",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "San Juan Islands Visitors Bureau",
     category: "other",
     subcategory: undefined,
@@ -79934,7 +79934,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-273",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "SC Henn CPA",
     category: "other",
     subcategory: undefined,
@@ -79953,7 +79953,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-274",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Scotiabank103-5120 Cordova Bay RdVictoriaBC",
     category: "other",
     subcategory: undefined,
@@ -79972,7 +79972,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-275",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Scotiabank",
     category: "other",
     subcategory: undefined,
@@ -79991,7 +79991,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-276",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Scotty Manufacturing Ltd",
     category: "other",
     subcategory: undefined,
@@ -80010,7 +80010,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-277",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Sea Cider Farm & Ciderhouse",
     category: "other",
     subcategory: undefined,
@@ -80029,7 +80029,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-278",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "About",
     category: "other",
     subcategory: undefined,
@@ -80048,7 +80048,7 @@ export const chamberMembers: ChamberMember[] = [
   },
   {
     id: "saanich-peninsula-member-279",
-    chamberId: "saanich-peninsula-chamber",
+    chamberId: "sidney-chamber",
     businessName: "Contact",
     category: "other",
     subcategory: undefined,
