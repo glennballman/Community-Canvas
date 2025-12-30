@@ -13,6 +13,7 @@ import { StatusCards } from './StatusCards';
 import { AlertsFeed } from './AlertsFeed';
 import { WebcamGrid } from './WebcamGrid';
 import { FerryStatus } from './FerryStatus';
+import { WeatherWidget } from './WeatherWidget';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -149,14 +150,7 @@ function OverviewTab({ regionId }: { regionId: string }) {
           <AlertsFeed regionId={regionId} maxAlerts={8} compact={true} />
         </div>
         <div className="space-y-4">
-          <div className="bg-gradient-to-br from-blue-500 to-blue-600 dark:from-blue-600 dark:to-blue-700 rounded-xl p-6 text-white">
-            <h3 className="font-semibold mb-2 flex items-center gap-2">
-              <Cloud className="w-5 h-5" />
-              Weather
-            </h3>
-            <p className="text-4xl font-bold">-2°C</p>
-            <p className="opacity-80">Light Snow</p>
-          </div>
+          <WeatherWidget regionId={regionId} />
           <FerryStatus />
         </div>
       </div>

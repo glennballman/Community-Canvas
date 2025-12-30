@@ -1,0 +1,179 @@
+Enhance the Weather Widget to show more details and a mini forecast.
+
+Create or update file: client/src/components/Dashboard/WeatherWidget.tsx
+
+import React, { useEffect, useState } from 'react';
+
+interface WeatherData {
+  location: string;
+  temperature: number;
+  feelsLike: number;
+  condition: string;
+  humidity: number;
+  windSpeed: number;
+  windDirection: string;
+  observedAt: string;
+  forecast: ForecastDay[];
+  warnings: string[];
+}
+
+interface ForecastDay {
+  day: string;
+  high: number;
+  low: number;
+  condition: string;
+  pop: number;
+}
+
+interface WeatherWidgetProps {
+  regionId?: string;
+}
+
+export function WeatherWidget({ regionId }: WeatherWidgetProps) {
+  const [weather, setWeather] = useState<WeatherData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [showDetails, setShowDetails] = useState(false);
+
+  useEffect(() => {
+    fetchWeather();
+    // Refresh every 30 minutes
+    const interval = setInterval(fetchWeather, 30 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, [regionId]);
+
+  async function fetchWeather() {
+    try {
+      const response = await fetch(`/api/v1/weather?region=${regionId || 'bc'}`);
+      const data = await response.json();
+      setWeather(data);
+    } catch (error) {
+      console.error('Failed to fetch weather:', error);
+      // Use mock data as fallback
+      setWeather(getMockWeather());
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="bg-gradient-to-br from-blue-600 to-blue-700 rounded-xl p-4 animate-pulse">
+        <div className="h-6 bg-white/20 rounded w-24 mb-3"></div>
+        <div className="h-12 bg-white/20 rounded w-20 mb-2"></div>
+        <div className="h-4 bg-white/20 rounded w-32"></div>
+      </div>
+    );
+  }
+
+  if (!weather) return null;
+
+  const weatherIcon = getWeatherIcon(weather.condition);
+
+  return (
+    <div 
+      className="bg-gradient-to-br from-blue-600 to-blue-700 rounded-xl overflow-hidden cursor-pointer"
+      onClick={() => setShowDetails(!showDetails)}
+    >
+      {/* Main Weather Display */}
+      <div className="p-4">
+        <div className="flex items-center justify-between mb-1">
+          <span className="text-white/80 text-sm flex items-center gap-1">
+            ☁️ Weather
+          </span>
+          <span className="text-white/60 text-xs">
+            {weather.location}
+          </span>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <span className="text-4xl">{weatherIcon}</span>
+          <div>
+            <div className="text-4xl font-bold text-white">
+              {weather.temperature}°C
+            </div>
+            <div className="text-white/80 text-sm">
+              {weather.condition}
+            </div>
+          </div>
+        </div>
+
+        {/* Quick Stats */}
+        <div className="flex gap-4 mt-3 text-sm text-white/70">
+          <span>💧 {weather.humidity}%</span>
+          <span>💨 {weather.windSpeed} km/h {weather.windDirection}</span>
+          <span>🌡️ Feels {weather.feelsLike}°</span>
+        </div>
+
+        {/* Warnings */}
+        {weather.warnings && weather.warnings.length > 0 && (
+          <div className="mt-3 p-2 bg-yellow-500/20 rounded-lg border border-yellow-500/30">
+            <p className="text-yellow-200 text-sm flex items-center gap-1">
+              ⚠️ {weather.warnings[0]}
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Expandable Forecast */}
+      {showDetails && weather.forecast && (
+        <div className="px-4 pb-4 border-t border-white/10 pt-3">
+          <p className="text-white/60 text-xs uppercase mb-2">5-Day Forecast</p>
+          <div className="grid grid-cols-5 gap-1">
+            {weather.forecast.slice(0, 5).map((day, i) => (
+              <div key={i} className="text-center">
+                <p className="text-white/60 text-xs">{day.day}</p>
+                <span className="text-lg">{getWeatherIcon(day.condition)}</span>
+                <p className="text-white text-sm font-medium">{day.high}°</p>
+                <p className="text-white/50 text-xs">{day.low}°</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Expand hint */}
+      <div className="px-4 pb-2 text-center">
+        <span className="text-white/40 text-xs">
+          {showDetails ? '▲ Less' : '▼ Forecast'}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function getWeatherIcon(condition?: string): string {
+  if (!condition) return '🌤️';
+  const lower = condition.toLowerCase();
+  if (lower.includes('snow')) return '🌨️';
+  if (lower.includes('rain') || lower.includes('shower')) return '🌧️';
+  if (lower.includes('thunder') || lower.includes('storm')) return '⛈️';
+  if (lower.includes('overcast') || lower.includes('cloudy')) return '☁️';
+  if (lower.includes('partly')) return '⛅';
+  if (lower.includes('sun') || lower.includes('clear')) return '☀️';
+  if (lower.includes('fog') || lower.includes('mist')) return '🌫️';
+  if (lower.includes('wind')) return '💨';
+  return '🌤️';
+}
+
+function getMockWeather(): WeatherData {
+  return {
+    location: 'Vancouver',
+    temperature: -2,
+    feelsLike: -5,
+    condition: 'Light Snow',
+    humidity: 85,
+    windSpeed: 15,
+    windDirection: 'NW',
+    observedAt: new Date().toISOString(),
+    forecast: [
+      { day: 'Today', high: 1, low: -3, condition: 'Snow', pop: 80 },
+      { day: 'Wed', high: 3, low: -1, condition: 'Cloudy', pop: 30 },
+      { day: 'Thu', high: 5, low: 0, condition: 'Partly Cloudy', pop: 10 },
+      { day: 'Fri', high: 4, low: -2, condition: 'Rain', pop: 60 },
+      { day: 'Sat', high: 6, low: 1, condition: 'Sunny', pop: 0 },
+    ],
+    warnings: []
+  };
+}
+
+export default WeatherWidget;
