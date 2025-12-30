@@ -1,0 +1,59 @@
+Fishing charter operators often cover multiple locations (they trailer boats to different ports). 
+Let's update the schema to support this:
+
+1. First, update the entity_types fields_schema for fishing-charter:
+
+UPDATE entity_types 
+SET fields_schema = '{
+  "primary_port": "string",
+  "service_areas": "array",
+  "contact_people": "array",
+  "social_media_links": "array",
+  "email": "string"
+}'
+WHERE id = 'fishing-charter';
+
+2. Now create a geocoding script that:
+
+a) For each fishing charter, parse the location field (e.g., "Bamfield, Vancouver Island, British Columbia")
+b) Extract the primary city/port (first part before comma)
+c) Look up that city in geo_regions to get coordinates
+d) Also identify the broader region for service_areas
+
+Here's the mapping logic:
+- Extract city name from metadata->>'home_port'
+- Match to geo_regions.short_name or geo_regions.name
+- Set entity latitude/longitude from the matched region
+- Store original location text in metadata->>'primary_port'
+- Store the region_id for service area coverage
+
+Common port mappings needed:
+- "Bamfield" → muni-bamfield (lat: 48.8333, lng: -125.1350)
+- "Tofino" → muni-tofino (lat: 49.1530, lng: -125.9066)
+- "Ucluelet" → muni-ucluelet (lat: 48.9422, lng: -125.5461)
+- "Port Alberni" → muni-port-alberni (lat: 49.2339, lng: -124.8055)
+- "Campbell River" → muni-campbell-river (lat: 50.0244, lng: -125.2475)
+- "Port Hardy" → muni-port-hardy (lat: 50.7256, lng: -127.4969)
+- "Victoria" → muni-victoria (lat: 48.4284, lng: -123.3656)
+- "Nanaimo" → muni-nanaimo (lat: 49.1659, lng: -123.9401)
+- "Prince Rupert" → muni-prince-rupert (lat: 54.3150, lng: -130.3208)
+- "Vancouver Island" → use central point (lat: 49.5, lng: -125.5)
+- "British Columbia" → use BC center (lat: 54.0, lng: -125.0)
+
+After geocoding, verify:
+SELECT 
+  COUNT(*) as total,
+  COUNT(latitude) as geocoded,
+  ROUND(100.0 * COUNT(latitude) / COUNT(*), 1) as pct
+FROM entities 
+WHERE entity_type_id = 'fishing-charter';
+
+-- Show distribution by region
+SELECT 
+  gr.short_name as region,
+  COUNT(e.id) as charters
+FROM entities e
+JOIN geo_regions gr ON e.region_id = gr.id
+WHERE e.entity_type_id = 'fishing-charter'
+GROUP BY gr.short_name
+ORDER BY charters DESC;
