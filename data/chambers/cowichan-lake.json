@@ -648,5 +648,70 @@
     "naicsSubsector": "713",
     "municipality": "Lake Cowichan",
     "region": "Cowichan Valley"
+  },
+  {
+    "id": "cl-lake-cowichan-pharmacy",
+    "chamberId": "cowichan-lake-chamber",
+    "businessName": "Lake Cowichan Pharmacy",
+    "category": "pharmacy",
+    "subcategory": "Pharmacy",
+    "naicsCode": "446110",
+    "naicsTitle": "Pharmacies and Drug Stores",
+    "naicsSector": "44",
+    "naicsSubsector": "446",
+    "municipality": "Lake Cowichan",
+    "region": "Cowichan Valley"
+  },
+  {
+    "id": "cl-lake-cowichan-dental",
+    "chamberId": "cowichan-lake-chamber",
+    "businessName": "Lake Cowichan Dental Centre",
+    "category": "dental",
+    "subcategory": "Dentist",
+    "naicsCode": "621210",
+    "naicsTitle": "Offices of Dentists",
+    "naicsSector": "62",
+    "naicsSubsector": "621",
+    "municipality": "Lake Cowichan",
+    "region": "Cowichan Valley"
+  },
+  {
+    "id": "cl-lake-cowichan-veterinary",
+    "chamberId": "cowichan-lake-chamber",
+    "businessName": "Lake Cowichan Veterinary Clinic",
+    "category": "veterinary",
+    "subcategory": "Veterinary Clinic",
+    "naicsCode": "541940",
+    "naicsTitle": "Veterinary Services",
+    "naicsSector": "54",
+    "naicsSubsector": "541",
+    "municipality": "Lake Cowichan",
+    "region": "Cowichan Valley"
+  },
+  {
+    "id": "cl-cowichan-lake-towing",
+    "chamberId": "cowichan-lake-chamber",
+    "businessName": "Cowichan Lake Towing",
+    "category": "towing",
+    "subcategory": "Towing",
+    "naicsCode": "488410",
+    "naicsTitle": "Motor Vehicle Towing",
+    "naicsSector": "48",
+    "naicsSubsector": "488",
+    "municipality": "Lake Cowichan",
+    "region": "Cowichan Valley"
+  },
+  {
+    "id": "cl-lake-cowichan-florist",
+    "chamberId": "cowichan-lake-chamber",
+    "businessName": "Lake Cowichan Florist",
+    "category": "retail",
+    "subcategory": "Florist",
+    "naicsCode": "453110",
+    "naicsTitle": "Florists",
+    "naicsSector": "45",
+    "naicsSubsector": "453",
+    "municipality": "Lake Cowichan",
+    "region": "Cowichan Valley"
   }
 ]
