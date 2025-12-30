@@ -1,0 +1,104 @@
+I need to add all entity types to support our infrastructure data. 
+
+Run this SQL to add entity types for ALL our datasets:
+
+-- TRANSPORTATION TYPES
+INSERT INTO entity_types (id, category_id, name, name_plural, description, icon, fields_schema) VALUES
+('airport-large', 'transportation', 'Large Airport', 'Large Airports', 'Major international/domestic airports', 'plane', '{"icao": "string", "iata": "string", "elevation_ft": "number", "has_metar": "boolean", "has_customs": "boolean", "runways": "array"}'),
+('airport-medium', 'transportation', 'Medium Airport', 'Medium Airports', 'Regional airports with scheduled service', 'plane', '{"icao": "string", "iata": "string", "elevation_ft": "number", "has_metar": "boolean", "runways": "array"}'),
+('airport-small', 'transportation', 'Small Airport', 'Small Airports', 'Small community airports', 'plane', '{"icao": "string", "tc_lid": "string", "elevation_ft": "number", "has_metar": "boolean"}'),
+('seaplane-base', 'transportation', 'Seaplane Base', 'Seaplane Bases', 'Floatplane and seaplane facilities', 'plane', '{"icao": "string", "tc_lid": "string"}'),
+('heliport', 'transportation', 'Heliport', 'Heliports', 'Helicopter landing facilities', 'plane', '{"icao": "string", "hospital_id": "string"}'),
+('ferry-terminal', 'transportation', 'Ferry Terminal', 'Ferry Terminals', 'BC Ferries and other ferry terminals', 'ship', '{"terminal_code": "string", "routes": "array"}'),
+('transit-system', 'transportation', 'Transit System', 'Transit Systems', 'Public transit systems', 'bus', '{"operator": "string", "type": "string", "municipalities_served": "array"}'),
+('rail-station', 'transportation', 'Rail Station', 'Rail Stations', 'Passenger and freight rail stations', 'train', '{"rail_type": "string", "operator": "string"}'),
+('bus-service', 'transportation', 'Bus Service', 'Bus Services', 'Intercity and charter bus services', 'bus', '{"service_type": "string", "routes": "array"}'),
+('taxi-service', 'transportation', 'Taxi Service', 'Taxi Services', 'Licensed taxi companies', 'car', '{"license_area": "string", "fleet_size": "number", "wheelchair_accessible": "boolean"}')
+ON CONFLICT (id) DO UPDATE SET
+  category_id = EXCLUDED.category_id,
+  name = EXCLUDED.name,
+  description = EXCLUDED.description,
+  fields_schema = EXCLUDED.fields_schema;
+
+-- EMERGENCY TYPES
+INSERT INTO entity_types (id, category_id, name, name_plural, description, icon, fields_schema) VALUES
+('hospital', 'emergency', 'Hospital', 'Hospitals', 'Acute care hospitals', 'hospital', '{"health_authority": "string", "has_helipad": "boolean", "helipad_icao": "string", "is_trauma_centre": "boolean", "is_tertiary": "boolean", "emergency_department": "boolean"}'),
+('fire-station', 'emergency', 'Fire Station', 'Fire Stations', 'Fire halls and stations', 'flame', '{"department_type": "string", "apparatus": "array"}'),
+('police-rcmp', 'emergency', 'RCMP Detachment', 'RCMP Detachments', 'Royal Canadian Mounted Police', 'shield', '{"detachment_size": "string"}'),
+('police-municipal', 'emergency', 'Municipal Police', 'Municipal Police', 'Municipal police departments', 'shield', '{"department": "string"}'),
+('ambulance-station', 'emergency', 'Ambulance Station', 'Ambulance Stations', 'BC Emergency Health Services', 'ambulance', '{"station_type": "string"}'),
+('sar-group', 'emergency', 'SAR Group', 'SAR Groups', 'Ground Search and Rescue volunteer groups', 'search', '{"capabilities": "array", "coverage_area": "string", "short_name": "string"}'),
+('coast-guard', 'emergency', 'Coast Guard Station', 'Coast Guard Stations', 'Canadian Coast Guard facilities', 'anchor', '{"services": "array", "vhf_channel": "string"}')
+ON CONFLICT (id) DO UPDATE SET
+  category_id = EXCLUDED.category_id,
+  name = EXCLUDED.name,
+  description = EXCLUDED.description,
+  fields_schema = EXCLUDED.fields_schema;
+
+-- INFRASTRUCTURE TYPES
+INSERT INTO entity_types (id, category_id, name, name_plural, description, icon, fields_schema) VALUES
+('marina', 'infrastructure', 'Marina', 'Marinas', 'Boat moorage and marine services', 'anchor', '{"has_fuel": "boolean", "has_moorage": "boolean", "has_launch": "boolean", "vhf_channel": "string"}'),
+('harbour-authority', 'infrastructure', 'Harbour Authority', 'Harbour Authorities', 'Port and harbour management', 'anchor', '{"services": "array"}'),
+('public-wharf', 'infrastructure', 'Public Wharf', 'Public Wharves', 'Government wharves and docks', 'anchor', '{}')
+ON CONFLICT (id) DO UPDATE SET
+  category_id = EXCLUDED.category_id,
+  name = EXCLUDED.name,
+  description = EXCLUDED.description,
+  fields_schema = EXCLUDED.fields_schema;
+
+-- ENVIRONMENT TYPES  
+INSERT INTO entity_types (id, category_id, name, name_plural, description, icon, fields_schema) VALUES
+('weather-station-metar', 'environment', 'METAR Station', 'METAR Stations', 'Aviation weather reporting stations', 'cloud', '{"station_id": "string", "icao": "string", "wmo_id": "string", "reports": "array", "elevation_m": "number"}'),
+('weather-station-buoy', 'environment', 'Weather Buoy', 'Weather Buoys', 'Offshore marine weather buoys', 'cloud', '{"station_id": "string", "wmo_id": "string"}'),
+('weather-station-lightstation', 'environment', 'Light Station', 'Light Stations', 'Coastal light stations with weather', 'cloud', '{"station_id": "string", "reports": "array"}'),
+('weather-station-climate', 'environment', 'Climate Station', 'Climate Stations', 'Climate reference stations', 'cloud', '{"station_id": "string", "wmo_id": "string"}')
+ON CONFLICT (id) DO UPDATE SET
+  category_id = EXCLUDED.category_id,
+  name = EXCLUDED.name,
+  description = EXCLUDED.description,
+  fields_schema = EXCLUDED.fields_schema;
+
+-- SERVICES TYPES
+INSERT INTO entity_types (id, category_id, name, name_plural, description, icon, fields_schema) VALUES
+('school-university', 'services', 'University', 'Universities', 'Degree-granting universities', 'graduation-cap', '{"enrollment": "number", "district": "string"}'),
+('school-college', 'services', 'College', 'Colleges', 'Community colleges and institutes', 'graduation-cap', '{"enrollment": "number"}'),
+('school-k12', 'services', 'K-12 School', 'K-12 Schools', 'Elementary and secondary schools', 'school', '{"school_type": "string", "grades": "string", "district": "string", "enrollment": "number"}'),
+('pharmacy', 'services', 'Pharmacy', 'Pharmacies', 'Retail pharmacies', 'pill', '{"chain": "string", "hours": "string", "services": "array"}'),
+('library', 'services', 'Library', 'Libraries', 'Public libraries', 'book', '{"system": "string"}'),
+('recreation-centre', 'services', 'Recreation Centre', 'Recreation Centres', 'Community recreation facilities', 'dumbbell', '{"amenities": "array"}'),
+('community-hall', 'services', 'Community Hall', 'Community Halls', 'Community gathering spaces', 'home', '{}')
+ON CONFLICT (id) DO UPDATE SET
+  category_id = EXCLUDED.category_id,
+  name = EXCLUDED.name,
+  description = EXCLUDED.description,
+  fields_schema = EXCLUDED.fields_schema;
+
+-- BUSINESS TYPES
+INSERT INTO entity_types (id, category_id, name, name_plural, description, icon, fields_schema) VALUES
+('chamber-of-commerce', 'business-org', 'Chamber of Commerce', 'Chambers of Commerce', 'Business associations and boards of trade', 'briefcase', '{"founded": "number", "members": "string"}'),
+('business', 'business-org', 'Business', 'Businesses', 'Chamber member businesses', 'store', '{"naics_code": "string", "naics_title": "string", "category": "string", "subcategory": "string"}')
+ON CONFLICT (id) DO UPDATE SET
+  category_id = EXCLUDED.category_id,
+  name = EXCLUDED.name,
+  description = EXCLUDED.description,
+  fields_schema = EXCLUDED.fields_schema;
+
+-- GOVERNMENT TYPES
+INSERT INTO entity_types (id, category_id, name, name_plural, description, icon, fields_schema) VALUES
+('city-hall', 'government', 'City Hall', 'City Halls', 'Municipal government offices', 'landmark', '{"services": "array"}'),
+('regional-district', 'government', 'Regional District Office', 'Regional District Offices', 'Regional district administration', 'landmark', '{}'),
+('service-bc', 'government', 'Service BC', 'Service BC Centres', 'Provincial service centres', 'landmark', '{"services": "array"}'),
+('first-nations-admin', 'government', 'First Nations Administration', 'First Nations Administrations', 'First Nations band offices', 'landmark', '{}')
+ON CONFLICT (id) DO UPDATE SET
+  category_id = EXCLUDED.category_id,
+  name = EXCLUDED.name,
+  description = EXCLUDED.description,
+  fields_schema = EXCLUDED.fields_schema;
+
+Then verify with:
+SELECT category_id, COUNT(*) as type_count 
+FROM entity_types 
+GROUP BY category_id 
+ORDER BY category_id;
+
+Expected: ~30 entity types across 7 categories
