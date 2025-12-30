@@ -9,8 +9,19 @@ import path from "path";
 import { runChamberAudit } from "@shared/chamber-audit";
 import { buildNAICSTree, getMembersByNAICSCode, getMembersBySector, getMembersBySubsector } from "@shared/naics-hierarchy";
 import { BC_CHAMBERS_OF_COMMERCE } from "@shared/chambers-of-commerce";
-import { chamberMembers } from "@shared/chamber-members";
+import { chamberMembers as staticMembers } from "@shared/chamber-members";
+import { getJsonLoadedMembers } from "@shared/chamber-member-registry";
 import { getChamberProgressList, getChamberProgressSummary } from "@shared/chamber-progress";
+
+// Merge static members with JSON-loaded members for consistent data across the app
+function getAllChamberMembers() {
+  const jsonMembers = getJsonLoadedMembers();
+  const jsonMemberIds = new Set(jsonMembers.map(m => m.id));
+  const uniqueStaticMembers = staticMembers.filter(m => !jsonMemberIds.has(m.id));
+  return [...uniqueStaticMembers, ...jsonMembers];
+}
+
+const chamberMembers = getAllChamberMembers();
 
 export async function registerRoutes(
   httpServer: Server,

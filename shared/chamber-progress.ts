@@ -13,7 +13,22 @@
  */
 
 import { BC_CHAMBERS_OF_COMMERCE } from './chambers-of-commerce';
-import { chamberMembers } from './chamber-members';
+import { chamberMembers as staticMembers } from './chamber-members';
+import { getJsonLoadedMembers } from './chamber-member-registry';
+
+// Merge static members with dynamically-loaded JSON members
+// This ensures new JSON files are automatically included without regenerating the static file
+function getAllChamberMembers() {
+  const jsonMembers = getJsonLoadedMembers();
+  const jsonMemberIds = new Set(jsonMembers.map(m => m.id));
+  
+  // Filter out static members that have been replaced by JSON versions
+  const uniqueStaticMembers = staticMembers.filter(m => !jsonMemberIds.has(m.id));
+  
+  return [...uniqueStaticMembers, ...jsonMembers];
+}
+
+const chamberMembers = getAllChamberMembers();
 
 export type ChamberProgressStatus = 'pending' | 'in_progress' | 'partial' | 'completed' | 'blocked';
 
