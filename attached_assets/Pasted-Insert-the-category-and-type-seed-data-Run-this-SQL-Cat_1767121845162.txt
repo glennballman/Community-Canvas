@@ -1,0 +1,31 @@
+Insert the category and type seed data.
+
+Run this SQL:
+
+-- Categories
+INSERT INTO entity_categories (id, name, icon, color, signal_type_prefix, sort_order) VALUES
+('transportation', 'Transportation', 'car', '#3B82F6', 'transport_', 1),
+('accommodation', 'Accommodation', 'bed', '#8B5CF6', 'lodging_', 2),
+('food-beverage', 'Food & Beverage', 'utensils', '#F59E0B', 'food_', 3),
+('recreation', 'Recreation & Tourism', 'compass', '#10B981', 'recreation_', 4),
+('services', 'Services', 'briefcase', '#6366F1', 'service_', 5),
+('infrastructure', 'Infrastructure', 'building', '#64748B', 'infra_', 6),
+('emergency', 'Emergency Services', 'siren', '#EF4444', 'emergency_', 7),
+('government', 'Government', 'landmark', '#0EA5E9', 'gov_', 8),
+('environment', 'Environment & Weather', 'cloud-sun', '#22C55E', 'env_', 9),
+('business-org', 'Business Organizations', 'users', '#EC4899', 'org_', 10);
+
+-- Key entity types (transportation, emergency, environment)
+INSERT INTO entity_types (id, category_id, name, has_capacity, has_schedule, has_real_time_status, civos_signal_type, export_to_civos) VALUES
+('ferry-route', 'transportation', 'Ferry Route', true, true, true, 'ferry_status', true),
+('ferry-terminal', 'transportation', 'Ferry Terminal', true, false, true, 'ferry_terminal', true),
+('highway', 'transportation', 'Highway', false, false, true, 'road_status', true),
+('road-segment', 'transportation', 'Road Segment', false, false, true, 'road_segment', true),
+('airport', 'transportation', 'Airport', false, true, true, 'airport_status', true),
+('hospital', 'emergency', 'Hospital', true, true, true, 'health_facility', true),
+('fire-station', 'emergency', 'Fire Station', false, false, true, 'fire_service', true),
+('weather-station', 'environment', 'Weather Station', false, false, true, 'weather_observation', true),
+('webcam', 'environment', 'Webcam', false, false, true, 'webcam_feed', true),
+('chamber-of-commerce', 'business-org', 'Chamber of Commerce', false, false, false, NULL, false);
+
+Confirm when done.
