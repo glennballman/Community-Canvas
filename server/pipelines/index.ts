@@ -26,8 +26,8 @@ export const pipelines: PipelineConfig[] = [
     id: 'bcferries',
     name: 'BC Ferries Conditions',
     pipeline: new BCFerriesPipeline(),
-    interval: 5 * 60 * 1000,
-    enabled: false // Needs scraping setup
+    interval: 10 * 60 * 1000, // 10 minutes
+    enabled: true
   },
   {
     id: 'weather',
