@@ -1,0 +1,278 @@
+Create a BC Ferries status component showing current sailing conditions.
+
+Create file: client/src/components/Dashboard/FerryStatus.tsx
+
+import React, { useEffect, useState } from 'react';
+
+interface FerrySailing {
+  route: string;
+  departing: string;
+  arriving: string;
+  nextSailing: string;
+  status: 'on_time' | 'delayed' | 'cancelled';
+  delayMinutes?: number;
+  vehicleCapacity: number;
+  passengerCapacity: number;
+  vessel?: string;
+}
+
+interface FerryRoute {
+  id: string;
+  name: string;
+  sailings: FerrySailing[];
+}
+
+export function FerryStatus() {
+  const [routes, setRoutes] = useState<FerryRoute[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedRoute, setSelectedRoute] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchFerryStatus();
+    // Refresh every 5 minutes
+    const interval = setInterval(fetchFerryStatus, 5 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  async function fetchFerryStatus() {
+    try {
+      const response = await fetch('/api/v1/ferries/status');
+      const data = await response.json();
+      setRoutes(data.routes || mockFerryData());
+    } catch (error) {
+      console.error('Failed to fetch ferry status:', error);
+      setRoutes(mockFerryData()); // Use mock data as fallback
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="bg-gray-800 rounded-xl p-4">
+        <div className="animate-pulse space-y-3">
+          <div className="h-6 bg-gray-700 rounded w-32"></div>
+          {[1, 2, 3].map(i => (
+            <div key={i} className="h-16 bg-gray-700 rounded-lg"></div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-gray-800 rounded-xl overflow-hidden">
+      <div className="px-4 py-3 border-b border-gray-700 flex items-center justify-between">
+        <h3 className="font-semibold text-white flex items-center gap-2">
+          <span>⛴️</span> BC Ferries
+        </h3>
+        
+          href="https://www.bcferries.com/current-conditions"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-xs text-blue-400 hover:text-blue-300"
+        >
+          View all →
+        </a>
+      </div>
+
+      <div className="divide-y divide-gray-700">
+        {routes.length === 0 ? (
+          <div className="p-4 text-center text-gray-400">
+            <p>No ferry data available</p>
+          </div>
+        ) : (
+          routes.map(route => (
+            <FerryRouteRow
+              key={route.id}
+              route={route}
+              expanded={selectedRoute === route.id}
+              onToggle={() => setSelectedRoute(
+                selectedRoute === route.id ? null : route.id
+              )}
+            />
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
+interface FerryRouteRowProps {
+  route: FerryRoute;
+  expanded: boolean;
+  onToggle: () => void;
+}
+
+function FerryRouteRow({ route, expanded, onToggle }: FerryRouteRowProps) {
+  const nextSailing = route.sailings[0];
+  if (!nextSailing) return null;
+
+  const statusConfig = {
+    on_time: { icon: '✅', text: 'On Time', color: 'text-green-400' },
+    delayed: { icon: '⏳', text: 'Delayed', color: 'text-yellow-400' },
+    cancelled: { icon: '❌', text: 'Cancelled', color: 'text-red-400' },
+  };
+
+  const config = statusConfig[nextSailing.status] || statusConfig.on_time;
+
+  return (
+    <div>
+      <button
+        onClick={onToggle}
+        className="w-full px-4 py-3 flex items-center justify-between hover:bg-gray-700/50 transition-colors text-left"
+      >
+        <div className="flex items-center gap-3">
+          <span className="text-xl">⛴️</span>
+          <div>
+            <h4 className="font-medium text-white">{route.name}</h4>
+            <p className="text-sm text-gray-400">
+              Next: {formatTime(nextSailing.nextSailing)}
+              {nextSailing.delayMinutes && nextSailing.delayMinutes > 0 && (
+                <span className="text-yellow-400 ml-1">
+                  (+{nextSailing.delayMinutes} min)
+                </span>
+              )}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <span className={`text-sm font-medium ${config.color}`}>
+            {config.icon} {config.text}
+          </span>
+          <span className="text-gray-500">{expanded ? '▲' : '▼'}</span>
+        </div>
+      </button>
+
+      {expanded && (
+        <div className="px-4 pb-4 bg-gray-700/30">
+          <div className="grid grid-cols-2 gap-4 mt-2">
+            {/* Vehicle capacity */}
+            <div>
+              <p className="text-xs text-gray-400 uppercase mb-1">🚗 Vehicles</p>
+              <div className="flex items-center gap-2">
+                <div className="flex-1 h-2 bg-gray-600 rounded-full overflow-hidden">
+                  <div
+                    className={`h-full transition-all ${
+                      nextSailing.vehicleCapacity > 80 ? 'bg-red-500' :
+                      nextSailing.vehicleCapacity > 50 ? 'bg-yellow-500' : 'bg-green-500'
+                    }`}
+                    style={{ width: `${nextSailing.vehicleCapacity}%` }}
+                  />
+                </div>
+                <span className="text-sm font-medium text-white w-12 text-right">
+                  {nextSailing.vehicleCapacity}%
+                </span>
+              </div>
+            </div>
+
+            {/* Passenger capacity */}
+            <div>
+              <p className="text-xs text-gray-400 uppercase mb-1">👥 Passengers</p>
+              <div className="flex items-center gap-2">
+                <div className="flex-1 h-2 bg-gray-600 rounded-full overflow-hidden">
+                  <div
+                    className={`h-full transition-all ${
+                      nextSailing.passengerCapacity > 80 ? 'bg-red-500' :
+                      nextSailing.passengerCapacity > 50 ? 'bg-yellow-500' : 'bg-green-500'
+                    }`}
+                    style={{ width: `${nextSailing.passengerCapacity}%` }}
+                  />
+                </div>
+                <span className="text-sm font-medium text-white w-12 text-right">
+                  {nextSailing.passengerCapacity}%
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {nextSailing.vessel && (
+            <p className="text-sm text-gray-400 mt-3">
+              🚢 Vessel: {nextSailing.vessel}
+            </p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function formatTime(dateString: string): string {
+  try {
+    const date = new Date(dateString);
+    return date.toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    });
+  } catch {
+    return dateString;
+  }
+}
+
+// Mock data until real pipeline is running
+function mockFerryData(): FerryRoute[] {
+  const now = new Date();
+  return [
+    {
+      id: 'tsawwassen-swartz-bay',
+      name: 'Tsawwassen → Swartz Bay',
+      sailings: [{
+        route: 'Tsawwassen - Swartz Bay',
+        departing: 'Tsawwassen',
+        arriving: 'Swartz Bay',
+        nextSailing: new Date(now.getTime() + 45 * 60000).toISOString(),
+        status: 'on_time',
+        vehicleCapacity: 65,
+        passengerCapacity: 40,
+        vessel: 'Spirit of British Columbia'
+      }]
+    },
+    {
+      id: 'horseshoe-bay-nanaimo',
+      name: 'Horseshoe Bay → Nanaimo',
+      sailings: [{
+        route: 'Horseshoe Bay - Departure Bay',
+        departing: 'Horseshoe Bay',
+        arriving: 'Departure Bay',
+        nextSailing: new Date(now.getTime() + 90 * 60000).toISOString(),
+        status: 'delayed',
+        delayMinutes: 15,
+        vehicleCapacity: 85,
+        passengerCapacity: 55,
+        vessel: 'Queen of Oak Bay'
+      }]
+    },
+    {
+      id: 'tsawwassen-duke-point',
+      name: 'Tsawwassen → Duke Point',
+      sailings: [{
+        route: 'Tsawwassen - Duke Point',
+        departing: 'Tsawwassen',
+        arriving: 'Duke Point',
+        nextSailing: new Date(now.getTime() + 120 * 60000).toISOString(),
+        status: 'on_time',
+        vehicleCapacity: 30,
+        passengerCapacity: 20,
+        vessel: 'Coastal Celebration'
+      }]
+    },
+    {
+      id: 'horseshoe-bay-langdale',
+      name: 'Horseshoe Bay → Langdale',
+      sailings: [{
+        route: 'Horseshoe Bay - Langdale',
+        departing: 'Horseshoe Bay',
+        arriving: 'Langdale',
+        nextSailing: new Date(now.getTime() + 30 * 60000).toISOString(),
+        status: 'on_time',
+        vehicleCapacity: 45,
+        passengerCapacity: 35,
+        vessel: 'Queen of Surrey'
+      }]
+    }
+  ];
+}
+
+export default FerryStatus;
