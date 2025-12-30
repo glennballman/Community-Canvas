@@ -114,7 +114,7 @@ export class DriveBCPipeline extends BasePipeline {
 
     // Get all active DriveBC alerts to track which ones to deactivate
     const activeAlerts = await pool.query(
-      `SELECT source_key FROM alerts WHERE alert_type = 'road_event' AND is_active = true`
+      `SELECT source_key FROM alerts WHERE alert_type = 'closure' AND is_active = true`
     );
     const activeSourceKeys = new Set(activeAlerts.rows.map(r => r.source_key));
     const processedKeys = new Set<string>();
@@ -140,8 +140,8 @@ export class DriveBCPipeline extends BasePipeline {
         }
       }
 
-      // Map severity to alert severity enum
-      let alertSeverity = 'moderate';
+      // Map severity to alert severity enum (using valid severity_level values)
+      let alertSeverity = 'warning';
       if (event.severity === 'MINOR') alertSeverity = 'minor';
       else if (event.severity === 'MAJOR') alertSeverity = 'major';
       
@@ -173,7 +173,7 @@ export class DriveBCPipeline extends BasePipeline {
             title = $2,
             summary = $3,
             message = $4,
-            severity = $5::alert_severity,
+            severity = $5::severity_level,
             latitude = $6,
             longitude = $7,
             region_id = $8,
@@ -204,7 +204,7 @@ export class DriveBCPipeline extends BasePipeline {
             effective_from, effective_until, is_active,
             source_key, source_url, observed_at
           ) VALUES (
-            'road_event', $1::alert_severity, 'drivebc', $2, $3, $4,
+            'closure', $1::severity_level, 'drivebc', $2, $3, $4,
             $5, $6, $7, $8::jsonb,
             $9, $10, true,
             $11, $12, NOW()

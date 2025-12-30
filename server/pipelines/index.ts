@@ -9,7 +9,7 @@ import { pool } from "../db";
 export interface PipelineConfig {
   id: string;
   name: string;
-  pipeline: BasePipeline;
+  pipeline: BasePipeline | any; // Some pipelines have different transform signatures
   intervalMinutes: number;
   enabled: boolean;
   requiresFirecrawl: boolean;
@@ -159,10 +159,10 @@ export function startPipelineScheduler(): void {
 export function stopPipelineScheduler(): void {
   console.log('Stopping pipeline scheduler...');
   
-  for (const [id, interval] of activeIntervals) {
+  activeIntervals.forEach((interval, id) => {
     clearInterval(interval);
     console.log(`Stopped: ${id}`);
-  }
+  });
   
   activeIntervals.clear();
 }
@@ -185,5 +185,5 @@ export function getPipelineStatus(): Array<{
   }));
 }
 
-// Re-export types
-export { PipelineResult } from "./base-pipeline";
+// Re-export type for external use
+export type { PipelineResult } from "./base-pipeline";

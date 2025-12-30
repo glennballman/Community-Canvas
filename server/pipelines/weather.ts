@@ -20,7 +20,7 @@ interface WeatherAlert {
   title: string;
   description: string;
   type: string;
-  severity: 'minor' | 'moderate' | 'major';
+  severity: 'minor' | 'warning' | 'major';
   effectiveFrom: string;
   effectiveUntil: string | null;
   stationId: string;
@@ -131,7 +131,7 @@ export class WeatherPipeline extends BasePipeline {
         
         if (titleMatch) {
           const priority = (priorityMatch?.[1] || '').toLowerCase();
-          let severity: WeatherAlert['severity'] = 'moderate';
+          let severity: WeatherAlert['severity'] = 'warning';
           if (priority.includes('low') || priority.includes('statement')) {
             severity = 'minor';
           } else if (priority.includes('high') || priority.includes('warning')) {
@@ -265,7 +265,7 @@ export class WeatherPipeline extends BasePipeline {
             alert_type, severity, signal_type, title, summary, message,
             region_id, details, effective_from, is_active, source_key, observed_at
           ) VALUES (
-            'weather', $1::alert_severity, 'environment_canada', $2, $3, $4,
+            'weather', $1::severity_level, 'environment_canada', $2, $3, $4,
             $5, $6::jsonb, NOW(), true, $7, NOW()
           )
         `, [

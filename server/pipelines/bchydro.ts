@@ -110,7 +110,7 @@ export class BCHydroPipeline extends BasePipeline {
 
     // Get all active BC Hydro alerts to track which ones to deactivate
     const activeAlerts = await pool.query(
-      `SELECT source_key FROM alerts WHERE alert_type = 'power_outage' AND is_active = true`
+      `SELECT source_key FROM alerts WHERE alert_type = 'outage' AND is_active = true`
     );
     const activeSourceKeys = new Set(activeAlerts.rows.map(r => r.source_key));
     const processedKeys = new Set<string>();
@@ -120,11 +120,12 @@ export class BCHydroPipeline extends BasePipeline {
       processedKeys.add(sourceKey);
       
       // Determine severity based on customers affected
-      let severity: 'minor' | 'moderate' | 'major' = 'minor';
+      // Using valid severity_level enum values: minor, warning, major
+      let severity: 'minor' | 'warning' | 'major' = 'minor';
       if (outage.customersAffected >= 1000) {
         severity = 'major';
       } else if (outage.customersAffected >= 100) {
-        severity = 'moderate';
+        severity = 'warning';
       }
 
       // Find matching region
@@ -165,6 +166,17 @@ export class BCHydroPipeline extends BasePipeline {
         [sourceKey]
       );
 
+      // Parse dates safely
+      let effectiveUntil: Date | null = null;
+      try {
+        if (outage.estimatedRestoration && !outage.estimatedRestoration.includes('NaN')) {
+          effectiveUntil = new Date(outage.estimatedRestoration);
+          if (isNaN(effectiveUntil.getTime())) effectiveUntil = null;
+        }
+      } catch (e) {
+        // Use null if date parsing fails
+      }
+
       if (existing.rows.length > 0) {
         // Update existing alert
         await pool.query(`
@@ -172,7 +184,7 @@ export class BCHydroPipeline extends BasePipeline {
             title = $2,
             summary = $3,
             message = $4,
-            severity = $5::alert_severity,
+            severity = $5::severity_level,
             latitude = $6,
             longitude = $7,
             region_id = $8,
@@ -191,11 +203,21 @@ export class BCHydroPipeline extends BasePipeline {
           longitude,
           regionId,
           JSON.stringify(details),
-          outage.estimatedRestoration ? new Date(outage.estimatedRestoration) : null
+          effectiveUntil
         ]);
         updated++;
       } else {
-        // Create new alert
+        // Create new alert - parse effectiveFrom safely
+        let effectiveFrom = new Date();
+        try {
+          if (outage.outageStart && !outage.outageStart.includes('NaN')) {
+            effectiveFrom = new Date(outage.outageStart);
+            if (isNaN(effectiveFrom.getTime())) effectiveFrom = new Date();
+          }
+        } catch (e) {
+          // Use current time if date parsing fails
+        }
+        
         await pool.query(`
           INSERT INTO alerts (
             alert_type, severity, signal_type, title, summary, message,
@@ -203,7 +225,7 @@ export class BCHydroPipeline extends BasePipeline {
             effective_from, effective_until, is_active,
             source_key, source_url, observed_at
           ) VALUES (
-            'power_outage', $1::alert_severity, 'bchydro', $2, $3, $4,
+            'outage', $1::severity_level, 'bchydro', $2, $3, $4,
             $5, $6, $7, $8::jsonb,
             $9, $10, true,
             $11, 'https://www.bchydro.com/power-outages/app/outage-map.html', NOW()
@@ -217,8 +239,8 @@ export class BCHydroPipeline extends BasePipeline {
           longitude,
           regionId,
           JSON.stringify(details),
-          new Date(outage.outageStart),
-          outage.estimatedRestoration ? new Date(outage.estimatedRestoration) : null,
+          effectiveFrom,
+          effectiveUntil,
           sourceKey
         ]);
         created++;
