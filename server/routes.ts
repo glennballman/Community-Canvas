@@ -586,6 +586,23 @@ export async function registerRoutes(
     }
   });
 
+  // GET /api/v1/alerts/count - Count of active alerts
+  app.get("/api/v1/alerts/count", async (req, res) => {
+    try {
+      const result = await storage.query(`
+        SELECT COUNT(*) as count
+        FROM alerts 
+        WHERE is_active = true
+        AND (effective_until IS NULL OR effective_until > NOW())
+      `);
+      
+      res.json({ count: parseInt(result.rows[0]?.count || '0', 10) });
+    } catch (error) {
+      console.error("Alerts count error:", error);
+      res.status(500).json({ message: "Failed to count alerts" });
+    }
+  });
+
   // GET /api/v1/alerts/by-type/:alertType - Alerts filtered by type
   app.get("/api/v1/alerts/by-type/:alertType", async (req, res) => {
     try {
