@@ -1,0 +1,62 @@
+Create the main entities table (the heart of the system).
+
+Run this SQL:
+
+CREATE TABLE entities (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    entity_type_id VARCHAR(50) REFERENCES entity_types(id) NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    slug VARCHAR(255) UNIQUE,
+    short_name VARCHAR(100),
+    aliases TEXT[],
+    external_ids JSONB DEFAULT '{}',
+    primary_region_id VARCHAR(50) REFERENCES geo_regions(id),
+    address_line1 VARCHAR(255),
+    address_line2 VARCHAR(255),
+    city VARCHAR(100),
+    province VARCHAR(50) DEFAULT 'BC',
+    postal_code VARCHAR(10),
+    country VARCHAR(50) DEFAULT 'Canada',
+    latitude DECIMAL(10, 7),
+    longitude DECIMAL(10, 7),
+    phone VARCHAR(30),
+    phone_secondary VARCHAR(30),
+    email VARCHAR(255),
+    website TEXT,
+    social_links JSONB DEFAULT '{}',
+    description TEXT,
+    short_description VARCHAR(500),
+    logo_url TEXT,
+    cover_image_url TEXT,
+    images JSONB DEFAULT '[]',
+    configuration JSONB DEFAULT '{}',
+    operating_hours JSONB DEFAULT '{}',
+    seasonal_info JSONB DEFAULT '{}',
+    pricing JSONB DEFAULT '{}',
+    payment_methods TEXT[],
+    parent_entity_id UUID REFERENCES entities(id),
+    operator_entity_id UUID REFERENCES entities(id),
+    chamber_id UUID REFERENCES entities(id),
+    membership_status VARCHAR(30),
+    verification_status VARCHAR(30) DEFAULT 'unverified',
+    claimed_by_user_id UUID,
+    claimed_at TIMESTAMPTZ,
+    verified_at TIMESTAMPTZ,
+    data_completeness INTEGER DEFAULT 0,
+    last_enriched_at TIMESTAMPTZ,
+    primary_source_id UUID REFERENCES data_sources(id),
+    is_active BOOLEAN DEFAULT true,
+    is_permanently_closed BOOLEAN DEFAULT false,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    search_vector TSVECTOR
+);
+
+CREATE INDEX idx_entities_type ON entities(entity_type_id);
+CREATE INDEX idx_entities_region ON entities(primary_region_id);
+CREATE INDEX idx_entities_slug ON entities(slug);
+CREATE INDEX idx_entities_active ON entities(is_active) WHERE is_active = true;
+CREATE INDEX idx_entities_external_ids ON entities USING GIN(external_ids);
+CREATE INDEX idx_entities_search ON entities USING GIN(search_vector);
+
+Confirm when done.
