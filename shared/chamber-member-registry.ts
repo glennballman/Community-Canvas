@@ -9,6 +9,9 @@ import chemainusData from '../data/chambers/chemainus.json';
 import cowichanLakeData from '../data/chambers/cowichan-lake.json';
 import portMcneillData from '../data/chambers/port-mcneill.json';
 import alertBayData from '../data/chambers/alert-bay.json';
+import qualicumBeachData from '../data/chambers/qualicum-beach.json';
+import portRenfrewData from '../data/chambers/port-renfrew.json';
+import penderIslandData from '../data/chambers/pender-island.json';
 
 const chamberDataFiles: Record<string, unknown[]> = {
   'port-alberni-chamber': portAlberniData as unknown[],
@@ -21,6 +24,9 @@ const chamberDataFiles: Record<string, unknown[]> = {
   'cowichan-lake-chamber': cowichanLakeData as unknown[],
   'port-mcneill-chamber': portMcneillData as unknown[],
   'alert-bay-chamber': alertBayData as unknown[],
+  'qualicum-beach-chamber': qualicumBeachData as unknown[],
+  'port-renfrew-chamber': portRenfrewData as unknown[],
+  'pender-island-chamber': penderIslandData as unknown[],
 };
 
 let validatedMembers: ChamberMember[] | null = null;
