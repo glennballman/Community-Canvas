@@ -8,12 +8,15 @@ import {
 } from "@shared/schema";
 import { eq, desc } from "drizzle-orm";
 
+import type { QueryResult } from "pg";
+
 export interface IStorage {
   getLatestSnapshot(location: string): Promise<Snapshot | undefined>;
   createSnapshot(snapshot: InsertSnapshot): Promise<Snapshot>;
   getChamberOverrides(): Promise<ChamberOverride[]>;
   getChamberOverride(chamberId: string): Promise<ChamberOverride | undefined>;
   upsertChamberOverride(chamberId: string, expectedMembers: number | null, estimatedMembers: number | null): Promise<ChamberOverride>;
+  query(text: string, params?: any[]): Promise<QueryResult>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -68,6 +71,10 @@ export class DatabaseStorage implements IStorage {
         .returning();
       return results[0];
     }
+  }
+
+  async query(text: string, params?: any[]): Promise<QueryResult> {
+    return pool.query(text, params);
   }
 }
 
