@@ -1,0 +1,64 @@
+I'm uploading a JSON file with 1,100 BC webcams to import. The file is at data/Webcams_1100_All_of_BC.json
+
+1. First, create the webcam entity type:
+
+INSERT INTO entity_types (id, category_id, name, name_plural, description, icon, fields_schema) VALUES
+('webcam', 'environment', 'Webcam', 'Webcams', 'Traffic and highway webcams across BC', 'camera', '{
+  "direct_feed_url": "string",
+  "host_page_url": "string", 
+  "view_description": "string",
+  "source_provider": "string",
+  "live_feed_status": "string",
+  "direction": "string"
+}')
+ON CONFLICT (id) DO UPDATE SET
+  name = EXCLUDED.name,
+  description = EXCLUDED.description,
+  fields_schema = EXCLUDED.fields_schema;
+
+2. Create an import script that reads the JSON file and for each webcam in the "webcams" array:
+
+Create an entity with:
+- slug = generate from nickname (e.g., "webcam-coquihalla-great-bear-n")
+- name = webcam.nickname (e.g., "Coquihalla Great Bear Snowshed - N")
+- entity_type_id = "webcam"
+- region_id = try to match webcam.city to a geo_region, fallback to "bc"
+- latitude = webcam.latitude
+- longitude = webcam.longitude
+- website = webcam.host_page_url
+- metadata = JSON with:
+  - direct_feed_url = webcam.direct_feed_url
+  - view_description = webcam.view_description
+  - source_provider = webcam.source_provider
+  - live_feed_status = webcam.live_feed_status
+  - Extract direction from nickname if present (N, S, E, W)
+
+The JSON structure is:
+{
+  "webcams": [
+    {
+      "latitude": 49.596374,
+      "longitude": -121.159832,
+      "city": "Coquihalla",
+      "nickname": "Coquihalla Great Bear Snowshed - N",
+      "view_description": "Highway 5 at the Great Bear Snowshed, looking north.",
+      "host_page_url": "https://images.drivebc.ca/bchighwaycam/pub/html/www/2.html",
+      "direct_feed_url": "https://images.drivebc.ca/bchighwaycam/pub/cameras/2.jpg",
+      "source_provider": "DriveBC (BC Ministry of Transportation)",
+      "live_feed_status": "online"
+    },
+    ...
+  ]
+}
+
+Process in batches of 200 to avoid timeouts.
+
+After import, verify:
+SELECT COUNT(*) FROM entities WHERE entity_type_id = 'webcam';
+-- Expected: 1100
+
+-- Check sample with feed URLs
+SELECT name, latitude, longitude, metadata->>'direct_feed_url' as feed_url
+FROM entities 
+WHERE entity_type_id = 'webcam'
+LIMIT 5;
