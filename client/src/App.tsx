@@ -3,6 +3,7 @@ import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import DashboardLayout from "@/components/Dashboard/DashboardLayout";
 import Dashboard from "@/pages/Dashboard";
 import AdminLayout from "@/pages/AdminLayout";
 import AdminHome from "@/pages/AdminHome";
@@ -37,10 +38,15 @@ function AdminRoutes() {
   );
 }
 
+function PublicDashboard() {
+  return <DashboardLayout />;
+}
+
 function Router() {
   return (
     <Switch>
-      <Route path="/" component={Dashboard} />
+      <Route path="/" component={PublicDashboard} />
+      <Route path="/legacy" component={Dashboard} />
       <Route path="/admin/:rest*" component={AdminRoutes} />
       <Route path="/admin" component={AdminRoutes} />
       <Route component={NotFound} />

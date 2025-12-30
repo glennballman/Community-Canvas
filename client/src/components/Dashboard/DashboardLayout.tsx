@@ -22,6 +22,7 @@ import {
 
 interface DashboardLayoutProps {
   defaultRegion?: string;
+  params?: Record<string, string>;
 }
 
 export function DashboardLayout({ defaultRegion = 'bc' }: DashboardLayoutProps) {
