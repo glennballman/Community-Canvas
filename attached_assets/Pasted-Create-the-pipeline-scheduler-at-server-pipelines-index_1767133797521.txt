@@ -1,0 +1,63 @@
+Create the pipeline scheduler at /server/pipelines/index.ts
+
+This manages all pipelines and runs them on schedule:
+
+import { BCFerriesPipeline } from './bcferries';
+import { DriveBCPipeline } from './drivebc';
+import { WeatherPipeline } from './weather';
+import { BCHydroPipeline } from './bchydro';
+
+interface PipelineConfig {
+  id: string;
+  pipeline: BasePipeline;
+  intervalMinutes: number;
+  enabled: boolean;
+}
+
+const pipelines: PipelineConfig[] = [
+  { id: 'bcferries', pipeline: new BCFerriesPipeline(), intervalMinutes: 10, enabled: true },
+  { id: 'drivebc', pipeline: new DriveBCPipeline(), intervalMinutes: 5, enabled: true },
+  { id: 'weather', pipeline: new WeatherPipeline(), intervalMinutes: 30, enabled: true },
+  { id: 'bchydro', pipeline: new BCHydroPipeline(), intervalMinutes: 15, enabled: true },
+];
+
+export async function startPipelineScheduler() {
+  console.log('Starting pipeline scheduler...');
+  
+  for (const config of pipelines) {
+    if (!config.enabled) continue;
+    
+    // Run immediately on startup
+    runPipeline(config);
+    
+    // Then schedule recurring runs
+    setInterval(() => runPipeline(config), config.intervalMinutes * 60 * 1000);
+  }
+}
+
+async function runPipeline(config: PipelineConfig) {
+  const startTime = new Date();
+  console.log(`[${config.id}] Starting pipeline run at ${startTime.toISOString()}`);
+  
+  try {
+    const result = await config.pipeline.run();
+    
+    // Log to pipeline_runs table
+    await db.query(`
+      INSERT INTO pipeline_runs (data_source_id, started_at, completed_at, status, records_processed, records_created, records_updated)
+      VALUES ($1, $2, NOW(), 'completed', $3, $4, $5)
+    `, [config.id, startTime, result.recordsProcessed, result.recordsCreated, result.recordsUpdated]);
+    
+    console.log(`[${config.id}] Completed: ${result.recordsProcessed} processed, ${result.recordsCreated} created, ${result.recordsUpdated} updated`);
+  } catch (error) {
+    console.error(`[${config.id}] Failed:`, error);
+    
+    await db.query(`
+      INSERT INTO pipeline_runs (data_source_id, started_at, completed_at, status, error_message)
+      VALUES ($1, $2, NOW(), 'failed', $3)
+    `, [config.id, startTime, error.message]);
+  }
+}
+
+// Add to server startup
+startPipelineScheduler();
