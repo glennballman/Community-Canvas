@@ -1,0 +1,74 @@
+BC has an official library dataset with GPS coordinates.
+
+Download the data from: 
+https://www2.gov.bc.ca/assets/gov/residents/sports-and-recreation/arts-culture/public-libraries/bc_public_libraries_mailing_addresses_list.xlsx
+
+Or use the BC Data Catalogue CSV:
+https://catalogue.data.gov.bc.ca/dataset/3d2318d4-8f5d-4208-88f5-995420d7c58f
+
+The data includes:
+- Library name
+- Address
+- City
+- Postal code
+- Phone
+- Website (some)
+- Latitude/Longitude
+- Library system name
+
+Create an import script that for each library:
+
+1. Creates an entity with:
+   - slug = generate from name (e.g., "library-vancouver-central")
+   - name = library name
+   - entity_type_id = "library"
+   - region_id = match city to geo_regions
+   - latitude = from data
+   - longitude = from data
+   - phone = library phone
+   - website = library website (if available)
+   - address_line1 = street address
+   - city = city name
+   - postal_code = postal code
+   - metadata = JSON with:
+     - library_system = parent system name (e.g., "Vancouver Public Library")
+     - branch_type = "branch" or "main"
+
+If you can't access the URL directly, here are the major BC library systems to import:
+
+VANCOUVER PUBLIC LIBRARY (21 branches)
+- Central Library: 350 W Georgia St, Vancouver (49.2797, -123.1156)
+- Britannia Branch: 1661 Napier St, Vancouver
+- Carnegie Branch: 401 Main St, Vancouver
+- Champlain Heights, Collingwood, Dunbar, Firehall, Fraserview
+- Hastings, Joe Fortes, Kensington, Kerrisdale, Kitsilano
+- Marpole, Mount Pleasant, Oakridge, Renfrew, South Hill
+- Strathcona, Terry Salman branches
+
+VANCOUVER ISLAND REGIONAL LIBRARY (39 branches)
+- Serving: Nanaimo, Parksville, Qualicum, Port Alberni, Tofino, Ucluelet, etc.
+
+OKANAGAN REGIONAL LIBRARY (28 branches)
+- Serving: Kelowna, Vernon, Penticton, Summerland, etc.
+
+FRASER VALLEY REGIONAL LIBRARY (24 branches)
+- Serving: Abbotsford, Chilliwack, Mission, etc.
+
+GREATER VICTORIA PUBLIC LIBRARY (13 branches)
+- Central, Esquimalt, Juan de Fuca, Langford, etc.
+
+And 60+ other library systems across BC.
+
+After import, verify:
+SELECT COUNT(*) FROM entities WHERE entity_type_id = 'library';
+-- Expected: 245+
+
+-- Distribution by system
+SELECT 
+  metadata->>'library_system' as system,
+  COUNT(*) as branches
+FROM entities
+WHERE entity_type_id = 'library'
+GROUP BY metadata->>'library_system'
+ORDER BY branches DESC
+LIMIT 10;
