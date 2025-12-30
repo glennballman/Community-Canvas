@@ -1,0 +1,84 @@
+Create the PostgreSQL functions that build CivOS-compliant payloads.
+
+Run this SQL:
+
+-- Severity to rank helper
+CREATE OR REPLACE FUNCTION severity_to_rank(p_severity TEXT)
+RETURNS INTEGER AS $$
+BEGIN
+    RETURN CASE p_severity
+        WHEN 'info' THEN 1
+        WHEN 'minor' THEN 2
+        WHEN 'advisory' THEN 3
+        WHEN 'warning' THEN 4
+        WHEN 'major' THEN 5
+        WHEN 'critical' THEN 6
+        WHEN 'emergency' THEN 7
+        ELSE 0
+    END;
+END;
+$$ LANGUAGE plpgsql IMMUTABLE;
+
+-- Get signals for a tenant
+CREATE OR REPLACE FUNCTION get_civos_signals(
+    p_tenant_id VARCHAR(100),
+    p_cursor BIGINT DEFAULT 0,
+    p_limit INTEGER DEFAULT 100
+)
+RETURNS TABLE (
+    signal_id UUID,
+    dedupe_key VARCHAR(128),
+    export_cursor BIGINT,
+    signal_type VARCHAR(50),
+    severity TEXT,
+    status TEXT,
+    entity_type_id VARCHAR(50),
+    observed_at TIMESTAMPTZ,
+    reported_at TIMESTAMPTZ,
+    effective_from TIMESTAMPTZ,
+    effective_until TIMESTAMPTZ,
+    region_id VARCHAR(50),
+    jurisdiction_id VARCHAR(100),
+    jurisdiction_refs TEXT[],
+    latitude DECIMAL(10, 7),
+    longitude DECIMAL(10, 7),
+    title VARCHAR(255),
+    summary VARCHAR(500),
+    message TEXT,
+    payload JSONB,
+    correlation_keys TEXT[],
+    entity_id UUID,
+    entity_name VARCHAR(255),
+    entity_external_ids JSONB,
+    source_key VARCHAR(100),
+    source_url TEXT,
+    raw_refs TEXT[],
+    confidence DECIMAL(3, 2),
+    method VARCHAR(30),
+    checksum VARCHAR(64),
+    version VARCHAR(20),
+    retrieved_at TIMESTAMPTZ
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        v.signal_id, v.dedupe_key, v.export_cursor, v.signal_type,
+        v.severity, v.status, v.entity_type_id, v.observed_at, v.reported_at,
+        v.effective_from, v.effective_until, v.region_id, v.jurisdiction_id,
+        v.jurisdiction_refs, v.latitude, v.longitude, v.title, v.summary,
+        v.message, v.payload, v.correlation_keys, v.entity_id, v.entity_name,
+        v.entity_external_ids, v.source_key, v.source_url, v.raw_refs,
+        v.confidence, v.method, v.checksum, v.version, v.retrieved_at
+    FROM v_civos_signals v
+    JOIN civos_tenants t ON t.tenant_id = p_tenant_id
+    WHERE v.export_cursor > p_cursor
+      AND t.is_active = true
+      AND (t.region_ids IS NULL OR v.region_id = ANY(t.region_ids))
+      AND (t.entity_types IS NULL OR v.entity_type_id = ANY(t.entity_types))
+      AND severity_to_rank(v.severity) >= severity_to_rank(t.severity_threshold::text)
+    ORDER BY v.export_cursor
+    LIMIT p_limit;
+END;
+$$ LANGUAGE plpgsql;
+
+Confirm when done.
