@@ -1,0 +1,59 @@
+Create schedules (for ferries) and status_history (time series).
+
+Run this SQL:
+
+CREATE TABLE schedules (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    entity_id UUID REFERENCES entities(id) ON DELETE CASCADE,
+    schedule_type VARCHAR(30) CHECK (schedule_type IN (
+        'ferry', 'flight', 'bus', 'tour', 'event', 'operating_hours'
+    )),
+    from_entity_id UUID REFERENCES entities(id),
+    to_entity_id UUID REFERENCES entities(id),
+    route_code VARCHAR(20),
+    scheduled_date DATE NOT NULL,
+    scheduled_time TIME NOT NULL,
+    arrival_time TIME,
+    duration_minutes INTEGER,
+    status VARCHAR(30) DEFAULT 'scheduled' CHECK (status IN (
+        'scheduled', 'boarding', 'departed', 'in_transit', 
+        'arrived', 'delayed', 'cancelled'
+    )),
+    status_message TEXT,
+    delay_minutes INTEGER,
+    capacity_total INTEGER,
+    capacity_available INTEGER,
+    capacity_percent_full INTEGER,
+    capacity_detail JSONB,
+    vessel_name VARCHAR(100),
+    vessel_entity_id UUID REFERENCES entities(id),
+    pricing JSONB,
+    source_id UUID REFERENCES data_sources(id),
+    source_key VARCHAR(100),
+    raw_data JSONB,
+    observed_at TIMESTAMPTZ DEFAULT NOW(),
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    export_cursor BIGINT GENERATED ALWAYS AS IDENTITY,
+    UNIQUE(entity_id, scheduled_date, scheduled_time, route_code)
+);
+
+CREATE INDEX idx_schedules_entity_date ON schedules(entity_id, scheduled_date);
+CREATE INDEX idx_schedules_route_date ON schedules(route_code, scheduled_date);
+CREATE INDEX idx_schedules_cursor ON schedules(export_cursor);
+
+CREATE TABLE status_history (
+    id BIGSERIAL,
+    time TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    entity_id UUID NOT NULL,
+    operational_status operational_status,
+    capacity_percent INTEGER,
+    severity severity_level,
+    metrics JSONB,
+    source_key VARCHAR(100),
+    PRIMARY KEY (id, time)
+);
+
+CREATE INDEX idx_status_history_entity_time ON status_history(entity_id, time DESC);
+
+Confirm when done.
