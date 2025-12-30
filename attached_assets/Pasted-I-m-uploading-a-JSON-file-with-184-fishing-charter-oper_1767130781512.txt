@@ -1,0 +1,68 @@
+I'm uploading a JSON file with 184 fishing charter operators to import. The file is at data/Fishing_Charter_Operators_All_of_BC.json
+
+1. First, create the fishing charter entity type:
+
+INSERT INTO entity_types (id, category_id, name, name_plural, description, icon, fields_schema) VALUES
+('fishing-charter', 'services', 'Fishing Charter', 'Fishing Charters', 'Sport fishing and charter boat operators', 'fish', '{
+  "home_port": "string",
+  "contact_people": "array",
+  "social_media_links": "array",
+  "email": "string"
+}')
+ON CONFLICT (id) DO UPDATE SET
+  name = EXCLUDED.name,
+  description = EXCLUDED.description,
+  fields_schema = EXCLUDED.fields_schema;
+
+2. Create an import script that reads the JSON file and for each operator in "fishing_charter_operators" array:
+
+Create an entity with:
+- slug = generate from business_name (e.g., "fishing-rocky-point-charters")
+- name = operator.business_name
+- entity_type_id = "fishing-charter"
+- region_id = parse location to match geo_region (extract city name like "Bamfield" → "alberni-clayoquot")
+- latitude = null (no GPS in this data - will geocode later)
+- longitude = null
+- phone = operator.phone_number
+- website = operator.website_url
+- metadata = JSON with:
+  - home_port = operator.location
+  - email = operator.email
+  - contact_people = operator.contact_people (array of {first_name, last_name, role})
+  - social_media_links = extract URLs from operator.social_media_links array
+
+The JSON structure is:
+{
+  "fishing_charter_operators": [
+    {
+      "business_name": "Rocky Point Charters",
+      "location": "Bamfield, Vancouver Island, British Columbia",
+      "website_url": "https://rockypointcharters.ca/",
+      "phone_number": "(250) 728-3678",
+      "email": "kbodaly@shaw.ca",
+      "social_media_links": [{"value": "https://www.youtube.com/..."}],
+      "contact_people": [{"first_name": "Ken", "last_name": "Bodaly", "role": "Owner/Operator"}]
+    },
+    ...
+  ]
+}
+
+After import, verify:
+SELECT COUNT(*) FROM entities WHERE entity_type_id = 'fishing-charter';
+-- Expected: 184
+
+-- Check sample
+SELECT name, phone, website, metadata->>'home_port' as port
+FROM entities 
+WHERE entity_type_id = 'fishing-charter'
+LIMIT 10;
+
+-- Check which regions have charters
+SELECT 
+  gr.short_name as region,
+  COUNT(e.id) as charters
+FROM entities e
+LEFT JOIN geo_regions gr ON e.region_id = gr.id
+WHERE e.entity_type_id = 'fishing-charter'
+GROUP BY gr.short_name
+ORDER BY charters DESC;

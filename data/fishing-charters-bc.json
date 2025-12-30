@@ -1,0 +1,4017 @@
+{
+  "fishing_charter_operators": [
+    {
+      "business_name": "Rocky Point Charters",
+      "business_name_citation": "https://rockypointcharters.ca/",
+      "location": "Bamfield, Vancouver Island, British Columbia",
+      "location_citation": "https://rockypointcharters.ca/",
+      "website_url": "https://rockypointcharters.ca/",
+      "website_url_citation": "https://rockypointcharters.ca/",
+      "phone_number": "(250) 728-3678",
+      "phone_number_citation": "https://rockypointcharters.ca/",
+      "email": "kbodaly@shaw.ca",
+      "email_citation": "https://rockypointcharters.ca/contact-us/",
+      "social_media_links": [
+        {
+          "value": "https://www.youtube.com/channel/UC53-QdbE7ReZGzjMA6xx8qw",
+          "value_citation": "https://rockypointcharters.ca/"
+        }
+      ],
+      "contact_people": [
+        {
+          "first_name": "Ken",
+          "first_name_citation": "https://rockypointcharters.ca/contact-us/",
+          "last_name": "Bodaly",
+          "last_name_citation": "https://rockypointcharters.ca/contact-us/",
+          "role": "Owner/Operator",
+          "role_citation": "https://rockypointcharters.ca/"
+        },
+        {
+          "first_name": "Betty",
+          "first_name_citation": "https://rockypointcharters.ca/contact-us/",
+          "last_name": "Bodaly",
+          "last_name_citation": "https://rockypointcharters.ca/contact-us/",
+          "role": null,
+          "role_citation": null
+        }
+      ],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Mills Landing",
+      "business_name_citation": "https://millslanding.com/",
+      "location": "Bamfield, British Columbia",
+      "location_citation": "https://millslanding.com/",
+      "website_url": "https://millslanding.com/",
+      "website_url_citation": "https://millslanding.com/",
+      "phone_number": "1-250-728-2300",
+      "phone_number_citation": "https://millslanding.com/",
+      "email": "cottages@millslanding.com",
+      "email_citation": "https://millslanding.com/",
+      "social_media_links": [],
+      "contact_people": [],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Bish 'N Son Fishing Adventures",
+      "business_name_citation": "https://bishnson.com/",
+      "location": "Bamfield, Vancouver Island, British Columbia",
+      "location_citation": "https://bishnson.com/",
+      "website_url": "https://bishnson.com/",
+      "website_url_citation": "https://bishnson.com/",
+      "phone_number": null,
+      "phone_number_citation": null,
+      "email": null,
+      "email_citation": null,
+      "social_media_links": [
+        {
+          "value": "https://www.youtube.com/channel/UCy49K64eM2UGdo31S0Nmy1A",
+          "value_citation": "https://bishnson.com/"
+        }
+      ],
+      "contact_people": [
+        {
+          "first_name": "Dan",
+          "first_name_citation": "https://bishnson.com/",
+          "last_name": "Bishop",
+          "last_name_citation": "https://bishnson.com/",
+          "role": "Owner Operator / Fishing Guide",
+          "role_citation": "https://bishnson.com/"
+        },
+        {
+          "first_name": "Kevin",
+          "first_name_citation": "https://bishnson.com/",
+          "last_name": "Bishop",
+          "last_name_citation": "https://bishnson.com/",
+          "role": "Co-Owner",
+          "role_citation": "https://bishnson.com/"
+        }
+      ],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Harbourside Lodge",
+      "business_name_citation": "https://harboursidelodge.com/",
+      "location": "Bamfield, British Columbia",
+      "location_citation": "https://harboursidelodge.com/",
+      "website_url": "https://harboursidelodge.com/",
+      "website_url_citation": "https://harboursidelodge.com/",
+      "phone_number": "(250) 728-3330",
+      "phone_number_citation": "https://harboursidelodge.com/contact/",
+      "email": "requests@harboursidelodge.com",
+      "email_citation": "https://harboursidelodge.com/contact/",
+      "social_media_links": [],
+      "contact_people": [],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "McKay Bay Lodge",
+      "business_name_citation": "https://www.mckaybaylodge.com/fishing-charters",
+      "location": "Bamfield, British Columbia",
+      "location_citation": "https://www.mckaybaylodge.com/contact",
+      "website_url": "https://www.mckaybaylodge.com/",
+      "website_url_citation": "https://www.mckaybaylodge.com/fishing-charters",
+      "phone_number": "250-728-3323",
+      "phone_number_citation": "https://www.mckaybaylodge.com/contact",
+      "email": "mckaybay@island.net",
+      "email_citation": "https://www.mckaybaylodge.com/contact",
+      "social_media_links": [
+        {
+          "value": "https://www.facebook.com/mckaybaylodge/",
+          "value_citation": "https://www.mckaybaylodge.com/"
+        },
+        {
+          "value": "https://www.instagram.com/explore/locations/819233987/mckay-bay-lodge/",
+          "value_citation": "https://www.mckaybaylodge.com/"
+        }
+      ],
+      "contact_people": [
+        {
+          "first_name": "Dan",
+          "first_name_citation": "https://www.mckaybaylodge.com/fishing-charters",
+          "last_name": null,
+          "last_name_citation": null,
+          "role": "Guide",
+          "role_citation": "https://www.mckaybaylodge.com/fishing-charters"
+        }
+      ],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "GA West Coast Charters",
+      "business_name_citation": "https://gawestcoastcharters.com/",
+      "location": "Vancouver Island, British Columbia",
+      "location_citation": "https://gawestcoastcharters.com/",
+      "website_url": "https://gawestcoastcharters.com/",
+      "website_url_citation": "https://gawestcoastcharters.com/",
+      "phone_number": null,
+      "phone_number_citation": null,
+      "email": null,
+      "email_citation": null,
+      "social_media_links": [],
+      "contact_people": [
+        {
+          "first_name": "Gerald",
+          "first_name_citation": "https://fishingbooker.com/destinations/location/ca/BC/bamfield",
+          "last_name": "Arkell",
+          "last_name_citation": "https://fishingbooker.com/destinations/location/ca/BC/bamfield",
+          "role": "Captain",
+          "role_citation": "https://fishingbooker.com/destinations/location/ca/BC/bamfield"
+        }
+      ],
+      "directory_url": "https://fishingbooker.com/charters/view/38943",
+      "directory_url_citation": "https://fishingbooker.com/destinations/location/ca/BC/bamfield"
+    },
+    {
+      "business_name": "Relentless Sportfishing",
+      "business_name_citation": "http://www.relentlessportfishing.ca/",
+      "location": "Bamfield, Vancouver Island, British Columbia",
+      "location_citation": "http://www.relentlessportfishing.ca/",
+      "website_url": "http://www.relentlessportfishing.ca/",
+      "website_url_citation": "http://www.relentlessportfishing.ca/",
+      "phone_number": null,
+      "phone_number_citation": null,
+      "email": null,
+      "email_citation": null,
+      "social_media_links": [],
+      "contact_people": [
+        {
+          "first_name": "Mark",
+          "first_name_citation": "http://www.relentlessportfishing.ca/about/",
+          "last_name": "Turnbull",
+          "last_name_citation": "http://www.relentlessportfishing.ca/about/",
+          "role": "Captain / Certified Angling Guide",
+          "role_citation": "http://www.relentlessportfishing.ca/about/"
+        }
+      ],
+      "directory_url": "https://fishingbooker.com/charters/view/41034",
+      "directory_url_citation": "https://fishingbooker.com/destinations/location/ca/BC/bamfield"
+    },
+    {
+      "business_name": "Bamfield Point Resort",
+      "business_name_citation": "https://bamfieldpointresort.com/",
+      "location": "Bamfield, British Columbia",
+      "location_citation": "https://bamfieldpointresort.com/",
+      "website_url": "https://bamfieldpointresort.com/",
+      "website_url_citation": "https://bamfieldpointresort.com/",
+      "phone_number": null,
+      "phone_number_citation": null,
+      "email": "Holotafish@gmail.com",
+      "email_citation": "https://bamfieldpointresort.com/",
+      "social_media_links": [],
+      "contact_people": [],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "4:19 Charters",
+      "business_name_citation": "https://fishingbooker.com/destinations/location/ca/BC/bamfield",
+      "location": "Bamfield, British Columbia",
+      "location_citation": "https://fishingbooker.com/destinations/location/ca/BC/bamfield",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": null,
+      "phone_number_citation": null,
+      "email": null,
+      "email_citation": null,
+      "social_media_links": [],
+      "contact_people": [
+        {
+          "first_name": "Randy",
+          "first_name_citation": "https://fishingbooker.com/destinations/location/ca/BC/bamfield",
+          "last_name": "Westlake",
+          "last_name_citation": "https://fishingbooker.com/destinations/location/ca/BC/bamfield",
+          "role": "Captain",
+          "role_citation": "https://fishingbooker.com/destinations/location/ca/BC/bamfield"
+        }
+      ],
+      "directory_url": "https://fishingbooker.com/charters/view/42251",
+      "directory_url_citation": "https://fishingbooker.com/destinations/location/ca/BC/bamfield"
+    },
+    {
+      "business_name": "Getter Done Charters",
+      "business_name_citation": "https://fishingbooker.com/destinations/location/ca/BC/bamfield",
+      "location": "Bamfield, British Columbia",
+      "location_citation": "https://fishingbooker.com/destinations/location/ca/BC/bamfield",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": null,
+      "phone_number_citation": null,
+      "email": null,
+      "email_citation": null,
+      "social_media_links": [],
+      "contact_people": [
+        {
+          "first_name": "Brannen",
+          "first_name_citation": "https://fishingbooker.com/destinations/location/ca/BC/bamfield",
+          "last_name": "Paradis",
+          "last_name_citation": "https://fishingbooker.com/destinations/location/ca/BC/bamfield",
+          "role": "Captain",
+          "role_citation": "https://fishingbooker.com/destinations/location/ca/BC/bamfield"
+        }
+      ],
+      "directory_url": "https://fishingbooker.com/charters/view/33602",
+      "directory_url_citation": "https://fishingbooker.com/destinations/location/ca/BC/bamfield"
+    },
+    {
+      "business_name": "Blue Water Boys Sport Fishing",
+      "business_name_citation": "https://fishingbooker.com/destinations/location/ca/BC/bamfield",
+      "location": "Bamfield, British Columbia",
+      "location_citation": "https://fishingbooker.com/destinations/location/ca/BC/bamfield",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": null,
+      "phone_number_citation": null,
+      "email": null,
+      "email_citation": null,
+      "social_media_links": [],
+      "contact_people": [],
+      "directory_url": "https://fishingbooker.com/charters/view/25356",
+      "directory_url_citation": "https://fishingbooker.com/destinations/location/ca/BC/bamfield"
+    },
+    {
+      "business_name": "Bonzai Sea Adventures",
+      "business_name_citation": "https://fishingbooker.com/destinations/location/ca/BC/bamfield",
+      "location": "Ucluelet, British Columbia",
+      "location_citation": "https://fishingbooker.com/destinations/location/ca/BC/bamfield",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": null,
+      "phone_number_citation": null,
+      "email": null,
+      "email_citation": null,
+      "social_media_links": [],
+      "contact_people": [],
+      "directory_url": "https://fishingbooker.com/charters/view/34488",
+      "directory_url_citation": "https://fishingbooker.com/destinations/location/ca/BC/bamfield"
+    },
+    {
+      "business_name": "Minnesota Charters",
+      "business_name_citation": "https://fishingbooker.com/destinations/location/ca/BC/bamfield",
+      "location": "Ucluelet, British Columbia",
+      "location_citation": "https://fishingbooker.com/destinations/location/ca/BC/bamfield",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": null,
+      "phone_number_citation": null,
+      "email": null,
+      "email_citation": null,
+      "social_media_links": [],
+      "contact_people": [
+        {
+          "first_name": "Brandon",
+          "first_name_citation": "https://fishingbooker.com/destinations/location/ca/BC/bamfield",
+          "last_name": "Wiita",
+          "last_name_citation": "https://fishingbooker.com/destinations/location/ca/BC/bamfield",
+          "role": "Captain",
+          "role_citation": "https://fishingbooker.com/destinations/location/ca/BC/bamfield"
+        }
+      ],
+      "directory_url": "https://fishingbooker.com/charters/view/28598",
+      "directory_url_citation": "https://fishingbooker.com/destinations/location/ca/BC/bamfield"
+    },
+    {
+      "business_name": "Peninsula Charters",
+      "business_name_citation": "https://fishingbooker.com/destinations/location/ca/BC/bamfield",
+      "location": "Ucluelet, British Columbia",
+      "location_citation": "https://fishingbooker.com/destinations/location/ca/BC/bamfield",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": null,
+      "phone_number_citation": null,
+      "email": null,
+      "email_citation": null,
+      "social_media_links": [],
+      "contact_people": [
+        {
+          "first_name": "Dean",
+          "first_name_citation": "https://fishingbooker.com/destinations/location/ca/BC/bamfield",
+          "last_name": null,
+          "last_name_citation": null,
+          "role": "Captain",
+          "role_citation": "https://fishingbooker.com/destinations/location/ca/BC/bamfield"
+        }
+      ],
+      "directory_url": "https://fishingbooker.com/charters/view/31959",
+      "directory_url_citation": "https://fishingbooker.com/destinations/location/ca/BC/bamfield"
+    },
+    {
+      "business_name": "Rebel Sport Fishing Charters",
+      "business_name_citation": "https://fishingbooker.com/destinations/location/ca/BC/bamfield",
+      "location": "Ucluelet, British Columbia",
+      "location_citation": "https://fishingbooker.com/destinations/location/ca/BC/bamfield",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": null,
+      "phone_number_citation": null,
+      "email": null,
+      "email_citation": null,
+      "social_media_links": [],
+      "contact_people": [
+        {
+          "first_name": "Markus",
+          "first_name_citation": "https://fishingbooker.com/destinations/location/ca/BC/bamfield",
+          "last_name": null,
+          "last_name_citation": null,
+          "role": "Captain",
+          "role_citation": "https://fishingbooker.com/destinations/location/ca/BC/bamfield"
+        }
+      ],
+      "directory_url": "https://fishingbooker.com/charters/view/42227",
+      "directory_url_citation": "https://fishingbooker.com/destinations/location/ca/BC/bamfield"
+    },
+    {
+      "business_name": "Overtime Charters",
+      "business_name_citation": "https://fishingbooker.com/destinations/location/ca/BC/bamfield",
+      "location": "Ucluelet, British Columbia",
+      "location_citation": "https://fishingbooker.com/destinations/location/ca/BC/bamfield",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": null,
+      "phone_number_citation": null,
+      "email": null,
+      "email_citation": null,
+      "social_media_links": [],
+      "contact_people": [
+        {
+          "first_name": "Curtis",
+          "first_name_citation": "https://fishingbooker.com/destinations/location/ca/BC/bamfield",
+          "last_name": null,
+          "last_name_citation": null,
+          "role": "Captain",
+          "role_citation": "https://fishingbooker.com/destinations/location/ca/BC/bamfield"
+        }
+      ],
+      "directory_url": "https://fishingbooker.com/charters/view/27477",
+      "directory_url_citation": "https://fishingbooker.com/destinations/location/ca/BC/bamfield"
+    },
+    {
+      "business_name": "Alberni Charters",
+      "business_name_citation": "https://albernicharters.com/your-guide-barkley-sound/bamfield",
+      "location": "Port Alberni, British Columbia",
+      "location_citation": "https://albernicharters.com/your-guide-barkley-sound/bamfield",
+      "website_url": "https://albernicharters.com",
+      "website_url_citation": "https://albernicharters.com/your-guide-barkley-sound/bamfield",
+      "phone_number": null,
+      "phone_number_citation": null,
+      "email": null,
+      "email_citation": null,
+      "social_media_links": [],
+      "contact_people": [
+        {
+          "first_name": "Orest",
+          "first_name_citation": "https://albernicharters.com/",
+          "last_name": "Iwaszko",
+          "last_name_citation": "https://albernicharters.com/",
+          "role": "Captain/Owner",
+          "role_citation": "https://albernicharters.com/"
+        }
+      ],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Absolute Sportfishing",
+      "business_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "location": "Discovery Drive Campbell River, British Columbia",
+      "location_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": "(250) 287-2210",
+      "phone_number_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "email": "fishbonz@telus.net",
+      "email_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "social_media_links": [],
+      "contact_people": [],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Peniuk's Sportfishing Adventures",
+      "business_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "location": "Greta Road Campbell River, British Columbia",
+      "location_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": "250-830-7108",
+      "phone_number_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "email": "brantpeniuk@gmail.com",
+      "email_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "social_media_links": [],
+      "contact_people": [
+        {
+          "first_name": "Brant",
+          "first_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "last_name": "Peniuk",
+          "last_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "role": "Certified Tidal Angling Guide",
+          "role_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory"
+        }
+      ],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Langara Fishing Adventures",
+      "business_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "location": "British Columbia",
+      "location_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": null,
+      "phone_number_citation": null,
+      "email": "brent_gibson@mac.com",
+      "email_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "social_media_links": [],
+      "contact_people": [
+        {
+          "first_name": "Brent",
+          "first_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "last_name": "Gibson",
+          "last_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "role": "Certified Tidal Angling Guide",
+          "role_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory"
+        }
+      ],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Brightfish Charters",
+      "business_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "location": "Campbell River, British Columbia",
+      "location_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "website_url": "https://gobrightfish.comCTAG",
+      "website_url_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "phone_number": "250 830-8680",
+      "phone_number_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "email": "rick@gobrightfish.com",
+      "email_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "social_media_links": [],
+      "contact_people": [],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Langara Fishing Adventures",
+      "business_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "location": "British Columbia",
+      "location_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": null,
+      "phone_number_citation": null,
+      "email": "cammuck@hotmail.com",
+      "email_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "social_media_links": [],
+      "contact_people": [
+        {
+          "first_name": "Cameron",
+          "first_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "last_name": "McCulloch",
+          "last_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "role": "Certified Tidal Angling Guide",
+          "role_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory"
+        }
+      ],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Carl Archibald",
+      "business_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "location": "Victoria, British Columbia",
+      "location_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": "647-862-3213",
+      "phone_number_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "email": "carl_archibald@hotmail.com",
+      "email_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "social_media_links": [],
+      "contact_people": [
+        {
+          "first_name": "Carl",
+          "first_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "last_name": "Archibald",
+          "last_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "role": "Certified Tidal Angling Guide",
+          "role_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory"
+        }
+      ],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Castle Point Charters",
+      "business_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "location": "Port Hardy, British Columbia",
+      "location_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": "(250) 949-9294",
+      "phone_number_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "email": "castlept@telus.net",
+      "email_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "social_media_links": [],
+      "contact_people": [],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Charter Tofino",
+      "business_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "location": "Tofino, British Columbia",
+      "location_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "website_url": "https://chartertofino.com",
+      "website_url_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "phone_number": "7788660826",
+      "phone_number_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "email": "kelly@chartertofino.com",
+      "email_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "social_media_links": [
+        {
+          "value": "https://www.instagram.com/p/DSS9Hj7Ek8f/",
+          "value_citation": "https://chartertofino.com"
+        }
+      ],
+      "contact_people": [
+        {
+          "first_name": "Kelly",
+          "first_name_citation": "https://chartertofino.com",
+          "last_name": "Aspinall",
+          "last_name_citation": "https://chartertofino.com",
+          "role": "Guide/Captain",
+          "role_citation": "https://chartertofino.com"
+        },
+        {
+          "first_name": "Neve",
+          "first_name_citation": "https://chartertofino.com",
+          "last_name": "Abraham",
+          "last_name_citation": "https://chartertofino.com",
+          "role": "Team Member",
+          "role_citation": "https://chartertofino.com"
+        }
+      ],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Tides and Tales Sportfishing Adventures",
+      "business_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "location": "Port Hardy, British Columbia",
+      "location_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": "250-949-2713",
+      "phone_number_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "email": "ranger@telus.net",
+      "email_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "social_media_links": [],
+      "contact_people": [
+        {
+          "first_name": "Chris",
+          "first_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "last_name": "Ranger",
+          "last_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "role": "Certified Tidal Angling Guide",
+          "role_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory"
+        }
+      ],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Chris Scoten",
+      "business_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "location": "th Ave Surrey, British Columbia",
+      "location_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": "604-816-1864",
+      "phone_number_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "email": "scooters@shaw.ca",
+      "email_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "social_media_links": [],
+      "contact_people": [
+        {
+          "first_name": "Chris",
+          "first_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "last_name": "Scoten",
+          "last_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "role": "Certified Tidal Angling Guide",
+          "role_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory"
+        }
+      ],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Chris Speed",
+      "business_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "location": "British Columbia",
+      "location_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": null,
+      "phone_number_citation": null,
+      "email": null,
+      "email_citation": null,
+      "social_media_links": [],
+      "contact_people": [
+        {
+          "first_name": "Chris",
+          "first_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "last_name": "Speed",
+          "last_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "role": "Certified Tidal Angling Guide",
+          "role_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory"
+        }
+      ],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Chromer Sport Fishing",
+      "business_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "location": "British Columbia",
+      "location_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "website_url": "https://chromersportfishing.com",
+      "website_url_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "phone_number": "604-366-3363",
+      "phone_number_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "email": "chromersportfishing@gmail.com",
+      "email_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "social_media_links": [],
+      "contact_people": [],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Cleanline Sportfishing Ltd.",
+      "business_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "location": "Tofino, British Columbia",
+      "location_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "website_url": "https://cleanlinesportfishing.com/",
+      "website_url_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "phone_number": null,
+      "phone_number_citation": null,
+      "email": "blake@cleanlinesportfishing.com",
+      "email_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "social_media_links": [],
+      "contact_people": [],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Coastal Blue Adventures",
+      "business_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "location": "Nanaimo, British Columbia",
+      "location_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "website_url": "http://www.coastalblueadventures.comCTAG",
+      "website_url_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "phone_number": "250-802-3166",
+      "phone_number_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "email": "info@coastalblueadventures.com",
+      "email_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "social_media_links": [],
+      "contact_people": [],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Codfather Charters Ltd.",
+      "business_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "location": "Port Hardy, British Columbia",
+      "location_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": "(250) 949-6696",
+      "phone_number_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "email": "info@codfathercharters.com",
+      "email_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "social_media_links": [],
+      "contact_people": [],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Craig Freeman",
+      "business_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "location": "North Vancouver, British Columbia",
+      "location_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": "778-340-2400",
+      "phone_number_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "email": "craigfreeman@shaw.ca",
+      "email_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "social_media_links": [],
+      "contact_people": [
+        {
+          "first_name": "Craig",
+          "first_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "last_name": "Freeman",
+          "last_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "role": "Certified Tidal Angling Guide",
+          "role_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory"
+        }
+      ],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Coastal Wilderness Adventures",
+      "business_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "location": "Campbell River, British Columbia",
+      "location_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": "250-287-3427",
+      "phone_number_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "email": "fish@coastwild.com",
+      "email_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "social_media_links": [],
+      "contact_people": [
+        {
+          "first_name": "Curtis",
+          "first_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "last_name": "Smith",
+          "last_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "role": "Certified Tidal Angling Guide",
+          "role_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory"
+        }
+      ],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Dave Hunchak",
+      "business_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "location": "Campbell River, British Columbia",
+      "location_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": "250-923-7603",
+      "phone_number_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "email": "hunchaks@telus.net",
+      "email_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "social_media_links": [],
+      "contact_people": [
+        {
+          "first_name": "Dave",
+          "first_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "last_name": "Hunchak",
+          "last_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "role": "Certified Tidal Angling Guide",
+          "role_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory"
+        }
+      ],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Predator Charters",
+      "business_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "location": "Gibsons, British Columbia",
+      "location_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": "604-329-8642",
+      "phone_number_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "email": "davek@dcc.net",
+      "email_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "social_media_links": [],
+      "contact_people": [
+        {
+          "first_name": "Dave",
+          "first_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "last_name": "Korsch",
+          "last_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "role": "Certified Tidal Angling Guide",
+          "role_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory"
+        }
+      ],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "David Korsch",
+      "business_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "location": "Gibsons, British Columbia",
+      "location_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "website_url": "http://predatorcharters.ca/",
+      "website_url_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "phone_number": "604-329-8642",
+      "phone_number_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "email": null,
+      "email_citation": null,
+      "social_media_links": [],
+      "contact_people": [
+        {
+          "first_name": "David",
+          "first_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "last_name": "Korsch",
+          "last_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "role": "Certified Tidal Angling Guide",
+          "role_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory"
+        }
+      ],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Powell River Sport Fishing",
+      "business_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "location": "Powell River, British Columbia",
+      "location_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": "(604) 223-5394",
+      "phone_number_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "email": "powellriversportfishing@gmail.com",
+      "email_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "social_media_links": [],
+      "contact_people": [
+        {
+          "first_name": "Dean",
+          "first_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "last_name": "McLaren",
+          "last_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "role": "Certified Tidal Angling Guide",
+          "role_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory"
+        }
+      ],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Deep Coast Charters",
+      "business_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "location": "Britannia Beach, British Columbia",
+      "location_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "website_url": "https://deepcoastcharters.ca/",
+      "website_url_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "phone_number": "604-230-3781",
+      "phone_number_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "email": null,
+      "email_citation": null,
+      "social_media_links": [],
+      "contact_people": [],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Desert Salmon Charter",
+      "business_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "location": "Kelowna, British Columbia",
+      "location_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "website_url": "https://desertsalmon.com/",
+      "website_url_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "phone_number": "250-308-9449",
+      "phone_number_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "email": "info@desertsalmon.ca",
+      "email_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "social_media_links": [],
+      "contact_people": [],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Donald Parrish",
+      "business_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "location": "Campbell River, British Columbia",
+      "location_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": "250-830-7276",
+      "phone_number_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "email": "donhparrish@hotmail.com",
+      "email_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "social_media_links": [],
+      "contact_people": [
+        {
+          "first_name": "Donald",
+          "first_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "last_name": "Parrish",
+          "last_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "role": "Certified Tidal Angling Guide",
+          "role_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory"
+        }
+      ],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Don H. Parrish",
+      "business_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "location": "Campbell River, British Columbia",
+      "location_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": "250-830-7276",
+      "phone_number_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "email": "donhparrish@hotmail.com",
+      "email_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "social_media_links": [],
+      "contact_people": [
+        {
+          "first_name": "Don",
+          "first_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "last_name": "Parrish",
+          "last_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "role": "Certified Tidal Angling Guide",
+          "role_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory"
+        }
+      ],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Duncanby Lodge",
+      "business_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "location": "River Road Delta, British Columbia",
+      "location_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "website_url": "http://duncanby.com/CTAG",
+      "website_url_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "phone_number": "(604) 952-2361Toll Free Number: 1-877-846-6548",
+      "phone_number_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "email": "admin@duncanby.com",
+      "email_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "social_media_links": [],
+      "contact_people": [],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Eagle Pointe Lodge",
+      "business_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "location": "British Columbia",
+      "location_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "website_url": "http://eaglepointelodge.com/",
+      "website_url_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "phone_number": null,
+      "phone_number_citation": null,
+      "email": "nikki.andersen@eaglepointelodge.com",
+      "email_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "social_media_links": [],
+      "contact_people": [],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Eddie Mathei",
+      "business_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "location": "British Columbia",
+      "location_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": "604-318-7712",
+      "phone_number_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "email": "nsfishing@yahoo.ca",
+      "email_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "social_media_links": [],
+      "contact_people": [
+        {
+          "first_name": "Eddie",
+          "first_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "last_name": "Mathei",
+          "last_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "role": "Certified Tidal Angling Guide",
+          "role_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory"
+        }
+      ],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "First Fish Charters",
+      "business_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "location": "West Vancouver, British Columbia",
+      "location_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "website_url": "https://firstfishcharters.ca/",
+      "website_url_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "phone_number": "604-202-6522",
+      "phone_number_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "email": "firstfishcharters@gmail.com",
+      "email_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "social_media_links": [],
+      "contact_people": [],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Fishers Island Adventures",
+      "business_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "location": "Courtenay, British Columbia",
+      "location_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "website_url": "http://fishersadventures.comCTAG",
+      "website_url_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "phone_number": "250 702 6309",
+      "phone_number_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "email": "fisher.888@hotmail.com",
+      "email_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "social_media_links": [],
+      "contact_people": [],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Foggy Point Charter Services",
+      "business_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "location": "Prince Rupert, British Columbia",
+      "location_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": "250-627-1853",
+      "phone_number_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "email": "info@foggypoint.com",
+      "email_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "social_media_links": [],
+      "contact_people": [],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Coastal Run Marine Services",
+      "business_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "location": "Sooke, British Columbia",
+      "location_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": "250-642-5490",
+      "phone_number_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "email": "Benvar2@gmail.com",
+      "email_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "social_media_links": [],
+      "contact_people": [
+        {
+          "first_name": "Glen",
+          "first_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "last_name": "Varney",
+          "last_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "role": "Certified Tidal Angling Guide",
+          "role_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory"
+        }
+      ],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Langara Fishing Adventures",
+      "business_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "location": "British Columbia",
+      "location_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": null,
+      "phone_number_citation": null,
+      "email": null,
+      "email_citation": null,
+      "social_media_links": [],
+      "contact_people": [
+        {
+          "first_name": "Gordon",
+          "first_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "last_name": "Bagan",
+          "last_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "role": "Certified Tidal Angling Guide",
+          "role_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory"
+        }
+      ],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Haggard Cove Resort",
+      "business_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "location": "Nanoose Bay, British Columbia",
+      "location_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": null,
+      "phone_number_citation": null,
+      "email": null,
+      "email_citation": null,
+      "social_media_links": [],
+      "contact_people": [],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Protected Water Charters",
+      "business_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "location": "Quadra Island, British Columbia",
+      "location_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": "250-285-2878",
+      "phone_number_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "email": "eliash@telus.net",
+      "email_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "social_media_links": [],
+      "contact_people": [
+        {
+          "first_name": "Harley",
+          "first_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "last_name": "Elias",
+          "last_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "role": "Certified Tidal Angling Guide",
+          "role_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory"
+        }
+      ],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "High Seas Outfitters Ltd.",
+      "business_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "location": "Quesnel, British Columbia",
+      "location_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": null,
+      "phone_number_citation": null,
+      "email": "highseasoutfitters@gmail.com",
+      "email_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "social_media_links": [],
+      "contact_people": [],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Hook’N Them Up Fishing Charters",
+      "business_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "location": "Nimpkish Heights Road Port McNeill, British Columbia",
+      "location_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": "(250) 956-3474",
+      "phone_number_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "email": "fishinguy007@gmail.com",
+      "email_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "social_media_links": [],
+      "contact_people": [],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Invictus Charters",
+      "business_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "location": "Nanaimo, British Columbia",
+      "location_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": "(250) 722-7201",
+      "phone_number_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "email": "invictuscharters@shaw.ca",
+      "email_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "social_media_links": [],
+      "contact_people": [],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Ivan Chu",
+      "business_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "location": "British Columbia",
+      "location_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": null,
+      "phone_number_citation": null,
+      "email": null,
+      "email_citation": null,
+      "social_media_links": [],
+      "contact_people": [
+        {
+          "first_name": "Ivan",
+          "first_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "last_name": "Chu",
+          "last_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "role": "Certified Tidal Angling Guide",
+          "role_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory"
+        }
+      ],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Fishers Island AdventuresInstagram: @fishersislandadventuresFacebook: fishersadventures.com",
+      "business_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "location": "Courtenay, British Columbia",
+      "location_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": "250 702 6309",
+      "phone_number_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "email": "fisher.888@hotmail.com",
+      "email_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "social_media_links": [],
+      "contact_people": [
+        {
+          "first_name": "James",
+          "first_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "last_name": "Fisher",
+          "last_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "role": "Certified Tidal Angling Guide",
+          "role_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory"
+        }
+      ],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Bon Chovy Fishing Charters",
+      "business_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "location": "British Columbia",
+      "location_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": null,
+      "phone_number_citation": null,
+      "email": null,
+      "email_citation": null,
+      "social_media_links": [],
+      "contact_people": [
+        {
+          "first_name": "Jason",
+          "first_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "last_name": "Assonitis",
+          "last_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "role": "Certified Tidal Angling Guide",
+          "role_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory"
+        }
+      ],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Jeremy Maynard Guiding",
+      "business_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "location": "Campbell River, British Columbia",
+      "location_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": "250-286-1456",
+      "phone_number_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "email": "jmaynard@island.net",
+      "email_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "social_media_links": [],
+      "contact_people": [
+        {
+          "first_name": "Jeremy",
+          "first_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "last_name": "Maynard",
+          "last_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "role": "Certified Tidal Angling Guide",
+          "role_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory"
+        }
+      ],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "No Bull Charters",
+      "business_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "location": "Blind Bay, British Columbia",
+      "location_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": "250-949-6990",
+      "phone_number_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "email": "nobull@island.net",
+      "email_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "social_media_links": [],
+      "contact_people": [
+        {
+          "first_name": "Ken",
+          "first_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "last_name": "Fuller",
+          "last_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "role": "Certified Tidal Angling Guide",
+          "role_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory"
+        }
+      ],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Ken Kaspar",
+      "business_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "location": "British Columbia",
+      "location_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": null,
+      "phone_number_citation": null,
+      "email": "saltydawg65@yahoo.ca",
+      "email_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "social_media_links": [],
+      "contact_people": [
+        {
+          "first_name": "Ken",
+          "first_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "last_name": "Kaspar",
+          "last_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "role": "Certified Tidal Angling Guide",
+          "role_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory"
+        }
+      ],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Ken Willan",
+      "business_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "location": "British Columbia",
+      "location_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": null,
+      "phone_number_citation": null,
+      "email": null,
+      "email_citation": null,
+      "social_media_links": [],
+      "contact_people": [
+        {
+          "first_name": "Ken",
+          "first_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "last_name": "Willan",
+          "last_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "role": "Certified Tidal Angling Guide",
+          "role_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory"
+        }
+      ],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Coast Pacific Guiding & Outfitting",
+      "business_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "location": "North Vancouver, British Columbia",
+      "location_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": "604-987-3509",
+      "phone_number_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "email": "wrongway67@shaw.ca",
+      "email_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "social_media_links": [],
+      "contact_people": [
+        {
+          "first_name": "Kevin",
+          "first_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "last_name": "Conway",
+          "last_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "role": "Certified Tidal Angling Guide",
+          "role_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory"
+        }
+      ],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Northern Bounty Fishing Charters",
+      "business_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "location": "British Columbia",
+      "location_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": null,
+      "phone_number_citation": null,
+      "email": null,
+      "email_citation": null,
+      "social_media_links": [],
+      "contact_people": [
+        {
+          "first_name": "Kevin",
+          "first_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "last_name": "Wiley",
+          "last_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "role": "Certified Tidal Angling Guide",
+          "role_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory"
+        }
+      ],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "King Pacific Lodge",
+      "business_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "location": "Richmond, British Columbia",
+      "location_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "website_url": "https://kingpacificlodge.com",
+      "website_url_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "phone_number": "604-503-5474Toll Free Number: 1-855-825-WEST (9378)",
+      "phone_number_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "email": "lisa@kingpacificlodge.com",
+      "email_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "social_media_links": [],
+      "contact_people": [],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Kingslayer Charters",
+      "business_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "location": "British Columbia",
+      "location_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "website_url": "http://www.kingslayercharters.ca",
+      "website_url_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "phone_number": "604-781-6697",
+      "phone_number_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "email": "info@kingslayercharters.ca",
+      "email_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "social_media_links": [],
+      "contact_people": [],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Last Cast Guiding",
+      "business_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "location": "Ashcraft Road Nanoose Bay, British Columbia",
+      "location_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": "(250) 954-8060Toll Free Number: 1-866-968-4665",
+      "phone_number_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "email": "pat.ahern@shaw.ca",
+      "email_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "social_media_links": [],
+      "contact_people": [],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Absolute Sportfishing",
+      "business_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "location": "British Columbia",
+      "location_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": null,
+      "phone_number_citation": null,
+      "email": null,
+      "email_citation": null,
+      "social_media_links": [],
+      "contact_people": [
+        {
+          "first_name": "Laurel",
+          "first_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "last_name": "Gareau",
+          "last_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "role": "Certified Tidal Angling Guide",
+          "role_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory"
+        }
+      ],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Tofino Fish Guides",
+      "business_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "location": "British Columbia",
+      "location_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": null,
+      "phone_number_citation": null,
+      "email": "lochie@tofinofishguides.com",
+      "email_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "social_media_links": [],
+      "contact_people": [
+        {
+          "first_name": "Lochie",
+          "first_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "last_name": "MacKenzie",
+          "last_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "role": "Certified Tidal Angling Guide",
+          "role_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory"
+        }
+      ],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Lucky Sportfishing at Eagle Nook Resort",
+      "business_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "location": "Brentwood Bay, British Columbia",
+      "location_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "website_url": "https://eaglenook.com/",
+      "website_url_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "phone_number": "250-880-0636",
+      "phone_number_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "email": "dan@luckysportfishing.com",
+      "email_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "social_media_links": [],
+      "contact_people": [],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Duncanby Lodge",
+      "business_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "location": "British Columbia",
+      "location_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": "604-999-0504",
+      "phone_number_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "email": "mackk@duncanby.com",
+      "email_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "social_media_links": [],
+      "contact_people": [
+        {
+          "first_name": "MacKenzie",
+          "first_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "last_name": "Keay",
+          "last_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "role": "Certified Tidal Angling Guide",
+          "role_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory"
+        }
+      ],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Mandy Wesley",
+      "business_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "location": "Sandspit, British Columbia",
+      "location_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": "604-928-6884",
+      "phone_number_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "email": "haidaguide@hotmail.com",
+      "email_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "social_media_links": [],
+      "contact_people": [
+        {
+          "first_name": "Mandy",
+          "first_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "last_name": "Wesley",
+          "last_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "role": "Certified Tidal Angling Guide",
+          "role_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory"
+        }
+      ],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Martin Paish",
+      "business_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "location": "Cressida Crescent Victoria, British Columbia",
+      "location_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": "250-391-7240",
+      "phone_number_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "email": "martinpaish1@gmail.com",
+      "email_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "social_media_links": [],
+      "contact_people": [
+        {
+          "first_name": "Martin",
+          "first_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "last_name": "Paish",
+          "last_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "role": "Certified Tidal Angling Guide",
+          "role_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory"
+        }
+      ],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Fifth Element Charters",
+      "business_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "location": "British Columbia",
+      "location_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": null,
+      "phone_number_citation": null,
+      "email": null,
+      "email_citation": null,
+      "social_media_links": [],
+      "contact_people": [
+        {
+          "first_name": "Mathew",
+          "first_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "last_name": "Harmeson",
+          "last_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "role": "Certified Tidal Angling Guide",
+          "role_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory"
+        }
+      ],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Michael McLennan",
+      "business_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "location": "British Columbia",
+      "location_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": null,
+      "phone_number_citation": null,
+      "email": "mikemclennan1990@hotmail.com",
+      "email_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "social_media_links": [],
+      "contact_people": [
+        {
+          "first_name": "Michael",
+          "first_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "last_name": "McLennan",
+          "last_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "role": "Certified Tidal Angling Guide",
+          "role_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory"
+        }
+      ],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Murphy’s Sportfishing",
+      "business_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "location": "Port Alberni, British Columbia",
+      "location_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": "(250) 723-2772",
+      "phone_number_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "email": "murphy@island.net",
+      "email_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "social_media_links": [],
+      "contact_people": [],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Naden Lodge",
+      "business_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "location": "Massett, British Columbia",
+      "location_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": "(250) 626-3322Toll Free Number: 1-800-771-TYEE",
+      "phone_number_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "email": "info@nadenlodge.com",
+      "email_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "social_media_links": [],
+      "contact_people": [],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "North King Lodge",
+      "business_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "location": "Nanaimo, British Columbia",
+      "location_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "website_url": "https://www.northkinglodge.com/",
+      "website_url_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "phone_number": "(250) 751-0302",
+      "phone_number_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "email": "info@northkinglodge.com",
+      "email_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "social_media_links": [],
+      "contact_people": [],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Oak Bay Marine Group",
+      "business_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "location": "Beach Avenue Victoria, British Columbia",
+      "location_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": null,
+      "phone_number_citation": null,
+      "email": null,
+      "email_citation": null,
+      "social_media_links": [],
+      "contact_people": [],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Offshore Fishing",
+      "business_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "location": "Mill Bay, British Columbia",
+      "location_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": "250-882-9039",
+      "phone_number_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "email": "offshorefishing@shaw.ca",
+      "email_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "social_media_links": [],
+      "contact_people": [],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Oliver Schmaler",
+      "business_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "location": "North Vancouver, British Columbia",
+      "location_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": "1 877-337-5464",
+      "phone_number_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "email": "oly_oly15@hotmail.com",
+      "email_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "social_media_links": [],
+      "contact_people": [
+        {
+          "first_name": "Oliver",
+          "first_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "last_name": "Schmaler",
+          "last_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "role": "Certified Tidal Angling Guide",
+          "role_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory"
+        }
+      ],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Outsider Charters",
+      "business_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "location": "British Columbia",
+      "location_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "website_url": "https://outsidercharters.com",
+      "website_url_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "phone_number": "250-800-0701",
+      "phone_number_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "email": "fish@outsidercharters.com",
+      "email_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "social_media_links": [],
+      "contact_people": [],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Pacific Angler",
+      "business_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "location": "Vancouver, British Columbia",
+      "location_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "website_url": "https://www.pacificangler.ca",
+      "website_url_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "phone_number": "604-872-2204",
+      "phone_number_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "email": "jtonelli@pacificangler.ca",
+      "email_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "social_media_links": [],
+      "contact_people": [],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Last Cast Guiding",
+      "business_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "location": "British Columbia",
+      "location_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": null,
+      "phone_number_citation": null,
+      "email": null,
+      "email_citation": null,
+      "social_media_links": [],
+      "contact_people": [
+        {
+          "first_name": "Pat",
+          "first_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "last_name": "Ahern",
+          "last_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "role": "Certified Tidal Angling Guide",
+          "role_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory"
+        }
+      ],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Patrick Vidito",
+      "business_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "location": "British Columbia",
+      "location_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": null,
+      "phone_number_citation": null,
+      "email": "p_vidito@hotmail.com",
+      "email_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "social_media_links": [],
+      "contact_people": [
+        {
+          "first_name": "Patrick",
+          "first_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "last_name": "Vidito",
+          "last_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "role": "Certified Tidal Angling Guide",
+          "role_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory"
+        }
+      ],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Langara Fishing Adventures",
+      "business_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "location": "British Columbia",
+      "location_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": null,
+      "phone_number_citation": null,
+      "email": "pgedak@hotmail.com",
+      "email_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "social_media_links": [],
+      "contact_people": [
+        {
+          "first_name": "Paul",
+          "first_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "last_name": "Gedak",
+          "last_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "role": "Certified Tidal Angling Guide",
+          "role_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory"
+        }
+      ],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Peniuk’s Sportfishing Adventures",
+      "business_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "location": "Discovery Drive Campbell River, British Columbia",
+      "location_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": "(250) 830-7108Toll Free Number: 1-888-287-2550",
+      "phone_number_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "email": "peniukssportfish@uniserve.com",
+      "email_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "social_media_links": [],
+      "contact_people": [],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Peter Geneau",
+      "business_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "location": "British Columbia",
+      "location_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": null,
+      "phone_number_citation": null,
+      "email": "petergeneau@hotmail.com",
+      "email_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "social_media_links": [],
+      "contact_people": [
+        {
+          "first_name": "Peter",
+          "first_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "last_name": "Geneau",
+          "last_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "role": "Certified Tidal Angling Guide",
+          "role_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory"
+        }
+      ],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "West Coast Resorts Langara Fishing Adventures West Coast Fishing Club",
+      "business_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "location": "British Columbia",
+      "location_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": null,
+      "phone_number_citation": null,
+      "email": "grassiphil@gmail.com",
+      "email_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "social_media_links": [],
+      "contact_people": [
+        {
+          "first_name": "Phil",
+          "first_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "last_name": "Grassi",
+          "last_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "role": "Certified Tidal Angling Guide",
+          "role_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory"
+        }
+      ],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Quatsino Lodge",
+      "business_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "location": "General Delivery Quatsino, British Columbia",
+      "location_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": "(250) 338-7473Toll Free Number: 1-866-279-5061",
+      "phone_number_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "email": "thequatsinolodge@gmail.com",
+      "email_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "social_media_links": [],
+      "contact_people": [],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Queen Charlotte Lodge",
+      "business_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "location": "Richmond, British Columbia",
+      "location_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "website_url": "https://www.queencharlottelodge.com/CTAG",
+      "website_url_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "phone_number": "(604) 420-7197Toll Free Number: (800) 688-8959",
+      "phone_number_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "email": "info@queencharlottelodge.com",
+      "email_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "social_media_links": [],
+      "contact_people": [],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Quinn Newsom",
+      "business_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "location": "Cumberland, British Columbia",
+      "location_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": "250-897-9288",
+      "phone_number_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "email": "growltom@yahoo.ca",
+      "email_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "social_media_links": [],
+      "contact_people": [
+        {
+          "first_name": "Quinn",
+          "first_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "last_name": "Newsom",
+          "last_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "role": "Certified Tidal Angling Guide",
+          "role_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory"
+        }
+      ],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Reel Fin-Atic Fishing Charters",
+      "business_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "location": "River Road Richmond, British Columbia",
+      "location_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": "(604) 376-9011",
+      "phone_number_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "email": "tsweet@fin-atic.com",
+      "email_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "social_media_links": [],
+      "contact_people": [],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Reel Obsession Sportfishing",
+      "business_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "location": "Carran Road Victoria, British Columbia",
+      "location_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": "(250) 391-6691",
+      "phone_number_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "email": "adrian@reelobsession.ca",
+      "email_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "social_media_links": [],
+      "contact_people": [],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Richard Rawlings",
+      "business_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "location": "British Columbia",
+      "location_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": null,
+      "phone_number_citation": null,
+      "email": null,
+      "email_citation": null,
+      "social_media_links": [],
+      "contact_people": [
+        {
+          "first_name": "Richard",
+          "first_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "last_name": "Rawlings",
+          "last_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "role": "Certified Tidal Angling Guide",
+          "role_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory"
+        }
+      ],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Rick Hackinen",
+      "business_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "location": "Campbell River, British Columbia",
+      "location_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": null,
+      "phone_number_citation": null,
+      "email": "rickhackinen@telus.net",
+      "email_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "social_media_links": [],
+      "contact_people": [],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Rick Mattson",
+      "business_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "location": "Aldergrove, British Columbia",
+      "location_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": "604-657-3119",
+      "phone_number_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "email": "rickmattson@telus.net",
+      "email_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "social_media_links": [],
+      "contact_people": [],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Rip & Reel Sportfishing",
+      "business_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "location": "Lantzville, British Columbia",
+      "location_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": "(250) 390-4744",
+      "phone_number_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "email": "info@ripandreel.com",
+      "email_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "social_media_links": [],
+      "contact_people": [],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Runaway Adventures",
+      "business_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "location": "British Columbia",
+      "location_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": null,
+      "phone_number_citation": null,
+      "email": "r.brandon@telus.net",
+      "email_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "social_media_links": [],
+      "contact_people": [
+        {
+          "first_name": "Rob",
+          "first_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "last_name": "Brandon",
+          "last_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "role": "Certified Tidal Angling Guide",
+          "role_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory"
+        }
+      ],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Robert Weeks",
+      "business_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "location": "British Columbia",
+      "location_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": "250-218-3166",
+      "phone_number_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "email": "weeks_64@hotmail.com",
+      "email_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "social_media_links": [],
+      "contact_people": [
+        {
+          "first_name": "Robert",
+          "first_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "last_name": "Weeks",
+          "last_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "role": "Certified Tidal Angling Guide",
+          "role_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory"
+        }
+      ],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "West Coast Resorts",
+      "business_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "location": "British Columbia",
+      "location_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": "250-478-4120",
+      "phone_number_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "email": "tyee51@hotmail.com",
+      "email_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "social_media_links": [],
+      "contact_people": [
+        {
+          "first_name": "Rob",
+          "first_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "last_name": "Havers",
+          "last_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "role": "Certified Tidal Angling Guide",
+          "role_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory"
+        }
+      ],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Ron Doumont",
+      "business_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "location": "Lantzville, British Columbia",
+      "location_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": "250-816-7335",
+      "phone_number_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "email": "ron.doumont@gmail.com",
+      "email_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "social_media_links": [],
+      "contact_people": [
+        {
+          "first_name": "Ron",
+          "first_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "last_name": "Doumont",
+          "last_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "role": "Certified Tidal Angling Guide",
+          "role_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory"
+        }
+      ],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Roy Tanami",
+      "business_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "location": "British Columbia",
+      "location_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": null,
+      "phone_number_citation": null,
+      "email": "rt@roytanami.com",
+      "email_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "social_media_links": [],
+      "contact_people": [
+        {
+          "first_name": "Roy",
+          "first_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "last_name": "Tanami",
+          "last_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "role": "Certified Tidal Angling Guide",
+          "role_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory"
+        }
+      ],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Vancouver Island Lodge",
+      "business_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "location": "British Columbia",
+      "location_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": null,
+      "phone_number_citation": null,
+      "email": "ryan@vancouverislandlodge.ca",
+      "email_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "social_media_links": [],
+      "contact_people": [
+        {
+          "first_name": "Ryan",
+          "first_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "last_name": "Chamberland",
+          "last_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "role": "Certified Tidal Angling Guide",
+          "role_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory"
+        }
+      ],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Scott Nijman",
+      "business_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "location": "British Columbia",
+      "location_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": null,
+      "phone_number_citation": null,
+      "email": "scott_n@hotmail.ca",
+      "email_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "social_media_links": [],
+      "contact_people": [
+        {
+          "first_name": "Scott",
+          "first_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "last_name": "Nijman",
+          "last_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "role": "Certified Tidal Angling Guide",
+          "role_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory"
+        }
+      ],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Scott Sutherland",
+      "business_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "location": "North Vancouver, British Columbia",
+      "location_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": null,
+      "phone_number_citation": null,
+      "email": null,
+      "email_citation": null,
+      "social_media_links": [],
+      "contact_people": [
+        {
+          "first_name": "Scott",
+          "first_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "last_name": "Sutherland",
+          "last_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "role": "Certified Tidal Angling Guide",
+          "role_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory"
+        }
+      ],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Shane O’Keefe",
+      "business_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "location": "British Columbia",
+      "location_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": "236-882-3559",
+      "phone_number_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "email": "shaneok.cf@gmail.com",
+      "email_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "social_media_links": [],
+      "contact_people": [
+        {
+          "first_name": "Shane",
+          "first_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "last_name": "O’Keefe",
+          "last_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "role": "Certified Tidal Angling Guide",
+          "role_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory"
+        }
+      ],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Shearwater Resort & Marina Ltd.",
+      "business_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "location": "Russ Baker Way Richmond, British Columbia",
+      "location_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": "(604) 270-6204",
+      "phone_number_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "email": "fish@shearwater.ca",
+      "email_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "social_media_links": [],
+      "contact_people": [],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Langara Fishing Adventures",
+      "business_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "location": "British Columbia",
+      "location_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": null,
+      "phone_number_citation": null,
+      "email": "sheilaryan@live.ca",
+      "email_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "social_media_links": [],
+      "contact_people": [
+        {
+          "first_name": "Sheila",
+          "first_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "last_name": "Ryan",
+          "last_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "role": "Certified Tidal Angling Guide",
+          "role_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory"
+        }
+      ],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Sidetrack Charters",
+      "business_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "location": "Rolston Cres Victoria, British Columbia",
+      "location_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": "(250) 881-1801",
+      "phone_number_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "email": "fishing@sidetrackcharters.com",
+      "email_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "social_media_links": [],
+      "contact_people": [],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Silver King Lodge",
+      "business_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "location": "Campbell River, British Columbia",
+      "location_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "website_url": "https://www.silverkinglodge.ca/",
+      "website_url_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "phone_number": "(250) 286-0142",
+      "phone_number_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "email": "info@silverkinglodge.ca",
+      "email_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "social_media_links": [],
+      "contact_people": [],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Slivers Charters",
+      "business_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "location": "Cherry Creek Road Port Alberni, British Columbia",
+      "location_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": "(250) 724-2502Toll Free Number: 1-888-214-7206",
+      "phone_number_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "email": "dlindy@shaw.ca",
+      "email_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "social_media_links": [],
+      "contact_people": [],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Stephen Johnston",
+      "business_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "location": "British Columbia",
+      "location_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": null,
+      "phone_number_citation": null,
+      "email": "stephendanjohnston@gmail.com",
+      "email_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "social_media_links": [],
+      "contact_people": [
+        {
+          "first_name": "Stephen",
+          "first_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "last_name": "Johnston",
+          "last_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "role": "Certified Tidal Angling Guide",
+          "role_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory"
+        }
+      ],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Tall Tale Charters",
+      "business_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "location": "Campbell River, British Columbia",
+      "location_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": "250-923-1309",
+      "phone_number_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "email": "talltale@shaw.ca",
+      "email_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "social_media_links": [],
+      "contact_people": [
+        {
+          "first_name": "Steve",
+          "first_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "last_name": "Babcock",
+          "last_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "role": "Certified Tidal Angling Guide",
+          "role_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory"
+        }
+      ],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Hook'N Them Up Fishing Charters",
+      "business_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "location": "Port McNeill, British Columbia",
+      "location_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": "250-956-3474",
+      "phone_number_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "email": "fishinguy007@gmail.com",
+      "email_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "social_media_links": [],
+      "contact_people": [
+        {
+          "first_name": "Steven",
+          "first_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "last_name": "Cahill",
+          "last_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "role": "Certified Tidal Angling Guide",
+          "role_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory"
+        }
+      ],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Storm Sport Fishing",
+      "business_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "location": "North Saanich, British Columbia",
+      "location_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "website_url": "http://stormsportfishing.com",
+      "website_url_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "phone_number": "778-966-1490",
+      "phone_number_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "email": "Info@stormsportfishing.com",
+      "email_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "social_media_links": [],
+      "contact_people": [],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Sunshine Bay Resort",
+      "business_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "location": "Stirling Arm Drive Port Alberni, British Columbia",
+      "location_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": null,
+      "phone_number_citation": null,
+      "email": null,
+      "email_citation": null,
+      "social_media_links": [],
+      "contact_people": [],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Langara Fishing Adventures",
+      "business_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "location": "British Columbia",
+      "location_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": null,
+      "phone_number_citation": null,
+      "email": null,
+      "email_citation": null,
+      "social_media_links": [],
+      "contact_people": [
+        {
+          "first_name": "Ted",
+          "first_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "last_name": "Cameron",
+          "last_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "role": "Certified Tidal Angling Guide",
+          "role_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory"
+        }
+      ],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Thunder 1 Adventures",
+      "business_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "location": "Prince Rupert, British Columbia",
+      "location_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "website_url": "http://thunder1.ca",
+      "website_url_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "phone_number": "1-250-703-6904",
+      "phone_number_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "email": "doug.deb@thunder1.ca",
+      "email_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "social_media_links": [],
+      "contact_people": [],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Warren Barker",
+      "business_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "location": "Bowen Island, British Columbia",
+      "location_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "website_url": "https://firstfishcharters.ca/",
+      "website_url_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "phone_number": "604-202-6522",
+      "phone_number_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "email": "firstfishcharters@gmail.com",
+      "email_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "social_media_links": [],
+      "contact_people": [
+        {
+          "first_name": "Warren",
+          "first_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "last_name": "Barker",
+          "last_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "role": "Certified Tidal Angling Guide",
+          "role_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory"
+        }
+      ],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Westview Marina & Lodge",
+      "business_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "location": "Tahsis, British Columbia",
+      "location_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "website_url": "http://westviewmarina.com/",
+      "website_url_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "phone_number": "(250) 934-7672",
+      "phone_number_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "email": "info@westviewmarina.com",
+      "email_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "social_media_links": [],
+      "contact_people": [],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Wild Pacific Charters",
+      "business_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "location": "Ucluelet, British Columbia",
+      "location_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": "(250) 735-9453Toll Free Number: 1-877-374-6653",
+      "phone_number_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "email": "fish@wildpacificcharters.com",
+      "email_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "social_media_links": [],
+      "contact_people": [],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "William Ridge",
+      "business_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "location": "British Columbia",
+      "location_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": "604-838-6555",
+      "phone_number_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "email": "billridge@shaw.ca",
+      "email_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+      "social_media_links": [],
+      "contact_people": [
+        {
+          "first_name": "William",
+          "first_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "last_name": "Ridge",
+          "last_name_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory",
+          "role": "Certified Tidal Angling Guide",
+          "role_citation": "https://www.sportfishing.bc.ca/membership-in-the-sfi/members-directory"
+        }
+      ],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Fishing Storie Charters",
+      "business_name_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+      "location": "Campbell River, British Columbia",
+      "location_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": null,
+      "phone_number_citation": null,
+      "email": null,
+      "email_citation": null,
+      "social_media_links": [],
+      "contact_people": [
+        {
+          "first_name": "Jason",
+          "first_name_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+          "last_name": null,
+          "last_name_citation": null,
+          "role": "Owner",
+          "role_citation": "https://fishingbooker.com/destinations/state/ca/BC"
+        }
+      ],
+      "directory_url": "https://fishingbooker.com/charters/view/43648",
+      "directory_url_citation": "https://fishingbooker.com/destinations/state/ca/BC"
+    },
+    {
+      "business_name": "Keepin' it reel fishing charter",
+      "business_name_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+      "location": "Victoria, British Columbia",
+      "location_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": null,
+      "phone_number_citation": null,
+      "email": null,
+      "email_citation": null,
+      "social_media_links": [],
+      "contact_people": [
+        {
+          "first_name": "Jeffrey",
+          "first_name_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+          "last_name": null,
+          "last_name_citation": null,
+          "role": "Captain",
+          "role_citation": "https://fishingbooker.com/destinations/state/ca/BC"
+        }
+      ],
+      "directory_url": "https://fishingbooker.com/charters/view/37286",
+      "directory_url_citation": "https://fishingbooker.com/destinations/state/ca/BC"
+    },
+    {
+      "business_name": "Full Melt Charters",
+      "business_name_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+      "location": "Sooke, British Columbia",
+      "location_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": null,
+      "phone_number_citation": null,
+      "email": null,
+      "email_citation": null,
+      "social_media_links": [],
+      "contact_people": [
+        {
+          "first_name": "Wayne",
+          "first_name_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+          "last_name": null,
+          "last_name_citation": null,
+          "role": "Captain",
+          "role_citation": "https://fishingbooker.com/destinations/state/ca/BC"
+        },
+        {
+          "first_name": "Chris",
+          "first_name_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+          "last_name": null,
+          "last_name_citation": null,
+          "role": "Captain",
+          "role_citation": "https://fishingbooker.com/destinations/state/ca/BC"
+        }
+      ],
+      "directory_url": "https://fishingbooker.com/charters/view/33917",
+      "directory_url_citation": "https://fishingbooker.com/destinations/state/ca/BC"
+    },
+    {
+      "business_name": "Sooke Salmon Fishing Charters",
+      "business_name_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+      "location": "Sooke, British Columbia",
+      "location_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": null,
+      "phone_number_citation": null,
+      "email": null,
+      "email_citation": null,
+      "social_media_links": [],
+      "contact_people": [
+        {
+          "first_name": "Luc",
+          "first_name_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+          "last_name": null,
+          "last_name_citation": null,
+          "role": "Captain",
+          "role_citation": "https://fishingbooker.com/destinations/state/ca/BC"
+        }
+      ],
+      "directory_url": "https://fishingbooker.com/charters/view/20705",
+      "directory_url_citation": "https://fishingbooker.com/destinations/state/ca/BC"
+    },
+    {
+      "business_name": "RDX Fishing Charters",
+      "business_name_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+      "location": "Richmond, British Columbia",
+      "location_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": null,
+      "phone_number_citation": null,
+      "email": null,
+      "email_citation": null,
+      "social_media_links": [],
+      "contact_people": [
+        {
+          "first_name": "Ben",
+          "first_name_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+          "last_name": "Ly",
+          "last_name_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+          "role": "Captain",
+          "role_citation": "https://fishingbooker.com/destinations/state/ca/BC"
+        }
+      ],
+      "directory_url": "https://fishingbooker.com/charters/view/44750",
+      "directory_url_citation": "https://fishingbooker.com/destinations/state/ca/BC"
+    },
+    {
+      "business_name": "Hooked On Fishing Charters",
+      "business_name_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+      "location": "Sooke, British Columbia",
+      "location_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": null,
+      "phone_number_citation": null,
+      "email": null,
+      "email_citation": null,
+      "social_media_links": [],
+      "contact_people": [
+        {
+          "first_name": "Joshua",
+          "first_name_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+          "last_name": null,
+          "last_name_citation": null,
+          "role": "Captain",
+          "role_citation": "https://fishingbooker.com/destinations/state/ca/BC"
+        }
+      ],
+      "directory_url": "https://fishingbooker.com/charters/view/37725",
+      "directory_url_citation": "https://fishingbooker.com/destinations/state/ca/BC"
+    },
+    {
+      "business_name": "Full Throttle Fishing Adventures",
+      "business_name_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+      "location": "Mission, British Columbia",
+      "location_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": null,
+      "phone_number_citation": null,
+      "email": null,
+      "email_citation": null,
+      "social_media_links": [],
+      "contact_people": [
+        {
+          "first_name": "Jason",
+          "first_name_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+          "last_name": null,
+          "last_name_citation": null,
+          "role": "Captain",
+          "role_citation": "https://fishingbooker.com/destinations/state/ca/BC"
+        }
+      ],
+      "directory_url": "https://fishingbooker.com/charters/view/41400",
+      "directory_url_citation": "https://fishingbooker.com/destinations/state/ca/BC"
+    },
+    {
+      "business_name": "Top Rods Guide Service - Sooke",
+      "business_name_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+      "location": "Sooke, British Columbia",
+      "location_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": null,
+      "phone_number_citation": null,
+      "email": null,
+      "email_citation": null,
+      "social_media_links": [],
+      "contact_people": [
+        {
+          "first_name": "Al",
+          "first_name_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+          "last_name": null,
+          "last_name_citation": null,
+          "role": null,
+          "role_citation": null
+        }
+      ],
+      "directory_url": "https://fishingbooker.com/charters/view/10306",
+      "directory_url_citation": "https://fishingbooker.com/destinations/state/ca/BC"
+    },
+    {
+      "business_name": "Cha'ak Charters",
+      "business_name_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+      "location": "Tofino, British Columbia",
+      "location_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": null,
+      "phone_number_citation": null,
+      "email": null,
+      "email_citation": null,
+      "social_media_links": [],
+      "contact_people": [
+        {
+          "first_name": "Nathan",
+          "first_name_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+          "last_name": null,
+          "last_name_citation": null,
+          "role": "Captain",
+          "role_citation": "https://fishingbooker.com/destinations/state/ca/BC"
+        }
+      ],
+      "directory_url": "https://fishingbooker.com/charters/view/32616",
+      "directory_url_citation": "https://fishingbooker.com/destinations/state/ca/BC"
+    },
+    {
+      "business_name": "Wild Pacific Charters - Knot 2 Wild",
+      "business_name_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+      "location": "Ucluelet, British Columbia",
+      "location_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": null,
+      "phone_number_citation": null,
+      "email": null,
+      "email_citation": null,
+      "social_media_links": [],
+      "contact_people": [
+        {
+          "first_name": "Alan",
+          "first_name_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+          "last_name": "Boyd",
+          "last_name_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+          "role": "Captain/Owner/Operator",
+          "role_citation": "https://fishingbooker.com/destinations/state/ca/BC"
+        }
+      ],
+      "directory_url": "https://fishingbooker.com/charters/view/1840",
+      "directory_url_citation": "https://fishingbooker.com/destinations/state/ca/BC"
+    },
+    {
+      "business_name": "Cliff's Chinook Charters",
+      "business_name_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+      "location": "Comox, British Columbia",
+      "location_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": null,
+      "phone_number_citation": null,
+      "email": null,
+      "email_citation": null,
+      "social_media_links": [],
+      "contact_people": [
+        {
+          "first_name": "Cliff",
+          "first_name_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+          "last_name": "Moors",
+          "last_name_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+          "role": "Captain",
+          "role_citation": "https://fishingbooker.com/destinations/state/ca/BC"
+        }
+      ],
+      "directory_url": "https://fishingbooker.com/charters/view/2836",
+      "directory_url_citation": "https://fishingbooker.com/destinations/state/ca/BC"
+    },
+    {
+      "business_name": "Tofino Ocean Adventures",
+      "business_name_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+      "location": "Tofino, British Columbia",
+      "location_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": null,
+      "phone_number_citation": null,
+      "email": null,
+      "email_citation": null,
+      "social_media_links": [],
+      "contact_people": [],
+      "directory_url": "https://fishingbooker.com/charters/view/14271",
+      "directory_url_citation": "https://fishingbooker.com/destinations/state/ca/BC"
+    },
+    {
+      "business_name": "Rugged West Coast Sport Fishing",
+      "business_name_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+      "location": "Vancouver Island, British Columbia",
+      "location_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": null,
+      "phone_number_citation": null,
+      "email": null,
+      "email_citation": null,
+      "social_media_links": [],
+      "contact_people": [],
+      "directory_url": "https://fishingbooker.com/charters/view/34654",
+      "directory_url_citation": "https://fishingbooker.com/destinations/state/ca/BC"
+    },
+    {
+      "business_name": "King Tide Charters",
+      "business_name_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+      "location": "Sooke, British Columbia",
+      "location_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": null,
+      "phone_number_citation": null,
+      "email": null,
+      "email_citation": null,
+      "social_media_links": [],
+      "contact_people": [
+        {
+          "first_name": "Andrew",
+          "first_name_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+          "last_name": null,
+          "last_name_citation": null,
+          "role": null,
+          "role_citation": null
+        }
+      ],
+      "directory_url": "https://fishingbooker.com/charters/view/38994",
+      "directory_url_citation": "https://fishingbooker.com/destinations/state/ca/BC"
+    },
+    {
+      "business_name": "Sooke Saltwater Fishing SL",
+      "business_name_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+      "location": "Sooke, British Columbia",
+      "location_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": null,
+      "phone_number_citation": null,
+      "email": null,
+      "email_citation": null,
+      "social_media_links": [],
+      "contact_people": [
+        {
+          "first_name": "Tristan",
+          "first_name_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+          "last_name": null,
+          "last_name_citation": null,
+          "role": "Captain",
+          "role_citation": "https://fishingbooker.com/destinations/state/ca/BC"
+        }
+      ],
+      "directory_url": "https://fishingbooker.com/charters/view/36425",
+      "directory_url_citation": "https://fishingbooker.com/destinations/state/ca/BC"
+    },
+    {
+      "business_name": "Unreel Fishing Charters",
+      "business_name_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+      "location": "Nanaimo, British Columbia",
+      "location_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": null,
+      "phone_number_citation": null,
+      "email": null,
+      "email_citation": null,
+      "social_media_links": [],
+      "contact_people": [
+        {
+          "first_name": "Alonso",
+          "first_name_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+          "last_name": null,
+          "last_name_citation": null,
+          "role": "Captain",
+          "role_citation": "https://fishingbooker.com/destinations/state/ca/BC"
+        }
+      ],
+      "directory_url": "https://fishingbooker.com/charters/view/7682",
+      "directory_url_citation": "https://fishingbooker.com/destinations/state/ca/BC"
+    },
+    {
+      "business_name": "Rodfather Fishing And Outdoor Adventures",
+      "business_name_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+      "location": "Victoria, British Columbia",
+      "location_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": null,
+      "phone_number_citation": null,
+      "email": null,
+      "email_citation": null,
+      "social_media_links": [],
+      "contact_people": [],
+      "directory_url": "https://fishingbooker.com/charters/view/15352",
+      "directory_url_citation": "https://fishingbooker.com/destinations/state/ca/BC"
+    },
+    {
+      "business_name": "Mongoose Striker Fishing Charters",
+      "business_name_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+      "location": "Vancouver, British Columbia",
+      "location_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": null,
+      "phone_number_citation": null,
+      "email": null,
+      "email_citation": null,
+      "social_media_links": [],
+      "contact_people": [
+        {
+          "first_name": "Scott",
+          "first_name_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+          "last_name": "Sutherland",
+          "last_name_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+          "role": "Captain",
+          "role_citation": "https://fishingbooker.com/destinations/state/ca/BC"
+        }
+      ],
+      "directory_url": "https://fishingbooker.com/charters/view/11171",
+      "directory_url_citation": "https://fishingbooker.com/destinations/state/ca/BC"
+    },
+    {
+      "business_name": "Built For Speed Salmon Fishing Charters",
+      "business_name_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+      "location": "West Vancouver, British Columbia",
+      "location_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": null,
+      "phone_number_citation": null,
+      "email": null,
+      "email_citation": null,
+      "social_media_links": [],
+      "contact_people": [],
+      "directory_url": "https://fishingbooker.com/charters/view/7696",
+      "directory_url_citation": "https://fishingbooker.com/destinations/state/ca/BC"
+    },
+    {
+      "business_name": "Rising Tide Coastal Adventures Sooke",
+      "business_name_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+      "location": "Sooke, British Columbia",
+      "location_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": null,
+      "phone_number_citation": null,
+      "email": null,
+      "email_citation": null,
+      "social_media_links": [],
+      "contact_people": [
+        {
+          "first_name": "Don",
+          "first_name_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+          "last_name": null,
+          "last_name_citation": null,
+          "role": "Captain",
+          "role_citation": "https://fishingbooker.com/destinations/state/ca/BC"
+        }
+      ],
+      "directory_url": "https://fishingbooker.com/charters/view/34635",
+      "directory_url_citation": "https://fishingbooker.com/destinations/state/ca/BC"
+    },
+    {
+      "business_name": "Last Chance Fishing Adventures",
+      "business_name_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+      "location": "Sooke, British Columbia",
+      "location_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": null,
+      "phone_number_citation": null,
+      "email": null,
+      "email_citation": null,
+      "social_media_links": [],
+      "contact_people": [
+        {
+          "first_name": "Kelly",
+          "first_name_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+          "last_name": null,
+          "last_name_citation": null,
+          "role": "Captain",
+          "role_citation": "https://fishingbooker.com/destinations/state/ca/BC"
+        }
+      ],
+      "directory_url": "https://fishingbooker.com/charters/view/8503",
+      "directory_url_citation": "https://fishingbooker.com/destinations/state/ca/BC"
+    },
+    {
+      "business_name": "Reel Life Charters",
+      "business_name_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+      "location": "Sooke, British Columbia",
+      "location_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": null,
+      "phone_number_citation": null,
+      "email": null,
+      "email_citation": null,
+      "social_media_links": [],
+      "contact_people": [
+        {
+          "first_name": "Travis",
+          "first_name_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+          "last_name": null,
+          "last_name_citation": null,
+          "role": "Captain",
+          "role_citation": "https://fishingbooker.com/destinations/state/ca/BC"
+        }
+      ],
+      "directory_url": "https://fishingbooker.com/charters/view/7639",
+      "directory_url_citation": "https://fishingbooker.com/destinations/state/ca/BC"
+    },
+    {
+      "business_name": "Goin Coastal Fishing Charters",
+      "business_name_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+      "location": "Sooke, British Columbia",
+      "location_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": null,
+      "phone_number_citation": null,
+      "email": null,
+      "email_citation": null,
+      "social_media_links": [],
+      "contact_people": [],
+      "directory_url": "https://fishingbooker.com/charters/view/5919",
+      "directory_url_citation": "https://fishingbooker.com/destinations/state/ca/BC"
+    },
+    {
+      "business_name": "Victory Charters",
+      "business_name_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+      "location": "Victoria, British Columbia",
+      "location_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": null,
+      "phone_number_citation": null,
+      "email": null,
+      "email_citation": null,
+      "social_media_links": [],
+      "contact_people": [],
+      "directory_url": "https://fishingbooker.com/charters/view/24062",
+      "directory_url_citation": "https://fishingbooker.com/destinations/state/ca/BC"
+    },
+    {
+      "business_name": "Bobby Kimoto Charters",
+      "business_name_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+      "location": "Vancouver Island, British Columbia",
+      "location_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": null,
+      "phone_number_citation": null,
+      "email": null,
+      "email_citation": null,
+      "social_media_links": [],
+      "contact_people": [
+        {
+          "first_name": "Bobby",
+          "first_name_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+          "last_name": "Kimoto",
+          "last_name_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+          "role": "Captain",
+          "role_citation": "https://fishingbooker.com/destinations/state/ca/BC"
+        }
+      ],
+      "directory_url": "https://fishingbooker.com/charters/view/14318",
+      "directory_url_citation": "https://fishingbooker.com/destinations/state/ca/BC"
+    },
+    {
+      "business_name": "Tofino Saltwater Sports",
+      "business_name_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+      "location": "Tofino, British Columbia",
+      "location_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": null,
+      "phone_number_citation": null,
+      "email": null,
+      "email_citation": null,
+      "social_media_links": [],
+      "contact_people": [
+        {
+          "first_name": "Carmen",
+          "first_name_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+          "last_name": null,
+          "last_name_citation": null,
+          "role": "Captain",
+          "role_citation": "https://fishingbooker.com/destinations/state/ca/BC"
+        }
+      ],
+      "directory_url": "https://fishingbooker.com/charters/view/4389",
+      "directory_url_citation": "https://fishingbooker.com/destinations/state/ca/BC"
+    },
+    {
+      "business_name": "Tips Up Sport Fishing Charters",
+      "business_name_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+      "location": "Sooke, British Columbia",
+      "location_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": null,
+      "phone_number_citation": null,
+      "email": null,
+      "email_citation": null,
+      "social_media_links": [],
+      "contact_people": [
+        {
+          "first_name": "Eugene",
+          "first_name_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+          "last_name": "Baldwin",
+          "last_name_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+          "role": "Captain",
+          "role_citation": "https://fishingbooker.com/destinations/state/ca/BC"
+        }
+      ],
+      "directory_url": "https://fishingbooker.com/charters/view/33996",
+      "directory_url_citation": "https://fishingbooker.com/destinations/state/ca/BC"
+    },
+    {
+      "business_name": "Arrowsmith Adventures",
+      "business_name_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+      "location": "Port Alberni, British Columbia",
+      "location_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": null,
+      "phone_number_citation": null,
+      "email": null,
+      "email_citation": null,
+      "social_media_links": [],
+      "contact_people": [],
+      "directory_url": "https://fishingbooker.com/charters/view/15881",
+      "directory_url_citation": "https://fishingbooker.com/destinations/state/ca/BC"
+    },
+    {
+      "business_name": "Kilby Lodge – Sturgeon Adventures",
+      "business_name_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+      "location": "Fraser Valley, British Columbia",
+      "location_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": null,
+      "phone_number_citation": null,
+      "email": null,
+      "email_citation": null,
+      "social_media_links": [],
+      "contact_people": [],
+      "directory_url": "https://fishingbooker.com/charters/view/16713",
+      "directory_url_citation": "https://fishingbooker.com/destinations/state/ca/BC"
+    },
+    {
+      "business_name": "Storm Rider Fishing Adventures",
+      "business_name_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+      "location": "North Vancouver, British Columbia",
+      "location_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": null,
+      "phone_number_citation": null,
+      "email": null,
+      "email_citation": null,
+      "social_media_links": [],
+      "contact_people": [
+        {
+          "first_name": "Paul",
+          "first_name_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+          "last_name": null,
+          "last_name_citation": null,
+          "role": "Captain",
+          "role_citation": "https://fishingbooker.com/destinations/state/ca/BC"
+        }
+      ],
+      "directory_url": "https://fishingbooker.com/charters/view/28891",
+      "directory_url_citation": "https://fishingbooker.com/destinations/state/ca/BC"
+    },
+    {
+      "business_name": "West Coast Ocean Charters",
+      "business_name_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+      "location": "Vancouver Island, British Columbia",
+      "location_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": null,
+      "phone_number_citation": null,
+      "email": null,
+      "email_citation": null,
+      "social_media_links": [],
+      "contact_people": [],
+      "directory_url": "https://fishingbooker.com/charters/view/16837",
+      "directory_url_citation": "https://fishingbooker.com/destinations/state/ca/BC"
+    },
+    {
+      "business_name": "Roy's Fishing Charters",
+      "business_name_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+      "location": "British Columbia",
+      "location_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": null,
+      "phone_number_citation": null,
+      "email": null,
+      "email_citation": null,
+      "social_media_links": [],
+      "contact_people": [
+        {
+          "first_name": "Roy",
+          "first_name_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+          "last_name": null,
+          "last_name_citation": null,
+          "role": "Captain",
+          "role_citation": "https://fishingbooker.com/destinations/state/ca/BC"
+        }
+      ],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Sooke Saltwater Fishing SA",
+      "business_name_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+      "location": "British Columbia",
+      "location_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": null,
+      "phone_number_citation": null,
+      "email": null,
+      "email_citation": null,
+      "social_media_links": [],
+      "contact_people": [
+        {
+          "first_name": "Regg",
+          "first_name_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+          "last_name": null,
+          "last_name_citation": null,
+          "role": "Captain",
+          "role_citation": "https://fishingbooker.com/destinations/state/ca/BC"
+        }
+      ],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Big Valley Sportfishing Adventures",
+      "business_name_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+      "location": "British Columbia",
+      "location_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": null,
+      "phone_number_citation": null,
+      "email": null,
+      "email_citation": null,
+      "social_media_links": [],
+      "contact_people": [
+        {
+          "first_name": "Mark",
+          "first_name_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+          "last_name": null,
+          "last_name_citation": null,
+          "role": null,
+          "role_citation": null
+        }
+      ],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Johnny's Sport Fishing",
+      "business_name_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+      "location": "Fraser River, British Columbia",
+      "location_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": null,
+      "phone_number_citation": null,
+      "email": null,
+      "email_citation": null,
+      "social_media_links": [],
+      "contact_people": [
+        {
+          "first_name": "Johnny",
+          "first_name_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+          "last_name": null,
+          "last_name_citation": null,
+          "role": null,
+          "role_citation": null
+        }
+      ],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Victoria Fishing Charters",
+      "business_name_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+      "location": "Victoria, British Columbia",
+      "location_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": null,
+      "phone_number_citation": null,
+      "email": null,
+      "email_citation": null,
+      "social_media_links": [],
+      "contact_people": [
+        {
+          "first_name": "Bradan",
+          "first_name_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+          "last_name": null,
+          "last_name_citation": null,
+          "role": null,
+          "role_citation": null
+        }
+      ],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Getter Done Charters – Nanaimo",
+      "business_name_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+      "location": "Nanaimo, British Columbia",
+      "location_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": null,
+      "phone_number_citation": null,
+      "email": null,
+      "email_citation": null,
+      "social_media_links": [],
+      "contact_people": [
+        {
+          "first_name": "Brannen",
+          "first_name_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+          "last_name": null,
+          "last_name_citation": null,
+          "role": null,
+          "role_citation": null
+        }
+      ],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Kolby's Fishing Adventures",
+      "business_name_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+      "location": "British Columbia",
+      "location_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": null,
+      "phone_number_citation": null,
+      "email": null,
+      "email_citation": null,
+      "social_media_links": [],
+      "contact_people": [
+        {
+          "first_name": "Kolby",
+          "first_name_citation": "https://fishingbooker.com/destinations/state/ca/BC",
+          "last_name": null,
+          "last_name_citation": null,
+          "role": null,
+          "role_citation": null
+        }
+      ],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Mainlanders Sport Fishing",
+      "business_name_citation": "https://www.guidefitter.com/fishing/canada-british-columbia",
+      "location": "Kitimat-Stikine C, BC",
+      "location_citation": "https://www.guidefitter.com/fishing/canada-british-columbia",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": null,
+      "phone_number_citation": null,
+      "email": null,
+      "email_citation": null,
+      "social_media_links": [],
+      "contact_people": [],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Chop Hopper Charters",
+      "business_name_citation": "https://www.guidefitter.com/fishing/canada-british-columbia",
+      "location": "Port Alberni, BC",
+      "location_citation": "https://www.guidefitter.com/fishing/canada-british-columbia",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": null,
+      "phone_number_citation": null,
+      "email": null,
+      "email_citation": null,
+      "social_media_links": [],
+      "contact_people": [],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Bones Bay Lodge",
+      "business_name_citation": "https://www.guidefitter.com/fishing/canada-british-columbia",
+      "location": "British Columbia",
+      "location_citation": "https://www.guidefitter.com/fishing/canada-british-columbia",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": null,
+      "phone_number_citation": null,
+      "email": null,
+      "email_citation": null,
+      "social_media_links": [],
+      "contact_people": [],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Nootka Island Lodge",
+      "business_name_citation": "https://www.guidefitter.com/fishing/canada-british-columbia",
+      "location": "British Columbia",
+      "location_citation": "https://www.guidefitter.com/fishing/canada-british-columbia",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": null,
+      "phone_number_citation": null,
+      "email": null,
+      "email_citation": null,
+      "social_media_links": [],
+      "contact_people": [],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "iGuideBC",
+      "business_name_citation": "https://www.guidefitter.com/fishing/canada-british-columbia",
+      "location": "British Columbia",
+      "location_citation": "https://www.guidefitter.com/fishing/canada-british-columbia",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": null,
+      "phone_number_citation": null,
+      "email": null,
+      "email_citation": null,
+      "social_media_links": [],
+      "contact_people": [],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Anvil Mountain Guiding & Outfitting",
+      "business_name_citation": "https://www.guidefitter.com/fishing/canada-british-columbia",
+      "location": "Cariboo K, BC",
+      "location_citation": "https://www.guidefitter.com/fishing/canada-british-columbia",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": null,
+      "phone_number_citation": null,
+      "email": null,
+      "email_citation": null,
+      "social_media_links": [],
+      "contact_people": [],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Wild River Flyfishing",
+      "business_name_citation": "https://www.guidefitter.com/fishing/canada-british-columbia",
+      "location": "Kitimat-Stikine C, BC",
+      "location_citation": "https://www.guidefitter.com/fishing/canada-british-columbia",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": null,
+      "phone_number_citation": null,
+      "email": null,
+      "email_citation": null,
+      "social_media_links": [],
+      "contact_people": [],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Elk River Guiding Company ltd",
+      "business_name_citation": "https://www.guidefitter.com/fishing/canada-british-columbia",
+      "location": "Fernie, BC",
+      "location_citation": "https://www.guidefitter.com/fishing/canada-british-columbia",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": null,
+      "phone_number_citation": null,
+      "email": null,
+      "email_citation": null,
+      "social_media_links": [],
+      "contact_people": [],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Northern Rockies Adventures",
+      "business_name_citation": "https://www.guidefitter.com/fishing/canada-british-columbia",
+      "location": "Fort Nelson, BC",
+      "location_citation": "https://www.guidefitter.com/fishing/canada-british-columbia",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": null,
+      "phone_number_citation": null,
+      "email": null,
+      "email_citation": null,
+      "social_media_links": [],
+      "contact_people": [],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Sturgeon Slayers",
+      "business_name_citation": "https://www.guidefitter.com/fishing/canada-british-columbia",
+      "location": "British Columbia",
+      "location_citation": "https://www.guidefitter.com/fishing/canada-british-columbia",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": null,
+      "phone_number_citation": null,
+      "email": null,
+      "email_citation": null,
+      "social_media_links": [],
+      "contact_people": [],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Shadow Mountain Outfitters, Ltd (SMO)",
+      "business_name_citation": "https://www.guidefitter.com/fishing/canada-british-columbia",
+      "location": "British Columbia",
+      "location_citation": "https://www.guidefitter.com/fishing/canada-british-columbia",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": null,
+      "phone_number_citation": null,
+      "email": null,
+      "email_citation": null,
+      "social_media_links": [],
+      "contact_people": [],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Action Packed Charters",
+      "business_name_citation": "https://albernivalleytourism.com/business_category/fishing-services-marine-charter/",
+      "location": "Port Alberni, British Columbia",
+      "location_citation": "https://albernivalleytourism.com/business_category/fishing-services-marine-charter/",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": null,
+      "phone_number_citation": null,
+      "email": null,
+      "email_citation": null,
+      "social_media_links": [],
+      "contact_people": [
+        {
+          "first_name": "Carla",
+          "first_name_citation": "https://albernivalleytourism.com/business_category/fishing-services-marine-charter/",
+          "last_name": "Halvorsen",
+          "last_name_citation": "https://albernivalleytourism.com/business_category/fishing-services-marine-charter/",
+          "role": "Owner",
+          "role_citation": "https://albernivalleytourism.com/business_category/fishing-services-marine-charter/"
+        }
+      ],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Fish on charters",
+      "business_name_citation": "https://albernivalleytourism.com/business_category/fishing-services-marine-charter/",
+      "location": "Nanaimo and Port Alberni, British Columbia",
+      "location_citation": "https://albernivalleytourism.com/business_category/fishing-services-marine-charter/",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": null,
+      "phone_number_citation": null,
+      "email": null,
+      "email_citation": null,
+      "social_media_links": [],
+      "contact_people": [],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Hot Rods Ocean Adventures",
+      "business_name_citation": "https://albernivalleytourism.com/business_category/fishing-services-marine-charter/",
+      "location": "Port Alberni, British Columbia",
+      "location_citation": "https://albernivalleytourism.com/business_category/fishing-services-marine-charter/",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": null,
+      "phone_number_citation": null,
+      "email": null,
+      "email_citation": null,
+      "social_media_links": [],
+      "contact_people": [],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Kingfish Westcoast Adventures Ltd.",
+      "business_name_citation": "https://fishingbooker.com/destinations/region/ca/haida-gwaii",
+      "location": "Kitimat, British Columbia",
+      "location_citation": "https://fishingbooker.com/destinations/region/ca/haida-gwaii",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": null,
+      "phone_number_citation": null,
+      "email": null,
+      "email_citation": null,
+      "social_media_links": [],
+      "contact_people": [
+        {
+          "first_name": "Andreas",
+          "first_name_citation": "https://fishingbooker.com/destinations/region/ca/haida-gwaii",
+          "last_name": "Handl",
+          "last_name_citation": "https://fishingbooker.com/destinations/region/ca/haida-gwaii",
+          "role": "Captain",
+          "role_citation": "https://fishingbooker.com/destinations/region/ca/haida-gwaii"
+        }
+      ],
+      "directory_url": "https://fishingbooker.com/charters/view/9483",
+      "directory_url_citation": "https://fishingbooker.com/destinations/region/ca/haida-gwaii"
+    },
+    {
+      "business_name": "Nautical West Sport Fishing",
+      "business_name_citation": "https://fishingbooker.com/destinations/region/ca/haida-gwaii",
+      "location": "Haida Gwaii, British Columbia",
+      "location_citation": "https://fishingbooker.com/destinations/region/ca/haida-gwaii",
+      "website_url": null,
+      "website_url_citation": null,
+      "phone_number": null,
+      "phone_number_citation": null,
+      "email": null,
+      "email_citation": null,
+      "social_media_links": [],
+      "contact_people": [
+        {
+          "first_name": "Todd",
+          "first_name_citation": "https://fishingbooker.com/destinations/region/ca/haida-gwaii",
+          "last_name": "Haynes",
+          "last_name_citation": "https://fishingbooker.com/destinations/region/ca/haida-gwaii",
+          "role": "Captain",
+          "role_citation": "https://fishingbooker.com/destinations/region/ca/haida-gwaii"
+        }
+      ],
+      "directory_url": "https://fishingbooker.com/charters/view/13961",
+      "directory_url_citation": "https://fishingbooker.com/destinations/region/ca/haida-gwaii"
+    },
+    {
+      "business_name": "Kaien Sportfishing Charters",
+      "business_name_citation": "https://kaiensports.com/",
+      "location": "Prince Rupert, British Columbia",
+      "location_citation": "https://kaiensports.com/",
+      "website_url": "https://kaiensports.com",
+      "website_url_citation": "https://kaiensports.com/",
+      "phone_number": "1-250-624-5151",
+      "phone_number_citation": "https://kaiensports.com/",
+      "email": "info@kaiensports.com",
+      "email_citation": "https://kaiensports.com/",
+      "social_media_links": [
+        {
+          "value": "https://www.youtube.com/channel/UCcJGFM92MSkfn1SNFezsGcA",
+          "value_citation": "https://kaiensports.com/"
+        }
+      ],
+      "contact_people": [
+        {
+          "first_name": "Colin",
+          "first_name_citation": "https://kaiensports.com/",
+          "last_name": "Flaten",
+          "last_name_citation": "https://kaiensports.com/",
+          "role": "Captain / Host",
+          "role_citation": "https://kaiensports.com/"
+        }
+      ],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Haida Fishing",
+      "business_name_citation": "https://www.haidafishing.com/aboutus.html",
+      "location": "Prince Rupert, British Columbia",
+      "location_citation": "https://www.haidafishing.com/aboutus.html",
+      "website_url": "http://www.haidafishing.com/",
+      "website_url_citation": "https://www.haidafishing.com/aboutus.html",
+      "phone_number": null,
+      "phone_number_citation": null,
+      "email": null,
+      "email_citation": null,
+      "social_media_links": [],
+      "contact_people": [
+        {
+          "first_name": "Real",
+          "first_name_citation": "https://www.haidafishing.com/aboutus.html",
+          "last_name": "Jones",
+          "last_name_citation": "https://www.haidafishing.com/aboutus.html",
+          "role": "Owner and operator",
+          "role_citation": "https://www.haidafishing.com/aboutus.html"
+        }
+      ],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Haida Gwaii Fishing Charters",
+      "business_name_citation": "https://www.haidagwaiifishingcharters.com/",
+      "location": "Haida Gwaii, British Columbia",
+      "location_citation": "https://www.haidagwaiifishingcharters.com/",
+      "website_url": "https://www.haidagwaiifishingcharters.com/",
+      "website_url_citation": "https://www.haidagwaiifishingcharters.com/",
+      "phone_number": null,
+      "phone_number_citation": null,
+      "email": null,
+      "email_citation": null,
+      "social_media_links": [],
+      "contact_people": [
+        {
+          "first_name": "Michael",
+          "first_name_citation": "https://www.haidagwaiifishingcharters.com/",
+          "last_name": "Mayr",
+          "last_name_citation": "https://www.haidagwaiifishingcharters.com/",
+          "role": "Captain / Guide",
+          "role_citation": "https://www.haidagwaiifishingcharters.com/"
+        }
+      ],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Peregrine Lodge",
+      "business_name_citation": "https://www.peregrinelodge.com/",
+      "location": "Haida Gwaii, British Columbia",
+      "location_citation": "https://www.peregrinelodge.com/",
+      "website_url": "https://www.peregrinelodge.com/",
+      "website_url_citation": "https://www.peregrinelodge.com/",
+      "phone_number": "1-800-663-0992",
+      "phone_number_citation": "https://www.peregrinelodge.com/",
+      "email": "info@peregrinelodge.com",
+      "email_citation": "https://www.peregrinelodge.com/",
+      "social_media_links": [
+        {
+          "value": "https://www.youtube.com/channel/UCOds6PNDXtlJcXtXV7uePIw",
+          "value_citation": "https://www.peregrinelodge.com/"
+        }
+      ],
+      "contact_people": [],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Haida Gwaii Safaris",
+      "business_name_citation": "https://qcsafaris.com/",
+      "location": "Sandspit, British Columbia",
+      "location_citation": "https://qcsafaris.com/",
+      "website_url": "https://qcsafaris.com/",
+      "website_url_citation": "https://qcsafaris.com/",
+      "phone_number": "877-815-2892",
+      "phone_number_citation": "https://qcsafaris.com/",
+      "email": null,
+      "email_citation": null,
+      "social_media_links": [],
+      "contact_people": [
+        {
+          "first_name": "Valerie",
+          "first_name_citation": "https://qcsafaris.com/",
+          "last_name": null,
+          "last_name_citation": null,
+          "role": "Owner / Host",
+          "role_citation": "https://qcsafaris.com/"
+        }
+      ],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Thunder 1 Adventure",
+      "business_name_citation": "https://thunder1.ca/book-thunder-1-adventures/",
+      "location": "Prince Rupert, British Columbia",
+      "location_citation": "https://thunder1.ca/book-thunder-1-adventures/",
+      "website_url": "https://thunder1.ca/",
+      "website_url_citation": "https://thunder1.ca/book-thunder-1-adventures/",
+      "phone_number": null,
+      "phone_number_citation": null,
+      "email": null,
+      "email_citation": null,
+      "social_media_links": [
+        {
+          "value": "https://www.instagram.com/thunder1adventures/",
+          "value_citation": "https://thunder1.ca/"
+        }
+      ],
+      "contact_people": [
+        {
+          "first_name": "Doug",
+          "first_name_citation": "https://thunder1.ca/",
+          "last_name": "Emery",
+          "last_name_citation": "https://thunder1.ca/",
+          "role": "Owner/Crew/Guide",
+          "role_citation": "https://thunder1.ca/"
+        },
+        {
+          "first_name": "Deb",
+          "first_name_citation": "https://thunder1.ca/",
+          "last_name": "Emery",
+          "last_name_citation": "https://thunder1.ca/",
+          "role": "Owner/Crew/Cook",
+          "role_citation": "https://thunder1.ca/"
+        }
+      ],
+      "directory_url": null,
+      "directory_url_citation": null
+    },
+    {
+      "business_name": "Chromer Sportfishing",
+      "business_name_citation": "https://chromersportfishing.com",
+      "location": "British Columbia",
+      "location_citation": "https://chromersportfishing.com",
+      "website_url": "https://chromersportfishing.com",
+      "website_url_citation": "https://chromersportfishing.com",
+      "phone_number": null,
+      "phone_number_citation": null,
+      "email": null,
+      "email_citation": null,
+      "social_media_links": [],
+      "contact_people": [
+        {
+          "first_name": "Yos",
+          "first_name_citation": "https://chromersportfishing.com",
+          "last_name": "Gladstone",
+          "last_name_citation": "https://chromersportfishing.com",
+          "role": "Fishing Guide",
+          "role_citation": "https://chromersportfishing.com"
+        }
+      ],
+      "directory_url": null,
+      "directory_url_citation": null
+    }
+  ]
+}
