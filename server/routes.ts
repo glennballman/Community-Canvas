@@ -14,14 +14,13 @@ import { getJsonLoadedMembers } from "@shared/chamber-member-registry";
 import { getChamberProgressList, getChamberProgressSummary } from "@shared/chamber-progress";
 
 // Merge static members with JSON-loaded members for consistent data across the app
+// IMPORTANT: This function is called per-request to ensure fresh data after JSON file updates
 function getAllChamberMembers() {
   const jsonMembers = getJsonLoadedMembers();
   const jsonMemberIds = new Set(jsonMembers.map(m => m.id));
   const uniqueStaticMembers = staticMembers.filter(m => !jsonMemberIds.has(m.id));
   return [...uniqueStaticMembers, ...jsonMembers];
 }
-
-const chamberMembers = getAllChamberMembers();
 
 export async function registerRoutes(
   httpServer: Server,
@@ -172,8 +171,9 @@ export async function registerRoutes(
 
   app.get("/api/chambers/locations", async (req, res) => {
     try {
+      const allMembers = getAllChamberMembers();
       const memberCountByChamberId = new Map<string, number>();
-      for (const member of chamberMembers) {
+      for (const member of allMembers) {
         const count = memberCountByChamberId.get(member.chamberId) || 0;
         memberCountByChamberId.set(member.chamberId, count + 1);
       }

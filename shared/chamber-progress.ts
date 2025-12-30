@@ -17,7 +17,8 @@ import { chamberMembers as staticMembers } from './chamber-members';
 import { getJsonLoadedMembers } from './chamber-member-registry';
 
 // Merge static members with dynamically-loaded JSON members
-// This ensures new JSON files are automatically included without regenerating the static file
+// IMPORTANT: This function is called per-request to ensure fresh data after JSON file updates
+// Do NOT cache the result at module level - it must be computed fresh each time
 function getAllChamberMembers() {
   const jsonMembers = getJsonLoadedMembers();
   const jsonMemberIds = new Set(jsonMembers.map(m => m.id));
@@ -27,8 +28,6 @@ function getAllChamberMembers() {
   
   return [...uniqueStaticMembers, ...jsonMembers];
 }
-
-const chamberMembers = getAllChamberMembers();
 
 export type ChamberProgressStatus = 'pending' | 'in_progress' | 'partial' | 'completed' | 'blocked';
 
@@ -125,10 +124,11 @@ function getExpectedMemberCounts(): Record<string, number> {
  */
 function getEstimatedMemberCounts(): Record<string, number> {
   const counts: Record<string, number> = {};
+  const members = getAllChamberMembers();
   
   // Count actual members per chamber
   const actualCounts = new Map<string, number>();
-  for (const member of chamberMembers) {
+  for (const member of members) {
     actualCounts.set(member.chamberId, (actualCounts.get(member.chamberId) || 0) + 1);
   }
   
@@ -147,10 +147,8 @@ function getEstimatedMemberCounts(): Record<string, number> {
   return counts;
 }
 
-// Expected = from official website sources
-const expectedMemberCounts: Record<string, number> = getExpectedMemberCounts();
-// Estimated = our calculations
-const estimatedMemberCounts: Record<string, number> = getEstimatedMemberCounts();
+// NOTE: expectedMemberCounts and estimatedMemberCounts are now computed on-demand
+// inside getChamberProgressList() to ensure fresh data after JSON file updates
 
 // Minimum thresholds for completion
 const MEMBER_THRESHOLD = 30;
@@ -159,7 +157,8 @@ const MEMBER_THRESHOLD = 30;
  * Calculate NAICS coverage for a chamber
  */
 function calculateNaicsCoverage(chamberId: string): { total: number; withNaics: number; percentage: number | null } {
-  const members = chamberMembers.filter(m => m.chamberId === chamberId);
+  const allMembers = getAllChamberMembers();
+  const members = allMembers.filter(m => m.chamberId === chamberId);
   const total = members.length;
   
   if (total === 0) {
@@ -223,6 +222,10 @@ function determineStatus(
  */
 export function getChamberProgressList(): ChamberProgress[] {
   const progressList: ChamberProgress[] = [];
+  
+  // Compute fresh on each call to pick up JSON file updates
+  const expectedMemberCounts = getExpectedMemberCounts();
+  const estimatedMemberCounts = getEstimatedMemberCounts();
   
   for (const chamber of BC_CHAMBERS_OF_COMMERCE) {
     const naicsData = calculateNaicsCoverage(chamber.id);

@@ -1,0 +1,85 @@
+I need you to perform a complete architecture audit of this project to diagnose data consistency issues. The symptom is: you tell me data has been updated, but I don't see the changes in the dashboard.
+
+Please provide a detailed report answering ALL of the following. Be thorough and show actual file paths, code snippets, and query results.
+
+## SECTION 1: DATA STORAGE AUDIT
+
+1.1 List ALL files that contain chamber member data:
+- Run: find . -name "*.json" -exec grep -l -i "member\|chamber" {} \;
+- Run: find . -name "*.js" -exec grep -l "members.*=.*\[" {} \;
+- Show me the file paths and a sample of what's in each
+
+1.2 Show the database schema for chamber-related tables:
+- Run the SQL: \dt *member* or SELECT table_name FROM information_schema.tables WHERE table_name LIKE '%member%';
+- Show me the CREATE TABLE statements or column definitions
+- Show current row counts: SELECT 'chamber_members' as tbl, COUNT(*) FROM chamber_members UNION ALL... (for each relevant table)
+
+1.3 For Sooke specifically, show me:
+- SELECT COUNT(*) FROM [whatever table] WHERE [chamber = 'Sooke' or similar];
+- SELECT * FROM [table] WHERE [chamber = 'Sooke'] LIMIT 5;
+- Are there JSON files with Sooke data? Show contents.
+
+## SECTION 2: DATA FLOW TRACE
+
+2.1 When Firecrawl scrapes a chamber website, what happens to the data?
+- Show me the code path from scrape completion to database insert
+- What function/file handles this?
+- Is there intermediate storage (temp files, staging tables)?
+
+2.2 Show me the API endpoints related to chambers/members:
+- List all routes in your API (grep for app.get, app.post, router.get, etc.)
+- Show me the specific endpoint that the dashboard calls to get member data
+- Show the actual code for that endpoint
+
+2.3 How does the React frontend load chamber data?
+- Find the component that displays member counts
+- Show me the fetch/import statement - does it call an API or import a JSON file directly?
+- Show the actual code
+
+## SECTION 3: CACHING & BUILD ANALYSIS
+
+3.1 Is there any caching?
+- Search for: grep -r "cache" --include="*.js" --include="*.ts"
+- Search for: grep -r "Cache-Control" --include="*.js"
+- Any Redis, memory cache, or memoization?
+
+3.2 Check for build-time data bundling:
+- Look at vite.config.js, webpack.config.js, next.config.js, or similar
+- Are JSON files being imported/required in a way that bundles them?
+- Show any dynamic imports of data files
+
+3.3 Show me package.json scripts:
+- What does "npm run build" or the build command do?
+- Is there a prebuild step that processes data?
+
+## SECTION 4: DISCREPANCY DIAGNOSIS
+
+4.1 Right now, tell me what EACH source says about Sooke member count:
+- Database query result: SELECT COUNT(*)...
+- JSON file (if exists): wc -l or parse and count
+- API endpoint response: curl localhost:PORT/api/chambers/sooke or similar
+- What the React component would receive
+
+4.2 Are these numbers the same or different? If different, explain why.
+
+## SECTION 5: RECENT CHANGES
+
+5.1 Show me the last 10 file modifications related to chambers/members:
+- git log --oneline -20 --all -- "*member*" "*chamber*" "*.json"
+- Or: ls -lt | head -20 for recently modified files
+
+5.2 What did you (Replit AI) modify when I asked you to fix Sooke to 85 members?
+- What file(s) did you edit?
+- What was the before/after?
+
+## FORMAT YOUR RESPONSE AS:
+
+### Section 1.1: Data Files Found
+[your findings with file paths]
+
+### Section 1.2: Database Schema
+[schema output]
+
+...and so on for each section.
+
+Be completely honest. If you find that JSON files are being used when they shouldn't be, or if the architecture has problems, tell me. I need the truth to fix this.
