@@ -1,0 +1,72 @@
+Let's create a real-time data pipeline system for our configured data sources.
+
+First, create the pipeline infrastructure:
+
+1. Create a new directory structure:
+/server/pipelines/
+  ├── index.ts           # Pipeline registry and scheduler
+  ├── base-pipeline.ts   # Abstract base class
+  ├── bcferries.ts       # BC Ferries current conditions
+  ├── drivebc.ts         # DriveBC road events + webcams
+  ├── weather.ts         # Environment Canada weather
+  ├── bchydro.ts         # BC Hydro outages
+  └── earthquakes.ts     # Earthquakes Canada
+
+2. Create the base pipeline class in base-pipeline.ts:
+
+export interface PipelineResult {
+  success: boolean;
+  recordsProcessed: number;
+  recordsCreated: number;
+  recordsUpdated: number;
+  errors: string[];
+  timestamp: Date;
+}
+
+export abstract class BasePipeline {
+  protected dataSourceId: string;
+  protected rateLimit: number;
+  
+  constructor(dataSourceId: string) {
+    this.dataSourceId = dataSourceId;
+  }
+  
+  abstract fetch(): Promise<any>;
+  abstract transform(rawData: any): any[];
+  abstract load(transformedData: any[]): Promise<PipelineResult>;
+  
+  async run(): Promise<PipelineResult> {
+    const raw = await this.fetch();
+    const transformed = this.transform(raw);
+    return await this.load(transformed);
+  }
+}
+
+3. Create tables for pipeline tracking:
+
+CREATE TABLE IF NOT EXISTS pipeline_runs (
+  id SERIAL PRIMARY KEY,
+  data_source_id VARCHAR(100) REFERENCES data_sources(id),
+  started_at TIMESTAMP DEFAULT NOW(),
+  completed_at TIMESTAMP,
+  status VARCHAR(20) DEFAULT 'running',
+  records_processed INTEGER DEFAULT 0,
+  records_created INTEGER DEFAULT 0,
+  records_updated INTEGER DEFAULT 0,
+  error_message TEXT,
+  metadata JSONB DEFAULT '{}'
+);
+
+CREATE TABLE IF NOT EXISTS entity_snapshots (
+  id SERIAL PRIMARY KEY,
+  entity_id INTEGER REFERENCES entities(id),
+  data_source_id VARCHAR(100) REFERENCES data_sources(id),
+  snapshot_time TIMESTAMP DEFAULT NOW(),
+  status VARCHAR(50),
+  raw_data JSONB,
+  metrics JSONB,
+  alerts JSONB
+);
+
+CREATE INDEX idx_snapshots_entity_time ON entity_snapshots(entity_id, snapshot_time DESC);
+CREATE INDEX idx_snapshots_source_time ON entity_snapshots(data_source_id, snapshot_time DESC);
