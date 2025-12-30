@@ -3,12 +3,14 @@ import portAlberniData from '../data/chambers/port-alberni.json';
 import ladysmithData from '../data/chambers/ladysmith.json';
 import portHardyData from '../data/chambers/port-hardy.json';
 import tofinoData from '../data/chambers/tofino.json';
+import uclueletData from '../data/chambers/ucluelet.json';
 
 const chamberDataFiles: Record<string, unknown[]> = {
   'port-alberni-chamber': portAlberniData as unknown[],
   'ladysmith-chamber': ladysmithData as unknown[],
   'port-hardy-chamber': portHardyData as unknown[],
   'tofino-long-beach-chamber': tofinoData as unknown[],
+  'ucluelet-chamber': uclueletData as unknown[],
 };
 
 let validatedMembers: ChamberMember[] | null = null;
