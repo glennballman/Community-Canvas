@@ -10,6 +10,7 @@ import {
   Radio
 } from 'lucide-react';
 import { StatusCards } from './StatusCards';
+import { AlertsFeed } from './AlertsFeed';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -122,10 +123,7 @@ export function DashboardLayout({ defaultRegion = 'bc' }: DashboardLayoutProps) 
           </div>
         )}
         {activeTab === 'alerts' && (
-          <div className="bg-card rounded-xl p-8 text-center border">
-            <AlertTriangle className="w-12 h-12 mx-auto text-muted-foreground" />
-            <p className="text-muted-foreground mt-2">Alerts tab coming soon</p>
-          </div>
+          <AlertsFeed regionId={selectedRegion} maxAlerts={50} />
         )}
       </main>
       
@@ -145,12 +143,8 @@ function OverviewTab({ regionId }: { regionId: string }) {
       <StatusCards regionId={regionId} />
       
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 bg-card rounded-xl border p-6">
-          <h3 className="font-semibold flex items-center gap-2 mb-4">
-            <AlertTriangle className="w-5 h-5 text-amber-500" />
-            Live Alerts
-          </h3>
-          <p className="text-muted-foreground">Alert feed will appear here</p>
+        <div className="lg:col-span-2">
+          <AlertsFeed regionId={regionId} maxAlerts={10} compact />
         </div>
         <div className="bg-gradient-to-br from-blue-500 to-blue-600 dark:from-blue-600 dark:to-blue-700 rounded-xl p-6 text-white">
           <h3 className="font-semibold mb-2 flex items-center gap-2">

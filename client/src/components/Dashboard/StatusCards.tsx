@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { AlertTriangle, Ship, Cloud, Car, Sun, CloudRain, CloudSnow, CloudLightning, CloudFog, Wind } from 'lucide-react';
 
 interface StatusData {
-  alerts: { critical: number; major: number; moderate: number; minor: number; total: number };
+  alerts: { critical: number; major: number; warning: number; advisory: number; minor: number; total: number };
   ferries: { status: string; delays: number; onTime: number };
   weather: { temperature: number; condition: string; warnings: number };
   roads: { closures: number; incidents: number; construction: number; total: number };

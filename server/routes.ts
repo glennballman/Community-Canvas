@@ -456,7 +456,8 @@ export async function registerRoutes(
         SELECT 
           COUNT(*) FILTER (WHERE severity::text = 'critical' OR severity::text = 'emergency') as critical,
           COUNT(*) FILTER (WHERE severity::text = 'major') as major,
-          COUNT(*) FILTER (WHERE severity::text = 'warning' OR severity::text = 'advisory') as moderate,
+          COUNT(*) FILTER (WHERE severity::text = 'warning') as warning,
+          COUNT(*) FILTER (WHERE severity::text = 'advisory') as advisory,
           COUNT(*) FILTER (WHERE severity::text = 'minor' OR severity::text = 'info') as minor,
           COUNT(*) as total
         FROM alerts 
@@ -494,7 +495,8 @@ export async function registerRoutes(
         alerts: {
           critical: parseInt(alertsResult.rows[0]?.critical || '0', 10),
           major: parseInt(alertsResult.rows[0]?.major || '0', 10),
-          moderate: parseInt(alertsResult.rows[0]?.moderate || '0', 10),
+          warning: parseInt(alertsResult.rows[0]?.warning || '0', 10),
+          advisory: parseInt(alertsResult.rows[0]?.advisory || '0', 10),
           minor: parseInt(alertsResult.rows[0]?.minor || '0', 10),
           total: parseInt(alertsResult.rows[0]?.total || '0', 10)
         },
@@ -544,7 +546,7 @@ export async function registerRoutes(
       
       // Get region info
       const regionResult = await storage.query(`
-        SELECT id, name, short_name, region_type, parent_id, centroid_lat, centroid_lon
+        SELECT id, name, region_type, parent_id, centroid_lat, centroid_lon
         FROM geo_regions WHERE id = $1
       `, [regionId]);
       
@@ -561,7 +563,10 @@ export async function registerRoutes(
         FROM alerts 
         WHERE region_id = $1 AND is_active = true
         ORDER BY 
-          CASE severity WHEN 'major' THEN 1 WHEN 'moderate' THEN 2 ELSE 3 END,
+          CASE severity 
+            WHEN 'emergency' THEN 1 WHEN 'critical' THEN 2 WHEN 'major' THEN 3 
+            WHEN 'warning' THEN 4 WHEN 'advisory' THEN 5 WHEN 'minor' THEN 6 ELSE 7 
+          END,
           created_at DESC
       `, [regionId]);
       
@@ -611,7 +616,7 @@ export async function registerRoutes(
       const { type, severity, region } = req.query;
       
       let query = `
-        SELECT a.*, gr.short_name as region_name, gr.name as region_full_name
+        SELECT a.*, gr.name as region_name
         FROM alerts a
         LEFT JOIN geo_regions gr ON a.region_id = gr.id
         WHERE a.is_active = true
@@ -639,9 +644,13 @@ export async function registerRoutes(
       query += `
         ORDER BY 
           CASE a.severity 
-            WHEN 'major' THEN 1 
-            WHEN 'moderate' THEN 2 
-            ELSE 3 
+            WHEN 'emergency' THEN 1
+            WHEN 'critical' THEN 2 
+            WHEN 'major' THEN 3 
+            WHEN 'warning' THEN 4
+            WHEN 'advisory' THEN 5
+            WHEN 'minor' THEN 6
+            ELSE 7 
           END,
           a.created_at DESC
         LIMIT 200
@@ -678,7 +687,7 @@ export async function registerRoutes(
       const { alertType } = req.params;
       
       const result = await storage.query(`
-        SELECT a.*, gr.short_name as region_name
+        SELECT a.*, gr.name as region_name
         FROM alerts a
         LEFT JOIN geo_regions gr ON a.region_id = gr.id
         WHERE a.alert_type = $1 AND a.is_active = true

@@ -1,0 +1,212 @@
+Create a real-time alerts feed that shows active alerts with auto-refresh.
+
+Create file: client/src/components/Dashboard/AlertsFeed.tsx
+
+import React, { useEffect, useState } from 'react';
+
+interface Alert {
+  id: number;
+  alert_type: string;
+  severity: string;
+  headline: string;
+  description: string;
+  region_name: string;
+  source: string;
+  created_at: string;
+  expires_at: string | null;
+  metadata: Record<string, any>;
+}
+
+interface AlertsFeedProps {
+  regionId?: string;
+  maxAlerts?: number;
+  compact?: boolean;
+}
+
+export function AlertsFeed({ regionId, maxAlerts = 10, compact = false }: AlertsFeedProps) {
+  const [alerts, setAlerts] = useState<Alert[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchAlerts();
+    // Auto-refresh every 30 seconds
+    const interval = setInterval(fetchAlerts, 30000);
+    return () => clearInterval(interval);
+  }, [regionId]);
+
+  async function fetchAlerts() {
+    try {
+      const url = regionId && regionId !== 'bc'
+        ? `/api/v1/alerts/active?region=${regionId}&limit=${maxAlerts}`
+        : `/api/v1/alerts/active?limit=${maxAlerts}`;
+      
+      const response = await fetch(url);
+      const data = await response.json();
+      setAlerts(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error('Failed to fetch alerts:', error);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="bg-gray-800 rounded-xl p-4">
+        <div className="animate-pulse space-y-3">
+          {[1, 2, 3].map(i => (
+            <div key={i} className="h-20 bg-gray-700 rounded-lg"></div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (alerts.length === 0) {
+    return (
+      <div className="bg-gray-800 rounded-xl p-6 text-center">
+        <span className="text-4xl">✅</span>
+        <p className="text-gray-300 mt-2">No active alerts</p>
+        <p className="text-sm text-gray-500">All systems operating normally</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-gray-800 rounded-xl overflow-hidden">
+      <div className="px-4 py-3 border-b border-gray-700 flex items-center justify-between">
+        <h3 className="font-semibold text-white flex items-center gap-2">
+          <span>🚨</span> Live Alerts
+          <span className="text-sm font-normal text-gray-400">
+            ({alerts.length})
+          </span>
+        </h3>
+        <span className="text-xs text-gray-500 flex items-center gap-1">
+          <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+          Auto-refresh
+        </span>
+      </div>
+
+      <div className={compact ? 'max-h-80 overflow-y-auto' : 'max-h-[500px] overflow-y-auto'}>
+        {alerts.map((alert, index) => (
+          <AlertItem 
+            key={alert.id} 
+            alert={alert} 
+            compact={compact}
+            isLast={index === alerts.length - 1}
+          />
+        ))}
+      </div>
+
+      {alerts.length >= maxAlerts && (
+        <div className="px-4 py-2 bg-gray-700/50 border-t border-gray-700 text-center">
+          <button className="text-sm text-blue-400 hover:text-blue-300 font-medium">
+            View all alerts →
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+interface AlertItemProps {
+  alert: Alert;
+  compact?: boolean;
+  isLast?: boolean;
+}
+
+function AlertItem({ alert, compact, isLast }: AlertItemProps) {
+  const [expanded, setExpanded] = useState(false);
+
+  const severityConfig: Record<string, { icon: string; bg: string; border: string; text: string }> = {
+    critical: { icon: '🔴', bg: 'bg-red-500/10', border: 'border-l-red-500', text: 'text-red-400' },
+    major: { icon: '🟠', bg: 'bg-orange-500/10', border: 'border-l-orange-500', text: 'text-orange-400' },
+    moderate: { icon: '🟡', bg: 'bg-yellow-500/10', border: 'border-l-yellow-500', text: 'text-yellow-400' },
+    minor: { icon: '🔵', bg: 'bg-blue-500/10', border: 'border-l-blue-500', text: 'text-blue-400' },
+    info: { icon: 'ℹ️', bg: 'bg-gray-500/10', border: 'border-l-gray-500', text: 'text-gray-400' },
+  };
+
+  const config = severityConfig[alert.severity] || severityConfig.info;
+
+  const typeIcons: Record<string, string> = {
+    road_event: '🛣️',
+    ferry_delay: '⛴️',
+    weather_warning: '⛈️',
+    power_outage: '⚡',
+    earthquake: '🌋',
+    wildfire: '🔥',
+    construction: '🚧',
+    incident: '🚨',
+    closure: '🚫',
+  };
+
+  const timeAgo = getTimeAgo(new Date(alert.created_at));
+
+  return (
+    <div 
+      className={`p-4 border-l-4 ${config.bg} ${config.border} ${!isLast ? 'border-b border-gray-700' : ''} cursor-pointer hover:bg-gray-700/30 transition-colors`}
+      onClick={() => setExpanded(!expanded)}
+    >
+      <div className="flex items-start gap-3">
+        <span className="text-xl flex-shrink-0">
+          {typeIcons[alert.alert_type] || config.icon}
+        </span>
+
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className={`text-xs font-semibold uppercase px-2 py-0.5 rounded ${config.text} bg-gray-700`}>
+              {alert.severity}
+            </span>
+            {alert.region_name && (
+              <>
+                <span className="text-gray-600">•</span>
+                <span className="text-xs text-gray-400">{alert.region_name}</span>
+              </>
+            )}
+            <span className="text-gray-600">•</span>
+            <span className="text-xs text-gray-500">{timeAgo}</span>
+          </div>
+
+          <h4 className="font-medium text-white mt-1 line-clamp-2">
+            {alert.headline}
+          </h4>
+
+          {(expanded || !compact) && alert.description && (
+            <p className="text-sm text-gray-400 mt-2 line-clamp-3">
+              {alert.description}
+            </p>
+          )}
+
+          {expanded && alert.metadata && Object.keys(alert.metadata).length > 0 && (
+            <div className="mt-3 p-2 bg-gray-700/50 rounded text-xs text-gray-400">
+              {alert.metadata.roads && (
+                <p>📍 Roads: {alert.metadata.roads}</p>
+              )}
+              {alert.metadata.estimated_end && (
+                <p>🕐 Est. end: {new Date(alert.metadata.estimated_end).toLocaleString()}</p>
+              )}
+              {alert.source && (
+                <p>📡 Source: {alert.source}</p>
+              )}
+            </div>
+          )}
+        </div>
+
+        <span className="text-gray-500 text-sm flex-shrink-0">
+          {expanded ? '▲' : '▼'}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function getTimeAgo(date: Date): string {
+  const seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000);
+
+  if (seconds < 60) return 'Just now';
+  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+  return `${Math.floor(seconds / 86400)}d ago`;
+}
+
+export default AlertsFeed;
