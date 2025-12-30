@@ -960,5 +960,70 @@
     "naicsSubsector": "453",
     "municipality": "Port Hardy",
     "region": "Mount Waddington"
+  },
+  {
+    "id": "north-island-dental",
+    "chamberId": "port-hardy-chamber",
+    "businessName": "North Island Dental Clinic",
+    "category": "dental",
+    "subcategory": "Dental Clinic",
+    "naicsCode": "621210",
+    "naicsTitle": "Offices of Dentists",
+    "naicsSector": "62",
+    "naicsSubsector": "621",
+    "municipality": "Port Hardy",
+    "region": "Mount Waddington"
+  },
+  {
+    "id": "port-hardy-optometry",
+    "chamberId": "port-hardy-chamber",
+    "businessName": "Port Hardy Optometry",
+    "category": "optometry",
+    "subcategory": "Eye Care",
+    "naicsCode": "621320",
+    "naicsTitle": "Offices of Optometrists",
+    "naicsSector": "62",
+    "naicsSubsector": "621",
+    "municipality": "Port Hardy",
+    "region": "Mount Waddington"
+  },
+  {
+    "id": "north-island-glass",
+    "chamberId": "port-hardy-chamber",
+    "businessName": "North Island Glass Ltd",
+    "category": "construction",
+    "subcategory": "Glass and Glazing",
+    "naicsCode": "238150",
+    "naicsTitle": "Glass and Glazing Contractors",
+    "naicsSector": "23",
+    "naicsSubsector": "238",
+    "municipality": "Port Hardy",
+    "region": "Mount Waddington"
+  },
+  {
+    "id": "pioneer-inn-port-hardy",
+    "chamberId": "port-hardy-chamber",
+    "businessName": "The Pioneer Inn",
+    "category": "accommodation",
+    "subcategory": "Hotel",
+    "naicsCode": "721110",
+    "naicsTitle": "Hotels and Motels",
+    "naicsSector": "72",
+    "naicsSubsector": "721",
+    "municipality": "Port Hardy",
+    "region": "Mount Waddington"
+  },
+  {
+    "id": "north-island-physiotherapy",
+    "chamberId": "port-hardy-chamber",
+    "businessName": "North Island Physiotherapy",
+    "category": "healthcare",
+    "subcategory": "Physiotherapy",
+    "naicsCode": "621340",
+    "naicsTitle": "Offices of Physical, Occupational and Speech Therapists, and Audiologists",
+    "naicsSector": "62",
+    "naicsSubsector": "621",
+    "municipality": "Port Hardy",
+    "region": "Mount Waddington"
   }
 ]
