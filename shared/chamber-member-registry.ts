@@ -1,54 +1,45 @@
 import { ChamberMemberSchema, ChamberMemberArraySchema, type ChamberMember, type BusinessCategory } from './chamber-member-schema';
-import portAlberniData from '../data/chambers/port-alberni.json';
-import ladysmithData from '../data/chambers/ladysmith.json';
-import portHardyData from '../data/chambers/port-hardy.json';
-import tofinoData from '../data/chambers/tofino.json';
-import uclueletData from '../data/chambers/ucluelet.json';
-import sookeData from '../data/chambers/sooke.json';
-import chemainusData from '../data/chambers/chemainus.json';
-import cowichanLakeData from '../data/chambers/cowichan-lake.json';
-import portMcneillData from '../data/chambers/port-mcneill.json';
-import alertBayData from '../data/chambers/alert-bay.json';
-import qualicumBeachData from '../data/chambers/qualicum-beach.json';
-import portRenfrewData from '../data/chambers/port-renfrew.json';
-import penderIslandData from '../data/chambers/pender-island.json';
+import * as fs from 'fs';
+import * as path from 'path';
 
-const chamberDataFiles: Record<string, unknown[]> = {
-  'port-alberni-chamber': portAlberniData as unknown[],
-  'ladysmith-chamber': ladysmithData as unknown[],
-  'port-hardy-chamber': portHardyData as unknown[],
-  'tofino-chamber': tofinoData as unknown[],
-  'ucluelet-chamber': uclueletData as unknown[],
-  'sooke-chamber': sookeData as unknown[],
-  'chemainus-chamber': chemainusData as unknown[],
-  'cowichan-lake-chamber': cowichanLakeData as unknown[],
-  'port-mcneill-chamber': portMcneillData as unknown[],
-  'alert-bay-chamber': alertBayData as unknown[],
-  'qualicum-beach-chamber': qualicumBeachData as unknown[],
-  'port-renfrew-chamber': portRenfrewData as unknown[],
-  'pender-island-chamber': penderIslandData as unknown[],
+// Map chamber IDs to their JSON file names
+const chamberJsonFiles: Record<string, string> = {
+  'port-alberni-chamber': 'port-alberni.json',
+  'ladysmith-chamber': 'ladysmith.json',
+  'port-hardy-chamber': 'port-hardy.json',
+  'tofino-chamber': 'tofino.json',
+  'ucluelet-chamber': 'ucluelet.json',
+  'sooke-chamber': 'sooke.json',
+  'chemainus-chamber': 'chemainus.json',
+  'cowichan-lake-chamber': 'cowichan-lake.json',
+  'port-mcneill-chamber': 'port-mcneill.json',
+  'alert-bay-chamber': 'alert-bay.json',
+  'qualicum-beach-chamber': 'qualicum-beach.json',
+  'port-renfrew-chamber': 'port-renfrew.json',
+  'pender-island-chamber': 'pender-island.json',
 };
 
-let validatedMembers: ChamberMember[] | null = null;
-
+// Load JSON files dynamically at runtime (not bundled at compile time)
+// This ensures updates to JSON files are reflected after server restart
 function loadAndValidateMembers(): ChamberMember[] {
-  if (validatedMembers !== null) {
-    return validatedMembers;
-  }
-  
   const allMembers: ChamberMember[] = [];
+  const dataDir = path.join(process.cwd(), 'data', 'chambers');
   
-  for (const [chamberId, data] of Object.entries(chamberDataFiles)) {
+  for (const [chamberId, fileName] of Object.entries(chamberJsonFiles)) {
     try {
-      const validated = ChamberMemberArraySchema.parse(data);
-      allMembers.push(...validated);
+      const filePath = path.join(dataDir, fileName);
+      if (fs.existsSync(filePath)) {
+        const rawData = fs.readFileSync(filePath, 'utf-8');
+        const data = JSON.parse(rawData);
+        const validated = ChamberMemberArraySchema.parse(data);
+        allMembers.push(...validated);
+      }
     } catch (error) {
-      console.error(`Failed to validate chamber data for ${chamberId}:`, error);
+      console.error(`Failed to load/validate chamber data for ${chamberId}:`, error);
     }
   }
   
-  validatedMembers = allMembers;
-  return validatedMembers;
+  return allMembers;
 }
 
 export function getJsonLoadedMembers(): ChamberMember[] {
