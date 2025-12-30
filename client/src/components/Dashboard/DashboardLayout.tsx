@@ -144,7 +144,7 @@ function OverviewTab({ regionId }: { regionId: string }) {
       
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
-          <AlertsFeed regionId={regionId} maxAlerts={10} compact />
+          <AlertsFeed regionId={regionId} maxAlerts={8} compact={true} />
         </div>
         <div className="bg-gradient-to-br from-blue-500 to-blue-600 dark:from-blue-600 dark:to-blue-700 rounded-xl p-6 text-white">
           <h3 className="font-semibold mb-2 flex items-center gap-2">
