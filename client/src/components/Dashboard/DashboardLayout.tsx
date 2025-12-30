@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { StatusCards } from './StatusCards';
 import { AlertsFeed } from './AlertsFeed';
+import { WebcamGrid } from './WebcamGrid';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -156,17 +157,7 @@ function OverviewTab({ regionId }: { regionId: string }) {
         </div>
       </div>
       
-      <div className="bg-card rounded-xl border p-6">
-        <h3 className="font-semibold flex items-center gap-2 mb-4">
-          <Camera className="w-5 h-5" />
-          Live Webcams
-        </h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {[1,2,3,4].map(i => (
-            <div key={i} className="aspect-video bg-muted rounded-lg animate-pulse" />
-          ))}
-        </div>
-      </div>
+      <WebcamGrid regionId={regionId} columns={4} maxWebcams={8} />
     </div>
   );
 }

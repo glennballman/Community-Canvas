@@ -702,6 +702,42 @@ export async function registerRoutes(
     }
   });
 
+  // GET /api/v1/entities - List entities with optional filtering
+  app.get("/api/v1/entities", async (req, res) => {
+    try {
+      const { type, region, limit = '50' } = req.query;
+      const params: any[] = [];
+      let paramIndex = 1;
+      
+      let query = `
+        SELECT id, name, slug, entity_type_id, 
+               latitude, longitude, primary_region_id as region_id, 
+               configuration as metadata, website, description
+        FROM entities
+        WHERE 1=1
+      `;
+      
+      if (type) {
+        query += ` AND entity_type_id = $${paramIndex++}`;
+        params.push(type);
+      }
+      
+      if (region && region !== 'bc') {
+        query += ` AND primary_region_id = $${paramIndex++}`;
+        params.push(region);
+      }
+      
+      query += ` ORDER BY name LIMIT $${paramIndex++}`;
+      params.push(parseInt(limit as string, 10));
+      
+      const result = await storage.query(query, params);
+      res.json(result.rows);
+    } catch (error) {
+      console.error("Entities list error:", error);
+      res.status(500).json({ message: "Failed to fetch entities" });
+    }
+  });
+
   // GET /api/v1/entity/:id/status - Current status for a specific entity
   app.get("/api/v1/entity/:id/status", async (req, res) => {
     try {

@@ -243,9 +243,9 @@ function AlertItem({ alert, compact, isLast }: AlertItemProps) {
 
           {expanded && alert.details && Object.keys(alert.details).length > 0 && (
             <div className="mt-3 p-2 bg-muted rounded text-xs text-muted-foreground space-y-1">
-              {alert.details.roads && (
+              {alert.details.roads && Array.isArray(alert.details.roads) && (
                 <p className="flex items-center gap-1">
-                  <Car className="w-3 h-3" /> Roads: {alert.details.roads}
+                  <Car className="w-3 h-3" /> Roads: {alert.details.roads.map((r: any) => r.name || r).join(', ')}
                 </p>
               )}
               {alert.details.event_type && (
