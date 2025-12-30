@@ -384,5 +384,65 @@ export async function registerRoutes(
     }
   });
 
+  // List available backups
+  app.get("/api/backups", (req, res) => {
+    try {
+      const backupsDir = path.join(process.cwd(), 'backups');
+      if (!fs.existsSync(backupsDir)) {
+        return res.json({ backups: [] });
+      }
+      
+      const files = fs.readdirSync(backupsDir)
+        .filter(f => f.endsWith('.tar.gz'))
+        .map(f => {
+          const stats = fs.statSync(path.join(backupsDir, f));
+          return {
+            name: f,
+            size: stats.size,
+            created: stats.mtime.toISOString()
+          };
+        })
+        .sort((a, b) => new Date(b.created).getTime() - new Date(a.created).getTime());
+      
+      res.json({ backups: files });
+    } catch (error) {
+      console.error("Backups list error:", error);
+      res.status(500).json({ message: "Failed to list backups" });
+    }
+  });
+
+  // Download a backup file
+  app.get("/api/backups/:filename", (req, res) => {
+    try {
+      const { filename } = req.params;
+      
+      // Security: only allow .tar.gz files from backups directory
+      if (!filename.endsWith('.tar.gz') || filename.includes('..')) {
+        return res.status(400).json({ message: "Invalid backup filename" });
+      }
+      
+      const filePath = path.join(process.cwd(), 'backups', filename);
+      
+      if (!fs.existsSync(filePath)) {
+        return res.status(404).json({ message: "Backup not found" });
+      }
+      
+      // Verify file is within backups directory
+      const realPath = fs.realpathSync(filePath);
+      const backupsDir = fs.realpathSync(path.join(process.cwd(), 'backups'));
+      
+      if (!realPath.startsWith(backupsDir)) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      res.setHeader('Content-Type', 'application/gzip');
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.sendFile(realPath);
+    } catch (error) {
+      console.error("Backup download error:", error);
+      res.status(500).json({ message: "Failed to download backup" });
+    }
+  });
+
   return httpServer;
 }

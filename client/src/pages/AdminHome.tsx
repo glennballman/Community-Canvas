@@ -6,14 +6,35 @@ import {
   TrendingUp,
   Globe,
   Clock,
-  ChevronRight
+  ChevronRight,
+  Download,
+  Archive
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { PROVINCIAL_SOURCES, REGIONAL_SOURCES, MUNICIPAL_SOURCES, ALL_MUNICIPALITIES } from "@shared/sources";
+import { useQuery } from "@tanstack/react-query";
+
+interface Backup {
+  name: string;
+  size: number;
+  created: string;
+}
 
 export default function AdminHome() {
+  const { data: backupsData } = useQuery<{ backups: Backup[] }>({
+    queryKey: ['/api/backups'],
+  });
+  
+  const backups = backupsData?.backups || [];
+  
+  const formatBytes = (bytes: number) => {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+  };
+  
   const totalProvincialSources = PROVINCIAL_SOURCES.length;
   const totalRegionalSources = Object.values(REGIONAL_SOURCES).reduce(
     (acc, sources) => acc + sources.length, 0
@@ -194,6 +215,49 @@ export default function AdminHome() {
             </div>
           </CardContent>
         </Card>
+
+        {backups.length > 0 && (
+          <Card className="bg-card/50">
+            <CardHeader>
+              <CardTitle className="text-sm font-bold flex items-center gap-2">
+                <Archive className="w-4 h-4" />
+                DATA BACKUPS
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                {backups.map((backup) => (
+                  <div 
+                    key={backup.name} 
+                    className="flex items-center justify-between bg-background/50 rounded-md p-3"
+                  >
+                    <div className="flex items-center gap-3">
+                      <Archive className="w-4 h-4 text-muted-foreground" />
+                      <div>
+                        <div className="text-sm font-medium" data-testid={`backup-name-${backup.name}`}>
+                          {backup.name}
+                        </div>
+                        <div className="text-[10px] text-muted-foreground">
+                          {formatBytes(backup.size)} | Created: {new Date(backup.created).toLocaleString()}
+                        </div>
+                      </div>
+                    </div>
+                    <a 
+                      href={`/api/backups/${backup.name}`} 
+                      download
+                      data-testid={`download-backup-${backup.name}`}
+                    >
+                      <Button size="sm" variant="outline" className="gap-2">
+                        <Download className="w-3 h-3" />
+                        Download
+                      </Button>
+                    </a>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   );
