@@ -1,0 +1,69 @@
+Create chamber_details and chamber_memberships tables (replaces JSON files!).
+
+Run this SQL:
+
+CREATE TABLE chamber_details (
+    entity_id UUID PRIMARY KEY REFERENCES entities(id) ON DELETE CASCADE,
+    directory_url TEXT,
+    member_count_estimated INTEGER,
+    member_count_expected INTEGER,
+    scrape_method VARCHAR(30),
+    scrape_config JSONB,
+    last_scraped_at TIMESTAMPTZ,
+    scrape_status VARCHAR(30),
+    executive_director VARCHAR(255),
+    membership_contact VARCHAR(255),
+    membership_email VARCHAR(255),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE chamber_memberships (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    chamber_entity_id UUID REFERENCES entities(id) ON DELETE CASCADE,
+    member_entity_id UUID REFERENCES entities(id) ON DELETE CASCADE,
+    membership_type VARCHAR(50),
+    membership_level VARCHAR(50),
+    member_since DATE,
+    expires_at DATE,
+    status VARCHAR(30) DEFAULT 'active' CHECK (status IN (
+        'active', 'pending', 'expired', 'suspended', 'cancelled'
+    )),
+    source_id UUID REFERENCES data_sources(id),
+    source_url TEXT,
+    scraped_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(chamber_entity_id, member_entity_id)
+);
+
+CREATE INDEX idx_chamber_memberships_chamber ON chamber_memberships(chamber_entity_id);
+CREATE INDEX idx_chamber_memberships_member ON chamber_memberships(member_entity_id);
+
+-- Create chamber progress view
+CREATE VIEW v_chamber_progress AS
+SELECT 
+    c.id as chamber_id,
+    c.name as chamber_name,
+    c.slug,
+    gr.name as region_name,
+    cd.member_count_expected,
+    cd.member_count_estimated,
+    COUNT(cm.id) as actual_member_count,
+    ROUND(COUNT(cm.id)::numeric / NULLIF(cd.member_count_expected, 0) * 100, 1) as progress_percent,
+    CASE 
+        WHEN COUNT(cm.id) >= cd.member_count_expected THEN 'complete'
+        WHEN COUNT(cm.id) >= cd.member_count_expected * 0.8 THEN 'nearly_complete'
+        WHEN COUNT(cm.id) > 0 THEN 'in_progress'
+        ELSE 'not_started'
+    END as status,
+    cd.last_scraped_at
+FROM entities c
+JOIN chamber_details cd ON c.id = cd.entity_id
+LEFT JOIN chamber_memberships cm ON c.id = cm.chamber_entity_id AND cm.status = 'active'
+LEFT JOIN geo_regions gr ON c.primary_region_id = gr.id
+WHERE c.entity_type_id = 'chamber-of-commerce'
+  AND c.is_active = true
+GROUP BY c.id, c.name, c.slug, gr.name, cd.member_count_expected, 
+         cd.member_count_estimated, cd.last_scraped_at;
+
+Confirm when done.
