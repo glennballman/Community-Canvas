@@ -7,6 +7,8 @@ import uclueletData from '../data/chambers/ucluelet.json';
 import sookeData from '../data/chambers/sooke.json';
 import chemainusData from '../data/chambers/chemainus.json';
 import cowichanLakeData from '../data/chambers/cowichan-lake.json';
+import portMcneillData from '../data/chambers/port-mcneill.json';
+import alertBayData from '../data/chambers/alert-bay.json';
 
 const chamberDataFiles: Record<string, unknown[]> = {
   'port-alberni-chamber': portAlberniData as unknown[],
@@ -17,6 +19,8 @@ const chamberDataFiles: Record<string, unknown[]> = {
   'sooke-chamber': sookeData as unknown[],
   'chemainus-chamber': chemainusData as unknown[],
   'cowichan-lake-chamber': cowichanLakeData as unknown[],
+  'port-mcneill-chamber': portMcneillData as unknown[],
+  'alert-bay-chamber': alertBayData as unknown[],
 };
 
 let validatedMembers: ChamberMember[] | null = null;
