@@ -1,0 +1,1 @@
+id,from_entity_id,to_entity_id,relationship_type,is_critical,is_bidirectional,travel_time_minutes,distance_km,conditions,is_active,created_at,updated_at

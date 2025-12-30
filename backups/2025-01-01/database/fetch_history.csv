@@ -1,0 +1,1 @@
+id,source_id,started_at,completed_at,duration_ms,status,records_fetched,records_created,records_updated,records_unchanged,error_message,error_details,request_url,response_code,response_size_bytes,response_checksum

@@ -1,0 +1,11 @@
+id,category_id,name,description,has_capacity,has_schedule,has_pricing,has_bookings,has_real_time_status,default_status_refresh,default_capacity_refresh,civos_signal_type,export_to_civos,icon,sort_order,is_active
+ferry-route,transportation,Ferry Route,,t,t,f,f,t,3600,300,ferry_status,t,,0,t
+ferry-terminal,transportation,Ferry Terminal,,t,f,f,f,t,3600,300,ferry_terminal,t,,0,t
+highway,transportation,Highway,,f,f,f,f,t,3600,300,road_status,t,,0,t
+road-segment,transportation,Road Segment,,f,f,f,f,t,3600,300,road_segment,t,,0,t
+airport,transportation,Airport,,f,t,f,f,t,3600,300,airport_status,t,,0,t
+hospital,emergency,Hospital,,t,t,f,f,t,3600,300,health_facility,t,,0,t
+fire-station,emergency,Fire Station,,f,f,f,f,t,3600,300,fire_service,t,,0,t
+weather-station,environment,Weather Station,,f,f,f,f,t,3600,300,weather_observation,t,,0,t
+webcam,environment,Webcam,,f,f,f,f,t,3600,300,webcam_feed,t,,0,t
+chamber-of-commerce,business-org,Chamber of Commerce,,f,f,f,f,f,3600,300,,f,,0,t

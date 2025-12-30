@@ -1,0 +1,2 @@
+id,tenant_id,tenant_name,region_ids,entity_types,severity_threshold,auth_type,api_key_id,signing_key_ref,webhook_url,pull_enabled,last_export_cursor,last_export_at,last_acknowledged_cursor,is_active,created_at,updated_at
+7bd9817e-a7b0-4ae0-9e5a-024836b5347c,bc-emergency-ops,BC Emergency Operations,,,advisory,hmac,,,,t,0,,,t,2025-12-30 19:25:24.649768+00,2025-12-30 19:25:24.649768+00

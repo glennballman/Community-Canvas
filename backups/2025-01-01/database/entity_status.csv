@@ -1,0 +1,1 @@
+entity_id,operational_status,status_message,status_detail,severity,delay_minutes,expected_resolution,incidents,source_id,source_key,source_url,raw_data,confidence,retrieval_method,parser_version,raw_checksum,status_since,observed_at,updated_at,export_cursor,dedupe_key

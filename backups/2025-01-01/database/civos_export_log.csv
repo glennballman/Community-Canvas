@@ -1,0 +1,1 @@
+id,tenant_id,export_type,cursor_from,cursor_to,record_count,signal_types,status,response_code,response_body,acknowledged_at,error_message,retry_count,next_retry_at,created_at

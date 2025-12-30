@@ -1,0 +1,3 @@
+id,name,slug,region_type,parent_id,centroid_lat,centroid_lon,boundary,timezone,population,area_sq_km,elevation_m,official_name,incorporation_date,website_url,civos_jurisdiction_id,civos_tenant_ids,is_active,created_at,updated_at
+bc,British Columbia,bc,province,,,,,America/Vancouver,,,,,,,bc-province,,t,2025-12-30 19:38:25.837219+00,2025-12-30 19:38:25.837219+00
+capital-regional-district,Capital Regional District,capital-regional-district,regional_district,bc,,,,America/Vancouver,,,,,,,bc-capital-region,,t,2025-12-30 19:38:25.837219+00,2025-12-30 19:38:25.837219+00

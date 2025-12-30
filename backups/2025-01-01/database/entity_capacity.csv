@@ -1,0 +1,1 @@
+entity_id,capacity,total_capacity,available_capacity,percent_full,booking_status,next_availability,next_availability_note,source_id,source_key,confidence,observed_at,updated_at,export_cursor,dedupe_key

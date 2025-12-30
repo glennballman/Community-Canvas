@@ -1,0 +1,11 @@
+id,name,description,icon,color,sort_order,signal_type_prefix,is_active
+transportation,Transportation,,car,#3B82F6,1,transport_,t
+accommodation,Accommodation,,bed,#8B5CF6,2,lodging_,t
+food-beverage,Food & Beverage,,utensils,#F59E0B,3,food_,t
+recreation,Recreation & Tourism,,compass,#10B981,4,recreation_,t
+services,Services,,briefcase,#6366F1,5,service_,t
+infrastructure,Infrastructure,,building,#64748B,6,infra_,t
+emergency,Emergency Services,,siren,#EF4444,7,emergency_,t
+government,Government,,landmark,#0EA5E9,8,gov_,t
+environment,Environment & Weather,,cloud-sun,#22C55E,9,env_,t
+business-org,Business Organizations,,users,#EC4899,10,org_,t

@@ -1,0 +1,1 @@
+id,entity_id,schedule_type,from_entity_id,to_entity_id,route_code,scheduled_date,scheduled_time,arrival_time,duration_minutes,status,status_message,delay_minutes,capacity_total,capacity_available,capacity_percent_full,capacity_detail,vessel_name,vessel_entity_id,pricing,source_id,source_key,raw_data,observed_at,created_at,updated_at,export_cursor

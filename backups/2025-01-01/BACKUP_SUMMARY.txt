@@ -1,0 +1,65 @@
+================================================================================
+                    COMMUNITY STATUS DASHBOARD - BACKUP SUMMARY
+                              Date: 2025-01-01
+================================================================================
+
+DATABASE TABLES EXPORTED (19 tables)
+--------------------------------------------------------------------------------
+Table Name              | Rows | File Size
+------------------------|------|----------
+alerts                  |    1 |    996 B
+chamber_details         |    0 |    193 B
+chamber_memberships     |    0 |    156 B
+chamber_overrides       |    5 |    318 B
+civos_export_log        |    0 |    175 B
+civos_tenants           |    1 |    386 B
+data_sources            |    1 |    637 B
+entities                |    1 |    970 B
+entity_audit_log        |    0 |    107 B
+entity_capacity         |    0 |    202 B
+entity_categories       |   10 |    646 B
+entity_relationships    |    0 |    153 B
+entity_status           |    0 |    269 B
+entity_types            |   10 |    986 B
+fetch_history           |    0 |    214 B
+geo_regions             |    2 |    571 B
+schedules               |    0 |    349 B
+snapshots               |    3 |  2,799 B
+status_history          |    0 |     82 B
+------------------------|------|----------
+TOTAL DATABASE ROWS:    |   34 |
+
+JSON FILES (Chamber Member Data) - 13 files
+--------------------------------------------------------------------------------
+File                    | Size
+------------------------|----------
+alert-bay.json          |  14,925 B
+chemainus.json          |  27,617 B
+cowichan-lake.json      |  50,084 B
+ladysmith.json          |  35,446 B
+pender-island.json      |  18,297 B
+port-alberni.json       | 110,147 B
+port-hardy.json         |  30,827 B
+port-mcneill.json       |  18,929 B
+port-renfrew.json       |  18,357 B
+qualicum-beach.json     |  23,134 B
+sooke.json              |  31,572 B
+tofino.json             | 109,501 B
+ucluelet.json           |  29,355 B
+
+SHARED TypeScript FILES - 24 files
+--------------------------------------------------------------------------------
+(See manifest.json for complete list)
+
+TOTALS
+--------------------------------------------------------------------------------
+- Database tables: 19
+- Database rows: 34
+- JSON files: 13
+- Shared/config files: 24+
+
+ERRORS ENCOUNTERED: None
+
+================================================================================
+                              BACKUP COMPLETE
+================================================================================
