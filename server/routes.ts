@@ -444,5 +444,270 @@ export async function registerRoutes(
     }
   });
 
+  // ============================================================================
+  // Real-Time Status API Endpoints (v1)
+  // ============================================================================
+
+  // GET /api/v1/status/overview - Dashboard status summary
+  app.get("/api/v1/status/overview", async (req, res) => {
+    try {
+      const overview = await storage.query(`
+        SELECT 
+          (SELECT COUNT(*) FROM alerts WHERE severity = 'major' AND is_active = true) as critical_alerts,
+          (SELECT COUNT(*) FROM alerts WHERE is_active = true) as total_alerts,
+          (SELECT COUNT(*) FROM entity_snapshots WHERE snapshot_time > NOW() - INTERVAL '1 hour') as recent_updates,
+          (SELECT MAX(completed_at) FROM pipeline_runs WHERE status = 'completed') as last_pipeline_run,
+          (SELECT COUNT(*) FROM infrastructure_entities) as total_entities,
+          (SELECT COUNT(DISTINCT region_id) FROM alerts WHERE is_active = true AND region_id IS NOT NULL) as regions_affected
+      `);
+      
+      res.json(overview.rows[0]);
+    } catch (error) {
+      console.error("Status overview error:", error);
+      res.status(500).json({ message: "Failed to fetch status overview" });
+    }
+  });
+
+  // GET /api/v1/status/region/:regionId - Status for a specific region
+  app.get("/api/v1/status/region/:regionId", async (req, res) => {
+    try {
+      const { regionId } = req.params;
+      
+      // Get region info
+      const regionResult = await storage.query(`
+        SELECT id, name, short_name, region_type, parent_id, centroid_lat, centroid_lon
+        FROM geo_regions WHERE id = $1
+      `, [regionId]);
+      
+      if (regionResult.rows.length === 0) {
+        return res.status(404).json({ message: "Region not found" });
+      }
+      
+      const region = regionResult.rows[0];
+      
+      // Get active alerts for this region
+      const alertsResult = await storage.query(`
+        SELECT id, alert_type, severity, signal_type, title, summary, 
+               latitude, longitude, effective_from, effective_until, details
+        FROM alerts 
+        WHERE region_id = $1 AND is_active = true
+        ORDER BY 
+          CASE severity WHEN 'major' THEN 1 WHEN 'moderate' THEN 2 ELSE 3 END,
+          created_at DESC
+      `, [regionId]);
+      
+      // Get road events in this region
+      const roadsResult = await storage.query(`
+        SELECT id, alert_type, title, summary, details, latitude, longitude
+        FROM alerts 
+        WHERE region_id = $1 AND alert_type = 'road_event' AND is_active = true
+        ORDER BY created_at DESC
+        LIMIT 20
+      `, [regionId]);
+      
+      // Get weather alerts for this region
+      const weatherResult = await storage.query(`
+        SELECT id, title, summary, severity, details
+        FROM alerts 
+        WHERE region_id = $1 AND alert_type = 'weather' AND is_active = true
+        ORDER BY severity DESC, created_at DESC
+        LIMIT 10
+      `, [regionId]);
+      
+      // Get infrastructure entities in this region
+      const entitiesResult = await storage.query(`
+        SELECT id, name, entity_type, category, latitude, longitude, status
+        FROM infrastructure_entities
+        WHERE region_id = $1
+        ORDER BY category, name
+        LIMIT 100
+      `, [regionId]);
+      
+      res.json({
+        region,
+        alerts: alertsResult.rows,
+        roads: roadsResult.rows,
+        weather: weatherResult.rows,
+        entities: entitiesResult.rows
+      });
+    } catch (error) {
+      console.error("Region status error:", error);
+      res.status(500).json({ message: "Failed to fetch region status" });
+    }
+  });
+
+  // GET /api/v1/alerts/active - All active alerts
+  app.get("/api/v1/alerts/active", async (req, res) => {
+    try {
+      const { type, severity, region } = req.query;
+      
+      let query = `
+        SELECT a.*, gr.short_name as region_name, gr.name as region_full_name
+        FROM alerts a
+        LEFT JOIN geo_regions gr ON a.region_id = gr.id
+        WHERE a.is_active = true
+        AND (a.effective_until IS NULL OR a.effective_until > NOW())
+      `;
+      
+      const params: any[] = [];
+      let paramIndex = 1;
+      
+      if (type) {
+        query += ` AND a.alert_type = $${paramIndex++}`;
+        params.push(type);
+      }
+      
+      if (severity) {
+        query += ` AND a.severity = $${paramIndex++}::alert_severity`;
+        params.push(severity);
+      }
+      
+      if (region) {
+        query += ` AND a.region_id = $${paramIndex++}`;
+        params.push(region);
+      }
+      
+      query += `
+        ORDER BY 
+          CASE a.severity 
+            WHEN 'major' THEN 1 
+            WHEN 'moderate' THEN 2 
+            ELSE 3 
+          END,
+          a.created_at DESC
+        LIMIT 200
+      `;
+      
+      const result = await storage.query(query, params);
+      res.json(result.rows);
+    } catch (error) {
+      console.error("Active alerts error:", error);
+      res.status(500).json({ message: "Failed to fetch active alerts" });
+    }
+  });
+
+  // GET /api/v1/alerts/by-type/:alertType - Alerts filtered by type
+  app.get("/api/v1/alerts/by-type/:alertType", async (req, res) => {
+    try {
+      const { alertType } = req.params;
+      
+      const result = await storage.query(`
+        SELECT a.*, gr.short_name as region_name
+        FROM alerts a
+        LEFT JOIN geo_regions gr ON a.region_id = gr.id
+        WHERE a.alert_type = $1 AND a.is_active = true
+        ORDER BY a.created_at DESC
+        LIMIT 100
+      `, [alertType]);
+      
+      res.json(result.rows);
+    } catch (error) {
+      console.error("Alerts by type error:", error);
+      res.status(500).json({ message: "Failed to fetch alerts" });
+    }
+  });
+
+  // GET /api/v1/entity/:id/status - Current status for a specific entity
+  app.get("/api/v1/entity/:id/status", async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      // Get entity info
+      const entityResult = await storage.query(`
+        SELECT * FROM infrastructure_entities WHERE id = $1
+      `, [id]);
+      
+      if (entityResult.rows.length === 0) {
+        return res.status(404).json({ message: "Entity not found" });
+      }
+      
+      // Get latest snapshot
+      const snapshotResult = await storage.query(`
+        SELECT * FROM entity_snapshots
+        WHERE entity_id = $1
+        ORDER BY snapshot_time DESC
+        LIMIT 1
+      `, [id]);
+      
+      // Get any active alerts for this entity's location
+      const entity = entityResult.rows[0];
+      let alerts: any[] = [];
+      
+      if (entity.latitude && entity.longitude) {
+        const alertsResult = await storage.query(`
+          SELECT id, alert_type, severity, title, summary
+          FROM alerts
+          WHERE is_active = true
+          AND latitude IS NOT NULL
+          AND (
+            (latitude - $1)^2 + (longitude - $2)^2 < 0.01
+          )
+          LIMIT 10
+        `, [entity.latitude, entity.longitude]);
+        alerts = alertsResult.rows;
+      }
+      
+      res.json({
+        entity: entityResult.rows[0],
+        snapshot: snapshotResult.rows[0] || null,
+        nearbyAlerts: alerts
+      });
+    } catch (error) {
+      console.error("Entity status error:", error);
+      res.status(500).json({ message: "Failed to fetch entity status" });
+    }
+  });
+
+  // GET /api/v1/pipelines/status - Pipeline scheduler status
+  app.get("/api/v1/pipelines/status", async (req, res) => {
+    try {
+      // Get recent pipeline runs
+      const runsResult = await storage.query(`
+        SELECT data_source_id, status, started_at, completed_at, 
+               records_processed, records_created, records_updated, error_message
+        FROM pipeline_runs
+        ORDER BY started_at DESC
+        LIMIT 50
+      `);
+      
+      // Group by pipeline
+      const pipelineStatus: Record<string, any> = {};
+      for (const run of runsResult.rows) {
+        if (!pipelineStatus[run.data_source_id]) {
+          pipelineStatus[run.data_source_id] = {
+            lastRun: run,
+            recentRuns: []
+          };
+        }
+        pipelineStatus[run.data_source_id].recentRuns.push(run);
+      }
+      
+      res.json(pipelineStatus);
+    } catch (error) {
+      console.error("Pipeline status error:", error);
+      res.status(500).json({ message: "Failed to fetch pipeline status" });
+    }
+  });
+
+  // POST /api/v1/pipelines/:id/run - Manually trigger a pipeline run
+  app.post("/api/v1/pipelines/:id/run", async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      // Import dynamically to avoid circular dependency
+      const { runPipeline } = await import('./pipelines');
+      const result = await runPipeline(id);
+      
+      if (result) {
+        res.json({ success: true, result });
+      } else {
+        res.status(400).json({ success: false, message: "Pipeline not found or disabled" });
+      }
+    } catch (error) {
+      console.error("Pipeline run error:", error);
+      res.status(500).json({ message: "Failed to run pipeline" });
+    }
+  });
+
   return httpServer;
 }

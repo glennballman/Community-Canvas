@@ -1,0 +1,67 @@
+Create API endpoints to expose real-time data:
+
+// GET /api/v1/status/overview
+// Returns current status summary for dashboard
+router.get('/status/overview', async (req, res) => {
+  const overview = await db.query(`
+    SELECT 
+      (SELECT COUNT(*) FROM alerts WHERE severity = 'critical' AND status = 'active') as critical_alerts,
+      (SELECT COUNT(*) FROM alerts WHERE status = 'active') as total_alerts,
+      (SELECT COUNT(*) FROM entity_snapshots WHERE snapshot_time > NOW() - INTERVAL '1 hour') as recent_updates,
+      (SELECT MAX(completed_at) FROM pipeline_runs WHERE status = 'completed') as last_pipeline_run
+  `);
+  
+  res.json(overview.rows[0]);
+});
+
+// GET /api/v1/status/region/:regionId
+// Returns current status for a specific region
+router.get('/status/region/:regionId', async (req, res) => {
+  const { regionId } = req.params;
+  
+  const [alerts, weather, ferries, roads] = await Promise.all([
+    getActiveAlerts(regionId),
+    getLatestWeather(regionId),
+    getFerryStatus(regionId),
+    getRoadEvents(regionId)
+  ]);
+  
+  res.json({ alerts, weather, ferries, roads });
+});
+
+// GET /api/v1/alerts/active
+// Returns all active alerts
+router.get('/alerts/active', async (req, res) => {
+  const alerts = await db.query(`
+    SELECT a.*, gr.short_name as region_name
+    FROM alerts a
+    LEFT JOIN geo_regions gr ON a.region_id = gr.id
+    WHERE a.status = 'active'
+    AND (a.expires_at IS NULL OR a.expires_at > NOW())
+    ORDER BY 
+      CASE a.severity 
+        WHEN 'critical' THEN 1 
+        WHEN 'major' THEN 2 
+        WHEN 'moderate' THEN 3 
+        ELSE 4 
+      END,
+      a.created_at DESC
+  `);
+  
+  res.json(alerts.rows);
+});
+
+// GET /api/v1/entity/:id/status
+// Returns current status/snapshot for a specific entity
+router.get('/entity/:id/status', async (req, res) => {
+  const { id } = req.params;
+  
+  const snapshot = await db.query(`
+    SELECT * FROM entity_snapshots
+    WHERE entity_id = $1
+    ORDER BY snapshot_time DESC
+    LIMIT 1
+  `, [id]);
+  
+  res.json(snapshot.rows[0] || null);
+});
