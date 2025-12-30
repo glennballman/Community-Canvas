@@ -1,0 +1,215 @@
+Enhance the status cards to be fully interactive with real-time data.
+
+Create file: client/src/components/Dashboard/StatusCards.tsx
+
+import React, { useEffect, useState } from 'react';
+
+interface StatusData {
+  alerts: { critical: number; major: number; moderate: number; minor: number; total: number };
+  ferries: { status: string; delays: number; onTime: number };
+  weather: { temperature: number; condition: string; warnings: number };
+  roads: { closures: number; incidents: number; construction: number; total: number };
+}
+
+interface StatusCardsProps {
+  regionId: string;
+  onCardClick?: (card: 'alerts' | 'ferries' | 'weather' | 'roads') => void;
+}
+
+export function StatusCards({ regionId, onCardClick }: StatusCardsProps) {
+  const [status, setStatus] = useState<StatusData | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchStatus();
+    // Refresh every 60 seconds
+    const interval = setInterval(fetchStatus, 60000);
+    return () => clearInterval(interval);
+  }, [regionId]);
+
+  async function fetchStatus() {
+    try {
+      const response = await fetch(`/api/v1/status/summary?region=${regionId}`);
+      const data = await response.json();
+      setStatus(data);
+    } catch (error) {
+      console.error('Failed to fetch status:', error);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {[1, 2, 3, 4].map(i => (
+          <div key={i} className="bg-gray-800 rounded-xl p-4 animate-pulse h-28" />
+        ))}
+      </div>
+    );
+  }
+
+  // Determine alert severity color
+  const alertColor = status?.alerts.critical && status.alerts.critical > 0 ? 'red' 
+    : status?.alerts.major && status.alerts.major > 0 ? 'orange'
+    : status?.alerts.total && status.alerts.total > 0 ? 'yellow' 
+    : 'green';
+
+  // Determine ferry status color
+  const ferryColor = status?.ferries.delays && status.ferries.delays > 0 ? 'yellow' : 'green';
+
+  // Determine road status color
+  const roadColor = status?.roads.closures && status.roads.closures > 0 ? 'red'
+    : status?.roads.incidents && status.roads.incidents > 0 ? 'orange'
+    : 'green';
+
+  return (
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      {/* Alerts Card */}
+      <StatusCard
+        icon="🚨"
+        title="Alerts"
+        value={status?.alerts.total || 0}
+        subtitle={
+          status?.alerts.critical 
+            ? `${status.alerts.critical} critical` 
+            : status?.alerts.major 
+            ? `${status.alerts.major} major`
+            : 'All clear'
+        }
+        color={alertColor}
+        onClick={() => onCardClick?.('alerts')}
+        pulse={status?.alerts.critical && status.alerts.critical > 0}
+      />
+
+      {/* Ferries Card */}
+      <StatusCard
+        icon="⛴️"
+        title="Ferries"
+        value={status?.ferries.delays ? `${status.ferries.delays} Delays` : 'On Time'}
+        subtitle={`${status?.ferries.onTime || 0} routes normal`}
+        color={ferryColor}
+        onClick={() => onCardClick?.('ferries')}
+      />
+
+      {/* Weather Card */}
+      <StatusCard
+        icon={getWeatherIcon(status?.weather.condition)}
+        title="Weather"
+        value={status?.weather.temperature !== undefined ? `${status.weather.temperature}°C` : '--'}
+        subtitle={status?.weather.condition || 'Loading...'}
+        color={status?.weather.warnings ? 'yellow' : 'blue'}
+        onClick={() => onCardClick?.('weather')}
+      />
+
+      {/* Roads Card */}
+      <StatusCard
+        icon="🛣️"
+        title="Roads"
+        value={`${status?.roads.total || 0} Events`}
+        subtitle={
+          status?.roads.closures 
+            ? `${status.roads.closures} closures` 
+            : status?.roads.incidents
+            ? `${status.roads.incidents} incidents`
+            : 'Roads clear'
+        }
+        color={roadColor}
+        onClick={() => onCardClick?.('roads')}
+      />
+    </div>
+  );
+}
+
+interface StatusCardProps {
+  icon: string;
+  title: string;
+  value: string | number;
+  subtitle: string;
+  color: 'red' | 'orange' | 'yellow' | 'green' | 'blue' | 'gray';
+  onClick?: () => void;
+  pulse?: boolean;
+}
+
+function StatusCard({ icon, title, value, subtitle, color, onClick, pulse }: StatusCardProps) {
+  const colorConfig = {
+    red: {
+      bg: 'bg-red-500/20',
+      border: 'border-red-500/50',
+      text: 'text-red-400',
+      value: 'text-red-300',
+    },
+    orange: {
+      bg: 'bg-orange-500/20',
+      border: 'border-orange-500/50',
+      text: 'text-orange-400',
+      value: 'text-orange-300',
+    },
+    yellow: {
+      bg: 'bg-yellow-500/20',
+      border: 'border-yellow-500/50',
+      text: 'text-yellow-400',
+      value: 'text-yellow-300',
+    },
+    green: {
+      bg: 'bg-green-500/20',
+      border: 'border-green-500/50',
+      text: 'text-green-400',
+      value: 'text-green-300',
+    },
+    blue: {
+      bg: 'bg-blue-500/20',
+      border: 'border-blue-500/50',
+      text: 'text-blue-400',
+      value: 'text-blue-300',
+    },
+    gray: {
+      bg: 'bg-gray-700',
+      border: 'border-gray-600',
+      text: 'text-gray-400',
+      value: 'text-gray-300',
+    },
+  };
+
+  const config = colorConfig[color];
+
+  return (
+    <div
+      className={`
+        rounded-xl p-4 border cursor-pointer transition-all duration-200
+        ${config.bg} ${config.border}
+        hover:scale-[1.02] hover:shadow-lg
+        ${pulse ? 'animate-pulse' : ''}
+      `}
+      onClick={onClick}
+    >
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-2xl">{icon}</span>
+        <span className={`text-xs font-semibold uppercase tracking-wider ${config.text}`}>
+          {title}
+        </span>
+      </div>
+      <div className={`text-3xl font-bold ${config.value}`}>
+        {value}
+      </div>
+      <div className={`text-sm mt-1 ${config.text}`}>
+        {subtitle}
+      </div>
+    </div>
+  );
+}
+
+function getWeatherIcon(condition?: string): string {
+  if (!condition) return '🌤️';
+  const lower = condition.toLowerCase();
+  if (lower.includes('snow')) return '🌨️';
+  if (lower.includes('rain')) return '🌧️';
+  if (lower.includes('thunder')) return '⛈️';
+  if (lower.includes('cloud')) return '☁️';
+  if (lower.includes('sun') || lower.includes('clear')) return '☀️';
+  if (lower.includes('fog')) return '🌫️';
+  if (lower.includes('wind')) return '💨';
+  return '🌤️';
+}
+
+export default StatusCards;

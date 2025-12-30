@@ -6,11 +6,10 @@ import {
   AlertTriangle, 
   Bell,
   Leaf,
-  Ship,
   Cloud,
-  Car,
   Radio
 } from 'lucide-react';
+import { StatusCards } from './StatusCards';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -143,32 +142,7 @@ export function DashboardLayout({ defaultRegion = 'bc' }: DashboardLayoutProps) 
 function OverviewTab({ regionId }: { regionId: string }) {
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <StatusCard 
-          icon={AlertTriangle} 
-          title="Alerts" 
-          value="254" 
-          variant="warning" 
-        />
-        <StatusCard 
-          icon={Ship} 
-          title="Ferries" 
-          value="On Time" 
-          variant="success" 
-        />
-        <StatusCard 
-          icon={Cloud} 
-          title="Weather" 
-          value="-2°C" 
-          variant="info" 
-        />
-        <StatusCard 
-          icon={Car} 
-          title="Roads" 
-          value="252 Events" 
-          variant="default" 
-        />
-      </div>
+      <StatusCards regionId={regionId} />
       
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 bg-card rounded-xl border p-6">
@@ -199,42 +173,6 @@ function OverviewTab({ regionId }: { regionId: string }) {
           ))}
         </div>
       </div>
-    </div>
-  );
-}
-
-function StatusCard({ 
-  icon: Icon, 
-  title, 
-  value, 
-  variant 
-}: { 
-  icon: typeof AlertTriangle; 
-  title: string; 
-  value: string; 
-  variant: 'default' | 'success' | 'warning' | 'info';
-}) {
-  const variantClasses = {
-    default: 'bg-muted/50 border-border',
-    success: 'bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800',
-    warning: 'bg-amber-50 dark:bg-amber-950 border-amber-200 dark:border-amber-800',
-    info: 'bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800',
-  };
-  
-  const iconColors = {
-    default: 'text-muted-foreground',
-    success: 'text-green-600 dark:text-green-400',
-    warning: 'text-amber-600 dark:text-amber-400',
-    info: 'text-blue-600 dark:text-blue-400',
-  };
-  
-  return (
-    <div className={`rounded-xl p-4 border-2 ${variantClasses[variant]}`} data-testid={`card-status-${title.toLowerCase()}`}>
-      <div className="flex items-center justify-between gap-2 mb-2">
-        <Icon className={`w-6 h-6 ${iconColors[variant]}`} />
-        <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{title}</span>
-      </div>
-      <div className="text-2xl font-bold">{value}</div>
     </div>
   );
 }

@@ -448,6 +448,75 @@ export async function registerRoutes(
   // Real-Time Status API Endpoints (v1)
   // ============================================================================
 
+  // GET /api/v1/status/summary - Dashboard status cards data
+  app.get("/api/v1/status/summary", async (req, res) => {
+    try {
+      // Get alert counts by severity
+      const alertsResult = await storage.query(`
+        SELECT 
+          COUNT(*) FILTER (WHERE severity::text = 'critical' OR severity::text = 'emergency') as critical,
+          COUNT(*) FILTER (WHERE severity::text = 'major') as major,
+          COUNT(*) FILTER (WHERE severity::text = 'warning' OR severity::text = 'advisory') as moderate,
+          COUNT(*) FILTER (WHERE severity::text = 'minor' OR severity::text = 'info') as minor,
+          COUNT(*) as total
+        FROM alerts 
+        WHERE is_active = true
+      `);
+      
+      // Get ferry status from entities (BC Ferries routes)
+      const ferriesResult = await storage.query(`
+        SELECT 
+          COUNT(*) FILTER (WHERE configuration->>'current_status' = 'delayed') as delays,
+          COUNT(*) FILTER (WHERE configuration->>'current_status' = 'on_time') as on_time
+        FROM entities 
+        WHERE slug LIKE 'bcferries-route-%'
+      `);
+      
+      // Get road events by type
+      const roadsResult = await storage.query(`
+        SELECT 
+          COUNT(*) FILTER (WHERE severity::text = 'major' OR severity::text = 'critical') as closures,
+          COUNT(*) FILTER (WHERE alert_type = 'closure' AND severity::text NOT IN ('major', 'critical')) as incidents,
+          COUNT(*) FILTER (WHERE details->>'event_type' = 'CONSTRUCTION') as construction,
+          COUNT(*) as total
+        FROM alerts 
+        WHERE is_active = true AND alert_type = 'closure'
+      `);
+      
+      // Weather placeholder (can be enhanced with actual weather data)
+      const weather = {
+        temperature: -2,
+        condition: 'Light Snow',
+        warnings: 0
+      };
+      
+      res.json({
+        alerts: {
+          critical: parseInt(alertsResult.rows[0]?.critical || '0', 10),
+          major: parseInt(alertsResult.rows[0]?.major || '0', 10),
+          moderate: parseInt(alertsResult.rows[0]?.moderate || '0', 10),
+          minor: parseInt(alertsResult.rows[0]?.minor || '0', 10),
+          total: parseInt(alertsResult.rows[0]?.total || '0', 10)
+        },
+        ferries: {
+          status: parseInt(ferriesResult.rows[0]?.delays || '0', 10) > 0 ? 'delayed' : 'on_time',
+          delays: parseInt(ferriesResult.rows[0]?.delays || '0', 10),
+          onTime: parseInt(ferriesResult.rows[0]?.on_time || '0', 10)
+        },
+        weather,
+        roads: {
+          closures: parseInt(roadsResult.rows[0]?.closures || '0', 10),
+          incidents: parseInt(roadsResult.rows[0]?.incidents || '0', 10),
+          construction: parseInt(roadsResult.rows[0]?.construction || '0', 10),
+          total: parseInt(roadsResult.rows[0]?.total || '0', 10)
+        }
+      });
+    } catch (error) {
+      console.error("Status summary error:", error);
+      res.status(500).json({ message: "Failed to fetch status summary" });
+    }
+  });
+
   // GET /api/v1/status/overview - Dashboard status summary
   app.get("/api/v1/status/overview", async (req, res) => {
     try {
