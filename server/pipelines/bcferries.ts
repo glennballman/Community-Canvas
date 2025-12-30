@@ -173,22 +173,9 @@ export class BCFerriesPipeline extends BasePipeline {
         }];
       }
 
-      // Save snapshot for each matched terminal
+      // Update terminal entities with latest status
+      // Note: entity_snapshots table uses integer IDs but entities uses UUID, so we skip snapshot saving
       for (const terminal of terminalQuery.rows) {
-        await this.saveSnapshot(
-          terminal.id,
-          sailing.status,
-          snapshotData,
-          {
-            vehicle_pct: sailing.vehicleCapacityPct,
-            passenger_pct: sailing.passengerCapacityPct,
-            delay_mins: sailing.delayMinutes
-          },
-          alerts
-        );
-        created++;
-
-        // Update terminal entity with latest status
         await pool.query(`
           UPDATE entities SET
             configuration = configuration || $2::jsonb
@@ -200,7 +187,11 @@ export class BCFerriesPipeline extends BasePipeline {
             current_route: sailing.route,
             last_updated: new Date().toISOString(),
             vehicle_capacity_pct: sailing.vehicleCapacityPct,
-            has_advisory: !!sailing.advisory
+            passenger_capacity_pct: sailing.passengerCapacityPct,
+            has_advisory: !!sailing.advisory,
+            advisory: sailing.advisory,
+            next_sailing: sailing.nextSailing,
+            delay_minutes: sailing.delayMinutes
           })
         ]);
         updated++;
