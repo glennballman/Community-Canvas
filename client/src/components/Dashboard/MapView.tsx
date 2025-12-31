@@ -282,8 +282,16 @@ export function MapView({ regionId }: MapViewProps) {
   const types = Array.from(new Set(entities.map(e => e.entity_type_id).filter(Boolean))).sort();
 
   return (
-    <div className="relative h-[600px] overflow-hidden" data-testid="map-view">
-      <div ref={mapContainer} className="absolute inset-0 rounded-xl overflow-hidden" style={{ contain: 'strict' }} />
+    <div 
+      className="relative rounded-xl border bg-card" 
+      style={{ height: '600px', overflow: 'hidden', isolation: 'isolate', contain: 'layout paint' }}
+      data-testid="map-view"
+    >
+      <div 
+        ref={mapContainer} 
+        className="rounded-xl"
+        style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, overflow: 'hidden' }} 
+      />
 
       {loading && (
         <div className="absolute inset-0 bg-background/80 flex items-center justify-center rounded-xl z-10">
