@@ -733,7 +733,7 @@ function WebcamModal({ webcam, refreshKey, onClose, onNext, onPrev }: WebcamModa
           <span>Source: {webcam.metadata?.source_provider || 'DriveBC'}</span>
           <span className="flex items-center gap-1">
             <MapPin className="w-3 h-3" />
-            {webcam.latitude?.toFixed(4)}, {webcam.longitude?.toFixed(4)}
+            {Number(webcam.latitude)?.toFixed(4)}, {Number(webcam.longitude)?.toFixed(4)}
           </span>
           <span className="text-xs">Arrow keys to navigate, ESC to close</span>
         </div>
