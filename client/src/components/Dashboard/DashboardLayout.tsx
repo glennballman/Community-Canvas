@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { StatusCards } from './StatusCards';
 import { AlertsFeed } from './AlertsFeed';
+import { AlertsTab } from './AlertsTab';
 import { WebcamGrid } from './WebcamGrid';
 import { WebcamsTab } from './WebcamsTab';
 import { FerryStatus } from './FerryStatus';
@@ -123,7 +124,7 @@ export function DashboardLayout({ defaultRegion = 'bc' }: DashboardLayoutProps) 
           <WebcamsTab regionId={selectedRegion} />
         )}
         {activeTab === 'alerts' && (
-          <AlertsFeed regionId={selectedRegion} maxAlerts={50} />
+          <AlertsTab regionId={selectedRegion} />
         )}
       </main>
       
