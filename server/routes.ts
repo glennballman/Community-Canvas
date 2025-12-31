@@ -1857,5 +1857,109 @@ export async function registerRoutes(
     }
   });
 
+  // GET /api/v1/planning/participants/:id/trip-qualifications - Get all trip qualifications for a participant
+  app.get("/api/v1/planning/participants/:id/trip-qualifications", async (req, res) => {
+    try {
+      const { id } = req.params;
+
+      const tripsResult = await storage.query(
+        "SELECT id, title, difficulty FROM road_trips WHERE is_published = true"
+      );
+
+      const skillsResult = await storage.query(
+        'SELECT skill_category, skill_type, skill_level FROM participant_skills WHERE participant_id = $1',
+        [id]
+      );
+      const participantSkills = skillsResult.rows;
+
+      const skillLevels = ['none', 'beginner', 'intermediate', 'advanced', 'expert', 'certified'];
+
+      const qualifications: Record<string, { qualified: boolean; gapCount: number; gaps: string[] }> = {};
+
+      for (const trip of tripsResult.rows) {
+        const reqResult = await storage.query(`
+          SELECT skill_category, skill_type, minimum_level, enforcement 
+          FROM skill_requirements 
+          WHERE requirement_type = 'trip' AND requirement_target_id = $1 AND enforcement = 'required'
+        `, [trip.id]);
+
+        const gaps: string[] = [];
+
+        for (const req of reqResult.rows) {
+          const hasSkill = participantSkills.find(
+            (s: any) => s.skill_category === req.skill_category && s.skill_type === req.skill_type
+          );
+
+          const requiredLevelIndex = skillLevels.indexOf(req.minimum_level);
+          const hasLevelIndex = hasSkill ? skillLevels.indexOf(hasSkill.skill_level) : 0;
+
+          if (hasLevelIndex < requiredLevelIndex) {
+            gaps.push(req.skill_type.replace(/_/g, ' '));
+          }
+        }
+
+        qualifications[trip.id] = {
+          qualified: gaps.length === 0,
+          gapCount: gaps.length,
+          gaps
+        };
+      }
+
+      res.json({ participant_id: id, qualifications });
+    } catch (error) {
+      console.error('Error getting qualifications:', error);
+      res.status(500).json({ error: 'Failed to get qualifications' });
+    }
+  });
+
+  // GET /api/v1/planning/safety-equipment-types - Get all safety equipment types
+  app.get("/api/v1/planning/safety-equipment-types", async (req, res) => {
+    try {
+      const result = await storage.query(
+        'SELECT * FROM safety_equipment_types ORDER BY sort_order, name'
+      );
+      res.json({ types: result.rows });
+    } catch (error) {
+      console.error('Error fetching equipment types:', error);
+      res.status(500).json({ error: 'Failed to fetch equipment types' });
+    }
+  });
+
+  // GET /api/v1/planning/vehicles/:id/safety-equipment - Get safety equipment for a vehicle
+  app.get("/api/v1/planning/vehicles/:id/safety-equipment", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const result = await storage.query(
+        'SELECT * FROM vehicle_safety_equipment WHERE vehicle_id = $1',
+        [id]
+      );
+      res.json({ equipment: result.rows });
+    } catch (error) {
+      console.error('Error fetching vehicle equipment:', error);
+      res.status(500).json({ error: 'Failed to fetch vehicle equipment' });
+    }
+  });
+
+  // PUT /api/v1/planning/vehicles/:vehicleId/safety-equipment/:equipmentTypeId - Update safety equipment
+  app.put("/api/v1/planning/vehicles/:vehicleId/safety-equipment/:equipmentTypeId", async (req, res) => {
+    try {
+      const { vehicleId, equipmentTypeId } = req.params;
+      const { present, condition, notes } = req.body;
+
+      const result = await storage.query(`
+        INSERT INTO vehicle_safety_equipment (vehicle_id, equipment_type_id, present, condition, notes, last_checked)
+        VALUES ($1, $2, $3, $4, $5, CURRENT_DATE)
+        ON CONFLICT (vehicle_id, equipment_type_id)
+        DO UPDATE SET present = $3, condition = $4, notes = $5, last_checked = CURRENT_DATE
+        RETURNING *
+      `, [vehicleId, equipmentTypeId, present, condition || null, notes || null]);
+
+      res.json(result.rows[0]);
+    } catch (error) {
+      console.error('Error updating equipment:', error);
+      res.status(500).json({ error: 'Failed to update equipment' });
+    }
+  });
+
   return httpServer;
 }

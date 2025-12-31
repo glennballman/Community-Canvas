@@ -1,0 +1,599 @@
+Let's add two high-impact features:
+1. Show qualification status on the Road Trips listing
+2. Build the safety equipment checklist UI for vehicles
+
+=== PART 1: Verify Vehicle Save is Working ===
+
+First, confirm the vehicle save issue is fixed:
+```bash
+# Test creating a vehicle
+curl -X POST http://localhost:5000/api/v1/planning/vehicles \
+  -H "Content-Type: application/json" \
+  -d '{
+    "owner_type": "personal",
+    "year": 2015,
+    "make": "Ford",
+    "model": "F350",
+    "vehicle_class": "truck",
+    "drive_type": "4wd",
+    "fuel_type": "diesel",
+    "color": "White",
+    "ground_clearance_inches": 10,
+    "passenger_capacity": 6
+  }'
+```
+
+=== PART 2: Add Qualification API for Current User ===
+
+Create an endpoint that returns qualification status for all trips at once:
+```typescript
+// Add to server/routes/tripPlanning.ts
+
+// Get qualification status for all trips (for a participant)
+router.get('/participants/:id/trip-qualifications', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    
+    // Get all published trips
+    const tripsResult = await db.query(
+      "SELECT id, title, difficulty FROM road_trips WHERE is_published = true"
+    );
+    
+    // Get participant skills
+    const skillsResult = await db.query(
+      'SELECT skill_category, skill_type, skill_level FROM participant_skills WHERE participant_id = $1',
+      [id]
+    );
+    const participantSkills = skillsResult.rows;
+    
+    const skillLevels = ['none', 'beginner', 'intermediate', 'advanced', 'expert', 'certified'];
+    
+    const qualifications: Record<string, { qualified: boolean; gapCount: number; gaps: string[] }> = {};
+    
+    for (const trip of tripsResult.rows) {
+      // Get requirements for this trip
+      const reqResult = await db.query(`
+        SELECT skill_category, skill_type, minimum_level, enforcement 
+        FROM skill_requirements 
+        WHERE requirement_type = 'trip' AND requirement_target_id = $1 AND enforcement = 'required'
+      `, [trip.id]);
+      
+      const gaps: string[] = [];
+      
+      for (const req of reqResult.rows) {
+        const hasSkill = participantSkills.find(
+          (s: any) => s.skill_category === req.skill_category && s.skill_type === req.skill_type
+        );
+        
+        const requiredLevelIndex = skillLevels.indexOf(req.minimum_level);
+        const hasLevelIndex = hasSkill ? skillLevels.indexOf(hasSkill.skill_level) : 0;
+        
+        if (hasLevelIndex < requiredLevelIndex) {
+          gaps.push(req.skill_type.replace(/_/g, ' '));
+        }
+      }
+      
+      qualifications[trip.id] = {
+        qualified: gaps.length === 0,
+        gapCount: gaps.length,
+        gaps
+      };
+    }
+    
+    res.json({ participant_id: id, qualifications });
+  } catch (error) {
+    console.error('Error getting qualifications:', error);
+    res.status(500).json({ error: 'Failed to get qualifications' });
+  }
+});
+```
+
+=== PART 3: Update Road Trips Tab with Qualification Badges ===
+
+Modify the RoadTripsTab.tsx to show qualification status:
+```tsx
+// Add state for qualifications
+const [qualifications, setQualifications] = useState<Record<string, { qualified: boolean; gapCount: number; gaps: string[] }>>({});
+const [participantId, setParticipantId] = useState<string | null>(null);
+
+// Load participant ID on mount (get most recent)
+useEffect(() => {
+  loadCurrentParticipant();
+}, []);
+
+async function loadCurrentParticipant() {
+  try {
+    // Get the most recent participant (or from localStorage if we store it)
+    const stored = localStorage.getItem('currentParticipantId');
+    if (stored) {
+      setParticipantId(stored);
+      loadQualifications(stored);
+    }
+  } catch (error) {
+    console.error('Error loading participant:', error);
+  }
+}
+
+async function loadQualifications(pid: string) {
+  try {
+    const response = await fetch(`/api/v1/planning/participants/${pid}/trip-qualifications`);
+    if (response.ok) {
+      const data = await response.json();
+      setQualifications(data.qualifications || {});
+    }
+  } catch (error) {
+    console.error('Error loading qualifications:', error);
+  }
+}
+
+// In the trip card component, add the badge:
+function TripCard({ trip }: { trip: RoadTrip }) {
+  const qual = qualifications[trip.id];
+  
+  return (
+    <div className="bg-gray-800 rounded-xl overflow-hidden hover:ring-1 hover:ring-blue-400 transition cursor-pointer relative">
+      {/* Qualification Badge */}
+      {qual && (
+        <div className="absolute top-3 right-3 z-10">
+          {qual.qualified ? (
+            <span className="px-2 py-1 bg-green-500/30 text-green-400 rounded-full text-xs font-medium backdrop-blur-sm">
+              ✓ Ready
+            </span>
+          ) : (
+            <span className="px-2 py-1 bg-orange-500/30 text-orange-400 rounded-full text-xs font-medium backdrop-blur-sm" title={`Need: ${qual.gaps.join(', ')}`}>
+              🔒 {qual.gapCount} skill{qual.gapCount !== 1 ? 's' : ''} needed
+            </span>
+          )}
+        </div>
+      )}
+      
+      {/* Rest of card content */}
+      <div className="p-4">
+        {/* ... existing content ... */}
+      </div>
+    </div>
+  );
+}
+```
+
+Also update the ParticipantProfileForm to store the ID:
+```tsx
+// After successful save in ParticipantProfileForm.tsx
+const handleSave = async () => {
+  // ... existing save logic ...
+  
+  // Store participant ID for other components
+  localStorage.setItem('currentParticipantId', savedParticipant.id);
+  
+  onSave(completeProfile);
+};
+```
+
+=== PART 4: Safety Equipment Checklist Component ===
+
+Create file: client/src/components/TripPlanning/SafetyEquipmentChecklist.tsx
+```tsx
+import React, { useState, useEffect } from 'react';
+
+interface SafetyEquipmentType {
+  id: string;
+  name: string;
+  category: string;
+  description: string;
+  required_for_routes: string[];
+  recommended_for_routes: string[];
+  bc_ferries_allowed: boolean;
+  bc_ferries_notes: string | null;
+  icon: string;
+}
+
+interface VehicleEquipment {
+  equipment_type_id: string;
+  present: boolean;
+  condition: string;
+  notes: string;
+}
+
+interface SafetyEquipmentChecklistProps {
+  vehicleId: string;
+  onUpdate?: () => void;
+}
+
+const CATEGORY_ORDER = ['navigation', 'communication', 'vehicle_emergency', 'tools', 'personal_safety', 'survival'];
+const CATEGORY_LABELS: Record<string, string> = {
+  navigation: '🧭 Navigation',
+  communication: '📡 Communication',
+  vehicle_emergency: '🚗 Vehicle Emergency',
+  tools: '🔧 Tools',
+  personal_safety: '🦺 Personal Safety',
+  survival: '🏕️ Survival'
+};
+
+export function SafetyEquipmentChecklist({ vehicleId, onUpdate }: SafetyEquipmentChecklistProps) {
+  const [equipmentTypes, setEquipmentTypes] = useState<SafetyEquipmentType[]>([]);
+  const [vehicleEquipment, setVehicleEquipment] = useState<Record<string, VehicleEquipment>>({});
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState<string | null>(null);
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(CATEGORY_ORDER));
+
+  useEffect(() => {
+    loadData();
+  }, [vehicleId]);
+
+  async function loadData() {
+    setLoading(true);
+    try {
+      // Load equipment types
+      const typesRes = await fetch('/api/v1/planning/safety-equipment-types');
+      const typesData = await typesRes.json();
+      setEquipmentTypes(typesData.types || []);
+
+      // Load vehicle's current equipment
+      const vehicleRes = await fetch(`/api/v1/planning/vehicles/${vehicleId}/safety-equipment`);
+      const vehicleData = await vehicleRes.json();
+      
+      const equipmentMap: Record<string, VehicleEquipment> = {};
+      for (const item of vehicleData.equipment || []) {
+        equipmentMap[item.equipment_type_id] = item;
+      }
+      setVehicleEquipment(equipmentMap);
+    } catch (error) {
+      console.error('Error loading safety equipment:', error);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function toggleEquipment(equipmentTypeId: string, present: boolean) {
+    setSaving(equipmentTypeId);
+    try {
+      await fetch(`/api/v1/planning/vehicles/${vehicleId}/safety-equipment/${equipmentTypeId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ present, condition: present ? 'good' : null })
+      });
+
+      setVehicleEquipment(prev => ({
+        ...prev,
+        [equipmentTypeId]: { 
+          equipment_type_id: equipmentTypeId, 
+          present, 
+          condition: present ? 'good' : '',
+          notes: ''
+        }
+      }));
+
+      onUpdate?.();
+    } catch (error) {
+      console.error('Error updating equipment:', error);
+    } finally {
+      setSaving(null);
+    }
+  }
+
+  function toggleCategory(category: string) {
+    setExpandedCategories(prev => {
+      const next = new Set(prev);
+      if (next.has(category)) {
+        next.delete(category);
+      } else {
+        next.add(category);
+      }
+      return next;
+    });
+  }
+
+  // Group equipment by category
+  const groupedEquipment = CATEGORY_ORDER.reduce((acc, category) => {
+    acc[category] = equipmentTypes.filter(e => e.category === category);
+    return acc;
+  }, {} as Record<string, SafetyEquipmentType[]>);
+
+  // Calculate stats
+  const totalItems = equipmentTypes.length;
+  const presentItems = Object.values(vehicleEquipment).filter(e => e.present).length;
+  const requiredItems = equipmentTypes.filter(e => e.required_for_routes.length > 0);
+  const requiredPresent = requiredItems.filter(e => vehicleEquipment[e.id]?.present).length;
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <span className="text-gray-400">Loading safety checklist...</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Summary Stats */}
+      <div className="grid grid-cols-3 gap-3">
+        <div className="bg-gray-700/50 rounded-lg p-3 text-center">
+          <p className="text-2xl font-bold text-white">{presentItems}/{totalItems}</p>
+          <p className="text-gray-400 text-sm">Total Items</p>
+        </div>
+        <div className={`rounded-lg p-3 text-center ${requiredPresent === requiredItems.length ? 'bg-green-500/20' : 'bg-orange-500/20'}`}>
+          <p className={`text-2xl font-bold ${requiredPresent === requiredItems.length ? 'text-green-400' : 'text-orange-400'}`}>
+            {requiredPresent}/{requiredItems.length}
+          </p>
+          <p className="text-gray-400 text-sm">Required Items</p>
+        </div>
+        <div className="bg-blue-500/20 rounded-lg p-3 text-center">
+          <p className="text-2xl font-bold text-blue-400">
+            {Math.round((presentItems / totalItems) * 100)}%
+          </p>
+          <p className="text-gray-400 text-sm">Prepared</p>
+        </div>
+      </div>
+
+      {/* Quick Actions */}
+      <div className="flex gap-2">
+        <button
+          onClick={() => setExpandedCategories(new Set(CATEGORY_ORDER))}
+          className="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-gray-300 rounded text-sm"
+        >
+          Expand All
+        </button>
+        <button
+          onClick={() => setExpandedCategories(new Set())}
+          className="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-gray-300 rounded text-sm"
+        >
+          Collapse All
+        </button>
+      </div>
+
+      {/* Equipment by Category */}
+      <div className="space-y-3">
+        {CATEGORY_ORDER.map(category => {
+          const items = groupedEquipment[category] || [];
+          const categoryPresent = items.filter(e => vehicleEquipment[e.id]?.present).length;
+          const isExpanded = expandedCategories.has(category);
+
+          return (
+            <div key={category} className="bg-gray-800 rounded-lg overflow-hidden">
+              {/* Category Header */}
+              <button
+                onClick={() => toggleCategory(category)}
+                className="w-full flex items-center justify-between p-4 hover:bg-gray-700/50 transition"
+              >
+                <div className="flex items-center gap-3">
+                  <span className="text-lg">{CATEGORY_LABELS[category]}</span>
+                  <span className="text-gray-500 text-sm">
+                    {categoryPresent}/{items.length}
+                  </span>
+                </div>
+                <span className={`transform transition ${isExpanded ? 'rotate-180' : ''}`}>
+                  ▼
+                </span>
+              </button>
+
+              {/* Equipment Items */}
+              {isExpanded && (
+                <div className="border-t border-gray-700 p-3 space-y-2">
+                  {items.map(item => {
+                    const equipment = vehicleEquipment[item.id];
+                    const isPresent = equipment?.present || false;
+                    const isRequired = item.required_for_routes.length > 0;
+                    const isSaving = saving === item.id;
+
+                    return (
+                      <div
+                        key={item.id}
+                        className={`flex items-center justify-between p-3 rounded-lg transition ${
+                          isPresent ? 'bg-green-500/10' : 'bg-gray-700/30'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <button
+                            onClick={() => toggleEquipment(item.id, !isPresent)}
+                            disabled={isSaving}
+                            className={`w-6 h-6 rounded flex items-center justify-center transition ${
+                              isPresent
+                                ? 'bg-green-500 text-white'
+                                : 'bg-gray-600 text-gray-400 hover:bg-gray-500'
+                            }`}
+                          >
+                            {isSaving ? '...' : isPresent ? '✓' : ''}
+                          </button>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-lg">{item.icon}</span>
+                              <span className={`font-medium ${isPresent ? 'text-white' : 'text-gray-300'}`}>
+                                {item.name}
+                              </span>
+                              {isRequired && (
+                                <span className="px-1.5 py-0.5 bg-red-500/20 text-red-400 rounded text-xs">
+                                  Required
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-gray-500 text-sm">{item.description}</p>
+                            {!item.bc_ferries_allowed && (
+                              <p className="text-yellow-400 text-xs mt-1">
+                                ⚠️ Not allowed on BC Ferries
+                              </p>
+                            )}
+                            {item.bc_ferries_notes && (
+                              <p className="text-blue-400 text-xs mt-1">
+                                ℹ️ Ferry note: {item.bc_ferries_notes}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+
+                        {isPresent && (
+                          <select
+                            value={equipment?.condition || 'good'}
+                            onChange={(e) => {
+                              setVehicleEquipment(prev => ({
+                                ...prev,
+                                [item.id]: { ...prev[item.id], condition: e.target.value }
+                              }));
+                            }}
+                            className="bg-gray-700 text-gray-300 rounded px-2 py-1 text-sm border border-gray-600"
+                          >
+                            <option value="new">New</option>
+                            <option value="good">Good</option>
+                            <option value="fair">Fair</option>
+                            <option value="needs_replacement">Replace Soon</option>
+                          </select>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* BC Ferries Notice */}
+      <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
+        <h4 className="text-blue-400 font-medium mb-2">🚢 BC Ferries Reminders</h4>
+        <ul className="text-gray-300 text-sm space-y-1">
+          <li>• Gas cans must be <strong>empty</strong> when boarding</li>
+          <li>• Propane tanks must be turned off</li>
+          <li>• Bear spray should be accessible, not in cargo</li>
+          <li>• Flares have restrictions - check current policy</li>
+        </ul>
+      </div>
+    </div>
+  );
+}
+
+export default SafetyEquipmentChecklist;
+```
+
+=== PART 5: Safety Equipment API Endpoints ===
+
+Add to server/routes/tripPlanning.ts:
+```typescript
+// Get all safety equipment types
+router.get('/safety-equipment-types', async (req: Request, res: Response) => {
+  try {
+    const result = await db.query(
+      'SELECT * FROM safety_equipment_types ORDER BY sort_order, name'
+    );
+    res.json({ types: result.rows });
+  } catch (error) {
+    console.error('Error fetching equipment types:', error);
+    res.status(500).json({ error: 'Failed to fetch equipment types' });
+  }
+});
+
+// Get safety equipment for a vehicle
+router.get('/vehicles/:id/safety-equipment', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const result = await db.query(
+      'SELECT * FROM vehicle_safety_equipment WHERE vehicle_id = $1',
+      [id]
+    );
+    res.json({ equipment: result.rows });
+  } catch (error) {
+    console.error('Error fetching vehicle equipment:', error);
+    res.status(500).json({ error: 'Failed to fetch vehicle equipment' });
+  }
+});
+
+// Update safety equipment for a vehicle
+router.put('/vehicles/:vehicleId/safety-equipment/:equipmentTypeId', async (req: Request, res: Response) => {
+  try {
+    const { vehicleId, equipmentTypeId } = req.params;
+    const { present, condition, notes } = req.body;
+
+    const result = await db.query(`
+      INSERT INTO vehicle_safety_equipment (vehicle_id, equipment_type_id, present, condition, notes, last_checked)
+      VALUES ($1, $2, $3, $4, $5, CURRENT_DATE)
+      ON CONFLICT (vehicle_id, equipment_type_id)
+      DO UPDATE SET present = $3, condition = $4, notes = $5, last_checked = CURRENT_DATE
+      RETURNING *
+    `, [vehicleId, equipmentTypeId, present, condition || null, notes || null]);
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error updating equipment:', error);
+    res.status(500).json({ error: 'Failed to update equipment' });
+  }
+});
+```
+
+=== PART 6: Add Safety Tab to Vehicle Form ===
+
+Update VehicleProfileForm.tsx to include the safety equipment checklist:
+```tsx
+// Add to section tabs
+const [activeSection, setActiveSection] = useState<'basic' | 'assessment' | 'safety'>('basic');
+
+// Update tabs UI
+<div className="flex gap-2 mt-4">
+  <button
+    onClick={() => setActiveSection('basic')}
+    className={`px-4 py-2 rounded-lg font-medium transition ${
+      activeSection === 'basic' ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300'
+    }`}
+  >
+    🚗 Vehicle Details
+  </button>
+  <button
+    onClick={() => setActiveSection('assessment')}
+    className={`px-4 py-2 rounded-lg font-medium transition ${
+      activeSection === 'assessment' ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300'
+    }`}
+  >
+    ✅ Condition Check
+  </button>
+  <button
+    onClick={() => setActiveSection('safety')}
+    className={`px-4 py-2 rounded-lg font-medium transition ${
+      activeSection === 'safety' ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300'
+    }`}
+  >
+    🦺 Safety Equipment
+  </button>
+</div>
+
+// Add safety section content
+{activeSection === 'safety' && savedVehicleId && (
+  <div className="bg-gray-800 rounded-xl p-6">
+    <SafetyEquipmentChecklist vehicleId={savedVehicleId} />
+  </div>
+)}
+
+{activeSection === 'safety' && !savedVehicleId && (
+  <div className="bg-gray-800 rounded-xl p-12 text-center">
+    <span className="text-4xl">💾</span>
+    <p className="text-gray-400 mt-2">Save your vehicle first to add safety equipment</p>
+  </div>
+)}
+```
+
+=== PART 7: Export New Components ===
+
+Update client/src/components/TripPlanning/index.ts:
+```typescript
+export { TripPlanningTab } from './TripPlanningTab';
+export { ParticipantProfileForm } from './ParticipantProfileForm';
+export { VehicleProfileForm } from './VehicleProfileForm';
+export { TripQualificationCheck } from './TripQualificationCheck';
+export { ServiceRunsBoard } from './ServiceRunsBoard';
+export { RouteExplorer } from './RouteExplorer';
+export { QuickTripQualification } from './QuickTripQualification';
+export { SafetyEquipmentChecklist } from './SafetyEquipmentChecklist';
+```
+
+This adds:
+1. Batch qualification check API endpoint
+2. Qualification badges on Road Trips listing ("✓ Ready" or "🔒 2 skills needed")
+3. Full safety equipment checklist UI with 38 items across 6 categories
+4. Equipment condition tracking
+5. BC Ferries compatibility notes
+6. Safety tab in Vehicle form
+
+The checklist shows:
+- Summary stats (X/38 items, required items status, % prepared)
+- Collapsible categories
+- One-click toggle for each item
+- Condition dropdown (New/Good/Fair/Replace)
+- Required badges for critical items
+- Ferry warnings where applicable
