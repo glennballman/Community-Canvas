@@ -7,6 +7,7 @@ The Community Status Dashboard is a Bloomberg-terminal style application designe
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.
+GitHub backup preference: Push to GitHub at the end of each session or after significant changes. Use `git push "$GIT_PUSH_URL" HEAD:main` command.
 
 ## System Architecture
 
