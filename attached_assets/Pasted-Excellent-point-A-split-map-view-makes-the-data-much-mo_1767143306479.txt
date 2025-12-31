@@ -1,0 +1,277 @@
+Excellent point! A split map view makes the data much more meaningful. Let me create prompts for both tabs with integrated maps.
+
+PROMPT 30.1: Alerts Tab with Split Map View
+Enhance the Alerts tab to include a split view with map showing alert locations.
+
+Update file: client/src/components/Dashboard/AlertsTab.tsx
+
+Add these imports at the top:
+```tsx
+import mapboxgl from 'mapbox-gl';
+import 'mapbox-gl/dist/mapbox-gl.css';
+
+mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN || '';
+```
+
+Add this state and map logic inside the AlertsTab component:
+```tsx
+// Add to existing state
+const [showMap, setShowMap] = useState(true);
+const [hoveredAlertId, setHoveredAlertId] = useState<number | null>(null);
+const mapContainer = useRef<HTMLDivElement>(null);
+const map = useRef<mapboxgl.Map | null>(null);
+const markersRef = useRef<mapboxgl.Marker[]>([]);
+
+// Initialize map
+useEffect(() => {
+  if (!mapContainer.current || !showMap) return;
+  
+  if (map.current) return; // Already initialized
+
+  map.current = new mapboxgl.Map({
+    container: mapContainer.current,
+    style: 'mapbox://styles/mapbox/dark-v11',
+    center: [-123.1207, 49.2827],
+    zoom: 5,
+  });
+
+  map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
+
+  return () => {
+    map.current?.remove();
+    map.current = null;
+  };
+}, [showMap]);
+
+// Update markers when alerts change
+useEffect(() => {
+  if (!map.current || !showMap) return;
+
+  // Clear existing markers
+  markersRef.current.forEach(m => m.remove());
+  markersRef.current = [];
+
+  // Add markers for filtered alerts with coordinates
+  const alertsWithCoords = filteredAlerts.filter(a => 
+    a.metadata?.latitude && a.metadata?.longitude
+  );
+
+  // If alerts don't have coords, try to get from region
+  // For now, use region centroids or random offset from BC center
+
+  alertsWithCoords.forEach(alert => {
+    const config = severityConfig[alert.severity] || severityConfig.info;
+    
+    const el = document.createElement('div');
+    el.className = 'alert-marker';
+    el.innerHTML = `
+      <div style="
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        background: ${config.border.replace('border-', '')};
+        border: 2px solid white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transform: ${hoveredAlertId === alert.id ? 'scale(1.3)' : 'scale(1)'};
+        transition: transform 0.2s;
+      ">
+        <span style="font-size: 12px;">${config.icon}</span>
+      </div>
+    `;
+    
+    el.addEventListener('click', () => setSelectedAlert(alert));
+    el.addEventListener('mouseenter', () => setHoveredAlertId(alert.id));
+    el.addEventListener('mouseleave', () => setHoveredAlertId(null));
+
+    const marker = new mapboxgl.Marker(el)
+      .setLngLat([alert.metadata.longitude, alert.metadata.latitude])
+      .setPopup(
+        new mapboxgl.Popup({ offset: 15 }).setHTML(`
+          <div style="padding: 8px;">
+            <strong>${alert.headline}</strong>
+            <p style="margin: 4px 0 0; color: #666; font-size: 12px;">
+              ${alert.region_name}
+            </p>
+          </div>
+        `)
+      )
+      .addTo(map.current!);
+    
+    markersRef.current.push(marker);
+  });
+
+  // Fit bounds to show all markers
+  if (alertsWithCoords.length > 0) {
+    const bounds = new mapboxgl.LngLatBounds();
+    alertsWithCoords.forEach(a => {
+      bounds.extend([a.metadata.longitude, a.metadata.latitude]);
+    });
+    map.current.fitBounds(bounds, { padding: 50, maxZoom: 10 });
+  }
+}, [filteredAlerts, showMap, hoveredAlertId]);
+
+// Function to fly to alert on map
+function flyToAlert(alert: Alert) {
+  if (map.current && alert.metadata?.latitude && alert.metadata?.longitude) {
+    map.current.flyTo({
+      center: [alert.metadata.longitude, alert.metadata.latitude],
+      zoom: 12,
+      duration: 1000
+    });
+  }
+}
+```
+
+Update the JSX to include split view:
+```tsx
+return (
+  <div className="space-y-4">
+    {/* Header & Stats - keep existing */}
+    <div className="bg-gray-800 rounded-xl p-4">
+      {/* ... existing header content ... */}
+      
+      {/* Add map toggle button */}
+      <div className="flex items-center gap-2 mt-4">
+        <button
+          onClick={() => setShowMap(!showMap)}
+          className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+            showMap 
+              ? 'bg-blue-600 text-white' 
+              : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+          }`}
+        >
+          🗺️ {showMap ? 'Hide Map' : 'Show Map'}
+        </button>
+        {/* ... existing filters ... */}
+      </div>
+    </div>
+
+    {/* Split View Container */}
+    <div className={`grid ${showMap ? 'grid-cols-1 lg:grid-cols-2' : 'grid-cols-1'} gap-4`}>
+      {/* Alert List */}
+      <div className={`space-y-3 ${showMap ? 'max-h-[70vh] overflow-y-auto pr-2' : ''}`}>
+        {filteredAlerts.map(alert => (
+          <AlertCard
+            key={alert.id}
+            alert={alert}
+            config={severityConfig}
+            typeIcons={typeIcons}
+            isHovered={hoveredAlertId === alert.id}
+            onHover={(hovered) => setHoveredAlertId(hovered ? alert.id : null)}
+            onClick={() => {
+              setSelectedAlert(alert);
+              flyToAlert(alert);
+            }}
+          />
+        ))}
+      </div>
+
+      {/* Map */}
+      {showMap && (
+        <div className="bg-gray-800 rounded-xl overflow-hidden h-[70vh] sticky top-4">
+          <div ref={mapContainer} className="w-full h-full" />
+          
+          {/* Map Legend */}
+          <div className="absolute bottom-4 left-4 bg-gray-900/90 rounded-lg p-3">
+            <h4 className="text-white text-xs font-semibold mb-2">Alert Severity</h4>
+            <div className="space-y-1">
+              {Object.entries(severityConfig).map(([sev, cfg]) => (
+                <div key={sev} className="flex items-center gap-2 text-xs">
+                  <span>{cfg.icon}</span>
+                  <span className={cfg.color}>{sev}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+          
+          {/* Alert count on map */}
+          <div className="absolute top-4 left-4 bg-gray-900/90 rounded-lg px-3 py-2">
+            <span className="text-white font-semibold">{filteredAlerts.length}</span>
+            <span className="text-gray-400 text-sm ml-1">alerts</span>
+          </div>
+        </div>
+      )}
+    </div>
+  </div>
+);
+```
+
+Update AlertCard to support hover state:
+```tsx
+interface AlertCardProps {
+  alert: Alert;
+  config: Record<string, { icon: string; color: string; bg: string; border: string }>;
+  typeIcons: Record<string, string>;
+  isHovered?: boolean;
+  onHover?: (hovered: boolean) => void;
+  onClick: () => void;
+}
+
+function AlertCard({ alert, config, typeIcons, isHovered, onHover, onClick }: AlertCardProps) {
+  const sevConfig = config[alert.severity] || config.info;
+  
+  return (
+    <div
+      className={`bg-gray-800 rounded-xl p-4 border-l-4 ${sevConfig.border} cursor-pointer transition-all ${
+        isHovered ? 'ring-2 ring-blue-400 bg-gray-700' : 'hover:bg-gray-700/50'
+      }`}
+      onClick={onClick}
+      onMouseEnter={() => onHover?.(true)}
+      onMouseLeave={() => onHover?.(false)}
+    >
+      {/* ... existing content ... */}
+    </div>
+  );
+}
+```
+
+Also, ensure alerts have coordinates. Update the API to include region coordinates:
+```typescript
+// In your alerts API endpoint, join with geo_regions to get coordinates:
+router.get('/alerts/active', async (req, res) => {
+  const result = await db.query(`
+    SELECT 
+      a.*,
+      gr.short_name as region_name,
+      gr.latitude as region_lat,
+      gr.longitude as region_lng
+    FROM alerts a
+    LEFT JOIN geo_regions gr ON a.region_id = gr.id
+    WHERE a.status = 'active'
+    ORDER BY 
+      CASE a.severity 
+        WHEN 'critical' THEN 1 
+        WHEN 'major' THEN 2 
+        WHEN 'moderate' THEN 3 
+        ELSE 4 
+      END,
+      a.created_at DESC
+    LIMIT 500
+  `);
+  
+  // Add coordinates to metadata
+  const alertsWithCoords = result.rows.map(alert => ({
+    ...alert,
+    metadata: {
+      ...alert.metadata,
+      latitude: alert.metadata?.latitude || alert.region_lat,
+      longitude: alert.metadata?.longitude || alert.region_lng,
+    }
+  }));
+  
+  res.json(alertsWithCoords);
+});
+```
+
+This adds:
+- Toggle button to show/hide map
+- Split view: list on left, map on right
+- Markers colored by severity
+- Click marker to see popup and select alert
+- Hover sync between list and map
+- Click list item to fly to location on map
+- Legend showing severity colors
+- Sticky map that stays visible while scrolling list

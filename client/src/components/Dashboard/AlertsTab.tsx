@@ -1,6 +1,6 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import { 
-  AlertTriangle, AlertCircle, Info, Clock, MapPin, Radio, X,
+  AlertTriangle, AlertCircle, Info, Clock, MapPin, Radio, X, Map as MapIcon,
   List, LayoutGrid, Calendar, ArrowRight, CheckCircle, Construction,
   CloudLightning, Ship, Zap, Flame, XCircle, Search, CircleDot
 } from 'lucide-react';
@@ -14,6 +14,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import mapboxgl from 'mapbox-gl';
+import 'mapbox-gl/dist/mapbox-gl.css';
 
 interface Alert {
   id: number;
@@ -29,6 +31,8 @@ interface Alert {
   expires_at: string | null;
   status: string;
   metadata: Record<string, unknown>;
+  region_lat?: number;
+  region_lng?: number;
 }
 
 interface AlertsTabProps {
@@ -40,16 +44,17 @@ interface SeverityConfig {
   color: string;
   bg: string;
   border: string;
+  markerColor: string;
 }
 
 const severityConfig: Record<string, SeverityConfig> = {
-  critical: { icon: <AlertCircle className="w-3 h-3" />, color: 'text-red-400', bg: 'bg-red-500/20', border: 'border-red-500' },
-  emergency: { icon: <AlertCircle className="w-3 h-3" />, color: 'text-red-400', bg: 'bg-red-500/20', border: 'border-red-500' },
-  major: { icon: <AlertTriangle className="w-3 h-3" />, color: 'text-orange-400', bg: 'bg-orange-500/20', border: 'border-orange-500' },
-  warning: { icon: <AlertTriangle className="w-3 h-3" />, color: 'text-yellow-400', bg: 'bg-yellow-500/20', border: 'border-yellow-500' },
-  advisory: { icon: <AlertTriangle className="w-3 h-3" />, color: 'text-yellow-400', bg: 'bg-yellow-500/20', border: 'border-yellow-500' },
-  minor: { icon: <Info className="w-3 h-3" />, color: 'text-blue-400', bg: 'bg-blue-500/20', border: 'border-blue-500' },
-  info: { icon: <Info className="w-3 h-3" />, color: 'text-gray-400', bg: 'bg-gray-500/20', border: 'border-gray-500' },
+  critical: { icon: <AlertCircle className="w-3 h-3" />, color: 'text-red-400', bg: 'bg-red-500/20', border: 'border-red-500', markerColor: '#ef4444' },
+  emergency: { icon: <AlertCircle className="w-3 h-3" />, color: 'text-red-400', bg: 'bg-red-500/20', border: 'border-red-500', markerColor: '#ef4444' },
+  major: { icon: <AlertTriangle className="w-3 h-3" />, color: 'text-orange-400', bg: 'bg-orange-500/20', border: 'border-orange-500', markerColor: '#f97316' },
+  warning: { icon: <AlertTriangle className="w-3 h-3" />, color: 'text-yellow-400', bg: 'bg-yellow-500/20', border: 'border-yellow-500', markerColor: '#eab308' },
+  advisory: { icon: <AlertTriangle className="w-3 h-3" />, color: 'text-yellow-400', bg: 'bg-yellow-500/20', border: 'border-yellow-500', markerColor: '#eab308' },
+  minor: { icon: <Info className="w-3 h-3" />, color: 'text-blue-400', bg: 'bg-blue-500/20', border: 'border-blue-500', markerColor: '#3b82f6' },
+  info: { icon: <Info className="w-3 h-3" />, color: 'text-gray-400', bg: 'bg-gray-500/20', border: 'border-gray-500', markerColor: '#6b7280' },
 };
 
 const TypeIcon = ({ type }: { type: string }) => {
@@ -78,6 +83,7 @@ export function AlertsTab({ regionId }: AlertsTabProps) {
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedAlert, setSelectedAlert] = useState<Alert | null>(null);
+  const [mapboxToken, setMapboxToken] = useState<string>('');
   
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSeverity, setSelectedSeverity] = useState<string>('all');
@@ -86,6 +92,19 @@ export function AlertsTab({ regionId }: AlertsTabProps) {
   const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'severity'>('newest');
   
   const [viewMode, setViewMode] = useState<'list' | 'compact' | 'timeline'>('list');
+  const [showMap, setShowMap] = useState(true);
+  const [hoveredAlertId, setHoveredAlertId] = useState<number | null>(null);
+  
+  const mapContainer = useRef<HTMLDivElement>(null);
+  const map = useRef<mapboxgl.Map | null>(null);
+  const markersRef = useRef<mapboxgl.Marker[]>([]);
+
+  useEffect(() => {
+    fetch('/api/config/mapbox-token')
+      .then(r => r.json())
+      .then(data => setMapboxToken(data.token || ''))
+      .catch(() => setMapboxToken(''));
+  }, []);
 
   useEffect(() => {
     fetchAlerts();
@@ -166,6 +185,108 @@ export function AlertsTab({ regionId }: AlertsTabProps) {
     return filtered;
   }, [alerts, searchQuery, selectedSeverity, selectedType, selectedRegion, sortBy]);
 
+  useEffect(() => {
+    if (!mapContainer.current || !showMap || !mapboxToken) return;
+    if (map.current) return;
+
+    mapboxgl.accessToken = mapboxToken;
+    map.current = new mapboxgl.Map({
+      container: mapContainer.current,
+      style: 'mapbox://styles/mapbox/dark-v11',
+      center: [-123.1207, 49.2827],
+      zoom: 5,
+    });
+
+    map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
+
+    return () => {
+      map.current?.remove();
+      map.current = null;
+    };
+  }, [showMap, mapboxToken]);
+
+  useEffect(() => {
+    if (!map.current || !showMap) return;
+
+    markersRef.current.forEach(m => m.remove());
+    markersRef.current = [];
+
+    const alertsWithCoords = filteredAlerts.filter(a => {
+      const lat = (a.metadata as Record<string, unknown>)?.latitude || a.region_lat;
+      const lng = (a.metadata as Record<string, unknown>)?.longitude || a.region_lng;
+      return lat && lng;
+    });
+
+    alertsWithCoords.forEach(alert => {
+      const config = severityConfig[alert.severity] || severityConfig.info;
+      const lat = Number((alert.metadata as Record<string, unknown>)?.latitude || alert.region_lat);
+      const lng = Number((alert.metadata as Record<string, unknown>)?.longitude || alert.region_lng);
+      
+      const el = document.createElement('div');
+      el.style.cssText = `
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        background: ${config.markerColor};
+        border: 2px solid white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: transform 0.2s;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+      `;
+      
+      el.addEventListener('click', () => setSelectedAlert(alert));
+      el.addEventListener('mouseenter', () => {
+        setHoveredAlertId(alert.id);
+        el.style.transform = 'scale(1.3)';
+      });
+      el.addEventListener('mouseleave', () => {
+        setHoveredAlertId(null);
+        el.style.transform = 'scale(1)';
+      });
+
+      const marker = new mapboxgl.Marker(el)
+        .setLngLat([lng, lat])
+        .setPopup(
+          new mapboxgl.Popup({ offset: 15 }).setHTML(`
+            <div style="padding: 8px; max-width: 200px;">
+              <strong style="color: #333;">${alert.headline}</strong>
+              <p style="margin: 4px 0 0; color: #666; font-size: 12px;">
+                ${alert.region_name || 'Unknown region'}
+              </p>
+            </div>
+          `)
+        )
+        .addTo(map.current!);
+      
+      markersRef.current.push(marker);
+    });
+
+    if (alertsWithCoords.length > 0 && map.current) {
+      const bounds = new mapboxgl.LngLatBounds();
+      alertsWithCoords.forEach(a => {
+        const lat = Number((a.metadata as Record<string, unknown>)?.latitude || a.region_lat);
+        const lng = Number((a.metadata as Record<string, unknown>)?.longitude || a.region_lng);
+        bounds.extend([lng, lat]);
+      });
+      map.current.fitBounds(bounds, { padding: 50, maxZoom: 10 });
+    }
+  }, [filteredAlerts, showMap, mapboxToken]);
+
+  function flyToAlert(alert: Alert) {
+    const lat = (alert.metadata as Record<string, unknown>)?.latitude || alert.region_lat;
+    const lng = (alert.metadata as Record<string, unknown>)?.longitude || alert.region_lng;
+    if (map.current && lat && lng) {
+      map.current.flyTo({
+        center: [Number(lng), Number(lat)],
+        zoom: 12,
+        duration: 1000
+      });
+    }
+  }
+
   const severityCounts = useMemo(() => {
     const counts: Record<string, number> = {};
     alerts.forEach(a => {
@@ -239,8 +360,18 @@ export function AlertsTab({ regionId }: AlertsTabProps) {
         </div>
 
         <div className="flex flex-wrap gap-3 mt-4">
+          <Button
+            variant={showMap ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setShowMap(!showMap)}
+            data-testid="button-toggle-map"
+          >
+            <MapIcon className="w-4 h-4 mr-1" />
+            {showMap ? 'Hide Map' : 'Show Map'}
+          </Button>
+
           <Select value={selectedType} onValueChange={setSelectedType}>
-            <SelectTrigger className="w-[180px]" data-testid="select-alert-type">
+            <SelectTrigger className="w-[160px]" data-testid="select-alert-type">
               <SelectValue placeholder="All Types" />
             </SelectTrigger>
             <SelectContent>
@@ -252,7 +383,7 @@ export function AlertsTab({ regionId }: AlertsTabProps) {
           </Select>
 
           <Select value={selectedRegion} onValueChange={setSelectedRegion}>
-            <SelectTrigger className="w-[180px]" data-testid="select-alert-region">
+            <SelectTrigger className="w-[160px]" data-testid="select-alert-region">
               <SelectValue placeholder="All Regions" />
             </SelectTrigger>
             <SelectContent>
@@ -264,7 +395,7 @@ export function AlertsTab({ regionId }: AlertsTabProps) {
           </Select>
 
           <Select value={sortBy} onValueChange={(v) => setSortBy(v as typeof sortBy)}>
-            <SelectTrigger className="w-[150px]" data-testid="select-sort">
+            <SelectTrigger className="w-[140px]" data-testid="select-sort">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -282,7 +413,7 @@ export function AlertsTab({ regionId }: AlertsTabProps) {
               }`}
               data-testid="view-mode-list"
             >
-              <List className="w-4 h-4" /> List
+              <List className="w-4 h-4" />
             </button>
             <button
               onClick={() => setViewMode('compact')}
@@ -291,7 +422,7 @@ export function AlertsTab({ regionId }: AlertsTabProps) {
               }`}
               data-testid="view-mode-compact"
             >
-              <LayoutGrid className="w-4 h-4" /> Compact
+              <LayoutGrid className="w-4 h-4" />
             </button>
             <button
               onClick={() => setViewMode('timeline')}
@@ -300,7 +431,7 @@ export function AlertsTab({ regionId }: AlertsTabProps) {
               }`}
               data-testid="view-mode-timeline"
             >
-              <Calendar className="w-4 h-4" /> Timeline
+              <Calendar className="w-4 h-4" />
             </button>
           </div>
         </div>
@@ -324,143 +455,153 @@ export function AlertsTab({ regionId }: AlertsTabProps) {
         )}
       </div>
 
-      {viewMode === 'list' && (
-        <div className="space-y-3">
-          {filteredAlerts.map(alert => (
+      <div className={`grid ${showMap ? 'grid-cols-1 lg:grid-cols-2' : 'grid-cols-1'} gap-4`}>
+        <div className={`space-y-3 ${showMap ? 'max-h-[70vh] overflow-y-auto pr-2' : ''}`}>
+          {viewMode === 'list' && filteredAlerts.map(alert => (
             <AlertCard
               key={alert.id}
               alert={alert}
-              onClick={() => setSelectedAlert(alert)}
+              isHovered={hoveredAlertId === alert.id}
+              onHover={(hovered) => setHoveredAlertId(hovered ? alert.id : null)}
+              onClick={() => {
+                setSelectedAlert(alert);
+                flyToAlert(alert);
+              }}
             />
           ))}
-        </div>
-      )}
 
-      {viewMode === 'compact' && (
-        <div className="bg-card rounded-xl overflow-hidden border">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b text-left text-muted-foreground text-sm">
-                <th className="px-4 py-3">Severity</th>
-                <th className="px-4 py-3">Type</th>
-                <th className="px-4 py-3">Headline</th>
-                <th className="px-4 py-3">Region</th>
-                <th className="px-4 py-3">Time</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {filteredAlerts.map(alert => {
-                const config = severityConfig[alert.severity] || severityConfig.info;
-                return (
-                  <tr 
-                    key={alert.id} 
-                    className="hover:bg-muted/50 cursor-pointer"
-                    onClick={() => setSelectedAlert(alert)}
-                    data-testid={`alert-row-${alert.id}`}
-                  >
-                    <td className="px-4 py-3">
-                      <span className={`px-2 py-1 rounded text-xs font-medium inline-flex items-center gap-1 ${config.bg} ${config.color}`}>
-                        {config.icon} {alert.severity}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-sm text-muted-foreground">
-                      <span className="flex items-center gap-1">
-                        <TypeIcon type={alert.alert_type} />
-                        {alert.alert_type?.replace(/_/g, ' ')}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-sm truncate max-w-md">
-                      {alert.headline}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-muted-foreground">
-                      {alert.region_name}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-muted-foreground">
-                      {getTimeAgo(new Date(alert.created_at))}
-                    </td>
+          {viewMode === 'compact' && (
+            <div className="bg-card rounded-xl overflow-hidden border">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b text-left text-muted-foreground text-sm">
+                    <th className="px-4 py-3">Severity</th>
+                    <th className="px-4 py-3">Headline</th>
+                    <th className="px-4 py-3">Time</th>
                   </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
+                </thead>
+                <tbody className="divide-y">
+                  {filteredAlerts.map(alert => {
+                    const config = severityConfig[alert.severity] || severityConfig.info;
+                    return (
+                      <tr 
+                        key={alert.id} 
+                        className={`cursor-pointer transition-colors ${hoveredAlertId === alert.id ? 'bg-primary/10' : 'hover:bg-muted/50'}`}
+                        onClick={() => { setSelectedAlert(alert); flyToAlert(alert); }}
+                        onMouseEnter={() => setHoveredAlertId(alert.id)}
+                        onMouseLeave={() => setHoveredAlertId(null)}
+                      >
+                        <td className="px-4 py-3">
+                          <span className={`px-2 py-1 rounded text-xs font-medium inline-flex items-center gap-1 ${config.bg} ${config.color}`}>
+                            {config.icon} {alert.severity}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-sm truncate max-w-xs">
+                          {alert.headline}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-muted-foreground">
+                          {getTimeAgo(new Date(alert.created_at))}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
 
-      {viewMode === 'timeline' && (
-        <div className="relative">
-          <div className="absolute left-8 top-0 bottom-0 w-0.5 bg-border"></div>
-          <div className="space-y-4">
-            {filteredAlerts.map((alert, idx) => {
-              const config = severityConfig[alert.severity] || severityConfig.info;
-              const showDate = idx === 0 || 
-                new Date(alert.created_at).toDateString() !== 
-                new Date(filteredAlerts[idx - 1].created_at).toDateString();
-              
-              return (
-                <div key={alert.id}>
-                  {showDate && (
-                    <div className="ml-16 mb-2 text-sm text-muted-foreground font-medium">
-                      {new Date(alert.created_at).toLocaleDateString('en-US', {
-                        weekday: 'long',
-                        month: 'long',
-                        day: 'numeric'
-                      })}
-                    </div>
-                  )}
-                  <div className="flex items-start gap-4">
-                    <div className={`w-4 h-4 rounded-full ${config.bg} ${config.border} border-2 mt-1 z-10 flex items-center justify-center`}>
-                      <CircleDot className="w-2 h-2" />
-                    </div>
-                    <div className="text-xs text-muted-foreground w-16 pt-1">
-                      {new Date(alert.created_at).toLocaleTimeString('en-US', {
-                        hour: 'numeric',
-                        minute: '2-digit'
-                      })}
-                    </div>
-                    <div 
-                      className={`flex-1 bg-card rounded-lg p-4 border-l-4 ${config.border} cursor-pointer hover:bg-muted/50 border`}
-                      onClick={() => setSelectedAlert(alert)}
-                      data-testid={`timeline-alert-${alert.id}`}
-                    >
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className={`text-xs font-semibold uppercase ${config.color} flex items-center gap-1`}>
-                          {config.icon} {alert.severity}
-                        </span>
-                        <span className="text-muted-foreground">-</span>
-                        <span className="text-xs text-muted-foreground flex items-center gap-1">
-                          <TypeIcon type={alert.alert_type} />
-                          {alert.alert_type?.replace(/_/g, ' ')}
-                        </span>
+          {viewMode === 'timeline' && (
+            <div className="relative">
+              <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-border"></div>
+              <div className="space-y-4">
+                {filteredAlerts.map((alert, idx) => {
+                  const config = severityConfig[alert.severity] || severityConfig.info;
+                  const showDate = idx === 0 || 
+                    new Date(alert.created_at).toDateString() !== 
+                    new Date(filteredAlerts[idx - 1].created_at).toDateString();
+                  
+                  return (
+                    <div key={alert.id}>
+                      {showDate && (
+                        <div className="ml-8 mb-2 text-sm text-muted-foreground font-medium">
+                          {new Date(alert.created_at).toLocaleDateString('en-US', {
+                            weekday: 'short', month: 'short', day: 'numeric'
+                          })}
+                        </div>
+                      )}
+                      <div className="flex items-start gap-3">
+                        <div className={`w-3 h-3 rounded-full mt-1 z-10`} style={{ background: config.markerColor }}></div>
+                        <div 
+                          className={`flex-1 bg-card rounded-lg p-3 border cursor-pointer transition-all ${
+                            hoveredAlertId === alert.id ? 'ring-2 ring-primary' : 'hover:bg-muted/50'
+                          }`}
+                          onClick={() => { setSelectedAlert(alert); flyToAlert(alert); }}
+                          onMouseEnter={() => setHoveredAlertId(alert.id)}
+                          onMouseLeave={() => setHoveredAlertId(null)}
+                        >
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className={`text-xs font-semibold uppercase ${config.color}`}>
+                              {alert.severity}
+                            </span>
+                            <span className="text-xs text-muted-foreground">
+                              {new Date(alert.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+                            </span>
+                          </div>
+                          <h4 className="font-medium text-sm">{alert.headline}</h4>
+                        </div>
                       </div>
-                      <h4 className="font-medium">{alert.headline}</h4>
-                      <p className="text-muted-foreground text-sm mt-1">{alert.region_name}</p>
                     </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
-      {filteredAlerts.length === 0 && (
-        <div className="bg-card rounded-xl p-12 text-center border">
-          <CheckCircle className="w-12 h-12 mx-auto text-muted-foreground" />
-          <p className="text-muted-foreground mt-2">No alerts match your filters</p>
-          <Button
-            variant="ghost"
-            onClick={() => {
-              setSearchQuery('');
-              setSelectedSeverity('all');
-              setSelectedType('all');
-              setSelectedRegion('all');
-            }}
-            className="mt-4"
-          >
-            Clear filters
-          </Button>
+          {filteredAlerts.length === 0 && (
+            <div className="bg-card rounded-xl p-12 text-center border">
+              <CheckCircle className="w-12 h-12 mx-auto text-muted-foreground" />
+              <p className="text-muted-foreground mt-2">No alerts match your filters</p>
+              <Button variant="ghost" onClick={() => {
+                setSearchQuery('');
+                setSelectedSeverity('all');
+                setSelectedType('all');
+                setSelectedRegion('all');
+              }} className="mt-4">
+                Clear filters
+              </Button>
+            </div>
+          )}
         </div>
-      )}
+
+        {showMap && (
+          <div 
+            className="bg-card rounded-xl overflow-hidden border relative"
+            style={{ height: '70vh', isolation: 'isolate', contain: 'layout paint' }}
+          >
+            <div ref={mapContainer} className="w-full h-full" />
+            
+            <div className="absolute bottom-4 left-4 bg-card/90 rounded-lg p-3 border">
+              <h4 className="text-xs font-semibold mb-2">Alert Severity</h4>
+              <div className="space-y-1">
+                {['critical', 'major', 'warning', 'minor', 'info'].map(sev => {
+                  const cfg = severityConfig[sev];
+                  return (
+                    <div key={sev} className="flex items-center gap-2 text-xs">
+                      <div className="w-3 h-3 rounded-full" style={{ background: cfg.markerColor }}></div>
+                      <span className={cfg.color}>{sev}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+            
+            <div className="absolute top-4 left-4 bg-card/90 rounded-lg px-3 py-2 border">
+              <span className="font-semibold">{filteredAlerts.length}</span>
+              <span className="text-muted-foreground text-sm ml-1">alerts</span>
+            </div>
+          </div>
+        )}
+      </div>
 
       {selectedAlert && (
         <AlertDetailModal
@@ -474,16 +615,22 @@ export function AlertsTab({ regionId }: AlertsTabProps) {
 
 interface AlertCardProps {
   alert: Alert;
+  isHovered?: boolean;
+  onHover?: (hovered: boolean) => void;
   onClick: () => void;
 }
 
-function AlertCard({ alert, onClick }: AlertCardProps) {
+function AlertCard({ alert, isHovered, onHover, onClick }: AlertCardProps) {
   const config = severityConfig[alert.severity] || severityConfig.info;
   
   return (
     <div
-      className={`bg-card rounded-xl p-4 border-l-4 ${config.border} cursor-pointer hover:bg-muted/50 transition-colors border`}
+      className={`bg-card rounded-xl p-4 border-l-4 cursor-pointer transition-all border ${config.border} ${
+        isHovered ? 'ring-2 ring-primary bg-primary/5' : 'hover:bg-muted/50'
+      }`}
       onClick={onClick}
+      onMouseEnter={() => onHover?.(true)}
+      onMouseLeave={() => onHover?.(false)}
       data-testid={`alert-card-${alert.id}`}
     >
       <div className="flex items-start justify-between gap-4">
@@ -497,34 +644,23 @@ function AlertCard({ alert, onClick }: AlertCardProps) {
               <TypeIcon type={alert.alert_type} />
               {alert.alert_type?.replace(/_/g, ' ')}
             </span>
-            <span className="text-muted-foreground">-</span>
-            <span className="text-sm text-muted-foreground flex items-center gap-1">
+          </div>
+          
+          <h3 className="font-medium">{alert.headline}</h3>
+          
+          <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
+            <span className="flex items-center gap-1">
               <MapPin className="w-3 h-3" />
               {alert.region_name}
             </span>
-          </div>
-          
-          <h3 className="font-medium text-lg">{alert.headline}</h3>
-          
-          {alert.description && (
-            <p className="text-muted-foreground text-sm mt-2 line-clamp-2">{alert.description}</p>
-          )}
-          
-          <div className="flex items-center gap-4 mt-3 text-xs text-muted-foreground">
             <span className="flex items-center gap-1">
               <Clock className="w-3 h-3" />
               {getTimeAgo(new Date(alert.created_at))}
             </span>
-            {alert.source && (
-              <span className="flex items-center gap-1">
-                <Radio className="w-3 h-3" />
-                {alert.source}
-              </span>
-            )}
           </div>
         </div>
         
-        <ArrowRight className="w-5 h-5 text-muted-foreground" />
+        <ArrowRight className="w-5 h-5 text-muted-foreground flex-shrink-0" />
       </div>
     </div>
   );
@@ -547,7 +683,7 @@ function AlertDetailModal({ alert, onClose }: AlertDetailModalProps) {
   }, [onClose]);
   
   return (
-    <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4" onClick={onClose} data-testid="alert-detail-modal">
+    <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4" onClick={onClose}>
       <div 
         className="max-w-2xl w-full bg-card rounded-xl overflow-hidden border"
         onClick={e => e.stopPropagation()}
@@ -611,15 +747,6 @@ function AlertDetailModal({ alert, onClose }: AlertDetailModalProps) {
               </div>
             )}
           </div>
-          
-          {alert.metadata && Object.keys(alert.metadata).length > 0 && (
-            <div className="mt-6 p-4 bg-muted rounded-lg">
-              <h4 className="text-muted-foreground text-sm uppercase mb-2">Additional Details</h4>
-              <pre className="text-xs overflow-x-auto">
-                {JSON.stringify(alert.metadata, null, 2)}
-              </pre>
-            </div>
-          )}
         </div>
       </div>
     </div>
