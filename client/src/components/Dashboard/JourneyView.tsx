@@ -11,7 +11,7 @@ import {
   Car, Ship, Bus, Train, Plane, Sailboat, Footprints, Bike,
   Snowflake, Waves, Wine, Flame, Camera, Eye, Tent, Building,
   Home, Utensils, BedDouble, Flag, Lightbulb, ExternalLink,
-  Share2, Calendar, Bookmark, Cloud, Route, AlertTriangle, Anchor
+  Share2, Calendar, Bookmark, Cloud, Route, AlertTriangle, Anchor, Video
 } from 'lucide-react';
 
 interface JourneyViewProps {
@@ -553,6 +553,7 @@ function WebcamThumbnail({ webcam, small = false }: { webcam: any; small?: boole
   const [imageError, setImageError] = useState(false);
   const rawUrl = webcam.image_url || webcam.metadata?.direct_feed_url;
   const isImage = rawUrl && (rawUrl.endsWith('.jpg') || rawUrl.endsWith('.png') || rawUrl.includes('drivebc.ca'));
+  const isVideoStream = rawUrl && (rawUrl.includes('.m3u8') || rawUrl.includes('stream'));
   const imageUrl = isImage && rawUrl ? `${rawUrl}?t=${Date.now()}` : null;
 
   return (
@@ -565,8 +566,15 @@ function WebcamThumbnail({ webcam, small = false }: { webcam: any; small?: boole
           onError={() => setImageError(true)}
         />
       ) : (
-        <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-          <Camera className="w-6 h-6" />
+        <div className="w-full h-full flex flex-col items-center justify-center text-muted-foreground">
+          {isVideoStream ? (
+            <>
+              <Video className="w-6 h-6" />
+              <span className="text-xs mt-1">Live Stream</span>
+            </>
+          ) : (
+            <Camera className="w-6 h-6" />
+          )}
         </div>
       )}
       <div className="absolute top-1 left-1 flex items-center gap-1 bg-black/60 rounded px-1.5 py-0.5">

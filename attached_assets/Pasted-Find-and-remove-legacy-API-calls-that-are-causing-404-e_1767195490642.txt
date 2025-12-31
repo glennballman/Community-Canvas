@@ -1,0 +1,60 @@
+Find and remove legacy API calls that are causing 404 errors. The diagnostic found old fetch calls to /api/weather and /api/ferry-status that no longer exist.
+
+=== STEP 1: Find Legacy Calls ===
+
+Search the entire client/src directory for these patterns:
+- /api/weather
+- /api/ferry-status
+- /api/ferry
+- fetchWeather
+- fetchFerryStatus
+
+Run this command and show me the results:
+```bash
+echo "=== Searching for legacy API calls ==="
+grep -r "/api/weather" client/src/ --include="*.tsx" --include="*.ts" -n
+grep -r "/api/ferry" client/src/ --include="*.tsx" --include="*.ts" -n
+grep -r "fetchWeather" client/src/ --include="*.tsx" --include="*.ts" -n
+grep -r "fetchFerryStatus" client/src/ --include="*.tsx" --include="*.ts" -n
+```
+
+=== STEP 2: Remove or Update Legacy Calls ===
+
+For each file found:
+
+1. If it's in JourneyView.tsx or RoadTripsTab.tsx:
+   - The conditions are now fetched from `/api/v1/trips/:id/conditions`
+   - Remove any separate weather/ferry fetch calls
+   - Use the conditions response which already includes weather and ferry_status
+
+2. If it's in Overview or other dashboard components:
+   - These might be legitimate calls for the main dashboard
+   - Check if there's a working endpoint or if it needs to use a different data source
+
+=== STEP 3: Verify No Console Errors ===
+
+After cleanup, the browser console should not show any 404 errors for API calls.
+
+=== STEP 4: Add Whistler Webcam Note (Optional) ===
+
+Since some Whistler webcams are video streams (not static images), we could add a small indicator. In the WebcamThumbnail component, when showing the placeholder for video streams:
+```tsx
+// If it's a video stream, show a different indicator
+const isVideoStream = rawUrl && (rawUrl.includes('.m3u8') || rawUrl.includes('stream'));
+
+// In the placeholder display:
+{!imageUrl && (
+  <div className="w-full h-full flex flex-col items-center justify-center text-gray-500">
+    <span className="text-2xl">{isVideoStream ? '🎥' : '📷'}</span>
+    {isVideoStream && <span className="text-xs mt-1">Live Video</span>}
+  </div>
+)}
+```
+
+=== EXPECTED OUTCOME ===
+
+1. No more 404 errors in browser console
+2. All data comes from the proper /api/v1/trips endpoints
+3. Video stream webcams show a "Live Video" indicator instead of broken image
+
+Show me what legacy calls you find and what changes you make.
