@@ -15,6 +15,7 @@ import { VehicleProfileForm } from './VehicleProfileForm';
 import { TripQualificationCheck } from './TripQualificationCheck';
 import { ServiceRunsBoard } from './ServiceRunsBoard';
 import { RouteExplorer } from './RouteExplorer';
+import { QuickTripQualification } from './QuickTripQualification';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -186,6 +187,20 @@ export function TripPlanningTab() {
           </CardContent>
         </Card>
       </div>
+
+      {currentParticipant && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Target className="w-5 h-5 text-primary" />
+              Trips Based on Your Skills
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <QuickTripQualification participantId={currentParticipant.id} />
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card 

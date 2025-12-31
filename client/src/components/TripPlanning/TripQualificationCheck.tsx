@@ -10,7 +10,12 @@ import {
   ChevronRight,
   Loader2,
   BookOpen,
-  Lightbulb
+  Lightbulb,
+  ClipboardList,
+  Sparkles,
+  GraduationCap,
+  Dumbbell,
+  Monitor
 } from 'lucide-react';
 import { ParticipantProfile, VehicleProfile, TripAssessment, RouteAssessment, skillLevelColors, SkillLevel } from '../../types/tripPlanning';
 import { RoadTrip } from '../../types/roadtrips';
@@ -265,6 +270,81 @@ export function TripQualificationCheck({ participant, vehicle, onBack }: TripQua
                           </p>
                         ))}
                       </div>
+                    )}
+
+                    {!isQualified && assessment.required_actions && assessment.required_actions.length > 0 && (
+                      <Card className="mt-4 bg-blue-500/10 border-blue-500/20">
+                        <CardContent className="pt-4 pb-4">
+                          <h4 className="text-blue-400 font-semibold mb-3 flex items-center gap-2">
+                            <ClipboardList className="w-4 h-4" />
+                            Your Path to Qualification
+                          </h4>
+                          <div className="space-y-3">
+                            {assessment.required_actions.map((action: any, idx: number) => (
+                              <div key={idx} className="flex items-start gap-3">
+                                <span className="flex-shrink-0 w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-bold">
+                                  {idx + 1}
+                                </span>
+                                <div className="flex-1">
+                                  <p className="font-medium capitalize">
+                                    Get {action.skill_type.replace(/_/g, ' ')} to {action.required_level} level
+                                  </p>
+                                  {action.resolution_options && action.resolution_options.length > 0 && (
+                                    <div className="mt-1 space-y-1">
+                                      {action.resolution_options.map((opt: any, optIdx: number) => (
+                                        <p key={optIdx} className="text-muted-foreground text-sm flex items-center gap-1">
+                                          {opt.type === 'course' && (
+                                            <>
+                                              <GraduationCap className="w-3 h-3 text-blue-400" />
+                                              <span className="text-blue-400">{opt.provider}</span> - {opt.duration} {opt.cost > 0 ? `($${opt.cost})` : '(Free)'}
+                                            </>
+                                          )}
+                                          {opt.type === 'experience' && (
+                                            <>
+                                              <Dumbbell className="w-3 h-3 text-blue-400" />
+                                              {opt.description}
+                                            </>
+                                          )}
+                                          {opt.type === 'online' && (
+                                            <>
+                                              <Monitor className="w-3 h-3 text-blue-400" />
+                                              <span className="text-blue-400">{opt.provider}</span> - {opt.duration} {opt.cost === 0 ? '(Free!)' : `($${opt.cost})`}
+                                            </>
+                                          )}
+                                        </p>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                          
+                          <div className="mt-4 pt-4 border-t border-blue-500/20">
+                            <p className="text-muted-foreground text-sm flex items-center gap-1">
+                              <Lightbulb className="w-3 h-3" />
+                              Once you've completed these steps, update your profile and check again!
+                            </p>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )}
+
+                    {isQualified && (
+                      <Card className="mt-4 bg-green-500/10 border-green-500/20">
+                        <CardContent className="pt-4 pb-4">
+                          <h4 className="text-green-400 font-semibold mb-2 flex items-center gap-2">
+                            <Sparkles className="w-4 h-4" />
+                            You're Ready!
+                          </h4>
+                          <p className="text-muted-foreground text-sm">
+                            You have all the required skills for this trip.
+                            {assessment.warnings && assessment.warnings.length > 0 && (
+                              <span> Consider the recommendations above for an even better experience.</span>
+                            )}
+                          </p>
+                        </CardContent>
+                      </Card>
                     )}
                   </div>
                 )}
