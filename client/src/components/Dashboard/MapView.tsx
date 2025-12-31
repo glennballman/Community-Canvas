@@ -1,10 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
-import { Map, Loader2, Filter } from 'lucide-react';
+import { Loader2, Filter } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-
-mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN || '';
 
 interface Entity {
   id: number;
@@ -65,6 +63,22 @@ export function MapView({ regionId }: MapViewProps) {
   const [selectedType, setSelectedType] = useState<string>('all');
   const [mapLoaded, setMapLoaded] = useState(false);
   const [stats, setStats] = useState({ total: 0, visible: 0 });
+  const [mapboxToken, setMapboxToken] = useState<string>('');
+
+  useEffect(() => {
+    async function fetchToken() {
+      try {
+        const res = await fetch('/api/config/mapbox-token');
+        const data = await res.json();
+        if (data.token) {
+          setMapboxToken(data.token);
+        }
+      } catch (error) {
+        console.error('Failed to fetch Mapbox token:', error);
+      }
+    }
+    fetchToken();
+  }, []);
 
   useEffect(() => {
     fetchEntities();
@@ -90,7 +104,9 @@ export function MapView({ regionId }: MapViewProps) {
   }
 
   useEffect(() => {
-    if (!mapContainer.current || map.current) return;
+    if (!mapContainer.current || map.current || !mapboxToken) return;
+
+    mapboxgl.accessToken = mapboxToken;
 
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
@@ -112,7 +128,7 @@ export function MapView({ regionId }: MapViewProps) {
       map.current?.remove();
       map.current = null;
     };
-  }, []);
+  }, [mapboxToken]);
 
   useEffect(() => {
     if (!map.current || !mapLoaded || entities.length === 0) return;
