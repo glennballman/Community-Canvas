@@ -58,7 +58,7 @@ export function RouteExplorer({ vehicle, onBack }: RouteExplorerProps) {
     setLoading(true);
     try {
       const [segmentsRes, providersRes] = await Promise.all([
-        fetch('/api/v1/planning/routes/segments'),
+        fetch('/api/v1/planning/route-segments'),
         fetch('/api/v1/planning/transport-providers')
       ]);
       
@@ -77,7 +77,7 @@ export function RouteExplorer({ vehicle, onBack }: RouteExplorerProps) {
   async function selectSegment(segment: RouteSegment) {
     setSelectedSegment(segment);
     try {
-      const altRes = await fetch(`/api/v1/planning/routes/segments/${segment.id}/alternatives`);
+      const altRes = await fetch(`/api/v1/planning/route-segments/${segment.id}/alternatives`);
       const altData = await altRes.json();
       setAlternatives(altData.alternatives || []);
     } catch (error) {
@@ -247,6 +247,44 @@ export function RouteExplorer({ vehicle, onBack }: RouteExplorerProps) {
                         ))}
                       </div>
                     </div>
+                  )}
+
+                  {selectedSegment.route_type === 'logging_road' && (
+                    <Card className="bg-orange-500/10 border-orange-500/20">
+                      <CardContent className="pt-3 pb-3">
+                        <p className="text-orange-400 font-medium mb-2 flex items-center gap-2">
+                          <AlertTriangle className="w-4 h-4" />
+                          Logging Road Safety
+                        </p>
+                        <ul className="text-sm text-muted-foreground space-y-1">
+                          <li>Logging trucks have RIGHT OF WAY - pull over and stop</li>
+                          <li>Drive with headlights ON at all times</li>
+                          <li>Use VHF radio channel if available (check signage)</li>
+                          <li>Industrial traffic typically Mon-Fri 6am-6pm</li>
+                          <li>Watch for potholes, washouts, and wildlife</li>
+                          <li>Carry emergency supplies: food, water, first aid</li>
+                          <li>Tell someone your plans and expected arrival time</li>
+                        </ul>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {selectedSegment.winter_tires_required && (
+                    <Card className="bg-blue-500/10 border-blue-500/20">
+                      <CardContent className="pt-3 pb-3">
+                        <p className="text-blue-400 font-medium mb-2 flex items-center gap-2">
+                          <Snowflake className="w-4 h-4" />
+                          Winter Tire Requirements
+                        </p>
+                        <ul className="text-sm text-muted-foreground space-y-1">
+                          <li>Winter tires required Oct 1 - Apr 30</li>
+                          <li>Look for M+S or Mountain Snowflake symbol</li>
+                          <li>Minimum 3.5mm tread depth</li>
+                          <li>Chains may be required in severe conditions</li>
+                          <li>Check DriveBC before departure</li>
+                        </ul>
+                      </CardContent>
+                    </Card>
                   )}
 
                   {vehicle && (

@@ -1,0 +1,420 @@
+Let's test all Trip Planning features and fix any issues, then add meaningful skill requirements so the qualification check actually works.
+
+=== PART 1: Test Current Features ===
+
+First, let's verify the API endpoints are working. Run these curl tests and report the output:
+```bash
+echo "=== Testing Trip Planning APIs ==="
+
+echo -e "\n1. GET /api/v1/planning/routes"
+curl -s http://localhost:5000/api/v1/planning/routes | head -50
+
+echo -e "\n2. GET /api/v1/planning/transport-providers"
+curl -s http://localhost:5000/api/v1/planning/transport-providers | head -50
+
+echo -e "\n3. GET /api/v1/planning/routes/bamfield-road"
+curl -s http://localhost:5000/api/v1/planning/routes/bamfield-road
+
+echo -e "\n4. GET /api/v1/planning/service-runs?upcoming_only=true"
+curl -s "http://localhost:5000/api/v1/planning/service-runs?upcoming_only=true"
+
+echo -e "\n5. Check skill_requirements table"
+psql $DATABASE_URL -c "SELECT * FROM skill_requirements;"
+```
+
+=== PART 2: Add Comprehensive Skill Requirements ===
+
+The qualification check needs skill requirements linked to trips. Add this data:
+```sql
+-- =====================================================
+-- SKILL REQUIREMENTS FOR TRIPS
+-- Links trips to required skills for qualification check
+-- =====================================================
+
+-- Clear existing requirements
+DELETE FROM skill_requirements WHERE requirement_type = 'trip';
+
+-- BAMFIELD ADVENTURE - Challenging trip, needs multiple skills
+INSERT INTO skill_requirements (requirement_type, requirement_target_id, skill_category, skill_type, minimum_level, enforcement, resolution_options, notes) VALUES
+-- Driving skills for Bamfield Road
+('trip', 'bamfield-adventure', 'driving', 'gravel_road', 'intermediate', 'required', 
+ '[{"type": "experience", "description": "Practice on easier gravel roads like Squamish forest roads first"}]',
+ 'Bamfield Road is an active logging road - not for beginners'),
+
+('trip', 'bamfield-adventure', 'driving', 'mountain', 'intermediate', 'recommended',
+ '[{"type": "experience", "description": "Drive Highway 4 to Port Alberni a few times first"}]',
+ 'Highway 4 has mountain grades and can be foggy'),
+
+-- Paddling skills for kayaking segment
+('trip', 'bamfield-adventure', 'paddling', 'sea_kayak', 'intermediate', 'required',
+ '[{"type": "course", "provider": "Pacific Rim Paddle Sports", "location": "Ladysmith", "duration": "2 days", "cost": 350}]',
+ 'Multi-day sea kayaking in Barkley Sound requires solid skills'),
+
+('trip', 'bamfield-adventure', 'paddling', 'self_rescue', 'certified', 'required',
+ '[{"type": "course", "provider": "Pacific Rim Paddle Sports", "location": "Ladysmith", "duration": "3 hours", "cost": 75}, {"type": "course", "provider": "Deep Cove Kayak", "location": "Deep Cove", "duration": "3 hours", "cost": 85}]',
+ 'Self-rescue certification required for kayak rentals'),
+
+-- Safety skills
+('trip', 'bamfield-adventure', 'water_safety', 'vhf_radio', 'beginner', 'recommended',
+ '[{"type": "online", "provider": "BoatUS Foundation", "duration": "2 hours", "cost": 0, "description": "Free online VHF radio course"}]',
+ 'VHF radio recommended for marine emergencies'),
+
+('trip', 'bamfield-adventure', 'backcountry', 'bear_aware', 'beginner', 'recommended',
+ '[{"type": "online", "provider": "WildSafeBC", "duration": "1 hour", "cost": 0, "description": "Free online bear awareness course"}]',
+ 'Bears are common in Bamfield area');
+
+-- WHISTLER SKI DAY - Winter driving essential
+INSERT INTO skill_requirements (requirement_type, requirement_target_id, skill_category, skill_type, minimum_level, enforcement, resolution_options, notes) VALUES
+('trip', 'whistler-ski-day', 'driving', 'winter', 'intermediate', 'required',
+ '[{"type": "course", "provider": "Young Drivers", "location": "Vancouver", "duration": "4 hours", "cost": 200}, {"type": "experience", "description": "Practice in empty parking lots after snowfall"}]',
+ 'Sea to Sky Highway can be icy - winter driving skills essential'),
+
+('trip', 'whistler-ski-day', 'driving', 'mountain', 'beginner', 'recommended',
+ '[{"type": "experience", "description": "Drive Highway 99 in good conditions first to learn the road"}]',
+ 'Steep grades and curves require attention');
+
+-- TOFINO STORM WATCHING - Relatively easy but some skills helpful
+INSERT INTO skill_requirements (requirement_type, requirement_target_id, skill_category, skill_type, minimum_level, enforcement, resolution_options, notes) VALUES
+('trip', 'tofino-storm-watching', 'driving', 'mountain', 'beginner', 'recommended',
+ '[{"type": "experience", "description": "Highway 4 through the mountains is scenic but winding"}]',
+ 'Highway 4 has some mountain sections'),
+
+('trip', 'tofino-storm-watching', 'backcountry', 'bear_aware', 'beginner', 'advisory',
+ '[{"type": "online", "provider": "WildSafeBC", "duration": "1 hour", "cost": 0}]',
+ 'Bears possible on rainforest trails');
+
+-- SUNSHINE COAST LOOP - Ferry experience helpful
+INSERT INTO skill_requirements (requirement_type, requirement_target_id, skill_category, skill_type, minimum_level, enforcement, resolution_options, notes) VALUES
+('trip', 'sunshine-coast-loop', 'driving', 'standard', 'beginner', 'required',
+ '[]',
+ 'Standard driving skills needed'),
+
+('trip', 'sunshine-coast-loop', 'water_safety', 'boating_license', 'none', 'advisory',
+ '[{"type": "info", "description": "Ferries are passenger service - no boating license needed, but helpful to understand marine environment"}]',
+ 'Understanding ferry schedules and procedures helpful');
+
+-- OKANAGAN WINE TRAIL - Easiest trip
+INSERT INTO skill_requirements (requirement_type, requirement_target_id, skill_category, skill_type, minimum_level, enforcement, resolution_options, notes) VALUES
+('trip', 'okanagan-wine-trail', 'driving', 'standard', 'beginner', 'required',
+ '[]',
+ 'Easy driving on good roads');
+
+-- HARRISON HOT SPRINGS - Easy day trip
+INSERT INTO skill_requirements (requirement_type, requirement_target_id, skill_category, skill_type, minimum_level, enforcement, resolution_options, notes) VALUES
+('trip', 'harrison-hot-springs', 'driving', 'standard', 'beginner', 'required',
+ '[]',
+ 'Easy highway driving');
+
+-- Verify the data
+SELECT requirement_target_id as trip, skill_category, skill_type, minimum_level, enforcement 
+FROM skill_requirements 
+WHERE requirement_type = 'trip'
+ORDER BY requirement_target_id, enforcement DESC, skill_category;
+```
+
+=== PART 3: Fix the Qualification Check API ===
+
+The assess/participant-trip endpoint needs to properly match skills. Update the endpoint:
+
+In server/routes/tripPlanning.ts, find the `/assess/participant-trip` endpoint and ensure it handles the case where no requirements exist:
+```typescript
+// Assess participant for a trip
+router.post('/assess/participant-trip', async (req: Request, res: Response) => {
+  try {
+    const { participant_id, trip_id } = req.body;
+
+    if (!participant_id || !trip_id) {
+      return res.status(400).json({ error: 'participant_id and trip_id required' });
+    }
+
+    // Get participant skills
+    const skillsResult = await db.query(
+      'SELECT * FROM participant_skills WHERE participant_id = $1',
+      [participant_id]
+    );
+    const participantSkills = skillsResult.rows;
+
+    // Get trip requirements
+    const requirementsResult = await db.query(`
+      SELECT * FROM skill_requirements 
+      WHERE requirement_type = 'trip' AND requirement_target_id = $1
+      ORDER BY 
+        CASE enforcement 
+          WHEN 'required' THEN 1 
+          WHEN 'recommended' THEN 2 
+          ELSE 3 
+        END,
+        skill_category
+    `, [trip_id]);
+
+    const requirements = requirementsResult.rows;
+
+    // If no requirements defined, trip is open to all
+    if (requirements.length === 0) {
+      return res.json({
+        participant_id,
+        trip_id,
+        qualified: true,
+        gaps: [],
+        warnings: ['No specific skill requirements defined for this trip'],
+        required_actions: []
+      });
+    }
+
+    const assessment = {
+      participant_id,
+      trip_id,
+      qualified: true,
+      gaps: [] as any[],
+      warnings: [] as string[],
+      required_actions: [] as any[]
+    };
+
+    // Skill level hierarchy
+    const skillLevels = ['none', 'beginner', 'intermediate', 'advanced', 'expert', 'certified'];
+
+    for (const req of requirements) {
+      // Find matching skill
+      const hasSkill = participantSkills.find(
+        (s: any) => s.skill_category === req.skill_category && s.skill_type === req.skill_type
+      );
+
+      const requiredLevelIndex = skillLevels.indexOf(req.minimum_level);
+      const hasLevelIndex = hasSkill ? skillLevels.indexOf(hasSkill.skill_level) : 0;
+
+      // Check if skill meets requirement
+      if (hasLevelIndex < requiredLevelIndex) {
+        const gap = {
+          skill_category: req.skill_category,
+          skill_type: req.skill_type,
+          required_level: req.minimum_level,
+          current_level: hasSkill?.skill_level || 'none',
+          enforcement: req.enforcement,
+          resolution_options: req.resolution_options || [],
+          notes: req.notes
+        };
+
+        assessment.gaps.push(gap);
+
+        if (req.enforcement === 'required') {
+          assessment.qualified = false;
+          assessment.required_actions.push({
+            type: 'skill_upgrade',
+            ...gap
+          });
+        } else if (req.enforcement === 'recommended') {
+          assessment.warnings.push(
+            `Recommended: ${req.skill_type.replace(/_/g, ' ')} (${req.minimum_level}) - you have: ${hasSkill?.skill_level || 'none'}`
+          );
+        } else {
+          // Advisory - just note it
+          assessment.warnings.push(
+            `Consider: ${req.skill_type.replace(/_/g, ' ')} training for a better experience`
+          );
+        }
+      }
+    }
+
+    // Add summary
+    if (assessment.qualified) {
+      if (assessment.warnings.length > 0) {
+        assessment.warnings.unshift('You meet all required skills! Some recommendations below:');
+      }
+    } else {
+      assessment.warnings.unshift(`You need ${assessment.required_actions.length} skill(s) before this trip`);
+    }
+
+    res.json(assessment);
+  } catch (error) {
+    console.error('Error assessing participant:', error);
+    res.status(500).json({ error: 'Failed to assess participant' });
+  }
+});
+```
+
+=== PART 4: Add Sample Service Run ===
+
+Let's add a real service run for testing:
+```sql
+-- Add a sample service run
+INSERT INTO service_runs (
+  company_name, service_type, destination_region, planned_date, planned_duration_days,
+  total_job_slots, slots_filled, crew_size, crew_lead_name,
+  logistics_cost_total, minimum_job_value, status, booking_deadline,
+  contact_email, contact_phone, booking_notes
+) VALUES (
+  'Island Glass Co.',
+  'Glass Installation & Repair',
+  'Bamfield',
+  CURRENT_DATE + INTERVAL '14 days',
+  2,
+  8,
+  3,
+  3,
+  'Mike Thompson',
+  1600.00,
+  300.00,
+  'published',
+  CURRENT_DATE + INTERVAL '10 days',
+  'schedule@islandglass.ca',
+  '250-555-1234',
+  'Windows, doors, skylights, shower enclosures. Residential and commercial. Free estimates with booking.'
+),
+(
+  'West Coast Plumbing',
+  'Plumbing Services',
+  'Bamfield',
+  CURRENT_DATE + INTERVAL '21 days',
+  1,
+  6,
+  1,
+  2,
+  'Dave Wilson',
+  1200.00,
+  250.00,
+  'published',
+  CURRENT_DATE + INTERVAL '17 days',
+  'dave@westcoastplumbing.ca',
+  '250-555-5678',
+  'General plumbing, hot water tanks, pump systems. Parts extra.'
+),
+(
+  'Island Electrical',
+  'Electrical Services',
+  'Gold River',
+  CURRENT_DATE + INTERVAL '28 days',
+  2,
+  10,
+  0,
+  2,
+  'Sarah Chen',
+  1400.00,
+  200.00,
+  'published',
+  CURRENT_DATE + INTERVAL '21 days',
+  'info@islandelectrical.ca',
+  '250-555-9012',
+  'Panel upgrades, rewiring, generator installs, EV chargers.'
+);
+
+-- Verify
+SELECT company_name, destination_region, planned_date, slots_filled, total_job_slots, logistics_cost_per_slot
+FROM service_runs
+WHERE status = 'published'
+ORDER BY planned_date;
+```
+
+=== PART 5: Enhance Route Explorer Display ===
+
+Update the Route Explorer to show more useful information about each segment. In RouteExplorer.tsx, enhance the segment details:
+
+Find the segment details section and add driving tips:
+```tsx
+{/* Driving Tips for Logging Roads */}
+{selectedSegment.route_type === 'logging_road' && (
+  <div className="bg-orange-500/10 border border-orange-500/20 rounded-lg p-4">
+    <h4 className="text-orange-400 font-medium mb-2">⚠️ Logging Road Safety</h4>
+    <ul className="text-gray-300 text-sm space-y-1">
+      <li>• Logging trucks have RIGHT OF WAY - pull over and stop</li>
+      <li>• Drive with headlights ON at all times</li>
+      <li>• Use VHF radio channel if available (check signage)</li>
+      <li>• Industrial traffic typically Mon-Fri 6am-6pm</li>
+      <li>• Watch for potholes, washouts, and wildlife</li>
+      <li>• Carry emergency supplies: food, water, first aid</li>
+      <li>• Tell someone your plans and expected arrival time</li>
+    </ul>
+  </div>
+)}
+
+{/* Winter Driving Info */}
+{selectedSegment.winter_tires_required && (
+  <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
+    <h4 className="text-blue-400 font-medium mb-2">❄️ Winter Tire Requirements</h4>
+    <ul className="text-gray-300 text-sm space-y-1">
+      <li>• Winter tires required Oct 1 - Apr 30</li>
+      <li>• Look for M+S or Mountain Snowflake symbol</li>
+      <li>• Minimum 3.5mm tread depth</li>
+      <li>• Chains may be required in severe conditions</li>
+      <li>• Check DriveBC before departure</li>
+    </ul>
+  </div>
+)}
+```
+
+=== PART 6: Add Trip Difficulty Indicators ===
+
+Create a helper to show trip difficulty based on skill requirements:
+```tsx
+// Add to TripQualificationCheck.tsx
+
+function getTripDifficultyInfo(tripId: string): { level: string; color: string; description: string } {
+  const difficulties: Record<string, { level: string; color: string; description: string }> = {
+    'bamfield-adventure': {
+      level: 'Challenging',
+      color: 'text-orange-400 bg-orange-500/20',
+      description: 'Requires intermediate driving and paddling skills, remote location'
+    },
+    'whistler-ski-day': {
+      level: 'Moderate',
+      color: 'text-yellow-400 bg-yellow-500/20',
+      description: 'Winter driving skills needed, otherwise straightforward'
+    },
+    'tofino-storm-watching': {
+      level: 'Easy-Moderate',
+      color: 'text-green-400 bg-green-500/20',
+      description: 'Long drive but on paved roads, no special skills required'
+    },
+    'sunshine-coast-loop': {
+      level: 'Easy',
+      color: 'text-green-400 bg-green-500/20',
+      description: 'Paved roads, two ferry crossings, family-friendly'
+    },
+    'okanagan-wine-trail': {
+      level: 'Easy',
+      color: 'text-green-400 bg-green-500/20',
+      description: 'Easy driving, designate a driver for wine tasting'
+    },
+    'harrison-hot-springs': {
+      level: 'Easy',
+      color: 'text-green-400 bg-green-500/20',
+      description: 'Short day trip, easy highway driving'
+    }
+  };
+  
+  return difficulties[tripId] || {
+    level: 'Unknown',
+    color: 'text-gray-400 bg-gray-500/20',
+    description: 'Difficulty not assessed'
+  };
+}
+```
+
+=== PART 7: Test the Full Flow ===
+
+After applying these changes, test the complete flow:
+
+1. Go to Trip Planning tab
+2. Create a profile with name "Test User"
+3. Add skills:
+   - Paddling > Sea Kayaking > Beginner
+   - Driving > Standard > Intermediate
+4. Save profile
+5. Go to "Check Trip Qualification"
+6. Select "Bamfield Adventure"
+7. You should see:
+   - ❌ Not Qualified
+   - Required: Sea Kayak (intermediate) - you have: beginner
+   - Required: Self-Rescue (certified) - you have: none
+   - Required: Gravel Road (intermediate) - you have: none
+   - Recommended: VHF Radio, Bear Aware
+8. Select "Harrison Hot Springs"
+9. You should see:
+   - ✅ Qualified
+   - You meet all requirements
+
+Also test:
+- Service Runs Board shows the 3 service runs
+- Route Explorer shows all route segments
+- Clicking Bamfield Road shows alternatives (Lady Rose, Float Plane, Youbou Road)
+
+Report any issues found during testing.

@@ -1384,6 +1384,56 @@ export async function registerRoutes(
     }
   });
 
+  // GET /api/v1/planning/routes - Get available trips with difficulty info
+  app.get("/api/v1/planning/routes", async (req, res) => {
+    try {
+      const difficulties: Record<string, { level: string; color: string; description: string }> = {
+        'bamfield-adventure': {
+          level: 'Challenging',
+          color: 'text-orange-400 bg-orange-500/20',
+          description: 'Requires intermediate driving and paddling skills, remote location'
+        },
+        'whistler-ski-day': {
+          level: 'Moderate',
+          color: 'text-yellow-400 bg-yellow-500/20',
+          description: 'Winter driving skills needed, otherwise straightforward'
+        },
+        'tofino-storm-watching': {
+          level: 'Easy-Moderate',
+          color: 'text-green-400 bg-green-500/20',
+          description: 'Long drive but on paved roads, no special skills required'
+        },
+        'sunshine-coast-loop': {
+          level: 'Easy',
+          color: 'text-green-400 bg-green-500/20',
+          description: 'Paved roads, two ferry crossings, family-friendly'
+        },
+        'okanagan-wine-trail': {
+          level: 'Easy',
+          color: 'text-green-400 bg-green-500/20',
+          description: 'Easy driving, designate a driver for wine tasting'
+        },
+        'harrison-hot-springs': {
+          level: 'Easy',
+          color: 'text-green-400 bg-green-500/20',
+          description: 'Short day trip, easy highway driving'
+        }
+      };
+
+      // Get trips and their skill requirements count
+      const tripsResult = await storage.query('SELECT * FROM road_trips WHERE is_published = true ORDER BY title');
+      const trips = tripsResult.rows.map((trip: any) => ({
+        ...trip,
+        difficulty: difficulties[trip.id] || { level: 'Unknown', color: 'text-gray-400 bg-gray-500/20', description: 'Difficulty not assessed' }
+      }));
+
+      res.json({ routes: trips });
+    } catch (error) {
+      console.error('Error fetching routes:', error);
+      res.status(500).json({ error: 'Failed to fetch routes' });
+    }
+  });
+
   // GET /api/v1/planning/route-segments - Get route segments
   app.get("/api/v1/planning/route-segments", async (req, res) => {
     try {
@@ -1658,17 +1708,38 @@ export async function registerRoutes(
     try {
       const { participant_id, trip_id } = req.body;
 
+      if (!participant_id || !trip_id) {
+        return res.status(400).json({ error: 'participant_id and trip_id required' });
+      }
+
       const skillsResult = await storage.query('SELECT * FROM participant_skills WHERE participant_id = $1', [participant_id]);
       const participantSkills = skillsResult.rows;
 
       const requirementsResult = await storage.query(`
         SELECT * FROM skill_requirements 
-        WHERE (requirement_type = 'trip' AND requirement_target_id = $1)
-           OR requirement_type = 'activity'
-        ORDER BY enforcement DESC
+        WHERE requirement_type = 'trip' AND requirement_target_id = $1
+        ORDER BY 
+          CASE enforcement 
+            WHEN 'required' THEN 1 
+            WHEN 'recommended' THEN 2 
+            ELSE 3 
+          END,
+          skill_category
       `, [trip_id]);
 
       const requirements = requirementsResult.rows;
+
+      // If no requirements defined, trip is open to all
+      if (requirements.length === 0) {
+        return res.json({
+          participant_id,
+          trip_id,
+          qualified: true,
+          gaps: [],
+          warnings: ['No specific skill requirements defined for this trip'],
+          required_actions: []
+        });
+      }
 
       const assessment: any = {
         participant_id,
@@ -1696,7 +1767,8 @@ export async function registerRoutes(
             required_level: req.minimum_level,
             current_level: hasSkill?.skill_level || 'none',
             enforcement: req.enforcement,
-            resolution_options: req.resolution_options
+            resolution_options: req.resolution_options || [],
+            notes: req.notes
           };
 
           assessment.gaps.push(gap);
@@ -1704,12 +1776,25 @@ export async function registerRoutes(
           if (req.enforcement === 'required') {
             assessment.qualified = false;
             assessment.required_actions.push({ type: 'skill_upgrade', ...gap });
+          } else if (req.enforcement === 'recommended') {
+            assessment.warnings.push(
+              `Recommended: ${req.skill_type.replace(/_/g, ' ')} (${req.minimum_level}) - you have: ${hasSkill?.skill_level || 'none'}`
+            );
           } else {
             assessment.warnings.push(
-              `${req.skill_type} skill recommended: ${req.minimum_level} (you have: ${hasSkill?.skill_level || 'none'})`
+              `Consider: ${req.skill_type.replace(/_/g, ' ')} training for a better experience`
             );
           }
         }
+      }
+
+      // Add summary
+      if (assessment.qualified) {
+        if (assessment.warnings.length > 0) {
+          assessment.warnings.unshift('You meet all required skills! Some recommendations below:');
+        }
+      } else {
+        assessment.warnings.unshift(`You need ${assessment.required_actions.length} skill(s) before this trip`);
       }
 
       res.json(assessment);
