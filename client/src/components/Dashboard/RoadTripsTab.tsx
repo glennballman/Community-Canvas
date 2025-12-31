@@ -104,11 +104,22 @@ export function RoadTripsTab({ regionId }: RoadTripsTabProps) {
     return tripsData.trips.map(transformDbTrip);
   }, [tripsData]);
 
-  const [selectedTrip, setSelectedTrip] = useState<RoadTrip | null>(null);
+  const [selectedTripId, setSelectedTripId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<TripCategory | 'all'>('all');
   const [selectedSeason, setSelectedSeason] = useState<Season | 'all'>('all');
   const [sortBy, setSortBy] = useState<'popular' | 'rating' | 'duration' | 'cost'>('popular');
+  
+  // Fetch full trip details with segments when a trip is selected
+  const { data: tripDetailData, isLoading: isLoadingDetail } = useQuery<any>({
+    queryKey: ['/api/v1/trips', selectedTripId],
+    enabled: !!selectedTripId,
+  });
+  
+  const selectedTrip = useMemo(() => {
+    if (!tripDetailData) return null;
+    return transformDbTrip(tripDetailData);
+  }, [tripDetailData]);
 
   const filteredTrips = useMemo(() => {
     let filtered = trips;
@@ -151,11 +162,19 @@ export function RoadTripsTab({ regionId }: RoadTripsTabProps) {
     return counts;
   }, [trips]);
 
-  if (selectedTrip) {
+  if (selectedTripId) {
+    if (isLoadingDetail || !selectedTrip) {
+      return (
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+          <span className="ml-2 text-muted-foreground">Loading trip details...</span>
+        </div>
+      );
+    }
     return (
       <JourneyView 
         trip={selectedTrip} 
-        onBack={() => setSelectedTrip(null)} 
+        onBack={() => setSelectedTripId(null)} 
       />
     );
   }
@@ -265,7 +284,7 @@ export function RoadTripsTab({ regionId }: RoadTripsTabProps) {
           <TripCard
             key={trip.id}
             trip={trip}
-            onClick={() => setSelectedTrip(trip)}
+            onClick={() => setSelectedTripId(trip.id)}
           />
         ))}
       </div>

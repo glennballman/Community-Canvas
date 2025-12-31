@@ -976,10 +976,22 @@ export async function registerRoutes(
     try {
       const { id } = req.params;
       
-      const tripResult = await storage.query(
-        `SELECT * FROM road_trips WHERE id = $1 OR slug = $1`,
-        [id]
-      );
+      // Check if id looks like a UUID or a slug
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+      
+      let tripResult;
+      if (isUuid) {
+        tripResult = await storage.query(
+          `SELECT * FROM road_trips WHERE id = $1`,
+          [id]
+        );
+      } else {
+        // Treat as slug
+        tripResult = await storage.query(
+          `SELECT * FROM road_trips WHERE slug = $1 OR id = $1`,
+          [id]
+        );
+      }
       
       if (tripResult.rows.length === 0) {
         return res.status(404).json({ error: 'Trip not found' });
