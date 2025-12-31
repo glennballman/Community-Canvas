@@ -32,7 +32,7 @@ export function TripPlanningTab() {
         return (
           <ParticipantProfileForm 
             participant={currentParticipant}
-            onSave={(p) => {
+            onSave={(p: ParticipantProfile) => {
               setCurrentParticipant(p);
               setActiveView('overview');
             }}
@@ -43,7 +43,7 @@ export function TripPlanningTab() {
         return (
           <VehicleProfileForm
             vehicle={currentVehicle}
-            onSave={(v) => {
+            onSave={(v: VehicleProfile) => {
               setCurrentVehicle(v);
               setActiveView('overview');
             }}

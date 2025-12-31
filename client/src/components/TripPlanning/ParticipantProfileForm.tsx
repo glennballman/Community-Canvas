@@ -12,6 +12,7 @@ import {
   Droplets,
   Siren
 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 import { ParticipantProfile, ParticipantSkill, SkillCategory, SkillLevel, skillLevelColors } from '../../types/tripPlanning';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -71,6 +72,7 @@ const categoryIcons: Record<SkillCategory, typeof Waves> = {
 };
 
 export function ParticipantProfileForm({ participant, onSave, onCancel }: ParticipantProfileFormProps) {
+  const { toast } = useToast();
   const [formData, setFormData] = useState<Partial<ParticipantProfile>>({
     name: participant?.name || '',
     email: participant?.email || '',
@@ -100,7 +102,11 @@ export function ParticipantProfileForm({ participant, onSave, onCancel }: Partic
 
   const handleSave = async () => {
     if (!formData.name) {
-      alert('Please enter your name');
+      toast({
+        title: 'Missing Information',
+        description: 'Please enter your name',
+        variant: 'destructive'
+      });
       return;
     }
 
@@ -129,10 +135,18 @@ export function ParticipantProfileForm({ participant, onSave, onCancel }: Partic
       const profileResponse = await fetch(`/api/v1/planning/participants/${savedParticipant.id}`);
       const completeProfile = await profileResponse.json();
 
+      toast({
+        title: 'Profile Saved',
+        description: 'Your profile has been saved successfully'
+      });
       onSave(completeProfile);
     } catch (error) {
       console.error('Error saving participant:', error);
-      alert('Failed to save profile. Please try again.');
+      toast({
+        title: 'Error',
+        description: 'Failed to save profile. Please try again.',
+        variant: 'destructive'
+      });
     } finally {
       setSaving(false);
     }

@@ -9,7 +9,8 @@ import {
   Cloud,
   Radio,
   Navigation2,
-  Settings
+  Settings,
+  Compass
 } from 'lucide-react';
 import { Link } from 'wouter';
 import { StatusCards } from './StatusCards';
@@ -22,6 +23,7 @@ import { WeatherWidget } from './WeatherWidget';
 import { RoadEvents } from './RoadEvents';
 import { MapView } from './MapView';
 import { RoadTripsTab } from './RoadTripsTab';
+import { TripPlanningTab } from '../TripPlanning/TripPlanningTab';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -38,7 +40,7 @@ interface DashboardLayoutProps {
 
 export function DashboardLayout({ defaultRegion = 'bc' }: DashboardLayoutProps) {
   const [selectedRegion, setSelectedRegion] = useState(defaultRegion);
-  const [activeTab, setActiveTab] = useState<'overview' | 'map' | 'webcams' | 'alerts' | 'roadtrips'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'map' | 'webcams' | 'alerts' | 'roadtrips' | 'planning'>('overview');
   const [alertCount, setAlertCount] = useState(0);
 
   useEffect(() => {
@@ -54,6 +56,7 @@ export function DashboardLayout({ defaultRegion = 'bc' }: DashboardLayoutProps) 
     { id: 'webcams', label: 'Webcams', icon: Camera },
     { id: 'alerts', label: 'Alerts', icon: AlertTriangle },
     { id: 'roadtrips', label: 'Road Trips', icon: Navigation2 },
+    { id: 'planning', label: 'Trip Planning', icon: Compass },
   ] as const;
 
   return (
@@ -139,6 +142,9 @@ export function DashboardLayout({ defaultRegion = 'bc' }: DashboardLayoutProps) 
         )}
         {activeTab === 'roadtrips' && (
           <RoadTripsTab regionId={selectedRegion} />
+        )}
+        {activeTab === 'planning' && (
+          <TripPlanningTab />
         )}
       </main>
       
