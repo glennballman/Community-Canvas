@@ -1,4 +1,4 @@
-import FirecrawlApp from "@mendable/firecrawl-js";
+import { getFirecrawlApp } from "../lib/firecrawl";
 import { BasePipeline } from "./base-pipeline";
 import { pool } from "../db";
 
@@ -18,18 +18,16 @@ interface PowerOutage {
 }
 
 export class BCHydroPipeline extends BasePipeline {
-  private firecrawl: FirecrawlApp;
-
   constructor() {
     super('bchydro-outages', 'BC Hydro Outages', 300000); // 5 min
-    this.firecrawl = new FirecrawlApp({ apiKey: process.env.FIRECRAWL_API_KEY! });
   }
 
   async fetch(): Promise<any> {
     console.log('[BCHydro] Fetching outage data via Firecrawl...');
     
     try {
-      const result = await this.firecrawl.scrapeUrl(
+      const firecrawl = await getFirecrawlApp(process.env.FIRECRAWL_API_KEY!);
+      const result = await firecrawl.scrapeUrl(
         'https://www.bchydro.com/power-outages/app/outage-list-planned.html',
         {
           formats: ['extract'],

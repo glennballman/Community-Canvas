@@ -1,4 +1,4 @@
-import FirecrawlApp from "@mendable/firecrawl-js";
+import { getFirecrawlApp } from "../lib/firecrawl";
 import { BasePipeline } from "./base-pipeline";
 import { pool } from "../db";
 
@@ -28,18 +28,16 @@ interface FerryRouteData {
 }
 
 export class BCFerriesPipeline extends BasePipeline {
-  private firecrawl: FirecrawlApp;
-
   constructor() {
     super('bcferries-conditions', 'BC Ferries Current Conditions', 600000); // 10 min
-    this.firecrawl = new FirecrawlApp({ apiKey: process.env.FIRECRAWL_API_KEY! });
   }
 
   async fetch(): Promise<any> {
     console.log('[BCFerries] Fetching current conditions via Firecrawl...');
     
     try {
-      const result = await this.firecrawl.scrapeUrl(
+      const firecrawl = await getFirecrawlApp(process.env.FIRECRAWL_API_KEY!);
+      const result = await firecrawl.scrapeUrl(
         'https://www.bcferries.com/current-conditions/',
         {
           formats: ['extract'],

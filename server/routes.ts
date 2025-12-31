@@ -3,7 +3,7 @@ import type { Server } from "http";
 import { storage } from "./storage";
 import { api } from "@shared/routes";
 import { z } from "zod";
-import FirecrawlApp from '@mendable/firecrawl-js';
+import { getFirecrawlApp } from './lib/firecrawl';
 import fs from "fs";
 import path from "path";
 import { runChamberAudit } from "@shared/chamber-audit";
@@ -54,7 +54,7 @@ export async function registerRoutes(
         return res.status(400).json({ message: "Firecrawl API key not configured" });
       }
 
-      const firecrawl = new FirecrawlApp({ apiKey });
+      const firecrawl = await getFirecrawlApp(apiKey);
 
       const prompt = `Extract real-time status updates and snapshots for ${location}. 
       Structure the response into a 'categories' object where keys are standard IDs (emergency, power, water, ferry, traffic, transit, airport, weather, tides, air_quality, health, events, parking, construction, economic, fire) and values are arrays of status objects.
