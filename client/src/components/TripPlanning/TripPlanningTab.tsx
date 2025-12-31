@@ -68,13 +68,32 @@ export function TripPlanningTab() {
           }
         }
         
-        if (savedVehicleId) {
-          const response = await fetch(`/api/v1/planning/vehicles/${savedVehicleId}`);
+        let vehicleId = savedVehicleId;
+        if (vehicleId) {
+          const response = await fetch(`/api/v1/planning/vehicles/${vehicleId}`);
           if (response.ok) {
             const data = await response.json();
             setCurrentVehicle(data);
           } else {
             localStorage.removeItem('tripPlanning_vehicleId');
+            vehicleId = null;
+          }
+        }
+        
+        if (!vehicleId) {
+          const response = await fetch('/api/v1/planning/vehicles');
+          if (response.ok) {
+            const data = await response.json();
+            const vehicles = data.vehicles || [];
+            if (vehicles.length > 0) {
+              const mostRecent = vehicles[0];
+              const detailResponse = await fetch(`/api/v1/planning/vehicles/${mostRecent.id}`);
+              if (detailResponse.ok) {
+                const vehicleData = await detailResponse.json();
+                setCurrentVehicle(vehicleData);
+                localStorage.setItem('tripPlanning_vehicleId', mostRecent.id);
+              }
+            }
           }
         }
       } catch (error) {
