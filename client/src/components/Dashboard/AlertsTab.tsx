@@ -240,31 +240,29 @@ export function AlertsTab({ regionId }: AlertsTabProps) {
         if (isNaN(lat) || isNaN(lng)) return;
         
         const el = document.createElement('div');
+        el.className = 'alert-marker';
         el.style.cssText = `
           width: 24px;
           height: 24px;
           border-radius: 50%;
           background: ${config.markerColor};
           border: 2px solid white;
-          display: flex;
-          align-items: center;
-          justify-content: center;
           cursor: pointer;
-          transition: transform 0.2s;
           box-shadow: 0 2px 4px rgba(0,0,0,0.3);
         `;
         
-        el.addEventListener('click', () => setSelectedAlert(alert));
+        el.addEventListener('click', (e) => {
+          e.stopPropagation();
+          setSelectedAlert(alert);
+        });
         el.addEventListener('mouseenter', () => {
           setHoveredAlertId(alert.id);
-          el.style.transform = 'scale(1.3)';
         });
         el.addEventListener('mouseleave', () => {
           setHoveredAlertId(null);
-          el.style.transform = 'scale(1)';
         });
 
-        const marker = new mapboxgl.Marker(el)
+        const marker = new mapboxgl.Marker({ element: el, anchor: 'center' })
           .setLngLat([lng, lat])
           .setPopup(
             new mapboxgl.Popup({ offset: 15 }).setHTML(`
