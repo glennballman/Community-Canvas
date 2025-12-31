@@ -281,10 +281,15 @@ export function AlertsTab({ regionId }: AlertsTabProps) {
       markersRef.current.forEach(m => m.remove());
       markersRef.current = [];
 
+      // BC bounding box: lat 48.2 to 60.0, lng -139.5 to -114.0
+      const isInBC = (lat: number, lng: number) => {
+        return lat >= 48.2 && lat <= 60.0 && lng >= -139.5 && lng <= -114.0;
+      };
+      
       const alertsWithCoords = filteredAlerts.filter(a => {
         const lat = Number(a.latitude || a.region_lat);
         const lng = Number(a.longitude || a.region_lng);
-        return !isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0;
+        return !isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0 && isInBC(lat, lng);
       });
 
       alertsWithCoords.forEach(alert => {
