@@ -1,0 +1,1365 @@
+We're building a comprehensive trip planning and service logistics system. This is Phase 1 - establishing the core data model and adding our first complete trip with the new 10-layer framework.
+
+=== OVERVIEW ===
+
+This system serves THREE use cases:
+1. TOURIST TRIPS - Swiss kayakers planning Broken Group adventure
+2. SERVICE RUNS - Glass company sending crew to Bamfield for multiple jobs
+3. REMOTE ACCESS - Helping Bamfield residents when road is closed
+
+All three share the same underlying framework:
+- Participant/Crew profiles with skills and equipment
+- Vehicle assessments
+- Route intelligence with real-time conditions
+- Multi-modal transport options
+- Dynamic re-routing when disruptions occur
+
+=== STEP 1: Create Enhanced Database Schema ===
+
+Create file: server/migrations/003_trip_planning_framework.sql
+```sql
+-- =====================================================
+-- TRIP PLANNING FRAMEWORK - PHASE 1
+-- Comprehensive participant, vehicle, route, and booking system
+-- =====================================================
+
+-- =====================================================
+-- PARTICIPANT PROFILES
+-- =====================================================
+
+CREATE TABLE IF NOT EXISTS participant_profiles (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  
+  -- Identity
+  user_id VARCHAR(255), -- Links to auth system if exists
+  name VARCHAR(255) NOT NULL,
+  email VARCHAR(255),
+  phone VARCHAR(50),
+  emergency_contact_name VARCHAR(255),
+  emergency_contact_phone VARCHAR(50),
+  country_of_origin VARCHAR(100),
+  languages TEXT[] DEFAULT ARRAY['English'],
+  
+  -- Medical/Dietary
+  medical_conditions TEXT[], -- diabetes, allergies, etc.
+  dietary_restrictions TEXT[],
+  medications TEXT[],
+  
+  -- Physical
+  fitness_level INTEGER DEFAULT 5 CHECK (fitness_level >= 1 AND fitness_level <= 10),
+  swimming_ability VARCHAR(20) DEFAULT 'basic', -- none, basic, strong, lifeguard
+  mobility_notes TEXT,
+  
+  -- Metadata
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Participant Skills & Certifications
+CREATE TABLE IF NOT EXISTS participant_skills (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  participant_id UUID NOT NULL REFERENCES participant_profiles(id) ON DELETE CASCADE,
+  
+  skill_category VARCHAR(50) NOT NULL, -- paddling, driving, backcountry, water_safety, emergency
+  skill_type VARCHAR(50) NOT NULL, -- sea_kayak, self_rescue, mountain_driving, vhf_radio, etc.
+  skill_level VARCHAR(20) NOT NULL, -- none, beginner, intermediate, advanced, expert, certified
+  
+  -- Certification details (if applicable)
+  certification_name VARCHAR(255),
+  certification_issuer VARCHAR(255),
+  certification_date DATE,
+  certification_expiry DATE,
+  certification_number VARCHAR(100),
+  
+  -- Verification
+  verified BOOLEAN DEFAULT false,
+  verified_by VARCHAR(255),
+  verified_date DATE,
+  
+  notes TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Skill Requirements Definition (what skills unlock what trips)
+CREATE TABLE IF NOT EXISTS skill_requirements (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  
+  -- What this requirement applies to
+  requirement_type VARCHAR(30) NOT NULL, -- trip, activity, route_segment, equipment
+  requirement_target_id VARCHAR(100) NOT NULL, -- trip_id, activity_type, segment_id, etc.
+  
+  -- The skill required
+  skill_category VARCHAR(50) NOT NULL,
+  skill_type VARCHAR(50) NOT NULL,
+  minimum_level VARCHAR(20) NOT NULL,
+  
+  -- Enforcement
+  enforcement VARCHAR(20) DEFAULT 'required', -- required, recommended, advisory
+  
+  -- If not met, what can resolve it?
+  resolution_options JSONB DEFAULT '[]', -- [{type: "course", provider: "...", duration: "2h", cost: 75}]
+  
+  notes TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- =====================================================
+-- VEHICLE PROFILES
+-- =====================================================
+
+CREATE TABLE IF NOT EXISTS vehicle_profiles (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  
+  -- Ownership
+  owner_type VARCHAR(20) NOT NULL, -- personal, rental, company
+  owner_id UUID, -- References participant or company
+  company_name VARCHAR(255),
+  
+  -- Identity
+  year INTEGER,
+  make VARCHAR(100),
+  model VARCHAR(100),
+  license_plate VARCHAR(20),
+  vin VARCHAR(50),
+  color VARCHAR(50),
+  
+  -- Specifications
+  vehicle_class VARCHAR(30) NOT NULL, -- sedan, suv, truck, van, cube_van, rv_class_a, rv_class_c, motorcycle
+  drive_type VARCHAR(10), -- 2wd, 4wd, awd
+  fuel_type VARCHAR(20), -- gas, diesel, electric, hybrid
+  ground_clearance_inches DECIMAL(4,1),
+  
+  -- Dimensions (important for ferries, roads)
+  length_feet DECIMAL(4,1),
+  height_feet DECIMAL(4,1),
+  width_feet DECIMAL(4,1),
+  weight_lbs INTEGER,
+  
+  -- Capabilities
+  towing_capacity_lbs INTEGER,
+  passenger_capacity INTEGER,
+  cargo_capacity_cubic_feet INTEGER,
+  
+  -- Ferry classification
+  ferry_class VARCHAR(30), -- under_20ft, 20_to_40ft, over_40ft, overheight, commercial
+  
+  -- Route suitability (calculated/assessed)
+  paved_road_suitable BOOLEAN DEFAULT true,
+  good_gravel_suitable BOOLEAN DEFAULT true,
+  rough_gravel_suitable BOOLEAN DEFAULT false,
+  four_x_four_required_suitable BOOLEAN DEFAULT false,
+  
+  -- Insurance
+  insurance_company VARCHAR(255),
+  insurance_policy_number VARCHAR(100),
+  insurance_expiry DATE,
+  
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Vehicle Condition Assessments
+CREATE TABLE IF NOT EXISTS vehicle_assessments (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  vehicle_id UUID NOT NULL REFERENCES vehicle_profiles(id) ON DELETE CASCADE,
+  assessed_by UUID REFERENCES participant_profiles(id),
+  assessment_date TIMESTAMPTZ DEFAULT NOW(),
+  
+  -- Tire Assessment
+  tire_tread_condition VARCHAR(20), -- new, good, fair, worn, needs_replacement
+  tire_tread_depth_mm DECIMAL(4,1),
+  tires_winter_rated BOOLEAN DEFAULT false, -- M+S or mountain snowflake
+  chains_available BOOLEAN DEFAULT false,
+  spare_tire_condition VARCHAR(20),
+  
+  -- Mechanical
+  last_service_date DATE,
+  last_service_mileage INTEGER,
+  current_mileage INTEGER,
+  oil_level VARCHAR(20), -- full, ok, low, critical
+  coolant_level VARCHAR(20),
+  brake_condition VARCHAR(20), -- new, good, fair, needs_service
+  battery_age_months INTEGER,
+  known_issues TEXT[],
+  
+  -- Safety Equipment
+  has_first_aid_kit BOOLEAN DEFAULT false,
+  has_fire_extinguisher BOOLEAN DEFAULT false,
+  has_reflective_triangles BOOLEAN DEFAULT false,
+  has_jumper_cables BOOLEAN DEFAULT false,
+  has_tow_strap BOOLEAN DEFAULT false,
+  
+  -- Emergency Supplies
+  has_blankets BOOLEAN DEFAULT false,
+  has_emergency_food BOOLEAN DEFAULT false,
+  has_water BOOLEAN DEFAULT false,
+  has_phone_charger BOOLEAN DEFAULT false,
+  has_flashlight BOOLEAN DEFAULT false,
+  windshield_washer_full BOOLEAN DEFAULT false,
+  
+  -- Documents
+  registration_current BOOLEAN DEFAULT true,
+  insurance_card_present BOOLEAN DEFAULT true,
+  
+  -- Overall Assessment
+  overall_condition VARCHAR(20), -- excellent, good, fair, poor, not_roadworthy
+  notes TEXT,
+  
+  -- Next assessment due
+  next_assessment_due DATE
+);
+
+-- =====================================================
+-- ROUTE SEGMENTS (Enhanced)
+-- =====================================================
+
+CREATE TABLE IF NOT EXISTS route_segments (
+  id VARCHAR(100) PRIMARY KEY,
+  
+  -- Identity
+  name VARCHAR(255) NOT NULL,
+  slug VARCHAR(150) UNIQUE,
+  description TEXT,
+  
+  -- Geography
+  start_location_name VARCHAR(255),
+  start_lat DECIMAL(10, 7),
+  start_lng DECIMAL(10, 7),
+  end_location_name VARCHAR(255),
+  end_lat DECIMAL(10, 7),
+  end_lng DECIMAL(10, 7),
+  
+  -- Route Details
+  distance_km DECIMAL(6, 1),
+  typical_duration_minutes INTEGER,
+  route_type VARCHAR(30) NOT NULL, -- highway, secondary, gravel, logging_road, water, air
+  road_surface VARCHAR(30), -- paved, good_gravel, rough_gravel, 4x4_only
+  
+  -- Highway Info
+  highway_numbers TEXT[],
+  
+  -- Requirements
+  minimum_vehicle_class VARCHAR(30), -- sedan, suv, truck, 4x4
+  winter_tires_required BOOLEAN DEFAULT false,
+  winter_tires_required_dates VARCHAR(50), -- "Oct 1 - Apr 30"
+  chains_may_be_required BOOLEAN DEFAULT false,
+  high_clearance_recommended BOOLEAN DEFAULT false,
+  
+  -- Hazards & Notes
+  hazards TEXT[], -- logging_trucks, wildlife, fog, ice, steep_grades
+  notes TEXT,
+  
+  -- Data Sources
+  conditions_source VARCHAR(100), -- drivebc, manual, forestry_radio
+  conditions_source_id VARCHAR(100), -- DriveBC segment ID if applicable
+  
+  -- Status
+  is_active BOOLEAN DEFAULT true,
+  
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Route Alternatives (what to do if segment is blocked)
+CREATE TABLE IF NOT EXISTS route_alternatives (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  
+  primary_segment_id VARCHAR(100) NOT NULL REFERENCES route_segments(id),
+  alternative_segment_id VARCHAR(100) REFERENCES route_segments(id),
+  
+  -- Or it might be a completely different mode
+  alternative_type VARCHAR(30) NOT NULL, -- route_segment, ferry, float_plane, water_taxi, delay
+  alternative_description TEXT,
+  
+  -- When to use this alternative
+  trigger_conditions TEXT[], -- road_closed, road_rough, weather, time_sensitive
+  
+  -- Cost/time impact
+  additional_time_minutes INTEGER,
+  additional_cost_estimate INTEGER,
+  
+  -- Provider info if not a road segment
+  provider_name VARCHAR(255),
+  provider_contact VARCHAR(255),
+  provider_booking_url VARCHAR(500),
+  
+  priority INTEGER DEFAULT 1, -- 1 = first choice, 2 = second, etc.
+  notes TEXT,
+  
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- =====================================================
+-- TRANSPORT PROVIDERS
+-- =====================================================
+
+CREATE TABLE IF NOT EXISTS transport_providers (
+  id VARCHAR(100) PRIMARY KEY,
+  
+  -- Identity
+  name VARCHAR(255) NOT NULL,
+  slug VARCHAR(150) UNIQUE,
+  provider_type VARCHAR(30) NOT NULL, -- ferry, float_plane, water_taxi, bus, shuttle, train, rental_car
+  
+  -- Contact
+  phone VARCHAR(50),
+  email VARCHAR(255),
+  website VARCHAR(500),
+  booking_url VARCHAR(500),
+  
+  -- Location/Coverage
+  base_location VARCHAR(255),
+  service_area TEXT[], -- regions/routes served
+  
+  -- Data Integration
+  has_live_api BOOLEAN DEFAULT false,
+  api_endpoint VARCHAR(500),
+  api_type VARCHAR(30), -- rest, graphql, scrape, manual
+  data_update_frequency VARCHAR(30), -- realtime, hourly, daily, weekly, manual
+  last_data_update TIMESTAMPTZ,
+  
+  -- Capabilities
+  accepts_vehicles BOOLEAN DEFAULT false,
+  max_vehicle_length_feet DECIMAL(4,1),
+  accepts_kayaks BOOLEAN DEFAULT false,
+  accepts_bikes BOOLEAN DEFAULT false,
+  accepts_pets BOOLEAN DEFAULT false,
+  wheelchair_accessible BOOLEAN DEFAULT false,
+  
+  -- Booking
+  reservation_required BOOLEAN DEFAULT false,
+  reservation_recommended BOOLEAN DEFAULT true,
+  advance_booking_days INTEGER, -- How far ahead can you book?
+  cancellation_policy TEXT,
+  
+  -- Status
+  is_active BOOLEAN DEFAULT true,
+  seasonal_operation BOOLEAN DEFAULT false,
+  operating_season VARCHAR(100), -- "May 1 - Sep 30"
+  
+  notes TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Provider Schedules
+CREATE TABLE IF NOT EXISTS transport_schedules (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  provider_id VARCHAR(100) NOT NULL REFERENCES transport_providers(id),
+  
+  -- Route
+  route_name VARCHAR(255),
+  origin VARCHAR(255) NOT NULL,
+  destination VARCHAR(255) NOT NULL,
+  
+  -- Schedule
+  day_of_week INTEGER, -- 0=Sun, 1=Mon, etc. NULL for daily
+  departure_time TIME,
+  arrival_time TIME,
+  duration_minutes INTEGER,
+  
+  -- Seasonal
+  valid_from DATE,
+  valid_to DATE,
+  
+  -- Pricing
+  adult_fare DECIMAL(8,2),
+  child_fare DECIMAL(8,2),
+  vehicle_fare DECIMAL(8,2),
+  vehicle_overheight_fare DECIMAL(8,2),
+  kayak_fare DECIMAL(8,2),
+  bike_fare DECIMAL(8,2),
+  
+  -- Capacity
+  passenger_capacity INTEGER,
+  vehicle_capacity INTEGER,
+  
+  notes TEXT,
+  
+  -- Data freshness
+  last_verified TIMESTAMPTZ,
+  verified_by VARCHAR(255),
+  
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- =====================================================
+-- SERVICE RUNS (for businesses)
+-- =====================================================
+
+CREATE TABLE IF NOT EXISTS service_runs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  
+  -- Provider
+  company_id UUID, -- References company if we have that table
+  company_name VARCHAR(255) NOT NULL,
+  service_type VARCHAR(100) NOT NULL, -- glass_installation, plumbing, electrical, etc.
+  
+  -- Schedule
+  destination_region VARCHAR(100) NOT NULL, -- Bamfield, Gold River, etc.
+  planned_date DATE NOT NULL,
+  planned_duration_days INTEGER DEFAULT 1,
+  flexible_dates BOOLEAN DEFAULT false,
+  date_flexibility_days INTEGER DEFAULT 0,
+  
+  -- Capacity
+  total_job_slots INTEGER NOT NULL,
+  slots_filled INTEGER DEFAULT 0,
+  slots_available INTEGER GENERATED ALWAYS AS (total_job_slots - slots_filled) STORED,
+  
+  -- Crew
+  crew_size INTEGER,
+  crew_lead_name VARCHAR(255),
+  
+  -- Vehicle
+  vehicle_id UUID REFERENCES vehicle_profiles(id),
+  vehicle_description VARCHAR(255),
+  
+  -- Costs (shared among jobs)
+  logistics_cost_total DECIMAL(10,2), -- Total: ferry, fuel, accommodations, crew time
+  logistics_cost_per_slot DECIMAL(10,2) GENERATED ALWAYS AS (
+    CASE WHEN total_job_slots > 0 THEN logistics_cost_total / total_job_slots ELSE 0 END
+  ) STORED,
+  
+  -- Pricing
+  minimum_job_value DECIMAL(10,2), -- Minimum job size to book a slot
+  
+  -- Status
+  status VARCHAR(30) DEFAULT 'planning', -- planning, published, confirmed, in_progress, completed, cancelled
+  published_at TIMESTAMPTZ,
+  confirmed_at TIMESTAMPTZ,
+  
+  -- Booking
+  booking_deadline DATE,
+  contact_email VARCHAR(255),
+  contact_phone VARCHAR(50),
+  booking_notes TEXT,
+  
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Service Run Bookings (customer jobs)
+CREATE TABLE IF NOT EXISTS service_run_bookings (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  service_run_id UUID NOT NULL REFERENCES service_runs(id) ON DELETE CASCADE,
+  
+  -- Customer
+  customer_name VARCHAR(255) NOT NULL,
+  customer_email VARCHAR(255),
+  customer_phone VARCHAR(50),
+  customer_address TEXT,
+  customer_location_lat DECIMAL(10, 7),
+  customer_location_lng DECIMAL(10, 7),
+  
+  -- Job Details
+  job_description TEXT,
+  job_reference VARCHAR(100), -- Jobber job ID, etc.
+  estimated_duration_hours DECIMAL(4,1),
+  
+  -- Pricing
+  job_value DECIMAL(10,2),
+  logistics_share DECIMAL(10,2), -- Their share of logistics cost
+  total_price DECIMAL(10,2),
+  
+  -- Status
+  status VARCHAR(30) DEFAULT 'pending', -- pending, confirmed, completed, cancelled
+  
+  -- Scheduling within the run
+  preferred_time VARCHAR(50), -- morning, afternoon, flexible
+  scheduled_order INTEGER, -- Order within the day
+  
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- =====================================================
+-- TRIP BOOKINGS (Enhanced)
+-- =====================================================
+
+CREATE TABLE IF NOT EXISTS trip_bookings (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  
+  -- What trip
+  trip_id VARCHAR(100) REFERENCES road_trips(id),
+  custom_trip BOOLEAN DEFAULT false, -- True if not a predefined trip
+  
+  -- Who
+  lead_participant_id UUID REFERENCES participant_profiles(id),
+  group_name VARCHAR(255),
+  group_size INTEGER DEFAULT 1,
+  
+  -- When
+  start_date DATE NOT NULL,
+  end_date DATE,
+  flexible_dates BOOLEAN DEFAULT false,
+  
+  -- Budget
+  budget_level VARCHAR(20) DEFAULT 'moderate', -- budget, moderate, comfort
+  estimated_cost DECIMAL(10,2),
+  
+  -- Status
+  status VARCHAR(30) DEFAULT 'planning', -- planning, assessing, booking, confirmed, in_progress, completed, cancelled
+  
+  -- Assessment Results
+  participant_assessment_complete BOOLEAN DEFAULT false,
+  vehicle_assessment_complete BOOLEAN DEFAULT false,
+  equipment_gaps_identified BOOLEAN DEFAULT false,
+  skill_gaps_identified BOOLEAN DEFAULT false,
+  all_requirements_met BOOLEAN DEFAULT false,
+  
+  -- Monitoring
+  monitoring_active BOOLEAN DEFAULT false,
+  last_conditions_check TIMESTAMPTZ,
+  current_alert_level VARCHAR(20), -- green, yellow, orange, red
+  
+  notes TEXT,
+  
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Trip Booking Participants
+CREATE TABLE IF NOT EXISTS trip_booking_participants (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  booking_id UUID NOT NULL REFERENCES trip_bookings(id) ON DELETE CASCADE,
+  participant_id UUID NOT NULL REFERENCES participant_profiles(id),
+  
+  role VARCHAR(30) DEFAULT 'participant', -- lead, participant, driver, guide
+  
+  -- Individual assessment for this trip
+  skills_verified BOOLEAN DEFAULT false,
+  equipment_verified BOOLEAN DEFAULT false,
+  requirements_met BOOLEAN DEFAULT false,
+  gaps TEXT[], -- List of gaps identified
+  
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Trip Booking Segments (actual booked items)
+CREATE TABLE IF NOT EXISTS trip_booking_segments (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  booking_id UUID NOT NULL REFERENCES trip_bookings(id) ON DELETE CASCADE,
+  
+  segment_order INTEGER NOT NULL,
+  segment_type VARCHAR(30) NOT NULL, -- transport, accommodation, activity, rental, meal, etc.
+  
+  -- What's booked
+  provider_id VARCHAR(100), -- References transport_providers, entities, etc.
+  provider_name VARCHAR(255),
+  provider_type VARCHAR(50),
+  
+  -- Schedule
+  scheduled_date DATE,
+  scheduled_time TIME,
+  duration_minutes INTEGER,
+  
+  -- Location
+  location_name VARCHAR(255),
+  location_lat DECIMAL(10, 7),
+  location_lng DECIMAL(10, 7),
+  
+  -- Booking Details
+  confirmation_number VARCHAR(100),
+  booking_status VARCHAR(30) DEFAULT 'pending', -- pending, confirmed, cancelled
+  
+  -- Pricing
+  cost DECIMAL(10,2),
+  deposit_paid DECIMAL(10,2),
+  balance_due DECIMAL(10,2),
+  payment_due_date DATE,
+  
+  -- Requirements for this segment
+  requirements_json JSONB DEFAULT '{}',
+  
+  notes TEXT,
+  
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- =====================================================
+-- EQUIPMENT INVENTORY (for rentals)
+-- =====================================================
+
+CREATE TABLE IF NOT EXISTS equipment_types (
+  id VARCHAR(100) PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  category VARCHAR(50) NOT NULL, -- kayak, camping, safety, clothing, vehicle_accessory
+  description TEXT,
+  
+  -- For matching to requirements
+  skill_category VARCHAR(50), -- What skill this relates to
+  skill_minimum VARCHAR(20), -- Minimum skill to use
+  
+  daily_rental_rate DECIMAL(8,2),
+  weekly_rental_rate DECIMAL(8,2),
+  purchase_price DECIMAL(10,2),
+  
+  -- What it unlocks
+  unlocks_trip_types TEXT[], -- Trips this equipment enables
+  
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- =====================================================
+-- INDEXES
+-- =====================================================
+
+CREATE INDEX IF NOT EXISTS idx_participant_skills_participant ON participant_skills(participant_id);
+CREATE INDEX IF NOT EXISTS idx_participant_skills_type ON participant_skills(skill_category, skill_type);
+CREATE INDEX IF NOT EXISTS idx_vehicle_profiles_owner ON vehicle_profiles(owner_id);
+CREATE INDEX IF NOT EXISTS idx_vehicle_assessments_vehicle ON vehicle_assessments(vehicle_id);
+CREATE INDEX IF NOT EXISTS idx_route_segments_type ON route_segments(route_type);
+CREATE INDEX IF NOT EXISTS idx_transport_schedules_provider ON transport_schedules(provider_id);
+CREATE INDEX IF NOT EXISTS idx_service_runs_destination ON service_runs(destination_region, planned_date);
+CREATE INDEX IF NOT EXISTS idx_service_runs_status ON service_runs(status);
+CREATE INDEX IF NOT EXISTS idx_service_run_bookings_run ON service_run_bookings(service_run_id);
+CREATE INDEX IF NOT EXISTS idx_trip_bookings_trip ON trip_bookings(trip_id);
+CREATE INDEX IF NOT EXISTS idx_trip_bookings_status ON trip_bookings(status);
+CREATE INDEX IF NOT EXISTS idx_trip_booking_segments_booking ON trip_booking_segments(booking_id);
+```
+
+=== STEP 2: Seed Route Segments (Vancouver to Bamfield) ===
+
+Create file: server/migrations/004_bamfield_route_data.sql
+```sql
+-- =====================================================
+-- BAMFIELD ROUTE DATA
+-- Complete route from Vancouver with all alternatives
+-- =====================================================
+
+-- Transport Providers
+INSERT INTO transport_providers (id, name, slug, provider_type, phone, website, booking_url, base_location, service_area, has_live_api, accepts_vehicles, max_vehicle_length_feet, accepts_kayaks, reservation_required, advance_booking_days, operating_season, notes) VALUES
+
+('bc-ferries', 'BC Ferries', 'bc-ferries', 'ferry', '1-888-223-3779', 'https://www.bcferries.com', 'https://www.bcferries.com/book-a-ferry', 'Victoria', ARRAY['Vancouver Island', 'Gulf Islands', 'Sunshine Coast'], true, true, 60, true, false, 90, NULL, 'Major routes have live API. Overheight vehicles must book commercial.'),
+
+('lady-rose', 'Lady Rose Marine Services', 'lady-rose', 'ferry', '250-723-8313', 'https://www.ladyrosemarine.com', 'https://www.ladyrosemarine.com/reservations', 'Port Alberni', ARRAY['Barkley Sound', 'Bamfield', 'Ucluelet'], false, false, NULL, true, true, 30, 'Year-round, reduced winter', 'MV Frances Barkley. No vehicles. Kayaks OK. Essential Bamfield access when road closed.'),
+
+('harbour-air', 'Harbour Air', 'harbour-air', 'float_plane', '1-800-665-0212', 'https://www.harbourair.com', 'https://www.harbourair.com/book', 'Vancouver', ARRAY['Vancouver Island', 'Gulf Islands', 'Sunshine Coast'], false, false, NULL, false, true, 7, NULL, 'Float plane service. Weather dependent. Limited luggage.'),
+
+('west-coast-trail-express', 'West Coast Trail Express', 'wct-express', 'bus', '250-477-8700', 'https://trailbus.com', 'https://trailbus.com/booking', 'Victoria', ARRAY['Victoria', 'Port Renfrew', 'Bamfield', 'Pachena Bay'], false, false, NULL, false, true, 14, 'May 1 - Sep 30', 'Shuttle for West Coast Trail hikers. Seasonal.'),
+
+('bamfield-water-taxi', 'Bamfield Water Taxi', 'bamfield-water-taxi', 'water_taxi', '250-728-3290', NULL, NULL, 'Bamfield', ARRAY['Bamfield', 'Barkley Sound'], false, false, NULL, true, true, 3, NULL, 'Local water taxi. Good for short hops within Barkley Sound.');
+
+-- Route Segments
+INSERT INTO route_segments (id, name, slug, description, start_location_name, start_lat, start_lng, end_location_name, end_lat, end_lng, distance_km, typical_duration_minutes, route_type, road_surface, highway_numbers, minimum_vehicle_class, winter_tires_required, high_clearance_recommended, hazards, conditions_source, notes) VALUES
+
+-- Vancouver to Horseshoe Bay
+('van-to-hsb', 'Vancouver to Horseshoe Bay', 'vancouver-horseshoe-bay', 'Highway 1/99 through West Vancouver to ferry terminal', 'Vancouver', 49.2827, -123.1207, 'Horseshoe Bay Ferry Terminal', 49.3742, -123.2733, 15, 25, 'highway', 'paved', ARRAY['1', '99'], 'sedan', false, false, ARRAY['traffic_congestion'], 'drivebc', 'Allow extra time during rush hour and summer weekends.'),
+
+-- Vancouver to Tsawwassen
+('van-to-tsaw', 'Vancouver to Tsawwassen', 'vancouver-tsawwassen', 'Highway 99 and 17 to Tsawwassen ferry terminal', 'Vancouver', 49.2827, -123.1207, 'Tsawwassen Ferry Terminal', 49.0075, -123.1313, 35, 40, 'highway', 'paved', ARRAY['99', '17'], 'sedan', false, false, ARRAY['traffic_congestion', 'tunnel'], 'drivebc', 'George Massey Tunnel can have delays.'),
+
+-- Swartz Bay to Victoria
+('swartz-to-vic', 'Swartz Bay to Victoria', 'swartz-bay-victoria', 'Highway 17 from ferry to downtown Victoria', 'Swartz Bay Ferry Terminal', 48.6886, -123.4108, 'Victoria', 48.4284, -123.3656, 32, 35, 'highway', 'paved', ARRAY['17'], 'sedan', false, false, NULL, 'drivebc', 'Scenic highway along Saanich Peninsula.'),
+
+-- Nanaimo to Port Alberni
+('nan-to-pa', 'Nanaimo to Port Alberni', 'nanaimo-port-alberni', 'Highway 4 over the hump to Port Alberni', 'Nanaimo', 49.1659, -123.9401, 'Port Alberni', 49.2338, -124.8055, 80, 75, 'highway', 'paved', ARRAY['4'], 'sedan', true, false, ARRAY['fog', 'ice_winter', 'mountain_grades'], 'drivebc', 'Cameron Lake section can be foggy. Winter tires required Oct-Apr.'),
+
+-- Port Alberni to Bamfield Junction
+('pa-to-junction', 'Port Alberni to Bamfield Junction', 'port-alberni-bamfield-junction', 'Highway 4 west to the Bamfield Road turnoff', 'Port Alberni', 49.2338, -124.8055, 'Bamfield Junction', 48.9500, -125.0500, 75, 50, 'highway', 'paved', ARRAY['4'], 'sedan', false, false, NULL, 'drivebc', 'Last fuel before Bamfield. Fill up in PA.'),
+
+-- Bamfield Road (Main Route)
+('bamfield-road', 'Bamfield Road', 'bamfield-road', 'Active logging road from junction to Bamfield. GRAVEL. Logging trucks have right of way.', 'Bamfield Junction', 48.9500, -125.0500, 'Bamfield', 48.8333, -125.1353, 80, 150, 'logging_road', 'rough_gravel', NULL, 'truck', false, true, ARRAY['logging_trucks', 'potholes', 'dust', 'wildlife', 'washouts'], 'manual', 'INDUSTRIAL ROAD. Trucks Mon-Fri 6am-6pm. VHF radio recommended. High clearance recommended. Not suitable for RVs, low vehicles, or inexperienced drivers.'),
+
+-- Youbou Road (Alternative)
+('youbou-road', 'Youbou Road (Lake Cowichan Route)', 'youbou-road-cowichan', 'Alternative logging road access via Lake Cowichan. Use when Bamfield Road closed on PA side.', 'Lake Cowichan', 48.8250, -124.0540, 'Bamfield', 48.8333, -125.1353, 120, 210, 'logging_road', 'rough_gravel', NULL, 'truck', false, true, ARRAY['logging_trucks', 'potholes', 'dust', 'wildlife'], 'manual', 'Longer but sometimes open when Bamfield Road is not. Same cautions apply.'),
+
+-- Malahat
+('malahat', 'Malahat Drive', 'malahat', 'Highway 1 over the Malahat Summit between Victoria and Duncan', 'Langford', 48.4500, -123.5000, 'Mill Bay', 48.6500, -123.5500, 25, 25, 'highway', 'paved', ARRAY['1'], 'sedan', true, false, ARRAY['mountain_grades', 'fog', 'ice_winter'], 'drivebc', 'Winter tires required Oct-Apr. Can close in severe weather. Alternative: Mill Bay Ferry.');
+
+-- Route Alternatives
+INSERT INTO route_alternatives (primary_segment_id, alternative_segment_id, alternative_type, alternative_description, trigger_conditions, additional_time_minutes, additional_cost_estimate, provider_name, provider_contact, priority, notes) VALUES
+
+-- If Bamfield Road closed
+('bamfield-road', NULL, 'ferry', 'Lady Rose Ferry from Port Alberni to Bamfield', ARRAY['road_closed', 'road_impassable'], 180, 160, 'Lady Rose Marine Services', '250-723-8313', 1, 'Best alternative. Book ahead. No vehicles. 4h trip including loading.'),
+
+('bamfield-road', NULL, 'float_plane', 'Float plane from Port Alberni to Bamfield', ARRAY['road_closed', 'urgent', 'time_sensitive'], 15, 600, 'Local operators', NULL, 2, 'Fast but expensive. Weather dependent. Very limited luggage.'),
+
+('bamfield-road', 'youbou-road', 'route_segment', 'Lake Cowichan / Youbou Road route', ARRAY['road_closed_pa_side', 'prefer_alternate'], 60, 30, NULL, NULL, 3, 'Use when PA side closed but Lake Cowichan side open. Check conditions separately.'),
+
+-- If Malahat closed
+('malahat', NULL, 'ferry', 'Mill Bay Ferry (Brentwood Bay to Mill Bay)', ARRAY['road_closed', 'severe_weather'], 30, 30, 'BC Ferries', '1-888-223-3779', 1, 'Small ferry, frequent service. Avoids Malahat entirely.'),
+
+-- If BC Ferries disrupted
+('van-to-hsb', 'van-to-tsaw', 'route_segment', 'Use Tsawwassen terminal instead', ARRAY['ferry_cancelled', 'ferry_full'], 60, 0, NULL, NULL, 1, 'Tsawwassen to Swartz Bay or Duke Point as alternative.');
+
+-- Equipment Types
+INSERT INTO equipment_types (id, name, category, description, skill_category, skill_minimum, daily_rental_rate, weekly_rental_rate, unlocks_trip_types) VALUES
+('expedition-kayak', 'Expedition Sea Kayak', 'kayak', 'Full-size touring kayak suitable for multi-day trips', 'paddling', 'intermediate', 85, 450, ARRAY['sea-kayaking', 'broken-group', 'johnstone-strait']),
+('recreational-kayak', 'Recreational Kayak', 'kayak', 'Stable kayak for calm water day trips', 'paddling', 'beginner', 55, 300, ARRAY['kayak-day-trip', 'calm-water']),
+('dry-suit', 'Dry Suit', 'clothing', 'Full dry suit for cold water paddling', 'paddling', 'intermediate', 45, 250, ARRAY['cold-water-paddling', 'winter-kayaking']),
+('pfd', 'PFD / Life Jacket', 'safety', 'Personal flotation device', NULL, NULL, 10, 50, NULL),
+('vhf-radio', 'VHF Marine Radio', 'safety', 'Handheld VHF radio for marine communication', 'water_safety', 'beginner', 15, 80, ARRAY['offshore-paddling', 'remote-areas']),
+('bear-canister', 'Bear Canister', 'camping', 'Bear-proof food storage container', 'backcountry', 'beginner', 8, 45, ARRAY['backcountry-camping']),
+('satellite-messenger', 'Satellite Messenger', 'safety', 'InReach or similar two-way satellite communicator', 'emergency', 'beginner', 15, 80, ARRAY['remote-areas', 'backcountry']),
+('tent-2p', '2-Person Tent', 'camping', 'Lightweight backpacking tent', 'backcountry', 'beginner', 25, 140, ARRAY['camping', 'backpacking']),
+('sleeping-bag-0c', 'Sleeping Bag (0°C)', 'camping', 'Three-season sleeping bag', 'backcountry', 'beginner', 15, 85, ARRAY['camping', 'backpacking']),
+('camp-stove', 'Camp Stove', 'camping', 'Portable backpacking stove', 'backcountry', 'beginner', 10, 55, ARRAY['camping', 'backpacking']),
+('tire-chains', 'Tire Chains', 'vehicle_accessory', 'Snow chains for winter driving', 'driving', 'intermediate', 20, 80, ARRAY['winter-driving', 'mountain-passes']),
+('first-aid-kit', 'Wilderness First Aid Kit', 'safety', 'Comprehensive backcountry first aid kit', 'emergency', 'beginner', 5, 25, ARRAY['backcountry', 'remote-areas']);
+
+-- Skill Requirements Examples
+INSERT INTO skill_requirements (requirement_type, requirement_target_id, skill_category, skill_type, minimum_level, enforcement, resolution_options, notes) VALUES
+('route_segment', 'bamfield-road', 'driving', 'gravel_road', 'intermediate', 'recommended', '[{"type": "experience", "description": "Practice on easier gravel roads first"}]', 'Not suitable for inexperienced drivers. Consider Lady Rose alternative.'),
+('trip', 'broken-group-kayak', 'paddling', 'sea_kayak', 'intermediate', 'required', '[{"type": "course", "provider": "Pacific Rim Paddle Sports", "location": "Ladysmith", "duration": "2 days", "cost": 350}]', 'Multi-day sea kayaking requires solid skills.'),
+('trip', 'broken-group-kayak', 'paddling', 'self_rescue', 'certified', 'required', '[{"type": "course", "provider": "Pacific Rim Paddle Sports", "location": "Ladysmith", "duration": "3 hours", "cost": 75}]', 'Self-rescue certification mandatory for rentals.'),
+('activity', 'vhf-radio-use', 'water_safety', 'vhf_radio', 'basic', 'recommended', '[{"type": "online", "provider": "BoatUS", "duration": "2 hours", "cost": 0}]', 'VHF basics can be learned online, but practice recommended.');
+```
+
+=== STEP 3: Create API Routes for Trip Planning ===
+
+Create file: server/routes/tripPlanning.ts
+```typescript
+import { Router, Request, Response } from 'express';
+import { Pool } from 'pg';
+
+export function createTripPlanningRouter(db: Pool) {
+  const router = Router();
+
+  // =====================================================
+  // PARTICIPANT PROFILES
+  // =====================================================
+
+  // Create participant profile
+  router.post('/participants', async (req: Request, res: Response) => {
+    try {
+      const { 
+        name, email, phone, emergency_contact_name, emergency_contact_phone,
+        country_of_origin, languages, medical_conditions, dietary_restrictions,
+        fitness_level, swimming_ability 
+      } = req.body;
+
+      const result = await db.query(`
+        INSERT INTO participant_profiles (
+          name, email, phone, emergency_contact_name, emergency_contact_phone,
+          country_of_origin, languages, medical_conditions, dietary_restrictions,
+          fitness_level, swimming_ability
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+        RETURNING *
+      `, [
+        name, email, phone, emergency_contact_name, emergency_contact_phone,
+        country_of_origin, languages || ['English'], medical_conditions || [],
+        dietary_restrictions || [], fitness_level || 5, swimming_ability || 'basic'
+      ]);
+
+      res.json(result.rows[0]);
+    } catch (error) {
+      console.error('Error creating participant:', error);
+      res.status(500).json({ error: 'Failed to create participant' });
+    }
+  });
+
+  // Get participant profile with skills
+  router.get('/participants/:id', async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+
+      const participantResult = await db.query(
+        'SELECT * FROM participant_profiles WHERE id = $1',
+        [id]
+      );
+
+      if (participantResult.rows.length === 0) {
+        return res.status(404).json({ error: 'Participant not found' });
+      }
+
+      const skillsResult = await db.query(
+        'SELECT * FROM participant_skills WHERE participant_id = $1 ORDER BY skill_category, skill_type',
+        [id]
+      );
+
+      res.json({
+        ...participantResult.rows[0],
+        skills: skillsResult.rows
+      });
+    } catch (error) {
+      console.error('Error fetching participant:', error);
+      res.status(500).json({ error: 'Failed to fetch participant' });
+    }
+  });
+
+  // Add skill to participant
+  router.post('/participants/:id/skills', async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { 
+        skill_category, skill_type, skill_level,
+        certification_name, certification_issuer, certification_date, certification_expiry
+      } = req.body;
+
+      const result = await db.query(`
+        INSERT INTO participant_skills (
+          participant_id, skill_category, skill_type, skill_level,
+          certification_name, certification_issuer, certification_date, certification_expiry
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        ON CONFLICT (participant_id, skill_category, skill_type) 
+        DO UPDATE SET 
+          skill_level = EXCLUDED.skill_level,
+          certification_name = EXCLUDED.certification_name,
+          certification_issuer = EXCLUDED.certification_issuer,
+          certification_date = EXCLUDED.certification_date,
+          certification_expiry = EXCLUDED.certification_expiry
+        RETURNING *
+      `, [id, skill_category, skill_type, skill_level, certification_name, certification_issuer, certification_date, certification_expiry]);
+
+      res.json(result.rows[0]);
+    } catch (error) {
+      console.error('Error adding skill:', error);
+      res.status(500).json({ error: 'Failed to add skill' });
+    }
+  });
+
+  // =====================================================
+  // VEHICLE PROFILES
+  // =====================================================
+
+  // Create vehicle profile
+  router.post('/vehicles', async (req: Request, res: Response) => {
+    try {
+      const { 
+        owner_type, owner_id, company_name, year, make, model, license_plate,
+        vehicle_class, drive_type, fuel_type, ground_clearance_inches,
+        length_feet, height_feet, towing_capacity_lbs, passenger_capacity
+      } = req.body;
+
+      // Determine ferry class
+      let ferry_class = 'under_20ft';
+      if (length_feet > 40) ferry_class = 'over_40ft';
+      else if (length_feet > 20) ferry_class = '20_to_40ft';
+      if (height_feet > 7) ferry_class = 'overheight';
+
+      // Determine route suitability
+      const rough_gravel_suitable = ['truck', 'suv'].includes(vehicle_class) && 
+        (drive_type === '4wd' || drive_type === 'awd') &&
+        ground_clearance_inches >= 8;
+
+      const result = await db.query(`
+        INSERT INTO vehicle_profiles (
+          owner_type, owner_id, company_name, year, make, model, license_plate,
+          vehicle_class, drive_type, fuel_type, ground_clearance_inches,
+          length_feet, height_feet, towing_capacity_lbs, passenger_capacity,
+          ferry_class, rough_gravel_suitable, four_x_four_required_suitable
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
+        RETURNING *
+      `, [
+        owner_type, owner_id, company_name, year, make, model, license_plate,
+        vehicle_class, drive_type, fuel_type, ground_clearance_inches,
+        length_feet, height_feet, towing_capacity_lbs, passenger_capacity,
+        ferry_class, rough_gravel_suitable, drive_type === '4wd'
+      ]);
+
+      res.json(result.rows[0]);
+    } catch (error) {
+      console.error('Error creating vehicle:', error);
+      res.status(500).json({ error: 'Failed to create vehicle' });
+    }
+  });
+
+  // Add vehicle assessment
+  router.post('/vehicles/:id/assessments', async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const assessment = req.body;
+
+      const result = await db.query(`
+        INSERT INTO vehicle_assessments (
+          vehicle_id, assessed_by,
+          tire_tread_condition, tires_winter_rated, chains_available, spare_tire_condition,
+          last_service_date, current_mileage, oil_level, coolant_level, brake_condition,
+          has_first_aid_kit, has_fire_extinguisher, has_blankets, has_emergency_food,
+          has_water, has_phone_charger, has_flashlight, windshield_washer_full,
+          overall_condition, notes
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
+        RETURNING *
+      `, [
+        id, assessment.assessed_by,
+        assessment.tire_tread_condition, assessment.tires_winter_rated, assessment.chains_available, assessment.spare_tire_condition,
+        assessment.last_service_date, assessment.current_mileage, assessment.oil_level, assessment.coolant_level, assessment.brake_condition,
+        assessment.has_first_aid_kit, assessment.has_fire_extinguisher, assessment.has_blankets, assessment.has_emergency_food,
+        assessment.has_water, assessment.has_phone_charger, assessment.has_flashlight, assessment.windshield_washer_full,
+        assessment.overall_condition, assessment.notes
+      ]);
+
+      res.json(result.rows[0]);
+    } catch (error) {
+      console.error('Error creating assessment:', error);
+      res.status(500).json({ error: 'Failed to create assessment' });
+    }
+  });
+
+  // =====================================================
+  // ROUTE PLANNING
+  // =====================================================
+
+  // Get route segments
+  router.get('/routes', async (req: Request, res: Response) => {
+    try {
+      const { from, to, type } = req.query;
+
+      let query = 'SELECT * FROM route_segments WHERE is_active = true';
+      const params: any[] = [];
+      let paramIndex = 1;
+
+      if (type) {
+        params.push(type);
+        query += ` AND route_type = $${paramIndex++}`;
+      }
+
+      query += ' ORDER BY name';
+
+      const result = await db.query(query, params);
+      res.json({ segments: result.rows });
+    } catch (error) {
+      console.error('Error fetching routes:', error);
+      res.status(500).json({ error: 'Failed to fetch routes' });
+    }
+  });
+
+  // Get route with alternatives
+  router.get('/routes/:id', async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+
+      const segmentResult = await db.query(
+        'SELECT * FROM route_segments WHERE id = $1',
+        [id]
+      );
+
+      if (segmentResult.rows.length === 0) {
+        return res.status(404).json({ error: 'Route segment not found' });
+      }
+
+      const alternativesResult = await db.query(`
+        SELECT ra.*, rs.name as alt_segment_name, rs.distance_km as alt_distance, rs.typical_duration_minutes as alt_duration
+        FROM route_alternatives ra
+        LEFT JOIN route_segments rs ON ra.alternative_segment_id = rs.id
+        WHERE ra.primary_segment_id = $1
+        ORDER BY ra.priority
+      `, [id]);
+
+      res.json({
+        segment: segmentResult.rows[0],
+        alternatives: alternativesResult.rows
+      });
+    } catch (error) {
+      console.error('Error fetching route:', error);
+      res.status(500).json({ error: 'Failed to fetch route' });
+    }
+  });
+
+  // Assess route suitability for a vehicle
+  router.post('/routes/assess', async (req: Request, res: Response) => {
+    try {
+      const { route_segment_ids, vehicle_id, date } = req.body;
+
+      // Get vehicle profile and latest assessment
+      const vehicleResult = await db.query(`
+        SELECT v.*, va.*
+        FROM vehicle_profiles v
+        LEFT JOIN vehicle_assessments va ON v.id = va.vehicle_id
+        WHERE v.id = $1
+        ORDER BY va.assessment_date DESC
+        LIMIT 1
+      `, [vehicle_id]);
+
+      if (vehicleResult.rows.length === 0) {
+        return res.status(404).json({ error: 'Vehicle not found' });
+      }
+
+      const vehicle = vehicleResult.rows[0];
+
+      // Get route segments
+      const segmentsResult = await db.query(
+        'SELECT * FROM route_segments WHERE id = ANY($1)',
+        [route_segment_ids]
+      );
+
+      const assessment = {
+        vehicle,
+        segments: [] as any[],
+        warnings: [] as string[],
+        blockers: [] as string[],
+        recommendations: [] as string[]
+      };
+
+      // Check winter tire dates
+      const tripDate = new Date(date);
+      const month = tripDate.getMonth(); // 0-indexed
+      const isWinterPeriod = month >= 9 || month <= 3; // Oct-Apr
+
+      for (const segment of segmentsResult.rows) {
+        const segmentAssessment: any = {
+          segment_id: segment.id,
+          segment_name: segment.name,
+          suitable: true,
+          issues: []
+        };
+
+        // Check vehicle class
+        if (segment.minimum_vehicle_class === 'truck' && 
+            !['truck', 'suv'].includes(vehicle.vehicle_class)) {
+          segmentAssessment.suitable = false;
+          segmentAssessment.issues.push('Vehicle type not suitable for this route');
+          assessment.blockers.push(`${segment.name}: Requires truck or SUV`);
+        }
+
+        // Check winter tires
+        if (segment.winter_tires_required && isWinterPeriod && !vehicle.tires_winter_rated) {
+          segmentAssessment.issues.push('Winter tires required');
+          assessment.warnings.push(`${segment.name}: Winter tires required ${segment.winter_tires_required_dates}`);
+        }
+
+        // Check high clearance
+        if (segment.high_clearance_recommended && vehicle.ground_clearance_inches < 8) {
+          segmentAssessment.issues.push('High clearance recommended');
+          assessment.warnings.push(`${segment.name}: High clearance vehicle recommended`);
+        }
+
+        // Check gravel suitability
+        if (segment.road_surface === 'rough_gravel' && !vehicle.rough_gravel_suitable) {
+          segmentAssessment.suitable = false;
+          segmentAssessment.issues.push('Vehicle not suitable for rough gravel');
+          assessment.blockers.push(`${segment.name}: Not suitable for rough gravel roads`);
+        }
+
+        assessment.segments.push(segmentAssessment);
+      }
+
+      // Add recommendations based on warnings
+      if (assessment.warnings.some(w => w.includes('Winter tires'))) {
+        assessment.recommendations.push('Ensure winter-rated tires (M+S or mountain snowflake symbol) are installed');
+      }
+
+      if (assessment.blockers.length > 0) {
+        assessment.recommendations.push('Consider alternative routes or transport providers (see route alternatives)');
+      }
+
+      res.json(assessment);
+    } catch (error) {
+      console.error('Error assessing route:', error);
+      res.status(500).json({ error: 'Failed to assess route' });
+    }
+  });
+
+  // =====================================================
+  // TRANSPORT PROVIDERS
+  // =====================================================
+
+  // Get transport providers
+  router.get('/transport-providers', async (req: Request, res: Response) => {
+    try {
+      const { type, region } = req.query;
+
+      let query = 'SELECT * FROM transport_providers WHERE is_active = true';
+      const params: any[] = [];
+      let paramIndex = 1;
+
+      if (type) {
+        params.push(type);
+        query += ` AND provider_type = $${paramIndex++}`;
+      }
+
+      if (region) {
+        params.push(region);
+        query += ` AND $${paramIndex++} = ANY(service_area)`;
+      }
+
+      query += ' ORDER BY name';
+
+      const result = await db.query(query, params);
+      res.json({ providers: result.rows });
+    } catch (error) {
+      console.error('Error fetching providers:', error);
+      res.status(500).json({ error: 'Failed to fetch providers' });
+    }
+  });
+
+  // Get provider schedules
+  router.get('/transport-providers/:id/schedules', async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { date } = req.query;
+
+      let query = `
+        SELECT * FROM transport_schedules 
+        WHERE provider_id = $1
+      `;
+      const params: any[] = [id];
+
+      if (date) {
+        params.push(date);
+        query += ` AND (valid_from IS NULL OR valid_from <= $2)
+                   AND (valid_to IS NULL OR valid_to >= $2)`;
+      }
+
+      query += ' ORDER BY departure_time';
+
+      const result = await db.query(query, params);
+      res.json({ schedules: result.rows });
+    } catch (error) {
+      console.error('Error fetching schedules:', error);
+      res.status(500).json({ error: 'Failed to fetch schedules' });
+    }
+  });
+
+  // =====================================================
+  // SERVICE RUNS
+  // =====================================================
+
+  // Create service run
+  router.post('/service-runs', async (req: Request, res: Response) => {
+    try {
+      const {
+        company_name, service_type, destination_region, planned_date, planned_duration_days,
+        total_job_slots, crew_size, crew_lead_name, vehicle_id, vehicle_description,
+        logistics_cost_total, minimum_job_value, booking_deadline, contact_email, contact_phone, booking_notes
+      } = req.body;
+
+      const result = await db.query(`
+        INSERT INTO service_runs (
+          company_name, service_type, destination_region, planned_date, planned_duration_days,
+          total_job_slots, crew_size, crew_lead_name, vehicle_id, vehicle_description,
+          logistics_cost_total, minimum_job_value, booking_deadline, contact_email, contact_phone, booking_notes
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+        RETURNING *
+      `, [
+        company_name, service_type, destination_region, planned_date, planned_duration_days || 1,
+        total_job_slots, crew_size, crew_lead_name, vehicle_id, vehicle_description,
+        logistics_cost_total, minimum_job_value, booking_deadline, contact_email, contact_phone, booking_notes
+      ]);
+
+      res.json(result.rows[0]);
+    } catch (error) {
+      console.error('Error creating service run:', error);
+      res.status(500).json({ error: 'Failed to create service run' });
+    }
+  });
+
+  // Get service runs (for a region)
+  router.get('/service-runs', async (req: Request, res: Response) => {
+    try {
+      const { region, service_type, upcoming_only } = req.query;
+
+      let query = `
+        SELECT sr.*, 
+               COUNT(srb.id) as bookings_count,
+               sr.total_job_slots - COALESCE(sr.slots_filled, 0) as slots_available
+        FROM service_runs sr
+        LEFT JOIN service_run_bookings srb ON sr.id = srb.service_run_id AND srb.status != 'cancelled'
+        WHERE 1=1
+      `;
+      const params: any[] = [];
+      let paramIndex = 1;
+
+      if (region) {
+        params.push(region);
+        query += ` AND sr.destination_region = $${paramIndex++}`;
+      }
+
+      if (service_type) {
+        params.push(service_type);
+        query += ` AND sr.service_type = $${paramIndex++}`;
+      }
+
+      if (upcoming_only === 'true') {
+        query += ` AND sr.planned_date >= CURRENT_DATE`;
+      }
+
+      query += ` GROUP BY sr.id ORDER BY sr.planned_date`;
+
+      const result = await db.query(query, params);
+      res.json({ service_runs: result.rows });
+    } catch (error) {
+      console.error('Error fetching service runs:', error);
+      res.status(500).json({ error: 'Failed to fetch service runs' });
+    }
+  });
+
+  // Book a slot on a service run
+  router.post('/service-runs/:id/book', async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const {
+        customer_name, customer_email, customer_phone, customer_address,
+        job_description, estimated_duration_hours, job_value, preferred_time
+      } = req.body;
+
+      // Get service run to calculate logistics share
+      const runResult = await db.query(
+        'SELECT * FROM service_runs WHERE id = $1',
+        [id]
+      );
+
+      if (runResult.rows.length === 0) {
+        return res.status(404).json({ error: 'Service run not found' });
+      }
+
+      const run = runResult.rows[0];
+
+      // Check availability
+      if (run.slots_filled >= run.total_job_slots) {
+        return res.status(400).json({ error: 'No slots available' });
+      }
+
+      // Calculate logistics share
+      const logistics_share = run.logistics_cost_total / run.total_job_slots;
+      const total_price = job_value + logistics_share;
+
+      const result = await db.query(`
+        INSERT INTO service_run_bookings (
+          service_run_id, customer_name, customer_email, customer_phone, customer_address,
+          job_description, estimated_duration_hours, job_value, logistics_share, total_price, preferred_time
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+        RETURNING *
+      `, [
+        id, customer_name, customer_email, customer_phone, customer_address,
+        job_description, estimated_duration_hours, job_value, logistics_share, total_price, preferred_time
+      ]);
+
+      // Update slots filled
+      await db.query(
+        'UPDATE service_runs SET slots_filled = slots_filled + 1 WHERE id = $1',
+        [id]
+      );
+
+      res.json(result.rows[0]);
+    } catch (error) {
+      console.error('Error booking slot:', error);
+      res.status(500).json({ error: 'Failed to book slot' });
+    }
+  });
+
+  // =====================================================
+  // SKILL & EQUIPMENT GAP ANALYSIS
+  // =====================================================
+
+  // Assess participant for a trip
+  router.post('/assess/participant-trip', async (req: Request, res: Response) => {
+    try {
+      const { participant_id, trip_id } = req.body;
+
+      // Get participant skills
+      const skillsResult = await db.query(
+        'SELECT * FROM participant_skills WHERE participant_id = $1',
+        [participant_id]
+      );
+      const participantSkills = skillsResult.rows;
+
+      // Get trip requirements
+      const requirementsResult = await db.query(`
+        SELECT * FROM skill_requirements 
+        WHERE (requirement_type = 'trip' AND requirement_target_id = $1)
+           OR requirement_type = 'activity'
+        ORDER BY enforcement DESC
+      `, [trip_id]);
+
+      const requirements = requirementsResult.rows;
+
+      const assessment = {
+        participant_id,
+        trip_id,
+        qualified: true,
+        gaps: [] as any[],
+        warnings: [] as string[],
+        required_actions: [] as any[]
+      };
+
+      for (const req of requirements) {
+        const hasSkill = participantSkills.find(
+          s => s.skill_category === req.skill_category && s.skill_type === req.skill_type
+        );
+
+        const skillLevels = ['none', 'beginner', 'intermediate', 'advanced', 'expert', 'certified'];
+        const requiredLevelIndex = skillLevels.indexOf(req.minimum_level);
+        const hasLevelIndex = hasSkill ? skillLevels.indexOf(hasSkill.skill_level) : 0;
+
+        if (hasLevelIndex < requiredLevelIndex) {
+          const gap = {
+            skill_category: req.skill_category,
+            skill_type: req.skill_type,
+            required_level: req.minimum_level,
+            current_level: hasSkill?.skill_level || 'none',
+            enforcement: req.enforcement,
+            resolution_options: req.resolution_options
+          };
+
+          assessment.gaps.push(gap);
+
+          if (req.enforcement === 'required') {
+            assessment.qualified = false;
+            assessment.required_actions.push({
+              type: 'skill_upgrade',
+              ...gap
+            });
+          } else {
+            assessment.warnings.push(
+              `${req.skill_type} skill recommended: ${req.minimum_level} (you have: ${hasSkill?.skill_level || 'none'})`
+            );
+          }
+        }
+      }
+
+      res.json(assessment);
+    } catch (error) {
+      console.error('Error assessing participant:', error);
+      res.status(500).json({ error: 'Failed to assess participant' });
+    }
+  });
+
+  return router;
+}
+
+export default createTripPlanningRouter;
+```
+
+=== STEP 4: Register Routes ===
+
+Add to your main server file:
+```typescript
+import { createTripPlanningRouter } from './routes/tripPlanning';
+
+// After db pool is created:
+app.use('/api/v1/planning', createTripPlanningRouter(pool));
+```
+
+=== STEP 5: Add Bamfield Trip to Road Trips ===
+
+Add this SQL to create the Bamfield trip:
+```sql
+-- Bamfield Adventure Trip
+INSERT INTO road_trips (id, slug, title, tagline, description, category, difficulty, seasons, tags, duration_min_hours, duration_max_hours, recommended_days, region, start_location_name, start_location_lat, start_location_lng, end_location_name, end_location_lat, end_location_lng, cost_budget, cost_moderate, cost_comfort, rating, rating_count, is_published, is_featured) VALUES
+('bamfield-adventure', 'bamfield-adventure', 'Bamfield Wilderness Adventure', 'Remote coastal village at the end of the road', 'Journey to Bamfield, a remote fishing village accessible by logging road, ferry, or float plane. Gateway to the West Coast Trail and Broken Group Islands. Experience true Pacific wilderness.', 'multi-day-trek', 'challenging', ARRAY['spring', 'summer', 'fall'], ARRAY['remote', 'kayaking', 'hiking', 'fishing', 'wildlife', 'west-coast-trail', 'broken-group'], 48, 168, 4, 'Vancouver Island', 'Vancouver', 49.2827, -123.1207, 'Bamfield', 48.8333, -125.1353, 450, 850, 1500, 4.9, 87, true, true);
+
+-- Bamfield Trip Segments
+INSERT INTO trip_segments (id, trip_id, segment_order, segment_type, title, location_name, location_lat, location_lng, duration_minutes, cost_budget, cost_moderate, cost_comfort, details, pro_tips, road_segments) VALUES
+('bamfield-1', 'bamfield-adventure', 1, 'departure', 'Depart Vancouver', 'Vancouver', 49.2827, -123.1207, 0, 0, 0, 0, '{"type": "departure"}', ARRAY['Leave early to catch first ferry', 'Check BC Ferries for reservations'], ARRAY[]::TEXT[]),
+
+('bamfield-2', 'bamfield-adventure', 2, 'transport', 'Ferry: Horseshoe Bay to Nanaimo', 'Horseshoe Bay', 49.3742, -123.2733, 100, 70, 70, 70, '{"type": "transport", "mode": "ferry", "operator": "BC Ferries", "route": "Horseshoe Bay - Departure Bay", "reservation_recommended": true}', ARRAY['Book ahead in summer', 'Arrive 30+ min early'], ARRAY['van-to-hsb']),
+
+('bamfield-3', 'bamfield-adventure', 3, 'transport', 'Drive: Nanaimo to Port Alberni', 'Highway 4', 49.2, -124.5, 75, 25, 25, 25, '{"type": "transport", "mode": "drive", "distance_km": 80, "route": "Highway 4", "notes": "Mountain highway, winter tires Oct-Apr"}', ARRAY['Stop at Cathedral Grove for giant trees', 'Fill up gas in Port Alberni - last station'], ARRAY['nan-to-pa']),
+
+('bamfield-4', 'bamfield-adventure', 4, 'transport', 'Drive: Bamfield Road (Logging Road)', 'Bamfield Road', 48.9, -125.0, 150, 30, 30, 30, '{"type": "transport", "mode": "drive", "distance_km": 80, "route": "Bamfield Road", "road_type": "active_logging", "warnings": ["Logging trucks have right of way", "High clearance recommended", "Not suitable for RVs", "Check conditions before departure"]}', ARRAY['Logging trucks Mon-Fri 6am-6pm - YIELD TO THEM', 'VHF radio channel 123.1 for logging traffic', 'Full tank required - no gas until Bamfield', 'Allow 2-2.5 hours', 'Not for inexperienced drivers'], ARRAY['bamfield-road']),
+
+('bamfield-5', 'bamfield-adventure', 5, 'accommodation', 'Stay: Woods End Landing', 'Bamfield', 48.8333, -125.1353, 2880, 150, 350, 600, '{"type": "accommodation", "accommodation_type": "resort", "provider_name": "Woods End Landing", "provider_url": "https://woodsendlanding.com", "amenities": ["Waterfront cabins", "Restaurant", "Kayak rentals", "Fishing charters"], "booking_integration": "cloudbeds"}', ARRAY['Book well ahead for summer', 'Ask about kayak packages', 'Restaurant has excellent local seafood'], ARRAY[]::TEXT[]),
+
+('bamfield-6', 'bamfield-adventure', 6, 'activity', 'Kayak: Broken Group Islands', 'Barkley Sound', 48.9, -125.3, 480, 100, 200, 350, '{"type": "activity", "activity_type": "kayaking", "provider_name": "Bamfield Adventure Center", "requirements": ["Self-rescue certification required", "Intermediate paddling skills"], "equipment_included": ["Kayak", "Paddle", "PFD", "Dry bags"], "booking_integration": "booqable"}', ARRAY['Multi-day trips available', 'Tides matter - check tables', 'Watch for sea otters and whales'], ARRAY[]::TEXT[]),
+
+('bamfield-7', 'bamfield-adventure', 7, 'activity', 'Explore: Brady Beach & Trails', 'Bamfield', 48.8333, -125.1353, 240, 0, 0, 0, '{"type": "activity", "activity_type": "hiking", "pricing": {"free": true}}', ARRAY['Short walk to Brady Beach', 'Watch for eagles', 'Beach is exposed - check tide'], ARRAY[]::TEXT[]),
+
+('bamfield-8', 'bamfield-adventure', 8, 'meal', 'Dine: Woods End Restaurant', 'Bamfield', 48.8333, -125.1353, 90, 35, 65, 100, '{"type": "meal", "meal_type": "dinner", "provider_name": "Woods End Landing Restaurant"}', ARRAY['Fresh local seafood', 'Book ahead in season'], ARRAY[]::TEXT[]),
+
+('bamfield-9', 'bamfield-adventure', 9, 'transport', 'Return: Via Port Alberni', 'Bamfield Road', 48.9, -125.0, 150, 30, 30, 30, '{"type": "transport", "mode": "drive", "distance_km": 80, "notes": "Same logging road - check conditions"}', ARRAY['Leave early for best conditions', 'Check road status before departure'], ARRAY['bamfield-road']),
+
+('bamfield-10', 'bamfield-adventure', 10, 'transport', 'Ferry: Nanaimo to Vancouver', 'Departure Bay', 49.1659, -123.9401, 100, 70, 70, 70, '{"type": "transport", "mode": "ferry", "operator": "BC Ferries"}', ARRAY['Book return ferry in advance'], ARRAY[]::TEXT[]);
+```
+
+This creates:
+1. Complete database schema for trip planning framework
+2. Route segments from Vancouver to Bamfield with all alternatives
+3. Transport provider data (BC Ferries, Lady Rose, float planes, etc.)
+4. API endpoints for participants, vehicles, routes, service runs
+5. The Bamfield Adventure trip in the road trips system
+
+Run the migrations and restart the server to activate the new framework.

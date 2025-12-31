@@ -8,8 +8,10 @@ import {
   Leaf,
   Cloud,
   Radio,
-  Navigation2
+  Navigation2,
+  Settings
 } from 'lucide-react';
+import { Link } from 'wouter';
 import { StatusCards } from './StatusCards';
 import { AlertsFeed } from './AlertsFeed';
 import { AlertsTab } from './AlertsTab';
@@ -89,6 +91,12 @@ export function DashboardLayout({ defaultRegion = 'bc' }: DashboardLayoutProps) 
                   </span>
                 )}
               </Button>
+              
+              <Link href="/admin">
+                <Button variant="ghost" size="icon" data-testid="button-admin">
+                  <Settings className="w-5 h-5" />
+                </Button>
+              </Link>
             </div>
           </div>
           
