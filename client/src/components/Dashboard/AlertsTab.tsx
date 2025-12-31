@@ -158,7 +158,7 @@ export function AlertsTab({ regionId }: AlertsTabProps) {
   const [hoveredAlertId, setHoveredAlertId] = useState<number | null>(null);
   
   const map = useRef<mapboxgl.Map | null>(null);
-  const markersRef = useRef<Map<number, { marker: mapboxgl.Marker; element: HTMLDivElement }>>(new Map());
+  const markersRef = useRef<Map<number, { marker: mapboxgl.Marker; innerElement: HTMLDivElement }>>(new Map());
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapInitializedRef = useRef(false);
 
@@ -301,22 +301,31 @@ export function AlertsTab({ regionId }: AlertsTabProps) {
         const lng = Number(alert.longitude || alert.region_lng);
         if (isNaN(lat) || isNaN(lng)) return;
         
-        const el = document.createElement('div');
-        el.className = 'alert-marker';
-        el.dataset.alertId = String(alert.id);
-        el.style.cssText = `
+        // Outer wrapper - Mapbox controls this element's transform for positioning
+        const wrapper = document.createElement('div');
+        wrapper.style.cssText = `
+          width: 32px;
+          height: 32px;
+          cursor: pointer;
+        `;
+        
+        // Inner element - we control this for hover effects (won't interfere with Mapbox's transform)
+        const inner = document.createElement('div');
+        inner.className = 'alert-marker-inner';
+        inner.dataset.alertId = String(alert.id);
+        inner.style.cssText = `
           width: 32px;
           height: 32px;
           border-radius: 50%;
           background: ${typeConfig.color}40;
           border: 3px solid ${typeConfig.color};
-          cursor: pointer;
           box-shadow: 0 2px 8px rgba(0,0,0,0.3);
           display: flex;
           align-items: center;
           justify-content: center;
           position: relative;
-          transition: transform 0.15s, box-shadow 0.15s;
+          transform-origin: center center;
+          transition: transform 0.15s ease, box-shadow 0.15s ease;
         `;
         
         const severityDot = document.createElement('div');
@@ -330,22 +339,23 @@ export function AlertsTab({ regionId }: AlertsTabProps) {
           border: 2px solid white;
           border-radius: 50%;
         `;
-        el.appendChild(severityDot);
+        inner.appendChild(severityDot);
+        wrapper.appendChild(inner);
         
-        el.addEventListener('click', (e) => {
+        wrapper.addEventListener('click', (e) => {
           e.stopPropagation();
           setSelectedAlert(alert);
         });
-        el.addEventListener('mouseenter', () => {
+        wrapper.addEventListener('mouseenter', () => {
           setHoveredAlertId(alert.id);
         });
-        el.addEventListener('mouseleave', () => {
+        wrapper.addEventListener('mouseleave', () => {
           setHoveredAlertId(null);
         });
 
         const roadsInfo = alert.details?.roads?.map(r => r.name).join(', ') || '';
 
-        const marker = new mapboxgl.Marker({ element: el, anchor: 'center' })
+        const marker = new mapboxgl.Marker({ element: wrapper, anchor: 'center' })
           .setLngLat([lng, lat])
           .setPopup(
             new mapboxgl.Popup({ offset: 20, maxWidth: '300px' }).setHTML(`
@@ -369,17 +379,16 @@ export function AlertsTab({ regionId }: AlertsTabProps) {
                 <p style="margin: 0 0 8px; font-weight: 500; color: #333; font-size: 14px;">
                   ${alert.headline || 'Alert'}
                 </p>
-                <p style="margin: 0 0 8px; font-size: 13px; color: #666; display: flex; align-items: center; gap: 4px;">
-                  <span style="font-size: 12px;">Pin</span> ${alert.region_name || 'Unknown'}
+                <p style="margin: 0 0 8px; font-size: 13px; color: #666;">
+                  ${alert.region_name || 'Unknown'}
                 </p>
                 ${roadsInfo ? `
-                  <p style="margin: 0 0 8px; font-size: 13px; color: #666; display: flex; align-items: center; gap: 4px;">
-                    <span style="font-size: 12px;">Road</span> ${roadsInfo}
+                  <p style="margin: 0 0 8px; font-size: 13px; color: #666;">
+                    ${roadsInfo}
                   </p>
                 ` : ''}
                 <div style="display: flex; gap: 8px; font-size: 11px; color: #888; border-top: 1px solid #eee; padding-top: 8px; margin-top: 8px;">
                   <span>${srcConfig.name}</span>
-                  <span>•</span>
                   <span>${getTimeAgo(new Date(alert.created_at))}</span>
                 </div>
               </div>
@@ -387,7 +396,7 @@ export function AlertsTab({ regionId }: AlertsTabProps) {
           )
           .addTo(currentMap);
         
-        markersRef.current.set(alert.id, { marker, element: el });
+        markersRef.current.set(alert.id, { marker, innerElement: inner });
       });
     };
 
@@ -402,17 +411,17 @@ export function AlertsTab({ regionId }: AlertsTabProps) {
     };
   }, [filteredAlerts, showMap]);
 
-  // Update marker highlighting when hoveredAlertId changes
+  // Update marker highlighting when hoveredAlertId changes - only modify innerElement, not wrapper
   useEffect(() => {
-    markersRef.current.forEach(({ element }, alertId) => {
+    markersRef.current.forEach(({ innerElement }, alertId) => {
       if (hoveredAlertId === alertId) {
-        element.style.transform = 'scale(1.4)';
-        element.style.boxShadow = '0 0 0 4px rgba(59, 130, 246, 0.5), 0 4px 12px rgba(0,0,0,0.4)';
-        element.style.zIndex = '1000';
+        innerElement.style.transform = 'scale(1.3)';
+        innerElement.style.boxShadow = '0 0 0 4px rgba(59, 130, 246, 0.5), 0 4px 12px rgba(0,0,0,0.4)';
+        innerElement.style.zIndex = '1000';
       } else {
-        element.style.transform = 'scale(1)';
-        element.style.boxShadow = '0 2px 8px rgba(0,0,0,0.3)';
-        element.style.zIndex = '1';
+        innerElement.style.transform = 'scale(1)';
+        innerElement.style.boxShadow = '0 2px 8px rgba(0,0,0,0.3)';
+        innerElement.style.zIndex = '1';
       }
     });
   }, [hoveredAlertId]);
