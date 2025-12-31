@@ -1237,5 +1237,508 @@ export async function registerRoutes(
     }
   });
 
+  // ==========================================
+  // TRIP PLANNING FRAMEWORK API
+  // ==========================================
+
+  // GET /api/v1/planning/participants - List participant profiles
+  app.get("/api/v1/planning/participants", async (req, res) => {
+    try {
+      const { search } = req.query;
+      let query = 'SELECT * FROM participant_profiles';
+      const params: any[] = [];
+
+      if (search) {
+        params.push(`%${search}%`);
+        query += ' WHERE name ILIKE $1 OR email ILIKE $1';
+      }
+
+      query += ' ORDER BY name';
+      const result = await storage.query(query, params);
+      res.json({ participants: result.rows });
+    } catch (error) {
+      console.error('Error fetching participants:', error);
+      res.status(500).json({ error: 'Failed to fetch participants' });
+    }
+  });
+
+  // POST /api/v1/planning/participants - Create participant profile
+  app.post("/api/v1/planning/participants", async (req, res) => {
+    try {
+      const { name, email, phone, emergency_contact_name, emergency_contact_phone, country_of_origin, languages, medical_conditions, dietary_restrictions, fitness_level, swimming_ability, mobility_notes } = req.body;
+
+      const result = await storage.query(`
+        INSERT INTO participant_profiles (name, email, phone, emergency_contact_name, emergency_contact_phone, country_of_origin, languages, medical_conditions, dietary_restrictions, fitness_level, swimming_ability, mobility_notes)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+        RETURNING *
+      `, [name, email, phone, emergency_contact_name, emergency_contact_phone, country_of_origin, languages || ['English'], medical_conditions || [], dietary_restrictions || [], fitness_level || 5, swimming_ability || 'basic', mobility_notes]);
+
+      res.json(result.rows[0]);
+    } catch (error) {
+      console.error('Error creating participant:', error);
+      res.status(500).json({ error: 'Failed to create participant' });
+    }
+  });
+
+  // GET /api/v1/planning/participants/:id - Get participant with skills
+  app.get("/api/v1/planning/participants/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const participantResult = await storage.query('SELECT * FROM participant_profiles WHERE id = $1', [id]);
+
+      if (participantResult.rows.length === 0) {
+        return res.status(404).json({ error: 'Participant not found' });
+      }
+
+      const skillsResult = await storage.query('SELECT * FROM participant_skills WHERE participant_id = $1', [id]);
+
+      res.json({
+        participant: participantResult.rows[0],
+        skills: skillsResult.rows
+      });
+    } catch (error) {
+      console.error('Error fetching participant:', error);
+      res.status(500).json({ error: 'Failed to fetch participant' });
+    }
+  });
+
+  // POST /api/v1/planning/participants/:id/skills - Add skill to participant
+  app.post("/api/v1/planning/participants/:id/skills", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { skill_category, skill_type, skill_level, certification_name, certification_issuer, certification_date, certification_expiry, notes } = req.body;
+
+      const result = await storage.query(`
+        INSERT INTO participant_skills (participant_id, skill_category, skill_type, skill_level, certification_name, certification_issuer, certification_date, certification_expiry, notes)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        RETURNING *
+      `, [id, skill_category, skill_type, skill_level, certification_name, certification_issuer, certification_date, certification_expiry, notes]);
+
+      res.json(result.rows[0]);
+    } catch (error) {
+      console.error('Error adding skill:', error);
+      res.status(500).json({ error: 'Failed to add skill' });
+    }
+  });
+
+  // GET /api/v1/planning/vehicles - List vehicle profiles
+  app.get("/api/v1/planning/vehicles", async (req, res) => {
+    try {
+      const { owner_id, vehicle_class } = req.query;
+      let query = 'SELECT * FROM vehicle_profiles WHERE 1=1';
+      const params: any[] = [];
+      let paramIndex = 1;
+
+      if (owner_id) {
+        params.push(owner_id);
+        query += ` AND owner_id = $${paramIndex++}`;
+      }
+      if (vehicle_class) {
+        params.push(vehicle_class);
+        query += ` AND vehicle_class = $${paramIndex++}`;
+      }
+
+      query += ' ORDER BY created_at DESC';
+      const result = await storage.query(query, params);
+      res.json({ vehicles: result.rows });
+    } catch (error) {
+      console.error('Error fetching vehicles:', error);
+      res.status(500).json({ error: 'Failed to fetch vehicles' });
+    }
+  });
+
+  // POST /api/v1/planning/vehicles - Create vehicle profile
+  app.post("/api/v1/planning/vehicles", async (req, res) => {
+    try {
+      const { owner_type, owner_id, company_name, year, make, model, license_plate, vehicle_class, drive_type, fuel_type, ground_clearance_inches, length_feet, height_feet, passenger_capacity, ferry_class, paved_road_suitable, good_gravel_suitable, rough_gravel_suitable, four_x_four_required_suitable } = req.body;
+
+      const result = await storage.query(`
+        INSERT INTO vehicle_profiles (owner_type, owner_id, company_name, year, make, model, license_plate, vehicle_class, drive_type, fuel_type, ground_clearance_inches, length_feet, height_feet, passenger_capacity, ferry_class, paved_road_suitable, good_gravel_suitable, rough_gravel_suitable, four_x_four_required_suitable)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
+        RETURNING *
+      `, [owner_type, owner_id, company_name, year, make, model, license_plate, vehicle_class, drive_type, fuel_type, ground_clearance_inches, length_feet, height_feet, passenger_capacity, ferry_class, paved_road_suitable ?? true, good_gravel_suitable ?? true, rough_gravel_suitable ?? false, four_x_four_required_suitable ?? false]);
+
+      res.json(result.rows[0]);
+    } catch (error) {
+      console.error('Error creating vehicle:', error);
+      res.status(500).json({ error: 'Failed to create vehicle' });
+    }
+  });
+
+  // POST /api/v1/planning/vehicles/:id/assess - Create vehicle assessment
+  app.post("/api/v1/planning/vehicles/:id/assess", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const assessment = req.body;
+
+      const result = await storage.query(`
+        INSERT INTO vehicle_assessments (vehicle_id, assessed_by, tire_tread_condition, tires_winter_rated, chains_available, oil_level, coolant_level, brake_condition, current_mileage, has_first_aid_kit, has_fire_extinguisher, has_blankets, has_water, has_flashlight, overall_condition, notes)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+        RETURNING *
+      `, [id, assessment.assessed_by, assessment.tire_tread_condition, assessment.tires_winter_rated, assessment.chains_available, assessment.oil_level, assessment.coolant_level, assessment.brake_condition, assessment.current_mileage, assessment.has_first_aid_kit, assessment.has_fire_extinguisher, assessment.has_blankets, assessment.has_water, assessment.has_flashlight, assessment.overall_condition, assessment.notes]);
+
+      res.json(result.rows[0]);
+    } catch (error) {
+      console.error('Error creating assessment:', error);
+      res.status(500).json({ error: 'Failed to create assessment' });
+    }
+  });
+
+  // GET /api/v1/planning/route-segments - Get route segments
+  app.get("/api/v1/planning/route-segments", async (req, res) => {
+    try {
+      const { route_type, region } = req.query;
+      let query = 'SELECT * FROM route_segments WHERE is_active = true';
+      const params: any[] = [];
+      let paramIndex = 1;
+
+      if (route_type) {
+        params.push(route_type);
+        query += ` AND route_type = $${paramIndex++}`;
+      }
+
+      query += ' ORDER BY name';
+      const result = await storage.query(query, params);
+      res.json({ segments: result.rows });
+    } catch (error) {
+      console.error('Error fetching route segments:', error);
+      res.status(500).json({ error: 'Failed to fetch route segments' });
+    }
+  });
+
+  // GET /api/v1/planning/route-segments/:id/alternatives - Get alternatives for a segment
+  app.get("/api/v1/planning/route-segments/:id/alternatives", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const result = await storage.query(`
+        SELECT ra.*, rs.name as alternative_segment_name 
+        FROM route_alternatives ra
+        LEFT JOIN route_segments rs ON ra.alternative_segment_id = rs.id
+        WHERE ra.primary_segment_id = $1
+        ORDER BY ra.priority
+      `, [id]);
+
+      res.json({ alternatives: result.rows });
+    } catch (error) {
+      console.error('Error fetching alternatives:', error);
+      res.status(500).json({ error: 'Failed to fetch alternatives' });
+    }
+  });
+
+  // POST /api/v1/planning/assess/route - Assess vehicle for route segments
+  app.post("/api/v1/planning/assess/route", async (req, res) => {
+    try {
+      const { vehicle_id, route_segment_ids, date } = req.body;
+
+      const vehicleResult = await storage.query(
+        `SELECT v.*, va.tires_winter_rated, va.chains_available 
+         FROM vehicle_profiles v 
+         LEFT JOIN vehicle_assessments va ON v.id = va.vehicle_id 
+         WHERE v.id = $1 
+         ORDER BY va.assessment_date DESC LIMIT 1`,
+        [vehicle_id]
+      );
+
+      if (vehicleResult.rows.length === 0) {
+        return res.status(404).json({ error: 'Vehicle not found' });
+      }
+
+      const vehicle = vehicleResult.rows[0];
+      const segmentsResult = await storage.query(
+        'SELECT * FROM route_segments WHERE id = ANY($1)',
+        [route_segment_ids]
+      );
+
+      const assessment: any = {
+        vehicle,
+        segments: [],
+        warnings: [],
+        blockers: [],
+        recommendations: []
+      };
+
+      const tripDate = new Date(date);
+      const month = tripDate.getMonth();
+      const isWinterPeriod = month >= 9 || month <= 3;
+
+      for (const segment of segmentsResult.rows) {
+        const segmentAssessment: any = {
+          segment_id: segment.id,
+          segment_name: segment.name,
+          suitable: true,
+          issues: []
+        };
+
+        if (segment.minimum_vehicle_class === 'truck' && !['truck', 'suv'].includes(vehicle.vehicle_class)) {
+          segmentAssessment.suitable = false;
+          segmentAssessment.issues.push('Vehicle type not suitable for this route');
+          assessment.blockers.push(`${segment.name}: Requires truck or SUV`);
+        }
+
+        if (segment.winter_tires_required && isWinterPeriod && !vehicle.tires_winter_rated) {
+          segmentAssessment.issues.push('Winter tires required');
+          assessment.warnings.push(`${segment.name}: Winter tires required ${segment.winter_tires_required_dates || 'Oct 1 - Apr 30'}`);
+        }
+
+        if (segment.high_clearance_recommended && vehicle.ground_clearance_inches && vehicle.ground_clearance_inches < 8) {
+          segmentAssessment.issues.push('High clearance recommended');
+          assessment.warnings.push(`${segment.name}: High clearance vehicle recommended`);
+        }
+
+        if (segment.road_surface === 'rough_gravel' && !vehicle.rough_gravel_suitable) {
+          segmentAssessment.suitable = false;
+          segmentAssessment.issues.push('Vehicle not suitable for rough gravel');
+          assessment.blockers.push(`${segment.name}: Not suitable for rough gravel roads`);
+        }
+
+        assessment.segments.push(segmentAssessment);
+      }
+
+      if (assessment.warnings.some((w: string) => w.includes('Winter tires'))) {
+        assessment.recommendations.push('Ensure winter-rated tires (M+S or mountain snowflake symbol) are installed');
+      }
+
+      if (assessment.blockers.length > 0) {
+        assessment.recommendations.push('Consider alternative routes or transport providers (see route alternatives)');
+      }
+
+      res.json(assessment);
+    } catch (error) {
+      console.error('Error assessing route:', error);
+      res.status(500).json({ error: 'Failed to assess route' });
+    }
+  });
+
+  // GET /api/v1/planning/transport-providers - Get transport providers
+  app.get("/api/v1/planning/transport-providers", async (req, res) => {
+    try {
+      const { type, region } = req.query;
+      let query = 'SELECT * FROM transport_providers WHERE is_active = true';
+      const params: any[] = [];
+      let paramIndex = 1;
+
+      if (type) {
+        params.push(type);
+        query += ` AND provider_type = $${paramIndex++}`;
+      }
+
+      if (region) {
+        params.push(region);
+        query += ` AND $${paramIndex++} = ANY(service_area)`;
+      }
+
+      query += ' ORDER BY name';
+      const result = await storage.query(query, params);
+      res.json({ providers: result.rows });
+    } catch (error) {
+      console.error('Error fetching providers:', error);
+      res.status(500).json({ error: 'Failed to fetch providers' });
+    }
+  });
+
+  // GET /api/v1/planning/transport-providers/:id/schedules - Get provider schedules
+  app.get("/api/v1/planning/transport-providers/:id/schedules", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { date } = req.query;
+
+      let query = 'SELECT * FROM transport_schedules WHERE provider_id = $1';
+      const params: any[] = [id];
+
+      if (date) {
+        params.push(date);
+        query += ` AND (valid_from IS NULL OR valid_from <= $2) AND (valid_to IS NULL OR valid_to >= $2)`;
+      }
+
+      query += ' ORDER BY departure_time';
+      const result = await storage.query(query, params);
+      res.json({ schedules: result.rows });
+    } catch (error) {
+      console.error('Error fetching schedules:', error);
+      res.status(500).json({ error: 'Failed to fetch schedules' });
+    }
+  });
+
+  // POST /api/v1/planning/service-runs - Create service run
+  app.post("/api/v1/planning/service-runs", async (req, res) => {
+    try {
+      const { company_name, service_type, destination_region, planned_date, planned_duration_days, total_job_slots, crew_size, crew_lead_name, vehicle_id, vehicle_description, logistics_cost_total, minimum_job_value, booking_deadline, contact_email, contact_phone, booking_notes } = req.body;
+
+      const result = await storage.query(`
+        INSERT INTO service_runs (company_name, service_type, destination_region, planned_date, planned_duration_days, total_job_slots, crew_size, crew_lead_name, vehicle_id, vehicle_description, logistics_cost_total, minimum_job_value, booking_deadline, contact_email, contact_phone, booking_notes)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+        RETURNING *
+      `, [company_name, service_type, destination_region, planned_date, planned_duration_days || 1, total_job_slots, crew_size, crew_lead_name, vehicle_id, vehicle_description, logistics_cost_total, minimum_job_value, booking_deadline, contact_email, contact_phone, booking_notes]);
+
+      res.json(result.rows[0]);
+    } catch (error) {
+      console.error('Error creating service run:', error);
+      res.status(500).json({ error: 'Failed to create service run' });
+    }
+  });
+
+  // GET /api/v1/planning/service-runs - Get service runs
+  app.get("/api/v1/planning/service-runs", async (req, res) => {
+    try {
+      const { region, service_type, upcoming_only } = req.query;
+
+      let query = `
+        SELECT sr.*, 
+               COUNT(srb.id) as bookings_count,
+               sr.total_job_slots - COALESCE(sr.slots_filled, 0) as slots_available
+        FROM service_runs sr
+        LEFT JOIN service_run_bookings srb ON sr.id = srb.service_run_id AND srb.status != 'cancelled'
+        WHERE 1=1
+      `;
+      const params: any[] = [];
+      let paramIndex = 1;
+
+      if (region) {
+        params.push(region);
+        query += ` AND sr.destination_region = $${paramIndex++}`;
+      }
+
+      if (service_type) {
+        params.push(service_type);
+        query += ` AND sr.service_type = $${paramIndex++}`;
+      }
+
+      if (upcoming_only === 'true') {
+        query += ` AND sr.planned_date >= CURRENT_DATE`;
+      }
+
+      query += ` GROUP BY sr.id ORDER BY sr.planned_date`;
+
+      const result = await storage.query(query, params);
+      res.json({ service_runs: result.rows });
+    } catch (error) {
+      console.error('Error fetching service runs:', error);
+      res.status(500).json({ error: 'Failed to fetch service runs' });
+    }
+  });
+
+  // POST /api/v1/planning/service-runs/:id/book - Book slot on service run
+  app.post("/api/v1/planning/service-runs/:id/book", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { customer_name, customer_email, customer_phone, customer_address, job_description, estimated_duration_hours, job_value, preferred_time } = req.body;
+
+      const runResult = await storage.query('SELECT * FROM service_runs WHERE id = $1', [id]);
+
+      if (runResult.rows.length === 0) {
+        return res.status(404).json({ error: 'Service run not found' });
+      }
+
+      const run = runResult.rows[0];
+
+      if (run.slots_filled >= run.total_job_slots) {
+        return res.status(400).json({ error: 'No slots available' });
+      }
+
+      const logistics_share = run.logistics_cost_total / run.total_job_slots;
+      const total_price = job_value + logistics_share;
+
+      const result = await storage.query(`
+        INSERT INTO service_run_bookings (service_run_id, customer_name, customer_email, customer_phone, customer_address, job_description, estimated_duration_hours, job_value, logistics_share, total_price, preferred_time)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+        RETURNING *
+      `, [id, customer_name, customer_email, customer_phone, customer_address, job_description, estimated_duration_hours, job_value, logistics_share, total_price, preferred_time]);
+
+      await storage.query('UPDATE service_runs SET slots_filled = slots_filled + 1 WHERE id = $1', [id]);
+
+      res.json(result.rows[0]);
+    } catch (error) {
+      console.error('Error booking slot:', error);
+      res.status(500).json({ error: 'Failed to book slot' });
+    }
+  });
+
+  // POST /api/v1/planning/assess/participant-trip - Assess participant skills for trip
+  app.post("/api/v1/planning/assess/participant-trip", async (req, res) => {
+    try {
+      const { participant_id, trip_id } = req.body;
+
+      const skillsResult = await storage.query('SELECT * FROM participant_skills WHERE participant_id = $1', [participant_id]);
+      const participantSkills = skillsResult.rows;
+
+      const requirementsResult = await storage.query(`
+        SELECT * FROM skill_requirements 
+        WHERE (requirement_type = 'trip' AND requirement_target_id = $1)
+           OR requirement_type = 'activity'
+        ORDER BY enforcement DESC
+      `, [trip_id]);
+
+      const requirements = requirementsResult.rows;
+
+      const assessment: any = {
+        participant_id,
+        trip_id,
+        qualified: true,
+        gaps: [],
+        warnings: [],
+        required_actions: []
+      };
+
+      const skillLevels = ['none', 'beginner', 'intermediate', 'advanced', 'expert', 'certified'];
+
+      for (const req of requirements) {
+        const hasSkill = participantSkills.find(
+          (s: any) => s.skill_category === req.skill_category && s.skill_type === req.skill_type
+        );
+
+        const requiredLevelIndex = skillLevels.indexOf(req.minimum_level);
+        const hasLevelIndex = hasSkill ? skillLevels.indexOf(hasSkill.skill_level) : 0;
+
+        if (hasLevelIndex < requiredLevelIndex) {
+          const gap = {
+            skill_category: req.skill_category,
+            skill_type: req.skill_type,
+            required_level: req.minimum_level,
+            current_level: hasSkill?.skill_level || 'none',
+            enforcement: req.enforcement,
+            resolution_options: req.resolution_options
+          };
+
+          assessment.gaps.push(gap);
+
+          if (req.enforcement === 'required') {
+            assessment.qualified = false;
+            assessment.required_actions.push({ type: 'skill_upgrade', ...gap });
+          } else {
+            assessment.warnings.push(
+              `${req.skill_type} skill recommended: ${req.minimum_level} (you have: ${hasSkill?.skill_level || 'none'})`
+            );
+          }
+        }
+      }
+
+      res.json(assessment);
+    } catch (error) {
+      console.error('Error assessing participant:', error);
+      res.status(500).json({ error: 'Failed to assess participant' });
+    }
+  });
+
+  // GET /api/v1/planning/equipment-types - Get equipment types
+  app.get("/api/v1/planning/equipment-types", async (req, res) => {
+    try {
+      const { category } = req.query;
+      let query = 'SELECT * FROM equipment_types';
+      const params: any[] = [];
+
+      if (category) {
+        params.push(category);
+        query += ' WHERE category = $1';
+      }
+
+      query += ' ORDER BY category, name';
+      const result = await storage.query(query, params);
+      res.json({ equipment: result.rows });
+    } catch (error) {
+      console.error('Error fetching equipment:', error);
+      res.status(500).json({ error: 'Failed to fetch equipment' });
+    }
+  });
+
   return httpServer;
 }
