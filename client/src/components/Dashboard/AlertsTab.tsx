@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useRef } from 'react';
+import { useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import { 
   AlertTriangle, AlertCircle, Info, Clock, MapPin, Radio, X, Map as MapIcon,
   List, LayoutGrid, Calendar, ArrowRight, CheckCircle, Construction,
@@ -97,9 +97,10 @@ export function AlertsTab({ regionId }: AlertsTabProps) {
   const [showMap, setShowMap] = useState(true);
   const [hoveredAlertId, setHoveredAlertId] = useState<number | null>(null);
   
-  const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const markersRef = useRef<mapboxgl.Marker[]>([]);
+  const mapContainerRef = useRef<HTMLDivElement | null>(null);
+  const mapInitializedRef = useRef(false);
 
   useEffect(() => {
     fetch('/api/config/mapbox-token')
@@ -107,6 +108,27 @@ export function AlertsTab({ regionId }: AlertsTabProps) {
       .then(data => setMapboxToken(data.token || ''))
       .catch(() => setMapboxToken(''));
   }, []);
+
+  // Callback ref for map container - initializes map when DOM element is mounted
+  const setMapContainer = useCallback((node: HTMLDivElement | null) => {
+    mapContainerRef.current = node;
+    
+    // Trigger map initialization check
+    if (node && mapboxToken && !mapInitializedRef.current) {
+      mapInitializedRef.current = true;
+      mapboxgl.accessToken = mapboxToken;
+      
+      const newMap = new mapboxgl.Map({
+        container: node,
+        style: 'mapbox://styles/mapbox/dark-v11',
+        center: [-123.1207, 49.2827],
+        zoom: 5,
+      });
+      
+      newMap.addControl(new mapboxgl.NavigationControl(), 'top-right');
+      map.current = newMap;
+    }
+  }, [mapboxToken]);
 
   useEffect(() => {
     fetchAlerts();
@@ -187,117 +209,90 @@ export function AlertsTab({ regionId }: AlertsTabProps) {
     return filtered;
   }, [alerts, searchQuery, selectedSeverity, selectedType, selectedRegion, sortBy]);
 
-  const [mapReady, setMapReady] = useState(false);
-
-  // Initialize map only once when container and token are available
+  // Update markers when map is ready and alerts change
   useEffect(() => {
-    if (!showMap || !mapboxToken || !mapContainer.current) return;
-    if (map.current) return; // Already initialized
+    if (!map.current || !showMap) return;
 
-    mapboxgl.accessToken = mapboxToken;
-    const newMap = new mapboxgl.Map({
-      container: mapContainer.current,
-      style: 'mapbox://styles/mapbox/dark-v11',
-      center: [-123.1207, 49.2827],
-      zoom: 5,
-    });
+    const updateMarkers = () => {
+      // Clear existing markers
+      markersRef.current.forEach(m => m.remove());
+      markersRef.current = [];
 
-    newMap.addControl(new mapboxgl.NavigationControl(), 'top-right');
-    
-    newMap.on('load', () => {
-      setMapReady(true);
-    });
-
-    map.current = newMap;
-
-    return () => {
-      if (map.current) {
-        map.current.remove();
-        map.current = null;
-        setMapReady(false);
-      }
-    };
-  }, [showMap, mapboxToken]);
-
-  // Update markers when alerts change
-  useEffect(() => {
-    if (!map.current || !mapReady || !showMap) return;
-
-    // Clear existing markers
-    markersRef.current.forEach(m => m.remove());
-    markersRef.current = [];
-
-    const alertsWithCoords = filteredAlerts.filter(a => {
-      const lat = Number(a.latitude || a.region_lat);
-      const lng = Number(a.longitude || a.region_lng);
-      return !isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0;
-    });
-
-    alertsWithCoords.forEach(alert => {
-      const config = severityConfig[alert.severity] || severityConfig.info;
-      const lat = Number(alert.latitude || alert.region_lat);
-      const lng = Number(alert.longitude || alert.region_lng);
-      if (isNaN(lat) || isNaN(lng)) return;
-      
-      const el = document.createElement('div');
-      el.style.cssText = `
-        width: 24px;
-        height: 24px;
-        border-radius: 50%;
-        background: ${config.markerColor};
-        border: 2px solid white;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        cursor: pointer;
-        transition: transform 0.2s;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-      `;
-      
-      el.addEventListener('click', () => setSelectedAlert(alert));
-      el.addEventListener('mouseenter', () => {
-        setHoveredAlertId(alert.id);
-        el.style.transform = 'scale(1.3)';
-      });
-      el.addEventListener('mouseleave', () => {
-        setHoveredAlertId(null);
-        el.style.transform = 'scale(1)';
-      });
-
-      const marker = new mapboxgl.Marker(el)
-        .setLngLat([lng, lat])
-        .setPopup(
-          new mapboxgl.Popup({ offset: 15 }).setHTML(`
-            <div style="padding: 8px; max-width: 200px;">
-              <strong style="color: #333;">${alert.headline}</strong>
-              <p style="margin: 4px 0 0; color: #666; font-size: 12px;">
-                ${alert.region_name || 'Unknown region'}
-              </p>
-            </div>
-          `)
-        )
-        .addTo(map.current!);
-      
-      markersRef.current.push(marker);
-    });
-
-    // Fit bounds only on first load, not on every update
-    if (alertsWithCoords.length > 0 && map.current && markersRef.current.length === alertsWithCoords.length) {
-      const bounds = new mapboxgl.LngLatBounds();
-      let validCount = 0;
-      alertsWithCoords.forEach(a => {
+      const alertsWithCoords = filteredAlerts.filter(a => {
         const lat = Number(a.latitude || a.region_lat);
         const lng = Number(a.longitude || a.region_lng);
-        if (!isNaN(lat) && !isNaN(lng)) {
-          bounds.extend([lng, lat]);
-          validCount++;
-        }
+        return !isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0;
       });
-      if (validCount > 0) {
+
+      alertsWithCoords.forEach(alert => {
+        const config = severityConfig[alert.severity] || severityConfig.info;
+        const lat = Number(alert.latitude || alert.region_lat);
+        const lng = Number(alert.longitude || alert.region_lng);
+        if (isNaN(lat) || isNaN(lng)) return;
+        
+        const el = document.createElement('div');
+        el.style.cssText = `
+          width: 24px;
+          height: 24px;
+          border-radius: 50%;
+          background: ${config.markerColor};
+          border: 2px solid white;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          transition: transform 0.2s;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        `;
+        
+        el.addEventListener('click', () => setSelectedAlert(alert));
+        el.addEventListener('mouseenter', () => {
+          setHoveredAlertId(alert.id);
+          el.style.transform = 'scale(1.3)';
+        });
+        el.addEventListener('mouseleave', () => {
+          setHoveredAlertId(null);
+          el.style.transform = 'scale(1)';
+        });
+
+        const marker = new mapboxgl.Marker(el)
+          .setLngLat([lng, lat])
+          .setPopup(
+            new mapboxgl.Popup({ offset: 15 }).setHTML(`
+              <div style="padding: 8px; max-width: 200px;">
+                <strong style="color: #333;">${alert.headline}</strong>
+                <p style="margin: 4px 0 0; color: #666; font-size: 12px;">
+                  ${alert.region_name || 'Unknown region'}
+                </p>
+              </div>
+            `)
+          )
+          .addTo(map.current!);
+        
+        markersRef.current.push(marker);
+      });
+
+      // Fit bounds
+      if (alertsWithCoords.length > 0 && map.current) {
+        const bounds = new mapboxgl.LngLatBounds();
+        alertsWithCoords.forEach(a => {
+          const lat = Number(a.latitude || a.region_lat);
+          const lng = Number(a.longitude || a.region_lng);
+          if (!isNaN(lat) && !isNaN(lng)) {
+            bounds.extend([lng, lat]);
+          }
+        });
         map.current.fitBounds(bounds, { padding: 50, maxZoom: 10 });
       }
+    };
+
+    // Check if map is loaded, if not wait for it
+    if (map.current.loaded()) {
+      updateMarkers();
+    } else {
+      map.current.on('load', updateMarkers);
     }
-  }, [filteredAlerts, mapReady, showMap]);
+  }, [filteredAlerts, showMap]);
 
   function flyToAlert(alert: Alert) {
     const lat = alert.latitude || alert.region_lat;
@@ -602,7 +597,7 @@ export function AlertsTab({ regionId }: AlertsTabProps) {
             className="bg-card rounded-xl border relative"
             style={{ height: '70vh', minHeight: '400px' }}
           >
-            <div ref={mapContainer} className="absolute inset-0 rounded-xl" />
+            <div ref={setMapContainer} className="absolute inset-0 rounded-xl" />
             
             <div className="absolute bottom-4 left-4 bg-card/90 rounded-lg p-3 border">
               <h4 className="text-xs font-semibold mb-2">Alert Severity</h4>
