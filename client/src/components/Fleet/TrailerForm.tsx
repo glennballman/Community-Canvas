@@ -185,6 +185,10 @@ export function TrailerForm({ trailerId, initialData, onSave, onCancel }: Traile
   const createMutation = useMutation({
     mutationFn: async (data: TrailerFormData) => {
       const res = await apiRequest('POST', '/api/v1/fleet/trailers', data);
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({ message: 'Failed to create trailer' }));
+        throw new Error(error.message || 'Failed to create trailer');
+      }
       return res.json();
     },
     onSuccess: () => {
@@ -201,6 +205,10 @@ export function TrailerForm({ trailerId, initialData, onSave, onCancel }: Traile
   const updateMutation = useMutation({
     mutationFn: async (data: TrailerFormData) => {
       const res = await apiRequest('PATCH', `/api/v1/fleet/trailers/${trailerId}`, data);
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({ message: 'Failed to update trailer' }));
+        throw new Error(error.message || 'Failed to update trailer');
+      }
       return res.json();
     },
     onSuccess: () => {
@@ -607,7 +615,7 @@ export function TrailerForm({ trailerId, initialData, onSave, onCancel }: Traile
                         <FormLabel>Brake Type</FormLabel>
                         <Select onValueChange={field.onChange} value={field.value}>
                           <FormControl>
-                            <SelectTrigger>
+                            <SelectTrigger data-testid="trailer-select-brake">
                               <SelectValue placeholder="Select brake type" />
                             </SelectTrigger>
                           </FormControl>
@@ -629,7 +637,7 @@ export function TrailerForm({ trailerId, initialData, onSave, onCancel }: Traile
                         <FormLabel>Wiring Type</FormLabel>
                         <Select onValueChange={field.onChange} value={field.value}>
                           <FormControl>
-                            <SelectTrigger>
+                            <SelectTrigger data-testid="trailer-select-wiring">
                               <SelectValue placeholder="Select wiring type" />
                             </SelectTrigger>
                           </FormControl>
@@ -656,7 +664,7 @@ export function TrailerForm({ trailerId, initialData, onSave, onCancel }: Traile
                         <FormLabel>Gate/Door Type</FormLabel>
                         <Select onValueChange={field.onChange} value={field.value}>
                           <FormControl>
-                            <SelectTrigger>
+                            <SelectTrigger data-testid="trailer-select-gate">
                               <SelectValue placeholder="Select gate type" />
                             </SelectTrigger>
                           </FormControl>
@@ -678,7 +686,7 @@ export function TrailerForm({ trailerId, initialData, onSave, onCancel }: Traile
                         <FormLabel>Floor Type</FormLabel>
                         <Select onValueChange={field.onChange} value={field.value}>
                           <FormControl>
-                            <SelectTrigger>
+                            <SelectTrigger data-testid="trailer-select-floor">
                               <SelectValue placeholder="Select floor type" />
                             </SelectTrigger>
                           </FormControl>
@@ -704,7 +712,7 @@ export function TrailerForm({ trailerId, initialData, onSave, onCancel }: Traile
                         <FormItem className="flex items-center justify-between rounded-lg border p-4">
                           <FormLabel className="text-base">Side Door</FormLabel>
                           <FormControl>
-                            <Switch checked={field.value} onCheckedChange={field.onChange} />
+                            <Switch checked={field.value} onCheckedChange={field.onChange} data-testid="switch-side-door" />
                           </FormControl>
                         </FormItem>
                       )}
@@ -716,7 +724,7 @@ export function TrailerForm({ trailerId, initialData, onSave, onCancel }: Traile
                         <FormItem className="flex items-center justify-between rounded-lg border p-4">
                           <FormLabel className="text-base">Roof Rack</FormLabel>
                           <FormControl>
-                            <Switch checked={field.value} onCheckedChange={field.onChange} />
+                            <Switch checked={field.value} onCheckedChange={field.onChange} data-testid="switch-roof-rack" />
                           </FormControl>
                         </FormItem>
                       )}
@@ -728,7 +736,7 @@ export function TrailerForm({ trailerId, initialData, onSave, onCancel }: Traile
                         <FormItem className="flex items-center justify-between rounded-lg border p-4">
                           <FormLabel className="text-base">Tie-Downs</FormLabel>
                           <FormControl>
-                            <Switch checked={field.value} onCheckedChange={field.onChange} />
+                            <Switch checked={field.value} onCheckedChange={field.onChange} data-testid="switch-tie-downs" />
                           </FormControl>
                         </FormItem>
                       )}
@@ -753,7 +761,7 @@ export function TrailerForm({ trailerId, initialData, onSave, onCancel }: Traile
                         <FormItem className="flex items-center justify-between rounded-lg border p-4">
                           <FormLabel className="text-base">Interior Lighting</FormLabel>
                           <FormControl>
-                            <Switch checked={field.value} onCheckedChange={field.onChange} />
+                            <Switch checked={field.value} onCheckedChange={field.onChange} data-testid="switch-interior-lighting" />
                           </FormControl>
                         </FormItem>
                       )}
@@ -765,7 +773,7 @@ export function TrailerForm({ trailerId, initialData, onSave, onCancel }: Traile
                         <FormItem className="flex items-center justify-between rounded-lg border p-4">
                           <FormLabel className="text-base">Electrical Outlets</FormLabel>
                           <FormControl>
-                            <Switch checked={field.value} onCheckedChange={field.onChange} />
+                            <Switch checked={field.value} onCheckedChange={field.onChange} data-testid="switch-electrical-outlets" />
                           </FormControl>
                         </FormItem>
                       )}

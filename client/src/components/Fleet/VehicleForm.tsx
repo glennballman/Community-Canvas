@@ -177,7 +177,11 @@ export function VehicleForm({ vehicleId, initialData, onSave, onCancel }: Vehicl
 
   const createMutation = useMutation({
     mutationFn: async (data: VehicleFormData) => {
-      const res = await apiRequest('POST', '/api/v1/planning/vehicles', data);
+      const res = await apiRequest('POST', '/api/v1/fleet/vehicles', data);
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({ message: 'Failed to create vehicle' }));
+        throw new Error(error.message || 'Failed to create vehicle');
+      }
       return res.json();
     },
     onSuccess: () => {
@@ -194,6 +198,10 @@ export function VehicleForm({ vehicleId, initialData, onSave, onCancel }: Vehicl
   const updateMutation = useMutation({
     mutationFn: async (data: VehicleFormData) => {
       const res = await apiRequest('PATCH', `/api/v1/fleet/vehicles/${vehicleId}`, data);
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({ message: 'Failed to update vehicle' }));
+        throw new Error(error.message || 'Failed to update vehicle');
+      }
       return res.json();
     },
     onSuccess: () => {
