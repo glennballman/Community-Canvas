@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { 
   Truck, 
   Ruler,
@@ -145,6 +145,11 @@ interface TrailerFormProps {
 export function TrailerForm({ trailerId, initialData, onSave, onCancel }: TrailerFormProps) {
   const [activeTab, setActiveTab] = useState('basic');
 
+  const trailerQuery = useQuery<{ trailer: TrailerFormData }>({
+    queryKey: ['/api/v1/fleet/trailers', trailerId],
+    enabled: !!trailerId,
+  });
+
   const form = useForm<TrailerFormData>({
     resolver: zodResolver(trailerFormSchema),
     defaultValues: {
@@ -181,6 +186,45 @@ export function TrailerForm({ trailerId, initialData, onSave, onCancel }: Traile
       notes: initialData?.notes || '',
     },
   });
+
+  useEffect(() => {
+    if (trailerQuery.data?.trailer) {
+      const t = trailerQuery.data.trailer;
+      form.reset({
+        nickname: t.nickname || '',
+        fleet_number: t.fleet_number || '',
+        trailer_type: t.trailer_type || 'utility',
+        color: t.color || '',
+        license_plate: t.license_plate || '',
+        vin: t.vin || '',
+        length_feet: t.length_feet || undefined,
+        width_feet: t.width_feet || undefined,
+        height_feet: t.height_feet || undefined,
+        interior_length_feet: t.interior_length_feet || undefined,
+        interior_width_feet: t.interior_width_feet || undefined,
+        interior_height_feet: t.interior_height_feet || undefined,
+        gvwr_lbs: t.gvwr_lbs || undefined,
+        empty_weight_lbs: t.empty_weight_lbs || undefined,
+        payload_capacity_lbs: t.payload_capacity_lbs || undefined,
+        hitch_type: t.hitch_type || 'ball',
+        required_ball_size: t.required_ball_size || '',
+        tongue_weight_lbs: t.tongue_weight_lbs || undefined,
+        brake_type: t.brake_type || '',
+        wiring_type: t.wiring_type || '',
+        gate_type: t.gate_type || '',
+        has_side_door: t.has_side_door || false,
+        has_roof_rack: t.has_roof_rack || false,
+        has_tie_downs: t.has_tie_downs ?? true,
+        tie_down_count: t.tie_down_count || undefined,
+        has_interior_lighting: t.has_interior_lighting || false,
+        has_electrical_outlets: t.has_electrical_outlets || false,
+        has_ventilation: t.has_ventilation || false,
+        floor_type: t.floor_type || '',
+        fleet_status: t.fleet_status || 'available',
+        notes: t.notes || '',
+      });
+    }
+  }, [trailerQuery.data, form]);
 
   const createMutation = useMutation({
     mutationFn: async (data: TrailerFormData) => {

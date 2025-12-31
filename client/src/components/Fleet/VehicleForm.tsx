@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { 
   Car, 
   Truck, 
@@ -144,6 +144,11 @@ interface VehicleFormProps {
 export function VehicleForm({ vehicleId, initialData, onSave, onCancel }: VehicleFormProps) {
   const [activeTab, setActiveTab] = useState('basic');
 
+  const vehicleQuery = useQuery<{ vehicle: VehicleFormData }>({
+    queryKey: ['/api/v1/fleet/vehicles', vehicleId],
+    enabled: !!vehicleId,
+  });
+
   const form = useForm<VehicleFormData>({
     resolver: zodResolver(vehicleFormSchema),
     defaultValues: {
@@ -171,9 +176,42 @@ export function VehicleForm({ vehicleId, initialData, onSave, onCancel }: Vehicl
       has_gooseneck_hitch: initialData?.has_gooseneck_hitch || false,
       has_fifth_wheel_hitch: initialData?.has_fifth_wheel_hitch || false,
       fleet_status: initialData?.fleet_status || 'available',
-      notes: initialData?.notes || '',
+      notes: '',
     },
   });
+
+  useEffect(() => {
+    if (vehicleQuery.data?.vehicle) {
+      const v = vehicleQuery.data.vehicle;
+      form.reset({
+        nickname: v.nickname || '',
+        fleet_number: v.fleet_number || '',
+        year: v.year || undefined,
+        make: v.make || '',
+        model: v.model || '',
+        color: v.color || '',
+        license_plate: v.license_plate || '',
+        vin: v.vin || '',
+        vehicle_class: v.vehicle_class || 'truck',
+        drive_type: v.drive_type || '4wd',
+        fuel_type: v.fuel_type || 'gas',
+        ground_clearance_inches: v.ground_clearance_inches || undefined,
+        length_feet: v.length_feet || undefined,
+        height_feet: v.height_feet || undefined,
+        passenger_capacity: v.passenger_capacity || undefined,
+        towing_capacity_lbs: v.towing_capacity_lbs || undefined,
+        has_hitch: v.has_hitch || false,
+        hitch_class: v.hitch_class || '',
+        hitch_ball_size: v.hitch_ball_size || '',
+        has_brake_controller: v.has_brake_controller || false,
+        trailer_wiring: v.trailer_wiring || '',
+        has_gooseneck_hitch: v.has_gooseneck_hitch || false,
+        has_fifth_wheel_hitch: v.has_fifth_wheel_hitch || false,
+        fleet_status: v.fleet_status || 'available',
+        notes: '',
+      });
+    }
+  }, [vehicleQuery.data, form]);
 
   const createMutation = useMutation({
     mutationFn: async (data: VehicleFormData) => {

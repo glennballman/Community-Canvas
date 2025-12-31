@@ -44,6 +44,30 @@ export function createFleetRouter(db: Pool) {
     }
   });
 
+  router.get('/vehicles/:id', async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const result = await db.query(`
+        SELECT v.*, 
+               p.name as assigned_to_display_name,
+               (SELECT COUNT(*) FROM vehicle_photos WHERE vehicle_id = v.id) as photo_count,
+               (SELECT COUNT(*) FROM vehicle_safety_equipment WHERE vehicle_id = v.id AND present = true) as equipment_count
+        FROM vehicle_profiles v
+        LEFT JOIN participant_profiles p ON v.assigned_to_id = p.id
+        WHERE v.id = $1
+      `, [id]);
+      
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: 'Vehicle not found' });
+      }
+      
+      res.json({ vehicle: result.rows[0] });
+    } catch (error) {
+      console.error('Error fetching vehicle:', error);
+      res.status(500).json({ error: 'Failed to fetch vehicle' });
+    }
+  });
+
   router.get('/stats', async (req: Request, res: Response) => {
     try {
       const vehicleStats = await db.query(`
@@ -299,6 +323,30 @@ export function createFleetRouter(db: Pool) {
     } catch (error) {
       console.error('Error fetching trailers:', error);
       res.status(500).json({ error: 'Failed to fetch trailers' });
+    }
+  });
+
+  router.get('/trailers/:id', async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const result = await db.query(`
+        SELECT t.*, 
+               v.nickname as hitched_to_nickname,
+               v.fleet_number as hitched_to_fleet_number,
+               (SELECT COUNT(*) FROM trailer_photos WHERE trailer_id = t.id) as photo_count
+        FROM trailer_profiles t
+        LEFT JOIN vehicle_profiles v ON t.currently_hitched_to = v.id
+        WHERE t.id = $1
+      `, [id]);
+      
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: 'Trailer not found' });
+      }
+      
+      res.json({ trailer: result.rows[0] });
+    } catch (error) {
+      console.error('Error fetching trailer:', error);
+      res.status(500).json({ error: 'Failed to fetch trailer' });
     }
   });
 
