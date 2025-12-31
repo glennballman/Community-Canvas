@@ -188,20 +188,31 @@ export function AlertsTab({ regionId }: AlertsTabProps) {
   }, [alerts, searchQuery, selectedSeverity, selectedType, selectedRegion, sortBy]);
 
   useEffect(() => {
-    if (!mapContainer.current || !showMap || !mapboxToken) return;
-    if (map.current) return;
+    if (!showMap || !mapboxToken) return;
+    
+    // Clean up existing map first
+    if (map.current) {
+      map.current.remove();
+      map.current = null;
+    }
 
-    mapboxgl.accessToken = mapboxToken;
-    map.current = new mapboxgl.Map({
-      container: mapContainer.current,
-      style: 'mapbox://styles/mapbox/dark-v11',
-      center: [-123.1207, 49.2827],
-      zoom: 5,
-    });
+    // Wait for DOM to be ready
+    const timer = setTimeout(() => {
+      if (!mapContainer.current) return;
+      
+      mapboxgl.accessToken = mapboxToken;
+      map.current = new mapboxgl.Map({
+        container: mapContainer.current,
+        style: 'mapbox://styles/mapbox/dark-v11',
+        center: [-123.1207, 49.2827],
+        zoom: 5,
+      });
 
-    map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
+      map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
+    }, 100);
 
     return () => {
+      clearTimeout(timer);
       map.current?.remove();
       map.current = null;
     };
@@ -209,63 +220,64 @@ export function AlertsTab({ regionId }: AlertsTabProps) {
 
   useEffect(() => {
     if (!map.current || !showMap) return;
+    
+    const addMarkers = () => {
+      markersRef.current.forEach(m => m.remove());
+      markersRef.current = [];
 
-    markersRef.current.forEach(m => m.remove());
-    markersRef.current = [];
-
-    const alertsWithCoords = filteredAlerts.filter(a => {
-      const lat = Number(a.latitude || a.region_lat);
-      const lng = Number(a.longitude || a.region_lng);
-      return !isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0;
-    });
-
-    alertsWithCoords.forEach(alert => {
-      const config = severityConfig[alert.severity] || severityConfig.info;
-      const lat = Number(alert.latitude || alert.region_lat);
-      const lng = Number(alert.longitude || alert.region_lng);
-      if (isNaN(lat) || isNaN(lng)) return;
-      
-      const el = document.createElement('div');
-      el.style.cssText = `
-        width: 24px;
-        height: 24px;
-        border-radius: 50%;
-        background: ${config.markerColor};
-        border: 2px solid white;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        cursor: pointer;
-        transition: transform 0.2s;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-      `;
-      
-      el.addEventListener('click', () => setSelectedAlert(alert));
-      el.addEventListener('mouseenter', () => {
-        setHoveredAlertId(alert.id);
-        el.style.transform = 'scale(1.3)';
-      });
-      el.addEventListener('mouseleave', () => {
-        setHoveredAlertId(null);
-        el.style.transform = 'scale(1)';
+      const alertsWithCoords = filteredAlerts.filter(a => {
+        const lat = Number(a.latitude || a.region_lat);
+        const lng = Number(a.longitude || a.region_lng);
+        return !isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0;
       });
 
-      const marker = new mapboxgl.Marker(el)
-        .setLngLat([lng, lat])
-        .setPopup(
-          new mapboxgl.Popup({ offset: 15 }).setHTML(`
-            <div style="padding: 8px; max-width: 200px;">
-              <strong style="color: #333;">${alert.headline}</strong>
-              <p style="margin: 4px 0 0; color: #666; font-size: 12px;">
-                ${alert.region_name || 'Unknown region'}
-              </p>
-            </div>
-          `)
-        )
-        .addTo(map.current!);
-      
-      markersRef.current.push(marker);
-    });
+      alertsWithCoords.forEach(alert => {
+        const config = severityConfig[alert.severity] || severityConfig.info;
+        const lat = Number(alert.latitude || alert.region_lat);
+        const lng = Number(alert.longitude || alert.region_lng);
+        if (isNaN(lat) || isNaN(lng)) return;
+        
+        const el = document.createElement('div');
+        el.style.cssText = `
+          width: 24px;
+          height: 24px;
+          border-radius: 50%;
+          background: ${config.markerColor};
+          border: 2px solid white;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          transition: transform 0.2s;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        `;
+        
+        el.addEventListener('click', () => setSelectedAlert(alert));
+        el.addEventListener('mouseenter', () => {
+          setHoveredAlertId(alert.id);
+          el.style.transform = 'scale(1.3)';
+        });
+        el.addEventListener('mouseleave', () => {
+          setHoveredAlertId(null);
+          el.style.transform = 'scale(1)';
+        });
+
+        const marker = new mapboxgl.Marker(el)
+          .setLngLat([lng, lat])
+          .setPopup(
+            new mapboxgl.Popup({ offset: 15 }).setHTML(`
+              <div style="padding: 8px; max-width: 200px;">
+                <strong style="color: #333;">${alert.headline}</strong>
+                <p style="margin: 4px 0 0; color: #666; font-size: 12px;">
+                  ${alert.region_name || 'Unknown region'}
+                </p>
+              </div>
+            `)
+          )
+          .addTo(map.current!);
+        
+        markersRef.current.push(marker);
+      });
 
     if (alertsWithCoords.length > 0 && map.current) {
       const bounds = new mapboxgl.LngLatBounds();
@@ -281,6 +293,14 @@ export function AlertsTab({ regionId }: AlertsTabProps) {
       if (validCount > 0) {
         map.current.fitBounds(bounds, { padding: 50, maxZoom: 10 });
       }
+    }
+    };
+    
+    // Wait for map to be loaded before adding markers
+    if (map.current.loaded()) {
+      addMarkers();
+    } else {
+      map.current.on('load', addMarkers);
     }
   }, [filteredAlerts, showMap, mapboxToken]);
 
@@ -584,10 +604,10 @@ export function AlertsTab({ regionId }: AlertsTabProps) {
 
         {showMap && (
           <div 
-            className="bg-card rounded-xl overflow-hidden border relative"
-            style={{ height: '70vh', isolation: 'isolate', contain: 'layout paint' }}
+            className="bg-card rounded-xl border relative"
+            style={{ height: '70vh', minHeight: '400px' }}
           >
-            <div ref={mapContainer} className="w-full h-full" />
+            <div ref={mapContainer} className="absolute inset-0 rounded-xl" />
             
             <div className="absolute bottom-4 left-4 bg-card/90 rounded-lg p-3 border">
               <h4 className="text-xs font-semibold mb-2">Alert Severity</h4>
