@@ -31,7 +31,7 @@ export function TripPlanningTab() {
   useEffect(() => {
     async function loadSavedProfiles() {
       try {
-        const savedParticipantId = localStorage.getItem('tripPlanning_participantId');
+        let savedParticipantId = localStorage.getItem('tripPlanning_participantId');
         const savedVehicleId = localStorage.getItem('tripPlanning_vehicleId');
         
         if (savedParticipantId) {
@@ -44,6 +44,27 @@ export function TripPlanningTab() {
             });
           } else {
             localStorage.removeItem('tripPlanning_participantId');
+            savedParticipantId = null;
+          }
+        }
+        
+        if (!savedParticipantId) {
+          const response = await fetch('/api/v1/planning/participants');
+          if (response.ok) {
+            const data = await response.json();
+            const participants = data.participants || [];
+            if (participants.length > 0) {
+              const mostRecent = participants[0];
+              const detailResponse = await fetch(`/api/v1/planning/participants/${mostRecent.id}`);
+              if (detailResponse.ok) {
+                const detailData = await detailResponse.json();
+                setCurrentParticipant({
+                  ...detailData.participant,
+                  skills: detailData.skills || []
+                });
+                localStorage.setItem('tripPlanning_participantId', mostRecent.id);
+              }
+            }
           }
         }
         
