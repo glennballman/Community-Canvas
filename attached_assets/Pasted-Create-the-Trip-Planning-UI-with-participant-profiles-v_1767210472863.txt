@@ -1,0 +1,2234 @@
+Create the Trip Planning UI with participant profiles, vehicle assessments, and trip qualification checks. This will allow users to:
+1. Create their profile with skills and certifications
+2. Add and assess their vehicle
+3. Check if they're qualified for a specific trip
+4. See what gaps they need to fill (training, equipment, vehicle upgrades)
+
+=== PART 1: Types ===
+
+Create file: client/src/types/tripPlanning.ts
+```typescript
+// Trip Planning Types
+
+export interface ParticipantProfile {
+  id: string;
+  name: string;
+  email?: string;
+  phone?: string;
+  emergency_contact_name?: string;
+  emergency_contact_phone?: string;
+  country_of_origin?: string;
+  languages: string[];
+  medical_conditions: string[];
+  dietary_restrictions: string[];
+  fitness_level: number; // 1-10
+  swimming_ability: 'none' | 'basic' | 'strong' | 'lifeguard';
+  skills?: ParticipantSkill[];
+  created_at?: string;
+}
+
+export interface ParticipantSkill {
+  id: string;
+  participant_id: string;
+  skill_category: SkillCategory;
+  skill_type: string;
+  skill_level: SkillLevel;
+  certification_name?: string;
+  certification_issuer?: string;
+  certification_date?: string;
+  certification_expiry?: string;
+  verified: boolean;
+}
+
+export type SkillCategory = 'paddling' | 'driving' | 'backcountry' | 'water_safety' | 'emergency';
+export type SkillLevel = 'none' | 'beginner' | 'intermediate' | 'advanced' | 'expert' | 'certified';
+
+export interface VehicleProfile {
+  id: string;
+  owner_type: 'personal' | 'rental' | 'company';
+  owner_id?: string;
+  company_name?: string;
+  year?: number;
+  make?: string;
+  model?: string;
+  license_plate?: string;
+  vehicle_class: VehicleClass;
+  drive_type?: '2wd' | '4wd' | 'awd';
+  fuel_type?: string;
+  ground_clearance_inches?: number;
+  length_feet?: number;
+  height_feet?: number;
+  towing_capacity_lbs?: number;
+  passenger_capacity?: number;
+  ferry_class?: string;
+  rough_gravel_suitable: boolean;
+  four_x_four_required_suitable: boolean;
+  latest_assessment?: VehicleAssessment;
+}
+
+export type VehicleClass = 'sedan' | 'suv' | 'truck' | 'van' | 'cube_van' | 'rv_class_a' | 'rv_class_c' | 'motorcycle';
+
+export interface VehicleAssessment {
+  id: string;
+  vehicle_id: string;
+  assessment_date: string;
+  tire_tread_condition: 'new' | 'good' | 'fair' | 'worn' | 'needs_replacement';
+  tires_winter_rated: boolean;
+  chains_available: boolean;
+  spare_tire_condition?: string;
+  last_service_date?: string;
+  current_mileage?: number;
+  oil_level?: string;
+  coolant_level?: string;
+  brake_condition?: string;
+  has_first_aid_kit: boolean;
+  has_fire_extinguisher: boolean;
+  has_blankets: boolean;
+  has_emergency_food: boolean;
+  has_water: boolean;
+  has_phone_charger: boolean;
+  has_flashlight: boolean;
+  windshield_washer_full: boolean;
+  overall_condition: 'excellent' | 'good' | 'fair' | 'poor' | 'not_roadworthy';
+  notes?: string;
+}
+
+export interface RouteSegment {
+  id: string;
+  name: string;
+  description?: string;
+  start_location_name: string;
+  end_location_name: string;
+  distance_km: number;
+  typical_duration_minutes: number;
+  route_type: 'highway' | 'secondary' | 'gravel' | 'logging_road' | 'water' | 'air';
+  road_surface?: string;
+  minimum_vehicle_class?: string;
+  winter_tires_required: boolean;
+  high_clearance_recommended: boolean;
+  hazards: string[];
+  conditions_source?: string;
+}
+
+export interface RouteAlternative {
+  id: string;
+  primary_segment_id: string;
+  alternative_type: 'route_segment' | 'ferry' | 'float_plane' | 'water_taxi' | 'delay';
+  alternative_description?: string;
+  trigger_conditions: string[];
+  additional_time_minutes?: number;
+  additional_cost_estimate?: number;
+  provider_name?: string;
+  provider_contact?: string;
+  priority: number;
+}
+
+export interface TransportProvider {
+  id: string;
+  name: string;
+  provider_type: 'ferry' | 'float_plane' | 'water_taxi' | 'bus' | 'shuttle' | 'train' | 'rental_car';
+  phone?: string;
+  website?: string;
+  booking_url?: string;
+  base_location?: string;
+  service_area: string[];
+  has_live_api: boolean;
+  accepts_vehicles: boolean;
+  accepts_kayaks: boolean;
+  reservation_required: boolean;
+  operating_season?: string;
+}
+
+export interface TripAssessment {
+  participant_id: string;
+  trip_id: string;
+  qualified: boolean;
+  gaps: SkillGap[];
+  warnings: string[];
+  required_actions: RequiredAction[];
+}
+
+export interface SkillGap {
+  skill_category: string;
+  skill_type: string;
+  required_level: string;
+  current_level: string;
+  enforcement: 'required' | 'recommended' | 'advisory';
+  resolution_options: ResolutionOption[];
+}
+
+export interface ResolutionOption {
+  type: 'course' | 'experience' | 'equipment' | 'online';
+  provider?: string;
+  location?: string;
+  duration?: string;
+  cost?: number;
+  description?: string;
+}
+
+export interface RequiredAction {
+  type: 'skill_upgrade' | 'equipment_rental' | 'vehicle_upgrade' | 'booking';
+  skill_category?: string;
+  skill_type?: string;
+  required_level?: string;
+  current_level?: string;
+  resolution_options?: ResolutionOption[];
+}
+
+export interface RouteAssessment {
+  vehicle: VehicleProfile;
+  segments: SegmentAssessment[];
+  warnings: string[];
+  blockers: string[];
+  recommendations: string[];
+}
+
+export interface SegmentAssessment {
+  segment_id: string;
+  segment_name: string;
+  suitable: boolean;
+  issues: string[];
+}
+
+export interface ServiceRun {
+  id: string;
+  company_name: string;
+  service_type: string;
+  destination_region: string;
+  planned_date: string;
+  planned_duration_days: number;
+  total_job_slots: number;
+  slots_filled: number;
+  slots_available: number;
+  crew_size?: number;
+  logistics_cost_total: number;
+  logistics_cost_per_slot: number;
+  minimum_job_value?: number;
+  status: 'planning' | 'published' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled';
+  booking_deadline?: string;
+  contact_email?: string;
+  contact_phone?: string;
+}
+
+// Icon mappings
+export const skillCategoryIcons: Record<SkillCategory, string> = {
+  paddling: '🚣',
+  driving: '🚗',
+  backcountry: '🏕️',
+  water_safety: '🌊',
+  emergency: '🚨'
+};
+
+export const skillLevelColors: Record<SkillLevel, string> = {
+  none: 'text-gray-400 bg-gray-500/20',
+  beginner: 'text-green-400 bg-green-500/20',
+  intermediate: 'text-blue-400 bg-blue-500/20',
+  advanced: 'text-purple-400 bg-purple-500/20',
+  expert: 'text-orange-400 bg-orange-500/20',
+  certified: 'text-yellow-400 bg-yellow-500/20'
+};
+
+export const vehicleClassIcons: Record<VehicleClass, string> = {
+  sedan: '🚗',
+  suv: '🚙',
+  truck: '🛻',
+  van: '🚐',
+  cube_van: '📦',
+  rv_class_a: '🚌',
+  rv_class_c: '🚐',
+  motorcycle: '🏍️'
+};
+```
+
+=== PART 2: Trip Planning Tab Component ===
+
+Create file: client/src/components/TripPlanning/TripPlanningTab.tsx
+```tsx
+import React, { useState } from 'react';
+import { ParticipantProfile, VehicleProfile } from '../../types/tripPlanning';
+import { ParticipantProfileForm } from './ParticipantProfileForm';
+import { VehicleProfileForm } from './VehicleProfileForm';
+import { TripQualificationCheck } from './TripQualificationCheck';
+import { ServiceRunsBoard } from './ServiceRunsBoard';
+import { RouteExplorer } from './RouteExplorer';
+
+type PlanningView = 'overview' | 'participant' | 'vehicle' | 'qualify' | 'service-runs' | 'routes';
+
+export function TripPlanningTab() {
+  const [activeView, setActiveView] = useState<PlanningView>('overview');
+  const [currentParticipant, setCurrentParticipant] = useState<ParticipantProfile | null>(null);
+  const [currentVehicle, setCurrentVehicle] = useState<VehicleProfile | null>(null);
+
+  const renderView = () => {
+    switch (activeView) {
+      case 'participant':
+        return (
+          <ParticipantProfileForm 
+            participant={currentParticipant}
+            onSave={(p) => {
+              setCurrentParticipant(p);
+              setActiveView('overview');
+            }}
+            onCancel={() => setActiveView('overview')}
+          />
+        );
+      case 'vehicle':
+        return (
+          <VehicleProfileForm
+            vehicle={currentVehicle}
+            onSave={(v) => {
+              setCurrentVehicle(v);
+              setActiveView('overview');
+            }}
+            onCancel={() => setActiveView('overview')}
+          />
+        );
+      case 'qualify':
+        return (
+          <TripQualificationCheck
+            participant={currentParticipant}
+            vehicle={currentVehicle}
+            onBack={() => setActiveView('overview')}
+          />
+        );
+      case 'service-runs':
+        return (
+          <ServiceRunsBoard
+            onBack={() => setActiveView('overview')}
+          />
+        );
+      case 'routes':
+        return (
+          <RouteExplorer
+            vehicle={currentVehicle}
+            onBack={() => setActiveView('overview')}
+          />
+        );
+      default:
+        return renderOverview();
+    }
+  };
+
+  const renderOverview = () => (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="bg-gray-800 rounded-xl p-6">
+        <h2 className="text-2xl font-bold text-white mb-2">🧭 Trip Planning Center</h2>
+        <p className="text-gray-400">
+          Assess your skills, check your vehicle, and find out if you're ready for BC's adventures.
+        </p>
+      </div>
+
+      {/* Status Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Participant Card */}
+        <div className="bg-gray-800 rounded-xl p-5">
+          <div className="flex items-start justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <span className="text-3xl">👤</span>
+              <div>
+                <h3 className="text-white font-semibold">Your Profile</h3>
+                <p className="text-gray-400 text-sm">Skills & certifications</p>
+              </div>
+            </div>
+            {currentParticipant ? (
+              <span className="px-2 py-1 bg-green-500/20 text-green-400 rounded text-sm">Complete</span>
+            ) : (
+              <span className="px-2 py-1 bg-yellow-500/20 text-yellow-400 rounded text-sm">Not Set</span>
+            )}
+          </div>
+
+          {currentParticipant ? (
+            <div className="space-y-2 mb-4">
+              <p className="text-white">{currentParticipant.name}</p>
+              <p className="text-gray-400 text-sm">
+                Fitness: {currentParticipant.fitness_level}/10 • 
+                Swimming: {currentParticipant.swimming_ability}
+              </p>
+              <p className="text-gray-400 text-sm">
+                {currentParticipant.skills?.length || 0} skills registered
+              </p>
+            </div>
+          ) : (
+            <p className="text-gray-500 text-sm mb-4">
+              Create your profile to check trip qualifications
+            </p>
+          )}
+
+          <button
+            onClick={() => setActiveView('participant')}
+            className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition"
+          >
+            {currentParticipant ? 'Edit Profile' : 'Create Profile'}
+          </button>
+        </div>
+
+        {/* Vehicle Card */}
+        <div className="bg-gray-800 rounded-xl p-5">
+          <div className="flex items-start justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <span className="text-3xl">🚗</span>
+              <div>
+                <h3 className="text-white font-semibold">Your Vehicle</h3>
+                <p className="text-gray-400 text-sm">Assessment & suitability</p>
+              </div>
+            </div>
+            {currentVehicle ? (
+              <span className="px-2 py-1 bg-green-500/20 text-green-400 rounded text-sm">Added</span>
+            ) : (
+              <span className="px-2 py-1 bg-yellow-500/20 text-yellow-400 rounded text-sm">Not Set</span>
+            )}
+          </div>
+
+          {currentVehicle ? (
+            <div className="space-y-2 mb-4">
+              <p className="text-white">
+                {currentVehicle.year} {currentVehicle.make} {currentVehicle.model}
+              </p>
+              <p className="text-gray-400 text-sm capitalize">
+                {currentVehicle.vehicle_class?.replace('_', ' ')} • {currentVehicle.drive_type?.toUpperCase()}
+              </p>
+              <div className="flex gap-2">
+                {currentVehicle.rough_gravel_suitable && (
+                  <span className="px-2 py-0.5 bg-green-500/20 text-green-400 rounded text-xs">Gravel OK</span>
+                )}
+                {currentVehicle.four_x_four_required_suitable && (
+                  <span className="px-2 py-0.5 bg-blue-500/20 text-blue-400 rounded text-xs">4x4 Ready</span>
+                )}
+              </div>
+            </div>
+          ) : (
+            <p className="text-gray-500 text-sm mb-4">
+              Add your vehicle to check route suitability
+            </p>
+          )}
+
+          <button
+            onClick={() => setActiveView('vehicle')}
+            className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition"
+          >
+            {currentVehicle ? 'Edit Vehicle' : 'Add Vehicle'}
+          </button>
+        </div>
+      </div>
+
+      {/* Action Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* Trip Qualification */}
+        <button
+          onClick={() => setActiveView('qualify')}
+          className="bg-gray-800 rounded-xl p-5 text-left hover:ring-2 hover:ring-blue-400 transition group"
+        >
+          <span className="text-3xl">✅</span>
+          <h3 className="text-white font-semibold mt-3 group-hover:text-blue-400">Check Trip Qualification</h3>
+          <p className="text-gray-400 text-sm mt-1">
+            See if you're ready for a specific trip and what gaps to fill
+          </p>
+        </button>
+
+        {/* Route Explorer */}
+        <button
+          onClick={() => setActiveView('routes')}
+          className="bg-gray-800 rounded-xl p-5 text-left hover:ring-2 hover:ring-blue-400 transition group"
+        >
+          <span className="text-3xl">🗺️</span>
+          <h3 className="text-white font-semibold mt-3 group-hover:text-blue-400">Explore Routes</h3>
+          <p className="text-gray-400 text-sm mt-1">
+            View route segments, conditions, and alternatives
+          </p>
+        </button>
+
+        {/* Service Runs */}
+        <button
+          onClick={() => setActiveView('service-runs')}
+          className="bg-gray-800 rounded-xl p-5 text-left hover:ring-2 hover:ring-green-400 transition group"
+        >
+          <span className="text-3xl">🔧</span>
+          <h3 className="text-white font-semibold mt-3 group-hover:text-green-400">Service Runs</h3>
+          <p className="text-gray-400 text-sm mt-1">
+            See upcoming service trips to remote areas
+          </p>
+        </button>
+      </div>
+
+      {/* Quick Info */}
+      <div className="bg-gradient-to-r from-blue-900/30 to-purple-900/30 rounded-xl p-5 border border-blue-500/20">
+        <h3 className="text-white font-semibold mb-3">🎯 How It Works</h3>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
+          <div className="flex items-start gap-2">
+            <span className="text-blue-400 font-bold">1.</span>
+            <span className="text-gray-300">Create your profile with skills and certifications</span>
+          </div>
+          <div className="flex items-start gap-2">
+            <span className="text-blue-400 font-bold">2.</span>
+            <span className="text-gray-300">Add your vehicle and complete the assessment</span>
+          </div>
+          <div className="flex items-start gap-2">
+            <span className="text-blue-400 font-bold">3.</span>
+            <span className="text-gray-300">Check qualification for trips you want to do</span>
+          </div>
+          <div className="flex items-start gap-2">
+            <span className="text-blue-400 font-bold">4.</span>
+            <span className="text-gray-300">Fill gaps with training, rentals, or alternatives</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="space-y-4">
+      {renderView()}
+    </div>
+  );
+}
+
+export default TripPlanningTab;
+```
+
+=== PART 3: Participant Profile Form ===
+
+Create file: client/src/components/TripPlanning/ParticipantProfileForm.tsx
+```tsx
+import React, { useState } from 'react';
+import { ParticipantProfile, ParticipantSkill, SkillCategory, SkillLevel, skillCategoryIcons, skillLevelColors } from '../../types/tripPlanning';
+
+interface ParticipantProfileFormProps {
+  participant: ParticipantProfile | null;
+  onSave: (participant: ParticipantProfile) => void;
+  onCancel: () => void;
+}
+
+const SKILL_TYPES: Record<SkillCategory, string[]> = {
+  paddling: ['sea_kayak', 'whitewater', 'canoe', 'sup', 'self_rescue'],
+  driving: ['standard', 'mountain', 'gravel_road', 'winter', 'commercial', 'towing'],
+  backcountry: ['navigation', 'camping', 'wilderness_first_aid', 'bear_aware', 'leave_no_trace'],
+  water_safety: ['vhf_radio', 'boating_license', 'fishing_license_salt', 'fishing_license_fresh'],
+  emergency: ['cpr_first_aid', 'wilderness_first_aid', 'satellite_device', 'emergency_beacon']
+};
+
+const SKILL_TYPE_LABELS: Record<string, string> = {
+  sea_kayak: 'Sea Kayaking',
+  whitewater: 'Whitewater',
+  canoe: 'Canoeing',
+  sup: 'Stand-Up Paddleboard',
+  self_rescue: 'Self-Rescue',
+  standard: 'Standard Driving',
+  mountain: 'Mountain Driving',
+  gravel_road: 'Gravel Road',
+  winter: 'Winter Driving',
+  commercial: 'Commercial License',
+  towing: 'Towing',
+  navigation: 'Navigation (Map/Compass)',
+  camping: 'Backcountry Camping',
+  wilderness_first_aid: 'Wilderness First Aid',
+  bear_aware: 'Bear Awareness',
+  leave_no_trace: 'Leave No Trace',
+  vhf_radio: 'VHF Radio',
+  boating_license: 'Boating License',
+  fishing_license_salt: 'Fishing License (Saltwater)',
+  fishing_license_fresh: 'Fishing License (Freshwater)',
+  cpr_first_aid: 'CPR/First Aid',
+  satellite_device: 'Satellite Communicator',
+  emergency_beacon: 'Emergency Beacon (PLB)'
+};
+
+export function ParticipantProfileForm({ participant, onSave, onCancel }: ParticipantProfileFormProps) {
+  const [formData, setFormData] = useState<Partial<ParticipantProfile>>({
+    name: participant?.name || '',
+    email: participant?.email || '',
+    phone: participant?.phone || '',
+    emergency_contact_name: participant?.emergency_contact_name || '',
+    emergency_contact_phone: participant?.emergency_contact_phone || '',
+    country_of_origin: participant?.country_of_origin || '',
+    languages: participant?.languages || ['English'],
+    medical_conditions: participant?.medical_conditions || [],
+    dietary_restrictions: participant?.dietary_restrictions || [],
+    fitness_level: participant?.fitness_level || 5,
+    swimming_ability: participant?.swimming_ability || 'basic'
+  });
+
+  const [skills, setSkills] = useState<Partial<ParticipantSkill>[]>(
+    participant?.skills || []
+  );
+
+  const [activeSection, setActiveSection] = useState<'basic' | 'skills' | 'emergency'>('basic');
+  const [saving, setSaving] = useState(false);
+
+  const [newSkill, setNewSkill] = useState<Partial<ParticipantSkill>>({
+    skill_category: 'paddling',
+    skill_type: 'sea_kayak',
+    skill_level: 'beginner'
+  });
+
+  const handleSave = async () => {
+    if (!formData.name) {
+      alert('Please enter your name');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      // Save participant
+      const response = await fetch('/api/v1/planning/participants', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+      });
+      
+      if (!response.ok) throw new Error('Failed to save participant');
+      
+      const savedParticipant = await response.json();
+
+      // Save skills
+      for (const skill of skills) {
+        if (skill.skill_category && skill.skill_type && skill.skill_level) {
+          await fetch(`/api/v1/planning/participants/${savedParticipant.id}/skills`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(skill)
+          });
+        }
+      }
+
+      // Fetch complete profile
+      const profileResponse = await fetch(`/api/v1/planning/participants/${savedParticipant.id}`);
+      const completeProfile = await profileResponse.json();
+
+      onSave(completeProfile);
+    } catch (error) {
+      console.error('Error saving participant:', error);
+      alert('Failed to save profile. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const addSkill = () => {
+    if (newSkill.skill_category && newSkill.skill_type && newSkill.skill_level) {
+      // Check for duplicate
+      const exists = skills.some(
+        s => s.skill_category === newSkill.skill_category && s.skill_type === newSkill.skill_type
+      );
+      if (!exists) {
+        setSkills([...skills, { ...newSkill }]);
+      }
+      setNewSkill({
+        skill_category: newSkill.skill_category,
+        skill_type: SKILL_TYPES[newSkill.skill_category as SkillCategory][0],
+        skill_level: 'beginner'
+      });
+    }
+  };
+
+  const removeSkill = (index: number) => {
+    setSkills(skills.filter((_, i) => i !== index));
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="bg-gray-800 rounded-xl p-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <button onClick={onCancel} className="text-gray-400 hover:text-white">
+              ← Back
+            </button>
+            <h2 className="text-xl font-bold text-white">
+              {participant ? 'Edit Profile' : 'Create Your Profile'}
+            </h2>
+          </div>
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white rounded-lg font-medium transition"
+          >
+            {saving ? 'Saving...' : 'Save Profile'}
+          </button>
+        </div>
+
+        {/* Section Tabs */}
+        <div className="flex gap-2 mt-4">
+          {(['basic', 'skills', 'emergency'] as const).map(section => (
+            <button
+              key={section}
+              onClick={() => setActiveSection(section)}
+              className={`px-4 py-2 rounded-lg font-medium capitalize transition ${
+                activeSection === section
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+              }`}
+            >
+              {section === 'basic' && '👤 '}
+              {section === 'skills' && '🎯 '}
+              {section === 'emergency' && '🚨 '}
+              {section}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Basic Info Section */}
+      {activeSection === 'basic' && (
+        <div className="bg-gray-800 rounded-xl p-6 space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Name */}
+            <div>
+              <label className="block text-gray-300 text-sm font-medium mb-2">Full Name *</label>
+              <input
+                type="text"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600 focus:border-blue-500 focus:outline-none"
+                placeholder="Your full name"
+              />
+            </div>
+
+            {/* Email */}
+            <div>
+              <label className="block text-gray-300 text-sm font-medium mb-2">Email</label>
+              <input
+                type="email"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600 focus:border-blue-500 focus:outline-none"
+                placeholder="your@email.com"
+              />
+            </div>
+
+            {/* Phone */}
+            <div>
+              <label className="block text-gray-300 text-sm font-medium mb-2">Phone</label>
+              <input
+                type="tel"
+                value={formData.phone}
+                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600 focus:border-blue-500 focus:outline-none"
+                placeholder="+1 (555) 123-4567"
+              />
+            </div>
+
+            {/* Country */}
+            <div>
+              <label className="block text-gray-300 text-sm font-medium mb-2">Country of Origin</label>
+              <input
+                type="text"
+                value={formData.country_of_origin}
+                onChange={(e) => setFormData({ ...formData, country_of_origin: e.target.value })}
+                className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600 focus:border-blue-500 focus:outline-none"
+                placeholder="Canada"
+              />
+            </div>
+          </div>
+
+          {/* Fitness & Swimming */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label className="block text-gray-300 text-sm font-medium mb-2">
+                Fitness Level: {formData.fitness_level}/10
+              </label>
+              <input
+                type="range"
+                min="1"
+                max="10"
+                value={formData.fitness_level}
+                onChange={(e) => setFormData({ ...formData, fitness_level: parseInt(e.target.value) })}
+                className="w-full"
+              />
+              <div className="flex justify-between text-xs text-gray-500 mt-1">
+                <span>Sedentary</span>
+                <span>Average</span>
+                <span>Athlete</span>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-gray-300 text-sm font-medium mb-2">Swimming Ability</label>
+              <select
+                value={formData.swimming_ability}
+                onChange={(e) => setFormData({ ...formData, swimming_ability: e.target.value as any })}
+                className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600 focus:border-blue-500 focus:outline-none"
+              >
+                <option value="none">Non-swimmer</option>
+                <option value="basic">Basic (can float, limited distance)</option>
+                <option value="strong">Strong swimmer</option>
+                <option value="lifeguard">Lifeguard/Certified</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Medical Conditions */}
+          <div>
+            <label className="block text-gray-300 text-sm font-medium mb-2">
+              Medical Conditions (optional, for safety planning)
+            </label>
+            <textarea
+              value={formData.medical_conditions?.join('\n')}
+              onChange={(e) => setFormData({ 
+                ...formData, 
+                medical_conditions: e.target.value.split('\n').filter(Boolean) 
+              })}
+              className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600 focus:border-blue-500 focus:outline-none"
+              placeholder="One per line: diabetes, allergies, etc."
+              rows={3}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Skills Section */}
+      {activeSection === 'skills' && (
+        <div className="bg-gray-800 rounded-xl p-6 space-y-6">
+          <div>
+            <h3 className="text-white font-semibold mb-4">Your Skills & Certifications</h3>
+            
+            {/* Add Skill Form */}
+            <div className="bg-gray-700/50 rounded-lg p-4 mb-6">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div>
+                  <label className="block text-gray-400 text-xs mb-1">Category</label>
+                  <select
+                    value={newSkill.skill_category}
+                    onChange={(e) => setNewSkill({ 
+                      ...newSkill, 
+                      skill_category: e.target.value as SkillCategory,
+                      skill_type: SKILL_TYPES[e.target.value as SkillCategory][0]
+                    })}
+                    className="w-full bg-gray-700 text-white rounded-lg px-3 py-2 border border-gray-600"
+                  >
+                    {Object.entries(skillCategoryIcons).map(([cat, icon]) => (
+                      <option key={cat} value={cat}>{icon} {cat}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-gray-400 text-xs mb-1">Skill Type</label>
+                  <select
+                    value={newSkill.skill_type}
+                    onChange={(e) => setNewSkill({ ...newSkill, skill_type: e.target.value })}
+                    className="w-full bg-gray-700 text-white rounded-lg px-3 py-2 border border-gray-600"
+                  >
+                    {SKILL_TYPES[newSkill.skill_category as SkillCategory]?.map(type => (
+                      <option key={type} value={type}>{SKILL_TYPE_LABELS[type] || type}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-gray-400 text-xs mb-1">Level</label>
+                  <select
+                    value={newSkill.skill_level}
+                    onChange={(e) => setNewSkill({ ...newSkill, skill_level: e.target.value as SkillLevel })}
+                    className="w-full bg-gray-700 text-white rounded-lg px-3 py-2 border border-gray-600"
+                  >
+                    <option value="none">None</option>
+                    <option value="beginner">Beginner</option>
+                    <option value="intermediate">Intermediate</option>
+                    <option value="advanced">Advanced</option>
+                    <option value="expert">Expert</option>
+                    <option value="certified">Certified</option>
+                  </select>
+                </div>
+
+                <div className="flex items-end">
+                  <button
+                    onClick={addSkill}
+                    className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium"
+                  >
+                    + Add Skill
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Skills List */}
+            {skills.length === 0 ? (
+              <p className="text-gray-500 text-center py-8">
+                No skills added yet. Add your skills above to get trip recommendations.
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {skills.map((skill, index) => (
+                  <div key={index} className="flex items-center justify-between bg-gray-700/30 rounded-lg p-3">
+                    <div className="flex items-center gap-3">
+                      <span className="text-xl">
+                        {skillCategoryIcons[skill.skill_category as SkillCategory]}
+                      </span>
+                      <div>
+                        <p className="text-white font-medium">
+                          {SKILL_TYPE_LABELS[skill.skill_type!] || skill.skill_type}
+                        </p>
+                        <p className="text-gray-400 text-sm capitalize">{skill.skill_category}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className={`px-2 py-1 rounded text-sm capitalize ${
+                        skillLevelColors[skill.skill_level as SkillLevel]
+                      }`}>
+                        {skill.skill_level}
+                      </span>
+                      <button
+                        onClick={() => removeSkill(index)}
+                        className="text-red-400 hover:text-red-300"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Emergency Section */}
+      {activeSection === 'emergency' && (
+        <div className="bg-gray-800 rounded-xl p-6 space-y-6">
+          <h3 className="text-white font-semibold">Emergency Contact</h3>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label className="block text-gray-300 text-sm font-medium mb-2">Emergency Contact Name</label>
+              <input
+                type="text"
+                value={formData.emergency_contact_name}
+                onChange={(e) => setFormData({ ...formData, emergency_contact_name: e.target.value })}
+                className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600 focus:border-blue-500 focus:outline-none"
+                placeholder="Name of emergency contact"
+              />
+            </div>
+
+            <div>
+              <label className="block text-gray-300 text-sm font-medium mb-2">Emergency Contact Phone</label>
+              <input
+                type="tel"
+                value={formData.emergency_contact_phone}
+                onChange={(e) => setFormData({ ...formData, emergency_contact_phone: e.target.value })}
+                className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600 focus:border-blue-500 focus:outline-none"
+                placeholder="+1 (555) 123-4567"
+              />
+            </div>
+          </div>
+
+          <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4">
+            <p className="text-yellow-400 text-sm">
+              ⚠️ Emergency contact information is crucial for backcountry and remote trips. 
+              This person should know your itinerary and be able to contact search & rescue if needed.
+            </p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default ParticipantProfileForm;
+```
+
+=== PART 4: Vehicle Profile Form ===
+
+Create file: client/src/components/TripPlanning/VehicleProfileForm.tsx
+```tsx
+import React, { useState } from 'react';
+import { VehicleProfile, VehicleAssessment, VehicleClass, vehicleClassIcons } from '../../types/tripPlanning';
+
+interface VehicleProfileFormProps {
+  vehicle: VehicleProfile | null;
+  onSave: (vehicle: VehicleProfile) => void;
+  onCancel: () => void;
+}
+
+export function VehicleProfileForm({ vehicle, onSave, onCancel }: VehicleProfileFormProps) {
+  const [activeSection, setActiveSection] = useState<'basic' | 'assessment'>('basic');
+  const [saving, setSaving] = useState(false);
+
+  const [formData, setFormData] = useState<Partial<VehicleProfile>>({
+    owner_type: vehicle?.owner_type || 'personal',
+    year: vehicle?.year || new Date().getFullYear(),
+    make: vehicle?.make || '',
+    model: vehicle?.model || '',
+    license_plate: vehicle?.license_plate || '',
+    vehicle_class: vehicle?.vehicle_class || 'suv',
+    drive_type: vehicle?.drive_type || 'awd',
+    fuel_type: vehicle?.fuel_type || 'gas',
+    ground_clearance_inches: vehicle?.ground_clearance_inches || 8,
+    length_feet: vehicle?.length_feet || 15,
+    height_feet: vehicle?.height_feet || 6,
+    passenger_capacity: vehicle?.passenger_capacity || 5
+  });
+
+  const [assessment, setAssessment] = useState<Partial<VehicleAssessment>>({
+    tire_tread_condition: 'good',
+    tires_winter_rated: false,
+    chains_available: false,
+    oil_level: 'ok',
+    coolant_level: 'ok',
+    brake_condition: 'good',
+    has_first_aid_kit: false,
+    has_fire_extinguisher: false,
+    has_blankets: false,
+    has_emergency_food: false,
+    has_water: false,
+    has_phone_charger: false,
+    has_flashlight: false,
+    windshield_washer_full: false,
+    overall_condition: 'good'
+  });
+
+  const handleSave = async () => {
+    if (!formData.make || !formData.model) {
+      alert('Please enter vehicle make and model');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      // Save vehicle
+      const response = await fetch('/api/v1/planning/vehicles', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+      });
+      
+      if (!response.ok) throw new Error('Failed to save vehicle');
+      
+      const savedVehicle = await response.json();
+
+      // Save assessment
+      await fetch(`/api/v1/planning/vehicles/${savedVehicle.id}/assessments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(assessment)
+      });
+
+      onSave({ ...savedVehicle, latest_assessment: assessment as VehicleAssessment });
+    } catch (error) {
+      console.error('Error saving vehicle:', error);
+      alert('Failed to save vehicle. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Calculate route suitability based on inputs
+  const calculateSuitability = () => {
+    const isHighClearance = (formData.ground_clearance_inches || 0) >= 8;
+    const is4x4 = formData.drive_type === '4wd';
+    const isAWD = formData.drive_type === 'awd';
+    const isTruckOrSUV = ['truck', 'suv'].includes(formData.vehicle_class || '');
+    
+    return {
+      pavedRoads: true,
+      goodGravel: isTruckOrSUV || isAWD,
+      roughGravel: isTruckOrSUV && (isAWD || is4x4) && isHighClearance,
+      fourByFourOnly: is4x4 && isHighClearance
+    };
+  };
+
+  const suitability = calculateSuitability();
+
+  return (
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="bg-gray-800 rounded-xl p-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <button onClick={onCancel} className="text-gray-400 hover:text-white">
+              ← Back
+            </button>
+            <h2 className="text-xl font-bold text-white">
+              {vehicle ? 'Edit Vehicle' : 'Add Your Vehicle'}
+            </h2>
+          </div>
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white rounded-lg font-medium transition"
+          >
+            {saving ? 'Saving...' : 'Save Vehicle'}
+          </button>
+        </div>
+
+        {/* Section Tabs */}
+        <div className="flex gap-2 mt-4">
+          <button
+            onClick={() => setActiveSection('basic')}
+            className={`px-4 py-2 rounded-lg font-medium transition ${
+              activeSection === 'basic'
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+            }`}
+          >
+            🚗 Vehicle Info
+          </button>
+          <button
+            onClick={() => setActiveSection('assessment')}
+            className={`px-4 py-2 rounded-lg font-medium transition ${
+              activeSection === 'assessment'
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+            }`}
+          >
+            ✅ Safety Check
+          </button>
+        </div>
+      </div>
+
+      {/* Basic Info */}
+      {activeSection === 'basic' && (
+        <div className="bg-gray-800 rounded-xl p-6 space-y-6">
+          {/* Vehicle Type Selection */}
+          <div>
+            <label className="block text-gray-300 text-sm font-medium mb-3">Vehicle Type</label>
+            <div className="grid grid-cols-4 md:grid-cols-8 gap-2">
+              {(Object.entries(vehicleClassIcons) as [VehicleClass, string][]).map(([cls, icon]) => (
+                <button
+                  key={cls}
+                  onClick={() => setFormData({ ...formData, vehicle_class: cls })}
+                  className={`p-3 rounded-lg text-center transition ${
+                    formData.vehicle_class === cls
+                      ? 'bg-blue-600 text-white ring-2 ring-blue-400'
+                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                  }`}
+                >
+                  <span className="text-2xl block">{icon}</span>
+                  <span className="text-xs capitalize">{cls.replace('_', ' ')}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Make/Model/Year */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div>
+              <label className="block text-gray-300 text-sm font-medium mb-2">Year</label>
+              <input
+                type="number"
+                value={formData.year}
+                onChange={(e) => setFormData({ ...formData, year: parseInt(e.target.value) })}
+                className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600 focus:border-blue-500 focus:outline-none"
+                min="1990"
+                max={new Date().getFullYear() + 1}
+              />
+            </div>
+            <div>
+              <label className="block text-gray-300 text-sm font-medium mb-2">Make *</label>
+              <input
+                type="text"
+                value={formData.make}
+                onChange={(e) => setFormData({ ...formData, make: e.target.value })}
+                className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600 focus:border-blue-500 focus:outline-none"
+                placeholder="Toyota, Ford, etc."
+              />
+            </div>
+            <div>
+              <label className="block text-gray-300 text-sm font-medium mb-2">Model *</label>
+              <input
+                type="text"
+                value={formData.model}
+                onChange={(e) => setFormData({ ...formData, model: e.target.value })}
+                className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600 focus:border-blue-500 focus:outline-none"
+                placeholder="4Runner, F-150, etc."
+              />
+            </div>
+            <div>
+              <label className="block text-gray-300 text-sm font-medium mb-2">License Plate</label>
+              <input
+                type="text"
+                value={formData.license_plate}
+                onChange={(e) => setFormData({ ...formData, license_plate: e.target.value })}
+                className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600 focus:border-blue-500 focus:outline-none"
+                placeholder="ABC 123"
+              />
+            </div>
+          </div>
+
+          {/* Drive Type & Specs */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div>
+              <label className="block text-gray-300 text-sm font-medium mb-2">Drive Type</label>
+              <select
+                value={formData.drive_type}
+                onChange={(e) => setFormData({ ...formData, drive_type: e.target.value as any })}
+                className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600 focus:border-blue-500 focus:outline-none"
+              >
+                <option value="2wd">2WD (Front or Rear)</option>
+                <option value="awd">AWD (All-Wheel Drive)</option>
+                <option value="4wd">4WD (Four-Wheel Drive)</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-gray-300 text-sm font-medium mb-2">Ground Clearance (inches)</label>
+              <input
+                type="number"
+                value={formData.ground_clearance_inches}
+                onChange={(e) => setFormData({ ...formData, ground_clearance_inches: parseFloat(e.target.value) })}
+                className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600 focus:border-blue-500 focus:outline-none"
+                step="0.5"
+                min="3"
+                max="20"
+              />
+            </div>
+            <div>
+              <label className="block text-gray-300 text-sm font-medium mb-2">Length (feet)</label>
+              <input
+                type="number"
+                value={formData.length_feet}
+                onChange={(e) => setFormData({ ...formData, length_feet: parseFloat(e.target.value) })}
+                className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600 focus:border-blue-500 focus:outline-none"
+                step="0.5"
+              />
+            </div>
+            <div>
+              <label className="block text-gray-300 text-sm font-medium mb-2">Height (feet)</label>
+              <input
+                type="number"
+                value={formData.height_feet}
+                onChange={(e) => setFormData({ ...formData, height_feet: parseFloat(e.target.value) })}
+                className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600 focus:border-blue-500 focus:outline-none"
+                step="0.5"
+              />
+              {(formData.height_feet || 0) > 7 && (
+                <p className="text-yellow-400 text-xs mt-1">⚠️ Overheight for BC Ferries</p>
+              )}
+            </div>
+          </div>
+
+          {/* Route Suitability Preview */}
+          <div className="bg-gray-700/50 rounded-lg p-4">
+            <h4 className="text-white font-medium mb-3">Route Suitability</h4>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className={`p-3 rounded-lg text-center ${suitability.pavedRoads ? 'bg-green-500/20' : 'bg-red-500/20'}`}>
+                <span className="text-2xl">{suitability.pavedRoads ? '✅' : '❌'}</span>
+                <p className="text-sm text-gray-300 mt-1">Paved Roads</p>
+              </div>
+              <div className={`p-3 rounded-lg text-center ${suitability.goodGravel ? 'bg-green-500/20' : 'bg-yellow-500/20'}`}>
+                <span className="text-2xl">{suitability.goodGravel ? '✅' : '⚠️'}</span>
+                <p className="text-sm text-gray-300 mt-1">Good Gravel</p>
+              </div>
+              <div className={`p-3 rounded-lg text-center ${suitability.roughGravel ? 'bg-green-500/20' : 'bg-red-500/20'}`}>
+                <span className="text-2xl">{suitability.roughGravel ? '✅' : '❌'}</span>
+                <p className="text-sm text-gray-300 mt-1">Rough Gravel</p>
+                <p className="text-xs text-gray-500">(Bamfield Road)</p>
+              </div>
+              <div className={`p-3 rounded-lg text-center ${suitability.fourByFourOnly ? 'bg-green-500/20' : 'bg-red-500/20'}`}>
+                <span className="text-2xl">{suitability.fourByFourOnly ? '✅' : '❌'}</span>
+                <p className="text-sm text-gray-300 mt-1">4x4 Required</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Safety Assessment */}
+      {activeSection === 'assessment' && (
+        <div className="bg-gray-800 rounded-xl p-6 space-y-6">
+          <h3 className="text-white font-semibold">Vehicle Safety Checklist</h3>
+          <p className="text-gray-400 text-sm">
+            Complete this checklist before remote or challenging trips. Items marked as issues will show warnings in trip planning.
+          </p>
+
+          {/* Tires Section */}
+          <div className="bg-gray-700/30 rounded-lg p-4">
+            <h4 className="text-white font-medium mb-4">🛞 Tires</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-gray-300 text-sm mb-2">Tire Tread Condition</label>
+                <select
+                  value={assessment.tire_tread_condition}
+                  onChange={(e) => setAssessment({ ...assessment, tire_tread_condition: e.target.value as any })}
+                  className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600"
+                >
+                  <option value="new">New (8mm+)</option>
+                  <option value="good">Good (5-8mm)</option>
+                  <option value="fair">Fair (3-5mm)</option>
+                  <option value="worn">Worn (2-3mm)</option>
+                  <option value="needs_replacement">Needs Replacement (&lt;2mm)</option>
+                </select>
+              </div>
+              <div className="space-y-3">
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={assessment.tires_winter_rated}
+                    onChange={(e) => setAssessment({ ...assessment, tires_winter_rated: e.target.checked })}
+                    className="w-5 h-5 rounded"
+                  />
+                  <span className="text-gray-300">❄️ Winter-rated tires (M+S or Snowflake)</span>
+                </label>
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={assessment.chains_available}
+                    onChange={(e) => setAssessment({ ...assessment, chains_available: e.target.checked })}
+                    className="w-5 h-5 rounded"
+                  />
+                  <span className="text-gray-300">⛓️ Tire chains available</span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          {/* Mechanical Section */}
+          <div className="bg-gray-700/30 rounded-lg p-4">
+            <h4 className="text-white font-medium mb-4">🔧 Mechanical</h4>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-gray-300 text-sm mb-2">Oil Level</label>
+                <select
+                  value={assessment.oil_level}
+                  onChange={(e) => setAssessment({ ...assessment, oil_level: e.target.value })}
+                  className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600"
+                >
+                  <option value="full">Full</option>
+                  <option value="ok">OK</option>
+                  <option value="low">Low</option>
+                  <option value="critical">Critical</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-gray-300 text-sm mb-2">Coolant Level</label>
+                <select
+                  value={assessment.coolant_level}
+                  onChange={(e) => setAssessment({ ...assessment, coolant_level: e.target.value })}
+                  className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600"
+                >
+                  <option value="full">Full</option>
+                  <option value="ok">OK</option>
+                  <option value="low">Low</option>
+                  <option value="critical">Critical</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-gray-300 text-sm mb-2">Brake Condition</label>
+                <select
+                  value={assessment.brake_condition}
+                  onChange={(e) => setAssessment({ ...assessment, brake_condition: e.target.value })}
+                  className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600"
+                >
+                  <option value="new">New</option>
+                  <option value="good">Good</option>
+                  <option value="fair">Fair</option>
+                  <option value="needs_service">Needs Service</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* Emergency Equipment */}
+          <div className="bg-gray-700/30 rounded-lg p-4">
+            <h4 className="text-white font-medium mb-4">🚨 Emergency Equipment</h4>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {[
+                { key: 'has_first_aid_kit', label: '🩹 First Aid Kit', field: 'has_first_aid_kit' },
+                { key: 'has_fire_extinguisher', label: '🧯 Fire Extinguisher', field: 'has_fire_extinguisher' },
+                { key: 'has_blankets', label: '🛏️ Blankets', field: 'has_blankets' },
+                { key: 'has_emergency_food', label: '🍫 Emergency Food', field: 'has_emergency_food' },
+                { key: 'has_water', label: '💧 Water', field: 'has_water' },
+                { key: 'has_phone_charger', label: '🔌 Phone Charger', field: 'has_phone_charger' },
+                { key: 'has_flashlight', label: '🔦 Flashlight', field: 'has_flashlight' },
+                { key: 'windshield_washer_full', label: '💦 Washer Fluid Full', field: 'windshield_washer_full' }
+              ].map(item => (
+                <label key={item.key} className="flex items-center gap-2 cursor-pointer bg-gray-700/50 rounded-lg p-3">
+                  <input
+                    type="checkbox"
+                    checked={(assessment as any)[item.field]}
+                    onChange={(e) => setAssessment({ ...assessment, [item.field]: e.target.checked })}
+                    className="w-4 h-4 rounded"
+                  />
+                  <span className="text-gray-300 text-sm">{item.label}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          {/* Overall Condition */}
+          <div>
+            <label className="block text-gray-300 text-sm font-medium mb-2">Overall Vehicle Condition</label>
+            <select
+              value={assessment.overall_condition}
+              onChange={(e) => setAssessment({ ...assessment, overall_condition: e.target.value as any })}
+              className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600"
+            >
+              <option value="excellent">Excellent - Ready for any trip</option>
+              <option value="good">Good - Suitable for most trips</option>
+              <option value="fair">Fair - Stick to easy routes</option>
+              <option value="poor">Poor - Needs maintenance</option>
+              <option value="not_roadworthy">Not Roadworthy - Do not drive</option>
+            </select>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default VehicleProfileForm;
+```
+
+=== PART 5: Trip Qualification Check ===
+
+Create file: client/src/components/TripPlanning/TripQualificationCheck.tsx
+```tsx
+import React, { useState, useEffect } from 'react';
+import { ParticipantProfile, VehicleProfile, TripAssessment, RouteAssessment, skillLevelColors, SkillLevel } from '../../types/tripPlanning';
+import { RoadTrip } from '../../types/roadtrips';
+
+interface TripQualificationCheckProps {
+  participant: ParticipantProfile | null;
+  vehicle: VehicleProfile | null;
+  onBack: () => void;
+}
+
+export function TripQualificationCheck({ participant, vehicle, onBack }: TripQualificationCheckProps) {
+  const [trips, setTrips] = useState<RoadTrip[]>([]);
+  const [selectedTrip, setSelectedTrip] = useState<RoadTrip | null>(null);
+  const [assessment, setAssessment] = useState<TripAssessment | null>(null);
+  const [routeAssessment, setRouteAssessment] = useState<RouteAssessment | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    fetchTrips();
+  }, []);
+
+  async function fetchTrips() {
+    try {
+      const response = await fetch('/api/v1/trips');
+      const data = await response.json();
+      setTrips(data.trips || []);
+    } catch (error) {
+      console.error('Error fetching trips:', error);
+    }
+  }
+
+  async function assessTrip(trip: RoadTrip) {
+    setSelectedTrip(trip);
+    setLoading(true);
+    setAssessment(null);
+    setRouteAssessment(null);
+
+    try {
+      // Assess participant skills
+      if (participant?.id) {
+        const skillResponse = await fetch('/api/v1/planning/assess/participant-trip', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            participant_id: participant.id,
+            trip_id: trip.id
+          })
+        });
+        if (skillResponse.ok) {
+          const skillData = await skillResponse.json();
+          setAssessment(skillData);
+        }
+      }
+
+      // Assess route for vehicle
+      if (vehicle?.id) {
+        // Get route segments for this trip (simplified - would need trip->segment mapping)
+        const routeResponse = await fetch('/api/v1/planning/routes/assess', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            route_segment_ids: ['bamfield-road'], // Example - would come from trip data
+            vehicle_id: vehicle.id,
+            date: new Date().toISOString()
+          })
+        });
+        if (routeResponse.ok) {
+          const routeData = await routeResponse.json();
+          setRouteAssessment(routeData);
+        }
+      }
+    } catch (error) {
+      console.error('Error assessing trip:', error);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const isQualified = assessment?.qualified !== false && 
+    (!routeAssessment || routeAssessment.blockers.length === 0);
+
+  return (
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="bg-gray-800 rounded-xl p-4">
+        <div className="flex items-center gap-3">
+          <button onClick={onBack} className="text-gray-400 hover:text-white">
+            ← Back
+          </button>
+          <div>
+            <h2 className="text-xl font-bold text-white">✅ Trip Qualification Check</h2>
+            <p className="text-gray-400 text-sm">Select a trip to see if you're ready</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Profile Status */}
+      {(!participant || !vehicle) && (
+        <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-4">
+          <p className="text-yellow-400">
+            ⚠️ For complete assessment, please set up:
+            {!participant && ' your profile'}
+            {!participant && !vehicle && ' and'}
+            {!vehicle && ' your vehicle'}
+          </p>
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Trip Selection */}
+        <div className="bg-gray-800 rounded-xl p-4">
+          <h3 className="text-white font-semibold mb-4">Select a Trip</h3>
+          <div className="space-y-2 max-h-96 overflow-y-auto">
+            {trips.map(trip => (
+              <button
+                key={trip.id}
+                onClick={() => assessTrip(trip)}
+                className={`w-full text-left p-3 rounded-lg transition ${
+                  selectedTrip?.id === trip.id
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-700/50 text-gray-300 hover:bg-gray-700'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium">{trip.title}</p>
+                    <p className="text-sm opacity-80">{trip.region} • {trip.difficulty}</p>
+                  </div>
+                  <span className="text-2xl">{trip.category === 'multi-day-trek' ? '🏔️' : '🗺️'}</span>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Assessment Results */}
+        <div className="bg-gray-800 rounded-xl p-4">
+          {!selectedTrip ? (
+            <div className="text-center py-12 text-gray-500">
+              <span className="text-4xl">👈</span>
+              <p className="mt-2">Select a trip to check your qualification</p>
+            </div>
+          ) : loading ? (
+            <div className="text-center py-12">
+              <span className="text-4xl animate-spin">⏳</span>
+              <p className="text-gray-400 mt-2">Analyzing trip requirements...</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {/* Overall Status */}
+              <div className={`p-4 rounded-lg ${
+                isQualified ? 'bg-green-500/20' : 'bg-red-500/20'
+              }`}>
+                <div className="flex items-center gap-3">
+                  <span className="text-3xl">{isQualified ? '✅' : '❌'}</span>
+                  <div>
+                    <p className={`font-bold text-lg ${isQualified ? 'text-green-400' : 'text-red-400'}`}>
+                      {isQualified ? 'You\'re Ready!' : 'Not Qualified Yet'}
+                    </p>
+                    <p className="text-gray-300 text-sm">
+                      {isQualified 
+                        ? 'You meet the requirements for this trip'
+                        : 'Some requirements need to be met first'
+                      }
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Skill Assessment */}
+              {assessment && (
+                <div>
+                  <h4 className="text-white font-medium mb-2">🎯 Skills Assessment</h4>
+                  
+                  {assessment.gaps.length === 0 ? (
+                    <p className="text-green-400 text-sm">All skill requirements met!</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {assessment.gaps.map((gap, i) => (
+                        <div key={i} className="bg-gray-700/50 rounded-lg p-3">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-white capitalize">
+                              {gap.skill_type.replace(/_/g, ' ')}
+                            </span>
+                            <span className={`px-2 py-0.5 rounded text-xs ${
+                              gap.enforcement === 'required' 
+                                ? 'bg-red-500/20 text-red-400'
+                                : 'bg-yellow-500/20 text-yellow-400'
+                            }`}>
+                              {gap.enforcement}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2 text-sm">
+                            <span className={`px-2 py-0.5 rounded ${skillLevelColors[gap.current_level as SkillLevel]}`}>
+                              You: {gap.current_level}
+                            </span>
+                            <span className="text-gray-500">→</span>
+                            <span className={`px-2 py-0.5 rounded ${skillLevelColors[gap.required_level as SkillLevel]}`}>
+                              Need: {gap.required_level}
+                            </span>
+                          </div>
+                          
+                          {gap.resolution_options && gap.resolution_options.length > 0 && (
+                            <div className="mt-2 p-2 bg-blue-500/10 rounded text-sm">
+                              <p className="text-blue-400 text-xs font-medium mb-1">How to qualify:</p>
+                              {gap.resolution_options.map((opt, j) => (
+                                <p key={j} className="text-gray-300">
+                                  {opt.type === 'course' && `📚 ${opt.provider} - ${opt.duration} ($${opt.cost})`}
+                                  {opt.type === 'experience' && `🏃 ${opt.description}`}
+                                </p>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {assessment.warnings.length > 0 && (
+                    <div className="mt-3">
+                      <p className="text-yellow-400 text-sm font-medium mb-1">Warnings:</p>
+                      {assessment.warnings.map((w, i) => (
+                        <p key={i} className="text-gray-400 text-sm">⚠️ {w}</p>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Route Assessment */}
+              {routeAssessment && (
+                <div>
+                  <h4 className="text-white font-medium mb-2">🚗 Vehicle Assessment</h4>
+                  
+                  {routeAssessment.blockers.length === 0 && routeAssessment.warnings.length === 0 ? (
+                    <p className="text-green-400 text-sm">Your vehicle is suitable for this route!</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {routeAssessment.blockers.map((b, i) => (
+                        <div key={i} className="bg-red-500/20 text-red-400 rounded-lg p-2 text-sm">
+                          ❌ {b}
+                        </div>
+                      ))}
+                      {routeAssessment.warnings.map((w, i) => (
+                        <div key={i} className="bg-yellow-500/20 text-yellow-400 rounded-lg p-2 text-sm">
+                          ⚠️ {w}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {routeAssessment.recommendations.length > 0 && (
+                    <div className="mt-3 p-3 bg-blue-500/10 rounded-lg">
+                      <p className="text-blue-400 text-sm font-medium mb-1">Recommendations:</p>
+                      {routeAssessment.recommendations.map((r, i) => (
+                        <p key={i} className="text-gray-300 text-sm">💡 {r}</p>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="flex gap-2 mt-4">
+                {isQualified ? (
+                  <button className="flex-1 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium">
+                    📅 Plan This Trip
+                  </button>
+                ) : (
+                  <button className="flex-1 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium">
+                    📋 View Resolution Steps
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default TripQualificationCheck;
+```
+
+=== PART 6: Service Runs Board ===
+
+Create file: client/src/components/TripPlanning/ServiceRunsBoard.tsx
+```tsx
+import React, { useState, useEffect } from 'react';
+import { ServiceRun } from '../../types/tripPlanning';
+
+interface ServiceRunsBoardProps {
+  onBack: () => void;
+}
+
+export function ServiceRunsBoard({ onBack }: ServiceRunsBoardProps) {
+  const [runs, setRuns] = useState<ServiceRun[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedRegion, setSelectedRegion] = useState<string>('all');
+
+  useEffect(() => {
+    fetchRuns();
+  }, [selectedRegion]);
+
+  async function fetchRuns() {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams({ upcoming_only: 'true' });
+      if (selectedRegion !== 'all') {
+        params.append('region', selectedRegion);
+      }
+      
+      const response = await fetch(`/api/v1/planning/service-runs?${params}`);
+      const data = await response.json();
+      setRuns(data.service_runs || []);
+    } catch (error) {
+      console.error('Error fetching service runs:', error);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const regions = ['all', 'Bamfield', 'Gold River', 'Tofino', 'Port Hardy'];
+
+  return (
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="bg-gray-800 rounded-xl p-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <button onClick={onBack} className="text-gray-400 hover:text-white">
+              ← Back
+            </button>
+            <div>
+              <h2 className="text-xl font-bold text-white">🔧 Upcoming Service Runs</h2>
+              <p className="text-gray-400 text-sm">Book a slot and share logistics costs</p>
+            </div>
+          </div>
+          <button className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium">
+            + Create Service Run
+          </button>
+        </div>
+
+        {/* Region Filter */}
+        <div className="flex gap-2 mt-4 overflow-x-auto pb-2">
+          {regions.map(region => (
+            <button
+              key={region}
+              onClick={() => setSelectedRegion(region)}
+              className={`px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition ${
+                selectedRegion === region
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+              }`}
+            >
+              {region === 'all' ? '📍 All Regions' : region}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Info Banner */}
+      <div className="bg-gradient-to-r from-green-900/30 to-blue-900/30 rounded-xl p-4 border border-green-500/20">
+        <h3 className="text-white font-semibold mb-2">💡 How Service Runs Work</h3>
+        <p className="text-gray-300 text-sm">
+          Service providers publish upcoming trips to remote areas. By booking a slot, you share the 
+          logistics costs (ferry, fuel, accommodation) with other customers. A $500 window installation 
+          that would cost $2,100 with solo logistics becomes ~$700 when shared among 8 jobs.
+        </p>
+      </div>
+
+      {/* Service Runs List */}
+      {loading ? (
+        <div className="bg-gray-800 rounded-xl p-12 text-center">
+          <span className="text-4xl animate-spin">⏳</span>
+          <p className="text-gray-400 mt-2">Loading service runs...</p>
+        </div>
+      ) : runs.length === 0 ? (
+        <div className="bg-gray-800 rounded-xl p-12 text-center">
+          <span className="text-4xl">📋</span>
+          <p className="text-gray-300 mt-2">No upcoming service runs found</p>
+          <p className="text-gray-500 text-sm mt-1">
+            Check back later or contact service providers directly
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {runs.map(run => (
+            <ServiceRunCard key={run.id} run={run} />
+          ))}
+        </div>
+      )}
+
+      {/* Example Card (when no real data) */}
+      {runs.length === 0 && (
+        <div className="bg-gray-800 rounded-xl overflow-hidden opacity-60">
+          <div className="p-4 border-b border-gray-700">
+            <p className="text-gray-500 text-xs uppercase">Example Service Run</p>
+          </div>
+          <ServiceRunCard 
+            run={{
+              id: 'example',
+              company_name: 'Island Glass Co.',
+              service_type: 'Glass Installation',
+              destination_region: 'Bamfield',
+              planned_date: '2025-02-15',
+              planned_duration_days: 2,
+              total_job_slots: 8,
+              slots_filled: 5,
+              slots_available: 3,
+              crew_size: 3,
+              logistics_cost_total: 1600,
+              logistics_cost_per_slot: 200,
+              minimum_job_value: 300,
+              status: 'published',
+              booking_deadline: '2025-02-10',
+              contact_email: 'schedule@islandglass.ca',
+              contact_phone: '250-555-1234'
+            }}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ServiceRunCard({ run }: { run: ServiceRun }) {
+  const slotsPercent = (run.slots_filled / run.total_job_slots) * 100;
+  const dateFormatted = new Date(run.planned_date).toLocaleDateString('en-CA', {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric'
+  });
+
+  return (
+    <div className="bg-gray-800 rounded-xl overflow-hidden hover:ring-1 hover:ring-blue-400 transition">
+      <div className="p-5">
+        <div className="flex items-start justify-between mb-4">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-2xl">🔧</span>
+              <h3 className="text-white font-semibold text-lg">{run.service_type}</h3>
+            </div>
+            <p className="text-gray-400">{run.company_name}</p>
+          </div>
+          <div className="text-right">
+            <p className="text-2xl font-bold text-green-400">${run.logistics_cost_per_slot}</p>
+            <p className="text-gray-500 text-sm">logistics share</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+          <div>
+            <p className="text-gray-500 text-xs uppercase">Destination</p>
+            <p className="text-white font-medium">📍 {run.destination_region}</p>
+          </div>
+          <div>
+            <p className="text-gray-500 text-xs uppercase">Date</p>
+            <p className="text-white font-medium">📅 {dateFormatted}</p>
+          </div>
+          <div>
+            <p className="text-gray-500 text-xs uppercase">Duration</p>
+            <p className="text-white font-medium">⏱️ {run.planned_duration_days} day(s)</p>
+          </div>
+          <div>
+            <p className="text-gray-500 text-xs uppercase">Min Job Value</p>
+            <p className="text-white font-medium">💰 ${run.minimum_job_value || 'Any'}</p>
+          </div>
+        </div>
+
+        {/* Slots Progress */}
+        <div className="mb-4">
+          <div className="flex items-center justify-between text-sm mb-1">
+            <span className="text-gray-400">Slots Booked</span>
+            <span className="text-white">{run.slots_filled} / {run.total_job_slots}</span>
+          </div>
+          <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
+            <div 
+              className={`h-full rounded-full transition-all ${
+                run.slots_available > 0 ? 'bg-green-500' : 'bg-red-500'
+              }`}
+              style={{ width: `${slotsPercent}%` }}
+            />
+          </div>
+          <p className="text-right text-xs mt-1">
+            {run.slots_available > 0 ? (
+              <span className="text-green-400">{run.slots_available} slots available</span>
+            ) : (
+              <span className="text-red-400">Fully booked</span>
+            )}
+          </p>
+        </div>
+
+        {/* Actions */}
+        <div className="flex gap-2">
+          <button 
+            className={`flex-1 py-2 rounded-lg font-medium transition ${
+              run.slots_available > 0
+                ? 'bg-green-600 hover:bg-green-700 text-white'
+                : 'bg-gray-700 text-gray-500 cursor-not-allowed'
+            }`}
+            disabled={run.slots_available === 0}
+          >
+            {run.slots_available > 0 ? '📝 Request a Slot' : 'Fully Booked'}
+          </button>
+          <button className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg">
+            📞 Contact
+          </button>
+        </div>
+
+        {run.booking_deadline && (
+          <p className="text-gray-500 text-xs text-center mt-3">
+            Book by: {new Date(run.booking_deadline).toLocaleDateString()}
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export default ServiceRunsBoard;
+```
+
+=== PART 7: Route Explorer ===
+
+Create file: client/src/components/TripPlanning/RouteExplorer.tsx
+```tsx
+import React, { useState, useEffect } from 'react';
+import { RouteSegment, RouteAlternative, TransportProvider, VehicleProfile } from '../../types/tripPlanning';
+
+interface RouteExplorerProps {
+  vehicle: VehicleProfile | null;
+  onBack: () => void;
+}
+
+export function RouteExplorer({ vehicle, onBack }: RouteExplorerProps) {
+  const [segments, setSegments] = useState<RouteSegment[]>([]);
+  const [providers, setProviders] = useState<TransportProvider[]>([]);
+  const [selectedSegment, setSelectedSegment] = useState<RouteSegment | null>(null);
+  const [alternatives, setAlternatives] = useState<RouteAlternative[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  async function fetchData() {
+    setLoading(true);
+    try {
+      const [segRes, provRes] = await Promise.all([
+        fetch('/api/v1/planning/routes'),
+        fetch('/api/v1/planning/transport-providers')
+      ]);
+      
+      const segData = await segRes.json();
+      const provData = await provRes.json();
+      
+      setSegments(segData.segments || []);
+      setProviders(provData.providers || []);
+    } catch (error) {
+      console.error('Error fetching data:', error);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function selectSegment(segment: RouteSegment) {
+    setSelectedSegment(segment);
+    try {
+      const response = await fetch(`/api/v1/planning/routes/${segment.id}`);
+      const data = await response.json();
+      setAlternatives(data.alternatives || []);
+    } catch (error) {
+      console.error('Error fetching alternatives:', error);
+    }
+  }
+
+  const routeTypeIcons: Record<string, string> = {
+    highway: '🛣️',
+    secondary: '🚗',
+    gravel: '🪨',
+    logging_road: '🌲',
+    water: '⛴️',
+    air: '✈️'
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="bg-gray-800 rounded-xl p-4">
+        <div className="flex items-center gap-3">
+          <button onClick={onBack} className="text-gray-400 hover:text-white">
+            ← Back
+          </button>
+          <div>
+            <h2 className="text-xl font-bold text-white">🗺️ Route Explorer</h2>
+            <p className="text-gray-400 text-sm">View routes, conditions, and alternatives</p>
+          </div>
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="bg-gray-800 rounded-xl p-12 text-center">
+          <span className="text-4xl animate-spin">⏳</span>
+          <p className="text-gray-400 mt-2">Loading routes...</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* Route Segments */}
+          <div className="bg-gray-800 rounded-xl p-4">
+            <h3 className="text-white font-semibold mb-4">Route Segments</h3>
+            <div className="space-y-2 max-h-[500px] overflow-y-auto">
+              {segments.map(segment => (
+                <button
+                  key={segment.id}
+                  onClick={() => selectSegment(segment)}
+                  className={`w-full text-left p-3 rounded-lg transition ${
+                    selectedSegment?.id === segment.id
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-700/50 text-gray-300 hover:bg-gray-700'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="text-2xl">{routeTypeIcons[segment.route_type] || '📍'}</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium truncate">{segment.name}</p>
+                      <p className="text-sm opacity-80">
+                        {segment.distance_km} km • {Math.round(segment.typical_duration_minutes / 60 * 10) / 10}h
+                      </p>
+                    </div>
+                    {segment.route_type === 'logging_road' && (
+                      <span className="px-2 py-0.5 bg-orange-500/20 text-orange-400 rounded text-xs">
+                        Caution
+                      </span>
+                    )}
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Segment Details */}
+          <div className="bg-gray-800 rounded-xl p-4">
+            {!selectedSegment ? (
+              <div className="text-center py-12 text-gray-500">
+                <span className="text-4xl">👈</span>
+                <p className="mt-2">Select a route segment to view details</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div>
+                  <h3 className="text-white font-semibold text-lg">{selectedSegment.name}</h3>
+                  <p className="text-gray-400 text-sm">{selectedSegment.description}</p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-gray-700/50 rounded-lg p-3">
+                    <p className="text-gray-500 text-xs">From</p>
+                    <p className="text-white">{selectedSegment.start_location_name}</p>
+                  </div>
+                  <div className="bg-gray-700/50 rounded-lg p-3">
+                    <p className="text-gray-500 text-xs">To</p>
+                    <p className="text-white">{selectedSegment.end_location_name}</p>
+                  </div>
+                  <div className="bg-gray-700/50 rounded-lg p-3">
+                    <p className="text-gray-500 text-xs">Distance</p>
+                    <p className="text-white">{selectedSegment.distance_km} km</p>
+                  </div>
+                  <div className="bg-gray-700/50 rounded-lg p-3">
+                    <p className="text-gray-500 text-xs">Duration</p>
+                    <p className="text-white">{Math.round(selectedSegment.typical_duration_minutes / 60 * 10) / 10} hours</p>
+                  </div>
+                </div>
+
+                {/* Requirements */}
+                <div>
+                  <p className="text-gray-400 text-sm font-medium mb-2">Requirements</p>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedSegment.winter_tires_required && (
+                      <span className="px-2 py-1 bg-blue-500/20 text-blue-400 rounded text-sm">
+                        ❄️ Winter Tires Required
+                      </span>
+                    )}
+                    {selectedSegment.high_clearance_recommended && (
+                      <span className="px-2 py-1 bg-yellow-500/20 text-yellow-400 rounded text-sm">
+                        ⬆️ High Clearance Recommended
+                      </span>
+                    )}
+                    {selectedSegment.minimum_vehicle_class && (
+                      <span className="px-2 py-1 bg-purple-500/20 text-purple-400 rounded text-sm">
+                        🚗 Min: {selectedSegment.minimum_vehicle_class}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Hazards */}
+                {selectedSegment.hazards && selectedSegment.hazards.length > 0 && (
+                  <div>
+                    <p className="text-gray-400 text-sm font-medium mb-2">⚠️ Hazards</p>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedSegment.hazards.map((hazard, i) => (
+                        <span key={i} className="px-2 py-1 bg-red-500/20 text-red-400 rounded text-sm capitalize">
+                          {hazard.replace(/_/g, ' ')}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Vehicle Suitability */}
+                {vehicle && (
+                  <div className={`p-3 rounded-lg ${
+                    vehicle.rough_gravel_suitable || selectedSegment.route_type !== 'logging_road'
+                      ? 'bg-green-500/20'
+                      : 'bg-red-500/20'
+                  }`}>
+                    <p className={`font-medium ${
+                      vehicle.rough_gravel_suitable || selectedSegment.route_type !== 'logging_road'
+                        ? 'text-green-400'
+                        : 'text-red-400'
+                    }`}>
+                      {vehicle.rough_gravel_suitable || selectedSegment.route_type !== 'logging_road'
+                        ? '✅ Your vehicle is suitable for this route'
+                        : '❌ Your vehicle may not be suitable for this route'
+                      }
+                    </p>
+                    <p className="text-gray-400 text-sm mt-1">
+                      {vehicle.year} {vehicle.make} {vehicle.model}
+                    </p>
+                  </div>
+                )}
+
+                {/* Alternatives */}
+                {alternatives.length > 0 && (
+                  <div>
+                    <p className="text-gray-400 text-sm font-medium mb-2">🔄 Alternatives (if route unavailable)</p>
+                    <div className="space-y-2">
+                      {alternatives.map(alt => (
+                        <div key={alt.id} className="bg-gray-700/50 rounded-lg p-3">
+                          <div className="flex items-center justify-between">
+                            <p className="text-white font-medium">
+                              {alt.provider_name || alt.alternative_description}
+                            </p>
+                            <span className="text-gray-400 text-sm">
+                              +{alt.additional_time_minutes}min, +${alt.additional_cost_estimate || 0}
+                            </span>
+                          </div>
+                          <p className="text-gray-500 text-sm mt-1">
+                            Use when: {alt.trigger_conditions?.join(', ')}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Transport Providers */}
+      <div className="bg-gray-800 rounded-xl p-4">
+        <h3 className="text-white font-semibold mb-4">🚌 Transport Providers</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+          {providers.map(provider => (
+            <div key={provider.id} className="bg-gray-700/50 rounded-lg p-3">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-xl">
+                  {provider.provider_type === 'ferry' && '⛴️'}
+                  {provider.provider_type === 'float_plane' && '🛩️'}
+                  {provider.provider_type === 'water_taxi' && '🚤'}
+                  {provider.provider_type === 'bus' && '🚌'}
+                </span>
+                <p className="text-white font-medium">{provider.name}</p>
+              </div>
+              <p className="text-gray-400 text-sm mb-2">{provider.base_location}</p>
+              <div className="flex flex-wrap gap-1">
+                {provider.has_live_api && (
+                  <span className="px-1.5 py-0.5 bg-green-500/20 text-green-400 rounded text-xs">Live Data</span>
+                )}
+                {provider.accepts_vehicles && (
+                  <span className="px-1.5 py-0.5 bg-blue-500/20 text-blue-400 rounded text-xs">Vehicles OK</span>
+                )}
+                {provider.accepts_kayaks && (
+                  <span className="px-1.5 py-0.5 bg-purple-500/20 text-purple-400 rounded text-xs">Kayaks OK</span>
+                )}
+              </div>
+              {provider.website && (
+                <a 
+                  href={provider.website} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-blue-400 text-sm hover:underline mt-2 block"
+                >
+                  Visit Website →
+                </a>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default RouteExplorer;
+```
+
+=== PART 8: Add Tab to Navigation ===
+
+In your DashboardLayout.tsx or wherever tabs are defined, add:
+```tsx
+import { TripPlanningTab } from './TripPlanning/TripPlanningTab';
+
+// Add to tabs array:
+const tabs = [
+  { id: 'overview', label: 'Overview', icon: '📊' },
+  { id: 'map', label: 'Map', icon: '🗺️' },
+  { id: 'webcams', label: 'Webcams', icon: '📷' },
+  { id: 'alerts', label: 'Alerts', icon: '🚨' },
+  { id: 'trips', label: 'Road Trips', icon: '🛣️' },
+  { id: 'planning', label: 'Trip Planning', icon: '🧭' }, // NEW
+];
+
+// In tab content section:
+{activeTab === 'planning' && (
+  <TripPlanningTab />
+)}
+```
+
+=== PART 9: Export Components ===
+
+Create file: client/src/components/TripPlanning/index.ts
+```typescript
+export { TripPlanningTab } from './TripPlanningTab';
+export { ParticipantProfileForm } from './ParticipantProfileForm';
+export { VehicleProfileForm } from './VehicleProfileForm';
+export { TripQualificationCheck } from './TripQualificationCheck';
+export { ServiceRunsBoard } from './ServiceRunsBoard';
+export { RouteExplorer } from './RouteExplorer';
+```
+
+This creates:
+1. Trip Planning Tab with overview dashboard
+2. Participant Profile Form with skills management
+3. Vehicle Profile Form with safety checklist
+4. Trip Qualification Checker (skill + vehicle assessment)
+5. Service Runs Board (for booking slots)
+6. Route Explorer (view segments, providers, alternatives)
+
+The UI integrates with all the API endpoints from Prompt 38. Users can:
+- Create their profile with skills
+- Add their vehicle and complete assessment
+- Check if they qualify for specific trips
+- See skill gaps and how to resolve them
+- Browse upcoming service runs
+- Explore route segments and alternatives
