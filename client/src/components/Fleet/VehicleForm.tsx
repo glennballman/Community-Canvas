@@ -218,11 +218,16 @@ export function VehicleForm({ vehicleId, initialData, onSave, onCancel }: Vehicl
   const isPending = createMutation.isPending || updateMutation.isPending;
 
   function onSubmit(data: VehicleFormData) {
+    console.log('VehicleForm onSubmit called with:', data);
     if (vehicleId) {
       updateMutation.mutate(data);
     } else {
       createMutation.mutate(data);
     }
+  }
+
+  function onError(errors: any) {
+    console.error('VehicleForm validation errors:', errors);
   }
 
   const watchedFuelType = form.watch('fuel_type');
@@ -242,7 +247,7 @@ export function VehicleForm({ vehicleId, initialData, onSave, onCancel }: Vehicl
               Cancel
             </Button>
             <Button 
-              onClick={form.handleSubmit(onSubmit)} 
+              onClick={form.handleSubmit(onSubmit, onError)} 
               disabled={isPending}
               data-testid="button-save-vehicle"
             >
