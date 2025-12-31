@@ -7,7 +7,8 @@ import {
   Bell,
   Leaf,
   Cloud,
-  Radio
+  Radio,
+  Navigation2
 } from 'lucide-react';
 import { StatusCards } from './StatusCards';
 import { AlertsFeed } from './AlertsFeed';
@@ -18,6 +19,7 @@ import { FerryStatus } from './FerryStatus';
 import { WeatherWidget } from './WeatherWidget';
 import { RoadEvents } from './RoadEvents';
 import { MapView } from './MapView';
+import { RoadTripsTab } from './RoadTripsTab';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -34,7 +36,7 @@ interface DashboardLayoutProps {
 
 export function DashboardLayout({ defaultRegion = 'bc' }: DashboardLayoutProps) {
   const [selectedRegion, setSelectedRegion] = useState(defaultRegion);
-  const [activeTab, setActiveTab] = useState<'overview' | 'map' | 'webcams' | 'alerts'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'map' | 'webcams' | 'alerts' | 'roadtrips'>('overview');
   const [alertCount, setAlertCount] = useState(0);
 
   useEffect(() => {
@@ -49,6 +51,7 @@ export function DashboardLayout({ defaultRegion = 'bc' }: DashboardLayoutProps) 
     { id: 'map', label: 'Map', icon: Map },
     { id: 'webcams', label: 'Webcams', icon: Camera },
     { id: 'alerts', label: 'Alerts', icon: AlertTriangle },
+    { id: 'roadtrips', label: 'Road Trips', icon: Navigation2 },
   ] as const;
 
   return (
@@ -125,6 +128,9 @@ export function DashboardLayout({ defaultRegion = 'bc' }: DashboardLayoutProps) 
         )}
         {activeTab === 'alerts' && (
           <AlertsTab regionId={selectedRegion} />
+        )}
+        {activeTab === 'roadtrips' && (
+          <RoadTripsTab regionId={selectedRegion} />
         )}
       </main>
       

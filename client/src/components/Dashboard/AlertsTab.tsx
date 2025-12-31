@@ -413,7 +413,10 @@ export function AlertsTab({ regionId }: AlertsTabProps) {
 
   // Update marker highlighting when hoveredAlertId changes - only modify innerElement, not wrapper
   useEffect(() => {
-    markersRef.current.forEach(({ innerElement }, alertId) => {
+    markersRef.current.forEach((markerData, alertId) => {
+      const innerElement = markerData?.innerElement;
+      if (!innerElement) return;
+      
       if (hoveredAlertId === alertId) {
         innerElement.style.transform = 'scale(1.3)';
         innerElement.style.boxShadow = '0 0 0 4px rgba(59, 130, 246, 0.5), 0 4px 12px rgba(0,0,0,0.4)';
