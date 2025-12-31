@@ -158,7 +158,7 @@ export function AlertsTab({ regionId }: AlertsTabProps) {
   const [hoveredAlertId, setHoveredAlertId] = useState<number | null>(null);
   
   const map = useRef<mapboxgl.Map | null>(null);
-  const markersRef = useRef<mapboxgl.Marker[]>([]);
+  const markersRef = useRef<Map<number, { marker: mapboxgl.Marker; element: HTMLDivElement }>>(new Map());
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapInitializedRef = useRef(false);
 
@@ -278,8 +278,9 @@ export function AlertsTab({ regionId }: AlertsTabProps) {
     const updateMarkers = () => {
       if (!currentMap) return;
       
-      markersRef.current.forEach(m => m.remove());
-      markersRef.current = [];
+      // Clear existing markers
+      markersRef.current.forEach(({ marker }) => marker.remove());
+      markersRef.current.clear();
 
       // BC bounding box: lat 48.2 to 60.0, lng -139.5 to -114.0
       const isInBC = (lat: number, lng: number) => {
@@ -302,6 +303,7 @@ export function AlertsTab({ regionId }: AlertsTabProps) {
         
         const el = document.createElement('div');
         el.className = 'alert-marker';
+        el.dataset.alertId = String(alert.id);
         el.style.cssText = `
           width: 32px;
           height: 32px;
@@ -314,6 +316,7 @@ export function AlertsTab({ regionId }: AlertsTabProps) {
           align-items: center;
           justify-content: center;
           position: relative;
+          transition: transform 0.15s, box-shadow 0.15s;
         `;
         
         const severityDot = document.createElement('div');
@@ -367,11 +370,11 @@ export function AlertsTab({ regionId }: AlertsTabProps) {
                   ${alert.headline || 'Alert'}
                 </p>
                 <p style="margin: 0 0 8px; font-size: 13px; color: #666; display: flex; align-items: center; gap: 4px;">
-                  <span style="font-size: 12px;">📍</span> ${alert.region_name || 'Unknown'}
+                  <span style="font-size: 12px;">Pin</span> ${alert.region_name || 'Unknown'}
                 </p>
                 ${roadsInfo ? `
                   <p style="margin: 0 0 8px; font-size: 13px; color: #666; display: flex; align-items: center; gap: 4px;">
-                    <span style="font-size: 12px;">🛣️</span> ${roadsInfo}
+                    <span style="font-size: 12px;">Road</span> ${roadsInfo}
                   </p>
                 ` : ''}
                 <div style="display: flex; gap: 8px; font-size: 11px; color: #888; border-top: 1px solid #eee; padding-top: 8px; margin-top: 8px;">
@@ -384,7 +387,7 @@ export function AlertsTab({ regionId }: AlertsTabProps) {
           )
           .addTo(currentMap);
         
-        markersRef.current.push(marker);
+        markersRef.current.set(alert.id, { marker, element: el });
       });
     };
 
@@ -398,6 +401,21 @@ export function AlertsTab({ regionId }: AlertsTabProps) {
       currentMap.off('load', updateMarkers);
     };
   }, [filteredAlerts, showMap]);
+
+  // Update marker highlighting when hoveredAlertId changes
+  useEffect(() => {
+    markersRef.current.forEach(({ element }, alertId) => {
+      if (hoveredAlertId === alertId) {
+        element.style.transform = 'scale(1.4)';
+        element.style.boxShadow = '0 0 0 4px rgba(59, 130, 246, 0.5), 0 4px 12px rgba(0,0,0,0.4)';
+        element.style.zIndex = '1000';
+      } else {
+        element.style.transform = 'scale(1)';
+        element.style.boxShadow = '0 2px 8px rgba(0,0,0,0.3)';
+        element.style.zIndex = '1';
+      }
+    });
+  }, [hoveredAlertId]);
 
   function flyToAlert(alert: Alert) {
     const lat = alert.latitude || alert.region_lat;
