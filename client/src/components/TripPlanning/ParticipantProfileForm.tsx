@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   ArrowLeft, 
   User, 
@@ -90,6 +90,25 @@ export function ParticipantProfileForm({ participant, onSave, onCancel }: Partic
   const [skills, setSkills] = useState<Partial<ParticipantSkill>[]>(
     participant?.skills || []
   );
+
+  useEffect(() => {
+    if (participant) {
+      setFormData({
+        name: participant.name || '',
+        email: participant.email || '',
+        phone: participant.phone || '',
+        emergency_contact_name: participant.emergency_contact_name || '',
+        emergency_contact_phone: participant.emergency_contact_phone || '',
+        country_of_origin: participant.country_of_origin || '',
+        languages: participant.languages || ['English'],
+        medical_conditions: participant.medical_conditions || [],
+        dietary_restrictions: participant.dietary_restrictions || [],
+        fitness_level: participant.fitness_level || 5,
+        swimming_ability: participant.swimming_ability || 'basic'
+      });
+      setSkills(participant.skills || []);
+    }
+  }, [participant]);
 
   const [activeSection, setActiveSection] = useState<'basic' | 'skills' | 'emergency'>('basic');
   const [saving, setSaving] = useState(false);
