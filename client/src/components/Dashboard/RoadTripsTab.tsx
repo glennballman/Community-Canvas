@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { RoadTrip, TripCategory, Season, difficultyColors } from '../../types/roadtrips';
 import { sampleTrips } from '../../data/sampleTrips';
 import { JourneyView } from './JourneyView';
@@ -9,7 +10,7 @@ import { Card } from '@/components/ui/card';
 import {
   Search, Map, Clock, DollarSign, Star, ChevronRight,
   Snowflake, Mountain, Waves, Wine, Bird, Flame, Ship, Route, Tent, Building,
-  Sun, Leaf, TreeDeciduous, CloudSnow
+  Sun, Leaf, TreeDeciduous, CloudSnow, Loader2
 } from 'lucide-react';
 
 interface RoadTripsTabProps {
@@ -36,8 +37,73 @@ const seasonIcons: Record<Season, React.ReactNode> = {
   winter: <CloudSnow className="w-3 h-3" />,
 };
 
+function transformDbTrip(dbTrip: any): RoadTrip {
+  return {
+    id: dbTrip.id,
+    title: dbTrip.title,
+    tagline: dbTrip.tagline || '',
+    description: dbTrip.description || '',
+    category: dbTrip.category as TripCategory,
+    difficulty: dbTrip.difficulty || 'moderate',
+    seasons: dbTrip.seasons || [],
+    tags: dbTrip.tags || [],
+    duration: {
+      min_hours: dbTrip.duration_min_hours || 0,
+      max_hours: dbTrip.duration_max_hours || 0,
+      recommended_days: dbTrip.recommended_days || 1,
+      best_start_time: dbTrip.best_start_time || null,
+    },
+    region: dbTrip.region || '',
+    start_location: {
+      name: dbTrip.start_location_name || '',
+      latitude: parseFloat(dbTrip.start_location_lat) || 0,
+      longitude: parseFloat(dbTrip.start_location_lng) || 0,
+    },
+    end_location: {
+      name: dbTrip.end_location_name || '',
+      latitude: parseFloat(dbTrip.end_location_lat) || 0,
+      longitude: parseFloat(dbTrip.end_location_lng) || 0,
+    },
+    estimated_cost: {
+      budget: dbTrip.cost_budget || 0,
+      moderate: dbTrip.cost_moderate || 0,
+      comfort: dbTrip.cost_comfort || 0,
+    },
+    rating: parseFloat(dbTrip.rating) || 0,
+    rating_count: dbTrip.rating_count || 0,
+    segments: (dbTrip.segments || []).map((seg: any) => ({
+      id: seg.id,
+      type: seg.segment_type,
+      title: seg.title,
+      location: {
+        name: seg.location_name || '',
+        latitude: parseFloat(seg.location_lat) || 0,
+        longitude: parseFloat(seg.location_lng) || 0,
+      },
+      duration_minutes: seg.duration_minutes || 0,
+      cost: {
+        budget: seg.cost_budget || 0,
+        moderate: seg.cost_moderate || 0,
+        comfort: seg.cost_comfort || 0,
+      },
+      details: seg.details || {},
+      pro_tips: seg.pro_tips || [],
+      webcam_ids: seg.webcam_ids || [],
+      road_segments: seg.road_segments || [],
+    })),
+  };
+}
+
 export function RoadTripsTab({ regionId }: RoadTripsTabProps) {
-  const [trips] = useState<RoadTrip[]>(sampleTrips);
+  const { data: tripsData, isLoading } = useQuery<{ trips: any[] }>({
+    queryKey: ['/api/v1/trips'],
+  });
+  
+  const trips = useMemo(() => {
+    if (!tripsData?.trips) return sampleTrips;
+    return tripsData.trips.map(transformDbTrip);
+  }, [tripsData]);
+
   const [selectedTrip, setSelectedTrip] = useState<RoadTrip | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<TripCategory | 'all'>('all');
