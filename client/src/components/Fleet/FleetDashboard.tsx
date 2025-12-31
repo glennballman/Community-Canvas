@@ -100,6 +100,8 @@ export function FleetDashboard() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [showVehicleForm, setShowVehicleForm] = useState(false);
   const [showTrailerForm, setShowTrailerForm] = useState(false);
+  const [editVehicleId, setEditVehicleId] = useState<string | null>(null);
+  const [editTrailerId, setEditTrailerId] = useState<string | null>(null);
 
   const vehiclesUrl = statusFilter !== 'all' 
     ? `/api/v1/fleet/vehicles?status=${statusFilter}` 
@@ -254,6 +256,7 @@ export function FleetDashboard() {
                     key={vehicle.id} 
                     vehicle={vehicle} 
                     onStatusChange={(status) => updateVehicleMutation.mutate({ vehicleId: vehicle.id, status })}
+                    onEdit={() => setEditVehicleId(vehicle.id)}
                     isPending={updateVehicleMutation.isPending}
                   />
                 ))}
@@ -280,6 +283,7 @@ export function FleetDashboard() {
                     key={trailer.id} 
                     trailer={trailer} 
                     onUnhitch={() => unhitchMutation.mutate(trailer.id)}
+                    onEdit={() => setEditTrailerId(trailer.id)}
                     isPending={unhitchMutation.isPending}
                   />
                 ))}
@@ -303,6 +307,26 @@ export function FleetDashboard() {
           <TrailerForm 
             onSave={() => setShowTrailerForm(false)}
             onCancel={() => setShowTrailerForm(false)}
+          />
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!editVehicleId} onOpenChange={(open) => !open && setEditVehicleId(null)}>
+        <DialogContent className="max-w-4xl p-0">
+          <VehicleForm 
+            vehicleId={editVehicleId || undefined}
+            onSave={() => setEditVehicleId(null)}
+            onCancel={() => setEditVehicleId(null)}
+          />
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!editTrailerId} onOpenChange={(open) => !open && setEditTrailerId(null)}>
+        <DialogContent className="max-w-4xl p-0">
+          <TrailerForm 
+            trailerId={editTrailerId || undefined}
+            onSave={() => setEditTrailerId(null)}
+            onCancel={() => setEditTrailerId(null)}
           />
         </DialogContent>
       </Dialog>
@@ -349,10 +373,12 @@ function StatCard({
 function VehicleCard({ 
   vehicle, 
   onStatusChange,
+  onEdit,
   isPending 
 }: { 
   vehicle: FleetVehicle; 
   onStatusChange: (status: string) => void;
+  onEdit: () => void;
   isPending: boolean;
 }) {
   const displayName = vehicle.nickname || `${vehicle.year} ${vehicle.make} ${vehicle.model}`;
@@ -426,7 +452,7 @@ function VehicleCard({
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
-          <Button size="sm" data-testid={`button-details-${vehicle.id}`}>
+          <Button size="sm" onClick={onEdit} data-testid={`button-details-${vehicle.id}`}>
             Details
           </Button>
         </div>
@@ -438,10 +464,12 @@ function VehicleCard({
 function TrailerCard({ 
   trailer, 
   onUnhitch,
+  onEdit,
   isPending 
 }: { 
   trailer: FleetTrailer; 
   onUnhitch: () => void;
+  onEdit: () => void;
   isPending: boolean;
 }) {
   const displayName = trailer.nickname || `${trailer.trailer_type.replace(/_/g, ' ')} Trailer`;
@@ -505,7 +533,7 @@ function TrailerCard({
           <Button variant="outline" size="sm" className="flex-1" data-testid={`button-hitch-${trailer.id}`}>
             Hitch To...
           </Button>
-          <Button size="sm" data-testid={`button-trailer-details-${trailer.id}`}>
+          <Button size="sm" onClick={onEdit} data-testid={`button-trailer-details-${trailer.id}`}>
             Details
           </Button>
         </div>
