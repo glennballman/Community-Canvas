@@ -1,0 +1,620 @@
+Great point! The alerts need richer data and proper visual icons. Let me create a prompt to enhance both the alert details and iconography.
+
+PROMPT 31.1: Enhanced Alerts with Rich Data & Custom Icons
+Enhance the Alerts tab with detailed information fields and type-specific icons for both the list and map.
+
+Update file: client/src/components/Dashboard/AlertsTab.tsx
+
+First, create a comprehensive icon and styling system:
+```tsx
+// Alert type configuration with specific icons (using emoji + optional SVG paths for map)
+const alertTypeConfig: Record<string, { 
+  icon: string; 
+  label: string; 
+  mapIcon: string;
+  color: string;
+}> = {
+  // Road Events
+  road_closure: { icon: '🚫', label: 'Road Closure', mapIcon: '🚫', color: '#ef4444' },
+  road_incident: { icon: '🚨', label: 'Incident', mapIcon: '🚨', color: '#f97316' },
+  construction: { icon: '🚧', label: 'Construction', mapIcon: '🚧', color: '#eab308' },
+  road_condition: { icon: '🛣️', label: 'Road Condition', mapIcon: '🛣️', color: '#3b82f6' },
+  
+  // Weather
+  weather_warning: { icon: '⛈️', label: 'Weather Warning', mapIcon: '⛈️', color: '#8b5cf6' },
+  snow_warning: { icon: '❄️', label: 'Snow Warning', mapIcon: '❄️', color: '#06b6d4' },
+  wind_warning: { icon: '💨', label: 'Wind Warning', mapIcon: '💨', color: '#6366f1' },
+  flood_warning: { icon: '🌊', label: 'Flood Warning', mapIcon: '🌊', color: '#0ea5e9' },
+  
+  // Natural Disasters
+  wildfire: { icon: '🔥', label: 'Wildfire', mapIcon: '🔥', color: '#dc2626' },
+  earthquake: { icon: '🌋', label: 'Earthquake', mapIcon: '🌋', color: '#7c2d12' },
+  avalanche: { icon: '🏔️', label: 'Avalanche Risk', mapIcon: '🏔️', color: '#78716c' },
+  landslide: { icon: '⛰️', label: 'Landslide', mapIcon: '⛰️', color: '#a16207' },
+  
+  // Transportation
+  ferry_delay: { icon: '⛴️', label: 'Ferry Delay', mapIcon: '⛴️', color: '#2563eb' },
+  ferry_cancellation: { icon: '🚢', label: 'Ferry Cancelled', mapIcon: '🚢', color: '#dc2626' },
+  transit_alert: { icon: '🚌', label: 'Transit Alert', mapIcon: '🚌', color: '#7c3aed' },
+  airport_delay: { icon: '✈️', label: 'Airport Delay', mapIcon: '✈️', color: '#0891b2' },
+  
+  // Infrastructure
+  power_outage: { icon: '⚡', label: 'Power Outage', mapIcon: '⚡', color: '#ca8a04' },
+  water_advisory: { icon: '💧', label: 'Water Advisory', mapIcon: '💧', color: '#0284c7' },
+  gas_leak: { icon: '🔶', label: 'Gas Leak', mapIcon: '🔶', color: '#ea580c' },
+  
+  // Public Safety
+  evacuation: { icon: '🏃', label: 'Evacuation Order', mapIcon: '🏃', color: '#dc2626' },
+  amber_alert: { icon: '🚸', label: 'Amber Alert', mapIcon: '🚸', color: '#f59e0b' },
+  emergency: { icon: '🆘', label: 'Emergency', mapIcon: '🆘', color: '#dc2626' },
+  
+  // Default
+  closure: { icon: '🚫', label: 'Closure', mapIcon: '🚫', color: '#6b7280' },
+  incident: { icon: '⚠️', label: 'Incident', mapIcon: '⚠️', color: '#f97316' },
+  default: { icon: '📋', label: 'Alert', mapIcon: '📋', color: '#6b7280' },
+};
+
+// Source configuration
+const sourceConfig: Record<string, { icon: string; name: string; url?: string }> = {
+  drivebc: { icon: '🛣️', name: 'DriveBC', url: 'https://drivebc.ca' },
+  bcferries: { icon: '⛴️', name: 'BC Ferries', url: 'https://bcferries.com' },
+  bchydro: { icon: '⚡', name: 'BC Hydro', url: 'https://bchydro.com' },
+  env_canada: { icon: '🌤️', name: 'Environment Canada', url: 'https://weather.gc.ca' },
+  bcwildfire: { icon: '🔥', name: 'BC Wildfire Service', url: 'https://bcwildfire.ca' },
+  earthquakes_canada: { icon: '🌋', name: 'Earthquakes Canada', url: 'https://earthquakescanada.nrcan.gc.ca' },
+  translink: { icon: '🚌', name: 'TransLink', url: 'https://translink.ca' },
+  bctransit: { icon: '🚍', name: 'BC Transit', url: 'https://bctransit.com' },
+  embc: { icon: '🆘', name: 'Emergency Management BC' },
+  local_gov: { icon: '🏛️', name: 'Local Government' },
+  unknown: { icon: '📡', name: 'Unknown Source' },
+};
+
+// Helper to get type config
+function getAlertTypeConfig(alertType: string) {
+  const normalized = alertType?.toLowerCase().replace(/[- ]/g, '_') || 'default';
+  return alertTypeConfig[normalized] || alertTypeConfig.default;
+}
+
+// Helper to get source config  
+function getSourceConfig(source: string) {
+  const normalized = source?.toLowerCase().replace(/[- ]/g, '_') || 'unknown';
+  return sourceConfig[normalized] || sourceConfig.unknown;
+}
+```
+
+Update the AlertCard component to show rich details:
+```tsx
+function AlertCard({ alert, config, isHovered, onHover, onClick }: AlertCardProps) {
+  const sevConfig = config[alert.severity] || config.info;
+  const typeConfig = getAlertTypeConfig(alert.alert_type);
+  const srcConfig = getSourceConfig(alert.source);
+  
+  // Parse metadata for additional details
+  const nextUpdate = alert.metadata?.next_update || alert.metadata?.nextUpdate;
+  const affectedRoads = alert.metadata?.roads || alert.metadata?.affected_roads;
+  const estimatedEnd = alert.metadata?.estimated_end || alert.metadata?.estimatedEnd || alert.expires_at;
+  const eventSubType = alert.metadata?.event_subtype || alert.metadata?.subtype;
+  const direction = alert.metadata?.direction;
+  const detour = alert.metadata?.detour || alert.metadata?.alternate_route;
+  
+  return (
+    <div
+      className={`bg-gray-800 rounded-xl overflow-hidden cursor-pointer transition-all ${
+        isHovered ? 'ring-2 ring-blue-400 bg-gray-700' : 'hover:bg-gray-700/50'
+      }`}
+      onClick={onClick}
+      onMouseEnter={() => onHover?.(true)}
+      onMouseLeave={() => onHover?.(false)}
+    >
+      {/* Severity Banner */}
+      <div className={`px-4 py-2 ${sevConfig.bg} border-b border-gray-700 flex items-center justify-between`}>
+        <div className="flex items-center gap-2">
+          <span className="text-2xl">{typeConfig.icon}</span>
+          <div>
+            <span className={`text-sm font-semibold uppercase ${sevConfig.color}`}>
+              {alert.severity}
+            </span>
+            <span className="text-gray-400 mx-2">•</span>
+            <span className="text-sm text-gray-300">{typeConfig.label}</span>
+          </div>
+        </div>
+        <span className="text-xs text-gray-500">{getTimeAgo(new Date(alert.created_at))}</span>
+      </div>
+      
+      {/* Main Content */}
+      <div className="p-4">
+        <h3 className="text-white font-semibold text-lg leading-tight">
+          {alert.headline || 'No headline available'}
+        </h3>
+        
+        {/* Location & Roads */}
+        <div className="flex items-center gap-4 mt-2 text-sm">
+          <span className="text-gray-400 flex items-center gap-1">
+            📍 {alert.region_name || 'Unknown location'}
+          </span>
+          {affectedRoads && (
+            <span className="text-gray-400 flex items-center gap-1">
+              🛣️ {affectedRoads}
+            </span>
+          )}
+          {direction && (
+            <span className="text-gray-500 text-xs">
+              ({direction})
+            </span>
+          )}
+        </div>
+        
+        {/* Description Preview */}
+        {alert.description && (
+          <p className="text-gray-400 text-sm mt-3 line-clamp-2">
+            {alert.description}
+          </p>
+        )}
+        
+        {/* Additional Details Row */}
+        <div className="flex flex-wrap gap-3 mt-4 pt-3 border-t border-gray-700">
+          {/* Source */}
+          <div className="flex items-center gap-1.5 text-xs">
+            <span>{srcConfig.icon}</span>
+            <span className="text-gray-500">Source:</span>
+            <span className="text-gray-300">{srcConfig.name}</span>
+          </div>
+          
+          {/* Estimated End */}
+          {estimatedEnd && (
+            <div className="flex items-center gap-1.5 text-xs">
+              <span>⏰</span>
+              <span className="text-gray-500">Est. End:</span>
+              <span className="text-gray-300">
+                {new Date(estimatedEnd).toLocaleDateString('en-US', {
+                  month: 'short',
+                  day: 'numeric',
+                  hour: 'numeric',
+                  minute: '2-digit'
+                })}
+              </span>
+            </div>
+          )}
+          
+          {/* Next Update */}
+          {nextUpdate && (
+            <div className="flex items-center gap-1.5 text-xs">
+              <span>🔄</span>
+              <span className="text-gray-500">Next Update:</span>
+              <span className="text-blue-400">
+                {typeof nextUpdate === 'string' && nextUpdate.includes('T') 
+                  ? new Date(nextUpdate).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+                  : nextUpdate
+                }
+              </span>
+            </div>
+          )}
+        </div>
+        
+        {/* Detour Info */}
+        {detour && (
+          <div className="mt-3 p-2 bg-blue-500/10 rounded-lg border border-blue-500/20">
+            <span className="text-blue-400 text-xs font-medium">🔀 Alternate Route: </span>
+            <span className="text-blue-300 text-xs">{detour}</span>
+          </div>
+        )}
+      </div>
+      
+      {/* Footer with arrow */}
+      <div className="px-4 py-2 bg-gray-700/30 flex items-center justify-between">
+        <span className="text-xs text-gray-500">
+          Click for full details
+        </span>
+        <span className="text-gray-400">→</span>
+      </div>
+    </div>
+  );
+}
+```
+
+Update the map markers to use type-specific icons:
+```tsx
+// In the map marker creation section:
+function createMapMarker(alert: Alert, map: mapboxgl.Map): mapboxgl.Marker {
+  const sevConfig = severityConfig[alert.severity] || severityConfig.info;
+  const typeConfig = getAlertTypeConfig(alert.alert_type);
+  
+  const el = document.createElement('div');
+  el.className = 'custom-marker';
+  el.style.cssText = `
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: transform 0.2s;
+  `;
+  
+  el.innerHTML = `
+    <div style="
+      position: relative;
+      width: 36px;
+      height: 36px;
+    ">
+      <!-- Background circle with severity color -->
+      <div style="
+        position: absolute;
+        inset: 0;
+        background: ${typeConfig.color}40;
+        border: 3px solid ${typeConfig.color};
+        border-radius: 50%;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+      "></div>
+      <!-- Icon -->
+      <div style="
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 18px;
+      ">${typeConfig.icon}</div>
+      <!-- Severity dot -->
+      <div style="
+        position: absolute;
+        top: -2px;
+        right: -2px;
+        width: 12px;
+        height: 12px;
+        background: ${sevConfig.border.includes('red') ? '#ef4444' : 
+                     sevConfig.border.includes('orange') ? '#f97316' : 
+                     sevConfig.border.includes('yellow') ? '#eab308' : 
+                     sevConfig.border.includes('blue') ? '#3b82f6' : '#6b7280'};
+        border: 2px solid white;
+        border-radius: 50%;
+      "></div>
+    </div>
+  `;
+
+  const marker = new mapboxgl.Marker(el)
+    .setLngLat([
+      alert.metadata?.longitude || alert.region_lng,
+      alert.metadata?.latitude || alert.region_lat
+    ])
+    .setPopup(
+      new mapboxgl.Popup({ offset: 25, maxWidth: '300px' }).setHTML(`
+        <div style="padding: 12px;">
+          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+            <span style="font-size: 24px;">${typeConfig.icon}</span>
+            <div>
+              <div style="font-weight: 600; color: #111;">${typeConfig.label}</div>
+              <div style="font-size: 12px; color: ${typeConfig.color}; text-transform: uppercase;">
+                ${alert.severity}
+              </div>
+            </div>
+          </div>
+          <p style="margin: 0 0 8px; font-weight: 500; color: #333;">
+            ${alert.headline || 'Alert'}
+          </p>
+          <p style="margin: 0 0 8px; font-size: 13px; color: #666;">
+            📍 ${alert.region_name}
+          </p>
+          ${alert.metadata?.roads ? `
+            <p style="margin: 0 0 8px; font-size: 13px; color: #666;">
+              🛣️ ${alert.metadata.roads}
+            </p>
+          ` : ''}
+          <div style="display: flex; gap: 8px; font-size: 11px; color: #888; border-top: 1px solid #eee; padding-top: 8px; margin-top: 8px;">
+            <span>${getSourceConfig(alert.source).icon} ${getSourceConfig(alert.source).name}</span>
+            <span>•</span>
+            <span>🕐 ${getTimeAgo(new Date(alert.created_at))}</span>
+          </div>
+        </div>
+      `)
+    );
+
+  return marker;
+}
+
+// Update the marker creation loop:
+useEffect(() => {
+  if (!map.current || !showMap) return;
+
+  // Clear existing markers
+  markersRef.current.forEach(m => m.remove());
+  markersRef.current = [];
+
+  // Add markers for alerts with coordinates
+  filteredAlerts.forEach(alert => {
+    const lat = alert.metadata?.latitude || alert.region_lat;
+    const lng = alert.metadata?.longitude || alert.region_lng;
+    
+    if (lat && lng) {
+      const marker = createMapMarker(alert, map.current!);
+      
+      marker.getElement().addEventListener('click', () => {
+        setSelectedAlert(alert);
+      });
+      
+      marker.getElement().addEventListener('mouseenter', () => {
+        setHoveredAlertId(alert.id);
+        marker.getElement().style.transform = 'scale(1.2)';
+      });
+      
+      marker.getElement().addEventListener('mouseleave', () => {
+        setHoveredAlertId(null);
+        marker.getElement().style.transform = 'scale(1)';
+      });
+      
+      marker.addTo(map.current!);
+      markersRef.current.push(marker);
+    }
+  });
+
+  // Fit bounds if we have markers
+  if (markersRef.current.length > 0) {
+    const bounds = new mapboxgl.LngLatBounds();
+    filteredAlerts.forEach(alert => {
+      const lat = alert.metadata?.latitude || alert.region_lat;
+      const lng = alert.metadata?.longitude || alert.region_lng;
+      if (lat && lng) bounds.extend([lng, lat]);
+    });
+    map.current.fitBounds(bounds, { padding: 60, maxZoom: 10 });
+  }
+}, [filteredAlerts, showMap]);
+```
+
+Update the detail modal to show comprehensive info:
+```tsx
+function AlertDetailModal({ alert, config, onClose }: AlertDetailModalProps) {
+  const sevConfig = config[alert.severity] || config.info;
+  const typeConfig = getAlertTypeConfig(alert.alert_type);
+  const srcConfig = getSourceConfig(alert.source);
+  
+  // Parse all metadata
+  const {
+    roads, affected_roads,
+    direction,
+    estimated_end, estimatedEnd,
+    next_update, nextUpdate,
+    detour, alternate_route,
+    event_subtype, subtype,
+    lane_closures,
+    speed_limit,
+    last_updated,
+    ...otherMetadata
+  } = alert.metadata || {};
+  
+  const affectedRoads = roads || affected_roads;
+  const estEnd = estimated_end || estimatedEnd || alert.expires_at;
+  const nextUpd = next_update || nextUpdate;
+  const altRoute = detour || alternate_route;
+  const eventType = event_subtype || subtype;
+  
+  return (
+    <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4" onClick={onClose}>
+      <div 
+        className="max-w-2xl w-full bg-gray-900 rounded-xl overflow-hidden max-h-[90vh] overflow-y-auto"
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Header with type icon */}
+        <div className={`px-6 py-4 ${sevConfig.bg}`}>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <span className="text-4xl">{typeConfig.icon}</span>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className={`px-3 py-1 rounded-full text-sm font-bold uppercase ${sevConfig.color} bg-gray-900/50`}>
+                    {alert.severity}
+                  </span>
+                  <span className="text-gray-300 text-sm">{typeConfig.label}</span>
+                </div>
+                {eventType && (
+                  <p className="text-gray-400 text-sm mt-1">{eventType}</p>
+                )}
+              </div>
+            </div>
+            <button onClick={onClose} className="text-gray-400 hover:text-white text-2xl p-2">
+              ✕
+            </button>
+          </div>
+        </div>
+        
+        {/* Headline */}
+        <div className="px-6 py-4 border-b border-gray-700">
+          <h2 className="text-xl font-bold text-white">{alert.headline}</h2>
+        </div>
+        
+        {/* Key Details Grid */}
+        <div className="px-6 py-4 grid grid-cols-2 gap-4 border-b border-gray-700">
+          {/* Location */}
+          <div className="bg-gray-800 rounded-lg p-3">
+            <div className="flex items-center gap-2 text-gray-400 text-xs uppercase mb-1">
+              <span>📍</span> Location
+            </div>
+            <p className="text-white font-medium">{alert.region_name}</p>
+          </div>
+          
+          {/* Roads Affected */}
+          {affectedRoads && (
+            <div className="bg-gray-800 rounded-lg p-3">
+              <div className="flex items-center gap-2 text-gray-400 text-xs uppercase mb-1">
+                <span>🛣️</span> Roads Affected
+              </div>
+              <p className="text-white font-medium">{affectedRoads}</p>
+              {direction && <p className="text-gray-400 text-sm">{direction}</p>}
+            </div>
+          )}
+          
+          {/* Source */}
+          <div className="bg-gray-800 rounded-lg p-3">
+            <div className="flex items-center gap-2 text-gray-400 text-xs uppercase mb-1">
+              <span>{srcConfig.icon}</span> Source
+            </div>
+            <p className="text-white font-medium">{srcConfig.name}</p>
+            {srcConfig.url && (
+              <a 
+                href={srcConfig.url} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-blue-400 text-xs hover:underline"
+              >
+                Visit website →
+              </a>
+            )}
+          </div>
+          
+          {/* Created */}
+          <div className="bg-gray-800 rounded-lg p-3">
+            <div className="flex items-center gap-2 text-gray-400 text-xs uppercase mb-1">
+              <span>🕐</span> Created
+            </div>
+            <p className="text-white font-medium">
+              {new Date(alert.created_at).toLocaleString()}
+            </p>
+            <p className="text-gray-400 text-sm">{getTimeAgo(new Date(alert.created_at))}</p>
+          </div>
+        </div>
+        
+        {/* Timeline Info */}
+        {(estEnd || nextUpd) && (
+          <div className="px-6 py-4 border-b border-gray-700">
+            <h4 className="text-gray-400 text-xs uppercase mb-3">Timeline</h4>
+            <div className="flex gap-4">
+              {estEnd && (
+                <div className="flex-1 bg-green-500/10 rounded-lg p-3 border border-green-500/20">
+                  <div className="flex items-center gap-2 text-green-400 text-sm font-medium mb-1">
+                    <span>⏰</span> Estimated End
+                  </div>
+                  <p className="text-white">
+                    {new Date(estEnd).toLocaleString('en-US', {
+                      weekday: 'short',
+                      month: 'short',
+                      day: 'numeric',
+                      hour: 'numeric',
+                      minute: '2-digit'
+                    })}
+                  </p>
+                </div>
+              )}
+              {nextUpd && (
+                <div className="flex-1 bg-blue-500/10 rounded-lg p-3 border border-blue-500/20">
+                  <div className="flex items-center gap-2 text-blue-400 text-sm font-medium mb-1">
+                    <span>🔄</span> Next Update
+                  </div>
+                  <p className="text-white">
+                    {typeof nextUpd === 'string' && nextUpd.includes('T')
+                      ? new Date(nextUpd).toLocaleString()
+                      : nextUpd
+                    }
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+        
+        {/* Alternate Route */}
+        {altRoute && (
+          <div className="px-6 py-4 border-b border-gray-700">
+            <div className="bg-blue-500/10 rounded-lg p-4 border border-blue-500/20">
+              <div className="flex items-center gap-2 text-blue-400 font-medium mb-2">
+                <span>🔀</span> Alternate Route / Detour
+              </div>
+              <p className="text-white">{altRoute}</p>
+            </div>
+          </div>
+        )}
+        
+        {/* Description */}
+        {alert.description && (
+          <div className="px-6 py-4 border-b border-gray-700">
+            <h4 className="text-gray-400 text-xs uppercase mb-2">Full Description</h4>
+            <p className="text-gray-300 whitespace-pre-wrap">{alert.description}</p>
+          </div>
+        )}
+        
+        {/* Additional Details */}
+        {(lane_closures || speed_limit) && (
+          <div className="px-6 py-4 border-b border-gray-700">
+            <h4 className="text-gray-400 text-xs uppercase mb-3">Additional Details</h4>
+            <div className="flex gap-4">
+              {lane_closures && (
+                <div className="bg-gray-800 rounded-lg px-4 py-2">
+                  <span className="text-gray-400 text-sm">Lane Closures: </span>
+                  <span className="text-white">{lane_closures}</span>
+                </div>
+              )}
+              {speed_limit && (
+                <div className="bg-gray-800 rounded-lg px-4 py-2">
+                  <span className="text-gray-400 text-sm">Speed Limit: </span>
+                  <span className="text-yellow-400 font-bold">{speed_limit} km/h</span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+        
+        {/* Raw Metadata (collapsible for debugging) */}
+        {Object.keys(otherMetadata).length > 0 && (
+          <details className="px-6 py-4">
+            <summary className="text-gray-500 text-xs cursor-pointer hover:text-gray-300">
+              View raw metadata ({Object.keys(otherMetadata).length} fields)
+            </summary>
+            <pre className="mt-2 text-xs text-gray-400 bg-gray-800 rounded p-3 overflow-x-auto">
+              {JSON.stringify(otherMetadata, null, 2)}
+            </pre>
+          </details>
+        )}
+      </div>
+    </div>
+  );
+}
+```
+
+Update the legend to show alert types instead of just severity:
+```tsx
+{/* Updated Map Legend */}
+<div className="absolute bottom-4 left-4 bg-gray-900/95 rounded-lg p-3 max-w-xs">
+  <h4 className="text-white text-xs font-semibold mb-2">Alert Types</h4>
+  <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs">
+    {[
+      { icon: '🚫', label: 'Road Closure', color: '#ef4444' },
+      { icon: '🚧', label: 'Construction', color: '#eab308' },
+      { icon: '🔥', label: 'Wildfire', color: '#dc2626' },
+      { icon: '⛈️', label: 'Weather', color: '#8b5cf6' },
+      { icon: '⚡', label: 'Power Outage', color: '#ca8a04' },
+      { icon: '⛴️', label: 'Ferry', color: '#2563eb' },
+    ].map(item => (
+      <div key={item.label} className="flex items-center gap-1.5">
+        <span className="text-sm">{item.icon}</span>
+        <span className="text-gray-300">{item.label}</span>
+      </div>
+    ))}
+  </div>
+  
+  <h4 className="text-white text-xs font-semibold mt-3 mb-2 pt-2 border-t border-gray-700">Severity</h4>
+  <div className="flex gap-3 text-xs">
+    <div className="flex items-center gap-1">
+      <span className="w-2.5 h-2.5 rounded-full bg-red-500"></span>
+      <span className="text-gray-400">Critical</span>
+    </div>
+    <div className="flex items-center gap-1">
+      <span className="w-2.5 h-2.5 rounded-full bg-orange-500"></span>
+      <span className="text-gray-400">Major</span>
+    </div>
+    <div className="flex items-center gap-1">
+      <span className="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
+      <span className="text-gray-400">Minor</span>
+    </div>
+  </div>
+</div>
+```
+
+This enhancement adds:
+1. Type-specific icons (🔥 wildfire, 🚧 construction, ⛴️ ferry, etc.)
+2. Source information with links
+3. Estimated end time
+4. Next update time
+5. Affected roads
+6. Alternate routes/detours
+7. Lane closures and speed limits
+8. Rich map markers with type icons + severity dots
+9. Detailed popups on map
+10. Comprehensive detail modal
+
+Copy this into Replit. The alerts will now be much more informative with proper icons and detailed data fields! 🚨🔥⛴️
