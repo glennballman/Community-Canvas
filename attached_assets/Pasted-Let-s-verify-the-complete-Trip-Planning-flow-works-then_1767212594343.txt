@@ -1,0 +1,374 @@
+Let's verify the complete Trip Planning flow works, then add some final polish.
+
+=== PART 1: Verify Database Has Required Data ===
+
+Run these SQL queries to confirm the data exists:
+```sql
+-- Check skill requirements
+SELECT requirement_target_id as trip, skill_category, skill_type, minimum_level, enforcement 
+FROM skill_requirements 
+WHERE requirement_type = 'trip'
+ORDER BY requirement_target_id, enforcement DESC;
+
+-- Check service runs
+SELECT company_name, destination_region, planned_date::date, 
+       slots_filled || '/' || total_job_slots as slots,
+       '$' || logistics_cost_per_slot::int as cost_share,
+       status
+FROM service_runs
+ORDER BY planned_date;
+
+-- Check route segments
+SELECT id, name, route_type, distance_km, typical_duration_minutes
+FROM route_segments
+ORDER BY name;
+
+-- Check transport providers
+SELECT name, provider_type, has_live_api, accepts_vehicles, accepts_kayaks
+FROM transport_providers
+ORDER BY name;
+```
+
+If skill_requirements is empty, run this:
+```sql
+-- SKILL REQUIREMENTS FOR ALL TRIPS
+INSERT INTO skill_requirements (requirement_type, requirement_target_id, skill_category, skill_type, minimum_level, enforcement, resolution_options, notes) VALUES
+-- Bamfield Adventure
+('trip', 'bamfield-adventure', 'driving', 'gravel_road', 'intermediate', 'required', 
+ '[{"type": "experience", "description": "Practice on easier gravel roads first"}]',
+ 'Bamfield Road is an active logging road'),
+('trip', 'bamfield-adventure', 'paddling', 'sea_kayak', 'intermediate', 'required',
+ '[{"type": "course", "provider": "Pacific Rim Paddle Sports", "location": "Ladysmith", "duration": "2 days", "cost": 350}]',
+ 'Multi-day sea kayaking requires solid skills'),
+('trip', 'bamfield-adventure', 'paddling', 'self_rescue', 'certified', 'required',
+ '[{"type": "course", "provider": "Pacific Rim Paddle Sports", "location": "Ladysmith", "duration": "3 hours", "cost": 75}]',
+ 'Self-rescue certification required for rentals'),
+('trip', 'bamfield-adventure', 'water_safety', 'vhf_radio', 'beginner', 'recommended',
+ '[{"type": "online", "provider": "BoatUS Foundation", "duration": "2 hours", "cost": 0}]',
+ 'VHF radio recommended for emergencies'),
+-- Whistler
+('trip', 'whistler-ski-day', 'driving', 'winter', 'intermediate', 'required',
+ '[{"type": "course", "provider": "Young Drivers", "duration": "4 hours", "cost": 200}]',
+ 'Sea to Sky can be icy'),
+-- Others have minimal requirements
+('trip', 'tofino-storm-watching', 'driving', 'standard', 'beginner', 'required', '[]', 'Basic driving'),
+('trip', 'sunshine-coast-loop', 'driving', 'standard', 'beginner', 'required', '[]', 'Basic driving'),
+('trip', 'okanagan-wine-trail', 'driving', 'standard', 'beginner', 'required', '[]', 'Basic driving'),
+('trip', 'harrison-hot-springs', 'driving', 'standard', 'beginner', 'required', '[]', 'Basic driving')
+ON CONFLICT DO NOTHING;
+```
+
+If service_runs is empty, run this:
+```sql
+INSERT INTO service_runs (company_name, service_type, destination_region, planned_date, planned_duration_days, total_job_slots, slots_filled, crew_size, logistics_cost_total, minimum_job_value, status, booking_deadline, contact_email, contact_phone, booking_notes) VALUES
+('Island Glass Co.', 'Glass Installation', 'Bamfield', CURRENT_DATE + 14, 2, 8, 3, 3, 1600, 300, 'published', CURRENT_DATE + 10, 'schedule@islandglass.ca', '250-555-1234', 'Windows, doors, skylights'),
+('West Coast Plumbing', 'Plumbing Services', 'Bamfield', CURRENT_DATE + 21, 1, 6, 1, 2, 1200, 250, 'published', CURRENT_DATE + 17, 'dave@westcoastplumbing.ca', '250-555-5678', 'General plumbing, hot water tanks'),
+('Island Electrical', 'Electrical Services', 'Gold River', CURRENT_DATE + 28, 2, 10, 0, 2, 1400, 200, 'published', CURRENT_DATE + 21, 'info@islandelectrical.ca', '250-555-9012', 'Panel upgrades, rewiring, generators')
+ON CONFLICT DO NOTHING;
+```
+
+=== PART 2: Test the Qualification API ===
+```bash
+# Create a test participant
+echo "Creating test participant..."
+PARTICIPANT=$(curl -s -X POST http://localhost:5000/api/v1/planning/participants \
+  -H "Content-Type: application/json" \
+  -d '{"name": "Test User", "email": "test@example.com", "fitness_level": 7, "swimming_ability": "strong"}')
+
+PARTICIPANT_ID=$(echo $PARTICIPANT | jq -r '.id')
+echo "Created participant: $PARTICIPANT_ID"
+
+# Add some skills (beginner level)
+echo "Adding beginner skills..."
+curl -s -X POST "http://localhost:5000/api/v1/planning/participants/$PARTICIPANT_ID/skills" \
+  -H "Content-Type: application/json" \
+  -d '{"skill_category": "driving", "skill_type": "standard", "skill_level": "intermediate"}'
+
+curl -s -X POST "http://localhost:5000/api/v1/planning/participants/$PARTICIPANT_ID/skills" \
+  -H "Content-Type: application/json" \
+  -d '{"skill_category": "paddling", "skill_type": "sea_kayak", "skill_level": "beginner"}'
+
+# Test qualification for Bamfield (should FAIL - missing gravel_road, intermediate kayak, self_rescue)
+echo -e "\n=== Testing Bamfield Qualification (expect NOT qualified) ==="
+curl -s -X POST http://localhost:5000/api/v1/planning/assess/participant-trip \
+  -H "Content-Type: application/json" \
+  -d "{\"participant_id\": \"$PARTICIPANT_ID\", \"trip_id\": \"bamfield-adventure\"}" | jq
+
+# Test qualification for Harrison (should PASS - only needs standard driving)
+echo -e "\n=== Testing Harrison Qualification (expect qualified) ==="
+curl -s -X POST http://localhost:5000/api/v1/planning/assess/participant-trip \
+  -H "Content-Type: application/json" \
+  -d "{\"participant_id\": \"$PARTICIPANT_ID\", \"trip_id\": \"harrison-hot-springs\"}" | jq
+```
+
+=== PART 3: Add Visual Feedback to Qualification Results ===
+
+Update TripQualificationCheck.tsx to show clearer results with action items:
+```tsx
+// After the gaps display, add a clear "Next Steps" section
+
+{/* Next Steps for Unqualified */}
+{!isQualified && assessment && assessment.required_actions.length > 0 && (
+  <div className="mt-4 p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+    <h4 className="text-blue-400 font-semibold mb-3">📋 Your Path to Qualification</h4>
+    <div className="space-y-3">
+      {assessment.required_actions.map((action: any, idx: number) => (
+        <div key={idx} className="flex items-start gap-3">
+          <span className="flex-shrink-0 w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-bold">
+            {idx + 1}
+          </span>
+          <div>
+            <p className="text-white font-medium capitalize">
+              Get {action.skill_type.replace(/_/g, ' ')} to {action.required_level} level
+            </p>
+            {action.resolution_options && action.resolution_options.length > 0 && (
+              <div className="mt-1 space-y-1">
+                {action.resolution_options.map((opt: any, optIdx: number) => (
+                  <p key={optIdx} className="text-gray-400 text-sm">
+                    {opt.type === 'course' && (
+                      <>📚 <span className="text-blue-400">{opt.provider}</span> - {opt.duration} {opt.cost > 0 ? `($${opt.cost})` : '(Free)'}</>
+                    )}
+                    {opt.type === 'experience' && (
+                      <>🏃 {opt.description}</>
+                    )}
+                    {opt.type === 'online' && (
+                      <>💻 <span className="text-blue-400">{opt.provider}</span> - {opt.duration} {opt.cost === 0 ? '(Free!)' : `($${opt.cost})`}</>
+                    )}
+                  </p>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      ))}
+    </div>
+    
+    <div className="mt-4 pt-4 border-t border-gray-700">
+      <p className="text-gray-400 text-sm">
+        💡 Once you've completed these steps, update your profile and check again!
+      </p>
+    </div>
+  </div>
+)}
+
+{/* Qualified - Show Encouragement */}
+{isQualified && (
+  <div className="mt-4 p-4 bg-green-500/10 border border-green-500/20 rounded-lg">
+    <h4 className="text-green-400 font-semibold mb-2">🎉 You're Ready!</h4>
+    <p className="text-gray-300 text-sm">
+      You have all the required skills for this trip. 
+      {assessment?.warnings && assessment.warnings.length > 1 && (
+        <span> Consider the recommendations above for an even better experience.</span>
+      )}
+    </p>
+    <button className="mt-3 w-full py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition">
+      📅 Start Planning This Trip
+    </button>
+  </div>
+)}
+```
+
+=== PART 4: Add "Trips You Can Do" Feature ===
+
+Add a quick view showing which trips the user qualifies for:
+
+Create a new component section in TripPlanningTab.tsx after the status cards:
+```tsx
+{/* Quick Qualification Overview - only show if participant exists */}
+{currentParticipant && (
+  <div className="bg-gray-800 rounded-xl p-5">
+    <h3 className="text-white font-semibold mb-4">🎯 Trips Based on Your Skills</h3>
+    <QuickTripQualification participantId={currentParticipant.id} />
+  </div>
+)}
+```
+
+Create component: client/src/components/TripPlanning/QuickTripQualification.tsx
+```tsx
+import React, { useState, useEffect } from 'react';
+
+interface QuickTripQualificationProps {
+  participantId: string;
+}
+
+interface TripStatus {
+  id: string;
+  title: string;
+  qualified: boolean;
+  gapCount: number;
+  difficulty: string;
+}
+
+export function QuickTripQualification({ participantId }: QuickTripQualificationProps) {
+  const [tripStatuses, setTripStatuses] = useState<TripStatus[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    checkAllTrips();
+  }, [participantId]);
+
+  async function checkAllTrips() {
+    setLoading(true);
+    try {
+      // Get all trips
+      const tripsRes = await fetch('/api/v1/trips');
+      const tripsData = await tripsRes.json();
+      
+      // Check qualification for each
+      const statuses: TripStatus[] = [];
+      
+      for (const trip of tripsData.trips || []) {
+        try {
+          const assessRes = await fetch('/api/v1/planning/assess/participant-trip', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ participant_id: participantId, trip_id: trip.id })
+          });
+          const assessment = await assessRes.json();
+          
+          statuses.push({
+            id: trip.id,
+            title: trip.title,
+            qualified: assessment.qualified !== false,
+            gapCount: assessment.required_actions?.length || 0,
+            difficulty: trip.difficulty || 'unknown'
+          });
+        } catch {
+          statuses.push({
+            id: trip.id,
+            title: trip.title,
+            qualified: true, // Assume OK if can't check
+            gapCount: 0,
+            difficulty: trip.difficulty || 'unknown'
+          });
+        }
+      }
+      
+      // Sort: qualified first, then by gap count
+      statuses.sort((a, b) => {
+        if (a.qualified !== b.qualified) return a.qualified ? -1 : 1;
+        return a.gapCount - b.gapCount;
+      });
+      
+      setTripStatuses(statuses);
+    } catch (error) {
+      console.error('Error checking trips:', error);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-6">
+        <span className="text-gray-400">Checking your qualifications...</span>
+      </div>
+    );
+  }
+
+  const qualifiedTrips = tripStatuses.filter(t => t.qualified);
+  const notQualifiedTrips = tripStatuses.filter(t => !t.qualified);
+
+  return (
+    <div className="space-y-4">
+      {/* Qualified Trips */}
+      {qualifiedTrips.length > 0 && (
+        <div>
+          <p className="text-green-400 text-sm font-medium mb-2">
+            ✅ Ready to Go ({qualifiedTrips.length})
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {qualifiedTrips.map(trip => (
+              <span 
+                key={trip.id}
+                className="px-3 py-1.5 bg-green-500/20 text-green-400 rounded-full text-sm"
+              >
+                {trip.title}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Not Qualified Trips */}
+      {notQualifiedTrips.length > 0 && (
+        <div>
+          <p className="text-orange-400 text-sm font-medium mb-2">
+            🔓 Unlock with More Skills ({notQualifiedTrips.length})
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {notQualifiedTrips.map(trip => (
+              <span 
+                key={trip.id}
+                className="px-3 py-1.5 bg-orange-500/20 text-orange-400 rounded-full text-sm"
+              >
+                {trip.title}
+                <span className="ml-1 text-xs opacity-70">
+                  ({trip.gapCount} skill{trip.gapCount !== 1 ? 's' : ''})
+                </span>
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {qualifiedTrips.length === tripStatuses.length && (
+        <p className="text-gray-400 text-sm text-center py-2">
+          🎉 Amazing! You're qualified for all trips!
+        </p>
+      )}
+    </div>
+  );
+}
+
+export default QuickTripQualification;
+```
+
+Don't forget to export it:
+```typescript
+// In client/src/components/TripPlanning/index.ts
+export { QuickTripQualification } from './QuickTripQualification';
+```
+
+=== PART 5: Final Verification Checklist ===
+
+After applying changes, manually test:
+
+1. **Trip Planning Tab**
+   - [ ] Shows "Trip Planning Center" header
+   - [ ] "Your Profile" card shows "Not Set" initially
+   - [ ] "Your Vehicle" card shows "Not Set" initially
+
+2. **Create Profile**
+   - [ ] Basic tab: Can enter name, email, fitness level
+   - [ ] Skills tab: Can select category, type, level
+   - [ ] Can add multiple skills
+   - [ ] Save Profile button works
+
+3. **After Profile Created**
+   - [ ] Profile card shows "Complete" with name
+   - [ ] "Trips Based on Your Skills" section appears
+   - [ ] Shows which trips you qualify for
+
+4. **Trip Qualification Check**
+   - [ ] Lists all 6 trips
+   - [ ] Clicking Bamfield shows NOT qualified (missing skills)
+   - [ ] Shows specific gaps with resolution options
+   - [ ] Shows "Path to Qualification" steps
+   - [ ] Clicking Harrison shows QUALIFIED
+
+5. **Service Runs Board**
+   - [ ] Shows 3 upcoming service runs
+   - [ ] Each shows company, destination, date, slots
+   - [ ] Shows logistics cost per slot
+   - [ ] "Request a Slot" button visible
+
+6. **Route Explorer**
+   - [ ] Shows all route segments
+   - [ ] Clicking "Bamfield Road" shows:
+     - Orange "Logging Road Safety" card
+     - Alternatives (Lady Rose, Float Plane, Youbou)
+   - [ ] Clicking segment with winter tires shows blue info card
+   - [ ] Transport Providers section shows BC Ferries, Lady Rose, etc.
+
+Report any issues found!
