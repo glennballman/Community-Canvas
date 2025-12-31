@@ -1,0 +1,1546 @@
+Create a new Road Trips tab with expandable journey visualization showing live webcams and conditions.
+
+=== PART 1: Data Types and Sample Data ===
+
+Create file: client/src/types/roadtrips.ts
+```typescript
+// Road Trip Types
+
+export interface RoadTrip {
+  id: string;
+  slug: string;
+  title: string;
+  tagline: string;
+  description: string;
+  category: TripCategory;
+  difficulty: 'easy' | 'moderate' | 'challenging' | 'expert';
+  seasons: Season[];
+  tags: string[];
+  duration: {
+    min_hours: number;
+    max_hours: number;
+    recommended_days: number;
+    best_start_time?: string;
+  };
+  region: string;
+  start_location: Location;
+  end_location: Location;
+  segments: TripSegment[];
+  estimated_cost: {
+    budget: number;
+    moderate: number;
+    comfort: number;
+  };
+  hero_image?: string;
+  rating: number;
+  rating_count: number;
+}
+
+export type TripCategory = 
+  | 'ski-snowboard' | 'hiking-camping' | 'beach-coastal' | 'wine-culinary'
+  | 'wildlife-nature' | 'hot-springs' | 'island-hopping' | 'scenic-drives'
+  | 'multi-day-trek' | 'urban-exploration';
+
+export type Season = 'spring' | 'summer' | 'fall' | 'winter';
+
+export interface Location {
+  name: string;
+  latitude: number;
+  longitude: number;
+  address?: string;
+}
+
+export interface TripSegment {
+  id: string;
+  order: number;
+  type: SegmentType;
+  title: string;
+  location: Location;
+  duration_minutes: number;
+  cost: { budget: number; moderate: number; comfort: number };
+  details: TransportDetails | ActivityDetails | AccommodationDetails | MealDetails;
+  webcam_ids: number[];
+  weather_station_id?: string;
+  road_segments?: string[];
+  pro_tips?: string[];
+}
+
+export type SegmentType = 'departure' | 'transport' | 'activity' | 'accommodation' | 'meal' | 'photo-stop' | 'arrival';
+
+export interface TransportDetails {
+  type: 'transport';
+  mode: 'drive' | 'ferry' | 'bus' | 'train' | 'flight' | 'water-taxi' | 'walk' | 'bike';
+  route_name?: string;
+  distance_km?: number;
+  highway_numbers?: string[];
+  operator?: string;
+  fare?: number;
+  fuel_estimate?: number;
+  parking_cost?: number;
+}
+
+export interface ActivityDetails {
+  type: 'activity';
+  activity_type: string;
+  provider_name?: string;
+  provider_url?: string;
+  pricing: { free: boolean; adult_price?: number; rental?: number };
+  requirements?: string[];
+  reservation_required?: boolean;
+}
+
+export interface AccommodationDetails {
+  type: 'accommodation';
+  accommodation_type: 'hostel' | 'hotel' | 'cabin' | 'campground' | 'rv-park';
+  provider_name?: string;
+  provider_url?: string;
+  amenities?: string[];
+}
+
+export interface MealDetails {
+  type: 'meal';
+  meal_type: 'breakfast' | 'lunch' | 'dinner' | 'drinks';
+  recommendations?: { budget: string; moderate: string; comfort: string };
+}
+
+// Icon mappings
+export const categoryIcons: Record<TripCategory, string> = {
+  'ski-snowboard': '⛷️',
+  'hiking-camping': '🥾',
+  'beach-coastal': '🏖️',
+  'wine-culinary': '🍷',
+  'wildlife-nature': '🦅',
+  'hot-springs': '♨️',
+  'island-hopping': '🏝️',
+  'scenic-drives': '🛣️',
+  'multi-day-trek': '🏔️',
+  'urban-exploration': '🏙️',
+};
+
+export const transportIcons: Record<string, string> = {
+  drive: '🚗',
+  ferry: '⛴️',
+  bus: '🚌',
+  train: '🚂',
+  flight: '✈️',
+  'water-taxi': '🚤',
+  walk: '🚶',
+  bike: '🚲',
+};
+
+export const activityIcons: Record<string, string> = {
+  skiing: '⛷️',
+  snowboarding: '🏂',
+  hiking: '🥾',
+  kayaking: '🚣',
+  surfing: '🏄',
+  'whale-watching': '🐋',
+  'wine-tasting': '🍷',
+  'hot-springs': '♨️',
+  fishing: '🎣',
+  camping: '🏕️',
+  photography: '📸',
+  wildlife: '🦅',
+  museum: '🏛️',
+  brewery: '🍺',
+  beach: '🏖️',
+  waterfall: '💦',
+  viewpoint: '🌅',
+};
+
+export const segmentTypeIcons: Record<SegmentType, string> = {
+  departure: '🏠',
+  transport: '🚗',
+  activity: '⭐',
+  accommodation: '🛏️',
+  meal: '🍽️',
+  'photo-stop': '📸',
+  arrival: '🏁',
+};
+
+export const seasonIcons: Record<Season, string> = {
+  spring: '🌸',
+  summer: '☀️',
+  fall: '🍂',
+  winter: '❄️',
+};
+
+export const difficultyColors: Record<string, string> = {
+  easy: 'text-green-400 bg-green-500/20',
+  moderate: 'text-yellow-400 bg-yellow-500/20',
+  challenging: 'text-orange-400 bg-orange-500/20',
+  expert: 'text-red-400 bg-red-500/20',
+};
+```
+
+Create file: client/src/data/sampleTrips.ts
+```typescript
+import { RoadTrip } from '../types/roadtrips';
+
+export const sampleTrips: RoadTrip[] = [
+  {
+    id: 'whistler-ski-day',
+    slug: 'whistler-ski-day',
+    title: 'Whistler Blackcomb Ski Day',
+    tagline: "North America's largest ski resort, 2 hours from Vancouver",
+    description: 'Experience world-class skiing at Whistler Blackcomb with over 8,000 acres of terrain. This day trip takes you along the stunning Sea to Sky Highway with incredible coastal mountain views.',
+    category: 'ski-snowboard',
+    difficulty: 'moderate',
+    seasons: ['winter'],
+    tags: ['skiing', 'snowboarding', 'mountains', 'scenic-drive'],
+    duration: { min_hours: 12, max_hours: 14, recommended_days: 1, best_start_time: '6:00 AM' },
+    region: 'Sea to Sky',
+    start_location: { name: 'Vancouver', latitude: 49.2827, longitude: -123.1207 },
+    end_location: { name: 'Vancouver', latitude: 49.2827, longitude: -123.1207 },
+    estimated_cost: { budget: 185, moderate: 285, comfort: 450 },
+    rating: 4.8,
+    rating_count: 234,
+    segments: [
+      {
+        id: 'ws-1',
+        order: 1,
+        type: 'departure',
+        title: 'Start from Vancouver',
+        location: { name: 'HI Vancouver Central', latitude: 49.2827, longitude: -123.1207, address: '1114 Burnaby St' },
+        duration_minutes: 0,
+        cost: { budget: 0, moderate: 0, comfort: 0 },
+        details: { type: 'accommodation', accommodation_type: 'hostel', provider_name: 'HI Vancouver Central' },
+        webcam_ids: [],
+        pro_tips: ['Pack breakfast from hostel', 'Leave by 6 AM for first chair']
+      },
+      {
+        id: 'ws-2',
+        order: 2,
+        type: 'transport',
+        title: 'Drive Sea to Sky Highway',
+        location: { name: 'Highway 99', latitude: 49.45, longitude: -123.23 },
+        duration_minutes: 120,
+        cost: { budget: 55, moderate: 55, comfort: 55 },
+        details: { 
+          type: 'transport', 
+          mode: 'drive', 
+          route_name: 'Sea to Sky Highway (Hwy 99)',
+          distance_km: 125,
+          highway_numbers: ['99'],
+          fuel_estimate: 35,
+          parking_cost: 20
+        },
+        webcam_ids: [1, 2, 3, 4, 5, 6, 7, 8], // Sea to Sky webcam IDs
+        road_segments: ['hwy99'],
+        pro_tips: ['Stop at Shannon Falls (5 min walk)', 'Gas up in Squamish - cheaper than Whistler']
+      },
+      {
+        id: 'ws-3',
+        order: 3,
+        type: 'activity',
+        title: 'Ski Whistler Blackcomb',
+        location: { name: 'Whistler Blackcomb', latitude: 50.1163, longitude: -122.9574 },
+        duration_minutes: 480,
+        cost: { budget: 89, moderate: 189, comfort: 289 },
+        details: {
+          type: 'activity',
+          activity_type: 'skiing',
+          provider_name: 'Whistler Blackcomb',
+          provider_url: 'https://www.whistlerblackcomb.com',
+          pricing: { free: false, adult_price: 189, rental: 65 },
+          requirements: ['Ski/snowboard ability', 'Warm clothing'],
+          reservation_required: false
+        },
+        webcam_ids: [9, 10, 11, 12], // Whistler mountain webcam IDs
+        weather_station_id: 'whistler-roundhouse',
+        pro_tips: ['Download trail map before going up', 'Roundhouse has best views for lunch']
+      },
+      {
+        id: 'ws-4',
+        order: 4,
+        type: 'meal',
+        title: 'Après Ski in Village',
+        location: { name: 'Whistler Village', latitude: 50.1150, longitude: -122.9540 },
+        duration_minutes: 90,
+        cost: { budget: 25, moderate: 50, comfort: 100 },
+        details: {
+          type: 'meal',
+          meal_type: 'drinks',
+          recommendations: {
+            budget: 'Splitz Grill - great burgers ($15-20)',
+            moderate: 'Longhorn Saloon - classic après ($25-40)',
+            comfort: 'Bearfoot Bistro - upscale ($60-100)'
+          }
+        },
+        webcam_ids: [13], // Village webcam
+        pro_tips: ['Happy hour 3-5pm at most spots', 'Longhorn gets packed - arrive early']
+      },
+      {
+        id: 'ws-5',
+        order: 5,
+        type: 'transport',
+        title: 'Return to Vancouver',
+        location: { name: 'Highway 99 South', latitude: 49.45, longitude: -123.23 },
+        duration_minutes: 120,
+        cost: { budget: 35, moderate: 35, comfort: 35 },
+        details: {
+          type: 'transport',
+          mode: 'drive',
+          route_name: 'Sea to Sky Highway (Hwy 99)',
+          distance_km: 125,
+          fuel_estimate: 35
+        },
+        webcam_ids: [8, 7, 6, 5, 4, 3, 2, 1],
+        road_segments: ['hwy99'],
+        pro_tips: ['Leave by 5:30 PM to avoid traffic', 'Check road conditions before leaving']
+      }
+    ]
+  },
+  {
+    id: 'tofino-storm-watching',
+    slug: 'tofino-storm-watching',
+    title: 'Tofino Storm Watching',
+    tagline: 'Wild Pacific waves and cozy beach vibes',
+    description: 'Experience the raw power of Pacific storms from the comfort of Tofino. Watch massive waves crash on Cox Bay, explore rainforest trails, and warm up in natural hot springs.',
+    category: 'beach-coastal',
+    difficulty: 'easy',
+    seasons: ['fall', 'winter'],
+    tags: ['beach', 'storms', 'hot-springs', 'rainforest'],
+    duration: { min_hours: 48, max_hours: 72, recommended_days: 3 },
+    region: 'Vancouver Island',
+    start_location: { name: 'Victoria', latitude: 48.4284, longitude: -123.3656 },
+    end_location: { name: 'Victoria', latitude: 48.4284, longitude: -123.3656 },
+    estimated_cost: { budget: 280, moderate: 450, comfort: 750 },
+    rating: 4.9,
+    rating_count: 189,
+    segments: [
+      {
+        id: 'tf-1',
+        order: 1,
+        type: 'departure',
+        title: 'Start from Victoria',
+        location: { name: 'HI Victoria', latitude: 48.4284, longitude: -123.3656 },
+        duration_minutes: 0,
+        cost: { budget: 0, moderate: 0, comfort: 0 },
+        details: { type: 'accommodation', accommodation_type: 'hostel', provider_name: 'HI Victoria' },
+        webcam_ids: [],
+        pro_tips: ['Stock up on snacks for the drive']
+      },
+      {
+        id: 'tf-2',
+        order: 2,
+        type: 'transport',
+        title: 'Drive to Tofino',
+        location: { name: 'Pacific Rim Highway', latitude: 49.15, longitude: -125.90 },
+        duration_minutes: 270,
+        cost: { budget: 60, moderate: 60, comfort: 60 },
+        details: {
+          type: 'transport',
+          mode: 'drive',
+          route_name: 'Pacific Rim Highway (Hwy 4)',
+          distance_km: 316,
+          highway_numbers: ['1', '4'],
+          fuel_estimate: 60
+        },
+        webcam_ids: [20, 21, 22, 23, 24],
+        road_segments: ['hwy1-victoria-nanaimo', 'hwy4-parksville-tofino'],
+        pro_tips: ['Stop at Cathedral Grove for old-growth trees', 'Windy road after Port Alberni - take your time']
+      },
+      {
+        id: 'tf-3',
+        order: 3,
+        type: 'activity',
+        title: 'Cox Bay Storm Watching',
+        location: { name: 'Cox Bay', latitude: 49.1033, longitude: -125.8769 },
+        duration_minutes: 180,
+        cost: { budget: 0, moderate: 0, comfort: 0 },
+        details: {
+          type: 'activity',
+          activity_type: 'beach',
+          pricing: { free: true }
+        },
+        webcam_ids: [25],
+        weather_station_id: 'tofino',
+        pro_tips: ['Best waves during incoming storms', 'Bring rain gear!']
+      },
+      {
+        id: 'tf-4',
+        order: 4,
+        type: 'accommodation',
+        title: 'Stay in Tofino',
+        location: { name: 'Tofino', latitude: 49.1530, longitude: -125.9066 },
+        duration_minutes: 720,
+        cost: { budget: 45, moderate: 120, comfort: 250 },
+        details: {
+          type: 'accommodation',
+          accommodation_type: 'hostel',
+          provider_name: 'Whalers on the Point Guesthouse',
+          amenities: ['Kitchen', 'Ocean views', 'Free parking']
+        },
+        webcam_ids: [26],
+        pro_tips: ['Book ahead in storm season']
+      },
+      {
+        id: 'tf-5',
+        order: 5,
+        type: 'activity',
+        title: 'Hot Springs Cove',
+        location: { name: 'Hot Springs Cove', latitude: 49.3575, longitude: -126.2644 },
+        duration_minutes: 360,
+        cost: { budget: 120, moderate: 140, comfort: 200 },
+        details: {
+          type: 'activity',
+          activity_type: 'hot-springs',
+          provider_name: 'Tofino Water Taxi',
+          provider_url: 'https://tofinowatertaxi.com',
+          pricing: { free: false, adult_price: 120 },
+          reservation_required: true
+        },
+        webcam_ids: [],
+        pro_tips: ['Book water taxi in advance', 'Bring towel and swimsuit']
+      }
+    ]
+  },
+  {
+    id: 'okanagan-wine-trail',
+    slug: 'okanagan-wine-trail',
+    title: 'Okanagan Wine Country',
+    tagline: 'World-class wines and stunning lake views',
+    description: 'Tour the famous Okanagan wine region with stops at award-winning wineries, beautiful lake beaches, and farm-to-table dining.',
+    category: 'wine-culinary',
+    difficulty: 'easy',
+    seasons: ['spring', 'summer', 'fall'],
+    tags: ['wine', 'culinary', 'lakes', 'relaxation'],
+    duration: { min_hours: 8, max_hours: 10, recommended_days: 1 },
+    region: 'Okanagan',
+    start_location: { name: 'Kelowna', latitude: 49.8880, longitude: -119.4960 },
+    end_location: { name: 'Kelowna', latitude: 49.8880, longitude: -119.4960 },
+    estimated_cost: { budget: 100, moderate: 180, comfort: 350 },
+    rating: 4.7,
+    rating_count: 156,
+    segments: [
+      {
+        id: 'ok-1',
+        order: 1,
+        type: 'departure',
+        title: 'Start from Kelowna',
+        location: { name: 'SameSun Kelowna', latitude: 49.8880, longitude: -119.4960 },
+        duration_minutes: 0,
+        cost: { budget: 0, moderate: 0, comfort: 0 },
+        details: { type: 'accommodation', accommodation_type: 'hostel', provider_name: 'SameSun Backpackers' },
+        webcam_ids: [],
+        pro_tips: ['Designate a driver or book a wine tour']
+      },
+      {
+        id: 'ok-2',
+        order: 2,
+        type: 'activity',
+        title: 'Mission Hill Winery',
+        location: { name: 'Mission Hill', latitude: 49.8283, longitude: -119.4789 },
+        duration_minutes: 90,
+        cost: { budget: 15, moderate: 35, comfort: 75 },
+        details: {
+          type: 'activity',
+          activity_type: 'wine-tasting',
+          provider_name: 'Mission Hill Family Estate',
+          provider_url: 'https://www.missionhillwinery.com',
+          pricing: { free: false, adult_price: 15 },
+          reservation_required: true
+        },
+        webcam_ids: [30],
+        pro_tips: ['The architecture is stunning - worth the tour', 'Reserve terrace lunch in summer']
+      },
+      {
+        id: 'ok-3',
+        order: 3,
+        type: 'activity',
+        title: 'Summerhill Pyramid Winery',
+        location: { name: 'Summerhill', latitude: 49.8547, longitude: -119.4856 },
+        duration_minutes: 60,
+        cost: { budget: 10, moderate: 25, comfort: 50 },
+        details: {
+          type: 'activity',
+          activity_type: 'wine-tasting',
+          provider_name: 'Summerhill Pyramid Winery',
+          provider_url: 'https://www.summerhill.bc.ca',
+          pricing: { free: false, adult_price: 10 }
+        },
+        webcam_ids: [],
+        pro_tips: ['Unique pyramid aging structure', 'Great organic wines']
+      },
+      {
+        id: 'ok-4',
+        order: 4,
+        type: 'meal',
+        title: 'Winery Lunch',
+        location: { name: 'Quails Gate', latitude: 49.8167, longitude: -119.5000 },
+        duration_minutes: 90,
+        cost: { budget: 35, moderate: 60, comfort: 120 },
+        details: {
+          type: 'meal',
+          meal_type: 'lunch',
+          recommendations: {
+            budget: 'Picnic on winery grounds ($35)',
+            moderate: 'Old Vines Restaurant ($60)',
+            comfort: 'Full tasting menu ($120)'
+          }
+        },
+        webcam_ids: [],
+        pro_tips: ['Old Vines has lake views', 'Reservations essential']
+      },
+      {
+        id: 'ok-5',
+        order: 5,
+        type: 'activity',
+        title: 'Beach at Okanagan Lake',
+        location: { name: 'Gyro Beach', latitude: 49.8650, longitude: -119.4875 },
+        duration_minutes: 120,
+        cost: { budget: 0, moderate: 0, comfort: 0 },
+        details: {
+          type: 'activity',
+          activity_type: 'beach',
+          pricing: { free: true }
+        },
+        webcam_ids: [31],
+        pro_tips: ['Perfect for sobering up before heading back', 'Warm lake swimming in summer']
+      }
+    ]
+  },
+  {
+    id: 'sunshine-coast-circle',
+    slug: 'sunshine-coast-circle',
+    title: 'Sunshine Coast Loop',
+    tagline: 'Two ferries, beaches, and coastal charm',
+    description: 'A classic BC road trip featuring two ferry crossings, quaint coastal towns, and stunning ocean views. Perfect for a weekend getaway.',
+    category: 'scenic-drives',
+    difficulty: 'easy',
+    seasons: ['spring', 'summer', 'fall'],
+    tags: ['ferries', 'coastal', 'towns', 'beaches'],
+    duration: { min_hours: 24, max_hours: 48, recommended_days: 2 },
+    region: 'Sunshine Coast',
+    start_location: { name: 'Vancouver', latitude: 49.2827, longitude: -123.1207 },
+    end_location: { name: 'Vancouver', latitude: 49.2827, longitude: -123.1207 },
+    estimated_cost: { budget: 180, moderate: 320, comfort: 550 },
+    rating: 4.6,
+    rating_count: 142,
+    segments: [
+      {
+        id: 'sc-1', order: 1, type: 'departure',
+        title: 'Start from Vancouver',
+        location: { name: 'Vancouver', latitude: 49.2827, longitude: -123.1207 },
+        duration_minutes: 0, cost: { budget: 0, moderate: 0, comfort: 0 },
+        details: { type: 'accommodation', accommodation_type: 'hostel' },
+        webcam_ids: []
+      },
+      {
+        id: 'sc-2', order: 2, type: 'transport',
+        title: 'Ferry: Horseshoe Bay to Langdale',
+        location: { name: 'Horseshoe Bay', latitude: 49.3742, longitude: -123.2733 },
+        duration_minutes: 40,
+        cost: { budget: 65, moderate: 65, comfort: 65 },
+        details: { type: 'transport', mode: 'ferry', operator: 'BC Ferries', fare: 65 },
+        webcam_ids: [40, 41],
+        pro_tips: ['Book ahead in summer', 'Arrive 30 min early']
+      },
+      {
+        id: 'sc-3', order: 3, type: 'activity',
+        title: 'Explore Gibsons',
+        location: { name: 'Gibsons', latitude: 49.3948, longitude: -123.5059 },
+        duration_minutes: 120,
+        cost: { budget: 20, moderate: 40, comfort: 80 },
+        details: { type: 'activity', activity_type: 'sightseeing', pricing: { free: true } },
+        webcam_ids: [],
+        pro_tips: ['Famous from The Beachcombers TV show', 'Great fish & chips at Smittys']
+      },
+      {
+        id: 'sc-4', order: 4, type: 'transport',
+        title: 'Drive to Powell River',
+        location: { name: 'Highway 101', latitude: 49.7, longitude: -124.2 },
+        duration_minutes: 150,
+        cost: { budget: 30, moderate: 30, comfort: 30 },
+        details: { type: 'transport', mode: 'drive', distance_km: 85, fuel_estimate: 30 },
+        webcam_ids: [42, 43, 44],
+        pro_tips: ['Stop at Roberts Creek for coffee', 'Sechelt has great bakeries']
+      },
+      {
+        id: 'sc-5', order: 5, type: 'transport',
+        title: 'Ferry: Earls Cove to Saltery Bay',
+        location: { name: 'Earls Cove', latitude: 49.7500, longitude: -124.0167 },
+        duration_minutes: 50,
+        cost: { budget: 55, moderate: 55, comfort: 55 },
+        details: { type: 'transport', mode: 'ferry', operator: 'BC Ferries', fare: 55 },
+        webcam_ids: [45],
+        pro_tips: ['Scenic crossing through Jervis Inlet']
+      },
+      {
+        id: 'sc-6', order: 6, type: 'activity',
+        title: 'Explore Powell River & Lund',
+        location: { name: 'Powell River', latitude: 49.8353, longitude: -124.5247 },
+        duration_minutes: 180,
+        cost: { budget: 0, moderate: 30, comfort: 60 },
+        details: { type: 'activity', activity_type: 'sightseeing', pricing: { free: true } },
+        webcam_ids: [],
+        pro_tips: ['Lund is Mile 0 of the Sunshine Coast', 'Nancy\'s Bakery is legendary']
+      }
+    ]
+  },
+  {
+    id: 'harrison-hot-springs',
+    slug: 'harrison-hot-springs',
+    title: 'Harrison Hot Springs Getaway',
+    tagline: 'Natural hot springs and mountain lake views',
+    description: 'A quick escape from Vancouver to the healing hot springs of Harrison Lake. Perfect for a relaxing day trip or overnight stay.',
+    category: 'hot-springs',
+    difficulty: 'easy',
+    seasons: ['spring', 'summer', 'fall', 'winter'],
+    tags: ['hot-springs', 'relaxation', 'lakes', 'mountains'],
+    duration: { min_hours: 6, max_hours: 24, recommended_days: 1 },
+    region: 'Fraser Valley',
+    start_location: { name: 'Vancouver', latitude: 49.2827, longitude: -123.1207 },
+    end_location: { name: 'Vancouver', latitude: 49.2827, longitude: -123.1207 },
+    estimated_cost: { budget: 80, moderate: 150, comfort: 300 },
+    rating: 4.5,
+    rating_count: 198,
+    segments: [
+      {
+        id: 'hh-1', order: 1, type: 'departure',
+        title: 'Start from Vancouver',
+        location: { name: 'Vancouver', latitude: 49.2827, longitude: -123.1207 },
+        duration_minutes: 0, cost: { budget: 0, moderate: 0, comfort: 0 },
+        details: { type: 'accommodation', accommodation_type: 'hostel' },
+        webcam_ids: []
+      },
+      {
+        id: 'hh-2', order: 2, type: 'transport',
+        title: 'Drive to Harrison',
+        location: { name: 'Highway 7', latitude: 49.25, longitude: -121.8 },
+        duration_minutes: 90,
+        cost: { budget: 25, moderate: 25, comfort: 25 },
+        details: { type: 'transport', mode: 'drive', distance_km: 128, fuel_estimate: 25 },
+        webcam_ids: [50, 51],
+        pro_tips: ['Highway 7 is more scenic than Highway 1']
+      },
+      {
+        id: 'hh-3', order: 3, type: 'activity',
+        title: 'Harrison Hot Springs Pool',
+        location: { name: 'Harrison Hot Springs', latitude: 49.2992, longitude: -121.7853 },
+        duration_minutes: 180,
+        cost: { budget: 18, moderate: 18, comfort: 80 },
+        details: {
+          type: 'activity', activity_type: 'hot-springs',
+          provider_name: 'Harrison Hot Springs Public Pool',
+          pricing: { free: false, adult_price: 18 }
+        },
+        webcam_ids: [],
+        pro_tips: ['Public pool is affordable', 'Resort spa for luxury option']
+      },
+      {
+        id: 'hh-4', order: 4, type: 'meal',
+        title: 'Lakeside Dining',
+        location: { name: 'Harrison Hot Springs', latitude: 49.2992, longitude: -121.7853 },
+        duration_minutes: 60,
+        cost: { budget: 20, moderate: 45, comfort: 80 },
+        details: {
+          type: 'meal', meal_type: 'lunch',
+          recommendations: {
+            budget: 'Black Forest Steakhouse patio ($20)',
+            moderate: 'Harrison Hot Springs Resort restaurant ($45)',
+            comfort: 'Copper Room fine dining ($80)'
+          }
+        },
+        webcam_ids: [],
+        pro_tips: ['Lake views are best at sunset']
+      }
+    ]
+  }
+];
+
+// Helper to get trips by category
+export function getTripsByCategory(category: TripCategory): RoadTrip[] {
+  return sampleTrips.filter(trip => trip.category === category);
+}
+
+// Helper to get trips by season
+export function getTripsBySeason(season: Season): RoadTrip[] {
+  return sampleTrips.filter(trip => trip.seasons.includes(season));
+}
+```
+
+=== PART 2: Main Road Trips Tab Component ===
+
+Create file: client/src/components/Dashboard/RoadTripsTab.tsx
+```tsx
+import React, { useState, useMemo } from 'react';
+import { RoadTrip, TripCategory, Season, categoryIcons, seasonIcons, difficultyColors } from '../../types/roadtrips';
+import { sampleTrips } from '../../data/sampleTrips';
+import { JourneyView } from './JourneyView';
+
+interface RoadTripsTabProps {
+  regionId?: string;
+}
+
+export function RoadTripsTab({ regionId }: RoadTripsTabProps) {
+  const [trips] = useState<RoadTrip[]>(sampleTrips);
+  const [selectedTrip, setSelectedTrip] = useState<RoadTrip | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<TripCategory | 'all'>('all');
+  const [selectedSeason, setSelectedSeason] = useState<Season | 'all'>('all');
+  const [sortBy, setSortBy] = useState<'popular' | 'rating' | 'duration' | 'cost'>('popular');
+
+  // Filter and sort trips
+  const filteredTrips = useMemo(() => {
+    let filtered = trips;
+
+    // Search
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(t =>
+        t.title.toLowerCase().includes(query) ||
+        t.tagline.toLowerCase().includes(query) ||
+        t.region.toLowerCase().includes(query) ||
+        t.tags.some(tag => tag.toLowerCase().includes(query))
+      );
+    }
+
+    // Category
+    if (selectedCategory !== 'all') {
+      filtered = filtered.filter(t => t.category === selectedCategory);
+    }
+
+    // Season
+    if (selectedSeason !== 'all') {
+      filtered = filtered.filter(t => t.seasons.includes(selectedSeason));
+    }
+
+    // Sort
+    filtered = [...filtered].sort((a, b) => {
+      switch (sortBy) {
+        case 'rating': return b.rating - a.rating;
+        case 'duration': return a.duration.min_hours - b.duration.min_hours;
+        case 'cost': return a.estimated_cost.budget - b.estimated_cost.budget;
+        default: return b.rating_count - a.rating_count;
+      }
+    });
+
+    return filtered;
+  }, [trips, searchQuery, selectedCategory, selectedSeason, sortBy]);
+
+  // Category counts
+  const categoryCounts = useMemo(() => {
+    const counts: Record<string, number> = { all: trips.length };
+    trips.forEach(t => {
+      counts[t.category] = (counts[t.category] || 0) + 1;
+    });
+    return counts;
+  }, [trips]);
+
+  // If a trip is selected, show the journey view
+  if (selectedTrip) {
+    return (
+      <JourneyView 
+        trip={selectedTrip} 
+        onBack={() => setSelectedTrip(null)} 
+      />
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="bg-gray-800 rounded-xl p-4">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div>
+            <h2 className="text-xl font-bold text-white flex items-center gap-2">
+              🗺️ BC Road Trips
+              <span className="text-sm font-normal text-gray-400">
+                ({filteredTrips.length} trips)
+              </span>
+            </h2>
+            <p className="text-gray-400 text-sm mt-1">
+              Curated adventures with live conditions and webcams
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as any)}
+              className="bg-gray-700 text-white rounded-lg px-3 py-2 text-sm border border-gray-600"
+            >
+              <option value="popular">Most Popular</option>
+              <option value="rating">Highest Rated</option>
+              <option value="duration">Shortest First</option>
+              <option value="cost">Lowest Cost</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Search */}
+        <div className="mt-4">
+          <input
+            type="text"
+            placeholder="Search trips by name, region, or activity..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 text-sm border border-gray-600 focus:border-blue-500 focus:outline-none"
+          />
+        </div>
+
+        {/* Category Filters */}
+        <div className="mt-4">
+          <p className="text-gray-400 text-xs uppercase mb-2">Filter by Category</p>
+          <div className="flex flex-wrap gap-2">
+            <CategoryChip
+              active={selectedCategory === 'all'}
+              onClick={() => setSelectedCategory('all')}
+              icon="📋"
+              label="All"
+              count={categoryCounts.all}
+            />
+            {Object.entries(categoryIcons).map(([cat, icon]) => (
+              categoryCounts[cat] > 0 && (
+                <CategoryChip
+                  key={cat}
+                  active={selectedCategory === cat}
+                  onClick={() => setSelectedCategory(cat as TripCategory)}
+                  icon={icon}
+                  label={cat.replace(/-/g, ' ')}
+                  count={categoryCounts[cat]}
+                />
+              )
+            ))}
+          </div>
+        </div>
+
+        {/* Season Filters */}
+        <div className="mt-3">
+          <p className="text-gray-400 text-xs uppercase mb-2">Season</p>
+          <div className="flex gap-2">
+            <SeasonChip active={selectedSeason === 'all'} onClick={() => setSelectedSeason('all')} label="All" />
+            {(['winter', 'spring', 'summer', 'fall'] as Season[]).map(season => (
+              <SeasonChip
+                key={season}
+                active={selectedSeason === season}
+                onClick={() => setSelectedSeason(season)}
+                icon={seasonIcons[season]}
+                label={season}
+              />
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Trip List */}
+      <div className="space-y-3">
+        {filteredTrips.map(trip => (
+          <TripCard
+            key={trip.id}
+            trip={trip}
+            onClick={() => setSelectedTrip(trip)}
+          />
+        ))}
+      </div>
+
+      {/* Empty State */}
+      {filteredTrips.length === 0 && (
+        <div className="bg-gray-800 rounded-xl p-12 text-center">
+          <span className="text-4xl">🗺️</span>
+          <p className="text-gray-300 mt-2">No trips match your filters</p>
+          <button
+            onClick={() => {
+              setSearchQuery('');
+              setSelectedCategory('all');
+              setSelectedSeason('all');
+            }}
+            className="mt-4 text-blue-400 hover:text-blue-300"
+          >
+            Clear filters
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Category filter chip
+interface CategoryChipProps {
+  active: boolean;
+  onClick: () => void;
+  icon: string;
+  label: string;
+  count: number;
+}
+
+function CategoryChip({ active, onClick, icon, label, count }: CategoryChipProps) {
+  return (
+    <button
+      onClick={onClick}
+      className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors capitalize ${
+        active
+          ? 'bg-blue-600 text-white'
+          : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+      }`}
+    >
+      {icon} {label} ({count})
+    </button>
+  );
+}
+
+// Season filter chip
+interface SeasonChipProps {
+  active: boolean;
+  onClick: () => void;
+  icon?: string;
+  label: string;
+}
+
+function SeasonChip({ active, onClick, icon, label }: SeasonChipProps) {
+  return (
+    <button
+      onClick={onClick}
+      className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors capitalize ${
+        active
+          ? 'bg-green-600 text-white'
+          : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+      }`}
+    >
+      {icon} {label}
+    </button>
+  );
+}
+
+// Trip card component
+interface TripCardProps {
+  trip: RoadTrip;
+  onClick: () => void;
+}
+
+function TripCard({ trip, onClick }: TripCardProps) {
+  const formatDuration = () => {
+    if (trip.duration.recommended_days > 1) {
+      return `${trip.duration.recommended_days} days`;
+    }
+    return `${trip.duration.min_hours}h`;
+  };
+
+  return (
+    <div
+      onClick={onClick}
+      className="bg-gray-800 rounded-xl overflow-hidden cursor-pointer hover:ring-2 hover:ring-blue-400 transition-all group"
+    >
+      <div className="flex">
+        {/* Hero Image Placeholder */}
+        <div className="w-48 h-36 bg-gradient-to-br from-gray-700 to-gray-800 flex-shrink-0 flex items-center justify-center">
+          <span className="text-5xl">{categoryIcons[trip.category]}</span>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 p-4">
+          <div className="flex items-start justify-between">
+            <div className="flex-1">
+              {/* Category & Season Tags */}
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-sm">{categoryIcons[trip.category]}</span>
+                <span className="text-xs text-gray-400 capitalize">{trip.category.replace(/-/g, ' ')}</span>
+                <span className="text-gray-600">•</span>
+                <span className="text-xs text-gray-400">{trip.region}</span>
+                <span className="text-gray-600">•</span>
+                {trip.seasons.map(s => (
+                  <span key={s} className="text-xs">{seasonIcons[s]}</span>
+                ))}
+              </div>
+
+              {/* Title */}
+              <h3 className="text-white font-semibold text-lg group-hover:text-blue-400 transition-colors">
+                {trip.title}
+              </h3>
+
+              {/* Tagline */}
+              <p className="text-gray-400 text-sm mt-1">{trip.tagline}</p>
+
+              {/* Stats Row */}
+              <div className="flex items-center gap-4 mt-3">
+                <span className="text-sm text-gray-300">
+                  ⏱️ {formatDuration()}
+                </span>
+                <span className="text-sm text-green-400">
+                  💰 From ${trip.estimated_cost.budget}
+                </span>
+                <span className={`text-xs px-2 py-0.5 rounded-full ${difficultyColors[trip.difficulty]}`}>
+                  {trip.difficulty}
+                </span>
+                <span className="text-sm text-yellow-400">
+                  ⭐ {trip.rating} ({trip.rating_count})
+                </span>
+              </div>
+            </div>
+
+            {/* Arrow */}
+            <div className="text-gray-500 group-hover:text-blue-400 transition-colors text-2xl pl-4">
+              →
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default RoadTripsTab;
+```
+
+=== PART 3: Journey View Component (Monopoly Board) ===
+
+Create file: client/src/components/Dashboard/JourneyView.tsx
+```tsx
+import React, { useState, useEffect } from 'react';
+import { 
+  RoadTrip, TripSegment, 
+  categoryIcons, transportIcons, activityIcons, segmentTypeIcons,
+  seasonIcons, difficultyColors,
+  TransportDetails, ActivityDetails, MealDetails, AccommodationDetails
+} from '../../types/roadtrips';
+
+interface JourneyViewProps {
+  trip: RoadTrip;
+  onBack: () => void;
+}
+
+type BudgetLevel = 'budget' | 'moderate' | 'comfort';
+
+export function JourneyView({ trip, onBack }: JourneyViewProps) {
+  const [budgetLevel, setBudgetLevel] = useState<BudgetLevel>('moderate');
+  const [expandedSegment, setExpandedSegment] = useState<string | null>(null);
+  const [webcams, setWebcams] = useState<any[]>([]);
+  const [routeConditions, setRouteConditions] = useState<any>(null);
+
+  // Fetch webcams for this trip
+  useEffect(() => {
+    fetchWebcams();
+    fetchRouteConditions();
+  }, [trip.id]);
+
+  async function fetchWebcams() {
+    try {
+      // Collect all webcam IDs from segments
+      const webcamIds = trip.segments.flatMap(s => s.webcam_ids);
+      if (webcamIds.length === 0) return;
+
+      const response = await fetch(`/api/v1/entities?type=webcam&limit=50`);
+      const data = await response.json();
+      // Filter to just the ones we need (in real implementation, pass IDs to API)
+      setWebcams(data.entities || data || []);
+    } catch (error) {
+      console.error('Failed to fetch webcams:', error);
+    }
+  }
+
+  async function fetchRouteConditions() {
+    try {
+      // Get alerts for the route
+      const response = await fetch(`/api/v1/alerts/active?limit=20`);
+      const alerts = await response.json();
+      setRouteConditions({ alerts: alerts.slice(0, 5) });
+    } catch (error) {
+      console.error('Failed to fetch conditions:', error);
+    }
+  }
+
+  // Calculate total cost for selected budget level
+  const totalCost = trip.segments.reduce((sum, seg) => sum + seg.cost[budgetLevel], 0);
+
+  // Get icon for segment
+  const getSegmentIcon = (segment: TripSegment): string => {
+    if (segment.type === 'transport') {
+      const details = segment.details as TransportDetails;
+      return transportIcons[details.mode] || '🚗';
+    }
+    if (segment.type === 'activity') {
+      const details = segment.details as ActivityDetails;
+      return activityIcons[details.activity_type] || '⭐';
+    }
+    if (segment.type === 'meal') {
+      return '🍽️';
+    }
+    if (segment.type === 'accommodation') {
+      return '🛏️';
+    }
+    return segmentTypeIcons[segment.type] || '📍';
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Back Button & Header */}
+      <div className="bg-gray-800 rounded-xl p-4">
+        <button
+          onClick={onBack}
+          className="text-gray-400 hover:text-white mb-4 flex items-center gap-2"
+        >
+          ← Back to all trips
+        </button>
+
+        <div className="flex items-start justify-between">
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-3xl">{categoryIcons[trip.category]}</span>
+              <div>
+                <h1 className="text-2xl font-bold text-white">{trip.title}</h1>
+                <p className="text-gray-400">{trip.tagline}</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-4 mt-3 text-sm">
+              <span className="text-gray-300">📍 {trip.region}</span>
+              <span className="text-gray-300">⏱️ {trip.duration.recommended_days > 1 ? `${trip.duration.recommended_days} days` : `${trip.duration.min_hours}h`}</span>
+              <span className={`px-2 py-0.5 rounded-full ${difficultyColors[trip.difficulty]}`}>
+                {trip.difficulty}
+              </span>
+              <span className="text-yellow-400">⭐ {trip.rating} ({trip.rating_count} reviews)</span>
+            </div>
+          </div>
+
+          {/* Total Cost */}
+          <div className="text-right">
+            <p className="text-gray-400 text-sm">Total Estimated Cost</p>
+            <p className="text-3xl font-bold text-green-400">${totalCost}</p>
+          </div>
+        </div>
+
+        {/* Budget Selector */}
+        <div className="mt-4 p-3 bg-gray-700/50 rounded-lg">
+          <p className="text-gray-400 text-xs uppercase mb-2">Select Your Budget</p>
+          <div className="flex gap-2">
+            {(['budget', 'moderate', 'comfort'] as BudgetLevel[]).map(level => (
+              <button
+                key={level}
+                onClick={() => setBudgetLevel(level)}
+                className={`flex-1 py-3 px-4 rounded-lg font-medium transition-all ${
+                  budgetLevel === level
+                    ? 'bg-blue-600 text-white ring-2 ring-blue-400'
+                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                }`}
+              >
+                <div className="text-lg">
+                  {level === 'budget' && '💰'}
+                  {level === 'moderate' && '💵'}
+                  {level === 'comfort' && '💎'}
+                </div>
+                <div className="capitalize">{level}</div>
+                <div className="text-sm opacity-80">${trip.estimated_cost[level]}</div>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Journey Timeline - Monopoly Board Style */}
+      <div className="bg-gray-800 rounded-xl p-6">
+        <h2 className="text-lg font-semibold text-white mb-6 flex items-center gap-2">
+          🎯 Your Journey
+        </h2>
+
+        {/* Horizontal Journey Steps */}
+        <div className="relative">
+          {/* Connection Line */}
+          <div className="absolute top-12 left-0 right-0 h-1 bg-gray-700 z-0" />
+
+          {/* Steps */}
+          <div className="flex justify-between relative z-10">
+            {trip.segments.map((segment, idx) => (
+              <JourneyStep
+                key={segment.id}
+                segment={segment}
+                icon={getSegmentIcon(segment)}
+                cost={segment.cost[budgetLevel]}
+                isFirst={idx === 0}
+                isLast={idx === trip.segments.length - 1}
+                isExpanded={expandedSegment === segment.id}
+                onClick={() => setExpandedSegment(expandedSegment === segment.id ? null : segment.id)}
+              />
+            ))}
+          </div>
+        </div>
+
+        {/* Expanded Segment Detail */}
+        {expandedSegment && (
+          <SegmentDetail
+            segment={trip.segments.find(s => s.id === expandedSegment)!}
+            budgetLevel={budgetLevel}
+            webcams={webcams}
+          />
+        )}
+      </div>
+
+      {/* Live Webcams Strip */}
+      <div className="bg-gray-800 rounded-xl p-4">
+        <h3 className="text-white font-semibold mb-4 flex items-center gap-2">
+          📷 Live Cameras Along Your Route
+          <span className="text-gray-400 text-sm font-normal">({webcams.length} cameras)</span>
+        </h3>
+
+        <div className="flex gap-3 overflow-x-auto pb-2">
+          {webcams.slice(0, 10).map((webcam, idx) => (
+            <WebcamThumbnail key={webcam.id || idx} webcam={webcam} />
+          ))}
+          {webcams.length === 0 && (
+            <div className="text-gray-500 text-sm">Loading webcams...</div>
+          )}
+        </div>
+      </div>
+
+      {/* Route Conditions */}
+      <div className="bg-gray-800 rounded-xl p-4">
+        <h3 className="text-white font-semibold mb-3 flex items-center gap-2">
+          📡 Current Route Conditions
+        </h3>
+
+        <div className="grid grid-cols-4 gap-4">
+          <div className="bg-gray-700/50 rounded-lg p-3 text-center">
+            <div className="text-2xl mb-1">🌤️</div>
+            <div className="text-white font-medium">-5°C</div>
+            <div className="text-gray-400 text-xs">Light Snow</div>
+          </div>
+          <div className="bg-gray-700/50 rounded-lg p-3 text-center">
+            <div className="text-2xl mb-1">🛣️</div>
+            <div className="text-white font-medium">Clear</div>
+            <div className="text-gray-400 text-xs">Road Status</div>
+          </div>
+          <div className="bg-gray-700/50 rounded-lg p-3 text-center">
+            <div className="text-2xl mb-1">⚠️</div>
+            <div className="text-white font-medium">{routeConditions?.alerts?.length || 0}</div>
+            <div className="text-gray-400 text-xs">Active Alerts</div>
+          </div>
+          <div className="bg-gray-700/50 rounded-lg p-3 text-center">
+            <div className="text-2xl mb-1">⛴️</div>
+            <div className="text-white font-medium">N/A</div>
+            <div className="text-gray-400 text-xs">Ferry Status</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Budget Summary */}
+      <div className="bg-gray-800 rounded-xl p-4">
+        <h3 className="text-white font-semibold mb-4">💰 Budget Breakdown</h3>
+
+        <div className="space-y-2">
+          {trip.segments.filter(s => s.cost[budgetLevel] > 0).map(segment => (
+            <div key={segment.id} className="flex items-center justify-between py-2 border-b border-gray-700">
+              <div className="flex items-center gap-3">
+                <span className="text-xl">{getSegmentIcon(segment)}</span>
+                <span className="text-gray-300">{segment.title}</span>
+              </div>
+              <span className="text-white font-medium">${segment.cost[budgetLevel]}</span>
+            </div>
+          ))}
+          <div className="flex items-center justify-between py-3 text-lg">
+            <span className="text-white font-semibold">Total</span>
+            <span className="text-green-400 font-bold">${totalCost}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Actions */}
+      <div className="flex gap-3">
+        <button className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-medium">
+          📤 Share Trip
+        </button>
+        <button className="flex-1 bg-gray-700 hover:bg-gray-600 text-white py-3 rounded-lg font-medium">
+          📅 Add to Calendar
+        </button>
+        <button className="flex-1 bg-gray-700 hover:bg-gray-600 text-white py-3 rounded-lg font-medium">
+          💾 Save Trip
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// Individual journey step (Monopoly board style)
+interface JourneyStepProps {
+  segment: TripSegment;
+  icon: string;
+  cost: number;
+  isFirst: boolean;
+  isLast: boolean;
+  isExpanded: boolean;
+  onClick: () => void;
+}
+
+function JourneyStep({ segment, icon, cost, isFirst, isLast, isExpanded, onClick }: JourneyStepProps) {
+  const formatDuration = (minutes: number) => {
+    if (minutes < 60) return `${minutes}m`;
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
+  };
+
+  return (
+    <div 
+      className={`flex flex-col items-center cursor-pointer group ${isExpanded ? 'scale-110' : ''} transition-transform`}
+      onClick={onClick}
+    >
+      {/* Icon Circle */}
+      <div className={`w-20 h-20 rounded-xl flex items-center justify-center text-3xl transition-all ${
+        isExpanded 
+          ? 'bg-blue-600 ring-4 ring-blue-400' 
+          : 'bg-gray-700 group-hover:bg-gray-600'
+      }`}>
+        {icon}
+      </div>
+
+      {/* Title */}
+      <div className="mt-2 text-center max-w-[120px]">
+        <p className="text-white text-sm font-medium truncate">{segment.title.split(' ').slice(0, 2).join(' ')}</p>
+        {segment.duration_minutes > 0 && (
+          <p className="text-gray-400 text-xs">{formatDuration(segment.duration_minutes)}</p>
+        )}
+        {cost > 0 && (
+          <p className="text-green-400 text-sm font-medium">${cost}</p>
+        )}
+      </div>
+
+      {/* Webcam indicator */}
+      {segment.webcam_ids.length > 0 && (
+        <div className="mt-1 flex items-center gap-1 text-xs text-gray-500">
+          <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
+          <span>{segment.webcam_ids.length} cams</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Expanded segment detail
+interface SegmentDetailProps {
+  segment: TripSegment;
+  budgetLevel: BudgetLevel;
+  webcams: any[];
+}
+
+function SegmentDetail({ segment, budgetLevel, webcams }: SegmentDetailProps) {
+  const details = segment.details;
+
+  return (
+    <div className="mt-6 p-4 bg-gray-700/50 rounded-xl border border-gray-600">
+      <div className="flex items-start justify-between mb-4">
+        <div>
+          <h4 className="text-white font-semibold text-lg">{segment.title}</h4>
+          <p className="text-gray-400 text-sm">📍 {segment.location.name}</p>
+        </div>
+        <div className="text-right">
+          <p className="text-green-400 font-bold text-xl">${segment.cost[budgetLevel]}</p>
+          {segment.duration_minutes > 0 && (
+            <p className="text-gray-400 text-sm">⏱️ {Math.floor(segment.duration_minutes / 60)}h {segment.duration_minutes % 60}m</p>
+          )}
+        </div>
+      </div>
+
+      {/* Type-specific details */}
+      {details.type === 'transport' && (
+        <TransportDetailView details={details as TransportDetails} />
+      )}
+      {details.type === 'activity' && (
+        <ActivityDetailView details={details as ActivityDetails} budgetLevel={budgetLevel} />
+      )}
+      {details.type === 'meal' && (
+        <MealDetailView details={details as MealDetails} budgetLevel={budgetLevel} />
+      )}
+
+      {/* Pro Tips */}
+      {segment.pro_tips && segment.pro_tips.length > 0 && (
+        <div className="mt-4 p-3 bg-yellow-500/10 rounded-lg border border-yellow-500/20">
+          <p className="text-yellow-400 text-sm font-medium mb-2">💡 Pro Tips</p>
+          <ul className="text-gray-300 text-sm space-y-1">
+            {segment.pro_tips.map((tip, idx) => (
+              <li key={idx}>• {tip}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* Webcams for this segment */}
+      {segment.webcam_ids.length > 0 && (
+        <div className="mt-4">
+          <p className="text-gray-400 text-sm mb-2">📷 Live Cameras ({segment.webcam_ids.length})</p>
+          <div className="flex gap-2 overflow-x-auto">
+            {webcams.slice(0, segment.webcam_ids.length).map((cam, idx) => (
+              <WebcamThumbnail key={idx} webcam={cam} small />
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TransportDetailView({ details }: { details: TransportDetails }) {
+  return (
+    <div className="grid grid-cols-2 gap-3">
+      {details.route_name && (
+        <div className="bg-gray-800 rounded-lg p-3">
+          <p className="text-gray-400 text-xs">Route</p>
+          <p className="text-white">{details.route_name}</p>
+        </div>
+      )}
+      {details.distance_km && (
+        <div className="bg-gray-800 rounded-lg p-3">
+          <p className="text-gray-400 text-xs">Distance</p>
+          <p className="text-white">{details.distance_km} km</p>
+        </div>
+      )}
+      {details.fuel_estimate && (
+        <div className="bg-gray-800 rounded-lg p-3">
+          <p className="text-gray-400 text-xs">Fuel Estimate</p>
+          <p className="text-white">${details.fuel_estimate}</p>
+        </div>
+      )}
+      {details.parking_cost && (
+        <div className="bg-gray-800 rounded-lg p-3">
+          <p className="text-gray-400 text-xs">Parking</p>
+          <p className="text-white">${details.parking_cost}</p>
+        </div>
+      )}
+      {details.operator && (
+        <div className="bg-gray-800 rounded-lg p-3">
+          <p className="text-gray-400 text-xs">Operator</p>
+          <p className="text-white">{details.operator}</p>
+        </div>
+      )}
+      {details.fare && (
+        <div className="bg-gray-800 rounded-lg p-3">
+          <p className="text-gray-400 text-xs">Fare</p>
+          <p className="text-white">${details.fare}</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ActivityDetailView({ details, budgetLevel }: { details: ActivityDetails; budgetLevel: BudgetLevel }) {
+  return (
+    <div className="space-y-3">
+      {details.provider_name && (
+        <div className="flex items-center justify-between">
+          <span className="text-gray-300">{details.provider_name}</span>
+          {details.provider_url && (
+            <a 
+              href={details.provider_url} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-blue-400 text-sm hover:underline"
+            >
+              Visit Website →
+            </a>
+          )}
+        </div>
+      )}
+      {details.pricing && !details.pricing.free && (
+        <div className="grid grid-cols-2 gap-3">
+          {details.pricing.adult_price && (
+            <div className="bg-gray-800 rounded-lg p-3">
+              <p className="text-gray-400 text-xs">Admission</p>
+              <p className="text-white">${details.pricing.adult_price}</p>
+            </div>
+          )}
+          {details.pricing.rental && (
+            <div className="bg-gray-800 rounded-lg p-3">
+              <p className="text-gray-400 text-xs">Equipment Rental</p>
+              <p className="text-white">${details.pricing.rental}</p>
+            </div>
+          )}
+        </div>
+      )}
+      {details.requirements && details.requirements.length > 0 && (
+        <div className="text-gray-400 text-sm">
+          📋 Requirements: {details.requirements.join(', ')}
+        </div>
+      )}
+      {details.reservation_required && (
+        <div className="text-yellow-400 text-sm">⚠️ Reservation required</div>
+      )}
+    </div>
+  );
+}
+
+function MealDetailView({ details, budgetLevel }: { details: MealDetails; budgetLevel: BudgetLevel }) {
+  return (
+    <div className="space-y-2">
+      {details.recommendations && (
+        <div className="p-3 bg-gray-800 rounded-lg">
+          <p className="text-gray-400 text-xs mb-1">Recommended ({budgetLevel})</p>
+          <p className="text-white">{details.recommendations[budgetLevel]}</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Webcam thumbnail
+function WebcamThumbnail({ webcam, small = false }: { webcam: any; small?: boolean }) {
+  const [imageError, setImageError] = useState(false);
+  const imageUrl = webcam.metadata?.direct_feed_url 
+    ? `${webcam.metadata.direct_feed_url}?t=${Date.now()}`
+    : null;
+
+  return (
+    <div className={`${small ? 'w-24 h-16' : 'w-40 h-28'} flex-shrink-0 bg-gray-700 rounded-lg overflow-hidden relative`}>
+      {imageUrl && !imageError ? (
+        <img
+          src={imageUrl}
+          alt={webcam.name}
+          className="w-full h-full object-cover"
+          onError={() => setImageError(true)}
+        />
+      ) : (
+        <div className="w-full h-full flex items-center justify-center text-gray-500">
+          <span className="text-2xl">📷</span>
+        </div>
+      )}
+      <div className="absolute top-1 left-1 flex items-center gap-1 bg-black/60 rounded px-1.5 py-0.5">
+        <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse"></span>
+        <span className="text-white text-xs">LIVE</span>
+      </div>
+      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-1">
+        <p className="text-white text-xs truncate">{webcam.name}</p>
+      </div>
+    </div>
+  );
+}
+
+export default JourneyView;
+```
+
+=== PART 4: Update Navigation ===
+
+In your DashboardLayout.tsx, add the Road Trips tab:
+```tsx
+import { RoadTripsTab } from './RoadTripsTab';
+
+// Add to tabs array:
+const tabs = [
+  { id: 'overview', label: 'Overview', icon: '📊' },
+  { id: 'map', label: 'Map', icon: '🗺️' },
+  { id: 'webcams', label: 'Webcams', icon: '📷' },
+  { id: 'alerts', label: 'Alerts', icon: '🚨' },
+  { id: 'trips', label: 'Road Trips', icon: '🗺️' }, // NEW
+];
+
+// In tab content section:
+{activeTab === 'trips' && (
+  <RoadTripsTab regionId={selectedRegion} />
+)}
+```
+
+This creates a complete Road Trips feature with:
+
+1. **Trip List View**: Browse all trips with category/season filters
+2. **Journey View**: Monopoly-board style visualization
+3. **Budget Selector**: Switch between Budget/Moderate/Comfort pricing
+4. **Live Webcams**: Thumbnails of cameras along the route
+5. **Route Conditions**: Weather, road status, alerts
+6. **Budget Breakdown**: Itemized cost summary
+7. **Pro Tips**: Local knowledge for each stop
+
+The sample data includes 5 trips to start:
+- Whistler Ski Day
+- Tofino Storm Watching
+- Okanagan Wine Country
+- Sunshine Coast Loop
+- Harrison Hot Springs
+
+Copy all parts into Replit and you'll have a working Road Trips tab!
