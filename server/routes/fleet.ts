@@ -76,6 +76,43 @@ export function createFleetRouter(db: Pool) {
     }
   });
 
+  router.post('/vehicles', async (req: Request, res: Response) => {
+    try {
+      const {
+        nickname, fleet_number, year, make, model, color,
+        license_plate, vin, vehicle_class, drive_type, fuel_type,
+        ground_clearance_inches, length_feet, height_feet, passenger_capacity,
+        towing_capacity_lbs, has_hitch, hitch_class, hitch_ball_size,
+        has_brake_controller, trailer_wiring, has_gooseneck_hitch, has_fifth_wheel_hitch,
+        fleet_status, notes
+      } = req.body;
+      
+      const result = await db.query(`
+        INSERT INTO vehicle_profiles (
+          owner_type, nickname, fleet_number, year, make, model, color,
+          license_plate, vin, vehicle_class, drive_type, fuel_type,
+          ground_clearance_inches, length_feet, height_feet, passenger_capacity,
+          towing_capacity_lbs, has_hitch, hitch_class, hitch_ball_size,
+          has_brake_controller, trailer_wiring, has_gooseneck_hitch, has_fifth_wheel_hitch,
+          fleet_status, notes
+        ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26)
+        RETURNING *
+      `, [
+        'company', nickname, fleet_number, year, make, model, color,
+        license_plate, vin, vehicle_class || 'truck', drive_type || '4wd', fuel_type || 'gas',
+        ground_clearance_inches, length_feet, height_feet, passenger_capacity,
+        towing_capacity_lbs, has_hitch || false, hitch_class, hitch_ball_size,
+        has_brake_controller || false, trailer_wiring, has_gooseneck_hitch || false, has_fifth_wheel_hitch || false,
+        fleet_status || 'available', notes
+      ]);
+      
+      res.json({ vehicle: result.rows[0] });
+    } catch (error) {
+      console.error('Error creating fleet vehicle:', error);
+      res.status(500).json({ error: 'Failed to create vehicle' });
+    }
+  });
+
   router.patch('/vehicles/:id', async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
