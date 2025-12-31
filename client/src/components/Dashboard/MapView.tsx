@@ -284,7 +284,7 @@ export function MapView({ regionId }: MapViewProps) {
   return (
     <div 
       className="relative rounded-xl border bg-card" 
-      style={{ height: '600px', overflow: 'hidden', isolation: 'isolate', contain: 'layout paint' }}
+      style={{ height: '840px', overflow: 'hidden', isolation: 'isolate', contain: 'layout paint' }}
       data-testid="map-view"
     >
       <div 
