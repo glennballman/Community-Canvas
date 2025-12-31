@@ -21,8 +21,14 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  Dialog,
+  DialogContent,
+} from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { apiRequest, queryClient } from '@/lib/queryClient';
+import { VehicleForm } from './VehicleForm';
+import { TrailerForm } from './TrailerForm';
 
 interface FleetStats {
   vehicles: {
@@ -91,6 +97,8 @@ const STATUS_LABELS: Record<string, string> = {
 
 export function FleetDashboard() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [showVehicleForm, setShowVehicleForm] = useState(false);
+  const [showTrailerForm, setShowTrailerForm] = useState(false);
 
   const vehiclesUrl = statusFilter !== 'all' 
     ? `/api/v1/fleet/vehicles?status=${statusFilter}` 
@@ -164,10 +172,16 @@ export function FleetDashboard() {
               <Truck className="w-6 h-6 text-primary" />
               <CardTitle>Fleet Management</CardTitle>
             </div>
-            <Button data-testid="button-add-vehicle">
-              <Plus className="w-4 h-4 mr-1.5" />
-              Add Vehicle
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => setShowTrailerForm(true)} data-testid="button-add-trailer">
+                <Plus className="w-4 h-4 mr-1.5" />
+                Add Trailer
+              </Button>
+              <Button onClick={() => setShowVehicleForm(true)} data-testid="button-add-vehicle">
+                <Plus className="w-4 h-4 mr-1.5" />
+                Add Vehicle
+              </Button>
+            </div>
           </div>
           <p className="text-muted-foreground text-sm">Manage vehicles, trailers, and assignments</p>
         </CardHeader>
@@ -226,7 +240,7 @@ export function FleetDashboard() {
                 <CardContent className="py-12 text-center">
                   <Car className="w-12 h-12 mx-auto text-muted-foreground opacity-50" />
                   <p className="text-muted-foreground mt-2">No vehicles found</p>
-                  <Button className="mt-4" data-testid="button-add-first-vehicle">
+                  <Button className="mt-4" onClick={() => setShowVehicleForm(true)} data-testid="button-add-first-vehicle">
                     <Plus className="w-4 h-4 mr-1.5" />
                     Add Your First Vehicle
                   </Button>
@@ -252,7 +266,7 @@ export function FleetDashboard() {
                 <CardContent className="py-12 text-center">
                   <Truck className="w-12 h-12 mx-auto text-muted-foreground opacity-50" />
                   <p className="text-muted-foreground mt-2">No trailers found</p>
-                  <Button className="mt-4" data-testid="button-add-first-trailer">
+                  <Button className="mt-4" onClick={() => setShowTrailerForm(true)} data-testid="button-add-first-trailer">
                     <Plus className="w-4 h-4 mr-1.5" />
                     Add Your First Trailer
                   </Button>
@@ -273,6 +287,24 @@ export function FleetDashboard() {
           </TabsContent>
         </Tabs>
       )}
+
+      <Dialog open={showVehicleForm} onOpenChange={setShowVehicleForm}>
+        <DialogContent className="max-w-4xl p-0">
+          <VehicleForm 
+            onSave={() => setShowVehicleForm(false)}
+            onCancel={() => setShowVehicleForm(false)}
+          />
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showTrailerForm} onOpenChange={setShowTrailerForm}>
+        <DialogContent className="max-w-4xl p-0">
+          <TrailerForm 
+            onSave={() => setShowTrailerForm(false)}
+            onCancel={() => setShowTrailerForm(false)}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

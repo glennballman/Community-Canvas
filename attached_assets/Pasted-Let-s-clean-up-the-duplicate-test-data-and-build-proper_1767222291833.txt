@@ -1,0 +1,860 @@
+Let's clean up the duplicate test data and build proper forms for adding real fleet vehicles and trailers with photos.
+
+=== PART 1: Clean Up Duplicate Test Data ===
+```sql
+-- See what we have
+SELECT id, nickname, fleet_number, year, make, model, created_at 
+FROM vehicle_profiles 
+ORDER BY created_at;
+
+-- Delete duplicate test vehicles (keep the most recent one if you want)
+-- Option 1: Delete ALL test vehicles and start fresh
+DELETE FROM vehicle_profiles WHERE nickname IS NULL AND fleet_number IS NULL;
+
+-- Option 2: Or keep one and delete the rest
+-- DELETE FROM vehicle_profiles 
+-- WHERE id NOT IN (SELECT id FROM vehicle_profiles ORDER BY created_at DESC LIMIT 1);
+
+-- Verify cleanup
+SELECT COUNT(*) as remaining_vehicles FROM vehicle_profiles;
+
+-- Check trailers are there
+SELECT id, nickname, fleet_number, trailer_type, color FROM trailer_profiles;
+```
+
+=== PART 2: Enhanced Vehicle Form with All Fleet Fields ===
+
+Create file: client/src/components/Fleet/VehicleForm.tsx
+```tsx
+import React, { useState, useEffect } from 'react';
+
+interface VehicleFormData {
+  // Identity
+  nickname: string;
+  fleet_number: string;
+  
+  // Basic Info
+  year: number | '';
+  make: string;
+  model: string;
+  color: string;
+  license_plate: string;
+  vin: string;
+  
+  // Classification
+  vehicle_class: string;
+  drive_type: string;
+  fuel_type: string;
+  
+  // Dimensions
+  ground_clearance_inches: number | '';
+  length_feet: number | '';
+  height_feet: number | '';
+  passenger_capacity: number | '';
+  
+  // Towing
+  towing_capacity_lbs: number | '';
+  has_hitch: boolean;
+  hitch_class: string;
+  hitch_ball_size: string;
+  has_brake_controller: boolean;
+  trailer_wiring: string;
+  has_gooseneck_hitch: boolean;
+  has_fifth_wheel_hitch: boolean;
+  
+  // Status
+  fleet_status: string;
+  
+  // Notes
+  notes: string;
+}
+
+const VEHICLE_CLASSES = [
+  { value: 'sedan', label: 'Sedan', icon: '🚗' },
+  { value: 'suv', label: 'SUV', icon: '🚙' },
+  { value: 'truck', label: 'Pickup Truck', icon: '🛻' },
+  { value: 'van', label: 'Cargo Van', icon: '🚐' },
+  { value: 'cube_van', label: 'Cube Van / Box Truck', icon: '📦' },
+  { value: 'flatbed', label: 'Flatbed Truck', icon: '🚚' },
+  { value: 'rv_class_a', label: 'RV Class A', icon: '🚌' },
+  { value: 'rv_class_c', label: 'RV Class C', icon: '🚐' },
+  { value: 'motorcycle', label: 'Motorcycle', icon: '🏍️' },
+];
+
+const DRIVE_TYPES = [
+  { value: '2wd', label: '2WD (Rear)' },
+  { value: 'fwd', label: 'FWD (Front)' },
+  { value: 'awd', label: 'AWD (All-Wheel)' },
+  { value: '4wd', label: '4WD (Four-Wheel)' },
+];
+
+const FUEL_TYPES = [
+  { value: 'gas', label: 'Gasoline' },
+  { value: 'diesel', label: 'Diesel' },
+  { value: 'electric', label: 'Electric' },
+  { value: 'hybrid', label: 'Hybrid' },
+  { value: 'plug_in_hybrid', label: 'Plug-in Hybrid' },
+  { value: 'propane', label: 'Propane' },
+];
+
+const HITCH_CLASSES = [
+  { value: '', label: 'None' },
+  { value: 'I', label: 'Class I (2,000 lbs)' },
+  { value: 'II', label: 'Class II (3,500 lbs)' },
+  { value: 'III', label: 'Class III (6,000 lbs)' },
+  { value: 'IV', label: 'Class IV (10,000 lbs)' },
+  { value: 'V', label: 'Class V (12,000+ lbs)' },
+];
+
+const BALL_SIZES = [
+  { value: '', label: 'None / Unknown' },
+  { value: '1_7_8', label: '1-7/8"' },
+  { value: '2', label: '2"' },
+  { value: '2_5_16', label: '2-5/16"' },
+];
+
+const WIRING_TYPES = [
+  { value: '', label: 'None' },
+  { value: '4_pin', label: '4-Pin (Flat)' },
+  { value: '5_pin', label: '5-Pin' },
+  { value: '7_pin', label: '7-Pin (RV Style)' },
+];
+
+interface VehicleFormProps {
+  vehicleId?: string; // If editing existing
+  onSave: (vehicle: any) => void;
+  onCancel: () => void;
+}
+
+export function VehicleForm({ vehicleId, onSave, onCancel }: VehicleFormProps) {
+  const [formData, setFormData] = useState<VehicleFormData>({
+    nickname: '',
+    fleet_number: '',
+    year: '',
+    make: '',
+    model: '',
+    color: '',
+    license_plate: '',
+    vin: '',
+    vehicle_class: 'truck',
+    drive_type: '4wd',
+    fuel_type: 'gas',
+    ground_clearance_inches: '',
+    length_feet: '',
+    height_feet: '',
+    passenger_capacity: '',
+    towing_capacity_lbs: '',
+    has_hitch: false,
+    hitch_class: '',
+    hitch_ball_size: '',
+    has_brake_controller: false,
+    trailer_wiring: '',
+    has_gooseneck_hitch: false,
+    has_fifth_wheel_hitch: false,
+    fleet_status: 'available',
+    notes: '',
+  });
+  
+  const [photos, setPhotos] = useState<{ type: string; url: string; file?: File }[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [activeTab, setActiveTab] = useState<'basic' | 'specs' | 'towing' | 'photos'>('basic');
+
+  useEffect(() => {
+    if (vehicleId) {
+      loadVehicle();
+    }
+  }, [vehicleId]);
+
+  async function loadVehicle() {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/v1/planning/vehicles/${vehicleId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setFormData({
+          nickname: data.nickname || '',
+          fleet_number: data.fleet_number || '',
+          year: data.year || '',
+          make: data.make || '',
+          model: data.model || '',
+          color: data.color || '',
+          license_plate: data.license_plate || '',
+          vin: data.vin || '',
+          vehicle_class: data.vehicle_class || 'truck',
+          drive_type: data.drive_type || '4wd',
+          fuel_type: data.fuel_type || 'gas',
+          ground_clearance_inches: data.ground_clearance_inches || '',
+          length_feet: data.length_feet || '',
+          height_feet: data.height_feet || '',
+          passenger_capacity: data.passenger_capacity || '',
+          towing_capacity_lbs: data.towing_capacity_lbs || '',
+          has_hitch: data.has_hitch || false,
+          hitch_class: data.hitch_class || '',
+          hitch_ball_size: data.hitch_ball_size || '',
+          has_brake_controller: data.has_brake_controller || false,
+          trailer_wiring: data.trailer_wiring || '',
+          has_gooseneck_hitch: data.has_gooseneck_hitch || false,
+          has_fifth_wheel_hitch: data.has_fifth_wheel_hitch || false,
+          fleet_status: data.fleet_status || 'available',
+          notes: data.notes || '',
+        });
+      }
+      
+      // Load photos
+      const photosRes = await fetch(`/api/v1/fleet/vehicles/${vehicleId}/photos`);
+      if (photosRes.ok) {
+        const photosData = await photosRes.json();
+        setPhotos(photosData.photos?.map((p: any) => ({ type: p.photo_type, url: p.photo_url })) || []);
+      }
+    } catch (error) {
+      console.error('Error loading vehicle:', error);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleSave() {
+    setSaving(true);
+    try {
+      const payload = {
+        ...formData,
+        year: formData.year || null,
+        ground_clearance_inches: formData.ground_clearance_inches || null,
+        length_feet: formData.length_feet || null,
+        height_feet: formData.height_feet || null,
+        passenger_capacity: formData.passenger_capacity || null,
+        towing_capacity_lbs: formData.towing_capacity_lbs || null,
+      };
+
+      let savedVehicle;
+      
+      if (vehicleId) {
+        // Update existing
+        const res = await fetch(`/api/v1/fleet/vehicles/${vehicleId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        savedVehicle = await res.json();
+      } else {
+        // Create new
+        const res = await fetch('/api/v1/planning/vehicles', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        savedVehicle = await res.json();
+      }
+
+      // Handle photo uploads if any new photos
+      // (For now, we'll use URL input - file upload can be added later)
+      
+      onSave(savedVehicle);
+    } catch (error) {
+      console.error('Error saving vehicle:', error);
+      alert('Failed to save vehicle');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function updateField(field: keyof VehicleFormData, value: any) {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  }
+
+  if (loading) {
+    return (
+      <div className="bg-gray-800 rounded-xl p-12 text-center">
+        <span className="text-4xl animate-pulse">🚗</span>
+        <p className="text-gray-400 mt-2">Loading vehicle...</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-gray-800 rounded-xl overflow-hidden">
+      {/* Header */}
+      <div className="p-6 border-b border-gray-700 flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-bold text-white">
+            {vehicleId ? 'Edit Vehicle' : 'Add New Vehicle'}
+          </h2>
+          <p className="text-gray-400 text-sm">
+            {formData.nickname || formData.fleet_number || 'Enter vehicle details'}
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <button
+            onClick={onCancel}
+            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-gray-300 rounded-lg"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={saving || !formData.make || !formData.model}
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg disabled:opacity-50"
+          >
+            {saving ? 'Saving...' : 'Save Vehicle'}
+          </button>
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex border-b border-gray-700">
+        {[
+          { id: 'basic', label: '🚗 Basic Info' },
+          { id: 'specs', label: '📐 Specs & Dimensions' },
+          { id: 'towing', label: '🔗 Towing & Hitch' },
+          { id: 'photos', label: '📷 Photos' },
+        ].map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id as any)}
+            className={`px-6 py-3 font-medium transition ${
+              activeTab === tab.id
+                ? 'text-blue-400 border-b-2 border-blue-400 bg-gray-700/50'
+                : 'text-gray-400 hover:text-gray-300'
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Content */}
+      <div className="p-6">
+        {/* Basic Info Tab */}
+        {activeTab === 'basic' && (
+          <div className="space-y-6">
+            {/* Identity */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-gray-300 text-sm font-medium mb-2">
+                  Nickname <span className="text-gray-500">(how you refer to this vehicle)</span>
+                </label>
+                <input
+                  type="text"
+                  value={formData.nickname}
+                  onChange={(e) => updateField('nickname', e.target.value)}
+                  className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600 focus:border-blue-500 focus:outline-none"
+                  placeholder='e.g., "Big Blue", "The Beast"'
+                />
+              </div>
+              <div>
+                <label className="block text-gray-300 text-sm font-medium mb-2">
+                  Fleet Number <span className="text-gray-500">(internal ID)</span>
+                </label>
+                <input
+                  type="text"
+                  value={formData.fleet_number}
+                  onChange={(e) => updateField('fleet_number', e.target.value)}
+                  className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600 focus:border-blue-500 focus:outline-none"
+                  placeholder="e.g., V-001, T-042"
+                />
+              </div>
+            </div>
+
+            {/* Year / Make / Model */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div>
+                <label className="block text-gray-300 text-sm font-medium mb-2">Year</label>
+                <input
+                  type="number"
+                  value={formData.year}
+                  onChange={(e) => updateField('year', e.target.value ? parseInt(e.target.value) : '')}
+                  className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600 focus:border-blue-500 focus:outline-none"
+                  placeholder="2024"
+                  min="1900"
+                  max="2030"
+                />
+              </div>
+              <div>
+                <label className="block text-gray-300 text-sm font-medium mb-2">Make *</label>
+                <input
+                  type="text"
+                  value={formData.make}
+                  onChange={(e) => updateField('make', e.target.value)}
+                  className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600 focus:border-blue-500 focus:outline-none"
+                  placeholder="Ford, Toyota, Isuzu..."
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-gray-300 text-sm font-medium mb-2">Model *</label>
+                <input
+                  type="text"
+                  value={formData.model}
+                  onChange={(e) => updateField('model', e.target.value)}
+                  className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600 focus:border-blue-500 focus:outline-none"
+                  placeholder="F-350, 4Runner, NPR..."
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-gray-300 text-sm font-medium mb-2">Color</label>
+                <input
+                  type="text"
+                  value={formData.color}
+                  onChange={(e) => updateField('color', e.target.value)}
+                  className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600 focus:border-blue-500 focus:outline-none"
+                  placeholder="White, Black, Red..."
+                />
+              </div>
+            </div>
+
+            {/* Vehicle Class */}
+            <div>
+              <label className="block text-gray-300 text-sm font-medium mb-2">Vehicle Type</label>
+              <div className="grid grid-cols-3 md:grid-cols-5 gap-2">
+                {VEHICLE_CLASSES.map(vc => (
+                  <button
+                    key={vc.value}
+                    type="button"
+                    onClick={() => updateField('vehicle_class', vc.value)}
+                    className={`p-3 rounded-lg border text-center transition ${
+                      formData.vehicle_class === vc.value
+                        ? 'border-blue-500 bg-blue-500/20 text-white'
+                        : 'border-gray-600 bg-gray-700 text-gray-300 hover:border-gray-500'
+                    }`}
+                  >
+                    <span className="text-2xl block">{vc.icon}</span>
+                    <span className="text-xs">{vc.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Drive Type & Fuel */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-gray-300 text-sm font-medium mb-2">Drive Type</label>
+                <select
+                  value={formData.drive_type}
+                  onChange={(e) => updateField('drive_type', e.target.value)}
+                  className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600 focus:border-blue-500 focus:outline-none"
+                >
+                  {DRIVE_TYPES.map(dt => (
+                    <option key={dt.value} value={dt.value}>{dt.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-gray-300 text-sm font-medium mb-2">Fuel Type</label>
+                <select
+                  value={formData.fuel_type}
+                  onChange={(e) => updateField('fuel_type', e.target.value)}
+                  className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600 focus:border-blue-500 focus:outline-none"
+                >
+                  {FUEL_TYPES.map(ft => (
+                    <option key={ft.value} value={ft.value}>{ft.label}</option>
+                  ))}
+                </select>
+                {formData.fuel_type === 'electric' && (
+                  <p className="text-yellow-400 text-xs mt-1">⚠️ EV charging limited in remote BC</p>
+                )}
+                {formData.fuel_type === 'diesel' && (
+                  <p className="text-blue-400 text-xs mt-1">ℹ️ Diesel not at all rural stations</p>
+                )}
+              </div>
+            </div>
+
+            {/* License & VIN */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-gray-300 text-sm font-medium mb-2">License Plate</label>
+                <input
+                  type="text"
+                  value={formData.license_plate}
+                  onChange={(e) => updateField('license_plate', e.target.value.toUpperCase())}
+                  className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600 focus:border-blue-500 focus:outline-none font-mono"
+                  placeholder="ABC 123"
+                />
+              </div>
+              <div>
+                <label className="block text-gray-300 text-sm font-medium mb-2">VIN</label>
+                <input
+                  type="text"
+                  value={formData.vin}
+                  onChange={(e) => updateField('vin', e.target.value.toUpperCase())}
+                  className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600 focus:border-blue-500 focus:outline-none font-mono text-sm"
+                  placeholder="1FTFW1E..."
+                  maxLength={17}
+                />
+              </div>
+            </div>
+
+            {/* Status */}
+            <div>
+              <label className="block text-gray-300 text-sm font-medium mb-2">Fleet Status</label>
+              <div className="flex gap-2">
+                {[
+                  { value: 'available', label: 'Available', color: 'green' },
+                  { value: 'in_use', label: 'In Use', color: 'blue' },
+                  { value: 'maintenance', label: 'Maintenance', color: 'yellow' },
+                  { value: 'reserved', label: 'Reserved', color: 'purple' },
+                  { value: 'retired', label: 'Retired', color: 'gray' },
+                ].map(status => (
+                  <button
+                    key={status.value}
+                    type="button"
+                    onClick={() => updateField('fleet_status', status.value)}
+                    className={`px-4 py-2 rounded-lg font-medium transition ${
+                      formData.fleet_status === status.value
+                        ? `bg-${status.color}-500 text-white`
+                        : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                    }`}
+                  >
+                    {status.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Specs Tab */}
+        {activeTab === 'specs' && (
+          <div className="space-y-6">
+            <p className="text-gray-400 text-sm">
+              These specs help determine route suitability and ferry pricing. Leave blank if unknown.
+            </p>
+            
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div>
+                <label className="block text-gray-300 text-sm font-medium mb-2">
+                  Ground Clearance <span className="text-gray-500">(inches)</span>
+                </label>
+                <input
+                  type="number"
+                  value={formData.ground_clearance_inches}
+                  onChange={(e) => updateField('ground_clearance_inches', e.target.value ? parseFloat(e.target.value) : '')}
+                  className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600 focus:border-blue-500 focus:outline-none"
+                  placeholder="8.5"
+                  step="0.5"
+                />
+                <p className="text-gray-500 text-xs mt-1">8"+ recommended for Bamfield Road</p>
+              </div>
+              <div>
+                <label className="block text-gray-300 text-sm font-medium mb-2">
+                  Length <span className="text-gray-500">(feet)</span>
+                </label>
+                <input
+                  type="number"
+                  value={formData.length_feet}
+                  onChange={(e) => updateField('length_feet', e.target.value ? parseFloat(e.target.value) : '')}
+                  className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600 focus:border-blue-500 focus:outline-none"
+                  placeholder="20"
+                  step="0.5"
+                />
+                <p className="text-gray-500 text-xs mt-1">Affects ferry pricing</p>
+              </div>
+              <div>
+                <label className="block text-gray-300 text-sm font-medium mb-2">
+                  Height <span className="text-gray-500">(feet)</span>
+                </label>
+                <input
+                  type="number"
+                  value={formData.height_feet}
+                  onChange={(e) => updateField('height_feet', e.target.value ? parseFloat(e.target.value) : '')}
+                  className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600 focus:border-blue-500 focus:outline-none"
+                  placeholder="7"
+                  step="0.5"
+                />
+                <p className="text-gray-500 text-xs mt-1">Over 7' = overheight ferry rate</p>
+              </div>
+              <div>
+                <label className="block text-gray-300 text-sm font-medium mb-2">
+                  Passengers
+                </label>
+                <input
+                  type="number"
+                  value={formData.passenger_capacity}
+                  onChange={(e) => updateField('passenger_capacity', e.target.value ? parseInt(e.target.value) : '')}
+                  className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600 focus:border-blue-500 focus:outline-none"
+                  placeholder="5"
+                />
+              </div>
+            </div>
+
+            {/* Route Suitability Preview */}
+            <div className="bg-gray-700/50 rounded-lg p-4">
+              <h4 className="text-white font-medium mb-3">Route Suitability Preview</h4>
+              <div className="grid grid-cols-4 gap-2">
+                <SuitabilityBadge 
+                  label="Paved Roads" 
+                  suitable={true} 
+                />
+                <SuitabilityBadge 
+                  label="Good Gravel" 
+                  suitable={['truck', 'suv'].includes(formData.vehicle_class) || ['awd', '4wd'].includes(formData.drive_type)} 
+                />
+                <SuitabilityBadge 
+                  label="Rough Gravel" 
+                  sublabel="(Bamfield Road)"
+                  suitable={
+                    ['truck', 'suv'].includes(formData.vehicle_class) && 
+                    ['awd', '4wd'].includes(formData.drive_type) && 
+                    (formData.ground_clearance_inches === '' || Number(formData.ground_clearance_inches) >= 8)
+                  } 
+                />
+                <SuitabilityBadge 
+                  label="4x4 Required" 
+                  suitable={formData.drive_type === '4wd' && (formData.ground_clearance_inches === '' || Number(formData.ground_clearance_inches) >= 8)} 
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Towing Tab */}
+        {activeTab === 'towing' && (
+          <div className="space-y-6">
+            <div className="flex items-center gap-4 p-4 bg-gray-700/50 rounded-lg">
+              <input
+                type="checkbox"
+                id="has_hitch"
+                checked={formData.has_hitch}
+                onChange={(e) => updateField('has_hitch', e.target.checked)}
+                className="w-5 h-5 rounded bg-gray-600 border-gray-500"
+              />
+              <label htmlFor="has_hitch" className="text-white font-medium">
+                This vehicle has a trailer hitch
+              </label>
+            </div>
+
+            {formData.has_hitch && (
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-gray-300 text-sm font-medium mb-2">Towing Capacity (lbs)</label>
+                    <input
+                      type="number"
+                      value={formData.towing_capacity_lbs}
+                      onChange={(e) => updateField('towing_capacity_lbs', e.target.value ? parseInt(e.target.value) : '')}
+                      className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600 focus:border-blue-500 focus:outline-none"
+                      placeholder="10000"
+                      step="500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-gray-300 text-sm font-medium mb-2">Hitch Class</label>
+                    <select
+                      value={formData.hitch_class}
+                      onChange={(e) => updateField('hitch_class', e.target.value)}
+                      className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600 focus:border-blue-500 focus:outline-none"
+                    >
+                      {HITCH_CLASSES.map(hc => (
+                        <option key={hc.value} value={hc.value}>{hc.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-gray-300 text-sm font-medium mb-2">Ball Size</label>
+                    <select
+                      value={formData.hitch_ball_size}
+                      onChange={(e) => updateField('hitch_ball_size', e.target.value)}
+                      className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600 focus:border-blue-500 focus:outline-none"
+                    >
+                      {BALL_SIZES.map(bs => (
+                        <option key={bs.value} value={bs.value}>{bs.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-gray-300 text-sm font-medium mb-2">Trailer Wiring</label>
+                    <select
+                      value={formData.trailer_wiring}
+                      onChange={(e) => updateField('trailer_wiring', e.target.value)}
+                      className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600 focus:border-blue-500 focus:outline-none"
+                    >
+                      {WIRING_TYPES.map(wt => (
+                        <option key={wt.value} value={wt.value}>{wt.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <label className="flex items-center gap-2 text-gray-300">
+                      <input
+                        type="checkbox"
+                        checked={formData.has_brake_controller}
+                        onChange={(e) => updateField('has_brake_controller', e.target.checked)}
+                        className="w-4 h-4 rounded bg-gray-600 border-gray-500"
+                      />
+                      Brake Controller
+                    </label>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap gap-4">
+                  <label className="flex items-center gap-2 text-gray-300">
+                    <input
+                      type="checkbox"
+                      checked={formData.has_gooseneck_hitch}
+                      onChange={(e) => updateField('has_gooseneck_hitch', e.target.checked)}
+                      className="w-4 h-4 rounded bg-gray-600 border-gray-500"
+                    />
+                    Gooseneck Hitch
+                  </label>
+                  <label className="flex items-center gap-2 text-gray-300">
+                    <input
+                      type="checkbox"
+                      checked={formData.has_fifth_wheel_hitch}
+                      onChange={(e) => updateField('has_fifth_wheel_hitch', e.target.checked)}
+                      className="w-4 h-4 rounded bg-gray-600 border-gray-500"
+                    />
+                    Fifth Wheel Hitch
+                  </label>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
+        {/* Photos Tab */}
+        {activeTab === 'photos' && (
+          <div className="space-y-6">
+            <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
+              <h4 className="text-blue-400 font-medium mb-2">📷 Vehicle Photos</h4>
+              <p className="text-gray-300 text-sm">
+                Add photos to help identify this vehicle. Recommended: front, rear, both sides, interior.
+              </p>
+            </div>
+
+            {/* Photo URL Input (simple version) */}
+            <div>
+              <label className="block text-gray-300 text-sm font-medium mb-2">Primary Photo URL</label>
+              <input
+                type="url"
+                placeholder="https://example.com/photo.jpg"
+                className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600 focus:border-blue-500 focus:outline-none"
+              />
+              <p className="text-gray-500 text-xs mt-1">
+                Paste a URL to an image, or drag & drop photos here (coming soon)
+              </p>
+            </div>
+
+            {/* Photo Grid Placeholder */}
+            <div className="grid grid-cols-4 gap-4">
+              {['Front', 'Rear', 'Driver Side', 'Passenger Side', 'Interior Front', 'Interior Rear', 'Cargo Area', 'Damage/Notes'].map((label, i) => (
+                <div key={i} className="aspect-video bg-gray-700 rounded-lg border-2 border-dashed border-gray-600 flex flex-col items-center justify-center text-gray-500 hover:border-gray-500 cursor-pointer">
+                  <span className="text-2xl">📷</span>
+                  <span className="text-xs mt-1">{label}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Notes (always visible at bottom) */}
+        <div className="mt-6 pt-6 border-t border-gray-700">
+          <label className="block text-gray-300 text-sm font-medium mb-2">Notes</label>
+          <textarea
+            value={formData.notes}
+            onChange={(e) => updateField('notes', e.target.value)}
+            className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600 focus:border-blue-500 focus:outline-none"
+            placeholder="Any additional notes about this vehicle..."
+            rows={3}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SuitabilityBadge({ label, sublabel, suitable }: { label: string; sublabel?: string; suitable: boolean }) {
+  return (
+    <div className={`p-3 rounded-lg text-center ${suitable ? 'bg-green-500/20' : 'bg-red-500/20'}`}>
+      <span className={`text-lg ${suitable ? 'text-green-400' : 'text-red-400'}`}>
+        {suitable ? '✓' : '✗'}
+      </span>
+      <p className={`text-sm font-medium ${suitable ? 'text-green-400' : 'text-red-400'}`}>{label}</p>
+      {sublabel && <p className="text-xs text-gray-500">{sublabel}</p>}
+    </div>
+  );
+}
+
+export default VehicleForm;
+```
+
+=== PART 3: Add Form to Fleet Dashboard ===
+
+Update FleetDashboard.tsx to include the form:
+```tsx
+// Add state for form
+const [showVehicleForm, setShowVehicleForm] = useState(false);
+const [editingVehicleId, setEditingVehicleId] = useState<string | null>(null);
+
+// Update the Add Vehicle button
+<button 
+  onClick={() => { setEditingVehicleId(null); setShowVehicleForm(true); }}
+  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium"
+>
+  + Add Vehicle
+</button>
+
+// Add form modal/panel
+{showVehicleForm && (
+  <div className="fixed inset-0 bg-black/50 flex items-start justify-center p-4 overflow-y-auto z-50">
+    <div className="w-full max-w-4xl my-8">
+      <VehicleForm
+        vehicleId={editingVehicleId || undefined}
+        onSave={(vehicle) => {
+          setShowVehicleForm(false);
+          setEditingVehicleId(null);
+          loadData();
+        }}
+        onCancel={() => {
+          setShowVehicleForm(false);
+          setEditingVehicleId(null);
+        }}
+      />
+    </div>
+  </div>
+)}
+
+// Update VehicleCard Details button to open editor
+<button 
+  onClick={() => { setEditingVehicleId(vehicle.id); setShowVehicleForm(true); }}
+  className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm"
+>
+  Details
+</button>
+```
+
+=== PART 4: Export Components ===
+
+Update client/src/components/Fleet/index.ts:
+```typescript
+export { FleetDashboard } from './FleetDashboard';
+export { VehicleForm } from './VehicleForm';
+```
+
+=== PART 5: Verify Trailer Data ===
+```sql
+-- Check the sample trailers were created
+SELECT nickname, fleet_number, trailer_type, length_feet, gvwr_lbs, color 
+FROM trailer_profiles 
+ORDER BY fleet_number;
+
+-- Should show:
+-- "The Box" | T-001 | enclosed_cargo | 16 | 7000 | White
+-- "Flatty"  | T-002 | flatbed        | 18 | 10000 | Black  
+-- "Utility" | T-003 | utility        | 6  | 2000 | Gray
+```
+
+This creates:
+1. Cleanup SQL to remove test data
+2. Full vehicle form with 4 tabs (Basic, Specs, Towing, Photos)
+3. Nickname and fleet number fields
+4. Vehicle type selector with icons
+5. Route suitability preview
+6. Towing configuration (hitch class, ball size, brake controller)
+7. Photo placeholders
+8. Integration with Fleet Dashboard
+
+Now you can add your real fleet vehicles with proper details!
