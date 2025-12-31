@@ -1100,8 +1100,9 @@ export async function registerRoutes(
           id: w.id,
           name: w.name,
           slug: w.slug,
-          image_url: w.configuration?.image_url || w.configuration?.url || null,
-          location: w.configuration?.location || null
+          image_url: w.configuration?.direct_feed_url || w.configuration?.image_url || w.configuration?.url || null,
+          location: w.configuration?.location || null,
+          description: w.configuration?.view_description || null
         }));
       }
       

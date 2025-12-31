@@ -71,36 +71,24 @@ export function JourneyView({ trip, onBack }: JourneyViewProps) {
   async function fetchWebcams() {
     try {
       setWebcamLoading(true);
-      const allWebcamIds = trip.segments.flatMap(s => s.webcam_ids);
-      if (allWebcamIds.length === 0) {
-        setWebcamLoading(false);
-        return;
-      }
-      
-      const response = await fetch(`/api/v1/entities?type=webcam&limit=100`);
+      const response = await fetch(`/api/v1/trips/${trip.id}/webcams`);
       const data = await response.json();
-      const allWebcams = data.entities || data || [];
       
-      const webcamMap = new Map<number, any>();
-      allWebcams.forEach((w: any) => {
-        if (w.id) webcamMap.set(w.id, w);
-      });
+      const allWebcams = data.webcams || [];
+      setWebcams(allWebcams);
       
       const segmentWebcams = new Map<string, any[]>();
-      trip.segments.forEach(segment => {
-        const segCams = segment.webcam_ids
-          .map(id => webcamMap.get(id))
-          .filter(Boolean);
-        segmentWebcams.set(segment.id, segCams);
+      (data.by_segment || []).forEach((seg: any, index: number) => {
+        const segment = trip.segments.find(s => 
+          (s as any).segment_order === seg.segment_order || 
+          s.order === seg.segment_order
+        ) || trip.segments[index];
+        if (segment?.id) {
+          segmentWebcams.set(segment.id, seg.webcams || []);
+        }
       });
-      
       setWebcamsBySegment(segmentWebcams);
       
-      const routeWebcams = allWebcamIds
-        .map(id => webcamMap.get(id))
-        .filter(Boolean)
-        .filter((w, i, arr) => arr.findIndex(x => x.id === w.id) === i);
-      setWebcams(routeWebcams);
       setWebcamLoading(false);
     } catch (error) {
       console.error('Failed to fetch webcams:', error);
@@ -110,9 +98,9 @@ export function JourneyView({ trip, onBack }: JourneyViewProps) {
 
   async function fetchRouteConditions() {
     try {
-      const response = await fetch(`/api/v1/alerts/active?limit=20`);
-      const alerts = await response.json();
-      setRouteConditions({ alerts: alerts.slice(0, 5) });
+      const response = await fetch(`/api/v1/trips/${trip.id}/conditions`);
+      const data = await response.json();
+      setRouteConditions(data);
     } catch (error) {
       console.error('Failed to fetch conditions:', error);
     }
@@ -269,12 +257,20 @@ export function JourneyView({ trip, onBack }: JourneyViewProps) {
         <div className="grid grid-cols-4 gap-4">
           <div className="bg-muted/50 rounded-lg p-3 text-center">
             <Cloud className="w-6 h-6 mx-auto mb-1 text-muted-foreground" />
-            <div className="text-foreground font-medium">-5C</div>
-            <div className="text-muted-foreground text-xs">Light Snow</div>
+            <div className="text-foreground font-medium">
+              {routeConditions?.weather?.temperature !== undefined 
+                ? `${routeConditions.weather.temperature}C` 
+                : '--'}
+            </div>
+            <div className="text-muted-foreground text-xs">
+              {routeConditions?.weather?.condition || 'Loading...'}
+            </div>
           </div>
           <div className="bg-muted/50 rounded-lg p-3 text-center">
             <Route className="w-6 h-6 mx-auto mb-1 text-muted-foreground" />
-            <div className="text-foreground font-medium">Clear</div>
+            <div className="text-foreground font-medium">
+              {routeConditions?.road_status || 'Clear'}
+            </div>
             <div className="text-muted-foreground text-xs">Road Status</div>
           </div>
           <div className="bg-muted/50 rounded-lg p-3 text-center">
@@ -284,7 +280,9 @@ export function JourneyView({ trip, onBack }: JourneyViewProps) {
           </div>
           <div className="bg-muted/50 rounded-lg p-3 text-center">
             <Anchor className="w-6 h-6 mx-auto mb-1 text-muted-foreground" />
-            <div className="text-foreground font-medium">N/A</div>
+            <div className="text-foreground font-medium">
+              {routeConditions?.ferry_status?.status || 'N/A'}
+            </div>
             <div className="text-muted-foreground text-xs">Ferry Status</div>
           </div>
         </div>
@@ -553,9 +551,9 @@ function MealDetailView({ details, budgetLevel }: { details: MealDetails; budget
 
 function WebcamThumbnail({ webcam, small = false }: { webcam: any; small?: boolean }) {
   const [imageError, setImageError] = useState(false);
-  const imageUrl = webcam.metadata?.direct_feed_url 
-    ? `${webcam.metadata.direct_feed_url}?t=${Date.now()}`
-    : null;
+  const rawUrl = webcam.image_url || webcam.metadata?.direct_feed_url;
+  const isImage = rawUrl && (rawUrl.endsWith('.jpg') || rawUrl.endsWith('.png') || rawUrl.includes('drivebc.ca'));
+  const imageUrl = isImage && rawUrl ? `${rawUrl}?t=${Date.now()}` : null;
 
   return (
     <div className={`${small ? 'w-24 h-16' : 'w-40 h-28'} flex-shrink-0 bg-muted rounded-lg overflow-hidden relative`}>

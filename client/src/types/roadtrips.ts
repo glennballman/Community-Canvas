@@ -47,13 +47,14 @@ export interface Location {
 export interface TripSegment {
   id: string;
   order: number;
+  segment_order?: number;
   type: SegmentType;
   title: string;
   location: Location;
   duration_minutes: number;
   cost: { budget: number; moderate: number; comfort: number };
   details: TransportDetails | ActivityDetails | AccommodationDetails | MealDetails;
-  webcam_ids: number[];
+  webcam_ids: string[];
   weather_station_id?: string;
   road_segments?: string[];
   pro_tips?: string[];
