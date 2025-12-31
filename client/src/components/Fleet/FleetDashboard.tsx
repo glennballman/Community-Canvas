@@ -10,7 +10,8 @@ import {
   ChevronDown,
   User,
   Link2,
-  Link2Off
+  Link2Off,
+  Container
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -192,7 +193,7 @@ export function FleetDashboard() {
               <StatCard label="Available" value={Number(stats.vehicles.available)} icon={CheckCircle2} variant="success" />
               <StatCard label="In Use" value={Number(stats.vehicles.in_use)} icon={Clock} variant="info" />
               <StatCard label="Maintenance" value={Number(stats.vehicles.maintenance)} icon={Wrench} variant="warning" />
-              <StatCard label="Trailers" value={Number(stats.trailers.total_trailers)} icon={Truck} />
+              <StatCard label="Trailers" value={Number(stats.trailers.total_trailers)} icon={Container} />
             </div>
           )}
         </CardContent>
@@ -229,7 +230,7 @@ export function FleetDashboard() {
               Vehicles ({vehicles.length})
             </TabsTrigger>
             <TabsTrigger value="trailers" data-testid="tab-trailers">
-              <Truck className="w-4 h-4 mr-1.5" />
+              <Container className="w-4 h-4 mr-1.5" />
               Trailers ({trailers.length})
             </TabsTrigger>
           </TabsList>
@@ -264,7 +265,7 @@ export function FleetDashboard() {
             {trailers.length === 0 ? (
               <Card>
                 <CardContent className="py-12 text-center">
-                  <Truck className="w-12 h-12 mx-auto text-muted-foreground opacity-50" />
+                  <Container className="w-12 h-12 mx-auto text-muted-foreground opacity-50" />
                   <p className="text-muted-foreground mt-2">No trailers found</p>
                   <Button className="mt-4" onClick={() => setShowTrailerForm(true)} data-testid="button-add-first-trailer">
                     <Plus className="w-4 h-4 mr-1.5" />
@@ -452,7 +453,7 @@ function TrailerCard({
         {trailer.primary_photo_url ? (
           <img src={trailer.primary_photo_url} alt={displayName} className="w-full h-full object-cover" />
         ) : (
-          <Truck className="w-12 h-12 text-muted-foreground opacity-30" />
+          <Container className="w-12 h-12 text-muted-foreground opacity-30" />
         )}
         
         <div className="absolute top-2 right-2">
