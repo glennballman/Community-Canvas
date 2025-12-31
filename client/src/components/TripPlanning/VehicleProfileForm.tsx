@@ -1,11 +1,12 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   ArrowLeft,
   Car,
   ClipboardCheck,
   Check,
   X,
-  AlertTriangle
+  AlertTriangle,
+  ShieldCheck
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { VehicleProfile, VehicleAssessment, VehicleClass } from '../../types/tripPlanning';
@@ -16,6 +17,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { SafetyEquipmentChecklist } from './SafetyEquipmentChecklist';
 
 interface VehicleProfileFormProps {
   vehicle: VehicleProfile | null;
@@ -71,8 +73,15 @@ export function VehicleProfileForm({ vehicle, onSave, onCancel }: VehicleProfile
     overall_condition: vehicle?.latest_assessment?.overall_condition || 'good'
   });
 
-  const [activeSection, setActiveSection] = useState<'details' | 'assessment'>('details');
+  const [activeSection, setActiveSection] = useState<'details' | 'assessment' | 'safety'>('details');
   const [saving, setSaving] = useState(false);
+  const [savedVehicleId, setSavedVehicleId] = useState<string | null>(vehicle?.id || null);
+
+  useEffect(() => {
+    if (vehicle?.id) {
+      setSavedVehicleId(vehicle.id);
+    }
+  }, [vehicle?.id]);
 
   const suitability = {
     pavedRoads: true,
@@ -108,6 +117,7 @@ export function VehicleProfileForm({ vehicle, onSave, onCancel }: VehicleProfile
       if (!response.ok) throw new Error('Failed to save vehicle');
       
       const savedVehicle = await response.json();
+      setSavedVehicleId(savedVehicle.id);
 
       if (activeSection === 'assessment') {
         await fetch(`/api/v1/planning/vehicles/${savedVehicle.id}/assessments`, {
@@ -158,7 +168,7 @@ export function VehicleProfileForm({ vehicle, onSave, onCancel }: VehicleProfile
             </Button>
           </div>
 
-          <div className="flex gap-2 mt-4">
+          <div className="flex gap-2 mt-4 flex-wrap">
             <Button
               variant={activeSection === 'details' ? 'default' : 'outline'}
               onClick={() => setActiveSection('details')}
@@ -173,7 +183,15 @@ export function VehicleProfileForm({ vehicle, onSave, onCancel }: VehicleProfile
               data-testid="tab-assessment"
             >
               <ClipboardCheck className="w-4 h-4 mr-2" />
-              Safety Assessment
+              Condition Check
+            </Button>
+            <Button
+              variant={activeSection === 'safety' ? 'default' : 'outline'}
+              onClick={() => setActiveSection('safety')}
+              data-testid="tab-safety"
+            >
+              <ShieldCheck className="w-4 h-4 mr-2" />
+              Safety Equipment
             </Button>
           </div>
         </CardHeader>
@@ -491,6 +509,39 @@ export function VehicleProfileForm({ vehicle, onSave, onCancel }: VehicleProfile
                 </SelectContent>
               </Select>
             </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {activeSection === 'safety' && savedVehicleId && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Safety Equipment Checklist</CardTitle>
+            <CardDescription>
+              Track the safety equipment in your vehicle for trip planning
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <SafetyEquipmentChecklist vehicleId={savedVehicleId} />
+          </CardContent>
+        </Card>
+      )}
+
+      {activeSection === 'safety' && !savedVehicleId && (
+        <Card>
+          <CardContent className="py-12 text-center">
+            <ShieldCheck className="w-12 h-12 mx-auto text-muted-foreground" />
+            <p className="text-muted-foreground mt-4">
+              Save your vehicle first to add safety equipment
+            </p>
+            <Button
+              variant="default"
+              onClick={() => setActiveSection('details')}
+              className="mt-4"
+              data-testid="button-go-to-details"
+            >
+              Go to Vehicle Details
+            </Button>
           </CardContent>
         </Card>
       )}

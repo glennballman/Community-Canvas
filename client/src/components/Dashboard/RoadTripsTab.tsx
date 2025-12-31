@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { RoadTrip, TripCategory, Season, difficultyColors } from '../../types/roadtrips';
 import { sampleTrips } from '../../data/sampleTrips';
@@ -10,8 +10,14 @@ import { Card } from '@/components/ui/card';
 import {
   Search, Map, Clock, DollarSign, Star, ChevronRight,
   Snowflake, Mountain, Waves, Wine, Bird, Flame, Ship, Route, Tent, Building,
-  Sun, Leaf, TreeDeciduous, CloudSnow, Loader2
+  Sun, Leaf, TreeDeciduous, CloudSnow, Loader2, CheckCircle, Lock
 } from 'lucide-react';
+
+interface TripQualification {
+  qualified: boolean;
+  gapCount: number;
+  gaps: string[];
+}
 
 interface RoadTripsTabProps {
   regionId?: string;
@@ -109,6 +115,36 @@ export function RoadTripsTab({ regionId }: RoadTripsTabProps) {
   const [selectedCategory, setSelectedCategory] = useState<TripCategory | 'all'>('all');
   const [selectedSeason, setSelectedSeason] = useState<Season | 'all'>('all');
   const [sortBy, setSortBy] = useState<'popular' | 'rating' | 'duration' | 'cost'>('popular');
+  const [qualifications, setQualifications] = useState<Record<string, TripQualification>>({});
+  const [participantId, setParticipantId] = useState<string | null>(null);
+
+  useEffect(() => {
+    loadCurrentParticipant();
+  }, []);
+
+  async function loadCurrentParticipant() {
+    try {
+      const stored = localStorage.getItem('tripPlanning_participantId');
+      if (stored) {
+        setParticipantId(stored);
+        loadQualifications(stored);
+      }
+    } catch (error) {
+      console.error('Error loading participant:', error);
+    }
+  }
+
+  async function loadQualifications(pid: string) {
+    try {
+      const response = await fetch(`/api/v1/planning/participants/${pid}/trip-qualifications`);
+      if (response.ok) {
+        const data = await response.json();
+        setQualifications(data.qualifications || {});
+      }
+    } catch (error) {
+      console.error('Error loading qualifications:', error);
+    }
+  }
   
   // Fetch full trip details with segments when a trip is selected
   const { data: tripDetailData, isLoading: isLoadingDetail } = useQuery<any>({
@@ -284,6 +320,7 @@ export function RoadTripsTab({ regionId }: RoadTripsTabProps) {
           <TripCard
             key={trip.id}
             trip={trip}
+            qualification={qualifications[trip.id]}
             onClick={() => setSelectedTripId(trip.id)}
           />
         ))}
@@ -313,10 +350,11 @@ export function RoadTripsTab({ regionId }: RoadTripsTabProps) {
 
 interface TripCardProps {
   trip: RoadTrip;
+  qualification?: TripQualification;
   onClick: () => void;
 }
 
-function TripCard({ trip, onClick }: TripCardProps) {
+function TripCard({ trip, qualification, onClick }: TripCardProps) {
   const formatDuration = () => {
     if (trip.duration.recommended_days > 1) {
       return `${trip.duration.recommended_days} days`;
@@ -327,9 +365,27 @@ function TripCard({ trip, onClick }: TripCardProps) {
   return (
     <Card
       onClick={onClick}
-      className="overflow-hidden cursor-pointer hover:ring-2 hover:ring-primary transition-all group"
+      className="overflow-hidden cursor-pointer hover:ring-2 hover:ring-primary transition-all group relative"
       data-testid={`card-trip-${trip.id}`}
     >
+      {qualification && (
+        <div className="absolute top-3 right-3 z-10">
+          {qualification.qualified ? (
+            <Badge variant="default" className="bg-green-500/80 text-white backdrop-blur-sm" data-testid={`badge-qualified-${trip.id}`}>
+              <CheckCircle className="w-3 h-3 mr-1" /> Ready
+            </Badge>
+          ) : (
+            <Badge 
+              variant="secondary" 
+              className="bg-orange-500/30 text-orange-400 backdrop-blur-sm" 
+              title={`Need: ${qualification.gaps.join(', ')}`}
+              data-testid={`badge-unqualified-${trip.id}`}
+            >
+              <Lock className="w-3 h-3 mr-1" /> {qualification.gapCount} skill{qualification.gapCount !== 1 ? 's' : ''} needed
+            </Badge>
+          )}
+        </div>
+      )}
       <div className="flex">
         <div className="w-48 h-36 bg-gradient-to-br from-muted to-muted/50 flex-shrink-0 flex items-center justify-center">
           <span className="text-4xl text-muted-foreground">
