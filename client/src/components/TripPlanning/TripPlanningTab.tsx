@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Compass, 
   User, 
@@ -26,6 +26,61 @@ export function TripPlanningTab() {
   const [activeView, setActiveView] = useState<PlanningView>('overview');
   const [currentParticipant, setCurrentParticipant] = useState<ParticipantProfile | null>(null);
   const [currentVehicle, setCurrentVehicle] = useState<VehicleProfile | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadSavedProfiles() {
+      try {
+        const savedParticipantId = localStorage.getItem('tripPlanning_participantId');
+        const savedVehicleId = localStorage.getItem('tripPlanning_vehicleId');
+        
+        if (savedParticipantId) {
+          const response = await fetch(`/api/v1/planning/participants/${savedParticipantId}`);
+          if (response.ok) {
+            const data = await response.json();
+            setCurrentParticipant({
+              ...data.participant,
+              skills: data.skills || []
+            });
+          } else {
+            localStorage.removeItem('tripPlanning_participantId');
+          }
+        }
+        
+        if (savedVehicleId) {
+          const response = await fetch(`/api/v1/planning/vehicles/${savedVehicleId}`);
+          if (response.ok) {
+            const data = await response.json();
+            setCurrentVehicle(data);
+          } else {
+            localStorage.removeItem('tripPlanning_vehicleId');
+          }
+        }
+      } catch (error) {
+        console.error('Error loading saved profiles:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    
+    loadSavedProfiles();
+  }, []);
+
+  const handleParticipantSave = (p: ParticipantProfile) => {
+    setCurrentParticipant(p);
+    if (p.id) {
+      localStorage.setItem('tripPlanning_participantId', p.id);
+    }
+    setActiveView('overview');
+  };
+
+  const handleVehicleSave = (v: VehicleProfile) => {
+    setCurrentVehicle(v);
+    if (v.id) {
+      localStorage.setItem('tripPlanning_vehicleId', v.id);
+    }
+    setActiveView('overview');
+  };
 
   const renderView = () => {
     switch (activeView) {
@@ -33,10 +88,7 @@ export function TripPlanningTab() {
         return (
           <ParticipantProfileForm 
             participant={currentParticipant}
-            onSave={(p: ParticipantProfile) => {
-              setCurrentParticipant(p);
-              setActiveView('overview');
-            }}
+            onSave={handleParticipantSave}
             onCancel={() => setActiveView('overview')}
           />
         );
@@ -44,10 +96,7 @@ export function TripPlanningTab() {
         return (
           <VehicleProfileForm
             vehicle={currentVehicle}
-            onSave={(v: VehicleProfile) => {
-              setCurrentVehicle(v);
-              setActiveView('overview');
-            }}
+            onSave={handleVehicleSave}
             onCancel={() => setActiveView('overview')}
           />
         );
