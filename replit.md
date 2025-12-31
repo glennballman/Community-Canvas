@@ -57,6 +57,20 @@ Pre-defined geographic datasets (with GPS coordinates and correlations) for BC i
 ### Data Flow
 User-triggered refreshes initiate Firecrawl AI scraping of public websites. Extracted data is stored in PostgreSQL as snapshots, and the client fetches the latest snapshot via React Query with auto-refresh.
 
+### Trip Planning Framework
+UI components at `client/src/components/TripPlanning/` provide:
+- **TripPlanningTab**: Main dashboard with participant/vehicle profiles, qualification checks
+- **ParticipantProfileForm**: Profile creation with skills management (paddling, driving, backcountry, water safety, emergency)
+- **VehicleProfileForm**: Vehicle details with safety assessment checklist
+- **TripQualificationCheck**: Route/skill matching and qualification assessment
+- **ServiceRunsBoard**: Service runs viewer for commercial logistics
+- **RouteExplorer**: Route segments, hazards, and transport providers
+
+**Architectural Debt**: Trip Planning components need refactoring to:
+- Use TanStack Query for data fetching (currently raw fetch/useState)
+- Use react-hook-form with zod validation (currently ad-hoc state)
+- Add PUT/PATCH endpoints for editing (currently POST only)
+
 ### Documentation System
 A Bloomberg-terminal styled documentation library is available at `/admin/docs`, rendering markdown files from the `docs/` directory. Key topics include data collection, architecture, completion criteria, tool selection, member counts, NAICS assignment, date tracking, and manual overrides.
 
