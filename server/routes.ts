@@ -1347,6 +1347,38 @@ export async function registerRoutes(
     }
   });
 
+  // GET /api/v1/planning/vehicles/:id - Get single vehicle with latest assessment
+  app.get("/api/v1/planning/vehicles/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      const vehicleResult = await storage.query(`
+        SELECT * FROM vehicle_profiles WHERE id = $1
+      `, [id]);
+      
+      if (vehicleResult.rows.length === 0) {
+        return res.status(404).json({ error: 'Vehicle not found' });
+      }
+      
+      const assessmentResult = await storage.query(`
+        SELECT * FROM vehicle_assessments 
+        WHERE vehicle_id = $1 
+        ORDER BY assessment_date DESC 
+        LIMIT 1
+      `, [id]);
+      
+      const vehicle = vehicleResult.rows[0];
+      if (assessmentResult.rows.length > 0) {
+        vehicle.latest_assessment = assessmentResult.rows[0];
+      }
+      
+      res.json(vehicle);
+    } catch (error) {
+      console.error('Error fetching vehicle:', error);
+      res.status(500).json({ error: 'Failed to fetch vehicle' });
+    }
+  });
+
   // POST /api/v1/planning/vehicles - Create vehicle profile
   app.post("/api/v1/planning/vehicles", async (req, res) => {
     try {
