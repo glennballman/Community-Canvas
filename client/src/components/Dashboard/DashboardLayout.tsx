@@ -12,6 +12,7 @@ import {
 import { StatusCards } from './StatusCards';
 import { AlertsFeed } from './AlertsFeed';
 import { WebcamGrid } from './WebcamGrid';
+import { WebcamsTab } from './WebcamsTab';
 import { FerryStatus } from './FerryStatus';
 import { WeatherWidget } from './WeatherWidget';
 import { RoadEvents } from './RoadEvents';
@@ -119,10 +120,7 @@ export function DashboardLayout({ defaultRegion = 'bc' }: DashboardLayoutProps) 
           <MapView regionId={selectedRegion} />
         )}
         {activeTab === 'webcams' && (
-          <div className="bg-card rounded-xl p-8 text-center border">
-            <Camera className="w-12 h-12 mx-auto text-muted-foreground" />
-            <p className="text-muted-foreground mt-2">Webcams tab - 1,100 cameras</p>
-          </div>
+          <WebcamsTab regionId={selectedRegion} />
         )}
         {activeTab === 'alerts' && (
           <AlertsFeed regionId={selectedRegion} maxAlerts={50} />
