@@ -84,6 +84,7 @@ function getTimeAgo(date: Date): string {
 export function AlertsTab({ regionId }: AlertsTabProps) {
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [loading, setLoading] = useState(true);
+  const [initialLoadComplete, setInitialLoadComplete] = useState(false);
   const [selectedAlert, setSelectedAlert] = useState<Alert | null>(null);
   const [mapboxToken, setMapboxToken] = useState<string>('');
   
@@ -137,7 +138,10 @@ export function AlertsTab({ regionId }: AlertsTabProps) {
   }, [regionId]);
 
   async function fetchAlerts() {
-    setLoading(true);
+    // Only show loading on initial load, not on refreshes
+    if (!initialLoadComplete) {
+      setLoading(true);
+    }
     try {
       const url = `/api/v1/alerts/active?limit=500`;
       const response = await fetch(url);
@@ -147,6 +151,7 @@ export function AlertsTab({ regionId }: AlertsTabProps) {
       console.error('Failed to fetch alerts:', error);
     } finally {
       setLoading(false);
+      setInitialLoadComplete(true);
     }
   }
 
@@ -213,7 +218,11 @@ export function AlertsTab({ regionId }: AlertsTabProps) {
   useEffect(() => {
     if (!map.current || !showMap) return;
 
+    const currentMap = map.current;
+
     const updateMarkers = () => {
+      if (!currentMap) return;
+      
       // Clear existing markers
       markersRef.current.forEach(m => m.remove());
       markersRef.current = [];
@@ -267,31 +276,22 @@ export function AlertsTab({ regionId }: AlertsTabProps) {
               </div>
             `)
           )
-          .addTo(map.current!);
+          .addTo(currentMap);
         
         markersRef.current.push(marker);
       });
-
-      // Fit bounds
-      if (alertsWithCoords.length > 0 && map.current) {
-        const bounds = new mapboxgl.LngLatBounds();
-        alertsWithCoords.forEach(a => {
-          const lat = Number(a.latitude || a.region_lat);
-          const lng = Number(a.longitude || a.region_lng);
-          if (!isNaN(lat) && !isNaN(lng)) {
-            bounds.extend([lng, lat]);
-          }
-        });
-        map.current.fitBounds(bounds, { padding: 50, maxZoom: 10 });
-      }
     };
 
     // Check if map is loaded, if not wait for it
-    if (map.current.loaded()) {
+    if (currentMap.loaded()) {
       updateMarkers();
     } else {
-      map.current.on('load', updateMarkers);
+      currentMap.once('load', updateMarkers);
     }
+
+    return () => {
+      currentMap.off('load', updateMarkers);
+    };
   }, [filteredAlerts, showMap]);
 
   function flyToAlert(alert: Alert) {
@@ -314,7 +314,7 @@ export function AlertsTab({ regionId }: AlertsTabProps) {
     return counts;
   }, [alerts]);
 
-  if (loading) {
+  if (loading && !initialLoadComplete) {
     return (
       <div className="space-y-4">
         <div className="bg-card rounded-xl p-4 border animate-pulse">
