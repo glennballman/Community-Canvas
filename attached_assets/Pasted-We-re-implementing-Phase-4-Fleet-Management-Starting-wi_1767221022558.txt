@@ -1,0 +1,1197 @@
+We're implementing Phase 4 Fleet Management. Starting with 4A: Fleet Basics.
+
+This adds:
+- Vehicle nicknames and fleet numbers
+- Fleet status tracking (available/in-use/maintenance)
+- Fleet dashboard view
+- Vehicle photo uploads
+- Trailer profiles as separate entities
+
+=== PART 1: Database Schema Updates ===
+```sql
+-- =====================================================
+-- PHASE 4A: FLEET MANAGEMENT BASICS
+-- =====================================================
+
+-- Add fleet columns to vehicle_profiles
+ALTER TABLE vehicle_profiles ADD COLUMN IF NOT EXISTS nickname VARCHAR(100);
+ALTER TABLE vehicle_profiles ADD COLUMN IF NOT EXISTS fleet_number VARCHAR(20);
+ALTER TABLE vehicle_profiles ADD COLUMN IF NOT EXISTS fleet_status VARCHAR(30) DEFAULT 'available';
+-- Status: available, in_use, maintenance, reserved, retired
+
+ALTER TABLE vehicle_profiles ADD COLUMN IF NOT EXISTS assigned_to_id UUID REFERENCES participant_profiles(id);
+ALTER TABLE vehicle_profiles ADD COLUMN IF NOT EXISTS assigned_to_name VARCHAR(255);
+ALTER TABLE vehicle_profiles ADD COLUMN IF NOT EXISTS last_check_out TIMESTAMPTZ;
+ALTER TABLE vehicle_profiles ADD COLUMN IF NOT EXISTS last_check_in TIMESTAMPTZ;
+ALTER TABLE vehicle_profiles ADD COLUMN IF NOT EXISTS primary_photo_url VARCHAR(500);
+
+-- Vehicle photos
+CREATE TABLE IF NOT EXISTS vehicle_photos (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  vehicle_id UUID NOT NULL REFERENCES vehicle_profiles(id) ON DELETE CASCADE,
+  
+  photo_type VARCHAR(30) NOT NULL, -- primary, exterior_front, exterior_rear, exterior_driver, exterior_passenger, interior_front, interior_rear, cargo_area, damage, other
+  photo_url VARCHAR(500) NOT NULL,
+  thumbnail_url VARCHAR(500),
+  photo_order INTEGER DEFAULT 0,
+  
+  caption TEXT,
+  taken_at TIMESTAMPTZ DEFAULT NOW(),
+  taken_by UUID REFERENCES participant_profiles(id),
+  
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- =====================================================
+-- TRAILER PROFILES
+-- =====================================================
+
+CREATE TABLE IF NOT EXISTS trailer_profiles (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  
+  -- Identity
+  nickname VARCHAR(100),
+  fleet_number VARCHAR(20),
+  
+  -- Ownership
+  owner_type VARCHAR(20) NOT NULL DEFAULT 'company', -- personal, company, rental
+  organization_id UUID,
+  
+  -- Registration
+  license_plate VARCHAR(20),
+  registration_expiry DATE,
+  vin VARCHAR(50),
+  
+  -- Type
+  trailer_type VARCHAR(30) NOT NULL, -- enclosed_cargo, flatbed, utility, boat, car_hauler, dump, horse, rv_trailer, popup_camper, equipment
+  
+  -- Dimensions (exterior)
+  length_feet DECIMAL(4,1),
+  width_feet DECIMAL(4,1),
+  height_feet DECIMAL(4,1),
+  
+  -- Interior dimensions (for enclosed)
+  interior_length_feet DECIMAL(4,1),
+  interior_width_feet DECIMAL(4,1),
+  interior_height_feet DECIMAL(4,1),
+  
+  -- Capacity
+  gvwr_lbs INTEGER, -- Gross Vehicle Weight Rating
+  empty_weight_lbs INTEGER,
+  payload_capacity_lbs INTEGER,
+  
+  -- Hitch Requirements
+  hitch_type VARCHAR(20) NOT NULL DEFAULT 'ball', -- ball, gooseneck, fifth_wheel, pintle
+  required_ball_size VARCHAR(20), -- 1_7_8, 2, 2_5_16
+  tongue_weight_lbs INTEGER,
+  
+  -- Brakes & Electrical
+  brake_type VARCHAR(20) DEFAULT 'none', -- none, surge, electric, air
+  wiring_type VARCHAR(20) DEFAULT '4_pin', -- 4_pin, 5_pin, 7_pin
+  
+  -- Access
+  gate_type VARCHAR(30), -- roll_up_door, swing_doors, ramp, lift_gate, drop_sides, none
+  has_side_door BOOLEAN DEFAULT false,
+  ramp_weight_capacity_lbs INTEGER,
+  
+  -- Features
+  has_roof_rack BOOLEAN DEFAULT false,
+  has_tie_downs BOOLEAN DEFAULT false,
+  tie_down_count INTEGER,
+  has_interior_lighting BOOLEAN DEFAULT false,
+  has_electrical_outlets BOOLEAN DEFAULT false,
+  has_ventilation BOOLEAN DEFAULT false,
+  
+  -- Floor
+  floor_type VARCHAR(20), -- wood, aluminum, rubber_mat, steel
+  
+  -- Status
+  fleet_status VARCHAR(30) DEFAULT 'available',
+  currently_hitched_to UUID REFERENCES vehicle_profiles(id),
+  
+  -- Insurance
+  insurance_company VARCHAR(255),
+  insurance_policy_number VARCHAR(100),
+  insurance_expiry DATE,
+  
+  -- Color for identification
+  color VARCHAR(50),
+  
+  -- Primary photo
+  primary_photo_url VARCHAR(500),
+  
+  notes TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Trailer photos
+CREATE TABLE IF NOT EXISTS trailer_photos (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  trailer_id UUID NOT NULL REFERENCES trailer_profiles(id) ON DELETE CASCADE,
+  
+  photo_type VARCHAR(30) NOT NULL, -- primary, exterior_front, exterior_side, exterior_rear, interior, hitch, ramp, damage, other
+  photo_url VARCHAR(500) NOT NULL,
+  thumbnail_url VARCHAR(500),
+  photo_order INTEGER DEFAULT 0,
+  
+  caption TEXT,
+  taken_at TIMESTAMPTZ DEFAULT NOW(),
+  
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- =====================================================
+-- HITCH COMPATIBILITY
+-- =====================================================
+
+-- Add hitch info to vehicles
+ALTER TABLE vehicle_profiles ADD COLUMN IF NOT EXISTS has_hitch BOOLEAN DEFAULT false;
+ALTER TABLE vehicle_profiles ADD COLUMN IF NOT EXISTS hitch_class VARCHAR(10); -- I, II, III, IV, V
+ALTER TABLE vehicle_profiles ADD COLUMN IF NOT EXISTS hitch_ball_size VARCHAR(20); -- 1_7_8, 2, 2_5_16
+ALTER TABLE vehicle_profiles ADD COLUMN IF NOT EXISTS has_gooseneck_hitch BOOLEAN DEFAULT false;
+ALTER TABLE vehicle_profiles ADD COLUMN IF NOT EXISTS has_fifth_wheel_hitch BOOLEAN DEFAULT false;
+ALTER TABLE vehicle_profiles ADD COLUMN IF NOT EXISTS has_brake_controller BOOLEAN DEFAULT false;
+ALTER TABLE vehicle_profiles ADD COLUMN IF NOT EXISTS trailer_wiring VARCHAR(20); -- 4_pin, 7_pin
+
+-- =====================================================
+-- INDEXES
+-- =====================================================
+
+CREATE INDEX IF NOT EXISTS idx_vehicle_photos_vehicle ON vehicle_photos(vehicle_id);
+CREATE INDEX IF NOT EXISTS idx_vehicle_fleet_status ON vehicle_profiles(fleet_status);
+CREATE INDEX IF NOT EXISTS idx_trailer_fleet_status ON trailer_profiles(fleet_status);
+CREATE INDEX IF NOT EXISTS idx_trailer_photos_trailer ON trailer_photos(trailer_id);
+
+-- =====================================================
+-- SAMPLE FLEET DATA
+-- =====================================================
+
+-- Update existing vehicles with fleet info (if they exist)
+UPDATE vehicle_profiles 
+SET nickname = 'Demo Vehicle', fleet_number = 'V-001', fleet_status = 'available'
+WHERE nickname IS NULL
+LIMIT 1;
+
+-- Insert sample trailers
+INSERT INTO trailer_profiles (nickname, fleet_number, owner_type, trailer_type, length_feet, width_feet, height_feet, interior_length_feet, interior_width_feet, interior_height_feet, gvwr_lbs, empty_weight_lbs, payload_capacity_lbs, hitch_type, required_ball_size, tongue_weight_lbs, brake_type, wiring_type, gate_type, has_tie_downs, tie_down_count, floor_type, color, notes) VALUES
+('The Box', 'T-001', 'company', 'enclosed_cargo', 16, 7, 7, 15, 6.5, 6.5, 7000, 1800, 5200, 'ball', '2_5_16', 700, 'electric', '7_pin', 'ramp', true, 8, 'wood', 'White', 'Main enclosed cargo trailer for equipment transport'),
+('Flatty', 'T-002', 'company', 'flatbed', 18, 7, 2, NULL, NULL, NULL, 10000, 2200, 7800, 'ball', '2_5_16', 1000, 'electric', '7_pin', 'none', true, 12, 'steel', 'Black', 'Flatbed for large materials, lumber, heavy equipment'),
+('Utility', 'T-003', 'company', 'utility', 6, 4, 2, NULL, NULL, NULL, 2000, 400, 1600, 'ball', '2', 200, 'none', '4_pin', 'drop_sides', true, 4, 'steel', 'Gray', 'Small utility trailer for light loads');
+```
+
+=== PART 2: Fleet API Routes ===
+
+Create file: server/routes/fleet.ts
+```typescript
+import { Router, Request, Response } from 'express';
+import { Pool } from 'pg';
+
+export function createFleetRouter(db: Pool) {
+  const router = Router();
+
+  // =====================================================
+  // FLEET VEHICLES
+  // =====================================================
+
+  // Get all fleet vehicles with status
+  router.get('/vehicles', async (req: Request, res: Response) => {
+    try {
+      const { status, assigned_to } = req.query;
+      
+      let query = `
+        SELECT v.*, 
+               p.name as assigned_to_display_name,
+               (SELECT COUNT(*) FROM vehicle_photos WHERE vehicle_id = v.id) as photo_count,
+               (SELECT COUNT(*) FROM vehicle_safety_equipment WHERE vehicle_id = v.id AND present = true) as equipment_count
+        FROM vehicle_profiles v
+        LEFT JOIN participant_profiles p ON v.assigned_to_id = p.id
+        WHERE 1=1
+      `;
+      const params: any[] = [];
+      let paramIndex = 1;
+      
+      if (status) {
+        params.push(status);
+        query += ` AND v.fleet_status = $${paramIndex++}`;
+      }
+      
+      if (assigned_to) {
+        params.push(assigned_to);
+        query += ` AND v.assigned_to_id = $${paramIndex++}`;
+      }
+      
+      query += ' ORDER BY v.fleet_number, v.nickname, v.make, v.model';
+      
+      const result = await db.query(query, params);
+      res.json({ vehicles: result.rows });
+    } catch (error) {
+      console.error('Error fetching fleet vehicles:', error);
+      res.status(500).json({ error: 'Failed to fetch vehicles' });
+    }
+  });
+
+  // Get fleet statistics
+  router.get('/stats', async (req: Request, res: Response) => {
+    try {
+      const vehicleStats = await db.query(`
+        SELECT 
+          COUNT(*) as total_vehicles,
+          COUNT(*) FILTER (WHERE fleet_status = 'available') as available,
+          COUNT(*) FILTER (WHERE fleet_status = 'in_use') as in_use,
+          COUNT(*) FILTER (WHERE fleet_status = 'maintenance') as maintenance,
+          COUNT(*) FILTER (WHERE fleet_status = 'reserved') as reserved,
+          COUNT(*) FILTER (WHERE fleet_status = 'retired') as retired
+        FROM vehicle_profiles
+      `);
+      
+      const trailerStats = await db.query(`
+        SELECT 
+          COUNT(*) as total_trailers,
+          COUNT(*) FILTER (WHERE fleet_status = 'available') as available,
+          COUNT(*) FILTER (WHERE fleet_status = 'in_use') as in_use,
+          COUNT(*) FILTER (WHERE fleet_status = 'maintenance') as maintenance
+        FROM trailer_profiles
+      `);
+      
+      res.json({
+        vehicles: vehicleStats.rows[0],
+        trailers: trailerStats.rows[0]
+      });
+    } catch (error) {
+      console.error('Error fetching fleet stats:', error);
+      res.status(500).json({ error: 'Failed to fetch stats' });
+    }
+  });
+
+  // Update vehicle fleet info
+  router.patch('/vehicles/:id', async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { nickname, fleet_number, fleet_status, assigned_to_id, assigned_to_name, primary_photo_url } = req.body;
+      
+      const updates: string[] = [];
+      const params: any[] = [];
+      let paramIndex = 1;
+      
+      if (nickname !== undefined) {
+        updates.push(`nickname = $${paramIndex++}`);
+        params.push(nickname);
+      }
+      if (fleet_number !== undefined) {
+        updates.push(`fleet_number = $${paramIndex++}`);
+        params.push(fleet_number);
+      }
+      if (fleet_status !== undefined) {
+        updates.push(`fleet_status = $${paramIndex++}`);
+        params.push(fleet_status);
+        
+        // Auto-update timestamps
+        if (fleet_status === 'in_use') {
+          updates.push(`last_check_out = NOW()`);
+        } else if (fleet_status === 'available') {
+          updates.push(`last_check_in = NOW()`);
+        }
+      }
+      if (assigned_to_id !== undefined) {
+        updates.push(`assigned_to_id = $${paramIndex++}`);
+        params.push(assigned_to_id || null);
+      }
+      if (assigned_to_name !== undefined) {
+        updates.push(`assigned_to_name = $${paramIndex++}`);
+        params.push(assigned_to_name);
+      }
+      if (primary_photo_url !== undefined) {
+        updates.push(`primary_photo_url = $${paramIndex++}`);
+        params.push(primary_photo_url);
+      }
+      
+      updates.push(`updated_at = NOW()`);
+      
+      params.push(id);
+      
+      const result = await db.query(`
+        UPDATE vehicle_profiles 
+        SET ${updates.join(', ')}
+        WHERE id = $${paramIndex}
+        RETURNING *
+      `, params);
+      
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: 'Vehicle not found' });
+      }
+      
+      res.json(result.rows[0]);
+    } catch (error) {
+      console.error('Error updating vehicle:', error);
+      res.status(500).json({ error: 'Failed to update vehicle' });
+    }
+  });
+
+  // Update vehicle hitch configuration
+  router.patch('/vehicles/:id/hitch', async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { 
+        has_hitch, hitch_class, hitch_ball_size, 
+        has_gooseneck_hitch, has_fifth_wheel_hitch, 
+        has_brake_controller, trailer_wiring 
+      } = req.body;
+      
+      const result = await db.query(`
+        UPDATE vehicle_profiles 
+        SET has_hitch = $1, hitch_class = $2, hitch_ball_size = $3,
+            has_gooseneck_hitch = $4, has_fifth_wheel_hitch = $5,
+            has_brake_controller = $6, trailer_wiring = $7,
+            updated_at = NOW()
+        WHERE id = $8
+        RETURNING *
+      `, [has_hitch, hitch_class, hitch_ball_size, has_gooseneck_hitch, has_fifth_wheel_hitch, has_brake_controller, trailer_wiring, id]);
+      
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: 'Vehicle not found' });
+      }
+      
+      res.json(result.rows[0]);
+    } catch (error) {
+      console.error('Error updating hitch config:', error);
+      res.status(500).json({ error: 'Failed to update hitch configuration' });
+    }
+  });
+
+  // =====================================================
+  // VEHICLE PHOTOS
+  // =====================================================
+
+  // Get photos for a vehicle
+  router.get('/vehicles/:id/photos', async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const result = await db.query(
+        'SELECT * FROM vehicle_photos WHERE vehicle_id = $1 ORDER BY photo_order, created_at',
+        [id]
+      );
+      res.json({ photos: result.rows });
+    } catch (error) {
+      console.error('Error fetching photos:', error);
+      res.status(500).json({ error: 'Failed to fetch photos' });
+    }
+  });
+
+  // Add photo to vehicle
+  router.post('/vehicles/:id/photos', async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { photo_type, photo_url, thumbnail_url, caption, photo_order } = req.body;
+      
+      const result = await db.query(`
+        INSERT INTO vehicle_photos (vehicle_id, photo_type, photo_url, thumbnail_url, caption, photo_order)
+        VALUES ($1, $2, $3, $4, $5, $6)
+        RETURNING *
+      `, [id, photo_type, photo_url, thumbnail_url || null, caption || null, photo_order || 0]);
+      
+      // If this is the primary photo, update the vehicle
+      if (photo_type === 'primary') {
+        await db.query(
+          'UPDATE vehicle_profiles SET primary_photo_url = $1 WHERE id = $2',
+          [photo_url, id]
+        );
+      }
+      
+      res.json(result.rows[0]);
+    } catch (error) {
+      console.error('Error adding photo:', error);
+      res.status(500).json({ error: 'Failed to add photo' });
+    }
+  });
+
+  // Delete photo
+  router.delete('/vehicles/:vehicleId/photos/:photoId', async (req: Request, res: Response) => {
+    try {
+      const { vehicleId, photoId } = req.params;
+      await db.query(
+        'DELETE FROM vehicle_photos WHERE id = $1 AND vehicle_id = $2',
+        [photoId, vehicleId]
+      );
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error deleting photo:', error);
+      res.status(500).json({ error: 'Failed to delete photo' });
+    }
+  });
+
+  // =====================================================
+  // TRAILERS
+  // =====================================================
+
+  // Get all trailers
+  router.get('/trailers', async (req: Request, res: Response) => {
+    try {
+      const { status, type } = req.query;
+      
+      let query = `
+        SELECT t.*, 
+               v.nickname as hitched_to_nickname,
+               v.fleet_number as hitched_to_fleet_number,
+               (SELECT COUNT(*) FROM trailer_photos WHERE trailer_id = t.id) as photo_count
+        FROM trailer_profiles t
+        LEFT JOIN vehicle_profiles v ON t.currently_hitched_to = v.id
+        WHERE 1=1
+      `;
+      const params: any[] = [];
+      let paramIndex = 1;
+      
+      if (status) {
+        params.push(status);
+        query += ` AND t.fleet_status = $${paramIndex++}`;
+      }
+      
+      if (type) {
+        params.push(type);
+        query += ` AND t.trailer_type = $${paramIndex++}`;
+      }
+      
+      query += ' ORDER BY t.fleet_number, t.nickname';
+      
+      const result = await db.query(query, params);
+      res.json({ trailers: result.rows });
+    } catch (error) {
+      console.error('Error fetching trailers:', error);
+      res.status(500).json({ error: 'Failed to fetch trailers' });
+    }
+  });
+
+  // Create trailer
+  router.post('/trailers', async (req: Request, res: Response) => {
+    try {
+      const {
+        nickname, fleet_number, owner_type, trailer_type,
+        length_feet, width_feet, height_feet,
+        interior_length_feet, interior_width_feet, interior_height_feet,
+        gvwr_lbs, empty_weight_lbs, payload_capacity_lbs,
+        hitch_type, required_ball_size, tongue_weight_lbs,
+        brake_type, wiring_type, gate_type, has_side_door,
+        has_tie_downs, tie_down_count, floor_type, color,
+        license_plate, registration_expiry, notes
+      } = req.body;
+      
+      const result = await db.query(`
+        INSERT INTO trailer_profiles (
+          nickname, fleet_number, owner_type, trailer_type,
+          length_feet, width_feet, height_feet,
+          interior_length_feet, interior_width_feet, interior_height_feet,
+          gvwr_lbs, empty_weight_lbs, payload_capacity_lbs,
+          hitch_type, required_ball_size, tongue_weight_lbs,
+          brake_type, wiring_type, gate_type, has_side_door,
+          has_tie_downs, tie_down_count, floor_type, color,
+          license_plate, registration_expiry, notes
+        ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27)
+        RETURNING *
+      `, [
+        nickname, fleet_number, owner_type || 'company', trailer_type,
+        length_feet, width_feet, height_feet,
+        interior_length_feet, interior_width_feet, interior_height_feet,
+        gvwr_lbs, empty_weight_lbs, payload_capacity_lbs,
+        hitch_type || 'ball', required_ball_size, tongue_weight_lbs,
+        brake_type || 'none', wiring_type || '4_pin', gate_type, has_side_door,
+        has_tie_downs, tie_down_count, floor_type, color,
+        license_plate, registration_expiry, notes
+      ]);
+      
+      res.json(result.rows[0]);
+    } catch (error) {
+      console.error('Error creating trailer:', error);
+      res.status(500).json({ error: 'Failed to create trailer' });
+    }
+  });
+
+  // Get single trailer
+  router.get('/trailers/:id', async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      
+      const result = await db.query(`
+        SELECT t.*, 
+               v.nickname as hitched_to_nickname,
+               v.fleet_number as hitched_to_fleet_number,
+               v.make as hitched_to_make,
+               v.model as hitched_to_model
+        FROM trailer_profiles t
+        LEFT JOIN vehicle_profiles v ON t.currently_hitched_to = v.id
+        WHERE t.id = $1
+      `, [id]);
+      
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: 'Trailer not found' });
+      }
+      
+      // Get photos
+      const photos = await db.query(
+        'SELECT * FROM trailer_photos WHERE trailer_id = $1 ORDER BY photo_order',
+        [id]
+      );
+      
+      res.json({ 
+        ...result.rows[0],
+        photos: photos.rows
+      });
+    } catch (error) {
+      console.error('Error fetching trailer:', error);
+      res.status(500).json({ error: 'Failed to fetch trailer' });
+    }
+  });
+
+  // Update trailer
+  router.patch('/trailers/:id', async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const updates = req.body;
+      
+      // Build dynamic update query
+      const fields = Object.keys(updates).filter(k => updates[k] !== undefined);
+      if (fields.length === 0) {
+        return res.status(400).json({ error: 'No fields to update' });
+      }
+      
+      const setClause = fields.map((f, i) => `${f} = $${i + 1}`).join(', ');
+      const values = fields.map(f => updates[f]);
+      values.push(id);
+      
+      const result = await db.query(`
+        UPDATE trailer_profiles 
+        SET ${setClause}, updated_at = NOW()
+        WHERE id = $${values.length}
+        RETURNING *
+      `, values);
+      
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: 'Trailer not found' });
+      }
+      
+      res.json(result.rows[0]);
+    } catch (error) {
+      console.error('Error updating trailer:', error);
+      res.status(500).json({ error: 'Failed to update trailer' });
+    }
+  });
+
+  // Hitch trailer to vehicle
+  router.post('/trailers/:id/hitch', async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { vehicle_id } = req.body;
+      
+      // Get trailer and vehicle info
+      const trailerResult = await db.query('SELECT * FROM trailer_profiles WHERE id = $1', [id]);
+      if (trailerResult.rows.length === 0) {
+        return res.status(404).json({ error: 'Trailer not found' });
+      }
+      const trailer = trailerResult.rows[0];
+      
+      const vehicleResult = await db.query('SELECT * FROM vehicle_profiles WHERE id = $1', [vehicle_id]);
+      if (vehicleResult.rows.length === 0) {
+        return res.status(404).json({ error: 'Vehicle not found' });
+      }
+      const vehicle = vehicleResult.rows[0];
+      
+      // Check compatibility
+      const issues: string[] = [];
+      const warnings: string[] = [];
+      
+      // Towing capacity
+      if (trailer.gvwr_lbs && vehicle.towing_capacity_lbs && trailer.gvwr_lbs > vehicle.towing_capacity_lbs) {
+        issues.push(`Trailer GVWR (${trailer.gvwr_lbs} lbs) exceeds vehicle towing capacity (${vehicle.towing_capacity_lbs} lbs)`);
+      }
+      
+      // Hitch type
+      if (trailer.hitch_type === 'gooseneck' && !vehicle.has_gooseneck_hitch) {
+        issues.push('Trailer requires gooseneck hitch');
+      }
+      if (trailer.hitch_type === 'fifth_wheel' && !vehicle.has_fifth_wheel_hitch) {
+        issues.push('Trailer requires fifth wheel hitch');
+      }
+      
+      // Ball size
+      if (trailer.hitch_type === 'ball' && trailer.required_ball_size && vehicle.hitch_ball_size !== trailer.required_ball_size) {
+        if (vehicle.hitch_ball_size) {
+          warnings.push(`Ball size mismatch: vehicle has ${vehicle.hitch_ball_size}", trailer needs ${trailer.required_ball_size}"`);
+        } else {
+          issues.push(`Trailer requires ${trailer.required_ball_size}" ball hitch`);
+        }
+      }
+      
+      // Brake controller
+      if (trailer.brake_type === 'electric' && !vehicle.has_brake_controller) {
+        issues.push('Trailer has electric brakes - vehicle needs brake controller');
+      }
+      
+      // Wiring
+      if (trailer.wiring_type === '7_pin' && vehicle.trailer_wiring === '4_pin') {
+        warnings.push('May need wiring adapter (trailer is 7-pin, vehicle is 4-pin)');
+      }
+      
+      if (issues.length > 0) {
+        return res.status(400).json({ 
+          error: 'Compatibility issues',
+          compatible: false,
+          issues,
+          warnings
+        });
+      }
+      
+      // All good - hitch the trailer
+      await db.query(
+        'UPDATE trailer_profiles SET currently_hitched_to = $1, fleet_status = $2 WHERE id = $3',
+        [vehicle_id, 'in_use', id]
+      );
+      
+      res.json({ 
+        success: true, 
+        compatible: true,
+        warnings,
+        message: `Trailer "${trailer.nickname || trailer.fleet_number}" hitched to "${vehicle.nickname || vehicle.fleet_number}"`
+      });
+    } catch (error) {
+      console.error('Error hitching trailer:', error);
+      res.status(500).json({ error: 'Failed to hitch trailer' });
+    }
+  });
+
+  // Unhitch trailer
+  router.post('/trailers/:id/unhitch', async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      
+      await db.query(
+        'UPDATE trailer_profiles SET currently_hitched_to = NULL, fleet_status = $1 WHERE id = $2',
+        ['available', id]
+      );
+      
+      res.json({ success: true, message: 'Trailer unhitched' });
+    } catch (error) {
+      console.error('Error unhitching trailer:', error);
+      res.status(500).json({ error: 'Failed to unhitch trailer' });
+    }
+  });
+
+  // Check hitch compatibility without actually hitching
+  router.post('/compatibility-check', async (req: Request, res: Response) => {
+    try {
+      const { vehicle_id, trailer_id } = req.body;
+      
+      const trailerResult = await db.query('SELECT * FROM trailer_profiles WHERE id = $1', [trailer_id]);
+      const vehicleResult = await db.query('SELECT * FROM vehicle_profiles WHERE id = $1', [vehicle_id]);
+      
+      if (trailerResult.rows.length === 0 || vehicleResult.rows.length === 0) {
+        return res.status(404).json({ error: 'Vehicle or trailer not found' });
+      }
+      
+      const trailer = trailerResult.rows[0];
+      const vehicle = vehicleResult.rows[0];
+      
+      const issues: string[] = [];
+      const warnings: string[] = [];
+      
+      // Same checks as hitch endpoint
+      if (trailer.gvwr_lbs && vehicle.towing_capacity_lbs && trailer.gvwr_lbs > vehicle.towing_capacity_lbs) {
+        issues.push(`Trailer GVWR (${trailer.gvwr_lbs} lbs) exceeds vehicle towing capacity (${vehicle.towing_capacity_lbs} lbs)`);
+      }
+      
+      if (trailer.hitch_type === 'gooseneck' && !vehicle.has_gooseneck_hitch) {
+        issues.push('Trailer requires gooseneck hitch');
+      }
+      
+      if (trailer.hitch_type === 'fifth_wheel' && !vehicle.has_fifth_wheel_hitch) {
+        issues.push('Trailer requires fifth wheel hitch');
+      }
+      
+      if (trailer.hitch_type === 'ball' && trailer.required_ball_size && vehicle.hitch_ball_size !== trailer.required_ball_size) {
+        if (vehicle.hitch_ball_size) {
+          warnings.push(`Ball size mismatch: vehicle has ${vehicle.hitch_ball_size}", trailer needs ${trailer.required_ball_size}"`);
+        } else {
+          warnings.push(`Unknown vehicle ball size - trailer needs ${trailer.required_ball_size}"`);
+        }
+      }
+      
+      if (trailer.brake_type === 'electric' && !vehicle.has_brake_controller) {
+        issues.push('Trailer has electric brakes - vehicle needs brake controller');
+      }
+      
+      if (trailer.wiring_type === '7_pin' && vehicle.trailer_wiring === '4_pin') {
+        warnings.push('May need wiring adapter');
+      }
+      
+      res.json({
+        compatible: issues.length === 0,
+        issues,
+        warnings,
+        vehicle: { id: vehicle.id, name: vehicle.nickname || `${vehicle.year} ${vehicle.make} ${vehicle.model}` },
+        trailer: { id: trailer.id, name: trailer.nickname || trailer.fleet_number }
+      });
+    } catch (error) {
+      console.error('Error checking compatibility:', error);
+      res.status(500).json({ error: 'Failed to check compatibility' });
+    }
+  });
+
+  return router;
+}
+
+export default createFleetRouter;
+```
+
+=== PART 3: Register Fleet Routes ===
+
+In your main server file, add:
+```typescript
+import { createFleetRouter } from './routes/fleet';
+
+// After db pool is created:
+app.use('/api/v1/fleet', createFleetRouter(pool));
+```
+
+=== PART 4: Fleet Dashboard Component ===
+
+Create file: client/src/components/Fleet/FleetDashboard.tsx
+```tsx
+import React, { useState, useEffect } from 'react';
+
+interface FleetStats {
+  vehicles: {
+    total_vehicles: number;
+    available: number;
+    in_use: number;
+    maintenance: number;
+    reserved: number;
+    retired: number;
+  };
+  trailers: {
+    total_trailers: number;
+    available: number;
+    in_use: number;
+    maintenance: number;
+  };
+}
+
+interface FleetVehicle {
+  id: string;
+  nickname: string;
+  fleet_number: string;
+  year: number;
+  make: string;
+  model: string;
+  color: string;
+  fleet_status: string;
+  assigned_to_name: string;
+  primary_photo_url: string;
+  last_check_out: string;
+  last_check_in: string;
+  photo_count: number;
+  equipment_count: number;
+}
+
+interface FleetTrailer {
+  id: string;
+  nickname: string;
+  fleet_number: string;
+  trailer_type: string;
+  color: string;
+  fleet_status: string;
+  currently_hitched_to: string;
+  hitched_to_nickname: string;
+  hitched_to_fleet_number: string;
+  length_feet: number;
+  gvwr_lbs: number;
+  primary_photo_url: string;
+}
+
+const STATUS_COLORS: Record<string, string> = {
+  available: 'bg-green-500',
+  in_use: 'bg-blue-500',
+  maintenance: 'bg-yellow-500',
+  reserved: 'bg-purple-500',
+  retired: 'bg-gray-500'
+};
+
+const STATUS_LABELS: Record<string, string> = {
+  available: 'Available',
+  in_use: 'In Use',
+  maintenance: 'Maintenance',
+  reserved: 'Reserved',
+  retired: 'Retired'
+};
+
+export function FleetDashboard() {
+  const [stats, setStats] = useState<FleetStats | null>(null);
+  const [vehicles, setVehicles] = useState<FleetVehicle[]>([]);
+  const [trailers, setTrailers] = useState<FleetTrailer[]>([]);
+  const [activeTab, setActiveTab] = useState<'vehicles' | 'trailers'>('vehicles');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadData();
+  }, [statusFilter]);
+
+  async function loadData() {
+    setLoading(true);
+    try {
+      // Load stats
+      const statsRes = await fetch('/api/v1/fleet/stats');
+      const statsData = await statsRes.json();
+      setStats(statsData);
+
+      // Load vehicles
+      const vehicleParams = statusFilter !== 'all' ? `?status=${statusFilter}` : '';
+      const vehiclesRes = await fetch(`/api/v1/fleet/vehicles${vehicleParams}`);
+      const vehiclesData = await vehiclesRes.json();
+      setVehicles(vehiclesData.vehicles || []);
+
+      // Load trailers
+      const trailerParams = statusFilter !== 'all' ? `?status=${statusFilter}` : '';
+      const trailersRes = await fetch(`/api/v1/fleet/trailers${trailerParams}`);
+      const trailersData = await trailersRes.json();
+      setTrailers(trailersData.trailers || []);
+    } catch (error) {
+      console.error('Error loading fleet data:', error);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function updateVehicleStatus(vehicleId: string, newStatus: string) {
+    try {
+      await fetch(`/api/v1/fleet/vehicles/${vehicleId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fleet_status: newStatus })
+      });
+      loadData();
+    } catch (error) {
+      console.error('Error updating vehicle:', error);
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="bg-gray-800 rounded-xl p-6">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h1 className="text-2xl font-bold text-white">🚛 Fleet Management</h1>
+            <p className="text-gray-400">Manage vehicles, trailers, and assignments</p>
+          </div>
+          <button className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium">
+            + Add Vehicle
+          </button>
+        </div>
+
+        {/* Stats Summary */}
+        {stats && (
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+            <StatCard label="Total Vehicles" value={stats.vehicles.total_vehicles} icon="🚗" />
+            <StatCard label="Available" value={stats.vehicles.available} color="green" icon="✅" />
+            <StatCard label="In Use" value={stats.vehicles.in_use} color="blue" icon="🔵" />
+            <StatCard label="Maintenance" value={stats.vehicles.maintenance} color="yellow" icon="🔧" />
+            <StatCard label="Trailers" value={stats.trailers.total_trailers} icon="🚛" />
+          </div>
+        )}
+      </div>
+
+      {/* Tabs & Filters */}
+      <div className="flex items-center justify-between">
+        <div className="flex gap-2">
+          <button
+            onClick={() => setActiveTab('vehicles')}
+            className={`px-4 py-2 rounded-lg font-medium transition ${
+              activeTab === 'vehicles' ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+            }`}
+          >
+            🚗 Vehicles ({vehicles.length})
+          </button>
+          <button
+            onClick={() => setActiveTab('trailers')}
+            className={`px-4 py-2 rounded-lg font-medium transition ${
+              activeTab === 'trailers' ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+            }`}
+          >
+            🚛 Trailers ({trailers.length})
+          </button>
+        </div>
+
+        <div className="flex gap-2">
+          {['all', 'available', 'in_use', 'maintenance'].map(status => (
+            <button
+              key={status}
+              onClick={() => setStatusFilter(status)}
+              className={`px-3 py-1.5 rounded-full text-sm font-medium transition ${
+                statusFilter === status
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+              }`}
+            >
+              {status === 'all' ? 'All' : STATUS_LABELS[status]}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Content */}
+      {loading ? (
+        <div className="bg-gray-800 rounded-xl p-12 text-center">
+          <span className="text-4xl animate-pulse">🚗</span>
+          <p className="text-gray-400 mt-2">Loading fleet...</p>
+        </div>
+      ) : activeTab === 'vehicles' ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {vehicles.length === 0 ? (
+            <div className="col-span-full bg-gray-800 rounded-xl p-12 text-center">
+              <span className="text-4xl">🚗</span>
+              <p className="text-gray-400 mt-2">No vehicles found</p>
+              <button className="mt-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg">
+                Add Your First Vehicle
+              </button>
+            </div>
+          ) : (
+            vehicles.map(vehicle => (
+              <VehicleCard 
+                key={vehicle.id} 
+                vehicle={vehicle} 
+                onStatusChange={(status) => updateVehicleStatus(vehicle.id, status)}
+              />
+            ))
+          )}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {trailers.length === 0 ? (
+            <div className="col-span-full bg-gray-800 rounded-xl p-12 text-center">
+              <span className="text-4xl">🚛</span>
+              <p className="text-gray-400 mt-2">No trailers found</p>
+              <button className="mt-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg">
+                Add Your First Trailer
+              </button>
+            </div>
+          ) : (
+            trailers.map(trailer => (
+              <TrailerCard key={trailer.id} trailer={trailer} onRefresh={loadData} />
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function StatCard({ label, value, color, icon }: { label: string; value: number; color?: string; icon: string }) {
+  const bgColor = color ? `bg-${color}-500/20` : 'bg-gray-700/50';
+  const textColor = color ? `text-${color}-400` : 'text-white';
+  
+  return (
+    <div className={`${bgColor} rounded-lg p-3 text-center`}>
+      <span className="text-2xl">{icon}</span>
+      <p className={`text-2xl font-bold ${textColor}`}>{value}</p>
+      <p className="text-gray-400 text-sm">{label}</p>
+    </div>
+  );
+}
+
+function VehicleCard({ vehicle, onStatusChange }: { vehicle: FleetVehicle; onStatusChange: (status: string) => void }) {
+  const [showMenu, setShowMenu] = useState(false);
+  
+  const displayName = vehicle.nickname || `${vehicle.year} ${vehicle.make} ${vehicle.model}`;
+  const displayNumber = vehicle.fleet_number || vehicle.id.slice(0, 8);
+  
+  return (
+    <div className="bg-gray-800 rounded-xl overflow-hidden hover:ring-1 hover:ring-blue-400 transition">
+      {/* Photo Area */}
+      <div className="h-32 bg-gray-700 relative">
+        {vehicle.primary_photo_url ? (
+          <img src={vehicle.primary_photo_url} alt={displayName} className="w-full h-full object-cover" />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center">
+            <span className="text-5xl opacity-30">🚗</span>
+          </div>
+        )}
+        
+        {/* Status Badge */}
+        <div className="absolute top-2 right-2">
+          <span className={`px-2 py-1 rounded-full text-xs font-medium text-white ${STATUS_COLORS[vehicle.fleet_status]}`}>
+            {STATUS_LABELS[vehicle.fleet_status]}
+          </span>
+        </div>
+        
+        {/* Fleet Number */}
+        <div className="absolute bottom-2 left-2">
+          <span className="px-2 py-1 bg-black/60 rounded text-white text-sm font-mono">
+            {displayNumber}
+          </span>
+        </div>
+      </div>
+      
+      {/* Info */}
+      <div className="p-4">
+        <h3 className="text-white font-semibold text-lg">{displayName}</h3>
+        <p className="text-gray-400 text-sm">
+          {vehicle.year} {vehicle.make} {vehicle.model}
+          {vehicle.color && ` • ${vehicle.color}`}
+        </p>
+        
+        {vehicle.assigned_to_name && (
+          <p className="text-blue-400 text-sm mt-2">
+            👤 {vehicle.assigned_to_name}
+          </p>
+        )}
+        
+        {vehicle.last_check_out && (
+          <p className="text-gray-500 text-xs mt-1">
+            Last out: {new Date(vehicle.last_check_out).toLocaleDateString()}
+          </p>
+        )}
+        
+        {/* Quick Actions */}
+        <div className="flex gap-2 mt-3">
+          <button 
+            onClick={() => setShowMenu(!showMenu)}
+            className="flex-1 px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-gray-300 rounded text-sm"
+          >
+            Status ▼
+          </button>
+          <button className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm">
+            Details
+          </button>
+        </div>
+        
+        {/* Status Menu */}
+        {showMenu && (
+          <div className="mt-2 p-2 bg-gray-700 rounded-lg space-y-1">
+            {['available', 'in_use', 'maintenance', 'reserved'].map(status => (
+              <button
+                key={status}
+                onClick={() => { onStatusChange(status); setShowMenu(false); }}
+                className={`w-full text-left px-3 py-1.5 rounded text-sm hover:bg-gray-600 ${
+                  vehicle.fleet_status === status ? 'bg-gray-600 text-white' : 'text-gray-300'
+                }`}
+              >
+                {STATUS_LABELS[status]}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function TrailerCard({ trailer, onRefresh }: { trailer: FleetTrailer; onRefresh: () => void }) {
+  const displayName = trailer.nickname || `${trailer.trailer_type} Trailer`;
+  const displayNumber = trailer.fleet_number || trailer.id.slice(0, 8);
+  
+  async function unhitch() {
+    try {
+      await fetch(`/api/v1/fleet/trailers/${trailer.id}/unhitch`, { method: 'POST' });
+      onRefresh();
+    } catch (error) {
+      console.error('Error unhitching:', error);
+    }
+  }
+  
+  return (
+    <div className="bg-gray-800 rounded-xl overflow-hidden hover:ring-1 hover:ring-blue-400 transition">
+      {/* Photo Area */}
+      <div className="h-32 bg-gray-700 relative">
+        {trailer.primary_photo_url ? (
+          <img src={trailer.primary_photo_url} alt={displayName} className="w-full h-full object-cover" />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center">
+            <span className="text-5xl opacity-30">🚛</span>
+          </div>
+        )}
+        
+        {/* Status Badge */}
+        <div className="absolute top-2 right-2">
+          <span className={`px-2 py-1 rounded-full text-xs font-medium text-white ${STATUS_COLORS[trailer.fleet_status]}`}>
+            {STATUS_LABELS[trailer.fleet_status]}
+          </span>
+        </div>
+        
+        {/* Fleet Number */}
+        <div className="absolute bottom-2 left-2">
+          <span className="px-2 py-1 bg-black/60 rounded text-white text-sm font-mono">
+            {displayNumber}
+          </span>
+        </div>
+      </div>
+      
+      {/* Info */}
+      <div className="p-4">
+        <h3 className="text-white font-semibold text-lg">{displayName}</h3>
+        <p className="text-gray-400 text-sm capitalize">
+          {trailer.trailer_type.replace(/_/g, ' ')}
+          {trailer.color && ` • ${trailer.color}`}
+        </p>
+        
+        <div className="flex gap-2 mt-2 text-xs text-gray-500">
+          {trailer.length_feet && <span>{trailer.length_feet}' long</span>}
+          {trailer.gvwr_lbs && <span>• {trailer.gvwr_lbs.toLocaleString()} lbs GVWR</span>}
+        </div>
+        
+        {trailer.currently_hitched_to && (
+          <div className="mt-2 p-2 bg-blue-500/20 rounded-lg">
+            <p className="text-blue-400 text-sm">
+              🔗 Hitched to: {trailer.hitched_to_nickname || trailer.hitched_to_fleet_number}
+            </p>
+            <button 
+              onClick={unhitch}
+              className="mt-1 text-xs text-blue-300 hover:text-blue-200"
+            >
+              Unhitch
+            </button>
+          </div>
+        )}
+        
+        {/* Actions */}
+        <div className="flex gap-2 mt-3">
+          <button className="flex-1 px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-gray-300 rounded text-sm">
+            Hitch To...
+          </button>
+          <button className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm">
+            Details
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default FleetDashboard;
+```
+
+=== PART 5: Add Fleet Tab to Navigation ===
+
+Add to your main navigation/tabs:
+```tsx
+// In your tab configuration
+{ id: 'fleet', label: 'Fleet', icon: '🚛' }
+
+// In tab content
+{activeTab === 'fleet' && <FleetDashboard />}
+```
+
+=== PART 6: Export Components ===
+
+Create file: client/src/components/Fleet/index.ts
+```typescript
+export { FleetDashboard } from './FleetDashboard';
+```
+
+This creates:
+1. Database schema for fleet management (nicknames, status, photos, hitch config)
+2. Trailer profiles as separate entities
+3. Hitch compatibility checking
+4. Fleet API with full CRUD operations
+5. Fleet Dashboard UI with vehicle/trailer cards
+6. Status management (available, in-use, maintenance)
+7. 3 sample trailers seeded
+
+Run migrations and restart to activate Fleet Management!

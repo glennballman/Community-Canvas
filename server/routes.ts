@@ -1,6 +1,7 @@
 import type { Express } from "express";
 import type { Server } from "http";
 import { storage } from "./storage";
+import { pool } from "./db";
 import { api } from "@shared/routes";
 import { z } from "zod";
 import { getFirecrawlApp } from './lib/firecrawl';
@@ -12,6 +13,7 @@ import { BC_CHAMBERS_OF_COMMERCE } from "@shared/chambers-of-commerce";
 import { chamberMembers as staticMembers } from "@shared/chamber-members";
 import { getJsonLoadedMembers } from "@shared/chamber-member-registry";
 import { getChamberProgressList, getChamberProgressSummary } from "@shared/chamber-progress";
+import { createFleetRouter } from "./routes/fleet";
 
 // Merge static members with JSON-loaded members for consistent data across the app
 // IMPORTANT: This function is called per-request to ensure fresh data after JSON file updates
@@ -26,6 +28,9 @@ export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
+
+  // Register fleet management routes
+  app.use('/api/v1/fleet', createFleetRouter(pool));
 
   app.get(api.snapshots.getLatest.path, async (req, res) => {
     try {
