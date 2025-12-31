@@ -1093,7 +1093,7 @@ export async function registerRoutes(
       let webcams: any[] = [];
       if (allWebcamIds.length > 0) {
         const webcamsResult = await storage.query(
-          `SELECT id, name, slug, configuration FROM entities WHERE id = ANY($1::text[])`,
+          `SELECT id, name, slug, configuration FROM entities WHERE id = ANY($1::uuid[])`,
           [allWebcamIds]
         ).catch(() => ({ rows: [] }));
         webcams = webcamsResult.rows.map((w: any) => ({
