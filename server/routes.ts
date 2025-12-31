@@ -741,7 +741,7 @@ export async function registerRoutes(
   // GET /api/v1/entities/geo - Get entities with coordinates for map
   app.get("/api/v1/entities/geo", async (req, res) => {
     try {
-      const { region, category, type, limit = '5000' } = req.query;
+      const { region, category, type, limit = '15000' } = req.query;
       const params: (string | number)[] = [];
       let paramIndex = 1;
       
