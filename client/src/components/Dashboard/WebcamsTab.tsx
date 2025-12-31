@@ -1,8 +1,8 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { 
   Camera, RefreshCw, Search, MapPin, X, ChevronLeft, ChevronRight, 
   ChevronsLeft, ChevronsRight, Maximize2, Ship, Mountain, Car, 
-  Building2, Navigation, Globe 
+  Building2, Navigation, Globe, Map as MapIcon
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,6 +14,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import mapboxgl from 'mapbox-gl';
+import 'mapbox-gl/dist/mapbox-gl.css';
 
 interface Webcam {
   id: number;
@@ -166,6 +168,16 @@ const SourceIcon = ({ source }: { source: string }) => {
   }
 };
 
+const SOURCE_COLORS: Record<string, string> = {
+  'BC Ferries': '#3b82f6',
+  'Ski Resorts': '#22c55e',
+  'Mountain Passes': '#f97316',
+  'Border Crossings': '#a855f7',
+  'Bridges & Tunnels': '#eab308',
+  'DriveBC Highways': '#ef4444',
+  'Other': '#6b7280',
+};
+
 export function WebcamsTab({ regionId }: WebcamsTabProps) {
   const [webcams, setWebcams] = useState<Webcam[]>([]);
   const [loading, setLoading] = useState(true);
@@ -180,6 +192,36 @@ export function WebcamsTab({ regionId }: WebcamsTabProps) {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(24);
   const [columns, setColumns] = useState<3 | 4 | 6>(4);
+  
+  const [showMap, setShowMap] = useState(true);
+  const [hoveredWebcamId, setHoveredWebcamId] = useState<number | null>(null);
+  const [initialLoadComplete, setInitialLoadComplete] = useState(false);
+  const [mapboxToken, setMapboxToken] = useState<string | null>(null);
+  
+  const map = useRef<mapboxgl.Map | null>(null);
+  const markers = useRef<mapboxgl.Marker[]>([]);
+  const [mapContainer, setMapContainer] = useState<HTMLDivElement | null>(null);
+  
+  const mapContainerRef = useCallback((node: HTMLDivElement | null) => {
+    if (node !== null) {
+      setMapContainer(node);
+    }
+  }, []);
+
+  useEffect(() => {
+    async function fetchToken() {
+      try {
+        const response = await fetch('/api/config/mapbox-token');
+        const data = await response.json();
+        if (data.token) {
+          setMapboxToken(data.token);
+        }
+      } catch (error) {
+        console.error('Failed to fetch Mapbox token:', error);
+      }
+    }
+    fetchToken();
+  }, []);
 
   useEffect(() => {
     fetchWebcams();
@@ -193,6 +235,19 @@ export function WebcamsTab({ regionId }: WebcamsTabProps) {
   }, []);
 
   async function fetchWebcams() {
+    if (initialLoadComplete) {
+      try {
+        const url = `/api/v1/entities?type=webcam&limit=1500`;
+        const response = await fetch(url);
+        const data = await response.json();
+        const webcamList = data.entities || data || [];
+        setWebcams(webcamList);
+      } catch (error) {
+        console.error('Failed to fetch webcams:', error);
+      }
+      return;
+    }
+    
     setLoading(true);
     try {
       const url = `/api/v1/entities?type=webcam&limit=1500`;
@@ -200,6 +255,7 @@ export function WebcamsTab({ regionId }: WebcamsTabProps) {
       const data = await response.json();
       const webcamList = data.entities || data || [];
       setWebcams(webcamList);
+      setInitialLoadComplete(true);
     } catch (error) {
       console.error('Failed to fetch webcams:', error);
     } finally {
@@ -293,6 +349,106 @@ export function WebcamsTab({ regionId }: WebcamsTabProps) {
     6: 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-6',
   };
 
+  useEffect(() => {
+    if (!mapContainer || !showMap || !mapboxToken) return;
+    if (map.current) return;
+
+    mapboxgl.accessToken = mapboxToken;
+    
+    map.current = new mapboxgl.Map({
+      container: mapContainer,
+      style: 'mapbox://styles/mapbox/dark-v11',
+      center: [-123.1207, 49.2827],
+      zoom: 5,
+    });
+
+    map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
+
+    map.current.once('load', () => {
+      updateMarkers();
+    });
+
+    return () => {
+      markers.current.forEach(m => m.remove());
+      markers.current = [];
+      map.current?.remove();
+      map.current = null;
+    };
+  }, [mapContainer, showMap, mapboxToken]);
+
+  useEffect(() => {
+    if (map.current?.loaded()) {
+      updateMarkers();
+    }
+  }, [filteredWebcams, hoveredWebcamId]);
+
+  function updateMarkers() {
+    if (!map.current) return;
+
+    markers.current.forEach(m => m.remove());
+    markers.current = [];
+
+    filteredWebcams.forEach(webcam => {
+      const lat = Number(webcam.latitude);
+      const lng = Number(webcam.longitude);
+      if (isNaN(lat) || isNaN(lng) || lat === 0 || lng === 0) return;
+
+      const source = webcam._category?.source || 'Other';
+      const color = SOURCE_COLORS[source] || SOURCE_COLORS['Other'];
+      const isHovered = webcam.id === hoveredWebcamId;
+
+      const el = document.createElement('div');
+      el.className = 'webcam-marker';
+      el.style.cssText = `
+        width: ${isHovered ? '20px' : '14px'};
+        height: ${isHovered ? '20px' : '14px'};
+        border-radius: 50%;
+        background: ${color};
+        border: 2px solid white;
+        cursor: pointer;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        transition: width 0.15s, height 0.15s;
+      `;
+
+      el.addEventListener('click', (e) => {
+        e.stopPropagation();
+        setSelectedWebcam(webcam);
+        flyToWebcam(webcam);
+      });
+      el.addEventListener('mouseenter', () => {
+        setHoveredWebcamId(webcam.id);
+      });
+      el.addEventListener('mouseleave', () => {
+        setHoveredWebcamId(null);
+      });
+
+      const marker = new mapboxgl.Marker({ element: el, anchor: 'center' })
+        .setLngLat([lng, lat])
+        .setPopup(
+          new mapboxgl.Popup({ offset: 15 }).setHTML(`
+            <div style="padding: 8px; max-width: 200px;">
+              <strong style="color: #333;">${webcam.name}</strong>
+              <p style="color: #666; font-size: 12px; margin-top: 4px;">${webcam.metadata?.view_description || ''}</p>
+              <p style="color: #999; font-size: 11px; margin-top: 4px;">${source}</p>
+            </div>
+          `)
+        )
+        .addTo(map.current!);
+
+      markers.current.push(marker);
+    });
+  }
+
+  function flyToWebcam(webcam: Webcam) {
+    if (map.current && webcam.latitude && webcam.longitude) {
+      map.current.flyTo({
+        center: [Number(webcam.longitude), Number(webcam.latitude)],
+        zoom: 14,
+        duration: 1000,
+      });
+    }
+  }
+
   if (loading) {
     return (
       <div className="space-y-4">
@@ -325,7 +481,17 @@ export function WebcamsTab({ regionId }: WebcamsTabProps) {
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            <Button
+              onClick={() => setShowMap(!showMap)}
+              variant={showMap ? 'default' : 'secondary'}
+              size="sm"
+              data-testid="button-toggle-map"
+            >
+              <MapIcon className="w-4 h-4 mr-1" />
+              {showMap ? 'Hide Map' : 'Show Map'}
+            </Button>
+            
             <Button
               onClick={() => setRefreshKey(k => k + 1)}
               size="sm"
@@ -480,59 +646,109 @@ export function WebcamsTab({ regionId }: WebcamsTabProps) {
         </div>
       </div>
 
-      <div className={`grid ${gridCols[columns]} gap-4`}>
-        {paginatedWebcams.map(webcam => (
-          <WebcamCard
-            key={webcam.id}
-            webcam={webcam}
-            refreshKey={refreshKey}
-            category={webcam._category}
-            onClick={() => setSelectedWebcam(webcam)}
-          />
-        ))}
+      <div className={`grid ${showMap ? 'grid-cols-1 lg:grid-cols-2' : 'grid-cols-1'} gap-4`}>
+        <div className={showMap ? 'max-h-[75vh] overflow-y-auto pr-2' : ''}>
+          <div className={`grid ${showMap ? 'grid-cols-2' : gridCols[columns]} gap-3`}>
+            {paginatedWebcams.map(webcam => (
+              <WebcamCard
+                key={webcam.id}
+                webcam={webcam}
+                refreshKey={refreshKey}
+                category={webcam._category}
+                isHovered={hoveredWebcamId === webcam.id}
+                onHover={(hovered) => setHoveredWebcamId(hovered ? webcam.id : null)}
+                onClick={() => {
+                  setSelectedWebcam(webcam);
+                  if (showMap) flyToWebcam(webcam);
+                }}
+              />
+            ))}
+          </div>
+
+          {filteredWebcams.length === 0 && (
+            <div className="bg-card rounded-xl p-12 text-center border">
+              <Camera className="w-12 h-12 mx-auto text-muted-foreground" />
+              <p className="text-muted-foreground mt-2">No webcams match your filters</p>
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  setSearchQuery('');
+                  setSelectedSource('all');
+                  setSelectedSubCategory('all');
+                  setSelectedHighway('all');
+                }}
+                className="mt-2"
+                data-testid="button-clear-filters"
+              >
+                Clear all filters
+              </Button>
+            </div>
+          )}
+
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center gap-2 py-4">
+              <Button variant="outline" size="icon" onClick={() => setPage(1)} disabled={page === 1}>
+                <ChevronsLeft className="w-4 h-4" />
+              </Button>
+              <Button variant="outline" size="icon" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}>
+                <ChevronLeft className="w-4 h-4" />
+              </Button>
+              
+              <span className="px-4 py-2 text-muted-foreground">
+                Page {page} of {totalPages}
+              </span>
+              
+              <Button variant="outline" size="icon" onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}>
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+              <Button variant="outline" size="icon" onClick={() => setPage(totalPages)} disabled={page === totalPages}>
+                <ChevronsRight className="w-4 h-4" />
+              </Button>
+            </div>
+          )}
+        </div>
+
+        {showMap && (
+          <div className="bg-card rounded-xl overflow-hidden h-[75vh] sticky top-4 border relative">
+            <div ref={mapContainerRef} className="w-full h-full" />
+            
+            <div className="absolute bottom-4 left-4 bg-background/90 rounded-lg p-3 border">
+              <h4 className="text-xs font-semibold mb-2">Camera Types</h4>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                <div className="flex items-center gap-2">
+                  <span className="w-3 h-3 rounded-full" style={{ background: SOURCE_COLORS['BC Ferries'] }}></span>
+                  <span className="text-muted-foreground">BC Ferries</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="w-3 h-3 rounded-full" style={{ background: SOURCE_COLORS['Ski Resorts'] }}></span>
+                  <span className="text-muted-foreground">Ski Resorts</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="w-3 h-3 rounded-full" style={{ background: SOURCE_COLORS['Mountain Passes'] }}></span>
+                  <span className="text-muted-foreground">Mountain Passes</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="w-3 h-3 rounded-full" style={{ background: SOURCE_COLORS['DriveBC Highways'] }}></span>
+                  <span className="text-muted-foreground">Highways</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="w-3 h-3 rounded-full" style={{ background: SOURCE_COLORS['Bridges & Tunnels'] }}></span>
+                  <span className="text-muted-foreground">Bridges</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="w-3 h-3 rounded-full" style={{ background: SOURCE_COLORS['Border Crossings'] }}></span>
+                  <span className="text-muted-foreground">Border Crossings</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="absolute top-4 left-4 bg-background/90 rounded-lg px-3 py-2 border">
+              <span className="font-semibold">{filteredWebcams.length}</span>
+              <span className="text-muted-foreground text-sm ml-1">cameras</span>
+            </div>
+          </div>
+        )}
       </div>
-
-      {filteredWebcams.length === 0 && (
-        <div className="bg-card rounded-xl p-12 text-center border">
-          <Camera className="w-12 h-12 mx-auto text-muted-foreground" />
-          <p className="text-muted-foreground mt-2">No webcams match your filters</p>
-          <Button
-            variant="ghost"
-            onClick={() => {
-              setSearchQuery('');
-              setSelectedSource('all');
-              setSelectedSubCategory('all');
-              setSelectedHighway('all');
-            }}
-            className="mt-2"
-            data-testid="button-clear-filters"
-          >
-            Clear all filters
-          </Button>
-        </div>
-      )}
-
-      {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-2 py-4">
-          <Button variant="outline" size="icon" onClick={() => setPage(1)} disabled={page === 1}>
-            <ChevronsLeft className="w-4 h-4" />
-          </Button>
-          <Button variant="outline" size="icon" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}>
-            <ChevronLeft className="w-4 h-4" />
-          </Button>
-          
-          <span className="px-4 py-2 text-muted-foreground">
-            Page {page} of {totalPages}
-          </span>
-          
-          <Button variant="outline" size="icon" onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}>
-            <ChevronRight className="w-4 h-4" />
-          </Button>
-          <Button variant="outline" size="icon" onClick={() => setPage(totalPages)} disabled={page === totalPages}>
-            <ChevronsRight className="w-4 h-4" />
-          </Button>
-        </div>
-      )}
 
       {selectedWebcam && (
         <WebcamModal
@@ -542,13 +758,17 @@ export function WebcamsTab({ regionId }: WebcamsTabProps) {
           onNext={() => {
             const idx = filteredWebcams.findIndex(w => w.id === selectedWebcam.id);
             if (idx < filteredWebcams.length - 1) {
-              setSelectedWebcam(filteredWebcams[idx + 1]);
+              const next = filteredWebcams[idx + 1];
+              setSelectedWebcam(next);
+              if (showMap) flyToWebcam(next);
             }
           }}
           onPrev={() => {
             const idx = filteredWebcams.findIndex(w => w.id === selectedWebcam.id);
             if (idx > 0) {
-              setSelectedWebcam(filteredWebcams[idx - 1]);
+              const prev = filteredWebcams[idx - 1];
+              setSelectedWebcam(prev);
+              if (showMap) flyToWebcam(prev);
             }
           }}
         />
@@ -561,10 +781,12 @@ interface WebcamCardProps {
   webcam: Webcam;
   refreshKey: number;
   category: WebcamCategory;
+  isHovered?: boolean;
+  onHover?: (hovered: boolean) => void;
   onClick: () => void;
 }
 
-function WebcamCard({ webcam, refreshKey, category, onClick }: WebcamCardProps) {
+function WebcamCard({ webcam, refreshKey, category, isHovered, onHover, onClick }: WebcamCardProps) {
   const [imageError, setImageError] = useState(false);
   const [imageLoading, setImageLoading] = useState(true);
 
@@ -579,8 +801,12 @@ function WebcamCard({ webcam, refreshKey, category, onClick }: WebcamCardProps) 
 
   return (
     <div
-      className="group relative bg-card rounded-lg overflow-hidden cursor-pointer border hover:ring-2 hover:ring-primary transition-all"
+      className={`group relative bg-card rounded-lg overflow-hidden cursor-pointer border transition-all ${
+        isHovered ? 'ring-2 ring-primary scale-[1.02]' : 'hover:ring-2 hover:ring-primary'
+      }`}
       onClick={onClick}
+      onMouseEnter={() => onHover?.(true)}
+      onMouseLeave={() => onHover?.(false)}
       data-testid={`webcam-card-${webcam.id}`}
     >
       <div className="aspect-video relative">
