@@ -66,6 +66,16 @@ UI components at `client/src/components/TripPlanning/` provide:
 - **ServiceRunsBoard**: Service runs viewer for commercial logistics
 - **RouteExplorer**: Route segments, hazards, and transport providers
 
+#### Trip Planning Database Schema (Migration 004)
+Enhanced schema for comprehensive trip planning:
+- **participant_emergency_contacts**: Multiple emergency contacts per participant with priority ordering
+- **trip_passengers**: Passengers on trips with age categories, car seat needs, mobility aids, medical info
+- **participant_documents**: Document uploads (licenses, certifications) with OCR extraction support
+- **vehicle_documents**: Vehicle documents (registration, insurance, rental agreements)
+- **safety_equipment_types**: 38 predefined equipment types across 6 categories (navigation, communication, vehicle_emergency, personal_safety, survival, tools)
+- **vehicle_safety_equipment**: Equipment checklist per vehicle with condition tracking
+- **Fleet management columns**: organization_id, subscription_tier, is_fleet_vehicle, assigned_driver_id
+
 **Architectural Debt**: Trip Planning components need refactoring to:
 - Use TanStack Query for data fetching (currently raw fetch/useState)
 - Use react-hook-form with zod validation (currently ad-hoc state)
