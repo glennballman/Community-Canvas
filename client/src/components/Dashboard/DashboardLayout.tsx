@@ -15,6 +15,7 @@ import { WebcamGrid } from './WebcamGrid';
 import { FerryStatus } from './FerryStatus';
 import { WeatherWidget } from './WeatherWidget';
 import { RoadEvents } from './RoadEvents';
+import { MapView } from './MapView';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -115,10 +116,7 @@ export function DashboardLayout({ defaultRegion = 'bc' }: DashboardLayoutProps) 
           <OverviewTab regionId={selectedRegion} />
         )}
         {activeTab === 'map' && (
-          <div className="bg-card rounded-xl p-8 text-center border">
-            <Map className="w-12 h-12 mx-auto text-muted-foreground" />
-            <p className="text-muted-foreground mt-2">Map view coming soon</p>
-          </div>
+          <MapView regionId={selectedRegion} />
         )}
         {activeTab === 'webcams' && (
           <div className="bg-card rounded-xl p-8 text-center border">

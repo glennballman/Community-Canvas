@@ -738,6 +738,51 @@ export async function registerRoutes(
     }
   });
 
+  // GET /api/v1/entities/geo - Get entities with coordinates for map
+  app.get("/api/v1/entities/geo", async (req, res) => {
+    try {
+      const { region, category, type, limit = '5000' } = req.query;
+      const params: (string | number)[] = [];
+      let paramIndex = 1;
+      
+      let query = `
+        SELECT 
+          e.id, e.slug, e.name, e.entity_type_id,
+          et.category_id as category, e.latitude, e.longitude,
+          gr.name as region_name
+        FROM entities e
+        LEFT JOIN entity_types et ON e.entity_type_id = et.id
+        LEFT JOIN geo_regions gr ON e.primary_region_id = gr.id
+        WHERE e.latitude IS NOT NULL 
+          AND e.longitude IS NOT NULL
+      `;
+      
+      if (region && region !== 'bc') {
+        query += ` AND e.primary_region_id = $${paramIndex++}`;
+        params.push(region as string);
+      }
+      
+      if (category) {
+        query += ` AND et.category_id = $${paramIndex++}`;
+        params.push(category as string);
+      }
+      
+      if (type) {
+        query += ` AND e.entity_type_id = $${paramIndex++}`;
+        params.push(type as string);
+      }
+      
+      query += ` LIMIT $${paramIndex++}`;
+      params.push(parseInt(limit as string, 10));
+      
+      const result = await storage.query(query, params);
+      res.json({ entities: result.rows, total: result.rows.length });
+    } catch (error) {
+      console.error("Geo entities error:", error);
+      res.status(500).json({ message: "Failed to fetch geo entities" });
+    }
+  });
+
   // GET /api/v1/entity/:id/status - Current status for a specific entity
   app.get("/api/v1/entity/:id/status", async (req, res) => {
     try {

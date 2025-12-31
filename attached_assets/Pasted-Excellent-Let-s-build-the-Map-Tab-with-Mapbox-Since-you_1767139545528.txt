@@ -1,0 +1,461 @@
+Excellent! Let's build the Map Tab with Mapbox. Since you already have the integration set up, this will be straightforward.
+
+PROMPT 27.1: Build Interactive Map Tab with Mapbox
+Create an interactive Map tab that displays all 10,330 entities on a Mapbox map with clustering, filtering, and popups.
+
+Create file: client/src/components/Dashboard/MapView.tsx
+
+import React, { useEffect, useRef, useState } from 'react';
+import mapboxgl from 'mapbox-gl';
+import 'mapbox-gl/dist/mapbox-gl.css';
+
+// Set your Mapbox token (should be in environment variable)
+mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN || process.env.REACT_APP_MAPBOX_TOKEN || 'YOUR_MAPBOX_TOKEN';
+
+interface Entity {
+  id: number;
+  slug: string;
+  name: string;
+  entity_type_id: string;
+  category: string;
+  latitude: number;
+  longitude: number;
+  region_name?: string;
+  metadata?: Record<string, any>;
+}
+
+interface MapViewProps {
+  regionId?: string;
+}
+
+// Entity type icons and colors
+const entityConfig: Record<string, { icon: string; color: string }> = {
+  // Emergency Services (red)
+  'fire-station': { icon: '🚒', color: '#ef4444' },
+  'hospital': { icon: '🏥', color: '#ef4444' },
+  'rcmp-detachment': { icon: '👮', color: '#ef4444' },
+  'municipal-police': { icon: '👮', color: '#ef4444' },
+  'sar-team': { icon: '🚁', color: '#ef4444' },
+  'coast-guard': { icon: '⚓', color: '#ef4444' },
+  
+  // Transportation (blue)
+  'airport': { icon: '✈️', color: '#3b82f6' },
+  'ferry-terminal': { icon: '⛴️', color: '#3b82f6' },
+  'webcam': { icon: '📷', color: '#3b82f6' },
+  'bus-transit': { icon: '🚌', color: '#3b82f6' },
+  
+  // Infrastructure (yellow)
+  'weather-station': { icon: '🌡️', color: '#eab308' },
+  'bc-hydro': { icon: '⚡', color: '#eab308' },
+  
+  // Community Services (green)
+  'library': { icon: '📚', color: '#22c55e' },
+  'school': { icon: '🏫', color: '#22c55e' },
+  'recreation-centre': { icon: '🏃', color: '#22c55e' },
+  'community-centre': { icon: '🏛️', color: '#22c55e' },
+  'pharmacy': { icon: '💊', color: '#22c55e' },
+  
+  // Business (purple)
+  'chamber-member': { icon: '🏢', color: '#a855f7' },
+  'fishing-charter': { icon: '🎣', color: '#a855f7' },
+  
+  // Government (orange)
+  'municipal-office': { icon: '🏛️', color: '#f97316' },
+  'chamber-of-commerce': { icon: '🤝', color: '#f97316' },
+  
+  // Default
+  'default': { icon: '📍', color: '#6b7280' },
+};
+
+const categoryColors: Record<string, string> = {
+  'Emergency Services': '#ef4444',
+  'Transportation': '#3b82f6',
+  'Infrastructure': '#eab308',
+  'Community Services': '#22c55e',
+  'Business Organizations': '#a855f7',
+  'Government': '#f97316',
+  'Environment': '#06b6d4',
+};
+
+export function MapView({ regionId }: MapViewProps) {
+  const mapContainer = useRef<HTMLDivElement>(null);
+  const map = useRef<mapboxgl.Map | null>(null);
+  const [entities, setEntities] = useState<Entity[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [selectedType, setSelectedType] = useState<string>('all');
+  const [mapLoaded, setMapLoaded] = useState(false);
+  const [stats, setStats] = useState({ total: 0, visible: 0 });
+
+  // Fetch entities
+  useEffect(() => {
+    fetchEntities();
+  }, [regionId]);
+
+  async function fetchEntities() {
+    setLoading(true);
+    try {
+      // Fetch entities with coordinates
+      const url = regionId && regionId !== 'bc'
+        ? `/api/v1/entities/geo?region=${regionId}&limit=5000`
+        : `/api/v1/entities/geo?limit=5000`;
+      
+      const response = await fetch(url);
+      const data = await response.json();
+      const entityList = data.entities || data || [];
+      setEntities(entityList);
+      setStats({ total: entityList.length, visible: entityList.length });
+    } catch (error) {
+      console.error('Failed to fetch entities:', error);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // Initialize map
+  useEffect(() => {
+    if (!mapContainer.current || map.current) return;
+
+    map.current = new mapboxgl.Map({
+      container: mapContainer.current,
+      style: 'mapbox://styles/mapbox/dark-v11',
+      center: [-123.1207, 49.2827], // Vancouver
+      zoom: 6,
+      minZoom: 4,
+      maxZoom: 18,
+    });
+
+    map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
+    map.current.addControl(new mapboxgl.FullscreenControl(), 'top-right');
+
+    map.current.on('load', () => {
+      setMapLoaded(true);
+    });
+
+    return () => {
+      map.current?.remove();
+      map.current = null;
+    };
+  }, []);
+
+  // Add entities to map when loaded
+  useEffect(() => {
+    if (!map.current || !mapLoaded || entities.length === 0) return;
+
+    // Filter entities
+    const filtered = entities.filter(e => {
+      if (selectedCategory !== 'all' && e.category !== selectedCategory) return false;
+      if (selectedType !== 'all' && e.entity_type_id !== selectedType) return false;
+      return e.latitude && e.longitude;
+    });
+
+    setStats(s => ({ ...s, visible: filtered.length }));
+
+    // Create GeoJSON
+    const geojson: GeoJSON.FeatureCollection = {
+      type: 'FeatureCollection',
+      features: filtered.map(entity => ({
+        type: 'Feature',
+        properties: {
+          id: entity.id,
+          name: entity.name,
+          type: entity.entity_type_id,
+          category: entity.category,
+          region: entity.region_name,
+          color: entityConfig[entity.entity_type_id]?.color || categoryColors[entity.category] || '#6b7280',
+        },
+        geometry: {
+          type: 'Point',
+          coordinates: [entity.longitude, entity.latitude],
+        },
+      })),
+    };
+
+    // Remove existing layers and source
+    if (map.current.getLayer('clusters')) map.current.removeLayer('clusters');
+    if (map.current.getLayer('cluster-count')) map.current.removeLayer('cluster-count');
+    if (map.current.getLayer('unclustered-point')) map.current.removeLayer('unclustered-point');
+    if (map.current.getSource('entities')) map.current.removeSource('entities');
+
+    // Add source with clustering
+    map.current.addSource('entities', {
+      type: 'geojson',
+      data: geojson,
+      cluster: true,
+      clusterMaxZoom: 14,
+      clusterRadius: 50,
+    });
+
+    // Cluster circles
+    map.current.addLayer({
+      id: 'clusters',
+      type: 'circle',
+      source: 'entities',
+      filter: ['has', 'point_count'],
+      paint: {
+        'circle-color': [
+          'step',
+          ['get', 'point_count'],
+          '#3b82f6',   // blue for < 10
+          10, '#22c55e', // green for < 50
+          50, '#eab308', // yellow for < 100
+          100, '#f97316', // orange for < 500
+          500, '#ef4444', // red for 500+
+        ],
+        'circle-radius': [
+          'step',
+          ['get', 'point_count'],
+          15,    // 15px for < 10
+          10, 20,  // 20px for < 50
+          50, 25,  // 25px for < 100
+          100, 30, // 30px for < 500
+          500, 40, // 40px for 500+
+        ],
+        'circle-stroke-width': 2,
+        'circle-stroke-color': '#ffffff',
+      },
+    });
+
+    // Cluster count labels
+    map.current.addLayer({
+      id: 'cluster-count',
+      type: 'symbol',
+      source: 'entities',
+      filter: ['has', 'point_count'],
+      layout: {
+        'text-field': '{point_count_abbreviated}',
+        'text-font': ['DIN Offc Pro Medium', 'Arial Unicode MS Bold'],
+        'text-size': 12,
+      },
+      paint: {
+        'text-color': '#ffffff',
+      },
+    });
+
+    // Individual points
+    map.current.addLayer({
+      id: 'unclustered-point',
+      type: 'circle',
+      source: 'entities',
+      filter: ['!', ['has', 'point_count']],
+      paint: {
+        'circle-color': ['get', 'color'],
+        'circle-radius': 8,
+        'circle-stroke-width': 2,
+        'circle-stroke-color': '#ffffff',
+      },
+    });
+
+    // Click on cluster to zoom
+    map.current.on('click', 'clusters', (e) => {
+      const features = map.current!.queryRenderedFeatures(e.point, { layers: ['clusters'] });
+      const clusterId = features[0].properties?.cluster_id;
+      const source = map.current!.getSource('entities') as mapboxgl.GeoJSONSource;
+      
+      source.getClusterExpansionZoom(clusterId, (err, zoom) => {
+        if (err) return;
+        map.current!.easeTo({
+          center: (features[0].geometry as GeoJSON.Point).coordinates as [number, number],
+          zoom: zoom!,
+        });
+      });
+    });
+
+    // Click on point to show popup
+    map.current.on('click', 'unclustered-point', (e) => {
+      const feature = e.features![0];
+      const coords = (feature.geometry as GeoJSON.Point).coordinates.slice() as [number, number];
+      const props = feature.properties!;
+      
+      const config = entityConfig[props.type] || entityConfig.default;
+      
+      new mapboxgl.Popup({ offset: 15 })
+        .setLngLat(coords)
+        .setHTML(`
+          <div style="padding: 8px; min-width: 200px;">
+            <div style="font-size: 24px; margin-bottom: 4px;">${config.icon}</div>
+            <h3 style="font-weight: 600; margin: 0 0 4px 0; color: #111;">${props.name}</h3>
+            <p style="margin: 0; color: #666; font-size: 12px;">
+              ${props.type.replace(/-/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
+            </p>
+            <p style="margin: 4px 0 0 0; color: #888; font-size: 11px;">
+              📍 ${props.region || 'British Columbia'}
+            </p>
+          </div>
+        `)
+        .addTo(map.current!);
+    });
+
+    // Cursor changes
+    map.current.on('mouseenter', 'clusters', () => {
+      map.current!.getCanvas().style.cursor = 'pointer';
+    });
+    map.current.on('mouseleave', 'clusters', () => {
+      map.current!.getCanvas().style.cursor = '';
+    });
+    map.current.on('mouseenter', 'unclustered-point', () => {
+      map.current!.getCanvas().style.cursor = 'pointer';
+    });
+    map.current.on('mouseleave', 'unclustered-point', () => {
+      map.current!.getCanvas().style.cursor = '';
+    });
+
+  }, [mapLoaded, entities, selectedCategory, selectedType]);
+
+  // Get unique categories and types
+  const categories = [...new Set(entities.map(e => e.category).filter(Boolean))].sort();
+  const types = [...new Set(entities.map(e => e.entity_type_id).filter(Boolean))].sort();
+
+  return (
+    <div className="relative h-[calc(100vh-200px)] min-h-[500px]">
+      {/* Map Container */}
+      <div ref={mapContainer} className="absolute inset-0 rounded-xl overflow-hidden" />
+
+      {/* Loading Overlay */}
+      {loading && (
+        <div className="absolute inset-0 bg-gray-900/80 flex items-center justify-center rounded-xl z-10">
+          <div className="text-center">
+            <div className="animate-spin text-4xl mb-2">🗺️</div>
+            <p className="text-white">Loading entities...</p>
+          </div>
+        </div>
+      )}
+
+      {/* Filter Controls */}
+      <div className="absolute top-4 left-4 z-10 bg-gray-800/90 backdrop-blur rounded-xl p-4 max-w-xs">
+        <h3 className="text-white font-semibold mb-3 flex items-center gap-2">
+          <span>🗺️</span> Map Filters
+        </h3>
+
+        {/* Category Filter */}
+        <div className="mb-3">
+          <label className="text-gray-400 text-xs uppercase mb-1 block">Category</label>
+          <select
+            value={selectedCategory}
+            onChange={(e) => setSelectedCategory(e.target.value)}
+            className="w-full bg-gray-700 text-white rounded-lg px-3 py-2 text-sm border border-gray-600"
+          >
+            <option value="all">All Categories</option>
+            {categories.map(cat => (
+              <option key={cat} value={cat}>{cat}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Type Filter */}
+        <div className="mb-3">
+          <label className="text-gray-400 text-xs uppercase mb-1 block">Entity Type</label>
+          <select
+            value={selectedType}
+            onChange={(e) => setSelectedType(e.target.value)}
+            className="w-full bg-gray-700 text-white rounded-lg px-3 py-2 text-sm border border-gray-600"
+          >
+            <option value="all">All Types</option>
+            {types.map(type => (
+              <option key={type} value={type}>
+                {entityConfig[type]?.icon || '📍'} {type.replace(/-/g, ' ')}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Stats */}
+        <div className="text-gray-400 text-xs pt-2 border-t border-gray-700">
+          Showing {stats.visible.toLocaleString()} of {stats.total.toLocaleString()} entities
+        </div>
+      </div>
+
+      {/* Legend */}
+      <div className="absolute bottom-4 left-4 z-10 bg-gray-800/90 backdrop-blur rounded-xl p-3">
+        <h4 className="text-white text-xs font-semibold mb-2">Legend</h4>
+        <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+          {Object.entries(categoryColors).slice(0, 6).map(([cat, color]) => (
+            <div key={cat} className="flex items-center gap-1.5">
+              <span className="w-3 h-3 rounded-full" style={{ backgroundColor: color }}></span>
+              <span className="text-gray-300 truncate">{cat.replace(' Services', '')}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Quick Stats */}
+      <div className="absolute top-4 right-16 z-10 bg-gray-800/90 backdrop-blur rounded-xl px-4 py-2">
+        <span className="text-white font-semibold">{stats.visible.toLocaleString()}</span>
+        <span className="text-gray-400 text-sm ml-1">entities</span>
+      </div>
+    </div>
+  );
+}
+
+export default MapView;
+Also create an API endpoint for geo entities if not exists:
+typescript// Add to your API routes:
+// GET /api/v1/entities/geo - Get entities with coordinates for map
+
+router.get('/entities/geo', async (req, res) => {
+  const { region, category, type, limit = 5000 } = req.query;
+  
+  try {
+    let query = `
+      SELECT 
+        e.id, e.slug, e.name, e.entity_type_id,
+        et.category, e.latitude, e.longitude,
+        gr.short_name as region_name
+      FROM entities e
+      LEFT JOIN entity_types et ON e.entity_type_id = et.id
+      LEFT JOIN geo_regions gr ON e.region_id = gr.id
+      WHERE e.latitude IS NOT NULL 
+        AND e.longitude IS NOT NULL
+    `;
+    
+    const params: any[] = [];
+    
+    if (region && region !== 'bc') {
+      params.push(region);
+      query += ` AND e.region_id = $${params.length}`;
+    }
+    
+    if (category) {
+      params.push(category);
+      query += ` AND et.category = $${params.length}`;
+    }
+    
+    if (type) {
+      params.push(type);
+      query += ` AND e.entity_type_id = $${params.length}`;
+    }
+    
+    params.push(limit);
+    query += ` LIMIT $${params.length}`;
+    
+    const result = await db.query(query, params);
+    res.json({ entities: result.rows, total: result.rows.length });
+  } catch (error) {
+    console.error('Error fetching geo entities:', error);
+    res.status(500).json({ error: 'Failed to fetch entities' });
+  }
+});
+Then update DashboardLayout to use MapView for the Map tab:
+tsximport { MapView } from './MapView';
+
+// In the tab content section:
+{activeTab === 'map' && (
+  <MapView regionId={selectedRegion} />
+)}
+Make sure you have Mapbox GL JS installed:
+bashnpm install mapbox-gl
+npm install --save-dev @types/mapbox-gl
+```
+
+And your Mapbox token is set in environment variables:
+```
+VITE_MAPBOX_TOKEN=your_mapbox_token_here
+The map will feature:
+
+Clustering for dense areas (color-coded by count)
+Click clusters to zoom in
+Click individual points to see popup with entity details
+Filter by category and entity type
+Color-coded legend
+Live entity count
+Dark theme to match dashboard
