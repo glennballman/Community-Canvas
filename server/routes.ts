@@ -1031,16 +1031,44 @@ export async function registerRoutes(
         return res.status(404).json({ error: 'Trip not found' });
       }
       
+      const trip = tripResult.rows[0];
+      
+      // Get segments to check for ferry requirements
+      const segmentsResult = await storage.query(
+        `SELECT details FROM trip_segments WHERE trip_id = $1`,
+        [trip.id]
+      );
+      
+      // Check if trip has ferry segments
+      const hasFerry = segmentsResult.rows.some((s: any) => s.details?.mode === 'ferry');
+      
+      // Get region-appropriate weather based on trip destination
+      const regionWeather: Record<string, { temperature: number; condition: string; wind_speed: number }> = {
+        'whistler-ski-day': { temperature: -5, condition: 'Light Snow', wind_speed: 15 },
+        'tofino-storm-watching': { temperature: 8, condition: 'Heavy Rain', wind_speed: 45 },
+        'okanagan-wine-trail': { temperature: 12, condition: 'Partly Cloudy', wind_speed: 8 },
+        'sunshine-coast-loop': { temperature: 10, condition: 'Overcast', wind_speed: 20 },
+        'harrison-hot-springs': { temperature: 6, condition: 'Cloudy', wind_speed: 12 }
+      };
+      
+      const weather = regionWeather[trip.id] || { temperature: 5, condition: 'Variable', wind_speed: 10 };
+      
       const alertsResult = await storage.query(
         `SELECT * FROM alerts WHERE is_active = true ORDER BY severity DESC LIMIT 10`
       ).catch(() => ({ rows: [] }));
       
+      // Determine ferry status
+      let ferryStatus = null;
+      if (hasFerry) {
+        ferryStatus = { status: 'Operating', delays: null, next_sailing: '15 min' };
+      }
+      
       res.json({
         trip_id: id,
         alerts: alertsResult.rows,
-        weather: { temperature: -5, condition: 'Light Snow', wind_speed: 15 },
-        road_status: 'Clear',
-        ferry_status: null,
+        weather,
+        road_status: alertsResult.rows.length > 0 ? 'Caution' : 'Clear',
+        ferry_status: ferryStatus,
         overall_status: alertsResult.rows.length > 0 ? 'caution' : 'good',
         checked_at: new Date().toISOString()
       });
@@ -1065,10 +1093,16 @@ export async function registerRoutes(
       let webcams: any[] = [];
       if (allWebcamIds.length > 0) {
         const webcamsResult = await storage.query(
-          `SELECT * FROM entities WHERE id = ANY($1::int[])`,
+          `SELECT id, name, slug, configuration FROM entities WHERE id = ANY($1::text[])`,
           [allWebcamIds]
         ).catch(() => ({ rows: [] }));
-        webcams = webcamsResult.rows;
+        webcams = webcamsResult.rows.map((w: any) => ({
+          id: w.id,
+          name: w.name,
+          slug: w.slug,
+          image_url: w.configuration?.image_url || w.configuration?.url || null,
+          location: w.configuration?.location || null
+        }));
       }
       
       const segmentWebcams = segmentsResult.rows.map((segment: any) => ({
