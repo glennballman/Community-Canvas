@@ -1,0 +1,523 @@
+We have two priorities:
+1. Fix the vehicle save error
+2. Enhance the data model based on real-world requirements
+
+=== PART 1: Debug and Fix Vehicle Save ===
+
+First, check what's happening with the vehicle save:
+```bash
+# Check the server logs for the error
+echo "=== Recent Server Logs ==="
+# Look at console output in Replit
+
+# Test the vehicle endpoint directly
+echo "=== Testing Vehicle API ==="
+curl -X POST http://localhost:5000/api/v1/planning/vehicles \
+  -H "Content-Type: application/json" \
+  -d '{
+    "owner_type": "personal",
+    "year": 2015,
+    "make": "Ford",
+    "model": "F350",
+    "vehicle_class": "truck",
+    "drive_type": "4wd",
+    "ground_clearance_inches": 8.5,
+    "passenger_capacity": 5
+  }' | jq
+
+# Check if vehicle_profiles table exists and has correct columns
+psql $DATABASE_URL -c "\d vehicle_profiles"
+```
+
+The error is likely one of:
+- Missing column in INSERT statement
+- Type mismatch
+- Missing table
+
+Fix the vehicle routes to handle optional fields properly:
+```typescript
+// In server/routes/tripPlanning.ts - update the vehicles POST endpoint
+
+router.post('/vehicles', async (req: Request, res: Response) => {
+  try {
+    const { 
+      owner_type = 'personal',
+      owner_id,
+      company_name,
+      year,
+      make,
+      model,
+      license_plate,
+      vehicle_class,
+      drive_type,
+      fuel_type,
+      ground_clearance_inches,
+      length_feet,
+      height_feet,
+      weight_lbs,
+      towing_capacity_lbs,
+      passenger_capacity,
+      color
+    } = req.body;
+
+    if (!make || !model) {
+      return res.status(400).json({ error: 'Make and model are required' });
+    }
+
+    // Determine ferry class based on dimensions
+    let ferry_class = 'under_20ft';
+    if (length_feet && length_feet > 40) ferry_class = 'over_40ft';
+    else if (length_feet && length_feet > 20) ferry_class = '20_to_40ft';
+    if (height_feet && height_feet > 7) ferry_class = 'overheight';
+
+    // Determine route suitability
+    const isTruckOrSUV = ['truck', 'suv'].includes(vehicle_class || '');
+    const isAWDor4WD = ['4wd', 'awd'].includes(drive_type || '');
+    const hasHighClearance = (ground_clearance_inches || 0) >= 8;
+
+    const rough_gravel_suitable = isTruckOrSUV && isAWDor4WD && hasHighClearance;
+    const four_x_four_required_suitable = drive_type === '4wd' && hasHighClearance;
+
+    const result = await db.query(`
+      INSERT INTO vehicle_profiles (
+        owner_type, owner_id, company_name, year, make, model, license_plate,
+        vehicle_class, drive_type, fuel_type, ground_clearance_inches,
+        length_feet, height_feet, weight_lbs, towing_capacity_lbs, passenger_capacity,
+        ferry_class, rough_gravel_suitable, four_x_four_required_suitable, color
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
+      RETURNING *
+    `, [
+      owner_type, owner_id || null, company_name || null, year || null, make, model, license_plate || null,
+      vehicle_class || 'sedan', drive_type || '2wd', fuel_type || 'gas', ground_clearance_inches || null,
+      length_feet || null, height_feet || null, weight_lbs || null, towing_capacity_lbs || null, passenger_capacity || null,
+      ferry_class, rough_gravel_suitable, four_x_four_required_suitable, color || null
+    ]);
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error creating vehicle:', error);
+    res.status(500).json({ error: 'Failed to create vehicle', details: error.message });
+  }
+});
+```
+
+=== PART 2: Enhanced Database Schema ===
+
+Add new columns and tables for the enhanced requirements:
+```sql
+-- =====================================================
+-- ENHANCED PARTICIPANT & VEHICLE SCHEMA
+-- Based on real-world requirements
+-- =====================================================
+
+-- Add color column to vehicle_profiles if not exists
+ALTER TABLE vehicle_profiles ADD COLUMN IF NOT EXISTS color VARCHAR(50);
+
+-- Add fuel_type if not exists (should be there but verify)
+ALTER TABLE vehicle_profiles ADD COLUMN IF NOT EXISTS fuel_type VARCHAR(20) DEFAULT 'gas';
+
+-- Add insurance tracking
+ALTER TABLE vehicle_profiles ADD COLUMN IF NOT EXISTS insurance_expiry DATE;
+ALTER TABLE vehicle_profiles ADD COLUMN IF NOT EXISTS registration_expiry DATE;
+
+-- =====================================================
+-- EMERGENCY CONTACTS (multiple per participant)
+-- =====================================================
+
+CREATE TABLE IF NOT EXISTS participant_emergency_contacts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  participant_id UUID NOT NULL REFERENCES participant_profiles(id) ON DELETE CASCADE,
+  
+  name VARCHAR(255) NOT NULL,
+  relationship VARCHAR(100), -- spouse, parent, friend, employer
+  phone VARCHAR(50) NOT NULL,
+  email VARCHAR(255),
+  
+  -- Priority
+  is_primary BOOLEAN DEFAULT false,
+  contact_order INTEGER DEFAULT 1,
+  
+  -- Availability
+  notes TEXT, -- "Best after 6pm", "Speaks Czech only"
+  
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- =====================================================
+-- TRIP PARTICIPANTS (passengers on a trip)
+-- =====================================================
+
+CREATE TABLE IF NOT EXISTS trip_passengers (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  
+  -- Can link to a full participant profile OR be a simple record
+  participant_id UUID REFERENCES participant_profiles(id),
+  trip_booking_id UUID REFERENCES trip_bookings(id) ON DELETE CASCADE,
+  
+  -- Basic info (if not linked to full profile)
+  name VARCHAR(255),
+  
+  -- Age classification (privacy-friendly)
+  age_category VARCHAR(20), -- infant (0-2), child (3-12), youth (13-17), adult (18-64), senior (65+)
+  exact_age INTEGER, -- Optional, for more precise requirements
+  
+  -- Special needs
+  needs_car_seat BOOLEAN DEFAULT false,
+  car_seat_type VARCHAR(30), -- rear_facing, forward_facing, booster, none
+  mobility_aids TEXT[], -- wheelchair, walker, cane
+  accessibility_needs TEXT[],
+  
+  -- Medical
+  medical_conditions TEXT[],
+  medications TEXT[],
+  allergies TEXT[],
+  
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- =====================================================
+-- DOCUMENT UPLOADS (licenses, certifications, etc.)
+-- =====================================================
+
+CREATE TABLE IF NOT EXISTS participant_documents (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  participant_id UUID NOT NULL REFERENCES participant_profiles(id) ON DELETE CASCADE,
+  
+  document_type VARCHAR(50) NOT NULL, -- drivers_license, passport, padi_cert, boating_license, fishing_license, vhf_license, pilots_license, rental_agreement, insurance_card, registration
+  document_name VARCHAR(255),
+  
+  -- Extracted data (from OCR/AI)
+  extracted_data JSONB DEFAULT '{}',
+  -- For drivers license: {license_number, class, endorsements: ["motorcycle", "air_brake"], restrictions: [], expiry: "2025-06-15"}
+  -- For fishing license: {license_number, type: "saltwater", valid_from, valid_to, region: "BC"}
+  
+  -- File reference
+  file_url VARCHAR(500),
+  file_type VARCHAR(20), -- image/jpeg, application/pdf
+  
+  -- Validation
+  expiry_date DATE,
+  is_verified BOOLEAN DEFAULT false,
+  verified_by VARCHAR(255),
+  verified_at TIMESTAMPTZ,
+  
+  -- Reminders
+  expiry_reminder_sent BOOLEAN DEFAULT false,
+  
+  -- Linked skills (auto-create skills from document)
+  auto_created_skill_ids UUID[],
+  
+  notes TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- =====================================================
+-- VEHICLE DOCUMENTS
+-- =====================================================
+
+CREATE TABLE IF NOT EXISTS vehicle_documents (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  vehicle_id UUID NOT NULL REFERENCES vehicle_profiles(id) ON DELETE CASCADE,
+  
+  document_type VARCHAR(50) NOT NULL, -- registration, insurance, rental_agreement, inspection
+  document_name VARCHAR(255),
+  
+  -- Extracted data
+  extracted_data JSONB DEFAULT '{}',
+  -- For registration: {plate: "ABC 123", vin: "...", owner: "...", expiry: "2025-03-31"}
+  -- For rental: {company: "Budget", pickup_date, return_date, vehicle_class, included_km}
+  
+  file_url VARCHAR(500),
+  file_type VARCHAR(20),
+  
+  expiry_date DATE,
+  expiry_reminder_sent BOOLEAN DEFAULT false,
+  
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- =====================================================
+-- ENHANCED SAFETY EQUIPMENT CHECKLIST
+-- =====================================================
+
+CREATE TABLE IF NOT EXISTS safety_equipment_types (
+  id VARCHAR(50) PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  category VARCHAR(50) NOT NULL, -- navigation, communication, vehicle_emergency, personal_safety, survival, tools
+  description TEXT,
+  
+  -- Requirements
+  required_for_routes TEXT[], -- logging_road, winter, remote, water
+  recommended_for_routes TEXT[],
+  
+  -- Restrictions
+  bc_ferries_allowed BOOLEAN DEFAULT true,
+  bc_ferries_notes TEXT, -- "Must be empty", "Limit 2 per vehicle"
+  
+  icon VARCHAR(10),
+  sort_order INTEGER DEFAULT 0
+);
+
+-- Seed safety equipment types
+INSERT INTO safety_equipment_types (id, name, category, description, required_for_routes, recommended_for_routes, bc_ferries_allowed, bc_ferries_notes, icon, sort_order) VALUES
+-- Navigation
+('gps_device', 'GPS Device', 'navigation', 'Dedicated GPS unit or phone with offline maps', ARRAY[]::TEXT[], ARRAY['remote', 'logging_road'], true, NULL, '📍', 1),
+('offline_maps', 'Offline Maps (Phone)', 'navigation', 'Downloaded maps for areas without cell service', ARRAY[]::TEXT[], ARRAY['remote', 'logging_road'], true, NULL, '🗺️', 2),
+('paper_maps', 'Paper Maps/Charts', 'navigation', 'Backup paper maps of the region', ARRAY[]::TEXT[], ARRAY['remote', 'backcountry'], true, NULL, '📜', 3),
+('compass', 'Compass', 'navigation', 'Magnetic compass for navigation', ARRAY[]::TEXT[], ARRAY['backcountry'], true, NULL, '🧭', 4),
+
+-- Communication
+('cell_phone', 'Cell Phone', 'communication', 'Mobile phone (note: no service in many remote areas)', ARRAY[]::TEXT[], ARRAY[]::TEXT[], true, NULL, '📱', 10),
+('satellite_messenger', 'Satellite Messenger', 'communication', 'InReach, SPOT, or similar two-way satellite device', ARRAY[]::TEXT[], ARRAY['remote', 'logging_road', 'backcountry'], true, NULL, '📡', 11),
+('satellite_phone', 'Satellite Phone', 'communication', 'Iridium or similar satellite phone', ARRAY[]::TEXT[], ARRAY['very_remote'], true, NULL, '☎️', 12),
+('vhf_radio', 'VHF Radio', 'communication', 'Marine VHF or forestry channel radio', ARRAY['logging_road']::TEXT[], ARRAY['water', 'remote'], true, NULL, '📻', 13),
+('starlink', 'Starlink', 'communication', 'Portable satellite internet terminal', ARRAY[]::TEXT[], ARRAY['remote', 'extended_stay'], true, NULL, '🛰️', 14),
+('cb_radio', 'CB Radio', 'communication', 'Citizens band radio for logging road communication', ARRAY[]::TEXT[], ARRAY['logging_road'], true, NULL, '📻', 15),
+
+-- Vehicle Emergency
+('spare_tire', 'Spare Tire (Full Size)', 'vehicle_emergency', 'Full-size spare tire, properly inflated', ARRAY['logging_road', 'remote']::TEXT[], ARRAY[]::TEXT[], true, NULL, '🛞', 20),
+('tire_jack', 'Tire Jack', 'vehicle_emergency', 'Jack suitable for your vehicle', ARRAY['logging_road', 'remote']::TEXT[], ARRAY[]::TEXT[], true, NULL, '🔧', 21),
+('tire_iron', 'Tire Iron/Lug Wrench', 'vehicle_emergency', 'Lug wrench that fits your wheels', ARRAY['logging_road', 'remote']::TEXT[], ARRAY[]::TEXT[], true, NULL, '🔧', 22),
+('jumper_cables', 'Jumper Cables', 'vehicle_emergency', 'Battery jumper cables or portable jump starter', ARRAY[]::TEXT[], ARRAY['all'], true, NULL, '🔌', 23),
+('tow_strap', 'Tow Strap', 'vehicle_emergency', 'Recovery strap for pulling out stuck vehicles', ARRAY['logging_road']::TEXT[], ARRAY['gravel'], true, NULL, '🪢', 24),
+('tire_chains', 'Tire Chains', 'vehicle_emergency', 'Snow chains that fit your tires', ARRAY['winter_mountain']::TEXT[], ARRAY['winter'], true, NULL, '⛓️', 25),
+('gas_can', 'Gas/Fuel Can', 'vehicle_emergency', 'Empty fuel container (fill at destination)', ARRAY[]::TEXT[], ARRAY['remote'], true, 'Must be empty on BC Ferries. Max 25L when full.', '⛽', 26),
+
+-- Tools
+('basic_tool_kit', 'Basic Tool Kit', 'tools', 'Wrenches, screwdrivers, pliers', ARRAY[]::TEXT[], ARRAY['remote', 'logging_road'], true, NULL, '🧰', 30),
+('socket_set', 'Socket Set', 'tools', 'Socket wrench set for vehicle repairs', ARRAY[]::TEXT[], ARRAY['remote', 'logging_road'], true, NULL, '🔩', 31),
+('duct_tape', 'Duct Tape', 'tools', 'Universal repair tape', ARRAY[]::TEXT[], ARRAY['all'], true, NULL, '🩹', 32),
+('zip_ties', 'Zip Ties', 'tools', 'Assorted cable ties for temporary repairs', ARRAY[]::TEXT[], ARRAY['all'], true, NULL, '🔗', 33),
+
+-- Personal Safety
+('first_aid_kit', 'First Aid Kit', 'personal_safety', 'Comprehensive first aid supplies', ARRAY['logging_road', 'remote', 'backcountry']::TEXT[], ARRAY['all'], true, NULL, '🩹', 40),
+('fire_extinguisher', 'Fire Extinguisher', 'personal_safety', 'ABC-rated fire extinguisher', ARRAY[]::TEXT[], ARRAY['all'], true, NULL, '🧯', 41),
+('reflective_triangles', 'Reflective Triangles', 'personal_safety', 'Emergency warning triangles', ARRAY[]::TEXT[], ARRAY['all'], true, NULL, '⚠️', 42),
+('flares', 'Road Flares', 'personal_safety', 'Emergency flares or LED alternatives', ARRAY[]::TEXT[], ARRAY['remote'], true, 'Traditional flares have restrictions', '🚨', 43),
+('hi_vis_vest', 'Hi-Vis Vest', 'personal_safety', 'Reflective safety vest', ARRAY[]::TEXT[], ARRAY['logging_road'], true, NULL, '🦺', 44),
+('bear_spray', 'Bear Spray', 'personal_safety', 'EPA-registered bear deterrent spray', ARRAY['backcountry']::TEXT[], ARRAY['remote', 'camping'], true, 'Keep accessible, not in checked luggage', '🐻', 45),
+('bear_bell', 'Bear Bell', 'personal_safety', 'Noise-making bell for bear country', ARRAY[]::TEXT[], ARRAY['backcountry', 'hiking'], true, NULL, '🔔', 46),
+('window_breaker', 'Window Breaker/Seatbelt Cutter', 'personal_safety', 'Emergency escape tool', ARRAY[]::TEXT[], ARRAY['ferry', 'water_crossing'], true, NULL, '🔨', 47),
+
+-- Survival
+('emergency_blankets', 'Emergency Blankets', 'survival', 'Mylar space blankets or wool blankets', ARRAY['remote', 'winter']::TEXT[], ARRAY['all'], true, NULL, '🛏️', 50),
+('emergency_food', 'Emergency Food', 'survival', 'Non-perishable food for 24-48 hours', ARRAY['remote', 'logging_road']::TEXT[], ARRAY['all'], true, NULL, '🍫', 51),
+('water', 'Water (4L minimum)', 'survival', 'Fresh water supply', ARRAY['remote']::TEXT[], ARRAY['all'], true, NULL, '💧', 52),
+('flashlight', 'Flashlight/Headlamp', 'survival', 'Battery or rechargeable light with extra batteries', ARRAY['remote']::TEXT[], ARRAY['all'], true, NULL, '🔦', 53),
+('matches_lighter', 'Matches/Lighter', 'survival', 'Fire-starting supplies in waterproof container', ARRAY[]::TEXT[], ARRAY['remote', 'backcountry'], true, NULL, '🔥', 54),
+('knife_multitool', 'Knife/Multitool', 'survival', 'Quality knife or multitool', ARRAY[]::TEXT[], ARRAY['all'], true, NULL, '🔪', 55),
+('whistle', 'Emergency Whistle', 'survival', 'Loud whistle for signaling', ARRAY[]::TEXT[], ARRAY['backcountry', 'water'], true, NULL, '📣', 56),
+('rain_gear', 'Rain Gear', 'survival', 'Waterproof jacket and pants', ARRAY[]::TEXT[], ARRAY['all'], true, NULL, '🧥', 57),
+('warm_clothing', 'Extra Warm Clothing', 'survival', 'Extra layers for unexpected cold', ARRAY['remote', 'winter']::TEXT[], ARRAY['all'], true, NULL, '🧣', 58);
+
+-- =====================================================
+-- VEHICLE SAFETY EQUIPMENT (what's in THIS vehicle)
+-- =====================================================
+
+CREATE TABLE IF NOT EXISTS vehicle_safety_equipment (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  vehicle_id UUID NOT NULL REFERENCES vehicle_profiles(id) ON DELETE CASCADE,
+  equipment_type_id VARCHAR(50) NOT NULL REFERENCES safety_equipment_types(id),
+  
+  present BOOLEAN DEFAULT false,
+  condition VARCHAR(20), -- new, good, fair, needs_replacement
+  last_checked DATE,
+  notes TEXT,
+  
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  
+  UNIQUE(vehicle_id, equipment_type_id)
+);
+
+-- =====================================================
+-- FLEET MANAGEMENT (multiple vehicles per owner)
+-- =====================================================
+
+-- Add fleet/organization support
+ALTER TABLE participant_profiles ADD COLUMN IF NOT EXISTS organization_id UUID;
+ALTER TABLE participant_profiles ADD COLUMN IF NOT EXISTS is_organization BOOLEAN DEFAULT false;
+ALTER TABLE participant_profiles ADD COLUMN IF NOT EXISTS organization_name VARCHAR(255);
+ALTER TABLE participant_profiles ADD COLUMN IF NOT EXISTS subscription_tier VARCHAR(20) DEFAULT 'free'; -- free, personal, business, enterprise
+
+-- Link vehicles to organizations
+ALTER TABLE vehicle_profiles ADD COLUMN IF NOT EXISTS organization_id UUID;
+ALTER TABLE vehicle_profiles ADD COLUMN IF NOT EXISTS is_fleet_vehicle BOOLEAN DEFAULT false;
+ALTER TABLE vehicle_profiles ADD COLUMN IF NOT EXISTS assigned_driver_id UUID REFERENCES participant_profiles(id);
+
+-- =====================================================
+-- INDEXES
+-- =====================================================
+
+CREATE INDEX IF NOT EXISTS idx_emergency_contacts_participant ON participant_emergency_contacts(participant_id);
+CREATE INDEX IF NOT EXISTS idx_trip_passengers_booking ON trip_passengers(trip_booking_id);
+CREATE INDEX IF NOT EXISTS idx_participant_documents_participant ON participant_documents(participant_id);
+CREATE INDEX IF NOT EXISTS idx_participant_documents_type ON participant_documents(document_type);
+CREATE INDEX IF NOT EXISTS idx_participant_documents_expiry ON participant_documents(expiry_date);
+CREATE INDEX IF NOT EXISTS idx_vehicle_documents_vehicle ON vehicle_documents(vehicle_id);
+CREATE INDEX IF NOT EXISTS idx_vehicle_safety_equipment_vehicle ON vehicle_safety_equipment(vehicle_id);
+```
+
+=== PART 3: Update Vehicle Form UI ===
+
+Update VehicleProfileForm.tsx to make specs optional and add new fields:
+```tsx
+// Add to the basic info section
+
+{/* Color */}
+<div>
+  <label className="block text-gray-300 text-sm font-medium mb-2">Color</label>
+  <input
+    type="text"
+    value={formData.color || ''}
+    onChange={(e) => setFormData({ ...formData, color: e.target.value })}
+    className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600 focus:border-blue-500 focus:outline-none"
+    placeholder="White, Black, Red, etc."
+  />
+</div>
+
+{/* Fuel Type */}
+<div>
+  <label className="block text-gray-300 text-sm font-medium mb-2">Fuel Type</label>
+  <select
+    value={formData.fuel_type || 'gas'}
+    onChange={(e) => setFormData({ ...formData, fuel_type: e.target.value })}
+    className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600 focus:border-blue-500 focus:outline-none"
+  >
+    <option value="gas">Gasoline</option>
+    <option value="diesel">Diesel</option>
+    <option value="electric">Electric</option>
+    <option value="hybrid">Hybrid</option>
+    <option value="plug_in_hybrid">Plug-in Hybrid</option>
+  </select>
+  {formData.fuel_type === 'electric' && (
+    <p className="text-yellow-400 text-xs mt-1">⚠️ EV charging stations are limited in remote BC areas</p>
+  )}
+  {formData.fuel_type === 'diesel' && (
+    <p className="text-blue-400 text-xs mt-1">ℹ️ Diesel not available at all rural stations</p>
+  )}
+</div>
+
+{/* Ground Clearance - make optional */}
+<div>
+  <label className="block text-gray-300 text-sm font-medium mb-2">
+    Ground Clearance (inches) <span className="text-gray-500 text-xs">Optional</span>
+  </label>
+  <div className="flex gap-2">
+    <input
+      type="number"
+      value={formData.ground_clearance_inches || ''}
+      onChange={(e) => setFormData({ ...formData, ground_clearance_inches: e.target.value ? parseFloat(e.target.value) : undefined })}
+      className="flex-1 bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600 focus:border-blue-500 focus:outline-none"
+      placeholder="Unknown"
+      step="0.5"
+    />
+    <button
+      type="button"
+      onClick={() => lookupVehicleSpecs()}
+      className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm"
+      title="Auto-lookup specs"
+    >
+      🔍 Lookup
+    </button>
+  </div>
+  <p className="text-gray-500 text-xs mt-1">We can look this up if you enter year/make/model</p>
+</div>
+```
+
+=== PART 4: Add Qualification Badge to Road Trips List ===
+
+In the Road Trips tab, add visual indicators for which trips the user qualifies for:
+```tsx
+// In RoadTripsTab.tsx or wherever trips are listed
+
+// Add a helper function to check qualification
+const [qualifications, setQualifications] = useState<Record<string, boolean>>({});
+
+useEffect(() => {
+  if (currentParticipantId) {
+    checkAllTripQualifications();
+  }
+}, [currentParticipantId, trips]);
+
+async function checkAllTripQualifications() {
+  const results: Record<string, boolean> = {};
+  for (const trip of trips) {
+    try {
+      const res = await fetch('/api/v1/planning/assess/participant-trip', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ participant_id: currentParticipantId, trip_id: trip.id })
+      });
+      const data = await res.json();
+      results[trip.id] = data.qualified !== false;
+    } catch {
+      results[trip.id] = true; // Assume qualified if can't check
+    }
+  }
+  setQualifications(results);
+}
+
+// In the trip card, add badge:
+<div className="absolute top-3 right-3">
+  {qualifications[trip.id] ? (
+    <span className="px-2 py-1 bg-green-500/20 text-green-400 rounded-full text-xs font-medium">
+      ✓ Qualified
+    </span>
+  ) : (
+    <span className="px-2 py-1 bg-orange-500/20 text-orange-400 rounded-full text-xs font-medium">
+      🔒 Skills Needed
+    </span>
+  )}
+</div>
+```
+
+=== PART 5: Document Future Integration Points ===
+
+Create a roadmap document for future integrations:
+```markdown
+# Community Canvas Integration Roadmap
+
+## Phase 1: Current (Community Canvas MVP)
+- ✅ Participant profiles with skills
+- ✅ Vehicle profiles with route suitability
+- ✅ Trip qualification checking
+- ✅ Service runs for remote communities
+- ✅ Route intelligence with alternatives
+
+## Phase 2: Document Intelligence (Next)
+- [ ] Driver's license OCR → auto-extract endorsements
+- [ ] Insurance card OCR → expiry reminders
+- [ ] Rental agreement OCR → vehicle capabilities
+- [ ] Fishing/boating license OCR → auto-add credentials
+- [ ] Registration OCR → vehicle details + expiry
+
+## Phase 3: Fleet Management
+- [ ] Multiple vehicles per account
+- [ ] Trailers as separate entities
+- [ ] Assigned drivers per vehicle
+- [ ] Subscription tiers (free/personal/business/enterprise)
+
+## Phase 4: CivOS Integration
+- [ ] Sovereign Individual credential vault
+- [ ] Government document verification
+- [ ] Immigration status tracking
+- [ ] Cross-border credential validation
+
+## Phase 5: Genesis Exchange Integration
+- [ ] Business insurance verification
+- [ ] WorkSafeBC certifications
+- [ ] Company fleet management
+- [ ] Job dispatch integration (Jobber)
+- [ ] Waiver Forever integration
+
+## Phase 6: Full Ecosystem
+- [ ] Boats and watercraft profiles
+- [ ] Aircraft profiles
+- [ ] Marine fuel availability
+- [ ] Aviation fuel availability
+- [ ] Weather-based trip recommendations
+- [ ] Real-time disruption rerouting
+```
+
+This sets up the enhanced data model while keeping the current system working. Run the migration to add the new tables and columns.
