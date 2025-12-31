@@ -1,0 +1,153 @@
+I need you to run diagnostic queries and report the output WITHOUT making any changes. Do not fix anything - just report what you find.
+
+=== DIAGNOSTIC 1: Database Table Check ===
+
+Run this SQL query in the database and show me the complete output:
+```sql
+-- Check road_trips data
+SELECT id, title, region, 
+       cost_budget, cost_moderate, cost_comfort,
+       rating, rating_count
+FROM road_trips 
+ORDER BY id;
+```
+
+=== DIAGNOSTIC 2: Segment Cost Verification ===
+
+Run this SQL and show output:
+```sql
+-- Compare trip totals vs segment totals
+SELECT 
+  t.id,
+  t.title,
+  t.cost_moderate as "Trip Cost (Moderate)",
+  COALESCE(SUM(s.cost_moderate), 0) as "Segment Total",
+  t.cost_moderate - COALESCE(SUM(s.cost_moderate), 0) as "Difference"
+FROM road_trips t
+LEFT JOIN trip_segments s ON t.id = s.trip_id
+GROUP BY t.id, t.title, t.cost_moderate
+ORDER BY t.id;
+```
+
+=== DIAGNOSTIC 3: Segment Details ===
+
+Run this SQL and show output:
+```sql
+-- Show all segments with their costs and types
+SELECT 
+  trip_id,
+  segment_order,
+  title,
+  segment_type,
+  cost_budget,
+  cost_moderate, 
+  cost_comfort,
+  details->>'mode' as transport_mode,
+  details->>'activity_type' as activity_type,
+  array_length(webcam_ids, 1) as webcam_count
+FROM trip_segments
+ORDER BY trip_id, segment_order;
+```
+
+=== DIAGNOSTIC 4: Ferry Segment Check ===
+
+Run this SQL and show output:
+```sql
+-- Find all ferry segments
+SELECT 
+  trip_id,
+  title,
+  cost_moderate,
+  details->>'mode' as mode,
+  details->>'operator' as operator,
+  details->>'fare' as fare
+FROM trip_segments
+WHERE details->>'mode' = 'ferry';
+```
+
+=== DIAGNOSTIC 5: Webcam Entity Sample ===
+
+Run this SQL and show output:
+```sql
+-- Sample webcam entities to understand structure
+SELECT 
+  id,
+  name,
+  slug,
+  SUBSTRING(metadata->>'direct_feed_url', 1, 80) as feed_url_preview,
+  SUBSTRING(metadata->>'image_url', 1, 80) as image_url_preview
+FROM entities 
+WHERE entity_type_id = 'webcam'
+LIMIT 15;
+```
+
+=== DIAGNOSTIC 6: API Response Check ===
+
+Run these curl commands and show me the JSON output:
+```bash
+echo "=== Trip List ==="
+curl -s http://localhost:5000/api/v1/trips | head -100
+
+echo ""
+echo "=== Whistler Trip Detail ==="
+curl -s http://localhost:5000/api/v1/trips/whistler-ski-day | head -150
+
+echo ""
+echo "=== Whistler Conditions ==="
+curl -s http://localhost:5000/api/v1/trips/whistler-ski-day/conditions
+
+echo ""
+echo "=== Whistler Webcams ==="
+curl -s http://localhost:5000/api/v1/trips/whistler-ski-day/webcams | head -100
+
+echo ""
+echo "=== Tofino Conditions ==="
+curl -s http://localhost:5000/api/v1/trips/tofino-storm-watching/conditions
+
+echo ""
+echo "=== Sunshine Coast Conditions ==="
+curl -s http://localhost:5000/api/v1/trips/sunshine-coast-loop/conditions
+```
+
+=== DIAGNOSTIC 7: Frontend Component Check ===
+
+Search and show me the current code for these specific items:
+
+1. In JourneyView.tsx, find and show me:
+   - The WebcamThumbnail component (how it gets the image URL)
+   - The conditions display section (how it shows weather/ferry/alerts)
+   - How the budget breakdown calculates the total
+
+2. In the trips API route, show me:
+   - The /conditions endpoint (full code)
+   - The /webcams endpoint (full code)
+
+=== OUTPUT FORMAT ===
+
+Please format your response as:
+
+## DIAGNOSTIC 1 RESULTS
+[paste SQL output here]
+
+## DIAGNOSTIC 2 RESULTS  
+[paste SQL output here]
+
+## DIAGNOSTIC 3 RESULTS
+[paste SQL output here]
+
+## DIAGNOSTIC 4 RESULTS
+[paste SQL output here]
+
+## DIAGNOSTIC 5 RESULTS
+[paste SQL output here]
+
+## DIAGNOSTIC 6 RESULTS
+[paste curl output here]
+
+## DIAGNOSTIC 7 RESULTS
+[paste code snippets here]
+
+## ISSUES IDENTIFIED
+[List any issues you see in the data]
+
+DO NOT FIX ANYTHING. Just report the diagnostic output so we can analyze it and plan fixes properly.
