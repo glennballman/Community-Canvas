@@ -31,6 +31,8 @@ interface Alert {
   expires_at: string | null;
   status: string;
   metadata: Record<string, unknown>;
+  latitude?: string | number;
+  longitude?: string | number;
   region_lat?: number;
   region_lng?: number;
 }
@@ -212,15 +214,16 @@ export function AlertsTab({ regionId }: AlertsTabProps) {
     markersRef.current = [];
 
     const alertsWithCoords = filteredAlerts.filter(a => {
-      const lat = (a.metadata as Record<string, unknown>)?.latitude || a.region_lat;
-      const lng = (a.metadata as Record<string, unknown>)?.longitude || a.region_lng;
-      return lat && lng;
+      const lat = Number(a.latitude || a.region_lat);
+      const lng = Number(a.longitude || a.region_lng);
+      return !isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0;
     });
 
     alertsWithCoords.forEach(alert => {
       const config = severityConfig[alert.severity] || severityConfig.info;
-      const lat = Number((alert.metadata as Record<string, unknown>)?.latitude || alert.region_lat);
-      const lng = Number((alert.metadata as Record<string, unknown>)?.longitude || alert.region_lng);
+      const lat = Number(alert.latitude || alert.region_lat);
+      const lng = Number(alert.longitude || alert.region_lng);
+      if (isNaN(lat) || isNaN(lng)) return;
       
       const el = document.createElement('div');
       el.style.cssText = `
@@ -266,18 +269,24 @@ export function AlertsTab({ regionId }: AlertsTabProps) {
 
     if (alertsWithCoords.length > 0 && map.current) {
       const bounds = new mapboxgl.LngLatBounds();
+      let validCount = 0;
       alertsWithCoords.forEach(a => {
-        const lat = Number((a.metadata as Record<string, unknown>)?.latitude || a.region_lat);
-        const lng = Number((a.metadata as Record<string, unknown>)?.longitude || a.region_lng);
-        bounds.extend([lng, lat]);
+        const lat = Number(a.latitude || a.region_lat);
+        const lng = Number(a.longitude || a.region_lng);
+        if (!isNaN(lat) && !isNaN(lng)) {
+          bounds.extend([lng, lat]);
+          validCount++;
+        }
       });
-      map.current.fitBounds(bounds, { padding: 50, maxZoom: 10 });
+      if (validCount > 0) {
+        map.current.fitBounds(bounds, { padding: 50, maxZoom: 10 });
+      }
     }
   }, [filteredAlerts, showMap, mapboxToken]);
 
   function flyToAlert(alert: Alert) {
-    const lat = (alert.metadata as Record<string, unknown>)?.latitude || alert.region_lat;
-    const lng = (alert.metadata as Record<string, unknown>)?.longitude || alert.region_lng;
+    const lat = alert.latitude || alert.region_lat;
+    const lng = alert.longitude || alert.region_lng;
     if (map.current && lat && lng) {
       map.current.flyTo({
         center: [Number(lng), Number(lat)],
