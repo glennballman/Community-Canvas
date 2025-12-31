@@ -153,8 +153,8 @@ export function SafetyEquipmentChecklist({ vehicleId, onUpdate }: SafetyEquipmen
 
   const totalItems = equipmentTypes.length;
   const presentItems = Object.values(vehicleEquipment).filter(e => e.present).length;
-  const requiredItems = equipmentTypes.filter(e => e.required_for_routes && e.required_for_routes.length > 0);
-  const requiredPresent = requiredItems.filter(e => vehicleEquipment[e.id]?.present).length;
+  const recommendedItems = equipmentTypes.filter(e => e.required_for_routes && e.required_for_routes.length > 0);
+  const recommendedPresent = recommendedItems.filter(e => vehicleEquipment[e.id]?.present).length;
 
   if (loading) {
     return (
@@ -174,12 +174,12 @@ export function SafetyEquipmentChecklist({ vehicleId, onUpdate }: SafetyEquipmen
             <p className="text-muted-foreground text-sm">Total Items</p>
           </CardContent>
         </Card>
-        <Card className={requiredPresent === requiredItems.length ? 'border-green-500/50' : 'border-orange-500/50'}>
+        <Card className={recommendedPresent === recommendedItems.length ? 'border-green-500/50' : 'border-orange-500/50'}>
           <CardContent className="py-4 text-center">
-            <p className={`text-2xl font-bold ${requiredPresent === requiredItems.length ? 'text-green-500' : 'text-orange-500'}`}>
-              {requiredPresent}/{requiredItems.length}
+            <p className={`text-2xl font-bold ${recommendedPresent === recommendedItems.length ? 'text-green-500' : 'text-orange-500'}`}>
+              {recommendedPresent}/{recommendedItems.length}
             </p>
-            <p className="text-muted-foreground text-sm">Required Items</p>
+            <p className="text-muted-foreground text-sm">Key Items</p>
           </CardContent>
         </Card>
         <Card className="border-blue-500/50">
@@ -274,8 +274,8 @@ export function SafetyEquipmentChecklist({ vehicleId, onUpdate }: SafetyEquipmen
                                 {item.name}
                               </span>
                               {isRequired && (
-                                <Badge variant="destructive" className="text-xs">
-                                  Required
+                                <Badge variant="secondary" className="text-xs bg-orange-500/20 text-orange-400">
+                                  Highly Recommended
                                 </Badge>
                               )}
                             </div>
