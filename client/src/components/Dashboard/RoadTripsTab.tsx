@@ -46,6 +46,7 @@ const seasonIcons: Record<Season, React.ReactNode> = {
 function transformDbTrip(dbTrip: any): RoadTrip {
   return {
     id: dbTrip.id,
+    slug: dbTrip.slug || dbTrip.id,
     title: dbTrip.title,
     tagline: dbTrip.tagline || '',
     description: dbTrip.description || '',
