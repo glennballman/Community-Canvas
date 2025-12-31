@@ -51,6 +51,12 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
               PUBLIC VIEW
             </Button>
           </Link>
+          <Link href="/legacy">
+            <Button variant="ghost" size="sm" className="w-full justify-start gap-2 text-xs" data-testid="link-command-center">
+              <ArrowLeft className="w-3 h-3" />
+              COMMAND CENTER
+            </Button>
+          </Link>
         </div>
         
         <ScrollArea className="flex-1 p-2">
