@@ -88,8 +88,8 @@ export function MapView({ regionId }: MapViewProps) {
     setLoading(true);
     try {
       const url = regionId && regionId !== 'bc'
-        ? `/api/v1/entities/geo?region=${regionId}&limit=5000`
-        : `/api/v1/entities/geo?limit=5000`;
+        ? `/api/v1/entities/geo?region=${regionId}&limit=15000`
+        : `/api/v1/entities/geo?limit=15000`;
       
       const response = await fetch(url);
       const data = await response.json();
