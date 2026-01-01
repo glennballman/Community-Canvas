@@ -1,4 +1,7 @@
-// ============================================
+Step 1: Create the Hooks File
+Tell Replit to create this new file:
+File: client/src/hooks/useDriverQualifications.ts
+typescript// ============================================
 // DRIVER QUALIFICATION HOOKS
 // Provides data fetching for qualification checks
 // ============================================
@@ -73,7 +76,7 @@ export function useDriverQualifications(driverId: string | null) {
     queryKey: ['driver-qualifications', driverId],
     queryFn: async () => {
       if (!driverId) throw new Error('No driver ID');
-      const response = await fetch(`/api/v1/fleet/driver-qualification-summary/${driverId}`);
+      const response = await fetch(`/api/fleet/driver-qualification-summary/${driverId}`);
       if (!response.ok) {
         const error = await response.text();
         throw new Error(error || 'Failed to fetch qualifications');
@@ -81,7 +84,7 @@ export function useDriverQualifications(driverId: string | null) {
       return response.json();
     },
     enabled: !!driverId,
-    staleTime: 30000,
+    staleTime: 30000, // Cache for 30 seconds
     retry: 1,
   });
 }
@@ -100,7 +103,7 @@ export function useQualificationCheck(
     queryKey: ['qualification-check', driverId, trailerId, province],
     queryFn: async () => {
       if (!driverId || !trailerId) throw new Error('Missing IDs');
-      const response = await fetch('/api/v1/fleet/check-driver-qualification', {
+      const response = await fetch('/api/fleet/check-driver-qualification', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ driverId, trailerId, province })
@@ -112,7 +115,7 @@ export function useQualificationCheck(
       return response.json();
     },
     enabled: !!driverId && !!trailerId,
-    staleTime: 60000,
+    staleTime: 60000, // Cache for 1 minute
     retry: 1,
   });
 }
@@ -127,7 +130,7 @@ export function useQualifiedDrivers(trailerId: string | null) {
     queryKey: ['qualified-drivers', trailerId],
     queryFn: async () => {
       if (!trailerId) throw new Error('No trailer ID');
-      const response = await fetch(`/api/v1/fleet/trailer/${trailerId}/qualified-drivers`);
+      const response = await fetch(`/api/fleet/trailer/${trailerId}/qualified-drivers`);
       if (!response.ok) {
         const error = await response.text();
         throw new Error(error || 'Failed to fetch qualified drivers');
@@ -149,3 +152,16 @@ export type {
   TrailerQualification, 
   QualificationCheckResult 
 };
+
+Tell Replit:
+
+"Create a new file client/src/hooks/useDriverQualifications.ts with the hooks code above. This provides three hooks:
+
+useDriverQualifications(driverId) - gets summary for all trailers
+useQualificationCheck(driverId, trailerId) - checks one specific combo
+useQualifiedDrivers(trailerId) - gets all drivers who can tow a trailer
+
+Make sure @tanstack/react-query is already installed (it should be if you're using it elsewhere)."
+
+
+Let me know when Step 1 is done and I'll give you Step 2 (QualificationBadge component)
