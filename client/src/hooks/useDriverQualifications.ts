@@ -62,6 +62,14 @@ interface QualificationCheckResult {
 export function useDriverQualifications(driverId: string | null) {
   return useQuery<DriverQualificationSummary>({
     queryKey: ['/api/fleet/driver-qualification-summary', driverId],
+    queryFn: async () => {
+      if (!driverId) throw new Error('No driver ID');
+      const response = await fetch(`/api/fleet/driver-qualification-summary/${driverId}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch driver qualifications');
+      }
+      return response.json();
+    },
     enabled: !!driverId,
     staleTime: 30000,
   });
