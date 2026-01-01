@@ -15,6 +15,7 @@ import { getJsonLoadedMembers } from "@shared/chamber-member-registry";
 import { getChamberProgressList, getChamberProgressSummary } from "@shared/chamber-progress";
 import { createFleetRouter } from "./routes/fleet";
 import { createAccommodationsRouter } from "./routes/accommodations";
+import stagingRouter from "./routes/staging";
 import { JobberService, getJobberAuthUrl, exchangeCodeForToken } from "./services/jobber";
 import { CompanyCamService, getPhotoUrl } from "./services/companycam";
 
@@ -37,6 +38,9 @@ export async function registerRoutes(
 
   // Register accommodations routes
   app.use('/api/accommodations', createAccommodationsRouter(pool));
+
+  // Register staging network routes
+  app.use('/api/staging', stagingRouter);
 
   // Jobber OAuth flow - Start authorization
   app.get('/api/v1/integrations/jobber/auth', (req, res) => {
