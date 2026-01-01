@@ -12,9 +12,12 @@ import {
   Link2,
   Link2Off,
   Caravan,
-  AlertTriangle
+  AlertTriangle,
+  X
 } from 'lucide-react';
 import { QualificationBadge } from './QualificationBadge';
+import { DriverQualificationSummary } from './DriverQualificationSummary';
+import { DriverQualificationsForm } from './DriverQualificationsForm';
 import { useQualificationCheck } from '@/hooks/useDriverQualifications';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -106,6 +109,7 @@ export function FleetDashboard() {
   const [editVehicleId, setEditVehicleId] = useState<string | null>(null);
   const [editTrailerId, setEditTrailerId] = useState<string | null>(null);
   const [currentDriverId, setCurrentDriverId] = useState<string | null>(null);
+  const [showQualificationsModal, setShowQualificationsModal] = useState(false);
 
   useEffect(() => {
     const savedId = localStorage.getItem('tripPlanning_participantId');
@@ -211,6 +215,13 @@ export function FleetDashboard() {
           )}
         </CardContent>
       </Card>
+
+      {currentDriverId && (
+        <DriverQualificationSummary
+          driverId={currentDriverId}
+          onEditQualifications={() => setShowQualificationsModal(true)}
+        />
+      )}
 
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div className="flex gap-2 flex-wrap">
@@ -409,6 +420,31 @@ export function FleetDashboard() {
           />
         </DialogContent>
       </Dialog>
+
+      {showQualificationsModal && currentDriverId && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-card rounded-lg border border-border w-full max-w-2xl max-h-[90vh] overflow-y-auto m-4">
+            <div className="flex items-center justify-between p-4 border-b border-border">
+              <h2 className="text-lg font-semibold">Edit Driver Qualifications</h2>
+              <button
+                onClick={() => setShowQualificationsModal(false)}
+                className="p-2 hover:bg-muted rounded-lg transition-colors"
+                data-testid="close-qualifications-modal"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="p-4">
+              <DriverQualificationsForm
+                driverId={currentDriverId}
+                onSave={() => {
+                  setShowQualificationsModal(false);
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

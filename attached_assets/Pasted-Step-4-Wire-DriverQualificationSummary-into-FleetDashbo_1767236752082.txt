@@ -1,0 +1,134 @@
+Step 4: Wire DriverQualificationSummary into FleetDashboard
+Now we need to add the summary card to your Fleet Dashboard. Since I don't have your exact FleetDashboard.tsx file, I'll give you the pieces to integrate:
+Modify: client/src/components/Fleet/FleetDashboard.tsx
+4A. Add Imports (at top of file)
+tsx// Add these imports near the top of FleetDashboard.tsx
+import { DriverQualificationSummary } from './DriverQualificationSummary';
+import { DriverQualificationsForm } from './DriverQualificationsForm';
+import { useState } from 'react';
+4B. Add State for Qualifications Modal
+tsx// Add inside your FleetDashboard component, near other useState calls
+const [showQualificationsModal, setShowQualificationsModal] = useState(false);
+4C. Get Current Driver ID
+You'll need the current user's participant profile ID. This might already exist in your app. Here are options:
+Option A: If you have user context
+tsx// If you have auth/user context
+import { useAuth } from '@/hooks/useAuth'; // or wherever your auth hook is
+const { user } = useAuth();
+
+// Then fetch their participant profile
+import { useQuery } from '@tanstack/react-query';
+
+const { data: participantData } = useQuery({
+  queryKey: ['current-participant', user?.id],
+  queryFn: async () => {
+    const response = await fetch(`/api/v1/fleet/participant-by-user/${user?.id}`);
+    if (!response.ok) throw new Error('Failed to fetch participant');
+    return response.json();
+  },
+  enabled: !!user?.id,
+});
+
+const currentDriverId = participantData?.id;
+Option B: If participant ID is stored directly
+tsx// If the participant ID is already available somewhere
+const currentDriverId = user?.participantId; // or however it's stored
+Option C: For testing - hardcode Glenn's ID temporarily
+tsx// TEMPORARY for testing - replace with actual ID from your database
+// Run this SQL to find it: SELECT id, full_name FROM participant_profiles;
+const currentDriverId = 'your-participant-uuid-here';
+4D. Add the Summary Card to JSX
+Find where your Fleet Management header is and add the summary card below it, above the vehicle/trailer cards:
+tsx{/* Inside your FleetDashboard return statement */}
+{/* Find your existing structure - it probably looks something like this: */}
+
+<div className="space-y-6">
+  {/* Fleet Management Header - this exists */}
+  <div className="bg-card rounded-lg p-4 border border-border">
+    <div className="flex items-center justify-between mb-4">
+      <div>
+        <h2 className="text-xl font-semibold flex items-center gap-2">
+          <Truck className="h-5 w-5" />
+          Fleet Management
+        </h2>
+        <p className="text-sm text-muted-foreground">
+          Manage vehicles, trailers, and assignments
+        </p>
+      </div>
+      {/* Add Trailer / Add Vehicle buttons */}
+    </div>
+    
+    {/* Stats row (4 Total Vehicles, 4 Available, etc.) */}
+    {/* ... existing stats ... */}
+  </div>
+
+  {/* ============================================ */}
+  {/* ADD THIS: Driver Qualification Summary Card */}
+  {/* ============================================ */}
+  {currentDriverId && (
+    <DriverQualificationSummary
+      driverId={currentDriverId}
+      onEditQualifications={() => setShowQualificationsModal(true)}
+    />
+  )}
+
+  {/* Filter tabs (All, Available, In Use, Maintenance) - this exists */}
+  {/* ... */}
+
+  {/* Vehicle and Trailer cards - this exists */}
+  {/* ... */}
+</div>
+4E. Add the Qualifications Modal
+Add this near the end of your component, before the closing </div> or wherever you have other modals:
+tsx{/* Driver Qualifications Modal */}
+{showQualificationsModal && currentDriverId && (
+  <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+    <div className="bg-card rounded-lg border border-border w-full max-w-2xl max-h-[90vh] overflow-y-auto m-4">
+      {/* Modal Header */}
+      <div className="flex items-center justify-between p-4 border-b border-border">
+        <h2 className="text-lg font-semibold">Edit Driver Qualifications</h2>
+        <button
+          onClick={() => setShowQualificationsModal(false)}
+          className="p-2 hover:bg-muted rounded-lg transition-colors"
+        >
+          <X className="h-5 w-5" />
+        </button>
+      </div>
+      
+      {/* Modal Body */}
+      <div className="p-4">
+        <DriverQualificationsForm
+          driverId={currentDriverId}
+          onSave={() => {
+            setShowQualificationsModal(false);
+            // The useDriverQualifications hook will auto-refetch
+          }}
+        />
+      </div>
+    </div>
+  </div>
+)}
+Make sure to import X from lucide-react if not already imported:
+tsximport { X } from 'lucide-react';
+
+Complete Integration Checklist
+Tell Replit:
+
+"Integrate DriverQualificationSummary into FleetDashboard.tsx:
+
+Add imports for DriverQualificationSummary, DriverQualificationsForm, and useState
+Add state: const [showQualificationsModal, setShowQualificationsModal] = useState(false);
+We need the current user's participant profile ID. Check if we already have this from auth context. If not, we may need to:
+
+Add an API endpoint to get participant by user ID, OR
+Query for participant profiles and find the current user's, OR
+For now, hardcode Glenn Ballman's participant ID for testing
+
+
+Add the <DriverQualificationSummary> component below the Fleet Management header and above the filter tabs
+Add a modal that shows <DriverQualificationsForm> when 'Edit Qualifications' is clicked
+
+The summary card should show Glenn's license info, endorsements, and how many of the 4 trailers he's qualified to tow."
+
+
+Let me know when Step 4 is done (or if Replit has questions about getting the participant ID) and I'll give you Step 5 (adding badges to TrailerCard)
