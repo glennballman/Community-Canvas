@@ -1,0 +1,1727 @@
+Based on extensive industry research, here's the complete trailer system covering work trailers, horse/livestock trailers with living quarters, and heavy equipment transport trailers.
+
+=== PART 1: Database Schema - Extended Trailer Types ===
+```sql
+-- =====================================================
+-- COMPREHENSIVE TRAILER TYPE CLASSIFICATION
+-- =====================================================
+
+-- Drop and recreate with full industry terminology
+DROP TYPE IF EXISTS trailer_type_enum CASCADE;
+CREATE TYPE trailer_type_enum AS ENUM (
+  -- HORSE TRAILERS
+  'horse_straight_load',      -- Horses face forward, side-by-side
+  'horse_slant_load',         -- Horses at angle, head to streetside
+  'horse_reverse_slant',      -- Horses at angle, head to curbside (rare)
+  'horse_head_to_head',       -- 4-6 horses facing each other with center aisle
+  'horse_stock_combo',        -- Stock trailer adapted for horses
+  'horse_box_stall',          -- Open box stalls like barn stalls
+  'horse_2_plus_1',           -- 2 rear stalls + 1 front box stall
+  
+  -- LIVESTOCK TRAILERS
+  'livestock_stock',          -- Open slat sides, cattle/general livestock
+  'livestock_pot',            -- Cattle pot / possum belly (double deck)
+  'livestock_sheep_deck',     -- Multi-deck for sheep/goats
+  'livestock_hog',            -- Hog trailer with punch floor
+  
+  -- ENCLOSED CARGO / WORK
+  'enclosed_cargo',           -- General enclosed cargo
+  'enclosed_contractor',      -- Contractor/tool trailer with shelving
+  'enclosed_mobile_workshop', -- Full workshop with workbench, power
+  'enclosed_concession',      -- Food truck / concession
+  'enclosed_office',          -- Mobile office trailer
+  'enclosed_fiber_splicing',  -- Telecom/utility work trailer
+  
+  -- OPEN UTILITY
+  'utility_open',             -- Basic open utility trailer
+  'utility_landscape',        -- Landscape trailer with mesh sides
+  'utility_pipe_material',    -- Long material / pipe rack trailer
+  'utility_atv',              -- ATV/UTV trailer
+  
+  -- FLATBED / EQUIPMENT
+  'flatbed_standard',         -- Standard flatbed
+  'flatbed_tilt',             -- Tilt deck for easy loading
+  'flatbed_dovetail',         -- Dovetail/beaver tail rear
+  'flatbed_deckover',         -- Deck over wheels (wider)
+  
+  -- HEAVY EQUIPMENT
+  'equipment_car_hauler',     -- Car hauler / auto transport
+  'equipment_step_deck',      -- Step deck / drop deck
+  'equipment_lowboy',         -- Lowboy (fixed gooseneck)
+  'equipment_rgn',            -- Removable Gooseneck (RGN)
+  'equipment_double_drop',    -- Double drop deck
+  'equipment_stretch',        -- Extendable/stretch trailer
+  'equipment_hydraulic_tail', -- Hydraulic tail trailer
+  
+  -- DUMP
+  'dump_standard',            -- Standard dump trailer
+  'dump_gooseneck',           -- Gooseneck dump
+  'dump_side_dump',           -- Side dump trailer
+  'dump_belly_dump',          -- Bottom/belly dump
+  'dump_end_dump',            -- End dump semi
+  
+  -- RV / RECREATION (Towable)
+  'rv_travel_trailer',        -- Travel trailer / camper
+  'rv_fifth_wheel',           -- Fifth wheel RV
+  'rv_toy_hauler',            -- Toy hauler with garage
+  'rv_popup',                 -- Pop-up / fold-down camper
+  'rv_teardrop',              -- Teardrop camper
+  'rv_truck_camper',          -- Slide-in truck camper
+  
+  -- BOAT / WATER
+  'boat_bunk',                -- Bunk-style boat trailer
+  'boat_roller',              -- Roller boat trailer
+  'boat_pwc',                 -- Personal watercraft (jet ski)
+  'boat_pontoon',             -- Pontoon boat trailer
+  'boat_sailboat',            -- Sailboat trailer with mast support
+  
+  -- SPECIALTY
+  'specialty_generator',      -- Generator/power trailer
+  'specialty_fuel',           -- Fuel transfer trailer
+  'specialty_welding',        -- Welding trailer
+  'specialty_pressure_wash',  -- Pressure washing trailer
+  'specialty_portable_toilet',-- Portable restroom trailer
+  'specialty_custom'          -- Custom/other
+);
+
+-- =====================================================
+-- HORSE TRAILER SPECIFIC FIELDS
+-- =====================================================
+
+-- Horse loading configuration
+DROP TYPE IF EXISTS horse_load_config CASCADE;
+CREATE TYPE horse_load_config AS ENUM (
+  'straight_load',        -- Horses face forward
+  'slant_load',           -- Angled stalls, head to driver side
+  'reverse_slant',        -- Angled, head to passenger side
+  'head_to_head',         -- Facing each other with center aisle
+  'box_stall',            -- Open box stalls
+  'stock_open'            -- No dividers, open stock style
+);
+
+-- Divider types
+DROP TYPE IF EXISTS horse_divider_type CASCADE;
+CREATE TYPE horse_divider_type AS ENUM (
+  'full_height',          -- Floor to ceiling solid
+  'partial',              -- Partial height
+  'padded',               -- Padded dividers
+  'air_flow',             -- Slats for ventilation
+  'stud_wall',            -- Solid stud divider (stallions)
+  'telescoping',          -- Adjustable length
+  'removable',            -- Fully removable
+  'swing_out',            -- Swing out for box stall conversion
+  'none'                  -- No dividers
+);
+
+-- Manger configuration
+DROP TYPE IF EXISTS manger_type CASCADE;
+CREATE TYPE manger_type AS ENUM (
+  'standard_manger',      -- Fixed manger under horse head
+  'drop_down_manger',     -- Folds down for more space
+  'hay_bag_only',         -- No manger, hay bags used
+  'walk_through',         -- No manger, open walk-through
+  'none'
+);
+
+-- Add horse-specific columns to trailer_profiles
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS is_horse_trailer BOOLEAN DEFAULT false;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS horse_capacity INTEGER; -- Number of horses
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS horse_load_config horse_load_config;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS stall_length_inches INTEGER; -- Length per stall
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS stall_width_inches INTEGER;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS stall_height_inches INTEGER; -- Interior height
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS horse_size_rating VARCHAR(30); -- pony, standard, warmblood, draft
+
+-- Dividers
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS divider_type horse_divider_type DEFAULT 'none';
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS divider_padded BOOLEAN DEFAULT false;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS dividers_removable BOOLEAN DEFAULT false;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS has_head_dividers BOOLEAN DEFAULT false;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS has_butt_bars BOOLEAN DEFAULT false;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS has_breast_bars BOOLEAN DEFAULT false;
+
+-- Mangers & Feeding
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS manger_type manger_type DEFAULT 'none';
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS has_hay_rack BOOLEAN DEFAULT false;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS hay_rack_type VARCHAR(30); -- roof_mounted, rear_mounted, front_rack
+
+-- Windows & Ventilation
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS drop_down_windows_head INTEGER DEFAULT 0; -- Count
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS drop_down_windows_butt INTEGER DEFAULT 0;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS slider_windows INTEGER DEFAULT 0;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS roof_vents INTEGER DEFAULT 0;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS window_bars BOOLEAN DEFAULT false; -- Safety bars on windows
+
+-- Doors & Access
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS escape_door_count INTEGER DEFAULT 0;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS escape_door_side VARCHAR(20); -- streetside, curbside, both
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS walk_through_door BOOLEAN DEFAULT false; -- Between LQ and horse area
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS rear_load_type VARCHAR(30); -- ramp, step_up, dutch_doors, swing_doors
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS side_ramp BOOLEAN DEFAULT false; -- Side loading ramp
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS rear_ramp_spring_assist BOOLEAN DEFAULT false;
+
+-- Flooring & Safety
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS horse_floor_type VARCHAR(30); -- aluminum, wood, rubber_mat, rumber
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS floor_mats BOOLEAN DEFAULT false;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS kick_wall_padding BOOLEAN DEFAULT false; -- SafeKick style walls
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS lined_walls BOOLEAN DEFAULT false;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS insulated_walls BOOLEAN DEFAULT false;
+
+-- Tie Systems
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS tie_ring_count INTEGER DEFAULT 0;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS tie_system_type VARCHAR(30); -- fixed_rings, quick_release, panic_snaps
+
+-- =====================================================
+-- TACK ROOM / DRESSING ROOM
+-- =====================================================
+
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS has_tack_room BOOLEAN DEFAULT false;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS tack_room_type VARCHAR(30); -- front_tack, rear_tack, mid_tack, fold_up, collapsible
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS tack_room_length_inches INTEGER; -- Short wall length
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS tack_room_width VARCHAR(20); -- full_width, partial
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS saddle_rack_count INTEGER DEFAULT 0;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS saddle_rack_type VARCHAR(30); -- swing_out, fixed, removable
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS bridle_hooks INTEGER DEFAULT 0;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS blanket_bar BOOLEAN DEFAULT false;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS tack_room_carpet BOOLEAN DEFAULT false;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS brush_tray BOOLEAN DEFAULT false;
+
+-- =====================================================
+-- LIVING QUARTERS (LQ) - For Work & Horse Trailers
+-- =====================================================
+
+-- LQ applies to horse trailers AND work trailers with sleeping
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS has_living_quarters BOOLEAN DEFAULT false;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS lq_certified BOOLEAN DEFAULT false; -- RVIA certified
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS lq_certification_type VARCHAR(30); -- rvia, tr_arnold, none
+
+-- LQ Dimensions (the "short wall" is the LQ length in gooseneck)
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS lq_short_wall_feet DECIMAL(4,1); -- 6', 8', 10', 12', etc.
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS lq_long_wall_feet DECIMAL(4,1); -- Total LQ length if different
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS lq_width_feet DECIMAL(4,1);
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS lq_ceiling_height_inches INTEGER;
+
+-- Sleeping
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS lq_sleep_capacity INTEGER;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS lq_bed_type VARCHAR(30); -- queen, full, dinette_converts, sofa_sleeper, bunk, cabover
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS lq_bed_count INTEGER DEFAULT 1;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS lq_has_cabover_bed BOOLEAN DEFAULT false; -- Bed over gooseneck
+
+-- Kitchen
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS lq_has_kitchen BOOLEAN DEFAULT false;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS lq_cooktop_type VARCHAR(30); -- 2_burner, 3_burner, induction, none
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS lq_has_oven BOOLEAN DEFAULT false;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS lq_has_microwave BOOLEAN DEFAULT false;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS lq_microwave_type VARCHAR(30); -- standard, convection
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS lq_refrigerator_type VARCHAR(30); -- 3_way, 12v_compressor, residential
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS lq_refrigerator_cubic_feet DECIMAL(4,1);
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS lq_sink_type VARCHAR(30); -- single, double, none
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS lq_has_outdoor_kitchen BOOLEAN DEFAULT false;
+
+-- Bathroom
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS lq_has_bathroom BOOLEAN DEFAULT false;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS lq_bathroom_type VARCHAR(30); -- wet_bath, dry_bath, half_bath
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS lq_toilet_type VARCHAR(30); -- gravity, macerator, cassette, porta_potti
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS lq_has_shower BOOLEAN DEFAULT false;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS lq_shower_type VARCHAR(30); -- corner, radius, rectangular, outdoor
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS lq_has_vanity BOOLEAN DEFAULT false;
+
+-- Climate
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS lq_ac_type VARCHAR(30); -- roof_ac, ducted, mini_split, none
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS lq_ac_btu INTEGER;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS lq_heat_type VARCHAR(30); -- propane_furnace, heat_pump, electric, none
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS lq_heat_btu INTEGER;
+
+-- Water & Waste (may override trailer-level fields)
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS lq_fresh_water_gallons INTEGER;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS lq_gray_water_gallons INTEGER;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS lq_black_water_gallons INTEGER;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS lq_water_heater_type VARCHAR(30); -- tankless, 6_gal, 10_gal, none
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS lq_water_heater_gallons INTEGER;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS lq_winterized BOOLEAN DEFAULT false; -- Heated/insulated for winter
+
+-- Power
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS lq_shore_power_amps INTEGER; -- 30, 50
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS lq_has_generator BOOLEAN DEFAULT false;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS lq_generator_type VARCHAR(30); -- built_in, portable_mount
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS lq_generator_watts INTEGER;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS lq_generator_fuel VARCHAR(20); -- gas, propane, diesel
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS lq_has_solar BOOLEAN DEFAULT false;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS lq_solar_watts INTEGER;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS lq_battery_type VARCHAR(30); -- lead_acid, agm, lithium
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS lq_battery_amp_hours INTEGER;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS lq_has_inverter BOOLEAN DEFAULT false;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS lq_inverter_watts INTEGER;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS lq_converter_amps INTEGER; -- 12V converter
+
+-- Entertainment & Comfort
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS lq_tv_count INTEGER DEFAULT 0;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS lq_has_stereo BOOLEAN DEFAULT false;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS lq_speaker_count INTEGER DEFAULT 0;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS lq_has_awning BOOLEAN DEFAULT false;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS lq_awning_length_feet DECIMAL(4,1);
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS lq_awning_power BOOLEAN DEFAULT false;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS lq_has_slide_out BOOLEAN DEFAULT false;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS lq_slide_out_count INTEGER DEFAULT 0;
+
+-- Propane
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS lq_propane_tank_count INTEGER;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS lq_propane_capacity_lbs INTEGER;
+
+-- =====================================================
+-- WORK / CONTRACTOR TRAILER FIELDS
+-- =====================================================
+
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS is_work_trailer BOOLEAN DEFAULT false;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS work_trailer_type VARCHAR(50); -- contractor, mobile_workshop, service, fiber_splicing
+
+-- Shelving & Storage
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS has_shelving BOOLEAN DEFAULT false;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS shelving_type VARCHAR(30); -- wood, metal, aluminum, adjustable
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS shelving_sides VARCHAR(20); -- one_side, both_sides, rear
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS shelf_count INTEGER DEFAULT 0;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS has_parts_bins BOOLEAN DEFAULT false;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS parts_bin_count INTEGER DEFAULT 0;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS has_tool_cabinets BOOLEAN DEFAULT false;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS has_overhead_storage BOOLEAN DEFAULT false;
+
+-- Workbench
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS has_workbench BOOLEAN DEFAULT false;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS workbench_type VARCHAR(30); -- fixed, fold_down, slide_out
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS workbench_length_inches INTEGER;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS workbench_width_inches INTEGER;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS workbench_has_vise BOOLEAN DEFAULT false;
+
+-- Tool Storage
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS has_ladder_rack BOOLEAN DEFAULT false;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS ladder_rack_type VARCHAR(30); -- roof, interior_ceiling, side_mount
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS has_pipe_rack BOOLEAN DEFAULT false;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS pipe_rack_length_feet DECIMAL(4,1);
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS has_conduit_tube BOOLEAN DEFAULT false; -- PVC tubes for conduit/pipe
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS has_lumber_rack BOOLEAN DEFAULT false;
+
+-- Power Systems (Work Trailer Specific)
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS has_generator_mount BOOLEAN DEFAULT false;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS generator_mount_type VARCHAR(30); -- tongue, rear, enclosed_cabinet
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS has_shore_power BOOLEAN DEFAULT false;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS shore_power_amps_work INTEGER; -- 30, 50, 100
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS electrical_outlets INTEGER DEFAULT 0;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS outlet_type VARCHAR(30); -- 110v, 220v, mixed
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS has_air_compressor_mount BOOLEAN DEFAULT false;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS has_welder_outlet BOOLEAN DEFAULT false;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS welder_outlet_amps INTEGER;
+
+-- Climate Control (Work)
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS has_hvac BOOLEAN DEFAULT false;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS hvac_type VARCHAR(30); -- mini_split, roof_ac, portable
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS has_exhaust_fan BOOLEAN DEFAULT false;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS exhaust_fan_cfm INTEGER;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS has_dust_collection BOOLEAN DEFAULT false;
+
+-- =====================================================
+-- HEAVY EQUIPMENT TRAILER FIELDS
+-- =====================================================
+
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS is_equipment_trailer BOOLEAN DEFAULT false;
+
+-- Deck Configuration
+DROP TYPE IF EXISTS deck_type CASCADE;
+CREATE TYPE deck_type AS ENUM (
+  'flatbed',              -- Standard flat deck
+  'step_deck',            -- Single drop (front high, rear low)
+  'double_drop',          -- Lowboy style (high-low-high)
+  'lowboy_fixed',         -- Fixed gooseneck lowboy
+  'rgn',                  -- Removable Gooseneck
+  'tilt_deck',            -- Hydraulic tilt
+  'deckover',             -- Deck over wheels
+  'split_deck',           -- Split/folding deck
+  'hydraulic_tail',       -- Hydraulic tail for self-loading
+  'beavertail',           -- Angled rear (dovetail)
+  'stretch'               -- Extendable deck
+);
+
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS deck_type deck_type;
+
+-- Deck Dimensions
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS deck_length_feet DECIMAL(5,1);
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS deck_width_inches INTEGER;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS deck_height_inches INTEGER; -- Height from ground
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS well_length_feet DECIMAL(5,1); -- For lowboy/RGN
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS upper_deck_length_feet DECIMAL(4,1); -- Step deck front
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS lower_deck_length_feet DECIMAL(4,1); -- Step deck rear/main
+
+-- For stretch/extendable trailers
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS is_extendable BOOLEAN DEFAULT false;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS extended_length_feet DECIMAL(5,1);
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS retracted_length_feet DECIMAL(5,1);
+
+-- Load Height Clearance
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS max_load_height_feet DECIMAL(4,1); -- Before permit needed
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS max_legal_height_feet DECIMAL(4,1); -- 13'6" or 14' typically
+
+-- Loading System
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS gooseneck_removable BOOLEAN DEFAULT false;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS gooseneck_type VARCHAR(30); -- fixed, hydraulic_detach, mechanical_detach
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS has_loading_ramps BOOLEAN DEFAULT false;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS ramp_type_equipment VARCHAR(30); -- flip_up, slide_in, hydraulic, air
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS ramp_length_feet DECIMAL(4,1);
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS ramp_width_inches INTEGER;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS ramp_capacity_lbs_equipment INTEGER;
+
+-- Tilt Deck Specific
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS tilt_type VARCHAR(30); -- gravity, hydraulic, power_up_gravity_down
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS tilt_angle_degrees INTEGER;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS stationary_front_feet DECIMAL(4,1); -- Non-tilting front section
+
+-- Heavy Duty Axle Configuration
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS axle_count_equipment INTEGER;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS axle_spacing_inches INTEGER;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS axle_capacity_per_axle_lbs INTEGER;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS has_lift_axle BOOLEAN DEFAULT false; -- Retractable axle
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS lift_axle_count INTEGER;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS has_air_ride BOOLEAN DEFAULT false;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS has_spread_axle BOOLEAN DEFAULT false;
+
+-- Tie Down System
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS has_stake_pockets BOOLEAN DEFAULT false;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS stake_pocket_count INTEGER;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS has_rub_rails BOOLEAN DEFAULT false;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS has_winch BOOLEAN DEFAULT false;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS winch_capacity_lbs INTEGER;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS winch_type VARCHAR(30); -- manual, electric, hydraulic
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS has_chain_tie_downs BOOLEAN DEFAULT false;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS chain_binder_count INTEGER;
+
+-- Deck Surface
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS deck_surface VARCHAR(30); -- wood, steel, aluminum, apitong, oak, rubber_coated
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS deck_thickness_inches DECIMAL(3,1);
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS has_wheel_wells BOOLEAN DEFAULT false; -- Wheel cutouts in deck
+
+-- =====================================================
+-- DUMP TRAILER FIELDS
+-- =====================================================
+
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS is_dump_trailer BOOLEAN DEFAULT false;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS dump_type VARCHAR(30); -- end_dump, side_dump, belly_dump, 3_way
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS dump_capacity_cubic_yards DECIMAL(5,1);
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS hydraulic_type VARCHAR(30); -- scissor, telescopic, dual_ram
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS hydraulic_capacity_tons DECIMAL(5,1);
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS dump_angle_degrees INTEGER;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS has_tarp BOOLEAN DEFAULT false;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS tarp_type VARCHAR(30); -- manual_roll, electric_roll, arm_system
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS has_barn_doors_dump BOOLEAN DEFAULT false;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS has_spread_gate BOOLEAN DEFAULT false; -- Spreader gate for gravel
+
+-- =====================================================
+-- BOAT TRAILER FIELDS
+-- =====================================================
+
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS is_boat_trailer BOOLEAN DEFAULT false;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS boat_trailer_type VARCHAR(30); -- bunk, roller, float_on, pwc
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS max_boat_length_feet DECIMAL(4,1);
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS max_boat_weight_lbs INTEGER;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS bunk_count INTEGER;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS roller_count INTEGER;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS has_winch_boat BOOLEAN DEFAULT false;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS winch_type_boat VARCHAR(30); -- manual, electric
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS has_guide_ons BOOLEAN DEFAULT false; -- Guide posts
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS guide_on_type VARCHAR(30); -- post, bunk, roller
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS is_galvanized BOOLEAN DEFAULT false; -- Corrosion protection
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS has_disc_brakes_boat BOOLEAN DEFAULT false; -- Disc vs drum for marine
+
+-- =====================================================
+-- REFERENCE TABLES FOR INDUSTRY STANDARDS
+-- =====================================================
+
+-- Horse Trailer Size Standards
+CREATE TABLE IF NOT EXISTS horse_size_standards (
+  id SERIAL PRIMARY KEY,
+  size_name VARCHAR(30) NOT NULL UNIQUE,
+  min_stall_length_inches INTEGER,
+  min_stall_width_inches INTEGER,
+  min_height_inches INTEGER,
+  description TEXT,
+  example_breeds TEXT[]
+);
+
+INSERT INTO horse_size_standards (size_name, min_stall_length_inches, min_stall_width_inches, min_height_inches, description, example_breeds) VALUES
+('pony', 72, 24, 60, 'For ponies under 14 hands', ARRAY['Shetland', 'Welsh', 'Miniature']),
+('standard', 84, 28, 78, 'Average sized horses 14-16 hands', ARRAY['Quarter Horse', 'Arabian', 'Morgan']),
+('warmblood', 96, 30, 84, 'Larger horses 16-17 hands', ARRAY['Warmblood', 'Thoroughbred', 'Hanoverian']),
+('draft', 108, 34, 90, 'Draft and heavy breeds 17+ hands', ARRAY['Clydesdale', 'Percheron', 'Belgian', 'Shire']);
+
+-- Heavy Equipment Trailer Weight Classes
+CREATE TABLE IF NOT EXISTS equipment_trailer_classes (
+  id SERIAL PRIMARY KEY,
+  class_name VARCHAR(50) NOT NULL UNIQUE,
+  min_gvwr_lbs INTEGER,
+  max_gvwr_lbs INTEGER,
+  typical_axles VARCHAR(20),
+  typical_deck_height_inches INTEGER,
+  cdl_required BOOLEAN DEFAULT false,
+  permit_required_threshold TEXT,
+  description TEXT
+);
+
+INSERT INTO equipment_trailer_classes (class_name, min_gvwr_lbs, max_gvwr_lbs, typical_axles, typical_deck_height_inches, cdl_required, permit_required_threshold, description) VALUES
+('light_equipment', 7000, 14000, '2', 24, false, 'Width > 8.5ft', 'Skid steers, mini excavators, compact tractors'),
+('medium_equipment', 14000, 25000, '2-3', 22, false, 'Width > 8.5ft or height > 13.5ft', 'Excavators, wheel loaders, dozers'),
+('heavy_equipment', 25000, 50000, '3-4', 18, true, 'Width > 8.5ft or height > 13.5ft or weight > 80k', 'Large excavators, cranes, pavers'),
+('super_heavy', 50000, 150000, '4-20', 18, true, 'Almost always requires permits', 'Mining equipment, transformers, oversized industrial');
+
+-- LQ Short Wall Common Sizes
+CREATE TABLE IF NOT EXISTS lq_shortwall_standards (
+  id SERIAL PRIMARY KEY,
+  short_wall_feet DECIMAL(4,1) NOT NULL UNIQUE,
+  typical_sleep_capacity INTEGER,
+  typical_features TEXT[],
+  description TEXT
+);
+
+INSERT INTO lq_shortwall_standards (short_wall_feet, typical_sleep_capacity, typical_features, description) VALUES
+(4, 1, ARRAY['Basic bunk', 'No bathroom'], 'Weekender - minimal sleeping only'),
+(6, 1, ARRAY['Bed', 'Small sink', 'Optional porta-potty'], 'Compact weekender'),
+(7, 2, ARRAY['Queen/Full bed', 'Wet bath', 'Mini fridge'], 'Popular weekender size'),
+(8, 2, ARRAY['Queen bed', 'Dry bath', 'Kitchenette', '3-way fridge'], 'Standard mid-size LQ'),
+(9, 2, ARRAY['Queen bed', 'Full bath', 'Full kitchen', 'Dinette'], 'Full-featured LQ'),
+(10, 3, ARRAY['Queen bed', 'Sofa sleeper', 'Full bath', 'Full kitchen'], 'Large LQ with sofa'),
+(11, 4, ARRAY['Queen bed', 'Bunks or sofa', 'Full bath', 'Full kitchen', 'Slide option'], 'Very large LQ'),
+(12, 4, ARRAY['Queen bed', 'Bunks', 'Full bath', 'Large kitchen', 'Slide common'], 'Maximum standard LQ'),
+(13, 5, ARRAY['Queen bed', 'Bunks', 'Full bath', 'Large kitchen', 'Multiple slides'], 'Custom luxury LQ'),
+(14, 6, ARRAY['Multiple beds', 'Full bath', 'Residential kitchen', 'Multiple slides'], 'Ultimate custom LQ');
+```
+
+=== PART 2: Trailer Type Specifications Reference ===
+```sql
+-- =====================================================
+-- COMPREHENSIVE TRAILER TYPE SPECIFICATIONS
+-- =====================================================
+
+DROP TABLE IF EXISTS trailer_type_specifications CASCADE;
+CREATE TABLE trailer_type_specifications (
+  id SERIAL PRIMARY KEY,
+  trailer_type VARCHAR(50) NOT NULL UNIQUE,
+  category VARCHAR(30) NOT NULL, -- horse, livestock, work, equipment, dump, rv, boat, specialty
+  
+  -- Typical Dimensions
+  typical_length_range VARCHAR(20),
+  typical_width_feet DECIMAL(4,1),
+  typical_height_feet DECIMAL(4,1),
+  
+  -- Weight Specs
+  typical_gvwr_range VARCHAR(30),
+  typical_payload_lbs INTEGER,
+  typical_empty_weight_lbs INTEGER,
+  
+  -- Hitch Requirements
+  typical_hitch_types TEXT[], -- Can support multiple
+  typical_ball_size VARCHAR(10),
+  typical_brake_type VARCHAR(20),
+  typical_wiring VARCHAR(20),
+  
+  -- Primary Use
+  description TEXT,
+  common_uses TEXT[],
+  
+  -- BC-Specific
+  bc_requires_inspection BOOLEAN DEFAULT false,
+  bc_ferry_classification VARCHAR(30)
+);
+
+-- HORSE TRAILERS
+INSERT INTO trailer_type_specifications (trailer_type, category, typical_length_range, typical_width_feet, typical_gvwr_range, typical_hitch_types, typical_ball_size, typical_brake_type, typical_wiring, description, common_uses) VALUES
+('horse_straight_load', 'horse', '14-22', 6.5, '7000-10000', ARRAY['bumper_pull', 'gooseneck'], '2_5_16', 'electric', '7_pin_rv_blade', 
+  '2 horses face forward side-by-side. Most compact design, horses can be unloaded individually.', 
+  ARRAY['Local shows', 'Trail riding', 'Veterinary transport']),
+  
+('horse_slant_load', 'horse', '18-35', 7, '7000-16000', ARRAY['bumper_pull', 'gooseneck'], '2_5_16', 'electric', '7_pin_rv_blade',
+  'Horses at 45° angle, head toward driver side. Most popular configuration - shorter for same horse capacity.',
+  ARRAY['Shows', 'Trail riding', 'Ranch work', 'Multi-horse transport']),
+  
+('horse_head_to_head', 'horse', '28-40', 8, '14000-20000', ARRAY['gooseneck'], '2_5_16', 'electric', '7_pin_rv_blade',
+  '4-6 horses facing each other with center aisle. Individual loading from side ramps.',
+  ARRAY['Large operations', 'Professional trainers', 'Race horses']),
+  
+('horse_stock_combo', 'horse', '16-28', 7, '7000-14000', ARRAY['bumper_pull', 'gooseneck'], '2_5_16', 'electric', '7_pin_rv_blade',
+  'Stock trailer style with horse dividers. Versatile for horses or livestock. Open slat sides for ventilation.',
+  ARRAY['Ranch versatility', 'Trail riding', 'Cattle and horses']),
+
+-- LIVESTOCK
+('livestock_stock', 'livestock', '16-53', 8, '14000-50000', ARRAY['bumper_pull', 'gooseneck', 'fifth_wheel'], '2_5_16', 'electric', '7_pin_rv_blade',
+  'Open-sided trailer with slats for ventilation. General livestock transport.',
+  ARRAY['Cattle', 'Sheep', 'Goats', 'Pigs', 'Llamas']),
+
+('livestock_pot', 'livestock', '48-53', 8.5, '45000-80000', ARRAY['fifth_wheel'], NULL, 'air', '7_pin_round',
+  'Double-deck cattle pot (possum belly). Lower deck accessed through belly. Commercial cattle transport.',
+  ARRAY['Commercial cattle hauling', 'Feedlot transport', 'Auction yards']),
+
+-- WORK / CONTRACTOR
+('enclosed_contractor', 'work', '6-24', 7, '3500-14000', ARRAY['bumper_pull', 'gooseneck'], '2_5_16', 'electric', '7_pin_rv_blade',
+  'Enclosed cargo trailer fitted with shelving, bins, and tool storage. Mobile tool crib.',
+  ARRAY['Contractors', 'Electricians', 'Plumbers', 'HVAC techs']),
+
+('enclosed_mobile_workshop', 'work', '14-28', 8, '7000-16000', ARRAY['bumper_pull', 'gooseneck'], '2_5_16', 'electric', '7_pin_rv_blade',
+  'Full workshop with workbench, power tools, dust collection. May include generator.',
+  ARRAY['Woodworkers', 'Cabinet makers', 'Custom fabricators']),
+
+('specialty_fiber_splicing', 'work', '16-24', 8, '10000-16000', ARRAY['gooseneck'], '2_5_16', 'electric', '7_pin_rv_blade',
+  'Climate-controlled work trailer for fiber optic splicing. Clean room environment.',
+  ARRAY['Telecom', 'Fiber installation', 'Data centers']),
+
+-- HEAVY EQUIPMENT
+('flatbed_standard', 'equipment', '16-53', 8.5, '7000-80000', ARRAY['bumper_pull', 'gooseneck', 'fifth_wheel'], '2_5_16', 'electric', '7_pin_rv_blade',
+  'Flat deck for general freight. Versatile, crane or forklift loading required.',
+  ARRAY['Lumber', 'Steel', 'Machinery', 'Palletized freight']),
+
+('flatbed_tilt', 'equipment', '16-24', 8.5, '10000-20000', ARRAY['bumper_pull', 'gooseneck'], '2_5_16', 'electric', '7_pin_rv_blade',
+  'Deck tilts for gravity loading. Great for equipment with wheels.',
+  ARRAY['Skid steers', 'Forklifts', 'Scissor lifts', 'Tractors']),
+
+('equipment_step_deck', 'equipment', '48-53', 8.5, '45000-52000', ARRAY['fifth_wheel'], NULL, 'air', '7_pin_round',
+  'Drop deck - front deck higher than rear. Extra 2ft of height clearance over flatbed.',
+  ARRAY['Tall machinery', 'Construction equipment', 'Oversized freight']),
+
+('equipment_lowboy', 'equipment', '35-53', 8.5, '40000-80000', ARRAY['gooseneck'], NULL, 'air', '7_pin_round',
+  'Double-drop with low 18-24" deck. Fixed gooseneck. For very tall equipment.',
+  ARRAY['Excavators', 'Dozers', 'Cranes', 'Mining equipment']),
+
+('equipment_rgn', 'equipment', '35-53', 8.5, '42000-150000', ARRAY['gooseneck'], NULL, 'air', '7_pin_round',
+  'Removable Gooseneck creates ground-level ramp. Drive-on loading. Up to 20+ axles.',
+  ARRAY['Self-propelled equipment', 'Tracked equipment', 'Heavy construction']),
+
+-- DUMP
+('dump_standard', 'dump', '10-20', 7, '10000-21000', ARRAY['bumper_pull', 'gooseneck'], '2_5_16', 'electric', '7_pin_rv_blade',
+  'Hydraulic dump bed for loose material. Scissor or telescopic lift.',
+  ARRAY['Gravel', 'Sand', 'Mulch', 'Debris removal', 'Firewood']),
+
+('dump_gooseneck', 'dump', '16-24', 8, '21000-30000', ARRAY['gooseneck'], '2_5_16', 'electric', '7_pin_rv_blade',
+  'Heavy duty gooseneck dump. Higher capacity than bumper pull.',
+  ARRAY['Construction debris', 'Aggregate', 'Farm use', 'Commercial hauling']),
+
+-- UTILITY / LANDSCAPE
+('utility_landscape', 'utility', '12-20', 7, '7000-14000', ARRAY['bumper_pull'], '2', 'electric', '4_pin_flat',
+  'Open trailer with mesh or solid sides. Gate options. Built for lawn equipment.',
+  ARRAY['Lawn care', 'Landscaping', 'Tree service', 'Property maintenance']);
+
+-- =====================================================
+-- HORSE TRAILER MANUFACTURER BRANDS (Reference)
+-- =====================================================
+
+CREATE TABLE IF NOT EXISTS trailer_manufacturers (
+  id SERIAL PRIMARY KEY,
+  brand_name VARCHAR(100) NOT NULL UNIQUE,
+  category VARCHAR(30), -- horse, livestock, equipment, rv, utility
+  country VARCHAR(50),
+  specialty TEXT[],
+  price_tier VARCHAR(20), -- budget, mid, premium, luxury
+  known_for TEXT
+);
+
+INSERT INTO trailer_manufacturers (brand_name, category, country, specialty, price_tier, known_for) VALUES
+-- Horse Trailer Brands
+('Double D Trailers', 'horse', 'USA', ARRAY['SafeTack design', 'Living quarters'], 'premium', 'Safety innovations, reverse slant'),
+('Sundowner', 'horse', 'USA', ARRAY['Living quarters', 'Stock combo'], 'premium', 'In-house LQ builds, aluminum'),
+('Featherlite', 'horse', 'USA', ARRAY['All aluminum', 'Lightweight'], 'premium', 'Lightest aluminum trailers'),
+('Lakota', 'horse', 'USA', ARRAY['Living quarters', 'Charger series'], 'premium', 'Charger/Bighorn models'),
+('Exiss', 'horse', 'USA', ARRAY['Aluminum', 'Event/Express series'], 'mid', 'Solid mid-range options'),
+('Shadow', 'horse', 'USA', ARRAY['Value aluminum', 'Pro Series'], 'mid', 'Good value for features'),
+('4-Star', 'horse', 'USA', ARRAY['Premium aluminum', 'Custom builds'], 'luxury', 'High-end custom trailers'),
+('Platinum Coach', 'horse', 'USA', ARRAY['Luxury LQ', 'Custom'], 'luxury', 'Ultimate luxury LQ'),
+('Trails West', 'horse', 'USA', ARRAY['Steel frame', 'Adventure series'], 'mid', 'Affordable steel construction'),
+('Bison', 'horse', 'USA', ARRAY['Value LQ', 'Ranger series'], 'mid', 'Budget-friendly LQ options'),
+
+-- Livestock
+('Wilson', 'livestock', 'USA', ARRAY['Cattle pots', 'Aluminum'], 'premium', 'Commercial cattle hauling'),
+('Merritt', 'livestock', 'USA', ARRAY['Cattle', 'Aluminum'], 'premium', 'Livestock industry standard'),
+('Barrett', 'livestock', 'USA', ARRAY['Cattle', 'Steel'], 'mid', 'Working ranch trailers'),
+
+-- Equipment
+('PJ Trailers', 'equipment', 'USA', ARRAY['Dump', 'Flatbed', 'Gooseneck'], 'mid', 'Diverse equipment lineup'),
+('Big Tex', 'equipment', 'USA', ARRAY['Utility', 'Dump', 'Flatbed'], 'mid', 'Large dealer network'),
+('Diamond C', 'equipment', 'USA', ARRAY['Premium flatbed', 'Dump'], 'premium', 'Heavy-duty construction'),
+('Load Trail', 'equipment', 'USA', ARRAY['Value trailers', 'Diverse'], 'budget', 'Budget-friendly equipment'),
+('Kaufman', 'equipment', 'USA', ARRAY['Car haulers', 'Equipment'], 'mid', 'Car carrier specialists'),
+('Fontaine', 'equipment', 'USA', ARRAY['Commercial flatbed', 'Heavy haul'], 'premium', 'Commercial trucking standard'),
+('XL Specialized', 'equipment', 'USA', ARRAY['Heavy haul', 'Lowboy', 'RGN'], 'premium', 'Extreme heavy equipment'),
+
+-- RV
+('Keystone', 'rv', 'USA', ARRAY['Travel trailers', 'Fifth wheels'], 'mid', 'Large manufacturer'),
+('Grand Design', 'rv', 'USA', ARRAY['Premium trailers'], 'premium', 'Quality-focused'),
+('Airstream', 'rv', 'USA', ARRAY['Iconic aluminum'], 'luxury', 'Classic aluminum design');
+```
+
+=== PART 3: TrailerForm Component with All Fields ===
+```tsx
+// client/src/components/Fleet/TrailerFormComprehensive.tsx
+
+import React, { useState, useEffect } from 'react';
+
+// =====================================================
+// TYPE DEFINITIONS - COMPREHENSIVE
+// =====================================================
+
+const TRAILER_CATEGORIES = [
+  { id: 'horse', label: '🐴 Horse Trailers', icon: '🐴' },
+  { id: 'livestock', label: '🐄 Livestock', icon: '🐄' },
+  { id: 'work', label: '🔧 Work/Contractor', icon: '🔧' },
+  { id: 'equipment', label: '🚜 Heavy Equipment', icon: '🚜' },
+  { id: 'dump', label: '⬆️ Dump Trailers', icon: '⬆️' },
+  { id: 'utility', label: '🛠️ Utility/Landscape', icon: '🛠️' },
+  { id: 'rv', label: '🏕️ RV/Recreation', icon: '🏕️' },
+  { id: 'boat', label: '🚤 Boat/Marine', icon: '🚤' },
+];
+
+const TRAILER_TYPES_BY_CATEGORY = {
+  horse: [
+    { value: 'horse_straight_load', label: 'Straight Load', description: '2 horses face forward side-by-side' },
+    { value: 'horse_slant_load', label: 'Slant Load', description: 'Horses at angle, most popular' },
+    { value: 'horse_reverse_slant', label: 'Reverse Slant', description: 'Head to curbside (rare)' },
+    { value: 'horse_head_to_head', label: 'Head to Head', description: '4-6 horses facing each other' },
+    { value: 'horse_stock_combo', label: 'Stock Combo', description: 'Stock trailer with horse dividers' },
+    { value: 'horse_box_stall', label: 'Box Stall', description: 'Open box stalls' },
+    { value: 'horse_2_plus_1', label: '2+1 Configuration', description: '2 rear + 1 front box stall' },
+  ],
+  livestock: [
+    { value: 'livestock_stock', label: 'Stock Trailer', description: 'Open slat sides, general livestock' },
+    { value: 'livestock_pot', label: 'Cattle Pot', description: 'Double deck (possum belly)' },
+    { value: 'livestock_sheep_deck', label: 'Sheep/Goat Deck', description: 'Multi-level for small animals' },
+    { value: 'livestock_hog', label: 'Hog Trailer', description: 'Punch floor for swine' },
+  ],
+  work: [
+    { value: 'enclosed_cargo', label: 'Enclosed Cargo', description: 'Basic enclosed trailer' },
+    { value: 'enclosed_contractor', label: 'Contractor Trailer', description: 'Shelving and tool storage' },
+    { value: 'enclosed_mobile_workshop', label: 'Mobile Workshop', description: 'Full workshop with power' },
+    { value: 'enclosed_concession', label: 'Concession', description: 'Food service trailer' },
+    { value: 'enclosed_office', label: 'Mobile Office', description: 'Office/meeting space' },
+    { value: 'specialty_fiber_splicing', label: 'Fiber Splicing', description: 'Climate-controlled work' },
+  ],
+  equipment: [
+    { value: 'flatbed_standard', label: 'Flatbed', description: 'Standard flat deck' },
+    { value: 'flatbed_tilt', label: 'Tilt Deck', description: 'Hydraulic tilt loading' },
+    { value: 'flatbed_dovetail', label: 'Dovetail/Beavertail', description: 'Angled rear for loading' },
+    { value: 'flatbed_deckover', label: 'Deckover', description: 'Deck over wheels (wider)' },
+    { value: 'equipment_car_hauler', label: 'Car Hauler', description: 'Auto transport' },
+    { value: 'equipment_step_deck', label: 'Step Deck', description: 'Drop deck, extra height' },
+    { value: 'equipment_lowboy', label: 'Lowboy (Fixed)', description: 'Double drop, very low' },
+    { value: 'equipment_rgn', label: 'RGN', description: 'Removable Gooseneck' },
+    { value: 'equipment_double_drop', label: 'Double Drop', description: 'High-low-high deck' },
+    { value: 'equipment_stretch', label: 'Stretch/Extendable', description: 'Adjustable length' },
+  ],
+  dump: [
+    { value: 'dump_standard', label: 'Standard Dump', description: 'End dump, bumper pull' },
+    { value: 'dump_gooseneck', label: 'Gooseneck Dump', description: 'Heavy duty GN dump' },
+    { value: 'dump_side_dump', label: 'Side Dump', description: 'Dumps to the side' },
+    { value: 'dump_belly_dump', label: 'Belly Dump', description: 'Bottom discharge' },
+  ],
+  utility: [
+    { value: 'utility_open', label: 'Open Utility', description: 'Basic open trailer' },
+    { value: 'utility_landscape', label: 'Landscape Trailer', description: 'With mesh sides' },
+    { value: 'utility_pipe_material', label: 'Pipe/Material', description: 'Long material rack' },
+    { value: 'utility_atv', label: 'ATV/UTV Trailer', description: 'For off-road vehicles' },
+  ],
+  rv: [
+    { value: 'rv_travel_trailer', label: 'Travel Trailer', description: 'Standard RV trailer' },
+    { value: 'rv_fifth_wheel', label: 'Fifth Wheel', description: 'Fifth wheel RV' },
+    { value: 'rv_toy_hauler', label: 'Toy Hauler', description: 'RV with garage' },
+    { value: 'rv_popup', label: 'Pop-Up Camper', description: 'Collapsible camper' },
+    { value: 'rv_teardrop', label: 'Teardrop', description: 'Compact teardrop' },
+  ],
+  boat: [
+    { value: 'boat_bunk', label: 'Bunk Trailer', description: 'Bunk-style support' },
+    { value: 'boat_roller', label: 'Roller Trailer', description: 'Roller loading' },
+    { value: 'boat_pwc', label: 'PWC/Jet Ski', description: 'Personal watercraft' },
+    { value: 'boat_pontoon', label: 'Pontoon', description: 'Wide pontoon trailer' },
+  ],
+};
+
+const HORSE_LOAD_CONFIGS = [
+  { value: 'straight_load', label: 'Straight Load', description: 'Horses face forward' },
+  { value: 'slant_load', label: 'Slant Load', description: 'Head to driver side' },
+  { value: 'reverse_slant', label: 'Reverse Slant', description: 'Head to passenger side' },
+  { value: 'head_to_head', label: 'Head to Head', description: 'Facing each other' },
+  { value: 'box_stall', label: 'Box Stall', description: 'Open box stalls' },
+  { value: 'stock_open', label: 'Stock (Open)', description: 'No dividers' },
+];
+
+const HORSE_SIZES = [
+  { value: 'pony', label: 'Pony', description: 'Under 14 hands' },
+  { value: 'standard', label: 'Standard', description: '14-16 hands' },
+  { value: 'warmblood', label: 'Warmblood', description: '16-17 hands' },
+  { value: 'draft', label: 'Draft', description: '17+ hands' },
+];
+
+const DIVIDER_TYPES = [
+  { value: 'full_height', label: 'Full Height', description: 'Floor to ceiling' },
+  { value: 'partial', label: 'Partial', description: 'Partial height' },
+  { value: 'padded', label: 'Padded', description: 'Padded for safety' },
+  { value: 'air_flow', label: 'Air Flow', description: 'Slats for ventilation' },
+  { value: 'stud_wall', label: 'Stud Wall', description: 'Solid for stallions' },
+  { value: 'telescoping', label: 'Telescoping', description: 'Adjustable length' },
+  { value: 'removable', label: 'Removable', description: 'Fully removable' },
+  { value: 'none', label: 'None', description: 'No dividers' },
+];
+
+const LQ_SHORTWALL_OPTIONS = [
+  { value: 4, label: "4' Short Wall", sleeps: 1, features: 'Basic bunk only' },
+  { value: 6, label: "6' Short Wall", sleeps: 1, features: 'Bed + small sink' },
+  { value: 7, label: "7' Short Wall", sleeps: 2, features: 'Bed + wet bath + mini fridge' },
+  { value: 8, label: "8' Short Wall", sleeps: 2, features: 'Full bed + dry bath + kitchenette' },
+  { value: 9, label: "9' Short Wall", sleeps: 2, features: 'Queen + full bath + full kitchen' },
+  { value: 10, label: "10' Short Wall", sleeps: 3, features: 'Queen + sofa + full amenities' },
+  { value: 11, label: "11' Short Wall", sleeps: 4, features: 'Queen + bunks + slide option' },
+  { value: 12, label: "12' Short Wall", sleeps: 4, features: 'Maximum standard LQ' },
+  { value: 13, label: "13'+ Short Wall", sleeps: 5, features: 'Custom luxury build' },
+];
+
+const DECK_TYPES = [
+  { value: 'flatbed', label: 'Flatbed', height: '60"', description: 'Standard flat, 8\'6" max load height' },
+  { value: 'step_deck', label: 'Step Deck', height: '40"', description: 'Drop deck, 10\'2" max load height' },
+  { value: 'double_drop', label: 'Double Drop', height: '24"', description: 'Lowboy, 11\'6" max load height' },
+  { value: 'rgn', label: 'RGN', height: '18"', description: 'Removable neck, 12\' max, drive-on' },
+  { value: 'tilt_deck', label: 'Tilt Deck', height: '24"', description: 'Hydraulic tilt for loading' },
+  { value: 'deckover', label: 'Deckover', height: '36"', description: 'Deck over wheels, wider' },
+];
+
+interface TrailerFormProps {
+  trailerId?: string;
+  onSave: (trailer: any) => void;
+  onCancel: () => void;
+}
+
+export function TrailerFormComprehensive({ trailerId, onSave, onCancel }: TrailerFormProps) {
+  const [activeTab, setActiveTab] = useState<'basic' | 'config' | 'lq' | 'work' | 'equipment' | 'photos'>('basic');
+  const [selectedCategory, setSelectedCategory] = useState('horse');
+  const [formData, setFormData] = useState<any>({
+    // Basic
+    nickname: '',
+    fleet_number: '',
+    year: '',
+    make: '',
+    model: '',
+    color: '',
+    vin: '',
+    trailer_type: '',
+    
+    // Dimensions
+    length_feet: '',
+    width_feet: '',
+    height_feet: '',
+    interior_height_inches: '',
+    gvwr_lbs: '',
+    payload_capacity_lbs: '',
+    empty_weight_lbs: '',
+    tongue_weight_lbs: '',
+    
+    // Hitch
+    required_hitch_type: 'bumper_pull',
+    required_ball_size: '2_5_16',
+    coupler_height_inches: '',
+    
+    // Axles/Brakes
+    axle_count: 2,
+    axle_capacity_lbs: '',
+    brake_type: 'electric',
+    suspension_type: 'leaf_spring',
+    tire_size: '',
+    spare_tire_included: false,
+    
+    // Wiring
+    wiring_type: '7_pin_rv_blade',
+    has_breakaway_switch: true,
+    
+    // ===== HORSE SPECIFIC =====
+    is_horse_trailer: false,
+    horse_capacity: '',
+    horse_load_config: 'slant_load',
+    stall_length_inches: '',
+    stall_width_inches: '',
+    horse_size_rating: 'standard',
+    divider_type: 'padded',
+    dividers_removable: false,
+    has_hay_rack: false,
+    drop_down_windows_head: 0,
+    drop_down_windows_butt: 0,
+    escape_door_count: 0,
+    rear_load_type: 'ramp',
+    horse_floor_type: 'rubber_mat',
+    
+    // Tack Room
+    has_tack_room: false,
+    tack_room_type: 'rear_tack',
+    tack_room_length_inches: '',
+    saddle_rack_count: 0,
+    bridle_hooks: 0,
+    
+    // ===== LIVING QUARTERS =====
+    has_living_quarters: false,
+    lq_certified: false,
+    lq_short_wall_feet: '',
+    lq_sleep_capacity: '',
+    lq_bed_type: 'queen',
+    
+    // LQ Kitchen
+    lq_has_kitchen: false,
+    lq_cooktop_type: '2_burner',
+    lq_has_microwave: false,
+    lq_refrigerator_type: '3_way',
+    lq_refrigerator_cubic_feet: '',
+    
+    // LQ Bathroom
+    lq_has_bathroom: false,
+    lq_bathroom_type: 'wet_bath',
+    lq_toilet_type: 'gravity',
+    lq_has_shower: false,
+    
+    // LQ Climate
+    lq_ac_type: 'roof_ac',
+    lq_ac_btu: '',
+    lq_heat_type: 'propane_furnace',
+    
+    // LQ Water
+    lq_fresh_water_gallons: '',
+    lq_gray_water_gallons: '',
+    lq_black_water_gallons: '',
+    lq_water_heater_type: '6_gal',
+    
+    // LQ Power
+    lq_shore_power_amps: 30,
+    lq_has_generator: false,
+    lq_generator_watts: '',
+    lq_has_solar: false,
+    lq_solar_watts: '',
+    
+    // LQ Extras
+    lq_has_awning: false,
+    lq_awning_length_feet: '',
+    lq_has_slide_out: false,
+    lq_slide_out_count: 0,
+    
+    // ===== WORK TRAILER =====
+    is_work_trailer: false,
+    has_shelving: false,
+    shelving_type: 'adjustable',
+    shelf_count: 0,
+    has_workbench: false,
+    workbench_type: 'fixed',
+    has_ladder_rack: false,
+    has_generator_mount: false,
+    has_shore_power: false,
+    electrical_outlets: 0,
+    
+    // ===== EQUIPMENT TRAILER =====
+    is_equipment_trailer: false,
+    deck_type: 'flatbed',
+    deck_length_feet: '',
+    deck_height_inches: '',
+    well_length_feet: '',
+    gooseneck_removable: false,
+    has_loading_ramps: false,
+    ramp_type_equipment: 'flip_up',
+    has_winch: false,
+    winch_capacity_lbs: '',
+    has_stake_pockets: false,
+    deck_surface: 'wood',
+    
+    // ===== DUMP TRAILER =====
+    is_dump_trailer: false,
+    dump_type: 'end_dump',
+    dump_capacity_cubic_yards: '',
+    hydraulic_type: 'scissor',
+    has_tarp: false,
+    has_spread_gate: false,
+    
+    notes: '',
+  });
+
+  // Determine which sections to show based on category
+  const showHorseSection = ['horse', 'livestock'].includes(selectedCategory);
+  const showLQSection = formData.has_living_quarters;
+  const showWorkSection = selectedCategory === 'work';
+  const showEquipmentSection = selectedCategory === 'equipment';
+  const showDumpSection = selectedCategory === 'dump' || formData.trailer_type?.includes('dump');
+
+  function updateField(field: string, value: any) {
+    setFormData((prev: any) => ({ ...prev, [field]: value }));
+  }
+
+  function handleCategoryChange(category: string) {
+    setSelectedCategory(category);
+    // Auto-set boolean flags
+    updateField('is_horse_trailer', ['horse'].includes(category));
+    updateField('is_work_trailer', category === 'work');
+    updateField('is_equipment_trailer', category === 'equipment');
+    updateField('is_dump_trailer', category === 'dump');
+  }
+
+  // Determine available tabs
+  const tabs = [
+    { id: 'basic', label: '📋 Basic Info', show: true },
+    { id: 'config', label: showHorseSection ? '🐴 Horse/Livestock' : '⚙️ Configuration', show: true },
+    { id: 'lq', label: '🏕️ Living Quarters', show: showHorseSection || selectedCategory === 'work' },
+    { id: 'work', label: '🔧 Workshop', show: showWorkSection },
+    { id: 'equipment', label: '🚜 Equipment', show: showEquipmentSection || showDumpSection },
+    { id: 'photos', label: '📷 Photos', show: true },
+  ].filter(t => t.show);
+
+  return (
+    <div className="bg-gray-800 rounded-xl overflow-hidden">
+      {/* Header */}
+      <div className="p-6 border-b border-gray-700 flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-bold text-white">
+            {trailerId ? 'Edit Trailer' : 'Add Fleet Trailer'}
+          </h2>
+          <p className="text-gray-400 text-sm">
+            {formData.nickname || formData.fleet_number || 'Complete trailer specifications'}
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <button onClick={onCancel} className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-gray-300 rounded-lg">
+            Cancel
+          </button>
+          <button 
+            onClick={() => onSave(formData)}
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
+          >
+            Save Trailer
+          </button>
+        </div>
+      </div>
+
+      {/* Category Selection */}
+      <div className="p-4 bg-gray-750 border-b border-gray-700">
+        <label className="block text-gray-300 text-sm font-medium mb-2">Trailer Category</label>
+        <div className="flex flex-wrap gap-2">
+          {TRAILER_CATEGORIES.map(cat => (
+            <button
+              key={cat.id}
+              onClick={() => handleCategoryChange(cat.id)}
+              className={`px-4 py-2 rounded-lg border text-sm transition ${
+                selectedCategory === cat.id
+                  ? 'border-blue-500 bg-blue-500/20 text-white'
+                  : 'border-gray-600 bg-gray-700 text-gray-300 hover:border-gray-500'
+              }`}
+            >
+              {cat.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex border-b border-gray-700 overflow-x-auto">
+        {tabs.map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id as any)}
+            className={`px-6 py-3 font-medium whitespace-nowrap transition ${
+              activeTab === tab.id
+                ? 'text-blue-400 border-b-2 border-blue-400 bg-gray-700/50'
+                : 'text-gray-400 hover:text-gray-300'
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="p-6 max-h-[70vh] overflow-y-auto">
+        
+        {/* ==================== BASIC INFO TAB ==================== */}
+        {activeTab === 'basic' && (
+          <div className="space-y-6">
+            {/* Trailer Type Selection */}
+            <div>
+              <label className="block text-gray-300 text-sm font-medium mb-2">Trailer Type</label>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                {TRAILER_TYPES_BY_CATEGORY[selectedCategory as keyof typeof TRAILER_TYPES_BY_CATEGORY]?.map(tt => (
+                  <button
+                    key={tt.value}
+                    type="button"
+                    onClick={() => updateField('trailer_type', tt.value)}
+                    className={`p-3 rounded-lg border text-left transition ${
+                      formData.trailer_type === tt.value
+                        ? 'border-blue-500 bg-blue-500/20 text-white'
+                        : 'border-gray-600 bg-gray-700 text-gray-300 hover:border-gray-500'
+                    }`}
+                  >
+                    <span className="font-medium block">{tt.label}</span>
+                    <span className="text-xs text-gray-400">{tt.description}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Identity */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-gray-300 text-sm font-medium mb-2">Nickname</label>
+                <input
+                  type="text"
+                  value={formData.nickname}
+                  onChange={(e) => updateField('nickname', e.target.value)}
+                  className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600"
+                  placeholder='"Horse Palace", "Tool Box", "Big Dump"'
+                />
+              </div>
+              <div>
+                <label className="block text-gray-300 text-sm font-medium mb-2">Fleet Number</label>
+                <input
+                  type="text"
+                  value={formData.fleet_number}
+                  onChange={(e) => updateField('fleet_number', e.target.value)}
+                  className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600"
+                  placeholder="T-001, HT-3"
+                />
+              </div>
+            </div>
+
+            {/* Year / Make / Model */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div>
+                <label className="block text-gray-300 text-sm font-medium mb-2">Year</label>
+                <input
+                  type="number"
+                  value={formData.year}
+                  onChange={(e) => updateField('year', e.target.value)}
+                  className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600"
+                  placeholder="2024"
+                />
+              </div>
+              <div>
+                <label className="block text-gray-300 text-sm font-medium mb-2">Make *</label>
+                <input
+                  type="text"
+                  value={formData.make}
+                  onChange={(e) => updateField('make', e.target.value)}
+                  className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600"
+                  placeholder="Sundowner, PJ..."
+                />
+              </div>
+              <div>
+                <label className="block text-gray-300 text-sm font-medium mb-2">Model</label>
+                <input
+                  type="text"
+                  value={formData.model}
+                  onChange={(e) => updateField('model', e.target.value)}
+                  className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600"
+                  placeholder="Horizon, Charger..."
+                />
+              </div>
+              <div>
+                <label className="block text-gray-300 text-sm font-medium mb-2">Color</label>
+                <input
+                  type="text"
+                  value={formData.color}
+                  onChange={(e) => updateField('color', e.target.value)}
+                  className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600"
+                  placeholder="Silver, White..."
+                />
+              </div>
+            </div>
+
+            {/* Dimensions */}
+            <h4 className="text-white font-medium pt-4">Dimensions & Weight</h4>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div>
+                <label className="block text-gray-300 text-sm font-medium mb-2">Length (ft)</label>
+                <input
+                  type="number"
+                  value={formData.length_feet}
+                  onChange={(e) => updateField('length_feet', e.target.value)}
+                  className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600"
+                  placeholder="24"
+                />
+              </div>
+              <div>
+                <label className="block text-gray-300 text-sm font-medium mb-2">Width (ft)</label>
+                <input
+                  type="number"
+                  value={formData.width_feet}
+                  onChange={(e) => updateField('width_feet', e.target.value)}
+                  className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600"
+                  placeholder="7"
+                />
+              </div>
+              <div>
+                <label className="block text-gray-300 text-sm font-medium mb-2">Height (ft)</label>
+                <input
+                  type="number"
+                  value={formData.height_feet}
+                  onChange={(e) => updateField('height_feet', e.target.value)}
+                  className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600"
+                  placeholder="7.5"
+                />
+              </div>
+              <div>
+                <label className="block text-gray-300 text-sm font-medium mb-2">GVWR (lbs)</label>
+                <input
+                  type="number"
+                  value={formData.gvwr_lbs}
+                  onChange={(e) => updateField('gvwr_lbs', e.target.value)}
+                  className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600"
+                  placeholder="14000"
+                />
+              </div>
+            </div>
+
+            {/* Living Quarters Toggle (for horse/work) */}
+            {(showHorseSection || selectedCategory === 'work') && (
+              <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4 mt-4">
+                <label className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    checked={formData.has_living_quarters}
+                    onChange={(e) => updateField('has_living_quarters', e.target.checked)}
+                    className="w-5 h-5 rounded"
+                  />
+                  <div>
+                    <span className="text-white font-medium">Has Living Quarters (LQ)</span>
+                    <p className="text-gray-400 text-sm">Includes sleeping, kitchen, and/or bathroom</p>
+                  </div>
+                </label>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ==================== HORSE/LIVESTOCK CONFIG TAB ==================== */}
+        {activeTab === 'config' && showHorseSection && (
+          <div className="space-y-6">
+            {/* Horse Capacity & Load Config */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-gray-300 text-sm font-medium mb-2">Horse Capacity</label>
+                <input
+                  type="number"
+                  value={formData.horse_capacity}
+                  onChange={(e) => updateField('horse_capacity', e.target.value)}
+                  className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600"
+                  placeholder="2, 3, 4..."
+                />
+              </div>
+              <div>
+                <label className="block text-gray-300 text-sm font-medium mb-2">Horse Size Rating</label>
+                <select
+                  value={formData.horse_size_rating}
+                  onChange={(e) => updateField('horse_size_rating', e.target.value)}
+                  className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600"
+                >
+                  {HORSE_SIZES.map(hs => (
+                    <option key={hs.value} value={hs.value}>{hs.label} ({hs.description})</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Load Configuration */}
+            <div>
+              <label className="block text-gray-300 text-sm font-medium mb-2">Loading Configuration</label>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                {HORSE_LOAD_CONFIGS.map(lc => (
+                  <button
+                    key={lc.value}
+                    type="button"
+                    onClick={() => updateField('horse_load_config', lc.value)}
+                    className={`p-3 rounded-lg border text-left transition ${
+                      formData.horse_load_config === lc.value
+                        ? 'border-blue-500 bg-blue-500/20 text-white'
+                        : 'border-gray-600 bg-gray-700 text-gray-300 hover:border-gray-500'
+                    }`}
+                  >
+                    <span className="font-medium block">{lc.label}</span>
+                    <span className="text-xs text-gray-400">{lc.description}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Stall Dimensions */}
+            <h4 className="text-white font-medium">Stall Dimensions</h4>
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <label className="block text-gray-300 text-sm font-medium mb-2">Stall Length (in)</label>
+                <input
+                  type="number"
+                  value={formData.stall_length_inches}
+                  onChange={(e) => updateField('stall_length_inches', e.target.value)}
+                  className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600"
+                  placeholder="84"
+                />
+              </div>
+              <div>
+                <label className="block text-gray-300 text-sm font-medium mb-2">Stall Width (in)</label>
+                <input
+                  type="number"
+                  value={formData.stall_width_inches}
+                  onChange={(e) => updateField('stall_width_inches', e.target.value)}
+                  className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600"
+                  placeholder="30"
+                />
+              </div>
+              <div>
+                <label className="block text-gray-300 text-sm font-medium mb-2">Interior Height (in)</label>
+                <input
+                  type="number"
+                  value={formData.interior_height_inches}
+                  onChange={(e) => updateField('interior_height_inches', e.target.value)}
+                  className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600"
+                  placeholder="84"
+                />
+              </div>
+            </div>
+
+            {/* Dividers */}
+            <div>
+              <label className="block text-gray-300 text-sm font-medium mb-2">Divider Type</label>
+              <select
+                value={formData.divider_type}
+                onChange={(e) => updateField('divider_type', e.target.value)}
+                className="w-full md:w-1/2 bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600"
+              >
+                {DIVIDER_TYPES.map(dt => (
+                  <option key={dt.value} value={dt.value}>{dt.label} - {dt.description}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex flex-wrap gap-4">
+              <label className="flex items-center gap-2 text-gray-300">
+                <input type="checkbox" checked={formData.dividers_removable} onChange={(e) => updateField('dividers_removable', e.target.checked)} className="w-4 h-4 rounded" />
+                Dividers Removable
+              </label>
+              <label className="flex items-center gap-2 text-gray-300">
+                <input type="checkbox" checked={formData.has_hay_rack} onChange={(e) => updateField('has_hay_rack', e.target.checked)} className="w-4 h-4 rounded" />
+                Hay Rack
+              </label>
+            </div>
+
+            {/* Windows & Doors */}
+            <h4 className="text-white font-medium pt-4">Windows & Doors</h4>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div>
+                <label className="block text-gray-300 text-sm font-medium mb-2">Drop Windows (Head)</label>
+                <input type="number" value={formData.drop_down_windows_head} onChange={(e) => updateField('drop_down_windows_head', parseInt(e.target.value))} className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600" />
+              </div>
+              <div>
+                <label className="block text-gray-300 text-sm font-medium mb-2">Drop Windows (Butt)</label>
+                <input type="number" value={formData.drop_down_windows_butt} onChange={(e) => updateField('drop_down_windows_butt', parseInt(e.target.value))} className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600" />
+              </div>
+              <div>
+                <label className="block text-gray-300 text-sm font-medium mb-2">Escape Doors</label>
+                <input type="number" value={formData.escape_door_count} onChange={(e) => updateField('escape_door_count', parseInt(e.target.value))} className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600" />
+              </div>
+              <div>
+                <label className="block text-gray-300 text-sm font-medium mb-2">Rear Load Type</label>
+                <select value={formData.rear_load_type} onChange={(e) => updateField('rear_load_type', e.target.value)} className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600">
+                  <option value="ramp">Ramp</option>
+                  <option value="step_up">Step Up</option>
+                  <option value="dutch_doors">Dutch Doors</option>
+                  <option value="swing_doors">Swing Doors</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Tack Room */}
+            <h4 className="text-white font-medium pt-4">Tack / Dressing Room</h4>
+            <label className="flex items-center gap-2 text-gray-300 mb-4">
+              <input type="checkbox" checked={formData.has_tack_room} onChange={(e) => updateField('has_tack_room', e.target.checked)} className="w-4 h-4 rounded" />
+              Has Tack Room
+            </label>
+            
+            {formData.has_tack_room && (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div>
+                  <label className="block text-gray-300 text-sm font-medium mb-2">Tack Room Type</label>
+                  <select value={formData.tack_room_type} onChange={(e) => updateField('tack_room_type', e.target.value)} className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600">
+                    <option value="front_tack">Front Tack</option>
+                    <option value="rear_tack">Rear Tack</option>
+                    <option value="mid_tack">Mid Tack</option>
+                    <option value="fold_up">Fold-Up/Collapsible</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-gray-300 text-sm font-medium mb-2">Tack Length (in)</label>
+                  <input type="number" value={formData.tack_room_length_inches} onChange={(e) => updateField('tack_room_length_inches', e.target.value)} className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600" />
+                </div>
+                <div>
+                  <label className="block text-gray-300 text-sm font-medium mb-2">Saddle Racks</label>
+                  <input type="number" value={formData.saddle_rack_count} onChange={(e) => updateField('saddle_rack_count', parseInt(e.target.value))} className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600" />
+                </div>
+                <div>
+                  <label className="block text-gray-300 text-sm font-medium mb-2">Bridle Hooks</label>
+                  <input type="number" value={formData.bridle_hooks} onChange={(e) => updateField('bridle_hooks', parseInt(e.target.value))} className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600" />
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ==================== LIVING QUARTERS TAB ==================== */}
+        {activeTab === 'lq' && formData.has_living_quarters && (
+          <div className="space-y-6">
+            <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4">
+              <h4 className="text-green-400 font-medium">🏕️ Living Quarters Specifications</h4>
+              <p className="text-gray-300 text-sm">Note: LQ trailers with bed, stove, bathroom, and sink may qualify for RV registration in most states.</p>
+            </div>
+
+            {/* Short Wall / Size */}
+            <div>
+              <label className="block text-gray-300 text-sm font-medium mb-2">Short Wall Length</label>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                {LQ_SHORTWALL_OPTIONS.map(sw => (
+                  <button
+                    key={sw.value}
+                    type="button"
+                    onClick={() => {
+                      updateField('lq_short_wall_feet', sw.value);
+                      updateField('lq_sleep_capacity', sw.sleeps);
+                    }}
+                    className={`p-3 rounded-lg border text-left transition ${
+                      formData.lq_short_wall_feet === sw.value
+                        ? 'border-blue-500 bg-blue-500/20 text-white'
+                        : 'border-gray-600 bg-gray-700 text-gray-300 hover:border-gray-500'
+                    }`}
+                  >
+                    <span className="font-medium block">{sw.label}</span>
+                    <span className="text-xs text-gray-400">Sleeps {sw.sleeps} • {sw.features}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* RVIA Certification */}
+            <label className="flex items-center gap-2 text-gray-300">
+              <input type="checkbox" checked={formData.lq_certified} onChange={(e) => updateField('lq_certified', e.target.checked)} className="w-4 h-4 rounded" />
+              RVIA Certified (Required for many RV parks)
+            </label>
+
+            {/* Sleeping */}
+            <h4 className="text-white font-medium">Sleeping</h4>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-gray-300 text-sm font-medium mb-2">Sleep Capacity</label>
+                <input type="number" value={formData.lq_sleep_capacity} onChange={(e) => updateField('lq_sleep_capacity', e.target.value)} className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600" />
+              </div>
+              <div>
+                <label className="block text-gray-300 text-sm font-medium mb-2">Bed Type</label>
+                <select value={formData.lq_bed_type} onChange={(e) => updateField('lq_bed_type', e.target.value)} className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600">
+                  <option value="queen">Queen</option>
+                  <option value="full">Full</option>
+                  <option value="dinette_converts">Dinette Converts</option>
+                  <option value="sofa_sleeper">Sofa Sleeper</option>
+                  <option value="bunk">Bunks</option>
+                  <option value="cabover">Cabover Bed</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Kitchen */}
+            <h4 className="text-white font-medium pt-4">Kitchen</h4>
+            <label className="flex items-center gap-2 text-gray-300 mb-4">
+              <input type="checkbox" checked={formData.lq_has_kitchen} onChange={(e) => updateField('lq_has_kitchen', e.target.checked)} className="w-4 h-4 rounded" />
+              Has Kitchen
+            </label>
+            
+            {formData.lq_has_kitchen && (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div>
+                  <label className="block text-gray-300 text-sm font-medium mb-2">Cooktop</label>
+                  <select value={formData.lq_cooktop_type} onChange={(e) => updateField('lq_cooktop_type', e.target.value)} className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600">
+                    <option value="none">None</option>
+                    <option value="2_burner">2-Burner</option>
+                    <option value="3_burner">3-Burner</option>
+                    <option value="induction">Induction</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-gray-300 text-sm font-medium mb-2">Refrigerator</label>
+                  <select value={formData.lq_refrigerator_type} onChange={(e) => updateField('lq_refrigerator_type', e.target.value)} className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600">
+                    <option value="none">None</option>
+                    <option value="3_way">3-Way (LP/12V/120V)</option>
+                    <option value="12v_compressor">12V Compressor</option>
+                    <option value="residential">Residential</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-gray-300 text-sm font-medium mb-2">Fridge Size (cu ft)</label>
+                  <input type="number" value={formData.lq_refrigerator_cubic_feet} onChange={(e) => updateField('lq_refrigerator_cubic_feet', e.target.value)} className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600" placeholder="6" />
+                </div>
+                <div className="flex items-end">
+                  <label className="flex items-center gap-2 text-gray-300">
+                    <input type="checkbox" checked={formData.lq_has_microwave} onChange={(e) => updateField('lq_has_microwave', e.target.checked)} className="w-4 h-4 rounded" />
+                    Microwave
+                  </label>
+                </div>
+              </div>
+            )}
+
+            {/* Bathroom */}
+            <h4 className="text-white font-medium pt-4">Bathroom</h4>
+            <label className="flex items-center gap-2 text-gray-300 mb-4">
+              <input type="checkbox" checked={formData.lq_has_bathroom} onChange={(e) => updateField('lq_has_bathroom', e.target.checked)} className="w-4 h-4 rounded" />
+              Has Bathroom
+            </label>
+            
+            {formData.lq_has_bathroom && (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div>
+                  <label className="block text-gray-300 text-sm font-medium mb-2">Bathroom Type</label>
+                  <select value={formData.lq_bathroom_type} onChange={(e) => updateField('lq_bathroom_type', e.target.value)} className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600">
+                    <option value="wet_bath">Wet Bath (Combined)</option>
+                    <option value="dry_bath">Dry Bath (Separate)</option>
+                    <option value="half_bath">Half Bath (No Shower)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-gray-300 text-sm font-medium mb-2">Toilet Type</label>
+                  <select value={formData.lq_toilet_type} onChange={(e) => updateField('lq_toilet_type', e.target.value)} className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600">
+                    <option value="gravity">Gravity Flush</option>
+                    <option value="macerator">Macerator</option>
+                    <option value="cassette">Cassette</option>
+                    <option value="porta_potti">Porta-Potti</option>
+                  </select>
+                </div>
+                <div className="flex items-end">
+                  <label className="flex items-center gap-2 text-gray-300">
+                    <input type="checkbox" checked={formData.lq_has_shower} onChange={(e) => updateField('lq_has_shower', e.target.checked)} className="w-4 h-4 rounded" />
+                    Has Shower
+                  </label>
+                </div>
+              </div>
+            )}
+
+            {/* Water System */}
+            <h4 className="text-white font-medium pt-4">Water System</h4>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div>
+                <label className="block text-gray-300 text-sm font-medium mb-2">Fresh Water (gal)</label>
+                <input type="number" value={formData.lq_fresh_water_gallons} onChange={(e) => updateField('lq_fresh_water_gallons', e.target.value)} className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600" placeholder="30" />
+              </div>
+              <div>
+                <label className="block text-gray-300 text-sm font-medium mb-2">Gray Water (gal)</label>
+                <input type="number" value={formData.lq_gray_water_gallons} onChange={(e) => updateField('lq_gray_water_gallons', e.target.value)} className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600" placeholder="25" />
+              </div>
+              <div>
+                <label className="block text-gray-300 text-sm font-medium mb-2">Black Water (gal)</label>
+                <input type="number" value={formData.lq_black_water_gallons} onChange={(e) => updateField('lq_black_water_gallons', e.target.value)} className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600" placeholder="25" />
+              </div>
+              <div>
+                <label className="block text-gray-300 text-sm font-medium mb-2">Water Heater</label>
+                <select value={formData.lq_water_heater_type} onChange={(e) => updateField('lq_water_heater_type', e.target.value)} className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600">
+                  <option value="none">None</option>
+                  <option value="tankless">Tankless</option>
+                  <option value="6_gal">6 Gallon</option>
+                  <option value="10_gal">10 Gallon</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Power System */}
+            <h4 className="text-white font-medium pt-4">Power System</h4>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div>
+                <label className="block text-gray-300 text-sm font-medium mb-2">Shore Power (amps)</label>
+                <select value={formData.lq_shore_power_amps} onChange={(e) => updateField('lq_shore_power_amps', parseInt(e.target.value))} className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600">
+                  <option value={30}>30 Amp</option>
+                  <option value={50}>50 Amp</option>
+                </select>
+              </div>
+              <div>
+                <label className="flex items-center gap-2 text-gray-300 h-full pt-6">
+                  <input type="checkbox" checked={formData.lq_has_generator} onChange={(e) => updateField('lq_has_generator', e.target.checked)} className="w-4 h-4 rounded" />
+                  Has Generator
+                </label>
+              </div>
+              {formData.lq_has_generator && (
+                <div>
+                  <label className="block text-gray-300 text-sm font-medium mb-2">Generator (watts)</label>
+                  <input type="number" value={formData.lq_generator_watts} onChange={(e) => updateField('lq_generator_watts', e.target.value)} className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600" placeholder="4000" />
+                </div>
+              )}
+              <div>
+                <label className="flex items-center gap-2 text-gray-300 h-full pt-6">
+                  <input type="checkbox" checked={formData.lq_has_solar} onChange={(e) => updateField('lq_has_solar', e.target.checked)} className="w-4 h-4 rounded" />
+                  Has Solar
+                </label>
+              </div>
+            </div>
+
+            {/* Extras */}
+            <h4 className="text-white font-medium pt-4">Comfort Features</h4>
+            <div className="flex flex-wrap gap-4">
+              <label className="flex items-center gap-2 text-gray-300">
+                <input type="checkbox" checked={formData.lq_has_awning} onChange={(e) => updateField('lq_has_awning', e.target.checked)} className="w-4 h-4 rounded" />
+                Awning
+              </label>
+              <label className="flex items-center gap-2 text-gray-300">
+                <input type="checkbox" checked={formData.lq_has_slide_out} onChange={(e) => updateField('lq_has_slide_out', e.target.checked)} className="w-4 h-4 rounded" />
+                Slide-Out
+              </label>
+            </div>
+          </div>
+        )}
+
+        {/* ==================== EQUIPMENT TAB ==================== */}
+        {activeTab === 'equipment' && (showEquipmentSection || showDumpSection) && (
+          <div className="space-y-6">
+            {showEquipmentSection && (
+              <>
+                <h4 className="text-white font-medium">Deck Configuration</h4>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                  {DECK_TYPES.map(dt => (
+                    <button
+                      key={dt.value}
+                      type="button"
+                      onClick={() => updateField('deck_type', dt.value)}
+                      className={`p-3 rounded-lg border text-left transition ${
+                        formData.deck_type === dt.value
+                          ? 'border-blue-500 bg-blue-500/20 text-white'
+                          : 'border-gray-600 bg-gray-700 text-gray-300 hover:border-gray-500'
+                      }`}
+                    >
+                      <span className="font-medium block">{dt.label}</span>
+                      <span className="text-xs text-gray-400">{dt.description}</span>
+                    </button>
+                  ))}
+                </div>
+
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div>
+                    <label className="block text-gray-300 text-sm font-medium mb-2">Deck Length (ft)</label>
+                    <input type="number" value={formData.deck_length_feet} onChange={(e) => updateField('deck_length_feet', e.target.value)} className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600" placeholder="24" />
+                  </div>
+                  <div>
+                    <label className="block text-gray-300 text-sm font-medium mb-2">Deck Height (in)</label>
+                    <input type="number" value={formData.deck_height_inches} onChange={(e) => updateField('deck_height_inches', e.target.value)} className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600" placeholder="24" />
+                  </div>
+                  {['equipment_lowboy', 'equipment_rgn', 'equipment_double_drop'].includes(formData.deck_type) && (
+                    <div>
+                      <label className="block text-gray-300 text-sm font-medium mb-2">Well Length (ft)</label>
+                      <input type="number" value={formData.well_length_feet} onChange={(e) => updateField('well_length_feet', e.target.value)} className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600" placeholder="29" />
+                    </div>
+                  )}
+                </div>
+
+                {/* RGN Specific */}
+                {formData.deck_type === 'equipment_rgn' && (
+                  <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4">
+                    <label className="flex items-center gap-2 text-gray-300">
+                      <input type="checkbox" checked={formData.gooseneck_removable} onChange={(e) => updateField('gooseneck_removable', e.target.checked)} className="w-4 h-4 rounded" />
+                      <div>
+                        <span className="text-white font-medium">Removable Gooseneck (RGN)</span>
+                        <p className="text-gray-400 text-sm">Front detaches to create ground-level loading ramp</p>
+                      </div>
+                    </label>
+                  </div>
+                )}
+
+                {/* Loading */}
+                <h4 className="text-white font-medium pt-4">Loading System</h4>
+                <div className="flex flex-wrap gap-4">
+                  <label className="flex items-center gap-2 text-gray-300">
+                    <input type="checkbox" checked={formData.has_loading_ramps} onChange={(e) => updateField('has_loading_ramps', e.target.checked)} className="w-4 h-4 rounded" />
+                    Loading Ramps
+                  </label>
+                  <label className="flex items-center gap-2 text-gray-300">
+                    <input type="checkbox" checked={formData.has_winch} onChange={(e) => updateField('has_winch', e.target.checked)} className="w-4 h-4 rounded" />
+                    Winch
+                  </label>
+                  <label className="flex items-center gap-2 text-gray-300">
+                    <input type="checkbox" checked={formData.has_stake_pockets} onChange={(e) => updateField('has_stake_pockets', e.target.checked)} className="w-4 h-4 rounded" />
+                    Stake Pockets
+                  </label>
+                </div>
+              </>
+            )}
+
+            {/* Dump Trailer Specific */}
+            {showDumpSection && (
+              <>
+                <h4 className="text-white font-medium pt-4">Dump Configuration</h4>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div>
+                    <label className="block text-gray-300 text-sm font-medium mb-2">Dump Type</label>
+                    <select value={formData.dump_type} onChange={(e) => updateField('dump_type', e.target.value)} className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600">
+                      <option value="end_dump">End Dump</option>
+                      <option value="side_dump">Side Dump</option>
+                      <option value="belly_dump">Belly Dump</option>
+                      <option value="3_way">3-Way Dump</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-gray-300 text-sm font-medium mb-2">Capacity (cu yd)</label>
+                    <input type="number" value={formData.dump_capacity_cubic_yards} onChange={(e) => updateField('dump_capacity_cubic_yards', e.target.value)} className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600" placeholder="14" />
+                  </div>
+                  <div>
+                    <label className="block text-gray-300 text-sm font-medium mb-2">Hydraulic Type</label>
+                    <select value={formData.hydraulic_type} onChange={(e) => updateField('hydraulic_type', e.target.value)} className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600">
+                      <option value="scissor">Scissor Lift</option>
+                      <option value="telescopic">Telescopic</option>
+                      <option value="dual_ram">Dual Ram</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-4">
+                  <label className="flex items-center gap-2 text-gray-300">
+                    <input type="checkbox" checked={formData.has_tarp} onChange={(e) => updateField('has_tarp', e.target.checked)} className="w-4 h-4 rounded" />
+                    Has Tarp System
+                  </label>
+                  <label className="flex items-center gap-2 text-gray-300">
+                    <input type="checkbox" checked={formData.has_spread_gate} onChange={(e) => updateField('has_spread_gate', e.target.checked)} className="w-4 h-4 rounded" />
+                    Spreader Gate
+                  </label>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
+        {/* Photos Tab Placeholder */}
+        {activeTab === 'photos' && (
+          <div className="text-center py-12">
+            <span className="text-5xl">📷</span>
+            <p className="text-gray-400 mt-4">Photo upload coming in Phase 4B</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export default TrailerFormComprehensive;
+```
+
+This comprehensive system covers:
+
+**HORSE TRAILERS:**
+- 7 loading configurations (straight, slant, reverse slant, head-to-head, stock combo, box stall, 2+1)
+- Stall dimensions with horse size ratings (pony, standard, warmblood, draft)
+- 8 divider types with padding and removal options
+- Window counts (drop-down head/butt, sliders)
+- Escape doors, rear load types (ramp, step-up, dutch, swing)
+- Complete tack room specifications
+
+**LIVING QUARTERS (applies to horse AND work trailers):**
+- Short wall sizing (4' to 14') with auto sleep capacity
+- RVIA certification tracking
+- Full kitchen specs (cooktop, microwave, refrigerator types)
+- Complete bathroom (wet/dry bath, toilet types, shower)
+- Water system (fresh/gray/black tanks, water heater)
+- Power system (shore, generator, solar, inverter)
+- Comfort features (awning, slide-outs, TV, stereo)
+
+**HEAVY EQUIPMENT:**
+- 6 deck types (flatbed, step deck, lowboy, RGN, double drop, tilt)
+- Deck height specifications for load clearance
+- Well length for lowboy/RGN
+- RGN removable gooseneck flag
+- Loading systems (ramps, winch, stake pockets)
+
+**DUMP TRAILERS:**
+- 4 dump types (end, side, belly, 3-way)
+- Hydraulic types (scissor, telescopic, dual ram)
+- Capacity in cubic yards
+- Tarp and spreader gate options
+
+Ready to paste into Replit!
