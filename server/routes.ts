@@ -15,6 +15,7 @@ import { getJsonLoadedMembers } from "@shared/chamber-member-registry";
 import { getChamberProgressList, getChamberProgressSummary } from "@shared/chamber-progress";
 import { createFleetRouter } from "./routes/fleet";
 import { JobberService, getJobberAuthUrl, exchangeCodeForToken } from "./services/jobber";
+import { CompanyCamService } from "./services/companycam";
 
 // Merge static members with JSON-loaded members for consistent data across the app
 // IMPORTANT: This function is called per-request to ensure fresh data after JSON file updates
@@ -202,6 +203,105 @@ export async function registerRoutes(
     } catch (error) {
       console.error('Jobber API error:', error);
       res.status(500).json({ error: 'Failed to fetch jobs from Jobber' });
+    }
+  });
+
+  // CompanyCam integration endpoints
+  app.get('/api/v1/integrations/companycam/test', async (req, res) => {
+    try {
+      const accessToken = process.env.COMPANYCAM_ACCESS_TOKEN;
+      if (!accessToken) {
+        return res.status(401).json({ 
+          connected: false,
+          error: 'COMPANYCAM_ACCESS_TOKEN not configured'
+        });
+      }
+
+      const companycam = new CompanyCamService({ accessToken });
+      const result = await companycam.testConnection();
+      
+      res.json({
+        connected: true,
+        ...result,
+      });
+    } catch (error) {
+      console.error('CompanyCam connection test error:', error);
+      res.status(500).json({ 
+        connected: false, 
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  app.get('/api/v1/integrations/companycam/project/:projectId/photos', async (req, res) => {
+    try {
+      const { projectId } = req.params;
+      const { limit = '10' } = req.query;
+      
+      const accessToken = process.env.COMPANYCAM_ACCESS_TOKEN;
+      if (!accessToken) {
+        return res.status(401).json({ error: 'CompanyCam not configured' });
+      }
+
+      const companycam = new CompanyCamService({ accessToken });
+      const photos = await companycam.getProjectPhotos(projectId, 1, Number(limit));
+      
+      const formattedPhotos = photos.map((photo) => ({
+        id: photo.id,
+        url: photo.uris?.original || photo.uris?.large,
+        thumbnailUrl: photo.uris?.thumbnail,
+        caption: photo.captured_at,
+        timestamp: photo.captured_at,
+        tags: photo.tags?.map((t) => t.name) || [],
+        source: 'companycam',
+      }));
+
+      res.json(formattedPhotos);
+    } catch (error) {
+      console.error('CompanyCam API error:', error);
+      res.status(500).json({ error: 'Failed to fetch photos' });
+    }
+  });
+
+  app.get('/api/v1/integrations/companycam/search', async (req, res) => {
+    try {
+      const { q } = req.query;
+      
+      if (!q) {
+        return res.status(400).json({ error: 'Search query (q) is required' });
+      }
+      
+      const accessToken = process.env.COMPANYCAM_ACCESS_TOKEN;
+      if (!accessToken) {
+        return res.status(401).json({ error: 'CompanyCam not configured' });
+      }
+
+      const companycam = new CompanyCamService({ accessToken });
+      const projects = await companycam.searchProjects(String(q));
+
+      res.json(projects);
+    } catch (error) {
+      console.error('CompanyCam API error:', error);
+      res.status(500).json({ error: 'Failed to search projects' });
+    }
+  });
+
+  app.get('/api/v1/integrations/companycam/projects', async (req, res) => {
+    try {
+      const { page = '1', limit = '50' } = req.query;
+      
+      const accessToken = process.env.COMPANYCAM_ACCESS_TOKEN;
+      if (!accessToken) {
+        return res.status(401).json({ error: 'CompanyCam not configured' });
+      }
+
+      const companycam = new CompanyCamService({ accessToken });
+      const projects = await companycam.getProjects(Number(page), Number(limit));
+
+      res.json(projects);
+    } catch (error) {
+      console.error('CompanyCam API error:', error);
+      res.status(500).json({ error: 'Failed to fetch projects' });
     }
   });
 

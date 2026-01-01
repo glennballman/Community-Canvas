@@ -1,0 +1,196 @@
+PROMPT 7: Scope CompanyCam API Integration
+TASK: Create CompanyCam API Integration Module
+
+PURPOSE:
+Pull real job site photos from CompanyCam to display in trip timeline:
+- Project photos
+- Tags/labels
+- Photo timestamps
+- Link to CompanyCam project
+
+IMPLEMENTATION:
+
+1. Create the CompanyCam service:
+   `server/services/companycam.ts`
+```typescript
+   import axios from 'axios';
+
+   const COMPANYCAM_API_URL = 'https://api.companycam.com/v2';
+
+   interface CompanyCamConfig {
+     accessToken: string;
+   }
+
+   export class CompanyCamService {
+     private client;
+
+     constructor(config: CompanyCamConfig) {
+       this.client = axios.create({
+         baseURL: COMPANYCAM_API_URL,
+         headers: {
+           Authorization: `Bearer ${config.accessToken}`,
+           'Content-Type': 'application/json',
+         },
+       });
+     }
+
+     // Get all projects
+     async getProjects(page: number = 1, perPage: number = 50) {
+       const response = await this.client.get('/projects', {
+         params: { page, per_page: perPage },
+       });
+       return response.data;
+     }
+
+     // Get a specific project
+     async getProject(projectId: string) {
+       const response = await this.client.get(`/projects/${projectId}`);
+       return response.data;
+     }
+
+     // Search projects by name/address
+     async searchProjects(query: string) {
+       const response = await this.client.get('/projects', {
+         params: { query },
+       });
+       return response.data;
+     }
+
+     // Get photos for a project
+     async getProjectPhotos(projectId: string, page: number = 1, perPage: number = 20) {
+       const response = await this.client.get(`/projects/${projectId}/photos`, {
+         params: { page, per_page: perPage },
+       });
+       return response.data;
+     }
+
+     // Get a specific photo
+     async getPhoto(photoId: string) {
+       const response = await this.client.get(`/photos/${photoId}`);
+       return response.data;
+     }
+
+     // Get recent photos across all projects (useful for timeline)
+     async getRecentPhotos(days: number = 7, page: number = 1) {
+       const startDate = new Date();
+       startDate.setDate(startDate.getDate() - days);
+       
+       const response = await this.client.get('/photos', {
+         params: {
+           page,
+           per_page: 50,
+           start_date: startDate.toISOString(),
+         },
+       });
+       return response.data;
+     }
+   }
+```
+
+2. Create API endpoint:
+   `server/routes/integrations/companycam.ts`
+```typescript
+   import { Router } from 'express';
+   import { CompanyCamService } from '../../services/companycam';
+
+   const router = Router();
+
+   // GET /api/v1/integrations/companycam/project/:projectId/photos
+   router.get('/project/:projectId/photos', async (req, res) => {
+     try {
+       const { projectId } = req.params;
+       const { limit = 10 } = req.query;
+       
+       const accessToken = process.env.COMPANYCAM_ACCESS_TOKEN;
+       if (!accessToken) {
+         return res.status(401).json({ error: 'CompanyCam not configured' });
+       }
+
+       const companycam = new CompanyCamService({ accessToken });
+       const photos = await companycam.getProjectPhotos(projectId, 1, Number(limit));
+       
+       // Transform to our photo format
+       const formattedPhotos = photos.map((photo: any) => ({
+         id: photo.id,
+         url: photo.uris?.original || photo.uris?.large,
+         thumbnailUrl: photo.uris?.thumbnail,
+         caption: photo.captured_at,
+         timestamp: photo.captured_at,
+         tags: photo.tags?.map((t: any) => t.name) || [],
+         source: 'companycam',
+       }));
+
+       res.json(formattedPhotos);
+     } catch (error) {
+       console.error('CompanyCam API error:', error);
+       res.status(500).json({ error: 'Failed to fetch photos' });
+     }
+   });
+
+   // GET /api/v1/integrations/companycam/search?q=bamfield
+   router.get('/search', async (req, res) => {
+     try {
+       const { q } = req.query;
+       
+       const accessToken = process.env.COMPANYCAM_ACCESS_TOKEN;
+       if (!accessToken) {
+         return res.status(401).json({ error: 'CompanyCam not configured' });
+       }
+
+       const companycam = new CompanyCamService({ accessToken });
+       const projects = await companycam.searchProjects(String(q));
+
+       res.json(projects);
+     } catch (error) {
+       console.error('CompanyCam API error:', error);
+       res.status(500).json({ error: 'Failed to search projects' });
+     }
+   });
+
+   export default router;
+```
+
+3. Create React hook:
+   `client/src/hooks/useCompanyCamPhotos.ts`
+```typescript
+   import { useQuery } from '@tanstack/react-query';
+
+   interface CompanyCamPhoto {
+     id: string;
+     url: string;
+     thumbnailUrl: string;
+     caption: string;
+     timestamp: string;
+     tags: string[];
+     source: 'companycam';
+   }
+
+   export function useCompanyCamPhotos(projectId: string | null, limit: number = 10) {
+     return useQuery<CompanyCamPhoto[]>({
+       queryKey: ['companycam-photos', projectId, limit],
+       queryFn: async () => {
+         const response = await fetch(
+           `/api/v1/integrations/companycam/project/${projectId}/photos?limit=${limit}`
+         );
+         if (!response.ok) throw new Error('Failed to fetch photos');
+         return response.json();
+       },
+       enabled: !!projectId,
+       staleTime: 5 * 60 * 1000, // 5 minutes
+     });
+   }
+```
+
+4. Environment variables needed:
+COMPANYCAM_ACCESS_TOKEN=your_access_token
+
+5. To get access token:
+   - Go to CompanyCam app > Settings > Integrations > API
+   - Generate an access token
+   - Or implement OAuth for multi-user access
+
+EXPECTED RESULT:
+- Framework for CompanyCam integration in place
+- Can fetch photos by project ID
+- Job site events show real photos from CompanyCam
+- Photos update as crew adds new ones on site
