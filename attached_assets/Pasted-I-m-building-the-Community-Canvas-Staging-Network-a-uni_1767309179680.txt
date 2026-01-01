@@ -1,0 +1,560 @@
+I'm building the Community Canvas Staging Network - a unified platform for:
+- RV parks and campgrounds
+- Truck parking with on-site mechanics
+- Equestrian facilities with horse amenities
+- Work crew staging areas
+- Traditional accommodations with vehicle parking
+
+The key differentiator: We match VEHICLE DIMENSIONS to SPOT DIMENSIONS, and track ON-SITE SERVICE PROVIDERS (mechanics, farriers, vets) who can work on vehicles while guests sleep.
+
+Run this SQL to create the core tables:
+
+-- ============================================================================
+-- COMMUNITY CANVAS STAGING NETWORK - CORE SCHEMA
+-- ============================================================================
+
+-- Drop existing accommodation tables if migrating (comment out if keeping both)
+-- We're creating a NEW unified system
+
+-- ============================================================================
+-- PART 1: HOST ACCOUNTS (Property Owners)
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS host_accounts (
+    id SERIAL PRIMARY KEY,
+    
+    -- Authentication
+    email VARCHAR(255) UNIQUE NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    
+    -- Profile
+    first_name VARCHAR(100),
+    last_name VARCHAR(100),
+    phone VARCHAR(20),
+    profile_photo_url TEXT,
+    
+    -- Business info
+    business_name VARCHAR(255),
+    business_type VARCHAR(50) DEFAULT 'individual',
+    -- 'individual', 'property_manager', 'company', 'municipality', 'first_nation'
+    
+    -- Tax/Business Info
+    business_number VARCHAR(50),
+    gst_number VARCHAR(50),
+    
+    -- Verification
+    email_verified BOOLEAN DEFAULT false,
+    email_verification_token VARCHAR(100),
+    email_verification_expires TIMESTAMP WITH TIME ZONE,
+    phone_verified BOOLEAN DEFAULT false,
+    identity_verified BOOLEAN DEFAULT false,
+    
+    -- Password reset
+    password_reset_token VARCHAR(100),
+    password_reset_expires TIMESTAMP WITH TIME ZONE,
+    
+    -- Account status
+    status VARCHAR(20) DEFAULT 'pending_verification',
+    -- 'active', 'suspended', 'pending_verification'
+    
+    -- Stats
+    total_properties INTEGER DEFAULT 0,
+    total_bookings INTEGER DEFAULT 0,
+    total_revenue DECIMAL(12, 2) DEFAULT 0,
+    
+    -- Settings
+    notification_preferences JSONB DEFAULT '{"email_bookings": true, "email_messages": true, "sms_bookings": false}',
+    payout_method VARCHAR(30),
+    payout_details JSONB,
+    timezone VARCHAR(50) DEFAULT 'America/Vancouver',
+    
+    -- Metadata
+    member_since TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    last_login_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_host_accounts_email ON host_accounts(email);
+CREATE INDEX idx_host_accounts_status ON host_accounts(status);
+
+-- Host Sessions
+CREATE TABLE IF NOT EXISTS host_sessions (
+    id SERIAL PRIMARY KEY,
+    host_account_id INTEGER REFERENCES host_accounts(id) ON DELETE CASCADE,
+    session_token VARCHAR(255) UNIQUE NOT NULL,
+    user_agent TEXT,
+    ip_address VARCHAR(45),
+    device_type VARCHAR(20),
+    expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    is_valid BOOLEAN DEFAULT true,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    last_used_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_host_sessions_token ON host_sessions(session_token);
+
+-- ============================================================================
+-- PART 2: STAGING PROPERTIES (The Main Entity)
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS staging_properties (
+    id SERIAL PRIMARY KEY,
+    
+    -- Identity
+    canvas_id VARCHAR(20) UNIQUE,
+    
+    -- External IDs
+    airbnb_id VARCHAR(50),
+    booking_id VARCHAR(50),
+    hipcamp_id VARCHAR(50),
+    rv_parky_id VARCHAR(50),
+    
+    -- Basic Info
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    short_description VARCHAR(500),
+    tagline VARCHAR(150),
+    
+    -- Property Type
+    property_type VARCHAR(30) NOT NULL,
+    -- 'parking_lot', 'rv_park', 'campground', 'farm_stay', 'industrial_yard',
+    -- 'accommodation', 'hybrid', 'boondocking', 'marina', 'equestrian'
+    
+    property_subtype VARCHAR(30),
+    
+    -- Ownership
+    host_account_id INTEGER REFERENCES host_accounts(id),
+    is_claimed BOOLEAN DEFAULT false,
+    claimed_at TIMESTAMP WITH TIME ZONE,
+    
+    -- =========================================================================
+    -- LOCATION
+    -- =========================================================================
+    municipality_id INTEGER,
+    region VARCHAR(100),
+    city VARCHAR(100),
+    address TEXT,
+    address_public BOOLEAN DEFAULT false,
+    postal_code VARCHAR(10),
+    latitude DECIMAL(10, 7),
+    longitude DECIMAL(10, 7),
+    location_description TEXT,
+    nearest_town VARCHAR(100),
+    distance_to_town_km DECIMAL(6, 2),
+    directions TEXT,
+    
+    -- =========================================================================
+    -- CAPACITY
+    -- =========================================================================
+    total_spots INTEGER DEFAULT 1,
+    spots_small INTEGER DEFAULT 0,
+    spots_medium INTEGER DEFAULT 0,
+    spots_large INTEGER DEFAULT 0,
+    spots_oversized INTEGER DEFAULT 0,
+    spots_pull_through INTEGER DEFAULT 0,
+    spots_back_in INTEGER DEFAULT 0,
+    
+    -- For accommodations
+    max_guests INTEGER,
+    bedrooms INTEGER,
+    beds INTEGER,
+    bathrooms DECIMAL(3, 1),
+    
+    -- =========================================================================
+    -- DIMENSIONS (Critical for matching!)
+    -- =========================================================================
+    max_vehicle_length_ft INTEGER,
+    max_combined_length_ft INTEGER,
+    max_vehicle_width_ft INTEGER DEFAULT 12,
+    max_vehicle_height_ft INTEGER,
+    
+    spot_length_ft INTEGER,
+    spot_width_ft INTEGER,
+    
+    entrance_width_ft INTEGER,
+    turning_radius_ft INTEGER,
+    max_weight_lbs INTEGER,
+    
+    -- Surface
+    surface_type VARCHAR(30),
+    surface_condition VARCHAR(20),
+    is_level BOOLEAN DEFAULT true,
+    
+    -- =========================================================================
+    -- HOOKUPS - POWER
+    -- =========================================================================
+    has_shore_power BOOLEAN DEFAULT false,
+    power_amps INTEGER[],
+    power_voltage INTEGER DEFAULT 120,
+    power_included BOOLEAN DEFAULT true,
+    power_cost_per_day DECIMAL(6, 2),
+    num_power_hookups INTEGER DEFAULT 0,
+    power_pedestal_distance_ft INTEGER,
+    power_metered BOOLEAN DEFAULT false,
+    
+    -- =========================================================================
+    -- HOOKUPS - WATER
+    -- =========================================================================
+    has_water_hookup BOOLEAN DEFAULT false,
+    water_included BOOLEAN DEFAULT true,
+    water_cost_per_day DECIMAL(6, 2),
+    num_water_hookups INTEGER DEFAULT 0,
+    has_potable_water BOOLEAN DEFAULT true,
+    water_pressure_psi INTEGER,
+    has_water_filter BOOLEAN DEFAULT false,
+    has_water_fill_station BOOLEAN DEFAULT false,
+    
+    -- =========================================================================
+    -- HOOKUPS - SEWER
+    -- =========================================================================
+    has_sewer_hookup BOOLEAN DEFAULT false,
+    num_sewer_hookups INTEGER DEFAULT 0,
+    sewer_gravity_ok BOOLEAN DEFAULT true,
+    sewer_macerator_ok BOOLEAN DEFAULT true,
+    has_dump_station BOOLEAN DEFAULT false,
+    dump_station_pull_through BOOLEAN DEFAULT false,
+    dump_station_rinse BOOLEAN DEFAULT false,
+    dump_fee DECIMAL(6, 2) DEFAULT 0,
+    has_honey_wagon BOOLEAN DEFAULT false,
+    honey_wagon_fee DECIMAL(6, 2),
+    
+    -- =========================================================================
+    -- CONNECTIVITY
+    -- =========================================================================
+    has_wifi BOOLEAN DEFAULT false,
+    wifi_included BOOLEAN DEFAULT true,
+    wifi_speed_mbps INTEGER,
+    wifi_data_cap_gb INTEGER,
+    has_cable_tv BOOLEAN DEFAULT false,
+    has_cell_signal BOOLEAN DEFAULT true,
+    cell_signal_strength INTEGER,
+    cell_carriers TEXT[],
+    has_cell_booster BOOLEAN DEFAULT false,
+    starlink_friendly BOOLEAN DEFAULT false,
+    
+    -- =========================================================================
+    -- FACILITIES - BATHROOMS & SHOWERS
+    -- =========================================================================
+    has_bathrooms BOOLEAN DEFAULT false,
+    bathroom_type VARCHAR(30),
+    num_bathrooms INTEGER DEFAULT 0,
+    bathrooms_24hr BOOLEAN DEFAULT true,
+    has_showers BOOLEAN DEFAULT false,
+    num_showers INTEGER DEFAULT 0,
+    showers_free BOOLEAN DEFAULT true,
+    shower_cost DECIMAL(4, 2),
+    has_laundry BOOLEAN DEFAULT false,
+    num_washers INTEGER DEFAULT 0,
+    num_dryers INTEGER DEFAULT 0,
+    laundry_cost DECIMAL(4, 2),
+    
+    -- =========================================================================
+    -- FACILITIES - KITCHEN & FOOD
+    -- =========================================================================
+    has_kitchen BOOLEAN DEFAULT false,
+    kitchen_type VARCHAR(30),
+    has_bbq_grills BOOLEAN DEFAULT false,
+    has_picnic_tables BOOLEAN DEFAULT false,
+    has_fire_pits BOOLEAN DEFAULT false,
+    fires_allowed BOOLEAN DEFAULT false,
+    fire_restrictions TEXT,
+    has_restaurant BOOLEAN DEFAULT false,
+    restaurant_hours VARCHAR(100),
+    has_store BOOLEAN DEFAULT false,
+    store_hours VARCHAR(100),
+    has_vending BOOLEAN DEFAULT false,
+    
+    -- =========================================================================
+    -- RV SERVICES
+    -- =========================================================================
+    has_propane_refill BOOLEAN DEFAULT false,
+    propane_price_per_lb DECIMAL(4, 2),
+    has_rv_wash BOOLEAN DEFAULT false,
+    has_rv_supplies_store BOOLEAN DEFAULT false,
+    has_ice BOOLEAN DEFAULT false,
+    has_firewood BOOLEAN DEFAULT false,
+    firewood_price_per_bundle DECIMAL(4, 2),
+    has_trash_service BOOLEAN DEFAULT true,
+    has_recycling BOOLEAN DEFAULT false,
+    
+    -- =========================================================================
+    -- RECREATION
+    -- =========================================================================
+    has_pool BOOLEAN DEFAULT false,
+    pool_seasonal BOOLEAN DEFAULT false,
+    has_hot_tub BOOLEAN DEFAULT false,
+    has_playground BOOLEAN DEFAULT false,
+    has_game_room BOOLEAN DEFAULT false,
+    has_fitness_center BOOLEAN DEFAULT false,
+    has_clubhouse BOOLEAN DEFAULT false,
+    has_hiking_trails BOOLEAN DEFAULT false,
+    trail_miles INTEGER,
+    has_fishing BOOLEAN DEFAULT false,
+    has_boat_launch BOOLEAN DEFAULT false,
+    has_kayak_rental BOOLEAN DEFAULT false,
+    has_bike_rental BOOLEAN DEFAULT false,
+    
+    -- =========================================================================
+    -- NATURE & ENVIRONMENT
+    -- =========================================================================
+    is_waterfront BOOLEAN DEFAULT false,
+    waterfront_type VARCHAR(30),
+    has_beach_access BOOLEAN DEFAULT false,
+    has_swimming BOOLEAN DEFAULT false,
+    is_dark_sky BOOLEAN DEFAULT false,
+    elevation_ft INTEGER,
+    terrain_type VARCHAR(50),
+    wildlife_common TEXT[],
+    
+    -- =========================================================================
+    -- SECURITY
+    -- =========================================================================
+    is_fenced BOOLEAN DEFAULT false,
+    fence_type VARCHAR(30),
+    is_gated BOOLEAN DEFAULT false,
+    gate_type VARCHAR(30),
+    gate_code_access BOOLEAN DEFAULT false,
+    has_security_camera BOOLEAN DEFAULT false,
+    cameras_monitored BOOLEAN DEFAULT false,
+    has_onsite_manager BOOLEAN DEFAULT false,
+    manager_hours VARCHAR(100),
+    has_24hr_security BOOLEAN DEFAULT false,
+    has_security_patrol BOOLEAN DEFAULT false,
+    patrol_frequency VARCHAR(50),
+    is_well_lit BOOLEAN DEFAULT false,
+    has_emergency_phone BOOLEAN DEFAULT false,
+    security_rating INTEGER,
+    
+    -- =========================================================================
+    -- ACCESS & POLICIES
+    -- =========================================================================
+    access_type VARCHAR(30) DEFAULT '24/7',
+    office_hours VARCHAR(100),
+    check_in_time TIME DEFAULT '14:00',
+    check_out_time TIME DEFAULT '11:00',
+    check_in_method VARCHAR(30),
+    late_check_in_available BOOLEAN DEFAULT false,
+    late_check_in_fee DECIMAL(6, 2),
+    
+    -- Road access
+    road_type VARCHAR(30),
+    road_condition_notes TEXT,
+    accessible_year_round BOOLEAN DEFAULT true,
+    winter_access_notes TEXT,
+    requires_4x4 BOOLEAN DEFAULT false,
+    requires_high_clearance BOOLEAN DEFAULT false,
+    
+    -- Stay policies
+    min_nights INTEGER DEFAULT 1,
+    max_nights INTEGER,
+    max_stay_days INTEGER DEFAULT 364,
+    
+    -- Quiet hours
+    has_quiet_hours BOOLEAN DEFAULT true,
+    quiet_hours_start TIME DEFAULT '22:00',
+    quiet_hours_end TIME DEFAULT '07:00',
+    
+    -- Generators
+    generators_allowed BOOLEAN DEFAULT true,
+    generator_hours VARCHAR(100),
+    
+    -- =========================================================================
+    -- PETS
+    -- =========================================================================
+    pets_allowed BOOLEAN DEFAULT false,
+    dogs_allowed BOOLEAN DEFAULT false,
+    cats_allowed BOOLEAN DEFAULT false,
+    max_pets INTEGER,
+    pet_weight_limit_lbs INTEGER,
+    breed_restrictions TEXT,
+    pet_fee_per_night DECIMAL(6, 2),
+    pet_fee_one_time DECIMAL(6, 2),
+    has_dog_park BOOLEAN DEFAULT false,
+    dog_park_acres DECIMAL(4, 2),
+    has_dog_wash BOOLEAN DEFAULT false,
+    has_off_leash_area BOOLEAN DEFAULT false,
+    has_pet_waste_stations BOOLEAN DEFAULT false,
+    
+    -- =========================================================================
+    -- EQUESTRIAN
+    -- =========================================================================
+    is_horse_friendly BOOLEAN DEFAULT false,
+    num_horse_stalls INTEGER DEFAULT 0,
+    stall_size VARCHAR(20),
+    stall_type VARCHAR(30),
+    stall_nightly_rate DECIMAL(6, 2),
+    has_paddocks BOOLEAN DEFAULT false,
+    num_paddocks INTEGER DEFAULT 0,
+    paddock_size_acres DECIMAL(4, 2),
+    paddock_nightly_rate DECIMAL(6, 2),
+    has_round_pen BOOLEAN DEFAULT false,
+    has_arena BOOLEAN DEFAULT false,
+    arena_type VARCHAR(30),
+    arena_footing VARCHAR(30),
+    arena_size VARCHAR(50),
+    has_hay_available BOOLEAN DEFAULT false,
+    hay_types TEXT[],
+    hay_price_per_bale DECIMAL(6, 2),
+    has_grain_available BOOLEAN DEFAULT false,
+    has_bedding_available BOOLEAN DEFAULT false,
+    bedding_types TEXT[],
+    has_water_trough BOOLEAN DEFAULT false,
+    has_wash_rack BOOLEAN DEFAULT false,
+    wash_rack_hot_water BOOLEAN DEFAULT false,
+    has_hitching_posts BOOLEAN DEFAULT false,
+    has_manure_disposal BOOLEAN DEFAULT false,
+    has_horse_trail_access BOOLEAN DEFAULT false,
+    horse_trail_miles INTEGER,
+    horse_trail_difficulty VARCHAR(20),
+    
+    -- =========================================================================
+    -- TRUCKING / COMMERCIAL
+    -- =========================================================================
+    accepts_semi_trucks BOOLEAN DEFAULT false,
+    accepts_tandem_trailers BOOLEAN DEFAULT false,
+    num_truck_spots INTEGER DEFAULT 0,
+    can_drop_trailer BOOLEAN DEFAULT false,
+    trailer_storage_rate DECIMAL(8, 2),
+    has_reefer_parking BOOLEAN DEFAULT false,
+    reefer_plugin BOOLEAN DEFAULT false,
+    
+    -- Trucker amenities
+    has_truck_showers BOOLEAN DEFAULT false,
+    truck_shower_cost DECIMAL(4, 2),
+    has_driver_lounge BOOLEAN DEFAULT false,
+    has_tv_room BOOLEAN DEFAULT false,
+    
+    -- Fuel
+    has_diesel BOOLEAN DEFAULT false,
+    diesel_price_per_liter DECIMAL(4, 2),
+    has_high_flow_diesel BOOLEAN DEFAULT false,
+    num_diesel_lanes INTEGER DEFAULT 0,
+    has_def_fluid BOOLEAN DEFAULT false,
+    def_price_per_gallon DECIMAL(4, 2),
+    accepted_fuel_cards TEXT[],
+    
+    -- Scales & Compliance
+    has_cat_scale BOOLEAN DEFAULT false,
+    has_truck_scale BOOLEAN DEFAULT false,
+    scale_cost DECIMAL(4, 2),
+    has_permit_service BOOLEAN DEFAULT false,
+    has_washout BOOLEAN DEFAULT false,
+    washout_types TEXT[],
+    
+    -- =========================================================================
+    -- REPAIR SERVICES (Summary - details in service_providers)
+    -- =========================================================================
+    has_repair_services BOOLEAN DEFAULT false,
+    repair_service_level VARCHAR(20),
+    has_onsite_mechanic BOOLEAN DEFAULT false,
+    has_24hr_repair BOOLEAN DEFAULT false,
+    has_tire_service BOOLEAN DEFAULT false,
+    has_towing BOOLEAN DEFAULT false,
+    has_parts_store BOOLEAN DEFAULT false,
+    
+    -- =========================================================================
+    -- SPECIALTY
+    -- =========================================================================
+    -- Film/Production
+    film_friendly BOOLEAN DEFAULT false,
+    max_production_vehicles INTEGER,
+    has_production_power BOOLEAN DEFAULT false,
+    production_daily_rate DECIMAL(10, 2),
+    
+    -- Boats
+    boat_trailer_friendly BOOLEAN DEFAULT false,
+    max_boat_trailer_length_ft INTEGER,
+    has_boat_launch_nearby BOOLEAN DEFAULT false,
+    boat_launch_distance_km DECIMAL(4, 1),
+    has_fish_cleaning_station BOOLEAN DEFAULT false,
+    
+    -- Construction
+    construction_staging_ok BOOLEAN DEFAULT false,
+    equipment_storage_ok BOOLEAN DEFAULT false,
+    has_secure_compound BOOLEAN DEFAULT false,
+    monthly_staging_rate DECIMAL(10, 2),
+    
+    -- Oversized
+    accepts_bus BOOLEAN DEFAULT false,
+    accepts_tiny_house BOOLEAN DEFAULT false,
+    accepts_food_truck BOOLEAN DEFAULT false,
+    has_commissary_kitchen BOOLEAN DEFAULT false,
+    
+    -- =========================================================================
+    -- ACCESSIBILITY
+    -- =========================================================================
+    has_accessible_sites BOOLEAN DEFAULT false,
+    num_accessible_sites INTEGER DEFAULT 0,
+    accessible_bathrooms BOOLEAN DEFAULT false,
+    accessible_showers BOOLEAN DEFAULT false,
+    paved_paths BOOLEAN DEFAULT false,
+    
+    -- =========================================================================
+    -- RATINGS & SCORES
+    -- =========================================================================
+    overall_rating DECIMAL(3, 2),
+    cleanliness_rating DECIMAL(3, 2),
+    accuracy_rating DECIMAL(3, 2),
+    communication_rating DECIMAL(3, 2),
+    location_rating DECIMAL(3, 2),
+    value_rating DECIMAL(3, 2),
+    review_count INTEGER DEFAULT 0,
+    
+    -- Suitability scores (auto-calculated)
+    crew_score INTEGER DEFAULT 0,
+    rv_score INTEGER DEFAULT 0,
+    trucker_score INTEGER DEFAULT 0,
+    equestrian_score INTEGER DEFAULT 0,
+    family_score INTEGER DEFAULT 0,
+    long_term_score INTEGER DEFAULT 0,
+    
+    -- =========================================================================
+    -- MEDIA
+    -- =========================================================================
+    thumbnail_url TEXT,
+    images JSONB DEFAULT '[]',
+    video_url TEXT,
+    virtual_tour_url TEXT,
+    
+    -- =========================================================================
+    -- LINKS
+    -- =========================================================================
+    website_url TEXT,
+    source_url TEXT,
+    booking_url TEXT,
+    
+    -- =========================================================================
+    -- STATUS
+    -- =========================================================================
+    status VARCHAR(20) DEFAULT 'discovered',
+    is_verified BOOLEAN DEFAULT false,
+    verified_at TIMESTAMP WITH TIME ZONE,
+    verified_by VARCHAR(100),
+    source VARCHAR(30) DEFAULT 'manual',
+    last_scraped_at TIMESTAMP WITH TIME ZONE,
+    
+    -- Seasonal
+    is_seasonal BOOLEAN DEFAULT false,
+    season_open_date DATE,
+    season_close_date DATE,
+    
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Indexes
+CREATE INDEX idx_staging_type ON staging_properties(property_type);
+CREATE INDEX idx_staging_region ON staging_properties(region);
+CREATE INDEX idx_staging_city ON staging_properties(city);
+CREATE INDEX idx_staging_host ON staging_properties(host_account_id);
+CREATE INDEX idx_staging_max_length ON staging_properties(max_combined_length_ft);
+CREATE INDEX idx_staging_status ON staging_properties(status);
+CREATE INDEX idx_staging_coords ON staging_properties USING GIST (
+    ST_SetSRID(ST_MakePoint(longitude, latitude), 4326)
+) WHERE latitude IS NOT NULL AND longitude IS NOT NULL;
+CREATE INDEX idx_staging_horse ON staging_properties(is_horse_friendly) WHERE is_horse_friendly = true;
+CREATE INDEX idx_staging_truck ON staging_properties(accepts_semi_trucks) WHERE accepts_semi_trucks = true;
+CREATE INDEX idx_staging_mechanic ON staging_properties(has_onsite_mechanic) WHERE has_onsite_mechanic = true;
+
+Confirm the tables were created, then we'll continue with the remaining tables.
