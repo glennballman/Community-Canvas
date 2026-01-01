@@ -1,0 +1,105 @@
+PROMPT 3: Update Bamfield Road Info (No Longer Gravel)
+TASK: Update Bamfield Road Information - It's Now Paved
+
+PROBLEM:
+The timeline shows "ACTIVE LOGGING ROAD - 90km gravel" but Bamfield Road 
+was chip-sealed in October 2023 and is now a paved highway.
+
+SOLUTION:
+Update all Bamfield Road references to reflect current conditions.
+
+IMPLEMENTATION:
+
+1. Update `sampleBamfieldTrip.ts` - find the Bamfield Road event and change:
+
+   FROM:
+```typescript
+   {
+     id: 'drive-bamfield-road',
+     type: 'drive_segment',
+     title: 'Bamfield Road',
+     subtitle: '⚠️ ACTIVE LOGGING ROAD - 90km gravel',
+     description: 'Radio required. Active logging trucks Mon-Fri...',
+     alerts: [
+       {
+         severity: 'major',
+         title: 'Active Logging Road',
+         description: 'Industrial traffic active...',
+       },
+       {
+         severity: 'minor', 
+         title: 'Road Condition: Good Gravel',
+         description: 'Recently graded. Some potholes...',
+       }
+     ],
+   }
+```
+
+   TO:
+```typescript
+   {
+     id: 'drive-bamfield-road',
+     type: 'drive_segment',
+     time: '2025-01-07T12:15:00',
+     title: 'Bamfield Road',
+     subtitle: 'Scenic paved highway - 90km',
+     description: 'Chip-sealed highway since October 2023. Watch for wildlife, especially deer at dawn/dusk. Some sections have steep grades and sharp curves.',
+     location: {
+       name: 'Bamfield Road (Highway 4 Extension)',
+     },
+     photos: [
+       {
+         url: '/roads/bamfield-road-paved.jpg',
+         caption: 'Bamfield Road - Now paved',
+         source: 'archive',
+       }
+     ],
+     alerts: [
+       {
+         severity: 'info',
+         title: 'Scenic Route',
+         description: 'Winding road with beautiful views. Take your time and watch for wildlife.',
+         source: 'System',
+       }
+     ],
+     weather: {
+       temperature: 6,
+       condition: 'Rain',
+       icon: 'rain',
+       precipitation: 8,
+     },
+     duration: 120, // Reduced from 150 - paved road is faster
+     distance: 90,
+     cost: 15,
+   }
+```
+
+2. Add a note about the BACKUP route being gravel:
+   
+   Add a new field or info banner:
+```typescript
+   {
+     // After the Bamfield Road event, add route info
+     routeAlternative: {
+       name: 'Plan B: Duncan-Youbou Route',
+       description: 'Alternative route via Duncan → Lake Cowichan → Youbou → Bamfield. Note: Road is GRAVEL after Youbou. Add 45+ minutes. Use if Highway 4 is closed.',
+       isGravel: true,
+       additionalTime: 45, // minutes
+     }
+   }
+```
+
+3. Update any hardcoded references in the codebase:
+   - Search for "gravel" in trip-related files
+   - Search for "logging road" 
+   - Update all to reflect current conditions
+
+4. Update the "No fuel in Bamfield" alert to be accurate:
+   - Keep the fuel warning (still valid)
+   - Remove any references to "gravel road" in the description
+
+EXPECTED RESULT:
+- Bamfield Road shows as "Scenic paved highway - 90km"
+- No more "ACTIVE LOGGING ROAD" warnings
+- Duration reduced from 2h30m to 2h (paved is faster)
+- Backup route via Youbou clearly marked as gravel

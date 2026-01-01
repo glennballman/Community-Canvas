@@ -198,7 +198,7 @@ export const sampleBamfieldTrip: TimelineEvent[] = [
       {
         severity: 'info',
         title: 'No fuel in Bamfield',
-        description: 'This is your last opportunity to fuel up. The nearest gas after this is 90km of gravel road away.',
+        description: 'This is your last opportunity to fuel up. No fuel stations available in Bamfield.',
         source: 'System',
       }
     ],
@@ -216,7 +216,7 @@ export const sampleBamfieldTrip: TimelineEvent[] = [
     type: 'meal',
     time: '2025-01-07T11:50:00',
     title: 'Lunch Stop',
-    subtitle: 'Quick bite before the gravel',
+    subtitle: 'Quick bite before Bamfield Road',
     location: {
       name: 'Tim Hortons Port Alberni',
       address: '3727 10th Ave, Port Alberni',
@@ -232,33 +232,33 @@ export const sampleBamfieldTrip: TimelineEvent[] = [
     type: 'drive_segment',
     time: '2025-01-07T12:15:00',
     title: 'Bamfield Road',
-    subtitle: 'ACTIVE LOGGING ROAD - 90km gravel',
-    description: 'Radio required. Active logging trucks Mon-Fri. Drive with headlights on. Pull over for loaded trucks.',
+    subtitle: 'Scenic paved highway - 90km',
+    description: 'Chip-sealed highway since October 2023. Watch for wildlife, especially deer at dawn/dusk. Some sections have steep grades and sharp curves.',
     location: {
-      name: 'Bamfield Main FSR',
+      name: 'Bamfield Road (Highway 4 Extension)',
     },
     photos: [],
     alerts: [
       {
-        severity: 'major',
-        title: 'Active Logging Road',
-        description: 'Industrial traffic active. Loaded logging trucks have right-of-way. Use headlights, drive defensively.',
-        source: 'Western Forest Products',
-      },
-      {
-        severity: 'minor',
-        title: 'Road Condition: Good Gravel',
-        description: 'Recently graded. Some potholes km 45-52. Watch for soft shoulders.',
+        severity: 'info',
+        title: 'Scenic Route',
+        description: 'Winding road with beautiful lake and forest views. Take your time and watch for wildlife.',
         source: 'DriveBC',
       }
     ],
+    routeAlternative: {
+      name: 'Plan B: Duncan-Youbou Route',
+      description: 'Alternative route via Duncan, Lake Cowichan, Youbou to Bamfield. Note: Road is GRAVEL after Youbou. Add 45+ minutes. Use if Highway 4 is closed.',
+      isGravel: true,
+      additionalTime: 45,
+    },
     weather: {
       temperature: 6,
       condition: 'Rain',
       icon: 'rain',
       precipitation: 8,
     },
-    duration: 150,
+    duration: 120,
     distance: 90,
     cost: 15,
     routePoint: 'Bamfield',
@@ -427,20 +427,20 @@ export const sampleBamfieldTrip: TimelineEvent[] = [
     type: 'drive_segment',
     time: '2025-01-09T13:30:00',
     title: 'Bamfield Road Return',
-    subtitle: 'Back to Port Alberni',
+    subtitle: 'Scenic drive back to Port Alberni',
     location: {
-      name: 'Bamfield Main FSR',
+      name: 'Bamfield Road (Highway 4 Extension)',
     },
     photos: [],
     alerts: [
       {
         severity: 'info',
-        title: 'Afternoon Traffic',
-        description: 'Lighter logging traffic after 1 PM. Better conditions for return.',
-        source: 'Western Forest Products',
+        title: 'Wildlife Watch',
+        description: 'Afternoon is peak time for deer activity. Drive carefully on winding sections.',
+        source: 'DriveBC',
       }
     ],
-    duration: 140,
+    duration: 120,
     distance: 90,
     cost: 15,
     routePoint: 'Bamfield',

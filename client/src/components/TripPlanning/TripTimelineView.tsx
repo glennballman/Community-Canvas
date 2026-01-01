@@ -135,6 +135,12 @@ export interface TimelineEvent {
     roomType?: string;
     amenities?: string[];
   };
+  routeAlternative?: {
+    name: string;
+    description: string;
+    isGravel?: boolean;
+    additionalTime?: number;
+  };
   jobSite?: {
     jobNumber?: string;
     clientName?: string;
