@@ -244,7 +244,58 @@ const ALLOWED_TRAILER_COLUMNS = new Set([
   'welder_type', 'welder_amps_max', 'has_cutting_torch', 'bottle_storage_count',
   // Pressure Wash Trailer
   'pressure_washer_psi', 'pressure_washer_gpm', 'water_tank_capacity_gallons',
-  'has_hot_water', 'hose_reel_count'
+  'has_hot_water', 'hose_reel_count',
+  
+  // =====================================================
+  // OVERLANDER/EXPEDITION TRAILER FIELDS (Migration 008)
+  // =====================================================
+  'is_overlander', 'overlander_type',
+  // Off-Road Capability
+  'ground_clearance_inches', 'approach_angle_degrees', 'departure_angle_degrees', 'breakover_angle_degrees',
+  // Suspension
+  'suspension_type_offroad', 'articulating_hitch', 'hitch_articulation_degrees',
+  // Tires
+  'tire_size_offroad', 'tire_type',
+  // Recovery/Protection
+  'has_skid_plates', 'has_rock_sliders', 'has_recovery_points', 'recovery_point_count',
+  // Rooftop Tent
+  'has_rooftop_tent_mount', 'rooftop_tent_weight_capacity_lbs', 'roof_rack_type',
+  // Galley/Outdoor Kitchen
+  'has_slide_out_kitchen', 'kitchen_side', 'has_outdoor_shower', 'outdoor_shower_type',
+  // Water
+  'external_water_tank_gallons', 'has_water_filtration',
+  // Fuel (Jerry Cans)
+  'has_jerry_can_mounts', 'jerry_can_capacity_gallons',
+  
+  // =====================================================
+  // TINY HOME ON WHEELS (THOW) FIELDS (Migration 008)
+  // =====================================================
+  'is_tiny_home', 'thow_certification', 'thow_square_feet', 'thow_loft_count',
+  'thow_full_time_rated', 'thow_four_season', 'thow_composting_toilet', 'thow_incinerating_toilet',
+  'registered_as',
+  
+  // =====================================================
+  // SPECIALTY EQUIPMENT TRAILER FIELDS (Migration 008)
+  // =====================================================
+  'is_specialty_equipment', 'equipment_type', 'equipment_make', 'equipment_model',
+  'equipment_power_type', 'equipment_hp',
+  'requires_setup_time', 'setup_time_minutes', 'requires_level_ground', 'has_outriggers', 'license_plate_exempt',
+  // Sawmill
+  'sawmill_max_log_diameter_inches', 'sawmill_max_log_length_feet', 'sawmill_cut_width_inches',
+  // Welder
+  'welder_amp_rating',
+  // Generator
+  'generator_kw_rating', 'generator_voltage', 'generator_phase',
+  // Pressure Washer
+  'water_tank_gallons',
+  // Air Compressor
+  'compressor_cfm', 'compressor_psi_max', 'tank_gallons',
+  // Light Tower
+  'light_tower_height_feet', 'light_output_lumens', 'light_coverage_acres',
+  // Fuel Transfer
+  'fuel_type_stored', 'has_fuel_pump', 'fuel_pump_gpm',
+  // Concrete Mixer
+  'mixer_capacity_cubic_yards', 'mixer_drum_rpm'
 ]);
 
 // Helper to filter and validate columns
