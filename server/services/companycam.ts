@@ -4,19 +4,27 @@ interface CompanyCamConfig {
   accessToken: string;
 }
 
+interface CompanyCamPhotoUri {
+  type: string;
+  uri: string;
+  url: string;
+}
+
 interface CompanyCamPhoto {
   id: string;
-  uris: {
-    original?: string;
-    large?: string;
-    thumbnail?: string;
-  };
-  captured_at: string;
+  uris: CompanyCamPhotoUri[];
+  captured_at: number;
+  creator_name?: string;
   tags?: { name: string }[];
   coordinates?: {
     lat: number;
     lon: number;
   };
+}
+
+function getPhotoUrl(uris: CompanyCamPhotoUri[], type: string): string | undefined {
+  const match = uris.find(u => u.type === type);
+  return match?.uri || match?.url;
 }
 
 interface CompanyCamProject {
@@ -108,4 +116,5 @@ export class CompanyCamService {
   }
 }
 
-export type { CompanyCamPhoto, CompanyCamProject, CompanyCamConfig };
+export { getPhotoUrl };
+export type { CompanyCamPhoto, CompanyCamProject, CompanyCamConfig, CompanyCamPhotoUri };

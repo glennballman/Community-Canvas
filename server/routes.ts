@@ -15,7 +15,7 @@ import { getJsonLoadedMembers } from "@shared/chamber-member-registry";
 import { getChamberProgressList, getChamberProgressSummary } from "@shared/chamber-progress";
 import { createFleetRouter } from "./routes/fleet";
 import { JobberService, getJobberAuthUrl, exchangeCodeForToken } from "./services/jobber";
-import { CompanyCamService } from "./services/companycam";
+import { CompanyCamService, getPhotoUrl } from "./services/companycam";
 
 // Merge static members with JSON-loaded members for consistent data across the app
 // IMPORTANT: This function is called per-request to ensure fresh data after JSON file updates
@@ -248,9 +248,9 @@ export async function registerRoutes(
       
       const formattedPhotos = photos.map((photo) => ({
         id: photo.id,
-        url: photo.uris?.original || photo.uris?.large,
-        thumbnailUrl: photo.uris?.thumbnail,
-        caption: photo.captured_at,
+        url: getPhotoUrl(photo.uris, 'original') || getPhotoUrl(photo.uris, 'web'),
+        thumbnailUrl: getPhotoUrl(photo.uris, 'thumbnail'),
+        caption: photo.creator_name || '',
         timestamp: photo.captured_at,
         tags: photo.tags?.map((t) => t.name) || [],
         source: 'companycam',
