@@ -285,7 +285,9 @@ export function DriverQualificationsForm({ driverId, onSave }: DriverQualificati
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/v1/fleet/driver-qualifications', driverId] });
-      queryClient.invalidateQueries({ queryKey: ['/api/v1/fleet/driver-qualification-summary', driverId] });
+      queryClient.invalidateQueries({ queryKey: ['driver-qualifications', driverId] });
+      queryClient.invalidateQueries({ queryKey: ['qualification-check'] });
+      queryClient.invalidateQueries({ queryKey: ['qualified-drivers'] });
       toast({
         title: 'Qualifications Saved',
         description: 'Driver qualifications have been updated successfully.',
