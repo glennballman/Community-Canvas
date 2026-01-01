@@ -727,6 +727,18 @@ function TimelineEventCard({
               {event.description && (
                 <div className="px-4 pb-4">
                   <p className="text-sm text-muted-foreground">{event.description}</p>
+                  {event.type === 'webcam' && event.location?.name?.includes('BMSC') && (
+                    <a 
+                      href="https://bamfieldmsc.com/webcam/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-primary hover:underline flex items-center gap-1 mt-2"
+                      data-testid="link-live-feed"
+                    >
+                      <ExternalLink className="h-3 w-3" />
+                      View live video feed
+                    </a>
+                  )}
                 </div>
               )}
 

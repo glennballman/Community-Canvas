@@ -1,0 +1,161 @@
+PROMPT 5: Add BMSC Webcam Integration
+TASK: Add Bamfield Marine Sciences Centre Webcam
+
+CONTEXT:
+BMSC has a public webcam at https://bamfieldmsc.com/webcam/
+Windy.com ID: 1171392505
+Shows views across Bamfield Inlet
+
+IMPLEMENTATION:
+
+1. Create a custom webcams data file:
+   `client/src/data/customWebcams.ts`
+```typescript
+   // Custom webcams not from DriveBC
+   export interface CustomWebcam {
+     id: string;
+     name: string;
+     description: string;
+     location: {
+       name: string;
+       lat: number;
+       lng: number;
+     };
+     imageUrl: string;        // Direct JPG URL if available
+     pageUrl: string;         // Web page with webcam
+     streamUrl?: string;      // Video stream URL if available
+     provider: string;
+     refreshIntervalSeconds: number;
+     isActive: boolean;
+   }
+
+   export const customWebcams: CustomWebcam[] = [
+     {
+       id: 'bmsc-inlet',
+       name: 'Bamfield Marine Sciences Centre',
+       description: 'View across Bamfield Inlet from BMSC',
+       location: {
+         name: 'Bamfield Marine Sciences Centre',
+         lat: 48.8353,
+         lng: -125.1361,
+       },
+       imageUrl: 'https://bamfieldmsc.com/webcam/camera1.jpg', // Verify actual URL
+       pageUrl: 'https://bamfieldmsc.com/webcam/',
+       provider: 'Bamfield Historical Society',
+       refreshIntervalSeconds: 300, // 5 minutes
+       isActive: true,
+     },
+     // Add more custom webcams here as needed
+   ];
+
+   // Function to get custom webcams near a location
+   export function getCustomWebcamsNear(
+     lat: number, 
+     lng: number, 
+     radiusKm: number = 20
+   ): CustomWebcam[] {
+     return customWebcams.filter(cam => {
+       if (!cam.isActive) return false;
+       const distance = calculateDistance(
+         lat, lng,
+         cam.location.lat, cam.location.lng
+       );
+       return distance <= radiusKm;
+     });
+   }
+
+   // Haversine distance calculation
+   function calculateDistance(
+     lat1: number, lon1: number,
+     lat2: number, lon2: number
+   ): number {
+     const R = 6371; // km
+     const dLat = (lat2 - lat1) * Math.PI / 180;
+     const dLon = (lon2 - lon1) * Math.PI / 180;
+     const a = 
+       Math.sin(dLat/2) * Math.sin(dLat/2) +
+       Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+       Math.sin(dLon/2) * Math.sin(dLon/2);
+     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+     return R * c;
+   }
+```
+
+2. Add BMSC webcam to the Bamfield trip at the job site:
+```typescript
+   // In sampleBamfieldTrip.ts, update the job site event
+   {
+     id: 'jobsite-day1',
+     type: 'job_site',
+     // ... existing fields
+     photos: [
+       {
+         url: 'https://bamfieldmsc.com/webcam/camera1.jpg', // Or actual image URL
+         caption: 'Live view - Bamfield Inlet from BMSC',
+         source: 'webcam',
+         timestamp: new Date().toISOString(),
+       },
+       // ... other photos
+     ],
+   }
+```
+
+3. Also add a dedicated webcam event near the job site:
+```typescript
+   {
+     id: 'webcam-bmsc',
+     type: 'webcam',
+     time: '2025-01-08T07:45:00', // Before job site
+     title: 'Bamfield Marine Sciences Centre',
+     subtitle: 'Live view of job site area',
+     location: {
+       name: 'BMSC',
+       address: '100 Pachena Rd, Bamfield',
+       lat: 48.8353,
+       lng: -125.1361,
+     },
+     photos: [
+       {
+         url: 'https://bamfieldmsc.com/webcam/camera1.jpg',
+         caption: 'Bamfield Inlet - View from BMSC',
+         source: 'webcam',
+         timestamp: new Date().toISOString(),
+       }
+     ],
+     alerts: [],
+     weather: {
+       temperature: 8,
+       condition: 'Cloudy',
+       icon: 'cloudy',
+     },
+     notes: 'Webcam provided by Bamfield Historical Society',
+   },
+```
+
+4. Create an admin interface for adding custom webcams (future):
+   - Form to add new webcam: name, URL, location, provider
+   - Ability to test if URL returns valid image
+   - Toggle active/inactive
+
+5. Add link to live video feed in the webcam display:
+```tsx
+   {event.type === 'webcam' && (
+     <div className="mt-2">
+       <a 
+         href="https://bamfieldmsc.com/webcam/"
+         target="_blank"
+         rel="noopener noreferrer"
+         className="text-xs text-primary hover:underline flex items-center gap-1"
+       >
+         <ExternalLink className="h-3 w-3" />
+         View live video feed
+       </a>
+     </div>
+   )}
+```
+
+EXPECTED RESULT:
+- BMSC webcam shows in timeline near Bamfield job site
+- Image refreshes every 5 minutes
+- "View live video feed" link opens BMSC webcam page
+- Framework in place to add more custom webcams

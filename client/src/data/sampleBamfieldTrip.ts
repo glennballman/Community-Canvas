@@ -439,6 +439,37 @@ export const sampleBamfieldTrip: TimelineEvent[] = [
     routePoint: 'Bamfield',
   },
   {
+    id: 'webcam-bmsc',
+    type: 'webcam',
+    time: '2025-01-08T07:45:00',
+    title: 'Bamfield Marine Sciences Centre',
+    subtitle: 'Live view of job site area',
+    description: 'Webcam showing view across Bamfield Inlet from BMSC. Check conditions before heading to job site.',
+    location: {
+      name: 'BMSC',
+      address: '100 Pachena Rd, Bamfield',
+      lat: 48.8353,
+      lng: -125.1361,
+    },
+    photos: [
+      {
+        url: 'https://bamfieldmsc.com/webcam/camera1.jpg',
+        caption: 'Bamfield Inlet - View from BMSC',
+        source: 'webcam',
+        timestamp: new Date().toISOString(),
+      }
+    ],
+    alerts: [],
+    weather: {
+      temperature: 8,
+      condition: 'Cloudy',
+      icon: 'cloudy',
+    },
+    notes: 'Webcam provided by Bamfield Historical Society. View live video at bamfieldmsc.com/webcam/',
+    duration: 0,
+    routePoint: 'Bamfield',
+  },
+  {
     id: 'jobsite-day1',
     type: 'job_site',
     time: '2025-01-08T08:00:00',
@@ -450,7 +481,14 @@ export const sampleBamfieldTrip: TimelineEvent[] = [
       name: 'Bamfield Marine Sciences Centre',
       address: '100 Pachena Rd, Bamfield',
     },
-    photos: [],
+    photos: [
+      {
+        url: 'https://bamfieldmsc.com/webcam/camera1.jpg',
+        caption: 'Live view - Bamfield Inlet from BMSC',
+        source: 'webcam',
+        timestamp: new Date().toISOString(),
+      }
+    ],
     alerts: [
       {
         severity: 'info',
