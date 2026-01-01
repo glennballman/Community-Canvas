@@ -80,6 +80,14 @@ export function DriverQualificationsForm({ driverId, onSave }: DriverQualificati
 
   const { data: qualifications, isLoading, error } = useQuery<DriverQualifications>({
     queryKey: ['/api/fleet/driver-qualifications', driverId],
+    queryFn: async () => {
+      const response = await fetch(`/api/fleet/driver-qualifications/${driverId}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch driver qualifications');
+      }
+      return response.json();
+    },
+    enabled: !!driverId,
   });
 
   const form = useForm({
