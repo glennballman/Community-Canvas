@@ -17,6 +17,7 @@ import AdminLogs from "@/pages/AdminLogs";
 import AdminSettings from "@/pages/AdminSettings";
 import Documentation from "@/pages/Documentation";
 import TripTimelineDemo from "@/pages/TripTimelineDemo";
+import Accommodations from "@/pages/Accommodations";
 import NotFound from "@/pages/not-found";
 
 function AdminRoutes() {
@@ -49,6 +50,7 @@ function Router() {
       <Route path="/" component={PublicDashboard} />
       <Route path="/legacy" component={Dashboard} />
       <Route path="/trip-timeline-demo" component={TripTimelineDemo} />
+      <Route path="/accommodations" component={Accommodations} />
       <Route path="/admin/:rest*" component={AdminRoutes} />
       <Route path="/admin" component={AdminRoutes} />
       <Route component={NotFound} />
