@@ -21,6 +21,7 @@ import {
   Loader2,
   Wrench,
   Coffee,
+  Anchor,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -30,6 +31,7 @@ export type EventType =
   | 'drive_segment'
   | 'webcam'
   | 'ferry'
+  | 'water_crossing'
   | 'fuel_stop'
   | 'rest_stop'
   | 'accommodation'
@@ -74,6 +76,31 @@ export interface TimelineAlert {
   sourceUrl?: string;
   distanceKm?: number;
   nearestPoint?: string;
+}
+
+export interface WaterCrossingOperator {
+  name: string;
+  phone: string;
+  hours?: string;
+  notes?: string;
+}
+
+export interface WaterCrossingDetails {
+  crossingType: 'water_taxi' | 'vehicle_ferry' | 'private_boat';
+  operators: WaterCrossingOperator[];
+  restrictions: string[];
+  bookingRequired: boolean;
+  advanceBookingDays?: number;
+  vehicleCapacity?: {
+    maxWeight?: number;
+    maxLength?: number;
+    vehicleTypes?: string[];
+  };
+  weatherDependent: boolean;
+  operatingHours?: {
+    start: string;
+    end: string;
+  };
 }
 
 export interface TimelineEvent {
@@ -141,6 +168,7 @@ export interface TimelineEvent {
     isGravel?: boolean;
     additionalTime?: number;
   };
+  waterCrossing?: WaterCrossingDetails;
   jobSite?: {
     jobNumber?: string;
     clientName?: string;
@@ -224,6 +252,7 @@ function getEventIcon(type: EventType) {
     case 'drive_segment': return Navigation;
     case 'webcam': return Camera;
     case 'ferry': return Ship;
+    case 'water_crossing': return Anchor;
     case 'fuel_stop': return Fuel;
     case 'rest_stop': return Coffee;
     case 'accommodation': return Hotel;
@@ -244,6 +273,7 @@ function getEventColor(type: EventType): string {
     case 'drive_segment': return 'bg-gray-500';
     case 'webcam': return 'bg-purple-500';
     case 'ferry': return 'bg-cyan-500';
+    case 'water_crossing': return 'bg-blue-600';
     case 'fuel_stop': return 'bg-yellow-500';
     case 'rest_stop': return 'bg-orange-400';
     case 'accommodation': return 'bg-indigo-500';
@@ -729,6 +759,86 @@ function TimelineEventCard({
                     <p className="text-sm">Sailing: {event.ferry.sailingTime}</p>
                     {event.ferry.deckSpace && (
                       <p className="text-sm">Deck: {event.ferry.deckSpace}</p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {event.waterCrossing && (
+                <div className="px-4 pb-4">
+                  <div className="p-3 bg-blue-500/10 rounded-lg space-y-3">
+                    <div className="flex items-center gap-2">
+                      <Anchor className="h-4 w-4 text-blue-500" />
+                      <span className="font-medium capitalize">
+                        {event.waterCrossing.crossingType.replace('_', ' ')}
+                      </span>
+                      {event.waterCrossing.weatherDependent && (
+                        <Badge variant="secondary" className="text-xs">Weather Dependent</Badge>
+                      )}
+                    </div>
+                    
+                    <div>
+                      <p className="text-sm font-medium mb-2">Contact to Book:</p>
+                      {event.waterCrossing.operators.map((op, i) => (
+                        <div key={i} className="flex items-center justify-between text-sm mb-2 p-2 bg-muted/50 rounded">
+                          <div>
+                            <span className="font-medium">{op.name}</span>
+                            {op.hours && (
+                              <span className="text-muted-foreground ml-2">({op.hours})</span>
+                            )}
+                            {op.notes && (
+                              <p className="text-xs text-muted-foreground mt-1">{op.notes}</p>
+                            )}
+                          </div>
+                          <a 
+                            href={`tel:${op.phone}`} 
+                            className="text-primary flex items-center gap-1 hover:underline"
+                            data-testid={`link-phone-${i}`}
+                          >
+                            <Phone className="h-3 w-3" />
+                            {op.phone}
+                          </a>
+                        </div>
+                      ))}
+                    </div>
+                    
+                    {event.waterCrossing.operatingHours && (
+                      <div className="text-sm">
+                        <span className="text-muted-foreground">Operating Hours: </span>
+                        {event.waterCrossing.operatingHours.start} - {event.waterCrossing.operatingHours.end}
+                      </div>
+                    )}
+                    
+                    {event.waterCrossing.restrictions.length > 0 && (
+                      <div className="text-sm">
+                        <p className="text-amber-500 font-medium mb-1">Restrictions:</p>
+                        <ul className="list-disc list-inside text-muted-foreground space-y-1">
+                          {event.waterCrossing.restrictions.map((r, i) => (
+                            <li key={i}>{r}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    
+                    {event.waterCrossing.bookingRequired && event.waterCrossing.advanceBookingDays && (
+                      <div className="p-2 bg-amber-500/20 rounded text-sm text-amber-400 flex items-center gap-2">
+                        <AlertTriangle className="h-4 w-4" />
+                        Book at least {event.waterCrossing.advanceBookingDays} days in advance
+                      </div>
+                    )}
+                    
+                    {event.waterCrossing.vehicleCapacity && (
+                      <div className="text-sm">
+                        <p className="text-muted-foreground mb-1">Vehicle Capacity:</p>
+                        {event.waterCrossing.vehicleCapacity.maxWeight && (
+                          <p className="text-xs">Max weight: {event.waterCrossing.vehicleCapacity.maxWeight} kg</p>
+                        )}
+                        {event.waterCrossing.vehicleCapacity.vehicleTypes && (
+                          <p className="text-xs">
+                            Accepts: {event.waterCrossing.vehicleCapacity.vehicleTypes.join(', ')}
+                          </p>
+                        )}
+                      </div>
                     )}
                   </div>
                 </div>

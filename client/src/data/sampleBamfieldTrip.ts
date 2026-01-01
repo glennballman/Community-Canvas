@@ -266,21 +266,144 @@ export const sampleBamfieldTrip: TimelineEvent[] = [
   {
     id: 'arrival-bamfield',
     type: 'arrival',
-    time: '2025-01-07T14:45:00',
-    title: 'Arrival in Bamfield',
-    subtitle: 'West Bamfield',
+    time: '2025-01-07T14:15:00',
+    title: 'Arrival in East Bamfield',
+    subtitle: 'End of road - water crossing required',
+    description: 'You cannot drive to West Bamfield. The road ends here. All passengers and vehicles must cross Bamfield Inlet by water.',
     location: {
-      name: 'Bamfield',
+      name: 'East Bamfield',
       address: 'Bamfield, BC',
     },
     photos: [],
-    alerts: [],
+    alerts: [
+      {
+        severity: 'major',
+        title: 'No Road to West Bamfield',
+        description: 'West Bamfield is only accessible by water. You must take a water taxi or the Lucky Lander vehicle ferry.',
+        source: 'Local Knowledge',
+      }
+    ],
     weather: {
       temperature: 8,
       condition: 'Light Rain',
       icon: 'rain',
     },
     duration: 0,
+    routePoint: 'Bamfield',
+  },
+  {
+    id: 'water-taxi-bamfield',
+    type: 'water_crossing',
+    time: '2025-01-07T14:30:00',
+    title: 'Water Taxi to West Bamfield',
+    subtitle: 'Cross Bamfield Inlet - No road access',
+    description: 'West Bamfield is only accessible by water. Call the water taxi operators on their cell phones. Service operates sunrise to sunset only.',
+    location: {
+      name: 'Bamfield Government Dock',
+      address: 'East Bamfield',
+    },
+    photos: [],
+    alerts: [
+      {
+        severity: 'info',
+        title: 'Sunset Cutoff',
+        description: 'Water taxi service ends at sunset. Plan your return crossing before dark.',
+        source: 'Local Knowledge',
+      }
+    ],
+    waterCrossing: {
+      crossingType: 'water_taxi',
+      operators: [
+        {
+          name: 'Bamfield Water Taxi',
+          phone: '250-728-3000',
+          hours: 'Sunrise to Sunset',
+          notes: 'Call when ready - they come to pick you up',
+        },
+        {
+          name: 'Broken Island Adventures',
+          phone: '250-728-3500',
+          hours: 'Sunrise to Sunset',
+          notes: 'Alternative operator - water taxi and tours',
+        }
+      ],
+      restrictions: [
+        'No service after sunset',
+        'Weather dependent - may not operate in storms',
+      ],
+      bookingRequired: false,
+      weatherDependent: true,
+      operatingHours: {
+        start: 'Sunrise',
+        end: 'Sunset',
+      },
+    },
+    booking: {
+      status: 'not_booked',
+      provider: 'Water Taxi',
+      price: 15,
+    },
+    duration: 10,
+    cost: 15,
+    routePoint: 'Bamfield',
+  },
+  {
+    id: 'lucky-lander-vehicle',
+    type: 'water_crossing',
+    time: '2025-01-07T14:00:00',
+    title: 'Lucky Lander Vehicle Ferry',
+    subtitle: 'ADVANCE BOOKING REQUIRED - Vehicles only',
+    description: 'Vehicle ferry to West Bamfield. Must book weeks in advance with the operator. Not all vehicles can be accommodated due to weight limits.',
+    location: {
+      name: 'Bamfield Vehicle Loading',
+      address: 'East Bamfield',
+    },
+    photos: [],
+    alerts: [
+      {
+        severity: 'major',
+        title: 'Advance Booking Required',
+        description: 'Must book 2+ weeks in advance. Contact the operator directly. Limited availability.',
+        source: 'Local Knowledge',
+      },
+      {
+        severity: 'minor',
+        title: 'Vehicle Restrictions',
+        description: 'Weight limits apply. Not all vehicles can be accommodated. Weather dependent.',
+        source: 'Local Knowledge',
+      }
+    ],
+    waterCrossing: {
+      crossingType: 'vehicle_ferry',
+      operators: [
+        {
+          name: 'Lucky Lander',
+          phone: '250-728-3295',
+          notes: 'Book weeks in advance. Confirm vehicle weight and dimensions.',
+        }
+      ],
+      restrictions: [
+        'Weight limits apply',
+        'Not all vehicle types accepted',
+        'Weather dependent',
+        'Limited schedule',
+      ],
+      bookingRequired: true,
+      advanceBookingDays: 14,
+      vehicleCapacity: {
+        maxWeight: 5000,
+        vehicleTypes: ['trucks', 'vans', 'small equipment'],
+      },
+      weatherDependent: true,
+    },
+    booking: {
+      status: 'pending',
+      provider: 'Lucky Lander',
+      price: 150,
+      phone: '250-728-3295',
+    },
+    duration: 20,
+    cost: 150,
     routePoint: 'Bamfield',
   },
   {

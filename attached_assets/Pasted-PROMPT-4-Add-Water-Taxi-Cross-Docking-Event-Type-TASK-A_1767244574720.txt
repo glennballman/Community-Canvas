@@ -1,0 +1,240 @@
+PROMPT 4: Add Water Taxi / Cross-Docking Event Type
+TASK: Add Water Crossing Event Type for Bamfield
+
+CRITICAL CONTEXT:
+You CANNOT drive to West Bamfield. There is NO road. Everyone must cross 
+by water - either water taxi (passengers) or Lucky Lander (vehicles).
+
+IMPLEMENTATION:
+
+1. Add new event type to TimelineEvent types:
+```typescript
+   type EventType = 
+     | 'departure'
+     | 'drive_segment'
+     | 'webcam'
+     | 'ferry'
+     | 'water_crossing'  // NEW
+     | 'fuel_stop'
+     // ... rest
+```
+
+2. Add water crossing specific fields:
+```typescript
+   interface WaterCrossingDetails {
+     crossingType: 'water_taxi' | 'vehicle_ferry' | 'private_boat';
+     operators: {
+       name: string;
+       phone: string;
+       hours?: string;
+       notes?: string;
+     }[];
+     restrictions: string[];
+     bookingRequired: boolean;
+     advanceBookingDays?: number;
+     vehicleCapacity?: {
+       maxWeight?: number;
+       maxLength?: number;
+       vehicleTypes?: string[];
+     };
+     weatherDependent: boolean;
+     operatingHours?: {
+       start: string;  // "sunrise" or "07:00"
+       end: string;    // "sunset" or "18:00"
+     };
+   }
+
+   interface TimelineEvent {
+     // ... existing fields
+     waterCrossing?: WaterCrossingDetails;
+   }
+```
+
+3. Add icon and color for water crossing:
+```typescript
+   // In getEventIcon function
+   case 'water_crossing': return Anchor; // or Ship or Waves
+   
+   // In getEventColor function
+   case 'water_crossing': return 'bg-blue-600';
+```
+
+4. Add the water crossing events to sampleBamfieldTrip.ts:
+
+   Insert AFTER "Arrival in Bamfield" and BEFORE "Woods End Landing":
+```typescript
+   // WATER TAXI FOR PASSENGERS
+   {
+     id: 'water-taxi-bamfield',
+     type: 'water_crossing',
+     time: '2025-01-07T15:00:00',
+     title: 'Water Taxi to West Bamfield',
+     subtitle: 'Cross Bamfield Inlet - No road access',
+     description: 'West Bamfield is only accessible by water. Call the water taxi operators on their cell phones. Service operates until sunset only.',
+     location: {
+       name: 'Bamfield Government Dock',
+       address: 'East Bamfield',
+     },
+     photos: [],
+     alerts: [
+       {
+         severity: 'info',
+         title: 'Sunset Cutoff',
+         description: 'Water taxi service ends at sunset. Plan your return crossing before dark.',
+         source: 'Local Knowledge',
+       }
+     ],
+     waterCrossing: {
+       crossingType: 'water_taxi',
+       operators: [
+         {
+           name: 'Bamfield Water Taxi #1',
+           phone: '250-XXX-XXXX', // Get actual number
+           hours: 'Sunrise to Sunset',
+           notes: 'Call when ready - they come to pick you up',
+         },
+         {
+           name: 'Bamfield Water Taxi #2', 
+           phone: '250-XXX-XXXX', // Get actual number
+           hours: 'Sunrise to Sunset',
+           notes: 'Alternative operator',
+         }
+       ],
+       restrictions: [
+         'No service after sunset',
+         'Weather dependent - may not operate in storms',
+       ],
+       bookingRequired: false, // Call when ready
+       weatherDependent: true,
+       operatingHours: {
+         start: 'sunrise',
+         end: 'sunset',
+       },
+     },
+     booking: {
+       status: 'not_booked',
+       provider: 'Water Taxi',
+       price: 15, // per person estimate
+     },
+     duration: 10,
+     cost: 15,
+   },
+
+   // LUCKY LANDER FOR VEHICLES (if needed)
+   {
+     id: 'lucky-lander-vehicle',
+     type: 'water_crossing',
+     time: '2025-01-07T14:30:00', // Before water taxi if bringing vehicle
+     title: 'Lucky Lander Vehicle Ferry',
+     subtitle: '⚠️ ADVANCE BOOKING REQUIRED',
+     description: 'Vehicle ferry to West Bamfield. Must book weeks in advance with Brian Baird. Not all vehicles can be accommodated.',
+     location: {
+       name: 'Bamfield Vehicle Loading',
+       address: 'East Bamfield',
+     },
+     photos: [],
+     alerts: [
+       {
+         severity: 'major',
+         title: 'Advance Booking Required',
+         description: 'Must book weeks in advance. Contact Brian Baird directly. Limited availability.',
+         source: 'Local Knowledge',
+       },
+       {
+         severity: 'minor',
+         title: 'Vehicle Restrictions',
+         description: 'Weight limits apply. Not all vehicles can be accommodated. Weather dependent.',
+         source: 'Local Knowledge',
+       }
+     ],
+     waterCrossing: {
+       crossingType: 'vehicle_ferry',
+       operators: [
+         {
+           name: 'Lucky Lander - Brian Baird',
+           phone: '250-XXX-XXXX', // Get actual number
+           notes: 'Book weeks in advance. Confirm vehicle weight and dimensions.',
+         }
+       ],
+       restrictions: [
+         'Weight limits apply',
+         'Not all vehicle types accepted',
+         'Weather dependent',
+         'Limited schedule',
+       ],
+       bookingRequired: true,
+       advanceBookingDays: 14, // Minimum 2 weeks advance
+       vehicleCapacity: {
+         maxWeight: 5000, // kg - verify actual limit
+         vehicleTypes: ['trucks', 'vans', 'small equipment'],
+       },
+       weatherDependent: true,
+     },
+     booking: {
+       status: 'pending', // Must confirm with Brian
+       provider: 'Lucky Lander',
+       price: 150, // estimate - verify
+       phone: '250-XXX-XXXX',
+     },
+     duration: 20,
+     cost: 150,
+   },
+```
+
+5. Create the UI component for water crossing display:
+```tsx
+   {event.waterCrossing && (
+     <div className="px-4 pb-4">
+       <div className="p-3 bg-blue-500/10 rounded-lg space-y-3">
+         {/* Operators */}
+         <div>
+           <p className="text-sm font-medium mb-2">Contact to Book:</p>
+           {event.waterCrossing.operators.map((op, i) => (
+             <div key={i} className="flex items-center justify-between text-sm mb-1">
+               <span>{op.name}</span>
+               <a href={`tel:${op.phone}`} className="text-primary flex items-center gap-1">
+                 <Phone className="h-3 w-3" />
+                 {op.phone}
+               </a>
+             </div>
+           ))}
+         </div>
+         
+         {/* Operating Hours */}
+         {event.waterCrossing.operatingHours && (
+           <div className="text-sm">
+             <span className="text-muted-foreground">Hours: </span>
+             {event.waterCrossing.operatingHours.start} - {event.waterCrossing.operatingHours.end}
+           </div>
+         )}
+         
+         {/* Restrictions */}
+         {event.waterCrossing.restrictions.length > 0 && (
+           <div className="text-sm">
+             <p className="text-warning font-medium mb-1">Restrictions:</p>
+             <ul className="list-disc list-inside text-muted-foreground">
+               {event.waterCrossing.restrictions.map((r, i) => (
+                 <li key={i}>{r}</li>
+               ))}
+             </ul>
+           </div>
+         )}
+         
+         {/* Advance Booking Warning */}
+         {event.waterCrossing.bookingRequired && event.waterCrossing.advanceBookingDays && (
+           <div className="p-2 bg-warning/20 rounded text-sm text-warning">
+             ⚠️ Book at least {event.waterCrossing.advanceBookingDays} days in advance
+           </div>
+         )}
+       </div>
+     </div>
+   )}
+```
+
+EXPECTED RESULT:
+- New blue "water crossing" event type in timeline
+- Water taxi event shows between Bamfield arrival and Woods End
+- Clear operator contact info with click-to-call
+- Sunset cutoff warning prominently displayed
+- Lucky Lander shows advance booking requirement
+- Users understand they CANNOT drive to West Bamfield
