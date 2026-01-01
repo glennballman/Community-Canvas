@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { 
   Truck, 
@@ -11,8 +11,11 @@ import {
   User,
   Link2,
   Link2Off,
-  Caravan
+  Caravan,
+  AlertTriangle
 } from 'lucide-react';
+import { QualificationBadge } from './QualificationBadge';
+import { useQualificationCheck } from '@/hooks/useDriverQualifications';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -102,6 +105,14 @@ export function FleetDashboard() {
   const [showTrailerForm, setShowTrailerForm] = useState(false);
   const [editVehicleId, setEditVehicleId] = useState<string | null>(null);
   const [editTrailerId, setEditTrailerId] = useState<string | null>(null);
+  const [currentDriverId, setCurrentDriverId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const savedId = localStorage.getItem('tripPlanning_participantId');
+    if (savedId) {
+      setCurrentDriverId(savedId);
+    }
+  }, []);
 
   const vehiclesUrl = statusFilter !== 'all' 
     ? `/api/v1/fleet/vehicles?status=${statusFilter}` 
@@ -291,6 +302,7 @@ export function FleetDashboard() {
                         <TrailerCard 
                           key={trailer.id} 
                           trailer={trailer} 
+                          currentDriverId={currentDriverId}
                           onUnhitch={() => unhitchMutation.mutate(trailer.id)}
                           onEdit={() => setEditTrailerId(trailer.id)}
                           isPending={unhitchMutation.isPending}
@@ -529,17 +541,24 @@ function VehicleCard({
 
 function TrailerCard({ 
   trailer, 
+  currentDriverId,
   onUnhitch,
   onEdit,
   isPending 
 }: { 
   trailer: FleetTrailer; 
+  currentDriverId: string | null;
   onUnhitch: () => void;
   onEdit: () => void;
   isPending: boolean;
 }) {
   const displayName = trailer.nickname || `${trailer.trailer_type.replace(/_/g, ' ')} Trailer`;
   const displayNumber = trailer.fleet_number || trailer.id.slice(0, 8);
+  
+  const { data: qualificationData } = useQualificationCheck(currentDriverId, trailer.id);
+  const isQualified = qualificationData?.qualification?.isQualified ?? true;
+  const issues = qualificationData?.qualification?.issues || [];
+  const warnings = qualificationData?.qualification?.warnings || [];
   
   return (
     <Card className="overflow-hidden" data-testid={`trailer-card-${trailer.id}`}>
@@ -550,7 +569,16 @@ function TrailerCard({
           <Caravan className="w-12 h-12 text-muted-foreground opacity-30" />
         )}
         
-        <div className="absolute top-2 right-2">
+        <div className="absolute top-2 right-2 flex items-center gap-2">
+          {currentDriverId && qualificationData && (
+            <QualificationBadge
+              isQualified={isQualified}
+              issueCount={issues.length}
+              warningCount={warnings.length}
+              primaryIssue={issues[0] || warnings[0] || null}
+              size="sm"
+            />
+          )}
           <Badge variant={STATUS_VARIANTS[trailer.fleet_status] || 'secondary'}>
             {STATUS_LABELS[trailer.fleet_status] || trailer.fleet_status}
           </Badge>
@@ -575,6 +603,15 @@ function TrailerCard({
           {trailer.gvwr_lbs && <span>- {trailer.gvwr_lbs.toLocaleString()} lbs GVWR</span>}
         </div>
         
+        {currentDriverId && qualificationData && !isQualified && (
+          <div className="mt-2 p-2 bg-destructive/10 border border-destructive/30 rounded-lg">
+            <p className="text-destructive text-xs flex items-center gap-1">
+              <AlertTriangle className="w-3.5 h-3.5" />
+              {issues[0] || 'Not qualified to tow'}
+            </p>
+          </div>
+        )}
+        
         {trailer.currently_hitched_to && (
           <div className="mt-2 p-2 bg-primary/10 rounded-lg">
             <p className="text-primary text-sm flex items-center gap-1">
@@ -596,7 +633,13 @@ function TrailerCard({
         )}
         
         <div className="flex gap-2 mt-3">
-          <Button variant="outline" size="sm" className="flex-1" data-testid={`button-hitch-${trailer.id}`}>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="flex-1" 
+            disabled={currentDriverId && qualificationData && !isQualified}
+            data-testid={`button-hitch-${trailer.id}`}
+          >
             Hitch To...
           </Button>
           <Button size="sm" onClick={onEdit} data-testid={`button-trailer-details-${trailer.id}`}>

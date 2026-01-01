@@ -10,8 +10,10 @@ import {
   Car as CarIcon,
   TreePine,
   Droplets,
-  Siren
+  Siren,
+  IdCard
 } from 'lucide-react';
+import { DriverQualificationsForm } from '../Fleet/DriverQualificationsForm';
 import { useToast } from '@/hooks/use-toast';
 import { ParticipantProfile, ParticipantSkill, SkillCategory, SkillLevel, skillLevelColors } from '../../types/tripPlanning';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -110,7 +112,7 @@ export function ParticipantProfileForm({ participant, onSave, onCancel }: Partic
     }
   }, [participant]);
 
-  const [activeSection, setActiveSection] = useState<'basic' | 'skills' | 'emergency'>('basic');
+  const [activeSection, setActiveSection] = useState<'basic' | 'skills' | 'qualifications' | 'emergency'>('basic');
   const [saving, setSaving] = useState(false);
 
   const [newSkill, setNewSkill] = useState<Partial<ParticipantSkill>>({
@@ -210,7 +212,7 @@ export function ParticipantProfileForm({ participant, onSave, onCancel }: Partic
           </div>
 
           <div className="flex gap-2 mt-4 flex-wrap">
-            {(['basic', 'skills', 'emergency'] as const).map(section => (
+            {(['basic', 'skills', 'qualifications', 'emergency'] as const).map(section => (
               <Button
                 key={section}
                 variant={activeSection === section ? 'default' : 'outline'}
@@ -219,6 +221,7 @@ export function ParticipantProfileForm({ participant, onSave, onCancel }: Partic
               >
                 {section === 'basic' && <User className="w-4 h-4 mr-2" />}
                 {section === 'skills' && <Target className="w-4 h-4 mr-2" />}
+                {section === 'qualifications' && <IdCard className="w-4 h-4 mr-2" />}
                 {section === 'emergency' && <AlertTriangle className="w-4 h-4 mr-2" />}
                 <span className="capitalize">{section}</span>
               </Button>
@@ -449,6 +452,29 @@ export function ParticipantProfileForm({ participant, onSave, onCancel }: Partic
                 })}
               </div>
             )}
+          </CardContent>
+        </Card>
+      )}
+
+      {activeSection === 'qualifications' && participant?.id && (
+        <DriverQualificationsForm 
+          driverId={participant.id} 
+          onSave={() => {
+            toast({
+              title: 'Qualifications Updated',
+              description: 'Your driver qualifications have been saved.'
+            });
+          }}
+        />
+      )}
+
+      {activeSection === 'qualifications' && !participant?.id && (
+        <Card>
+          <CardContent className="py-8 text-center">
+            <IdCard className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+            <p className="text-muted-foreground">
+              Please save your profile first to add driver qualifications.
+            </p>
           </CardContent>
         </Card>
       )}
