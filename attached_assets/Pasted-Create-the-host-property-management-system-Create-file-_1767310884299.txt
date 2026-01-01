@@ -1,0 +1,60 @@
+Create the host property management system.
+
+Create file: server/routes/hostProperties.ts
+
+All routes require host authentication.
+
+MY PROPERTIES
+- GET /api/host/properties - List host's claimed properties
+- GET /api/host/properties/:id - Get property details (verify ownership)
+- PUT /api/host/properties/:id - Update property details
+- PUT /api/host/properties/:id/photos - Update photos
+- PUT /api/host/properties/:id/status - Change status (active/inactive)
+
+CLAIMING
+- GET /api/host/properties/search?q= - Search unclaimed properties
+- GET /api/host/properties/unclaimed - Browse unclaimed by region
+- POST /api/host/properties/claim - Initiate claim
+- POST /api/host/properties/verify-claim - Verify with code
+- POST /api/host/properties - Create new property (manual entry)
+
+SPOTS
+- GET /api/host/properties/:id/spots - Get spots
+- POST /api/host/properties/:id/spots - Add spot
+- PUT /api/host/properties/:id/spots/:spotId - Update spot
+- DELETE /api/host/properties/:id/spots/:spotId - Remove spot
+
+PRICING
+- GET /api/host/properties/:id/pricing - Get pricing rules
+- POST /api/host/properties/:id/pricing - Add pricing rule
+- PUT /api/host/properties/:id/pricing/:ruleId - Update rule
+- DELETE /api/host/properties/:id/pricing/:ruleId - Remove rule
+
+SERVICE PROVIDERS
+- GET /api/host/properties/:id/providers - Get providers
+- POST /api/host/properties/:id/providers - Add provider
+- PUT /api/host/properties/:id/providers/:providerId - Update
+- DELETE /api/host/properties/:id/providers/:providerId - Remove
+
+CALENDAR
+- GET /api/host/calendar/:propertyId - Get calendar
+- POST /api/host/calendar/:propertyId/block - Create block
+- PUT /api/host/calendar/block/:blockId - Update block
+- DELETE /api/host/calendar/block/:blockId - Delete block
+- POST /api/host/calendar/:propertyId/import - Import iCal
+- GET /api/host/calendar/:propertyId/export - Export iCal
+
+ICAL FEEDS
+- GET /api/host/properties/:id/feeds - Get iCal feeds
+- POST /api/host/properties/:id/feeds - Add feed
+- DELETE /api/host/feeds/:feedId - Remove feed
+- POST /api/host/feeds/:feedId/sync - Force sync
+
+BOOKINGS
+- GET /api/host/bookings - All bookings for host's properties
+- GET /api/host/bookings/:id - Booking details
+- PUT /api/host/bookings/:id/status - Update status (confirm, check-in, etc.)
+
+Register: app.use('/api/host', hostPropertiesRouter);
+
+Include ownership verification middleware for all property-specific routes.
