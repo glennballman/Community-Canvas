@@ -1,4 +1,14 @@
 import type { TimelineEvent } from '../components/TripPlanning/TripTimelineView';
+import { BC_WEBCAMS, getLiveWebcamUrl } from '../lib/routeWebcams';
+
+// Real DriveBC webcam URLs
+const WEBCAMS = {
+  horseshoeBay: BC_WEBCAMS.find(w => w.id === 'horseshoe-bay-e'),
+  departureBay: BC_WEBCAMS.find(w => w.id === 'departure-bay-ferry'),
+  portAlberniSummit: BC_WEBCAMS.find(w => w.id === 'port-alberni-summit'),
+  horneLakeRoad: BC_WEBCAMS.find(w => w.id === 'horne-lake-road-n'),
+  qualicumInterchange: BC_WEBCAMS.find(w => w.id === 'qualicum-interchange-w'),
+};
 
 export const sampleBamfieldTrip: TimelineEvent[] = [
   {
@@ -64,18 +74,18 @@ export const sampleBamfieldTrip: TimelineEvent[] = [
     id: 'webcam-horseshoe-bay',
     type: 'webcam',
     time: '2025-01-07T07:50:00',
-    title: 'Horseshoe Bay Terminal',
-    subtitle: 'Live camera feed',
+    title: WEBCAMS.horseshoeBay?.nickname || 'Horseshoe Bay - E',
+    subtitle: 'Live DriveBC camera feed',
     location: {
       name: 'BC Ferries Terminal',
       address: 'Horseshoe Bay, West Vancouver',
     },
     photos: [
       {
-        url: 'https://images.drivebc.ca/bchighwaycam/pub/cameras/588.jpg',
-        caption: 'Horseshoe Bay Terminal - Vehicle lineup',
+        url: getLiveWebcamUrl(WEBCAMS.horseshoeBay?.directFeedUrl || 'https://images.drivebc.ca/bchighwaycam/pub/cameras/228.jpg'),
+        caption: WEBCAMS.horseshoeBay?.viewDescription || 'Highway 99 at Horseshoe Bay ferry terminal',
         source: 'webcam',
-        timestamp: 'Updated 2 min ago',
+        timestamp: 'LIVE - DriveBC',
       }
     ],
     alerts: [],
@@ -144,18 +154,18 @@ export const sampleBamfieldTrip: TimelineEvent[] = [
     id: 'webcam-cathedral-grove',
     type: 'webcam',
     time: '2025-01-07T11:00:00',
-    title: 'Cathedral Grove',
-    subtitle: 'Ancient forest - quick stretch stop',
+    title: WEBCAMS.portAlberniSummit?.nickname || 'Port Alberni Summit',
+    subtitle: 'Near Cathedral Grove - Live DriveBC feed',
     location: {
       name: 'MacMillan Provincial Park',
       address: 'Highway 4, Vancouver Island',
     },
     photos: [
       {
-        url: 'https://images.drivebc.ca/bchighwaycam/pub/cameras/580.jpg',
-        caption: 'Highway 4 at Cathedral Grove',
+        url: getLiveWebcamUrl(WEBCAMS.portAlberniSummit?.directFeedUrl || 'https://images.drivebc.ca/bchighwaycam/pub/cameras/102.jpg'),
+        caption: WEBCAMS.portAlberniSummit?.viewDescription || 'Highway 4 at Port Alberni Summit near Cathedral Grove',
         source: 'webcam',
-        timestamp: 'Updated 5 min ago',
+        timestamp: 'LIVE - DriveBC',
       }
     ],
     alerts: [],
@@ -439,6 +449,32 @@ export const sampleBamfieldTrip: TimelineEvent[] = [
     },
     duration: 10,
     cost: 97,
+  },
+  {
+    id: 'webcam-departure-bay',
+    type: 'webcam',
+    time: '2025-01-09T18:15:00',
+    title: WEBCAMS.departureBay?.nickname || 'Departure Bay Ferry',
+    subtitle: 'Live DriveBC camera feed',
+    location: {
+      name: 'Departure Bay Terminal',
+      address: 'Nanaimo, BC',
+    },
+    photos: [
+      {
+        url: getLiveWebcamUrl(WEBCAMS.departureBay?.directFeedUrl || 'https://images.drivebc.ca/bchighwaycam/pub/cameras/743.jpg'),
+        caption: WEBCAMS.departureBay?.viewDescription || 'Departure Bay ferry terminal',
+        source: 'webcam',
+        timestamp: 'LIVE - DriveBC',
+      }
+    ],
+    alerts: [],
+    weather: {
+      temperature: 8,
+      condition: 'Clear',
+      icon: 'clear',
+    },
+    duration: 5,
   },
   {
     id: 'ferry-return',

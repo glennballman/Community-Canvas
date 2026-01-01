@@ -1,0 +1,55 @@
+Option A: Let's Wire Up Real Webcams
+Since you have 1,100+ webcams with real direct_feed_url links ready to go, this is the quickest win.
+Tell Replit:
+
+"Let's wire real DriveBC webcams into the trip timeline. Here's what I need:
+1. Create a utility function to find webcams along a route:
+typescript// client/src/lib/routeWebcams.ts
+
+interface RoutePoint {
+  lat: number;
+  lng: number;
+  name: string;
+}
+
+// Find webcams within X km of route points
+async function getWebcamsAlongRoute(
+  routePoints: RoutePoint[],
+  radiusKm: number = 10
+): Promise<Webcam[]>
+2. For the Bamfield trip, find webcams near these key points:
+
+Horseshoe Bay (49.3722, -123.2738)
+Highway 4 at Cathedral Grove (49.2833, -124.6667)
+Port Alberni (49.2339, -124.8055)
+Bamfield Road junction (49.0000, -125.1000)
+
+3. Update the sample trip data to use real webcam URLs from webcams-bc.json
+4. The timeline should show the actual live DriveBC camera image with 'LIVE' badge
+Start by showing me what webcams we have near Horseshoe Bay and Cathedral Grove from the webcams-bc.json file."
+
+
+Quick Architecture
+┌─────────────────────────────────────────────────┐
+│  webcams-bc.json (1,100+ cameras)               │
+│  • id, name, lat, lng                           │
+│  • direct_feed_url → actual JPG from DriveBC    │
+└─────────────────────────────────────────────────┘
+                    ↓
+┌─────────────────────────────────────────────────┐
+│  getWebcamsAlongRoute(routePoints)              │
+│  • Calculate distance from each route point     │
+│  • Return webcams within radius                 │
+└─────────────────────────────────────────────────┘
+                    ↓
+┌─────────────────────────────────────────────────┐
+│  Trip Timeline                                  │
+│  • Insert webcam events at appropriate times    │
+│  • Show real JPG images with LIVE badge         │
+│  • Auto-refresh every 5 minutes                 │
+└─────────────────────────────────────────────────┘
+
+Once we have real webcams working, we can quickly add:
+
+Real weather from your existing weather pipeline
+Real alerts filtered by route proximity
