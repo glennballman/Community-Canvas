@@ -225,8 +225,12 @@ export function FleetDashboard() {
           </CardContent>
         </Card>
       ) : (
-        <Tabs defaultValue="vehicles" className="w-full">
+        <Tabs defaultValue="all" className="w-full">
           <TabsList className="mb-4">
+            <TabsTrigger value="all" data-testid="tab-all">
+              <Truck className="w-4 h-4 mr-1.5" />
+              All ({vehicles.length + trailers.length})
+            </TabsTrigger>
             <TabsTrigger value="vehicles" data-testid="tab-vehicles">
               <Car className="w-4 h-4 mr-1.5" />
               Vehicles ({vehicles.length})
@@ -236,6 +240,68 @@ export function FleetDashboard() {
               Trailers ({trailers.length})
             </TabsTrigger>
           </TabsList>
+
+          <TabsContent value="all">
+            {vehicles.length === 0 && trailers.length === 0 ? (
+              <Card>
+                <CardContent className="py-12 text-center">
+                  <Truck className="w-12 h-12 mx-auto text-muted-foreground opacity-50" />
+                  <p className="text-muted-foreground mt-2">No vehicles or trailers found</p>
+                  <div className="flex gap-2 justify-center mt-4">
+                    <Button variant="outline" onClick={() => setShowTrailerForm(true)} data-testid="button-add-first-trailer-all">
+                      <Plus className="w-4 h-4 mr-1.5" />
+                      Add Trailer
+                    </Button>
+                    <Button onClick={() => setShowVehicleForm(true)} data-testid="button-add-first-vehicle-all">
+                      <Plus className="w-4 h-4 mr-1.5" />
+                      Add Vehicle
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="space-y-6">
+                {vehicles.length > 0 && (
+                  <div>
+                    <h3 className="text-sm font-medium text-muted-foreground mb-3 flex items-center gap-2">
+                      <Car className="w-4 h-4" />
+                      Vehicles
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {vehicles.map(vehicle => (
+                        <VehicleCard 
+                          key={vehicle.id} 
+                          vehicle={vehicle} 
+                          onStatusChange={(status) => updateVehicleMutation.mutate({ vehicleId: vehicle.id, status })}
+                          onEdit={() => setEditVehicleId(vehicle.id)}
+                          isPending={updateVehicleMutation.isPending}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {trailers.length > 0 && (
+                  <div>
+                    <h3 className="text-sm font-medium text-muted-foreground mb-3 flex items-center gap-2">
+                      <Caravan className="w-4 h-4" />
+                      Trailers
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {trailers.map(trailer => (
+                        <TrailerCard 
+                          key={trailer.id} 
+                          trailer={trailer} 
+                          onUnhitch={() => unhitchMutation.mutate(trailer.id)}
+                          onEdit={() => setEditTrailerId(trailer.id)}
+                          isPending={unhitchMutation.isPending}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </TabsContent>
 
           <TabsContent value="vehicles">
             {vehicles.length === 0 ? (
