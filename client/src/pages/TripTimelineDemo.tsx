@@ -48,18 +48,25 @@ export function TripTimelineDemo() {
     return () => clearInterval(interval);
   }, []);
   
+  // Track when we last fetched data
+  const webcamTimestamp = useMemo(() => lastRefresh.toISOString(), [lastRefresh]);
+  
   // Inject live alerts into existing timeline events using data-driven routePoint matching
   const eventsWithLiveData: TimelineEvent[] = useMemo(() => {
-    // Clone events and refresh webcam URLs
+    // Clone events and refresh webcam URLs with timestamps
     const events: TimelineEvent[] = sampleBamfieldTrip.map(event => {
       const cloned = { ...event, alerts: [...(event.alerts || [])] };
       
-      // Refresh webcam URLs with cache-busting
+      // Refresh webcam URLs with cache-busting and add timestamp
       if (cloned.type === 'webcam' && cloned.photos?.length) {
         cloned.photos = cloned.photos.map(photo => ({
           ...photo,
-          url: getLiveWebcamUrl(photo.url.split('?')[0])
+          url: getLiveWebcamUrl(photo.url.split('?')[0]),
+          timestamp: webcamTimestamp, // Add the refresh timestamp
         }));
+        cloned.dataFreshness = {
+          webcam: webcamTimestamp,
+        };
       }
       return cloned;
     });
@@ -202,7 +209,7 @@ export function TripTimelineDemo() {
     }
     
     return events;
-  }, [sampleBamfieldTrip, liveAlerts, liveWeather, webcamRefreshKey]);
+  }, [sampleBamfieldTrip, liveAlerts, liveWeather, webcamRefreshKey, webcamTimestamp]);
   
   const handleEventClick = (event: TimelineEvent) => {
     console.log('Event clicked:', event);
@@ -256,17 +263,18 @@ export function TripTimelineDemo() {
         {/* Live Data Status Bar */}
         <Card className="p-3 mb-4" data-testid="card-live-status">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-4 flex-wrap">
               <div className="flex items-center gap-2">
-                <Radio className="h-4 w-4 text-green-500 animate-pulse" />
+                <div className="h-2 w-2 bg-green-500 rounded-full animate-pulse"></div>
                 <span className="text-sm font-medium">Live Data</span>
               </div>
               
               <div className="flex items-center gap-1.5">
                 <AlertTriangle className="h-4 w-4 text-amber-500" />
                 <span className="text-sm text-muted-foreground">
-                  {alertsLoading ? 'Loading...' : `${liveAlerts.length} alerts`}
+                  {alertsLoading ? 'Loading...' : `${liveAlerts.length} route alerts`}
                 </span>
+                <span className="text-xs text-muted-foreground opacity-60">(5 min)</span>
               </div>
               
               <div className="flex items-center gap-1.5">
@@ -274,12 +282,19 @@ export function TripTimelineDemo() {
                 <span className="text-sm text-muted-foreground">
                   {weatherLoading ? 'Loading...' : (liveWeather ? `${liveWeather.temperature}°C ${liveWeather.condition}` : 'No data')}
                 </span>
+                <span className="text-xs text-muted-foreground opacity-60">(30 min)</span>
+              </div>
+              
+              <div className="flex items-center gap-1.5">
+                <Radio className="h-4 w-4 text-red-500" />
+                <span className="text-sm text-muted-foreground">Webcams</span>
+                <span className="text-xs text-muted-foreground opacity-60">(5 min)</span>
               </div>
             </div>
             
             <div className="flex items-center gap-2">
               <span className="text-xs text-muted-foreground">
-                Updated {lastRefresh.toLocaleTimeString()}
+                Last refresh: {lastRefresh.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
               </span>
               <Button 
                 size="sm" 

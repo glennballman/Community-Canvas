@@ -144,6 +144,11 @@ export interface TimelineEvent {
     companyCamLink?: string;
   };
   routePoint?: string;
+  dataFreshness?: {
+    webcam?: string;
+    weather?: string;
+    alerts?: string;
+  };
 }
 
 export interface TripTimelineViewProps {
@@ -161,6 +166,26 @@ function formatTime(isoString: string): string {
     hour: 'numeric', 
     minute: '2-digit',
     hour12: true 
+  });
+}
+
+function formatRelativeTime(isoTimestamp: string): string {
+  const date = new Date(isoTimestamp);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  
+  if (diffMins < 1) return 'just now';
+  if (diffMins < 60) return `${diffMins} min ago`;
+  
+  const diffHours = Math.floor(diffMins / 60);
+  if (diffHours < 24) return `${diffHours}h ago`;
+  
+  return date.toLocaleDateString('en-US', { 
+    month: 'short', 
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit'
   });
 }
 
@@ -346,20 +371,25 @@ function PhotoGallery({ photos }: { photos: TimelinePhoto[] }) {
           className="w-full h-48 object-cover"
           onError={() => handleImageError(0)}
         />
-        {photos[0].caption && (
-          <div className="absolute bottom-0 left-0 right-0 bg-black/60 px-3 py-2">
-            <p className="text-sm text-white">{photos[0].caption}</p>
-            {photos[0].timestamp && (
-              <p className="text-xs text-gray-300">{photos[0].timestamp}</p>
-            )}
-          </div>
-        )}
         {photos[0].source === 'webcam' && (
           <div className="absolute top-2 left-2 px-2 py-1 bg-red-500 rounded text-xs text-white flex items-center gap-1">
             <span className="h-2 w-2 bg-white rounded-full animate-pulse"></span>
             LIVE
           </div>
         )}
+        <div className="absolute bottom-0 left-0 right-0 bg-black/60 px-3 py-2">
+          {photos[0].caption && (
+            <p className="text-sm text-white">{photos[0].caption}</p>
+          )}
+          {photos[0].source === 'webcam' && photos[0].timestamp && (
+            <p className="text-xs text-gray-300">
+              LIVE - DriveBC {photos[0].timestamp.includes('T') ? `· Updated ${formatRelativeTime(photos[0].timestamp)}` : `· ${photos[0].timestamp}`}
+            </p>
+          )}
+          {photos[0].source !== 'webcam' && photos[0].timestamp && (
+            <p className="text-xs text-gray-300">{photos[0].timestamp}</p>
+          )}
+        </div>
       </div>
     );
   }

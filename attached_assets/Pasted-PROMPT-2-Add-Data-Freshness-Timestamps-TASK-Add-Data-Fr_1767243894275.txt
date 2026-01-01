@@ -1,0 +1,123 @@
+PROMPT 2: Add Data Freshness Timestamps
+TASK: Add Data Freshness Timestamps to Real-Time Elements
+
+PROBLEM:
+Users don't know if webcam images, weather, or alerts are current or stale.
+
+SOLUTION:
+Add subtle timestamps showing when each data source was last updated.
+
+IMPLEMENTATION:
+
+1. Update the TimelineEvent type to include timestamps:
+```typescript
+   interface TimelineEvent {
+     // ... existing fields
+     dataFreshness?: {
+       webcam?: string;    // ISO timestamp
+       weather?: string;   // ISO timestamp  
+       alerts?: string;    // ISO timestamp
+     };
+   }
+```
+
+2. Create a freshness display component:
+   `client/src/components/TripPlanning/DataFreshness.tsx`
+```typescript
+   import React from 'react';
+   import { RefreshCw } from 'lucide-react';
+
+   interface DataFreshnessProps {
+     timestamp: string | null;
+     source: string;
+     onRefresh?: () => void;
+   }
+
+   function formatFreshness(isoTimestamp: string): string {
+     const date = new Date(isoTimestamp);
+     const now = new Date();
+     const diffMs = now.getTime() - date.getTime();
+     const diffMins = Math.floor(diffMs / 60000);
+     
+     if (diffMins < 1) return 'Just now';
+     if (diffMins < 60) return `${diffMins} min ago`;
+     
+     const diffHours = Math.floor(diffMins / 60);
+     if (diffHours < 24) return `${diffHours}h ago`;
+     
+     return date.toLocaleDateString('en-US', { 
+       month: 'short', 
+       day: 'numeric',
+       hour: 'numeric',
+       minute: '2-digit'
+     });
+   }
+
+   export function DataFreshness({ timestamp, source, onRefresh }: DataFreshnessProps) {
+     if (!timestamp) return null;
+     
+     return (
+       <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+         <span>{source}: {formatFreshness(timestamp)}</span>
+         {onRefresh && (
+           <button 
+             onClick={onRefresh}
+             className="p-0.5 hover:bg-muted rounded"
+             title="Refresh"
+           >
+             <RefreshCw className="h-3 w-3" />
+           </button>
+         )}
+       </div>
+     );
+   }
+```
+
+3. Add timestamps to webcam display in PhotoGallery:
+```tsx
+   {photos[0].source === 'webcam' && (
+     <div className="absolute bottom-0 left-0 right-0 bg-black/60 px-3 py-2">
+       <p className="text-sm text-white">{photos[0].caption}</p>
+       <p className="text-xs text-gray-400">
+         LIVE - DriveBC · Updated {formatFreshness(photos[0].timestamp)}
+       </p>
+     </div>
+   )}
+```
+
+4. Add timestamps to weather display:
+```tsx
+   <WeatherWidget weather={event.weather} compact />
+   {event.dataFreshness?.weather && (
+     <span className="text-xs text-muted-foreground">
+       as of {new Date(event.dataFreshness.weather).toLocaleTimeString('en-US', {
+         hour: 'numeric',
+         minute: '2-digit'
+       })}
+     </span>
+   )}
+```
+
+5. Add a global freshness indicator at the top of the timeline:
+```tsx
+   <div className="flex items-center gap-4 text-xs text-muted-foreground mb-4">
+     <span>🟢 Live Data</span>
+     <span>Webcams: every 5 min</span>
+     <span>Weather: every 30 min</span>
+     <span>Alerts: every 5 min</span>
+     <span className="ml-auto">
+       Last refresh: {formatFreshness(lastRefreshTime)}
+     </span>
+   </div>
+```
+
+6. Store actual fetch timestamps when data is retrieved:
+   - When fetching webcam URLs, store `new Date().toISOString()`
+   - When fetching weather, store the timestamp
+   - When fetching alerts, store the timestamp
+
+EXPECTED RESULT:
+- Each webcam shows "Updated 2 min ago" or similar
+- Weather shows "as of 7:30 PM"
+- Global indicator shows overall data freshness
+- Users trust the data because they can see it's current
