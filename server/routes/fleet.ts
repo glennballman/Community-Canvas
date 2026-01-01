@@ -887,6 +887,163 @@ export function createFleetRouter(db: Pool) {
     }
   });
 
+  // ============================================
+  // DRIVER QUALIFICATION CHECKING ENDPOINTS
+  // ============================================
+
+  router.post('/check-driver-qualification', async (req: Request, res: Response) => {
+    try {
+      const { driverId, trailerId, province = 'BC' } = req.body;
+
+      if (!driverId || !trailerId) {
+        return res.status(400).json({ 
+          error: 'Missing required fields: driverId and trailerId' 
+        });
+      }
+
+      const result = await db.query(`
+        SELECT 
+          (check_driver_trailer_qualification($1::uuid, $2::uuid, $3)).*
+      `, [driverId, trailerId, province]);
+
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: 'Qualification check failed' });
+      }
+
+      const row = result.rows[0];
+      
+      res.json({
+        driverId,
+        trailerId,
+        province,
+        qualification: {
+          isQualified: row.is_qualified,
+          issues: row.issues || [],
+          warnings: row.warnings || [],
+          requiredEndorsements: row.required_endorsements || []
+        },
+        checkedAt: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Error checking driver qualification:', error);
+      res.status(500).json({ error: 'Failed to check driver qualification' });
+    }
+  });
+
+  router.get('/driver-qualification-summary/:driverId', async (req: Request, res: Response) => {
+    try {
+      const { driverId } = req.params;
+
+      const result = await db.query(`
+        SELECT * FROM get_driver_qualification_summary($1::uuid)
+      `, [driverId]);
+
+      res.json({
+        driverId,
+        trailers: result.rows.map(row => ({
+          trailerId: row.trailer_id,
+          trailerNickname: row.trailer_nickname,
+          trailerType: row.trailer_type,
+          isQualified: row.is_qualified,
+          issueCount: row.issue_count || 0,
+          warningCount: row.warning_count || 0,
+          primaryIssue: row.primary_issue
+        })),
+        checkedAt: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Error getting driver qualification summary:', error);
+      res.status(500).json({ error: 'Failed to get driver qualification summary' });
+    }
+  });
+
+  router.get('/driver-qualifications/:driverId', async (req: Request, res: Response) => {
+    try {
+      const { driverId } = req.params;
+
+      const result = await db.query(`
+        SELECT 
+          id, name, 
+          license_class, license_province, license_expiry,
+          has_air_brake_endorsement, air_brake_endorsement_date,
+          has_house_trailer_endorsement, house_trailer_endorsement_date,
+          has_heavy_trailer_endorsement, heavy_trailer_endorsement_date,
+          heavy_trailer_medical_expiry,
+          max_trailer_weight_certified_kg, max_combination_weight_certified_kg,
+          double_tow_experience, fifth_wheel_experience, gooseneck_experience,
+          heavy_equipment_loading_experience, horse_trailer_experience,
+          livestock_handling_experience, boat_launching_experience,
+          rv_driving_course_completed, rv_course_provider, rv_course_date
+        FROM participant_profiles
+        WHERE id = $1
+      `, [driverId]);
+
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: 'Driver not found' });
+      }
+
+      res.json(result.rows[0]);
+    } catch (error) {
+      console.error('Error getting driver qualifications:', error);
+      res.status(500).json({ error: 'Failed to get driver qualifications' });
+    }
+  });
+
+  router.patch('/driver-qualifications/:driverId', async (req: Request, res: Response) => {
+    try {
+      const { driverId } = req.params;
+      const updates = req.body;
+
+      const allowedFields = new Set([
+        'license_class', 'license_province', 'license_expiry',
+        'has_air_brake_endorsement', 'air_brake_endorsement_date',
+        'has_house_trailer_endorsement', 'house_trailer_endorsement_date',
+        'has_heavy_trailer_endorsement', 'heavy_trailer_endorsement_date',
+        'heavy_trailer_medical_expiry',
+        'max_trailer_weight_certified_kg', 'max_combination_weight_certified_kg',
+        'double_tow_experience', 'fifth_wheel_experience', 'gooseneck_experience',
+        'heavy_equipment_loading_experience', 'horse_trailer_experience',
+        'livestock_handling_experience', 'boat_launching_experience',
+        'rv_driving_course_completed', 'rv_course_provider', 'rv_course_date'
+      ]);
+
+      const setClauses: string[] = [];
+      const values: any[] = [];
+      let paramIndex = 1;
+
+      for (const [key, value] of Object.entries(updates)) {
+        if (allowedFields.has(key)) {
+          setClauses.push(`${key} = $${paramIndex}`);
+          values.push(value);
+          paramIndex++;
+        }
+      }
+
+      if (setClauses.length === 0) {
+        return res.status(400).json({ error: 'No valid fields to update' });
+      }
+
+      values.push(driverId);
+      const query = `
+        UPDATE participant_profiles
+        SET ${setClauses.join(', ')}, updated_at = NOW()
+        WHERE id = $${paramIndex}
+        RETURNING *
+      `;
+
+      const result = await db.query(query, values);
+
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: 'Driver not found' });
+      }
+
+      res.json({ success: true, driver: result.rows[0] });
+    } catch (error) {
+      console.error('Error updating driver qualifications:', error);
+      res.status(500).json({ error: 'Failed to update driver qualifications' });
+    }
+  });
+
   return router;
 }
 
