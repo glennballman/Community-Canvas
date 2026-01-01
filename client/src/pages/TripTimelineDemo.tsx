@@ -13,7 +13,7 @@ import {
   mapAlertSeverity, 
   mapWeatherConditionToIcon,
   BAMFIELD_ROUTE_POINTS,
-  LiveAlert,
+  AlertWithLocation,
   LiveWeather
 } from '../lib/routeRealTimeData';
 import { getLiveWebcamUrl } from '../lib/routeWebcams';
@@ -21,10 +21,10 @@ import { getLiveWebcamUrl } from '../lib/routeWebcams';
 export function TripTimelineDemo() {
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
   
-  // Fetch live alerts along the route (refresh every 5 minutes)
+  // Fetch live alerts along the route (refresh every 5 minutes, 20km radius per spec)
   const { data: liveAlerts = [], isLoading: alertsLoading, refetch: refetchAlerts } = useQuery({
     queryKey: ['/trip-alerts', 'bamfield-route'],
-    queryFn: () => getAlertsAlongRoute(BAMFIELD_ROUTE_POINTS, 25),
+    queryFn: () => getAlertsAlongRoute(BAMFIELD_ROUTE_POINTS, 20),
     refetchInterval: 5 * 60 * 1000, // 5 minutes
     staleTime: 4 * 60 * 1000,
   });
@@ -47,20 +47,20 @@ export function TripTimelineDemo() {
     return () => clearInterval(interval);
   }, []);
   
-  // Convert live alerts to timeline alert events and inject into timeline
+  // Inject live alerts into existing timeline events using data-driven routePoint matching
   const eventsWithLiveData: TimelineEvent[] = useMemo(() => {
-    // Start with a copy of the sample trip events with refreshed webcam URLs
-    const events = sampleBamfieldTrip.map(event => {
-      if (event.type === 'webcam' && event.photos?.length) {
-        return {
-          ...event,
-          photos: event.photos.map(photo => ({
-            ...photo,
-            url: getLiveWebcamUrl(photo.url.split('?')[0]) // Refresh cache-busted URL
-          }))
-        };
+    // Clone events and refresh webcam URLs
+    const events: TimelineEvent[] = sampleBamfieldTrip.map(event => {
+      const cloned = { ...event, alerts: [...(event.alerts || [])] };
+      
+      // Refresh webcam URLs with cache-busting
+      if (cloned.type === 'webcam' && cloned.photos?.length) {
+        cloned.photos = cloned.photos.map(photo => ({
+          ...photo,
+          url: getLiveWebcamUrl(photo.url.split('?')[0])
+        }));
       }
-      return event;
+      return cloned;
     });
     
     // Update weather data on events if we have live weather
@@ -77,29 +77,60 @@ export function TripTimelineDemo() {
       });
     }
     
-    // Create alert events from live alerts
-    const alertEvents: TimelineEvent[] = liveAlerts.slice(0, 5).map((alert) => ({
-      id: `live-alert-${alert.id}`,
-      type: 'alert' as const,
-      time: new Date().toISOString(), // Show at current time
-      title: alert.title || 'Road Alert',
-      subtitle: `${alert.distanceKm}km from route - ${alert.region_name || 'BC'}`,
-      description: alert.summary || alert.message,
-      location: {
-        name: alert.region_name || 'Along Route',
-      },
-      photos: [],
-      alerts: [{
-        severity: mapAlertSeverity(alert.severity) === 'major' ? 'major' : 
-                  mapAlertSeverity(alert.severity) === 'minor' ? 'minor' : 'info',
-        title: alert.title || 'Alert',
-        description: alert.summary || alert.message || '',
-        source: 'DriveBC'
-      }],
-    }));
+    // Track alerts that couldn't be matched to insert as standalone events
+    const unmatchedAlerts: AlertWithLocation[] = [];
     
-    // Insert live alerts at the beginning of the timeline if any exist
-    if (alertEvents.length > 0) {
+    // Inject live alerts into matching timeline events using routePoint metadata
+    for (const alert of liveAlerts) {
+      // Find the first event that matches this alert's nearestRoutePoint
+      const targetIndex = events.findIndex(event => 
+        event.routePoint === alert.nearestRoutePoint
+      );
+      
+      if (targetIndex !== -1) {
+        // Inject alert into the matching event
+        const severity = mapAlertSeverity(alert.severity);
+        events[targetIndex].alerts = [
+          ...(events[targetIndex].alerts || []),
+          {
+            severity: severity === 'major' ? 'major' : severity === 'minor' ? 'minor' : 'info',
+            title: alert.title || 'Road Alert',
+            description: alert.summary || alert.message || '',
+            source: 'DriveBC'
+          }
+        ];
+      } else {
+        // No matching event found, add to unmatched list
+        unmatchedAlerts.push(alert);
+      }
+    }
+    
+    // Create standalone alert events for unmatched alerts and insert at chronologically appropriate positions
+    if (unmatchedAlerts.length > 0) {
+      const alertEvents: TimelineEvent[] = unmatchedAlerts.slice(0, 3).map((alert) => {
+        const severity = mapAlertSeverity(alert.severity);
+        return {
+          id: `live-alert-${alert.id}`,
+          type: 'alert' as const,
+          time: events[0]?.time || new Date().toISOString(), // Place near start
+          title: alert.title || 'Road Alert',
+          subtitle: `${alert.distanceKm}km from ${alert.nearestRoutePoint} - DriveBC`,
+          description: alert.summary || alert.message,
+          location: {
+            name: alert.nearestRoutePoint || alert.region_name || 'Along Route',
+          },
+          photos: [],
+          alerts: [{
+            severity: severity === 'major' ? 'major' : severity === 'minor' ? 'minor' : 'info',
+            title: alert.title || 'Road Alert',
+            description: alert.summary || alert.message || '',
+            source: 'DriveBC'
+          }],
+          routePoint: alert.nearestRoutePoint,
+        };
+      });
+      
+      // Insert unmatched alerts at the beginning
       return [...alertEvents, ...events];
     }
     

@@ -51,13 +51,17 @@ function haversineDistance(lat1: number, lon1: number, lat2: number, lon2: numbe
   return R * c;
 }
 
+export interface AlertWithLocation extends LiveAlert {
+  nearestRoutePoint: string;
+}
+
 /**
- * Fetch all active alerts and filter by proximity to route
+ * Fetch all active alerts and filter by proximity to route (20km default)
  */
 export async function getAlertsAlongRoute(
   routePoints: RoutePoint[],
-  radiusKm: number = 25
-): Promise<LiveAlert[]> {
+  radiusKm: number = 20
+): Promise<AlertWithLocation[]> {
   try {
     const response = await fetch('/api/v1/alerts/active');
     if (!response.ok) {
@@ -68,13 +72,15 @@ export async function getAlertsAlongRoute(
     const allAlerts: LiveAlert[] = await response.json();
     
     // Filter alerts that have coordinates and are within radius of any route point
-    const nearbyAlerts: LiveAlert[] = [];
+    const nearbyAlerts: AlertWithLocation[] = [];
     
     for (const alert of allAlerts) {
       if (alert.latitude === null || alert.longitude === null) continue;
       
-      // Check distance to any route point
+      // Find the nearest route point and its distance
       let minDistance = Infinity;
+      let nearestPoint = routePoints[0]?.name || 'Route';
+      
       for (const point of routePoints) {
         const distance = haversineDistance(
           point.lat, point.lng,
@@ -82,13 +88,15 @@ export async function getAlertsAlongRoute(
         );
         if (distance < minDistance) {
           minDistance = distance;
+          nearestPoint = point.name;
         }
       }
       
       if (minDistance <= radiusKm) {
         nearbyAlerts.push({
           ...alert,
-          distanceKm: Math.round(minDistance * 10) / 10
+          distanceKm: Math.round(minDistance * 10) / 10,
+          nearestRoutePoint: nearestPoint
         });
       }
     }

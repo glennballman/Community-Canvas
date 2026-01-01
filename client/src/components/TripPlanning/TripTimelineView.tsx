@@ -134,6 +134,7 @@ export interface TimelineEvent {
     jobberLink?: string;
     companyCamLink?: string;
   };
+  routePoint?: string;
 }
 
 export interface TripTimelineViewProps {

@@ -42,6 +42,7 @@ export const sampleBamfieldTrip: TimelineEvent[] = [
     },
     duration: 30,
     cost: 0,
+    routePoint: 'Vancouver',
   },
   {
     id: 'drive-to-horseshoe',
@@ -69,6 +70,7 @@ export const sampleBamfieldTrip: TimelineEvent[] = [
     duration: 50,
     distance: 42,
     cost: 10,
+    routePoint: 'Horseshoe Bay',
   },
   {
     id: 'webcam-horseshoe-bay',
@@ -95,6 +97,7 @@ export const sampleBamfieldTrip: TimelineEvent[] = [
       icon: 'cloudy',
     },
     duration: 5,
+    routePoint: 'Horseshoe Bay',
   },
   {
     id: 'ferry-horseshoe-nanaimo',
@@ -129,6 +132,7 @@ export const sampleBamfieldTrip: TimelineEvent[] = [
     },
     duration: 100,
     cost: 142.50,
+    routePoint: 'Horseshoe Bay',
   },
   {
     id: 'drive-nanaimo-portalberni',
@@ -149,6 +153,7 @@ export const sampleBamfieldTrip: TimelineEvent[] = [
     duration: 75,
     distance: 85,
     cost: 15,
+    routePoint: 'Nanaimo',
   },
   {
     id: 'webcam-cathedral-grove',
@@ -175,6 +180,7 @@ export const sampleBamfieldTrip: TimelineEvent[] = [
       icon: 'fog',
     },
     duration: 15,
+    routePoint: 'Port Alberni Summit',
   },
   {
     id: 'fuel-port-alberni',
@@ -203,6 +209,7 @@ export const sampleBamfieldTrip: TimelineEvent[] = [
     },
     duration: 15,
     cost: 132,
+    routePoint: 'Port Alberni',
   },
   {
     id: 'lunch-port-alberni',
@@ -218,6 +225,7 @@ export const sampleBamfieldTrip: TimelineEvent[] = [
     alerts: [],
     duration: 25,
     cost: 45,
+    routePoint: 'Port Alberni',
   },
   {
     id: 'drive-bamfield-road',
@@ -253,6 +261,7 @@ export const sampleBamfieldTrip: TimelineEvent[] = [
     duration: 150,
     distance: 90,
     cost: 15,
+    routePoint: 'Bamfield',
   },
   {
     id: 'arrival-bamfield',
@@ -272,6 +281,7 @@ export const sampleBamfieldTrip: TimelineEvent[] = [
       icon: 'rain',
     },
     duration: 0,
+    routePoint: 'Bamfield',
   },
   {
     id: 'accommodation-woods-end',
@@ -303,6 +313,7 @@ export const sampleBamfieldTrip: TimelineEvent[] = [
     },
     duration: 60,
     cost: 350,
+    routePoint: 'Bamfield',
   },
   {
     id: 'jobsite-day1',
@@ -352,6 +363,7 @@ export const sampleBamfieldTrip: TimelineEvent[] = [
     },
     duration: 540,
     cost: 0,
+    routePoint: 'Bamfield',
   },
   {
     id: 'jobsite-day2',
@@ -389,6 +401,7 @@ export const sampleBamfieldTrip: TimelineEvent[] = [
     },
     duration: 240,
     cost: 0,
+    routePoint: 'Bamfield',
   },
   {
     id: 'departure-bamfield',
@@ -407,6 +420,7 @@ export const sampleBamfieldTrip: TimelineEvent[] = [
       icon: 'sunny',
     },
     duration: 30,
+    routePoint: 'Bamfield',
   },
   {
     id: 'return-bamfield-road',
@@ -429,6 +443,7 @@ export const sampleBamfieldTrip: TimelineEvent[] = [
     duration: 140,
     distance: 90,
     cost: 15,
+    routePoint: 'Bamfield',
   },
   {
     id: 'fuel-return-portalberni',
@@ -449,6 +464,7 @@ export const sampleBamfieldTrip: TimelineEvent[] = [
     },
     duration: 10,
     cost: 97,
+    routePoint: 'Port Alberni',
   },
   {
     id: 'webcam-departure-bay',
@@ -475,6 +491,7 @@ export const sampleBamfieldTrip: TimelineEvent[] = [
       icon: 'clear',
     },
     duration: 5,
+    routePoint: 'Departure Bay',
   },
   {
     id: 'ferry-return',
@@ -503,6 +520,7 @@ export const sampleBamfieldTrip: TimelineEvent[] = [
     },
     duration: 100,
     cost: 142.50,
+    routePoint: 'Departure Bay',
   },
   {
     id: 'arrival-surrey',
@@ -523,6 +541,7 @@ export const sampleBamfieldTrip: TimelineEvent[] = [
       icon: 'clear',
     },
     duration: 30,
+    routePoint: 'Vancouver',
   },
 ];
 
