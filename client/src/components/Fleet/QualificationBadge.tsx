@@ -33,7 +33,7 @@ export function QualificationBadge({
       <Tooltip>
         <TooltipTrigger asChild>
           <span className="inline-flex" data-testid="badge-qualified">
-            <CheckCircle className={`${iconSize} text-green-600 dark:text-green-400`} />
+            <CheckCircle className={`${iconSize} text-success`} />
           </span>
         </TooltipTrigger>
         <TooltipContent>
@@ -48,7 +48,7 @@ export function QualificationBadge({
       <Tooltip>
         <TooltipTrigger asChild>
           <span className="inline-flex" data-testid="badge-qualified-warnings">
-            <Info className={`${iconSize} text-yellow-600 dark:text-yellow-400`} />
+            <Info className={`${iconSize} text-warning`} />
           </span>
         </TooltipTrigger>
         <TooltipContent>

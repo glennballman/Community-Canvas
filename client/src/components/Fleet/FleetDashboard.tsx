@@ -360,6 +360,7 @@ export function FleetDashboard() {
                   <TrailerCard 
                     key={trailer.id} 
                     trailer={trailer} 
+                    currentDriverId={currentDriverId}
                     onUnhitch={() => unhitchMutation.mutate(trailer.id)}
                     onEdit={() => setEditTrailerId(trailer.id)}
                     isPending={unhitchMutation.isPending}
@@ -637,7 +638,7 @@ function TrailerCard({
             variant="outline" 
             size="sm" 
             className="flex-1" 
-            disabled={currentDriverId && qualificationData && !isQualified}
+            disabled={!!(currentDriverId && qualificationData && !isQualified)}
             data-testid={`button-hitch-${trailer.id}`}
           >
             Hitch To...
