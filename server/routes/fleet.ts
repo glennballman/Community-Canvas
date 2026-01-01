@@ -106,7 +106,145 @@ const ALLOWED_TRAILER_COLUMNS = new Set([
   'is_toy_hauler', 'garage_length_feet', 'garage_width_feet', 'garage_height_feet',
   'fuel_station_gallons', 'tie_down_points',
   // Hitch status
-  'currently_hitched_to', 'primary_photo_url'
+  'currently_hitched_to', 'primary_photo_url',
+  
+  // =====================================================
+  // HORSE TRAILER FIELDS (Migration 007)
+  // =====================================================
+  'is_horse_trailer', 'horse_capacity', 'horse_load_config', 'stall_length_inches',
+  'stall_width_inches', 'stall_height_inches', 'horse_size_rating',
+  // Dividers
+  'divider_type', 'divider_padded', 'dividers_removable', 'has_head_dividers',
+  'has_butt_bars', 'has_breast_bars',
+  // Mangers & Feeding
+  'manger_type', 'has_hay_rack', 'hay_rack_type',
+  // Windows & Ventilation
+  'drop_down_windows_head', 'drop_down_windows_butt', 'slider_windows', 'roof_vents', 'window_bars',
+  // Doors & Access
+  'escape_door_count', 'escape_door_side', 'walk_through_door', 'rear_load_type',
+  'side_ramp', 'rear_ramp_spring_assist',
+  // Flooring & Safety
+  'horse_floor_type', 'floor_mats', 'kick_wall_padding', 'lined_walls', 'insulated_walls',
+  // Tie Systems
+  'tie_ring_count', 'tie_system_type',
+  
+  // =====================================================
+  // TACK ROOM FIELDS
+  // =====================================================
+  'has_tack_room', 'tack_room_type', 'tack_room_length_inches', 'tack_room_width',
+  'saddle_rack_count', 'saddle_rack_type', 'bridle_hooks', 'blanket_bar',
+  'tack_room_carpet', 'brush_tray',
+  
+  // =====================================================
+  // LIVING QUARTERS (LQ) FIELDS
+  // =====================================================
+  'has_living_quarters', 'lq_certified', 'lq_certification_type',
+  // LQ Dimensions
+  'lq_short_wall_feet', 'lq_long_wall_feet', 'lq_width_feet', 'lq_ceiling_height_inches',
+  // Sleeping
+  'lq_sleep_capacity', 'lq_bed_type', 'lq_bed_count', 'lq_has_cabover_bed',
+  // Kitchen
+  'lq_has_kitchen', 'lq_cooktop_type', 'lq_has_oven', 'lq_has_microwave', 'lq_microwave_type',
+  'lq_refrigerator_type', 'lq_refrigerator_cubic_feet', 'lq_sink_type', 'lq_has_outdoor_kitchen',
+  // Bathroom
+  'lq_has_bathroom', 'lq_bathroom_type', 'lq_toilet_type', 'lq_has_shower',
+  'lq_shower_type', 'lq_has_vanity',
+  // Climate
+  'lq_ac_type', 'lq_ac_btu', 'lq_heat_type', 'lq_heat_btu',
+  // Water & Waste
+  'lq_fresh_water_gallons', 'lq_gray_water_gallons', 'lq_black_water_gallons',
+  'lq_water_heater_type', 'lq_water_heater_gallons', 'lq_winterized',
+  // Power
+  'lq_shore_power_amps', 'lq_has_generator', 'lq_generator_type', 'lq_generator_watts',
+  'lq_generator_fuel', 'lq_has_solar', 'lq_solar_watts', 'lq_battery_type',
+  'lq_battery_amp_hours', 'lq_has_inverter', 'lq_inverter_watts', 'lq_converter_amps',
+  // Entertainment & Comfort
+  'lq_tv_count', 'lq_has_stereo', 'lq_speaker_count', 'lq_has_awning', 'lq_awning_length_feet',
+  'lq_awning_power', 'lq_has_slide_out', 'lq_slide_out_count',
+  // Propane
+  'lq_propane_tank_count', 'lq_propane_capacity_lbs',
+  
+  // =====================================================
+  // WORK / CONTRACTOR TRAILER FIELDS
+  // =====================================================
+  'is_work_trailer', 'work_trailer_type',
+  // Shelving & Storage
+  'has_shelving', 'shelving_type', 'shelving_sides', 'shelf_count',
+  'has_parts_bins', 'parts_bin_count', 'has_tool_cabinets', 'has_overhead_storage',
+  // Workbench
+  'has_workbench', 'workbench_type', 'workbench_length_inches', 'workbench_width_inches',
+  'workbench_has_vise',
+  // Tool Storage
+  'ladder_rack_type', 'has_pipe_rack', 'pipe_rack_length_feet',
+  'has_conduit_tube', 'has_lumber_rack',
+  // Power Systems (Work)
+  'has_generator_mount', 'generator_mount_type', 'has_shore_power', 'shore_power_amps_work',
+  'electrical_outlets', 'outlet_type', 'has_air_compressor_mount', 'has_welder_outlet', 'welder_outlet_amps',
+  // Climate Control (Work)
+  'has_hvac', 'hvac_type', 'has_exhaust_fan', 'exhaust_fan_cfm', 'has_dust_collection',
+  
+  // =====================================================
+  // HEAVY EQUIPMENT TRAILER FIELDS
+  // =====================================================
+  'is_equipment_trailer', 'deck_type',
+  // Deck Dimensions
+  'deck_length_feet', 'deck_width_inches', 'deck_height_inches', 'well_length_feet',
+  'upper_deck_length_feet', 'lower_deck_length_feet',
+  // Extendable
+  'is_extendable', 'extended_length_feet', 'retracted_length_feet',
+  // Load Height
+  'max_load_height_feet', 'max_legal_height_feet',
+  // Loading System
+  'gooseneck_removable', 'gooseneck_type', 'has_loading_ramps', 'ramp_type_equipment',
+  'ramp_length_feet', 'ramp_width_inches', 'ramp_capacity_lbs_equipment',
+  // Tilt Deck
+  'tilt_type', 'tilt_angle_degrees', 'stationary_front_feet',
+  // Heavy Duty Axle
+  'axle_count_equipment', 'axle_spacing_inches', 'axle_capacity_per_axle_lbs',
+  'has_lift_axle', 'lift_axle_count', 'has_air_ride', 'has_spread_axle',
+  // Tie Down System
+  'has_stake_pockets', 'stake_pocket_count', 'has_rub_rails', 'has_winch',
+  'winch_capacity_lbs', 'winch_type', 'has_chain_tie_downs', 'chain_binder_count',
+  // Deck Surface
+  'deck_surface_type', 'd_ring_capacity_lbs',
+  
+  // =====================================================
+  // LIVESTOCK TRAILER FIELDS
+  // =====================================================
+  'is_livestock_trailer', 'livestock_type', 'livestock_capacity_head',
+  'has_center_gate', 'center_gate_type', 'has_possum_belly', 'possum_belly_count',
+  'has_upper_deck', 'punch_floor', 'has_nose_gate',
+  
+  // =====================================================
+  // DUMP TRAILER FIELDS
+  // =====================================================
+  'is_dump_trailer', 'dump_type', 'dump_capacity_cubic_yards', 'dump_bed_length_feet',
+  'dump_bed_width_inches', 'dump_bed_height_inches', 'dump_hydraulic_type',
+  'dump_lift_capacity_lbs', 'has_tarp_system', 'tarp_type', 'has_barn_doors', 'has_spread_gate',
+  
+  // =====================================================
+  // BOAT TRAILER FIELDS
+  // =====================================================
+  'is_boat_trailer', 'boat_trailer_type', 'max_boat_length_feet', 'max_boat_weight_lbs',
+  'bunk_count', 'bunk_material', 'roller_count', 'has_keel_rollers', 'has_bow_stop',
+  'has_winch_stand', 'has_guide_ons', 'guide_on_type', 'has_mast_support',
+  'trailer_submersible', 'has_led_lights',
+  
+  // =====================================================
+  // SPECIALTY TRAILER FIELDS
+  // =====================================================
+  'is_specialty_trailer', 'specialty_type',
+  // Generator Trailer
+  'onboard_generator_kw', 'generator_fuel_type', 'generator_fuel_capacity_gallons',
+  'has_distribution_panel', 'outlet_count_120v', 'outlet_count_240v',
+  // Fuel Transfer Trailer
+  'fuel_tank_capacity_gallons', 'fuel_type_stored', 'has_transfer_pump',
+  'transfer_pump_gpm', 'has_fuel_meter',
+  // Welding Trailer
+  'welder_type', 'welder_amps_max', 'has_cutting_torch', 'bottle_storage_count',
+  // Pressure Wash Trailer
+  'pressure_washer_psi', 'pressure_washer_gpm', 'water_tank_capacity_gallons',
+  'has_hot_water', 'hose_reel_count'
 ]);
 
 // Helper to filter and validate columns
