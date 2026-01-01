@@ -1,0 +1,257 @@
+Let's seed the database with Save Paradise Parking as our first property. This is a real property in Bamfield, BC.
+
+INSERT INTO staging_properties (
+    name,
+    description,
+    short_description,
+    tagline,
+    property_type,
+    property_subtype,
+    
+    -- Location
+    region,
+    city,
+    nearest_town,
+    distance_to_town_km,
+    location_description,
+    latitude,
+    longitude,
+    
+    -- Capacity
+    total_spots,
+    spots_medium,
+    spots_large,
+    spots_oversized,
+    spots_pull_through,
+    
+    -- Dimensions
+    max_vehicle_length_ft,
+    max_combined_length_ft,
+    max_vehicle_width_ft,
+    spot_length_ft,
+    spot_width_ft,
+    surface_type,
+    surface_condition,
+    is_level,
+    
+    -- Power
+    has_shore_power,
+    power_amps,
+    power_included,
+    num_power_hookups,
+    
+    -- Water
+    has_water_hookup,
+    has_potable_water,
+    has_water_fill_station,
+    
+    -- Sewer
+    has_dump_station,
+    
+    -- Connectivity
+    has_wifi,
+    has_cell_signal,
+    cell_signal_strength,
+    cell_carriers,
+    starlink_friendly,
+    
+    -- Facilities
+    has_bathrooms,
+    bathroom_type,
+    
+    -- Security
+    is_fenced,
+    is_gated,
+    has_security_camera,
+    is_well_lit,
+    
+    -- Access
+    access_type,
+    check_in_method,
+    road_type,
+    
+    -- Policies
+    min_nights,
+    max_stay_days,
+    pets_allowed,
+    dogs_allowed,
+    generators_allowed,
+    
+    -- Trucking
+    accepts_semi_trucks,
+    num_truck_spots,
+    can_drop_trailer,
+    
+    -- RV
+    has_propane_refill,
+    
+    -- Nature
+    is_waterfront,
+    waterfront_type,
+    has_fishing,
+    has_kayak_rental,
+    has_boat_launch,
+    terrain_type,
+    
+    -- Status
+    status,
+    is_verified,
+    source
+) VALUES (
+    'Save Paradise Parking',
+    'Safe, secure parking in Bamfield for work crews, RVs, and boat trailers. Located near the Bamfield Marine Sciences Centre and minutes from world-class fishing. Our lot has hosted BC Hydro crews, forestry workers, and countless RV travelers exploring the West Coast Trail area.
+
+Features:
+- Large gravel lot with pull-through spots for big rigs
+- Shore power available (30A)
+- Secure fenced area
+- Beautiful waterfront location on Bamfield Inlet
+- Close to boat launch and fishing charters
+- Pet friendly
+
+Perfect for:
+- Work crews needing a staging area
+- RV travelers exploring Pacific Rim
+- Boat trailers (we''re near the best fishing on the island!)
+- Anyone exploring the West Coast Trail
+
+We understand what crews and travelers need - we''ve been hosting them for years.',
+    
+    'Secure parking in Bamfield for work crews, RVs, and boat trailers. Shore power, waterfront location.',
+    'Where crews rest and adventurers launch',
+    'parking_lot',
+    'marina',
+    
+    -- Location
+    'Vancouver Island',
+    'Bamfield',
+    'Port Alberni',
+    75.0,
+    'Located on Bamfield Inlet, 5 minutes from the village center and boat launch. Take the gravel road from Port Alberni - it''s an adventure but worth it!',
+    48.8356,
+    -125.1358,
+    
+    -- Capacity
+    15,
+    5,
+    6,
+    4,
+    8,
+    
+    -- Dimensions
+    60,
+    85,
+    14,
+    70,
+    15,
+    'gravel',
+    'good',
+    true,
+    
+    -- Power
+    true,
+    ARRAY[30],
+    false,
+    8,
+    
+    -- Water
+    true,
+    true,
+    true,
+    
+    -- Sewer
+    false,
+    
+    -- Connectivity
+    true,
+    true,
+    2,
+    ARRAY['Telus', 'Rogers'],
+    true,
+    
+    -- Facilities
+    true,
+    'portable',
+    
+    -- Security
+    true,
+    true,
+    true,
+    true,
+    
+    -- Access
+    '24/7',
+    'key_code',
+    'gravel',
+    
+    -- Policies
+    1,
+    364,
+    true,
+    true,
+    true,
+    
+    -- Trucking
+    true,
+    4,
+    true,
+    
+    -- RV
+    false,
+    
+    -- Nature
+    true,
+    'inlet',
+    true,
+    true,
+    true,
+    'coastal_forest',
+    
+    -- Status
+    'active',
+    true,
+    'manual'
+);
+
+-- Add base pricing
+INSERT INTO staging_pricing (property_id, pricing_type, nightly_rate, weekly_rate, monthly_rate, is_active)
+SELECT id, 'base_nightly', 40.00, 240.00, 800.00, true
+FROM staging_properties WHERE name = 'Save Paradise Parking';
+
+-- Add seasonal summer pricing
+INSERT INTO staging_pricing (property_id, pricing_type, nightly_rate, season_name, start_date, end_date, is_active)
+SELECT id, 'seasonal', 55.00, 'Peak Summer', '2026-06-15', '2026-09-15', true
+FROM staging_properties WHERE name = 'Save Paradise Parking';
+
+-- Add some individual spots
+INSERT INTO staging_spots (property_id, spot_number, spot_name, spot_type, length_ft, width_ft, max_combined_length_ft, is_pull_through, has_power, power_amps, is_waterfront, view_type)
+SELECT 
+    p.id,
+    'A' || n,
+    CASE 
+        WHEN n <= 3 THEN 'Waterfront ' || n
+        ELSE 'Back Row ' || (n - 3)
+    END,
+    CASE 
+        WHEN n <= 4 THEN 'parking_oversized'
+        ELSE 'parking_standard'
+    END,
+    CASE WHEN n <= 4 THEN 80 ELSE 50 END,
+    15,
+    CASE WHEN n <= 4 THEN 85 ELSE 55 END,
+    n <= 6,
+    n <= 8,
+    CASE WHEN n <= 8 THEN 30 ELSE NULL END,
+    n <= 3,
+    CASE WHEN n <= 3 THEN 'inlet' ELSE NULL END
+FROM staging_properties p, generate_series(1, 10) n
+WHERE p.name = 'Save Paradise Parking';
+
+-- Verify
+SELECT name, canvas_id, crew_score, rv_score, trucker_score, status 
+FROM staging_properties WHERE name = 'Save Paradise Parking';
+
+SELECT spot_number, spot_type, max_combined_length_ft, is_pull_through, has_power 
+FROM staging_spots 
+WHERE property_id = (SELECT id FROM staging_properties WHERE name = 'Save Paradise Parking')
+ORDER BY spot_number;
