@@ -61,10 +61,10 @@ interface QualificationCheckResult {
 
 export function useDriverQualifications(driverId: string | null) {
   return useQuery<DriverQualificationSummary>({
-    queryKey: ['/api/fleet/driver-qualification-summary', driverId],
+    queryKey: ['/api/v1/fleet/driver-qualification-summary', driverId],
     queryFn: async () => {
       if (!driverId) throw new Error('No driver ID');
-      const response = await fetch(`/api/fleet/driver-qualification-summary/${driverId}`);
+      const response = await fetch(`/api/v1/fleet/driver-qualification-summary/${driverId}`);
       if (!response.ok) {
         throw new Error('Failed to fetch driver qualifications');
       }
@@ -77,10 +77,10 @@ export function useDriverQualifications(driverId: string | null) {
 
 export function useQualificationCheck(driverId: string | null, trailerId: string | null) {
   return useQuery<QualificationCheckResult>({
-    queryKey: ['/api/fleet/check-driver-qualification', driverId, trailerId],
+    queryKey: ['/api/v1/fleet/check-driver-qualification', driverId, trailerId],
     queryFn: async () => {
       if (!driverId || !trailerId) throw new Error('Missing IDs');
-      const response = await apiRequest('POST', '/api/fleet/check-driver-qualification', {
+      const response = await apiRequest('POST', '/api/v1/fleet/check-driver-qualification', {
         driverId,
         trailerId,
         province: 'BC'

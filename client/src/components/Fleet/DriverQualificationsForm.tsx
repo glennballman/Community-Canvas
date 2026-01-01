@@ -79,9 +79,9 @@ export function DriverQualificationsForm({ driverId, onSave }: DriverQualificati
   const { toast } = useToast();
 
   const { data: qualifications, isLoading, error } = useQuery<DriverQualifications>({
-    queryKey: ['/api/fleet/driver-qualifications', driverId],
+    queryKey: ['/api/v1/fleet/driver-qualifications', driverId],
     queryFn: async () => {
-      const response = await fetch(`/api/fleet/driver-qualifications/${driverId}`);
+      const response = await fetch(`/api/v1/fleet/driver-qualifications/${driverId}`);
       if (!response.ok) {
         throw new Error('Failed to fetch driver qualifications');
       }
@@ -148,10 +148,10 @@ export function DriverQualificationsForm({ driverId, onSave }: DriverQualificati
 
   const mutation = useMutation({
     mutationFn: async (data: any) => {
-      return apiRequest('PATCH', `/api/fleet/driver-qualifications/${driverId}`, data);
+      return apiRequest('PATCH', `/api/v1/fleet/driver-qualifications/${driverId}`, data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/fleet/driver-qualifications', driverId] });
+      queryClient.invalidateQueries({ queryKey: ['/api/v1/fleet/driver-qualifications', driverId] });
       toast({
         title: 'Qualifications Saved',
         description: 'Driver qualifications have been updated successfully.',
