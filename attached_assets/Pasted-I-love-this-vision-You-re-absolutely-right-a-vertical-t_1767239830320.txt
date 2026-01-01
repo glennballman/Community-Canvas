@@ -1,0 +1,806 @@
+I love this vision! You're absolutely right - a vertical timeline is much more intuitive for following a journey. Let me build this.
+Trip Timeline View - Vertical Visual Journey
+The concept:
+TIME     │  EVENT
+─────────┼─────────────────────────────────────
+7:00 AM  │  🚐 [PHOTO: Cube Van]
+         │  Departure from Surrey
+         │  Weather: 5°C, Clear
+─────────┼─────────────────────────────────────
+7:30 AM  │  📍 [PHOTO: Webcam - Horseshoe Bay]
+         │  BC Ferries Terminal
+         │  ⚠️ 15 min delay reported
+─────────┼─────────────────────────────────────
+8:15 AM  │  ⛴️ [PHOTO: Queen of Cowichan]
+         │  Ferry: Horseshoe Bay → Nanaimo
+         │  Reservation: CONFIRMED
+─────────┼─────────────────────────────────────
+...      │  ...continues down the screen
+Let me create this component:
+
+TripTimelineView Component
+File: client/src/components/TripPlanning/TripTimelineView.tsx
+tsx// ============================================
+// TRIP TIMELINE VIEW
+// Vertical visual journey with photos, webcams,
+// weather, alerts, and real-time conditions
+// ============================================
+
+import React, { useState } from 'react';
+import {
+  Car,
+  Ship,
+  Fuel,
+  Hotel,
+  MapPin,
+  Camera,
+  CloudSun,
+  AlertTriangle,
+  Clock,
+  DollarSign,
+  Navigation,
+  Thermometer,
+  Wind,
+  Droplets,
+  ChevronDown,
+  ChevronUp,
+  ExternalLink,
+  Phone,
+  Calendar,
+  CheckCircle,
+  XCircle,
+  Loader2,
+  Wrench,
+  Anchor,
+  Mountain,
+  Coffee,
+  ParkingCircle,
+  Tent,
+  Waves,
+} from 'lucide-react';
+
+// ============================================
+// TYPES
+// ============================================
+
+type EventType = 
+  | 'departure'
+  | 'drive_segment'
+  | 'webcam'
+  | 'ferry'
+  | 'fuel_stop'
+  | 'rest_stop'
+  | 'accommodation'
+  | 'activity'
+  | 'job_site'
+  | 'parking'
+  | 'sightseeing'
+  | 'meal'
+  | 'arrival'
+  | 'alert';
+
+type BookingStatus = 'confirmed' | 'pending' | 'not_booked' | 'cancelled';
+
+interface WeatherData {
+  temperature: number;
+  condition: string;
+  icon: string;
+  humidity?: number;
+  windSpeed?: number;
+  windDirection?: string;
+  precipitation?: number;
+}
+
+interface TimelinePhoto {
+  url: string;
+  caption?: string;
+  source?: string; // 'webcam', 'vehicle', 'accommodation', 'jobber', 'companycam', etc.
+  timestamp?: string;
+}
+
+interface TimelineAlert {
+  severity: 'critical' | 'major' | 'minor' | 'info';
+  title: string;
+  description: string;
+  source?: string;
+}
+
+interface TimelineEvent {
+  id: string;
+  type: EventType;
+  time: string; // ISO timestamp
+  endTime?: string; // For events with duration
+  title: string;
+  subtitle?: string;
+  description?: string;
+  location?: {
+    name: string;
+    address?: string;
+    lat?: number;
+    lng?: number;
+  };
+  photos: TimelinePhoto[];
+  weather?: WeatherData;
+  weatherForecast?: WeatherData[]; // For job sites: -1h to +8h
+  alerts: TimelineAlert[];
+  booking?: {
+    status: BookingStatus;
+    confirmationNumber?: string;
+    provider?: string;
+    price?: number;
+    link?: string;
+    phone?: string;
+  };
+  duration?: number; // minutes
+  distance?: number; // km
+  cost?: number;
+  notes?: string;
+  // Type-specific fields
+  vehicle?: {
+    id: string;
+    name: string;
+    photo?: string;
+    licensePlate?: string;
+  };
+  trailer?: {
+    id: string;
+    name: string;
+    photo?: string;
+  };
+  ferry?: {
+    route: string;
+    vessel?: string;
+    sailingTime: string;
+    deckSpace?: string;
+  };
+  fuel?: {
+    stationName: string;
+    pricePerLiter?: number;
+    estimatedFillUp?: number;
+  };
+  accommodation?: {
+    type: 'hotel' | 'motel' | 'airbnb' | 'vrbo' | 'camping' | 'cabin';
+    checkIn?: string;
+    checkOut?: string;
+    roomType?: string;
+    amenities?: string[];
+  };
+  jobSite?: {
+    jobNumber?: string;
+    clientName?: string;
+    scope?: string;
+    estimatedHours?: number;
+    jobberLink?: string;
+    companyCamLink?: string;
+  };
+}
+
+interface TripTimelineViewProps {
+  tripId: string;
+  tripName: string;
+  events: TimelineEvent[];
+  isLoading?: boolean;
+  onEventClick?: (event: TimelineEvent) => void;
+  onBookEvent?: (event: TimelineEvent) => void;
+}
+
+// ============================================
+// HELPER FUNCTIONS
+// ============================================
+
+function formatTime(isoString: string): string {
+  const date = new Date(isoString);
+  return date.toLocaleTimeString('en-US', { 
+    hour: 'numeric', 
+    minute: '2-digit',
+    hour12: true 
+  });
+}
+
+function formatDate(isoString: string): string {
+  const date = new Date(isoString);
+  return date.toLocaleDateString('en-US', { 
+    weekday: 'short',
+    month: 'short', 
+    day: 'numeric' 
+  });
+}
+
+function formatDuration(minutes: number): string {
+  if (minutes < 60) return `${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
+}
+
+function getEventIcon(type: EventType) {
+  switch (type) {
+    case 'departure': return Car;
+    case 'drive_segment': return Navigation;
+    case 'webcam': return Camera;
+    case 'ferry': return Ship;
+    case 'fuel_stop': return Fuel;
+    case 'rest_stop': return Coffee;
+    case 'accommodation': return Hotel;
+    case 'activity': return Waves;
+    case 'job_site': return Wrench;
+    case 'parking': return ParkingCircle;
+    case 'sightseeing': return Mountain;
+    case 'meal': return Coffee;
+    case 'arrival': return MapPin;
+    case 'alert': return AlertTriangle;
+    default: return MapPin;
+  }
+}
+
+function getEventColor(type: EventType): string {
+  switch (type) {
+    case 'departure': return 'bg-blue-500';
+    case 'drive_segment': return 'bg-gray-500';
+    case 'webcam': return 'bg-purple-500';
+    case 'ferry': return 'bg-cyan-500';
+    case 'fuel_stop': return 'bg-yellow-500';
+    case 'rest_stop': return 'bg-orange-400';
+    case 'accommodation': return 'bg-indigo-500';
+    case 'activity': return 'bg-green-500';
+    case 'job_site': return 'bg-red-500';
+    case 'parking': return 'bg-gray-400';
+    case 'sightseeing': return 'bg-emerald-500';
+    case 'meal': return 'bg-amber-500';
+    case 'arrival': return 'bg-green-600';
+    case 'alert': return 'bg-red-600';
+    default: return 'bg-gray-500';
+  }
+}
+
+function getBookingStatusBadge(status: BookingStatus) {
+  switch (status) {
+    case 'confirmed':
+      return (
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-success/20 text-success rounded text-xs font-medium">
+          <CheckCircle className="h-3 w-3" />
+          Confirmed
+        </span>
+      );
+    case 'pending':
+      return (
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-warning/20 text-warning rounded text-xs font-medium">
+          <Loader2 className="h-3 w-3 animate-spin" />
+          Pending
+        </span>
+      );
+    case 'not_booked':
+      return (
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-muted text-muted-foreground rounded text-xs font-medium">
+          Not Booked
+        </span>
+      );
+    case 'cancelled':
+      return (
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-destructive/20 text-destructive rounded text-xs font-medium">
+          <XCircle className="h-3 w-3" />
+          Cancelled
+        </span>
+      );
+  }
+}
+
+// ============================================
+// WEATHER WIDGET COMPONENT
+// ============================================
+
+function WeatherWidget({ weather, compact = false }: { weather: WeatherData; compact?: boolean }) {
+  if (compact) {
+    return (
+      <div className="flex items-center gap-2 text-sm">
+        <Thermometer className="h-4 w-4 text-muted-foreground" />
+        <span>{weather.temperature}°C</span>
+        <span className="text-muted-foreground">{weather.condition}</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-4 p-3 bg-muted/50 rounded-lg">
+      <div className="text-center">
+        <CloudSun className="h-8 w-8 text-yellow-500 mx-auto" />
+        <p className="text-2xl font-bold">{weather.temperature}°C</p>
+        <p className="text-sm text-muted-foreground">{weather.condition}</p>
+      </div>
+      <div className="flex-1 grid grid-cols-3 gap-2 text-sm">
+        {weather.humidity !== undefined && (
+          <div className="flex items-center gap-1">
+            <Droplets className="h-4 w-4 text-blue-400" />
+            <span>{weather.humidity}%</span>
+          </div>
+        )}
+        {weather.windSpeed !== undefined && (
+          <div className="flex items-center gap-1">
+            <Wind className="h-4 w-4 text-gray-400" />
+            <span>{weather.windSpeed} km/h</span>
+          </div>
+        )}
+        {weather.precipitation !== undefined && (
+          <div className="flex items-center gap-1">
+            <Droplets className="h-4 w-4 text-cyan-400" />
+            <span>{weather.precipitation}mm</span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ============================================
+// WEATHER FORECAST STRIP (for job sites)
+// ============================================
+
+function WeatherForecastStrip({ forecast }: { forecast: WeatherData[] }) {
+  return (
+    <div className="mt-3">
+      <p className="text-xs text-muted-foreground mb-2">Weather Forecast (-1h to +8h)</p>
+      <div className="flex gap-2 overflow-x-auto pb-2">
+        {forecast.map((hour, i) => (
+          <div 
+            key={i} 
+            className={`flex-shrink-0 text-center p-2 rounded ${
+              i === 1 ? 'bg-primary/20 ring-1 ring-primary' : 'bg-muted/50'
+            }`}
+          >
+            <p className="text-xs text-muted-foreground">
+              {i === 0 ? '-1h' : i === 1 ? 'Arrival' : `+${i - 1}h`}
+            </p>
+            <p className="font-bold">{hour.temperature}°</p>
+            <p className="text-xs">{hour.condition}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ============================================
+// PHOTO GALLERY COMPONENT
+// ============================================
+
+function PhotoGallery({ photos }: { photos: TimelinePhoto[] }) {
+  if (photos.length === 0) return null;
+
+  if (photos.length === 1) {
+    return (
+      <div className="relative rounded-lg overflow-hidden">
+        <img 
+          src={photos[0].url} 
+          alt={photos[0].caption || 'Event photo'}
+          className="w-full h-48 object-cover"
+        />
+        {photos[0].caption && (
+          <div className="absolute bottom-0 left-0 right-0 bg-black/60 px-3 py-2">
+            <p className="text-sm text-white">{photos[0].caption}</p>
+            {photos[0].timestamp && (
+              <p className="text-xs text-gray-300">{photos[0].timestamp}</p>
+            )}
+          </div>
+        )}
+        {photos[0].source === 'webcam' && (
+          <div className="absolute top-2 left-2 px-2 py-1 bg-red-500 rounded text-xs text-white flex items-center gap-1">
+            <span className="h-2 w-2 bg-white rounded-full animate-pulse"></span>
+            LIVE
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Multiple photos - grid layout
+  return (
+    <div className="grid grid-cols-2 gap-2">
+      {photos.slice(0, 4).map((photo, i) => (
+        <div key={i} className="relative rounded-lg overflow-hidden">
+          <img 
+            src={photo.url} 
+            alt={photo.caption || `Photo ${i + 1}`}
+            className="w-full h-24 object-cover"
+          />
+          {photo.source === 'webcam' && (
+            <div className="absolute top-1 left-1 px-1.5 py-0.5 bg-red-500 rounded text-xs text-white flex items-center gap-1">
+              <span className="h-1.5 w-1.5 bg-white rounded-full animate-pulse"></span>
+              LIVE
+            </div>
+          )}
+        </div>
+      ))}
+      {photos.length > 4 && (
+        <div className="absolute bottom-2 right-2 px-2 py-1 bg-black/70 rounded text-xs text-white">
+          +{photos.length - 4} more
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================
+// ALERT BANNER COMPONENT
+// ============================================
+
+function AlertBanner({ alert }: { alert: TimelineAlert }) {
+  const severityStyles = {
+    critical: 'bg-red-500/20 border-red-500/50 text-red-400',
+    major: 'bg-orange-500/20 border-orange-500/50 text-orange-400',
+    minor: 'bg-yellow-500/20 border-yellow-500/50 text-yellow-400',
+    info: 'bg-blue-500/20 border-blue-500/50 text-blue-400',
+  };
+
+  return (
+    <div className={`p-3 rounded-lg border ${severityStyles[alert.severity]}`}>
+      <div className="flex items-start gap-2">
+        <AlertTriangle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+        <div>
+          <p className="font-medium text-sm">{alert.title}</p>
+          <p className="text-xs opacity-80">{alert.description}</p>
+          {alert.source && (
+            <p className="text-xs opacity-60 mt-1">Source: {alert.source}</p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================
+// SINGLE TIMELINE EVENT COMPONENT
+// ============================================
+
+function TimelineEventCard({ 
+  event, 
+  isFirst,
+  isLast,
+  onEventClick,
+  onBookEvent 
+}: { 
+  event: TimelineEvent;
+  isFirst: boolean;
+  isLast: boolean;
+  onEventClick?: (event: TimelineEvent) => void;
+  onBookEvent?: (event: TimelineEvent) => void;
+}) {
+  const [isExpanded, setIsExpanded] = useState(true);
+  const Icon = getEventIcon(event.type);
+  const colorClass = getEventColor(event.type);
+
+  return (
+    <div className="relative flex gap-4" data-testid={`timeline-event-${event.id}`}>
+      {/* Timeline Line */}
+      <div className="flex flex-col items-center">
+        {/* Time */}
+        <div className="w-20 text-right pr-3 flex-shrink-0">
+          <p className="text-sm font-medium">{formatTime(event.time)}</p>
+          {event.duration && (
+            <p className="text-xs text-muted-foreground">{formatDuration(event.duration)}</p>
+          )}
+        </div>
+      </div>
+
+      {/* Connector Line & Dot */}
+      <div className="flex flex-col items-center">
+        {!isFirst && <div className="w-0.5 h-4 bg-border"></div>}
+        <div className={`w-10 h-10 rounded-full ${colorClass} flex items-center justify-center flex-shrink-0`}>
+          <Icon className="h-5 w-5 text-white" />
+        </div>
+        {!isLast && <div className="w-0.5 flex-1 bg-border min-h-[2rem]"></div>}
+      </div>
+
+      {/* Event Content */}
+      <div className="flex-1 pb-6">
+        <div 
+          className="bg-card border border-border rounded-lg overflow-hidden cursor-pointer hover:border-primary/50 transition-colors"
+          onClick={() => onEventClick?.(event)}
+        >
+          {/* Header */}
+          <div className="p-4">
+            <div className="flex items-start justify-between">
+              <div className="flex-1">
+                <h3 className="font-semibold text-foreground">{event.title}</h3>
+                {event.subtitle && (
+                  <p className="text-sm text-muted-foreground">{event.subtitle}</p>
+                )}
+              </div>
+              
+              <div className="flex items-center gap-2">
+                {event.cost !== undefined && event.cost > 0 && (
+                  <span className="text-sm font-medium text-success">
+                    ${event.cost}
+                  </span>
+                )}
+                {event.booking && getBookingStatusBadge(event.booking.status)}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsExpanded(!isExpanded);
+                  }}
+                  className="p-1 hover:bg-muted rounded"
+                >
+                  {isExpanded ? (
+                    <ChevronUp className="h-4 w-4" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4" />
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {/* Quick Info Row */}
+            <div className="flex flex-wrap items-center gap-3 mt-2 text-sm text-muted-foreground">
+              {event.location && (
+                <span className="flex items-center gap-1">
+                  <MapPin className="h-3.5 w-3.5" />
+                  {event.location.name}
+                </span>
+              )}
+              {event.distance && (
+                <span className="flex items-center gap-1">
+                  <Navigation className="h-3.5 w-3.5" />
+                  {event.distance} km
+                </span>
+              )}
+              {event.weather && (
+                <WeatherWidget weather={event.weather} compact />
+              )}
+            </div>
+          </div>
+
+          {/* Expanded Content */}
+          {isExpanded && (
+            <div className="border-t border-border">
+              {/* Alerts */}
+              {event.alerts.length > 0 && (
+                <div className="p-4 space-y-2">
+                  {event.alerts.map((alert, i) => (
+                    <AlertBanner key={i} alert={alert} />
+                  ))}
+                </div>
+              )}
+
+              {/* Photos */}
+              {event.photos.length > 0 && (
+                <div className="p-4 pt-0">
+                  <PhotoGallery photos={event.photos} />
+                </div>
+              )}
+
+              {/* Weather Forecast for Job Sites */}
+              {event.weatherForecast && event.weatherForecast.length > 0 && (
+                <div className="px-4 pb-4">
+                  <WeatherForecastStrip forecast={event.weatherForecast} />
+                </div>
+              )}
+
+              {/* Description */}
+              {event.description && (
+                <div className="px-4 pb-4">
+                  <p className="text-sm text-muted-foreground">{event.description}</p>
+                </div>
+              )}
+
+              {/* Type-specific details */}
+              {event.vehicle && (
+                <div className="px-4 pb-4">
+                  <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+                    {event.vehicle.photo ? (
+                      <img 
+                        src={event.vehicle.photo} 
+                        alt={event.vehicle.name}
+                        className="w-16 h-12 object-cover rounded"
+                      />
+                    ) : (
+                      <div className="w-16 h-12 bg-muted rounded flex items-center justify-center">
+                        <Car className="h-6 w-6 text-muted-foreground" />
+                      </div>
+                    )}
+                    <div>
+                      <p className="font-medium">{event.vehicle.name}</p>
+                      {event.vehicle.licensePlate && (
+                        <p className="text-sm text-muted-foreground">{event.vehicle.licensePlate}</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {event.ferry && (
+                <div className="px-4 pb-4">
+                  <div className="p-3 bg-cyan-500/10 rounded-lg space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Ship className="h-4 w-4 text-cyan-500" />
+                      <span className="font-medium">{event.ferry.route}</span>
+                    </div>
+                    {event.ferry.vessel && (
+                      <p className="text-sm">Vessel: {event.ferry.vessel}</p>
+                    )}
+                    <p className="text-sm">Sailing: {event.ferry.sailingTime}</p>
+                    {event.ferry.deckSpace && (
+                      <p className="text-sm">Deck: {event.ferry.deckSpace}</p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {event.jobSite && (
+                <div className="px-4 pb-4">
+                  <div className="p-3 bg-red-500/10 rounded-lg space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium">{event.jobSite.clientName || 'Job Site'}</span>
+                      {event.jobSite.jobNumber && (
+                        <span className="text-sm text-muted-foreground">#{event.jobSite.jobNumber}</span>
+                      )}
+                    </div>
+                    {event.jobSite.scope && (
+                      <p className="text-sm">{event.jobSite.scope}</p>
+                    )}
+                    {event.jobSite.estimatedHours && (
+                      <p className="text-sm">Est. {event.jobSite.estimatedHours} hours</p>
+                    )}
+                    <div className="flex gap-2 pt-2">
+                      {event.jobSite.jobberLink && (
+                        <a 
+                          href={event.jobSite.jobberLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs text-primary hover:underline flex items-center gap-1"
+                        >
+                          <ExternalLink className="h-3 w-3" />
+                          Jobber
+                        </a>
+                      )}
+                      {event.jobSite.companyCamLink && (
+                        <a 
+                          href={event.jobSite.companyCamLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs text-primary hover:underline flex items-center gap-1"
+                        >
+                          <Camera className="h-3 w-3" />
+                          CompanyCam
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Booking Actions */}
+              {event.booking && event.booking.status === 'not_booked' && onBookEvent && (
+                <div className="px-4 pb-4">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onBookEvent(event);
+                    }}
+                    className="w-full py-2 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition-colors"
+                  >
+                    Book Now
+                  </button>
+                </div>
+              )}
+
+              {event.booking && event.booking.status === 'confirmed' && (
+                <div className="px-4 pb-4 flex items-center gap-4 text-sm">
+                  {event.booking.confirmationNumber && (
+                    <span className="text-muted-foreground">
+                      Conf#: <span className="font-mono">{event.booking.confirmationNumber}</span>
+                    </span>
+                  )}
+                  {event.booking.phone && (
+                    <a href={`tel:${event.booking.phone}`} className="text-primary flex items-center gap-1">
+                      <Phone className="h-3 w-3" />
+                      {event.booking.phone}
+                    </a>
+                  )}
+                  {event.booking.link && (
+                    <a 
+                      href={event.booking.link}
+                      target="_blank"
+                      rel="noopener noreferrer" 
+                      className="text-primary flex items-center gap-1"
+                    >
+                      <ExternalLink className="h-3 w-3" />
+                      View
+                    </a>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================
+// MAIN TIMELINE COMPONENT
+// ============================================
+
+export function TripTimelineView({
+  tripId,
+  tripName,
+  events,
+  isLoading,
+  onEventClick,
+  onBookEvent,
+}: TripTimelineViewProps) {
+  // Group events by date
+  const eventsByDate = events.reduce((acc, event) => {
+    const dateKey = formatDate(event.time);
+    if (!acc[dateKey]) acc[dateKey] = [];
+    acc[dateKey].push(event);
+    return acc;
+  }, {} as Record<string, TimelineEvent[]>);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-3xl mx-auto" data-testid="trip-timeline-view">
+      {/* Trip Header */}
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold">{tripName}</h1>
+        <p className="text-muted-foreground">
+          {events.length} stops · {Object.keys(eventsByDate).length} day{Object.keys(eventsByDate).length > 1 ? 's' : ''}
+        </p>
+      </div>
+
+      {/* Timeline */}
+      {Object.entries(eventsByDate).map(([date, dateEvents], dateIndex) => (
+        <div key={date} className="mb-8">
+          {/* Date Header */}
+          <div className="flex items-center gap-3 mb-4">
+            <Calendar className="h-5 w-5 text-primary" />
+            <h2 className="text-lg font-semibold">{date}</h2>
+            <div className="flex-1 h-px bg-border"></div>
+          </div>
+
+          {/* Events for this date */}
+          <div className="space-y-0">
+            {dateEvents.map((event, eventIndex) => (
+              <TimelineEventCard
+                key={event.id}
+                event={event}
+                isFirst={eventIndex === 0}
+                isLast={eventIndex === dateEvents.length - 1}
+                onEventClick={onEventClick}
+                onBookEvent={onBookEvent}
+              />
+            ))}
+          </div>
+        </div>
+      ))}
+
+      {/* Empty State */}
+      {events.length === 0 && (
+        <div className="text-center py-12">
+          <MapPin className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+          <h3 className="text-lg font-medium mb-2">No events yet</h3>
+          <p className="text-muted-foreground">Start building your trip itinerary</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default TripTimelineView;
+export type { TimelineEvent, TimelinePhoto, TimelineAlert, WeatherData };
+
+This is long! Let me continue in the next message with:
+
+Sample Bamfield trip data to test with
+How to wire it up
+
+Tell Replit:
+
+"Create client/src/components/TripPlanning/TripTimelineView.tsx with the code above. This is a vertical timeline view for trip details showing each event (departure, ferry, fuel stops, accommodations, job sites) flowing down the screen with photos, weather, alerts, and booking status."
