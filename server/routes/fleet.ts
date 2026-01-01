@@ -1,6 +1,125 @@
 import { Router, Request, Response } from 'express';
 import { Pool } from 'pg';
 
+// Whitelist of allowed vehicle_profiles columns for dynamic updates/inserts
+const ALLOWED_VEHICLE_COLUMNS = new Set([
+  // Basic info
+  'nickname', 'fleet_number', 'year', 'make', 'model', 'color', 'license_plate', 'vin',
+  'vehicle_class', 'drive_type', 'fuel_type', 'owner_type', 'is_fleet_vehicle',
+  'ground_clearance_inches', 'length_feet', 'height_feet', 'width_feet', 'passenger_capacity',
+  'fleet_status', 'assigned_to_id', 'assigned_to_name', 'primary_photo_url', 'notes',
+  // Commercial cargo
+  'cargo_length_inches', 'cargo_width_inches', 'cargo_height_inches', 'cargo_volume_cubic_feet',
+  'payload_capacity_lbs', 'gvwr_lbs',
+  // Door configuration
+  'rear_door_type', 'rear_door_width_inches', 'rear_door_height_inches',
+  'has_side_door', 'side_door_type',
+  // Liftgate
+  'liftgate_type', 'liftgate_capacity_lbs', 'liftgate_platform_width_inches',
+  'liftgate_platform_depth_inches', 'liftgate_power_type',
+  // Loading ramp
+  'has_loading_ramp', 'ramp_type', 'ramp_capacity_lbs',
+  // Bed/cargo (trucks)
+  'bed_length', 'bed_length_inches', 'has_bed_liner', 'bed_liner_type',
+  'has_tonneau_cover', 'tonneau_type', 'has_truck_cap',
+  // Towing configuration
+  'towing_capacity_lbs', 'has_hitch', 'hitch_class', 'hitch_ball_size',
+  'has_brake_controller', 'trailer_wiring', 'has_gooseneck_hitch', 'has_fifth_wheel_hitch',
+  'primary_hitch_type', 'receiver_size_inches', 'hitch_class_type', 'ball_size', 'max_tongue_weight_lbs',
+  // Gooseneck/Fifth wheel
+  'gooseneck_ball_size', 'fifth_wheel_rail_type', 'fifth_wheel_hitch_brand',
+  // Brake controller
+  'brake_controller_type', 'brake_controller_brand', 'max_trailer_brakes',
+  // Wiring
+  'trailer_wiring_type', 'has_aux_12v_circuit',
+  // RV features
+  'is_rv', 'rv_sleep_capacity', 'rv_seatbelt_positions',
+  // Tanks
+  'fresh_water_gallons', 'gray_water_gallons', 'black_water_gallons',
+  'propane_tank_count', 'propane_capacity_lbs', 'fuel_tank_gallons',
+  // Power
+  'generator_type', 'generator_watts', 'shore_power_amps',
+  'has_solar', 'solar_watts', 'battery_type', 'battery_amp_hours',
+  'has_inverter', 'inverter_watts',
+  // Slideouts
+  'slideout_count', 'slideout_type',
+  // Climate
+  'ac_type', 'ac_btu', 'heat_type', 'heat_btu',
+  // RV amenities
+  'rv_amenities'
+]);
+
+// Whitelist of allowed trailer_profiles columns for dynamic updates/inserts
+const ALLOWED_TRAILER_COLUMNS = new Set([
+  // Basic info
+  'nickname', 'fleet_number', 'owner_type', 'trailer_type', 'trailer_type_class',
+  'color', 'license_plate', 'vin', 'registration_expiry', 'notes', 'fleet_status',
+  // Dimensions
+  'length_feet', 'width_feet', 'height_feet',
+  'interior_length_feet', 'interior_width_feet', 'interior_height_feet',
+  // Weights
+  'gvwr_lbs', 'empty_weight_lbs', 'payload_capacity_lbs', 'tongue_weight_lbs',
+  // Coupler/Hitch
+  'coupler_type', 'coupler_height_inches', 'coupler_adjustable',
+  'required_hitch_type', 'required_ball_size_type', 'kingpin_weight_lbs',
+  'hitch_type', 'required_ball_size',
+  // Safety chains
+  'safety_chain_rating_lbs', 'breakaway_system', 'breakaway_battery_type',
+  // Axles & suspension
+  'axle_type', 'axle_count', 'axle_capacity_lbs', 'suspension_type',
+  'tire_size', 'spare_tire_included',
+  // Brakes
+  'trailer_brake_type', 'brake_type', 'brakes_on_all_axles', 'abs_brakes',
+  // Wiring
+  'trailer_wiring_type', 'wiring_type', 'has_breakaway_switch', 'has_aux_battery', 'has_reverse_lights',
+  // Doors
+  'rear_door_type', 'rear_door_width_inches', 'rear_door_height_inches',
+  'side_door_type_detail', 'side_door_width_inches', 'has_side_door', 'gate_type',
+  // Ramp
+  'ramp_door_type', 'ramp_length_inches', 'ramp_capacity_lbs', 'ramp_transition_flap', 'dovetail_length_inches',
+  // Interior
+  'interior_lighting_type', 'has_e_track', 'e_track_rows', 'has_d_rings', 'd_ring_count',
+  'wall_type', 'floor_type', 'has_tie_downs', 'tie_down_count',
+  'has_interior_lighting', 'has_electrical_outlets',
+  // Ventilation
+  'has_roof_vent', 'roof_vent_count', 'has_side_vents',
+  // Exterior
+  'exterior_material', 'roof_type', 'has_ladder_rack', 'has_stone_guard', 'has_fenders', 'fender_type',
+  'has_roof_rack',
+  // Jack
+  'jack_type', 'jack_capacity_lbs', 'rear_stabilizer_jacks',
+  // RV trailer
+  'is_rv_trailer', 'rv_sleep_capacity', 'rv_dry_weight_lbs',
+  // Tanks
+  'fresh_water_gallons', 'gray_water_gallons', 'black_water_gallons',
+  'propane_tank_count', 'propane_capacity_lbs',
+  // Power
+  'shore_power_amps', 'has_solar', 'solar_watts', 'battery_type', 'battery_amp_hours',
+  'has_inverter', 'inverter_watts', 'generator_type', 'generator_watts',
+  // Slideouts
+  'slideout_count', 'slideout_type',
+  // Climate
+  'ac_type', 'ac_btu', 'heat_type', 'heat_btu',
+  // RV amenities
+  'rv_amenities',
+  // Toy hauler
+  'is_toy_hauler', 'garage_length_feet', 'garage_width_feet', 'garage_height_feet',
+  'fuel_station_gallons', 'tie_down_points',
+  // Hitch status
+  'currently_hitched_to', 'primary_photo_url'
+]);
+
+// Helper to filter and validate columns
+function filterAllowedColumns(data: Record<string, any>, allowedColumns: Set<string>): Record<string, any> {
+  const filtered: Record<string, any> = {};
+  for (const key of Object.keys(data)) {
+    if (allowedColumns.has(key) && data[key] !== undefined) {
+      filtered[key] = data[key];
+    }
+  }
+  return filtered;
+}
+
 export function createFleetRouter(db: Pool) {
   const router = Router();
 
@@ -102,33 +221,31 @@ export function createFleetRouter(db: Pool) {
 
   router.post('/vehicles', async (req: Request, res: Response) => {
     try {
-      const {
-        nickname, fleet_number, year, make, model, color,
-        license_plate, vin, vehicle_class, drive_type, fuel_type,
-        ground_clearance_inches, length_feet, height_feet, passenger_capacity,
-        towing_capacity_lbs, has_hitch, hitch_class, hitch_ball_size,
-        has_brake_controller, trailer_wiring, has_gooseneck_hitch, has_fifth_wheel_hitch,
-        fleet_status
-      } = req.body;
+      // Set defaults and required fields
+      const rawData = {
+        ...req.body,
+        owner_type: req.body.owner_type || 'company',
+        is_fleet_vehicle: true,
+        fleet_status: req.body.fleet_status || 'available',
+      };
+      
+      // Filter to only allowed columns (prevents SQL injection)
+      const safeData = filterAllowedColumns(rawData, ALLOWED_VEHICLE_COLUMNS);
+      
+      const fields = Object.keys(safeData);
+      if (fields.length === 0) {
+        return res.status(400).json({ error: 'No valid fields provided' });
+      }
+      
+      const columns = fields.join(', ');
+      const placeholders = fields.map((_, i) => `$${i + 1}`).join(', ');
+      const values = fields.map(f => safeData[f]);
       
       const result = await db.query(`
-        INSERT INTO vehicle_profiles (
-          owner_type, nickname, fleet_number, year, make, model, color,
-          license_plate, vin, vehicle_class, drive_type, fuel_type,
-          ground_clearance_inches, length_feet, height_feet, passenger_capacity,
-          towing_capacity_lbs, has_hitch, hitch_class, hitch_ball_size,
-          has_brake_controller, trailer_wiring, has_gooseneck_hitch, has_fifth_wheel_hitch,
-          fleet_status, is_fleet_vehicle
-        ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26)
+        INSERT INTO vehicle_profiles (${columns})
+        VALUES (${placeholders})
         RETURNING *
-      `, [
-        'company', nickname || null, fleet_number || null, year || null, make, model, color || null,
-        license_plate || null, vin || null, vehicle_class || 'truck', drive_type || '4wd', fuel_type || 'gas',
-        ground_clearance_inches || null, length_feet || null, height_feet || null, passenger_capacity || null,
-        towing_capacity_lbs || null, has_hitch || false, hitch_class || null, hitch_ball_size || null,
-        has_brake_controller || false, trailer_wiring || null, has_gooseneck_hitch || false, has_fifth_wheel_hitch || false,
-        fleet_status || 'available', true
-      ]);
+      `, values);
       
       res.json({ vehicle: result.rows[0] });
     } catch (error) {
@@ -140,59 +257,41 @@ export function createFleetRouter(db: Pool) {
   router.patch('/vehicles/:id', async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
-      const { nickname, fleet_number, fleet_status, assigned_to_id, assigned_to_name, primary_photo_url } = req.body;
       
-      const updates: string[] = [];
-      const params: any[] = [];
-      let paramIndex = 1;
+      // Filter to only allowed columns (prevents SQL injection)
+      const safeUpdates = filterAllowedColumns(req.body, ALLOWED_VEHICLE_COLUMNS);
       
-      if (nickname !== undefined) {
-        updates.push(`nickname = $${paramIndex++}`);
-        params.push(nickname);
-      }
-      if (fleet_number !== undefined) {
-        updates.push(`fleet_number = $${paramIndex++}`);
-        params.push(fleet_number);
-      }
-      if (fleet_status !== undefined) {
-        updates.push(`fleet_status = $${paramIndex++}`);
-        params.push(fleet_status);
-        
-        if (fleet_status === 'in_use') {
-          updates.push(`last_check_out = NOW()`);
-        } else if (fleet_status === 'available') {
-          updates.push(`last_check_in = NOW()`);
-        }
-      }
-      if (assigned_to_id !== undefined) {
-        updates.push(`assigned_to_id = $${paramIndex++}`);
-        params.push(assigned_to_id || null);
-      }
-      if (assigned_to_name !== undefined) {
-        updates.push(`assigned_to_name = $${paramIndex++}`);
-        params.push(assigned_to_name);
-      }
-      if (primary_photo_url !== undefined) {
-        updates.push(`primary_photo_url = $${paramIndex++}`);
-        params.push(primary_photo_url);
+      const fields = Object.keys(safeUpdates);
+      if (fields.length === 0) {
+        return res.status(400).json({ error: 'No valid fields to update' });
       }
       
-      updates.push(`updated_at = NOW()`);
+      // Build dynamic SET clause
+      const setClause = fields.map((f, i) => `${f} = $${i + 1}`).join(', ');
+      const values = fields.map(f => safeUpdates[f]);
       
-      params.push(id);
+      // Handle fleet_status side effects
+      let extraSets = '';
+      if (safeUpdates.fleet_status === 'in_use') {
+        extraSets = ', last_check_out = NOW()';
+      } else if (safeUpdates.fleet_status === 'available') {
+        extraSets = ', last_check_in = NOW()';
+      }
+      
+      values.push(id);
       
       const result = await db.query(`
         UPDATE vehicle_profiles 
-        SET ${updates.join(', ')}
-        WHERE id = $${paramIndex}
+        SET ${setClause}${extraSets}, updated_at = NOW()
+        WHERE id = $${values.length}
         RETURNING *
-      `, params);
+      `, values);
       
       if (result.rows.length === 0) {
         return res.status(404).json({ error: 'Vehicle not found' });
       }
       
-      res.json(result.rows[0]);
+      res.json({ vehicle: result.rows[0] });
     } catch (error) {
       console.error('Error updating vehicle:', error);
       res.status(500).json({ error: 'Failed to update vehicle' });
@@ -352,41 +451,32 @@ export function createFleetRouter(db: Pool) {
 
   router.post('/trailers', async (req: Request, res: Response) => {
     try {
-      const {
-        nickname, fleet_number, owner_type, trailer_type,
-        length_feet, width_feet, height_feet,
-        interior_length_feet, interior_width_feet, interior_height_feet,
-        gvwr_lbs, empty_weight_lbs, payload_capacity_lbs,
-        hitch_type, required_ball_size, tongue_weight_lbs,
-        brake_type, wiring_type, gate_type, has_side_door,
-        has_tie_downs, tie_down_count, floor_type, color,
-        license_plate, registration_expiry, notes
-      } = req.body;
+      // Set defaults and required fields
+      const rawData = {
+        ...req.body,
+        owner_type: req.body.owner_type || 'company',
+        fleet_status: req.body.fleet_status || 'available',
+      };
+      
+      // Filter to only allowed columns (prevents SQL injection)
+      const safeData = filterAllowedColumns(rawData, ALLOWED_TRAILER_COLUMNS);
+      
+      const fields = Object.keys(safeData);
+      if (fields.length === 0) {
+        return res.status(400).json({ error: 'No valid fields provided' });
+      }
+      
+      const columns = fields.join(', ');
+      const placeholders = fields.map((_, i) => `$${i + 1}`).join(', ');
+      const values = fields.map(f => safeData[f]);
       
       const result = await db.query(`
-        INSERT INTO trailer_profiles (
-          nickname, fleet_number, owner_type, trailer_type,
-          length_feet, width_feet, height_feet,
-          interior_length_feet, interior_width_feet, interior_height_feet,
-          gvwr_lbs, empty_weight_lbs, payload_capacity_lbs,
-          hitch_type, required_ball_size, tongue_weight_lbs,
-          brake_type, wiring_type, gate_type, has_side_door,
-          has_tie_downs, tie_down_count, floor_type, color,
-          license_plate, registration_expiry, notes
-        ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27)
+        INSERT INTO trailer_profiles (${columns})
+        VALUES (${placeholders})
         RETURNING *
-      `, [
-        nickname, fleet_number, owner_type || 'company', trailer_type,
-        length_feet, width_feet, height_feet,
-        interior_length_feet, interior_width_feet, interior_height_feet,
-        gvwr_lbs, empty_weight_lbs, payload_capacity_lbs,
-        hitch_type || 'ball', required_ball_size, tongue_weight_lbs,
-        brake_type || 'none', wiring_type || '4_pin', gate_type, has_side_door,
-        has_tie_downs, tie_down_count, floor_type, color,
-        license_plate, registration_expiry, notes
-      ]);
+      `, values);
       
-      res.json(result.rows[0]);
+      res.json({ trailer: result.rows[0] });
     } catch (error) {
       console.error('Error creating trailer:', error);
       res.status(500).json({ error: 'Failed to create trailer' });
@@ -430,15 +520,17 @@ export function createFleetRouter(db: Pool) {
   router.patch('/trailers/:id', async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
-      const updates = req.body;
       
-      const fields = Object.keys(updates).filter(k => updates[k] !== undefined);
+      // Filter to only allowed columns (prevents SQL injection)
+      const safeUpdates = filterAllowedColumns(req.body, ALLOWED_TRAILER_COLUMNS);
+      
+      const fields = Object.keys(safeUpdates);
       if (fields.length === 0) {
-        return res.status(400).json({ error: 'No fields to update' });
+        return res.status(400).json({ error: 'No valid fields to update' });
       }
       
       const setClause = fields.map((f, i) => `${f} = $${i + 1}`).join(', ');
-      const values = fields.map(f => updates[f]);
+      const values = fields.map(f => safeUpdates[f]);
       values.push(id);
       
       const result = await db.query(`
@@ -452,7 +544,7 @@ export function createFleetRouter(db: Pool) {
         return res.status(404).json({ error: 'Trailer not found' });
       }
       
-      res.json(result.rows[0]);
+      res.json({ trailer: result.rows[0] });
     } catch (error) {
       console.error('Error updating trailer:', error);
       res.status(500).json({ error: 'Failed to update trailer' });
