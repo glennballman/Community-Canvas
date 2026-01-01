@@ -13,6 +13,7 @@ import {
   ChevronDown,
   X
 } from "lucide-react";
+import { PropertyDetails } from "@/components/accommodations/PropertyDetails";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -82,6 +83,7 @@ export default function Accommodations() {
   const { toast } = useToast();
   const [importModalOpen, setImportModalOpen] = useState(false);
   const [jsonInput, setJsonInput] = useState("");
+  const [selectedPropertyId, setSelectedPropertyId] = useState<number | null>(null);
   const [filters, setFilters] = useState({
     region: "",
     city: "",
@@ -486,7 +488,12 @@ export default function Accommodations() {
                   </TableHeader>
                   <TableBody>
                     {paginatedProperties.map((property) => (
-                      <TableRow key={property.id} data-testid={`row-property-${property.id}`}>
+                      <TableRow 
+                        key={property.id} 
+                        data-testid={`row-property-${property.id}`}
+                        className="cursor-pointer hover-elevate"
+                        onClick={() => setSelectedPropertyId(property.id)}
+                      >
                         <TableCell>
                           {property.thumbnailUrl ? (
                             <img 
@@ -542,9 +549,14 @@ export default function Accommodations() {
                         <TableCell>
                           {getStatusBadge(property.status)}
                         </TableCell>
-                        <TableCell>
+                        <TableCell onClick={(e) => e.stopPropagation()}>
                           <div className="flex items-center gap-1">
-                            <Button variant="ghost" size="sm" data-testid={`button-view-${property.id}`}>
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              data-testid={`button-view-${property.id}`}
+                              onClick={() => setSelectedPropertyId(property.id)}
+                            >
                               View
                             </Button>
                           </div>
@@ -589,6 +601,14 @@ export default function Accommodations() {
           </CardContent>
         </Card>
       </div>
+
+      {selectedPropertyId && (
+        <PropertyDetails
+          propertyId={selectedPropertyId}
+          open={!!selectedPropertyId}
+          onOpenChange={(open) => !open && setSelectedPropertyId(null)}
+        />
+      )}
     </div>
   );
 }
