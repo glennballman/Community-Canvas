@@ -1,0 +1,51 @@
+PROMPT 3: Create the Accommodations Storage Layer
+Create the database storage layer for accommodations.
+
+Create file: server/storage/accommodationStorage.ts
+
+This should handle all database operations for the accommodations module. Use the same patterns as other storage files in the project.
+
+Include these methods:
+
+1. Properties:
+   - getAllProperties(filters?: { region?, city?, minCrewScore?, status? })
+   - getPropertyById(id: number)
+   - getPropertyByAirbnbId(airbnbId: string)
+   - createProperty(property: Partial<AccommodationProperty>)
+   - updateProperty(id: number, updates: Partial<AccommodationProperty>)
+   - upsertPropertyByAirbnbId(airbnbId: string, data: Partial<AccommodationProperty>)
+   - getPropertyStats()
+
+2. Hosts:
+   - getAllHosts(filters?: { contactStatus?, isInNetwork? })
+   - getHostById(id: number)
+   - createHost(host: Partial<AccommodationHost>)
+   - updateHost(id: number, updates: Partial<AccommodationHost>)
+   - linkHostToProperty(hostId: number, propertyId: number)
+
+3. iCal Feeds:
+   - getFeedsByPropertyId(propertyId: number)
+   - createFeed(feed: Partial<ICalFeed>)
+   - updateFeedSyncStatus(feedId: number, status: string, error?: string)
+   - getFeedsDueForSync()
+
+4. Availability:
+   - getAvailabilityBlocks(propertyId: number, startDate: Date, endDate: Date)
+   - upsertAvailabilityBlock(block: Partial<AvailabilityBlock>)
+   - clearBlocksForFeed(feedId: number)
+   - checkAvailability(propertyId: number, checkIn: Date, checkOut: Date)
+
+5. Bookings:
+   - getAllBookings(filters?: { status?, propertyId?, dateRange? })
+   - getBookingById(id: number)
+   - createBooking(booking: Partial<AccommodationBooking>)
+   - updateBooking(id: number, updates: Partial<AccommodationBooking>)
+
+6. Outreach:
+   - getCampaigns()
+   - createCampaign(campaign: Partial<OutreachCampaign>)
+   - getMessagesForCampaign(campaignId: number)
+   - createOutreachMessage(message: Partial<OutreachMessage>)
+   - updateMessageStatus(messageId: number, status: string)
+
+Use parameterized queries to prevent SQL injection. Follow the snake_case to camelCase conversion pattern used elsewhere in the project.
