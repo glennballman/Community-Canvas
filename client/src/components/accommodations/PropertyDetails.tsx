@@ -346,7 +346,7 @@ export function PropertyDetails({ propertyId, open, onOpenChange }: PropertyDeta
                   <div className="text-center p-3 bg-muted/50 rounded-md">
                     <DollarSign className="w-5 h-5 mx-auto mb-1 text-muted-foreground" />
                     <div className="font-semibold">
-                      {property.baseNightlyRate ? `$${property.baseNightlyRate.toFixed(0)}` : '-'}
+                      {property.baseNightlyRate ? `$${Math.round(Number(property.baseNightlyRate))}` : '-'}
                     </div>
                     <div className="text-xs text-muted-foreground">Per Night</div>
                   </div>
