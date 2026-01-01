@@ -1,0 +1,312 @@
+PROMPT 1: Create the Database Schema
+Copy this entire block and paste into Replit:
+I need to add an Accommodations module to Community Canvas. This is for tracking Airbnb/Booking.com properties for crew travel.
+
+First, run this SQL to create the database tables. Go to the Database tab or run via your db connection:
+
+---START SQL---
+
+-- ACCOMMODATION PROPERTIES TABLE
+CREATE TABLE IF NOT EXISTS accommodation_properties (
+    id SERIAL PRIMARY KEY,
+    airbnb_id VARCHAR(50) UNIQUE,
+    booking_id VARCHAR(50),
+    canvas_id VARCHAR(20) UNIQUE,
+    
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    property_type VARCHAR(50),
+    
+    municipality_id INTEGER,
+    region VARCHAR(100),
+    city VARCHAR(100),
+    latitude DECIMAL(10, 7),
+    longitude DECIMAL(10, 7),
+    
+    max_guests INTEGER,
+    bedrooms INTEGER,
+    beds INTEGER,
+    bathrooms DECIMAL(3, 1),
+    
+    has_parking BOOLEAN DEFAULT false,
+    has_kitchen BOOLEAN DEFAULT false,
+    has_wifi BOOLEAN DEFAULT false,
+    has_washer BOOLEAN DEFAULT false,
+    has_dryer BOOLEAN DEFAULT false,
+    
+    amenities JSONB DEFAULT '[]',
+    thumbnail_url TEXT,
+    images JSONB DEFAULT '[]',
+    source_url TEXT,
+    
+    base_nightly_rate DECIMAL(10, 2),
+    cleaning_fee DECIMAL(10, 2),
+    min_nights INTEGER DEFAULT 1,
+    
+    overall_rating DECIMAL(3, 2),
+    review_count INTEGER DEFAULT 0,
+    crew_score INTEGER DEFAULT 0,
+    
+    source VARCHAR(20) DEFAULT 'airbnb',
+    status VARCHAR(20) DEFAULT 'discovered',
+    is_verified BOOLEAN DEFAULT false,
+    is_crew_friendly BOOLEAN DEFAULT false,
+    
+    last_scraped_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_acc_region ON accommodation_properties(region);
+CREATE INDEX IF NOT EXISTS idx_acc_city ON accommodation_properties(city);
+CREATE INDEX IF NOT EXISTS idx_acc_crew_score ON accommodation_properties(crew_score DESC);
+CREATE INDEX IF NOT EXISTS idx_acc_status ON accommodation_properties(status);
+CREATE INDEX IF NOT EXISTS idx_acc_airbnb ON accommodation_properties(airbnb_id);
+
+-- HOSTS TABLE
+CREATE TABLE IF NOT EXISTS accommodation_hosts (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    email VARCHAR(255),
+    phone VARCHAR(20),
+    airbnb_host_id VARCHAR(50),
+    airbnb_host_url TEXT,
+    is_superhost BOOLEAN DEFAULT false,
+    contact_status VARCHAR(20) DEFAULT 'not_contacted',
+    is_in_network BOOLEAN DEFAULT false,
+    offers_direct_booking BOOLEAN DEFAULT false,
+    first_contacted_at TIMESTAMP WITH TIME ZONE,
+    last_contacted_at TIMESTAMP WITH TIME ZONE,
+    contact_attempts INTEGER DEFAULT 0,
+    last_response_at TIMESTAMP WITH TIME ZONE,
+    notes TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- HOST-PROPERTY LINK TABLE
+CREATE TABLE IF NOT EXISTS host_properties (
+    id SERIAL PRIMARY KEY,
+    host_id INTEGER REFERENCES accommodation_hosts(id) ON DELETE CASCADE,
+    property_id INTEGER REFERENCES accommodation_properties(id) ON DELETE CASCADE,
+    is_primary_host BOOLEAN DEFAULT true,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(host_id, property_id)
+);
+
+-- ICAL FEEDS TABLE
+CREATE TABLE IF NOT EXISTS ical_feeds (
+    id SERIAL PRIMARY KEY,
+    property_id INTEGER REFERENCES accommodation_properties(id) ON DELETE CASCADE,
+    host_id INTEGER REFERENCES accommodation_hosts(id),
+    ical_url TEXT NOT NULL,
+    feed_name VARCHAR(100),
+    is_active BOOLEAN DEFAULT true,
+    last_synced_at TIMESTAMP WITH TIME ZONE,
+    last_sync_status VARCHAR(20),
+    last_sync_error TEXT,
+    sync_frequency_minutes INTEGER DEFAULT 60,
+    total_syncs INTEGER DEFAULT 0,
+    failed_syncs INTEGER DEFAULT 0,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(property_id, ical_url)
+);
+
+-- AVAILABILITY BLOCKS TABLE
+CREATE TABLE IF NOT EXISTS availability_blocks (
+    id SERIAL PRIMARY KEY,
+    property_id INTEGER REFERENCES accommodation_properties(id) ON DELETE CASCADE,
+    feed_id INTEGER REFERENCES ical_feeds(id) ON DELETE CASCADE,
+    start_date DATE NOT NULL,
+    end_date DATE NOT NULL,
+    block_type VARCHAR(20) DEFAULT 'booked',
+    summary TEXT,
+    uid VARCHAR(255),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(property_id, uid)
+);
+
+CREATE INDEX IF NOT EXISTS idx_avail_dates ON availability_blocks(property_id, start_date, end_date);
+
+-- OUTREACH CAMPAIGNS TABLE
+CREATE TABLE IF NOT EXISTS outreach_campaigns (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    description TEXT,
+    target_region VARCHAR(100),
+    target_cities TEXT[],
+    target_min_crew_score INTEGER DEFAULT 50,
+    template_id VARCHAR(50),
+    status VARCHAR(20) DEFAULT 'draft',
+    started_at TIMESTAMP WITH TIME ZONE,
+    completed_at TIMESTAMP WITH TIME ZONE,
+    total_targets INTEGER DEFAULT 0,
+    contacted INTEGER DEFAULT 0,
+    responded INTEGER DEFAULT 0,
+    converted INTEGER DEFAULT 0,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- OUTREACH MESSAGES TABLE
+CREATE TABLE IF NOT EXISTS outreach_messages (
+    id SERIAL PRIMARY KEY,
+    campaign_id INTEGER REFERENCES outreach_campaigns(id),
+    host_id INTEGER REFERENCES accommodation_hosts(id),
+    property_id INTEGER REFERENCES accommodation_properties(id),
+    channel VARCHAR(20) NOT NULL,
+    subject VARCHAR(255),
+    message_body TEXT,
+    status VARCHAR(20) DEFAULT 'pending',
+    sent_at TIMESTAMP WITH TIME ZONE,
+    delivered_at TIMESTAMP WITH TIME ZONE,
+    opened_at TIMESTAMP WITH TIME ZONE,
+    responded_at TIMESTAMP WITH TIME ZONE,
+    response_text TEXT,
+    response_sentiment VARCHAR(20),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_outreach_campaign ON outreach_messages(campaign_id);
+CREATE INDEX IF NOT EXISTS idx_outreach_status ON outreach_messages(status);
+
+-- ACCOMMODATION BOOKINGS TABLE
+CREATE TABLE IF NOT EXISTS accommodation_bookings (
+    id SERIAL PRIMARY KEY,
+    booking_ref VARCHAR(20) UNIQUE,
+    property_id INTEGER REFERENCES accommodation_properties(id),
+    host_id INTEGER REFERENCES accommodation_hosts(id),
+    trip_id INTEGER,
+    trip_name VARCHAR(255),
+    external_platform VARCHAR(20),
+    external_confirmation VARCHAR(50),
+    check_in_date DATE NOT NULL,
+    check_out_date DATE NOT NULL,
+    check_in_time TIME DEFAULT '15:00',
+    check_out_time TIME DEFAULT '11:00',
+    num_guests INTEGER NOT NULL,
+    guest_names TEXT,
+    primary_guest_name VARCHAR(100),
+    primary_guest_phone VARCHAR(20),
+    nightly_rate DECIMAL(10, 2),
+    cleaning_fee DECIMAL(10, 2) DEFAULT 0,
+    service_fee DECIMAL(10, 2) DEFAULT 0,
+    taxes DECIMAL(10, 2) DEFAULT 0,
+    total_cost DECIMAL(10, 2),
+    status VARCHAR(20) DEFAULT 'pending',
+    payment_status VARCHAR(20) DEFAULT 'pending',
+    guest_rating INTEGER CHECK (guest_rating >= 1 AND guest_rating <= 5),
+    guest_review TEXT,
+    would_book_again BOOLEAN,
+    special_requests TEXT,
+    internal_notes TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    created_by VARCHAR(100),
+    CONSTRAINT valid_booking_dates CHECK (check_out_date > check_in_date)
+);
+
+CREATE INDEX IF NOT EXISTS idx_bookings_property ON accommodation_bookings(property_id);
+CREATE INDEX IF NOT EXISTS idx_bookings_dates ON accommodation_bookings(check_in_date, check_out_date);
+CREATE INDEX IF NOT EXISTS idx_bookings_status ON accommodation_bookings(status);
+
+-- REGION BOUNDARIES TABLE (for auto-detection from coordinates)
+CREATE TABLE IF NOT EXISTS region_boundaries (
+    id SERIAL PRIMARY KEY,
+    region_name VARCHAR(100) NOT NULL UNIQUE,
+    lat_min DECIMAL(10, 7),
+    lat_max DECIMAL(10, 7),
+    lng_min DECIMAL(10, 7),
+    lng_max DECIMAL(10, 7)
+);
+
+INSERT INTO region_boundaries (region_name, lat_min, lat_max, lng_min, lng_max) VALUES
+('Victoria Metro', 48.3, 48.7, -123.8, -123.2),
+('Nanaimo Area', 49.0, 49.3, -124.2, -123.8),
+('Tofino/Ucluelet', 48.8, 49.3, -126.0, -125.4),
+('Courtenay/Comox', 49.6, 49.9, -125.3, -124.8),
+('Campbell River', 49.9, 50.2, -125.5, -125.0),
+('Parksville/Qualicum', 49.25, 49.5, -124.6, -124.1),
+('Port Alberni', 49.1, 49.35, -125.0, -124.6),
+('Duncan/Cowichan', 48.7, 49.0, -124.0, -123.5),
+('Sooke', 48.3, 48.5, -124.0, -123.6),
+('Sunshine Coast', 49.3, 49.8, -124.0, -123.4),
+('Vancouver Metro', 49.0, 49.4, -123.3, -122.5),
+('Whistler/Squamish', 49.5, 50.5, -123.5, -122.5),
+('Okanagan', 49.0, 50.5, -120.5, -118.5),
+('Kootenays', 49.0, 51.0, -118.5, -114.5)
+ON CONFLICT (region_name) DO NOTHING;
+
+-- HELPER FUNCTION: Get region from coordinates
+CREATE OR REPLACE FUNCTION get_region_from_coords(lat DECIMAL, lng DECIMAL) 
+RETURNS VARCHAR AS $$
+DECLARE
+    region VARCHAR;
+BEGIN
+    SELECT region_name INTO region
+    FROM region_boundaries
+    WHERE lat BETWEEN lat_min AND lat_max
+      AND lng BETWEEN lng_min AND lng_max
+    LIMIT 1;
+    RETURN COALESCE(region, 'Other BC');
+END;
+$$ LANGUAGE plpgsql;
+
+-- HELPER FUNCTION: Generate booking reference
+CREATE OR REPLACE FUNCTION generate_booking_ref() RETURNS VARCHAR AS $$
+DECLARE
+    today_str VARCHAR;
+    seq_num INTEGER;
+BEGIN
+    today_str := TO_CHAR(CURRENT_DATE, 'YYYYMMDD');
+    SELECT COALESCE(MAX(
+        SUBSTRING(booking_ref FROM 'CC-BK-' || today_str || '-(\d+)')::INTEGER
+    ), 0) + 1
+    INTO seq_num
+    FROM accommodation_bookings
+    WHERE booking_ref LIKE 'CC-BK-' || today_str || '-%';
+    RETURN 'CC-BK-' || today_str || '-' || LPAD(seq_num::TEXT, 3, '0');
+END;
+$$ LANGUAGE plpgsql;
+
+-- TRIGGER: Auto-set booking ref
+CREATE OR REPLACE FUNCTION set_booking_ref() RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.booking_ref IS NULL THEN
+        NEW.booking_ref := generate_booking_ref();
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS booking_ref_trigger ON accommodation_bookings;
+CREATE TRIGGER booking_ref_trigger
+    BEFORE INSERT ON accommodation_bookings
+    FOR EACH ROW
+    EXECUTE FUNCTION set_booking_ref();
+
+-- TRIGGER: Auto-update timestamps
+CREATE OR REPLACE FUNCTION update_timestamp() RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS update_acc_properties_timestamp ON accommodation_properties;
+CREATE TRIGGER update_acc_properties_timestamp BEFORE UPDATE ON accommodation_properties
+    FOR EACH ROW EXECUTE FUNCTION update_timestamp();
+
+DROP TRIGGER IF EXISTS update_acc_hosts_timestamp ON accommodation_hosts;
+CREATE TRIGGER update_acc_hosts_timestamp BEFORE UPDATE ON accommodation_hosts
+    FOR EACH ROW EXECUTE FUNCTION update_timestamp();
+
+DROP TRIGGER IF EXISTS update_acc_bookings_timestamp ON accommodation_bookings;
+CREATE TRIGGER update_acc_bookings_timestamp BEFORE UPDATE ON accommodation_bookings
+    FOR EACH ROW EXECUTE FUNCTION update_timestamp();
+
+---END SQL---
+
+Run this SQL and confirm the tables were created successfully. Then we'll add the TypeScript types.
