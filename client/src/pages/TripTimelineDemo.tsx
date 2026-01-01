@@ -135,15 +135,22 @@ export function TripTimelineDemo() {
       });
       
       if (targetIndex !== -1) {
-        // Inject alert into the matching event
+        // Inject alert into the matching event with full details
         const severity = mapAlertSeverity(alert.severity);
+        const mappedSeverity = severity === 'major' ? 'major' : severity === 'minor' ? 'minor' : 'info';
         events[targetIndex].alerts = [
           ...(events[targetIndex].alerts || []),
           {
-            severity: severity === 'major' ? 'major' : severity === 'minor' ? 'minor' : 'info',
+            severity: mappedSeverity as 'critical' | 'major' | 'minor' | 'info',
             title: alert.title || 'Road Alert',
-            description: alert.summary || alert.message || '',
-            source: 'DriveBC'
+            description: alert.message || alert.summary || '',
+            source: 'DriveBC',
+            eventType: alert.alert_type,
+            region: alert.region_name ?? undefined,
+            details: alert.details || {},
+            sourceUrl: alert.source_url ?? undefined,
+            distanceKm: alert.distanceKm,
+            nearestPoint: segmentName || alert.nearestRoutePoint,
           }
         ];
       } else {
@@ -156,6 +163,7 @@ export function TripTimelineDemo() {
     if (unmatchedAlerts.length > 0) {
       const alertEvents: TimelineEvent[] = unmatchedAlerts.slice(0, 3).map((alert) => {
         const severity = mapAlertSeverity(alert.severity);
+        const mappedSeverity = severity === 'major' ? 'major' : severity === 'minor' ? 'minor' : 'info';
         const segmentName = getRouteSegmentName({
           headline: alert.title,
           description: alert.message,
@@ -168,16 +176,22 @@ export function TripTimelineDemo() {
           time: events[0]?.time || new Date().toISOString(),
           title: alert.title || 'Road Alert',
           subtitle: segmentName ? `${segmentName} - DriveBC` : `${alert.distanceKm}km from ${alert.nearestRoutePoint} - DriveBC`,
-          description: alert.summary || alert.message,
+          description: alert.message || alert.summary,
           location: {
             name: segmentName || alert.nearestRoutePoint || alert.region_name || 'Along Route',
           },
           photos: [],
           alerts: [{
-            severity: severity === 'major' ? 'major' : severity === 'minor' ? 'minor' : 'info',
+            severity: mappedSeverity as 'critical' | 'major' | 'minor' | 'info',
             title: alert.title || 'Road Alert',
-            description: alert.summary || alert.message || '',
-            source: 'DriveBC'
+            description: alert.message || alert.summary || '',
+            source: 'DriveBC',
+            eventType: alert.alert_type,
+            region: alert.region_name ?? undefined,
+            details: alert.details || {},
+            sourceUrl: alert.source_url ?? undefined,
+            distanceKm: alert.distanceKm,
+            nearestPoint: segmentName || alert.nearestRoutePoint,
           }],
           routePoint: alert.nearestRoutePoint,
         };

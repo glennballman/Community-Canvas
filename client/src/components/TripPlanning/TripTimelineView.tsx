@@ -65,6 +65,15 @@ export interface TimelineAlert {
   title: string;
   description: string;
   source?: string;
+  roads?: string[];
+  eventType?: string;
+  startTime?: string;
+  endTime?: string;
+  region?: string;
+  details?: Record<string, unknown>;
+  sourceUrl?: string;
+  distanceKm?: number;
+  nearestPoint?: string;
 }
 
 export interface TimelineEvent {
@@ -389,6 +398,7 @@ function PhotoGallery({ photos }: { photos: TimelinePhoto[] }) {
 }
 
 function AlertBanner({ alert }: { alert: TimelineAlert }) {
+  const [isExpanded, setIsExpanded] = useState(false);
   const severityStyles = {
     critical: 'bg-red-500/20 border-red-500/50 text-red-400',
     major: 'bg-orange-500/20 border-orange-500/50 text-orange-400',
@@ -396,18 +406,121 @@ function AlertBanner({ alert }: { alert: TimelineAlert }) {
     info: 'bg-blue-500/20 border-blue-500/50 text-blue-400',
   };
 
+  const severityLabels = {
+    critical: 'CLOSURE',
+    major: 'MAJOR',
+    minor: 'MINOR',
+    info: 'INFO',
+  };
+
+  const hasDetails = alert.description || alert.roads?.length || alert.region || alert.startTime || alert.details;
+
   return (
-    <div className={`p-3 rounded-lg border ${severityStyles[alert.severity]}`}>
-      <div className="flex items-start gap-2">
-        <AlertTriangle className="h-4 w-4 mt-0.5 flex-shrink-0" />
-        <div>
-          <p className="font-medium text-sm">{alert.title}</p>
-          <p className="text-xs opacity-80">{alert.description}</p>
-          {alert.source && (
-            <p className="text-xs opacity-60 mt-1">Source: {alert.source}</p>
-          )}
+    <div className={`rounded-lg border ${severityStyles[alert.severity]} overflow-hidden`}>
+      <div 
+        className="p-3 cursor-pointer"
+        onClick={() => hasDetails && setIsExpanded(!isExpanded)}
+        data-testid={`alert-banner-${alert.title?.substring(0, 20)}`}
+      >
+        <div className="flex items-start gap-2">
+          <AlertTriangle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="px-1.5 py-0.5 rounded text-xs font-bold bg-current/20">
+                {alert.eventType || severityLabels[alert.severity]}
+              </span>
+              {alert.nearestPoint && (
+                <span className="text-xs opacity-70">{alert.nearestPoint}</span>
+              )}
+              {alert.distanceKm !== undefined && (
+                <span className="text-xs opacity-60">{alert.distanceKm.toFixed(1)}km away</span>
+              )}
+            </div>
+            <p className="font-medium text-sm mt-1">{alert.title}</p>
+            {!isExpanded && alert.description && (
+              <p className="text-xs opacity-80 mt-1 line-clamp-2">{alert.description}</p>
+            )}
+            {hasDetails && (
+              <button 
+                className="text-xs opacity-60 mt-1 hover:opacity-100 flex items-center gap-1"
+                onClick={(e) => { e.stopPropagation(); setIsExpanded(!isExpanded); }}
+              >
+                {isExpanded ? 'Show less' : 'Show details'}
+                <ChevronDown className={`h-3 w-3 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+              </button>
+            )}
+          </div>
         </div>
       </div>
+      
+      {isExpanded && (
+        <div className="px-3 pb-3 pt-0 border-t border-current/20 mt-0">
+          <div className="space-y-2 text-xs">
+            {alert.description && (
+              <div>
+                <p className="opacity-60 font-medium">Description:</p>
+                <p className="opacity-90 whitespace-pre-wrap">{alert.description}</p>
+              </div>
+            )}
+            
+            {alert.roads && alert.roads.length > 0 && (
+              <div>
+                <p className="opacity-60 font-medium">Affected Roads:</p>
+                <p className="opacity-90">{alert.roads.join(', ')}</p>
+              </div>
+            )}
+            
+            {alert.region && (
+              <div>
+                <p className="opacity-60 font-medium">Region:</p>
+                <p className="opacity-90">{alert.region}</p>
+              </div>
+            )}
+            
+            {(alert.startTime || alert.endTime) && (
+              <div>
+                <p className="opacity-60 font-medium">Timing:</p>
+                <p className="opacity-90">
+                  {alert.startTime && `From: ${new Date(alert.startTime).toLocaleString()}`}
+                  {alert.startTime && alert.endTime && ' | '}
+                  {alert.endTime && `Until: ${new Date(alert.endTime).toLocaleString()}`}
+                </p>
+              </div>
+            )}
+            
+            {alert.details && Object.keys(alert.details).length > 0 && (
+              <div>
+                <p className="opacity-60 font-medium">Additional Details:</p>
+                <div className="opacity-90 space-y-1">
+                  {Object.entries(alert.details).map(([key, value]) => (
+                    <p key={key} className="pl-2">
+                      <span className="opacity-70">{key}:</span>{' '}
+                      {typeof value === 'string' ? value : JSON.stringify(value)}
+                    </p>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            <div className="flex items-center justify-between pt-1">
+              {alert.source && (
+                <p className="opacity-50">Source: {alert.source}</p>
+              )}
+              {alert.sourceUrl && (
+                <a 
+                  href={alert.sourceUrl} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-blue-400 hover:underline"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  View on DriveBC
+                </a>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
