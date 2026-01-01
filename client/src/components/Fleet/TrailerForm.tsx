@@ -4266,7 +4266,7 @@ export function TrailerForm({ trailerId, initialData, onSave, onCancel }: Traile
                             <FormItem>
                               <FormLabel>Articulation (degrees)</FormLabel>
                               <FormControl>
-                                <Input type="number" placeholder="360" {...field} value={field.value ?? ''} />
+                                <Input type="number" placeholder="360" {...field} value={field.value ?? ''} data-testid="input-hitch-articulation" />
                               </FormControl>
                             </FormItem>
                           )}
@@ -4287,7 +4287,7 @@ export function TrailerForm({ trailerId, initialData, onSave, onCancel }: Traile
                         <FormItem className="flex items-center justify-between rounded-lg border p-3">
                           <FormLabel>Skid Plates</FormLabel>
                           <FormControl>
-                            <Switch checked={field.value} onCheckedChange={field.onChange} />
+                            <Switch checked={field.value} onCheckedChange={field.onChange} data-testid="switch-skid-plates" />
                           </FormControl>
                         </FormItem>
                       )}
@@ -4299,7 +4299,7 @@ export function TrailerForm({ trailerId, initialData, onSave, onCancel }: Traile
                         <FormItem className="flex items-center justify-between rounded-lg border p-3">
                           <FormLabel>Rock Sliders</FormLabel>
                           <FormControl>
-                            <Switch checked={field.value} onCheckedChange={field.onChange} />
+                            <Switch checked={field.value} onCheckedChange={field.onChange} data-testid="switch-rock-sliders" />
                           </FormControl>
                         </FormItem>
                       )}
@@ -4311,7 +4311,7 @@ export function TrailerForm({ trailerId, initialData, onSave, onCancel }: Traile
                         <FormItem className="flex items-center justify-between rounded-lg border p-3">
                           <FormLabel>Recovery Points</FormLabel>
                           <FormControl>
-                            <Switch checked={field.value} onCheckedChange={field.onChange} />
+                            <Switch checked={field.value} onCheckedChange={field.onChange} data-testid="switch-recovery-points" />
                           </FormControl>
                         </FormItem>
                       )}
@@ -4324,7 +4324,7 @@ export function TrailerForm({ trailerId, initialData, onSave, onCancel }: Traile
                           <FormItem>
                             <FormLabel>Count</FormLabel>
                             <FormControl>
-                              <Input type="number" placeholder="4" {...field} value={field.value ?? ''} />
+                              <Input type="number" placeholder="4" {...field} value={field.value ?? ''} data-testid="input-recovery-point-count" />
                             </FormControl>
                           </FormItem>
                         )}
@@ -4344,7 +4344,7 @@ export function TrailerForm({ trailerId, initialData, onSave, onCancel }: Traile
                         <FormItem className="flex items-center justify-between rounded-lg border p-3">
                           <FormLabel>RTT Mount</FormLabel>
                           <FormControl>
-                            <Switch checked={field.value} onCheckedChange={field.onChange} />
+                            <Switch checked={field.value} onCheckedChange={field.onChange} data-testid="switch-rtt-mount" />
                           </FormControl>
                         </FormItem>
                       )}
@@ -4357,7 +4357,7 @@ export function TrailerForm({ trailerId, initialData, onSave, onCancel }: Traile
                           <FormItem>
                             <FormLabel>RTT Capacity (lbs)</FormLabel>
                             <FormControl>
-                              <Input type="number" placeholder="600" {...field} value={field.value ?? ''} />
+                              <Input type="number" placeholder="600" {...field} value={field.value ?? ''} data-testid="input-rtt-capacity" />
                             </FormControl>
                           </FormItem>
                         )}
@@ -4371,7 +4371,7 @@ export function TrailerForm({ trailerId, initialData, onSave, onCancel }: Traile
                           <FormLabel>Roof Rack Type</FormLabel>
                           <Select onValueChange={field.onChange} value={field.value || ''}>
                             <FormControl>
-                              <SelectTrigger>
+                              <SelectTrigger data-testid="select-roof-rack-type">
                                 <SelectValue placeholder="Select" />
                               </SelectTrigger>
                             </FormControl>
@@ -4399,7 +4399,7 @@ export function TrailerForm({ trailerId, initialData, onSave, onCancel }: Traile
                           <FormItem className="flex items-center justify-between rounded-lg border p-3">
                             <FormLabel>Slide-Out Kitchen</FormLabel>
                             <FormControl>
-                              <Switch checked={field.value} onCheckedChange={field.onChange} />
+                              <Switch checked={field.value} onCheckedChange={field.onChange} data-testid="switch-slide-out-kitchen" />
                             </FormControl>
                           </FormItem>
                         )}
@@ -4413,7 +4413,7 @@ export function TrailerForm({ trailerId, initialData, onSave, onCancel }: Traile
                               <FormLabel>Kitchen Side</FormLabel>
                               <Select onValueChange={field.onChange} value={field.value || ''}>
                                 <FormControl>
-                                  <SelectTrigger>
+                                  <SelectTrigger data-testid="select-kitchen-side">
                                     <SelectValue placeholder="Select" />
                                   </SelectTrigger>
                                 </FormControl>
@@ -4436,7 +4436,7 @@ export function TrailerForm({ trailerId, initialData, onSave, onCancel }: Traile
                           <FormItem className="flex items-center justify-between rounded-lg border p-3">
                             <FormLabel>Outdoor Shower</FormLabel>
                             <FormControl>
-                              <Switch checked={field.value} onCheckedChange={field.onChange} />
+                              <Switch checked={field.value} onCheckedChange={field.onChange} data-testid="switch-outdoor-shower" />
                             </FormControl>
                           </FormItem>
                         )}
@@ -4450,7 +4450,7 @@ export function TrailerForm({ trailerId, initialData, onSave, onCancel }: Traile
                               <FormLabel>Shower Type</FormLabel>
                               <Select onValueChange={field.onChange} value={field.value || ''}>
                                 <FormControl>
-                                  <SelectTrigger>
+                                  <SelectTrigger data-testid="select-outdoor-shower-type">
                                     <SelectValue placeholder="Select" />
                                   </SelectTrigger>
                                 </FormControl>
@@ -4479,7 +4479,7 @@ export function TrailerForm({ trailerId, initialData, onSave, onCancel }: Traile
                         <FormItem>
                           <FormLabel>Water Tank (gal)</FormLabel>
                           <FormControl>
-                            <Input type="number" placeholder="25" {...field} value={field.value ?? ''} />
+                            <Input type="number" placeholder="25" {...field} value={field.value ?? ''} data-testid="input-external-water-tank" />
                           </FormControl>
                         </FormItem>
                       )}
@@ -4491,7 +4491,7 @@ export function TrailerForm({ trailerId, initialData, onSave, onCancel }: Traile
                         <FormItem className="flex items-center justify-between rounded-lg border p-3">
                           <FormLabel>Water Filtration</FormLabel>
                           <FormControl>
-                            <Switch checked={field.value} onCheckedChange={field.onChange} />
+                            <Switch checked={field.value} onCheckedChange={field.onChange} data-testid="switch-water-filtration" />
                           </FormControl>
                         </FormItem>
                       )}
@@ -4503,7 +4503,7 @@ export function TrailerForm({ trailerId, initialData, onSave, onCancel }: Traile
                         <FormItem className="flex items-center justify-between rounded-lg border p-3">
                           <FormLabel>Jerry Can Mounts</FormLabel>
                           <FormControl>
-                            <Switch checked={field.value} onCheckedChange={field.onChange} />
+                            <Switch checked={field.value} onCheckedChange={field.onChange} data-testid="switch-jerry-can-mounts" />
                           </FormControl>
                         </FormItem>
                       )}
@@ -4515,7 +4515,7 @@ export function TrailerForm({ trailerId, initialData, onSave, onCancel }: Traile
                         <FormItem>
                           <FormLabel>Jerry Capacity (gal)</FormLabel>
                           <FormControl>
-                            <Input type="number" placeholder="10" {...field} value={field.value ?? ''} />
+                            <Input type="number" placeholder="10" {...field} value={field.value ?? ''} data-testid="input-jerry-can-capacity" />
                           </FormControl>
                         </FormItem>
                       )}
@@ -4619,7 +4619,7 @@ export function TrailerForm({ trailerId, initialData, onSave, onCancel }: Traile
                         <FormItem>
                           <FormLabel>Loft Count</FormLabel>
                           <FormControl>
-                            <Input type="number" placeholder="1" {...field} value={field.value ?? ''} />
+                            <Input type="number" placeholder="1" {...field} value={field.value ?? ''} data-testid="input-thow-loft-count" />
                           </FormControl>
                         </FormItem>
                       )}
@@ -4631,7 +4631,7 @@ export function TrailerForm({ trailerId, initialData, onSave, onCancel }: Traile
                         <FormItem className="flex items-center justify-between rounded-lg border p-3">
                           <FormLabel>Full-Time Rated</FormLabel>
                           <FormControl>
-                            <Switch checked={field.value} onCheckedChange={field.onChange} />
+                            <Switch checked={field.value} onCheckedChange={field.onChange} data-testid="switch-thow-full-time" />
                           </FormControl>
                         </FormItem>
                       )}
@@ -4643,7 +4643,7 @@ export function TrailerForm({ trailerId, initialData, onSave, onCancel }: Traile
                         <FormItem className="flex items-center justify-between rounded-lg border p-3">
                           <FormLabel>4-Season</FormLabel>
                           <FormControl>
-                            <Switch checked={field.value} onCheckedChange={field.onChange} />
+                            <Switch checked={field.value} onCheckedChange={field.onChange} data-testid="switch-thow-four-season" />
                           </FormControl>
                         </FormItem>
                       )}
@@ -4662,7 +4662,7 @@ export function TrailerForm({ trailerId, initialData, onSave, onCancel }: Traile
                         <FormItem className="flex items-center justify-between rounded-lg border p-3">
                           <FormLabel>Composting Toilet</FormLabel>
                           <FormControl>
-                            <Switch checked={field.value} onCheckedChange={field.onChange} />
+                            <Switch checked={field.value} onCheckedChange={field.onChange} data-testid="switch-thow-composting" />
                           </FormControl>
                         </FormItem>
                       )}
@@ -4674,7 +4674,7 @@ export function TrailerForm({ trailerId, initialData, onSave, onCancel }: Traile
                         <FormItem className="flex items-center justify-between rounded-lg border p-3">
                           <FormLabel>Incinerating Toilet</FormLabel>
                           <FormControl>
-                            <Switch checked={field.value} onCheckedChange={field.onChange} />
+                            <Switch checked={field.value} onCheckedChange={field.onChange} data-testid="switch-thow-incinerating" />
                           </FormControl>
                         </FormItem>
                       )}
@@ -4738,7 +4738,7 @@ export function TrailerForm({ trailerId, initialData, onSave, onCancel }: Traile
                         <FormItem>
                           <FormLabel>Equipment Make</FormLabel>
                           <FormControl>
-                            <Input placeholder="e.g., Wood-Mizer" {...field} value={field.value ?? ''} />
+                            <Input placeholder="e.g., Wood-Mizer" {...field} value={field.value ?? ''} data-testid="input-equipment-make" />
                           </FormControl>
                         </FormItem>
                       )}
@@ -4750,7 +4750,7 @@ export function TrailerForm({ trailerId, initialData, onSave, onCancel }: Traile
                         <FormItem>
                           <FormLabel>Equipment Model</FormLabel>
                           <FormControl>
-                            <Input placeholder="e.g., LT35" {...field} value={field.value ?? ''} />
+                            <Input placeholder="e.g., LT35" {...field} value={field.value ?? ''} data-testid="input-equipment-model" />
                           </FormControl>
                         </FormItem>
                       )}
@@ -4762,7 +4762,7 @@ export function TrailerForm({ trailerId, initialData, onSave, onCancel }: Traile
                         <FormItem>
                           <FormLabel>Horsepower</FormLabel>
                           <FormControl>
-                            <Input type="number" placeholder="25" {...field} value={field.value ?? ''} />
+                            <Input type="number" placeholder="25" {...field} value={field.value ?? ''} data-testid="input-equipment-hp" />
                           </FormControl>
                         </FormItem>
                       )}
@@ -4777,7 +4777,7 @@ export function TrailerForm({ trailerId, initialData, onSave, onCancel }: Traile
                           <FormLabel>Power Type</FormLabel>
                           <Select onValueChange={field.onChange} value={field.value || ''}>
                             <FormControl>
-                              <SelectTrigger>
+                              <SelectTrigger data-testid="select-equipment-power-type">
                                 <SelectValue placeholder="Select" />
                               </SelectTrigger>
                             </FormControl>
@@ -4797,7 +4797,7 @@ export function TrailerForm({ trailerId, initialData, onSave, onCancel }: Traile
                         <FormItem className="flex items-center justify-between rounded-lg border p-3">
                           <FormLabel>License Plate Exempt</FormLabel>
                           <FormControl>
-                            <Switch checked={field.value} onCheckedChange={field.onChange} />
+                            <Switch checked={field.value} onCheckedChange={field.onChange} data-testid="switch-license-plate-exempt" />
                           </FormControl>
                         </FormItem>
                       )}
@@ -4816,7 +4816,7 @@ export function TrailerForm({ trailerId, initialData, onSave, onCancel }: Traile
                         <FormItem className="flex items-center justify-between rounded-lg border p-3">
                           <FormLabel>Requires Setup</FormLabel>
                           <FormControl>
-                            <Switch checked={field.value} onCheckedChange={field.onChange} />
+                            <Switch checked={field.value} onCheckedChange={field.onChange} data-testid="switch-requires-setup" />
                           </FormControl>
                         </FormItem>
                       )}
@@ -4829,7 +4829,7 @@ export function TrailerForm({ trailerId, initialData, onSave, onCancel }: Traile
                           <FormItem>
                             <FormLabel>Setup Time (min)</FormLabel>
                             <FormControl>
-                              <Input type="number" placeholder="30" {...field} value={field.value ?? ''} />
+                              <Input type="number" placeholder="30" {...field} value={field.value ?? ''} data-testid="input-setup-time" />
                             </FormControl>
                           </FormItem>
                         )}
@@ -4842,7 +4842,7 @@ export function TrailerForm({ trailerId, initialData, onSave, onCancel }: Traile
                         <FormItem className="flex items-center justify-between rounded-lg border p-3">
                           <FormLabel>Requires Level</FormLabel>
                           <FormControl>
-                            <Switch checked={field.value} onCheckedChange={field.onChange} />
+                            <Switch checked={field.value} onCheckedChange={field.onChange} data-testid="switch-requires-level" />
                           </FormControl>
                         </FormItem>
                       )}
@@ -4854,7 +4854,7 @@ export function TrailerForm({ trailerId, initialData, onSave, onCancel }: Traile
                         <FormItem className="flex items-center justify-between rounded-lg border p-3">
                           <FormLabel>Outriggers</FormLabel>
                           <FormControl>
-                            <Switch checked={field.value} onCheckedChange={field.onChange} />
+                            <Switch checked={field.value} onCheckedChange={field.onChange} data-testid="switch-outriggers" />
                           </FormControl>
                         </FormItem>
                       )}
@@ -4874,7 +4874,7 @@ export function TrailerForm({ trailerId, initialData, onSave, onCancel }: Traile
                           <FormItem>
                             <FormLabel>Max Log Diameter (in)</FormLabel>
                             <FormControl>
-                              <Input type="number" placeholder="28" {...field} value={field.value ?? ''} />
+                              <Input type="number" placeholder="28" {...field} value={field.value ?? ''} data-testid="input-sawmill-diameter" />
                             </FormControl>
                           </FormItem>
                         )}
@@ -4886,7 +4886,7 @@ export function TrailerForm({ trailerId, initialData, onSave, onCancel }: Traile
                           <FormItem>
                             <FormLabel>Max Log Length (ft)</FormLabel>
                             <FormControl>
-                              <Input type="number" step="0.1" placeholder="21" {...field} value={field.value ?? ''} />
+                              <Input type="number" step="0.1" placeholder="21" {...field} value={field.value ?? ''} data-testid="input-sawmill-length" />
                             </FormControl>
                           </FormItem>
                         )}
@@ -4898,7 +4898,7 @@ export function TrailerForm({ trailerId, initialData, onSave, onCancel }: Traile
                           <FormItem>
                             <FormLabel>Cut Width (in)</FormLabel>
                             <FormControl>
-                              <Input type="number" step="0.1" placeholder="21" {...field} value={field.value ?? ''} />
+                              <Input type="number" step="0.1" placeholder="21" {...field} value={field.value ?? ''} data-testid="input-sawmill-cut-width" />
                             </FormControl>
                           </FormItem>
                         )}
@@ -4918,7 +4918,7 @@ export function TrailerForm({ trailerId, initialData, onSave, onCancel }: Traile
                           <FormItem>
                             <FormLabel>Amp Rating</FormLabel>
                             <FormControl>
-                              <Input type="number" placeholder="300" {...field} value={field.value ?? ''} />
+                              <Input type="number" placeholder="300" {...field} value={field.value ?? ''} data-testid="input-welder-amps" />
                             </FormControl>
                           </FormItem>
                         )}
@@ -4938,7 +4938,7 @@ export function TrailerForm({ trailerId, initialData, onSave, onCancel }: Traile
                           <FormItem>
                             <FormLabel>kW Rating</FormLabel>
                             <FormControl>
-                              <Input type="number" step="0.1" placeholder="50" {...field} value={field.value ?? ''} />
+                              <Input type="number" step="0.1" placeholder="50" {...field} value={field.value ?? ''} data-testid="input-generator-kw" />
                             </FormControl>
                           </FormItem>
                         )}
@@ -4951,7 +4951,7 @@ export function TrailerForm({ trailerId, initialData, onSave, onCancel }: Traile
                             <FormLabel>Voltage</FormLabel>
                             <Select onValueChange={field.onChange} value={field.value || ''}>
                               <FormControl>
-                                <SelectTrigger>
+                                <SelectTrigger data-testid="select-generator-voltage">
                                   <SelectValue placeholder="Select" />
                                 </SelectTrigger>
                               </FormControl>
@@ -4972,7 +4972,7 @@ export function TrailerForm({ trailerId, initialData, onSave, onCancel }: Traile
                             <FormLabel>Phase</FormLabel>
                             <Select onValueChange={field.onChange} value={field.value || ''}>
                               <FormControl>
-                                <SelectTrigger>
+                                <SelectTrigger data-testid="select-generator-phase">
                                   <SelectValue placeholder="Select" />
                                 </SelectTrigger>
                               </FormControl>
@@ -5000,7 +5000,7 @@ export function TrailerForm({ trailerId, initialData, onSave, onCancel }: Traile
                           <FormItem>
                             <FormLabel>PSI</FormLabel>
                             <FormControl>
-                              <Input type="number" placeholder="4000" {...field} value={field.value ?? ''} />
+                              <Input type="number" placeholder="4000" {...field} value={field.value ?? ''} data-testid="input-pressure-psi" />
                             </FormControl>
                           </FormItem>
                         )}
@@ -5012,7 +5012,7 @@ export function TrailerForm({ trailerId, initialData, onSave, onCancel }: Traile
                           <FormItem>
                             <FormLabel>GPM</FormLabel>
                             <FormControl>
-                              <Input type="number" step="0.1" placeholder="4.0" {...field} value={field.value ?? ''} />
+                              <Input type="number" step="0.1" placeholder="4.0" {...field} value={field.value ?? ''} data-testid="input-pressure-gpm" />
                             </FormControl>
                           </FormItem>
                         )}
@@ -5024,7 +5024,7 @@ export function TrailerForm({ trailerId, initialData, onSave, onCancel }: Traile
                           <FormItem>
                             <FormLabel>Water Tank (gal)</FormLabel>
                             <FormControl>
-                              <Input type="number" placeholder="200" {...field} value={field.value ?? ''} />
+                              <Input type="number" placeholder="200" {...field} value={field.value ?? ''} data-testid="input-water-tank" />
                             </FormControl>
                           </FormItem>
                         )}
@@ -5044,7 +5044,7 @@ export function TrailerForm({ trailerId, initialData, onSave, onCancel }: Traile
                           <FormItem>
                             <FormLabel>CFM</FormLabel>
                             <FormControl>
-                              <Input type="number" step="0.1" placeholder="185" {...field} value={field.value ?? ''} />
+                              <Input type="number" step="0.1" placeholder="185" {...field} value={field.value ?? ''} data-testid="input-compressor-cfm" />
                             </FormControl>
                           </FormItem>
                         )}
@@ -5056,7 +5056,7 @@ export function TrailerForm({ trailerId, initialData, onSave, onCancel }: Traile
                           <FormItem>
                             <FormLabel>Max PSI</FormLabel>
                             <FormControl>
-                              <Input type="number" placeholder="150" {...field} value={field.value ?? ''} />
+                              <Input type="number" placeholder="150" {...field} value={field.value ?? ''} data-testid="input-compressor-psi" />
                             </FormControl>
                           </FormItem>
                         )}
@@ -5068,7 +5068,7 @@ export function TrailerForm({ trailerId, initialData, onSave, onCancel }: Traile
                           <FormItem>
                             <FormLabel>Tank Size (gal)</FormLabel>
                             <FormControl>
-                              <Input type="number" placeholder="60" {...field} value={field.value ?? ''} />
+                              <Input type="number" placeholder="60" {...field} value={field.value ?? ''} data-testid="input-tank-gallons" />
                             </FormControl>
                           </FormItem>
                         )}
@@ -5088,7 +5088,7 @@ export function TrailerForm({ trailerId, initialData, onSave, onCancel }: Traile
                           <FormItem>
                             <FormLabel>Tower Height (ft)</FormLabel>
                             <FormControl>
-                              <Input type="number" placeholder="30" {...field} value={field.value ?? ''} />
+                              <Input type="number" placeholder="30" {...field} value={field.value ?? ''} data-testid="input-light-tower-height" />
                             </FormControl>
                           </FormItem>
                         )}
@@ -5100,7 +5100,7 @@ export function TrailerForm({ trailerId, initialData, onSave, onCancel }: Traile
                           <FormItem>
                             <FormLabel>Output (lumens)</FormLabel>
                             <FormControl>
-                              <Input type="number" placeholder="400000" {...field} value={field.value ?? ''} />
+                              <Input type="number" placeholder="400000" {...field} value={field.value ?? ''} data-testid="input-light-lumens" />
                             </FormControl>
                           </FormItem>
                         )}
@@ -5112,7 +5112,7 @@ export function TrailerForm({ trailerId, initialData, onSave, onCancel }: Traile
                           <FormItem>
                             <FormLabel>Coverage (acres)</FormLabel>
                             <FormControl>
-                              <Input type="number" step="0.01" placeholder="5" {...field} value={field.value ?? ''} />
+                              <Input type="number" step="0.01" placeholder="5" {...field} value={field.value ?? ''} data-testid="input-light-coverage" />
                             </FormControl>
                           </FormItem>
                         )}
@@ -5132,7 +5132,7 @@ export function TrailerForm({ trailerId, initialData, onSave, onCancel }: Traile
                           <FormItem>
                             <FormLabel>Tank Capacity (gal)</FormLabel>
                             <FormControl>
-                              <Input type="number" placeholder="500" {...field} value={field.value ?? ''} />
+                              <Input type="number" placeholder="500" {...field} value={field.value ?? ''} data-testid="input-fuel-tank-capacity" />
                             </FormControl>
                           </FormItem>
                         )}
@@ -5145,7 +5145,7 @@ export function TrailerForm({ trailerId, initialData, onSave, onCancel }: Traile
                             <FormLabel>Fuel Type</FormLabel>
                             <Select onValueChange={field.onChange} value={field.value || ''}>
                               <FormControl>
-                                <SelectTrigger>
+                                <SelectTrigger data-testid="select-fuel-type-stored">
                                   <SelectValue placeholder="Select" />
                                 </SelectTrigger>
                               </FormControl>
@@ -5165,7 +5165,7 @@ export function TrailerForm({ trailerId, initialData, onSave, onCancel }: Traile
                           <FormItem className="flex items-center justify-between rounded-lg border p-3">
                             <FormLabel>Has Fuel Pump</FormLabel>
                             <FormControl>
-                              <Switch checked={field.value} onCheckedChange={field.onChange} />
+                              <Switch checked={field.value} onCheckedChange={field.onChange} data-testid="switch-fuel-pump" />
                             </FormControl>
                           </FormItem>
                         )}
@@ -5185,7 +5185,7 @@ export function TrailerForm({ trailerId, initialData, onSave, onCancel }: Traile
                           <FormItem>
                             <FormLabel>Capacity (cu yd)</FormLabel>
                             <FormControl>
-                              <Input type="number" step="0.01" placeholder="2" {...field} value={field.value ?? ''} />
+                              <Input type="number" step="0.01" placeholder="2" {...field} value={field.value ?? ''} data-testid="input-mixer-capacity" />
                             </FormControl>
                           </FormItem>
                         )}
@@ -5197,7 +5197,7 @@ export function TrailerForm({ trailerId, initialData, onSave, onCancel }: Traile
                           <FormItem>
                             <FormLabel>Drum RPM</FormLabel>
                             <FormControl>
-                              <Input type="number" placeholder="20" {...field} value={field.value ?? ''} />
+                              <Input type="number" placeholder="20" {...field} value={field.value ?? ''} data-testid="input-mixer-rpm" />
                             </FormControl>
                           </FormItem>
                         )}
