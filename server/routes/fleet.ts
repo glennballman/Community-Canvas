@@ -934,21 +934,69 @@ export function createFleetRouter(db: Pool) {
     try {
       const { driverId } = req.params;
 
-      const result = await db.query(`
+      const driverResult = await db.query(`
+        SELECT 
+          id, name, full_name,
+          license_class, license_province, license_expiry,
+          has_air_brake_endorsement,
+          has_house_trailer_endorsement,
+          has_heavy_trailer_endorsement,
+          heavy_trailer_medical_expiry,
+          fifth_wheel_experience, gooseneck_experience,
+          horse_trailer_experience, boat_launching_experience
+        FROM participant_profiles
+        WHERE id = $1
+      `, [driverId]);
+
+      if (driverResult.rows.length === 0) {
+        return res.status(404).json({ error: 'Driver not found' });
+      }
+
+      const driverRow = driverResult.rows[0];
+
+      const qualResult = await db.query(`
         SELECT * FROM get_driver_qualification_summary($1::uuid)
       `, [driverId]);
 
+      const trailerQualifications = qualResult.rows.map(row => ({
+        trailerId: row.trailer_id,
+        trailerName: row.trailer_nickname || row.trailer_type,
+        trailerType: row.trailer_type,
+        isQualified: row.is_qualified,
+        issueCount: row.issue_count || 0,
+        warningCount: row.warning_count || 0,
+        primaryIssue: row.primary_issue
+      }));
+
+      const qualifiedCount = trailerQualifications.filter(t => t.isQualified).length;
+      const totalCount = trailerQualifications.length;
+
       res.json({
-        driverId,
-        trailers: result.rows.map(row => ({
-          trailerId: row.trailer_id,
-          trailerNickname: row.trailer_nickname,
-          trailerType: row.trailer_type,
-          isQualified: row.is_qualified,
-          issueCount: row.issue_count || 0,
-          warningCount: row.warning_count || 0,
-          primaryIssue: row.primary_issue
-        })),
+        driver: {
+          id: driverRow.id,
+          name: driverRow.full_name || driverRow.name || 'Unknown Driver',
+          licenseClass: driverRow.license_class,
+          licenseProvince: driverRow.license_province,
+          licenseExpiry: driverRow.license_expiry,
+          endorsements: {
+            airBrake: driverRow.has_air_brake_endorsement || false,
+            houseTrailer: driverRow.has_house_trailer_endorsement || false,
+            heavyTrailer: driverRow.has_heavy_trailer_endorsement || false
+          },
+          medicalExpiry: driverRow.heavy_trailer_medical_expiry,
+          experience: {
+            fifthWheel: driverRow.fifth_wheel_experience || false,
+            gooseneck: driverRow.gooseneck_experience || false,
+            horseTrailer: driverRow.horse_trailer_experience || false,
+            boatLaunching: driverRow.boat_launching_experience || false
+          }
+        },
+        summary: {
+          qualifiedFor: qualifiedCount,
+          totalTrailers: totalCount,
+          percentageQualified: totalCount > 0 ? Math.round((qualifiedCount / totalCount) * 100) : 100
+        },
+        trailerQualifications,
         checkedAt: new Date().toISOString()
       });
     } catch (error) {
