@@ -292,9 +292,9 @@ export function PropertyDetails({ propertyId, open, onOpenChange }: PropertyDeta
                       {property.overallRating && (
                         <div className="flex items-center gap-1" data-testid="rating-stars">
                           <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
-                          <span className="font-medium">{property.overallRating.toFixed(2)}</span>
+                          <span className="font-medium">{Number(property.overallRating).toFixed(2)}</span>
                           <span className="text-muted-foreground text-sm">
-                            ({property.reviewCount} reviews)
+                            ({property.reviewCount || 0} reviews)
                           </span>
                         </div>
                       )}
