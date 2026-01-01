@@ -12,7 +12,8 @@ import {
   Radio,
   Store,
   TreePine,
-  Book
+  Book,
+  Home
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -55,6 +56,12 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
             <Button variant="ghost" size="sm" className="w-full justify-start gap-2 text-xs" data-testid="link-command-center">
               <ArrowLeft className="w-3 h-3" />
               COMMAND CENTER
+            </Button>
+          </Link>
+          <Link href="/accommodations">
+            <Button variant="ghost" size="sm" className="w-full justify-start gap-2 text-xs" data-testid="link-accommodations">
+              <Home className="w-3 h-3" />
+              ACCOMMODATIONS
             </Button>
           </Link>
         </div>
