@@ -34,6 +34,7 @@ function AdminRoutes() {
         <Route path="/admin/logs" component={AdminLogs} />
         <Route path="/admin/settings" component={AdminSettings} />
         <Route path="/admin/docs" component={Documentation} />
+        <Route path="/admin/accommodations" component={Accommodations} />
         <Route component={NotFound} />
       </Switch>
     </AdminLayout>

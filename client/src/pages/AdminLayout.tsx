@@ -58,7 +58,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
               COMMAND CENTER
             </Button>
           </Link>
-          <Link href="/accommodations">
+          <Link href="/admin/accommodations">
             <Button variant="ghost" size="sm" className="w-full justify-start gap-2 text-xs" data-testid="link-accommodations">
               <Home className="w-3 h-3" />
               ACCOMMODATIONS
