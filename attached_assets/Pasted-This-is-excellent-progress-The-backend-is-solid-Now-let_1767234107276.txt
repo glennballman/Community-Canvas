@@ -1,0 +1,438 @@
+This is excellent progress! The backend is solid. Now let's wire it into the UI. I can see from your screenshots:
+
+Trip Planning has "Edit Profile" for Glenn Ballman
+Edit Vehicle form exists with tabs (Vehicle Details, Condition Check, Safety Equipment)
+Fleet Dashboard shows vehicles and trailers with status
+
+Let me give you the code for the next two pieces:
+
+1. Add "Driver Qualifications" Tab to Edit Profile
+This integrates the DriverQualificationsForm into whatever profile editing view you have. If "Edit Profile" opens a modal or page, add this as a new tab.
+tsx// Add this tab to your profile editing component
+// Likely in: client/src/components/TripPlanning/EditProfileModal.tsx 
+// or wherever "Edit Profile" button leads
+
+import { DriverQualificationsForm } from '../Fleet/DriverQualificationsForm';
+
+// Inside your tabs array, add:
+{
+  id: 'qualifications',
+  label: 'Driver Qualifications',
+  icon: <IdCard className="h-4 w-4" />, // from lucide-react
+}
+
+// Inside your tab content render:
+{activeTab === 'qualifications' && (
+  <DriverQualificationsForm 
+    driverId={participantId} 
+    onSave={() => {
+      // Refresh data or close modal
+      refetch?.();
+    }}
+  />
+)}
+
+2. Qualification Warning Badges for Fleet Dashboard
+This adds visual warnings when a driver lacks qualifications for trailers. Add this to your FleetDashboard.tsx:
+tsx// ============================================
+// QUALIFICATION BADGE COMPONENT
+// Add to: client/src/components/Fleet/QualificationBadge.tsx
+// ============================================
+
+import React from 'react';
+import { AlertTriangle, CheckCircle, AlertCircle, Info } from 'lucide-react';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+
+interface QualificationBadgeProps {
+  isQualified: boolean;
+  issueCount: number;
+  warningCount: number;
+  primaryIssue?: string | null;
+  size?: 'sm' | 'md' | 'lg';
+}
+
+export function QualificationBadge({ 
+  isQualified, 
+  issueCount, 
+  warningCount, 
+  primaryIssue,
+  size = 'md' 
+}: QualificationBadgeProps) {
+  const sizeClasses = {
+    sm: 'h-4 w-4',
+    md: 'h-5 w-5',
+    lg: 'h-6 w-6'
+  };
+
+  const iconSize = sizeClasses[size];
+
+  if (isQualified && warningCount === 0) {
+    return (
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger>
+            <CheckCircle className={`${iconSize} text-green-500`} />
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Fully qualified to tow</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    );
+  }
+
+  if (isQualified && warningCount > 0) {
+    return (
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger>
+            <Info className={`${iconSize} text-yellow-500`} />
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Qualified with {warningCount} warning{warningCount > 1 ? 's' : ''}</p>
+            {primaryIssue && <p className="text-xs text-gray-400 mt-1">{primaryIssue}</p>}
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    );
+  }
+
+  // Not qualified
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger>
+          <AlertTriangle className={`${iconSize} text-red-500`} />
+        </TooltipTrigger>
+        <TooltipContent>
+          <p className="font-medium text-red-400">Not qualified</p>
+          {primaryIssue && <p className="text-xs mt-1">{primaryIssue}</p>}
+          {issueCount > 1 && (
+            <p className="text-xs text-gray-400">+ {issueCount - 1} more issue{issueCount > 2 ? 's' : ''}</p>
+          )}
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+}
+
+3. Hook to Fetch Driver Qualifications
+tsx// ============================================
+// QUALIFICATION HOOK
+// Add to: client/src/hooks/useDriverQualifications.ts
+// ============================================
+
+import { useQuery } from '@tanstack/react-query';
+
+interface TrailerQualification {
+  trailerId: string;
+  trailerName: string;
+  trailerType: string;
+  isQualified: boolean;
+  issueCount: number;
+  warningCount: number;
+  primaryIssue: string | null;
+}
+
+interface DriverQualificationSummary {
+  driver: {
+    id: string;
+    name: string;
+    licenseClass: string | null;
+    licenseProvince: string | null;
+    licenseExpiry: string | null;
+    endorsements: {
+      airBrake: boolean;
+      houseTrailer: boolean;
+      heavyTrailer: boolean;
+    };
+    medicalExpiry: string | null;
+    experience: {
+      fifthWheel: boolean;
+      gooseneck: boolean;
+      horseTrailer: boolean;
+      boatLaunching: boolean;
+    };
+  };
+  summary: {
+    qualifiedFor: number;
+    totalTrailers: number;
+    percentageQualified: number;
+  };
+  trailerQualifications: TrailerQualification[];
+}
+
+export function useDriverQualifications(driverId: string | null) {
+  return useQuery<DriverQualificationSummary>({
+    queryKey: ['driver-qualifications', driverId],
+    queryFn: async () => {
+      if (!driverId) throw new Error('No driver ID');
+      const response = await fetch(`/api/fleet/driver-qualification-summary/${driverId}`);
+      if (!response.ok) throw new Error('Failed to fetch qualifications');
+      return response.json();
+    },
+    enabled: !!driverId,
+    staleTime: 30000, // 30 seconds
+  });
+}
+
+// Hook to check specific driver + trailer combo
+export function useQualificationCheck(driverId: string | null, trailerId: string | null) {
+  return useQuery({
+    queryKey: ['qualification-check', driverId, trailerId],
+    queryFn: async () => {
+      if (!driverId || !trailerId) throw new Error('Missing IDs');
+      const response = await fetch('/api/fleet/check-driver-qualification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ driverId, trailerId, province: 'BC' })
+      });
+      if (!response.ok) throw new Error('Failed to check qualification');
+      return response.json();
+    },
+    enabled: !!driverId && !!trailerId,
+  });
+}
+
+4. Updated TrailerCard with Qualification Badge
+Add qualification status to each trailer card in the Fleet Dashboard:
+tsx// ============================================
+// UPDATED TRAILER CARD WITH QUALIFICATION BADGE
+// Modify: client/src/components/Fleet/TrailerCard.tsx
+// ============================================
+
+// Add these imports at the top:
+import { QualificationBadge } from './QualificationBadge';
+import { useQualificationCheck } from '@/hooks/useDriverQualifications';
+
+// Inside TrailerCard component, add this hook call:
+// (You'll need to pass currentDriverId as a prop or get it from context)
+
+interface TrailerCardProps {
+  trailer: TrailerProfile;
+  currentDriverId?: string; // Add this prop
+  onEdit: () => void;
+  onHitchTo: () => void;
+}
+
+export function TrailerCard({ trailer, currentDriverId, onEdit, onHitchTo }: TrailerCardProps) {
+  // Check qualification if we have a current driver
+  const { data: qualificationData } = useQualificationCheck(
+    currentDriverId || null, 
+    trailer.id
+  );
+
+  return (
+    <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
+      {/* Existing card header */}
+      <div className="flex justify-between items-start mb-3">
+        <div className="flex items-center gap-2">
+          {/* Trailer icon */}
+          <div className="text-gray-400">
+            <Truck className="h-8 w-8" />
+          </div>
+          
+          {/* Qualification badge - NEW */}
+          {currentDriverId && qualificationData && (
+            <QualificationBadge
+              isQualified={qualificationData.qualification.isQualified}
+              issueCount={qualificationData.qualification.issues?.length || 0}
+              warningCount={qualificationData.qualification.warnings?.length || 0}
+              primaryIssue={qualificationData.qualification.issues?.[0] || null}
+              size="sm"
+            />
+          )}
+        </div>
+        
+        {/* Status badge */}
+        <span className={`px-2 py-1 rounded text-xs ${
+          trailer.fleet_status === 'available' 
+            ? 'bg-green-500/20 text-green-400' 
+            : 'bg-yellow-500/20 text-yellow-400'
+        }`}>
+          {trailer.fleet_status}
+        </span>
+      </div>
+
+      {/* Rest of existing card content... */}
+      <div className="mb-2">
+        {trailer.fleet_number && (
+          <span className="text-xs bg-gray-700 px-2 py-0.5 rounded mr-2">
+            {trailer.fleet_number}
+          </span>
+        )}
+      </div>
+      
+      <h3 className="font-semibold text-white">{trailer.nickname}</h3>
+      <p className="text-sm text-gray-400">
+        {trailer.trailer_type?.replace(/_/g, ' ')} - {trailer.color}
+      </p>
+      
+      {trailer.length_feet && (
+        <p className="text-sm text-gray-500">
+          {trailer.length_feet}' long - {trailer.gvwr_lbs?.toLocaleString()} lbs GVWR
+        </p>
+      )}
+
+      {/* Qualification warning banner - NEW */}
+      {currentDriverId && qualificationData && !qualificationData.qualification.isQualified && (
+        <div className="mt-3 p-2 bg-red-500/10 border border-red-500/30 rounded text-xs text-red-400">
+          <span className="font-medium">Cannot tow:</span> {qualificationData.qualification.issues?.[0]}
+        </div>
+      )}
+
+      {/* Action buttons */}
+      <div className="flex gap-2 mt-4">
+        <button
+          onClick={onHitchTo}
+          disabled={currentDriverId && qualificationData && !qualificationData.qualification.isQualified}
+          className={`flex-1 py-2 px-3 rounded text-sm ${
+            currentDriverId && qualificationData && !qualificationData.qualification.isQualified
+              ? 'bg-gray-700 text-gray-500 cursor-not-allowed'
+              : 'bg-gray-700 hover:bg-gray-600 text-white'
+          }`}
+        >
+          Hitch To...
+        </button>
+        <button
+          onClick={onEdit}
+          className="py-2 px-4 bg-blue-600 hover:bg-blue-500 rounded text-sm text-white"
+        >
+          Details
+        </button>
+      </div>
+    </div>
+  );
+}
+
+5. Driver Summary Card for Fleet Dashboard
+Add a driver qualification summary at the top of the Fleet page:
+tsx// ============================================
+// DRIVER QUALIFICATION SUMMARY CARD
+// Add to: client/src/components/Fleet/DriverQualificationSummary.tsx
+// ============================================
+
+import React from 'react';
+import { useDriverQualifications } from '@/hooks/useDriverQualifications';
+import { CheckCircle, AlertTriangle, User, Award } from 'lucide-react';
+
+interface DriverQualificationSummaryProps {
+  driverId: string;
+  onEditQualifications: () => void;
+}
+
+export function DriverQualificationSummary({ 
+  driverId, 
+  onEditQualifications 
+}: DriverQualificationSummaryProps) {
+  const { data, isLoading, error } = useDriverQualifications(driverId);
+
+  if (isLoading) {
+    return (
+      <div className="bg-gray-800 rounded-lg p-4 border border-gray-700 animate-pulse">
+        <div className="h-6 bg-gray-700 rounded w-1/3 mb-2"></div>
+        <div className="h-4 bg-gray-700 rounded w-1/2"></div>
+      </div>
+    );
+  }
+
+  if (error || !data) {
+    return null;
+  }
+
+  const { driver, summary } = data;
+  const hasIssues = summary.qualifiedFor < summary.totalTrailers;
+
+  return (
+    <div className={`bg-gray-800 rounded-lg p-4 border ${
+      hasIssues ? 'border-yellow-500/50' : 'border-gray-700'
+    }`}>
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-gray-700 rounded-full">
+            <User className="h-5 w-5 text-gray-400" />
+          </div>
+          <div>
+            <h3 className="font-semibold text-white">{driver.name}</h3>
+            <p className="text-sm text-gray-400">
+              {driver.licenseClass ? `Class ${driver.licenseClass}` : 'No license on file'} 
+              {driver.licenseProvince && ` (${driver.licenseProvince})`}
+            </p>
+          </div>
+        </div>
+        
+        <button
+          onClick={onEditQualifications}
+          className="text-sm text-blue-400 hover:text-blue-300"
+        >
+          Edit Qualifications
+        </button>
+      </div>
+
+      {/* Endorsements */}
+      <div className="flex flex-wrap gap-2 mb-3">
+        {driver.endorsements.airBrake && (
+          <span className="px-2 py-1 bg-green-500/20 text-green-400 rounded text-xs flex items-center gap-1">
+            <Award className="h-3 w-3" /> Air Brake
+          </span>
+        )}
+        {driver.endorsements.houseTrailer && (
+          <span className="px-2 py-1 bg-green-500/20 text-green-400 rounded text-xs flex items-center gap-1">
+            <Award className="h-3 w-3" /> Code 07
+          </span>
+        )}
+        {driver.endorsements.heavyTrailer && (
+          <span className="px-2 py-1 bg-green-500/20 text-green-400 rounded text-xs flex items-center gap-1">
+            <Award className="h-3 w-3" /> Code 20
+          </span>
+        )}
+        {!driver.endorsements.airBrake && !driver.endorsements.houseTrailer && !driver.endorsements.heavyTrailer && (
+          <span className="px-2 py-1 bg-gray-700 text-gray-400 rounded text-xs">
+            No endorsements
+          </span>
+        )}
+      </div>
+
+      {/* Qualification Summary */}
+      <div className="flex items-center gap-4 pt-3 border-t border-gray-700">
+        <div className="flex items-center gap-2">
+          {summary.qualifiedFor === summary.totalTrailers ? (
+            <CheckCircle className="h-5 w-5 text-green-500" />
+          ) : (
+            <AlertTriangle className="h-5 w-5 text-yellow-500" />
+          )}
+          <span className="text-sm">
+            <span className="font-medium text-white">{summary.qualifiedFor}</span>
+            <span className="text-gray-400"> / {summary.totalTrailers} trailers</span>
+          </span>
+        </div>
+        
+        {/* Progress bar */}
+        <div className="flex-1 h-2 bg-gray-700 rounded-full overflow-hidden">
+          <div 
+            className={`h-full ${
+              summary.percentageQualified === 100 
+                ? 'bg-green-500' 
+                : summary.percentageQualified >= 50 
+                  ? 'bg-yellow-500' 
+                  : 'bg-red-500'
+            }`}
+            style={{ width: `${summary.percentageQualified}%` }}
+          />
+        </div>
+        
+        <span className="text-sm text-gray-400">
+          {summary.percentageQualified}% qualified
+        </span>
+      </div>
+    </div>
+  );
+}
+
+Summary: Files to Create/Modify
+FileActionclient/src/components/Fleet/QualificationBadge.tsxCREATE - New componentclient/src/hooks/useDriverQualifications.tsCREATE - New hooks fileclient/src/components/Fleet/DriverQualificationSummary.tsxCREATE - Summary cardclient/src/components/Fleet/TrailerCard.tsxMODIFY - Add badgeclient/src/components/Fleet/FleetDashboard.tsxMODIFY - Add summary cardTrip Planning Edit ProfileMODIFY - Add qualifications tab
