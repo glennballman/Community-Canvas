@@ -220,10 +220,7 @@ export async function registerRoutes(
       const companycam = new CompanyCamService({ accessToken });
       const result = await companycam.testConnection();
       
-      res.json({
-        connected: true,
-        ...result,
-      });
+      res.json(result);
     } catch (error) {
       console.error('CompanyCam connection test error:', error);
       res.status(500).json({ 

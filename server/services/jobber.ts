@@ -120,6 +120,31 @@ interface JobberJob {
   };
 }
 
+// Global rate limiter for Jobber API - prevents concurrent requests
+let lastJobberRequestTime = 0;
+const MIN_REQUEST_INTERVAL = 2000; // Minimum 2 seconds between requests
+let requestQueue: Promise<void> = Promise.resolve();
+
+async function acquireJobberRateLimitSlot(): Promise<void> {
+  // Queue requests to ensure they run sequentially
+  const previousRequest = requestQueue;
+  let resolveSlot: () => void;
+  requestQueue = new Promise<void>(resolve => { resolveSlot = resolve; });
+  
+  await previousRequest;
+  
+  const now = Date.now();
+  const timeSinceLastRequest = now - lastJobberRequestTime;
+  if (timeSinceLastRequest < MIN_REQUEST_INTERVAL) {
+    const waitTime = MIN_REQUEST_INTERVAL - timeSinceLastRequest;
+    console.log(`[Jobber] Rate limiting: waiting ${waitTime}ms before request`);
+    await new Promise(resolve => setTimeout(resolve, waitTime));
+  }
+  
+  lastJobberRequestTime = Date.now();
+  resolveSlot!();
+}
+
 export class JobberService {
   private accessToken: string;
 
@@ -127,7 +152,10 @@ export class JobberService {
     this.accessToken = config.accessToken;
   }
 
-  private async graphqlRequest<T>(query: string, variables: Record<string, unknown> = {}, retries = 3): Promise<T> {
+  private async graphqlRequest<T>(query: string, variables: Record<string, unknown> = {}, retries = 5): Promise<T> {
+    // Acquire rate limit slot before making request
+    await acquireJobberRateLimitSlot();
+    
     const response = await fetch(JOBBER_API_URL, {
       method: 'POST',
       headers: {
@@ -149,8 +177,9 @@ export class JobberService {
       );
       
       if (isThrottled && retries > 0) {
-        const waitTime = Math.pow(2, 4 - retries) * 1000;
-        console.log(`Jobber API throttled, waiting ${waitTime}ms before retry...`);
+        // Exponential backoff starting at 15 seconds, then 30s, 60s, 120s, 240s
+        const waitTime = 15000 * Math.pow(2, 5 - retries);
+        console.log(`[Jobber] API throttled, attempt ${6 - retries}/5, waiting ${waitTime / 1000}s before retry...`);
         await new Promise(resolve => setTimeout(resolve, waitTime));
         return this.graphqlRequest<T>(query, variables, retries - 1);
       }
@@ -272,9 +301,22 @@ export class JobberService {
   }
 
   async getJobByNumber(jobNumber: string): Promise<JobberJob | null> {
+    // Check if this looks like a base64-encoded ID (Jobber uses base64 for IDs)
+    const isEncodedId = /^[A-Za-z0-9+/=]+$/.test(jobNumber) && jobNumber.length > 8;
+    
+    if (isEncodedId) {
+      // Try to fetch directly by ID first
+      try {
+        return await this.getJob(jobNumber);
+      } catch (error) {
+        console.log('[Jobber] Failed to fetch by encoded ID, trying job number search...');
+      }
+    }
+    
+    // Fetch recent jobs and filter client-side by job number
     const query = `
-      query SearchJob($filter: JobFilterAttributes) {
-        jobs(filter: $filter, first: 1) {
+      query GetJobsByNumber {
+        jobs(first: 100) {
           nodes {
             id
             jobNumber
@@ -311,12 +353,15 @@ export class JobberService {
       }
     `;
 
-    const response = await this.graphqlRequest<{ jobs: { nodes: JobberJob[] } }>(query, {
-      filter: {
-        search: jobNumber,
-      },
-    });
-    return response.jobs.nodes[0] || null;
+    const response = await this.graphqlRequest<{ jobs: { nodes: JobberJob[] } }>(query);
+    
+    // Filter by job number (convert to string for comparison)
+    const matchedJob = response.jobs.nodes.find(job => 
+      job.jobNumber?.toString() === jobNumber || 
+      job.id === jobNumber
+    );
+    
+    return matchedJob || null;
   }
 }
 
