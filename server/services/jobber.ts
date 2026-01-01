@@ -127,13 +127,13 @@ export class JobberService {
     this.accessToken = config.accessToken;
   }
 
-  private async graphqlRequest<T>(query: string, variables: Record<string, unknown> = {}): Promise<T> {
+  private async graphqlRequest<T>(query: string, variables: Record<string, unknown> = {}, retries = 3): Promise<T> {
     const response = await fetch(JOBBER_API_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${this.accessToken}`,
-        'X-JOBBER-GRAPHQL-VERSION': '2024-06-12',
+        'X-JOBBER-GRAPHQL-VERSION': '2023-11-15',
       },
       body: JSON.stringify({ query, variables }),
     });
@@ -144,6 +144,17 @@ export class JobberService {
 
     const result = await response.json();
     if (result.errors) {
+      const isThrottled = result.errors.some((e: { extensions?: { code?: string } }) => 
+        e.extensions?.code === 'THROTTLED'
+      );
+      
+      if (isThrottled && retries > 0) {
+        const waitTime = Math.pow(2, 4 - retries) * 1000;
+        console.log(`Jobber API throttled, waiting ${waitTime}ms before retry...`);
+        await new Promise(resolve => setTimeout(resolve, waitTime));
+        return this.graphqlRequest<T>(query, variables, retries - 1);
+      }
+      
       throw new Error(`Jobber GraphQL error: ${JSON.stringify(result.errors)}`);
     }
 
@@ -205,8 +216,8 @@ export class JobberService {
 
   async getJobsForDateRange(startDate: string, endDate: string): Promise<JobberJob[]> {
     const query = `
-      query GetJobs($filter: JobFilterAttributes) {
-        jobs(filter: $filter, first: 50) {
+      query GetJobs {
+        jobs(first: 50) {
           nodes {
             id
             jobNumber
@@ -228,13 +239,36 @@ export class JobberService {
       }
     `;
 
-    const response = await this.graphqlRequest<{ jobs: { nodes: JobberJob[] } }>(query, {
-      filter: {
-        startDate,
-        endDate,
-      },
+    const response = await this.graphqlRequest<{ jobs: { nodes: JobberJob[] } }>(query);
+    
+    // Client-side filter by date if visits exist
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    
+    return response.jobs.nodes.filter(job => {
+      if (!job.visits?.nodes?.length) return true;
+      return job.visits.nodes.some(visit => {
+        const visitDate = new Date(visit.startAt);
+        return visitDate >= start && visitDate <= end;
+      });
     });
-    return response.jobs.nodes;
+  }
+
+  async testConnection(): Promise<{ name: string; email: string } | null> {
+    const query = `
+      query TestConnection {
+        account {
+          name
+        }
+      }
+    `;
+
+    try {
+      const response = await this.graphqlRequest<{ account: { name: string } }>(query);
+      return { name: response.account.name, email: '' };
+    } catch (error) {
+      throw error;
+    }
   }
 
   async getJobByNumber(jobNumber: string): Promise<JobberJob | null> {

@@ -124,6 +124,33 @@ export async function registerRoutes(
     }
   });
 
+  // Jobber connection test endpoint
+  app.get('/api/v1/integrations/jobber/test', async (req, res) => {
+    try {
+      const accessToken = process.env.JOBBER_ACCESS_TOKEN;
+      if (!accessToken) {
+        return res.status(401).json({ 
+          connected: false,
+          error: 'JOBBER_ACCESS_TOKEN not configured'
+        });
+      }
+
+      const jobber = new JobberService({ accessToken });
+      const result = await jobber.testConnection();
+      
+      res.json({
+        connected: true,
+        account: result,
+      });
+    } catch (error) {
+      console.error('Jobber connection test error:', error);
+      res.status(500).json({ 
+        connected: false, 
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
   // Jobber integration endpoint
   app.get('/api/v1/integrations/jobber/job/:jobNumber', async (req, res) => {
     try {
