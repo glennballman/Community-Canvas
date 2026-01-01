@@ -1,0 +1,498 @@
+Now let's add the scoring functions and triggers. Run this SQL:
+
+-- ============================================================================
+-- SCORING FUNCTIONS
+-- ============================================================================
+
+-- Crew Score (Work crews with trucks/trailers)
+CREATE OR REPLACE FUNCTION calculate_crew_score(prop staging_properties) RETURNS INTEGER AS $$
+DECLARE
+    score INTEGER := 0;
+BEGIN
+    -- Dimensions (big rigs)
+    IF prop.max_combined_length_ft >= 80 THEN score := score + 25;
+    ELSIF prop.max_combined_length_ft >= 60 THEN score := score + 15;
+    ELSIF prop.max_combined_length_ft >= 40 THEN score := score + 5;
+    END IF;
+    
+    -- Power
+    IF prop.has_shore_power THEN score := score + 15;
+        IF 50 = ANY(prop.power_amps) THEN score := score + 5; END IF;
+    END IF;
+    
+    -- Security
+    IF prop.is_fenced THEN score := score + 8; END IF;
+    IF prop.is_gated THEN score := score + 5; END IF;
+    IF prop.has_security_camera THEN score := score + 4; END IF;
+    IF prop.has_24hr_security THEN score := score + 8; END IF;
+    
+    -- Facilities
+    IF prop.has_bathrooms THEN score := score + 8; END IF;
+    IF prop.has_showers THEN score := score + 5; END IF;
+    IF prop.has_wifi THEN score := score + 5; END IF;
+    IF prop.has_laundry THEN score := score + 3; END IF;
+    
+    -- Access
+    IF prop.access_type = '24/7' THEN score := score + 5; END IF;
+    IF prop.spots_pull_through > 0 THEN score := score + 4; END IF;
+    
+    RETURN LEAST(score, 100);
+END;
+$$ LANGUAGE plpgsql;
+
+-- RV Score (RV travelers)
+CREATE OR REPLACE FUNCTION calculate_rv_score(prop staging_properties) RETURNS INTEGER AS $$
+DECLARE
+    score INTEGER := 0;
+BEGIN
+    -- Hookups (most important)
+    IF prop.has_shore_power THEN score := score + 20; END IF;
+    IF prop.has_water_hookup THEN score := score + 15; END IF;
+    IF prop.has_sewer_hookup THEN score := score + 15; END IF;
+    IF prop.has_dump_station THEN score := score + 8; END IF;
+    
+    -- Facilities
+    IF prop.has_bathrooms THEN score := score + 5; END IF;
+    IF prop.has_showers THEN score := score + 5; END IF;
+    IF prop.has_laundry THEN score := score + 4; END IF;
+    IF prop.has_wifi THEN score := score + 4; END IF;
+    
+    -- Amenities
+    IF prop.has_pool THEN score := score + 4; END IF;
+    IF prop.has_hot_tub THEN score := score + 3; END IF;
+    IF prop.has_playground THEN score := score + 3; END IF;
+    IF prop.has_dog_park THEN score := score + 3; END IF;
+    
+    -- Size
+    IF prop.max_combined_length_ft >= 45 THEN score := score + 4; END IF;
+    IF prop.spots_pull_through > 0 THEN score := score + 5; END IF;
+    
+    -- RV Services
+    IF prop.has_propane_refill THEN score := score + 2; END IF;
+    
+    RETURN LEAST(score, 100);
+END;
+$$ LANGUAGE plpgsql;
+
+-- Trucker Score
+CREATE OR REPLACE FUNCTION calculate_trucker_score(prop staging_properties) RETURNS INTEGER AS $$
+DECLARE
+    score INTEGER := 0;
+BEGIN
+    -- Size
+    IF prop.max_combined_length_ft >= 80 THEN score := score + 15;
+    ELSIF prop.max_combined_length_ft >= 70 THEN score := score + 10;
+    END IF;
+    
+    IF prop.accepts_semi_trucks THEN score := score + 5; END IF;
+    IF prop.spots_pull_through > 0 THEN score := score + 8; END IF;
+    IF prop.can_drop_trailer THEN score := score + 5; END IF;
+    
+    -- KILLER FEATURES
+    IF prop.has_onsite_mechanic THEN score := score + 20; END IF;
+    IF prop.has_24hr_repair THEN score := score + 10; END IF;
+    IF prop.has_tire_service THEN score := score + 5; END IF;
+    
+    -- Fuel
+    IF prop.has_diesel THEN score := score + 8; END IF;
+    IF prop.has_high_flow_diesel THEN score := score + 3; END IF;
+    IF prop.has_cat_scale THEN score := score + 5; END IF;
+    
+    -- Amenities
+    IF prop.has_truck_showers THEN score := score + 5; END IF;
+    IF prop.has_restaurant THEN score := score + 3; END IF;
+    IF prop.has_laundry THEN score := score + 2; END IF;
+    
+    -- Security
+    IF prop.is_fenced AND prop.is_gated THEN score := score + 5; END IF;
+    IF prop.has_24hr_security THEN score := score + 5; END IF;
+    
+    RETURN LEAST(score, 100);
+END;
+$$ LANGUAGE plpgsql;
+
+-- Equestrian Score
+CREATE OR REPLACE FUNCTION calculate_equestrian_score(prop staging_properties) RETURNS INTEGER AS $$
+DECLARE
+    score INTEGER := 0;
+BEGIN
+    IF NOT prop.is_horse_friendly THEN RETURN 0; END IF;
+    
+    -- Stabling
+    IF prop.num_horse_stalls > 0 THEN score := score + 20; END IF;
+    IF prop.has_paddocks THEN score := score + 15; END IF;
+    IF prop.has_round_pen THEN score := score + 8; END IF;
+    IF prop.has_arena THEN score := score + 12; END IF;
+    
+    -- Care
+    IF prop.has_hay_available THEN score := score + 10; END IF;
+    IF prop.has_water_trough THEN score := score + 8; END IF;
+    IF prop.has_wash_rack THEN score := score + 5; END IF;
+    IF prop.has_manure_disposal THEN score := score + 5; END IF;
+    
+    -- Trails
+    IF prop.has_horse_trail_access THEN score := score + 15; END IF;
+    
+    -- Hookups for LQ trailers
+    IF prop.has_shore_power THEN score := score + 2; END IF;
+    
+    RETURN LEAST(score, 100);
+END;
+$$ LANGUAGE plpgsql;
+
+-- Family Score
+CREATE OR REPLACE FUNCTION calculate_family_score(prop staging_properties) RETURNS INTEGER AS $$
+DECLARE
+    score INTEGER := 0;
+BEGIN
+    -- Kid-friendly
+    IF prop.has_playground THEN score := score + 15; END IF;
+    IF prop.has_pool THEN score := score + 12; END IF;
+    IF prop.has_game_room THEN score := score + 8; END IF;
+    IF prop.has_swimming THEN score := score + 10; END IF;
+    
+    -- Safety
+    IF prop.is_gated THEN score := score + 5; END IF;
+    IF prop.has_onsite_manager THEN score := score + 5; END IF;
+    
+    -- Facilities
+    IF prop.has_bathrooms THEN score := score + 8; END IF;
+    IF prop.has_showers THEN score := score + 5; END IF;
+    IF prop.has_laundry THEN score := score + 8; END IF;
+    IF prop.has_store THEN score := score + 5; END IF;
+    
+    -- Activities
+    IF prop.has_hiking_trails THEN score := score + 5; END IF;
+    IF prop.has_bike_rental THEN score := score + 4; END IF;
+    IF prop.has_kayak_rental THEN score := score + 4; END IF;
+    IF prop.has_fishing THEN score := score + 4; END IF;
+    
+    -- Pet friendly (families often have dogs)
+    IF prop.dogs_allowed THEN score := score + 2; END IF;
+    
+    RETURN LEAST(score, 100);
+END;
+$$ LANGUAGE plpgsql;
+
+-- Long-term Score
+CREATE OR REPLACE FUNCTION calculate_long_term_score(prop staging_properties) RETURNS INTEGER AS $$
+DECLARE
+    score INTEGER := 0;
+BEGIN
+    -- Full hookups essential
+    IF prop.has_shore_power AND prop.has_water_hookup AND prop.has_sewer_hookup THEN
+        score := score + 30;
+    ELSIF prop.has_shore_power AND prop.has_water_hookup THEN
+        score := score + 15;
+    END IF;
+    
+    -- Laundry essential
+    IF prop.has_laundry THEN score := score + 15; END IF;
+    
+    -- Connectivity
+    IF prop.has_wifi THEN score := score + 10; END IF;
+    IF prop.wifi_speed_mbps >= 25 THEN score := score + 5; END IF;
+    IF prop.cell_signal_strength >= 3 THEN score := score + 5; END IF;
+    
+    -- Mail/packages
+    IF prop.has_store THEN score := score + 5; END IF;
+    
+    -- Max stay
+    IF prop.max_stay_days >= 180 THEN score := score + 15; END IF;
+    IF prop.max_stay_days >= 364 THEN score := score + 5; END IF;
+    
+    -- Monthly rate available
+    -- (Would check pricing table, for now use proxy)
+    IF prop.property_type IN ('rv_park', 'campground') THEN score := score + 5; END IF;
+    
+    RETURN LEAST(score, 100);
+END;
+$$ LANGUAGE plpgsql;
+
+-- ============================================================================
+-- UPDATE ALL SCORES TRIGGER
+-- ============================================================================
+
+CREATE OR REPLACE FUNCTION update_all_staging_scores() RETURNS TRIGGER AS $$
+BEGIN
+    NEW.crew_score := calculate_crew_score(NEW);
+    NEW.rv_score := calculate_rv_score(NEW);
+    NEW.trucker_score := calculate_trucker_score(NEW);
+    NEW.equestrian_score := calculate_equestrian_score(NEW);
+    NEW.family_score := calculate_family_score(NEW);
+    NEW.long_term_score := calculate_long_term_score(NEW);
+    NEW.updated_at := CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trigger_update_staging_scores ON staging_properties;
+CREATE TRIGGER trigger_update_staging_scores
+    BEFORE INSERT OR UPDATE ON staging_properties
+    FOR EACH ROW
+    EXECUTE FUNCTION update_all_staging_scores();
+
+-- ============================================================================
+-- BOOKING REFERENCE GENERATOR
+-- ============================================================================
+
+CREATE OR REPLACE FUNCTION generate_staging_booking_ref() RETURNS VARCHAR AS $$
+DECLARE
+    today_str VARCHAR;
+    seq_num INTEGER;
+BEGIN
+    today_str := TO_CHAR(CURRENT_DATE, 'YYYYMMDD');
+    SELECT COALESCE(MAX(
+        SUBSTRING(booking_ref FROM 'CC-STG-' || today_str || '-(\d+)')::INTEGER
+    ), 0) + 1
+    INTO seq_num
+    FROM staging_bookings
+    WHERE booking_ref LIKE 'CC-STG-' || today_str || '-%';
+    RETURN 'CC-STG-' || today_str || '-' || LPAD(seq_num::TEXT, 3, '0');
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION set_staging_booking_ref() RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.booking_ref IS NULL THEN
+        NEW.booking_ref := generate_staging_booking_ref();
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS staging_booking_ref_trigger ON staging_bookings;
+CREATE TRIGGER staging_booking_ref_trigger
+    BEFORE INSERT ON staging_bookings
+    FOR EACH ROW
+    EXECUTE FUNCTION set_staging_booking_ref();
+
+-- ============================================================================
+-- CANVAS ID GENERATOR
+-- ============================================================================
+
+CREATE OR REPLACE FUNCTION generate_staging_canvas_id() RETURNS VARCHAR AS $$
+DECLARE
+    seq_num INTEGER;
+BEGIN
+    SELECT COALESCE(MAX(
+        SUBSTRING(canvas_id FROM 'CC-STG-(\d+)')::INTEGER
+    ), 0) + 1
+    INTO seq_num
+    FROM staging_properties
+    WHERE canvas_id IS NOT NULL;
+    RETURN 'CC-STG-' || LPAD(seq_num::TEXT, 5, '0');
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION set_staging_canvas_id() RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.canvas_id IS NULL THEN
+        NEW.canvas_id := generate_staging_canvas_id();
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS staging_canvas_id_trigger ON staging_properties;
+CREATE TRIGGER staging_canvas_id_trigger
+    BEFORE INSERT ON staging_properties
+    FOR EACH ROW
+    EXECUTE FUNCTION set_staging_canvas_id();
+
+-- ============================================================================
+-- TIMESTAMP UPDATE TRIGGER
+-- ============================================================================
+
+CREATE OR REPLACE FUNCTION update_timestamp() RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS update_host_accounts_ts ON host_accounts;
+CREATE TRIGGER update_host_accounts_ts BEFORE UPDATE ON host_accounts
+    FOR EACH ROW EXECUTE FUNCTION update_timestamp();
+
+DROP TRIGGER IF EXISTS update_staging_spots_ts ON staging_spots;
+CREATE TRIGGER update_staging_spots_ts BEFORE UPDATE ON staging_spots
+    FOR EACH ROW EXECUTE FUNCTION update_timestamp();
+
+DROP TRIGGER IF EXISTS update_staging_bookings_ts ON staging_bookings;
+CREATE TRIGGER update_staging_bookings_ts BEFORE UPDATE ON staging_bookings
+    FOR EACH ROW EXECUTE FUNCTION update_timestamp();
+
+DROP TRIGGER IF EXISTS update_service_providers_ts ON staging_service_providers;
+CREATE TRIGGER update_service_providers_ts BEFORE UPDATE ON staging_service_providers
+    FOR EACH ROW EXECUTE FUNCTION update_timestamp();
+
+-- ============================================================================
+-- AVAILABILITY SEARCH FUNCTION
+-- ============================================================================
+
+CREATE OR REPLACE FUNCTION find_available_staging(
+    p_check_in DATE,
+    p_check_out DATE,
+    p_vehicle_length_ft INTEGER DEFAULT NULL,
+    p_needs_power BOOLEAN DEFAULT false,
+    p_power_amps INTEGER DEFAULT NULL,
+    p_needs_water BOOLEAN DEFAULT false,
+    p_needs_sewer BOOLEAN DEFAULT false,
+    p_needs_pull_through BOOLEAN DEFAULT false,
+    p_is_horse_friendly BOOLEAN DEFAULT false,
+    p_accepts_semi BOOLEAN DEFAULT false,
+    p_has_mechanic BOOLEAN DEFAULT false,
+    p_dogs_allowed BOOLEAN DEFAULT false,
+    p_region VARCHAR DEFAULT NULL,
+    p_city VARCHAR DEFAULT NULL,
+    p_property_type VARCHAR DEFAULT NULL,
+    p_max_nightly_rate DECIMAL DEFAULT NULL,
+    p_sort_by VARCHAR DEFAULT 'rv_score',
+    p_limit INTEGER DEFAULT 50,
+    p_offset INTEGER DEFAULT 0
+) RETURNS TABLE (
+    id INTEGER,
+    canvas_id VARCHAR,
+    name VARCHAR,
+    property_type VARCHAR,
+    city VARCHAR,
+    region VARCHAR,
+    max_combined_length_ft INTEGER,
+    has_shore_power BOOLEAN,
+    power_amps INTEGER[],
+    has_water_hookup BOOLEAN,
+    has_sewer_hookup BOOLEAN,
+    spots_pull_through INTEGER,
+    is_horse_friendly BOOLEAN,
+    accepts_semi_trucks BOOLEAN,
+    has_onsite_mechanic BOOLEAN,
+    dogs_allowed BOOLEAN,
+    thumbnail_url TEXT,
+    crew_score INTEGER,
+    rv_score INTEGER,
+    trucker_score INTEGER,
+    equestrian_score INTEGER,
+    overall_rating DECIMAL,
+    review_count INTEGER,
+    base_nightly_rate DECIMAL
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        sp.id,
+        sp.canvas_id,
+        sp.name,
+        sp.property_type,
+        sp.city,
+        sp.region,
+        sp.max_combined_length_ft,
+        sp.has_shore_power,
+        sp.power_amps,
+        sp.has_water_hookup,
+        sp.has_sewer_hookup,
+        sp.spots_pull_through,
+        sp.is_horse_friendly,
+        sp.accepts_semi_trucks,
+        sp.has_onsite_mechanic,
+        sp.dogs_allowed,
+        sp.thumbnail_url,
+        sp.crew_score,
+        sp.rv_score,
+        sp.trucker_score,
+        sp.equestrian_score,
+        sp.overall_rating,
+        sp.review_count,
+        pr.nightly_rate as base_nightly_rate
+    FROM staging_properties sp
+    LEFT JOIN staging_pricing pr ON pr.property_id = sp.id 
+        AND pr.pricing_type = 'base_nightly' AND pr.is_active = true
+    WHERE sp.status = 'active'
+      AND (p_vehicle_length_ft IS NULL OR sp.max_combined_length_ft >= p_vehicle_length_ft)
+      AND (NOT p_needs_power OR sp.has_shore_power = true)
+      AND (p_power_amps IS NULL OR p_power_amps = ANY(sp.power_amps))
+      AND (NOT p_needs_water OR sp.has_water_hookup = true)
+      AND (NOT p_needs_sewer OR sp.has_sewer_hookup = true)
+      AND (NOT p_needs_pull_through OR sp.spots_pull_through > 0)
+      AND (NOT p_is_horse_friendly OR sp.is_horse_friendly = true)
+      AND (NOT p_accepts_semi OR sp.accepts_semi_trucks = true)
+      AND (NOT p_has_mechanic OR sp.has_onsite_mechanic = true)
+      AND (NOT p_dogs_allowed OR sp.dogs_allowed = true)
+      AND (p_region IS NULL OR sp.region = p_region)
+      AND (p_city IS NULL OR sp.city ILIKE '%' || p_city || '%')
+      AND (p_property_type IS NULL OR sp.property_type = p_property_type)
+      AND (p_max_nightly_rate IS NULL OR pr.nightly_rate <= p_max_nightly_rate)
+      AND NOT EXISTS (
+          SELECT 1 FROM staging_calendar_blocks scb
+          WHERE scb.property_id = sp.id
+            AND scb.spot_id IS NULL
+            AND scb.start_date < p_check_out
+            AND scb.end_date > p_check_in
+      )
+    ORDER BY 
+        CASE p_sort_by
+            WHEN 'rv_score' THEN sp.rv_score
+            WHEN 'crew_score' THEN sp.crew_score
+            WHEN 'trucker_score' THEN sp.trucker_score
+            WHEN 'equestrian_score' THEN sp.equestrian_score
+            WHEN 'rating' THEN COALESCE(sp.overall_rating * 20, 0)::INTEGER
+            WHEN 'price_low' THEN -COALESCE(pr.nightly_rate, 9999)::INTEGER
+            WHEN 'price_high' THEN COALESCE(pr.nightly_rate, 0)::INTEGER
+            ELSE sp.rv_score
+        END DESC,
+        sp.review_count DESC
+    LIMIT p_limit
+    OFFSET p_offset;
+END;
+$$ LANGUAGE plpgsql;
+
+-- ============================================================================
+-- UPDATE RATING AVERAGES FUNCTION
+-- ============================================================================
+
+CREATE OR REPLACE FUNCTION update_property_ratings() RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.property_id IS NOT NULL THEN
+        UPDATE staging_properties SET
+            overall_rating = (
+                SELECT AVG(overall_rating) FROM staging_reviews 
+                WHERE property_id = NEW.property_id AND is_published = true
+            ),
+            cleanliness_rating = (
+                SELECT AVG(cleanliness_rating) FROM staging_reviews 
+                WHERE property_id = NEW.property_id AND is_published = true AND cleanliness_rating IS NOT NULL
+            ),
+            accuracy_rating = (
+                SELECT AVG(accuracy_rating) FROM staging_reviews 
+                WHERE property_id = NEW.property_id AND is_published = true AND accuracy_rating IS NOT NULL
+            ),
+            communication_rating = (
+                SELECT AVG(communication_rating) FROM staging_reviews 
+                WHERE property_id = NEW.property_id AND is_published = true AND communication_rating IS NOT NULL
+            ),
+            location_rating = (
+                SELECT AVG(location_rating) FROM staging_reviews 
+                WHERE property_id = NEW.property_id AND is_published = true AND location_rating IS NOT NULL
+            ),
+            value_rating = (
+                SELECT AVG(value_rating) FROM staging_reviews 
+                WHERE property_id = NEW.property_id AND is_published = true AND value_rating IS NOT NULL
+            ),
+            review_count = (
+                SELECT COUNT(*) FROM staging_reviews 
+                WHERE property_id = NEW.property_id AND is_published = true
+            )
+        WHERE id = NEW.property_id;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trigger_update_property_ratings ON staging_reviews;
+CREATE TRIGGER trigger_update_property_ratings
+    AFTER INSERT OR UPDATE ON staging_reviews
+    FOR EACH ROW
+    EXECUTE FUNCTION update_property_ratings();
+
+-- Done with functions!
+SELECT 'All functions and triggers created!' as status;
