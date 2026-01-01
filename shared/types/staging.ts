@@ -1,0 +1,406 @@
+// ============================================================================
+// STAGING NETWORK TYPES
+// ============================================================================
+
+// Enums
+export type PropertyType = 
+  | 'parking_lot' | 'rv_park' | 'campground' | 'farm_stay' 
+  | 'industrial_yard' | 'accommodation' | 'hybrid' | 'boondocking' 
+  | 'marina' | 'equestrian';
+
+export type PropertyStatus = 'discovered' | 'contacted' | 'onboarded' | 'active' | 'inactive' | 'seasonal';
+
+export type SpotType = 
+  | 'rv_full_hookup' | 'rv_partial' | 'rv_dry' | 'rv_pull_through'
+  | 'parking_standard' | 'parking_oversized' | 'parking_pull_through'
+  | 'tent' | 'cabin' | 'glamping' | 'horse_stall' | 'paddock';
+
+export type BookingStatus = 
+  | 'pending' | 'confirmed' | 'checked_in' | 'checked_out' 
+  | 'completed' | 'cancelled' | 'no_show';
+
+export type PaymentStatus = 'pending' | 'deposit_paid' | 'paid' | 'partial_refund' | 'refunded';
+
+export type ProviderType = 
+  // Mechanical
+  | 'mechanic_diesel' | 'mechanic_gas' | 'mechanic_rv' | 'tire_service' 
+  | 'welder' | 'electrician_auto' | 'transmission' | 'mobile_mechanic'
+  // RV
+  | 'rv_technician' | 'generator_repair' | 'appliance_repair'
+  // Equestrian  
+  | 'farrier' | 'veterinarian' | 'vet_emergency' | 'horse_trainer'
+  // General
+  | 'cleaning' | 'catering' | 'propane_delivery' | 'locksmith'
+  // Emergency
+  | 'towing_light' | 'towing_heavy' | 'roadside_assist' | 'fuel_delivery';
+
+export type VehicleType = 
+  | 'class_a' | 'class_b' | 'class_c' | 'travel_trailer' | 'fifth_wheel'
+  | 'toy_hauler' | 'truck_camper' | 'popup' | 'teardrop' | 'van'
+  | 'cargo_trailer' | 'semi_truck' | 'work_truck' | 'horse_trailer'
+  | 'boat_trailer' | 'car_hauler' | 'tiny_house';
+
+// ============================================================================
+// MAIN ENTITIES
+// ============================================================================
+
+export interface StagingProperty {
+  id: number;
+  canvasId: string;
+  
+  // Basic
+  name: string;
+  description?: string;
+  shortDescription?: string;
+  tagline?: string;
+  propertyType: PropertyType;
+  propertySubtype?: string;
+  
+  // Location
+  region?: string;
+  city?: string;
+  address?: string;
+  latitude?: number;
+  longitude?: number;
+  locationDescription?: string;
+  nearestTown?: string;
+  distanceToTownKm?: number;
+  
+  // Capacity
+  totalSpots: number;
+  spotsSmall: number;
+  spotsMedium: number;
+  spotsLarge: number;
+  spotsOversized: number;
+  spotsPullThrough: number;
+  
+  // Dimensions
+  maxVehicleLengthFt?: number;
+  maxCombinedLengthFt?: number;
+  maxVehicleWidthFt?: number;
+  maxVehicleHeightFt?: number;
+  surfaceType?: string;
+  
+  // Hookups
+  hasShorePower: boolean;
+  powerAmps?: number[];
+  powerIncluded: boolean;
+  hasWaterHookup: boolean;
+  waterIncluded: boolean;
+  hasSewerHookup: boolean;
+  hasDumpStation: boolean;
+  
+  // Connectivity
+  hasWifi: boolean;
+  wifiSpeedMbps?: number;
+  hasCellSignal: boolean;
+  cellSignalStrength?: number;
+  
+  // Facilities
+  hasBathrooms: boolean;
+  hasShowers: boolean;
+  hasLaundry: boolean;
+  hasKitchen: boolean;
+  hasRestaurant: boolean;
+  hasStore: boolean;
+  
+  // RV Services
+  hasPropaneRefill: boolean;
+  hasRvWash: boolean;
+  hasFirewood: boolean;
+  
+  // Recreation
+  hasPool: boolean;
+  hasHotTub: boolean;
+  hasPlayground: boolean;
+  hasHikingTrails: boolean;
+  hasFishing: boolean;
+  hasBoatLaunch: boolean;
+  
+  // Security
+  isFenced: boolean;
+  isGated: boolean;
+  hasSecurityCamera: boolean;
+  has24hrSecurity: boolean;
+  
+  // Pets
+  petsAllowed: boolean;
+  dogsAllowed: boolean;
+  hasDogPark: boolean;
+  petFeePerNight?: number;
+  
+  // Equestrian
+  isHorseFriendly: boolean;
+  numHorseStalls: number;
+  hasPaddocks: boolean;
+  hasArena: boolean;
+  hasHayAvailable: boolean;
+  hasHorseTrailAccess: boolean;
+  
+  // Trucking
+  acceptsSemiTrucks: boolean;
+  numTruckSpots: number;
+  canDropTrailer: boolean;
+  hasReeferParking: boolean;
+  hasDiesel: boolean;
+  hasCatScale: boolean;
+  
+  // Repair Services
+  hasRepairServices: boolean;
+  hasOnsiteMechanic: boolean;
+  has24hrRepair: boolean;
+  hasTireService: boolean;
+  hasTowing: boolean;
+  
+  // Nature
+  isWaterfront: boolean;
+  waterfrontType?: string;
+  isDarkSky: boolean;
+  elevationFt?: number;
+  
+  // Ratings & Scores
+  overallRating?: number;
+  reviewCount: number;
+  crewScore: number;
+  rvScore: number;
+  truckerScore: number;
+  equestrianScore: number;
+  familyScore: number;
+  longTermScore: number;
+  
+  // Media
+  thumbnailUrl?: string;
+  images?: string[];
+  
+  // Status
+  status: PropertyStatus;
+  isVerified: boolean;
+  
+  // Pricing (joined)
+  baseNightlyRate?: number;
+  baseWeeklyRate?: number;
+  baseMonthlyRate?: number;
+  
+  // Meta
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface StagingSpot {
+  id: number;
+  propertyId: number;
+  spotNumber?: string;
+  spotName?: string;
+  spotType: SpotType;
+  
+  lengthFt?: number;
+  widthFt?: number;
+  maxVehicleLengthFt?: number;
+  maxCombinedLengthFt?: number;
+  
+  isPullThrough: boolean;
+  isBackIn: boolean;
+  siteOrientation?: string;
+  slideOutClearanceFt?: number;
+  
+  hasPower: boolean;
+  powerAmps?: number;
+  hasWater: boolean;
+  hasSewer: boolean;
+  
+  isShaded: boolean;
+  isWaterfront: boolean;
+  hasPicnicTable: boolean;
+  hasFireRing: boolean;
+  viewType?: string;
+  
+  isPremium: boolean;
+  isAccessible: boolean;
+  
+  nightlyRateOverride?: number;
+  isAvailable: boolean;
+  status: string;
+}
+
+export interface ServiceProvider {
+  id: number;
+  propertyId: number;
+  providerType: ProviderType;
+  
+  businessName?: string;
+  providerName?: string;
+  isResident: boolean;
+  isEmployee: boolean;
+  
+  phone?: string;
+  phone24hr?: string;
+  email?: string;
+  website?: string;
+  
+  hoursRegular?: Record<string, string>;
+  available24hr: boolean;
+  availableAfterHours: boolean;
+  afterHoursFee?: number;
+  responseTimeMinutes?: number;
+  
+  servicesOffered?: string[];
+  serviceDescriptions?: Record<string, string>;
+  vehicleTypesServed?: string[];
+  certifications?: string[];
+  yearsExperience?: number;
+  specialties?: string[];
+  
+  hourlyRate?: number;
+  hasFlatRateMenu: boolean;
+  flatRateMenu?: Record<string, number>;
+  
+  overallRating?: number;
+  qualityRating?: number;
+  speedRating?: number;
+  priceRating?: number;
+  reviewCount: number;
+  
+  isVerified: boolean;
+  isActive: boolean;
+  photoUrl?: string;
+}
+
+export interface VehicleProfile {
+  id: number;
+  hostAccountId?: number;
+  name?: string;
+  description?: string;
+  vehicleType: VehicleType;
+  
+  totalLengthFt?: number;
+  vehicleLengthFt?: number;
+  trailerLengthFt?: number;
+  widthFt?: number;
+  heightFt?: number;
+  
+  needsPower: boolean;
+  powerAmpsNeeded?: number;
+  needsWater: boolean;
+  needsSewer: boolean;
+  
+  hasOnboardGenerator: boolean;
+  hasSolar: boolean;
+  numSlides: number;
+  hasBathroom: boolean;
+  hasKitchen: boolean;
+  numSleeps?: number;
+  
+  isTowable: boolean;
+  isTowing: boolean;
+  
+  make?: string;
+  model?: string;
+  year?: number;
+  
+  photos?: string[];
+}
+
+export interface StagingBooking {
+  id: number;
+  bookingRef: string;
+  propertyId: number;
+  spotId?: number;
+  
+  guestType: string;
+  guestName: string;
+  guestEmail?: string;
+  guestPhone?: string;
+  
+  vehicleProfileId?: number;
+  vehicleDescription?: string;
+  vehicleLengthFt?: number;
+  vehicleType?: string;
+  
+  numHorses: number;
+  
+  checkInDate: string;
+  checkOutDate: string;
+  numNights: number;
+  
+  numAdults: number;
+  numChildren: number;
+  numPets: number;
+  numVehicles: number;
+  
+  nightlyRate?: number;
+  subtotal?: number;
+  totalCost?: number;
+  
+  status: BookingStatus;
+  paymentStatus: PaymentStatus;
+  
+  specialRequests?: string;
+  
+  property?: StagingProperty;
+  spot?: StagingSpot;
+  
+  createdAt: string;
+}
+
+// ============================================================================
+// SEARCH & FILTERS
+// ============================================================================
+
+export interface StagingSearchParams {
+  checkIn?: string;
+  checkOut?: string;
+  vehicleLengthFt?: number;
+  needsPower?: boolean;
+  powerAmps?: number;
+  needsWater?: boolean;
+  needsSewer?: boolean;
+  needsPullThrough?: boolean;
+  isHorseFriendly?: boolean;
+  acceptsSemi?: boolean;
+  hasMechanic?: boolean;
+  dogsAllowed?: boolean;
+  region?: string;
+  city?: string;
+  propertyType?: PropertyType;
+  maxNightlyRate?: number;
+  sortBy?: 'rv_score' | 'crew_score' | 'trucker_score' | 'equestrian_score' | 'rating' | 'price_low' | 'price_high';
+  limit?: number;
+  offset?: number;
+}
+
+export interface StagingSearchResult {
+  properties: StagingProperty[];
+  total: number;
+  filters: StagingSearchParams;
+}
+
+// ============================================================================
+// API RESPONSES
+// ============================================================================
+
+export interface StagingStats {
+  totalProperties: number;
+  activeProperties: number;
+  totalSpots: number;
+  byType: Record<PropertyType, number>;
+  byRegion: Record<string, number>;
+  withMechanic: number;
+  horseFriendly: number;
+  acceptsSemi: number;
+  avgCrewScore: number;
+  avgRvScore: number;
+}
+
+export interface PropertyAvailability {
+  propertyId: number;
+  checkIn: string;
+  checkOut: string;
+  isAvailable: boolean;
+  availableSpots: number;
+  blockedDates: string[];
+  pricing: {
+    nightly: number;
+    total: number;
+    fees: Record<string, number>;
+  };
+}
