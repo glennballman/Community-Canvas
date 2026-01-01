@@ -17,6 +17,7 @@ import {
   LiveWeather
 } from '../lib/routeRealTimeData';
 import { getLiveWebcamUrl } from '../lib/routeWebcams';
+import { isAlertOnRoute, deduplicateRouteAlerts, getRouteSegmentName } from '../data/bamfieldRouteGeometry';
 
 export function TripTimelineDemo() {
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
@@ -77,15 +78,61 @@ export function TripTimelineDemo() {
       });
     }
     
+    // Filter alerts to only those actually on our route roads (not just nearby)
+    const routeFilteredAlerts = liveAlerts.filter(alert => isAlertOnRoute({
+      headline: alert.title,
+      title: alert.title,
+      description: alert.message,
+      summary: alert.summary,
+      latitude: alert.latitude ?? undefined,
+      longitude: alert.longitude ?? undefined,
+      region_name: alert.region_name ?? undefined,
+    }));
+    
+    // Deduplicate by road segment (keep most severe per segment)
+    // Keep as AlertWithLocation type for downstream use
+    const seenSegments = new Set<string>();
+    const deduplicatedAlerts: AlertWithLocation[] = [];
+    for (const alert of routeFilteredAlerts) {
+      const segmentName = getRouteSegmentName({
+        headline: alert.title,
+        title: alert.title,
+        description: alert.message,
+        summary: alert.summary,
+        latitude: alert.latitude ?? undefined,
+        longitude: alert.longitude ?? undefined,
+      });
+      const key = segmentName || alert.nearestRoutePoint;
+      if (!seenSegments.has(key)) {
+        seenSegments.add(key);
+        deduplicatedAlerts.push(alert);
+      }
+    }
+    
     // Track alerts that couldn't be matched to insert as standalone events
     const unmatchedAlerts: AlertWithLocation[] = [];
     
-    // Inject live alerts into matching timeline events using routePoint metadata
-    for (const alert of liveAlerts) {
-      // Find the first event that matches this alert's nearestRoutePoint
-      const targetIndex = events.findIndex(event => 
-        event.routePoint === alert.nearestRoutePoint
-      );
+    // Inject filtered alerts into matching timeline events using routePoint metadata
+    for (const alert of deduplicatedAlerts) {
+      // Get the route segment name for better matching
+      const segmentName = getRouteSegmentName({
+        headline: alert.title,
+        title: alert.title,
+        description: alert.message,
+        summary: alert.summary,
+        latitude: alert.latitude ?? undefined,
+        longitude: alert.longitude ?? undefined,
+      });
+      
+      // Find the first event that matches this alert's segment or nearestRoutePoint
+      const targetIndex = events.findIndex(event => {
+        if (!event.routePoint) return false;
+        // Match by route point or partial match with segment name
+        if (event.routePoint === alert.nearestRoutePoint) return true;
+        if (segmentName && segmentName.toLowerCase().includes(event.routePoint.toLowerCase())) return true;
+        if (segmentName && event.routePoint.toLowerCase().includes(segmentName.split(' ')[0].toLowerCase())) return true;
+        return false;
+      });
       
       if (targetIndex !== -1) {
         // Inject alert into the matching event
@@ -105,19 +152,25 @@ export function TripTimelineDemo() {
       }
     }
     
-    // Create standalone alert events for unmatched alerts and insert at chronologically appropriate positions
+    // Create standalone alert events for unmatched but route-relevant alerts (limit to 3)
     if (unmatchedAlerts.length > 0) {
       const alertEvents: TimelineEvent[] = unmatchedAlerts.slice(0, 3).map((alert) => {
         const severity = mapAlertSeverity(alert.severity);
+        const segmentName = getRouteSegmentName({
+          headline: alert.title,
+          description: alert.message,
+          latitude: alert.latitude ?? undefined,
+          longitude: alert.longitude ?? undefined,
+        });
         return {
           id: `live-alert-${alert.id}`,
           type: 'alert' as const,
-          time: events[0]?.time || new Date().toISOString(), // Place near start
+          time: events[0]?.time || new Date().toISOString(),
           title: alert.title || 'Road Alert',
-          subtitle: `${alert.distanceKm}km from ${alert.nearestRoutePoint} - DriveBC`,
+          subtitle: segmentName ? `${segmentName} - DriveBC` : `${alert.distanceKm}km from ${alert.nearestRoutePoint} - DriveBC`,
           description: alert.summary || alert.message,
           location: {
-            name: alert.nearestRoutePoint || alert.region_name || 'Along Route',
+            name: segmentName || alert.nearestRoutePoint || alert.region_name || 'Along Route',
           },
           photos: [],
           alerts: [{

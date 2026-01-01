@@ -1,0 +1,91 @@
+Complete Implementation Guide for ReplitI'll give you each prompt in order of priority. Copy and paste these one at a time.PROMPT 1: Fix Alert Filtering to Actual RouteTASK: Fix Alert Filtering - Only Show Alerts ON the Actual Route
+
+PROBLEM:
+The trip timeline shows alerts that are nearby but NOT on roads we're actually traveling.
+This floods the timeline with irrelevant CONSTRUCTION alerts.
+
+SOLUTION:
+Filter alerts to only match roads in our route geometry.
+
+IMPLEMENTATION:
+
+1. Create a route definition file:
+   `client/src/data/bamfieldRouteGeometry.ts`
+```typescript// Define the actual roads used in the Bamfield route
+export const bamfieldRouteSegments = [
+{
+name: 'Highway 99 South',
+keywords: ['Highway 99', 'Hwy 99', 'Sea to Sky'],
+boundingBox: { north: 49.38, south: 49.25, west: -123.30, east: -123.10 }
+},
+{
+name: 'Highway 1 West',
+keywords: ['Highway 1', 'Hwy 1', 'Trans-Canada', 'Upper Levels'],
+boundingBox: { north: 49.35, south: 49.30, west: -123.30, east: -123.00 }
+},
+{
+name: 'BC Ferries Horseshoe Bay',
+keywords: ['Horseshoe Bay', 'ferry'],
+boundingBox: { north: 49.40, south: 49.36, west: -123.30, east: -123.26 }
+},
+{
+name: 'Highway 19 Nanaimo',
+keywords: ['Highway 19', 'Hwy 19', 'Island Highway', 'Nanaimo'],
+boundingBox: { north: 49.20, south: 49.10, west: -124.00, east: -123.90 }
+},
+{
+name: 'Highway 4 West',
+keywords: ['Highway 4', 'Hwy 4', 'Port Alberni', 'Cathedral Grove', 'Alberni'],
+boundingBox: { north: 49.35, south: 49.05, west: -125.50, east: -124.00 }
+},
+{
+name: 'Bamfield Road',
+keywords: ['Bamfield', 'Franklin River', 'Pachena'],
+boundingBox: { north: 49.10, south: 48.80, west: -125.20, east: -124.80 }
+}
+];// Function to check if an alert matches our route
+export function isAlertOnRoute(alert: {
+headline?: string;
+description?: string;
+latitude?: number;
+longitude?: number;
+roads?: string[];
+}): boolean {
+const alertText = ${alert.headline || ''} ${alert.description || ''} ${(alert.roads || []).join(' ')}.toLowerCase(); // Check keyword match
+ for (const segment of bamfieldRouteSegments) {
+   for (const keyword of segment.keywords) {
+     if (alertText.includes(keyword.toLowerCase())) {
+       return true;
+     }
+   }   // Check GPS if available
+   if (alert.latitude && alert.longitude) {
+     const bbox = segment.boundingBox;
+     if (
+       alert.latitude >= bbox.south &&
+       alert.latitude <= bbox.north &&
+       alert.longitude >= bbox.west &&
+       alert.longitude <= bbox.east
+     ) {
+       return true;
+     }
+   }
+ } return false;
+}
+
+2. Update the alert fetching in the timeline demo:
+   - Import `isAlertOnRoute` from the route geometry file
+   - Filter alerts through this function before displaying
+   - Only show alerts where `isAlertOnRoute(alert) === true`
+
+3. In the API endpoint or wherever alerts are fetched for the timeline:
+```typescriptconst allAlerts = await fetchActiveAlerts();
+const routeAlerts = allAlerts.filter(isAlertOnRoute);
+
+4. Reduce duplicate alerts:
+   - Group alerts by road segment
+   - If multiple CONSTRUCTION alerts on same road, show only the most severe or most recent
+
+EXPECTED RESULT:
+- Timeline should show 2-5 relevant alerts, not 15+ irrelevant ones
+- Each alert should clearly relate to a road we're traveling
+- No more flooding of CONSTRUCTION alerts for roads we're not using
