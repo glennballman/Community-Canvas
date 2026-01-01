@@ -14,7 +14,7 @@ import { chamberMembers as staticMembers } from "@shared/chamber-members";
 import { getJsonLoadedMembers } from "@shared/chamber-member-registry";
 import { getChamberProgressList, getChamberProgressSummary } from "@shared/chamber-progress";
 import { createFleetRouter } from "./routes/fleet";
-import { JobberService } from "./services/jobber";
+import { JobberService, getJobberAuthUrl, exchangeCodeForToken } from "./services/jobber";
 
 // Merge static members with JSON-loaded members for consistent data across the app
 // IMPORTANT: This function is called per-request to ensure fresh data after JSON file updates
@@ -32,6 +32,97 @@ export async function registerRoutes(
 
   // Register fleet management routes
   app.use('/api/v1/fleet', createFleetRouter(pool));
+
+  // Jobber OAuth flow - Start authorization
+  app.get('/api/v1/integrations/jobber/auth', (req, res) => {
+    const clientId = process.env.JOBBER_CLIENT_ID;
+    if (!clientId) {
+      return res.status(500).json({ error: 'JOBBER_CLIENT_ID not configured' });
+    }
+    
+    const host = req.headers.host || 'localhost:5000';
+    const protocol = host.includes('localhost') ? 'http' : 'https';
+    const redirectUri = `${protocol}://${host}/api/v1/integrations/jobber/callback`;
+    
+    const authUrl = getJobberAuthUrl({
+      clientId,
+      clientSecret: '',
+      redirectUri,
+    });
+    
+    res.redirect(authUrl);
+  });
+
+  // Jobber OAuth callback - Exchange code for token
+  app.get('/api/v1/integrations/jobber/callback', async (req, res) => {
+    try {
+      const { code, error } = req.query;
+      
+      if (error) {
+        return res.status(400).send(`
+          <html>
+            <body style="font-family: system-ui; padding: 40px; max-width: 600px; margin: 0 auto;">
+              <h1>Authorization Failed</h1>
+              <p>Error: ${error}</p>
+              <a href="/">Return to app</a>
+            </body>
+          </html>
+        `);
+      }
+      
+      if (!code) {
+        return res.status(400).json({ error: 'No authorization code received' });
+      }
+
+      const clientId = process.env.JOBBER_CLIENT_ID;
+      const clientSecret = process.env.JOBBER_CLIENT_SECRET;
+      
+      if (!clientId || !clientSecret) {
+        return res.status(500).json({ error: 'Jobber credentials not configured' });
+      }
+
+      const host = req.headers.host || 'localhost:5000';
+      const protocol = host.includes('localhost') ? 'http' : 'https';
+      const redirectUri = `${protocol}://${host}/api/v1/integrations/jobber/callback`;
+
+      const tokens = await exchangeCodeForToken(code as string, {
+        clientId,
+        clientSecret,
+        redirectUri,
+      });
+
+      // Display the tokens to the user so they can save them
+      res.send(`
+        <html>
+          <body style="font-family: system-ui; padding: 40px; max-width: 800px; margin: 0 auto;">
+            <h1 style="color: green;">Jobber Authorization Successful!</h1>
+            <p>Copy your access token below and add it as JOBBER_ACCESS_TOKEN in your Secrets:</p>
+            <div style="background: #f5f5f5; padding: 16px; border-radius: 8px; margin: 20px 0;">
+              <label style="font-weight: bold; display: block; margin-bottom: 8px;">Access Token:</label>
+              <textarea readonly style="width: 100%; height: 80px; font-family: monospace; font-size: 12px;">${tokens.access_token}</textarea>
+            </div>
+            <div style="background: #f5f5f5; padding: 16px; border-radius: 8px; margin: 20px 0;">
+              <label style="font-weight: bold; display: block; margin-bottom: 8px;">Refresh Token (save this too):</label>
+              <textarea readonly style="width: 100%; height: 80px; font-family: monospace; font-size: 12px;">${tokens.refresh_token}</textarea>
+            </div>
+            <p><strong>Token expires in:</strong> ${Math.floor(tokens.expires_in / 3600)} hours</p>
+            <p>After adding the secret, <a href="/trip-timeline-demo">return to the app</a> to test the integration.</p>
+          </body>
+        </html>
+      `);
+    } catch (error) {
+      console.error('Jobber OAuth callback error:', error);
+      res.status(500).send(`
+        <html>
+          <body style="font-family: system-ui; padding: 40px; max-width: 600px; margin: 0 auto;">
+            <h1>Token Exchange Failed</h1>
+            <p>Error: ${error instanceof Error ? error.message : 'Unknown error'}</p>
+            <a href="/">Return to app</a>
+          </body>
+        </html>
+      `);
+    }
+  });
 
   // Jobber integration endpoint
   app.get('/api/v1/integrations/jobber/job/:jobNumber', async (req, res) => {

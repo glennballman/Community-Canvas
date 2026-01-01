@@ -1,7 +1,83 @@
 const JOBBER_API_URL = 'https://api.getjobber.com/api/graphql';
+const JOBBER_AUTH_URL = 'https://api.getjobber.com/api/oauth/authorize';
+const JOBBER_TOKEN_URL = 'https://api.getjobber.com/api/oauth/token';
 
 interface JobberConfig {
   accessToken: string;
+}
+
+interface JobberOAuthConfig {
+  clientId: string;
+  clientSecret: string;
+  redirectUri: string;
+}
+
+interface TokenResponse {
+  access_token: string;
+  refresh_token: string;
+  token_type: string;
+  expires_in: number;
+  created_at: number;
+}
+
+export function getJobberAuthUrl(config: JobberOAuthConfig): string {
+  const params = new URLSearchParams({
+    client_id: config.clientId,
+    redirect_uri: config.redirectUri,
+    response_type: 'code',
+  });
+  return `${JOBBER_AUTH_URL}?${params.toString()}`;
+}
+
+export async function exchangeCodeForToken(
+  code: string,
+  config: JobberOAuthConfig
+): Promise<TokenResponse> {
+  const response = await fetch(JOBBER_TOKEN_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: new URLSearchParams({
+      grant_type: 'authorization_code',
+      code,
+      client_id: config.clientId,
+      client_secret: config.clientSecret,
+      redirect_uri: config.redirectUri,
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Token exchange failed: ${error}`);
+  }
+
+  return response.json();
+}
+
+export async function refreshAccessToken(
+  refreshToken: string,
+  config: Omit<JobberOAuthConfig, 'redirectUri'>
+): Promise<TokenResponse> {
+  const response = await fetch(JOBBER_TOKEN_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: new URLSearchParams({
+      grant_type: 'refresh_token',
+      refresh_token: refreshToken,
+      client_id: config.clientId,
+      client_secret: config.clientSecret,
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Token refresh failed: ${error}`);
+  }
+
+  return response.json();
 }
 
 interface JobberJob {
