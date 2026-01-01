@@ -1,9 +1,12 @@
-// ============================================
+Step 2: Create the QualificationBadge Component
+File: client/src/components/Fleet/QualificationBadge.tsx
+tsx// ============================================
 // QUALIFICATION BADGE COMPONENT
 // Visual indicator for driver/trailer qualification status
 // ============================================
 
-import { AlertTriangle, CheckCircle, Info } from 'lucide-react';
+import React from 'react';
+import { AlertTriangle, CheckCircle, AlertCircle, Info } from 'lucide-react';
 import {
   Tooltip,
   TooltipContent,
@@ -39,6 +42,7 @@ export function QualificationBadge({
   showLabel = false
 }: QualificationBadgeProps) {
   
+  // Size classes for the icon
   const sizeClasses = {
     sm: 'h-4 w-4',
     md: 'h-5 w-5',
@@ -55,15 +59,15 @@ export function QualificationBadge({
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
-            <div className="flex items-center gap-1.5 cursor-help" data-testid="badge-qualified">
-              <CheckCircle className={`${iconSize} text-success`} />
+            <div className="flex items-center gap-1.5 cursor-help">
+              <CheckCircle className={`${iconSize} text-green-500`} />
               {showLabel && (
-                <span className="text-xs text-success font-medium">Qualified</span>
+                <span className="text-xs text-green-500 font-medium">Qualified</span>
               )}
             </div>
           </TooltipTrigger>
-          <TooltipContent side="top">
-            <p className="text-success font-medium">Fully qualified to tow</p>
+          <TooltipContent side="top" className="bg-gray-800 border-gray-700">
+            <p className="text-green-400 font-medium">✓ Fully qualified to tow</p>
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
@@ -78,33 +82,33 @@ export function QualificationBadge({
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
-            <div className="flex items-center gap-1.5 cursor-help" data-testid="badge-qualified-warnings">
-              <Info className={`${iconSize} text-warning`} />
+            <div className="flex items-center gap-1.5 cursor-help">
+              <Info className={`${iconSize} text-yellow-500`} />
               {showLabel && (
-                <span className="text-xs text-warning font-medium">
+                <span className="text-xs text-yellow-500 font-medium">
                   {warningCount} warning{warningCount > 1 ? 's' : ''}
                 </span>
               )}
             </div>
           </TooltipTrigger>
-          <TooltipContent side="top" className="max-w-xs">
-            <p className="text-warning font-medium mb-1">
-              Qualified with {warningCount} warning{warningCount > 1 ? 's' : ''}
+          <TooltipContent side="top" className="bg-gray-800 border-gray-700 max-w-xs">
+            <p className="text-yellow-400 font-medium mb-1">
+              ⚠ Qualified with {warningCount} warning{warningCount > 1 ? 's' : ''}
             </p>
             {warnings.length > 0 ? (
-              <ul className="text-xs text-muted-foreground space-y-1">
+              <ul className="text-xs text-gray-300 space-y-1">
                 {warnings.slice(0, 3).map((warning, i) => (
                   <li key={i} className="flex items-start gap-1">
-                    <span className="text-warning mt-0.5">•</span>
+                    <span className="text-yellow-500 mt-0.5">•</span>
                     <span>{warning}</span>
                   </li>
                 ))}
                 {warnings.length > 3 && (
-                  <li className="text-muted-foreground">+ {warnings.length - 3} more</li>
+                  <li className="text-gray-500">+ {warnings.length - 3} more</li>
                 )}
               </ul>
             ) : primaryIssue && (
-              <p className="text-xs text-muted-foreground">{primaryIssue}</p>
+              <p className="text-xs text-gray-300">{primaryIssue}</p>
             )}
           </TooltipContent>
         </Tooltip>
@@ -119,24 +123,24 @@ export function QualificationBadge({
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
-          <div className="flex items-center gap-1.5 cursor-help" data-testid="badge-not-qualified">
-            <AlertTriangle className={`${iconSize} text-destructive`} />
+          <div className="flex items-center gap-1.5 cursor-help">
+            <AlertTriangle className={`${iconSize} text-red-500`} />
             {showLabel && (
-              <span className="text-xs text-destructive font-medium">
+              <span className="text-xs text-red-500 font-medium">
                 Not Qualified
               </span>
             )}
           </div>
         </TooltipTrigger>
-        <TooltipContent side="top" className="max-w-xs">
-          <p className="text-destructive font-medium mb-1">
-            Not qualified to tow
+        <TooltipContent side="top" className="bg-gray-800 border-gray-700 max-w-xs">
+          <p className="text-red-400 font-medium mb-1">
+            ✗ Not qualified to tow
           </p>
           {primaryIssue && (
-            <p className="text-xs text-muted-foreground mb-1">{primaryIssue}</p>
+            <p className="text-xs text-gray-300 mb-1">{primaryIssue}</p>
           )}
           {issueCount > 1 && (
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-gray-500">
               + {issueCount - 1} more issue{issueCount > 2 ? 's' : ''}
             </p>
           )}
@@ -158,12 +162,12 @@ export function QualificationBadgeCompact({
   warningCount?: number;
 }) {
   if (isQualified && warningCount === 0) {
-    return <CheckCircle className="h-4 w-4 text-success" data-testid="badge-compact-qualified" />;
+    return <CheckCircle className="h-4 w-4 text-green-500" />;
   }
   if (isQualified && warningCount > 0) {
-    return <Info className="h-4 w-4 text-warning" data-testid="badge-compact-warnings" />;
+    return <Info className="h-4 w-4 text-yellow-500" />;
   }
-  return <AlertTriangle className="h-4 w-4 text-destructive" data-testid="badge-compact-not-qualified" />;
+  return <AlertTriangle className="h-4 w-4 text-red-500" />;
 }
 
 // ============================================
@@ -181,7 +185,7 @@ export function QualificationStatus({
 }) {
   if (isQualified && warningCount === 0) {
     return (
-      <span className="inline-flex items-center gap-1 text-success text-sm" data-testid="status-qualified">
+      <span className="inline-flex items-center gap-1 text-green-500 text-sm">
         <CheckCircle className="h-3.5 w-3.5" />
         Qualified
       </span>
@@ -189,18 +193,29 @@ export function QualificationStatus({
   }
   if (isQualified && warningCount > 0) {
     return (
-      <span className="inline-flex items-center gap-1 text-warning text-sm" data-testid="status-warnings">
+      <span className="inline-flex items-center gap-1 text-yellow-500 text-sm">
         <Info className="h-3.5 w-3.5" />
         {warningCount} warning{warningCount > 1 ? 's' : ''}
       </span>
     );
   }
   return (
-    <span className="inline-flex items-center gap-1 text-destructive text-sm" data-testid="status-not-qualified">
+    <span className="inline-flex items-center gap-1 text-red-500 text-sm">
       <AlertTriangle className="h-3.5 w-3.5" />
       {issueCount} issue{issueCount > 1 ? 's' : ''}
     </span>
   );
 }
 
-export default QualificationBadge;
+Tell Replit:
+
+"Create client/src/components/Fleet/QualificationBadge.tsx with the code above. This provides three variants:
+
+QualificationBadge - Full badge with tooltip (main one)
+QualificationBadgeCompact - Just the icon, no tooltip
+QualificationStatus - Inline text with icon for lists
+
+Note: This uses the shadcn/ui Tooltip components. If those don't exist yet, let me know and we can use a simpler hover approach."
+
+
+Let me know when Step 2 is done and I'll give you Step 3 (DriverQualificationSummary card)
