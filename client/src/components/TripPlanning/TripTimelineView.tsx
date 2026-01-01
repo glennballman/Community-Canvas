@@ -189,6 +189,13 @@ function formatRelativeTime(isoTimestamp: string): string {
   });
 }
 
+function formatRelativeWithTimestamp(isoTimestamp: string): string {
+  const date = new Date(isoTimestamp);
+  const timeStr = date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+  const relative = formatRelativeTime(isoTimestamp);
+  return `${relative} (${timeStr})`;
+}
+
 function formatDate(isoString: string): string {
   const date = new Date(isoString);
   return date.toLocaleDateString('en-US', { 
@@ -275,13 +282,18 @@ function BookingStatusBadge({ status }: { status: BookingStatus }) {
   }
 }
 
-function WeatherWidget({ weather, compact = false }: { weather: WeatherData; compact?: boolean }) {
+function WeatherWidget({ weather, compact = false, freshness }: { weather: WeatherData; compact?: boolean; freshness?: string }) {
   if (compact) {
     return (
       <div className="flex items-center gap-2 text-sm">
         <Thermometer className="h-4 w-4 text-muted-foreground" />
         <span>{weather.temperature}C</span>
         <span className="text-muted-foreground">{weather.condition}</span>
+        {freshness && (
+          <span className="text-xs text-muted-foreground opacity-60">
+            ({formatRelativeWithTimestamp(freshness)})
+          </span>
+        )}
       </div>
     );
   }
@@ -292,6 +304,11 @@ function WeatherWidget({ weather, compact = false }: { weather: WeatherData; com
         <CloudSun className="h-8 w-8 text-yellow-500 mx-auto" />
         <p className="text-2xl font-bold">{weather.temperature}C</p>
         <p className="text-sm text-muted-foreground">{weather.condition}</p>
+        {freshness && (
+          <p className="text-xs text-muted-foreground mt-1">
+            as of {formatRelativeWithTimestamp(freshness)}
+          </p>
+        )}
       </div>
       <div className="flex-1 grid grid-cols-3 gap-2 text-sm">
         {weather.humidity !== undefined && (
@@ -383,7 +400,7 @@ function PhotoGallery({ photos }: { photos: TimelinePhoto[] }) {
           )}
           {photos[0].source === 'webcam' && photos[0].timestamp && (
             <p className="text-xs text-gray-300">
-              LIVE - DriveBC {photos[0].timestamp.includes('T') ? `· Updated ${formatRelativeTime(photos[0].timestamp)}` : `· ${photos[0].timestamp}`}
+              LIVE - DriveBC · Updated {photos[0].timestamp.includes('T') ? formatRelativeWithTimestamp(photos[0].timestamp) : photos[0].timestamp}
             </p>
           )}
           {photos[0].source !== 'webcam' && photos[0].timestamp && (
@@ -644,7 +661,7 @@ function TimelineEventCard({
                 </span>
               )}
               {event.weather && (
-                <WeatherWidget weather={event.weather} compact />
+                <WeatherWidget weather={event.weather} compact freshness={event.dataFreshness?.weather} />
               )}
             </div>
           </div>

@@ -72,6 +72,7 @@ export function TripTimelineDemo() {
     });
     
     // Update weather data on events if we have live weather
+    const weatherTimestamp = lastRefresh.toISOString();
     if (liveWeather) {
       events.forEach(event => {
         if (event.weather) {
@@ -80,6 +81,11 @@ export function TripTimelineDemo() {
             temperature: liveWeather.temperature,
             condition: liveWeather.condition,
             icon: mapWeatherConditionToIcon(liveWeather.condition)
+          };
+          // Add weather freshness timestamp
+          event.dataFreshness = {
+            ...event.dataFreshness,
+            weather: weatherTimestamp,
           };
         }
       });
