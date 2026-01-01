@@ -1,0 +1,1518 @@
+PROMPT 46: Comprehensive Fleet Characteristics Database
+Based on extensive industry research, let's build a truly comprehensive fleet management system with proper terminology. This covers vehicles, trailers, RVs, and all their specifications.
+
+=== PART 1: Database Schema - Vehicle Characteristics ===
+```sql
+-- =====================================================
+-- COMPREHENSIVE VEHICLE CHARACTERISTICS
+-- =====================================================
+
+-- Drop and recreate vehicle class types for proper options
+DROP TYPE IF EXISTS vehicle_class_type CASCADE;
+CREATE TYPE vehicle_class_type AS ENUM (
+  -- Passenger Vehicles
+  'sedan', 'coupe', 'hatchback', 'wagon',
+  -- SUVs & Crossovers
+  'suv_compact', 'suv_midsize', 'suv_fullsize',
+  -- Trucks
+  'pickup_midsize', 'pickup_fullsize', 'pickup_heavy_duty',
+  -- Vans
+  'minivan', 'passenger_van', 'cargo_van', 'cargo_van_high_roof',
+  -- Commercial
+  'cube_van', 'box_truck', 'flatbed_truck', 'stake_truck',
+  -- RVs - Motorized
+  'rv_class_a', 'rv_class_b', 'rv_class_c',
+  -- Specialty
+  'motorcycle', 'atv', 'utv'
+);
+
+-- Liftgate types (for cargo vans and box trucks)
+DROP TYPE IF EXISTS liftgate_type CASCADE;
+CREATE TYPE liftgate_type AS ENUM (
+  'none',
+  'tuck_under',      -- Folds under truck, dock-friendly
+  'rail_gate',       -- Vertical rails, level ride
+  'cantilever',      -- Adjustable tilt, good for uneven ground
+  'column_lift',     -- Column mechanism, extra clearance
+  'side_loader'      -- Side-mounted for tight spaces
+);
+
+-- Rear door types (for vans and trucks)
+DROP TYPE IF EXISTS rear_door_type CASCADE;
+CREATE TYPE rear_door_type AS ENUM (
+  'none',
+  'swing_doors',      -- Barn doors, 2 doors swing out
+  'roll_up',          -- Overhead roll-up door
+  'ramp_door',        -- Hinged at bottom, folds down as ramp
+  'ramp_spring_assist', -- Ramp with spring assist
+  'lift_gate_door'    -- Door is the liftgate
+);
+
+-- Add comprehensive vehicle fields
+ALTER TABLE vehicle_profiles ADD COLUMN IF NOT EXISTS vehicle_class vehicle_class_type;
+
+-- Commercial Vehicle Features
+ALTER TABLE vehicle_profiles ADD COLUMN IF NOT EXISTS cargo_length_inches INTEGER;
+ALTER TABLE vehicle_profiles ADD COLUMN IF NOT EXISTS cargo_width_inches INTEGER;
+ALTER TABLE vehicle_profiles ADD COLUMN IF NOT EXISTS cargo_height_inches INTEGER;
+ALTER TABLE vehicle_profiles ADD COLUMN IF NOT EXISTS cargo_volume_cubic_feet INTEGER;
+ALTER TABLE vehicle_profiles ADD COLUMN IF NOT EXISTS payload_capacity_lbs INTEGER;
+ALTER TABLE vehicle_profiles ADD COLUMN IF NOT EXISTS gvwr_lbs INTEGER; -- Gross Vehicle Weight Rating
+
+-- Door Configuration (Cargo/Box Vehicles)
+ALTER TABLE vehicle_profiles ADD COLUMN IF NOT EXISTS rear_door_type rear_door_type DEFAULT 'none';
+ALTER TABLE vehicle_profiles ADD COLUMN IF NOT EXISTS rear_door_width_inches INTEGER;
+ALTER TABLE vehicle_profiles ADD COLUMN IF NOT EXISTS rear_door_height_inches INTEGER;
+ALTER TABLE vehicle_profiles ADD COLUMN IF NOT EXISTS has_side_door BOOLEAN DEFAULT false;
+ALTER TABLE vehicle_profiles ADD COLUMN IF NOT EXISTS side_door_type VARCHAR(30); -- sliding, swing, roll_up
+
+-- Liftgate Configuration
+ALTER TABLE vehicle_profiles ADD COLUMN IF NOT EXISTS liftgate_type liftgate_type DEFAULT 'none';
+ALTER TABLE vehicle_profiles ADD COLUMN IF NOT EXISTS liftgate_capacity_lbs INTEGER;
+ALTER TABLE vehicle_profiles ADD COLUMN IF NOT EXISTS liftgate_platform_width_inches INTEGER;
+ALTER TABLE vehicle_profiles ADD COLUMN IF NOT EXISTS liftgate_platform_depth_inches INTEGER;
+ALTER TABLE vehicle_profiles ADD COLUMN IF NOT EXISTS liftgate_power_type VARCHAR(20); -- hydraulic, electric
+
+-- Loading Ramp (for vehicles without liftgate)
+ALTER TABLE vehicle_profiles ADD COLUMN IF NOT EXISTS has_loading_ramp BOOLEAN DEFAULT false;
+ALTER TABLE vehicle_profiles ADD COLUMN IF NOT EXISTS ramp_type VARCHAR(30); -- built_in, removable, spring_assist, power
+ALTER TABLE vehicle_profiles ADD COLUMN IF NOT EXISTS ramp_capacity_lbs INTEGER;
+
+-- Bed/Cargo Configuration (Trucks)
+ALTER TABLE vehicle_profiles ADD COLUMN IF NOT EXISTS bed_length VARCHAR(20); -- short, standard, long
+ALTER TABLE vehicle_profiles ADD COLUMN IF NOT EXISTS bed_length_inches INTEGER;
+ALTER TABLE vehicle_profiles ADD COLUMN IF NOT EXISTS has_bed_liner BOOLEAN DEFAULT false;
+ALTER TABLE vehicle_profiles ADD COLUMN IF NOT EXISTS bed_liner_type VARCHAR(30); -- spray_in, drop_in, rubber_mat
+ALTER TABLE vehicle_profiles ADD COLUMN IF NOT EXISTS has_tonneau_cover BOOLEAN DEFAULT false;
+ALTER TABLE vehicle_profiles ADD COLUMN IF NOT EXISTS tonneau_type VARCHAR(30); -- soft_roll, hard_roll, tri_fold, retractable
+ALTER TABLE vehicle_profiles ADD COLUMN IF NOT EXISTS has_truck_cap BOOLEAN DEFAULT false;
+
+-- =====================================================
+-- TOWING CONFIGURATION (Enhanced)
+-- =====================================================
+
+-- Hitch types
+DROP TYPE IF EXISTS hitch_type CASCADE;
+CREATE TYPE hitch_type AS ENUM (
+  'none',
+  'bumper_pull',     -- Standard receiver hitch behind bumper
+  'gooseneck',       -- Ball in truck bed
+  'fifth_wheel',     -- Kingpin/jaw system in bed
+  'pintle',          -- Hook and lunette ring (heavy duty)
+  'weight_distribution' -- WD hitch with spring bars
+);
+
+-- Ball sizes (for bumper pull and gooseneck)
+DROP TYPE IF EXISTS ball_size_type CASCADE;
+CREATE TYPE ball_size_type AS ENUM (
+  'none',
+  '1_7_8',    -- 1-7/8" - Light duty
+  '2',        -- 2" - Most common
+  '2_5_16',   -- 2-5/16" - Heavy duty
+  '3'         -- 3" - Extra heavy duty
+);
+
+-- Receiver hitch classes
+DROP TYPE IF EXISTS hitch_class_type CASCADE;
+CREATE TYPE hitch_class_type AS ENUM (
+  'none',
+  'class_i',    -- Up to 2,000 lbs GTW
+  'class_ii',   -- Up to 3,500 lbs GTW
+  'class_iii',  -- Up to 8,000 lbs GTW
+  'class_iv',   -- Up to 10,000 lbs GTW
+  'class_v'     -- Up to 17,000 lbs GTW
+);
+
+-- Wiring connector types
+DROP TYPE IF EXISTS wiring_connector_type CASCADE;
+CREATE TYPE wiring_connector_type AS ENUM (
+  'none',
+  '4_pin_flat',      -- Basic: tail, brake, turn, ground
+  '5_pin_flat',      -- Adds reverse lights
+  '6_pin_round',     -- Adds electric brakes + 12V
+  '7_pin_rv_blade',  -- Full RV: all functions
+  '7_pin_round'      -- Heavy duty round (rare)
+);
+
+-- Update vehicle towing columns
+ALTER TABLE vehicle_profiles ADD COLUMN IF NOT EXISTS primary_hitch_type hitch_type DEFAULT 'none';
+ALTER TABLE vehicle_profiles ADD COLUMN IF NOT EXISTS receiver_size_inches DECIMAL(3,2); -- 1.25, 2, 2.5
+ALTER TABLE vehicle_profiles ADD COLUMN IF NOT EXISTS hitch_class hitch_class_type DEFAULT 'none';
+ALTER TABLE vehicle_profiles ADD COLUMN IF NOT EXISTS ball_size ball_size_type DEFAULT 'none';
+ALTER TABLE vehicle_profiles ADD COLUMN IF NOT EXISTS max_tongue_weight_lbs INTEGER;
+
+-- Gooseneck/Fifth Wheel specifics
+ALTER TABLE vehicle_profiles ADD COLUMN IF NOT EXISTS gooseneck_ball_size ball_size_type DEFAULT 'none';
+ALTER TABLE vehicle_profiles ADD COLUMN IF NOT EXISTS fifth_wheel_rail_type VARCHAR(30); -- standard, oem, custom
+ALTER TABLE vehicle_profiles ADD COLUMN IF NOT EXISTS fifth_wheel_hitch_brand VARCHAR(100);
+
+-- Brake controller
+ALTER TABLE vehicle_profiles ADD COLUMN IF NOT EXISTS brake_controller_type VARCHAR(30); -- none, proportional, time_delayed, integrated
+ALTER TABLE vehicle_profiles ADD COLUMN IF NOT EXISTS brake_controller_brand VARCHAR(100);
+ALTER TABLE vehicle_profiles ADD COLUMN IF NOT EXISTS max_trailer_brakes INTEGER; -- Number of axles supported
+
+-- Wiring
+ALTER TABLE vehicle_profiles ADD COLUMN IF NOT EXISTS trailer_wiring_type wiring_connector_type DEFAULT 'none';
+ALTER TABLE vehicle_profiles ADD COLUMN IF NOT EXISTS has_aux_12v_circuit BOOLEAN DEFAULT false;
+
+-- =====================================================
+-- RV-SPECIFIC FEATURES (for motorhomes)
+-- =====================================================
+
+-- RV Systems
+ALTER TABLE vehicle_profiles ADD COLUMN IF NOT EXISTS is_rv BOOLEAN DEFAULT false;
+ALTER TABLE vehicle_profiles ADD COLUMN IF NOT EXISTS rv_sleep_capacity INTEGER;
+ALTER TABLE vehicle_profiles ADD COLUMN IF NOT EXISTS rv_seatbelt_positions INTEGER;
+
+-- Tanks
+ALTER TABLE vehicle_profiles ADD COLUMN IF NOT EXISTS fresh_water_gallons INTEGER;
+ALTER TABLE vehicle_profiles ADD COLUMN IF NOT EXISTS gray_water_gallons INTEGER;
+ALTER TABLE vehicle_profiles ADD COLUMN IF NOT EXISTS black_water_gallons INTEGER;
+ALTER TABLE vehicle_profiles ADD COLUMN IF NOT EXISTS propane_tank_count INTEGER;
+ALTER TABLE vehicle_profiles ADD COLUMN IF NOT EXISTS propane_capacity_lbs INTEGER;
+ALTER TABLE vehicle_profiles ADD COLUMN IF NOT EXISTS fuel_tank_gallons INTEGER;
+
+-- Power
+ALTER TABLE vehicle_profiles ADD COLUMN IF NOT EXISTS generator_type VARCHAR(30); -- none, gas, diesel, propane
+ALTER TABLE vehicle_profiles ADD COLUMN IF NOT EXISTS generator_watts INTEGER;
+ALTER TABLE vehicle_profiles ADD COLUMN IF NOT EXISTS shore_power_amps INTEGER; -- 30, 50
+ALTER TABLE vehicle_profiles ADD COLUMN IF NOT EXISTS has_solar BOOLEAN DEFAULT false;
+ALTER TABLE vehicle_profiles ADD COLUMN IF NOT EXISTS solar_watts INTEGER;
+ALTER TABLE vehicle_profiles ADD COLUMN IF NOT EXISTS battery_type VARCHAR(30); -- lead_acid, agm, lithium
+ALTER TABLE vehicle_profiles ADD COLUMN IF NOT EXISTS battery_amp_hours INTEGER;
+ALTER TABLE vehicle_profiles ADD COLUMN IF NOT EXISTS has_inverter BOOLEAN DEFAULT false;
+ALTER TABLE vehicle_profiles ADD COLUMN IF NOT EXISTS inverter_watts INTEGER;
+
+-- Slideouts
+ALTER TABLE vehicle_profiles ADD COLUMN IF NOT EXISTS slideout_count INTEGER DEFAULT 0;
+ALTER TABLE vehicle_profiles ADD COLUMN IF NOT EXISTS slideout_type VARCHAR(30); -- electric, hydraulic, manual
+
+-- Climate
+ALTER TABLE vehicle_profiles ADD COLUMN IF NOT EXISTS ac_type VARCHAR(30); -- roof, basement, ducted
+ALTER TABLE vehicle_profiles ADD COLUMN IF NOT EXISTS ac_btu INTEGER;
+ALTER TABLE vehicle_profiles ADD COLUMN IF NOT EXISTS heat_type VARCHAR(30); -- propane, electric, heat_pump, hydronic
+ALTER TABLE vehicle_profiles ADD COLUMN IF NOT EXISTS heat_btu INTEGER;
+
+-- Amenities (JSONB for flexibility)
+ALTER TABLE vehicle_profiles ADD COLUMN IF NOT EXISTS rv_amenities JSONB DEFAULT '{}';
+-- Example: {"kitchen": true, "microwave": true, "oven": true, "refrigerator_cubic_feet": 8, 
+--           "bathroom": true, "shower": true, "toilet_type": "gravity", "outdoor_kitchen": false,
+--           "tv_count": 2, "awning_length_feet": 18, "awning_power": true}
+
+-- =====================================================
+-- TRAILER PROFILES (Enhanced)
+-- =====================================================
+
+-- Trailer types
+DROP TYPE IF EXISTS trailer_type_enum CASCADE;
+CREATE TYPE trailer_type_enum AS ENUM (
+  -- Cargo/Utility
+  'enclosed_cargo', 'open_utility', 'flatbed', 'dump',
+  -- Specialty
+  'car_hauler', 'equipment', 'landscaping', 'motorcycle',
+  -- Livestock
+  'horse', 'livestock', 'stock',
+  -- RV/Recreation
+  'travel_trailer', 'fifth_wheel_rv', 'toy_hauler', 'popup_camper', 'teardrop',
+  -- Boat/Water
+  'boat', 'pwc', 'pontoon',
+  -- Other
+  'food_truck', 'office', 'custom'
+);
+
+-- Trailer coupler types
+DROP TYPE IF EXISTS coupler_type CASCADE;
+CREATE TYPE coupler_type AS ENUM (
+  'ball_coupler',      -- Standard ball hitch
+  'gooseneck_coupler', -- Vertical coupler for gooseneck ball
+  'fifth_wheel_kingpin', -- Kingpin for fifth wheel
+  'pintle_ring',       -- Lunette ring for pintle hook
+  'adjustable_coupler' -- Height-adjustable coupler
+);
+
+-- Trailer brake types
+DROP TYPE IF EXISTS trailer_brake_type CASCADE;
+CREATE TYPE trailer_brake_type AS ENUM (
+  'none',
+  'surge',       -- Hydraulic surge brakes (no controller needed)
+  'electric',    -- Electric brakes (requires controller)
+  'electric_hydraulic', -- Electric over hydraulic
+  'air'          -- Air brakes (commercial)
+);
+
+-- Trailer axle types
+DROP TYPE IF EXISTS axle_type CASCADE;
+CREATE TYPE axle_type AS ENUM (
+  'single', 'tandem', 'triple', 'quad'
+);
+
+-- Update trailer_profiles with comprehensive fields
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS trailer_type trailer_type_enum;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS coupler_type coupler_type;
+
+-- Coupler/Hitch Details
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS coupler_height_inches INTEGER; -- Height from ground to coupler
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS coupler_adjustable BOOLEAN DEFAULT false;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS required_hitch_type hitch_type;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS required_ball_size ball_size_type;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS kingpin_weight_lbs INTEGER; -- For fifth wheel
+
+-- Safety Chains
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS safety_chain_rating_lbs INTEGER;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS breakaway_system BOOLEAN DEFAULT false;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS breakaway_battery_type VARCHAR(30);
+
+-- Axles & Suspension
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS axle_type axle_type;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS axle_count INTEGER DEFAULT 1;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS axle_capacity_lbs INTEGER; -- Per axle
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS suspension_type VARCHAR(30); -- leaf_spring, torsion, air_ride
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS tire_size VARCHAR(20);
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS spare_tire_included BOOLEAN DEFAULT false;
+
+-- Brakes (Enhanced)
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS brake_type trailer_brake_type DEFAULT 'none';
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS brakes_on_all_axles BOOLEAN DEFAULT true;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS abs_brakes BOOLEAN DEFAULT false;
+
+-- Wiring
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS wiring_type wiring_connector_type;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS has_breakaway_switch BOOLEAN DEFAULT false;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS has_aux_battery BOOLEAN DEFAULT false;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS has_reverse_lights BOOLEAN DEFAULT false;
+
+-- Doors (Cargo/Enclosed Trailers)
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS rear_door_type rear_door_type DEFAULT 'none';
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS rear_door_width_inches INTEGER;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS rear_door_height_inches INTEGER;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS side_door_type VARCHAR(30); -- man_door, ramp, roll_up
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS side_door_width_inches INTEGER;
+
+-- Ramp Configuration
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS ramp_door_type VARCHAR(30); -- fold_down, spring_assist, power, stowable
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS ramp_length_inches INTEGER;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS ramp_capacity_lbs INTEGER;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS ramp_transition_flap BOOLEAN DEFAULT false; -- Dovetail/beaver tail
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS dovetail_length_inches INTEGER;
+
+-- Interior Features
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS interior_lighting BOOLEAN DEFAULT false;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS interior_lighting_type VARCHAR(30); -- led, fluorescent, none
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS has_e_track BOOLEAN DEFAULT false; -- Cargo tie-down track
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS e_track_rows INTEGER;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS has_d_rings BOOLEAN DEFAULT false;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS d_ring_count INTEGER;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS floor_type VARCHAR(30); -- wood, aluminum, rubber_coin, steel_tread
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS wall_type VARCHAR(30); -- plywood, aluminum, bare_studs
+
+-- Ventilation
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS has_roof_vent BOOLEAN DEFAULT false;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS roof_vent_count INTEGER;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS has_side_vents BOOLEAN DEFAULT false;
+
+-- Exterior Features
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS exterior_material VARCHAR(30); -- aluminum, steel, fiberglass
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS roof_type VARCHAR(30); -- flat, rounded, peaked
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS has_roof_rack BOOLEAN DEFAULT false;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS has_ladder_rack BOOLEAN DEFAULT false;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS has_stone_guard BOOLEAN DEFAULT false;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS has_fenders BOOLEAN DEFAULT true;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS fender_type VARCHAR(30); -- steel, aluminum, plastic
+
+-- Jack Configuration
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS jack_type VARCHAR(30); -- manual_crank, power, stabilizer
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS jack_capacity_lbs INTEGER;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS rear_stabilizer_jacks BOOLEAN DEFAULT false;
+
+-- =====================================================
+-- RV TRAILER SPECIFIC (Travel Trailers, Fifth Wheels)
+-- =====================================================
+
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS is_rv_trailer BOOLEAN DEFAULT false;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS rv_sleep_capacity INTEGER;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS rv_dry_weight_lbs INTEGER;
+
+-- Tanks
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS fresh_water_gallons INTEGER;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS gray_water_gallons INTEGER;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS black_water_gallons INTEGER;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS propane_tank_count INTEGER;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS propane_capacity_lbs INTEGER;
+
+-- Power
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS shore_power_amps INTEGER;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS has_solar BOOLEAN DEFAULT false;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS solar_watts INTEGER;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS battery_type VARCHAR(30);
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS battery_amp_hours INTEGER;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS has_inverter BOOLEAN DEFAULT false;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS inverter_watts INTEGER;
+
+-- Slideouts
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS slideout_count INTEGER DEFAULT 0;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS slideout_type VARCHAR(30);
+
+-- Climate
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS ac_type VARCHAR(30);
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS ac_btu INTEGER;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS heat_type VARCHAR(30);
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS heat_btu INTEGER;
+
+-- Amenities (JSONB)
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS rv_amenities JSONB DEFAULT '{}';
+
+-- =====================================================
+-- TOY HAULER SPECIFIC
+-- =====================================================
+
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS is_toy_hauler BOOLEAN DEFAULT false;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS garage_length_feet DECIMAL(4,1);
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS garage_width_feet DECIMAL(4,1);
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS garage_height_feet DECIMAL(4,1);
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS fuel_station_gallons INTEGER; -- Onboard fuel for toys
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS has_tie_downs BOOLEAN DEFAULT false;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS tie_down_points INTEGER;
+```
+
+=== PART 2: Seed Data - Vehicle Classes & Common Configurations ===
+```sql
+-- =====================================================
+-- VEHICLE CLASS SPECIFICATIONS (for auto-fill)
+-- =====================================================
+
+CREATE TABLE IF NOT EXISTS vehicle_class_specs (
+  id SERIAL PRIMARY KEY,
+  vehicle_class VARCHAR(50) NOT NULL,
+  
+  -- Typical dimensions
+  typical_length_feet DECIMAL(4,1),
+  typical_height_feet DECIMAL(4,1),
+  typical_width_feet DECIMAL(4,1),
+  
+  -- Cargo (if applicable)
+  typical_cargo_volume_cubic_feet INTEGER,
+  typical_payload_lbs INTEGER,
+  
+  -- Towing
+  typical_towing_capacity_lbs INTEGER,
+  typical_hitch_class VARCHAR(10),
+  typical_receiver_size DECIMAL(3,2),
+  
+  -- Route suitability defaults
+  suitable_paved BOOLEAN DEFAULT true,
+  suitable_good_gravel BOOLEAN DEFAULT true,
+  suitable_rough_gravel BOOLEAN DEFAULT false,
+  suitable_4x4_required BOOLEAN DEFAULT false,
+  
+  -- BC Ferries default classification
+  bc_ferries_class VARCHAR(20),
+  
+  description TEXT,
+  
+  UNIQUE(vehicle_class)
+);
+
+-- Seed vehicle class specs
+INSERT INTO vehicle_class_specs (vehicle_class, typical_length_feet, typical_height_feet, typical_cargo_volume_cubic_feet, typical_payload_lbs, typical_towing_capacity_lbs, typical_hitch_class, suitable_rough_gravel, suitable_4x4_required, bc_ferries_class, description) VALUES
+
+-- Passenger Vehicles
+('sedan', 15.5, 4.8, NULL, NULL, 1000, 'class_i', false, false, 'standard', 'Standard 4-door sedan'),
+('suv_compact', 15, 5.5, NULL, NULL, 3500, 'class_ii', false, false, 'standard', 'Compact crossover/SUV like RAV4, CR-V'),
+('suv_midsize', 16, 5.8, NULL, NULL, 5000, 'class_iii', true, false, 'standard', 'Midsize SUV like 4Runner, Explorer'),
+('suv_fullsize', 17.5, 6.3, NULL, NULL, 8000, 'class_iv', true, true, 'standard', 'Full-size SUV like Tahoe, Expedition'),
+
+-- Trucks
+('pickup_midsize', 18, 5.8, NULL, 1500, 7000, 'class_iii', true, false, 'standard', 'Midsize pickup like Tacoma, Ranger'),
+('pickup_fullsize', 20, 6.3, NULL, 2500, 12000, 'class_iv', true, true, 'standard', 'Full-size pickup like F-150, Silverado'),
+('pickup_heavy_duty', 22, 6.5, NULL, 4000, 20000, 'class_v', true, true, 'oversize', 'HD truck like F-250, 2500 series'),
+
+-- Vans
+('cargo_van', 19, 6.5, 250, 2800, 6000, 'class_ii', false, false, 'standard', 'Standard cargo van like Transit, Sprinter'),
+('cargo_van_high_roof', 20, 8.5, 400, 3500, 6000, 'class_ii', false, false, 'overheight', 'High-roof cargo van, may be overheight'),
+
+-- Commercial
+('cube_van', 24, 10.5, 800, 4300, NULL, NULL, false, false, 'commercial', 'Box truck / cube van 14-16ft'),
+('box_truck', 30, 12.5, 1200, 10000, NULL, NULL, false, false, 'commercial', 'Large box truck 20-26ft'),
+
+-- RVs
+('rv_class_a', 38, 12.5, NULL, NULL, 10000, 'class_v', false, false, 'oversize', 'Class A motorhome, bus-style'),
+('rv_class_b', 22, 8.5, NULL, NULL, 3500, 'class_ii', true, false, 'overheight', 'Class B camper van'),
+('rv_class_c', 28, 10.5, NULL, NULL, 5000, 'class_iii', false, false, 'overheight', 'Class C motorhome with cabover');
+
+-- =====================================================
+-- TRAILER TYPE SPECIFICATIONS
+-- =====================================================
+
+CREATE TABLE IF NOT EXISTS trailer_type_specs (
+  id SERIAL PRIMARY KEY,
+  trailer_type VARCHAR(50) NOT NULL,
+  
+  -- Typical dimensions
+  typical_length_range VARCHAR(20), -- e.g., "12-20"
+  typical_width_feet DECIMAL(4,1),
+  typical_height_feet DECIMAL(4,1),
+  
+  -- Typical capacities
+  typical_gvwr_range VARCHAR(20), -- e.g., "3500-7000"
+  typical_payload_lbs INTEGER,
+  
+  -- Hitch requirements
+  typical_hitch_type VARCHAR(30),
+  typical_ball_size VARCHAR(10),
+  typical_brake_type VARCHAR(20),
+  typical_wiring VARCHAR(20),
+  
+  -- Common door configurations
+  typical_rear_door VARCHAR(30),
+  typical_side_door VARCHAR(30),
+  
+  description TEXT,
+  
+  UNIQUE(trailer_type)
+);
+
+-- Seed trailer type specs
+INSERT INTO trailer_type_specs (trailer_type, typical_length_range, typical_width_feet, typical_gvwr_range, typical_hitch_type, typical_ball_size, typical_brake_type, typical_wiring, typical_rear_door, description) VALUES
+
+-- Cargo/Utility
+('enclosed_cargo', '6-24', 7, '3500-14000', 'bumper_pull', '2_5_16', 'electric', '7_pin_rv_blade', 'ramp_door', 'Enclosed cargo trailer for tools, equipment'),
+('open_utility', '5-16', 6.5, '2000-7000', 'bumper_pull', '2', 'none', '4_pin_flat', 'none', 'Open utility trailer with rails'),
+('flatbed', '16-40', 8.5, '7000-25000', 'gooseneck', '2_5_16', 'electric', '7_pin_rv_blade', 'none', 'Flatbed equipment trailer'),
+('dump', '10-16', 7, '7000-14000', 'bumper_pull', '2_5_16', 'electric', '7_pin_rv_blade', 'swing_doors', 'Dump trailer with hydraulic lift'),
+
+-- Car/Equipment
+('car_hauler', '16-24', 8.5, '7000-14000', 'bumper_pull', '2_5_16', 'electric', '7_pin_rv_blade', 'ramp_door', 'Open or enclosed car hauler'),
+('equipment', '18-40', 8.5, '10000-25000', 'gooseneck', '2_5_16', 'electric', '7_pin_rv_blade', 'ramp_door', 'Heavy equipment trailer'),
+
+-- Livestock
+('horse', '12-24', 7, '7000-14000', 'bumper_pull', '2_5_16', 'electric', '7_pin_rv_blade', 'swing_doors', 'Horse trailer, slant or straight load'),
+('livestock', '16-32', 7, '14000-25000', 'gooseneck', '2_5_16', 'electric', '7_pin_rv_blade', 'swing_doors', 'Livestock/cattle trailer'),
+
+-- RV
+('travel_trailer', '15-35', 8, '3500-10000', 'bumper_pull', '2_5_16', 'electric', '7_pin_rv_blade', 'none', 'Travel trailer / camper'),
+('fifth_wheel_rv', '25-42', 8, '10000-18000', 'fifth_wheel', NULL, 'electric', '7_pin_rv_blade', 'none', 'Fifth wheel RV'),
+('toy_hauler', '20-40', 8.5, '7000-18000', 'bumper_pull', '2_5_16', 'electric', '7_pin_rv_blade', 'ramp_door', 'Toy hauler with garage'),
+
+-- Recreation
+('boat', '12-35', 8.5, '1500-10000', 'bumper_pull', '2', 'surge', '4_pin_flat', 'none', 'Boat trailer'),
+('pwc', '10-14', 6, '1000-2000', 'bumper_pull', '1_7_8', 'none', '4_pin_flat', 'none', 'Personal watercraft trailer');
+
+-- =====================================================
+-- LIFTGATE SPECIFICATIONS
+-- =====================================================
+
+CREATE TABLE IF NOT EXISTS liftgate_specs (
+  id SERIAL PRIMARY KEY,
+  liftgate_type liftgate_type NOT NULL,
+  
+  name VARCHAR(100) NOT NULL,
+  description TEXT,
+  
+  -- Typical capacities
+  typical_capacity_range VARCHAR(20), -- e.g., "1500-3000"
+  typical_platform_width_inches INTEGER,
+  typical_platform_depth_inches INTEGER,
+  
+  -- Pros/Cons
+  pros TEXT[],
+  cons TEXT[],
+  
+  -- Best for
+  best_for TEXT[],
+  
+  -- Cost range
+  typical_cost_range VARCHAR(30)
+);
+
+INSERT INTO liftgate_specs (liftgate_type, name, description, typical_capacity_range, typical_platform_width_inches, typical_platform_depth_inches, pros, cons, best_for, typical_cost_range) VALUES
+('tuck_under', 'Tuck-Under Liftgate', 'Platform folds and stows under the truck bed when not in use', '1500-3300', 80, 52, 
+  ARRAY['Dock-friendly - backs right up to dock', 'Out of way when not needed', 'Popular and proven design'],
+  ARRAY['Requires sufficient ground clearance', 'Platform tilts slightly at ground level'],
+  ARRAY['Dock deliveries', 'Mixed dock/ground deliveries', 'Rental trucks'],
+  '$3,000-$13,000'),
+
+('rail_gate', 'Rail Gate', 'Platform moves up and down on vertical rails mounted to truck frame', '2000-6600', 90, 60,
+  ARRAY['Level ride throughout lift cycle', 'Very stable platform', 'Large platform capacity'],
+  ARRAY['Blocks rear doors when stowed', 'Heavier than tuck-under'],
+  ARRAY['Heavy palletized loads', 'Warehouse deliveries', 'LTL carriers'],
+  '$4,000-$13,000'),
+
+('cantilever', 'Cantilever Liftgate', 'Platform extends from chassis, can tilt to match uneven ground', '2000-5500', 90, 60,
+  ARRAY['Adjustable tilt for uneven surfaces', 'Large platform', 'Works with swing doors or roll-up'],
+  ARRAY['More expensive', 'Heavier', 'Requires skilled installation'],
+  ARRAY['Beverage distribution', 'Last-mile delivery', 'Fragile cargo'],
+  '$4,500-$18,000'),
+
+('column_lift', 'Column Lift', 'Uses column mechanism for straight up/down motion', '3000-6600', 90, 60,
+  ARRAY['High capacity', 'Precise control', 'Good ground clearance'],
+  ARRAY['Most expensive', 'Heavy', 'Complex mechanism'],
+  ARRAY['Industrial deliveries', 'Heavy equipment', 'Construction'],
+  '$6,000-$25,000'),
+
+('side_loader', 'Side Loader', 'Platform mounted on side of truck for side loading', '3000-6000', 48, 72,
+  ARRAY['Access in tight rear spaces', 'Urban-friendly', 'Unique side loading capability'],
+  ARRAY['Side space required', 'Pricier install'],
+  ARRAY['Urban deliveries', 'Tight loading docks', 'Parallel parking deliveries'],
+  '$6,000-$18,000');
+```
+
+=== PART 3: Updated Vehicle Form Component ===
+
+Create file: client/src/components/Fleet/VehicleFormEnhanced.tsx
+```tsx
+import React, { useState, useEffect } from 'react';
+
+// =====================================================
+// TYPE DEFINITIONS
+// =====================================================
+
+const VEHICLE_CLASSES = [
+  { value: 'sedan', label: 'Sedan', icon: '🚗', category: 'passenger' },
+  { value: 'suv_compact', label: 'Compact SUV', icon: '🚙', category: 'passenger' },
+  { value: 'suv_midsize', label: 'Midsize SUV', icon: '🚙', category: 'passenger' },
+  { value: 'suv_fullsize', label: 'Full-Size SUV', icon: '🚙', category: 'passenger' },
+  { value: 'pickup_midsize', label: 'Midsize Pickup', icon: '🛻', category: 'truck' },
+  { value: 'pickup_fullsize', label: 'Full-Size Pickup', icon: '🛻', category: 'truck' },
+  { value: 'pickup_heavy_duty', label: 'Heavy Duty Pickup', icon: '🛻', category: 'truck' },
+  { value: 'minivan', label: 'Minivan', icon: '🚐', category: 'van' },
+  { value: 'cargo_van', label: 'Cargo Van', icon: '🚐', category: 'van' },
+  { value: 'cargo_van_high_roof', label: 'High-Roof Cargo Van', icon: '🚐', category: 'van' },
+  { value: 'cube_van', label: 'Cube Van (12-16ft)', icon: '📦', category: 'commercial' },
+  { value: 'box_truck', label: 'Box Truck (20-26ft)', icon: '🚚', category: 'commercial' },
+  { value: 'rv_class_a', label: 'Class A Motorhome', icon: '🚌', category: 'rv' },
+  { value: 'rv_class_b', label: 'Class B (Camper Van)', icon: '🚐', category: 'rv' },
+  { value: 'rv_class_c', label: 'Class C Motorhome', icon: '🚐', category: 'rv' },
+];
+
+const HITCH_TYPES = [
+  { value: 'none', label: 'No Hitch' },
+  { value: 'bumper_pull', label: 'Bumper Pull (Receiver)', description: 'Standard receiver hitch behind bumper' },
+  { value: 'gooseneck', label: 'Gooseneck', description: 'Ball mounted in truck bed' },
+  { value: 'fifth_wheel', label: 'Fifth Wheel', description: 'Kingpin/jaw system in truck bed' },
+  { value: 'pintle', label: 'Pintle Hook', description: 'Hook & lunette ring (heavy duty)' },
+  { value: 'weight_distribution', label: 'Weight Distribution', description: 'WD hitch with spring bars' },
+];
+
+const HITCH_CLASSES = [
+  { value: 'none', label: 'None' },
+  { value: 'class_i', label: 'Class I', capacity: '2,000 lbs GTW', receiver: '1.25"' },
+  { value: 'class_ii', label: 'Class II', capacity: '3,500 lbs GTW', receiver: '1.25"' },
+  { value: 'class_iii', label: 'Class III', capacity: '8,000 lbs GTW', receiver: '2"' },
+  { value: 'class_iv', label: 'Class IV', capacity: '10,000 lbs GTW', receiver: '2"' },
+  { value: 'class_v', label: 'Class V', capacity: '17,000 lbs GTW', receiver: '2.5"' },
+];
+
+const BALL_SIZES = [
+  { value: 'none', label: 'None / N/A' },
+  { value: '1_7_8', label: '1-7/8"', description: 'Light duty - small trailers' },
+  { value: '2', label: '2"', description: 'Most common - mid-size trailers' },
+  { value: '2_5_16', label: '2-5/16"', description: 'Heavy duty - large trailers' },
+  { value: '3', label: '3"', description: 'Extra heavy duty' },
+];
+
+const WIRING_TYPES = [
+  { value: 'none', label: 'No Wiring' },
+  { value: '4_pin_flat', label: '4-Pin Flat', description: 'Lights only: tail, brake, turn, ground' },
+  { value: '5_pin_flat', label: '5-Pin Flat', description: 'Adds reverse lights' },
+  { value: '6_pin_round', label: '6-Pin Round', description: 'Adds electric brakes + 12V' },
+  { value: '7_pin_rv_blade', label: '7-Pin RV Blade', description: 'Full RV: brakes, 12V, reverse' },
+  { value: '7_pin_round', label: '7-Pin Round', description: 'Heavy duty commercial' },
+];
+
+const BRAKE_CONTROLLER_TYPES = [
+  { value: 'none', label: 'No Brake Controller' },
+  { value: 'proportional', label: 'Proportional', description: 'Senses vehicle braking, applies proportional force' },
+  { value: 'time_delayed', label: 'Time-Delayed', description: 'Applies set force after delay' },
+  { value: 'integrated', label: 'Factory Integrated', description: 'Built into vehicle (factory tow package)' },
+];
+
+const LIFTGATE_TYPES = [
+  { value: 'none', label: 'No Liftgate' },
+  { value: 'tuck_under', label: 'Tuck-Under', description: 'Folds under truck bed, dock-friendly' },
+  { value: 'rail_gate', label: 'Rail Gate', description: 'Level ride on vertical rails' },
+  { value: 'cantilever', label: 'Cantilever', description: 'Adjustable tilt for uneven ground' },
+  { value: 'column_lift', label: 'Column Lift', description: 'Heavy duty column mechanism' },
+  { value: 'side_loader', label: 'Side Loader', description: 'Side-mounted for tight spaces' },
+];
+
+const REAR_DOOR_TYPES = [
+  { value: 'none', label: 'None / N/A' },
+  { value: 'swing_doors', label: 'Swing Doors (Barn Doors)', description: '2 doors swing out, max cargo access' },
+  { value: 'roll_up', label: 'Roll-Up Door', description: 'Rolls up overhead, space-efficient' },
+  { value: 'ramp_door', label: 'Ramp Door', description: 'Hinged at bottom, folds down as ramp' },
+  { value: 'ramp_spring_assist', label: 'Ramp with Spring Assist', description: 'Ramp door with lift assist' },
+  { value: 'lift_gate_door', label: 'Liftgate Door', description: 'Door is the liftgate platform' },
+];
+
+interface VehicleFormEnhancedProps {
+  vehicleId?: string;
+  onSave: (vehicle: any) => void;
+  onCancel: () => void;
+}
+
+export function VehicleFormEnhanced({ vehicleId, onSave, onCancel }: VehicleFormEnhancedProps) {
+  const [activeTab, setActiveTab] = useState<'basic' | 'cargo' | 'towing' | 'rv' | 'photos'>('basic');
+  const [vehicleClass, setVehicleClass] = useState('pickup_fullsize');
+  const [formData, setFormData] = useState<any>({
+    // Basic
+    nickname: '',
+    fleet_number: '',
+    year: '',
+    make: '',
+    model: '',
+    color: '',
+    license_plate: '',
+    vin: '',
+    vehicle_class: 'pickup_fullsize',
+    drive_type: '4wd',
+    fuel_type: 'gas',
+    fleet_status: 'available',
+    
+    // Dimensions
+    length_feet: '',
+    height_feet: '',
+    ground_clearance_inches: '',
+    
+    // Cargo (for vans/trucks)
+    cargo_length_inches: '',
+    cargo_width_inches: '',
+    cargo_height_inches: '',
+    cargo_volume_cubic_feet: '',
+    payload_capacity_lbs: '',
+    gvwr_lbs: '',
+    
+    // Doors
+    rear_door_type: 'none',
+    rear_door_width_inches: '',
+    rear_door_height_inches: '',
+    has_side_door: false,
+    side_door_type: '',
+    
+    // Liftgate
+    liftgate_type: 'none',
+    liftgate_capacity_lbs: '',
+    liftgate_platform_width_inches: '',
+    liftgate_platform_depth_inches: '',
+    
+    // Loading Ramp
+    has_loading_ramp: false,
+    ramp_type: '',
+    ramp_capacity_lbs: '',
+    
+    // Bed (trucks)
+    bed_length: '',
+    bed_length_inches: '',
+    has_bed_liner: false,
+    bed_liner_type: '',
+    has_tonneau_cover: false,
+    has_truck_cap: false,
+    
+    // Towing
+    towing_capacity_lbs: '',
+    primary_hitch_type: 'none',
+    receiver_size_inches: '',
+    hitch_class: 'none',
+    ball_size: 'none',
+    max_tongue_weight_lbs: '',
+    gooseneck_ball_size: 'none',
+    fifth_wheel_rail_type: '',
+    brake_controller_type: 'none',
+    brake_controller_brand: '',
+    trailer_wiring_type: 'none',
+    has_aux_12v_circuit: false,
+    
+    // RV Systems
+    is_rv: false,
+    rv_sleep_capacity: '',
+    rv_seatbelt_positions: '',
+    fresh_water_gallons: '',
+    gray_water_gallons: '',
+    black_water_gallons: '',
+    propane_tank_count: '',
+    propane_capacity_lbs: '',
+    fuel_tank_gallons: '',
+    generator_type: '',
+    generator_watts: '',
+    shore_power_amps: '',
+    has_solar: false,
+    solar_watts: '',
+    battery_type: '',
+    battery_amp_hours: '',
+    has_inverter: false,
+    inverter_watts: '',
+    slideout_count: 0,
+    slideout_type: '',
+    ac_type: '',
+    ac_btu: '',
+    heat_type: '',
+    heat_btu: '',
+    
+    notes: '',
+  });
+
+  // Show/hide sections based on vehicle class
+  const showCargoSection = ['cargo_van', 'cargo_van_high_roof', 'cube_van', 'box_truck'].includes(vehicleClass);
+  const showLiftgateSection = ['cube_van', 'box_truck'].includes(vehicleClass);
+  const showBedSection = ['pickup_midsize', 'pickup_fullsize', 'pickup_heavy_duty'].includes(vehicleClass);
+  const showRvSection = ['rv_class_a', 'rv_class_b', 'rv_class_c'].includes(vehicleClass);
+  const showGooseneckFifthWheel = ['pickup_fullsize', 'pickup_heavy_duty'].includes(vehicleClass);
+
+  function updateField(field: string, value: any) {
+    setFormData((prev: any) => ({ ...prev, [field]: value }));
+    if (field === 'vehicle_class') {
+      setVehicleClass(value);
+    }
+  }
+
+  return (
+    <div className="bg-gray-800 rounded-xl overflow-hidden">
+      {/* Header */}
+      <div className="p-6 border-b border-gray-700 flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-bold text-white">
+            {vehicleId ? 'Edit Vehicle' : 'Add Fleet Vehicle'}
+          </h2>
+          <p className="text-gray-400 text-sm">
+            {formData.nickname || formData.fleet_number || 'Complete vehicle specifications'}
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <button onClick={onCancel} className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-gray-300 rounded-lg">
+            Cancel
+          </button>
+          <button 
+            onClick={() => onSave(formData)}
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
+          >
+            Save Vehicle
+          </button>
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex border-b border-gray-700 overflow-x-auto">
+        {[
+          { id: 'basic', label: '🚗 Basic Info', show: true },
+          { id: 'cargo', label: '📦 Cargo & Loading', show: showCargoSection || showBedSection },
+          { id: 'towing', label: '🔗 Towing & Hitch', show: true },
+          { id: 'rv', label: '🏕️ RV Systems', show: showRvSection },
+          { id: 'photos', label: '📷 Photos', show: true },
+        ].filter(t => t.show).map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id as any)}
+            className={`px-6 py-3 font-medium whitespace-nowrap transition ${
+              activeTab === tab.id
+                ? 'text-blue-400 border-b-2 border-blue-400 bg-gray-700/50'
+                : 'text-gray-400 hover:text-gray-300'
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="p-6 max-h-[70vh] overflow-y-auto">
+        {/* Basic Info Tab */}
+        {activeTab === 'basic' && (
+          <div className="space-y-6">
+            {/* Vehicle Class Selection */}
+            <div>
+              <label className="block text-gray-300 text-sm font-medium mb-3">Vehicle Type</label>
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-2">
+                {VEHICLE_CLASSES.map(vc => (
+                  <button
+                    key={vc.value}
+                    type="button"
+                    onClick={() => updateField('vehicle_class', vc.value)}
+                    className={`p-3 rounded-lg border text-center transition ${
+                      formData.vehicle_class === vc.value
+                        ? 'border-blue-500 bg-blue-500/20 text-white'
+                        : 'border-gray-600 bg-gray-700 text-gray-300 hover:border-gray-500'
+                    }`}
+                  >
+                    <span className="text-2xl block">{vc.icon}</span>
+                    <span className="text-xs">{vc.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Identity */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-gray-300 text-sm font-medium mb-2">
+                  Nickname <span className="text-gray-500">(how your team refers to it)</span>
+                </label>
+                <input
+                  type="text"
+                  value={formData.nickname}
+                  onChange={(e) => updateField('nickname', e.target.value)}
+                  className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600 focus:border-blue-500 focus:outline-none"
+                  placeholder='"Big Blue", "The Beast", "Unit 7"'
+                />
+              </div>
+              <div>
+                <label className="block text-gray-300 text-sm font-medium mb-2">Fleet Number</label>
+                <input
+                  type="text"
+                  value={formData.fleet_number}
+                  onChange={(e) => updateField('fleet_number', e.target.value)}
+                  className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600 focus:border-blue-500 focus:outline-none"
+                  placeholder="V-001, T-042"
+                />
+              </div>
+            </div>
+
+            {/* Year / Make / Model / Color */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div>
+                <label className="block text-gray-300 text-sm font-medium mb-2">Year</label>
+                <input
+                  type="number"
+                  value={formData.year}
+                  onChange={(e) => updateField('year', e.target.value)}
+                  className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600"
+                  placeholder="2024"
+                />
+              </div>
+              <div>
+                <label className="block text-gray-300 text-sm font-medium mb-2">Make *</label>
+                <input
+                  type="text"
+                  value={formData.make}
+                  onChange={(e) => updateField('make', e.target.value)}
+                  className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600"
+                  placeholder="Ford, Isuzu..."
+                />
+              </div>
+              <div>
+                <label className="block text-gray-300 text-sm font-medium mb-2">Model *</label>
+                <input
+                  type="text"
+                  value={formData.model}
+                  onChange={(e) => updateField('model', e.target.value)}
+                  className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600"
+                  placeholder="F-350, NPR..."
+                />
+              </div>
+              <div>
+                <label className="block text-gray-300 text-sm font-medium mb-2">Color</label>
+                <input
+                  type="text"
+                  value={formData.color}
+                  onChange={(e) => updateField('color', e.target.value)}
+                  className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600"
+                  placeholder="White, Blue..."
+                />
+              </div>
+            </div>
+
+            {/* Continue with rest of basic fields... */}
+          </div>
+        )}
+
+        {/* Cargo & Loading Tab */}
+        {activeTab === 'cargo' && (showCargoSection || showBedSection) && (
+          <div className="space-y-6">
+            {showCargoSection && (
+              <>
+                <h3 className="text-lg font-semibold text-white">Cargo Area Dimensions</h3>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div>
+                    <label className="block text-gray-300 text-sm font-medium mb-2">Length (inches)</label>
+                    <input
+                      type="number"
+                      value={formData.cargo_length_inches}
+                      onChange={(e) => updateField('cargo_length_inches', e.target.value)}
+                      className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600"
+                      placeholder="192"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-gray-300 text-sm font-medium mb-2">Width (inches)</label>
+                    <input
+                      type="number"
+                      value={formData.cargo_width_inches}
+                      onChange={(e) => updateField('cargo_width_inches', e.target.value)}
+                      className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600"
+                      placeholder="91"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-gray-300 text-sm font-medium mb-2">Height (inches)</label>
+                    <input
+                      type="number"
+                      value={formData.cargo_height_inches}
+                      onChange={(e) => updateField('cargo_height_inches', e.target.value)}
+                      className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600"
+                      placeholder="78"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-gray-300 text-sm font-medium mb-2">Volume (cu ft)</label>
+                    <input
+                      type="number"
+                      value={formData.cargo_volume_cubic_feet}
+                      onChange={(e) => updateField('cargo_volume_cubic_feet', e.target.value)}
+                      className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600"
+                      placeholder="800"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-gray-300 text-sm font-medium mb-2">Payload Capacity (lbs)</label>
+                    <input
+                      type="number"
+                      value={formData.payload_capacity_lbs}
+                      onChange={(e) => updateField('payload_capacity_lbs', e.target.value)}
+                      className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600"
+                      placeholder="4300"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-gray-300 text-sm font-medium mb-2">GVWR (lbs)</label>
+                    <input
+                      type="number"
+                      value={formData.gvwr_lbs}
+                      onChange={(e) => updateField('gvwr_lbs', e.target.value)}
+                      className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600"
+                      placeholder="14000"
+                    />
+                  </div>
+                </div>
+
+                {/* Rear Door Configuration */}
+                <h3 className="text-lg font-semibold text-white mt-6">Rear Door Configuration</h3>
+                <div>
+                  <label className="block text-gray-300 text-sm font-medium mb-2">Rear Door Type</label>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                    {REAR_DOOR_TYPES.map(door => (
+                      <button
+                        key={door.value}
+                        type="button"
+                        onClick={() => updateField('rear_door_type', door.value)}
+                        className={`p-3 rounded-lg border text-left transition ${
+                          formData.rear_door_type === door.value
+                            ? 'border-blue-500 bg-blue-500/20 text-white'
+                            : 'border-gray-600 bg-gray-700 text-gray-300 hover:border-gray-500'
+                        }`}
+                      >
+                        <span className="font-medium block">{door.label}</span>
+                        {door.description && (
+                          <span className="text-xs text-gray-400">{door.description}</span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {formData.rear_door_type !== 'none' && (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-gray-300 text-sm font-medium mb-2">Door Width (inches)</label>
+                      <input
+                        type="number"
+                        value={formData.rear_door_width_inches}
+                        onChange={(e) => updateField('rear_door_width_inches', e.target.value)}
+                        className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600"
+                        placeholder="94"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-gray-300 text-sm font-medium mb-2">Door Height (inches)</label>
+                      <input
+                        type="number"
+                        value={formData.rear_door_height_inches}
+                        onChange={(e) => updateField('rear_door_height_inches', e.target.value)}
+                        className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600"
+                        placeholder="82"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Liftgate Configuration */}
+                {showLiftgateSection && (
+                  <>
+                    <h3 className="text-lg font-semibold text-white mt-6">Liftgate Configuration</h3>
+                    <div>
+                      <label className="block text-gray-300 text-sm font-medium mb-2">Liftgate Type</label>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                        {LIFTGATE_TYPES.map(lg => (
+                          <button
+                            key={lg.value}
+                            type="button"
+                            onClick={() => updateField('liftgate_type', lg.value)}
+                            className={`p-3 rounded-lg border text-left transition ${
+                              formData.liftgate_type === lg.value
+                                ? 'border-blue-500 bg-blue-500/20 text-white'
+                                : 'border-gray-600 bg-gray-700 text-gray-300 hover:border-gray-500'
+                            }`}
+                          >
+                            <span className="font-medium block">{lg.label}</span>
+                            {lg.description && (
+                              <span className="text-xs text-gray-400">{lg.description}</span>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {formData.liftgate_type !== 'none' && (
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div>
+                          <label className="block text-gray-300 text-sm font-medium mb-2">Capacity (lbs)</label>
+                          <input
+                            type="number"
+                            value={formData.liftgate_capacity_lbs}
+                            onChange={(e) => updateField('liftgate_capacity_lbs', e.target.value)}
+                            className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600"
+                            placeholder="2500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-gray-300 text-sm font-medium mb-2">Platform Width (in)</label>
+                          <input
+                            type="number"
+                            value={formData.liftgate_platform_width_inches}
+                            onChange={(e) => updateField('liftgate_platform_width_inches', e.target.value)}
+                            className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600"
+                            placeholder="80"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-gray-300 text-sm font-medium mb-2">Platform Depth (in)</label>
+                          <input
+                            type="number"
+                            value={formData.liftgate_platform_depth_inches}
+                            onChange={(e) => updateField('liftgate_platform_depth_inches', e.target.value)}
+                            className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600"
+                            placeholder="52"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+              </>
+            )}
+
+            {showBedSection && (
+              <>
+                <h3 className="text-lg font-semibold text-white">Truck Bed Configuration</h3>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-gray-300 text-sm font-medium mb-2">Bed Length</label>
+                    <select
+                      value={formData.bed_length}
+                      onChange={(e) => updateField('bed_length', e.target.value)}
+                      className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600"
+                    >
+                      <option value="">Select...</option>
+                      <option value="short">Short (5.5-6 ft)</option>
+                      <option value="standard">Standard (6.5 ft)</option>
+                      <option value="long">Long (8 ft)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-gray-300 text-sm font-medium mb-2">Exact Length (inches)</label>
+                    <input
+                      type="number"
+                      value={formData.bed_length_inches}
+                      onChange={(e) => updateField('bed_length_inches', e.target.value)}
+                      className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600"
+                      placeholder="78"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap gap-4">
+                  <label className="flex items-center gap-2 text-gray-300">
+                    <input
+                      type="checkbox"
+                      checked={formData.has_bed_liner}
+                      onChange={(e) => updateField('has_bed_liner', e.target.checked)}
+                      className="w-4 h-4 rounded"
+                    />
+                    Bed Liner
+                  </label>
+                  <label className="flex items-center gap-2 text-gray-300">
+                    <input
+                      type="checkbox"
+                      checked={formData.has_tonneau_cover}
+                      onChange={(e) => updateField('has_tonneau_cover', e.target.checked)}
+                      className="w-4 h-4 rounded"
+                    />
+                    Tonneau Cover
+                  </label>
+                  <label className="flex items-center gap-2 text-gray-300">
+                    <input
+                      type="checkbox"
+                      checked={formData.has_truck_cap}
+                      onChange={(e) => updateField('has_truck_cap', e.target.checked)}
+                      className="w-4 h-4 rounded"
+                    />
+                    Truck Cap / Canopy
+                  </label>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
+        {/* Towing Tab */}
+        {activeTab === 'towing' && (
+          <div className="space-y-6">
+            <div>
+              <label className="block text-gray-300 text-sm font-medium mb-2">Towing Capacity (lbs)</label>
+              <input
+                type="number"
+                value={formData.towing_capacity_lbs}
+                onChange={(e) => updateField('towing_capacity_lbs', e.target.value)}
+                className="w-full md:w-1/2 bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600"
+                placeholder="12000"
+              />
+            </div>
+
+            {/* Primary Hitch Type */}
+            <div>
+              <label className="block text-gray-300 text-sm font-medium mb-2">Primary Hitch Type</label>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                {HITCH_TYPES.map(ht => (
+                  <button
+                    key={ht.value}
+                    type="button"
+                    onClick={() => updateField('primary_hitch_type', ht.value)}
+                    className={`p-3 rounded-lg border text-left transition ${
+                      formData.primary_hitch_type === ht.value
+                        ? 'border-blue-500 bg-blue-500/20 text-white'
+                        : 'border-gray-600 bg-gray-700 text-gray-300 hover:border-gray-500'
+                    }`}
+                  >
+                    <span className="font-medium block">{ht.label}</span>
+                    {ht.description && (
+                      <span className="text-xs text-gray-400">{ht.description}</span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Bumper Pull Details */}
+            {formData.primary_hitch_type === 'bumper_pull' && (
+              <>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-gray-300 text-sm font-medium mb-2">Hitch Class</label>
+                    <select
+                      value={formData.hitch_class}
+                      onChange={(e) => updateField('hitch_class', e.target.value)}
+                      className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600"
+                    >
+                      {HITCH_CLASSES.map(hc => (
+                        <option key={hc.value} value={hc.value}>
+                          {hc.label} {hc.capacity && `(${hc.capacity})`}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-gray-300 text-sm font-medium mb-2">Receiver Size</label>
+                    <select
+                      value={formData.receiver_size_inches}
+                      onChange={(e) => updateField('receiver_size_inches', e.target.value)}
+                      className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600"
+                    >
+                      <option value="">Select...</option>
+                      <option value="1.25">1.25" (Class I-II)</option>
+                      <option value="2">2" (Class III-IV)</option>
+                      <option value="2.5">2.5" (Class V)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-gray-300 text-sm font-medium mb-2">Ball Size</label>
+                    <select
+                      value={formData.ball_size}
+                      onChange={(e) => updateField('ball_size', e.target.value)}
+                      className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600"
+                    >
+                      {BALL_SIZES.map(bs => (
+                        <option key={bs.value} value={bs.value}>{bs.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* Gooseneck/Fifth Wheel Details (for HD trucks) */}
+            {showGooseneckFifthWheel && (
+              <div className="bg-gray-700/50 rounded-lg p-4">
+                <h4 className="text-white font-medium mb-3">In-Bed Hitch Options</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-gray-300 text-sm font-medium mb-2">Gooseneck Ball Size</label>
+                    <select
+                      value={formData.gooseneck_ball_size}
+                      onChange={(e) => updateField('gooseneck_ball_size', e.target.value)}
+                      className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600"
+                    >
+                      {BALL_SIZES.map(bs => (
+                        <option key={bs.value} value={bs.value}>{bs.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-gray-300 text-sm font-medium mb-2">Fifth Wheel Rails</label>
+                    <select
+                      value={formData.fifth_wheel_rail_type}
+                      onChange={(e) => updateField('fifth_wheel_rail_type', e.target.value)}
+                      className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600"
+                    >
+                      <option value="">None</option>
+                      <option value="standard">Standard Industry Rails</option>
+                      <option value="oem">OEM Factory Rails</option>
+                      <option value="custom">Custom Installation</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Brake Controller */}
+            <div>
+              <label className="block text-gray-300 text-sm font-medium mb-2">Brake Controller</label>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                {BRAKE_CONTROLLER_TYPES.map(bc => (
+                  <button
+                    key={bc.value}
+                    type="button"
+                    onClick={() => updateField('brake_controller_type', bc.value)}
+                    className={`p-3 rounded-lg border text-left transition ${
+                      formData.brake_controller_type === bc.value
+                        ? 'border-blue-500 bg-blue-500/20 text-white'
+                        : 'border-gray-600 bg-gray-700 text-gray-300 hover:border-gray-500'
+                    }`}
+                  >
+                    <span className="font-medium block text-sm">{bc.label}</span>
+                    {bc.description && (
+                      <span className="text-xs text-gray-400">{bc.description}</span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Wiring */}
+            <div>
+              <label className="block text-gray-300 text-sm font-medium mb-2">Trailer Wiring Connector</label>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                {WIRING_TYPES.map(wt => (
+                  <button
+                    key={wt.value}
+                    type="button"
+                    onClick={() => updateField('trailer_wiring_type', wt.value)}
+                    className={`p-3 rounded-lg border text-left transition ${
+                      formData.trailer_wiring_type === wt.value
+                        ? 'border-blue-500 bg-blue-500/20 text-white'
+                        : 'border-gray-600 bg-gray-700 text-gray-300 hover:border-gray-500'
+                    }`}
+                  >
+                    <span className="font-medium block text-sm">{wt.label}</span>
+                    {wt.description && (
+                      <span className="text-xs text-gray-400">{wt.description}</span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* RV Systems Tab */}
+        {activeTab === 'rv' && showRvSection && (
+          <div className="space-y-6">
+            <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
+              <h4 className="text-blue-400 font-medium">🏕️ RV Specifications</h4>
+              <p className="text-gray-300 text-sm">Enter your motorhome's systems and capacities</p>
+            </div>
+
+            {/* Capacity */}
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-gray-300 text-sm font-medium mb-2">Sleep Capacity</label>
+                <input
+                  type="number"
+                  value={formData.rv_sleep_capacity}
+                  onChange={(e) => updateField('rv_sleep_capacity', e.target.value)}
+                  className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600"
+                  placeholder="6"
+                />
+              </div>
+              <div>
+                <label className="block text-gray-300 text-sm font-medium mb-2">Seatbelt Positions</label>
+                <input
+                  type="number"
+                  value={formData.rv_seatbelt_positions}
+                  onChange={(e) => updateField('rv_seatbelt_positions', e.target.value)}
+                  className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600"
+                  placeholder="4"
+                />
+              </div>
+              <div>
+                <label className="block text-gray-300 text-sm font-medium mb-2">Slideouts</label>
+                <input
+                  type="number"
+                  value={formData.slideout_count}
+                  onChange={(e) => updateField('slideout_count', e.target.value)}
+                  className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600"
+                  placeholder="2"
+                />
+              </div>
+            </div>
+
+            {/* Tanks */}
+            <h4 className="text-white font-medium">Tank Capacities</h4>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div>
+                <label className="block text-gray-300 text-sm font-medium mb-2">Fresh Water (gal)</label>
+                <input
+                  type="number"
+                  value={formData.fresh_water_gallons}
+                  onChange={(e) => updateField('fresh_water_gallons', e.target.value)}
+                  className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600"
+                  placeholder="80"
+                />
+              </div>
+              <div>
+                <label className="block text-gray-300 text-sm font-medium mb-2">Gray Water (gal)</label>
+                <input
+                  type="number"
+                  value={formData.gray_water_gallons}
+                  onChange={(e) => updateField('gray_water_gallons', e.target.value)}
+                  className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600"
+                  placeholder="50"
+                />
+              </div>
+              <div>
+                <label className="block text-gray-300 text-sm font-medium mb-2">Black Water (gal)</label>
+                <input
+                  type="number"
+                  value={formData.black_water_gallons}
+                  onChange={(e) => updateField('black_water_gallons', e.target.value)}
+                  className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600"
+                  placeholder="40"
+                />
+              </div>
+              <div>
+                <label className="block text-gray-300 text-sm font-medium mb-2">Propane (lbs)</label>
+                <input
+                  type="number"
+                  value={formData.propane_capacity_lbs}
+                  onChange={(e) => updateField('propane_capacity_lbs', e.target.value)}
+                  className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600"
+                  placeholder="40"
+                />
+              </div>
+            </div>
+
+            {/* Power */}
+            <h4 className="text-white font-medium">Power Systems</h4>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div>
+                <label className="block text-gray-300 text-sm font-medium mb-2">Shore Power (amps)</label>
+                <select
+                  value={formData.shore_power_amps}
+                  onChange={(e) => updateField('shore_power_amps', e.target.value)}
+                  className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600"
+                >
+                  <option value="">Select...</option>
+                  <option value="30">30 amp</option>
+                  <option value="50">50 amp</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-gray-300 text-sm font-medium mb-2">Generator (watts)</label>
+                <input
+                  type="number"
+                  value={formData.generator_watts}
+                  onChange={(e) => updateField('generator_watts', e.target.value)}
+                  className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600"
+                  placeholder="4000"
+                />
+              </div>
+              <div>
+                <label className="block text-gray-300 text-sm font-medium mb-2">Solar (watts)</label>
+                <input
+                  type="number"
+                  value={formData.solar_watts}
+                  onChange={(e) => updateField('solar_watts', e.target.value)}
+                  className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600"
+                  placeholder="400"
+                />
+              </div>
+              <div>
+                <label className="block text-gray-300 text-sm font-medium mb-2">Battery (Ah)</label>
+                <input
+                  type="number"
+                  value={formData.battery_amp_hours}
+                  onChange={(e) => updateField('battery_amp_hours', e.target.value)}
+                  className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600"
+                  placeholder="200"
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Photos Tab placeholder */}
+        {activeTab === 'photos' && (
+          <div className="text-center py-12">
+            <span className="text-5xl">📷</span>
+            <p className="text-gray-400 mt-4">Photo upload coming in Phase 4B</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export default VehicleFormEnhanced;
+```
+
+This creates a comprehensive fleet management system with:
+
+**Vehicle Features:**
+- 15+ vehicle classes (sedan through Class A RV)
+- Cargo dimensions for vans/trucks
+- 5 liftgate types with specs
+- 6 rear door types
+- Bed configurations for trucks
+
+**Towing Features:**
+- 6 hitch types (bumper pull, gooseneck, fifth wheel, pintle, WD)
+- 5 hitch classes with capacities
+- 4 ball sizes
+- 6 wiring connector types
+- 4 brake controller types
+- Gooseneck/Fifth wheel in-bed options
+
+**Trailer Features:**
+- 15+ trailer types
+- Coupler types and heights
+- Brake types (surge, electric, air)
+- Axle configurations
+- Door and ramp configurations
+- E-track and tie-down options
+
+**RV Features:**
+- Tank capacities (fresh, gray, black, propane)
+- Power systems (shore, generator, solar, battery, inverter)
+- Sleep/seatbelt capacity
+- Slideout configuration
+- Climate control specs
+
+Run the migrations and you'll have industry-standard fleet management!
