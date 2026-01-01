@@ -1,0 +1,828 @@
+=== TRAILER SYSTEM CLEANUP - FINAL COMPREHENSIVE PASS ===
+
+PART 1: Add Missing Trailer Types to Enum
+=========================================
+
+-- Update trailer_type_enum with missing categories
+ALTER TYPE trailer_type_enum ADD VALUE IF NOT EXISTS 'overlander_expedition';
+ALTER TYPE trailer_type_enum ADD VALUE IF NOT EXISTS 'overlander_teardrop_offroad';
+ALTER TYPE trailer_type_enum ADD VALUE IF NOT EXISTS 'overlander_popup_offroad';
+ALTER TYPE trailer_type_enum ADD VALUE IF NOT EXISTS 'tiny_home_thow';
+ALTER TYPE trailer_type_enum ADD VALUE IF NOT EXISTS 'park_model_rv';
+ALTER TYPE trailer_type_enum ADD VALUE IF NOT EXISTS 'specialty_sawmill';
+ALTER TYPE trailer_type_enum ADD VALUE IF NOT EXISTS 'specialty_log_splitter';
+ALTER TYPE trailer_type_enum ADD VALUE IF NOT EXISTS 'specialty_welder';
+ALTER TYPE trailer_type_enum ADD VALUE IF NOT EXISTS 'specialty_pressure_washer';
+ALTER TYPE trailer_type_enum ADD VALUE IF NOT EXISTS 'specialty_generator';
+ALTER TYPE trailer_type_enum ADD VALUE IF NOT EXISTS 'specialty_air_compressor';
+ALTER TYPE trailer_type_enum ADD VALUE IF NOT EXISTS 'specialty_light_tower';
+ALTER TYPE trailer_type_enum ADD VALUE IF NOT EXISTS 'specialty_fuel_transfer';
+ALTER TYPE trailer_type_enum ADD VALUE IF NOT EXISTS 'specialty_concrete_mixer';
+ALTER TYPE trailer_type_enum ADD VALUE IF NOT EXISTS 'car_hauler_open';
+ALTER TYPE trailer_type_enum ADD VALUE IF NOT EXISTS 'car_hauler_enclosed';
+ALTER TYPE trailer_type_enum ADD VALUE IF NOT EXISTS 'motorcycle_trailer';
+ALTER TYPE trailer_type_enum ADD VALUE IF NOT EXISTS 'snowmobile_trailer';
+ALTER TYPE trailer_type_enum ADD VALUE IF NOT EXISTS 'atv_utv_trailer';
+ALTER TYPE trailer_type_enum ADD VALUE IF NOT EXISTS 'kayak_canoe_trailer';
+ALTER TYPE trailer_type_enum ADD VALUE IF NOT EXISTS 'food_truck_concession';
+ALTER TYPE trailer_type_enum ADD VALUE IF NOT EXISTS 'mobile_office';
+ALTER TYPE trailer_type_enum ADD VALUE IF NOT EXISTS 'mobile_medical';
+ALTER TYPE trailer_type_enum ADD VALUE IF NOT EXISTS 'mobile_command';
+ALTER TYPE trailer_type_enum ADD VALUE IF NOT EXISTS 'mobile_stage';
+ALTER TYPE trailer_type_enum ADD VALUE IF NOT EXISTS 'restroom_shower';
+
+
+PART 2: Overlander/Expedition Trailer Fields
+============================================
+
+-- Add overlander-specific fields to trailer_profiles
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS is_overlander BOOLEAN DEFAULT false;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS overlander_type VARCHAR(30); -- expedition, teardrop, popup, cargo
+
+-- Off-Road Capability
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS ground_clearance_inches INTEGER;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS approach_angle_degrees INTEGER;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS departure_angle_degrees INTEGER;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS breakover_angle_degrees INTEGER;
+
+-- Suspension (off-road specific)
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS suspension_type_offroad VARCHAR(30); 
+  -- timbren_axleless, independent_coilover, airbag, torsion, leaf_spring, multi_link
+
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS articulating_hitch BOOLEAN DEFAULT false;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS hitch_articulation_degrees INTEGER; -- 360, 180, etc.
+
+-- Tires (off-road)
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS tire_size_offroad VARCHAR(20); -- 32", 35", etc.
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS tire_type VARCHAR(30); -- all_terrain, mud_terrain, highway
+
+-- Recovery/Protection
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS has_skid_plates BOOLEAN DEFAULT false;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS has_rock_sliders BOOLEAN DEFAULT false;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS has_recovery_points BOOLEAN DEFAULT false;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS recovery_point_count INTEGER;
+
+-- Rooftop Tent Support (common on overlanders)
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS has_rooftop_tent_mount BOOLEAN DEFAULT false;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS rooftop_tent_weight_capacity_lbs INTEGER;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS roof_rack_type VARCHAR(30); -- exoskeleton, standard, none
+
+-- Galley (outdoor kitchen)
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS has_slide_out_kitchen BOOLEAN DEFAULT false;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS kitchen_side VARCHAR(20); -- driver, passenger, rear
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS has_outdoor_shower BOOLEAN DEFAULT false;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS outdoor_shower_type VARCHAR(30); -- solar_heated, tankless, pressurized
+
+-- Water (overlander style - external tanks)
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS external_water_tank_gallons INTEGER;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS has_water_filtration BOOLEAN DEFAULT false;
+
+-- Fuel (some overlanders carry extra)
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS has_jerry_can_mounts BOOLEAN DEFAULT false;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS jerry_can_capacity_gallons INTEGER;
+
+
+PART 3: Tiny Home on Wheels (THOW) Fields
+=========================================
+
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS is_tiny_home BOOLEAN DEFAULT false;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS thow_certification VARCHAR(30); -- rvia, noah, none, diy
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS thow_square_feet INTEGER;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS thow_loft_count INTEGER DEFAULT 0;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS thow_full_time_rated BOOLEAN DEFAULT false; -- Some aren't designed for full-time
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS thow_four_season BOOLEAN DEFAULT false;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS thow_composting_toilet BOOLEAN DEFAULT false;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS thow_incinerating_toilet BOOLEAN DEFAULT false;
+
+-- Tiny home registration (varies by jurisdiction)
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS registered_as VARCHAR(30); 
+  -- rv, travel_trailer, mobile_home, utility_trailer, park_model
+
+
+PART 4: Specialty Equipment Trailer Fields
+==========================================
+
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS is_specialty_equipment BOOLEAN DEFAULT false;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS equipment_type VARCHAR(50);
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS equipment_make VARCHAR(100);
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS equipment_model VARCHAR(100);
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS equipment_power_type VARCHAR(30); -- gas, diesel, electric, pto, hydraulic
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS equipment_hp INTEGER;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS requires_setup_time BOOLEAN DEFAULT false; -- Sawmills need leveling, outriggers
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS setup_time_minutes INTEGER;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS requires_level_ground BOOLEAN DEFAULT false;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS has_outriggers BOOLEAN DEFAULT false;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS license_plate_exempt BOOLEAN DEFAULT false; -- Some jurisdictions exempt sawmills, etc.
+
+-- Sawmill specific
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS sawmill_max_log_diameter_inches INTEGER;
+ALTER TYPE trailer_profiles ADD COLUMN IF NOT EXISTS sawmill_max_log_length_feet DECIMAL(4,1);
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS sawmill_cut_width_inches DECIMAL(4,1);
+
+-- Welder specific  
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS welder_amp_rating INTEGER;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS welder_type VARCHAR(30); -- mig, tig, stick, multi
+
+-- Generator specific
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS generator_kw_rating DECIMAL(5,1);
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS generator_voltage VARCHAR(30); -- 120v, 240v, 480v, multi
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS generator_phase VARCHAR(20); -- single, three
+
+-- Pressure washer specific
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS pressure_washer_psi INTEGER;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS pressure_washer_gpm DECIMAL(4,1);
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS water_tank_gallons INTEGER;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS has_hot_water BOOLEAN DEFAULT false;
+
+-- Air compressor specific
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS compressor_cfm DECIMAL(5,1);
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS compressor_psi_max INTEGER;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS tank_gallons INTEGER;
+
+-- Light tower specific
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS light_tower_height_feet INTEGER;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS light_output_lumens INTEGER;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS light_coverage_acres DECIMAL(4,2);
+
+-- Fuel transfer specific
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS fuel_tank_capacity_gallons INTEGER;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS fuel_type_stored VARCHAR(30); -- gasoline, diesel, aviation, def
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS has_pump BOOLEAN DEFAULT false;
+ALTER TABLE trailer_profiles ADD COLUMN IF NOT EXISTS pump_gpm DECIMAL(4,1);
+
+
+PART 5: DRIVER QUALIFICATIONS - Trailer Licensing
+=================================================
+
+-- These fields go in the participant_profiles table (drivers)
+
+-- License Class & Endorsements
+ALTER TABLE participant_profiles ADD COLUMN IF NOT EXISTS license_class VARCHAR(10); -- 1, 2, 3, 4, 5, 6, 7, 8, L, N (BC)
+ALTER TABLE participant_profiles ADD COLUMN IF NOT EXISTS license_province VARCHAR(20);
+ALTER TABLE participant_profiles ADD COLUMN IF NOT EXISTS license_expiry DATE;
+
+-- Endorsements (BC specific codes)
+ALTER TABLE participant_profiles ADD COLUMN IF NOT EXISTS has_air_brake_endorsement BOOLEAN DEFAULT false;
+ALTER TABLE participant_profiles ADD COLUMN IF NOT EXISTS air_brake_endorsement_date DATE;
+
+ALTER TABLE participant_profiles ADD COLUMN IF NOT EXISTS has_house_trailer_endorsement BOOLEAN DEFAULT false; -- BC Code 07
+ALTER TABLE participant_profiles ADD COLUMN IF NOT EXISTS house_trailer_endorsement_date DATE;
+
+ALTER TABLE participant_profiles ADD COLUMN IF NOT EXISTS has_heavy_trailer_endorsement BOOLEAN DEFAULT false; -- BC Code 20
+ALTER TABLE participant_profiles ADD COLUMN IF NOT EXISTS heavy_trailer_endorsement_date DATE;
+ALTER TABLE participant_profiles ADD COLUMN IF NOT EXISTS heavy_trailer_medical_expiry DATE; -- Required every 3 years
+
+-- Weight Certifications (what are they certified to tow?)
+ALTER TABLE participant_profiles ADD COLUMN IF NOT EXISTS max_trailer_weight_certified_kg INTEGER;
+ALTER TABLE participant_profiles ADD COLUMN IF NOT EXISTS max_combination_weight_certified_kg INTEGER;
+
+-- Special Experience Flags
+ALTER TABLE participant_profiles ADD COLUMN IF NOT EXISTS double_tow_experience BOOLEAN DEFAULT false; -- For AB, SK, MB travel
+ALTER TABLE participant_profiles ADD COLUMN IF NOT EXISTS fifth_wheel_experience BOOLEAN DEFAULT false;
+ALTER TABLE participant_profiles ADD COLUMN IF NOT EXISTS gooseneck_experience BOOLEAN DEFAULT false;
+ALTER TABLE participant_profiles ADD COLUMN IF NOT EXISTS heavy_equipment_loading_experience BOOLEAN DEFAULT false;
+ALTER TABLE participant_profiles ADD COLUMN IF NOT EXISTS horse_trailer_experience BOOLEAN DEFAULT false;
+ALTER TABLE participant_profiles ADD COLUMN IF NOT EXISTS livestock_handling_experience BOOLEAN DEFAULT false;
+ALTER TABLE participant_profiles ADD COLUMN IF NOT EXISTS boat_launching_experience BOOLEAN DEFAULT false;
+
+-- Training Certifications
+ALTER TABLE participant_profiles ADD COLUMN IF NOT EXISTS rv_driving_course_completed BOOLEAN DEFAULT false; -- AMA RV Smart, etc.
+ALTER TABLE participant_profiles ADD COLUMN IF NOT EXISTS rv_course_provider VARCHAR(100);
+ALTER TABLE participant_profiles ADD COLUMN IF NOT EXISTS rv_course_date DATE;
+
+
+PART 6: PROVINCIAL TOWING REGULATIONS Reference Table
+=====================================================
+
+CREATE TABLE IF NOT EXISTS provincial_towing_regulations (
+  id SERIAL PRIMARY KEY,
+  province_code VARCHAR(5) NOT NULL, -- BC, AB, SK, MB, ON, etc.
+  province_name VARCHAR(50) NOT NULL,
+  
+  -- Double Towing Rules
+  double_tow_allowed BOOLEAN DEFAULT false,
+  double_tow_requirements TEXT,
+  double_tow_lead_trailer_type VARCHAR(30), -- fifth_wheel, any, none
+  double_tow_max_length_m DECIMAL(4,1),
+  
+  -- Weight Thresholds
+  class_5_max_trailer_kg INTEGER,
+  trailer_brake_required_kg INTEGER,
+  driver_accessible_brake_kg INTEGER,
+  house_trailer_endorsement_threshold_kg INTEGER,
+  heavy_trailer_endorsement_threshold_kg INTEGER,
+  commercial_license_threshold_kg INTEGER,
+  
+  -- Length/Width Limits
+  max_motorized_rv_length_m DECIMAL(4,1),
+  max_towed_trailer_length_m DECIMAL(4,1),
+  max_combination_length_m DECIMAL(4,1),
+  max_width_m DECIMAL(3,2),
+  
+  -- Endorsement Types
+  house_trailer_endorsement_code VARCHAR(10),
+  heavy_trailer_endorsement_code VARCHAR(10),
+  air_brake_endorsement_code VARCHAR(10),
+  
+  -- Misc
+  weigh_scale_threshold_kg INTEGER, -- When must report to scales
+  notes TEXT,
+  
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Seed BC regulations
+INSERT INTO provincial_towing_regulations (
+  province_code, province_name,
+  double_tow_allowed, double_tow_requirements,
+  class_5_max_trailer_kg, trailer_brake_required_kg, driver_accessible_brake_kg,
+  house_trailer_endorsement_threshold_kg, commercial_license_threshold_kg,
+  max_motorized_rv_length_m, max_towed_trailer_length_m, max_combination_length_m, max_width_m,
+  house_trailer_endorsement_code, heavy_trailer_endorsement_code, air_brake_endorsement_code,
+  weigh_scale_threshold_kg, notes
+) VALUES (
+  'BC', 'British Columbia',
+  false, 'Commercial only with specific endorsement. Car dolly exception.',
+  4600, 1400, 2800,
+  4600, 4600,
+  14.0, 12.5, 20.0, 2.6,
+  '07', '20', 'J',
+  5500, 'Power unit licensed >5500kg must report to open inspection stations regardless of trailer type'
+);
+
+-- Seed Alberta regulations  
+INSERT INTO provincial_towing_regulations (
+  province_code, province_name,
+  double_tow_allowed, double_tow_requirements, double_tow_lead_trailer_type, double_tow_max_length_m,
+  class_5_max_trailer_kg, trailer_brake_required_kg,
+  max_combination_length_m, max_width_m,
+  notes
+) VALUES (
+  'AB', 'Alberta',
+  true, 'Lead trailer must be fifth wheel with 2+ tandem axles. Longer trailer must be first. Hitch must attach to frame of first trailer.',
+  'fifth_wheel', 20.0,
+  4600, 2000,
+  20.0, 2.6,
+  'Breakaway device not specifically required but vehicle must be maintained in safe operating condition'
+);
+
+-- Seed Saskatchewan
+INSERT INTO provincial_towing_regulations (
+  province_code, province_name,
+  double_tow_allowed, double_tow_lead_trailer_type,
+  notes
+) VALUES (
+  'SK', 'Saskatchewan',
+  true, 'fifth_wheel',
+  'Fifth wheel lead required for recreational double towing'
+);
+
+-- Seed Manitoba
+INSERT INTO provincial_towing_regulations (
+  province_code, province_name,
+  double_tow_allowed, double_tow_lead_trailer_type
+) VALUES (
+  'MB', 'Manitoba',
+  true, 'fifth_wheel'
+);
+
+-- Seed Ontario (no double tow)
+INSERT INTO provincial_towing_regulations (
+  province_code, province_name,
+  double_tow_allowed, double_tow_requirements
+) VALUES (
+  'ON', 'Ontario',
+  false, 'Commercial only'
+);
+
+
+PART 7: Trailer Type Complete Reference Table
+=============================================
+
+DROP TABLE IF EXISTS trailer_type_master CASCADE;
+CREATE TABLE trailer_type_master (
+  id SERIAL PRIMARY KEY,
+  trailer_type VARCHAR(50) NOT NULL UNIQUE,
+  category VARCHAR(30) NOT NULL,
+  subcategory VARCHAR(30),
+  
+  -- Classification
+  is_recreational BOOLEAN DEFAULT false,
+  is_commercial BOOLEAN DEFAULT false,
+  is_specialty_equipment BOOLEAN DEFAULT false,
+  
+  -- Typical Specs
+  typical_length_range VARCHAR(20),
+  typical_weight_range VARCHAR(30),
+  typical_gvwr_range VARCHAR(30),
+  
+  -- Hitch
+  typical_hitch_types TEXT[], -- bumper_pull, gooseneck, fifth_wheel, pintle
+  typical_ball_size VARCHAR(10),
+  
+  -- Licensing Impact
+  typically_requires_endorsement BOOLEAN DEFAULT false,
+  endorsement_type VARCHAR(30), -- house_trailer, heavy_trailer, commercial
+  typically_requires_air_brakes BOOLEAN DEFAULT false,
+  
+  -- Registration
+  typical_registration_type VARCHAR(30), -- trailer, rv, utility, exempt
+  
+  -- Description
+  description TEXT,
+  common_uses TEXT[],
+  common_brands TEXT[],
+  
+  -- BC Ferry Classification (important for your system!)
+  bc_ferry_vehicle_type VARCHAR(30), -- standard, overheight, overlength, dangerous_goods
+  
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ============================================
+-- RECREATION / RV CATEGORY
+-- ============================================
+
+INSERT INTO trailer_type_master (trailer_type, category, subcategory, is_recreational, typical_length_range, typical_weight_range, typical_hitch_types, description, common_uses, bc_ferry_vehicle_type) VALUES
+
+-- Travel/RV Trailers
+('rv_travel_trailer', 'rv', 'towable', true, '12-35 ft', '2,000-9,000 lbs', ARRAY['bumper_pull'], 
+  'Standard travel trailer towed behind vehicle. Self-contained with sleeping, kitchen, bathroom.',
+  ARRAY['Family camping', 'Seasonal sites', 'Snowbird travel'], 'standard'),
+
+('rv_fifth_wheel', 'rv', 'towable', true, '22-45 ft', '8,000-20,000 lbs', ARRAY['fifth_wheel'],
+  'Fifth wheel RV with raised front section over truck bed. Most spacious towable option.',
+  ARRAY['Full-time RVing', 'Extended travel', 'Luxury camping'], 'overlength'),
+
+('rv_toy_hauler', 'rv', 'towable', true, '20-40 ft', '6,000-18,000 lbs', ARRAY['bumper_pull', 'fifth_wheel'],
+  'RV with rear garage for ATVs, motorcycles, or gear. Garage converts to living space.',
+  ARRAY['Motorsports', 'Adventure sports', 'Multi-vehicle trips'], 'standard'),
+
+('rv_popup', 'rv', 'towable', true, '8-16 ft', '1,000-3,500 lbs', ARRAY['bumper_pull'],
+  'Collapsible trailer with fold-out tent sections. Lightweight and compact for storage.',
+  ARRAY['Tent-style camping', 'Budget RVing', 'Light towing vehicles'], 'standard'),
+
+('rv_teardrop', 'rv', 'towable', true, '8-18 ft', '1,000-3,500 lbs', ARRAY['bumper_pull'],
+  'Small aerodynamic trailer with rear galley. Sleeping only inside.',
+  ARRAY['Couples camping', 'Fuel efficiency', 'Easy towing'], 'standard'),
+
+('rv_truck_camper', 'rv', 'slide_in', true, 'N/A', '1,500-5,000 lbs', ARRAY['none'],
+  'Slide-in camper for pickup truck bed. Not technically a trailer but related.',
+  ARRAY['Boondocking', 'Remote access', 'Single vehicle camping'], 'standard'),
+
+('park_model_rv', 'rv', 'semi_permanent', true, '35-45 ft', '10,000-15,000 lbs', ARRAY['special'],
+  'Large RV designed for semi-permanent placement. Max 400 sq ft. Requires special transport.',
+  ARRAY['Seasonal sites', 'Vacation properties', 'Semi-permanent housing'], 'oversize'),
+
+-- Overlander/Expedition
+('overlander_expedition', 'overlander', 'off_road', true, '8-16 ft', '1,300-5,500 lbs', ARRAY['bumper_pull'],
+  'Off-road capable cargo/camping trailer with high clearance, independent suspension. Often uses rooftop tent.',
+  ARRAY['Overlanding', 'Remote camping', 'Adventure travel'], 'standard'),
+
+('overlander_teardrop_offroad', 'overlander', 'off_road', true, '10-16 ft', '2,000-4,000 lbs', ARRAY['bumper_pull'],
+  'Teardrop-style trailer built for off-road use. Reinforced suspension, all-terrain tires.',
+  ARRAY['Off-road camping', 'Adventure couples', 'Remote access'], 'standard'),
+
+('overlander_popup_offroad', 'overlander', 'off_road', true, '10-18 ft', '2,500-5,000 lbs', ARRAY['bumper_pull'],
+  'Pop-up trailer with off-road capability. Lower profile for trail clearance.',
+  ARRAY['Forest roads', 'BLM camping', 'Adventure families'], 'standard'),
+
+-- Tiny Homes
+('tiny_home_thow', 'tiny_home', 'residential', true, '16-30 ft', '8,000-15,000 lbs', ARRAY['bumper_pull', 'gooseneck'],
+  'Tiny House on Wheels. Full residential construction on trailer frame. RVIA/NOAH certification available.',
+  ARRAY['Alternative housing', 'Minimalist living', 'Mobile residence'], 'overheight'),
+
+
+-- ============================================
+-- HORSE / LIVESTOCK CATEGORY  
+-- ============================================
+
+('horse_straight_load', 'horse', 'load_config', true, '14-22 ft', '3,000-7,000 lbs', ARRAY['bumper_pull', 'gooseneck'],
+  'Horses face forward, side-by-side. Most compact design for 1-2 horses.',
+  ARRAY['Local shows', 'Trail riding', 'Veterinary transport'], 'standard'),
+
+('horse_slant_load', 'horse', 'load_config', true, '18-35 ft', '5,000-14,000 lbs', ARRAY['bumper_pull', 'gooseneck'],
+  'Horses at 45° angle. Most popular configuration - shorter overall for same capacity.',
+  ARRAY['Shows', 'Multi-horse transport', 'Ranch work'], 'standard'),
+
+('horse_head_to_head', 'horse', 'load_config', true, '28-40 ft', '10,000-18,000 lbs', ARRAY['gooseneck'],
+  '4-6 horses facing each other with center aisle. Individual side loading.',
+  ARRAY['Large operations', 'Professional trainers', 'Race horses'], 'overlength'),
+
+('horse_stock_combo', 'horse', 'load_config', true, '16-28 ft', '4,000-12,000 lbs', ARRAY['bumper_pull', 'gooseneck'],
+  'Stock trailer adapted for horses. Open sides, versatile for horses or cattle.',
+  ARRAY['Ranch versatility', 'Mixed livestock', 'Trail riding'], 'standard'),
+
+('horse_lq', 'horse', 'living_quarters', true, '24-45 ft', '10,000-22,000 lbs', ARRAY['gooseneck'],
+  'Horse trailer with living quarters. NOT classified as RV in most states despite amenities.',
+  ARRAY['Shows with overnight', 'Trail camping', 'Rodeo circuit'], 'overlength'),
+
+('livestock_stock', 'livestock', 'general', false, '16-53 ft', '5,000-25,000 lbs', ARRAY['bumper_pull', 'gooseneck', 'fifth_wheel'],
+  'Open-sided stock trailer for general livestock. Slat sides for ventilation.',
+  ARRAY['Cattle', 'Sheep', 'Goats', 'Pigs', 'Llamas'], 'standard'),
+
+('livestock_pot', 'livestock', 'commercial', false, '48-53 ft', '10,000-15,000 lbs', ARRAY['fifth_wheel'],
+  'Double-deck cattle pot (possum belly). Commercial cattle hauling.',
+  ARRAY['Commercial cattle', 'Feedlot transport', 'Auction yards'], 'commercial'),
+
+
+-- ============================================
+-- UTILITY / CARGO CATEGORY
+-- ============================================
+
+('utility_open', 'utility', 'open', false, '4-16 ft', '500-5,000 lbs', ARRAY['bumper_pull'],
+  'Basic open utility trailer with sides. General purpose hauling.',
+  ARRAY['Home projects', 'Yard waste', 'Small equipment'], 'standard'),
+
+('utility_landscape', 'utility', 'open', false, '12-22 ft', '2,000-10,000 lbs', ARRAY['bumper_pull'],
+  'Landscape trailer with mesh/solid sides, gate. Built for lawn equipment.',
+  ARRAY['Lawn care', 'Landscaping', 'Tree service'], 'standard'),
+
+('enclosed_cargo', 'enclosed', 'cargo', false, '6-28 ft', '1,500-14,000 lbs', ARRAY['bumper_pull', 'gooseneck'],
+  'Basic enclosed cargo trailer. Weather protection for goods.',
+  ARRAY['Moving', 'Band equipment', 'Vendor displays'], 'standard'),
+
+('enclosed_contractor', 'enclosed', 'work', false, '6-24 ft', '2,000-12,000 lbs', ARRAY['bumper_pull', 'gooseneck'],
+  'Enclosed trailer with shelving, bins, tool storage. Mobile tool crib.',
+  ARRAY['Contractors', 'Electricians', 'Plumbers', 'HVAC'], 'standard'),
+
+('enclosed_mobile_workshop', 'enclosed', 'work', false, '14-28 ft', '5,000-14,000 lbs', ARRAY['bumper_pull', 'gooseneck'],
+  'Full workshop with workbench, power tools, dust collection, climate control.',
+  ARRAY['Woodworkers', 'Cabinet makers', 'Custom fabricators'], 'standard'),
+
+
+-- ============================================
+-- VEHICLE TRANSPORT CATEGORY
+-- ============================================
+
+('car_hauler_open', 'vehicle', 'transport', false, '16-24 ft', '2,500-10,000 lbs', ARRAY['bumper_pull', 'gooseneck'],
+  'Open flatbed for vehicle transport. Tilt deck or ramps for loading.',
+  ARRAY['Car shows', 'Project cars', 'Race cars'], 'standard'),
+
+('car_hauler_enclosed', 'vehicle', 'transport', false, '18-32 ft', '5,000-14,000 lbs', ARRAY['bumper_pull', 'gooseneck'],
+  'Enclosed trailer for vehicle transport. Weather and theft protection.',
+  ARRAY['Classic cars', 'Race teams', 'Dealer transport'], 'standard'),
+
+('motorcycle_trailer', 'vehicle', 'transport', false, '4-14 ft', '500-2,500 lbs', ARRAY['bumper_pull'],
+  'Trailer designed for 1-3 motorcycles. May be open or enclosed.',
+  ARRAY['Motorcycle transport', 'Track days', 'Road trips'], 'standard'),
+
+('snowmobile_trailer', 'vehicle', 'transport', true, '8-24 ft', '1,000-4,000 lbs', ARRAY['bumper_pull'],
+  'Enclosed or open trailer for snowmobiles. Often 2-4 sled capacity.',
+  ARRAY['Winter recreation', 'Sled transport', 'Trail access'], 'standard'),
+
+('atv_utv_trailer', 'vehicle', 'transport', true, '8-20 ft', '1,000-5,000 lbs', ARRAY['bumper_pull'],
+  'Trailer for ATVs, UTVs, side-by-sides. Open or enclosed.',
+  ARRAY['Off-road recreation', 'Trail riding', 'Ranch work'], 'standard'),
+
+
+-- ============================================
+-- BOAT / MARINE CATEGORY
+-- ============================================
+
+('boat_bunk', 'boat', 'marine', true, '12-35 ft', '1,000-8,000 lbs', ARRAY['bumper_pull'],
+  'Boat trailer with bunk-style supports. Common for smaller boats.',
+  ARRAY['Fishing boats', 'Ski boats', 'General boating'], 'standard'),
+
+('boat_roller', 'boat', 'marine', true, '14-35 ft', '1,500-10,000 lbs', ARRAY['bumper_pull'],
+  'Boat trailer with roller supports for easy loading/unloading.',
+  ARRAY['Heavy boats', 'Frequent launching', 'Solo boaters'], 'standard'),
+
+('boat_pwc', 'boat', 'marine', true, '8-16 ft', '300-1,500 lbs', ARRAY['bumper_pull'],
+  'Trailer for personal watercraft (jet skis). 1-3 PWC capacity.',
+  ARRAY['Jet ski transport', 'Lake recreation'], 'standard'),
+
+('boat_pontoon', 'boat', 'marine', true, '20-30 ft', '2,500-6,000 lbs', ARRAY['bumper_pull'],
+  'Wide trailer for pontoon boats. Specialized bunks for pontoon design.',
+  ARRAY['Pontoon boats', 'Party barges'], 'standard'),
+
+('boat_sailboat', 'boat', 'marine', true, '16-35 ft', '2,000-8,000 lbs', ARRAY['bumper_pull'],
+  'Sailboat trailer with mast support. Keel cradle for keelboats.',
+  ARRAY['Sailboats', 'Racing dinghies', 'Cruising sailboats'], 'overheight'),
+
+('kayak_canoe_trailer', 'boat', 'marine', true, '10-20 ft', '300-1,500 lbs', ARRAY['bumper_pull'],
+  'Multi-boat trailer for kayaks, canoes, SUPs. May hold 4-12+ boats.',
+  ARRAY['Kayak groups', 'Outfitters', 'Paddle sports clubs'], 'standard'),
+
+
+-- ============================================
+-- HEAVY EQUIPMENT CATEGORY
+-- ============================================
+
+('flatbed_standard', 'equipment', 'flatbed', false, '16-53 ft', '5,000-25,000 lbs', ARRAY['bumper_pull', 'gooseneck', 'fifth_wheel'],
+  'Standard flat deck for freight. Crane or forklift loading.',
+  ARRAY['Lumber', 'Steel', 'Machinery', 'Palletized freight'], 'standard'),
+
+('flatbed_tilt', 'equipment', 'flatbed', false, '16-24 ft', '7,000-16,000 lbs', ARRAY['bumper_pull', 'gooseneck'],
+  'Hydraulic tilt deck for gravity loading. Great for wheeled equipment.',
+  ARRAY['Skid steers', 'Forklifts', 'Scissor lifts', 'Tractors'], 'standard'),
+
+('flatbed_dovetail', 'equipment', 'flatbed', false, '18-28 ft', '7,000-20,000 lbs', ARRAY['bumper_pull', 'gooseneck'],
+  'Flatbed with angled rear (beavertail) for easier loading.',
+  ARRAY['Small equipment', 'Vehicles', 'Machinery'], 'standard'),
+
+('equipment_step_deck', 'equipment', 'heavy', false, '48-53 ft', '15,000-20,000 lbs', ARRAY['fifth_wheel'],
+  'Drop deck - front high, rear low. Extra 2ft height clearance over flatbed. Max load 10\'2".',
+  ARRAY['Tall machinery', 'Construction equipment', 'Oversized freight'], 'commercial'),
+
+('equipment_lowboy', 'equipment', 'heavy', false, '35-53 ft', '15,000-25,000 lbs', ARRAY['gooseneck'],
+  'Double-drop with 18-24" deck. Fixed gooseneck. For very tall equipment. Max load 11\'6".',
+  ARRAY['Excavators', 'Dozers', 'Cranes', 'Mining equipment'], 'commercial'),
+
+('equipment_rgn', 'equipment', 'heavy', false, '35-53 ft', '15,000-25,000 lbs', ARRAY['gooseneck'],
+  'Removable Gooseneck - detaches to create ground-level ramp. Drive-on loading. Max load 12\'.',
+  ARRAY['Self-propelled equipment', 'Tracked equipment', 'Heavy construction'], 'commercial'),
+
+
+-- ============================================
+-- DUMP TRAILERS CATEGORY  
+-- ============================================
+
+('dump_standard', 'dump', 'end_dump', false, '10-20 ft', '5,000-14,000 lbs', ARRAY['bumper_pull'],
+  'Hydraulic dump bed for loose material. Scissor or telescopic lift.',
+  ARRAY['Gravel', 'Sand', 'Mulch', 'Debris removal', 'Firewood'], 'standard'),
+
+('dump_gooseneck', 'dump', 'end_dump', false, '16-24 ft', '14,000-25,000 lbs', ARRAY['gooseneck'],
+  'Heavy duty gooseneck dump. Higher capacity than bumper pull.',
+  ARRAY['Construction debris', 'Aggregate', 'Farm use', 'Commercial hauling'], 'standard'),
+
+('dump_side_dump', 'dump', 'side_dump', false, '28-40 ft', '20,000-35,000 lbs', ARRAY['fifth_wheel'],
+  'Dumps to the side. For long windrows of material.',
+  ARRAY['Road construction', 'Mining', 'Large aggregate'], 'commercial'),
+
+('dump_belly_dump', 'dump', 'bottom_dump', false, '35-45 ft', '20,000-35,000 lbs', ARRAY['fifth_wheel'],
+  'Bottom discharge while moving. For spreading material.',
+  ARRAY['Road base', 'Fill material', 'Large construction'], 'commercial'),
+
+
+-- ============================================
+-- SPECIALTY EQUIPMENT TRAILERS
+-- ============================================
+
+('specialty_sawmill', 'specialty', 'forestry', false, '10-25 ft', '1,500-5,000 lbs', ARRAY['bumper_pull'],
+  'Portable bandsaw sawmill on trailer (Wood-Mizer GO Trailer). Off-road hitch, outriggers.',
+  ARRAY['Custom lumber milling', 'On-site milling', 'Hobby sawyers'], 'standard'),
+
+('specialty_log_splitter', 'specialty', 'forestry', false, '6-12 ft', '500-2,500 lbs', ARRAY['bumper_pull'],
+  'Towable hydraulic log splitter. Gas, electric, or PTO powered.',
+  ARRAY['Firewood processing', 'Tree service', 'Homestead use'], 'standard'),
+
+('specialty_welder', 'specialty', 'work', false, '8-16 ft', '2,000-6,000 lbs', ARRAY['bumper_pull'],
+  'Mobile welding rig with welder, generator, tank storage, work surface.',
+  ARRAY['Field welding', 'Fabrication', 'Pipe welding'], 'standard'),
+
+('specialty_pressure_washer', 'specialty', 'work', false, '6-14 ft', '1,500-5,000 lbs', ARRAY['bumper_pull'],
+  'Pressure washing trailer with tank, pump, hose reel. May include hot water.',
+  ARRAY['Commercial cleaning', 'Fleet washing', 'Building maintenance'], 'standard'),
+
+('specialty_generator', 'specialty', 'power', false, '8-20 ft', '3,000-15,000 lbs', ARRAY['bumper_pull'],
+  'Towable generator for job sites or events. 10kW to 500kW+ capacity.',
+  ARRAY['Construction sites', 'Events', 'Emergency power'], 'standard'),
+
+('specialty_air_compressor', 'specialty', 'work', false, '8-16 ft', '2,500-8,000 lbs', ARRAY['bumper_pull'],
+  'Towable industrial air compressor. Diesel or gas powered.',
+  ARRAY['Construction', 'Sandblasting', 'Pneumatic tools'], 'standard'),
+
+('specialty_light_tower', 'specialty', 'work', false, '6-12 ft', '1,500-4,000 lbs', ARRAY['bumper_pull'],
+  'Mobile light tower with generator. 4-6 lights, 25-30ft mast.',
+  ARRAY['Night construction', 'Events', 'Emergency scenes'], 'standard'),
+
+('specialty_fuel_transfer', 'specialty', 'fuel', false, '6-16 ft', '1,000-5,000 lbs', ARRAY['bumper_pull'],
+  'Fuel tank trailer with pump for field refueling. Diesel, gas, or DEF.',
+  ARRAY['Farm equipment', 'Construction', 'Remote sites'], 'dangerous_goods'),
+
+('specialty_concrete_mixer', 'specialty', 'construction', false, '8-14 ft', '3,000-8,000 lbs', ARRAY['bumper_pull'],
+  'Towable concrete mixer. 1-4 cubic yard capacity.',
+  ARRAY['Small concrete jobs', 'Remote sites', 'Homebuilding'], 'standard'),
+
+
+-- ============================================
+-- MOBILE SERVICES CATEGORY
+-- ============================================
+
+('food_truck_concession', 'mobile_service', 'food', false, '10-26 ft', '5,000-14,000 lbs', ARRAY['bumper_pull'],
+  'Food service trailer with commercial kitchen equipment. Health dept certified.',
+  ARRAY['Events', 'Fairs', 'Food service'], 'standard'),
+
+('mobile_office', 'mobile_service', 'work', false, '20-60 ft', '10,000-25,000 lbs', ARRAY['special'],
+  'Construction site office trailer. HVAC, electrical, furniture.',
+  ARRAY['Construction management', 'Sales offices', 'Temporary space'], 'oversize'),
+
+('mobile_medical', 'mobile_service', 'medical', false, '24-53 ft', '15,000-30,000 lbs', ARRAY['special'],
+  'Mobile medical clinic or testing facility. Medical equipment, exam rooms.',
+  ARRAY['Health screening', 'Blood drives', 'Remote clinics'], 'oversize'),
+
+('mobile_command', 'mobile_service', 'emergency', false, '24-45 ft', '15,000-30,000 lbs', ARRAY['fifth_wheel'],
+  'Emergency command/communication trailer. Comm equipment, workstations.',
+  ARRAY['Emergency management', 'Search and rescue', 'Incident command'], 'oversize'),
+
+('mobile_stage', 'mobile_service', 'event', false, '20-53 ft', '10,000-30,000 lbs', ARRAY['special'],
+  'Mobile performance stage. Hydraulic deployment, sound/lighting.',
+  ARRAY['Concerts', 'Festivals', 'Political events', 'Community events'], 'oversize'),
+
+('restroom_shower', 'mobile_service', 'sanitation', false, '8-53 ft', '3,000-20,000 lbs', ARRAY['bumper_pull', 'gooseneck'],
+  'Portable restroom/shower trailer. 2-20+ stations.',
+  ARRAY['Events', 'Construction sites', 'Disaster relief', 'Weddings'], 'standard');
+
+
+PART 8: UI Category Groupings for TrailerForm
+=============================================
+
+-- This is for the React component category selector
+
+const TRAILER_CATEGORIES_COMPLETE = [
+  // Recreation
+  { id: 'rv', label: '🏕️ RV / Travel Trailers', icon: '🏕️', 
+    description: 'Travel trailers, fifth wheels, toy haulers, popups, teardrops' },
+  { id: 'overlander', label: '🏔️ Overlander / Expedition', icon: '🏔️',
+    description: 'Off-road capable adventure trailers' },
+  { id: 'tiny_home', label: '🏠 Tiny Home (THOW)', icon: '🏠',
+    description: 'Tiny Houses on Wheels for residential use' },
+  
+  // Livestock
+  { id: 'horse', label: '🐴 Horse Trailers', icon: '🐴',
+    description: 'All loading configurations, with/without living quarters' },
+  { id: 'livestock', label: '🐄 Livestock', icon: '🐄',
+    description: 'Stock trailers, cattle pots, multi-species' },
+  
+  // Cargo / Work  
+  { id: 'enclosed', label: '📦 Enclosed Cargo / Work', icon: '📦',
+    description: 'Cargo, contractor, mobile workshop trailers' },
+  { id: 'utility', label: '🛠️ Utility / Landscape', icon: '🛠️',
+    description: 'Open utility, landscape trailers' },
+  
+  // Vehicles
+  { id: 'vehicle', label: '🚗 Vehicle Transport', icon: '🚗',
+    description: 'Car haulers, motorcycle, snowmobile, ATV trailers' },
+  { id: 'boat', label: '🚤 Boat / Marine', icon: '🚤',
+    description: 'All boat trailer types including PWC and kayak' },
+  
+  // Heavy Equipment
+  { id: 'equipment', label: '🚜 Heavy Equipment', icon: '🚜',
+    description: 'Flatbed, step deck, lowboy, RGN' },
+  { id: 'dump', label: '⬆️ Dump Trailers', icon: '⬆️',
+    description: 'End dump, side dump, belly dump' },
+  
+  // Specialty
+  { id: 'specialty', label: '⚙️ Specialty Equipment', icon: '⚙️',
+    description: 'Sawmills, welders, generators, compressors, light towers' },
+  { id: 'mobile_service', label: '🚐 Mobile Services', icon: '🚐',
+    description: 'Food trucks, offices, medical, command, restrooms' },
+];
+
+
+PART 9: Driver-Trailer Compatibility Checking
+=============================================
+
+-- Function to check if driver is qualified for trailer
+
+CREATE OR REPLACE FUNCTION check_driver_trailer_qualification(
+  p_driver_id INTEGER,
+  p_trailer_id INTEGER,
+  p_province VARCHAR(5) DEFAULT 'BC'
+) RETURNS TABLE (
+  is_qualified BOOLEAN,
+  issues TEXT[],
+  warnings TEXT[],
+  required_endorsements TEXT[]
+) AS $$
+DECLARE
+  v_driver RECORD;
+  v_trailer RECORD;
+  v_regs RECORD;
+  v_issues TEXT[] := ARRAY[]::TEXT[];
+  v_warnings TEXT[] := ARRAY[]::TEXT[];
+  v_required TEXT[] := ARRAY[]::TEXT[];
+  v_trailer_weight_kg DECIMAL;
+BEGIN
+  -- Get driver info
+  SELECT * INTO v_driver FROM participant_profiles WHERE id = p_driver_id;
+  
+  -- Get trailer info
+  SELECT * INTO v_trailer FROM trailer_profiles WHERE id = p_trailer_id;
+  
+  -- Get provincial regulations
+  SELECT * INTO v_regs FROM provincial_towing_regulations WHERE province_code = p_province;
+  
+  -- Convert trailer weight to kg if needed
+  v_trailer_weight_kg := COALESCE(v_trailer.gvwr_lbs, 0) * 0.453592;
+  
+  -- Check weight thresholds
+  IF v_trailer_weight_kg > COALESCE(v_regs.class_5_max_trailer_kg, 4600) THEN
+    IF v_trailer.trailer_type IN ('rv_travel_trailer', 'rv_fifth_wheel', 'rv_toy_hauler', 'rv_popup', 'horse_lq') THEN
+      -- House trailer - check for Code 07
+      IF NOT COALESCE(v_driver.has_house_trailer_endorsement, false) THEN
+        v_issues := array_append(v_issues, format('Trailer exceeds %s kg - requires House Trailer Endorsement (Code 07)', v_regs.class_5_max_trailer_kg));
+        v_required := array_append(v_required, 'house_trailer_endorsement');
+      END IF;
+    ELSE
+      -- Other heavy trailer - check for Code 20
+      IF NOT COALESCE(v_driver.has_heavy_trailer_endorsement, false) THEN
+        v_issues := array_append(v_issues, format('Trailer exceeds %s kg - requires Heavy Trailer Endorsement (Code 20)', v_regs.class_5_max_trailer_kg));
+        v_required := array_append(v_required, 'heavy_trailer_endorsement');
+      END IF;
+    END IF;
+  END IF;
+  
+  -- Check air brake requirement
+  IF COALESCE(v_trailer.brake_type, '') = 'air' THEN
+    IF NOT COALESCE(v_driver.has_air_brake_endorsement, false) THEN
+      v_issues := array_append(v_issues, 'Trailer has air brakes - requires Air Brake Endorsement');
+      v_required := array_append(v_required, 'air_brake_endorsement');
+    END IF;
+    
+    -- Air brakes + heavy = commercial
+    IF v_trailer_weight_kg > COALESCE(v_regs.class_5_max_trailer_kg, 4600) THEN
+      IF v_driver.license_class NOT IN ('1', '2', '3') THEN
+        v_issues := array_append(v_issues, 'Air brakes on heavy trailer requires Class 1 Commercial License');
+        v_required := array_append(v_required, 'class_1_license');
+      END IF;
+    END IF;
+  END IF;
+  
+  -- Experience warnings (not blockers, just warnings)
+  IF v_trailer.trailer_type LIKE 'horse%' AND NOT COALESCE(v_driver.horse_trailer_experience, false) THEN
+    v_warnings := array_append(v_warnings, 'Driver has no documented horse trailer experience');
+  END IF;
+  
+  IF v_trailer.required_hitch_type = 'fifth_wheel' AND NOT COALESCE(v_driver.fifth_wheel_experience, false) THEN
+    v_warnings := array_append(v_warnings, 'Driver has no documented fifth wheel towing experience');
+  END IF;
+  
+  IF v_trailer.required_hitch_type = 'gooseneck' AND NOT COALESCE(v_driver.gooseneck_experience, false) THEN
+    v_warnings := array_append(v_warnings, 'Driver has no documented gooseneck towing experience');
+  END IF;
+  
+  IF v_trailer.trailer_type LIKE 'boat%' AND NOT COALESCE(v_driver.boat_launching_experience, false) THEN
+    v_warnings := array_append(v_warnings, 'Driver has no documented boat launching experience');
+  END IF;
+  
+  -- Medical expiry check for heavy endorsement
+  IF COALESCE(v_driver.has_heavy_trailer_endorsement, false) THEN
+    IF v_driver.heavy_trailer_medical_expiry IS NOT NULL AND v_driver.heavy_trailer_medical_expiry < CURRENT_DATE THEN
+      v_issues := array_append(v_issues, 'Heavy Trailer Endorsement medical has expired');
+    ELSIF v_driver.heavy_trailer_medical_expiry IS NOT NULL AND v_driver.heavy_trailer_medical_expiry < CURRENT_DATE + INTERVAL '30 days' THEN
+      v_warnings := array_append(v_warnings, 'Heavy Trailer Endorsement medical expires within 30 days');
+    END IF;
+  END IF;
+  
+  RETURN QUERY SELECT 
+    array_length(v_issues, 1) IS NULL OR array_length(v_issues, 1) = 0,
+    v_issues,
+    v_warnings,
+    v_required;
+END;
+$$ LANGUAGE plpgsql;
+
+
+-- Example usage:
+-- SELECT * FROM check_driver_trailer_qualification(1, 5, 'BC');
+
+
+PART 10: Summary Cleanup Checklist
+==================================
+
+TRAILERS ADDED:
+✅ Overlander/Expedition trailers (off-road, rooftop tent, slide-out galley)
+✅ Tiny Homes on Wheels (THOW with RVIA/NOAH certification)
+✅ Park Model RVs (semi-permanent, 400 sq ft max)
+✅ Specialty equipment: Sawmill, log splitter, welder, pressure washer
+✅ Specialty equipment: Generator, air compressor, light tower, fuel transfer, concrete mixer
+✅ Vehicle transport: Car hauler (open/enclosed), motorcycle, snowmobile, ATV
+✅ Kayak/canoe multi-boat trailers
+✅ Mobile services: Food truck, office, medical, command, stage, restroom
+
+DRIVER QUALIFICATIONS ADDED:
+✅ License class and province
+✅ Air brake endorsement (with date)
+✅ House trailer endorsement - BC Code 07 (with date)
+✅ Heavy trailer endorsement - BC Code 20 (with date + medical expiry)
+✅ Max trailer/combination weight certified
+✅ Double tow experience flag
+✅ Fifth wheel / gooseneck experience
+✅ Horse trailer / livestock handling experience
+✅ Boat launching experience
+✅ RV driving course completion
+
+REGULATIONS CAPTURED:
+✅ BC - No double tow (commercial only), 4600kg threshold, Code 07/20
+✅ Alberta - Double tow OK with fifth wheel lead, 20m max
+✅ Saskatchewan/Manitoba/Nova Scotia - Double tow with fifth wheel
+✅ Ontario - No double tow
+✅ Length/width/weight limits by province
+✅ Brake requirements (1400kg, 2800kg thresholds)
+✅ Weigh scale reporting requirements (5500kg power unit)
+
+BC FERRY CLASSIFICATIONS:
+✅ standard - Most trailers
+✅ overlength - Fifth wheels, head-to-head horse, lowboy
+✅ overheight - Tiny homes, sailboats
+✅ dangerous_goods - Fuel transfer trailers
+✅ commercial - Cattle pots, step deck, RGN
+
+THINGS EXPLICITLY OUT OF SCOPE:
+❌ Mobile/manufactured homes (one-time move, HUD code)
+❌ Shipping containers (not trailers)
+❌ Railroad equipment
+❌ Military trailers
