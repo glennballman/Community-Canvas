@@ -19,6 +19,10 @@ import Documentation from "@/pages/Documentation";
 import TripTimelineDemo from "@/pages/TripTimelineDemo";
 import Accommodations from "@/pages/Accommodations";
 import NotFound from "@/pages/not-found";
+import { HostAuthProvider } from "@/contexts/HostAuthContext";
+import HostLogin from "@/pages/host/Login";
+import HostSignup from "@/pages/host/Signup";
+import ForgotPassword from "@/pages/host/ForgotPassword";
 
 function AdminRoutes() {
   return (
@@ -52,6 +56,9 @@ function Router() {
       <Route path="/legacy" component={Dashboard} />
       <Route path="/trip-timeline-demo" component={TripTimelineDemo} />
       <Route path="/accommodations" component={Accommodations} />
+      <Route path="/host/login" component={HostLogin} />
+      <Route path="/host/signup" component={HostSignup} />
+      <Route path="/host/forgot-password" component={ForgotPassword} />
       <Route path="/admin/:rest*" component={AdminRoutes} />
       <Route path="/admin" component={AdminRoutes} />
       <Route component={NotFound} />
@@ -63,8 +70,10 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <Toaster />
-        <Router />
+        <HostAuthProvider>
+          <Toaster />
+          <Router />
+        </HostAuthProvider>
       </TooltipProvider>
     </QueryClientProvider>
   );
