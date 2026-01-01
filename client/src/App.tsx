@@ -23,6 +23,7 @@ import { HostAuthProvider } from "@/contexts/HostAuthContext";
 import HostLogin from "@/pages/host/Login";
 import HostSignup from "@/pages/host/Signup";
 import ForgotPassword from "@/pages/host/ForgotPassword";
+import PropertyManage from "@/pages/host/PropertyManage";
 
 function AdminRoutes() {
   return (
@@ -59,6 +60,7 @@ function Router() {
       <Route path="/host/login" component={HostLogin} />
       <Route path="/host/signup" component={HostSignup} />
       <Route path="/host/forgot-password" component={ForgotPassword} />
+      <Route path="/host/properties/:id" component={PropertyManage} />
       <Route path="/admin/:rest*" component={AdminRoutes} />
       <Route path="/admin" component={AdminRoutes} />
       <Route component={NotFound} />
