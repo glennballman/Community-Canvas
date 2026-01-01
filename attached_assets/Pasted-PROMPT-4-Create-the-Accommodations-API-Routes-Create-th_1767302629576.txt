@@ -1,0 +1,73 @@
+PROMPT 4: Create the Accommodations API Routes
+Create the API routes for the Accommodations module.
+
+Create file: server/routes/accommodations.ts
+
+Include these endpoints:
+
+PROPERTIES:
+- GET /api/accommodations - List all properties with filters
+  Query params: region, city, minCrewScore, status, limit, offset
+  
+- GET /api/accommodations/stats - Get aggregate statistics
+  Returns: total, crewFriendly, inNetwork, byRegion counts, etc.
+
+- GET /api/accommodations/:id - Get single property details
+
+- POST /api/accommodations - Create new property manually
+
+- PUT /api/accommodations/:id - Update property
+
+- POST /api/accommodations/import - Bulk import from Apify JSON
+  Body: { listings: ApifyListing[] }
+  This should:
+  1. Process each listing
+  2. Calculate crew_score from description keywords
+  3. Detect region from coordinates using get_region_from_coords()
+  4. Upsert by airbnb_id
+  5. Return ImportResult stats
+
+ICAL FEEDS:
+- GET /api/accommodations/:id/feeds - Get iCal feeds for property
+
+- POST /api/accommodations/:id/feeds - Add iCal feed
+  Body: { icalUrl, feedName }
+  Should validate URL is accessible before saving
+
+- POST /api/accommodations/feeds/:feedId/sync - Trigger sync for a feed
+
+- GET /api/accommodations/:id/availability - Check availability
+  Query: checkIn, checkOut (dates)
+
+BOOKINGS:
+- GET /api/accommodations/bookings - List bookings
+  Query: status, propertyId, upcoming (boolean)
+
+- GET /api/accommodations/bookings/:id - Get booking details
+
+- POST /api/accommodations/bookings - Create booking
+
+- PUT /api/accommodations/bookings/:id - Update booking
+
+OUTREACH:
+- GET /api/accommodations/outreach/campaigns - List campaigns
+
+- POST /api/accommodations/outreach/campaigns - Create campaign
+
+- GET /api/accommodations/outreach/campaigns/:id/targets - Get properties to contact
+
+- POST /api/accommodations/outreach/messages - Log outreach attempt
+
+Register these routes in the main server file under /api/accommodations prefix.
+
+For the import endpoint, here's the crew score calculation logic:
+- "parking" or "driveway" or "garage" = +20 points
+- "truck" or "trailer" or "rv" = +15 points  
+- "kitchen" or "cook" or "stove" = +15 points
+- "wifi" or "internet" = +10 points
+- "washer" or "dryer" or "laundry" = +10 points
+- "workspace" or "desk" or "office" = +8 points
+- "bedrooms" or "sleeps 4" or "sleeps 5" or "sleeps 6" = +10 points
+- "weekly" or "monthly" or "long term" = +7 points
+- "self check" or "keypad" or "lockbox" = +5 points
+Cap at 100 points max.
