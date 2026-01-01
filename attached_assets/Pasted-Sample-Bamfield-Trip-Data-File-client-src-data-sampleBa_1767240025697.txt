@@ -1,0 +1,747 @@
+Sample Bamfield Trip Data
+File: client/src/data/sampleBamfieldTrip.ts
+typescript// ============================================
+// SAMPLE BAMFIELD WORK CREW TRIP
+// Demo data showing the full journey
+// ============================================
+
+import type { TimelineEvent } from '../components/TripPlanning/TripTimelineView';
+
+export const sampleBamfieldTrip: TimelineEvent[] = [
+  // ============================================
+  // DAY 1 - TUESDAY
+  // ============================================
+  {
+    id: 'departure-surrey',
+    type: 'departure',
+    time: '2025-01-07T06:30:00',
+    title: 'Departure from Surrey',
+    subtitle: 'Glass Installation Crew',
+    description: 'Load equipment, verify manifest, safety check',
+    location: {
+      name: 'Surrey Depot',
+      address: '12345 Industrial Way, Surrey, BC',
+    },
+    photos: [],
+    alerts: [],
+    weather: {
+      temperature: 4,
+      condition: 'Cloudy',
+      icon: 'cloudy',
+      humidity: 85,
+      windSpeed: 12,
+    },
+    vehicle: {
+      id: 'cube-van-1',
+      name: 'Millennium Falcon',
+      photo: '/vehicles/millennium-falcon.jpg',
+      licensePlate: 'ABC 123',
+    },
+    trailer: {
+      id: 'enclosed-1',
+      name: 'The Box',
+      photo: '/trailers/the-box.jpg',
+    },
+    duration: 30,
+    cost: 0,
+  },
+  {
+    id: 'drive-to-horseshoe',
+    type: 'drive_segment',
+    time: '2025-01-07T07:00:00',
+    title: 'Drive to Horseshoe Bay',
+    subtitle: 'Via Highway 1 & Upper Levels',
+    location: {
+      name: 'Highway 1 West',
+    },
+    photos: [],
+    alerts: [
+      {
+        severity: 'minor',
+        title: 'Construction on Upper Levels',
+        description: 'Single lane alternating between Taylor Way and Horseshoe Bay. Expect 10-15 min delay.',
+        source: 'DriveBC',
+      }
+    ],
+    weather: {
+      temperature: 5,
+      condition: 'Light Rain',
+      icon: 'rain',
+    },
+    duration: 50,
+    distance: 42,
+    cost: 10,
+  },
+  {
+    id: 'webcam-horseshoe-bay',
+    type: 'webcam',
+    time: '2025-01-07T07:50:00',
+    title: 'Horseshoe Bay Terminal',
+    subtitle: 'Live camera feed',
+    location: {
+      name: 'BC Ferries Terminal',
+      address: 'Horseshoe Bay, West Vancouver',
+    },
+    photos: [
+      {
+        url: 'https://images.drivebc.ca/bchighwaycam/pub/cameras/1/horseshoe.jpg',
+        caption: 'Horseshoe Bay Terminal - Vehicle lineup',
+        source: 'webcam',
+        timestamp: 'Updated 2 min ago',
+      }
+    ],
+    alerts: [],
+    weather: {
+      temperature: 6,
+      condition: 'Overcast',
+      icon: 'cloudy',
+    },
+    duration: 5,
+  },
+  {
+    id: 'ferry-horseshoe-nanaimo',
+    type: 'ferry',
+    time: '2025-01-07T08:20:00',
+    endTime: '2025-01-07T10:00:00',
+    title: 'BC Ferries - Departure Bay',
+    subtitle: 'Horseshoe Bay → Nanaimo',
+    location: {
+      name: 'Horseshoe Bay Terminal',
+    },
+    photos: [
+      {
+        url: '/ferries/queen-of-cowichan.jpg',
+        caption: 'Queen of Cowichan',
+        source: 'ferry',
+      }
+    ],
+    alerts: [],
+    weather: {
+      temperature: 7,
+      condition: 'Partly Cloudy',
+      icon: 'partly-cloudy',
+    },
+    ferry: {
+      route: 'Horseshoe Bay - Departure Bay',
+      vessel: 'Queen of Cowichan',
+      sailingTime: '8:20 AM',
+      deckSpace: 'Commercial - Reserved',
+    },
+    booking: {
+      status: 'confirmed',
+      confirmationNumber: 'BCF-2025-789456',
+      provider: 'BC Ferries',
+      price: 142.50,
+      link: 'https://www.bcferries.com/manage-booking',
+      phone: '1-888-223-3779',
+    },
+    duration: 100,
+    cost: 142.50,
+  },
+  {
+    id: 'drive-nanaimo-portalberni',
+    type: 'drive_segment',
+    time: '2025-01-07T10:15:00',
+    title: 'Drive to Port Alberni',
+    subtitle: 'Highway 19 → Highway 4',
+    location: {
+      name: 'Highway 4 West',
+    },
+    photos: [],
+    alerts: [],
+    weather: {
+      temperature: 8,
+      condition: 'Cloudy',
+      icon: 'cloudy',
+    },
+    duration: 75,
+    distance: 85,
+    cost: 15,
+  },
+  {
+    id: 'webcam-cathedral-grove',
+    type: 'webcam',
+    time: '2025-01-07T11:00:00',
+    title: 'Cathedral Grove',
+    subtitle: 'Ancient forest - quick stretch stop',
+    location: {
+      name: 'MacMillan Provincial Park',
+      address: 'Highway 4, Vancouver Island',
+    },
+    photos: [
+      {
+        url: 'https://images.drivebc.ca/bchighwaycam/pub/cameras/401/cathedral.jpg',
+        caption: 'Highway 4 at Cathedral Grove',
+        source: 'webcam',
+        timestamp: 'Updated 5 min ago',
+      }
+    ],
+    alerts: [],
+    weather: {
+      temperature: 7,
+      condition: 'Misty',
+      icon: 'fog',
+    },
+    duration: 15,
+  },
+  {
+    id: 'fuel-port-alberni',
+    type: 'fuel_stop',
+    time: '2025-01-07T11:30:00',
+    title: 'Fuel Stop - Port Alberni',
+    subtitle: 'LAST FUEL BEFORE BAMFIELD',
+    description: 'Fill up completely - no fuel available in Bamfield. Estimated 80L fill-up.',
+    location: {
+      name: 'Petro-Canada Port Alberni',
+      address: '4004 Redford St, Port Alberni',
+    },
+    photos: [
+      {
+        url: '/fuel/petro-canada-logo.png',
+        caption: 'Petro-Canada',
+        source: 'logo',
+      }
+    ],
+    alerts: [
+      {
+        severity: 'info',
+        title: 'No fuel in Bamfield',
+        description: 'This is your last opportunity to fuel up. The nearest gas after this is 90km of gravel road away.',
+        source: 'System',
+      }
+    ],
+    fuel: {
+      stationName: 'Petro-Canada',
+      pricePerLiter: 1.65,
+      estimatedFillUp: 80,
+    },
+    duration: 15,
+    cost: 132,
+  },
+  {
+    id: 'lunch-port-alberni',
+    type: 'meal',
+    time: '2025-01-07T11:50:00',
+    title: 'Lunch Stop',
+    subtitle: 'Quick bite before the gravel',
+    location: {
+      name: 'Tim Hortons Port Alberni',
+      address: '3727 10th Ave, Port Alberni',
+    },
+    photos: [],
+    alerts: [],
+    duration: 25,
+    cost: 45,
+  },
+  {
+    id: 'drive-bamfield-road',
+    type: 'drive_segment',
+    time: '2025-01-07T12:15:00',
+    title: 'Bamfield Road',
+    subtitle: '⚠️ ACTIVE LOGGING ROAD - 90km gravel',
+    description: 'Radio required. Active logging trucks Mon-Fri. Drive with headlights on. Pull over for loaded trucks.',
+    location: {
+      name: 'Bamfield Main FSR',
+    },
+    photos: [
+      {
+        url: '/roads/bamfield-road-gravel.jpg',
+        caption: 'Bamfield Road - Typical conditions',
+        source: 'archive',
+      }
+    ],
+    alerts: [
+      {
+        severity: 'major',
+        title: 'Active Logging Road',
+        description: 'Industrial traffic active. Loaded logging trucks have right-of-way. Use headlights, drive defensively.',
+        source: 'Western Forest Products',
+      },
+      {
+        severity: 'minor',
+        title: 'Road Condition: Good Gravel',
+        description: 'Recently graded. Some potholes km 45-52. Watch for soft shoulders.',
+        source: 'DriveBC',
+      }
+    ],
+    weather: {
+      temperature: 6,
+      condition: 'Rain',
+      icon: 'rain',
+      precipitation: 8,
+    },
+    duration: 150,
+    distance: 90,
+    cost: 15,
+  },
+  {
+    id: 'arrival-bamfield',
+    type: 'arrival',
+    time: '2025-01-07T14:45:00',
+    title: 'Arrival in Bamfield',
+    subtitle: 'West Bamfield',
+    location: {
+      name: 'Bamfield',
+      address: 'Bamfield, BC',
+    },
+    photos: [
+      {
+        url: '/locations/bamfield-inlet.jpg',
+        caption: 'Bamfield Inlet',
+        source: 'archive',
+      }
+    ],
+    alerts: [],
+    weather: {
+      temperature: 8,
+      condition: 'Light Rain',
+      icon: 'rain',
+    },
+    duration: 0,
+  },
+  {
+    id: 'accommodation-woods-end',
+    type: 'accommodation',
+    time: '2025-01-07T15:00:00',
+    title: 'Woods End Landing Cottages',
+    subtitle: 'Check-in & unload gear',
+    description: '2 waterfront cabins booked. Kitchen facilities, parking for truck + trailer.',
+    location: {
+      name: 'Woods End Landing',
+      address: '168 Wild Rose Lane, Bamfield',
+    },
+    photos: [
+      {
+        url: '/accommodations/woods-end-exterior.jpg',
+        caption: 'Woods End Landing - Waterfront Cabin',
+        source: 'accommodation',
+      },
+      {
+        url: '/accommodations/woods-end-interior.jpg',
+        caption: 'Cabin Interior',
+        source: 'accommodation',
+      }
+    ],
+    alerts: [],
+    accommodation: {
+      type: 'cabin',
+      checkIn: '3:00 PM',
+      checkOut: '11:00 AM',
+      roomType: '2x Waterfront Cabins',
+      amenities: ['Kitchen', 'WiFi', 'Parking', 'Boat Launch Access'],
+    },
+    booking: {
+      status: 'confirmed',
+      confirmationNumber: 'WEL-2025-1234',
+      provider: 'Woods End Landing',
+      price: 350,
+      link: 'https://woodsendlanding.com',
+      phone: '250-728-3383',
+    },
+    duration: 60,
+    cost: 350,
+  },
+
+  // ============================================
+  // DAY 2 - WEDNESDAY - JOB SITE
+  // ============================================
+  {
+    id: 'jobsite-day1',
+    type: 'job_site',
+    time: '2025-01-08T08:00:00',
+    endTime: '2025-01-08T17:00:00',
+    title: 'Job Site - Marine Research Station',
+    subtitle: 'Window Installation - Day 1 of 2',
+    description: 'Install 6 marine-grade windows at research station. Silicone cure time required between installations.',
+    location: {
+      name: 'Bamfield Marine Sciences Centre',
+      address: '100 Pachena Rd, Bamfield',
+    },
+    photos: [
+      {
+        url: '/jobs/bamfield-marine-exterior.jpg',
+        caption: 'Research Station - South Wing',
+        source: 'companycam',
+      },
+      {
+        url: '/jobs/bamfield-marine-windows.jpg',
+        caption: 'Windows to be replaced',
+        source: 'jobber',
+      },
+      {
+        url: '/jobs/bamfield-marine-prep.jpg',
+        caption: 'Prep work completed',
+        source: 'companycam',
+      }
+    ],
+    alerts: [
+      {
+        severity: 'info',
+        title: 'Weather Advisory',
+        description: 'Light rain expected 2-4 PM. Plan exterior silicone work for morning.',
+        source: 'Weather Service',
+      }
+    ],
+    weather: {
+      temperature: 9,
+      condition: 'Partly Cloudy',
+      icon: 'partly-cloudy',
+    },
+    weatherForecast: [
+      { temperature: 8, condition: 'Cloudy', icon: 'cloudy', humidity: 80 },      // -1h
+      { temperature: 9, condition: 'Partly Cloudy', icon: 'partly-cloudy', humidity: 75 }, // arrival
+      { temperature: 10, condition: 'Cloudy', icon: 'cloudy', humidity: 78 },     // +1h
+      { temperature: 11, condition: 'Cloudy', icon: 'cloudy', humidity: 76 },     // +2h
+      { temperature: 11, condition: 'Light Rain', icon: 'rain', humidity: 82 },   // +3h
+      { temperature: 10, condition: 'Rain', icon: 'rain', humidity: 88 },         // +4h
+      { temperature: 10, condition: 'Light Rain', icon: 'rain', humidity: 85 },   // +5h
+      { temperature: 9, condition: 'Cloudy', icon: 'cloudy', humidity: 80 },      // +6h
+      { temperature: 8, condition: 'Partly Cloudy', icon: 'partly-cloudy', humidity: 78 }, // +7h
+      { temperature: 7, condition: 'Clear', icon: 'clear', humidity: 75 },        // +8h
+    ],
+    jobSite: {
+      jobNumber: 'JOB-2025-0142',
+      clientName: 'Bamfield Marine Sciences Centre',
+      scope: 'Replace 6 marine-grade windows, apply weather sealing',
+      estimatedHours: 16,
+      jobberLink: 'https://secure.getjobber.com/jobs/2025-0142',
+      companyCamLink: 'https://app.companycam.com/projects/bamfield-marine',
+    },
+    duration: 540,
+    cost: 0,
+  },
+
+  // ============================================
+  // DAY 3 - THURSDAY - JOB COMPLETION & RETURN
+  // ============================================
+  {
+    id: 'jobsite-day2',
+    type: 'job_site',
+    time: '2025-01-09T08:00:00',
+    endTime: '2025-01-09T12:00:00',
+    title: 'Job Site - Final Day',
+    subtitle: 'Window Installation - Day 2 of 2',
+    description: 'Complete remaining windows, final inspection, client sign-off.',
+    location: {
+      name: 'Bamfield Marine Sciences Centre',
+      address: '100 Pachena Rd, Bamfield',
+    },
+    photos: [],
+    alerts: [],
+    weather: {
+      temperature: 10,
+      condition: 'Sunny',
+      icon: 'sunny',
+    },
+    weatherForecast: [
+      { temperature: 9, condition: 'Clear', icon: 'clear', humidity: 70 },
+      { temperature: 10, condition: 'Sunny', icon: 'sunny', humidity: 68 },
+      { temperature: 11, condition: 'Sunny', icon: 'sunny', humidity: 65 },
+      { temperature: 12, condition: 'Sunny', icon: 'sunny', humidity: 62 },
+      { temperature: 12, condition: 'Partly Cloudy', icon: 'partly-cloudy', humidity: 65 },
+    ],
+    jobSite: {
+      jobNumber: 'JOB-2025-0142',
+      clientName: 'Bamfield Marine Sciences Centre',
+      scope: 'Final installation, inspection, cleanup',
+      estimatedHours: 4,
+      jobberLink: 'https://secure.getjobber.com/jobs/2025-0142',
+      companyCamLink: 'https://app.companycam.com/projects/bamfield-marine',
+    },
+    duration: 240,
+    cost: 0,
+  },
+  {
+    id: 'departure-bamfield',
+    type: 'departure',
+    time: '2025-01-09T13:00:00',
+    title: 'Depart Bamfield',
+    subtitle: 'Begin return journey',
+    location: {
+      name: 'Bamfield',
+    },
+    photos: [],
+    alerts: [],
+    weather: {
+      temperature: 11,
+      condition: 'Sunny',
+      icon: 'sunny',
+    },
+    duration: 30,
+  },
+  {
+    id: 'return-bamfield-road',
+    type: 'drive_segment',
+    time: '2025-01-09T13:30:00',
+    title: 'Bamfield Road Return',
+    subtitle: 'Back to Port Alberni',
+    location: {
+      name: 'Bamfield Main FSR',
+    },
+    photos: [],
+    alerts: [
+      {
+        severity: 'info',
+        title: 'Afternoon Traffic',
+        description: 'Lighter logging traffic after 1 PM. Better conditions for return.',
+        source: 'Western Forest Products',
+      }
+    ],
+    duration: 140,
+    distance: 90,
+    cost: 15,
+  },
+  {
+    id: 'fuel-return-portalberni',
+    type: 'fuel_stop',
+    time: '2025-01-09T15:50:00',
+    title: 'Fuel Stop - Port Alberni',
+    subtitle: 'Top up for ferry and home',
+    location: {
+      name: 'Shell Port Alberni',
+      address: '3655 Johnston Rd, Port Alberni',
+    },
+    photos: [],
+    alerts: [],
+    fuel: {
+      stationName: 'Shell',
+      pricePerLiter: 1.62,
+      estimatedFillUp: 60,
+    },
+    duration: 10,
+    cost: 97,
+  },
+  {
+    id: 'ferry-return',
+    type: 'ferry',
+    time: '2025-01-09T18:45:00',
+    endTime: '2025-01-09T20:25:00',
+    title: 'BC Ferries - Return',
+    subtitle: 'Departure Bay → Horseshoe Bay',
+    location: {
+      name: 'Departure Bay Terminal',
+    },
+    photos: [],
+    alerts: [],
+    ferry: {
+      route: 'Departure Bay - Horseshoe Bay',
+      vessel: 'Coastal Renaissance',
+      sailingTime: '6:45 PM',
+      deckSpace: 'Commercial - Reserved',
+    },
+    booking: {
+      status: 'confirmed',
+      confirmationNumber: 'BCF-2025-789457',
+      provider: 'BC Ferries',
+      price: 142.50,
+      link: 'https://www.bcferries.com/manage-booking',
+    },
+    duration: 100,
+    cost: 142.50,
+  },
+  {
+    id: 'arrival-surrey',
+    type: 'arrival',
+    time: '2025-01-09T21:30:00',
+    title: 'Return to Surrey Depot',
+    subtitle: 'Trip complete',
+    description: 'Unload equipment, complete vehicle checklist, submit job completion.',
+    location: {
+      name: 'Surrey Depot',
+      address: '12345 Industrial Way, Surrey, BC',
+    },
+    photos: [],
+    alerts: [],
+    weather: {
+      temperature: 5,
+      condition: 'Clear',
+      icon: 'clear',
+    },
+    duration: 30,
+  },
+];
+
+// ============================================
+// TRIP SUMMARY DATA
+// ============================================
+
+export const bamfieldTripSummary = {
+  id: 'bamfield-work-trip-2025-01',
+  name: 'Bamfield Adventure: Vancouver to Broken Group Islands',
+  description: 'Glass installation job at Bamfield Marine Sciences Centre',
+  startDate: '2025-01-07',
+  endDate: '2025-01-09',
+  totalDays: 3,
+  totalDistance: 650, // km round trip
+  totalDuration: 1680, // minutes
+  totalCost: {
+    fuel: 254,
+    ferry: 285,
+    accommodation: 350,
+    meals: 135,
+    total: 1024,
+  },
+  crew: [
+    { name: 'Glenn Ballman', role: 'Lead Installer' },
+    { name: 'Mike Chen', role: 'Installer' },
+    { name: 'Sarah Williams', role: 'Apprentice' },
+  ],
+  vehicle: {
+    id: 'cube-van-1',
+    name: 'Millennium Falcon',
+    type: 'Cube Van',
+  },
+  trailer: {
+    id: 'enclosed-1',
+    name: 'The Box',
+    type: 'Enclosed Cargo',
+  },
+};
+
+Demo Page to Display the Timeline
+File: client/src/pages/TripTimelineDemo.tsx
+tsx// ============================================
+// TRIP TIMELINE DEMO PAGE
+// Shows the Bamfield trip in vertical timeline view
+// ============================================
+
+import React from 'react';
+import { ArrowLeft, Share, Download, Edit, MoreVertical } from 'lucide-react';
+import { Link } from 'wouter';
+import { TripTimelineView } from '../components/TripPlanning/TripTimelineView';
+import { sampleBamfieldTrip, bamfieldTripSummary } from '../data/sampleBamfieldTrip';
+
+export function TripTimelineDemo() {
+  const handleEventClick = (event: any) => {
+    console.log('Event clicked:', event);
+  };
+
+  const handleBookEvent = (event: any) => {
+    console.log('Book event:', event);
+    alert(`Booking flow for: ${event.title}`);
+  };
+
+  return (
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <header className="sticky top-0 z-10 bg-card border-b border-border">
+        <div className="max-w-4xl mx-auto px-4 py-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Link href="/road-trips">
+                <a className="p-2 hover:bg-muted rounded-lg transition-colors">
+                  <ArrowLeft className="h-5 w-5" />
+                </a>
+              </Link>
+              <div>
+                <h1 className="font-semibold">Trip Details</h1>
+                <p className="text-sm text-muted-foreground">
+                  {bamfieldTripSummary.startDate} - {bamfieldTripSummary.endDate}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <button className="p-2 hover:bg-muted rounded-lg transition-colors">
+                <Share className="h-5 w-5" />
+              </button>
+              <button className="p-2 hover:bg-muted rounded-lg transition-colors">
+                <Download className="h-5 w-5" />
+              </button>
+              <button className="p-2 hover:bg-muted rounded-lg transition-colors">
+                <Edit className="h-5 w-5" />
+              </button>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* Trip Summary Card */}
+      <div className="max-w-4xl mx-auto px-4 py-6">
+        <div className="bg-card border border-border rounded-lg p-4 mb-6">
+          <div className="flex flex-wrap gap-6">
+            {/* Cost Summary */}
+            <div className="flex-1 min-w-[150px]">
+              <p className="text-sm text-muted-foreground">Total Cost</p>
+              <p className="text-2xl font-bold text-success">
+                ${bamfieldTripSummary.totalCost.total}
+              </p>
+              <div className="text-xs text-muted-foreground mt-1 space-y-0.5">
+                <p>Fuel: ${bamfieldTripSummary.totalCost.fuel}</p>
+                <p>Ferry: ${bamfieldTripSummary.totalCost.ferry}</p>
+                <p>Accommodation: ${bamfieldTripSummary.totalCost.accommodation}</p>
+                <p>Meals: ${bamfieldTripSummary.totalCost.meals}</p>
+              </div>
+            </div>
+
+            {/* Distance & Duration */}
+            <div className="flex-1 min-w-[150px]">
+              <p className="text-sm text-muted-foreground">Distance</p>
+              <p className="text-2xl font-bold">{bamfieldTripSummary.totalDistance} km</p>
+              <p className="text-xs text-muted-foreground mt-1">Round trip</p>
+            </div>
+
+            {/* Crew */}
+            <div className="flex-1 min-w-[150px]">
+              <p className="text-sm text-muted-foreground">Crew</p>
+              <p className="text-2xl font-bold">{bamfieldTripSummary.crew.length}</p>
+              <div className="text-xs text-muted-foreground mt-1">
+                {bamfieldTripSummary.crew.map(c => c.name).join(', ')}
+              </div>
+            </div>
+
+            {/* Vehicle */}
+            <div className="flex-1 min-w-[150px]">
+              <p className="text-sm text-muted-foreground">Vehicle</p>
+              <p className="font-bold">{bamfieldTripSummary.vehicle.name}</p>
+              <p className="text-xs text-muted-foreground">{bamfieldTripSummary.vehicle.type}</p>
+              {bamfieldTripSummary.trailer && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  + {bamfieldTripSummary.trailer.name}
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Timeline */}
+        <TripTimelineView
+          tripId={bamfieldTripSummary.id}
+          tripName={bamfieldTripSummary.name}
+          events={sampleBamfieldTrip}
+          onEventClick={handleEventClick}
+          onBookEvent={handleBookEvent}
+        />
+      </div>
+    </div>
+  );
+}
+
+export default TripTimelineDemo;
+
+Add Route for Demo Page
+Add to your router (likely client/src/App.tsx or routes file):
+tsximport { TripTimelineDemo } from './pages/TripTimelineDemo';
+
+// Add this route
+<Route path="/trip-timeline-demo" component={TripTimelineDemo} />
+
+Summary: Files to Create
+FilePurposeclient/src/components/TripPlanning/TripTimelineView.tsxMain vertical timeline componentclient/src/data/sampleBamfieldTrip.tsDemo data for Bamfield work tripclient/src/pages/TripTimelineDemo.tsxDemo page to view the timeline
+
+Tell Replit:
+
+"Let's build the vertical trip timeline view. Create these three files:
+
+client/src/components/TripPlanning/TripTimelineView.tsx - The vertical timeline component with photos, weather, alerts, booking status
+client/src/data/sampleBamfieldTrip.ts - Sample Bamfield work crew trip data with 3 days of events
+client/src/pages/TripTimelineDemo.tsx - Demo page to display the timeline
+Add a route /trip-timeline-demo to view it
+
+Use the code Claude provided. Once created, I should be able to navigate to /trip-timeline-demo and see the full Bamfield trip flowing vertically down the screen."
+
+
+Let me know when this is working and we can:
+
+Connect real webcam images from DriveBC
+Add real weather data
+Wire up actual booking integrations
