@@ -1,0 +1,117 @@
+Great catch! Let me verify what we have and provide any missing pieces.
+Step 5: Verify TrailerCard Integration
+Let's check if the TrailerCard is fully wired up. The key pieces needed are:
+
+Badge shows on each trailer card (red/yellow/green)
+"Hitch To" button disabled when driver can't tow
+Warning banner on unqualified trailers
+
+Ask Replit to verify:
+
+"Can you check TrailerCard.tsx and confirm it has:
+
+Import and usage of useQualificationCheck hook
+Import and usage of QualificationBadge component
+The 'Hitch To' button is disabled when !isQualified
+A warning banner shows the primary issue when not qualified
+
+Also, is currentDriverId being passed to TrailerCard from FleetDashboard?"
+
+
+If any pieces are missing, here's what the TrailerCard integration should look like:
+TrailerCard Modifications (if needed)
+tsx// At top of TrailerCard.tsx - add these imports
+import { QualificationBadge } from './QualificationBadge';
+import { useQualificationCheck } from '@/hooks/useDriverQualifications';
+
+// Update the props interface to accept currentDriverId
+interface TrailerCardProps {
+  trailer: TrailerProfile;
+  currentDriverId?: string | null;  // ADD THIS
+  onEdit: () => void;
+  onHitchTo?: () => void;
+  onStatusChange?: (status: string) => void;
+}
+
+// Inside the component, add the hook call
+export function TrailerCard({ 
+  trailer, 
+  currentDriverId,  // ADD THIS
+  onEdit, 
+  onHitchTo,
+  onStatusChange 
+}: TrailerCardProps) {
+  
+  // ADD THIS: Check qualification if we have a driver
+  const { data: qualificationData, isLoading: qualificationLoading } = useQualificationCheck(
+    currentDriverId || null,
+    trailer.id
+  );
+
+  const isQualified = qualificationData?.qualification?.isQualified ?? true;
+  const qualificationIssues = qualificationData?.qualification?.issues || [];
+  const qualificationWarnings = qualificationData?.qualification?.warnings || [];
+
+  // ... rest of component
+In the TrailerCard JSX:
+tsx// Near the status badge, add qualification badge
+<div className="flex items-center gap-2">
+  {/* Existing status badge */}
+  <span className={`px-2 py-1 rounded text-xs ...`}>
+    {trailer.fleet_status}
+  </span>
+  
+  {/* ADD: Qualification badge */}
+  {currentDriverId && !qualificationLoading && qualificationData && (
+    <QualificationBadge
+      isQualified={isQualified}
+      issueCount={qualificationIssues.length}
+      warningCount={qualificationWarnings.length}
+      primaryIssue={qualificationIssues[0] || null}
+      warnings={qualificationWarnings}
+      size="sm"
+    />
+  )}
+</div>
+
+{/* ADD: Warning banner when not qualified */}
+{currentDriverId && !isQualified && qualificationIssues.length > 0 && (
+  <div className="mt-3 p-2 bg-destructive/10 border border-destructive/30 rounded text-xs text-destructive">
+    <span className="font-medium">Cannot tow: </span>
+    {qualificationIssues[0]}
+  </div>
+)}
+
+{/* Modify the Hitch To button to be disabled when not qualified */}
+<button
+  onClick={onHitchTo}
+  disabled={!isQualified || !onHitchTo}
+  className={`flex-1 py-2 px-3 rounded text-sm transition-colors ${
+    !isQualified
+      ? 'bg-muted text-muted-foreground cursor-not-allowed'
+      : 'bg-secondary hover:bg-secondary/80 text-secondary-foreground'
+  }`}
+>
+  Hitch To...
+</button>
+In FleetDashboard - pass currentDriverId to TrailerCard:
+tsx{/* Where you render TrailerCards */}
+{trailers.map(trailer => (
+  <TrailerCard
+    key={trailer.id}
+    trailer={trailer}
+    currentDriverId={currentDriverId}  // ADD THIS
+    onEdit={() => handleEditTrailer(trailer)}
+    onHitchTo={() => handleHitchTo(trailer)}
+  />
+))}
+
+Quick Test
+Once everything is wired up, you should see:
+TrailerGlenn's StatusWhat ShowsThe Box (7,000 lbs)✅ QualifiedGreen checkmarkFlatty (10,000 lbs)⚠️ or ❌Yellow/Red based on endorsementsLong Flatbed HeavyDepends on weightBadge + disabled button if too heavy
+
+Ask Replit:
+
+"Please verify the TrailerCard integration is complete and currentDriverId is being passed from FleetDashboard to each TrailerCard. If anything is missing, add it. Then let's test by viewing the Fleet page - we should see qualification badges on each trailer."
+
+Let me know what Replit finds! If it's all working, we can move to testing the full system or start on the orchestration layer for the Bamfield trip
