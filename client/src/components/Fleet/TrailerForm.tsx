@@ -16,7 +16,11 @@ import {
   Home,
   Thermometer,
   Shield,
-  CircleDot
+  CircleDot,
+  Hammer,
+  Truck,
+  Fence,
+  BedDouble
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -161,6 +165,213 @@ const trailerFormSchema = z.object({
   tie_down_points: z.coerce.number().optional().nullable(),
   
   fleet_status: z.string().default('available'),
+  
+  // =====================================================
+  // HORSE TRAILER FIELDS
+  // =====================================================
+  is_horse_trailer: z.boolean().default(false),
+  horse_capacity: z.coerce.number().optional().nullable(),
+  horse_load_config: z.string().optional(),
+  stall_length_inches: z.coerce.number().optional().nullable(),
+  stall_width_inches: z.coerce.number().optional().nullable(),
+  stall_height_inches: z.coerce.number().optional().nullable(),
+  horse_size_rating: z.string().optional(),
+  divider_type: z.string().optional(),
+  divider_padded: z.boolean().default(false),
+  dividers_removable: z.boolean().default(false),
+  has_head_dividers: z.boolean().default(false),
+  has_butt_bars: z.boolean().default(false),
+  has_breast_bars: z.boolean().default(false),
+  manger_type: z.string().optional(),
+  has_hay_rack: z.boolean().default(false),
+  hay_rack_type: z.string().optional(),
+  drop_down_windows_head: z.coerce.number().optional().nullable(),
+  drop_down_windows_butt: z.coerce.number().optional().nullable(),
+  slider_windows: z.coerce.number().optional().nullable(),
+  roof_vents: z.coerce.number().optional().nullable(),
+  window_bars: z.boolean().default(false),
+  escape_door_count: z.coerce.number().optional().nullable(),
+  escape_door_side: z.string().optional(),
+  walk_through_door: z.boolean().default(false),
+  rear_load_type: z.string().optional(),
+  side_ramp: z.boolean().default(false),
+  rear_ramp_spring_assist: z.boolean().default(false),
+  horse_floor_type: z.string().optional(),
+  floor_mats: z.boolean().default(false),
+  kick_wall_padding: z.boolean().default(false),
+  lined_walls: z.boolean().default(false),
+  insulated_walls: z.boolean().default(false),
+  tie_ring_count: z.coerce.number().optional().nullable(),
+  tie_system_type: z.string().optional(),
+  
+  // Tack Room
+  has_tack_room: z.boolean().default(false),
+  tack_room_type: z.string().optional(),
+  tack_room_length_inches: z.coerce.number().optional().nullable(),
+  tack_room_width: z.string().optional(),
+  saddle_rack_count: z.coerce.number().optional().nullable(),
+  saddle_rack_type: z.string().optional(),
+  bridle_hooks: z.coerce.number().optional().nullable(),
+  blanket_bar: z.boolean().default(false),
+  tack_room_carpet: z.boolean().default(false),
+  brush_tray: z.boolean().default(false),
+  
+  // Living Quarters
+  has_living_quarters: z.boolean().default(false),
+  lq_certified: z.boolean().default(false),
+  lq_certification_type: z.string().optional(),
+  lq_short_wall_feet: z.coerce.number().optional().nullable(),
+  lq_long_wall_feet: z.coerce.number().optional().nullable(),
+  lq_width_feet: z.coerce.number().optional().nullable(),
+  lq_ceiling_height_inches: z.coerce.number().optional().nullable(),
+  lq_sleep_capacity: z.coerce.number().optional().nullable(),
+  lq_bed_type: z.string().optional(),
+  lq_bed_count: z.coerce.number().optional().nullable(),
+  lq_has_cabover_bed: z.boolean().default(false),
+  lq_has_kitchen: z.boolean().default(false),
+  lq_cooktop_type: z.string().optional(),
+  lq_has_oven: z.boolean().default(false),
+  lq_has_microwave: z.boolean().default(false),
+  lq_refrigerator_type: z.string().optional(),
+  lq_refrigerator_cubic_feet: z.coerce.number().optional().nullable(),
+  lq_sink_type: z.string().optional(),
+  lq_has_outdoor_kitchen: z.boolean().default(false),
+  lq_has_bathroom: z.boolean().default(false),
+  lq_bathroom_type: z.string().optional(),
+  lq_toilet_type: z.string().optional(),
+  lq_has_shower: z.boolean().default(false),
+  lq_shower_type: z.string().optional(),
+  lq_has_vanity: z.boolean().default(false),
+  lq_ac_type: z.string().optional(),
+  lq_ac_btu: z.coerce.number().optional().nullable(),
+  lq_heat_type: z.string().optional(),
+  lq_heat_btu: z.coerce.number().optional().nullable(),
+  lq_fresh_water_gallons: z.coerce.number().optional().nullable(),
+  lq_gray_water_gallons: z.coerce.number().optional().nullable(),
+  lq_black_water_gallons: z.coerce.number().optional().nullable(),
+  lq_water_heater_type: z.string().optional(),
+  lq_water_heater_gallons: z.coerce.number().optional().nullable(),
+  lq_winterized: z.boolean().default(false),
+  lq_shore_power_amps: z.coerce.number().optional().nullable(),
+  lq_has_generator: z.boolean().default(false),
+  lq_generator_watts: z.coerce.number().optional().nullable(),
+  lq_generator_fuel: z.string().optional(),
+  lq_has_solar: z.boolean().default(false),
+  lq_solar_watts: z.coerce.number().optional().nullable(),
+  lq_battery_type: z.string().optional(),
+  lq_battery_amp_hours: z.coerce.number().optional().nullable(),
+  lq_has_inverter: z.boolean().default(false),
+  lq_inverter_watts: z.coerce.number().optional().nullable(),
+  lq_has_awning: z.boolean().default(false),
+  lq_awning_length_feet: z.coerce.number().optional().nullable(),
+  lq_has_slide_out: z.boolean().default(false),
+  lq_slide_out_count: z.coerce.number().optional().nullable(),
+  lq_propane_tank_count: z.coerce.number().optional().nullable(),
+  lq_propane_capacity_lbs: z.coerce.number().optional().nullable(),
+  
+  // Work Trailer
+  is_work_trailer: z.boolean().default(false),
+  work_trailer_type: z.string().optional(),
+  has_shelving: z.boolean().default(false),
+  shelving_type: z.string().optional(),
+  shelving_sides: z.string().optional(),
+  shelf_count: z.coerce.number().optional().nullable(),
+  has_parts_bins: z.boolean().default(false),
+  parts_bin_count: z.coerce.number().optional().nullable(),
+  has_tool_cabinets: z.boolean().default(false),
+  has_overhead_storage: z.boolean().default(false),
+  has_workbench: z.boolean().default(false),
+  workbench_type: z.string().optional(),
+  workbench_length_inches: z.coerce.number().optional().nullable(),
+  workbench_width_inches: z.coerce.number().optional().nullable(),
+  workbench_has_vise: z.boolean().default(false),
+  ladder_rack_type: z.string().optional(),
+  has_pipe_rack: z.boolean().default(false),
+  pipe_rack_length_feet: z.coerce.number().optional().nullable(),
+  has_conduit_tube: z.boolean().default(false),
+  has_lumber_rack: z.boolean().default(false),
+  has_generator_mount: z.boolean().default(false),
+  generator_mount_type: z.string().optional(),
+  has_shore_power: z.boolean().default(false),
+  shore_power_amps_work: z.coerce.number().optional().nullable(),
+  electrical_outlets: z.coerce.number().optional().nullable(),
+  outlet_type: z.string().optional(),
+  has_air_compressor_mount: z.boolean().default(false),
+  has_welder_outlet: z.boolean().default(false),
+  welder_outlet_amps: z.coerce.number().optional().nullable(),
+  has_hvac: z.boolean().default(false),
+  hvac_type: z.string().optional(),
+  has_exhaust_fan: z.boolean().default(false),
+  exhaust_fan_cfm: z.coerce.number().optional().nullable(),
+  has_dust_collection: z.boolean().default(false),
+  
+  // Equipment Trailer
+  is_equipment_trailer: z.boolean().default(false),
+  deck_type: z.string().optional(),
+  deck_length_feet: z.coerce.number().optional().nullable(),
+  deck_width_inches: z.coerce.number().optional().nullable(),
+  deck_height_inches: z.coerce.number().optional().nullable(),
+  well_length_feet: z.coerce.number().optional().nullable(),
+  upper_deck_length_feet: z.coerce.number().optional().nullable(),
+  lower_deck_length_feet: z.coerce.number().optional().nullable(),
+  is_extendable: z.boolean().default(false),
+  extended_length_feet: z.coerce.number().optional().nullable(),
+  retracted_length_feet: z.coerce.number().optional().nullable(),
+  max_load_height_feet: z.coerce.number().optional().nullable(),
+  max_legal_height_feet: z.coerce.number().optional().nullable(),
+  gooseneck_removable: z.boolean().default(false),
+  gooseneck_type: z.string().optional(),
+  has_loading_ramps: z.boolean().default(false),
+  ramp_type_equipment: z.string().optional(),
+  ramp_length_feet: z.coerce.number().optional().nullable(),
+  ramp_width_inches: z.coerce.number().optional().nullable(),
+  ramp_capacity_lbs_equipment: z.coerce.number().optional().nullable(),
+  tilt_type: z.string().optional(),
+  tilt_angle_degrees: z.coerce.number().optional().nullable(),
+  stationary_front_feet: z.coerce.number().optional().nullable(),
+  axle_count_equipment: z.coerce.number().optional().nullable(),
+  axle_spacing_inches: z.coerce.number().optional().nullable(),
+  axle_capacity_per_axle_lbs: z.coerce.number().optional().nullable(),
+  has_lift_axle: z.boolean().default(false),
+  lift_axle_count: z.coerce.number().optional().nullable(),
+  has_air_ride: z.boolean().default(false),
+  has_spread_axle: z.boolean().default(false),
+  has_stake_pockets: z.boolean().default(false),
+  stake_pocket_count: z.coerce.number().optional().nullable(),
+  has_rub_rails: z.boolean().default(false),
+  has_winch: z.boolean().default(false),
+  winch_capacity_lbs: z.coerce.number().optional().nullable(),
+  winch_type: z.string().optional(),
+  has_chain_tie_downs: z.boolean().default(false),
+  chain_binder_count: z.coerce.number().optional().nullable(),
+  deck_surface_type: z.string().optional(),
+  d_ring_capacity_lbs: z.coerce.number().optional().nullable(),
+  
+  // Livestock Trailer
+  is_livestock_trailer: z.boolean().default(false),
+  livestock_type: z.string().optional(),
+  livestock_capacity_head: z.coerce.number().optional().nullable(),
+  has_center_gate: z.boolean().default(false),
+  center_gate_type: z.string().optional(),
+  has_possum_belly: z.boolean().default(false),
+  possum_belly_count: z.coerce.number().optional().nullable(),
+  has_upper_deck: z.boolean().default(false),
+  punch_floor: z.boolean().default(false),
+  has_nose_gate: z.boolean().default(false),
+  
+  // Dump Trailer
+  is_dump_trailer: z.boolean().default(false),
+  dump_type: z.string().optional(),
+  dump_capacity_cubic_yards: z.coerce.number().optional().nullable(),
+  dump_bed_length_feet: z.coerce.number().optional().nullable(),
+  dump_bed_width_inches: z.coerce.number().optional().nullable(),
+  dump_bed_height_inches: z.coerce.number().optional().nullable(),
+  dump_hydraulic_type: z.string().optional(),
+  dump_lift_capacity_lbs: z.coerce.number().optional().nullable(),
+  has_tarp_system: z.boolean().default(false),
+  tarp_type: z.string().optional(),
+  has_barn_doors: z.boolean().default(false),
+  has_spread_gate: z.boolean().default(false),
 });
 
 type TrailerFormData = z.infer<typeof trailerFormSchema>;
@@ -326,6 +537,188 @@ const HEAT_TYPES = [
   { value: 'hydronic', label: 'Hydronic' },
 ];
 
+const HORSE_LOAD_CONFIGS = [
+  { value: 'straight_load', label: 'Straight Load' },
+  { value: 'slant_load', label: 'Slant Load' },
+  { value: 'reverse_slant', label: 'Reverse Slant' },
+  { value: 'head_to_head', label: 'Head to Head' },
+  { value: 'box_stall', label: 'Box Stall' },
+  { value: 'stock_open', label: 'Stock/Open' },
+];
+
+const HORSE_SIZE_RATINGS = [
+  { value: 'pony', label: 'Pony (up to 14.2hh)' },
+  { value: 'small', label: 'Small Horse (14.2-15.2hh)' },
+  { value: 'standard', label: 'Standard (15.2-16.2hh)' },
+  { value: 'warmblood', label: 'Warmblood (16.2-17.2hh)' },
+  { value: 'draft', label: 'Draft (17.2hh+)' },
+];
+
+const DIVIDER_TYPES = [
+  { value: 'none', label: 'None' },
+  { value: 'full_height', label: 'Full Height' },
+  { value: 'partial', label: 'Partial Height' },
+  { value: 'padded', label: 'Padded' },
+  { value: 'air_flow', label: 'Air Flow' },
+  { value: 'stud_wall', label: 'Stud Wall' },
+  { value: 'telescoping', label: 'Telescoping' },
+  { value: 'removable', label: 'Removable' },
+  { value: 'swing_out', label: 'Swing Out' },
+];
+
+const MANGER_TYPES = [
+  { value: 'none', label: 'None' },
+  { value: 'standard_manger', label: 'Standard Manger' },
+  { value: 'drop_down_manger', label: 'Drop-Down Manger' },
+  { value: 'hay_bag_only', label: 'Hay Bag Only' },
+  { value: 'walk_through', label: 'Walk Through' },
+];
+
+const REAR_LOAD_TYPES = [
+  { value: 'ramp', label: 'Ramp' },
+  { value: 'step_up', label: 'Step Up' },
+  { value: 'dutch_doors', label: 'Dutch Doors' },
+  { value: 'swing_doors', label: 'Swing Doors' },
+];
+
+const HORSE_FLOOR_TYPES = [
+  { value: 'aluminum', label: 'Aluminum' },
+  { value: 'wood', label: 'Wood' },
+  { value: 'rubber_mat', label: 'Rubber Mat' },
+  { value: 'rumber', label: 'Rumber (Recycled)' },
+];
+
+const TACK_ROOM_TYPES = [
+  { value: 'front_tack', label: 'Front Tack' },
+  { value: 'rear_tack', label: 'Rear Tack' },
+  { value: 'mid_tack', label: 'Mid Tack' },
+  { value: 'fold_up', label: 'Fold Up' },
+  { value: 'collapsible', label: 'Collapsible' },
+];
+
+const SADDLE_RACK_TYPES = [
+  { value: 'swing_out', label: 'Swing Out' },
+  { value: 'fixed', label: 'Fixed' },
+  { value: 'removable', label: 'Removable' },
+];
+
+const LQ_BED_TYPES = [
+  { value: 'queen', label: 'Queen' },
+  { value: 'full', label: 'Full' },
+  { value: 'dinette_converts', label: 'Dinette Converts' },
+  { value: 'sofa_sleeper', label: 'Sofa Sleeper' },
+  { value: 'bunk', label: 'Bunks' },
+  { value: 'cabover', label: 'Cabover Bed' },
+];
+
+const LQ_COOKTOP_TYPES = [
+  { value: 'none', label: 'None' },
+  { value: '2_burner', label: '2-Burner' },
+  { value: '3_burner', label: '3-Burner' },
+  { value: 'induction', label: 'Induction' },
+];
+
+const LQ_REFRIGERATOR_TYPES = [
+  { value: 'none', label: 'None' },
+  { value: '3_way', label: '3-Way (Propane/12V/120V)' },
+  { value: '12v_compressor', label: '12V Compressor' },
+  { value: 'residential', label: 'Residential' },
+];
+
+const LQ_BATHROOM_TYPES = [
+  { value: 'none', label: 'None' },
+  { value: 'wet_bath', label: 'Wet Bath' },
+  { value: 'dry_bath', label: 'Dry Bath' },
+  { value: 'half_bath', label: 'Half Bath' },
+];
+
+const LQ_TOILET_TYPES = [
+  { value: 'none', label: 'None' },
+  { value: 'gravity', label: 'Gravity' },
+  { value: 'macerator', label: 'Macerator' },
+  { value: 'cassette', label: 'Cassette' },
+  { value: 'porta_potti', label: 'Porta Potti' },
+];
+
+const WORK_TRAILER_TYPES = [
+  { value: 'contractor', label: 'Contractor' },
+  { value: 'mobile_workshop', label: 'Mobile Workshop' },
+  { value: 'service', label: 'Service' },
+  { value: 'fiber_splicing', label: 'Fiber Splicing' },
+];
+
+const SHELVING_TYPES = [
+  { value: 'wood', label: 'Wood' },
+  { value: 'metal', label: 'Metal' },
+  { value: 'aluminum', label: 'Aluminum' },
+  { value: 'adjustable', label: 'Adjustable' },
+];
+
+const WORKBENCH_TYPES = [
+  { value: 'fixed', label: 'Fixed' },
+  { value: 'fold_down', label: 'Fold Down' },
+  { value: 'slide_out', label: 'Slide Out' },
+];
+
+const DECK_TYPES = [
+  { value: 'flatbed', label: 'Flatbed' },
+  { value: 'step_deck', label: 'Step Deck' },
+  { value: 'double_drop', label: 'Double Drop' },
+  { value: 'lowboy_fixed', label: 'Lowboy (Fixed)' },
+  { value: 'rgn', label: 'RGN (Removable Gooseneck)' },
+  { value: 'tilt_deck', label: 'Tilt Deck' },
+  { value: 'deckover', label: 'Deckover' },
+  { value: 'beavertail', label: 'Beavertail' },
+  { value: 'hydraulic_tail', label: 'Hydraulic Tail' },
+];
+
+const GOOSENECK_TYPES = [
+  { value: 'fixed', label: 'Fixed' },
+  { value: 'hydraulic_detach', label: 'Hydraulic Detach' },
+  { value: 'mechanical_detach', label: 'Mechanical Detach' },
+];
+
+const TILT_TYPES = [
+  { value: 'gravity', label: 'Gravity Tilt' },
+  { value: 'hydraulic', label: 'Hydraulic Tilt' },
+  { value: 'power_up_gravity_down', label: 'Power Up/Gravity Down' },
+];
+
+const WINCH_TYPES = [
+  { value: 'manual', label: 'Manual' },
+  { value: 'electric', label: 'Electric' },
+  { value: 'hydraulic', label: 'Hydraulic' },
+];
+
+const DECK_SURFACE_TYPES = [
+  { value: 'steel', label: 'Steel' },
+  { value: 'wood', label: 'Wood' },
+  { value: 'aluminum', label: 'Aluminum' },
+  { value: 'apitong', label: 'Apitong' },
+  { value: 'rubber', label: 'Rubber' },
+];
+
+const LIVESTOCK_TYPES = [
+  { value: 'cattle', label: 'Cattle' },
+  { value: 'sheep', label: 'Sheep' },
+  { value: 'goats', label: 'Goats' },
+  { value: 'hogs', label: 'Hogs' },
+  { value: 'mixed', label: 'Mixed' },
+];
+
+const DUMP_TYPES = [
+  { value: 'end_dump', label: 'End Dump' },
+  { value: 'side_dump', label: 'Side Dump' },
+  { value: 'belly_dump', label: 'Belly Dump' },
+  { value: 'bottom_dump', label: 'Bottom Dump' },
+];
+
+const DUMP_HYDRAULIC_TYPES = [
+  { value: 'scissor', label: 'Scissor' },
+  { value: 'telescopic', label: 'Telescopic' },
+  { value: 'dual_piston', label: 'Dual Piston' },
+];
+
 const FLEET_STATUSES = [
   { value: 'available', label: 'Available', variant: 'default' as const },
   { value: 'in_use', label: 'In Use', variant: 'secondary' as const },
@@ -466,9 +859,27 @@ export function TrailerForm({ trailerId, initialData, onSave, onCancel }: Traile
   const watchedCouplerType = form.watch('coupler_type');
   const watchedHasETrack = form.watch('has_e_track');
   const watchedHasDRings = form.watch('has_d_rings');
+  const watchedIsHorseTrailer = form.watch('is_horse_trailer');
+  const watchedHasLivingQuarters = form.watch('has_living_quarters');
+  const watchedIsWorkTrailer = form.watch('is_work_trailer');
+  const watchedIsEquipmentTrailer = form.watch('is_equipment_trailer');
+  const watchedIsLivestockTrailer = form.watch('is_livestock_trailer');
+  const watchedIsDumpTrailer = form.watch('is_dump_trailer');
+  const watchedHasTackRoom = form.watch('has_tack_room');
+  const watchedLqHasKitchen = form.watch('lq_has_kitchen');
+  const watchedLqHasBathroom = form.watch('lq_has_bathroom');
+  const watchedLqHasGenerator = form.watch('lq_has_generator');
+  const watchedLqHasSolar = form.watch('lq_has_solar');
+  const watchedLqHasInverter = form.watch('lq_has_inverter');
+  const watchedHasShelving = form.watch('has_shelving');
+  const watchedHasWorkbench = form.watch('has_workbench');
+  const watchedHasWinch = form.watch('has_winch');
 
   const isRvType = ['travel_trailer', 'fifth_wheel_rv', 'toy_hauler', 'popup_camper', 'teardrop'].includes(watchedTrailerType);
   const isEnclosedType = ['enclosed_cargo', 'travel_trailer', 'fifth_wheel_rv', 'toy_hauler', 'food_truck', 'office'].includes(watchedTrailerType);
+  const isHorseType = ['horse', 'livestock'].includes(watchedTrailerType) || watchedIsHorseTrailer || watchedIsLivestockTrailer;
+  const isEquipmentType = ['equipment', 'car_hauler', 'flatbed'].includes(watchedTrailerType) || watchedIsEquipmentTrailer;
+  const isDumpType = watchedTrailerType === 'dump' || watchedIsDumpTrailer;
 
   return (
     <Card className="max-h-[85vh] overflow-hidden flex flex-col">
@@ -519,6 +930,30 @@ export function TrailerForm({ trailerId, initialData, onSave, onCancel }: Traile
                 <TabsTrigger value="cargo" data-testid="tab-cargo">
                   <Package className="w-4 h-4 mr-1.5" />
                   Cargo
+                </TabsTrigger>
+              )}
+              {isHorseType && (
+                <TabsTrigger value="horse" data-testid="tab-horse">
+                  <Fence className="w-4 h-4 mr-1.5" />
+                  Horse
+                </TabsTrigger>
+              )}
+              {(isHorseType || watchedHasLivingQuarters) && (
+                <TabsTrigger value="lq" data-testid="tab-lq">
+                  <BedDouble className="w-4 h-4 mr-1.5" />
+                  LQ
+                </TabsTrigger>
+              )}
+              {(watchedIsWorkTrailer || isEnclosedType) && (
+                <TabsTrigger value="work" data-testid="tab-work">
+                  <Hammer className="w-4 h-4 mr-1.5" />
+                  Work
+                </TabsTrigger>
+              )}
+              {(isEquipmentType || isDumpType) && (
+                <TabsTrigger value="equipment" data-testid="tab-equipment">
+                  <Truck className="w-4 h-4 mr-1.5" />
+                  Equipment
                 </TabsTrigger>
               )}
               {(isRvType || watchedIsRvTrailer) && (
@@ -1997,6 +2432,1404 @@ export function TrailerForm({ trailerId, initialData, onSave, onCancel }: Traile
                               <Input type="number" placeholder="30" {...field} value={field.value || ''} />
                             </FormControl>
                             <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  </>
+                )}
+              </TabsContent>
+
+              {/* HORSE/LIVESTOCK TAB */}
+              <TabsContent value="horse" className="mt-0 space-y-6">
+                <div className="flex items-center gap-4 flex-wrap">
+                  <FormField
+                    control={form.control}
+                    name="is_horse_trailer"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center justify-between rounded-lg border p-3">
+                        <FormLabel>Horse Trailer</FormLabel>
+                        <FormControl>
+                          <Switch checked={field.value} onCheckedChange={field.onChange} />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="is_livestock_trailer"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center justify-between rounded-lg border p-3">
+                        <FormLabel>Livestock Trailer</FormLabel>
+                        <FormControl>
+                          <Switch checked={field.value} onCheckedChange={field.onChange} />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="has_living_quarters"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center justify-between rounded-lg border p-3">
+                        <FormLabel>Has Living Quarters</FormLabel>
+                        <FormControl>
+                          <Switch checked={field.value} onCheckedChange={field.onChange} />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <h4 className="font-medium text-sm flex items-center gap-2">
+                  <Fence className="w-4 h-4" />
+                  Capacity & Configuration
+                </h4>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="horse_capacity"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Horse Capacity</FormLabel>
+                        <FormControl>
+                          <Input type="number" placeholder="2, 3, 4..." {...field} value={field.value || ''} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="horse_load_config"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Load Configuration</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value || ''}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {HORSE_LOAD_CONFIGS.map(lc => (
+                              <SelectItem key={lc.value} value={lc.value}>{lc.label}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="horse_size_rating"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Horse Size Rating</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value || ''}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {HORSE_SIZE_RATINGS.map(sr => (
+                              <SelectItem key={sr.value} value={sr.value}>{sr.label}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="divider_type"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Divider Type</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value || ''}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {DIVIDER_TYPES.map(dt => (
+                              <SelectItem key={dt.value} value={dt.value}>{dt.label}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <h4 className="font-medium text-sm">Stall Dimensions</h4>
+                <div className="grid grid-cols-3 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="stall_length_inches"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Stall Length (in)</FormLabel>
+                        <FormControl>
+                          <Input type="number" placeholder="84" {...field} value={field.value || ''} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="stall_width_inches"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Stall Width (in)</FormLabel>
+                        <FormControl>
+                          <Input type="number" placeholder="30" {...field} value={field.value || ''} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="stall_height_inches"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Interior Height (in)</FormLabel>
+                        <FormControl>
+                          <Input type="number" placeholder="84" {...field} value={field.value || ''} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="dividers_removable"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center justify-between rounded-lg border p-3">
+                        <FormLabel>Dividers Removable</FormLabel>
+                        <FormControl>
+                          <Switch checked={field.value} onCheckedChange={field.onChange} />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="divider_padded"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center justify-between rounded-lg border p-3">
+                        <FormLabel>Dividers Padded</FormLabel>
+                        <FormControl>
+                          <Switch checked={field.value} onCheckedChange={field.onChange} />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="has_hay_rack"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center justify-between rounded-lg border p-3">
+                        <FormLabel>Hay Rack</FormLabel>
+                        <FormControl>
+                          <Switch checked={field.value} onCheckedChange={field.onChange} />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="floor_mats"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center justify-between rounded-lg border p-3">
+                        <FormLabel>Floor Mats</FormLabel>
+                        <FormControl>
+                          <Switch checked={field.value} onCheckedChange={field.onChange} />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <h4 className="font-medium text-sm">Windows & Doors</h4>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="drop_down_windows_head"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Drop Windows (Head)</FormLabel>
+                        <FormControl>
+                          <Input type="number" placeholder="0" {...field} value={field.value || ''} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="drop_down_windows_butt"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Drop Windows (Butt)</FormLabel>
+                        <FormControl>
+                          <Input type="number" placeholder="0" {...field} value={field.value || ''} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="escape_door_count"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Escape Doors</FormLabel>
+                        <FormControl>
+                          <Input type="number" placeholder="0" {...field} value={field.value || ''} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="rear_load_type"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Rear Load Type</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value || ''}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {REAR_LOAD_TYPES.map(rt => (
+                              <SelectItem key={rt.value} value={rt.value}>{rt.label}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <h4 className="font-medium text-sm">Tack Room</h4>
+                <FormField
+                  control={form.control}
+                  name="has_tack_room"
+                  render={({ field }) => (
+                    <FormItem className="flex items-center justify-between rounded-lg border p-3 w-fit">
+                      <FormLabel className="mr-4">Has Tack Room</FormLabel>
+                      <FormControl>
+                        <Switch checked={field.value} onCheckedChange={field.onChange} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                {watchedHasTackRoom && (
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="tack_room_type"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Tack Room Type</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value || ''}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {TACK_ROOM_TYPES.map(tt => (
+                                <SelectItem key={tt.value} value={tt.value}>{tt.label}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="tack_room_length_inches"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Tack Room Length (in)</FormLabel>
+                          <FormControl>
+                            <Input type="number" placeholder="48" {...field} value={field.value || ''} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="saddle_rack_count"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Saddle Racks</FormLabel>
+                          <FormControl>
+                            <Input type="number" placeholder="2" {...field} value={field.value || ''} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="bridle_hooks"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Bridle Hooks</FormLabel>
+                          <FormControl>
+                            <Input type="number" placeholder="4" {...field} value={field.value || ''} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                )}
+
+                {watchedIsLivestockTrailer && (
+                  <>
+                    <h4 className="font-medium text-sm">Livestock Configuration</h4>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="livestock_type"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Livestock Type</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value || ''}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {LIVESTOCK_TYPES.map(lt => (
+                                  <SelectItem key={lt.value} value={lt.value}>{lt.label}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="livestock_capacity_head"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Capacity (Head)</FormLabel>
+                            <FormControl>
+                              <Input type="number" placeholder="20" {...field} value={field.value || ''} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="has_center_gate"
+                        render={({ field }) => (
+                          <FormItem className="flex items-center justify-between rounded-lg border p-3">
+                            <FormLabel>Center Gate</FormLabel>
+                            <FormControl>
+                              <Switch checked={field.value} onCheckedChange={field.onChange} />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="has_possum_belly"
+                        render={({ field }) => (
+                          <FormItem className="flex items-center justify-between rounded-lg border p-3">
+                            <FormLabel>Possum Belly</FormLabel>
+                            <FormControl>
+                              <Switch checked={field.value} onCheckedChange={field.onChange} />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  </>
+                )}
+              </TabsContent>
+
+              {/* LIVING QUARTERS TAB */}
+              <TabsContent value="lq" className="mt-0 space-y-6">
+                <div className="flex items-center gap-4 flex-wrap">
+                  <FormField
+                    control={form.control}
+                    name="has_living_quarters"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center justify-between rounded-lg border p-3">
+                        <FormLabel>Has Living Quarters</FormLabel>
+                        <FormControl>
+                          <Switch checked={field.value} onCheckedChange={field.onChange} />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="lq_certified"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center justify-between rounded-lg border p-3">
+                        <FormLabel>RVIA Certified</FormLabel>
+                        <FormControl>
+                          <Switch checked={field.value} onCheckedChange={field.onChange} />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <h4 className="font-medium text-sm flex items-center gap-2">
+                  <BedDouble className="w-4 h-4" />
+                  Dimensions & Sleeping
+                </h4>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="lq_short_wall_feet"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Short Wall (ft)</FormLabel>
+                        <FormControl>
+                          <Input type="number" step="0.5" placeholder="8" {...field} value={field.value || ''} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="lq_sleep_capacity"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Sleep Capacity</FormLabel>
+                        <FormControl>
+                          <Input type="number" placeholder="4" {...field} value={field.value || ''} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="lq_bed_type"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Bed Type</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value || ''}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {LQ_BED_TYPES.map(bt => (
+                              <SelectItem key={bt.value} value={bt.value}>{bt.label}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="lq_bed_count"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Bed Count</FormLabel>
+                        <FormControl>
+                          <Input type="number" placeholder="1" {...field} value={field.value || ''} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <h4 className="font-medium text-sm">Kitchen</h4>
+                <FormField
+                  control={form.control}
+                  name="lq_has_kitchen"
+                  render={({ field }) => (
+                    <FormItem className="flex items-center justify-between rounded-lg border p-3 w-fit">
+                      <FormLabel className="mr-4">Has Kitchen</FormLabel>
+                      <FormControl>
+                        <Switch checked={field.value} onCheckedChange={field.onChange} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                {watchedLqHasKitchen && (
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="lq_cooktop_type"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Cooktop Type</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value || ''}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {LQ_COOKTOP_TYPES.map(ct => (
+                                <SelectItem key={ct.value} value={ct.value}>{ct.label}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="lq_refrigerator_type"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Refrigerator</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value || ''}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {LQ_REFRIGERATOR_TYPES.map(rt => (
+                                <SelectItem key={rt.value} value={rt.value}>{rt.label}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="lq_refrigerator_cubic_feet"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Fridge Size (cu ft)</FormLabel>
+                          <FormControl>
+                            <Input type="number" step="0.5" placeholder="6" {...field} value={field.value || ''} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="lq_has_microwave"
+                      render={({ field }) => (
+                        <FormItem className="flex items-center justify-between rounded-lg border p-3">
+                          <FormLabel>Microwave</FormLabel>
+                          <FormControl>
+                            <Switch checked={field.value} onCheckedChange={field.onChange} />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                )}
+
+                <h4 className="font-medium text-sm">Bathroom</h4>
+                <FormField
+                  control={form.control}
+                  name="lq_has_bathroom"
+                  render={({ field }) => (
+                    <FormItem className="flex items-center justify-between rounded-lg border p-3 w-fit">
+                      <FormLabel className="mr-4">Has Bathroom</FormLabel>
+                      <FormControl>
+                        <Switch checked={field.value} onCheckedChange={field.onChange} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                {watchedLqHasBathroom && (
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="lq_bathroom_type"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Bathroom Type</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value || ''}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {LQ_BATHROOM_TYPES.map(bt => (
+                                <SelectItem key={bt.value} value={bt.value}>{bt.label}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="lq_toilet_type"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Toilet Type</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value || ''}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {LQ_TOILET_TYPES.map(tt => (
+                                <SelectItem key={tt.value} value={tt.value}>{tt.label}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="lq_has_shower"
+                      render={({ field }) => (
+                        <FormItem className="flex items-center justify-between rounded-lg border p-3">
+                          <FormLabel>Shower</FormLabel>
+                          <FormControl>
+                            <Switch checked={field.value} onCheckedChange={field.onChange} />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                )}
+
+                <h4 className="font-medium text-sm">Water Tanks</h4>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="lq_fresh_water_gallons"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Fresh Water (gal)</FormLabel>
+                        <FormControl>
+                          <Input type="number" placeholder="30" {...field} value={field.value || ''} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="lq_gray_water_gallons"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Gray Water (gal)</FormLabel>
+                        <FormControl>
+                          <Input type="number" placeholder="20" {...field} value={field.value || ''} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="lq_black_water_gallons"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Black Water (gal)</FormLabel>
+                        <FormControl>
+                          <Input type="number" placeholder="15" {...field} value={field.value || ''} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="lq_water_heater_gallons"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Water Heater (gal)</FormLabel>
+                        <FormControl>
+                          <Input type="number" placeholder="6" {...field} value={field.value || ''} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <h4 className="font-medium text-sm">Power</h4>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="lq_shore_power_amps"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Shore Power (A)</FormLabel>
+                        <FormControl>
+                          <Input type="number" placeholder="30" {...field} value={field.value || ''} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="lq_has_generator"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center justify-between rounded-lg border p-3">
+                        <FormLabel>Generator</FormLabel>
+                        <FormControl>
+                          <Switch checked={field.value} onCheckedChange={field.onChange} />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  {watchedLqHasGenerator && (
+                    <FormField
+                      control={form.control}
+                      name="lq_generator_watts"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Generator (W)</FormLabel>
+                          <FormControl>
+                            <Input type="number" placeholder="4000" {...field} value={field.value || ''} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
+                  <FormField
+                    control={form.control}
+                    name="lq_has_solar"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center justify-between rounded-lg border p-3">
+                        <FormLabel>Solar</FormLabel>
+                        <FormControl>
+                          <Switch checked={field.value} onCheckedChange={field.onChange} />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  {watchedLqHasSolar && (
+                    <FormField
+                      control={form.control}
+                      name="lq_solar_watts"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Solar (W)</FormLabel>
+                          <FormControl>
+                            <Input type="number" placeholder="400" {...field} value={field.value || ''} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
+                </div>
+              </TabsContent>
+
+              {/* WORK TRAILER TAB */}
+              <TabsContent value="work" className="mt-0 space-y-6">
+                <FormField
+                  control={form.control}
+                  name="is_work_trailer"
+                  render={({ field }) => (
+                    <FormItem className="flex items-center justify-between rounded-lg border p-3 w-fit">
+                      <FormLabel className="mr-4">Work/Contractor Trailer</FormLabel>
+                      <FormControl>
+                        <Switch checked={field.value} onCheckedChange={field.onChange} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="work_trailer_type"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Work Trailer Type</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value || ''}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {WORK_TRAILER_TYPES.map(wt => (
+                              <SelectItem key={wt.value} value={wt.value}>{wt.label}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <h4 className="font-medium text-sm flex items-center gap-2">
+                  <Package className="w-4 h-4" />
+                  Shelving & Storage
+                </h4>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="has_shelving"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center justify-between rounded-lg border p-3">
+                        <FormLabel>Shelving</FormLabel>
+                        <FormControl>
+                          <Switch checked={field.value} onCheckedChange={field.onChange} />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  {watchedHasShelving && (
+                    <>
+                      <FormField
+                        control={form.control}
+                        name="shelving_type"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Shelving Type</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value || ''}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {SHELVING_TYPES.map(st => (
+                                  <SelectItem key={st.value} value={st.value}>{st.label}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="shelf_count"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Shelf Count</FormLabel>
+                            <FormControl>
+                              <Input type="number" placeholder="6" {...field} value={field.value || ''} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </>
+                  )}
+                  <FormField
+                    control={form.control}
+                    name="has_parts_bins"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center justify-between rounded-lg border p-3">
+                        <FormLabel>Parts Bins</FormLabel>
+                        <FormControl>
+                          <Switch checked={field.value} onCheckedChange={field.onChange} />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="has_tool_cabinets"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center justify-between rounded-lg border p-3">
+                        <FormLabel>Tool Cabinets</FormLabel>
+                        <FormControl>
+                          <Switch checked={field.value} onCheckedChange={field.onChange} />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <h4 className="font-medium text-sm">Workbench</h4>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="has_workbench"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center justify-between rounded-lg border p-3">
+                        <FormLabel>Workbench</FormLabel>
+                        <FormControl>
+                          <Switch checked={field.value} onCheckedChange={field.onChange} />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  {watchedHasWorkbench && (
+                    <>
+                      <FormField
+                        control={form.control}
+                        name="workbench_type"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Workbench Type</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value || ''}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {WORKBENCH_TYPES.map(wt => (
+                                  <SelectItem key={wt.value} value={wt.value}>{wt.label}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="workbench_length_inches"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Bench Length (in)</FormLabel>
+                            <FormControl>
+                              <Input type="number" placeholder="60" {...field} value={field.value || ''} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="workbench_has_vise"
+                        render={({ field }) => (
+                          <FormItem className="flex items-center justify-between rounded-lg border p-3">
+                            <FormLabel>Has Vise</FormLabel>
+                            <FormControl>
+                              <Switch checked={field.value} onCheckedChange={field.onChange} />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                    </>
+                  )}
+                </div>
+
+                <h4 className="font-medium text-sm">Power & Utilities</h4>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="has_shore_power"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center justify-between rounded-lg border p-3">
+                        <FormLabel>Shore Power</FormLabel>
+                        <FormControl>
+                          <Switch checked={field.value} onCheckedChange={field.onChange} />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="electrical_outlets"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Outlet Count</FormLabel>
+                        <FormControl>
+                          <Input type="number" placeholder="4" {...field} value={field.value || ''} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="has_generator_mount"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center justify-between rounded-lg border p-3">
+                        <FormLabel>Generator Mount</FormLabel>
+                        <FormControl>
+                          <Switch checked={field.value} onCheckedChange={field.onChange} />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="has_air_compressor_mount"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center justify-between rounded-lg border p-3">
+                        <FormLabel>Air Compressor Mount</FormLabel>
+                        <FormControl>
+                          <Switch checked={field.value} onCheckedChange={field.onChange} />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </TabsContent>
+
+              {/* EQUIPMENT TRAILER TAB */}
+              <TabsContent value="equipment" className="mt-0 space-y-6">
+                <div className="flex items-center gap-4 flex-wrap">
+                  <FormField
+                    control={form.control}
+                    name="is_equipment_trailer"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center justify-between rounded-lg border p-3">
+                        <FormLabel>Equipment Trailer</FormLabel>
+                        <FormControl>
+                          <Switch checked={field.value} onCheckedChange={field.onChange} />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="is_dump_trailer"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center justify-between rounded-lg border p-3">
+                        <FormLabel>Dump Trailer</FormLabel>
+                        <FormControl>
+                          <Switch checked={field.value} onCheckedChange={field.onChange} />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <h4 className="font-medium text-sm flex items-center gap-2">
+                  <Truck className="w-4 h-4" />
+                  Deck Configuration
+                </h4>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="deck_type"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Deck Type</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value || ''}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {DECK_TYPES.map(dt => (
+                              <SelectItem key={dt.value} value={dt.value}>{dt.label}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="deck_length_feet"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Deck Length (ft)</FormLabel>
+                        <FormControl>
+                          <Input type="number" step="0.5" placeholder="20" {...field} value={field.value || ''} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="deck_width_inches"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Deck Width (in)</FormLabel>
+                        <FormControl>
+                          <Input type="number" placeholder="102" {...field} value={field.value || ''} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="deck_surface_type"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Deck Surface</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value || ''}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {DECK_SURFACE_TYPES.map(ds => (
+                              <SelectItem key={ds.value} value={ds.value}>{ds.label}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <h4 className="font-medium text-sm">Loading System</h4>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="has_loading_ramps"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center justify-between rounded-lg border p-3">
+                        <FormLabel>Loading Ramps</FormLabel>
+                        <FormControl>
+                          <Switch checked={field.value} onCheckedChange={field.onChange} />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="gooseneck_removable"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center justify-between rounded-lg border p-3">
+                        <FormLabel>Removable Gooseneck</FormLabel>
+                        <FormControl>
+                          <Switch checked={field.value} onCheckedChange={field.onChange} />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="gooseneck_type"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Gooseneck Type</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value || ''}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {GOOSENECK_TYPES.map(gt => (
+                              <SelectItem key={gt.value} value={gt.value}>{gt.label}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="tilt_type"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Tilt Type</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value || ''}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {TILT_TYPES.map(tt => (
+                              <SelectItem key={tt.value} value={tt.value}>{tt.label}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <h4 className="font-medium text-sm">Tie Downs & Winch</h4>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="has_stake_pockets"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center justify-between rounded-lg border p-3">
+                        <FormLabel>Stake Pockets</FormLabel>
+                        <FormControl>
+                          <Switch checked={field.value} onCheckedChange={field.onChange} />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="stake_pocket_count"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Pocket Count</FormLabel>
+                        <FormControl>
+                          <Input type="number" placeholder="12" {...field} value={field.value || ''} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="has_winch"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center justify-between rounded-lg border p-3">
+                        <FormLabel>Winch</FormLabel>
+                        <FormControl>
+                          <Switch checked={field.value} onCheckedChange={field.onChange} />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  {watchedHasWinch && (
+                    <>
+                      <FormField
+                        control={form.control}
+                        name="winch_type"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Winch Type</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value || ''}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {WINCH_TYPES.map(wt => (
+                                  <SelectItem key={wt.value} value={wt.value}>{wt.label}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="winch_capacity_lbs"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Winch Capacity (lbs)</FormLabel>
+                            <FormControl>
+                              <Input type="number" placeholder="12000" {...field} value={field.value || ''} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </>
+                  )}
+                </div>
+
+                {isDumpType && (
+                  <>
+                    <h4 className="font-medium text-sm">Dump Configuration</h4>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="dump_type"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Dump Type</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value || ''}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {DUMP_TYPES.map(dt => (
+                                  <SelectItem key={dt.value} value={dt.value}>{dt.label}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="dump_capacity_cubic_yards"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Capacity (cu yd)</FormLabel>
+                            <FormControl>
+                              <Input type="number" step="0.5" placeholder="14" {...field} value={field.value || ''} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="dump_hydraulic_type"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Hydraulic Type</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value || ''}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {DUMP_HYDRAULIC_TYPES.map(dh => (
+                                  <SelectItem key={dh.value} value={dh.value}>{dh.label}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="has_tarp_system"
+                        render={({ field }) => (
+                          <FormItem className="flex items-center justify-between rounded-lg border p-3">
+                            <FormLabel>Tarp System</FormLabel>
+                            <FormControl>
+                              <Switch checked={field.value} onCheckedChange={field.onChange} />
+                            </FormControl>
                           </FormItem>
                         )}
                       />
