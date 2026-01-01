@@ -1,0 +1,234 @@
+PROMPT 6: Scope Jobber API Integration
+TASK: Create Jobber API Integration Module
+
+PURPOSE:
+Pull real job data from Jobber to display in trip timeline:
+- Job number, client name, scope of work
+- Scheduled visit times
+- Estimated hours
+- Link back to Jobber
+
+IMPLEMENTATION:
+
+1. Create the Jobber service:
+   `server/services/jobber.ts`
+```typescript
+   import { GraphQLClient } from 'graphql-request';
+
+   const JOBBER_API_URL = 'https://api.getjobber.com/api/graphql';
+
+   interface JobberConfig {
+     accessToken: string;
+   }
+
+   export class JobberService {
+     private client: GraphQLClient;
+
+     constructor(config: JobberConfig) {
+       this.client = new GraphQLClient(JOBBER_API_URL, {
+         headers: {
+           Authorization: `Bearer ${config.accessToken}`,
+         },
+       });
+     }
+
+     // Get a specific job by ID
+     async getJob(jobId: string) {
+       const query = `
+         query GetJob($id: EncodedId!) {
+           job(id: $id) {
+             id
+             jobNumber
+             title
+             instructions
+             jobberWebUri
+             client {
+               id
+               name
+               companyName
+               phones {
+                 number
+               }
+             }
+             property {
+               address {
+                 street
+                 city
+                 province
+                 postalCode
+               }
+             }
+             visits {
+               nodes {
+                 id
+                 title
+                 startAt
+                 endAt
+                 completedAt
+                 assignedUsers {
+                   nodes {
+                     name
+                   }
+                 }
+               }
+             }
+             quote {
+               id
+               amounts {
+                 total
+               }
+             }
+           }
+         }
+       `;
+
+       const response = await this.client.request(query, { id: jobId });
+       return response.job;
+     }
+
+     // Get jobs for a date range
+     async getJobsForDateRange(startDate: string, endDate: string) {
+       const query = `
+         query GetJobs($filter: JobFilterAttributes) {
+           jobs(filter: $filter, first: 50) {
+             nodes {
+               id
+               jobNumber
+               title
+               jobberWebUri
+               client {
+                 name
+                 companyName
+               }
+               visits {
+                 nodes {
+                   startAt
+                   endAt
+                 }
+               }
+             }
+           }
+         }
+       `;
+
+       const response = await this.client.request(query, {
+         filter: {
+           startDate,
+           endDate,
+         },
+       });
+       return response.jobs.nodes;
+     }
+
+     // Get job by job number (more user-friendly)
+     async getJobByNumber(jobNumber: string) {
+       const query = `
+         query SearchJob($filter: JobFilterAttributes) {
+           jobs(filter: $filter, first: 1) {
+             nodes {
+               id
+               jobNumber
+               title
+               instructions
+               jobberWebUri
+               client {
+                 name
+                 companyName
+               }
+             }
+           }
+         }
+       `;
+
+       const response = await this.client.request(query, {
+         filter: {
+           search: jobNumber,
+         },
+       });
+       return response.jobs.nodes[0] || null;
+     }
+   }
+```
+
+2. Create API endpoint:
+   `server/routes/integrations/jobber.ts`
+```typescript
+   import { Router } from 'express';
+   import { JobberService } from '../../services/jobber';
+
+   const router = Router();
+
+   // GET /api/v1/integrations/jobber/job/:jobNumber
+   router.get('/job/:jobNumber', async (req, res) => {
+     try {
+       const { jobNumber } = req.params;
+       
+       // Get access token from environment or user settings
+       const accessToken = process.env.JOBBER_ACCESS_TOKEN;
+       if (!accessToken) {
+         return res.status(401).json({ error: 'Jobber not configured' });
+       }
+
+       const jobber = new JobberService({ accessToken });
+       const job = await jobber.getJobByNumber(jobNumber);
+       
+       if (!job) {
+         return res.status(404).json({ error: 'Job not found' });
+       }
+
+       res.json(job);
+     } catch (error) {
+       console.error('Jobber API error:', error);
+       res.status(500).json({ error: 'Failed to fetch job' });
+     }
+   });
+
+   export default router;
+```
+
+3. Create React hook:
+   `client/src/hooks/useJobberJob.ts`
+```typescript
+   import { useQuery } from '@tanstack/react-query';
+
+   interface JobberJob {
+     id: string;
+     jobNumber: string;
+     title: string;
+     instructions: string;
+     jobberWebUri: string;
+     client: {
+       name: string;
+       companyName?: string;
+     };
+   }
+
+   export function useJobberJob(jobNumber: string | null) {
+     return useQuery<JobberJob>({
+       queryKey: ['jobber-job', jobNumber],
+       queryFn: async () => {
+         const response = await fetch(`/api/v1/integrations/jobber/job/${jobNumber}`);
+         if (!response.ok) throw new Error('Failed to fetch job');
+         return response.json();
+       },
+       enabled: !!jobNumber,
+       staleTime: 5 * 60 * 1000, // 5 minutes
+     });
+   }
+```
+
+4. Environment variables needed:
+JOBBER_CLIENT_ID=your_client_id
+JOBBER_CLIENT_SECRET=your_client_secret
+JOBBER_ACCESS_TOKEN=your_access_token
+
+5. OAuth setup (for production):
+   - Register app at https://developer.getjobber.com
+   - Request scopes: read_jobs, read_clients, read_visits
+   - Implement OAuth 2.0 flow for user authorization
+
+EXPECTED RESULT:
+- Framework for Jobber integration in place
+- Can fetch job details by job number
+- Job site events in timeline can pull real data
+- Links back to Jobber for full details

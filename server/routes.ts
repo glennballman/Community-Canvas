@@ -14,6 +14,7 @@ import { chamberMembers as staticMembers } from "@shared/chamber-members";
 import { getJsonLoadedMembers } from "@shared/chamber-member-registry";
 import { getChamberProgressList, getChamberProgressSummary } from "@shared/chamber-progress";
 import { createFleetRouter } from "./routes/fleet";
+import { JobberService } from "./services/jobber";
 
 // Merge static members with JSON-loaded members for consistent data across the app
 // IMPORTANT: This function is called per-request to ensure fresh data after JSON file updates
@@ -31,6 +32,60 @@ export async function registerRoutes(
 
   // Register fleet management routes
   app.use('/api/v1/fleet', createFleetRouter(pool));
+
+  // Jobber integration endpoint
+  app.get('/api/v1/integrations/jobber/job/:jobNumber', async (req, res) => {
+    try {
+      const { jobNumber } = req.params;
+      
+      const accessToken = process.env.JOBBER_ACCESS_TOKEN;
+      if (!accessToken) {
+        return res.status(401).json({ 
+          error: 'Jobber not configured',
+          message: 'JOBBER_ACCESS_TOKEN environment variable not set'
+        });
+      }
+
+      const jobber = new JobberService({ accessToken });
+      const job = await jobber.getJobByNumber(jobNumber);
+      
+      if (!job) {
+        return res.status(404).json({ error: 'Job not found' });
+      }
+
+      res.json(job);
+    } catch (error) {
+      console.error('Jobber API error:', error);
+      res.status(500).json({ error: 'Failed to fetch job from Jobber' });
+    }
+  });
+
+  // Jobber jobs for date range
+  app.get('/api/v1/integrations/jobber/jobs', async (req, res) => {
+    try {
+      const { startDate, endDate } = req.query;
+      
+      if (!startDate || !endDate) {
+        return res.status(400).json({ error: 'startDate and endDate query parameters required' });
+      }
+      
+      const accessToken = process.env.JOBBER_ACCESS_TOKEN;
+      if (!accessToken) {
+        return res.status(401).json({ 
+          error: 'Jobber not configured',
+          message: 'JOBBER_ACCESS_TOKEN environment variable not set'
+        });
+      }
+
+      const jobber = new JobberService({ accessToken });
+      const jobs = await jobber.getJobsForDateRange(startDate as string, endDate as string);
+      
+      res.json({ jobs });
+    } catch (error) {
+      console.error('Jobber API error:', error);
+      res.status(500).json({ error: 'Failed to fetch jobs from Jobber' });
+    }
+  });
 
   app.get(api.snapshots.getLatest.path, async (req, res) => {
     try {
