@@ -936,7 +936,7 @@ export function createFleetRouter(db: Pool) {
 
       const driverResult = await db.query(`
         SELECT 
-          id, name, full_name,
+          id, name,
           license_class, license_province, license_expiry,
           has_air_brake_endorsement,
           has_house_trailer_endorsement,
@@ -974,7 +974,7 @@ export function createFleetRouter(db: Pool) {
       res.json({
         driver: {
           id: driverRow.id,
-          name: driverRow.full_name || driverRow.name || 'Unknown Driver',
+          name: driverRow.name || 'Unknown Driver',
           licenseClass: driverRow.license_class,
           licenseProvince: driverRow.license_province,
           licenseExpiry: driverRow.license_expiry,
