@@ -99,8 +99,23 @@ export default function Accommodations() {
     queryKey: ["/api/accommodations/stats"]
   });
 
+  const buildQueryString = () => {
+    const params = new URLSearchParams();
+    if (filters.region) params.set('region', filters.region);
+    if (filters.city) params.set('city', filters.city);
+    if (filters.minCrewScore > 0) params.set('minCrewScore', String(filters.minCrewScore));
+    if (filters.status && filters.status !== 'all') params.set('status', filters.status);
+    const qs = params.toString();
+    return qs ? `/api/accommodations?${qs}` : '/api/accommodations';
+  };
+
   const { data: propertiesData, isLoading: propertiesLoading } = useQuery<{ properties: AccommodationProperty[]; total: number }>({
-    queryKey: ["/api/accommodations", filters]
+    queryKey: ["/api/accommodations", filters.region, filters.city, filters.minCrewScore, filters.status],
+    queryFn: async () => {
+      const res = await fetch(buildQueryString(), { credentials: 'include' });
+      if (!res.ok) throw new Error('Failed to fetch properties');
+      return res.json();
+    }
   });
 
   const importMutation = useMutation({
@@ -170,24 +185,8 @@ export default function Accommodations() {
   const sortedProperties = useMemo(() => {
     if (!propertiesData?.properties) return [];
     
-    let filtered = [...propertiesData.properties];
-    
-    if (filters.region) {
-      filtered = filtered.filter(p => p.region === filters.region);
-    }
-    if (filters.city) {
-      filtered = filtered.filter(p => 
-        p.city?.toLowerCase().includes(filters.city.toLowerCase())
-      );
-    }
-    if (filters.minCrewScore > 0) {
-      filtered = filtered.filter(p => (p.crewScore || 0) >= filters.minCrewScore);
-    }
-    if (filters.status !== "all") {
-      filtered = filtered.filter(p => p.status === filters.status);
-    }
-
-    return filtered.sort((a, b) => {
+    // API handles filtering, just sort here
+    return [...propertiesData.properties].sort((a, b) => {
       let aVal: any = a[sortField];
       let bVal: any = b[sortField];
       
@@ -202,7 +201,7 @@ export default function Accommodations() {
       }
       return aVal < bVal ? 1 : -1;
     });
-  }, [propertiesData?.properties, filters, sortField, sortDirection]);
+  }, [propertiesData?.properties, sortField, sortDirection]);
 
   const paginatedProperties = useMemo(() => {
     const start = (currentPage - 1) * itemsPerPage;
@@ -533,7 +532,7 @@ export default function Accommodations() {
                           {property.overallRating ? (
                             <div className="flex items-center gap-1">
                               <Star className="w-3 h-3 text-yellow-500 fill-yellow-500" />
-                              <span className="text-sm">{property.overallRating.toFixed(1)}</span>
+                              <span className="text-sm">{Number(property.overallRating).toFixed(1)}</span>
                             </div>
                           ) : (
                             <span className="text-muted-foreground">-</span>
