@@ -1,28 +1,13 @@
 import { Router, Request, Response } from 'express';
 import { Pool } from 'pg';
 import { AccommodationStorage } from '../storage/accommodationStorage';
-import type { ApifyListing, ImportResult } from '../../shared/types/accommodations';
-
-function calculateCrewScore(description: string, title: string = ''): number {
-  const text = `${title} ${description}`.toLowerCase();
-  let score = 0;
-
-  if (/parking|driveway|garage/i.test(text)) score += 20;
-  if (/truck|trailer|rv/i.test(text)) score += 15;
-  if (/kitchen|cook|stove/i.test(text)) score += 15;
-  if (/wifi|internet/i.test(text)) score += 10;
-  if (/washer|dryer|laundry/i.test(text)) score += 10;
-  if (/workspace|desk|office/i.test(text)) score += 8;
-  if (/bedrooms?|sleeps [4-9]|sleeps 1[0-9]/i.test(text)) score += 10;
-  if (/weekly|monthly|long.?term/i.test(text)) score += 7;
-  if (/self.?check|keypad|lockbox/i.test(text)) score += 5;
-
-  return Math.min(score, 100);
-}
+import { AccommodationImportService } from '../services/accommodationImportService';
+import type { ApifyListing } from '../../shared/types/accommodations';
 
 export function createAccommodationsRouter(db: Pool) {
   const router = Router();
   const storage = new AccommodationStorage(db);
+  const importService = new AccommodationImportService(db);
 
   // =====================================================
   // PROPERTIES
@@ -182,67 +167,7 @@ export function createAccommodationsRouter(db: Pool) {
         return res.status(400).json({ error: 'listings array is required' });
       }
 
-      const result: ImportResult = {
-        total: listings.length,
-        imported: 0,
-        updated: 0,
-        skipped: 0,
-        errors: []
-      };
-
-      for (const listing of listings) {
-        try {
-          const existing = await storage.getPropertyByAirbnbId(listing.id);
-          
-          const regionResult = await db.query(
-            'SELECT get_region_from_coords($1, $2) as region',
-            [listing.coordinates?.latitude, listing.coordinates?.longitude]
-          );
-          const region = regionResult.rows[0]?.region || 'Other BC';
-
-          const crewScore = calculateCrewScore(listing.description || '', listing.title || '');
-          
-          const priceMatch = listing.price?.price?.match(/[\d,]+/);
-          const baseNightlyRate = priceMatch ? parseFloat(priceMatch[0].replace(',', '')) : undefined;
-
-          const propertyData = {
-            airbnbId: listing.id,
-            name: listing.title,
-            description: listing.description,
-            thumbnailUrl: listing.thumbnail,
-            sourceUrl: listing.url,
-            latitude: listing.coordinates?.latitude,
-            longitude: listing.coordinates?.longitude,
-            region,
-            overallRating: listing.rating?.guestSatisfaction,
-            reviewCount: listing.rating?.reviewsCount || 0,
-            crewScore,
-            baseNightlyRate,
-            source: 'airbnb' as const,
-            status: 'discovered' as const,
-            isVerified: false,
-            isCrewFriendly: crewScore >= 50,
-            hasParking: /parking|driveway|garage/i.test(listing.description || ''),
-            hasKitchen: /kitchen|cook|stove/i.test(listing.description || ''),
-            hasWifi: /wifi|internet/i.test(listing.description || ''),
-            hasWasher: /washer|laundry/i.test(listing.description || ''),
-            hasDryer: /dryer/i.test(listing.description || ''),
-            lastScrapedAt: new Date().toISOString()
-          };
-
-          await storage.upsertPropertyByAirbnbId(listing.id, propertyData);
-          
-          if (existing) {
-            result.updated++;
-          } else {
-            result.imported++;
-          }
-        } catch (err) {
-          result.skipped++;
-          result.errors.push(`Failed to import ${listing.id}: ${err instanceof Error ? err.message : 'Unknown error'}`);
-        }
-      }
-
+      const result = await importService.importListings(listings);
       res.json(result);
     } catch (error) {
       console.error('Error importing listings:', error);
