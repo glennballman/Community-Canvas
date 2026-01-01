@@ -4,6 +4,7 @@ import { BCFerriesPipeline } from "./bcferries";
 import { WeatherPipeline } from "./weather";
 import { BCHydroPipeline } from "./bchydro";
 import { EarthquakesPipeline } from "./earthquakes";
+import { ICalSyncService } from "../services/icalSyncService";
 import { pool } from "../db";
 
 export interface PipelineConfig {
@@ -154,6 +155,33 @@ export function startPipelineScheduler(): void {
   }
   
   console.log(`Pipeline scheduler started with ${pipelines.filter(p => p.enabled).length} active pipelines`);
+
+  // Schedule iCal feed sync every hour
+  const icalService = new ICalSyncService(pool);
+  const ICAL_SYNC_INTERVAL = 60 * 60 * 1000; // 1 hour
+  
+  // Run initial iCal sync after 30 seconds
+  setTimeout(async () => {
+    console.log('[iCal Sync] Running initial sync...');
+    try {
+      await icalService.syncAllActiveFeeds();
+    } catch (err) {
+      console.error('[iCal Sync] Initial sync failed:', err);
+    }
+  }, 30000);
+
+  // Schedule hourly iCal sync
+  const icalInterval = setInterval(async () => {
+    console.log('[iCal Sync] Running scheduled sync...');
+    try {
+      await icalService.syncAllActiveFeeds();
+    } catch (err) {
+      console.error('[iCal Sync] Scheduled sync failed:', err);
+    }
+  }, ICAL_SYNC_INTERVAL);
+  
+  activeIntervals.set('ical-sync', icalInterval);
+  console.log('Scheduled iCal feed sync every 60 minutes');
 }
 
 export function stopPipelineScheduler(): void {

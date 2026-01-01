@@ -2,12 +2,14 @@ import { Router, Request, Response } from 'express';
 import { Pool } from 'pg';
 import { AccommodationStorage } from '../storage/accommodationStorage';
 import { AccommodationImportService } from '../services/accommodationImportService';
+import { ICalSyncService } from '../services/icalSyncService';
 import type { ApifyListing } from '../../shared/types/accommodations';
 
 export function createAccommodationsRouter(db: Pool) {
   const router = Router();
   const storage = new AccommodationStorage(db);
   const importService = new AccommodationImportService(db);
+  const icalService = new ICalSyncService(db);
 
   // =====================================================
   // PROPERTIES
@@ -270,80 +272,61 @@ export function createAccommodationsRouter(db: Pool) {
   router.post('/feeds/:feedId/sync', async (req: Request, res: Response) => {
     try {
       const feedId = parseInt(req.params.feedId);
+      const result = await icalService.syncFeed(feedId);
       
-      const feedResult = await db.query('SELECT * FROM ical_feeds WHERE id = $1', [feedId]);
-      if (feedResult.rows.length === 0) {
-        return res.status(404).json({ error: 'Feed not found' });
-      }
-
-      const feed = feedResult.rows[0];
-      
-      try {
-        const response = await fetch(feed.ical_url);
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}`);
-        }
-        
-        const icalData = await response.text();
-        
-        const events: Array<{ uid: string; start: string; end: string; summary: string }> = [];
-        const lines = icalData.split('\n');
-        let currentEvent: any = null;
-
-        for (const line of lines) {
-          const trimmed = line.trim();
-          if (trimmed === 'BEGIN:VEVENT') {
-            currentEvent = {};
-          } else if (trimmed === 'END:VEVENT' && currentEvent) {
-            if (currentEvent.uid && currentEvent.start && currentEvent.end) {
-              events.push(currentEvent);
-            }
-            currentEvent = null;
-          } else if (currentEvent) {
-            if (trimmed.startsWith('UID:')) {
-              currentEvent.uid = trimmed.substring(4);
-            } else if (trimmed.startsWith('DTSTART')) {
-              const dateStr = trimmed.split(':')[1];
-              currentEvent.start = dateStr ? dateStr.substring(0, 8) : null;
-            } else if (trimmed.startsWith('DTEND')) {
-              const dateStr = trimmed.split(':')[1];
-              currentEvent.end = dateStr ? dateStr.substring(0, 8) : null;
-            } else if (trimmed.startsWith('SUMMARY:')) {
-              currentEvent.summary = trimmed.substring(8);
-            }
-          }
-        }
-
-        await storage.clearBlocksForFeed(feedId);
-        
-        for (const event of events) {
-          const startDate = `${event.start.substring(0, 4)}-${event.start.substring(4, 6)}-${event.start.substring(6, 8)}`;
-          const endDate = `${event.end.substring(0, 4)}-${event.end.substring(4, 6)}-${event.end.substring(6, 8)}`;
-          
-          await storage.upsertAvailabilityBlock({
-            propertyId: feed.property_id,
-            feedId,
-            startDate,
-            endDate,
-            blockType: 'booked',
-            summary: event.summary,
-            uid: event.uid
-          });
-        }
-
-        await storage.updateFeedSyncStatus(feedId, 'success');
-        
-        res.json({ 
-          success: true, 
-          eventsProcessed: events.length 
+      if (!result.success) {
+        return res.status(400).json({ 
+          success: false, 
+          error: result.error 
         });
-      } catch (syncError) {
-        await storage.updateFeedSyncStatus(feedId, 'failed', syncError instanceof Error ? syncError.message : 'Unknown error');
-        throw syncError;
       }
+
+      res.json({
+        success: true,
+        eventsFound: result.eventsFound,
+        blocksCreated: result.blocksCreated,
+        blocksUpdated: result.blocksUpdated
+      });
     } catch (error) {
       console.error('Error syncing feed:', error);
       res.status(500).json({ error: 'Failed to sync feed' });
+    }
+  });
+
+  router.post('/feeds/sync-all', async (req: Request, res: Response) => {
+    try {
+      const result = await icalService.syncAllActiveFeeds();
+      res.json(result);
+    } catch (error) {
+      console.error('Error syncing all feeds:', error);
+      res.status(500).json({ error: 'Failed to sync feeds' });
+    }
+  });
+
+  router.post('/feeds/validate', async (req: Request, res: Response) => {
+    try {
+      const { url } = req.body;
+      
+      if (!url) {
+        return res.status(400).json({ valid: false, error: 'URL is required' });
+      }
+
+      const result = await icalService.validateAndFetchIcal(url);
+      res.json(result);
+    } catch (error) {
+      console.error('Error validating iCal URL:', error);
+      res.status(500).json({ valid: false, error: 'Failed to validate URL' });
+    }
+  });
+
+  router.get('/:id/blocks', async (req: Request, res: Response) => {
+    try {
+      const days = parseInt(req.query.days as string) || 30;
+      const blocks = await icalService.getAvailabilityBlocks(parseInt(req.params.id), days);
+      res.json({ blocks });
+    } catch (error) {
+      console.error('Error fetching availability blocks:', error);
+      res.status(500).json({ error: 'Failed to fetch availability blocks' });
     }
   });
 

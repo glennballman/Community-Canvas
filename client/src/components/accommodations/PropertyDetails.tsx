@@ -1,13 +1,15 @@
 import { useState } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { queryClient, apiRequest } from '@/lib/queryClient';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { 
   Star, 
@@ -31,7 +33,9 @@ import {
   Plus,
   Edit,
   Briefcase,
-  Award
+  Award,
+  RefreshCw,
+  Loader2
 } from 'lucide-react';
 import type { 
   AccommodationProperty, 
@@ -128,6 +132,9 @@ function MiniCalendar({ blocks }: { blocks: { start: string; end: string }[] }) 
 export function PropertyDetails({ propertyId, open, onOpenChange }: PropertyDetailsProps) {
   const { toast } = useToast();
   const [selectedStatus, setSelectedStatus] = useState<PropertyStatus | null>(null);
+  const [icalModalOpen, setIcalModalOpen] = useState(false);
+  const [icalUrl, setIcalUrl] = useState('');
+  const [feedName, setFeedName] = useState('');
 
   const { data: property, isLoading } = useQuery<AccommodationProperty>({
     queryKey: ['/api/accommodations', propertyId],
@@ -139,8 +146,13 @@ export function PropertyDetails({ propertyId, open, onOpenChange }: PropertyDeta
     enabled: open && !!propertyId,
   });
 
-  const { data: feedsData } = useQuery<{ feeds: ICalFeed[] }>({
+  const { data: feedsData, refetch: refetchFeeds } = useQuery<{ feeds: ICalFeed[] }>({
     queryKey: ['/api/accommodations', propertyId, 'feeds'],
+    enabled: open && !!propertyId,
+  });
+
+  const { data: blocksData, refetch: refetchBlocks } = useQuery<{ blocks: { start: string; end: string; type: string }[] }>({
+    queryKey: ['/api/accommodations', propertyId, 'blocks'],
     enabled: open && !!propertyId,
   });
 
@@ -157,6 +169,73 @@ export function PropertyDetails({ propertyId, open, onOpenChange }: PropertyDeta
     },
   });
 
+  const validateIcalMutation = useMutation({
+    mutationFn: async (url: string) => {
+      const res = await apiRequest('POST', '/api/accommodations/feeds/validate', { url });
+      return res.json() as Promise<{ valid: boolean; error?: string }>;
+    },
+  });
+
+  const createFeedMutation = useMutation({
+    mutationFn: async (data: { icalUrl: string; feedName?: string }) => {
+      const res = await apiRequest('POST', `/api/accommodations/${propertyId}/feeds`, data);
+      return res.json() as Promise<ICalFeed>;
+    },
+    onSuccess: async (feed) => {
+      toast({ title: 'iCal feed added' });
+      setIcalModalOpen(false);
+      setIcalUrl('');
+      setFeedName('');
+      refetchFeeds();
+      if (feed.id) {
+        await syncFeedMutation.mutateAsync(feed.id);
+      }
+    },
+    onError: (error) => {
+      toast({ 
+        title: 'Failed to add feed', 
+        description: error instanceof Error ? error.message : 'Unknown error',
+        variant: 'destructive' 
+      });
+    },
+  });
+
+  const syncFeedMutation = useMutation({
+    mutationFn: async (feedId: number) => {
+      const res = await apiRequest('POST', `/api/accommodations/feeds/${feedId}/sync`, {});
+      return res.json();
+    },
+    onSuccess: (result) => {
+      toast({ 
+        title: 'Sync complete', 
+        description: `Found ${result.eventsFound} events, ${result.blocksCreated} new blocks` 
+      });
+      refetchBlocks();
+    },
+    onError: () => {
+      toast({ title: 'Sync failed', variant: 'destructive' });
+    },
+  });
+
+  const handleAddFeed = async () => {
+    if (!icalUrl) {
+      toast({ title: 'Please enter an iCal URL', variant: 'destructive' });
+      return;
+    }
+
+    const validation = await validateIcalMutation.mutateAsync(icalUrl);
+    if (!validation.valid) {
+      toast({ 
+        title: 'Invalid iCal URL', 
+        description: validation.error || 'Could not validate the calendar',
+        variant: 'destructive' 
+      });
+      return;
+    }
+
+    createFeedMutation.mutate({ icalUrl, feedName: feedName || undefined });
+  };
+
   const handleStatusChange = (status: PropertyStatus) => {
     setSelectedStatus(status);
     updateMutation.mutate({ status });
@@ -167,7 +246,7 @@ export function PropertyDetails({ propertyId, open, onOpenChange }: PropertyDeta
   const currentStatus = selectedStatus || property?.status || 'discovered';
   const bookings = bookingsData?.bookings || [];
   const feeds = feedsData?.feeds || [];
-  const availabilityBlocks = feeds.length > 0 ? [] : [];
+  const availabilityBlocks = blocksData?.blocks || [];
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -317,16 +396,46 @@ export function PropertyDetails({ propertyId, open, onOpenChange }: PropertyDeta
                 <Card data-testid="section-availability">
                   <CardHeader className="pb-2 flex flex-row items-center justify-between gap-2">
                     <CardTitle className="text-sm font-medium">Availability (Next 30 Days)</CardTitle>
-                    {feeds.length === 0 && (
-                      <Button size="sm" variant="outline" data-testid="button-add-ical">
+                    <div className="flex items-center gap-2">
+                      {feeds.length > 0 && (
+                        <Button 
+                          size="sm" 
+                          variant="ghost"
+                          onClick={() => feeds[0] && syncFeedMutation.mutate(feeds[0].id)}
+                          disabled={syncFeedMutation.isPending}
+                          data-testid="button-sync-ical"
+                        >
+                          {syncFeedMutation.isPending ? (
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                          ) : (
+                            <RefreshCw className="w-3 h-3" />
+                          )}
+                        </Button>
+                      )}
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        onClick={() => setIcalModalOpen(true)}
+                        data-testid="button-add-ical"
+                      >
                         <Plus className="w-3 h-3 mr-1" />
                         Add iCal Feed
                       </Button>
-                    )}
+                    </div>
                   </CardHeader>
                   <CardContent>
                     {feeds.length > 0 ? (
-                      <MiniCalendar blocks={availabilityBlocks.map(b => ({ start: '', end: '' }))} />
+                      <div className="space-y-3">
+                        <MiniCalendar blocks={availabilityBlocks} />
+                        <div className="text-xs text-muted-foreground">
+                          {feeds.length} feed(s) configured
+                          {feeds[0]?.lastSyncedAt && (
+                            <span className="ml-2">
+                              Last synced: {new Date(feeds[0].lastSyncedAt).toLocaleString()}
+                            </span>
+                          )}
+                        </div>
+                      </div>
                     ) : (
                       <div className="text-center py-4 text-muted-foreground text-sm">
                         No iCal feeds configured. Add a feed to see availability.
@@ -429,6 +538,69 @@ export function PropertyDetails({ propertyId, open, onOpenChange }: PropertyDeta
           </div>
         </ScrollArea>
       </DialogContent>
+
+      {/* iCal Feed Modal */}
+      <Dialog open={icalModalOpen} onOpenChange={setIcalModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add iCal Feed</DialogTitle>
+            <DialogDescription>
+              Enter the iCal URL from Airbnb, Booking.com, or another calendar source to sync availability.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="ical-url">iCal URL</Label>
+              <Input
+                id="ical-url"
+                placeholder="https://www.airbnb.com/calendar/ical/..."
+                value={icalUrl}
+                onChange={(e) => setIcalUrl(e.target.value)}
+                data-testid="input-ical-url"
+              />
+              <p className="text-xs text-muted-foreground">
+                Find this in your Airbnb or Booking.com calendar settings under "Export Calendar"
+              </p>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="feed-name">Feed Name (optional)</Label>
+              <Input
+                id="feed-name"
+                placeholder="Airbnb Calendar"
+                value={feedName}
+                onChange={(e) => setFeedName(e.target.value)}
+                data-testid="input-feed-name"
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setIcalModalOpen(false)}
+              data-testid="button-cancel-ical"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleAddFeed}
+              disabled={validateIcalMutation.isPending || createFeedMutation.isPending || !icalUrl}
+              data-testid="button-save-ical"
+            >
+              {(validateIcalMutation.isPending || createFeedMutation.isPending) ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  {validateIcalMutation.isPending ? 'Validating...' : 'Saving...'}
+                </>
+              ) : (
+                'Add Feed'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 }
