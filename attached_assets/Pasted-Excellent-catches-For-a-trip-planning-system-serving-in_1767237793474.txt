@@ -1,0 +1,314 @@
+Excellent catches! For a trip planning system serving international tourists, we absolutely need to handle licenses from anywhere. Let me give you the updated code.
+Updated DriverQualificationsForm - License Section
+Tell Replit to update the License section in DriverQualificationsForm.tsx:
+tsx// ============================================
+// UPDATED LICENSE SECTION
+// Supports international licenses + "No License" option
+// ============================================
+
+// Add these constants at the top of the file (outside the component)
+
+const LICENSE_COUNTRIES = [
+  { value: '', label: 'Select Country' },
+  { value: 'CA', label: '🇨🇦 Canada' },
+  { value: 'US', label: '🇺🇸 United States' },
+  { value: 'GB', label: '🇬🇧 United Kingdom' },
+  { value: 'DE', label: '🇩🇪 Germany' },
+  { value: 'FR', label: '🇫🇷 France' },
+  { value: 'CH', label: '🇨🇭 Switzerland' },
+  { value: 'AU', label: '🇦🇺 Australia' },
+  { value: 'NZ', label: '🇳🇿 New Zealand' },
+  { value: 'JP', label: '🇯🇵 Japan' },
+  { value: 'KR', label: '🇰🇷 South Korea' },
+  { value: 'CN', label: '🇨🇳 China' },
+  { value: 'IN', label: '🇮🇳 India' },
+  { value: 'MX', label: '🇲🇽 Mexico' },
+  { value: 'BR', label: '🇧🇷 Brazil' },
+  { value: 'OTHER', label: '🌍 Other Country' },
+];
+
+const CANADIAN_PROVINCES = [
+  { value: '', label: 'Select Province' },
+  { value: 'BC', label: 'British Columbia' },
+  { value: 'AB', label: 'Alberta' },
+  { value: 'SK', label: 'Saskatchewan' },
+  { value: 'MB', label: 'Manitoba' },
+  { value: 'ON', label: 'Ontario' },
+  { value: 'QC', label: 'Quebec' },
+  { value: 'NB', label: 'New Brunswick' },
+  { value: 'NS', label: 'Nova Scotia' },
+  { value: 'PE', label: 'Prince Edward Island' },
+  { value: 'NL', label: 'Newfoundland and Labrador' },
+  { value: 'YT', label: 'Yukon' },
+  { value: 'NT', label: 'Northwest Territories' },
+  { value: 'NU', label: 'Nunavut' },
+];
+
+const US_STATES = [
+  { value: '', label: 'Select State' },
+  { value: 'AL', label: 'Alabama' },
+  { value: 'AK', label: 'Alaska' },
+  { value: 'AZ', label: 'Arizona' },
+  { value: 'AR', label: 'Arkansas' },
+  { value: 'CA', label: 'California' },
+  { value: 'CO', label: 'Colorado' },
+  { value: 'CT', label: 'Connecticut' },
+  { value: 'DE', label: 'Delaware' },
+  { value: 'FL', label: 'Florida' },
+  { value: 'GA', label: 'Georgia' },
+  { value: 'HI', label: 'Hawaii' },
+  { value: 'ID', label: 'Idaho' },
+  { value: 'IL', label: 'Illinois' },
+  { value: 'IN', label: 'Indiana' },
+  { value: 'IA', label: 'Iowa' },
+  { value: 'KS', label: 'Kansas' },
+  { value: 'KY', label: 'Kentucky' },
+  { value: 'LA', label: 'Louisiana' },
+  { value: 'ME', label: 'Maine' },
+  { value: 'MD', label: 'Maryland' },
+  { value: 'MA', label: 'Massachusetts' },
+  { value: 'MI', label: 'Michigan' },
+  { value: 'MN', label: 'Minnesota' },
+  { value: 'MS', label: 'Mississippi' },
+  { value: 'MO', label: 'Missouri' },
+  { value: 'MT', label: 'Montana' },
+  { value: 'NE', label: 'Nebraska' },
+  { value: 'NV', label: 'Nevada' },
+  { value: 'NH', label: 'New Hampshire' },
+  { value: 'NJ', label: 'New Jersey' },
+  { value: 'NM', label: 'New Mexico' },
+  { value: 'NY', label: 'New York' },
+  { value: 'NC', label: 'North Carolina' },
+  { value: 'ND', label: 'North Dakota' },
+  { value: 'OH', label: 'Ohio' },
+  { value: 'OK', label: 'Oklahoma' },
+  { value: 'OR', label: 'Oregon' },
+  { value: 'PA', label: 'Pennsylvania' },
+  { value: 'RI', label: 'Rhode Island' },
+  { value: 'SC', label: 'South Carolina' },
+  { value: 'SD', label: 'South Dakota' },
+  { value: 'TN', label: 'Tennessee' },
+  { value: 'TX', label: 'Texas' },
+  { value: 'UT', label: 'Utah' },
+  { value: 'VT', label: 'Vermont' },
+  { value: 'VA', label: 'Virginia' },
+  { value: 'WA', label: 'Washington' },
+  { value: 'WV', label: 'West Virginia' },
+  { value: 'WI', label: 'Wisconsin' },
+  { value: 'WY', label: 'Wyoming' },
+  { value: 'DC', label: 'District of Columbia' },
+];
+
+const AUSTRALIAN_STATES = [
+  { value: '', label: 'Select State' },
+  { value: 'NSW', label: 'New South Wales' },
+  { value: 'VIC', label: 'Victoria' },
+  { value: 'QLD', label: 'Queensland' },
+  { value: 'WA', label: 'Western Australia' },
+  { value: 'SA', label: 'South Australia' },
+  { value: 'TAS', label: 'Tasmania' },
+  { value: 'ACT', label: 'Australian Capital Territory' },
+  { value: 'NT', label: 'Northern Territory' },
+];
+
+// BC-specific license classes
+const BC_LICENSE_CLASSES = [
+  { value: '', label: 'No License' },
+  { value: '7L', label: 'Class 7L - Learner' },
+  { value: '7N', label: 'Class 7N - Novice' },
+  { value: '5', label: 'Class 5 - Full License' },
+  { value: '4', label: 'Class 4 - Taxi/Ambulance' },
+  { value: '3', label: 'Class 3 - Medium Trucks' },
+  { value: '2', label: 'Class 2 - Bus' },
+  { value: '1', label: 'Class 1 - Semi-Trailer' },
+];
+
+// Generic license classes for non-BC
+const GENERIC_LICENSE_CLASSES = [
+  { value: '', label: 'No License' },
+  { value: 'LEARNER', label: 'Learner / Provisional' },
+  { value: 'STANDARD', label: 'Standard / Full License' },
+  { value: 'COMMERCIAL', label: 'Commercial License' },
+];
+
+// Helper function to get subdivision options based on country
+function getSubdivisionOptions(country: string) {
+  switch (country) {
+    case 'CA':
+      return { label: 'Province/Territory', options: CANADIAN_PROVINCES };
+    case 'US':
+      return { label: 'State', options: US_STATES };
+    case 'AU':
+      return { label: 'State/Territory', options: AUSTRALIAN_STATES };
+    default:
+      return null; // No subdivision dropdown for other countries
+  }
+}
+
+// Helper function to get license class options based on jurisdiction
+function getLicenseClassOptions(country: string, subdivision: string) {
+  if (country === 'CA' && subdivision === 'BC') {
+    return BC_LICENSE_CLASSES;
+  }
+  return GENERIC_LICENSE_CLASSES;
+}
+Updated Form State
+tsx// Inside your component, update the form state to include country
+const [formData, setFormData] = useState({
+  // License info
+  licenseCountry: '', // NEW: Country that issued the license
+  licenseProvince: '', // State/Province within country
+  licenseClass: '',
+  licenseExpiry: '',
+  otherCountryName: '', // NEW: For "Other Country" option
+  
+  // ... rest of existing fields
+});
+Updated JSX for License Section
+tsx{/* ============================================ */}
+{/* DRIVER LICENSE SECTION */}
+{/* ============================================ */}
+<div className="bg-card rounded-lg p-4 border border-border">
+  <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+    <CreditCard className="h-5 w-5" />
+    Driver License
+  </h3>
+
+  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+    {/* Country */}
+    <div>
+      <label className="block text-sm font-medium text-muted-foreground mb-1">
+        Country of Issue
+      </label>
+      <select
+        value={formData.licenseCountry}
+        onChange={(e) => {
+          const newCountry = e.target.value;
+          setFormData(prev => ({
+            ...prev,
+            licenseCountry: newCountry,
+            licenseProvince: '', // Reset subdivision when country changes
+            licenseClass: '', // Reset class when country changes
+          }));
+        }}
+        className="w-full px-3 py-2 bg-background border border-input rounded-md text-sm"
+      >
+        {LICENSE_COUNTRIES.map(country => (
+          <option key={country.value} value={country.value}>
+            {country.label}
+          </option>
+        ))}
+      </select>
+    </div>
+
+    {/* Other Country Name (only if "Other" selected) */}
+    {formData.licenseCountry === 'OTHER' && (
+      <div>
+        <label className="block text-sm font-medium text-muted-foreground mb-1">
+          Country Name
+        </label>
+        <input
+          type="text"
+          value={formData.otherCountryName}
+          onChange={(e) => setFormData(prev => ({ ...prev, otherCountryName: e.target.value }))}
+          placeholder="Enter country name"
+          className="w-full px-3 py-2 bg-background border border-input rounded-md text-sm"
+        />
+      </div>
+    )}
+
+    {/* State/Province (only for countries with subdivisions) */}
+    {formData.licenseCountry && getSubdivisionOptions(formData.licenseCountry) && (
+      <div>
+        <label className="block text-sm font-medium text-muted-foreground mb-1">
+          {getSubdivisionOptions(formData.licenseCountry)?.label}
+        </label>
+        <select
+          value={formData.licenseProvince}
+          onChange={(e) => {
+            const newProvince = e.target.value;
+            setFormData(prev => ({
+              ...prev,
+              licenseProvince: newProvince,
+              licenseClass: '', // Reset class when province changes (BC has different classes)
+            }));
+          }}
+          className="w-full px-3 py-2 bg-background border border-input rounded-md text-sm"
+        >
+          {getSubdivisionOptions(formData.licenseCountry)?.options.map(opt => (
+            <option key={opt.value} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
+        </select>
+      </div>
+    )}
+
+    {/* License Class */}
+    <div>
+      <label className="block text-sm font-medium text-muted-foreground mb-1">
+        License Class
+      </label>
+      <select
+        value={formData.licenseClass}
+        onChange={(e) => setFormData(prev => ({ ...prev, licenseClass: e.target.value }))}
+        className="w-full px-3 py-2 bg-background border border-input rounded-md text-sm"
+      >
+        {getLicenseClassOptions(formData.licenseCountry, formData.licenseProvince).map(cls => (
+          <option key={cls.value} value={cls.value}>
+            {cls.label}
+          </option>
+        ))}
+      </select>
+    </div>
+
+    {/* License Expiry */}
+    <div>
+      <label className="block text-sm font-medium text-muted-foreground mb-1">
+        License Expiry
+      </label>
+      <input
+        type="date"
+        value={formData.licenseExpiry}
+        onChange={(e) => setFormData(prev => ({ ...prev, licenseExpiry: e.target.value }))}
+        className="w-full px-3 py-2 bg-background border border-input rounded-md text-sm"
+      />
+    </div>
+  </div>
+
+  {/* No License Info Box */}
+  {!formData.licenseClass && formData.licenseCountry && (
+    <div className="mt-4 p-3 bg-warning/10 border border-warning/30 rounded-md text-sm text-warning flex items-center gap-2">
+      <AlertCircle className="h-4 w-4" />
+      No license selected. This participant cannot be assigned as a driver.
+    </div>
+  )}
+
+  {/* International License Note */}
+  {formData.licenseCountry && formData.licenseCountry !== 'CA' && formData.licenseClass && (
+    <div className="mt-4 p-3 bg-muted border border-border rounded-md text-sm text-muted-foreground">
+      <p className="font-medium mb-1">International Visitors Note:</p>
+      <p>Visitors to BC can drive with a valid foreign license for up to 6 months. 
+         An International Driving Permit (IDP) is recommended but not required for English-language licenses.</p>
+    </div>
+  )}
+</div>
+
+Summary of Changes
+BeforeAfterProvince dropdown onlyCountry → State/Province cascadeOnly Canadian provinces15 countries + "Other" optionNo "No License" optionEmpty value = No LicenseBC license classes onlyBC classes for BC, generic for others
+
+Tell Replit:
+
+"Update the DriverQualificationsForm license section to support international licenses:
+
+Add a Country dropdown with major tourist-origin countries (Canada, US, UK, Germany, France, Switzerland, Australia, NZ, Japan, etc.) plus 'Other'
+Only show State/Province dropdown for countries that have them (Canada, US, Australia)
+For 'Other Country', show a text input for the country name
+Show BC-specific license classes (7L, 7N, 5, 4, 3, 2, 1) only when BC is selected; show generic classes (Learner, Standard, Commercial) for all other jurisdictions
+First option in License Class should be empty/blank representing 'No License'
+Show a warning when no license is selected
+Show an info note for international visitors about BC driving rules
+
+Use the code Claude provided above."
+
+Let me know when this is done!

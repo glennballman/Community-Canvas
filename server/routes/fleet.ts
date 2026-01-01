@@ -937,7 +937,7 @@ export function createFleetRouter(db: Pool) {
       const driverResult = await db.query(`
         SELECT 
           id, name,
-          license_class, license_province, license_expiry,
+          license_class, license_province, license_country, license_expiry,
           has_air_brake_endorsement,
           has_house_trailer_endorsement,
           has_heavy_trailer_endorsement,
@@ -977,6 +977,7 @@ export function createFleetRouter(db: Pool) {
           name: driverRow.name || 'Unknown Driver',
           licenseClass: driverRow.license_class,
           licenseProvince: driverRow.license_province,
+          licenseCountry: driverRow.license_country || 'CA',
           licenseExpiry: driverRow.license_expiry,
           endorsements: {
             airBrake: driverRow.has_air_brake_endorsement || false,
@@ -1012,7 +1013,7 @@ export function createFleetRouter(db: Pool) {
       const result = await db.query(`
         SELECT 
           id, name, 
-          license_class, license_province, license_expiry,
+          license_class, license_province, license_country, license_expiry,
           has_air_brake_endorsement, air_brake_endorsement_date,
           has_house_trailer_endorsement, house_trailer_endorsement_date,
           has_heavy_trailer_endorsement, heavy_trailer_endorsement_date,
@@ -1043,7 +1044,7 @@ export function createFleetRouter(db: Pool) {
       const updates = req.body;
 
       const allowedFields = new Set([
-        'license_class', 'license_province', 'license_expiry',
+        'license_class', 'license_province', 'license_country', 'license_expiry',
         'has_air_brake_endorsement', 'air_brake_endorsement_date',
         'has_house_trailer_endorsement', 'house_trailer_endorsement_date',
         'has_heavy_trailer_endorsement', 'heavy_trailer_endorsement_date',
