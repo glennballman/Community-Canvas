@@ -1,0 +1,98 @@
+STOP. Do not make any changes. I need a complete audit of what exists in this codebase BEFORE any navigation work.
+
+## Task 1: Find ALL Page Components
+
+Run these commands and show me the COMPLETE output:
+```bash
+echo "=== ALL TSX FILES IN PAGES DIRECTORY ==="
+find client/src/pages -name "*.tsx" -type f 2>/dev/null | sort
+
+echo ""
+echo "=== ALL TSX FILES IN COMPONENTS DIRECTORY ==="
+find client/src/components -name "*.tsx" -type f 2>/dev/null | sort
+
+echo ""
+echo "=== SEARCH FOR 'COMMAND' IN ALL FILES ==="
+grep -ril "command" client/src/ 2>/dev/null
+
+echo ""
+echo "=== SEARCH FOR 'MUNICIPALITY' OR 'MUNICIPALITIES' ==="
+grep -ril "municipalit" client/src/ 2>/dev/null
+
+echo ""
+echo "=== SEARCH FOR 'EMERGENCY' OR 'TSUNAMI' OR 'EARTHQUAKE' ==="
+grep -ril -E "emergency|tsunami|earthquake" client/src/ 2>/dev/null
+
+echo ""
+echo "=== SEARCH FOR 'DASHBOARD' IN FILENAMES ==="
+find client/src -name "*[Dd]ashboard*" -type f 2>/dev/null
+
+echo ""
+echo "=== SEARCH FOR 'CENTER' IN FILENAMES ==="
+find client/src -name "*[Cc]enter*" -type f 2>/dev/null
+```
+
+## Task 2: Show Me App.tsx Routes (Full File)
+```bash
+echo "=== FULL APP.TSX CONTENT ==="
+cat client/src/App.tsx
+```
+
+## Task 3: Find All Layout Components
+```bash
+echo "=== LAYOUT FILES ==="
+find client/src -name "*[Ll]ayout*" -type f 2>/dev/null
+
+echo ""
+echo "=== SHOW ADMIN LAYOUT CONTENT ==="
+cat client/src/layouts/AdminLayout.tsx 2>/dev/null || cat client/src/components/AdminLayout.tsx 2>/dev/null || echo "AdminLayout not found in expected locations"
+```
+
+## Task 4: Database Tables - What Data Do We Have?
+```bash
+echo "=== CHECK DATABASE FOR COMMAND CENTER DATA ==="
+```
+
+Run this SQL:
+```sql
+-- Find all tables
+SELECT table_name 
+FROM information_schema.tables 
+WHERE table_schema = 'public' 
+ORDER BY table_name;
+
+-- Check for municipality/community data
+SELECT COUNT(*) as municipality_count FROM municipalities;
+SELECT COUNT(*) as data_source_count FROM data_sources;
+
+-- Sample municipality names
+SELECT name, region FROM municipalities LIMIT 10;
+
+-- Sample data sources
+SELECT name, category, municipality_id FROM data_sources LIMIT 10;
+```
+
+## Task 5: Find API Routes for Command Center
+```bash
+echo "=== SERVER ROUTE FILES ==="
+ls -la server/routes/
+
+echo ""
+echo "=== SEARCH FOR COMMAND/MUNICIPALITY IN SERVER ==="
+grep -ril -E "command|municipalit" server/ 2>/dev/null
+
+echo ""
+echo "=== SHOW ALL API ENDPOINT DEFINITIONS ==="
+grep -rh "router\.\(get\|post\|put\|delete\)" server/routes/*.ts 2>/dev/null | head -100
+```
+
+## Task 6: Show Me What Navigation Currently Exists
+```bash
+echo "=== CURRENT SIDEBAR/NAV COMPONENTS ==="
+cat client/src/components/AdminSidebar.tsx 2>/dev/null || echo "No AdminSidebar.tsx"
+cat client/src/components/Sidebar.tsx 2>/dev/null || echo "No Sidebar.tsx"
+cat client/src/components/Navigation.tsx 2>/dev/null || echo "No Navigation.tsx"
+cat client/src/components/MobileNav.tsx 2>/dev/null || echo "No MobileNav.tsx"
+```
+
+DO NOT MAKE ANY CHANGES. Just show me all the output so I can see what we have.
