@@ -1,0 +1,183 @@
+Fix the GET /api/staging/trips/:id endpoint - it's returning "Failed to load trip" errors.
+
+## Step 1: Debug the issue
+
+First, let's check what's happening. Add some logging or run this SQL directly:
+```sql
+-- Check if trips exist
+SELECT id, trip_ref, name, origin_name, destination_name FROM staging_trips;
+
+-- Check if stops exist
+SELECT ts.*, sp.name as property_name 
+FROM staging_trip_stops ts
+LEFT JOIN staging_properties sp ON sp.id = ts.property_id
+LIMIT 10;
+```
+
+## Step 2: Fix the GET trips endpoint
+
+The issue is likely one of these:
+1. Route conflict with `/trips/popular-routes` matching before `/:id`
+2. Query error with the trip lookup
+3. NULL handling in the response
+
+Replace the GET trip endpoint with this fixed version:
+```typescript
+// IMPORTANT: Put this AFTER /trips/popular-routes but handle the conflict
+// GET /api/staging/trips/:id - Get trip details
+router.get('/trips/:id', async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
+        
+        // Skip if this is the popular-routes endpoint (shouldn't happen but safety check)
+        if (id === 'popular-routes') {
+            return res.status(400).json({ success: false, error: 'Invalid trip ID' });
+        }
+
+        // Try to find by ID (numeric) or trip_ref (string)
+        const tripResult = await db.query(`
+            SELECT * FROM staging_trips 
+            WHERE trip_ref = $1 OR id::text = $1
+        `, [id]);
+
+        if (tripResult.rows.length === 0) {
+            return res.status(404).json({ 
+                success: false, 
+                error: 'Trip not found' 
+            });
+        }
+
+        const trip = tripResult.rows[0];
+
+        // Get stops with property details
+        const stopsResult = await db.query(`
+            SELECT 
+                ts.id,
+                ts.property_id,
+                ts.stop_order,
+                ts.stop_type,
+                ts.check_in_date,
+                ts.check_out_date,
+                ts.distance_from_route_km,
+                ts.distance_from_origin_km,
+                ts.notes,
+                sp.name as property_name,
+                sp.city,
+                sp.region,
+                sp.latitude,
+                sp.longitude,
+                sp.thumbnail_url,
+                pr.nightly_rate
+            FROM staging_trip_stops ts
+            LEFT JOIN staging_properties sp ON sp.id = ts.property_id
+            LEFT JOIN staging_pricing pr ON pr.property_id = sp.id 
+                AND pr.pricing_type = 'base_nightly' AND pr.is_active = true
+            WHERE ts.trip_id = $1
+            ORDER BY ts.stop_order
+        `, [trip.id]);
+
+        res.json({
+            success: true,
+            trip: {
+                id: trip.id,
+                tripRef: trip.trip_ref,
+                name: trip.name,
+                description: trip.description,
+                origin: {
+                    name: trip.origin_name,
+                    lat: trip.origin_lat ? parseFloat(trip.origin_lat) : null,
+                    lng: trip.origin_lng ? parseFloat(trip.origin_lng) : null
+                },
+                destination: {
+                    name: trip.destination_name,
+                    lat: trip.destination_lat ? parseFloat(trip.destination_lat) : null,
+                    lng: trip.destination_lng ? parseFloat(trip.destination_lng) : null
+                },
+                totalDistanceKm: trip.total_distance_km ? parseFloat(trip.total_distance_km) : null,
+                totalDriveTimeHours: trip.total_drive_time_hours ? parseFloat(trip.total_drive_time_hours) : null,
+                vehicleLengthFt: trip.vehicle_length_ft,
+                vehicleType: trip.vehicle_type,
+                departureDate: trip.departure_date,
+                returnDate: trip.return_date,
+                guestEmail: trip.guest_email,
+                createdAt: trip.created_at,
+                stops: stopsResult.rows.map(s => ({
+                    id: s.id,
+                    propertyId: s.property_id,
+                    propertyName: s.property_name,
+                    city: s.city,
+                    region: s.region,
+                    latitude: s.latitude ? parseFloat(s.latitude) : null,
+                    longitude: s.longitude ? parseFloat(s.longitude) : null,
+                    thumbnailUrl: s.thumbnail_url,
+                    stopOrder: s.stop_order,
+                    stopType: s.stop_type,
+                    checkInDate: s.check_in_date,
+                    checkOutDate: s.check_out_date,
+                    nightlyRate: s.nightly_rate ? parseFloat(s.nightly_rate) : null,
+                    notes: s.notes
+                }))
+            }
+        });
+
+    } catch (error: any) {
+        console.error('Get trip error:', error);
+        console.error('Error details:', error.message, error.stack);
+        res.status(500).json({ 
+            success: false, 
+            error: 'Failed to load trip',
+            details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+    }
+});
+```
+
+## Step 3: Verify route order
+
+Make sure your routes are in this order:
+```typescript
+// Trip routes - ORDER MATTERS!
+router.get('/trips/popular-routes', ...);  // Static route FIRST
+router.post('/trips/plan', ...);
+router.post('/trips', ...);
+router.get('/trips/:id', ...);             // Dynamic route LAST
+```
+
+## Step 4: Test the fix
+```bash
+# First create a fresh trip with valid property IDs
+# Get some valid property IDs first:
+curl http://localhost:5000/api/staging/search?limit=2 | jq '.properties[].id'
+
+# Create trip with those IDs (replace X and Y with actual IDs)
+curl -X POST http://localhost:5000/api/staging/trips \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "QA Test Trip Fixed",
+    "originName": "Vancouver",
+    "originLat": 49.2827,
+    "originLng": -123.1207,
+    "destinationName": "Kelowna",
+    "destinationLat": 49.8880,
+    "destinationLng": -119.4960,
+    "totalDistanceKm": 390,
+    "guestEmail": "qa@test.com",
+    "stops": []
+  }'
+
+# Note the tripRef from response, then test GET:
+curl http://localhost:5000/api/staging/trips/[TRIP_REF]
+
+# Also test by numeric ID:
+curl http://localhost:5000/api/staging/trips/1
+
+# Test non-existent (should be 404, not 500):
+curl http://localhost:5000/api/staging/trips/FAKE-999999
+```
+
+Report results for:
+- Test 8: Get by tripRef → EXPECTED: 200 with trip details
+- Test 9: Get by numeric ID → EXPECTED: 200 with trip details  
+- Test 10: Non-existent → EXPECTED: 404 "Trip not found"
+
+Then continue with **QA Batches 5 & 6**.
