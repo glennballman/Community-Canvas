@@ -1,0 +1,450 @@
+Create CivOS operations dashboard UI.
+
+Create file: client/src/pages/admin/CivOSDashboard.tsx
+```tsx
+import React, { useState, useEffect, useCallback } from 'react';
+import { useAuth } from '../../contexts/AuthContext';
+
+interface Signal {
+    id: number;
+    signalCode: string;
+    signalName: string;
+    category: string;
+    severity: string;
+    property: {
+        id: number;
+        name: string;
+        city: string;
+        phone: string;
+    } | null;
+    region: string;
+    coordinates: { lat: number; lng: number };
+    data: any;
+    message: string;
+    detectedAt: string;
+    expiresAt: string;
+}
+
+interface Stats {
+    signals: {
+        active: number;
+        critical: number;
+        high: number;
+        resolved24h: number;
+        regionsAffected: number;
+    };
+    capacity: {
+        properties: number;
+        spots: number;
+        withMechanic: number;
+    };
+}
+
+interface RegionCapacity {
+    region: string;
+    properties: number;
+    spots: number;
+    poweredSpots: number;
+    avgRvScore: number;
+    avgCrewScore: number;
+}
+
+export default function CivOSDashboard() {
+    const { user } = useAuth();
+    const [signals, setSignals] = useState<Signal[]>([]);
+    const [stats, setStats] = useState<Stats | null>(null);
+    const [regions, setRegions] = useState<RegionCapacity[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [generating, setGenerating] = useState(false);
+    
+    // Filters
+    const [selectedRegion, setSelectedRegion] = useState('');
+    const [selectedSeverity, setSelectedSeverity] = useState('');
+    const [autoRefresh, setAutoRefresh] = useState(true);
+
+    const loadData = useCallback(async () => {
+        try {
+            let signalUrl = '/api/civos/signals?limit=50';
+            if (selectedRegion) signalUrl += `&region=${encodeURIComponent(selectedRegion)}`;
+            if (selectedSeverity) signalUrl += `&severity=${selectedSeverity}`;
+
+            const [signalsRes, statsRes, capacityRes] = await Promise.all([
+                fetch(signalUrl),
+                fetch('/api/civos/stats'),
+                fetch('/api/civos/capacity')
+            ]);
+
+            const [signalsData, statsData, capacityData] = await Promise.all([
+                signalsRes.json(),
+                statsRes.json(),
+                capacityRes.json()
+            ]);
+
+            if (signalsData.success) setSignals(signalsData.signals);
+            if (statsData.success) setStats(statsData.stats);
+            if (capacityData.success) setRegions(capacityData.capacity.byRegion);
+        } catch (err) {
+            console.error('Failed to load data:', err);
+        } finally {
+            setLoading(false);
+        }
+    }, [selectedRegion, selectedSeverity]);
+
+    useEffect(() => {
+        loadData();
+        
+        // Auto-refresh every 30 seconds
+        let interval: NodeJS.Timeout | undefined;
+        if (autoRefresh) {
+            interval = setInterval(loadData, 30000);
+        }
+        
+        return () => {
+            if (interval) clearInterval(interval);
+        };
+    }, [loadData, autoRefresh]);
+
+    async function generateSignals() {
+        setGenerating(true);
+        const token = localStorage.getItem('accessToken');
+        
+        try {
+            const res = await fetch('/api/civos/signals/generate', {
+                method: 'POST',
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            const data = await res.json();
+            if (data.success) {
+                alert(`Generated ${data.generated} signals`);
+                loadData();
+            } else {
+                alert('Failed: ' + data.error);
+            }
+        } catch (err) {
+            console.error('Failed to generate signals:', err);
+            alert('Failed to generate signals');
+        } finally {
+            setGenerating(false);
+        }
+    }
+
+    async function resolveSignal(signalId: number) {
+        const token = localStorage.getItem('accessToken');
+        
+        try {
+            await fetch(`/api/civos/signals/${signalId}/resolve`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}`
+                },
+                body: JSON.stringify({ reason: 'Manually resolved from dashboard' })
+            });
+            loadData();
+        } catch (err) {
+            console.error('Failed to resolve signal:', err);
+        }
+    }
+
+    const severityColors: Record<string, string> = {
+        critical: 'bg-red-600 animate-pulse',
+        high: 'bg-orange-600',
+        medium: 'bg-yellow-600',
+        low: 'bg-green-600'
+    };
+
+    const categoryIcons: Record<string, string> = {
+        capacity: '📊',
+        emergency: '🚨',
+        infrastructure: '🔧',
+        community: '👥'
+    };
+
+    if (user?.userType !== 'admin') {
+        return (
+            <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+                <div className="text-red-400 text-xl">Admin access required</div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="min-h-screen bg-gray-900">
+            {/* Header */}
+            <div className="bg-gray-800 border-b border-gray-700">
+                <div className="max-w-7xl mx-auto px-4 py-4">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+                                🛡️ CivOS Operations Dashboard
+                            </h1>
+                            <p className="text-gray-400 text-sm">
+                                Real-time staging network signals for emergency operations
+                            </p>
+                        </div>
+                        <div className="flex items-center gap-4">
+                            <label className="flex items-center gap-2 text-gray-300 text-sm">
+                                <input
+                                    type="checkbox"
+                                    checked={autoRefresh}
+                                    onChange={(e) => setAutoRefresh(e.target.checked)}
+                                    className="rounded"
+                                />
+                                Auto-refresh (30s)
+                            </label>
+                            <button
+                                onClick={generateSignals}
+                                disabled={generating}
+                                className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white px-4 py-2 rounded-lg text-sm"
+                            >
+                                {generating ? 'Generating...' : '🔄 Generate Signals'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div className="max-w-7xl mx-auto px-4 py-6">
+                {/* Stats Cards */}
+                {stats && (
+                    <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-8">
+                        <div className="bg-gray-800 rounded-lg p-4">
+                            <p className="text-gray-400 text-xs uppercase">Active Signals</p>
+                            <p className="text-3xl font-bold text-white">{stats.signals.active}</p>
+                        </div>
+                        <div className="bg-gray-800 rounded-lg p-4 border-l-4 border-red-500">
+                            <p className="text-gray-400 text-xs uppercase">Critical</p>
+                            <p className="text-3xl font-bold text-red-400">{stats.signals.critical}</p>
+                        </div>
+                        <div className="bg-gray-800 rounded-lg p-4 border-l-4 border-orange-500">
+                            <p className="text-gray-400 text-xs uppercase">High</p>
+                            <p className="text-3xl font-bold text-orange-400">{stats.signals.high}</p>
+                        </div>
+                        <div className="bg-gray-800 rounded-lg p-4">
+                            <p className="text-gray-400 text-xs uppercase">Properties</p>
+                            <p className="text-3xl font-bold text-blue-400">{stats.capacity.properties}</p>
+                        </div>
+                        <div className="bg-gray-800 rounded-lg p-4">
+                            <p className="text-gray-400 text-xs uppercase">Total Spots</p>
+                            <p className="text-3xl font-bold text-green-400">{stats.capacity.spots.toLocaleString()}</p>
+                        </div>
+                        <div className="bg-gray-800 rounded-lg p-4">
+                            <p className="text-gray-400 text-xs uppercase">With Mechanic</p>
+                            <p className="text-3xl font-bold text-purple-400">{stats.capacity.withMechanic}</p>
+                        </div>
+                    </div>
+                )}
+
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    {/* Active Signals */}
+                    <div className="lg:col-span-2">
+                        <div className="bg-gray-800 rounded-lg">
+                            <div className="px-4 py-3 border-b border-gray-700 flex justify-between items-center">
+                                <h2 className="text-lg font-semibold text-white">
+                                    Active Signals ({signals.length})
+                                </h2>
+                                <div className="flex gap-2">
+                                    <select
+                                        value={selectedSeverity}
+                                        onChange={(e) => setSelectedSeverity(e.target.value)}
+                                        className="bg-gray-700 border border-gray-600 rounded px-2 py-1 text-white text-sm"
+                                    >
+                                        <option value="">All Severities</option>
+                                        <option value="critical">🔴 Critical</option>
+                                        <option value="high">🟠 High</option>
+                                        <option value="medium">🟡 Medium</option>
+                                        <option value="low">🟢 Low</option>
+                                    </select>
+                                    <select
+                                        value={selectedRegion}
+                                        onChange={(e) => setSelectedRegion(e.target.value)}
+                                        className="bg-gray-700 border border-gray-600 rounded px-2 py-1 text-white text-sm"
+                                    >
+                                        <option value="">All Regions</option>
+                                        {regions.map(r => (
+                                            <option key={r.region} value={r.region}>{r.region}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div className="divide-y divide-gray-700 max-h-[600px] overflow-y-auto">
+                                {loading ? (
+                                    <div className="p-8 text-center text-gray-500">Loading signals...</div>
+                                ) : signals.length === 0 ? (
+                                    <div className="p-8 text-center text-gray-500">
+                                        No active signals. Click "Generate Signals" to create capacity signals.
+                                    </div>
+                                ) : (
+                                    signals.map(signal => (
+                                        <div key={signal.id} className="p-4 hover:bg-gray-750">
+                                            <div className="flex items-start justify-between">
+                                                <div className="flex items-start gap-3">
+                                                    <span className={`${severityColors[signal.severity]} w-3 h-3 rounded-full mt-1.5 flex-shrink-0`} />
+                                                    <div>
+                                                        <div className="flex items-center gap-2 flex-wrap">
+                                                            <span className="text-gray-400 text-sm">
+                                                                {categoryIcons[signal.category] || '📌'} {signal.category.toUpperCase()}
+                                                            </span>
+                                                            <span className="text-white font-medium">
+                                                                {signal.signalName}
+                                                            </span>
+                                                            <span className={`text-xs px-2 py-0.5 rounded ${severityColors[signal.severity]} text-white`}>
+                                                                {signal.severity}
+                                                            </span>
+                                                        </div>
+                                                        <p className="text-gray-300 mt-1">{signal.message}</p>
+                                                        {signal.property && (
+                                                            <p className="text-gray-400 text-sm mt-1">
+                                                                📍 {signal.property.name}, {signal.property.city}
+                                                                {signal.property.phone && (
+                                                                    <span className="ml-2">📞 {signal.property.phone}</span>
+                                                                )}
+                                                            </p>
+                                                        )}
+                                                        <p className="text-gray-500 text-xs mt-1">
+                                                            Detected: {new Date(signal.detectedAt).toLocaleString()}
+                                                            {signal.expiresAt && (
+                                                                <span className="ml-2">
+                                                                    • Expires: {new Date(signal.expiresAt).toLocaleString()}
+                                                                </span>
+                                                            )}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                <button
+                                                    onClick={() => resolveSignal(signal.id)}
+                                                    className="text-gray-400 hover:text-green-400 text-sm flex-shrink-0"
+                                                    title="Mark as resolved"
+                                                >
+                                                    ✓ Resolve
+                                                </button>
+                                            </div>
+
+                                            {/* Signal Data */}
+                                            {signal.data && (
+                                                <div className="mt-3 bg-gray-700 rounded p-2 text-xs ml-6">
+                                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                                                        {signal.data.total_spots !== undefined && (
+                                                            <div>
+                                                                <span className="text-gray-400">Total:</span>{' '}
+                                                                <span className="text-white">{signal.data.total_spots}</span>
+                                                            </div>
+                                                        )}
+                                                        {signal.data.available_spots !== undefined && (
+                                                            <div>
+                                                                <span className="text-gray-400">Available:</span>{' '}
+                                                                <span className="text-green-400">{signal.data.available_spots}</span>
+                                                            </div>
+                                                        )}
+                                                        {signal.data.utilization_percent !== undefined && (
+                                                            <div>
+                                                                <span className="text-gray-400">Utilization:</span>{' '}
+                                                                <span className="text-yellow-400">{signal.data.utilization_percent}%</span>
+                                                            </div>
+                                                        )}
+                                                        {signal.data.has_mechanic && (
+                                                            <div className="text-green-400">🔧 Mechanic</div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Regional Capacity Sidebar */}
+                    <div className="space-y-4">
+                        <div className="bg-gray-800 rounded-lg">
+                            <div className="px-4 py-3 border-b border-gray-700">
+                                <h2 className="text-lg font-semibold text-white">Regional Capacity</h2>
+                            </div>
+                            <div className="divide-y divide-gray-700 max-h-[400px] overflow-y-auto">
+                                {regions.map(region => (
+                                    <div 
+                                        key={region.region} 
+                                        className={`p-3 cursor-pointer hover:bg-gray-750 ${selectedRegion === region.region ? 'bg-gray-700' : ''}`}
+                                        onClick={() => setSelectedRegion(selectedRegion === region.region ? '' : region.region)}
+                                    >
+                                        <div className="flex justify-between items-start">
+                                            <div>
+                                                <p className="text-white font-medium">{region.region}</p>
+                                                <p className="text-gray-400 text-sm">
+                                                    {region.properties} properties
+                                                </p>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className="text-blue-400 font-medium">{region.spots} spots</p>
+                                                <p className="text-yellow-400 text-sm">⚡ {region.poweredSpots}</p>
+                                            </div>
+                                        </div>
+                                        {(region.avgRvScore > 0 || region.avgCrewScore > 0) && (
+                                            <div className="mt-2 flex gap-4 text-xs">
+                                                {region.avgRvScore > 0 && (
+                                                    <span className="text-gray-500">
+                                                        RV: <span className="text-green-400">{region.avgRvScore}</span>
+                                                    </span>
+                                                )}
+                                                {region.avgCrewScore > 0 && (
+                                                    <span className="text-gray-500">
+                                                        Crew: <span className="text-blue-400">{region.avgCrewScore}</span>
+                                                    </span>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* API Endpoints Reference */}
+                        <div className="bg-gray-800 rounded-lg">
+                            <div className="px-4 py-3 border-b border-gray-700">
+                                <h2 className="text-lg font-semibold text-white">CivOS API Endpoints</h2>
+                            </div>
+                            <div className="p-4 space-y-2 text-sm">
+                                <div className="bg-gray-700 rounded p-2 font-mono">
+                                    <span className="text-green-400">GET</span>
+                                    <span className="text-gray-300 ml-2">/api/civos/signals</span>
+                                </div>
+                                <div className="bg-gray-700 rounded p-2 font-mono">
+                                    <span className="text-green-400">GET</span>
+                                    <span className="text-gray-300 ml-2">/api/civos/capacity</span>
+                                </div>
+                                <div className="bg-gray-700 rounded p-2 font-mono">
+                                    <span className="text-green-400">GET</span>
+                                    <span className="text-gray-300 ml-2">/api/civos/properties</span>
+                                </div>
+                                <div className="bg-gray-700 rounded p-2 font-mono">
+                                    <span className="text-green-400">GET</span>
+                                    <span className="text-gray-300 ml-2">/api/civos/export</span>
+                                </div>
+                                <p className="text-gray-500 text-xs mt-2">
+                                    These endpoints are publicly accessible for CivOS integration.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+```
+
+Add the route to your router:
+```tsx
+import CivOSDashboard from './pages/admin/CivOSDashboard';
+
+// In your Routes:
+<Route path="/admin/civos" element={<CivOSDashboard />} />
+```
+
+Test the dashboard:
+1. Login as admin@example.com
+2. Navigate to /admin/civos
+3. Click "Generate Signals" to create capacity signals for all properties
+4. Verify signals appear with severity levels and data

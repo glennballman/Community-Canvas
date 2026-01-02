@@ -18,6 +18,7 @@ import AdminSources from "@/pages/AdminSources";
 import AdminLogs from "@/pages/AdminLogs";
 import AdminSettings from "@/pages/AdminSettings";
 import DataImport from "@/pages/admin/DataImport";
+import CivOSDashboard from "@/pages/admin/CivOSDashboard";
 import Documentation from "@/pages/Documentation";
 import TripTimelineDemo from "@/pages/TripTimelineDemo";
 import Accommodations from "@/pages/Accommodations";
@@ -55,6 +56,7 @@ function AdminRoutes() {
         <Route path="/admin/logs" component={AdminLogs} />
         <Route path="/admin/settings" component={AdminSettings} />
         <Route path="/admin/import" component={DataImport} />
+        <Route path="/admin/civos" component={CivOSDashboard} />
         <Route path="/admin/docs" component={Documentation} />
         <Route path="/admin/accommodations" component={Accommodations} />
         <Route component={NotFound} />
