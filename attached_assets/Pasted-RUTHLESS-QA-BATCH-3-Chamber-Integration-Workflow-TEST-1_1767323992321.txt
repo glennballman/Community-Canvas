@@ -1,0 +1,107 @@
+RUTHLESS QA - BATCH 3: Chamber Integration Workflow
+
+## TEST 1: Chamber stats endpoint
+```bash
+curl http://localhost:5000/api/staging/chamber/stats
+```
+EXPECTED: JSON with total_opportunities, potential, contacted, interested, active, declined
+FAIL if: 500 error or missing fields
+
+## TEST 2: List all opportunities
+```bash
+curl http://localhost:5000/api/staging/chamber/opportunities
+```
+EXPECTED: Array of opportunities with business_name, chamber_name, opportunity_status
+FAIL if: empty array (we loaded 11 samples) or error
+
+## TEST 3: Filter by status
+```bash
+curl "http://localhost:5000/api/staging/chamber/opportunities?status=potential"
+```
+EXPECTED: Only opportunities with status=potential
+FAIL if: other statuses appear in results
+
+## TEST 4: Filter by chamber
+```bash
+curl "http://localhost:5000/api/staging/chamber/opportunities?chamber=Bamfield"
+```
+EXPECTED: Only Bamfield Chamber opportunities
+FAIL if: other chambers appear
+
+## TEST 5: Get single opportunity
+First get an ID from the list, then:
+```bash
+curl http://localhost:5000/api/staging/chamber/opportunities/1
+```
+EXPECTED: Full opportunity details
+FAIL if: 404 or missing fields
+
+## TEST 6: Update opportunity status
+```bash
+curl -X PUT http://localhost:5000/api/staging/chamber/opportunities/1 \
+  -H "Content-Type: application/json" \
+  -d '{"opportunityStatus": "contacted", "contactNotes": "QA Test - left voicemail"}'
+```
+EXPECTED: Updated opportunity with status=contacted, last_contacted_at set
+FAIL if: error or status not updated
+
+## TEST 7: Update with invalid ID
+```bash
+curl -X PUT http://localhost:5000/api/staging/chamber/opportunities/99999 \
+  -H "Content-Type: application/json" \
+  -d '{"opportunityStatus": "contacted"}'
+```
+EXPECTED: 404 error
+FAIL if: 500 error or success
+
+## TEST 8: Convert opportunity to property
+Find an opportunity that hasn't been converted:
+```sql
+SELECT id, business_name FROM staging_chamber_links 
+WHERE property_id IS NULL AND opportunity_status = 'interested' LIMIT 1;
+```
+Then convert:
+```bash
+curl -X POST http://localhost:5000/api/staging/chamber/opportunities/[ID]/convert
+```
+EXPECTED: New property created, opportunity linked
+FAIL if: error or no property created
+
+## TEST 9: Double convert attempt
+Try converting the same opportunity again:
+```bash
+curl -X POST http://localhost:5000/api/staging/chamber/opportunities/[SAME_ID]/convert
+```
+EXPECTED: 400 error "Already converted"
+FAIL if: duplicate property created
+
+## TEST 10: Verify converted property exists
+```sql
+SELECT sp.id, sp.name, sp.status, cl.business_name
+FROM staging_properties sp
+JOIN staging_chamber_links cl ON cl.property_id = sp.id
+WHERE cl.id = [CONVERTED_ID];
+```
+EXPECTED: Property exists with status='pending_setup'
+FAIL if: no results
+
+## TEST 11: Data integrity after operations
+```sql
+-- No orphaned links
+SELECT COUNT(*) FROM staging_chamber_links 
+WHERE property_id IS NOT NULL 
+AND property_id NOT IN (SELECT id FROM staging_properties);
+```
+EXPECTED: 0
+FAIL if: orphaned links exist
+
+## TEST 12: Status workflow validation
+```sql
+-- Verify valid status values only
+SELECT DISTINCT opportunity_status FROM staging_chamber_links
+WHERE opportunity_status NOT IN ('potential', 'contacted', 'interested', 'active', 'declined');
+```
+EXPECTED: 0 rows
+FAIL if: invalid status values exist
+
+Report PASS/FAIL for all 12 tests.
