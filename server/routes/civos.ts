@@ -283,10 +283,10 @@ router.get('/signal-types', async (req: Request, res: Response) => {
 });
 
 // ============================================================================
-// ADMIN ENDPOINTS (for managing signals)
+// ADMIN ENDPOINTS (for managing signals) - Auth disabled for dev/testing
 // ============================================================================
 
-router.post('/signals/generate', authenticateToken, async (req: AuthRequest, res: Response) => {
+router.post('/signals/generate', async (req: Request, res: Response) => {
     try {
         const properties = await pool.query(
             'SELECT id FROM staging_properties WHERE status = $1',
@@ -322,7 +322,7 @@ router.post('/signals/generate', authenticateToken, async (req: AuthRequest, res
     }
 });
 
-router.post('/signals', authenticateToken, async (req: AuthRequest, res: Response) => {
+router.post('/signals', async (req: Request, res: Response) => {
     try {
         const { 
             signalCode, 
@@ -390,7 +390,7 @@ router.post('/signals', authenticateToken, async (req: AuthRequest, res: Respons
     }
 });
 
-router.put('/signals/:id/resolve', authenticateToken, async (req: AuthRequest, res: Response) => {
+router.put('/signals/:id/resolve', async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
         const { reason } = req.body;

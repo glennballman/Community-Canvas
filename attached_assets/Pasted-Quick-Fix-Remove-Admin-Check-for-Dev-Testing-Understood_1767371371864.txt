@@ -1,0 +1,65 @@
+Quick Fix: Remove Admin Check for Dev/Testing
+Understood! Let's remove the auth barrier so you can test freely.
+Make CivOS dashboard publicly accessible for development/testing.
+
+Update client/src/pages/admin/CivOSDashboard.tsx - remove the admin check at the top of the component:
+
+Find and DELETE these lines (around line 70-80):
+```tsx
+    if (user?.userType !== 'admin') {
+        return (
+            <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+                <div className="text-red-400 text-xl">Admin access required</div>
+            </div>
+        );
+    }
+```
+
+Also remove the unused `useAuth` import if no longer needed, or keep it if you want to show the user info.
+
+The dashboard will now be accessible to anyone at `/admin/civos`.
+
+---
+
+Also, for the API endpoints that require auth for write operations (generate signals, resolve signals), let's make those public too for testing:
+
+In server/routes/civos.ts, find and update these routes:
+```typescript
+// BEFORE:
+router.post('/signals/generate', authenticateToken, async (req: AuthRequest, res: Response) => {
+
+// AFTER:
+router.post('/signals/generate', async (req: Request, res: Response) => {
+```
+```typescript
+// BEFORE:
+router.post('/signals', authenticateToken, async (req: AuthRequest, res: Response) => {
+
+// AFTER:
+router.post('/signals', async (req: Request, res: Response) => {
+```
+```typescript
+// BEFORE:
+router.put('/signals/:id/resolve', authenticateToken, async (req: AuthRequest, res: Response) => {
+
+// AFTER:
+router.put('/signals/:id/resolve', async (req: Request, res: Response) => {
+```
+```typescript
+// BEFORE:
+router.get('/config', authenticateToken, async (req: AuthRequest, res: Response) => {
+
+// AFTER:
+router.get('/config', async (req: Request, res: Response) => {
+```
+
+Change `AuthRequest` to `Request` in these function signatures and remove any `req.user` references (or make them optional).
+
+After these changes, refresh `/admin/civos` and everything should work without login!
+This removes all auth friction for your dev environment. The CivOS dashboard and all its functionality will be fully accessible for testing.
+Once you've made the changes, hit refresh on /admin/civos and you should see the full dashboard with:
+
+Stats cards
+Signal list (empty until you click "Generate Signals")
+Regional capacity sidebar
+API endpoints reference

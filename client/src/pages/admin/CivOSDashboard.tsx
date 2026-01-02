@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -54,7 +53,6 @@ interface RegionCapacity {
 }
 
 export default function CivOSDashboard() {
-    const { user, loading: authLoading } = useAuth();
     const [signals, setSignals] = useState<Signal[]>([]);
     const [stats, setStats] = useState<Stats | null>(null);
     const [regions, setRegions] = useState<RegionCapacity[]>([]);
@@ -94,9 +92,7 @@ export default function CivOSDashboard() {
     }, [selectedRegion, selectedSeverity]);
 
     useEffect(() => {
-        if (!authLoading) {
-            loadData();
-        }
+        loadData();
         
         let interval: ReturnType<typeof setInterval> | undefined;
         if (autoRefresh) {
@@ -106,7 +102,7 @@ export default function CivOSDashboard() {
         return () => {
             if (interval) clearInterval(interval);
         };
-    }, [loadData, autoRefresh, authLoading]);
+    }, [loadData, autoRefresh]);
 
     async function generateSignals() {
         setGenerating(true);
@@ -176,28 +172,10 @@ export default function CivOSDashboard() {
         }
     }
 
-    if (authLoading) {
+    if (loading && !stats) {
         return (
             <div className="min-h-screen bg-background flex items-center justify-center">
                 <RefreshCw className="w-8 h-8 animate-spin text-muted-foreground" />
-            </div>
-        );
-    }
-
-    if (user?.userType !== 'admin') {
-        return (
-            <div className="min-h-screen bg-background flex items-center justify-center">
-                <Card className="w-96">
-                    <CardContent className="pt-6">
-                        <div className="text-center">
-                            <AlertCircle className="w-12 h-12 text-destructive mx-auto mb-4" />
-                            <p className="text-lg font-medium">Admin access required</p>
-                            <p className="text-muted-foreground text-sm mt-2">
-                                This dashboard is only available to administrators.
-                            </p>
-                        </div>
-                    </CardContent>
-                </Card>
             </div>
         );
     }
