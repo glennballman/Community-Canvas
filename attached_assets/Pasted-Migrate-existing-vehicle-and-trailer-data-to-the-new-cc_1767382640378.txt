@@ -1,0 +1,222 @@
+Migrate existing vehicle and trailer data to the new cc_vehicles and cc_trailers tables.
+
+## Run this SQL to migrate existing data:
+```sql
+-- ============================================================================
+-- MIGRATE EXISTING VEHICLES & TRAILERS
+-- ============================================================================
+
+-- Check existing tables
+SELECT 'Existing vehicle tables:' as status;
+SELECT table_name FROM information_schema.tables 
+WHERE table_schema = 'public' 
+AND table_name LIKE '%vehicle%'
+ORDER BY table_name;
+
+SELECT 'Existing trailer tables:' as status;
+SELECT table_name FROM information_schema.tables 
+WHERE table_schema = 'public' 
+AND table_name LIKE '%trailer%'
+ORDER BY table_name;
+
+-- ============================================================================
+-- 1. MIGRATE VEHICLES
+-- ============================================================================
+
+-- First, let's see what we have in the old vehicles table
+SELECT 'Existing vehicles:' as status;
+SELECT * FROM vehicles LIMIT 5;
+
+-- Migrate vehicles to cc_vehicles
+-- Assign them to Glenn's individual tenant for now
+INSERT INTO cc_vehicles (
+    owner_type,
+    owner_user_id,
+    name,
+    vin,
+    license_plate,
+    year,
+    make,
+    model,
+    color,
+    vehicle_type,
+    status,
+    notes,
+    created_at
+)
+SELECT 
+    'individual',
+    'a0000000-0000-0000-0000-000000000001',  -- Glenn's user ID
+    COALESCE(name, make || ' ' || model),
+    vin,
+    license_plate,
+    year,
+    make,
+    model,
+    color,
+    CASE 
+        WHEN LOWER(COALESCE(vehicle_type, '')) LIKE '%truck%' THEN 'truck'
+        WHEN LOWER(COALESCE(vehicle_type, '')) LIKE '%suv%' THEN 'suv'
+        WHEN LOWER(COALESCE(vehicle_type, '')) LIKE '%van%' THEN 'van'
+        WHEN LOWER(COALESCE(make, '')) = 'tesla' THEN 'car'
+        ELSE 'truck'
+    END,
+    COALESCE(status, 'available'),
+    notes,
+    COALESCE(created_at, NOW())
+FROM vehicles
+WHERE NOT EXISTS (
+    SELECT 1 FROM cc_vehicles cv WHERE cv.vin = vehicles.vin AND vehicles.vin IS NOT NULL
+)
+ON CONFLICT DO NOTHING;
+
+-- ============================================================================
+-- 2. MIGRATE TRAILERS
+-- ============================================================================
+
+SELECT 'Existing trailers:' as status;
+SELECT * FROM trailers LIMIT 5;
+
+-- Migrate trailers to cc_trailers
+INSERT INTO cc_trailers (
+    owner_type,
+    owner_user_id,
+    name,
+    vin,
+    license_plate,
+    year,
+    make,
+    model,
+    trailer_type,
+    length_ft,
+    width_ft,
+    gvwr_lbs,
+    axle_count,
+    has_brakes,
+    hitch_type,
+    status,
+    notes,
+    created_at
+)
+SELECT 
+    'individual',
+    'a0000000-0000-0000-0000-000000000001',  -- Glenn's user ID
+    COALESCE(name, make || ' ' || model),
+    vin,
+    license_plate,
+    year,
+    make,
+    model,
+    COALESCE(trailer_type, 'utility'),
+    length_ft,
+    width_ft,
+    gvwr,
+    axles,
+    has_brakes,
+    COALESCE(hitch_type, 'ball'),
+    COALESCE(status, 'available'),
+    notes,
+    COALESCE(created_at, NOW())
+FROM trailers
+WHERE NOT EXISTS (
+    SELECT 1 FROM cc_trailers ct WHERE ct.vin = trailers.vin AND trailers.vin IS NOT NULL
+)
+ON CONFLICT DO NOTHING;
+
+-- ============================================================================
+-- 3. CREATE FLEET FOR GLENN'S BUSINESS
+-- ============================================================================
+
+INSERT INTO cc_fleets (
+    id,
+    tenant_id,
+    name,
+    description,
+    status
+) VALUES (
+    'f0000000-0000-0000-0000-000000000001',
+    'd0000000-0000-0000-0000-000000000001',  -- Ballman Enterprises tenant
+    'Main Fleet',
+    'Primary vehicle and trailer fleet',
+    'active'
+) ON CONFLICT DO NOTHING;
+
+-- ============================================================================
+-- 4. ASSIGN VEHICLES TO FLEET (by reference, not ownership transfer)
+-- ============================================================================
+
+-- Assign all of Glenn's vehicles to his business fleet
+INSERT INTO cc_fleet_vehicle_assignments (fleet_id, vehicle_id, assigned_by)
+SELECT 
+    'f0000000-0000-0000-0000-000000000001',  -- Main Fleet
+    v.id,
+    'a0000000-0000-0000-0000-000000000001'   -- Glenn
+FROM cc_vehicles v
+WHERE v.owner_user_id = 'a0000000-0000-0000-0000-000000000001'
+AND NOT EXISTS (
+    SELECT 1 FROM cc_fleet_vehicle_assignments fva 
+    WHERE fva.vehicle_id = v.id AND fva.fleet_id = 'f0000000-0000-0000-0000-000000000001'
+);
+
+-- Assign all of Glenn's trailers to his business fleet
+INSERT INTO cc_fleet_trailer_assignments (fleet_id, trailer_id, assigned_by)
+SELECT 
+    'f0000000-0000-0000-0000-000000000001',  -- Main Fleet
+    t.id,
+    'a0000000-0000-0000-0000-000000000001'   -- Glenn
+FROM cc_trailers t
+WHERE t.owner_user_id = 'a0000000-0000-0000-0000-000000000001'
+AND NOT EXISTS (
+    SELECT 1 FROM cc_fleet_trailer_assignments fta 
+    WHERE fta.trailer_id = t.id AND fta.fleet_id = 'f0000000-0000-0000-0000-000000000001'
+);
+
+-- ============================================================================
+-- 5. ASSIGN GLENN AS DRIVER FOR ALL VEHICLES
+-- ============================================================================
+
+INSERT INTO cc_vehicle_driver_assignments (vehicle_id, user_id, assignment_type, assigned_by)
+SELECT 
+    v.id,
+    'a0000000-0000-0000-0000-000000000001',  -- Glenn
+    'primary',
+    'a0000000-0000-0000-0000-000000000001'   -- Glenn
+FROM cc_vehicles v
+WHERE v.owner_user_id = 'a0000000-0000-0000-0000-000000000001'
+AND NOT EXISTS (
+    SELECT 1 FROM cc_vehicle_driver_assignments vda 
+    WHERE vda.vehicle_id = v.id AND vda.user_id = 'a0000000-0000-0000-0000-000000000001'
+);
+
+-- ============================================================================
+-- VERIFY MIGRATION
+-- ============================================================================
+
+SELECT '=== MIGRATION RESULTS ===' as section;
+
+SELECT 'Vehicles migrated:' as status;
+SELECT 
+    v.id, v.name, v.year, v.make, v.model, v.owner_type,
+    CASE WHEN v.owner_user_id IS NOT NULL THEN 'Glenn Ballman' ELSE 'Business' END as owner
+FROM cc_vehicles v;
+
+SELECT 'Trailers migrated:' as status;
+SELECT 
+    t.id, t.name, t.year, t.make, t.model, t.trailer_type, t.owner_type
+FROM cc_trailers t;
+
+SELECT 'Fleet summary:' as status;
+SELECT * FROM v_fleet_summary;
+
+SELECT 'Driver assignments:' as status;
+SELECT 
+    u.first_name || ' ' || u.last_name as driver,
+    v.name as vehicle,
+    vda.assignment_type
+FROM cc_vehicle_driver_assignments vda
+JOIN cc_users u ON u.id = vda.user_id
+JOIN cc_vehicles v ON v.id = vda.vehicle_id
+WHERE vda.is_active = true;
+```
+
+Report migration results.
