@@ -1,0 +1,183 @@
+RUTHLESS QA - BATCH 4: Trip Planner Functionality
+
+## TEST 1: Popular routes endpoint
+```bash
+curl http://localhost:5000/api/staging/trips/popular-routes
+```
+EXPECTED: Array with at least 4 routes, each having origin, destination, distanceKm
+FAIL if: empty or missing fields
+
+## TEST 2: Plan route - Vancouver to Victoria
+```bash
+curl -X POST http://localhost:5000/api/staging/trips/plan \
+  -H "Content-Type: application/json" \
+  -d '{
+    "originLat": 49.2827,
+    "originLng": -123.1207,
+    "originName": "Vancouver",
+    "destLat": 48.4284,
+    "destLng": -123.3656,
+    "destName": "Victoria",
+    "bufferKm": 100
+  }'
+```
+EXPECTED: route object + properties array with at least some results
+FAIL if: error or empty properties
+
+## TEST 3: Plan route - Vancouver to Tofino (longer route)
+```bash
+curl -X POST http://localhost:5000/api/staging/trips/plan \
+  -H "Content-Type: application/json" \
+  -d '{
+    "originLat": 49.2827,
+    "originLng": -123.1207,
+    "originName": "Vancouver",
+    "destLat": 49.1530,
+    "destLng": -125.9066,
+    "destName": "Tofino",
+    "bufferKm": 75
+  }'
+```
+EXPECTED: Multiple properties along the route
+FAIL if: fewer than 3 properties returned
+
+## TEST 4: Plan route with filters
+```bash
+curl -X POST http://localhost:5000/api/staging/trips/plan \
+  -H "Content-Type: application/json" \
+  -d '{
+    "originLat": 49.2827,
+    "originLng": -123.1207,
+    "destLat": 49.8880,
+    "destLng": -119.4960,
+    "bufferKm": 50,
+    "vehicleLengthFt": 45,
+    "needsPower": true
+  }'
+```
+EXPECTED: Only properties that fit 45ft vehicle AND have power
+FAIL if: properties without power appear
+
+## TEST 5: Missing coordinates (should fail gracefully)
+```bash
+curl -X POST http://localhost:5000/api/staging/trips/plan \
+  -H "Content-Type: application/json" \
+  -d '{
+    "originName": "Vancouver",
+    "destName": "Victoria"
+  }'
+```
+EXPECTED: 400 error about missing coordinates
+FAIL if: 500 error or success
+
+## TEST 6: Invalid coordinates (middle of ocean)
+```bash
+curl -X POST http://localhost:5000/api/staging/trips/plan \
+  -H "Content-Type: application/json" \
+  -d '{
+    "originLat": 45.0,
+    "originLng": -140.0,
+    "destLat": 45.0,
+    "destLng": -145.0,
+    "bufferKm": 50
+  }'
+```
+EXPECTED: Empty properties array (no properties in Pacific Ocean)
+FAIL if: error (should handle gracefully)
+
+## TEST 7: Save a trip
+```bash
+curl -X POST http://localhost:5000/api/staging/trips \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "QA Test Trip",
+    "description": "Testing trip save functionality",
+    "originName": "Vancouver",
+    "originLat": 49.2827,
+    "originLng": -123.1207,
+    "destinationName": "Kelowna",
+    "destinationLat": 49.8880,
+    "destinationLng": -119.4960,
+    "totalDistanceKm": 390,
+    "totalDriveTimeHours": 4.5,
+    "vehicleLengthFt": 35,
+    "guestEmail": "qa@test.com",
+    "stops": [
+      {"propertyId": 1, "stopOrder": 1, "stopType": "overnight"},
+      {"propertyId": 2, "stopOrder": 2, "stopType": "lunch"}
+    ]
+  }'
+```
+EXPECTED: 201 status, trip with tripRef
+FAIL if: error or missing tripRef
+
+## TEST 8: Get saved trip
+Use tripRef from TEST 7:
+```bash
+curl http://localhost:5000/api/staging/trips/[TRIP_REF]
+```
+EXPECTED: Full trip details with stops array containing property info
+FAIL if: 404 or missing stops
+
+## TEST 9: Get trip by ID (numeric)
+```bash
+curl http://localhost:5000/api/staging/trips/1
+```
+EXPECTED: Trip details (works with both ID and tripRef)
+FAIL if: different behavior than tripRef lookup
+
+## TEST 10: Non-existent trip
+```bash
+curl http://localhost:5000/api/staging/trips/FAKE-999999
+```
+EXPECTED: 404 status
+FAIL if: 500 error
+
+## TEST 11: Route distance calculation accuracy
+```bash
+curl -X POST http://localhost:5000/api/staging/trips/plan \
+  -H "Content-Type: application/json" \
+  -d '{
+    "originLat": 49.2827,
+    "originLng": -123.1207,
+    "destLat": 50.1163,
+    "destLng": -122.9574,
+    "bufferKm": 50
+  }'
+```
+Vancouver to Whistler is ~125km. 
+Verify totalDistanceKm is reasonable (100-150km range)
+FAIL if: wildly inaccurate (< 50km or > 300km)
+
+## TEST 12: Properties ordered by distance from origin
+Using results from TEST 2 or 3, verify:
+```javascript
+// Properties should be ordered by distanceFromOriginKm ascending
+for (let i = 1; i < properties.length; i++) {
+  if (properties[i].distanceFromOriginKm < properties[i-1].distanceFromOriginKm) {
+    FAIL("Properties not ordered by distance");
+  }
+}
+```
+EXPECTED: All properties in distance order
+FAIL if: out of order
+
+## TEST 13: Database integrity after trip operations
+```sql
+-- No orphaned trip stops
+SELECT COUNT(*) FROM staging_trip_stops ts
+LEFT JOIN staging_trips t ON t.id = ts.trip_id
+WHERE t.id IS NULL;
+```
+EXPECTED: 0
+FAIL if: orphaned stops exist
+```sql
+-- Trip stops reference valid properties
+SELECT COUNT(*) FROM staging_trip_stops ts
+LEFT JOIN staging_properties sp ON sp.id = ts.property_id
+WHERE sp.id IS NULL;
+```
+EXPECTED: 0
+FAIL if: invalid property references
+
+Report PASS/FAIL for all 13 tests.
