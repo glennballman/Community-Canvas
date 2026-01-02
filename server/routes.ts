@@ -20,6 +20,7 @@ import hostAuthRouter from "./routes/hostAuth";
 import hostPropertiesRouter from "./routes/hostProperties";
 import authRouter from "./routes/auth";
 import hostDashboardRouter from "./routes/host";
+import importRouter from "./routes/import";
 import { JobberService, getJobberAuthUrl, exchangeCodeForToken } from "./services/jobber";
 import { CompanyCamService, getPhotoUrl } from "./services/companycam";
 
@@ -57,6 +58,9 @@ export async function registerRoutes(
 
   // Register host dashboard routes (JWT auth)
   app.use('/api/host-dashboard', hostDashboardRouter);
+
+  // Register data import routes (JWT auth)
+  app.use('/api/import', importRouter);
 
   // Jobber OAuth flow - Start authorization
   app.get('/api/v1/integrations/jobber/auth', (req, res) => {
