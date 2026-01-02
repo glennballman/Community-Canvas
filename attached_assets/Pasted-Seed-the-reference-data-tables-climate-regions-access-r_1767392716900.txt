@@ -1,0 +1,162 @@
+Seed the reference data tables: climate regions, access requirements, mobilization classes, certifications, constraints, and pricing models.
+
+## Run this SQL:
+```sql
+-- =====================================================================
+-- SEED REFERENCE DATA
+-- =====================================================================
+
+-- =====================================================================
+-- 1. CLIMATE REGIONS
+-- =====================================================================
+
+INSERT INTO sr_climate_regions (name, koppen_codes, description, typical_freeze_week, typical_thaw_week) VALUES
+('Coastal Wet', ARRAY['Cfb','Cfc'], 'High precipitation, mild temperatures, storm-driven scheduling. BC coast, Alaska Panhandle.', 48, 10),
+('Coastal Dry', ARRAY['Csb'], 'Mediterranean-like, dry summers, wet winters. Southern BC, Pacific Northwest.', 50, 8),
+('Prairie', ARRAY['Dfb','Dfa','BSk'], 'Wide seasonal swings, wind, hail, frost depth matters. AB/SK/MB.', 42, 16),
+('Boreal', ARRAY['Dfc','Dfb'], 'Short build season, freeze/thaw transitions critical. Northern BC/AB, Yukon.', 38, 20),
+('Arctic', ARRAY['ET','EF'], 'Extremely compressed windows, logistics dominate cost. Nunavut, NWT.', 36, 24),
+('Continental Humid', ARRAY['Cfa','Dfa'], 'Hot summers, cold winters. Ontario, Quebec.', 46, 14),
+('Mountain', ARRAY['Dfc','ET'], 'Elevation-dependent seasons, snow load concerns. Rockies, interior BC.', 40, 18)
+ON CONFLICT (name) DO NOTHING;
+
+-- =====================================================================
+-- 2. ACCESS REQUIREMENTS
+-- =====================================================================
+
+INSERT INTO sr_access_requirements (name, description, base_cost_multiplier, sort_order) VALUES
+('road', 'Standard road access', 1.0, 10),
+('gravel_road', 'Gravel/unpaved road - may require specific vehicles', 1.1, 20),
+('4x4', '4x4 required due to grade, terrain, or seasonal conditions', 1.25, 30),
+('water_only', 'Water-only access (boat, water taxi, float plane)', 1.5, 40),
+('barge', 'Barge required for heavy equipment or bulk materials', 1.75, 50),
+('helicopter', 'Helicopter access required', 2.5, 60),
+('atv_trail', 'ATV/UTV access only', 1.35, 35),
+('seasonal_road', 'Road accessible only certain seasons (winter road, etc.)', 1.3, 25),
+('ferry', 'Ferry required (scheduled service)', 1.2, 22)
+ON CONFLICT (name) DO NOTHING;
+
+-- =====================================================================
+-- 3. MOBILIZATION CLASSES
+-- =====================================================================
+
+INSERT INTO sr_mobilization_classes (name, description, base_cost, sort_order) VALUES
+('light_vehicle', 'Pickup truck or van with standard tools', 75, 10),
+('service_truck', 'Fully equipped service truck (plumber, electrician, etc.)', 125, 20),
+('heavy_truck', 'Dump truck, flatbed, or specialized heavy vehicle', 200, 30),
+('trailer_required', 'Requires towing trailer with equipment', 150, 25),
+('pump_truck', 'Septic pump truck or vacuum truck', 250, 35),
+('boom_truck', 'Truck with boom/crane attachment', 350, 40),
+('crane', 'Dedicated crane mobilization', 900, 50),
+('barge', 'Barge logistics including loading/unloading', 600, 55),
+('dive_support', 'Dive team with safety support vessel', 750, 60),
+('helicopter', 'Helicopter transport for crew/equipment', 1500, 70)
+ON CONFLICT (name) DO NOTHING;
+
+-- =====================================================================
+-- 4. CERTIFICATIONS
+-- =====================================================================
+
+INSERT INTO sr_certifications (name, authority, jurisdiction, trade_code, description) VALUES
+-- Fire & Heating
+('WETT Certified', 'WETT Inc.', 'Canada', 'WETT', 'Wood Energy Technology Transfer - chimney/wood stove'),
+('Gas Fitter Class A', 'Technical Safety BC', 'BC', 'GF-A', 'Unlimited gas fitting'),
+('Gas Fitter Class B', 'Technical Safety BC', 'BC', 'GF-B', 'Residential gas fitting'),
+('Oil Burner Mechanic', 'Technical Safety BC', 'BC', 'OBM', 'Oil heating systems'),
+
+-- Electrical
+('Electrician FSR-A', 'Technical Safety BC', 'BC', 'FSR-A', 'Full electrical contractor'),
+('Electrician FSR-B', 'Technical Safety BC', 'BC', 'FSR-B', 'Residential electrical'),
+
+-- Plumbing & Water
+('Plumber Red Seal', 'Red Seal Program', 'Canada', 'RS-PLMB', 'Interprovincial plumber'),
+('Cross Connection Control', 'BC Water & Waste Association', 'BC', 'CCC', 'Backflow prevention'),
+('ROWP', 'ASTTBC', 'BC', 'ROWP', 'Registered Onsite Wastewater Practitioner'),
+('Well Pump Installer', 'Province', 'BC', 'WPI', 'Well pump installation'),
+
+-- Construction
+('Carpenter Red Seal', 'Red Seal Program', 'Canada', 'RS-CARP', 'Interprovincial carpenter'),
+('Roofer', 'Provincial', 'BC', 'ROOF', 'Roofing contractor'),
+('Mason', 'Provincial', 'BC', 'MASON', 'Masonry contractor'),
+('Glazier', 'Provincial', 'BC', 'GLAZ', 'Window/glass specialist'),
+
+-- Tree & Land
+('ISA Certified Arborist', 'International Society of Arboriculture', 'North America', 'ISA', 'Professional arborist'),
+('Utility Arborist', 'ISA', 'North America', 'ISA-UT', 'Utility line clearance'),
+('Pesticide Applicator', 'Province', 'BC', 'PEST', 'Licensed pesticide use'),
+
+-- Marine
+('Marine Mechanic', 'Transport Canada', 'Canada', 'MAR-MECH', 'Marine engine certification'),
+('Commercial Diver', 'Divers Certification Board', 'Canada', 'DCB', 'Commercial diving'),
+('Small Vessel Operator', 'Transport Canada', 'Canada', 'SVOP', 'Operate commercial vessels'),
+
+-- Safety
+('First Aid Level 3', 'WorkSafeBC', 'BC', 'FA3', 'Occupational first aid'),
+('Fall Protection', 'Provincial', 'BC', 'FALL', 'Fall protection trained'),
+('Confined Space', 'Provincial', 'BC', 'CONF', 'Confined space entry')
+ON CONFLICT (name, authority, jurisdiction) DO NOTHING;
+
+-- =====================================================================
+-- 5. CONSTRAINTS
+-- =====================================================================
+
+INSERT INTO sr_constraints (name, constraint_type, description) VALUES
+-- Cultural/Indigenous
+('band_approval_required', 'cultural', 'Requires approval from local First Nation band council'),
+('liaison_required', 'cultural', 'Indigenous community liaison must be present or consulted'),
+('cultural_site_sensitive', 'cultural', 'Near known cultural or heritage site'),
+('seasonal_cultural_restriction', 'cultural', 'May conflict with traditional harvesting or ceremonies'),
+('local_employment_preference', 'cultural', 'Local/Indigenous employment should be prioritized'),
+
+-- Environmental
+('archaeological_sensitive', 'environmental', 'Potential archaeological significance - may need assessment'),
+('riparian_sensitive', 'environmental', 'Within riparian zone - special handling required'),
+('wetland_sensitive', 'environmental', 'Wetland area - restricted activities'),
+('endangered_species', 'environmental', 'Known endangered species habitat'),
+('marine_mammal_window', 'environmental', 'Work timing restricted for marine mammal protection'),
+('spawning_season', 'environmental', 'Fish spawning restrictions apply'),
+('erosion_control_required', 'environmental', 'Erosion and sediment control measures required'),
+
+-- Regulatory
+('permit_required', 'regulatory', 'Municipal or provincial permit required'),
+('fire_permit_required', 'regulatory', 'Fire permit required during fire season'),
+('heritage_building', 'regulatory', 'Heritage designation affects allowable modifications'),
+('strata_approval', 'regulatory', 'Strata council approval required'),
+('crown_land', 'regulatory', 'Work on Crown land - additional approvals'),
+('alr_land', 'regulatory', 'Agricultural Land Reserve restrictions'),
+
+-- Safety
+('fire_safety_critical', 'safety', 'Fire safety - immediate attention required'),
+('structural_safety_critical', 'safety', 'Structural safety concern'),
+('electrical_safety_critical', 'safety', 'Electrical safety hazard'),
+('confined_space', 'safety', 'Confined space protocols required'),
+('height_work', 'safety', 'Working at height - fall protection required'),
+('hazmat_present', 'safety', 'Hazardous materials may be present')
+ON CONFLICT (name) DO NOTHING;
+
+-- =====================================================================
+-- 6. PRICING MODELS
+-- =====================================================================
+
+INSERT INTO sr_pricing_models (model, description) VALUES
+('flat', 'Fixed price regardless of scope'),
+('per_hour', 'Priced by labor hours'),
+('per_sqft', 'Priced by square footage'),
+('per_unit', 'Priced per unit (chimney, window, tree, etc.)'),
+('hybrid', 'Base fee plus variable component')
+ON CONFLICT (model) DO NOTHING;
+
+-- =====================================================================
+-- VERIFY
+-- =====================================================================
+
+SELECT 'Reference data seeded:' as status;
+SELECT 'Climate Regions: ' || COUNT(*) FROM sr_climate_regions;
+SELECT 'Access Requirements: ' || COUNT(*) FROM sr_access_requirements;
+SELECT 'Mobilization Classes: ' || COUNT(*) FROM sr_mobilization_classes;
+SELECT 'Certifications: ' || COUNT(*) FROM sr_certifications;
+SELECT 'Constraints: ' || COUNT(*) FROM sr_constraints;
+SELECT 'Pricing Models: ' || COUNT(*) FROM sr_pricing_models;
+```
+
+Report the counts for each reference table.
