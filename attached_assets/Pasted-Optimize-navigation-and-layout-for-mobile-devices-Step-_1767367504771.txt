@@ -1,0 +1,257 @@
+Optimize navigation and layout for mobile devices.
+
+## Step 1: Create Mobile Navigation Component
+
+Create file: client/src/components/MobileNav.tsx
+```tsx
+import React, { useState } from 'react';
+import { Link, useLocation } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+
+export default function MobileNav() {
+    const { user, logout } = useAuth();
+    const location = useLocation();
+    const [isOpen, setIsOpen] = useState(false);
+
+    const navItems = [
+        { path: '/staging', label: 'Search', icon: '🔍' },
+        { path: '/staging/map', label: 'Map', icon: '🗺️' },
+        { path: '/staging/trip-planner', label: 'Trip Planner', icon: '📍' },
+    ];
+
+    const userItems = user ? [
+        { path: '/account', label: 'My Account', icon: '👤' },
+        { path: '/account/bookings', label: 'My Bookings', icon: '📅' },
+        { path: '/account/favorites', label: 'Favorites', icon: '❤️' },
+        { path: '/account/vehicles', label: 'My Vehicles', icon: '🚐' },
+    ] : [];
+
+    const hostItems = (user?.userType === 'host' || user?.userType === 'admin') ? [
+        { path: '/host', label: 'Host Dashboard', icon: '🏠' },
+    ] : [];
+
+    const isActive = (path: string) => location.pathname === path;
+
+    return (
+        <>
+            {/* Mobile Header */}
+            <header className="lg:hidden fixed top-0 left-0 right-0 bg-gray-800 border-b border-gray-700 z-40">
+                <div className="flex items-center justify-between px-4 py-3">
+                    <Link to="/" className="text-xl font-bold text-white">
+                        🚐 BC Staging
+                    </Link>
+                    <button
+                        onClick={() => setIsOpen(!isOpen)}
+                        className="text-white p-2"
+                    >
+                        {isOpen ? (
+                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        ) : (
+                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                            </svg>
+                        )}
+                    </button>
+                </div>
+            </header>
+
+            {/* Mobile Menu Overlay */}
+            {isOpen && (
+                <div className="lg:hidden fixed inset-0 z-50">
+                    <div 
+                        className="absolute inset-0 bg-black/50"
+                        onClick={() => setIsOpen(false)}
+                    />
+                    <div className="absolute top-0 right-0 w-80 max-w-full h-full bg-gray-800 shadow-xl overflow-y-auto">
+                        <div className="p-4">
+                            <div className="flex justify-between items-center mb-6">
+                                <h2 className="text-lg font-bold text-white">Menu</h2>
+                                <button
+                                    onClick={() => setIsOpen(false)}
+                                    className="text-gray-400 hover:text-white"
+                                >
+                                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
+                            </div>
+
+                            {/* User Info */}
+                            {user ? (
+                                <div className="bg-gray-700 rounded-lg p-3 mb-4">
+                                    <p className="text-white font-medium">
+                                        {user.firstName || user.email.split('@')[0]}
+                                    </p>
+                                    <p className="text-gray-400 text-sm">{user.email}</p>
+                                </div>
+                            ) : (
+                                <Link
+                                    to="/login"
+                                    onClick={() => setIsOpen(false)}
+                                    className="block w-full bg-blue-600 text-white text-center py-3 rounded-lg mb-4"
+                                >
+                                    Sign In
+                                </Link>
+                            )}
+
+                            {/* Navigation */}
+                            <nav className="space-y-1">
+                                <p className="text-gray-500 text-xs uppercase tracking-wider px-3 py-2">
+                                    Explore
+                                </p>
+                                {navItems.map(item => (
+                                    <Link
+                                        key={item.path}
+                                        to={item.path}
+                                        onClick={() => setIsOpen(false)}
+                                        className={`flex items-center gap-3 px-3 py-3 rounded-lg ${
+                                            isActive(item.path)
+                                                ? 'bg-blue-600 text-white'
+                                                : 'text-gray-300 hover:bg-gray-700'
+                                        }`}
+                                    >
+                                        <span>{item.icon}</span>
+                                        <span>{item.label}</span>
+                                    </Link>
+                                ))}
+
+                                {user && userItems.length > 0 && (
+                                    <>
+                                        <p className="text-gray-500 text-xs uppercase tracking-wider px-3 py-2 mt-4">
+                                            My Account
+                                        </p>
+                                        {userItems.map(item => (
+                                            <Link
+                                                key={item.path}
+                                                to={item.path}
+                                                onClick={() => setIsOpen(false)}
+                                                className={`flex items-center gap-3 px-3 py-3 rounded-lg ${
+                                                    isActive(item.path)
+                                                        ? 'bg-blue-600 text-white'
+                                                        : 'text-gray-300 hover:bg-gray-700'
+                                                }`}
+                                            >
+                                                <span>{item.icon}</span>
+                                                <span>{item.label}</span>
+                                            </Link>
+                                        ))}
+                                    </>
+                                )}
+
+                                {hostItems.length > 0 && (
+                                    <>
+                                        <p className="text-gray-500 text-xs uppercase tracking-wider px-3 py-2 mt-4">
+                                            Host
+                                        </p>
+                                        {hostItems.map(item => (
+                                            <Link
+                                                key={item.path}
+                                                to={item.path}
+                                                onClick={() => setIsOpen(false)}
+                                                className={`flex items-center gap-3 px-3 py-3 rounded-lg ${
+                                                    isActive(item.path)
+                                                        ? 'bg-green-600 text-white'
+                                                        : 'text-green-400 hover:bg-gray-700'
+                                                }`}
+                                            >
+                                                <span>{item.icon}</span>
+                                                <span>{item.label}</span>
+                                            </Link>
+                                        ))}
+                                    </>
+                                )}
+                            </nav>
+
+                            {/* Logout */}
+                            {user && (
+                                <button
+                                    onClick={() => { logout(); setIsOpen(false); }}
+                                    className="w-full mt-6 px-3 py-3 text-red-400 hover:bg-gray-700 rounded-lg text-left"
+                                >
+                                    Sign Out
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Bottom Tab Bar (Mobile) */}
+            <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-gray-800 border-t border-gray-700 z-40">
+                <div className="flex justify-around py-2">
+                    {navItems.slice(0, 4).map(item => (
+                        <Link
+                            key={item.path}
+                            to={item.path}
+                            className={`flex flex-col items-center py-1 px-3 ${
+                                isActive(item.path) ? 'text-blue-400' : 'text-gray-400'
+                            }`}
+                        >
+                            <span className="text-xl">{item.icon}</span>
+                            <span className="text-xs mt-1">{item.label}</span>
+                        </Link>
+                    ))}
+                    <button
+                        onClick={() => setIsOpen(true)}
+                        className="flex flex-col items-center py-1 px-3 text-gray-400"
+                    >
+                        <span className="text-xl">☰</span>
+                        <span className="text-xs mt-1">More</span>
+                    </button>
+                </div>
+            </nav>
+
+            {/* Spacer for fixed header/footer on mobile */}
+            <div className="lg:hidden h-14" /> {/* Top spacer */}
+        </>
+    );
+}
+```
+
+## Step 2: Update main layout
+
+Update your App.tsx or main layout component:
+```tsx
+import MobileNav from './components/MobileNav';
+
+function App() {
+    return (
+        <AuthProvider>
+            <BrowserRouter>
+                <MobileNav />
+                
+                {/* Desktop Header - hidden on mobile */}
+                <header className="hidden lg:block bg-gray-800 border-b border-gray-700">
+                    {/* Your existing desktop header */}
+                </header>
+
+                <main className="pb-16 lg:pb-0"> {/* Bottom padding for mobile nav */}
+                    <Routes>
+                        {/* Your routes */}
+                    </Routes>
+                </main>
+            </BrowserRouter>
+        </AuthProvider>
+    );
+}
+```
+
+## Step 3: Add mobile-specific Tailwind utilities
+
+Make sure your tailwind.config.js has proper breakpoints:
+```javascript
+module.exports = {
+    content: ['./src/**/*.{js,ts,jsx,tsx}'],
+    theme: {
+        extend: {
+            screens: {
+                'xs': '475px',
+                // Default: sm: 640px, md: 768px, lg: 1024px, xl: 1280px
+            },
+        },
+    },
+    plugins: [],
+}
+```

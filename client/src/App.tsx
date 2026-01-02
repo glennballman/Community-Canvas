@@ -3,6 +3,8 @@ import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { AuthProvider } from "@/contexts/AuthContext";
+import MobileNav from "@/components/MobileNav";
 import DashboardLayout from "@/components/Dashboard/DashboardLayout";
 import Dashboard from "@/pages/Dashboard";
 import AdminLayout from "@/pages/AdminLayout";
@@ -102,10 +104,15 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <HostAuthProvider>
-          <Toaster />
-          <Router />
-        </HostAuthProvider>
+        <AuthProvider>
+          <HostAuthProvider>
+            <MobileNav />
+            <main className="pb-16 lg:pb-0">
+              <Router />
+            </main>
+            <Toaster />
+          </HostAuthProvider>
+        </AuthProvider>
       </TooltipProvider>
     </QueryClientProvider>
   );
