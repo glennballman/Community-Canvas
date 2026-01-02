@@ -92,20 +92,27 @@ router.get('/properties', async (req: Request, res: Response) => {
 router.get('/properties/:id', async (req: Request, res: Response) => {
   try {
     const id = parseInt(req.params.id);
+    let property;
+    
     if (isNaN(id)) {
       // Try by canvas_id
-      const property = await stagingStorage.getPropertyByCanvasId(req.params.id);
-      if (!property) {
-        return res.status(404).json({ error: 'Property not found' });
-      }
-      return res.json(property);
+      property = await stagingStorage.getPropertyByCanvasId(req.params.id);
+    } else {
+      property = await stagingStorage.getPropertyById(id);
+    }
+    
+    if (!property) {
+      return res.status(404).json({ error: 'Property not found', code: 'PROPERTY_NOT_FOUND' });
     }
 
-    const property = await stagingStorage.getPropertyById(id);
-    if (!property) {
-      return res.status(404).json({ error: 'Property not found' });
-    }
-    res.json(property);
+    // Get service providers for this property
+    const providers = await stagingStorage.getProvidersForProperty(property.id);
+    
+    // Return property with service providers included
+    res.json({
+      ...property,
+      serviceProviders: providers
+    });
   } catch (error) {
     console.error('[Staging Property] Error:', error);
     res.status(500).json({ error: 'Failed to get property' });

@@ -1,0 +1,166 @@
+Fix the property detail endpoint to include service providers.
+
+Find the GET /api/staging/properties/:id endpoint in server/routes/staging.ts and add the service providers query:
+```typescript
+// GET /api/staging/properties/:id - Get property details
+router.get('/properties/:id', async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
+
+        // Get property
+        const propResult = await db.query(`
+            SELECT * FROM staging_properties WHERE id = $1
+        `, [id]);
+
+        if (propResult.rows.length === 0) {
+            return res.status(404).json({ success: false, error: 'Property not found' });
+        }
+
+        const property = propResult.rows[0];
+
+        // Get pricing
+        const pricingResult = await db.query(`
+            SELECT * FROM staging_pricing 
+            WHERE property_id = $1 AND is_active = true
+            ORDER BY pricing_type
+        `, [id]);
+
+        // Get spots
+        const spotsResult = await db.query(`
+            SELECT * FROM staging_spots 
+            WHERE property_id = $1 AND is_active = true
+            ORDER BY name
+        `, [id]);
+
+        // GET SERVICE PROVIDERS - ADD THIS SECTION
+        const providersResult = await db.query(`
+            SELECT 
+                id,
+                provider_type,
+                business_name,
+                provider_name,
+                is_resident,
+                is_employee,
+                phone,
+                phone_24hr,
+                phone_text_ok,
+                email,
+                website,
+                hours_regular,
+                available_24hr,
+                available_after_hours,
+                after_hours_fee,
+                available_weekends,
+                response_time_minutes,
+                same_day_service,
+                services_offered,
+                service_descriptions,
+                vehicle_types_served,
+                makes_serviced,
+                certifications,
+                years_experience,
+                specialties,
+                hourly_rate,
+                has_flat_rate_menu,
+                flat_rate_menu,
+                minimum_charge,
+                mobile_service_fee,
+                overall_rating,
+                quality_rating,
+                speed_rating,
+                price_rating,
+                review_count,
+                is_verified,
+                is_featured
+            FROM staging_service_providers
+            WHERE property_id = $1 AND is_active = true
+            ORDER BY is_resident DESC, is_featured DESC, overall_rating DESC NULLS LAST
+        `, [id]);
+
+        // Format service providers for response
+        const serviceProviders = providersResult.rows.map(p => ({
+            id: p.id,
+            providerType: p.provider_type,
+            businessName: p.business_name,
+            providerName: p.provider_name,
+            isResident: p.is_resident,
+            isEmployee: p.is_employee,
+            phone: p.phone,
+            phone24hr: p.phone_24hr,
+            phoneTextOk: p.phone_text_ok,
+            email: p.email,
+            website: p.website,
+            hoursRegular: p.hours_regular,
+            available24hr: p.available_24hr,
+            availableAfterHours: p.available_after_hours,
+            afterHoursFee: p.after_hours_fee ? parseFloat(p.after_hours_fee) : null,
+            availableWeekends: p.available_weekends,
+            responseTimeMinutes: p.response_time_minutes,
+            sameDayService: p.same_day_service,
+            servicesOffered: p.services_offered,
+            serviceDescriptions: p.service_descriptions,
+            vehicleTypesServed: p.vehicle_types_served,
+            makesServiced: p.makes_serviced,
+            certifications: p.certifications,
+            yearsExperience: p.years_experience,
+            specialties: p.specialties,
+            hourlyRate: p.hourly_rate ? parseFloat(p.hourly_rate) : null,
+            hasFlatRateMenu: p.has_flat_rate_menu,
+            flatRateMenu: p.flat_rate_menu,
+            minimumCharge: p.minimum_charge ? parseFloat(p.minimum_charge) : null,
+            mobileServiceFee: p.mobile_service_fee ? parseFloat(p.mobile_service_fee) : null,
+            overallRating: p.overall_rating ? parseFloat(p.overall_rating) : null,
+            qualityRating: p.quality_rating ? parseFloat(p.quality_rating) : null,
+            speedRating: p.speed_rating ? parseFloat(p.speed_rating) : null,
+            priceRating: p.price_rating ? parseFloat(p.price_rating) : null,
+            reviewCount: p.review_count,
+            isVerified: p.is_verified,
+            isFeatured: p.is_featured
+        }));
+
+        // Return full property with all related data
+        res.json({
+            success: true,
+            property: {
+                // ... existing property fields ...
+                id: property.id,
+                name: property.name,
+                // ... all other property fields you're already returning ...
+            },
+            pricing: pricingResult.rows,
+            spots: spotsResult.rows,
+            serviceProviders: serviceProviders  // ADD THIS LINE
+        });
+
+    } catch (error: any) {
+        console.error('Get property error:', error);
+        res.status(500).json({ success: false, error: 'Failed to load property' });
+    }
+});
+```
+
+## Test the fix:
+```bash
+# Test Save Paradise Parking (property 1) - should have 2 providers
+curl http://localhost:5000/api/staging/properties/1 | jq '.serviceProviders'
+
+# Expected output:
+# [
+#   {
+#     "businessName": "Bamfield Diesel Doctor",
+#     "providerName": "Mike Thornton",
+#     "isResident": true,
+#     ...
+#   },
+#   {
+#     "businessName": "West Coast Propane - Bamfield",
+#     ...
+#   }
+# ]
+
+# Verify count
+curl http://localhost:5000/api/staging/properties/1 | jq '.serviceProviders | length'
+# Expected: 2
+```
+
+Report result: PASS or FAIL
