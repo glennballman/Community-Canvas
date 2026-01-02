@@ -1,0 +1,268 @@
+Create CivOS integration layer for emergency operations and community intelligence.
+
+Run this SQL to create CivOS export structures:
+
+-- ============================================================================
+-- CIVOS INTEGRATION - REAL-TIME SIGNALS & EXPORT
+-- ============================================================================
+
+-- Signal types that CivOS cares about
+CREATE TABLE IF NOT EXISTS civos_signal_types (
+    id SERIAL PRIMARY KEY,
+    signal_code VARCHAR(50) UNIQUE NOT NULL,
+    signal_name VARCHAR(255) NOT NULL,
+    category VARCHAR(50) NOT NULL,  -- capacity, emergency, infrastructure, community
+    severity_levels VARCHAR(255),    -- low,medium,high,critical
+    description TEXT,
+    is_active BOOLEAN DEFAULT true
+);
+
+INSERT INTO civos_signal_types (signal_code, signal_name, category, severity_levels, description) VALUES
+('CAPACITY_AVAILABLE', 'Staging Capacity Available', 'capacity', 'low,medium,high', 'Available spots for emergency staging'),
+('CAPACITY_CRITICAL', 'Staging Capacity Critical', 'capacity', 'high,critical', 'Low available capacity warning'),
+('MECHANIC_AVAILABLE', 'Mobile Mechanic Available', 'infrastructure', 'low,medium', 'Mechanic on-site and available'),
+('POWER_AVAILABLE', 'Shore Power Available', 'infrastructure', 'low,medium', 'Electrical hookups available'),
+('ROAD_ACCESSIBLE', 'Road Accessible', 'infrastructure', 'low,medium,high', 'Property access status'),
+('EVACUATION_READY', 'Evacuation Staging Ready', 'emergency', 'medium,high,critical', 'Ready to receive evacuees'),
+('CREW_STAGING', 'Work Crew Staging Active', 'community', 'low,medium', 'Active work crew accommodation');
+
+-- Real-time signals (current state)
+CREATE TABLE IF NOT EXISTS civos_signals (
+    id SERIAL PRIMARY KEY,
+    
+    -- What
+    signal_type_id INTEGER REFERENCES civos_signal_types(id),
+    signal_code VARCHAR(50) NOT NULL,
+    
+    -- Where
+    property_id INTEGER REFERENCES staging_properties(id),
+    region VARCHAR(100),
+    latitude DECIMAL(10, 7),
+    longitude DECIMAL(10, 7),
+    
+    -- Status
+    severity VARCHAR(20) DEFAULT 'low',  -- low, medium, high, critical
+    status VARCHAR(50) DEFAULT 'active', -- active, resolved, expired
+    
+    -- Data
+    signal_value JSONB,  -- Flexible data payload
+    message TEXT,
+    
+    -- Timing
+    detected_at TIMESTAMP DEFAULT NOW(),
+    expires_at TIMESTAMP,
+    resolved_at TIMESTAMP,
+    
+    -- Source
+    source_system VARCHAR(50) DEFAULT 'staging_network',
+    source_id VARCHAR(100),
+    
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_civos_signals_active ON civos_signals(status, signal_code) WHERE status = 'active';
+CREATE INDEX idx_civos_signals_region ON civos_signals(region);
+CREATE INDEX idx_civos_signals_property ON civos_signals(property_id);
+
+-- Signal history (for analytics)
+CREATE TABLE IF NOT EXISTS civos_signal_history (
+    id SERIAL PRIMARY KEY,
+    signal_id INTEGER REFERENCES civos_signals(id),
+    
+    previous_severity VARCHAR(20),
+    new_severity VARCHAR(20),
+    previous_status VARCHAR(50),
+    new_status VARCHAR(50),
+    
+    change_reason TEXT,
+    changed_by VARCHAR(100),
+    
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- CivOS export queue (for async push to CivOS)
+CREATE TABLE IF NOT EXISTS civos_export_queue (
+    id SERIAL PRIMARY KEY,
+    
+    export_type VARCHAR(50) NOT NULL,  -- signal, property, capacity_report
+    payload JSONB NOT NULL,
+    
+    status VARCHAR(50) DEFAULT 'pending',  -- pending, processing, sent, failed
+    attempts INTEGER DEFAULT 0,
+    max_attempts INTEGER DEFAULT 3,
+    
+    last_attempt_at TIMESTAMP,
+    sent_at TIMESTAMP,
+    error_message TEXT,
+    
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_civos_export_pending ON civos_export_queue(status) WHERE status = 'pending';
+
+-- CivOS API configuration
+CREATE TABLE IF NOT EXISTS civos_config (
+    key VARCHAR(100) PRIMARY KEY,
+    value TEXT,
+    description TEXT,
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+
+INSERT INTO civos_config (key, value, description) VALUES
+('api_endpoint', 'https://api.civos.bc.ca/v1', 'CivOS API base URL'),
+('api_key', '', 'CivOS API authentication key'),
+('push_enabled', 'false', 'Enable real-time push to CivOS'),
+('pull_interval_seconds', '300', 'How often to pull updates from CivOS'),
+('export_batch_size', '100', 'Max records per export batch');
+
+-- ============================================================================
+-- HELPER FUNCTIONS FOR SIGNAL GENERATION
+-- ============================================================================
+
+-- Function to calculate capacity signal for a property
+CREATE OR REPLACE FUNCTION generate_capacity_signal(p_property_id INTEGER)
+RETURNS VOID AS $$
+DECLARE
+    v_property RECORD;
+    v_booked_spots INTEGER;
+    v_available_spots INTEGER;
+    v_utilization DECIMAL;
+    v_severity VARCHAR(20);
+    v_signal_code VARCHAR(50);
+BEGIN
+    -- Get property
+    SELECT * INTO v_property FROM staging_properties WHERE id = p_property_id;
+    
+    IF NOT FOUND THEN
+        RETURN;
+    END IF;
+
+    -- Count booked spots (simplified - would need actual spot tracking)
+    SELECT COALESCE(COUNT(*), 0) INTO v_booked_spots
+    FROM staging_bookings
+    WHERE property_id = p_property_id
+    AND status IN ('confirmed', 'pending')
+    AND check_in_date <= CURRENT_DATE
+    AND check_out_date > CURRENT_DATE;
+
+    -- Calculate availability
+    v_available_spots := v_property.total_spots - v_booked_spots;
+    v_utilization := (v_booked_spots::DECIMAL / NULLIF(v_property.total_spots, 0)) * 100;
+
+    -- Determine severity
+    IF v_utilization >= 90 THEN
+        v_severity := 'critical';
+        v_signal_code := 'CAPACITY_CRITICAL';
+    ELSIF v_utilization >= 75 THEN
+        v_severity := 'high';
+        v_signal_code := 'CAPACITY_CRITICAL';
+    ELSIF v_utilization >= 50 THEN
+        v_severity := 'medium';
+        v_signal_code := 'CAPACITY_AVAILABLE';
+    ELSE
+        v_severity := 'low';
+        v_signal_code := 'CAPACITY_AVAILABLE';
+    END IF;
+
+    -- Upsert signal
+    INSERT INTO civos_signals (
+        signal_type_id,
+        signal_code,
+        property_id,
+        region,
+        latitude,
+        longitude,
+        severity,
+        signal_value,
+        message,
+        expires_at
+    )
+    SELECT 
+        st.id,
+        v_signal_code,
+        v_property.id,
+        v_property.region,
+        v_property.latitude,
+        v_property.longitude,
+        v_severity,
+        jsonb_build_object(
+            'total_spots', v_property.total_spots,
+            'booked_spots', v_booked_spots,
+            'available_spots', v_available_spots,
+            'utilization_percent', ROUND(v_utilization, 1)
+        ),
+        v_property.name || ': ' || v_available_spots || ' spots available (' || ROUND(v_utilization) || '% full)',
+        NOW() + INTERVAL '1 hour'
+    FROM civos_signal_types st
+    WHERE st.signal_code = v_signal_code
+    ON CONFLICT (property_id, signal_code) 
+    WHERE status = 'active'
+    DO UPDATE SET
+        severity = EXCLUDED.severity,
+        signal_value = EXCLUDED.signal_value,
+        message = EXCLUDED.message,
+        updated_at = NOW(),
+        expires_at = NOW() + INTERVAL '1 hour';
+
+END;
+$$ LANGUAGE plpgsql;
+
+-- Function to generate all active signals for export
+CREATE OR REPLACE FUNCTION get_civos_export_payload()
+RETURNS JSONB AS $$
+DECLARE
+    v_result JSONB;
+BEGIN
+    SELECT jsonb_build_object(
+        'export_timestamp', NOW(),
+        'source_system', 'bc_staging_network',
+        'signals', (
+            SELECT jsonb_agg(
+                jsonb_build_object(
+                    'signal_id', s.id,
+                    'signal_code', s.signal_code,
+                    'severity', s.severity,
+                    'property_id', s.property_id,
+                    'property_name', p.name,
+                    'region', s.region,
+                    'coordinates', jsonb_build_object('lat', s.latitude, 'lng', s.longitude),
+                    'data', s.signal_value,
+                    'message', s.message,
+                    'detected_at', s.detected_at,
+                    'expires_at', s.expires_at
+                )
+            )
+            FROM civos_signals s
+            LEFT JOIN staging_properties p ON p.id = s.property_id
+            WHERE s.status = 'active'
+            AND (s.expires_at IS NULL OR s.expires_at > NOW())
+        ),
+        'capacity_summary', (
+            SELECT jsonb_build_object(
+                'total_properties', COUNT(*),
+                'total_spots', SUM(total_spots),
+                'by_region', (
+                    SELECT jsonb_object_agg(
+                        region,
+                        jsonb_build_object('properties', count, 'spots', spots)
+                    )
+                    FROM (
+                        SELECT region, COUNT(*) as count, SUM(total_spots) as spots
+                        FROM staging_properties
+                        WHERE status = 'active'
+                        GROUP BY region
+                    ) r
+                )
+            )
+            FROM staging_properties
+            WHERE status = 'active'
+        )
+    ) INTO v_result;
+
+    RETURN v_result;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Test the export payload
+SELECT get_civos_export_payload();

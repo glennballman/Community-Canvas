@@ -1,0 +1,944 @@
+QA BATCH E: User Authentication (25 tests)
+Run comprehensive QA tests for User Authentication system.
+
+## E1: Registration Tests (8 tests)
+```bash
+echo "=== E1: REGISTRATION TESTS ==="
+
+# E1-1: Valid registration
+echo "E1-1: Valid registration"
+curl -s -X POST http://localhost:5000/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"email": "qa_test_'$(date +%s)'@example.com", "password": "TestPass123!", "firstName": "QA", "lastName": "Tester"}' | jq '{success, user: .user.email}'
+
+# E1-2: Missing email
+echo "E1-2: Missing email (expect error)"
+curl -s -X POST http://localhost:5000/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"password": "TestPass123!"}' | jq '{success, error}'
+
+# E1-3: Missing password
+echo "E1-3: Missing password (expect error)"
+curl -s -X POST http://localhost:5000/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"email": "test@example.com"}' | jq '{success, error}'
+
+# E1-4: Password too short
+echo "E1-4: Password too short (expect error)"
+curl -s -X POST http://localhost:5000/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"email": "short@example.com", "password": "123"}' | jq '{success, error}'
+
+# E1-5: Duplicate email
+echo "E1-5: Duplicate email (expect error)"
+curl -s -X POST http://localhost:5000/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"email": "admin@example.com", "password": "TestPass123!"}' | jq '{success, error}'
+
+# E1-6: Invalid email format (should still work - server-side validation)
+echo "E1-6: Invalid email format"
+curl -s -X POST http://localhost:5000/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"email": "notanemail", "password": "TestPass123!"}' | jq '{success, error}'
+
+# E1-7: Register as host
+echo "E1-7: Register as host"
+curl -s -X POST http://localhost:5000/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"email": "qahost_'$(date +%s)'@example.com", "password": "TestPass123!", "userType": "host", "companyName": "QA Properties"}' | jq '{success, userType: .user.userType}'
+
+# E1-8: Register with all fields
+echo "E1-8: Full registration"
+curl -s -X POST http://localhost:5000/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"email": "qafull_'$(date +%s)'@example.com", "password": "TestPass123!", "firstName": "Full", "lastName": "User", "phone": "555-1234", "userType": "crew_manager", "companyName": "QA Crews Inc"}' | jq '{success, user}'
+```
+
+## E2: Login Tests (6 tests)
+```bash
+echo "=== E2: LOGIN TESTS ==="
+
+# E2-1: Valid login
+echo "E2-1: Valid login (admin)"
+ADMIN_LOGIN=$(curl -s -X POST http://localhost:5000/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email": "admin@example.com", "password": "password"}')
+echo $ADMIN_LOGIN | jq '{success, hasAccessToken: (.accessToken != null), hasRefreshToken: (.refreshToken != null)}'
+ADMIN_TOKEN=$(echo $ADMIN_LOGIN | jq -r '.accessToken')
+
+# E2-2: Wrong password
+echo "E2-2: Wrong password (expect error)"
+curl -s -X POST http://localhost:5000/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email": "admin@example.com", "password": "wrongpassword"}' | jq '{success, error}'
+
+# E2-3: Non-existent user
+echo "E2-3: Non-existent user (expect error)"
+curl -s -X POST http://localhost:5000/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email": "nonexistent@example.com", "password": "password"}' | jq '{success, error}'
+
+# E2-4: Missing credentials
+echo "E2-4: Missing credentials (expect error)"
+curl -s -X POST http://localhost:5000/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{}' | jq '{success, error}'
+
+# E2-5: Host login
+echo "E2-5: Host login"
+HOST_LOGIN=$(curl -s -X POST http://localhost:5000/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email": "host@example.com", "password": "password"}')
+echo $HOST_LOGIN | jq '{success, userType: .user.userType}'
+HOST_TOKEN=$(echo $HOST_LOGIN | jq -r '.accessToken')
+
+# E2-6: SQL injection attempt
+echo "E2-6: SQL injection (should fail safely)"
+curl -s -X POST http://localhost:5000/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email": "admin@example.com'\'' OR 1=1--", "password": "x"}' | jq '{success, error}'
+```
+
+## E3: Token & Session Tests (5 tests)
+```bash
+echo "=== E3: TOKEN & SESSION TESTS ==="
+
+# E3-1: Get me with valid token
+echo "E3-1: Get current user"
+curl -s http://localhost:5000/api/auth/me \
+  -H "Authorization: Bearer $ADMIN_TOKEN" | jq '{success, email: .user.email, userType: .user.userType}'
+
+# E3-2: Get me without token
+echo "E3-2: No token (expect 401)"
+curl -s -w "\nHTTP Status: %{http_code}\n" http://localhost:5000/api/auth/me | head -2
+
+# E3-3: Get me with invalid token
+echo "E3-3: Invalid token (expect 403)"
+curl -s -w "\nHTTP Status: %{http_code}\n" http://localhost:5000/api/auth/me \
+  -H "Authorization: Bearer invalid_token_here" | head -2
+
+# E3-4: Refresh token
+echo "E3-4: Refresh token"
+REFRESH_TOKEN=$(echo $ADMIN_LOGIN | jq -r '.refreshToken')
+curl -s -X POST http://localhost:5000/api/auth/refresh \
+  -H "Content-Type: application/json" \
+  -d "{\"refreshToken\": \"$REFRESH_TOKEN\"}" | jq '{success, hasNewAccessToken: (.accessToken != null)}'
+
+# E3-5: Logout
+echo "E3-5: Logout"
+curl -s -X POST http://localhost:5000/api/auth/logout \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d "{\"refreshToken\": \"$REFRESH_TOKEN\"}" | jq '{success}'
+```
+
+## E4: User Vehicles Tests (6 tests)
+```bash
+echo "=== E4: USER VEHICLES TESTS ==="
+
+# Re-login to get fresh token
+ADMIN_LOGIN=$(curl -s -X POST http://localhost:5000/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email": "admin@example.com", "password": "password"}')
+ADMIN_TOKEN=$(echo $ADMIN_LOGIN | jq -r '.accessToken')
+
+# E4-1: Get vehicles (empty initially)
+echo "E4-1: Get vehicles"
+curl -s http://localhost:5000/api/auth/vehicles \
+  -H "Authorization: Bearer $ADMIN_TOKEN" | jq '{success, count: (.vehicles | length)}'
+
+# E4-2: Add vehicle
+echo "E4-2: Add vehicle"
+VEHICLE=$(curl -s -X POST http://localhost:5000/api/auth/vehicles \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"nickname": "QA Class A", "vehicleType": "class_a", "make": "Winnebago", "model": "Vista", "year": 2022, "lengthFt": 35, "powerAmpRequirement": 50, "isPrimary": true}')
+echo $VEHICLE | jq '{success, vehicleId: .vehicle.id}'
+VEHICLE_ID=$(echo $VEHICLE | jq -r '.vehicle.id')
+
+# E4-3: Add second vehicle
+echo "E4-3: Add second vehicle"
+curl -s -X POST http://localhost:5000/api/auth/vehicles \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"nickname": "Work Truck", "vehicleType": "semi_truck", "lengthFt": 70, "isPrimary": false}' | jq '{success}'
+
+# E4-4: Update vehicle
+echo "E4-4: Update vehicle"
+curl -s -X PUT http://localhost:5000/api/auth/vehicles/$VEHICLE_ID \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"nickname": "My Updated RV", "year": 2023}' | jq '{success}'
+
+# E4-5: Verify vehicles list
+echo "E4-5: Verify vehicles"
+curl -s http://localhost:5000/api/auth/vehicles \
+  -H "Authorization: Bearer $ADMIN_TOKEN" | jq '{success, count: (.vehicles | length), vehicles: [.vehicles[].nickname]}'
+
+# E4-6: Delete vehicle
+echo "E4-6: Delete vehicle"
+curl -s -X DELETE http://localhost:5000/api/auth/vehicles/$VEHICLE_ID \
+  -H "Authorization: Bearer $ADMIN_TOKEN" | jq '{success}'
+```
+
+## E5: Favorites Tests (4 tests)
+```bash
+echo "=== E5: FAVORITES TESTS ==="
+
+# E5-1: Add favorite
+echo "E5-1: Add favorite"
+curl -s -X POST http://localhost:5000/api/auth/favorites \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"propertyId": 1, "notes": "Great mechanic!"}' | jq '{success}'
+
+# E5-2: Get favorites
+echo "E5-2: Get favorites"
+curl -s http://localhost:5000/api/auth/favorites \
+  -H "Authorization: Bearer $ADMIN_TOKEN" | jq '{success, count: (.favorites | length), first: .favorites[0].property.name}'
+
+# E5-3: Add non-existent property (expect error)
+echo "E5-3: Invalid property (expect error)"
+curl -s -X POST http://localhost:5000/api/auth/favorites \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"propertyId": 99999}' | jq '{success, error}'
+
+# E5-4: Remove favorite
+echo "E5-4: Remove favorite"
+curl -s -X DELETE http://localhost:5000/api/auth/favorites/1 \
+  -H "Authorization: Bearer $ADMIN_TOKEN" | jq '{success}'
+
+echo ""
+echo "=== E: AUTH QA COMPLETE ==="
+echo "Expected: 25 tests, majority PASS"
+```
+
+Report results in this format:
+| Test | Description | Result | Notes |
+|------|-------------|--------|-------|
+| E1-1 | Valid registration | ? | |
+| E1-2 | Missing email | ? | |
+...continue for all 25 tests
+
+QA BATCH F: Host Dashboard (22 tests)
+Run comprehensive QA tests for Host Dashboard system.
+
+## F1: Host Properties Tests (6 tests)
+```bash
+echo "=== F1: HOST PROPERTIES TESTS ==="
+
+# Login as host
+HOST_LOGIN=$(curl -s -X POST http://localhost:5000/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email": "host@example.com", "password": "password"}')
+HOST_TOKEN=$(echo $HOST_LOGIN | jq -r '.accessToken')
+echo "Host logged in: $(echo $HOST_LOGIN | jq -r '.user.email')"
+
+# F1-1: Get host properties
+echo "F1-1: Get host properties"
+curl -s http://localhost:5000/api/host/properties \
+  -H "Authorization: Bearer $HOST_TOKEN" | jq '{success, count: (.properties | length), properties: [.properties[].name]}'
+
+# F1-2: Get single property detail
+echo "F1-2: Get property detail"
+FIRST_PROP=$(curl -s http://localhost:5000/api/host/properties \
+  -H "Authorization: Bearer $HOST_TOKEN" | jq -r '.properties[0].id')
+curl -s http://localhost:5000/api/host/properties/$FIRST_PROP \
+  -H "Authorization: Bearer $HOST_TOKEN" | jq '{success, propertyName: .property.name, hasSpots: (.spots != null)}'
+
+# F1-3: Access property not owned (expect 403)
+echo "F1-3: Access unowned property (expect 403)"
+curl -s -w "\nHTTP: %{http_code}" http://localhost:5000/api/host/properties/999 \
+  -H "Authorization: Bearer $HOST_TOKEN" | head -2
+
+# F1-4: Get host stats
+echo "F1-4: Get host stats"
+curl -s http://localhost:5000/api/host/stats \
+  -H "Authorization: Bearer $HOST_TOKEN" | jq '{success, stats}'
+
+# F1-5: Non-host user access (expect failure or empty)
+echo "F1-5: Non-host access"
+GUEST_REG=$(curl -s -X POST http://localhost:5000/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"email": "guest_qa_'$(date +%s)'@test.com", "password": "TestPass123!", "userType": "guest"}')
+GUEST_TOKEN=$(echo $GUEST_REG | jq -r '.accessToken')
+curl -s http://localhost:5000/api/host/properties \
+  -H "Authorization: Bearer $GUEST_TOKEN" | jq '{success, count: (.properties | length)}'
+
+# F1-6: No auth header
+echo "F1-6: No auth (expect 401)"
+curl -s -w "\nHTTP: %{http_code}" http://localhost:5000/api/host/properties | head -2
+```
+
+## F2: Host Bookings Tests (8 tests)
+```bash
+echo "=== F2: HOST BOOKINGS TESTS ==="
+
+# F2-1: Get all host bookings
+echo "F2-1: Get all bookings"
+curl -s http://localhost:5000/api/host/bookings \
+  -H "Authorization: Bearer $HOST_TOKEN" | jq '{success, count: (.bookings | length)}'
+
+# F2-2: Filter by status
+echo "F2-2: Filter pending bookings"
+curl -s "http://localhost:5000/api/host/bookings?status=pending" \
+  -H "Authorization: Bearer $HOST_TOKEN" | jq '{success, count: (.bookings | length), statuses: [.bookings[].status] | unique}'
+
+# F2-3: Filter by property
+echo "F2-3: Filter by property"
+curl -s "http://localhost:5000/api/host/bookings?propertyId=$FIRST_PROP" \
+  -H "Authorization: Bearer $HOST_TOKEN" | jq '{success, count: (.bookings | length)}'
+
+# F2-4: Create a booking to test with
+echo "F2-4: Creating test booking..."
+TOMORROW=$(date -d "+1 day" +%Y-%m-%d 2>/dev/null || date -v+1d +%Y-%m-%d)
+NEXT_WEEK=$(date -d "+7 days" +%Y-%m-%d 2>/dev/null || date -v+7d +%Y-%m-%d)
+BOOKING=$(curl -s -X POST http://localhost:5000/api/staging/bookings \
+  -H "Content-Type: application/json" \
+  -d "{\"propertyId\": $FIRST_PROP, \"checkInDate\": \"$TOMORROW\", \"checkOutDate\": \"$NEXT_WEEK\", \"guestName\": \"QA Host Test\", \"guestEmail\": \"qahost@test.com\", \"numAdults\": 2}")
+BOOKING_ID=$(echo $BOOKING | jq -r '.booking.id')
+echo "Created booking: $BOOKING_ID"
+
+# F2-5: Confirm booking
+echo "F2-5: Confirm booking"
+curl -s -X PUT http://localhost:5000/api/host/bookings/$BOOKING_ID/status \
+  -H "Authorization: Bearer $HOST_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"status": "confirmed", "notes": "QA confirmed"}' | jq '{success, newStatus: .booking.status}'
+
+# F2-6: Mark completed
+echo "F2-6: Mark completed"
+curl -s -X PUT http://localhost:5000/api/host/bookings/$BOOKING_ID/status \
+  -H "Authorization: Bearer $HOST_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"status": "completed"}' | jq '{success}'
+
+# F2-7: Invalid status
+echo "F2-7: Invalid status (expect error)"
+curl -s -X PUT http://localhost:5000/api/host/bookings/$BOOKING_ID/status \
+  -H "Authorization: Bearer $HOST_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"status": "invalid_status"}' | jq '{success, error}'
+
+# F2-8: Update booking not owned
+echo "F2-8: Update unowned booking (expect 403)"
+curl -s -w "\nHTTP: %{http_code}" -X PUT http://localhost:5000/api/host/bookings/99999/status \
+  -H "Authorization: Bearer $HOST_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"status": "confirmed"}' | head -2
+```
+
+## F3: Calendar Management Tests (8 tests)
+```bash
+echo "=== F3: CALENDAR TESTS ==="
+
+# F3-1: Get calendar
+echo "F3-1: Get calendar"
+curl -s "http://localhost:5000/api/host/properties/$FIRST_PROP/calendar" \
+  -H "Authorization: Bearer $HOST_TOKEN" | jq '{success, hasBookings: (.calendar.bookings | length > 0), hasBlocks: (.calendar.blocks != null)}'
+
+# F3-2: Get calendar with date range
+echo "F3-2: Calendar with date range"
+START=$(date +%Y-%m-%d)
+END=$(date -d "+60 days" +%Y-%m-%d 2>/dev/null || date -v+60d +%Y-%m-%d)
+curl -s "http://localhost:5000/api/host/properties/$FIRST_PROP/calendar?startDate=$START&endDate=$END" \
+  -H "Authorization: Bearer $HOST_TOKEN" | jq '{success, startDate: .calendar.startDate, endDate: .calendar.endDate}'
+
+# F3-3: Add calendar block
+echo "F3-3: Add block"
+BLOCK_START=$(date -d "+30 days" +%Y-%m-%d 2>/dev/null || date -v+30d +%Y-%m-%d)
+BLOCK_END=$(date -d "+32 days" +%Y-%m-%d 2>/dev/null || date -v+32d +%Y-%m-%d)
+BLOCK=$(curl -s -X POST http://localhost:5000/api/host/properties/$FIRST_PROP/blocks \
+  -H "Authorization: Bearer $HOST_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d "{\"blockType\": \"maintenance\", \"title\": \"QA Maintenance\", \"startDate\": \"$BLOCK_START\", \"endDate\": \"$BLOCK_END\"}")
+echo $BLOCK | jq '{success, blockId: .block.id}'
+BLOCK_ID=$(echo $BLOCK | jq -r '.block.id')
+
+# F3-4: Add block missing dates (expect error)
+echo "F3-4: Block without dates (expect error)"
+curl -s -X POST http://localhost:5000/api/host/properties/$FIRST_PROP/blocks \
+  -H "Authorization: Bearer $HOST_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"blockType": "blocked"}' | jq '{success, error}'
+
+# F3-5: Verify block appears in calendar
+echo "F3-5: Verify block in calendar"
+curl -s "http://localhost:5000/api/host/properties/$FIRST_PROP/calendar?startDate=$BLOCK_START&endDate=$BLOCK_END" \
+  -H "Authorization: Bearer $HOST_TOKEN" | jq '{success, blockCount: (.calendar.blocks | length), blockTitle: .calendar.blocks[0].title}'
+
+# F3-6: Delete block
+echo "F3-6: Delete block"
+curl -s -X DELETE http://localhost:5000/api/host/properties/$FIRST_PROP/blocks/$BLOCK_ID \
+  -H "Authorization: Bearer $HOST_TOKEN" | jq '{success}'
+
+# F3-7: Delete non-existent block (expect 404)
+echo "F3-7: Delete non-existent block"
+curl -s -w "\nHTTP: %{http_code}" -X DELETE http://localhost:5000/api/host/properties/$FIRST_PROP/blocks/99999 \
+  -H "Authorization: Bearer $HOST_TOKEN" | head -2
+
+# F3-8: Revenue endpoint
+echo "F3-8: Get revenue"
+curl -s "http://localhost:5000/api/host/properties/$FIRST_PROP/revenue?period=month" \
+  -H "Authorization: Bearer $HOST_TOKEN" | jq '{success, period: .revenue.period, bookingCount: .revenue.bookingCount}'
+
+echo ""
+echo "=== F: HOST DASHBOARD QA COMPLETE ==="
+echo "Expected: 22 tests"
+```
+
+Report results for all 22 tests.
+
+QA BATCH G: Real Data Import (18 tests)
+Run comprehensive QA tests for Data Import system.
+
+## G1: Import Setup & Sources (4 tests)
+```bash
+echo "=== G1: IMPORT SETUP TESTS ==="
+
+# Login as admin
+ADMIN_LOGIN=$(curl -s -X POST http://localhost:5000/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email": "admin@example.com", "password": "password"}')
+ADMIN_TOKEN=$(echo $ADMIN_LOGIN | jq -r '.accessToken')
+
+# G1-1: Get data sources
+echo "G1-1: Get data sources"
+curl -s http://localhost:5000/api/import/sources \
+  -H "Authorization: Bearer $ADMIN_TOKEN" | jq '{success, count: (.sources | length), sources: [.sources[].name]}'
+
+# G1-2: Get import batches (empty or existing)
+echo "G1-2: Get import batches"
+curl -s http://localhost:5000/api/import/batches \
+  -H "Authorization: Bearer $ADMIN_TOKEN" | jq '{success, count: (.batches | length)}'
+
+# G1-3: Non-admin access (expect 401/403)
+echo "G1-3: Non-admin access"
+curl -s -w "\nHTTP: %{http_code}" http://localhost:5000/api/import/sources \
+  -H "Authorization: Bearer $HOST_TOKEN" | head -2
+
+# G1-4: No auth
+echo "G1-4: No auth (expect 401)"
+curl -s -w "\nHTTP: %{http_code}" http://localhost:5000/api/import/batches | head -2
+```
+
+## G2: CSV Upload Tests (8 tests)
+```bash
+echo "=== G2: CSV UPLOAD TESTS ==="
+
+# Create test CSV file
+echo "G2: Creating test CSV..."
+cat > /tmp/test_import.csv << 'EOF'
+name,city,latitude,longitude,phone,email,website
+QA Test Park 1,Vancouver,49.2827,-123.1207,555-0001,qa1@test.com,https://qapark1.com
+QA Test Park 2,Victoria,48.4284,-123.3656,555-0002,qa2@test.com,https://qapark2.com
+QA Test Park 3,Kelowna,49.8880,-119.4960,555-0003,qa3@test.com,https://qapark3.com
+Duplicate Test,Bamfield,48.8334,-125.1353,555-0004,dup@test.com,
+Invalid Coords,Unknown,,,555-0005,,
+EOF
+
+# G2-1: Upload valid CSV
+echo "G2-1: Upload valid CSV"
+UPLOAD=$(curl -s -X POST http://localhost:5000/api/import/csv \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -F "file=@/tmp/test_import.csv" \
+  -F "sourceName=QA Test Import")
+echo $UPLOAD | jq '{success, batchId, recordCount}'
+BATCH_ID=$(echo $UPLOAD | jq -r '.batchId')
+
+# G2-2: Get batch details
+echo "G2-2: Get batch details"
+curl -s http://localhost:5000/api/import/batches/$BATCH_ID \
+  -H "Authorization: Bearer $ADMIN_TOKEN" | jq '{success, batchName: .batch.batch_name, recordCount: (.records | length), records: [.records[].name]}'
+
+# G2-3: No file upload (expect error)
+echo "G2-3: No file (expect error)"
+curl -s -X POST http://localhost:5000/api/import/csv \
+  -H "Authorization: Bearer $ADMIN_TOKEN" | jq '{success, error}'
+
+# G2-4: Create CSV with missing headers
+echo "G2-4: Testing minimal CSV..."
+cat > /tmp/minimal.csv << 'EOF'
+name,city
+Minimal Park,Vancouver
+EOF
+curl -s -X POST http://localhost:5000/api/import/csv \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -F "file=@/tmp/minimal.csv" | jq '{success, recordCount}'
+
+# G2-5: Empty CSV (just headers)
+echo "G2-5: Empty CSV"
+echo "name,city,latitude" > /tmp/empty.csv
+curl -s -X POST http://localhost:5000/api/import/csv \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -F "file=@/tmp/empty.csv" | jq '{success, error}'
+
+# G2-6: Invalid batch ID
+echo "G2-6: Invalid batch ID"
+curl -s -w "\nHTTP: %{http_code}" http://localhost:5000/api/import/batches/99999 \
+  -H "Authorization: Bearer $ADMIN_TOKEN" | head -2
+
+# G2-7: Large field test
+echo "G2-7: Large field handling"
+cat > /tmp/large.csv << EOF
+name,city,description
+$(printf 'X%.0s' {1..1000}),Vancouver,Test
+EOF
+curl -s -X POST http://localhost:5000/api/import/csv \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -F "file=@/tmp/large.csv" | jq '{success}'
+
+# G2-8: Special characters
+echo "G2-8: Special characters"
+cat > /tmp/special.csv << 'EOF'
+name,city,phone
+"Park with, comma",Vancouver,555-1234
+"Park with ""quotes""",Victoria,555-5678
+L'Auberge du Lac,Kelowna,555-9012
+EOF
+curl -s -X POST http://localhost:5000/api/import/csv \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -F "file=@/tmp/special.csv" | jq '{success, recordCount}'
+```
+
+## G3: Duplicate Detection & Import (6 tests)
+```bash
+echo "=== G3: DUPLICATE DETECTION & IMPORT ==="
+
+# G3-1: Run duplicate detection
+echo "G3-1: Detect duplicates"
+curl -s -X POST http://localhost:5000/api/import/batches/$BATCH_ID/detect-duplicates \
+  -H "Authorization: Bearer $ADMIN_TOKEN" | jq '{success, processed, matched, new, needsReview}'
+
+# G3-2: Check batch status after detection
+echo "G3-2: Batch status after detection"
+curl -s http://localhost:5000/api/import/batches/$BATCH_ID \
+  -H "Authorization: Bearer $ADMIN_TOKEN" | jq '{success, records: [.records[] | {name, status, confidence: .confidence_score}]}'
+
+# G3-3: Import new records
+echo "G3-3: Import new records"
+curl -s -X POST http://localhost:5000/api/import/batches/$BATCH_ID/import \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "Content-Type: application/json" | jq '{success, imported, errors}'
+
+# G3-4: Verify imported properties exist
+echo "G3-4: Verify imports"
+curl -s "http://localhost:5000/api/staging/search?limit=5" | jq '{success, recent: [.properties[-3:][].name]}'
+
+# G3-5: Re-run detection (should find matches now)
+echo "G3-5: Re-detection on same data"
+# Upload same CSV again
+BATCH2=$(curl -s -X POST http://localhost:5000/api/import/csv \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -F "file=@/tmp/test_import.csv" | jq -r '.batchId')
+curl -s -X POST http://localhost:5000/api/import/batches/$BATCH2/detect-duplicates \
+  -H "Authorization: Bearer $ADMIN_TOKEN" | jq '{success, matched, new}'
+
+# G3-6: Import on invalid batch
+echo "G3-6: Import invalid batch"
+curl -s -w "\nHTTP: %{http_code}" -X POST http://localhost:5000/api/import/batches/99999/import \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "Content-Type: application/json" | head -2
+
+# Cleanup
+rm -f /tmp/test_import.csv /tmp/minimal.csv /tmp/empty.csv /tmp/large.csv /tmp/special.csv
+
+echo ""
+echo "=== G: DATA IMPORT QA COMPLETE ==="
+echo "Expected: 18 tests"
+```
+
+Report results for all 18 tests.
+
+QA BATCH H: Map View (15 tests)
+Run comprehensive QA tests for Map View functionality.
+
+## H1: Map Data Endpoints (8 tests)
+```bash
+echo "=== H1: MAP DATA TESTS ==="
+
+# H1-1: Search with coordinates
+echo "H1-1: Properties with coordinates"
+curl -s "http://localhost:5000/api/staging/search?limit=50" | jq '{
+  success,
+  total: (.properties | length),
+  withCoords: ([.properties[] | select(.latitude != null and .longitude != null)] | length),
+  sample: .properties[0] | {name, lat: .latitude, lng: .longitude}
+}'
+
+# H1-2: Check coordinate validity (BC bounds: lat 48-60, lng -140 to -114)
+echo "H1-2: Coordinate validity"
+curl -s "http://localhost:5000/api/staging/search?limit=100" | jq '{
+  success,
+  validCoords: ([.properties[] | select(.latitude >= 48 and .latitude <= 60 and .longitude >= -140 and .longitude <= -114)] | length),
+  invalidCoords: ([.properties[] | select(.latitude != null and (.latitude < 48 or .latitude > 60 or .longitude < -140 or .longitude > -114))] | length)
+}'
+
+# H1-3: Properties by region with coords
+echo "H1-3: Vancouver Island coords"
+curl -s "http://localhost:5000/api/staging/search?region=Vancouver%20Island&limit=20" | jq '{
+  success,
+  count: (.properties | length),
+  allHaveCoords: ([.properties[] | select(.latitude == null)] | length == 0)
+}'
+
+# H1-4: Filter hasMechanic
+echo "H1-4: Properties with mechanic (for map highlight)"
+curl -s "http://localhost:5000/api/staging/search?hasMechanic=true" | jq '{
+  success,
+  count: (.properties | length),
+  names: [.properties[].name]
+}'
+
+# H1-5: Filter truckerFriendly
+echo "H1-5: Trucker friendly properties"
+curl -s "http://localhost:5000/api/staging/search?truckerFriendly=true" | jq '{
+  success,
+  count: (.properties | length),
+  avgTruckerScore: ([.properties[].truckerScore] | add / length)
+}'
+
+# H1-6: Combined filters
+echo "H1-6: Combined filters for map"
+curl -s "http://localhost:5000/api/staging/search?needsPower=true&petsAllowed=true&limit=20" | jq '{
+  success,
+  count: (.properties | length)
+}'
+
+# H1-7: Property detail with coords
+echo "H1-7: Property detail coords"
+curl -s "http://localhost:5000/api/staging/properties/1" | jq '{
+  success,
+  name: .property.name,
+  hasCoords: (.property.latitude != null),
+  lat: .property.latitude,
+  lng: .property.longitude
+}'
+
+# H1-8: All regions represented
+echo "H1-8: Regions with properties"
+curl -s "http://localhost:5000/api/staging/search?limit=100" | jq '{
+  success,
+  regions: ([.properties[].region] | unique | sort)
+}'
+```
+
+## H2: Trip Route Map Data (7 tests)
+```bash
+echo "=== H2: TRIP ROUTE MAP TESTS ==="
+
+# H2-1: Plan route Vancouver to Victoria
+echo "H2-1: Vancouver to Victoria route"
+curl -s -X POST http://localhost:5000/api/staging/trips/plan \
+  -H "Content-Type: application/json" \
+  -d '{
+    "originLat": 49.2827,
+    "originLng": -123.1207,
+    "destinationLat": 48.4284,
+    "destinationLng": -123.3656,
+    "bufferKm": 50
+  }' | jq '{
+    success,
+    distance: .route.totalDistanceKm,
+    propertyCount: (.properties | length),
+    propertiesWithCoords: ([.properties[] | select(.latitude != null)] | length)
+  }'
+
+# H2-2: Route with vehicle filters
+echo "H2-2: Route with filters"
+curl -s -X POST http://localhost:5000/api/staging/trips/plan \
+  -H "Content-Type: application/json" \
+  -d '{
+    "originLat": 49.2827,
+    "originLng": -123.1207,
+    "destinationLat": 49.8880,
+    "destinationLng": -119.4960,
+    "bufferKm": 75,
+    "vehicleLengthFt": 40,
+    "needsPower": true
+  }' | jq '{
+    success,
+    propertyCount: (.properties | length)
+  }'
+
+# H2-3: Check distance from origin ordering
+echo "H2-3: Distance ordering"
+curl -s -X POST http://localhost:5000/api/staging/trips/plan \
+  -H "Content-Type: application/json" \
+  -d '{
+    "originLat": 49.2827,
+    "originLng": -123.1207,
+    "destinationLat": 50.1163,
+    "destinationLng": -122.9574,
+    "bufferKm": 100
+  }' | jq '{
+    success,
+    isOrdered: ([.properties[].distanceFromOriginKm] | . == sort),
+    distances: [.properties[:5][].distanceFromOriginKm]
+  }'
+
+# H2-4: Popular routes have coords
+echo "H2-4: Popular routes"
+curl -s http://localhost:5000/api/staging/trips/popular-routes | jq '{
+  success,
+  routes: [.routes[] | {name, hasOriginCoords: (.origin.lat != null), hasDestCoords: (.destination.lat != null)}]
+}'
+
+# H2-5: Save trip with stops
+echo "H2-5: Save trip"
+TRIP=$(curl -s -X POST http://localhost:5000/api/staging/trips \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "QA Map Test Trip",
+    "originName": "Vancouver",
+    "originLat": 49.2827,
+    "originLng": -123.1207,
+    "destinationName": "Whistler",
+    "destinationLat": 50.1163,
+    "destinationLng": -122.9574,
+    "totalDistanceKm": 125,
+    "guestEmail": "qamap@test.com",
+    "stops": []
+  }')
+echo $TRIP | jq '{success, tripRef}'
+TRIP_REF=$(echo $TRIP | jq -r '.tripRef')
+
+# H2-6: Get saved trip with coords
+echo "H2-6: Get saved trip"
+curl -s http://localhost:5000/api/staging/trips/$TRIP_REF | jq '{
+  success,
+  origin: .trip.origin,
+  destination: .trip.destination,
+  hasCoords: (.trip.origin.lat != null and .trip.destination.lat != null)
+}'
+
+# H2-7: Zero buffer (edge case)
+echo "H2-7: Zero buffer"
+curl -s -X POST http://localhost:5000/api/staging/trips/plan \
+  -H "Content-Type: application/json" \
+  -d '{
+    "originLat": 49.2827,
+    "originLng": -123.1207,
+    "destinationLat": 48.4284,
+    "destinationLng": -123.3656,
+    "bufferKm": 0
+  }' | jq '{success, propertyCount: (.properties | length)}'
+
+echo ""
+echo "=== H: MAP VIEW QA COMPLETE ==="
+echo "Expected: 15 tests"
+```
+
+Report results for all 15 tests.
+
+QA BATCH I: Mobile Optimization (12 tests)
+Run QA tests for Mobile-related functionality and API performance.
+
+## I1: API Response Format Tests (6 tests)
+```bash
+echo "=== I1: API RESPONSE FORMAT TESTS ==="
+
+# I1-1: Search response has all mobile-needed fields
+echo "I1-1: Mobile search fields"
+curl -s "http://localhost:5000/api/staging/search?limit=1" | jq '{
+  success,
+  property: .properties[0] | {
+    hasId: (.id != null),
+    hasName: (.name != null),
+    hasCity: (.city != null),
+    hasRegion: (.region != null),
+    hasTotalSpots: (.totalSpots != null),
+    hasNightlyRate: (.nightlyRate != null),
+    hasRvScore: (.rvScore != null),
+    hasCrewScore: (.crewScore != null),
+    hasTruckerScore: (.truckerScore != null),
+    hasLat: (.latitude != null),
+    hasLng: (.longitude != null),
+    hasThumbnail: (.thumbnailUrl != null or .thumbnailUrl == null)
+  }
+}'
+
+# I1-2: Property detail response
+echo "I1-2: Mobile property detail"
+curl -s "http://localhost:5000/api/staging/properties/1" | jq '{
+  success,
+  hasProperty: (.property != null),
+  hasPricing: (.pricing != null),
+  hasSpots: (.spots != null),
+  hasServiceProviders: (.serviceProviders != null)
+}'
+
+# I1-3: Booking response format
+echo "I1-3: Booking response"
+TOMORROW=$(date -d "+1 day" +%Y-%m-%d 2>/dev/null || date -v+1d +%Y-%m-%d)
+NEXT_WEEK=$(date -d "+7 days" +%Y-%m-%d 2>/dev/null || date -v+7d +%Y-%m-%d)
+curl -s -X POST http://localhost:5000/api/staging/bookings \
+  -H "Content-Type: application/json" \
+  -d "{\"propertyId\": 1, \"checkInDate\": \"$TOMORROW\", \"checkOutDate\": \"$NEXT_WEEK\", \"guestName\": \"Mobile Test\", \"guestEmail\": \"mobile@test.com\", \"numAdults\": 1}" | jq '{
+  success,
+  booking: .booking | {
+    hasId: (.id != null),
+    hasRef: (.bookingRef != null),
+    hasTotal: (.totalCost != null)
+  }
+}'
+
+# I1-4: User endpoints for mobile
+echo "I1-4: User data format"
+ADMIN_LOGIN=$(curl -s -X POST http://localhost:5000/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email": "admin@example.com", "password": "password"}')
+ADMIN_TOKEN=$(echo $ADMIN_LOGIN | jq -r '.accessToken')
+curl -s http://localhost:5000/api/auth/me \
+  -H "Authorization: Bearer $ADMIN_TOKEN" | jq '{
+  success,
+  user: .user | {
+    hasId: (.id != null),
+    hasEmail: (.email != null),
+    hasUserType: (.userType != null),
+    hasFirstName: (.firstName != null or .firstName == null)
+  }
+}'
+
+# I1-5: Favorites list format
+echo "I1-5: Favorites format"
+curl -s http://localhost:5000/api/auth/favorites \
+  -H "Authorization: Bearer $ADMIN_TOKEN" | jq '{
+  success,
+  hasFavorites: (.favorites != null)
+}'
+
+# I1-6: Error response format
+echo "I1-6: Error response format"
+curl -s "http://localhost:5000/api/staging/properties/99999" | jq '{
+  hasSuccess: has("success"),
+  hasError: has("error"),
+  success,
+  error
+}'
+```
+
+## I2: Performance Tests (6 tests)
+```bash
+echo "=== I2: PERFORMANCE TESTS ==="
+
+# I2-1: Search response time
+echo "I2-1: Search performance"
+time_ms=$(curl -s -o /dev/null -w "%{time_total}" "http://localhost:5000/api/staging/search?limit=20")
+echo "Search (20 results): ${time_ms}s"
+[ $(echo "$time_ms < 0.5" | bc -l 2>/dev/null || echo "1") -eq 1 ] && echo "PASS: < 500ms" || echo "WARN: > 500ms"
+
+# I2-2: Property detail response time
+echo "I2-2: Property detail performance"
+time_ms=$(curl -s -o /dev/null -w "%{time_total}" "http://localhost:5000/api/staging/properties/1")
+echo "Property detail: ${time_ms}s"
+[ $(echo "$time_ms < 0.3" | bc -l 2>/dev/null || echo "1") -eq 1 ] && echo "PASS: < 300ms" || echo "WARN: > 300ms"
+
+# I2-3: Auth me response time
+echo "I2-3: Auth performance"
+time_ms=$(curl -s -o /dev/null -w "%{time_total}" "http://localhost:5000/api/auth/me" -H "Authorization: Bearer $ADMIN_TOKEN")
+echo "Auth/me: ${time_ms}s"
+[ $(echo "$time_ms < 0.2" | bc -l 2>/dev/null || echo "1") -eq 1 ] && echo "PASS: < 200ms" || echo "WARN: > 200ms"
+
+# I2-4: Trip planning response time
+echo "I2-4: Trip planning performance"
+time_ms=$(curl -s -o /dev/null -w "%{time_total}" -X POST "http://localhost:5000/api/staging/trips/plan" \
+  -H "Content-Type: application/json" \
+  -d '{"originLat": 49.2827, "originLng": -123.1207, "destinationLat": 49.8880, "destinationLng": -119.4960, "bufferKm": 50}')
+echo "Trip plan: ${time_ms}s"
+[ $(echo "$time_ms < 1.0" | bc -l 2>/dev/null || echo "1") -eq 1 ] && echo "PASS: < 1000ms" || echo "WARN: > 1000ms"
+
+# I2-5: Large result set
+echo "I2-5: Large result performance"
+time_ms=$(curl -s -o /dev/null -w "%{time_total}" "http://localhost:5000/api/staging/search?limit=100")
+echo "Search (100 results): ${time_ms}s"
+[ $(echo "$time_ms < 1.0" | bc -l 2>/dev/null || echo "1") -eq 1 ] && echo "PASS: < 1000ms" || echo "WARN: > 1000ms"
+
+# I2-6: Response size check
+echo "I2-6: Response sizes"
+search_size=$(curl -s "http://localhost:5000/api/staging/search?limit=10" | wc -c)
+detail_size=$(curl -s "http://localhost:5000/api/staging/properties/1" | wc -c)
+echo "Search (10): ${search_size} bytes"
+echo "Property detail: ${detail_size} bytes"
+[ $search_size -lt 50000 ] && echo "PASS: Search < 50KB" || echo "WARN: Search > 50KB"
+
+echo ""
+echo "=== I: MOBILE QA COMPLETE ==="
+echo "Expected: 12 tests"
+```
+
+Report results for all 12 tests.
+
+📊 QA Results Template
+After running all batches, compile results in this format:
+============================================================
+BC STAGING NETWORK - QA RESULTS: PHASES E-I
+============================================================
+
+BATCH E: User Authentication (25 tests)
+---------------------------------------
+| Test  | Description              | Result | Notes |
+|-------|--------------------------|--------|-------|
+| E1-1  | Valid registration       |        |       |
+| E1-2  | Missing email            |        |       |
+| E1-3  | Missing password         |        |       |
+| E1-4  | Password too short       |        |       |
+| E1-5  | Duplicate email          |        |       |
+| E1-6  | Invalid email format     |        |       |
+| E1-7  | Register as host         |        |       |
+| E1-8  | Full registration        |        |       |
+| E2-1  | Valid login              |        |       |
+| E2-2  | Wrong password           |        |       |
+| E2-3  | Non-existent user        |        |       |
+| E2-4  | Missing credentials      |        |       |
+| E2-5  | Host login               |        |       |
+| E2-6  | SQL injection            |        |       |
+| E3-1  | Get me with token        |        |       |
+| E3-2  | No token                 |        |       |
+| E3-3  | Invalid token            |        |       |
+| E3-4  | Refresh token            |        |       |
+| E3-5  | Logout                   |        |       |
+| E4-1  | Get vehicles             |        |       |
+| E4-2  | Add vehicle              |        |       |
+| E4-3  | Add second vehicle       |        |       |
+| E4-4  | Update vehicle           |        |       |
+| E4-5  | Verify vehicles          |        |       |
+| E4-6  | Delete vehicle           |        |       |
+| E5-1  | Add favorite             |        |       |
+| E5-2  | Get favorites            |        |       |
+| E5-3  | Invalid property         |        |       |
+| E5-4  | Remove favorite          |        |       |
+SUBTOTAL: __/25 PASS
+
+BATCH F: Host Dashboard (22 tests)
+----------------------------------
+[Similar table for F1-1 through F3-8]
+SUBTOTAL: __/22 PASS
+
+BATCH G: Real Data Import (18 tests)
+------------------------------------
+[Similar table for G1-1 through G3-6]
+SUBTOTAL: __/18 PASS
+
+BATCH H: Map View (15 tests)
+----------------------------
+[Similar table for H1-1 through H2-7]
+SUBTOTAL: __/15 PASS
+
+BATCH I: Mobile Optimization (12 tests)
+---------------------------------------
+[Similar table for I1-1 through I2-6]
+SUBTOTAL: __/12 PASS
+
+============================================================
+TOTAL: __/92 TESTS PASSING
+============================================================
+
+ISSUES FOUND:
+1. [Test ID] - [Description of failure]
+2. ...
+
+FIXES NEEDED:
+1. ...
+Run all 5 batches and report back!
