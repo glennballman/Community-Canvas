@@ -100,6 +100,15 @@ const navSections: NavSection[] = [
     ]
   },
   {
+    title: "Platform Admin",
+    icon: Shield,
+    defaultOpen: true,
+    items: [
+      { path: "/admin/users", label: "Users", icon: User },
+      { path: "/admin/tenants", label: "Tenants", icon: Building2 },
+    ]
+  },
+  {
     title: "Data Management",
     icon: Database,
     defaultOpen: false,
