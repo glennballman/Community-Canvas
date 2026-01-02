@@ -15,6 +15,7 @@ import AdminNAICS from "@/pages/AdminNAICS";
 import AdminSources from "@/pages/AdminSources";
 import AdminLogs from "@/pages/AdminLogs";
 import AdminSettings from "@/pages/AdminSettings";
+import DataImport from "@/pages/admin/DataImport";
 import Documentation from "@/pages/Documentation";
 import TripTimelineDemo from "@/pages/TripTimelineDemo";
 import Accommodations from "@/pages/Accommodations";
@@ -50,6 +51,7 @@ function AdminRoutes() {
         <Route path="/admin/sources" component={AdminSources} />
         <Route path="/admin/logs" component={AdminLogs} />
         <Route path="/admin/settings" component={AdminSettings} />
+        <Route path="/admin/import" component={DataImport} />
         <Route path="/admin/docs" component={Documentation} />
         <Route path="/admin/accommodations" component={Accommodations} />
         <Route component={NotFound} />
