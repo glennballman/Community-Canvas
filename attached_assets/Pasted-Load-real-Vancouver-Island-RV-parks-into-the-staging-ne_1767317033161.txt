@@ -1,0 +1,312 @@
+Load real Vancouver Island RV parks into the staging network database. These are actual properties with real data.
+
+Run this SQL to insert South and Central Vancouver Island RV parks:
+
+-- ============================================================================
+-- VANCOUVER ISLAND RV PARKS - SOUTH (Victoria to Nanaimo)
+-- ============================================================================
+
+-- 1. Oceanside RV Resort (Saanichton - near Swartz Bay ferry)
+INSERT INTO staging_properties (
+    name, description, short_description, tagline,
+    property_type, property_subtype,
+    region, city, address, postal_code,
+    latitude, longitude,
+    total_spots, spots_medium, spots_large, spots_pull_through,
+    max_combined_length_ft, max_vehicle_width_ft,
+    has_shore_power, power_amps, power_included, num_power_hookups,
+    has_water_hookup, has_potable_water, num_water_hookups,
+    has_sewer_hookup, num_sewer_hookups, has_dump_station,
+    has_wifi, wifi_included, has_cell_signal, cell_signal_strength,
+    has_bathrooms, bathroom_type, has_showers, showers_free,
+    has_laundry, has_store, has_restaurant,
+    has_pool, has_playground,
+    pets_allowed, dogs_allowed, has_dog_park,
+    is_waterfront, waterfront_type,
+    is_fenced, is_gated, has_security_camera,
+    access_type, check_in_method,
+    min_nights, max_stay_days,
+    status, is_verified, source
+) VALUES (
+    'Oceanside RV Resort',
+    'Premier RV resort just 40 minutes from downtown Victoria, located near Swartz Bay ferry terminal. Features breathtaking views of the Olympic Mountain Range and Race Rocks Marine Reserve. Full-service sites with pull-through access, perfect for large RVs.',
+    'Full-service RV resort near Victoria with ocean views and ferry access.',
+    'Your gateway to Vancouver Island adventures',
+    'rv_park', 'full_hookup',
+    'Vancouver Island', 'Saanichton', '3000 Stautw Road', 'V8M 2A2',
+    48.5934, -123.4047,
+    79, 30, 35, 40,
+    45, 12,
+    true, ARRAY[30, 50], true, 79,
+    true, true, 79,
+    true, 79, true,
+    true, true, true, 4,
+    true, 'flush', true, true,
+    true, true, false,
+    true, true,
+    true, true, true,
+    true, 'ocean',
+    true, true, true,
+    'office_hours', 'self_check_in',
+    1, 180,
+    'active', true, 'web_research'
+);
+
+-- Add pricing for Oceanside
+INSERT INTO staging_pricing (property_id, pricing_type, nightly_rate, weekly_rate, monthly_rate, is_active)
+SELECT id, 'base_nightly', 65.00, 390.00, 1400.00, true
+FROM staging_properties WHERE name = 'Oceanside RV Resort';
+
+-- 2. Fort Victoria RV Park (Victoria)
+INSERT INTO staging_properties (
+    name, description, short_description, tagline,
+    property_type, property_subtype,
+    region, city, address, postal_code,
+    latitude, longitude,
+    total_spots, spots_medium, spots_large, spots_pull_through,
+    max_combined_length_ft, max_vehicle_width_ft,
+    has_shore_power, power_amps, power_included, num_power_hookups,
+    has_water_hookup, has_potable_water, num_water_hookups,
+    has_sewer_hookup, num_sewer_hookups, has_dump_station,
+    has_wifi, wifi_included, has_cell_signal, cell_signal_strength,
+    has_bathrooms, bathroom_type, has_showers, showers_free,
+    has_laundry, has_store,
+    pets_allowed, dogs_allowed,
+    is_fenced, is_gated, has_security_camera, is_well_lit,
+    access_type, check_in_method,
+    min_nights, max_stay_days,
+    status, is_verified, source
+) VALUES (
+    'Fort Victoria RV Park',
+    'Conveniently located RV park in Victoria, perfect base for exploring BC''s capital city. Close to downtown attractions, Butchart Gardens, and whale watching tours. Full hookups available with good cell signal throughout.',
+    'Urban RV park in Victoria near downtown attractions.',
+    'Camp in the capital',
+    'rv_park', 'full_hookup',
+    'Vancouver Island', 'Victoria', '340 Island Highway', 'V9B 1H1',
+    48.4284, -123.4527,
+    100, 40, 45, 30,
+    45, 12,
+    true, ARRAY[30, 50], true, 100,
+    true, true, 100,
+    true, 100, true,
+    true, true, true, 5,
+    true, 'flush', true, true,
+    true, true,
+    true, true,
+    true, true, true, true,
+    '24/7', 'self_check_in',
+    1, 180,
+    'active', true, 'web_research'
+);
+
+INSERT INTO staging_pricing (property_id, pricing_type, nightly_rate, weekly_rate, monthly_rate, is_active)
+SELECT id, 'base_nightly', 55.00, 330.00, 1200.00, true
+FROM staging_properties WHERE name = 'Fort Victoria RV Park';
+
+-- 3. Malahat Mountain Meadows RV Park
+INSERT INTO staging_properties (
+    name, description, short_description, tagline,
+    property_type, property_subtype,
+    region, city, address, postal_code,
+    latitude, longitude,
+    total_spots, spots_medium, spots_large, spots_oversized, spots_pull_through,
+    max_combined_length_ft, max_vehicle_width_ft,
+    has_shore_power, power_amps, power_included, num_power_hookups,
+    has_water_hookup, has_potable_water, num_water_hookups,
+    has_sewer_hookup, num_sewer_hookups, has_dump_station,
+    has_wifi, wifi_included, has_cell_signal,
+    has_bathrooms, bathroom_type, has_showers, showers_free,
+    has_laundry, has_store,
+    has_hiking_trails,
+    pets_allowed, dogs_allowed, has_dog_park,
+    terrain_type, elevation_ft,
+    is_fenced, is_well_lit,
+    access_type, check_in_method,
+    min_nights, max_stay_days,
+    status, is_verified, source
+) VALUES (
+    'Malahat Mountain Meadows RV Park',
+    'Nestled among giant cedars at the summit of Malahat Drive, this quiet natural resort offers private scenic campsites and 63 fully-serviced RV sites. Beautiful seasonal creeks and both sunny and shaded lots available. Just 26km north of Victoria.',
+    'Mountain retreat RV park nestled among giant cedars on Malahat Drive.',
+    'Where nature meets comfort',
+    'rv_park', 'full_hookup',
+    'Vancouver Island', 'Malahat', '304 Trans-Canada Highway', 'V0R 2L0',
+    48.5612, -123.5234,
+    63, 20, 30, 13, 20,
+    55, 12,
+    true, ARRAY[30, 50], true, 63,
+    true, true, 63,
+    true, 63, true,
+    true, true, true,
+    true, 'flush', true, true,
+    true, true,
+    true,
+    true, true, true,
+    'mountain_forest', 1200,
+    false, true,
+    'office_hours', 'office_check_in',
+    1, 364,
+    'active', true, 'web_research'
+);
+
+INSERT INTO staging_pricing (property_id, pricing_type, nightly_rate, weekly_rate, monthly_rate, is_active)
+SELECT id, 'base_nightly', 52.00, 310.00, 1100.00, true
+FROM staging_properties WHERE name = 'Malahat Mountain Meadows RV Park';
+
+-- 4. Living Forest Oceanside Campground & RV (Nanaimo)
+INSERT INTO staging_properties (
+    name, description, short_description, tagline,
+    property_type, property_subtype,
+    region, city, address, postal_code,
+    latitude, longitude,
+    total_spots, spots_small, spots_medium, spots_large, spots_pull_through,
+    max_combined_length_ft, max_vehicle_width_ft,
+    has_shore_power, power_amps, power_included, num_power_hookups,
+    has_water_hookup, has_potable_water, num_water_hookups,
+    has_sewer_hookup, num_sewer_hookups, has_dump_station,
+    has_wifi, wifi_included, has_cell_signal, cell_signal_strength,
+    has_bathrooms, bathroom_type, has_showers, showers_free,
+    has_laundry, has_store, has_restaurant,
+    has_pool, has_playground, has_hiking_trails,
+    has_kayak_rental, has_fishing, has_boat_launch,
+    is_waterfront, waterfront_type,
+    pets_allowed, dogs_allowed, has_dog_park,
+    is_fenced, is_gated, has_onsite_manager,
+    access_type, check_in_method,
+    min_nights, max_stay_days,
+    status, is_verified, source
+) VALUES (
+    'Living Forest Oceanside Campground & RV',
+    'Award-winning oceanside campground in Nanaimo featuring tent sites, RV sites with full hookups, and cabin rentals. Located on 50 acres of old-growth forest with direct beach access. Kayak rentals, fishing, and nature trails throughout.',
+    'Oceanside campground in Nanaimo with old-growth forest and beach access.',
+    'Camp where the forest meets the sea',
+    'campground', 'mixed',
+    'Vancouver Island', 'Nanaimo', '6 Maki Road', 'V9R 6N7',
+    49.1234, -123.9456,
+    150, 40, 60, 35, 25,
+    50, 12,
+    true, ARRAY[15, 30, 50], true, 100,
+    true, true, 100,
+    true, 80, true,
+    true, false, true, 4,
+    true, 'flush', true, true,
+    true, true, true,
+    false, true, true,
+    true, true, true,
+    true, 'ocean',
+    true, true, true,
+    true, true, true,
+    'office_hours', 'office_check_in',
+    1, 180,
+    'active', true, 'web_research'
+);
+
+INSERT INTO staging_pricing (property_id, pricing_type, nightly_rate, weekly_rate, monthly_rate, is_active)
+SELECT id, 'base_nightly', 48.00, 290.00, 1050.00, true
+FROM staging_properties WHERE name = 'Living Forest Oceanside Campground & RV';
+
+-- 5. Mountainaire Campground and RV Park (Nanaimo area)
+INSERT INTO staging_properties (
+    name, description, short_description, tagline,
+    property_type, property_subtype,
+    region, city, address, postal_code,
+    latitude, longitude,
+    total_spots, spots_small, spots_medium, spots_large, spots_pull_through,
+    max_combined_length_ft, max_vehicle_width_ft,
+    has_shore_power, power_amps, power_included, num_power_hookups,
+    has_water_hookup, has_potable_water, num_water_hookups,
+    has_sewer_hookup, num_sewer_hookups, has_dump_station,
+    has_wifi, wifi_included, has_cell_signal, cell_signal_strength,
+    has_bathrooms, bathroom_type, has_showers, showers_free,
+    has_laundry, has_store,
+    has_pool, has_playground, has_hiking_trails, has_fishing,
+    has_swimming,
+    pets_allowed, dogs_allowed, has_dog_park, has_off_leash_area,
+    terrain_type,
+    is_fenced, has_onsite_manager,
+    access_type, check_in_method,
+    min_nights, max_stay_days,
+    status, is_verified, source
+) VALUES (
+    'Mountainaire Campground and RV Park',
+    'Beautiful 40-acre family-friendly park with 120 well-maintained sites in a rustic, quiet atmosphere. Features the famous Crystal Bowl swimming hole, catch-and-release rainbow trout pond, playground, and Friday night movies with free popcorn. Central Vancouver Island location near Nanaimo airport.',
+    '40-acre family campground with swimming hole, fishing pond, and movie nights.',
+    'Family fun in the heart of the Island',
+    'campground', 'mixed',
+    'Vancouver Island', 'Nanaimo', '1700 Errington Road', 'V9P 9H7',
+    49.2567, -124.2345,
+    120, 30, 50, 30, 35,
+    55, 12,
+    true, ARRAY[30, 50], true, 90,
+    true, true, 90,
+    true, 70, true,
+    true, true, true, 4,
+    true, 'flush', true, true,
+    true, true,
+    false, true, true, true,
+    true,
+    true, true, true, true,
+    'forest',
+    false, true,
+    'office_hours', 'office_check_in',
+    1, 364,
+    'active', true, 'web_research'
+);
+
+INSERT INTO staging_pricing (property_id, pricing_type, nightly_rate, weekly_rate, monthly_rate, is_active)
+SELECT id, 'base_nightly', 45.00, 270.00, 950.00, true
+FROM staging_properties WHERE name = 'Mountainaire Campground and RV Park';
+
+-- 6. Westwood Lake RV Camping & Cabins (Nanaimo)
+INSERT INTO staging_properties (
+    name, description, short_description, tagline,
+    property_type, property_subtype,
+    region, city, address, postal_code,
+    latitude, longitude,
+    total_spots, spots_small, spots_medium, spots_large, spots_pull_through,
+    max_combined_length_ft,
+    has_shore_power, power_amps, power_included, num_power_hookups,
+    has_water_hookup, has_potable_water, num_water_hookups,
+    has_sewer_hookup, has_dump_station,
+    has_wifi, has_cell_signal,
+    has_bathrooms, bathroom_type, has_showers, showers_free,
+    has_laundry,
+    has_hiking_trails, has_swimming, has_fishing,
+    is_waterfront, waterfront_type,
+    pets_allowed, dogs_allowed,
+    access_type, check_in_method,
+    min_nights, max_stay_days,
+    status, is_verified, source
+) VALUES (
+    'Westwood Lake RV Camping & Cabins',
+    'Located next to Westwood Lake Park with safe swimming beaches and miles of well-maintained hiking trails. Perfect for families wanting a lakeside camping experience. Combination of tent sites, RV sites, and cozy cabins.',
+    'Lakeside camping near Westwood Lake Park with swimming and hiking.',
+    'Lakeside serenity awaits',
+    'campground', 'mixed',
+    'Vancouver Island', 'Nanaimo', '380 Westwood Road', 'V9R 6S1',
+    49.1567, -123.9789,
+    60, 20, 25, 15, 15,
+    40,
+    true, ARRAY[30], true, 40,
+    true, true, 40,
+    true, true,
+    true, true,
+    true, 'flush', true, true,
+    true,
+    true, true, true,
+    true, 'lake',
+    true, true,
+    'office_hours', 'office_check_in',
+    1, 180,
+    'active', true, 'web_research'
+);
+
+INSERT INTO staging_pricing (property_id, pricing_type, nightly_rate, weekly_rate, is_active)
+SELECT id, 'base_nightly', 42.00, 250.00, true
+FROM staging_properties WHERE name = 'Westwood Lake RV Camping & Cabins';
+
+-- Verify inserted properties
+SELECT name, city, property_type, total_spots, max_combined_length_ft, crew_score, rv_score
+FROM staging_properties
+WHERE region = 'Vancouver Island'
+ORDER BY city, name;
