@@ -1,0 +1,242 @@
+Connect Chamber of Commerce member data to create parking opportunities. This leverages your existing Chamber dataset to identify businesses with potential parking space.
+
+## Step 1: Create Chamber-Staging Link Table
+
+Run this SQL:
+
+-- ============================================================================
+-- CHAMBER MEMBER STAGING OPPORTUNITIES
+-- ============================================================================
+
+-- Create linking table between chamber members and staging properties
+CREATE TABLE IF NOT EXISTS staging_chamber_links (
+    id SERIAL PRIMARY KEY,
+    property_id INTEGER REFERENCES staging_properties(id) ON DELETE CASCADE,
+    chamber_member_id INTEGER,  -- Links to your existing chamber_members table
+    chamber_name VARCHAR(255),
+    business_name VARCHAR(255) NOT NULL,
+    business_type VARCHAR(100),
+    naics_code VARCHAR(10),
+    
+    -- Opportunity details
+    opportunity_type VARCHAR(50) DEFAULT 'parking',  -- parking, camping, storage
+    opportunity_status VARCHAR(50) DEFAULT 'potential',  -- potential, contacted, interested, active, declined
+    
+    -- Contact tracking
+    primary_contact_name VARCHAR(255),
+    primary_contact_email VARCHAR(255),
+    primary_contact_phone VARCHAR(50),
+    last_contacted_at TIMESTAMP,
+    next_followup_date DATE,
+    contact_notes TEXT,
+    
+    -- Potential capacity
+    estimated_spots INTEGER,
+    estimated_spot_types VARCHAR(255),  -- 'rv,truck,trailer'
+    has_power_potential BOOLEAN DEFAULT false,
+    has_water_potential BOOLEAN DEFAULT false,
+    property_size_acres DECIMAL(10,2),
+    
+    -- Revenue sharing
+    revenue_share_percent DECIMAL(5,2),
+    management_type VARCHAR(50),  -- 'self_managed', 'platform_managed', 'hybrid'
+    
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_chamber_links_status ON staging_chamber_links(opportunity_status);
+CREATE INDEX idx_chamber_links_chamber ON staging_chamber_links(chamber_name);
+
+-- ============================================================================
+-- IDENTIFY HIGH-POTENTIAL CHAMBER MEMBERS
+-- ============================================================================
+
+-- These business types often have suitable parking:
+-- - Farms, ranches, agricultural operations
+-- - Industrial/warehouse facilities
+-- - Hotels/motels (overflow parking)
+-- - Marinas and boat storage
+-- - Equipment rental companies
+-- - Auto dealers (closed lots on weekends)
+-- - Churches (weekday parking)
+-- - Fairgrounds and event venues
+
+-- Insert sample high-potential opportunities from Bamfield Chamber
+INSERT INTO staging_chamber_links (
+    chamber_name,
+    business_name,
+    business_type,
+    naics_code,
+    opportunity_type,
+    opportunity_status,
+    primary_contact_name,
+    estimated_spots,
+    estimated_spot_types,
+    has_power_potential,
+    has_water_potential,
+    contact_notes
+) VALUES 
+(
+    'Bamfield Chamber of Commerce',
+    'Bamfield Marine Sciences Centre',
+    'Research Facility',
+    '541710',
+    'parking',
+    'potential',
+    'Facility Manager',
+    15,
+    'rv,work_truck,trailer',
+    true,
+    true,
+    'Large parking lot, often has visiting researchers who could use RV parking. Potential for work crew staging during off-season.'
+),
+(
+    'Bamfield Chamber of Commerce',
+    'Pacheedaht First Nation',
+    'First Nation',
+    '813410',
+    'parking',
+    'contacted',
+    'Economic Development Officer',
+    25,
+    'rv,truck,camping',
+    true,
+    true,
+    'Already operates campground at Port Renfrew. May have additional land for staging area. Strong interest in tourism revenue.'
+),
+(
+    'Bamfield Chamber of Commerce',
+    'West Coast Fishing Charters',
+    'Fishing Charter',
+    '487210',
+    'parking',
+    'potential',
+    NULL,
+    8,
+    'rv,boat_trailer',
+    false,
+    true,
+    'Marina with parking area. Boat trailer parking specialists. Could offer combined fishing/parking packages.'
+),
+(
+    'Alberni Valley Chamber',
+    'Alberni Valley Bulldogs',
+    'Arena/Sports Facility',
+    '711310',
+    'parking',
+    'potential',
+    'Facility Manager',
+    50,
+    'rv,truck,bus',
+    true,
+    false,
+    'Large arena parking lot. Available weekdays and off-season. Perfect for sports team buses and work crews.'
+),
+(
+    'Alberni Valley Chamber',
+    'McLean Mill National Historic Site',
+    'Heritage Site',
+    '712120',
+    'parking',
+    'interested',
+    'Site Manager',
+    30,
+    'rv,camping',
+    true,
+    true,
+    'Historic sawmill with camping area. Already set up for visitors. Interested in RV traffic.'
+),
+(
+    'Ucluelet Chamber',
+    'Ucluelet First Nation',
+    'First Nation',
+    '813410',
+    'parking',
+    'active',
+    'Wya Point Resort Manager',
+    35,
+    'rv,camping,tent',
+    true,
+    true,
+    'ACTIVE - Already operating Wya Point Resort. Looking to expand capacity.'
+),
+(
+    'Tofino Chamber',
+    'Tofino Airport',
+    'Airport',
+    '488119',
+    'parking',
+    'potential',
+    'Airport Manager',
+    20,
+    'rv,truck',
+    true,
+    false,
+    'Airport overflow parking. Available for long-term RV storage during shoulder seasons.'
+),
+(
+    'Nanaimo Chamber',
+    'Nanaimo Ice Centre',
+    'Arena/Sports Facility', 
+    '711310',
+    'parking',
+    'potential',
+    NULL,
+    75,
+    'rv,truck,bus,semi',
+    true,
+    false,
+    'Massive parking lot. Tournament weekends = bus parking revenue. Work crews during off-hours.'
+),
+(
+    'Nanaimo Chamber',
+    'Country Club Centre',
+    'Shopping Mall',
+    '531120',
+    'parking',
+    'contacted',
+    'Property Manager',
+    100,
+    'rv,truck',
+    false,
+    false,
+    'Large mall parking. Overnight RV parking potential in designated area. Security on site.'
+),
+(
+    'Kelowna Chamber',
+    'Kelowna Farmers Market',
+    'Market/Event Venue',
+    '453310',
+    'parking',
+    'potential',
+    NULL,
+    40,
+    'rv,food_truck,vendor',
+    true,
+    true,
+    'Parking available non-market days. Food truck staging and vendor parking.'
+),
+(
+    'Kelowna Chamber',
+    'Okanagan Crush Pad Winery',
+    'Winery',
+    '312130',
+    'parking',
+    'interested',
+    'Owner',
+    12,
+    'rv,camping',
+    true,
+    true,
+    'Harvest Host style opportunity. RV parking with wine tasting package. Scenic vineyard setting.'
+);
+
+-- View opportunities by status
+SELECT 
+    opportunity_status,
+    COUNT(*) as count,
+    SUM(estimated_spots) as potential_spots
+FROM staging_chamber_links
+GROUP BY opportunity_status
+ORDER BY count DESC;
