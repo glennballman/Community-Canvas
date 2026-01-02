@@ -13,7 +13,10 @@ import {
   Store,
   TreePine,
   Book,
-  Home
+  Home,
+  Shield,
+  Download,
+  Building2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -22,15 +25,26 @@ interface AdminLayoutProps {
   children: React.ReactNode;
 }
 
-const NAV_ITEMS = [
+type NavItem = { path: string; label: string; icon: typeof LayoutDashboard } | { section: string };
+
+const NAV_ITEMS: NavItem[] = [
   { path: "/admin", label: "OVERVIEW", icon: LayoutDashboard },
+  
+  { section: "DATA MANAGEMENT" },
   { path: "/admin/geo", label: "GEOGRAPHIC VIEW", icon: Globe },
   { path: "/admin/infrastructure", label: "INFRASTRUCTURE", icon: Radio },
   { path: "/admin/chambers", label: "CHAMBERS", icon: Store },
   { path: "/admin/naics", label: "NAICS EXPLORER", icon: TreePine },
-  { path: "/admin/matrix", label: "SOURCE MATRIX", icon: Grid3X3 },
+  { path: "/admin/accommodations", label: "ACCOMMODATIONS", icon: Building2 },
+  
+  { section: "OPERATIONS" },
+  { path: "/admin/civos", label: "CIVOS DASHBOARD", icon: Shield },
+  { path: "/admin/import", label: "DATA IMPORT", icon: Download },
   { path: "/admin/sources", label: "MANAGE SOURCES", icon: Database },
+  { path: "/admin/matrix", label: "SOURCE MATRIX", icon: Grid3X3 },
   { path: "/admin/logs", label: "SCRAPE LOGS", icon: FileText },
+  
+  { section: "SYSTEM" },
   { path: "/admin/settings", label: "SETTINGS", icon: Settings },
   { path: "/admin/docs", label: "DOCUMENTATION", icon: Book },
 ];
@@ -52,23 +66,33 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
               PUBLIC VIEW
             </Button>
           </Link>
-          <Link href="/legacy">
-            <Button variant="ghost" size="sm" className="w-full justify-start gap-2 text-xs" data-testid="link-command-center">
+          <Link href="/staging">
+            <Button variant="ghost" size="sm" className="w-full justify-start gap-2 text-xs" data-testid="link-staging-search">
               <ArrowLeft className="w-3 h-3" />
-              COMMAND CENTER
+              STAGING SEARCH
             </Button>
           </Link>
-          <Link href="/admin/accommodations">
-            <Button variant="ghost" size="sm" className="w-full justify-start gap-2 text-xs" data-testid="link-accommodations">
+          <Link href="/host/dashboard">
+            <Button variant="ghost" size="sm" className="w-full justify-start gap-2 text-xs" data-testid="link-host-portal">
               <Home className="w-3 h-3" />
-              ACCOMMODATIONS
+              HOST PORTAL
             </Button>
           </Link>
         </div>
         
         <ScrollArea className="flex-1 p-2">
           <nav className="space-y-1">
-            {NAV_ITEMS.map((item) => {
+            {NAV_ITEMS.map((item, index) => {
+              if ('section' in item) {
+                return (
+                  <div key={item.section} className="pt-4 pb-1 first:pt-0">
+                    <div className="text-[10px] text-muted-foreground uppercase tracking-wider px-3">
+                      {item.section}
+                    </div>
+                  </div>
+                );
+              }
+              
               const isActive = location === item.path || 
                 (item.path !== "/admin" && location.startsWith(item.path));
               const isExactAdmin = item.path === "/admin" && location === "/admin";

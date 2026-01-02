@@ -1,0 +1,259 @@
+Clean up navigation and create unified structure across the BC Staging Network app.
+
+## Step 1: Update AdminLayout Navigation
+
+Edit client/src/layouts/AdminLayout.tsx (or wherever the admin sidebar is defined).
+
+Add these sections to the sidebar navigation:
+```tsx
+// Find the navigation items array and update to include:
+
+const navItems = [
+  // MAIN
+  { path: '/admin', label: 'Overview', icon: '📊' },
+  
+  // DATA MANAGEMENT
+  { section: 'Data Management' },
+  { path: '/admin/geo', label: 'Geographic View', icon: '🗺️' },
+  { path: '/admin/infrastructure', label: 'Infrastructure', icon: '🏗️' },
+  { path: '/admin/chambers', label: 'Chambers', icon: '🏛️' },
+  { path: '/admin/naics', label: 'NAICS Explorer', icon: '📋' },
+  { path: '/admin/accommodations', label: 'Accommodations', icon: '🏨' },
+  
+  // OPERATIONS
+  { section: 'Operations' },
+  { path: '/admin/civos', label: 'CivOS Dashboard', icon: '🛡️' },
+  { path: '/admin/import', label: 'Data Import', icon: '📥' },
+  { path: '/admin/sources', label: 'Manage Sources', icon: '🔗' },
+  { path: '/admin/matrix', label: 'Source Matrix', icon: '📈' },
+  { path: '/admin/logs', label: 'Scrape Logs', icon: '📝' },
+  
+  // SYSTEM
+  { section: 'System' },
+  { path: '/admin/settings', label: 'Settings', icon: '⚙️' },
+  { path: '/admin/docs', label: 'Documentation', icon: '📚' },
+];
+```
+
+## Step 2: Update MobileNav / Guest Navigation
+
+Edit client/src/components/MobileNav.tsx (or equivalent):
+```tsx
+const navItems = [
+  { path: '/staging', label: 'Find Staging', icon: '🔍' },
+  { path: '/staging/map', label: 'Map View', icon: '🗺️' },
+  { path: '/staging/trip-planner', label: 'Trip Planner', icon: '📍' },
+  { path: '/staging/chamber', label: 'Local Services', icon: '🏛️' },
+];
+
+const userItems = user ? [
+  { path: '/account', label: 'My Account', icon: '👤' },
+  { path: '/staging/bookings', label: 'My Bookings', icon: '📅' },
+  { path: '/account/trips', label: 'My Trips', icon: '🚐' },
+  { path: '/account/favorites', label: 'Favorites', icon: '❤️' },
+  { path: '/account/vehicles', label: 'My Vehicles', icon: '🚛' },
+] : [];
+```
+
+## Step 3: Create Quick Links Component
+
+Create client/src/components/QuickLinks.tsx for consistent cross-app navigation:
+```tsx
+import React from 'react';
+import { Link, useLocation } from 'react-router-dom';
+
+interface QuickLinksProps {
+  variant?: 'admin' | 'public' | 'host';
+}
+
+export default function QuickLinks({ variant = 'public' }: QuickLinksProps) {
+  const location = useLocation();
+  
+  const links = {
+    admin: [
+      { path: '/', label: 'Public Site', icon: '🌐' },
+      { path: '/host/dashboard', label: 'Host View', icon: '🏠' },
+      { path: '/admin/civos', label: 'CivOS Ops', icon: '🛡️' },
+    ],
+    public: [
+      { path: '/staging', label: 'Find Staging', icon: '🔍' },
+      { path: '/staging/map', label: 'Map', icon: '🗺️' },
+      { path: '/host/login', label: 'Host Login', icon: '🏠' },
+    ],
+    host: [
+      { path: '/', label: 'Public Site', icon: '🌐' },
+      { path: '/staging', label: 'Find Staging', icon: '🔍' },
+      { path: '/admin', label: 'Admin', icon: '⚙️' },
+    ],
+  };
+
+  return (
+    <div className="flex gap-2 text-sm">
+      {links[variant].map(link => (
+        <Link
+          key={link.path}
+          to={link.path}
+          className={`px-3 py-1 rounded ${
+            location.pathname === link.path 
+              ? 'bg-blue-600 text-white' 
+              : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+          }`}
+        >
+          {link.icon} {link.label}
+        </Link>
+      ))}
+    </div>
+  );
+}
+```
+
+## Step 4: Remove/Redirect Orphan Routes
+
+In App.tsx, handle orphans:
+```tsx
+// Remove or redirect these:
+// /trip-timeline-demo - keep as hidden demo page (no change)
+// /accommodations - redirect to /admin/accommodations
+
+<Route path="/accommodations" element={<Navigate to="/admin/accommodations" replace />} />
+```
+
+## Step 5: Create Unified Header for Public Pages
+
+Create client/src/components/PublicHeader.tsx:
+```tsx
+import React, { useState } from 'react';
+import { Link, useLocation } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+
+export default function PublicHeader() {
+  const { user, logout } = useAuth();
+  const location = useLocation();
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  const mainNav = [
+    { path: '/staging', label: 'Find Staging' },
+    { path: '/staging/map', label: 'Map' },
+    { path: '/staging/chamber', label: 'Local Services' },
+  ];
+
+  const isActive = (path: string) => location.pathname === path;
+
+  return (
+    <header className="bg-gray-800 border-b border-gray-700 sticky top-0 z-40">
+      <div className="max-w-7xl mx-auto px-4">
+        <div className="flex items-center justify-between h-14">
+          {/* Logo */}
+          <Link to="/" className="flex items-center gap-2">
+            <span className="text-2xl">🚐</span>
+            <span className="font-bold text-white hidden sm:block">BC Staging Network</span>
+          </Link>
+
+          {/* Desktop Nav */}
+          <nav className="hidden md:flex items-center gap-1">
+            {mainNav.map(item => (
+              <Link
+                key={item.path}
+                to={item.path}
+                className={`px-3 py-2 rounded-lg text-sm ${
+                  isActive(item.path)
+                    ? 'bg-blue-600 text-white'
+                    : 'text-gray-300 hover:bg-gray-700'
+                }`}
+              >
+                {item.label}
+              </Link>
+            ))}
+          </nav>
+
+          {/* User Menu */}
+          <div className="flex items-center gap-2">
+            {user ? (
+              <div className="relative">
+                <button
+                  onClick={() => setMenuOpen(!menuOpen)}
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-700 text-white text-sm"
+                >
+                  <span className="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center text-xs">
+                    {user.firstName?.[0] || user.email[0].toUpperCase()}
+                  </span>
+                  <span className="hidden sm:block">{user.firstName || 'Account'}</span>
+                </button>
+                
+                {menuOpen && (
+                  <div className="absolute right-0 mt-2 w-48 bg-gray-800 border border-gray-700 rounded-lg shadow-xl py-1">
+                    <Link to="/account" className="block px-4 py-2 text-gray-300 hover:bg-gray-700">My Account</Link>
+                    <Link to="/staging/bookings" className="block px-4 py-2 text-gray-300 hover:bg-gray-700">My Bookings</Link>
+                    <Link to="/account/vehicles" className="block px-4 py-2 text-gray-300 hover:bg-gray-700">My Vehicles</Link>
+                    {(user.userType === 'host' || user.userType === 'admin') && (
+                      <Link to="/host/dashboard" className="block px-4 py-2 text-green-400 hover:bg-gray-700">Host Dashboard</Link>
+                    )}
+                    {user.userType === 'admin' && (
+                      <Link to="/admin" className="block px-4 py-2 text-purple-400 hover:bg-gray-700">Admin Console</Link>
+                    )}
+                    <hr className="border-gray-700 my-1" />
+                    <button onClick={logout} className="block w-full text-left px-4 py-2 text-red-400 hover:bg-gray-700">Sign Out</button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <Link to="/host/login" className="px-3 py-2 text-gray-300 hover:text-white text-sm">
+                  Host Login
+                </Link>
+                <Link to="/host/signup" className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm">
+                  List Property
+                </Link>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </header>
+  );
+}
+```
+
+## Step 6: Verify Navigation Structure
+
+After changes, this should be the final navigation map:
+
+**Public Site:**
+- / → Landing page
+- /staging → Search properties
+- /staging/map → Map view
+- /staging/chamber → Local services directory
+- /staging/:id → Property detail
+- /staging/:id/book → Booking flow
+
+**User Account (when logged in):**
+- /account → Profile settings
+- /staging/bookings → My bookings
+- /account/trips → Saved trips
+- /account/vehicles → My vehicles
+- /account/favorites → Favorites
+
+**Host Portal:**
+- /host/login, /host/signup → Auth
+- /host/dashboard → Overview
+- /host/properties → Manage listings
+- /host/bookings → Booking management
+- /host/payouts → Earnings
+- /host/settings → Account settings
+
+**Admin Console:**
+- /admin → Overview dashboard
+- /admin/geo → Geographic data
+- /admin/infrastructure → Infrastructure
+- /admin/chambers → Chambers of commerce
+- /admin/naics → Business categories
+- /admin/accommodations → Accommodation manager
+- /admin/civos → Emergency ops dashboard
+- /admin/import → Data import
+- /admin/sources → Source management
+- /admin/matrix → Source matrix
+- /admin/logs → Activity logs
+- /admin/settings → System settings
+- /admin/docs → Documentation
+
+Test that all navigation links work and nothing is orphaned.

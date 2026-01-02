@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { 
     Menu, X, Search, Map, Route, User, Calendar, 
-    Heart, Car, Home, LogOut, ChevronRight
+    Heart, Car, Home, LogOut, ChevronRight, Building2, Settings
 } from 'lucide-react';
 
 export default function MobileNav() {
@@ -15,6 +15,7 @@ export default function MobileNav() {
     const navItems = [
         { path: '/staging', label: 'Search', icon: Search },
         { path: '/staging/map', label: 'Map', icon: Map },
+        { path: '/staging/chamber', label: 'Local Services', icon: Building2 },
     ];
 
     const userItems = user ? [
@@ -23,6 +24,10 @@ export default function MobileNav() {
 
     const hostItems = (user?.userType === 'host' || user?.userType === 'admin') ? [
         { path: '/host/dashboard', label: 'Host Dashboard', icon: Home },
+    ] : [];
+
+    const adminItems = user?.userType === 'admin' ? [
+        { path: '/admin', label: 'Admin Console', icon: Settings },
     ] : [];
 
     const isActive = (path: string) => location === path;
@@ -144,6 +149,31 @@ export default function MobileNav() {
                                                     isActive(item.path)
                                                         ? 'bg-green-600 text-white'
                                                         : 'text-green-500 hover:bg-muted'
+                                                }`}>
+                                                    <item.icon className="h-5 w-5" />
+                                                    <span>{item.label}</span>
+                                                    <ChevronRight className="h-4 w-4 ml-auto opacity-50" />
+                                                </div>
+                                            </Link>
+                                        ))}
+                                    </>
+                                )}
+
+                                {adminItems.length > 0 && (
+                                    <>
+                                        <p className="text-muted-foreground text-xs uppercase tracking-wider px-3 py-2 mt-4">
+                                            Admin
+                                        </p>
+                                        {adminItems.map(item => (
+                                            <Link
+                                                key={item.path}
+                                                href={item.path}
+                                                onClick={() => setIsOpen(false)}
+                                            >
+                                                <div className={`flex items-center gap-3 px-3 py-3 rounded-lg cursor-pointer ${
+                                                    isActive(item.path)
+                                                        ? 'bg-purple-600 text-white'
+                                                        : 'text-purple-500 hover:bg-muted'
                                                 }`}>
                                                     <item.icon className="h-5 w-5" />
                                                     <span>{item.label}</span>
