@@ -1,0 +1,274 @@
+Add RV-specific services and equestrian providers.
+
+Run this SQL:
+
+-- ============================================================================
+-- RV REPAIR & SERVICE PROVIDERS
+-- ============================================================================
+
+-- 1. Mountainaire - Mobile RV Repair
+INSERT INTO staging_service_providers (
+    property_id,
+    provider_type,
+    business_name,
+    provider_name,
+    is_resident,
+    phone,
+    phone_text_ok,
+    email,
+    website,
+    
+    hours_regular,
+    available_weekends,
+    advance_booking_required,
+    response_time_minutes,
+    same_day_service,
+    
+    services_offered,
+    service_descriptions,
+    vehicle_types_served,
+    
+    certifications,
+    years_experience,
+    specialties,
+    
+    hourly_rate,
+    has_flat_rate_menu,
+    flat_rate_menu,
+    minimum_charge,
+    mobile_service_fee,
+    accepts_cards,
+    
+    overall_rating,
+    review_count,
+    
+    is_verified,
+    is_active
+)
+SELECT 
+    id,
+    'mechanic_rv',
+    'Island RV Mobile Service',
+    'Kevin Park',
+    false,
+    '250-555-7890',
+    true,
+    'kevin@islandrvservice.ca',
+    'https://islandrvservice.ca',
+    
+    '{"monday": "8:00-17:00", "tuesday": "8:00-17:00", "wednesday": "8:00-17:00", "thursday": "8:00-17:00", "friday": "8:00-17:00", "saturday": "9:00-15:00"}'::jsonb,
+    true,
+    true,
+    120,
+    true,
+    
+    ARRAY['generator_repair', 'generator_service', 'ac_repair', 'ac_service', 'furnace_repair', 'water_heater', 'refrigerator_repair', 'slide_out_repair', 'awning_repair', 'roof_repair', 'plumbing', 'electrical_12v', 'electrical_120v', 'propane_system', 'leveling_system'],
+    '{"generator_service": "Full Onan/Champion generator service including oil, filters, spark plugs", "ac_service": "AC inspection, cleaning, refrigerant check", "roof_inspection": "Complete roof inspection and sealant check"}'::jsonb,
+    ARRAY['rv_class_a', 'rv_class_b', 'rv_class_c', 'travel_trailer', 'fifth_wheel', 'toy_hauler', 'truck_camper'],
+    
+    ARRAY['RVIA Certified', 'Onan Certified', 'Dometic Certified', 'Norcold Certified'],
+    14,
+    ARRAY['Onan generators', 'Dometic AC', 'Slide mechanisms', 'Water damage repair'],
+    
+    95.00,
+    true,
+    '{"generator_service": 175.00, "ac_service": 125.00, "roof_inspection": 95.00, "winterization": 150.00, "dewinterization": 125.00}'::jsonb,
+    95.00,
+    35.00,
+    true,
+    
+    4.8,
+    124,
+    
+    true,
+    true
+FROM staging_properties WHERE name = 'Mountainaire Campground and RV Park';
+
+-- 2. Country Maples - RV Service
+INSERT INTO staging_service_providers (
+    property_id,
+    provider_type,
+    business_name,
+    provider_name,
+    is_resident,
+    phone,
+    phone_text_ok,
+    
+    available_weekends,
+    advance_booking_required,
+    same_day_service,
+    
+    services_offered,
+    vehicle_types_served,
+    
+    certifications,
+    years_experience,
+    
+    hourly_rate,
+    minimum_charge,
+    mobile_service_fee,
+    accepts_cards,
+    
+    overall_rating,
+    review_count,
+    
+    is_active
+)
+SELECT 
+    id,
+    'mechanic_rv',
+    'Cowichan RV Repair',
+    'Sarah Mitchell',
+    false,
+    '250-555-4321',
+    true,
+    
+    true,
+    true,
+    false,
+    
+    ARRAY['generator_repair', 'ac_repair', 'furnace_repair', 'water_heater', 'refrigerator_repair', 'plumbing', 'electrical_12v', 'propane_system'],
+    ARRAY['rv_class_a', 'rv_class_c', 'travel_trailer', 'fifth_wheel'],
+    
+    ARRAY['RVIA Certified', 'Propane Certified'],
+    8,
+    
+    85.00,
+    85.00,
+    25.00,
+    true,
+    
+    4.6,
+    67,
+    
+    true
+FROM staging_properties WHERE name = 'Country Maples RV Resort';
+
+-- ============================================================================
+-- EQUESTRIAN SERVICES (Future - when we add horse-friendly properties)
+-- ============================================================================
+
+-- For now, add a farrier service to a property we can mark as horse-friendly
+
+-- First, let's update Mountainaire to be horse-friendly (they have the space)
+UPDATE staging_properties 
+SET is_horse_friendly = true,
+    has_paddocks = true,
+    num_paddocks = 2,
+    paddock_nightly_rate = 25.00,
+    has_water_trough = true,
+    has_hitching_posts = true,
+    has_horse_trail_access = true
+WHERE name = 'Mountainaire Campground and RV Park';
+
+-- Add farrier service
+INSERT INTO staging_service_providers (
+    property_id,
+    provider_type,
+    business_name,
+    provider_name,
+    is_resident,
+    phone,
+    phone_text_ok,
+    email,
+    
+    hours_regular,
+    advance_booking_required,
+    response_time_minutes,
+    
+    services_offered,
+    service_descriptions,
+    
+    certifications,
+    years_experience,
+    specialties,
+    
+    has_flat_rate_menu,
+    flat_rate_menu,
+    accepts_cash,
+    accepts_cards,
+    
+    overall_rating,
+    review_count,
+    
+    is_active
+)
+SELECT 
+    id,
+    'farrier',
+    'Island Farrier Services',
+    'Tom Wheeler',
+    false,
+    '250-555-HOOF',
+    true,
+    'tom@islandfarrier.ca',
+    
+    '{"monday": "8:00-17:00", "tuesday": "8:00-17:00", "wednesday": "8:00-17:00", "thursday": "8:00-17:00", "friday": "8:00-17:00"}'::jsonb,
+    true,
+    1440,  -- Next day
+    
+    ARRAY['trim', 'shoe_front', 'shoe_full', 'corrective', 'therapeutic', 'emergency'],
+    '{"trim": "Basic trim and balance", "shoe_full": "Full set of 4 shoes", "corrective": "Corrective shoeing for specific issues"}'::jsonb,
+    
+    ARRAY['Certified Journeyman Farrier', 'AFA Certified'],
+    20,
+    ARRAY['Corrective shoeing', 'Trail horses', 'Draft horses'],
+    
+    true,
+    '{"trim": 45.00, "shoe_front": 95.00, "shoe_full": 175.00, "corrective": 225.00, "emergency_call": 75.00}'::jsonb,
+    true,
+    true,
+    
+    4.9,
+    89,
+    
+    true
+FROM staging_properties WHERE name = 'Mountainaire Campground and RV Park';
+
+-- Add emergency vet contact
+INSERT INTO staging_service_providers (
+    property_id,
+    provider_type,
+    business_name,
+    is_resident,
+    phone,
+    phone_24hr,
+    
+    available_24hr,
+    
+    services_offered,
+    vehicle_types_served,
+    
+    certifications,
+    
+    is_active
+)
+SELECT 
+    id,
+    'vet_emergency',
+    'Mid-Island Equine Emergency',
+    false,
+    '250-555-VET1',
+    '250-555-8381',
+    
+    true,
+    
+    ARRAY['emergency_colic', 'emergency_injury', 'emergency_foaling', 'lameness_eval'],
+    ARRAY['horse'],
+    
+    ARRAY['DVM', 'Equine Specialist'],
+    
+    true
+FROM staging_properties WHERE name = 'Mountainaire Campground and RV Park';
+
+-- Verify all RV and equestrian services
+SELECT 
+    sp.name as property,
+    ssp.provider_type,
+    ssp.business_name,
+    ssp.provider_name,
+    ssp.overall_rating
+FROM staging_service_providers ssp
+JOIN staging_properties sp ON sp.id = ssp.property_id
+WHERE ssp.provider_type IN ('mechanic_rv', 'farrier', 'vet_emergency')
+ORDER BY ssp.provider_type;
