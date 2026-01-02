@@ -41,6 +41,8 @@ import StagingBook from "@/pages/staging/BookingFlow";
 import MyBookings from "@/pages/staging/MyBookings";
 import ChamberDashboard from "@/pages/staging/ChamberDashboard";
 import MapSearch from "@/pages/staging/MapSearch";
+import NavigationHub from "@/pages/NavigationHub";
+import FleetPage from "@/pages/FleetPage";
 
 function AdminRoutes() {
   return (
@@ -73,7 +75,10 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={PublicDashboard} />
+      <Route path="/hub" component={NavigationHub} />
+      <Route path="/command-center" component={Dashboard} />
       <Route path="/legacy" component={Dashboard} />
+      <Route path="/fleet" component={FleetPage} />
       <Route path="/trip-timeline-demo" component={TripTimelineDemo} />
       <Route path="/accommodations" component={Accommodations} />
       <Route path="/host/login" component={HostLogin} />

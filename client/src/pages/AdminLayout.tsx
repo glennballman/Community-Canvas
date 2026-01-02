@@ -4,7 +4,6 @@ import {
   Grid3X3, 
   Database, 
   Settings,
-  ArrowLeft,
   Plus,
   FileText,
   Activity,
@@ -16,7 +15,10 @@ import {
   Home,
   Shield,
   Download,
-  Building2
+  Building2,
+  Map,
+  Truck,
+  Search
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -28,17 +30,27 @@ interface AdminLayoutProps {
 type NavItem = { path: string; label: string; icon: typeof LayoutDashboard } | { section: string };
 
 const NAV_ITEMS: NavItem[] = [
+  { section: "NAVIGATION" },
+  { path: "/hub", label: "NAVIGATION HUB", icon: Map },
+  { path: "/command-center", label: "COMMAND CENTER", icon: Shield },
+  
+  { section: "ADMIN" },
   { path: "/admin", label: "OVERVIEW", icon: LayoutDashboard },
   
-  { section: "DATA MANAGEMENT" },
+  { section: "COMMUNITY DATA" },
   { path: "/admin/geo", label: "GEOGRAPHIC VIEW", icon: Globe },
   { path: "/admin/infrastructure", label: "INFRASTRUCTURE", icon: Radio },
   { path: "/admin/chambers", label: "CHAMBERS", icon: Store },
   { path: "/admin/naics", label: "NAICS EXPLORER", icon: TreePine },
-  { path: "/admin/accommodations", label: "ACCOMMODATIONS", icon: Building2 },
+  
+  { section: "ACCOMMODATIONS" },
+  { path: "/admin/accommodations", label: "ALL PROPERTIES", icon: Building2 },
+  { path: "/staging", label: "STAGING SEARCH", icon: Search },
+  { path: "/host/dashboard", label: "HOST PORTAL", icon: Home },
   
   { section: "OPERATIONS" },
   { path: "/admin/civos", label: "CIVOS DASHBOARD", icon: Shield },
+  { path: "/fleet", label: "VEHICLE FLEET", icon: Truck },
   { path: "/admin/import", label: "DATA IMPORT", icon: Download },
   { path: "/admin/sources", label: "MANAGE SOURCES", icon: Database },
   { path: "/admin/matrix", label: "SOURCE MATRIX", icon: Grid3X3 },
@@ -56,27 +68,11 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     <div className="flex h-screen w-full bg-background font-mono">
       <aside className="w-56 border-r border-border/50 bg-card/30 flex flex-col">
         <div className="p-3 border-b border-border/50">
-          <div className="flex items-center gap-2 mb-3">
-            <Activity className="w-4 h-4 text-green-400" />
-            <span className="text-xs font-bold tracking-wider text-muted-foreground">ADMIN CONSOLE</span>
-          </div>
-          <Link href="/">
-            <Button variant="ghost" size="sm" className="w-full justify-start gap-2 text-xs" data-testid="link-back-dashboard">
-              <ArrowLeft className="w-3 h-3" />
-              PUBLIC VIEW
-            </Button>
-          </Link>
-          <Link href="/staging">
-            <Button variant="ghost" size="sm" className="w-full justify-start gap-2 text-xs" data-testid="link-staging-search">
-              <ArrowLeft className="w-3 h-3" />
-              STAGING SEARCH
-            </Button>
-          </Link>
-          <Link href="/host/dashboard">
-            <Button variant="ghost" size="sm" className="w-full justify-start gap-2 text-xs" data-testid="link-host-portal">
-              <Home className="w-3 h-3" />
-              HOST PORTAL
-            </Button>
+          <Link href="/hub">
+            <div className="flex items-center gap-2 cursor-pointer hover-elevate p-2 rounded-md" data-testid="link-hub-header">
+              <Activity className="w-4 h-4 text-green-400" />
+              <span className="text-xs font-bold tracking-wider text-muted-foreground">COMMUNITY CANVAS</span>
+            </div>
           </Link>
         </div>
         
