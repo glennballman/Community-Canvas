@@ -1,0 +1,440 @@
+PROMPT 1A: Database Schema for Multi-Tenant Foundation
+Create the multi-tenant foundation database schema. This is the core architecture for Community Canvas supporting Platform, Government, Business, Property, and Individual tenants.
+
+## Important: Run this SQL to create the foundation tables
+```sql
+-- ============================================================================
+-- COMMUNITY CANVAS - MULTI-TENANT FOUNDATION
+-- ============================================================================
+
+-- Drop existing tables if rebuilding (careful in production!)
+-- DROP TABLE IF EXISTS tenant_invitations CASCADE;
+-- DROP TABLE IF EXISTS tenant_users CASCADE;
+-- DROP TABLE IF EXISTS tenants CASCADE;
+-- DROP TABLE IF EXISTS user_profiles CASCADE;
+-- DROP TABLE IF EXISTS users CASCADE;
+
+-- ============================================================================
+-- 1. CORE USERS TABLE (replaces/extends staging_users)
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS cc_users (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    
+    -- Authentication
+    email VARCHAR(255) UNIQUE NOT NULL,
+    password_hash VARCHAR(255),
+    email_verified BOOLEAN DEFAULT false,
+    email_verified_at TIMESTAMP,
+    
+    -- Basic Identity
+    first_name VARCHAR(100),
+    last_name VARCHAR(100),
+    display_name VARCHAR(200),
+    phone VARCHAR(50),
+    avatar_url TEXT,
+    
+    -- Platform-level status
+    status VARCHAR(50) DEFAULT 'active',  -- active, suspended, banned, pending
+    is_platform_admin BOOLEAN DEFAULT false,  -- Super admin flag
+    
+    -- Metadata
+    last_login_at TIMESTAMP,
+    login_count INTEGER DEFAULT 0,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW(),
+    
+    -- For migration from staging_users
+    legacy_staging_user_id INTEGER
+);
+
+CREATE INDEX IF NOT EXISTS idx_cc_users_email ON cc_users(email);
+CREATE INDEX IF NOT EXISTS idx_cc_users_status ON cc_users(status);
+
+-- ============================================================================
+-- 2. USER PROFILES (Sovereign Individual Data)
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS cc_user_profiles (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID REFERENCES cc_users(id) ON DELETE CASCADE,
+    
+    -- Personal Details
+    date_of_birth DATE,
+    gender VARCHAR(50),
+    bio TEXT,
+    
+    -- Location
+    address_line1 VARCHAR(255),
+    address_line2 VARCHAR(255),
+    city VARCHAR(100),
+    province VARCHAR(100),
+    postal_code VARCHAR(20),
+    country VARCHAR(100) DEFAULT 'Canada',
+    latitude DECIMAL(10, 7),
+    longitude DECIMAL(10, 7),
+    
+    -- Emergency Contact
+    emergency_contact_name VARCHAR(200),
+    emergency_contact_phone VARCHAR(50),
+    emergency_contact_relationship VARCHAR(100),
+    
+    -- Travel/Accommodation Preferences
+    sleeping_preferences JSONB,  -- {snores: true, cpap: true, needs_private_room: true}
+    dietary_restrictions TEXT[],
+    accessibility_needs TEXT[],
+    
+    -- Professional
+    occupation VARCHAR(200),
+    employer VARCHAR(200),
+    years_experience INTEGER,
+    
+    -- Sovereign Individual Settings
+    data_sharing_consent JSONB,  -- {share_with_employers: true, share_with_properties: true}
+    
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW(),
+    
+    UNIQUE(user_id)
+);
+
+-- ============================================================================
+-- 3. USER QUALIFICATIONS (Skills, Certifications, Licenses)
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS cc_user_qualifications (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID REFERENCES cc_users(id) ON DELETE CASCADE,
+    
+    -- Qualification Details
+    qualification_type VARCHAR(50) NOT NULL,  -- license, certification, skill, training
+    name VARCHAR(255) NOT NULL,
+    issuing_authority VARCHAR(255),
+    credential_number VARCHAR(100),
+    
+    -- Validity
+    issued_date DATE,
+    expiry_date DATE,
+    is_verified BOOLEAN DEFAULT false,
+    verified_at TIMESTAMP,
+    verified_by UUID REFERENCES cc_users(id),
+    
+    -- Documentation
+    document_url TEXT,
+    notes TEXT,
+    
+    -- Categorization
+    category VARCHAR(100),  -- driving, trade, safety, medical, etc.
+    subcategory VARCHAR(100),
+    
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_cc_user_qualifications_user ON cc_user_qualifications(user_id);
+CREATE INDEX IF NOT EXISTS idx_cc_user_qualifications_type ON cc_user_qualifications(qualification_type);
+CREATE INDEX IF NOT EXISTS idx_cc_user_qualifications_expiry ON cc_user_qualifications(expiry_date);
+
+-- ============================================================================
+-- 4. TENANTS TABLE
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS cc_tenants (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    
+    -- Identity
+    name VARCHAR(255) NOT NULL,
+    slug VARCHAR(100) UNIQUE NOT NULL,  -- url-friendly identifier
+    tenant_type VARCHAR(50) NOT NULL,  -- platform, government, business, property, individual
+    
+    -- For sub-typing
+    business_type VARCHAR(100),  -- contractor, property_manager, fleet_operator, etc.
+    government_level VARCHAR(50),  -- municipal, regional_district, provincial, federal
+    
+    -- Contact Info
+    email VARCHAR(255),
+    phone VARCHAR(50),
+    website VARCHAR(255),
+    
+    -- Location
+    address_line1 VARCHAR(255),
+    address_line2 VARCHAR(255),
+    city VARCHAR(100),
+    province VARCHAR(100),
+    postal_code VARCHAR(20),
+    country VARCHAR(100) DEFAULT 'Canada',
+    
+    -- Linked Geography (for government tenants)
+    municipality_id INTEGER,  -- links to geo_regions
+    region_id INTEGER,
+    
+    -- Business Details
+    business_number VARCHAR(50),  -- CRA business number
+    gst_number VARCHAR(50),
+    
+    -- Settings & Config
+    settings JSONB DEFAULT '{}',
+    features_enabled TEXT[] DEFAULT '{}',  -- feature flags for this tenant
+    
+    -- Status
+    status VARCHAR(50) DEFAULT 'active',  -- active, suspended, pending, trial
+    subscription_tier VARCHAR(50) DEFAULT 'free',  -- free, starter, professional, enterprise
+    trial_ends_at TIMESTAMP,
+    
+    -- For individual tenants, link to user
+    owner_user_id UUID REFERENCES cc_users(id),
+    
+    -- Metadata
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW(),
+    created_by UUID REFERENCES cc_users(id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_cc_tenants_slug ON cc_tenants(slug);
+CREATE INDEX IF NOT EXISTS idx_cc_tenants_type ON cc_tenants(tenant_type);
+CREATE INDEX IF NOT EXISTS idx_cc_tenants_status ON cc_tenants(status);
+CREATE INDEX IF NOT EXISTS idx_cc_tenants_owner ON cc_tenants(owner_user_id);
+
+-- ============================================================================
+-- 5. TENANT USERS (Junction with Roles)
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS cc_tenant_users (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID REFERENCES cc_tenants(id) ON DELETE CASCADE,
+    user_id UUID REFERENCES cc_users(id) ON DELETE CASCADE,
+    
+    -- Role within this tenant
+    role VARCHAR(50) NOT NULL,  -- owner, admin, manager, member, viewer
+    title VARCHAR(100),  -- Job title: "Fleet Manager", "Emergency Coordinator"
+    
+    -- Permissions (can override role defaults)
+    permissions JSONB DEFAULT '{}',  -- {can_manage_fleet: true, can_view_financials: false}
+    
+    -- Status
+    status VARCHAR(50) DEFAULT 'active',  -- active, invited, suspended
+    invited_at TIMESTAMP,
+    joined_at TIMESTAMP,
+    invited_by UUID REFERENCES cc_users(id),
+    
+    -- Employment details (for business tenants)
+    employee_id VARCHAR(50),
+    department VARCHAR(100),
+    hire_date DATE,
+    
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW(),
+    
+    UNIQUE(tenant_id, user_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_cc_tenant_users_tenant ON cc_tenant_users(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_cc_tenant_users_user ON cc_tenant_users(user_id);
+CREATE INDEX IF NOT EXISTS idx_cc_tenant_users_role ON cc_tenant_users(role);
+
+-- ============================================================================
+-- 6. TENANT INVITATIONS
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS cc_tenant_invitations (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID REFERENCES cc_tenants(id) ON DELETE CASCADE,
+    
+    -- Invitation details
+    email VARCHAR(255) NOT NULL,
+    role VARCHAR(50) NOT NULL,
+    title VARCHAR(100),
+    
+    -- Token for accepting
+    token VARCHAR(255) UNIQUE NOT NULL,
+    
+    -- Status
+    status VARCHAR(50) DEFAULT 'pending',  -- pending, accepted, expired, revoked
+    expires_at TIMESTAMP NOT NULL,
+    accepted_at TIMESTAMP,
+    accepted_by UUID REFERENCES cc_users(id),
+    
+    -- Who sent it
+    invited_by UUID REFERENCES cc_users(id),
+    message TEXT,
+    
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_cc_tenant_invitations_token ON cc_tenant_invitations(token);
+CREATE INDEX IF NOT EXISTS idx_cc_tenant_invitations_email ON cc_tenant_invitations(email);
+
+-- ============================================================================
+-- 7. ROLE DEFINITIONS (Reference table)
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS cc_roles (
+    id SERIAL PRIMARY KEY,
+    tenant_type VARCHAR(50) NOT NULL,  -- platform, government, business, property, individual
+    role_name VARCHAR(50) NOT NULL,
+    display_name VARCHAR(100) NOT NULL,
+    description TEXT,
+    default_permissions JSONB NOT NULL DEFAULT '{}',
+    is_system_role BOOLEAN DEFAULT true,  -- system roles can't be deleted
+    
+    UNIQUE(tenant_type, role_name)
+);
+
+-- Insert default roles
+INSERT INTO cc_roles (tenant_type, role_name, display_name, description, default_permissions) VALUES
+-- Platform roles
+('platform', 'super_admin', 'Super Administrator', 'Full platform access', '{"all": true}'),
+('platform', 'admin', 'Platform Admin', 'Manage users and tenants', '{"manage_users": true, "manage_tenants": true, "view_all": true}'),
+('platform', 'support', 'Support Staff', 'Help users, view data', '{"view_all": true, "support_tickets": true}'),
+
+-- Government tenant roles
+('government', 'admin', 'Municipal Admin', 'Full municipal tenant access', '{"manage_tenant": true, "manage_users": true, "manage_data": true}'),
+('government', 'coordinator', 'Emergency Coordinator', 'Emergency operations', '{"manage_emergencies": true, "view_signals": true, "broadcast_alerts": true}'),
+('government', 'staff', 'Staff Member', 'View and basic operations', '{"view_data": true}'),
+
+-- Business tenant roles  
+('business', 'owner', 'Business Owner', 'Full business access', '{"all": true}'),
+('business', 'admin', 'Administrator', 'Manage business operations', '{"manage_tenant": true, "manage_users": true, "manage_fleet": true}'),
+('business', 'fleet_manager', 'Fleet Manager', 'Manage vehicles and assignments', '{"manage_fleet": true, "view_employees": true}'),
+('business', 'dispatcher', 'Dispatcher', 'Manage trips and schedules', '{"manage_trips": true, "view_fleet": true}'),
+('business', 'driver', 'Driver/Worker', 'View assigned work', '{"view_assigned": true, "update_status": true}'),
+
+-- Property tenant roles
+('property', 'owner', 'Property Owner', 'Full property access', '{"all": true}'),
+('property', 'manager', 'Property Manager', 'Day-to-day operations', '{"manage_bookings": true, "manage_calendar": true, "view_financials": true}'),
+('property', 'staff', 'Staff', 'Handle guests', '{"view_bookings": true, "check_in_guests": true}'),
+
+-- Individual (mostly just one role)
+('individual', 'owner', 'Account Owner', 'Own data', '{"manage_own": true}')
+ON CONFLICT (tenant_type, role_name) DO NOTHING;
+
+-- ============================================================================
+-- 8. AUDIT LOG
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS cc_audit_log (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    
+    -- Who
+    user_id UUID REFERENCES cc_users(id),
+    tenant_id UUID REFERENCES cc_tenants(id),
+    
+    -- What
+    action VARCHAR(100) NOT NULL,  -- create, update, delete, login, etc.
+    entity_type VARCHAR(100),  -- user, tenant, vehicle, booking, etc.
+    entity_id VARCHAR(255),
+    
+    -- Details
+    old_values JSONB,
+    new_values JSONB,
+    metadata JSONB,  -- IP address, user agent, etc.
+    
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_cc_audit_log_user ON cc_audit_log(user_id);
+CREATE INDEX IF NOT EXISTS idx_cc_audit_log_tenant ON cc_audit_log(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_cc_audit_log_entity ON cc_audit_log(entity_type, entity_id);
+CREATE INDEX IF NOT EXISTS idx_cc_audit_log_created ON cc_audit_log(created_at DESC);
+
+-- ============================================================================
+-- 9. SESSIONS (replaces staging_sessions)
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS cc_sessions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID REFERENCES cc_users(id) ON DELETE CASCADE,
+    
+    -- Current context
+    active_tenant_id UUID REFERENCES cc_tenants(id),  -- Which tenant they're currently viewing as
+    
+    -- Token
+    token VARCHAR(255) UNIQUE NOT NULL,
+    refresh_token VARCHAR(255),
+    
+    -- Device info
+    user_agent TEXT,
+    ip_address VARCHAR(50),
+    device_type VARCHAR(50),  -- web, mobile, api
+    
+    -- Validity
+    expires_at TIMESTAMP NOT NULL,
+    last_activity_at TIMESTAMP DEFAULT NOW(),
+    
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_cc_sessions_user ON cc_sessions(user_id);
+CREATE INDEX IF NOT EXISTS idx_cc_sessions_token ON cc_sessions(token);
+CREATE INDEX IF NOT EXISTS idx_cc_sessions_expires ON cc_sessions(expires_at);
+
+-- ============================================================================
+-- 10. HELPER VIEWS
+-- ============================================================================
+
+-- User's tenants with roles
+CREATE OR REPLACE VIEW v_user_tenants AS
+SELECT 
+    tu.user_id,
+    u.email,
+    u.first_name,
+    u.last_name,
+    u.is_platform_admin,
+    t.id as tenant_id,
+    t.name as tenant_name,
+    t.slug as tenant_slug,
+    t.tenant_type,
+    tu.role,
+    tu.title,
+    tu.status as membership_status,
+    r.display_name as role_display_name,
+    r.default_permissions
+FROM cc_tenant_users tu
+JOIN cc_users u ON u.id = tu.user_id
+JOIN cc_tenants t ON t.id = tu.tenant_id
+LEFT JOIN cc_roles r ON r.tenant_type = t.tenant_type AND r.role_name = tu.role
+WHERE tu.status = 'active' AND t.status = 'active';
+
+-- Tenant members
+CREATE OR REPLACE VIEW v_tenant_members AS
+SELECT 
+    t.id as tenant_id,
+    t.name as tenant_name,
+    t.tenant_type,
+    u.id as user_id,
+    u.email,
+    u.first_name,
+    u.last_name,
+    u.avatar_url,
+    tu.role,
+    tu.title,
+    tu.status,
+    tu.joined_at,
+    r.display_name as role_display_name
+FROM cc_tenants t
+JOIN cc_tenant_users tu ON tu.tenant_id = t.id
+JOIN cc_users u ON u.id = tu.user_id
+LEFT JOIN cc_roles r ON r.tenant_type = t.tenant_type AND r.role_name = tu.role;
+
+-- ============================================================================
+-- VERIFY CREATION
+-- ============================================================================
+
+SELECT 'Tables created:' as status;
+SELECT table_name 
+FROM information_schema.tables 
+WHERE table_schema = 'public' 
+AND table_name LIKE 'cc_%'
+ORDER BY table_name;
+
+SELECT 'Roles seeded:' as status;
+SELECT tenant_type, role_name, display_name FROM cc_roles ORDER BY tenant_type, role_name;
+```
+
+After running the SQL, verify with:
+```bash
+echo "=== VERIFY FOUNDATION TABLES ==="
+curl -s http://localhost:5000/api/health 2>/dev/null || echo "Check DB directly"
+```
+
+Report what tables were created and any errors.
