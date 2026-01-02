@@ -1,0 +1,418 @@
+Create unified vehicle and trailer tables that support both individual ownership and fleet assignment.
+
+## Run this SQL to create the vehicle/trailer ownership model:
+```sql
+-- ============================================================================
+-- COMMUNITY CANVAS - VEHICLES & TRAILERS WITH OWNERSHIP
+-- ============================================================================
+
+-- ============================================================================
+-- 1. UNIFIED VEHICLES TABLE
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS cc_vehicles (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    
+    -- OWNERSHIP (Sovereign Individual concept)
+    owner_type VARCHAR(20) NOT NULL,  -- 'individual' or 'business'
+    owner_user_id UUID REFERENCES cc_users(id),  -- if individual
+    owner_tenant_id UUID REFERENCES cc_tenants(id),  -- if business
+    
+    -- IDENTIFICATION
+    name VARCHAR(255),  -- "Blanco", "The Diesel", friendly name
+    vin VARCHAR(17),
+    license_plate VARCHAR(20),
+    license_plate_province VARCHAR(50),
+    
+    -- VEHICLE DETAILS
+    year INTEGER,
+    make VARCHAR(100),
+    model VARCHAR(100),
+    trim VARCHAR(100),
+    color VARCHAR(50),
+    vehicle_type VARCHAR(50),  -- car, truck, suv, van, rv, semi, bus
+    fuel_type VARCHAR(50),  -- gas, diesel, electric, hybrid
+    
+    -- DIMENSIONS & CAPACITY
+    length_ft DECIMAL(6,2),
+    width_ft DECIMAL(6,2),
+    height_ft DECIMAL(6,2),
+    gvwr_lbs INTEGER,  -- Gross Vehicle Weight Rating
+    towing_capacity_lbs INTEGER,
+    passenger_capacity INTEGER,
+    cargo_capacity_cubic_ft DECIMAL(8,2),
+    
+    -- TOWING SETUP
+    has_hitch BOOLEAN DEFAULT false,
+    hitch_class INTEGER,  -- 1-5
+    hitch_type VARCHAR(50),  -- receiver, gooseneck, fifth_wheel, pintle
+    brake_controller BOOLEAN DEFAULT false,
+    
+    -- RV SPECIFIC
+    is_rv BOOLEAN DEFAULT false,
+    rv_class VARCHAR(10),  -- A, B, C
+    slide_outs INTEGER DEFAULT 0,
+    fresh_water_capacity_gal INTEGER,
+    gray_water_capacity_gal INTEGER,
+    black_water_capacity_gal INTEGER,
+    propane_capacity_lbs INTEGER,
+    generator_watts INTEGER,
+    solar_watts INTEGER,
+    shore_power_amps INTEGER,
+    
+    -- COMMERCIAL/SEMI SPECIFIC  
+    is_commercial BOOLEAN DEFAULT false,
+    dot_number VARCHAR(50),
+    mc_number VARCHAR(50),
+    ifta_account VARCHAR(50),
+    hazmat_endorsed BOOLEAN DEFAULT false,
+    
+    -- INSURANCE & REGISTRATION
+    insurance_company VARCHAR(255),
+    insurance_policy_number VARCHAR(100),
+    insurance_expiry DATE,
+    registration_expiry DATE,
+    inspection_expiry DATE,
+    
+    -- IMAGES
+    primary_image_url TEXT,
+    images JSONB DEFAULT '[]',
+    
+    -- STATUS
+    status VARCHAR(50) DEFAULT 'available',  -- available, in_use, maintenance, retired
+    current_odometer INTEGER,
+    last_service_date DATE,
+    last_service_odometer INTEGER,
+    
+    -- METADATA
+    notes TEXT,
+    tags TEXT[],
+    
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW(),
+    
+    -- Ensure owner is set appropriately
+    CONSTRAINT valid_owner CHECK (
+        (owner_type = 'individual' AND owner_user_id IS NOT NULL) OR
+        (owner_type = 'business' AND owner_tenant_id IS NOT NULL)
+    )
+);
+
+CREATE INDEX IF NOT EXISTS idx_cc_vehicles_owner_user ON cc_vehicles(owner_user_id) WHERE owner_type = 'individual';
+CREATE INDEX IF NOT EXISTS idx_cc_vehicles_owner_tenant ON cc_vehicles(owner_tenant_id) WHERE owner_type = 'business';
+CREATE INDEX IF NOT EXISTS idx_cc_vehicles_status ON cc_vehicles(status);
+CREATE INDEX IF NOT EXISTS idx_cc_vehicles_type ON cc_vehicles(vehicle_type);
+CREATE INDEX IF NOT EXISTS idx_cc_vehicles_plate ON cc_vehicles(license_plate);
+
+-- ============================================================================
+-- 2. UNIFIED TRAILERS TABLE
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS cc_trailers (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    
+    -- OWNERSHIP
+    owner_type VARCHAR(20) NOT NULL,  -- 'individual' or 'business'
+    owner_user_id UUID REFERENCES cc_users(id),
+    owner_tenant_id UUID REFERENCES cc_tenants(id),
+    
+    -- IDENTIFICATION
+    name VARCHAR(255),  -- "The Box", "Flatty", friendly name
+    vin VARCHAR(17),
+    serial_number VARCHAR(100),
+    license_plate VARCHAR(20),
+    license_plate_province VARCHAR(50),
+    
+    -- TRAILER DETAILS
+    year INTEGER,
+    make VARCHAR(100),
+    model VARCHAR(100),
+    trailer_type VARCHAR(50),  -- utility, enclosed, flatbed, dump, horse, boat, rv, cargo, livestock
+    
+    -- DIMENSIONS & CAPACITY
+    length_ft DECIMAL(6,2),
+    width_ft DECIMAL(6,2),
+    height_ft DECIMAL(6,2),  -- internal height for enclosed
+    deck_height_in DECIMAL(6,2),
+    gvwr_lbs INTEGER,
+    payload_capacity_lbs INTEGER,
+    
+    -- AXLES & BRAKES
+    axle_count INTEGER DEFAULT 1,
+    axle_type VARCHAR(50),  -- single, tandem, tri
+    has_brakes BOOLEAN DEFAULT false,
+    brake_type VARCHAR(50),  -- electric, surge, hydraulic, air
+    
+    -- HITCH REQUIREMENTS
+    hitch_type VARCHAR(50),  -- ball, gooseneck, fifth_wheel, pintle
+    ball_size_inches DECIMAL(4,2),  -- 1.875, 2, 2.5625
+    coupler_height_inches DECIMAL(6,2),
+    tongue_weight_lbs INTEGER,
+    
+    -- FEATURES
+    has_ramps BOOLEAN DEFAULT false,
+    ramp_type VARCHAR(50),  -- fold_down, slide_out, stand_up
+    has_side_door BOOLEAN DEFAULT false,
+    has_roof_vent BOOLEAN DEFAULT false,
+    has_interior_lights BOOLEAN DEFAULT false,
+    has_electrical BOOLEAN DEFAULT false,
+    electrical_connector VARCHAR(50),  -- 4_flat, 5_flat, 6_round, 7_round, 7_rv
+    
+    -- LIVING QUARTERS (for RV trailers)
+    is_rv BOOLEAN DEFAULT false,
+    has_living_quarters BOOLEAN DEFAULT false,
+    sleeps INTEGER,
+    has_bathroom BOOLEAN DEFAULT false,
+    has_kitchen BOOLEAN DEFAULT false,
+    fresh_water_capacity_gal INTEGER,
+    gray_water_capacity_gal INTEGER,
+    black_water_capacity_gal INTEGER,
+    propane_capacity_lbs INTEGER,
+    shore_power_amps INTEGER,
+    
+    -- HORSE/LIVESTOCK SPECIFIC
+    is_livestock BOOLEAN DEFAULT false,
+    stall_count INTEGER,
+    has_tack_room BOOLEAN DEFAULT false,
+    has_hay_rack BOOLEAN DEFAULT false,
+    
+    -- REGISTRATION & INSURANCE
+    insurance_company VARCHAR(255),
+    insurance_policy_number VARCHAR(100),
+    insurance_expiry DATE,
+    registration_expiry DATE,
+    inspection_expiry DATE,
+    
+    -- IMAGES
+    primary_image_url TEXT,
+    images JSONB DEFAULT '[]',
+    
+    -- STATUS
+    status VARCHAR(50) DEFAULT 'available',  -- available, in_use, maintenance, retired
+    
+    -- METADATA
+    notes TEXT,
+    tags TEXT[],
+    
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW(),
+    
+    CONSTRAINT valid_trailer_owner CHECK (
+        (owner_type = 'individual' AND owner_user_id IS NOT NULL) OR
+        (owner_type = 'business' AND owner_tenant_id IS NOT NULL)
+    )
+);
+
+CREATE INDEX IF NOT EXISTS idx_cc_trailers_owner_user ON cc_trailers(owner_user_id) WHERE owner_type = 'individual';
+CREATE INDEX IF NOT EXISTS idx_cc_trailers_owner_tenant ON cc_trailers(owner_tenant_id) WHERE owner_type = 'business';
+CREATE INDEX IF NOT EXISTS idx_cc_trailers_status ON cc_trailers(status);
+CREATE INDEX IF NOT EXISTS idx_cc_trailers_type ON cc_trailers(trailer_type);
+
+-- ============================================================================
+-- 3. FLEETS TABLE (Grouping of vehicles/trailers for businesses)
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS cc_fleets (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID REFERENCES cc_tenants(id) ON DELETE CASCADE,
+    
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    
+    -- Fleet settings
+    default_home_base_address TEXT,
+    default_home_base_lat DECIMAL(10, 7),
+    default_home_base_lng DECIMAL(10, 7),
+    
+    status VARCHAR(50) DEFAULT 'active',
+    
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_cc_fleets_tenant ON cc_fleets(tenant_id);
+
+-- ============================================================================
+-- 4. FLEET ASSIGNMENTS (Vehicles/Trailers assigned to fleets WITHOUT ownership transfer)
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS cc_fleet_vehicle_assignments (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    fleet_id UUID REFERENCES cc_fleets(id) ON DELETE CASCADE,
+    vehicle_id UUID REFERENCES cc_vehicles(id) ON DELETE CASCADE,
+    
+    -- Assignment details
+    assigned_at TIMESTAMP DEFAULT NOW(),
+    assigned_by UUID REFERENCES cc_users(id),
+    unassigned_at TIMESTAMP,
+    
+    -- Current assignment status
+    is_active BOOLEAN DEFAULT true,
+    
+    -- Notes
+    notes TEXT,
+    
+    UNIQUE(fleet_id, vehicle_id, is_active) -- Only one active assignment per vehicle per fleet
+);
+
+CREATE TABLE IF NOT EXISTS cc_fleet_trailer_assignments (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    fleet_id UUID REFERENCES cc_fleets(id) ON DELETE CASCADE,
+    trailer_id UUID REFERENCES cc_trailers(id) ON DELETE CASCADE,
+    
+    assigned_at TIMESTAMP DEFAULT NOW(),
+    assigned_by UUID REFERENCES cc_users(id),
+    unassigned_at TIMESTAMP,
+    is_active BOOLEAN DEFAULT true,
+    notes TEXT,
+    
+    UNIQUE(fleet_id, trailer_id, is_active)
+);
+
+-- ============================================================================
+-- 5. DRIVER/USER VEHICLE ASSIGNMENTS (Who can drive what)
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS cc_vehicle_driver_assignments (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    vehicle_id UUID REFERENCES cc_vehicles(id) ON DELETE CASCADE,
+    user_id UUID REFERENCES cc_users(id) ON DELETE CASCADE,
+    
+    -- Assignment type
+    assignment_type VARCHAR(50) DEFAULT 'assigned',  -- primary, assigned, temporary, shared
+    
+    -- Validity
+    valid_from TIMESTAMP DEFAULT NOW(),
+    valid_until TIMESTAMP,
+    is_active BOOLEAN DEFAULT true,
+    
+    -- Who assigned
+    assigned_by UUID REFERENCES cc_users(id),
+    
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_vehicle_drivers_vehicle ON cc_vehicle_driver_assignments(vehicle_id);
+CREATE INDEX IF NOT EXISTS idx_vehicle_drivers_user ON cc_vehicle_driver_assignments(user_id);
+
+-- ============================================================================
+-- 6. VEHICLE/TRAILER MAINTENANCE RECORDS
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS cc_maintenance_records (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    
+    -- What was serviced
+    asset_type VARCHAR(20) NOT NULL,  -- 'vehicle' or 'trailer'
+    vehicle_id UUID REFERENCES cc_vehicles(id) ON DELETE CASCADE,
+    trailer_id UUID REFERENCES cc_trailers(id) ON DELETE CASCADE,
+    
+    -- Service details
+    service_type VARCHAR(100) NOT NULL,  -- oil_change, tire_rotation, brake_service, inspection, etc.
+    service_date DATE NOT NULL,
+    odometer_reading INTEGER,
+    
+    -- Provider
+    service_provider VARCHAR(255),
+    service_location VARCHAR(255),
+    
+    -- Cost
+    labor_cost DECIMAL(10,2),
+    parts_cost DECIMAL(10,2),
+    total_cost DECIMAL(10,2),
+    
+    -- Documentation
+    description TEXT,
+    invoice_number VARCHAR(100),
+    receipt_url TEXT,
+    
+    -- Next service
+    next_service_date DATE,
+    next_service_odometer INTEGER,
+    
+    -- Who recorded
+    recorded_by UUID REFERENCES cc_users(id),
+    
+    created_at TIMESTAMP DEFAULT NOW(),
+    
+    CONSTRAINT valid_asset CHECK (
+        (asset_type = 'vehicle' AND vehicle_id IS NOT NULL) OR
+        (asset_type = 'trailer' AND trailer_id IS NOT NULL)
+    )
+);
+
+CREATE INDEX IF NOT EXISTS idx_maintenance_vehicle ON cc_maintenance_records(vehicle_id);
+CREATE INDEX IF NOT EXISTS idx_maintenance_trailer ON cc_maintenance_records(trailer_id);
+CREATE INDEX IF NOT EXISTS idx_maintenance_date ON cc_maintenance_records(service_date DESC);
+
+-- ============================================================================
+-- 7. HELPER VIEWS
+-- ============================================================================
+
+-- All vehicles with owner info
+CREATE OR REPLACE VIEW v_vehicles_with_owners AS
+SELECT 
+    v.*,
+    CASE v.owner_type
+        WHEN 'individual' THEN u.first_name || ' ' || u.last_name
+        WHEN 'business' THEN t.name
+    END as owner_name,
+    CASE v.owner_type
+        WHEN 'individual' THEN u.email
+        WHEN 'business' THEN t.email
+    END as owner_email,
+    u.id as individual_owner_id,
+    t.id as business_owner_id
+FROM cc_vehicles v
+LEFT JOIN cc_users u ON v.owner_type = 'individual' AND v.owner_user_id = u.id
+LEFT JOIN cc_tenants t ON v.owner_type = 'business' AND v.owner_tenant_id = t.id;
+
+-- All trailers with owner info
+CREATE OR REPLACE VIEW v_trailers_with_owners AS
+SELECT 
+    tr.*,
+    CASE tr.owner_type
+        WHEN 'individual' THEN u.first_name || ' ' || u.last_name
+        WHEN 'business' THEN t.name
+    END as owner_name,
+    CASE tr.owner_type
+        WHEN 'individual' THEN u.email
+        WHEN 'business' THEN t.email
+    END as owner_email,
+    u.id as individual_owner_id,
+    t.id as business_owner_id
+FROM cc_trailers tr
+LEFT JOIN cc_users u ON tr.owner_type = 'individual' AND tr.owner_user_id = u.id
+LEFT JOIN cc_tenants t ON tr.owner_type = 'business' AND tr.owner_tenant_id = t.id;
+
+-- Fleet summary view
+CREATE OR REPLACE VIEW v_fleet_summary AS
+SELECT 
+    f.id as fleet_id,
+    f.name as fleet_name,
+    f.tenant_id,
+    t.name as tenant_name,
+    COUNT(DISTINCT fva.vehicle_id) FILTER (WHERE fva.is_active) as vehicle_count,
+    COUNT(DISTINCT fta.trailer_id) FILTER (WHERE fta.is_active) as trailer_count
+FROM cc_fleets f
+JOIN cc_tenants t ON t.id = f.tenant_id
+LEFT JOIN cc_fleet_vehicle_assignments fva ON fva.fleet_id = f.id
+LEFT JOIN cc_fleet_trailer_assignments fta ON fta.fleet_id = f.id
+WHERE f.status = 'active'
+GROUP BY f.id, f.name, f.tenant_id, t.name;
+
+-- ============================================================================
+-- VERIFY
+-- ============================================================================
+
+SELECT 'Vehicle/Trailer tables created:' as status;
+SELECT table_name FROM information_schema.tables 
+WHERE table_schema = 'public' 
+AND table_name IN ('cc_vehicles', 'cc_trailers', 'cc_fleets', 
+                   'cc_fleet_vehicle_assignments', 'cc_fleet_trailer_assignments',
+                   'cc_vehicle_driver_assignments', 'cc_maintenance_records')
+ORDER BY table_name;
+```
+
+Report verification results.
