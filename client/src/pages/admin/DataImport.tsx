@@ -72,8 +72,9 @@ export default function DataImport() {
     const [processing, setProcessing] = useState(false);
 
     useEffect(() => {
-        if (user) loadData();
-    }, [user]);
+        // Load data regardless of auth state for testing
+        loadData();
+    }, []);
 
     async function loadData() {
         const token = localStorage.getItem('accessToken');
