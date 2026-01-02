@@ -8,6 +8,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Users, Shield, Building2, Award, Search, UserPlus, Edit, KeyRound, UserX, UserCheck } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface User {
     id: string;
@@ -59,6 +60,7 @@ interface Qualification {
 }
 
 export default function UsersManagement() {
+    const { token, loading: authLoading } = useAuth();
     const [users, setUsers] = useState<User[]>([]);
     const [selectedUser, setSelectedUser] = useState<UserDetail | null>(null);
     const [userTenants, setUserTenants] = useState<Tenant[]>([]);
@@ -70,9 +72,8 @@ export default function UsersManagement() {
     const [statusFilter, setStatusFilter] = useState('all');
     const [total, setTotal] = useState(0);
 
-    const token = localStorage.getItem('cc_token');
-
     const loadUsers = useCallback(async () => {
+        if (!token) return;
         setLoading(true);
         try {
             let url = '/api/foundation/users?limit=50';
@@ -96,8 +97,18 @@ export default function UsersManagement() {
     }, [search, statusFilter, token]);
 
     useEffect(() => {
-        loadUsers();
-    }, [loadUsers]);
+        if (token) {
+            loadUsers();
+        }
+    }, [loadUsers, token]);
+
+    if (authLoading) {
+        return (
+            <div className="p-6 flex items-center justify-center">
+                <div className="text-muted-foreground">Initializing...</div>
+            </div>
+        );
+    }
 
     async function loadUserDetails(userId: string) {
         setDetailLoading(true);

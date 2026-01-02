@@ -1,15 +1,25 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+The Users and Tenants management pages are not loading data because they need authentication. The pages are trying to use `localStorage.getItem('cc_token')` but we haven't set up the login flow yet.
+
+## Quick Fix: Add temporary auto-login for development
+
+Create a simple auth context and auto-login for the platform admin.
+
+### Step 1: Create AuthContext
+
+Create file: client/src/contexts/AuthContext.tsx
+```tsx
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
 interface User {
     id: string;
     email: string;
-    firstName: string | null;
-    lastName: string | null;
+    firstName: string;
+    lastName: string;
     displayName: string;
     isPlatformAdmin: boolean;
 }
 
-interface CCTenant {
+interface Tenant {
     id: string;
     name: string;
     slug: string;
@@ -19,7 +29,7 @@ interface CCTenant {
 
 interface AuthContextType {
     user: User | null;
-    ccTenants: CCTenant[];
+    tenants: Tenant[];
     token: string | null;
     loading: boolean;
     login: (email: string, password: string) => Promise<boolean>;
@@ -32,10 +42,11 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
-    const [ccTenants, setCCTenants] = useState<CCTenant[]>([]);
+    const [tenants, setTenants] = useState<Tenant[]>([]);
     const [token, setToken] = useState<string | null>(localStorage.getItem('cc_token'));
     const [loading, setLoading] = useState(true);
 
+    // Check for existing session on mount
     useEffect(() => {
         async function checkAuth() {
             const storedToken = localStorage.getItem('cc_token');
@@ -47,9 +58,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                     const data = await res.json();
                     if (data.success) {
                         setUser(data.user);
-                        setCCTenants(data.tenants || []);
+                        setTenants(data.tenants);
                         setToken(storedToken);
                     } else {
+                        // Token invalid, clear it
                         localStorage.removeItem('cc_token');
                         setToken(null);
                     }
@@ -64,6 +76,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         checkAuth();
     }, []);
 
+    // Auto-login for development (remove in production)
     useEffect(() => {
         async function devAutoLogin() {
             if (!token && !loading) {
@@ -71,6 +84,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 await login('glenn@communitycanvas.ca', 'admin123');
             }
         }
+        // Only auto-login if no token and we're done loading
         if (!token && !loading) {
             devAutoLogin();
         }
@@ -89,7 +103,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 localStorage.setItem('cc_token', data.token);
                 setToken(data.token);
                 setUser(data.user);
-                setCCTenants(data.tenants || []);
+                setTenants(data.tenants);
                 return true;
             }
             return false;
@@ -103,13 +117,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         localStorage.removeItem('cc_token');
         setToken(null);
         setUser(null);
-        setCCTenants([]);
+        setTenants([]);
     }
 
     return (
         <AuthContext.Provider value={{
             user,
-            ccTenants,
+            tenants,
             token,
             loading,
             login,
@@ -129,3 +143,81 @@ export function useAuth() {
     }
     return context;
 }
+```
+
+### Step 2: Wrap App with AuthProvider
+
+In client/src/main.tsx or client/src/App.tsx, wrap the app:
+```tsx
+import { AuthProvider } from './contexts/AuthContext';
+
+// In the render:
+<AuthProvider>
+    <BrowserRouter>
+        <Routes>
+            {/* ... routes ... */}
+        </Routes>
+    </BrowserRouter>
+</AuthProvider>
+```
+
+### Step 3: Update UsersManagement to use AuthContext
+
+In the UsersManagement.tsx, update to use the auth context:
+```tsx
+import { useAuth } from '../../contexts/AuthContext';
+
+export default function UsersManagement() {
+    const { token, loading: authLoading } = useAuth();
+    
+    // ... rest of component
+    
+    // Update the loadUsers function to check for token
+    const loadUsers = useCallback(async () => {
+        if (!token) return;  // Don't fetch without token
+        
+        setLoading(true);
+        try {
+            let url = '/api/foundation/users?limit=50';
+            if (search) url += `&search=${encodeURIComponent(search)}`;
+            if (statusFilter) url += `&status=${statusFilter}`;
+
+            const res = await fetch(url, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            const data = await res.json();
+            
+            if (data.success) {
+                setUsers(data.users);
+                setTotal(data.total);
+            }
+        } catch (err) {
+            console.error('Failed to load users:', err);
+        } finally {
+            setLoading(false);
+        }
+    }, [search, statusFilter, token]);
+
+    useEffect(() => {
+        if (token) {
+            loadUsers();
+        }
+    }, [loadUsers, token]);
+    
+    // Show loading while auth is initializing
+    if (authLoading) {
+        return <div className="p-6 text-gray-400">Initializing...</div>;
+    }
+```
+
+### Step 4: Do the same for TenantsManagement
+
+Update TenantsManagement.tsx similarly to use `useAuth()` and check for token before fetching.
+
+### Step 5: Test
+
+After these changes, reload the pages. The AuthContext will auto-login as Glenn (platform admin) in development mode, and the pages should load the data.
+
+You should see:
+- Users page: 2 users (Glenn, Test User)
+- Tenants page: 5 tenants (Platform: 1, Government: 1, Business: 1, Individual: 2)
