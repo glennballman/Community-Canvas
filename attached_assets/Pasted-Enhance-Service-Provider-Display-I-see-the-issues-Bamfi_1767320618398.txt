@@ -1,0 +1,333 @@
+Enhance Service Provider Display
+I see the issues:
+
+Bamfield Diesel Doctor shows but no mechanic name, rating, or details
+"Updated Mechanic Service" appears twice (duplicate bug)
+Cards aren't clickable/expandable
+
+Let's fix this with a UI enhancement prompt:
+
+UI FIX PROMPT: Enhanced Service Provider Cards
+The service provider section on property detail pages needs enhancement. Currently it only shows business name, type, and phone. We need to show the full value proposition.
+
+## Issues to Fix:
+1. There are duplicate "Updated Mechanic Service" entries - find and remove these from the database
+2. Service provider cards need more detail
+3. Cards should be expandable or link to more info
+
+## Step 1: Clean up duplicate providers
+
+Run this SQL to find and fix duplicates:
+
+-- Find duplicates
+SELECT property_id, business_name, provider_type, COUNT(*) 
+FROM staging_service_providers 
+GROUP BY property_id, business_name, provider_type 
+HAVING COUNT(*) > 1;
+
+-- Delete any test/duplicate entries
+DELETE FROM staging_service_providers 
+WHERE business_name = 'Updated Mechanic Service';
+
+-- Verify Save Paradise providers are correct
+SELECT id, business_name, provider_name, provider_type, is_resident, overall_rating
+FROM staging_service_providers 
+WHERE property_id = (SELECT id FROM staging_properties WHERE name = 'Save Paradise Parking');
+
+## Step 2: Update the ServiceProviderCard component
+
+Find the component that renders service providers on the property detail page. It's likely in:
+- client/src/pages/staging/PropertyDetail.tsx
+- client/src/components/staging/ServiceProviderCard.tsx
+- Or similar location
+
+Update the card to show this enhanced layout:
+```tsx
+interface ServiceProviderCardProps {
+  provider: {
+    id: number;
+    businessName: string;
+    providerName?: string;
+    providerType: string;
+    isResident: boolean;
+    phone?: string;
+    phone24hr?: string;
+    available24hr: boolean;
+    hourlyRate?: number;
+    overallRating?: number;
+    reviewCount?: number;
+    servicesOffered?: string[];
+    certifications?: string[];
+  };
+}
+
+function ServiceProviderCard({ provider }: ServiceProviderCardProps) {
+  const [expanded, setExpanded] = useState(false);
+  
+  // Format provider type for display
+  const formatType = (type: string) => {
+    const typeMap: Record<string, string> = {
+      'mechanic_diesel': 'Diesel Mechanic',
+      'mechanic_rv': 'RV Mechanic',
+      'tire_service': 'Tire Service',
+      'towing_heavy': 'Heavy Towing',
+      'farrier': 'Farrier',
+      'propane_delivery': 'Propane Delivery',
+      'welder': 'Mobile Welding',
+      'cleaning': 'Cleaning & Detailing',
+      'vet_emergency': 'Emergency Vet'
+    };
+    return typeMap[type] || type.replace(/_/g, ' ');
+  };
+
+  return (
+    <div 
+      className="bg-gray-800 rounded-lg p-4 border border-gray-700 hover:border-blue-500 cursor-pointer transition-all"
+      onClick={() => setExpanded(!expanded)}
+    >
+      {/* Header Row */}
+      <div className="flex justify-between items-start">
+        <div className="flex-1">
+          <div className="flex items-center gap-2">
+            <h4 className="text-white font-semibold">{provider.businessName}</h4>
+            {provider.isResident && (
+              <span className="bg-green-600 text-white text-xs px-2 py-0.5 rounded-full font-medium">
+                ★ RESIDENT
+              </span>
+            )}
+            {provider.available24hr && (
+              <span className="bg-blue-600 text-white text-xs px-2 py-0.5 rounded-full">
+                24/7
+              </span>
+            )}
+          </div>
+          
+          {/* Provider Name - THE KEY ADDITION */}
+          {provider.providerName && (
+            <p className="text-gray-300 text-sm mt-1">
+              Contact: <span className="text-white">{provider.providerName}</span>
+            </p>
+          )}
+          
+          <p className="text-gray-400 text-sm">{formatType(provider.providerType)}</p>
+        </div>
+        
+        {/* Rating & Phone */}
+        <div className="text-right">
+          {provider.overallRating && (
+            <div className="flex items-center gap-1 justify-end">
+              <span className="text-yellow-400">★</span>
+              <span className="text-white font-medium">{provider.overallRating}</span>
+              {provider.reviewCount && (
+                <span className="text-gray-400 text-sm">({provider.reviewCount})</span>
+              )}
+            </div>
+          )}
+          {provider.phone && (
+            <a 
+              href={`tel:${provider.phone}`} 
+              className="text-blue-400 hover:text-blue-300 text-sm"
+              onClick={(e) => e.stopPropagation()}
+            >
+              📞 {provider.phone}
+            </a>
+          )}
+        </div>
+      </div>
+      
+      {/* Hourly Rate */}
+      {provider.hourlyRate && (
+        <div className="mt-2 text-sm">
+          <span className="text-gray-400">Rate: </span>
+          <span className="text-green-400 font-medium">${provider.hourlyRate}/hr</span>
+        </div>
+      )}
+      
+      {/* Expanded Details */}
+      {expanded && (
+        <div className="mt-4 pt-4 border-t border-gray-700">
+          {/* Services */}
+          {provider.servicesOffered && provider.servicesOffered.length > 0 && (
+            <div className="mb-3">
+              <p className="text-gray-400 text-sm mb-1">Services:</p>
+              <div className="flex flex-wrap gap-1">
+                {provider.servicesOffered.slice(0, 8).map((service, i) => (
+                  <span key={i} className="bg-gray-700 text-gray-300 text-xs px-2 py-1 rounded">
+                    {service.replace(/_/g, ' ')}
+                  </span>
+                ))}
+                {provider.servicesOffered.length > 8 && (
+                  <span className="text-gray-400 text-xs">+{provider.servicesOffered.length - 8} more</span>
+                )}
+              </div>
+            </div>
+          )}
+          
+          {/* Certifications */}
+          {provider.certifications && provider.certifications.length > 0 && (
+            <div className="mb-3">
+              <p className="text-gray-400 text-sm mb-1">Certifications:</p>
+              <div className="flex flex-wrap gap-1">
+                {provider.certifications.map((cert, i) => (
+                  <span key={i} className="bg-green-900 text-green-300 text-xs px-2 py-1 rounded">
+                    ✓ {cert}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+          
+          {/* 24hr Phone if different */}
+          {provider.phone24hr && provider.phone24hr !== provider.phone && (
+            <p className="text-sm">
+              <span className="text-gray-400">24hr Emergency: </span>
+              <a href={`tel:${provider.phone24hr}`} className="text-red-400 hover:text-red-300">
+                📞 {provider.phone24hr}
+              </a>
+            </p>
+          )}
+        </div>
+      )}
+      
+      {/* Expand indicator */}
+      <div className="mt-2 text-center text-gray-500 text-xs">
+        {expanded ? '▲ Click to collapse' : '▼ Click for details'}
+      </div>
+    </div>
+  );
+}
+```
+
+## Step 3: Update the API to return full provider data
+
+Check the property detail API endpoint and ensure it returns all provider fields:
+
+In server/routes/staging.ts, find the providers endpoint and update the query:
+```typescript
+// GET /api/staging/properties/:id/providers
+router.get('/properties/:id/providers', async (req, res) => {
+  const { id } = req.params;
+  
+  const result = await db.query(`
+    SELECT 
+      id,
+      provider_type,
+      business_name,
+      provider_name,
+      is_resident,
+      is_employee,
+      phone,
+      phone_24hr,
+      phone_text_ok,
+      email,
+      website,
+      hours_regular,
+      available_24hr,
+      available_after_hours,
+      after_hours_fee,
+      available_weekends,
+      response_time_minutes,
+      same_day_service,
+      services_offered,
+      certifications,
+      years_experience,
+      specialties,
+      hourly_rate,
+      has_flat_rate_menu,
+      flat_rate_menu,
+      minimum_charge,
+      mobile_service_fee,
+      overall_rating,
+      quality_rating,
+      speed_rating,
+      price_rating,
+      review_count,
+      is_verified,
+      is_featured
+    FROM staging_service_providers
+    WHERE property_id = $1 AND is_active = true
+    ORDER BY is_resident DESC, is_featured DESC, overall_rating DESC NULLS LAST
+  `, [id]);
+  
+  // Convert snake_case to camelCase
+  const providers = result.rows.map(row => ({
+    id: row.id,
+    providerType: row.provider_type,
+    businessName: row.business_name,
+    providerName: row.provider_name,
+    isResident: row.is_resident,
+    isEmployee: row.is_employee,
+    phone: row.phone,
+    phone24hr: row.phone_24hr,
+    phoneTextOk: row.phone_text_ok,
+    email: row.email,
+    website: row.website,
+    hoursRegular: row.hours_regular,
+    available24hr: row.available_24hr,
+    availableAfterHours: row.available_after_hours,
+    afterHoursFee: row.after_hours_fee,
+    availableWeekends: row.available_weekends,
+    responseTimeMinutes: row.response_time_minutes,
+    sameDayService: row.same_day_service,
+    servicesOffered: row.services_offered,
+    certifications: row.certifications,
+    yearsExperience: row.years_experience,
+    specialties: row.specialties,
+    hourlyRate: row.hourly_rate,
+    hasFlatRateMenu: row.has_flat_rate_menu,
+    flatRateMenu: row.flat_rate_menu,
+    minimumCharge: row.minimum_charge,
+    mobileServiceFee: row.mobile_service_fee,
+    overallRating: row.overall_rating,
+    qualityRating: row.quality_rating,
+    speedRating: row.speed_rating,
+    priceRating: row.price_rating,
+    reviewCount: row.review_count,
+    isVerified: row.is_verified,
+    isFeatured: row.is_featured
+  }));
+  
+  res.json({ providers });
+});
+```
+
+## Step 4: Verify the fix
+
+After implementing, Save Paradise Parking should show:
+
+┌─────────────────────────────────────────────────────────────────┐
+│  Bamfield Diesel Doctor                    ★ RESIDENT   24/7   │
+│  Contact: Mike Thornton                                        │
+│  Diesel Mechanic                           ★ 4.9 (47)          │
+│                                            📞 250-728-3456     │
+│  Rate: $125/hr                                                 │
+│                                                                │
+│  ▼ Click for details                                           │
+└─────────────────────────────────────────────────────────────────┘
+
+When expanded:
+┌─────────────────────────────────────────────────────────────────┐
+│  Services: oil change | brake repair | engine diagnostics ...  │
+│  Certifications: ✓ ASE Master | ✓ Cummins | ✓ CAT | ✓ Detroit │
+│  24hr Emergency: 📞 250-728-3456                               │
+└─────────────────────────────────────────────────────────────────┘
+
+First run the SQL to clean up duplicates, then implement the component changes.
+
+Run the SQL cleanup first:
+sql-- Find any duplicates or test data
+SELECT id, business_name, provider_type, property_id 
+FROM staging_service_providers 
+WHERE business_name LIKE '%Updated%' OR business_name LIKE '%Test%'
+ORDER BY id;
+
+-- Delete test entries
+DELETE FROM staging_service_providers 
+WHERE business_name LIKE '%Updated%';
+
+-- Verify Save Paradise providers
+SELECT business_name, provider_name, provider_type, is_resident, overall_rating
+FROM staging_service_providers 
+WHERE property_id = (SELECT id FROM staging_properties WHERE name = 'Save Paradise Parking')
+ORDER BY is_resident DESC;
+Let me know what the SQL shows, and then we'll fix the UI component

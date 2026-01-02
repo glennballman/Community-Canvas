@@ -79,8 +79,17 @@ interface Provider {
   businessName: string | null;
   providerName: string | null;
   phone: string | null;
+  phone_24hr: string | null;
+  email: string | null;
   isResident: boolean;
-  available24hr: boolean;
+  available_24hr: boolean;
+  hourlyRate: number | null;
+  overallRating: number | null;
+  reviewCount: number | null;
+  servicesOffered: string[] | null;
+  certifications: string[] | null;
+  yearsExperience: number | null;
+  specialties: string[] | null;
 }
 
 function AmenityItem({ available, label, icon: Icon }: { available: boolean; label: string; icon: React.ElementType }) {
@@ -327,33 +336,104 @@ export default function PropertyDetail() {
                 <div>
                   <h2 className="text-xl font-semibold mb-4">On-Site Services</h2>
                   <div className="space-y-4">
-                    {providersData.providers.map((provider: Provider) => (
-                      <Card key={provider.id} className={provider.providerType === 'mechanic' && provider.isResident ? 'border-green-500' : ''}>
-                        <CardContent className="p-4">
-                          <div className="flex items-start justify-between">
-                            <div>
-                              <div className="flex items-center gap-2 mb-1">
-                                {provider.providerType === 'mechanic' && <Wrench className="h-4 w-4 text-green-500" />}
-                                <h4 className="font-medium">{provider.businessName || provider.providerName}</h4>
-                                {provider.isResident && (
-                                  <Badge className="bg-green-500">Resident!</Badge>
+                    {providersData.providers.map((provider: Provider) => {
+                      const formatType = (type: string) => {
+                        const typeMap: Record<string, string> = {
+                          'mechanic_diesel': 'Diesel Mechanic',
+                          'mechanic_rv': 'RV Mechanic',
+                          'mechanic': 'Mechanic',
+                          'tire_service': 'Tire Service',
+                          'towing_heavy': 'Heavy Towing',
+                          'farrier': 'Farrier',
+                          'propane_delivery': 'Propane Delivery',
+                          'welder': 'Mobile Welding',
+                          'cleaning': 'Cleaning & Detailing',
+                          'vet_emergency': 'Emergency Vet'
+                        };
+                        return typeMap[type] || type.replace(/_/g, ' ');
+                      };
+                      
+                      return (
+                        <Card key={provider.id} className={provider.isResident ? 'border-green-500 border-2' : ''}>
+                          <CardContent className="p-4">
+                            <div className="flex items-start justify-between gap-4">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 flex-wrap mb-1">
+                                  {provider.providerType?.includes('mechanic') && <Wrench className="h-4 w-4 text-green-500" />}
+                                  <h4 className="font-semibold">{provider.businessName || provider.providerName}</h4>
+                                  {provider.isResident && (
+                                    <Badge className="bg-green-600 text-white">RESIDENT</Badge>
+                                  )}
+                                  {provider.available_24hr && (
+                                    <Badge variant="secondary">24/7</Badge>
+                                  )}
+                                </div>
+                                {provider.providerName && provider.businessName && (
+                                  <p className="text-sm text-muted-foreground">
+                                    Contact: <span className="text-foreground">{provider.providerName}</span>
+                                    {provider.yearsExperience && <span className="ml-2">({provider.yearsExperience} yrs exp)</span>}
+                                  </p>
+                                )}
+                                <p className="text-sm text-muted-foreground">{formatType(provider.providerType)}</p>
+                              </div>
+                              <div className="text-right shrink-0">
+                                {provider.overallRating && (
+                                  <div className="flex items-center gap-1 justify-end mb-1">
+                                    <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" />
+                                    <span className="font-medium">{provider.overallRating}</span>
+                                    {provider.reviewCount !== null && provider.reviewCount > 0 && (
+                                      <span className="text-muted-foreground text-sm">({provider.reviewCount})</span>
+                                    )}
+                                  </div>
+                                )}
+                                {provider.phone && (
+                                  <a href={`tel:${provider.phone}`} className="flex items-center gap-1 text-primary justify-end">
+                                    <Phone className="h-4 w-4" />
+                                    <span className="text-sm">{provider.phone}</span>
+                                  </a>
                                 )}
                               </div>
-                              <p className="text-sm text-muted-foreground capitalize">{provider.providerType?.replace(/_/g, ' ')}</p>
                             </div>
-                            {provider.phone && (
-                              <a href={`tel:${provider.phone}`} className="flex items-center gap-1 text-primary">
-                                <Phone className="h-4 w-4" />
-                                <span className="text-sm">{provider.phone}</span>
-                              </a>
+                            
+                            {provider.hourlyRate && (
+                              <div className="mt-2 text-sm">
+                                <span className="text-muted-foreground">Rate: </span>
+                                <span className="text-green-600 dark:text-green-400 font-medium">${provider.hourlyRate}/hr</span>
+                              </div>
                             )}
-                          </div>
-                          {provider.available24hr && (
-                            <Badge variant="outline" className="mt-2">24/7 Available</Badge>
-                          )}
-                        </CardContent>
-                      </Card>
-                    ))}
+                            
+                            {provider.certifications && provider.certifications.length > 0 && (
+                              <div className="mt-3 flex flex-wrap gap-1">
+                                {provider.certifications.slice(0, 4).map((cert, i) => (
+                                  <Badge key={i} variant="outline" className="text-xs bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/30">
+                                    {cert}
+                                  </Badge>
+                                ))}
+                                {provider.certifications.length > 4 && (
+                                  <span className="text-xs text-muted-foreground self-center">+{provider.certifications.length - 4} more</span>
+                                )}
+                              </div>
+                            )}
+                            
+                            {provider.servicesOffered && provider.servicesOffered.length > 0 && (
+                              <div className="mt-3">
+                                <p className="text-xs text-muted-foreground mb-1">Services:</p>
+                                <div className="flex flex-wrap gap-1">
+                                  {provider.servicesOffered.slice(0, 6).map((service, i) => (
+                                    <Badge key={i} variant="secondary" className="text-xs">
+                                      {service.replace(/_/g, ' ')}
+                                    </Badge>
+                                  ))}
+                                  {provider.servicesOffered.length > 6 && (
+                                    <span className="text-xs text-muted-foreground self-center">+{provider.servicesOffered.length - 6} more</span>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
                   </div>
                 </div>
               </>
