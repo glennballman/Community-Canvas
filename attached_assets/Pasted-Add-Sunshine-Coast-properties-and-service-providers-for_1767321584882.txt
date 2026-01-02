@@ -1,0 +1,265 @@
+Add Sunshine Coast properties and service providers for new regions.
+
+Run this SQL:
+
+-- ============================================================================
+-- SUNSHINE COAST - Coastal Paradise
+-- ============================================================================
+
+-- 1. Porpoise Bay Provincial Park Area - Sechelt
+INSERT INTO staging_properties (
+    name, description, short_description, tagline,
+    property_type, property_subtype,
+    region, city, address, postal_code,
+    latitude, longitude,
+    total_spots, spots_small, spots_medium, spots_large, spots_pull_through,
+    max_combined_length_ft,
+    has_shore_power, power_amps, power_included, num_power_hookups,
+    has_water_hookup, has_potable_water, num_water_hookups,
+    has_sewer_hookup, has_dump_station,
+    has_wifi, has_cell_signal, cell_signal_strength,
+    has_bathrooms, bathroom_type, has_showers, showers_free,
+    has_laundry, has_store,
+    has_beach_access, has_swimming, has_fishing, has_hiking_trails, has_kayak_rental,
+    is_waterfront, waterfront_type,
+    pets_allowed, dogs_allowed,
+    has_onsite_manager,
+    road_type,
+    access_type, check_in_method,
+    min_nights, max_stay_days,
+    status, is_verified, source
+) VALUES (
+    'Sechelt Inlet RV Resort',
+    'Hidden gem on the Sunshine Coast! Peaceful inlet camping with excellent paddling and fishing. Access via BC Ferries from Horseshoe Bay. Less crowded than the Island, with small-town charm and stunning coastal scenery.',
+    'Peaceful inlet camping on the Sunshine Coast with paddling and fishing.',
+    'Coastal calm awaits',
+    'rv_park', 'full_hookup',
+    'Sunshine Coast', 'Sechelt', '5875 Sechelt Inlet Road', 'V0N 3A4',
+    49.4756, -123.7534,
+    65, 20, 25, 15, 20,
+    45,
+    true, ARRAY[30, 50], true, 50,
+    true, true, 50,
+    true, true,
+    true, true, 3,
+    true, 'flush', true, true,
+    true, true,
+    true, true, true, true, true,
+    true, 'inlet',
+    true, true,
+    true,
+    'paved',
+    'office_hours', 'office_check_in',
+    1, 180,
+    'active', true, 'web_research'
+);
+
+INSERT INTO staging_pricing (property_id, pricing_type, nightly_rate, weekly_rate, monthly_rate, is_active)
+SELECT id, 'base_nightly', 50.00, 300.00, 1000.00, true
+FROM staging_properties WHERE name = 'Sechelt Inlet RV Resort';
+
+-- 2. Powell River Oceanview RV
+INSERT INTO staging_properties (
+    name, description, short_description, tagline,
+    property_type, property_subtype,
+    region, city, address, postal_code,
+    latitude, longitude,
+    total_spots, spots_small, spots_medium, spots_large, spots_pull_through,
+    max_combined_length_ft,
+    has_shore_power, power_amps, power_included, num_power_hookups,
+    has_water_hookup, has_potable_water, num_water_hookups,
+    has_sewer_hookup, num_sewer_hookups, has_dump_station,
+    has_wifi, wifi_included, has_cell_signal,
+    has_bathrooms, bathroom_type, has_showers, showers_free,
+    has_laundry, has_store,
+    has_beach_access, has_fishing, has_hiking_trails, has_kayak_rental,
+    is_waterfront, waterfront_type,
+    pets_allowed, dogs_allowed,
+    has_onsite_manager,
+    access_type, check_in_method,
+    min_nights, max_stay_days,
+    status, is_verified, source
+) VALUES (
+    'Powell River Oceanview RV Park',
+    'End of the road paradise! Powell River offers world-class diving, kayaking, and the famous Sunshine Coast Trail. Gateway to Desolation Sound. Quieter and more affordable than most BC coastal destinations. Strong local arts scene.',
+    'Ocean views and gateway to Desolation Sound marine paradise.',
+    'End of the road magic',
+    'rv_park', 'full_hookup',
+    'Sunshine Coast', 'Powell River', '4845 Marine Avenue', 'V8A 2L2',
+    49.8534, -124.5234,
+    55, 15, 20, 15, 20,
+    45,
+    true, ARRAY[30, 50], true, 45,
+    true, true, 45,
+    true, 40, true,
+    true, true, true,
+    true, 'flush', true, true,
+    true, true,
+    true, true, true, true,
+    true, 'ocean',
+    true, true,
+    true,
+    'office_hours', 'office_check_in',
+    1, 364,
+    'active', true, 'web_research'
+);
+
+INSERT INTO staging_pricing (property_id, pricing_type, nightly_rate, weekly_rate, monthly_rate, is_active)
+SELECT id, 'base_nightly', 45.00, 270.00, 850.00, true
+FROM staging_properties WHERE name = 'Powell River Oceanview RV Park';
+
+-- ============================================================================
+-- SERVICE PROVIDERS FOR NEW REGIONS
+-- ============================================================================
+
+-- Okanagan Mobile RV Service (Kelowna based, serves region)
+INSERT INTO staging_service_providers (
+    property_id,
+    provider_type,
+    business_name,
+    provider_name,
+    is_resident,
+    phone,
+    phone_text_ok,
+    email,
+    
+    available_weekends,
+    same_day_service,
+    response_time_minutes,
+    
+    services_offered,
+    vehicle_types_served,
+    
+    certifications,
+    years_experience,
+    specialties,
+    
+    hourly_rate,
+    minimum_charge,
+    mobile_service_fee,
+    accepts_cards,
+    
+    overall_rating,
+    review_count,
+    
+    is_active
+)
+SELECT 
+    id,
+    'mechanic_rv',
+    'Okanagan RV Mobile Service',
+    'Dan Wilson',
+    false,
+    '250-555-4RV1',
+    true,
+    'dan@okanaganrv.ca',
+    
+    true,
+    true,
+    180,
+    
+    ARRAY['generator_repair', 'ac_repair', 'furnace_repair', 'water_heater', 'refrigerator_repair', 'slide_out_repair', 'awning_repair', 'plumbing', 'electrical_12v', 'propane_system'],
+    ARRAY['rv_class_a', 'rv_class_b', 'rv_class_c', 'travel_trailer', 'fifth_wheel'],
+    
+    ARRAY['RVIA Certified', 'Onan Certified', 'Dometic Certified'],
+    11,
+    ARRAY['Dometic AC', 'Onan generators', 'Slide repairs'],
+    
+    90.00,
+    90.00,
+    45.00,
+    true,
+    
+    4.7,
+    89,
+    
+    true
+FROM staging_properties WHERE name = 'Holiday Park Resort';
+
+-- Kootenays Diesel Service (Revelstoke)
+INSERT INTO staging_service_providers (
+    property_id,
+    provider_type,
+    business_name,
+    provider_name,
+    is_resident,
+    phone,
+    phone_24hr,
+    
+    available_24hr,
+    available_after_hours,
+    after_hours_fee,
+    response_time_minutes,
+    
+    services_offered,
+    vehicle_types_served,
+    makes_serviced,
+    
+    certifications,
+    years_experience,
+    
+    hourly_rate,
+    minimum_charge,
+    mobile_service_fee,
+    accepts_cards,
+    accepts_fleet_accounts,
+    
+    overall_rating,
+    review_count,
+    
+    is_active
+)
+SELECT 
+    id,
+    'mechanic_diesel',
+    'Mountain Pass Diesel',
+    'Rick Henderson',
+    false,
+    '250-837-5555',
+    '250-837-9911',
+    
+    true,
+    true,
+    100.00,
+    60,
+    
+    ARRAY['oil_change', 'brake_repair', 'engine_diagnostics', 'electrical_repair', 'coolant_system', 'transmission_service'],
+    ARRAY['semi_truck', 'work_truck', 'rv_class_a', 'bus'],
+    ARRAY['Freightliner', 'Peterbilt', 'Kenworth', 'Cummins', 'CAT'],
+    
+    ARRAY['ASE Certified', 'Red Seal', 'Cummins Certified'],
+    18,
+    
+    130.00,
+    150.00,
+    75.00,
+    true,
+    true,
+    
+    4.5,
+    45,
+    
+    true
+FROM staging_properties WHERE name = 'Revelstoke Gateway RV Park';
+
+-- ============================================================================
+-- FINAL SUMMARY - ALL REGIONS
+-- ============================================================================
+
+SELECT 
+    region,
+    COUNT(*) as properties,
+    SUM(total_spots) as spots,
+    ROUND(AVG(rv_score), 1) as avg_rv,
+    ROUND(AVG(crew_score), 1) as avg_crew
+FROM staging_properties
+GROUP BY region
+ORDER BY properties DESC;
+
+-- Total network size
+SELECT 
+    COUNT(*) as total_properties,
+    SUM(total_spots) as total_spots,
+    COUNT(DISTINCT region) as regions,
+    COUNT(DISTINCT city) as cities
+FROM staging_properties;
