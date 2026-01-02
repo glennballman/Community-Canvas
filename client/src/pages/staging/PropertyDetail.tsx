@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useRoute, Link } from 'wouter';
+import { useRoute, Link, useLocation } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -104,6 +104,7 @@ function AmenityItem({ available, label, icon: Icon }: { available: boolean; lab
 
 export default function PropertyDetail() {
   const [, params] = useRoute('/staging/:id');
+  const [, setLocation] = useLocation();
   const propertyId = params?.id ? parseInt(params.id) : null;
   
   const [checkIn, setCheckIn] = useState('');
@@ -533,7 +534,16 @@ export default function PropertyDetail() {
                     </div>
                   )}
 
-                  <Button className="w-full" size="lg" data-testid="button-book-now">
+                  <Button 
+                    className="w-full" 
+                    size="lg" 
+                    data-testid="button-book-now"
+                    onClick={() => {
+                      if (checkIn && checkOut) {
+                        setLocation(`/staging/${propertyId}/book?checkIn=${checkIn}&checkOut=${checkOut}`);
+                      }
+                    }}
+                  >
                     {checkIn && checkOut ? 'Book Now' : 'Check Availability'}
                   </Button>
                   
