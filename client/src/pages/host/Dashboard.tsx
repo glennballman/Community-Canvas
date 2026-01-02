@@ -21,11 +21,12 @@ function DashboardContent() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
 
-  useEffect(() => {
-    if (user && user.userType !== 'host' && user.userType !== 'admin') {
-      setLocation('/');
-    }
-  }, [user, setLocation]);
+  // Auth redirect temporarily disabled for testing - users stay on page
+  // useEffect(() => {
+  //   if (user && user.userType !== 'host' && user.userType !== 'admin') {
+  //     setLocation('/');
+  //   }
+  // }, [user, setLocation]);
 
   const { data: statsData, isLoading: loadingStats } = useQuery({
     queryKey: ['/api/host-dashboard', 'stats'],
