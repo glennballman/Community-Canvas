@@ -1,0 +1,159 @@
+Create user authentication system - database schema.
+
+Run this SQL to create all auth-related tables:
+
+-- ============================================================================
+-- USER AUTHENTICATION TABLES
+-- ============================================================================
+
+-- Users table
+CREATE TABLE IF NOT EXISTS staging_users (
+    id SERIAL PRIMARY KEY,
+    
+    -- Identity
+    email VARCHAR(255) UNIQUE NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    
+    -- Profile
+    first_name VARCHAR(100),
+    last_name VARCHAR(100),
+    phone VARCHAR(50),
+    avatar_url TEXT,
+    
+    -- User type
+    user_type VARCHAR(50) DEFAULT 'guest',  -- guest, host, admin, crew_manager
+    company_name VARCHAR(255),
+    company_role VARCHAR(100),
+    
+    -- Verification
+    email_verified BOOLEAN DEFAULT false,
+    email_verified_at TIMESTAMP,
+    phone_verified BOOLEAN DEFAULT false,
+    
+    -- Status
+    status VARCHAR(50) DEFAULT 'active',  -- active, suspended, deleted
+    last_login_at TIMESTAMP,
+    login_count INTEGER DEFAULT 0,
+    
+    -- Preferences
+    preferences JSONB DEFAULT '{}',
+    notification_settings JSONB DEFAULT '{"email": true, "sms": false}',
+    
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_users_email ON staging_users(email);
+CREATE INDEX idx_users_type ON staging_users(user_type);
+
+-- Sessions table (for JWT refresh tokens)
+CREATE TABLE IF NOT EXISTS staging_sessions (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES staging_users(id) ON DELETE CASCADE,
+    
+    refresh_token VARCHAR(255) UNIQUE NOT NULL,
+    device_info VARCHAR(255),
+    ip_address VARCHAR(45),
+    
+    expires_at TIMESTAMP NOT NULL,
+    revoked_at TIMESTAMP,
+    
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_sessions_user ON staging_sessions(user_id);
+CREATE INDEX idx_sessions_token ON staging_sessions(refresh_token);
+
+-- User vehicles (saved vehicle profiles)
+CREATE TABLE IF NOT EXISTS staging_user_vehicles (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES staging_users(id) ON DELETE CASCADE,
+    
+    -- Vehicle details
+    nickname VARCHAR(100),  -- "My Class A", "Work Truck"
+    vehicle_type VARCHAR(50) NOT NULL,
+    make VARCHAR(100),
+    model VARCHAR(100),
+    year INTEGER,
+    
+    -- Dimensions
+    length_ft INTEGER,
+    width_ft INTEGER,
+    height_ft INTEGER,
+    weight_lbs INTEGER,
+    
+    -- Features
+    has_slideouts BOOLEAN DEFAULT false,
+    num_slideouts INTEGER DEFAULT 0,
+    tow_vehicle_length_ft INTEGER,  -- If towing
+    combined_length_ft INTEGER,     -- Total with tow
+    
+    -- Power requirements
+    power_amp_requirement INTEGER,  -- 30 or 50
+    has_generator BOOLEAN DEFAULT false,
+    
+    -- Identification
+    license_plate VARCHAR(20),
+    license_state VARCHAR(10),
+    vin VARCHAR(50),
+    
+    -- Insurance (optional)
+    insurance_company VARCHAR(100),
+    insurance_policy VARCHAR(50),
+    insurance_expiry DATE,
+    
+    is_primary BOOLEAN DEFAULT false,
+    is_active BOOLEAN DEFAULT true,
+    
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_user_vehicles_user ON staging_user_vehicles(user_id);
+
+-- User favorites (saved properties)
+CREATE TABLE IF NOT EXISTS staging_user_favorites (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES staging_users(id) ON DELETE CASCADE,
+    property_id INTEGER REFERENCES staging_properties(id) ON DELETE CASCADE,
+    
+    notes TEXT,
+    
+    created_at TIMESTAMP DEFAULT NOW(),
+    
+    UNIQUE(user_id, property_id)
+);
+
+CREATE INDEX idx_favorites_user ON staging_user_favorites(user_id);
+
+-- Password reset tokens
+CREATE TABLE IF NOT EXISTS staging_password_resets (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES staging_users(id) ON DELETE CASCADE,
+    
+    token VARCHAR(255) UNIQUE NOT NULL,
+    expires_at TIMESTAMP NOT NULL,
+    used_at TIMESTAMP,
+    
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Update bookings table to link to users
+ALTER TABLE staging_bookings 
+ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES staging_users(id);
+
+CREATE INDEX IF NOT EXISTS idx_bookings_user ON staging_bookings(user_id);
+
+-- Update trips table to link to users
+ALTER TABLE staging_trips
+ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES staging_users(id);
+
+-- Verify tables created
+SELECT table_name FROM information_schema.tables 
+WHERE table_name IN (
+    'staging_users', 
+    'staging_sessions', 
+    'staging_user_vehicles', 
+    'staging_user_favorites',
+    'staging_password_resets'
+);
