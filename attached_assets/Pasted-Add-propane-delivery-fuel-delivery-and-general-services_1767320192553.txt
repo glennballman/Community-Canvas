@@ -1,0 +1,224 @@
+Add propane delivery, fuel delivery, and general services.
+
+Run this SQL:
+
+-- ============================================================================
+-- PROPANE DELIVERY
+-- ============================================================================
+
+-- 1. Save Paradise Parking - Propane delivery
+INSERT INTO staging_service_providers (
+    property_id,
+    provider_type,
+    business_name,
+    is_resident,
+    phone,
+    phone_text_ok,
+    
+    hours_regular,
+    advance_booking_required,
+    same_day_service,
+    
+    services_offered,
+    
+    has_flat_rate_menu,
+    flat_rate_menu,
+    accepts_cash,
+    accepts_cards,
+    
+    is_active
+)
+SELECT 
+    id,
+    'propane_delivery',
+    'West Coast Propane - Bamfield',
+    false,
+    '250-728-3333',
+    true,
+    
+    '{"monday": "9:00-17:00", "tuesday": "9:00-17:00", "wednesday": "9:00-17:00", "thursday": "9:00-17:00", "friday": "9:00-17:00"}'::jsonb,
+    true,
+    false,
+    
+    ARRAY['propane_tank_fill', 'propane_exchange', 'propane_inspection'],
+    
+    true,
+    '{"20lb_fill": 28.00, "30lb_fill": 42.00, "40lb_fill": 56.00, "delivery_fee": 15.00}'::jsonb,
+    true,
+    true,
+    
+    true
+FROM staging_properties WHERE name = 'Save Paradise Parking';
+
+-- 2. Mountainaire - Propane
+INSERT INTO staging_service_providers (
+    property_id,
+    provider_type,
+    business_name,
+    is_resident,
+    phone,
+    
+    same_day_service,
+    
+    services_offered,
+    
+    has_flat_rate_menu,
+    flat_rate_menu,
+    accepts_cards,
+    
+    is_active
+)
+SELECT 
+    id,
+    'propane_delivery',
+    'Nanaimo Propane Services',
+    false,
+    '250-555-7766',
+    
+    true,
+    
+    ARRAY['propane_tank_fill', 'propane_exchange', 'rv_propane_fill'],
+    
+    true,
+    '{"20lb_fill": 25.00, "30lb_fill": 38.00, "rv_fill_per_gallon": 4.50}'::jsonb,
+    true,
+    
+    true
+FROM staging_properties WHERE name = 'Mountainaire Campground and RV Park';
+
+-- ============================================================================
+-- MOBILE WELDING
+-- ============================================================================
+
+INSERT INTO staging_service_providers (
+    property_id,
+    provider_type,
+    business_name,
+    provider_name,
+    is_resident,
+    phone,
+    phone_24hr,
+    
+    available_24hr,
+    available_after_hours,
+    after_hours_fee,
+    response_time_minutes,
+    
+    services_offered,
+    vehicle_types_served,
+    
+    certifications,
+    years_experience,
+    specialties,
+    
+    hourly_rate,
+    minimum_charge,
+    mobile_service_fee,
+    accepts_cards,
+    accepts_fleet_accounts,
+    
+    overall_rating,
+    review_count,
+    
+    is_active
+)
+SELECT 
+    id,
+    'welder',
+    'Highway Mobile Welding',
+    'Rob Steele',
+    false,
+    '604-555-WELD',
+    '604-555-9353',
+    
+    true,
+    true,
+    100.00,
+    90,
+    
+    ARRAY['trailer_repair', 'frame_repair', 'hitch_repair', 'fabrication', 'aluminum_welding', 'steel_welding', 'emergency_repair'],
+    ARRAY['semi_truck', 'trailer', 'rv_class_a', 'fifth_wheel', 'heavy_equipment'],
+    
+    ARRAY['CWB Certified', 'Red Seal Welder'],
+    19,
+    ARRAY['Trailer frames', 'Fifth wheel hitches', 'Aluminum RV repair'],
+    
+    125.00,
+    150.00,
+    75.00,
+    true,
+    true,
+    
+    4.7,
+    56,
+    
+    true
+FROM staging_properties WHERE name = 'Flying J Travel Plaza - Hope';
+
+-- ============================================================================
+-- CLEANING / DETAILING
+-- ============================================================================
+
+INSERT INTO staging_service_providers (
+    property_id,
+    provider_type,
+    business_name,
+    is_resident,
+    phone,
+    phone_text_ok,
+    email,
+    
+    hours_regular,
+    advance_booking_required,
+    
+    services_offered,
+    service_descriptions,
+    vehicle_types_served,
+    
+    has_flat_rate_menu,
+    flat_rate_menu,
+    accepts_cards,
+    
+    overall_rating,
+    review_count,
+    
+    is_active
+)
+SELECT 
+    id,
+    'cleaning',
+    'Shine Mobile RV Detailing',
+    false,
+    '250-555-WASH',
+    true,
+    'shine@mobiledetail.ca',
+    
+    '{"monday": "8:00-18:00", "tuesday": "8:00-18:00", "wednesday": "8:00-18:00", "thursday": "8:00-18:00", "friday": "8:00-18:00", "saturday": "9:00-16:00"}'::jsonb,
+    true,
+    
+    ARRAY['exterior_wash', 'interior_clean', 'full_detail', 'wax', 'roof_treatment', 'awning_clean', 'window_clean'],
+    '{"exterior_wash": "Hand wash exterior, tires, wheels", "full_detail": "Complete interior and exterior detail", "roof_treatment": "Roof wash and UV protectant application"}'::jsonb,
+    ARRAY['rv_class_a', 'rv_class_b', 'rv_class_c', 'travel_trailer', 'fifth_wheel'],
+    
+    true,
+    '{"exterior_wash_small": 75.00, "exterior_wash_large": 125.00, "interior_clean": 95.00, "full_detail_small": 250.00, "full_detail_large": 400.00, "roof_treatment": 150.00}'::jsonb,
+    true,
+    
+    4.8,
+    234,
+    
+    true
+FROM staging_properties WHERE name = 'Oceanside RV Resort';
+
+-- ============================================================================
+-- SUMMARY OF ALL PROVIDERS
+-- ============================================================================
+
+SELECT 
+    ssp.provider_type,
+    COUNT(*) as count,
+    ROUND(AVG(ssp.overall_rating), 2) as avg_rating,
+    SUM(ssp.review_count) as total_reviews
+FROM staging_service_providers ssp
+GROUP BY ssp.provider_type
+ORDER BY count DESC;
