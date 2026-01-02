@@ -1,0 +1,174 @@
+Create host dashboard backend - property ownership and calendar management.
+
+Run this SQL:
+
+-- ============================================================================
+-- HOST DASHBOARD TABLES
+-- ============================================================================
+
+-- Property ownership/management
+CREATE TABLE IF NOT EXISTS staging_property_hosts (
+    id SERIAL PRIMARY KEY,
+    property_id INTEGER REFERENCES staging_properties(id) ON DELETE CASCADE,
+    user_id INTEGER REFERENCES staging_users(id) ON DELETE CASCADE,
+    
+    role VARCHAR(50) DEFAULT 'owner',  -- owner, manager, staff
+    
+    -- Permissions
+    can_edit_property BOOLEAN DEFAULT true,
+    can_manage_bookings BOOLEAN DEFAULT true,
+    can_manage_calendar BOOLEAN DEFAULT true,
+    can_view_revenue BOOLEAN DEFAULT true,
+    can_add_staff BOOLEAN DEFAULT false,
+    
+    -- Revenue share (for managers)
+    revenue_share_percent DECIMAL(5,2),
+    
+    is_primary_contact BOOLEAN DEFAULT false,
+    
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW(),
+    
+    UNIQUE(property_id, user_id)
+);
+
+CREATE INDEX idx_property_hosts_user ON staging_property_hosts(user_id);
+CREATE INDEX idx_property_hosts_property ON staging_property_hosts(property_id);
+
+-- Calendar blocks (availability management)
+CREATE TABLE IF NOT EXISTS staging_calendar_blocks (
+    id SERIAL PRIMARY KEY,
+    property_id INTEGER REFERENCES staging_properties(id) ON DELETE CASCADE,
+    spot_id INTEGER REFERENCES staging_spots(id) ON DELETE CASCADE,
+    
+    -- Block details
+    block_type VARCHAR(50) NOT NULL,  -- blocked, maintenance, owner_use, seasonal_closure
+    title VARCHAR(255),
+    description TEXT,
+    
+    -- Dates
+    start_date DATE NOT NULL,
+    end_date DATE NOT NULL,
+    
+    -- Recurrence (optional)
+    is_recurring BOOLEAN DEFAULT false,
+    recurrence_pattern VARCHAR(50),  -- weekly, monthly, yearly
+    recurrence_end_date DATE,
+    
+    created_by INTEGER REFERENCES staging_users(id),
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_calendar_blocks_property ON staging_calendar_blocks(property_id);
+CREATE INDEX idx_calendar_blocks_dates ON staging_calendar_blocks(start_date, end_date);
+
+-- Pricing overrides (special dates, events)
+CREATE TABLE IF NOT EXISTS staging_pricing_overrides (
+    id SERIAL PRIMARY KEY,
+    property_id INTEGER REFERENCES staging_properties(id) ON DELETE CASCADE,
+    
+    -- Override details
+    override_type VARCHAR(50) NOT NULL,  -- event, holiday, weekend, custom
+    name VARCHAR(255),
+    description TEXT,
+    
+    -- Dates
+    start_date DATE NOT NULL,
+    end_date DATE NOT NULL,
+    
+    -- Pricing adjustments
+    nightly_rate DECIMAL(10, 2),           -- Flat rate override
+    rate_multiplier DECIMAL(5, 2),          -- e.g., 1.5 = 50% increase
+    minimum_nights INTEGER,
+    
+    is_active BOOLEAN DEFAULT true,
+    
+    created_by INTEGER REFERENCES staging_users(id),
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_pricing_overrides_property ON staging_pricing_overrides(property_id);
+CREATE INDEX idx_pricing_overrides_dates ON staging_pricing_overrides(start_date, end_date);
+
+-- Daily revenue tracking
+CREATE TABLE IF NOT EXISTS staging_revenue_daily (
+    id SERIAL PRIMARY KEY,
+    property_id INTEGER REFERENCES staging_properties(id) ON DELETE CASCADE,
+    
+    date DATE NOT NULL,
+    
+    -- Bookings
+    bookings_count INTEGER DEFAULT 0,
+    nights_sold INTEGER DEFAULT 0,
+    occupancy_rate DECIMAL(5, 2),
+    
+    -- Revenue
+    gross_revenue DECIMAL(10, 2) DEFAULT 0,
+    platform_fee DECIMAL(10, 2) DEFAULT 0,
+    net_revenue DECIMAL(10, 2) DEFAULT 0,
+    
+    -- Breakdown
+    accommodation_revenue DECIMAL(10, 2) DEFAULT 0,
+    service_revenue DECIMAL(10, 2) DEFAULT 0,
+    addon_revenue DECIMAL(10, 2) DEFAULT 0,
+    
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW(),
+    
+    UNIQUE(property_id, date)
+);
+
+CREATE INDEX idx_revenue_daily_property ON staging_revenue_daily(property_id);
+CREATE INDEX idx_revenue_daily_date ON staging_revenue_daily(date);
+
+-- Host notifications
+CREATE TABLE IF NOT EXISTS staging_host_notifications (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES staging_users(id) ON DELETE CASCADE,
+    property_id INTEGER REFERENCES staging_properties(id) ON DELETE SET NULL,
+    
+    notification_type VARCHAR(50) NOT NULL,  -- booking_new, booking_cancel, review, message, payout
+    title VARCHAR(255) NOT NULL,
+    message TEXT,
+    
+    -- Related entity
+    related_type VARCHAR(50),  -- booking, review, message
+    related_id INTEGER,
+    
+    is_read BOOLEAN DEFAULT false,
+    read_at TIMESTAMP,
+    
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_host_notifications_user ON staging_host_notifications(user_id);
+CREATE INDEX idx_host_notifications_unread ON staging_host_notifications(user_id, is_read) WHERE is_read = false;
+
+-- Link a test host user to properties
+-- First create a host user if needed
+INSERT INTO staging_users (email, password_hash, first_name, last_name, user_type, email_verified)
+VALUES ('host@example.com', '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/X4S1J1q5HhX9q5/Aq', 'Demo', 'Host', 'host', true)
+ON CONFLICT (email) DO UPDATE SET user_type = 'host'
+RETURNING id;
+
+-- Link host to first 3 properties (run after getting user ID)
+INSERT INTO staging_property_hosts (property_id, user_id, role, is_primary_contact)
+SELECT 
+    p.id,
+    (SELECT id FROM staging_users WHERE email = 'host@example.com'),
+    'owner',
+    true
+FROM staging_properties p
+WHERE p.id <= 3
+ON CONFLICT (property_id, user_id) DO NOTHING;
+
+-- Verify
+SELECT 
+    ph.id,
+    u.email,
+    p.name as property_name,
+    ph.role
+FROM staging_property_hosts ph
+JOIN staging_users u ON u.id = ph.user_id
+JOIN staging_properties p ON p.id = ph.property_id;
