@@ -650,4 +650,11 @@ router.delete('/calendar/:id', async (req: Request, res: Response) => {
   }
 });
 
+// ============================================================================
+// 404 CATCH-ALL (must be last)
+// ============================================================================
+router.use('*', (_req: Request, res: Response) => {
+  res.status(404).json({ success: false, error: 'Staging endpoint not found' });
+});
+
 export default router;

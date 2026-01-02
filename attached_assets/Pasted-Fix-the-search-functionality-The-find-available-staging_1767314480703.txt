@@ -1,0 +1,322 @@
+Fix the search functionality. The find_available_staging function is missing.
+
+## BUG 1: Create the missing search function
+
+Run this SQL:
+
+-- ============================================================================
+-- CREATE find_available_staging FUNCTION
+-- This is the core search function called by the API
+-- ============================================================================
+
+CREATE OR REPLACE FUNCTION find_available_staging(
+    p_check_in DATE DEFAULT NULL,
+    p_check_out DATE DEFAULT NULL,
+    p_vehicle_length_ft INTEGER DEFAULT NULL,
+    p_needs_power BOOLEAN DEFAULT false,
+    p_power_amps INTEGER DEFAULT NULL,
+    p_needs_water BOOLEAN DEFAULT false,
+    p_needs_sewer BOOLEAN DEFAULT false,
+    p_needs_pull_through BOOLEAN DEFAULT false,
+    p_is_horse_friendly BOOLEAN DEFAULT false,
+    p_accepts_semi BOOLEAN DEFAULT false,
+    p_has_mechanic BOOLEAN DEFAULT false,
+    p_dogs_allowed BOOLEAN DEFAULT false,
+    p_region VARCHAR DEFAULT NULL,
+    p_city VARCHAR DEFAULT NULL,
+    p_property_type VARCHAR DEFAULT NULL,
+    p_max_nightly_rate DECIMAL DEFAULT NULL,
+    p_sort_by VARCHAR DEFAULT 'rv_score',
+    p_limit INTEGER DEFAULT 50,
+    p_offset INTEGER DEFAULT 0
+) RETURNS TABLE (
+    id INTEGER,
+    canvas_id VARCHAR(20),
+    name VARCHAR(255),
+    property_type VARCHAR(30),
+    city VARCHAR(100),
+    region VARCHAR(100),
+    max_combined_length_ft INTEGER,
+    has_shore_power BOOLEAN,
+    power_amps INTEGER[],
+    has_water_hookup BOOLEAN,
+    has_sewer_hookup BOOLEAN,
+    spots_pull_through INTEGER,
+    is_horse_friendly BOOLEAN,
+    accepts_semi_trucks BOOLEAN,
+    has_onsite_mechanic BOOLEAN,
+    dogs_allowed BOOLEAN,
+    thumbnail_url TEXT,
+    crew_score INTEGER,
+    rv_score INTEGER,
+    trucker_score INTEGER,
+    equestrian_score INTEGER,
+    overall_rating DECIMAL(3,2),
+    review_count INTEGER,
+    base_nightly_rate DECIMAL(8,2)
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        sp.id,
+        sp.canvas_id,
+        sp.name,
+        sp.property_type,
+        sp.city,
+        sp.region,
+        sp.max_combined_length_ft,
+        sp.has_shore_power,
+        sp.power_amps,
+        sp.has_water_hookup,
+        sp.has_sewer_hookup,
+        sp.spots_pull_through,
+        sp.is_horse_friendly,
+        sp.accepts_semi_trucks,
+        sp.has_onsite_mechanic,
+        sp.dogs_allowed,
+        sp.thumbnail_url,
+        sp.crew_score,
+        sp.rv_score,
+        sp.trucker_score,
+        sp.equestrian_score,
+        sp.overall_rating,
+        sp.review_count,
+        COALESCE(pr.nightly_rate, 0.00) as base_nightly_rate
+    FROM staging_properties sp
+    LEFT JOIN staging_pricing pr ON pr.property_id = sp.id 
+        AND pr.pricing_type = 'base_nightly' AND pr.is_active = true
+    WHERE sp.status = 'active'
+      -- Vehicle length filter
+      AND (p_vehicle_length_ft IS NULL OR sp.max_combined_length_ft IS NULL 
+           OR sp.max_combined_length_ft >= p_vehicle_length_ft)
+      -- Power filter
+      AND (NOT p_needs_power OR sp.has_shore_power = true)
+      AND (p_power_amps IS NULL OR p_power_amps = ANY(sp.power_amps))
+      -- Water filter
+      AND (NOT p_needs_water OR sp.has_water_hookup = true)
+      -- Sewer filter
+      AND (NOT p_needs_sewer OR sp.has_sewer_hookup = true)
+      -- Pull-through filter
+      AND (NOT p_needs_pull_through OR sp.spots_pull_through > 0)
+      -- Horse friendly filter
+      AND (NOT p_is_horse_friendly OR sp.is_horse_friendly = true)
+      -- Semi truck filter
+      AND (NOT p_accepts_semi OR sp.accepts_semi_trucks = true)
+      -- Mechanic filter
+      AND (NOT p_has_mechanic OR sp.has_onsite_mechanic = true)
+      -- Dogs filter
+      AND (NOT p_dogs_allowed OR sp.dogs_allowed = true)
+      -- Region filter
+      AND (p_region IS NULL OR sp.region ILIKE p_region)
+      -- City filter
+      AND (p_city IS NULL OR sp.city ILIKE '%' || p_city || '%')
+      -- Property type filter
+      AND (p_property_type IS NULL OR sp.property_type = p_property_type)
+      -- Price filter
+      AND (p_max_nightly_rate IS NULL OR pr.nightly_rate IS NULL 
+           OR pr.nightly_rate <= p_max_nightly_rate)
+      -- Availability filter (check calendar blocks)
+      AND (p_check_in IS NULL OR p_check_out IS NULL OR NOT EXISTS (
+          SELECT 1 FROM staging_calendar_blocks scb
+          WHERE scb.property_id = sp.id
+            AND scb.spot_id IS NULL  -- Property-wide blocks
+            AND scb.start_date < p_check_out
+            AND scb.end_date > p_check_in
+      ))
+    ORDER BY 
+        CASE p_sort_by
+            WHEN 'crew_score' THEN sp.crew_score
+            WHEN 'rv_score' THEN sp.rv_score
+            WHEN 'trucker_score' THEN sp.trucker_score
+            WHEN 'equestrian_score' THEN sp.equestrian_score
+            WHEN 'rating' THEN COALESCE(sp.overall_rating * 20, 0)::INTEGER
+            WHEN 'price_low' THEN -COALESCE(pr.nightly_rate, 9999)::INTEGER
+            WHEN 'price_high' THEN COALESCE(pr.nightly_rate, 0)::INTEGER
+            ELSE sp.rv_score
+        END DESC,
+        sp.review_count DESC NULLS LAST,
+        sp.name
+    LIMIT p_limit
+    OFFSET p_offset;
+END;
+$$ LANGUAGE plpgsql;
+
+-- ============================================================================
+-- TEST THE FUNCTION
+-- ============================================================================
+
+-- Basic test - should return all active properties
+SELECT * FROM find_available_staging();
+
+-- Test with vehicle length
+SELECT name, max_combined_length_ft FROM find_available_staging(
+    p_vehicle_length_ft := 45
+);
+
+-- Test with power filter
+SELECT name, has_shore_power FROM find_available_staging(
+    p_needs_power := true
+);
+
+-- Test combined filters
+SELECT name, region, max_combined_length_ft, has_shore_power FROM find_available_staging(
+    p_vehicle_length_ft := 60,
+    p_needs_power := true,
+    p_region := 'Vancouver Island'
+);
+
+-- Test sorting
+SELECT name, rv_score FROM find_available_staging(
+    p_sort_by := 'rv_score',
+    p_limit := 5
+);
+
+SELECT name, crew_score FROM find_available_staging(
+    p_sort_by := 'crew_score',
+    p_limit := 5
+);
+
+Confirm the function works with these test queries.
+
+## BUG 2 & 3: Fix API error handling
+
+Now update the staging routes to handle errors better.
+
+Find and update the search endpoint in server/routes/staging.ts:
+
+// GET /api/staging/search
+router.get('/search', async (req: Request, res: Response) => {
+    try {
+        const {
+            checkIn,
+            checkOut,
+            vehicleLengthFt,
+            needsPower,
+            powerAmps,
+            needsWater,
+            needsSewer,
+            needsPullThrough,
+            isHorseFriendly,
+            acceptsSemi,
+            hasMechanic,
+            dogsAllowed,
+            region,
+            city,
+            propertyType,
+            maxNightlyRate,
+            sortBy,
+            limit,
+            offset
+        } = req.query;
+
+        // Input validation
+        const parsedLimit = Math.min(Math.max(parseInt(limit as string) || 50, 1), 100);
+        const parsedOffset = Math.max(parseInt(offset as string) || 0, 0);
+        
+        // Parse vehicle length safely
+        let parsedVehicleLength: number | null = null;
+        if (vehicleLengthFt) {
+            const parsed = parseInt(vehicleLengthFt as string);
+            if (!isNaN(parsed) && parsed > 0 && parsed < 500) {
+                parsedVehicleLength = parsed;
+            }
+        }
+
+        // Parse max rate safely
+        let parsedMaxRate: number | null = null;
+        if (maxNightlyRate) {
+            const parsed = parseFloat(maxNightlyRate as string);
+            if (!isNaN(parsed) && parsed > 0) {
+                parsedMaxRate = parsed;
+            }
+        }
+
+        // Validate sortBy
+        const validSortOptions = ['rv_score', 'crew_score', 'trucker_score', 'equestrian_score', 'rating', 'price_low', 'price_high'];
+        const parsedSortBy = validSortOptions.includes(sortBy as string) ? sortBy as string : 'rv_score';
+
+        // Validate propertyType if provided
+        const validPropertyTypes = ['parking_lot', 'rv_park', 'campground', 'farm_stay', 'industrial_yard', 'accommodation', 'hybrid', 'boondocking', 'marina', 'equestrian'];
+        const parsedPropertyType = propertyType && validPropertyTypes.includes(propertyType as string) 
+            ? propertyType as string 
+            : null;
+
+        const result = await db.query(
+            `SELECT * FROM find_available_staging($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)`,
+            [
+                checkIn || null,
+                checkOut || null,
+                parsedVehicleLength,
+                needsPower === 'true',
+                powerAmps ? parseInt(powerAmps as string) : null,
+                needsWater === 'true',
+                needsSewer === 'true',
+                needsPullThrough === 'true',
+                isHorseFriendly === 'true',
+                acceptsSemi === 'true',
+                hasMechanic === 'true',
+                dogsAllowed === 'true',
+                region || null,
+                city || null,
+                parsedPropertyType,
+                parsedMaxRate,
+                parsedSortBy,
+                parsedLimit,
+                parsedOffset
+            ]
+        );
+
+        // Transform snake_case to camelCase
+        const properties = result.rows.map(row => ({
+            id: row.id,
+            canvasId: row.canvas_id,
+            name: row.name,
+            propertyType: row.property_type,
+            city: row.city,
+            region: row.region,
+            maxCombinedLengthFt: row.max_combined_length_ft,
+            hasShorePower: row.has_shore_power,
+            powerAmps: row.power_amps,
+            hasWaterHookup: row.has_water_hookup,
+            hasSewerHookup: row.has_sewer_hookup,
+            spotsPullThrough: row.spots_pull_through,
+            isHorseFriendly: row.is_horse_friendly,
+            acceptsSemiTrucks: row.accepts_semi_trucks,
+            hasOnsiteMechanic: row.has_onsite_mechanic,
+            dogsAllowed: row.dogs_allowed,
+            thumbnailUrl: row.thumbnail_url,
+            crewScore: row.crew_score,
+            rvScore: row.rv_score,
+            truckerScore: row.trucker_score,
+            equestrianScore: row.equestrian_score,
+            overallRating: row.overall_rating,
+            reviewCount: row.review_count,
+            baseNightlyRate: row.base_nightly_rate
+        }));
+
+        res.json({
+            success: true,
+            properties,
+            total: properties.length,
+            limit: parsedLimit,
+            offset: parsedOffset
+        });
+
+    } catch (error: any) {
+        console.error('Search error:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: 'Search failed',
+            details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+    }
+});
+
+Also make sure there's a 404 catch-all at the END of your route definitions:
+
+// Add this AFTER all other routes in your main server file
+app.use('/api/*', (req, res) => {
+    res.status(404).json({ success: false, error: 'Endpoint not found' });
+});
+
+Test the search endpoint again after these changes.
