@@ -1,138 +1,220 @@
+import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { 
   LayoutDashboard, 
-  Grid3X3, 
-  Database, 
-  Settings,
-  Plus,
-  FileText,
-  Activity,
   Globe,
   Radio,
   Store,
   TreePine,
-  Book,
-  Home,
+  Building2,
+  Search,
+  MapPin,
+  User,
+  Truck,
   Shield,
   Download,
-  Building2,
+  Database,
+  Grid3X3,
+  FileText,
+  Settings,
+  Book,
   Map,
-  Truck,
-  Search
+  Home,
+  ChevronDown,
+  ChevronRight,
+  Activity,
+  Compass
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface AdminLayoutProps {
   children: React.ReactNode;
 }
 
-type NavItem = { path: string; label: string; icon: typeof LayoutDashboard } | { section: string };
+interface NavItem {
+  path: string;
+  label: string;
+  icon: React.ElementType;
+  count?: string;
+}
 
-const NAV_ITEMS: NavItem[] = [
-  { section: "NAVIGATION" },
-  { path: "/hub", label: "NAVIGATION HUB", icon: Map },
-  { path: "/command-center", label: "COMMAND CENTER", icon: Shield },
-  
-  { section: "ADMIN" },
-  { path: "/admin", label: "OVERVIEW", icon: LayoutDashboard },
-  
-  { section: "COMMUNITY DATA" },
-  { path: "/admin/geo", label: "GEOGRAPHIC VIEW", icon: Globe },
-  { path: "/admin/infrastructure", label: "INFRASTRUCTURE", icon: Radio },
-  { path: "/admin/chambers", label: "CHAMBERS", icon: Store },
-  { path: "/admin/naics", label: "NAICS EXPLORER", icon: TreePine },
-  
-  { section: "ACCOMMODATIONS" },
-  { path: "/admin/accommodations", label: "ALL PROPERTIES", icon: Building2 },
-  { path: "/staging", label: "STAGING SEARCH", icon: Search },
-  { path: "/host/dashboard", label: "HOST PORTAL", icon: Home },
-  
-  { section: "OPERATIONS" },
-  { path: "/admin/civos", label: "CIVOS DASHBOARD", icon: Shield },
-  { path: "/fleet", label: "VEHICLE FLEET", icon: Truck },
-  { path: "/admin/import", label: "DATA IMPORT", icon: Download },
-  { path: "/admin/sources", label: "MANAGE SOURCES", icon: Database },
-  { path: "/admin/matrix", label: "SOURCE MATRIX", icon: Grid3X3 },
-  { path: "/admin/logs", label: "SCRAPE LOGS", icon: FileText },
-  
-  { section: "SYSTEM" },
-  { path: "/admin/settings", label: "SETTINGS", icon: Settings },
-  { path: "/admin/docs", label: "DOCUMENTATION", icon: Book },
+interface NavSection {
+  title: string;
+  icon: React.ElementType;
+  items: NavItem[];
+  defaultOpen?: boolean;
+}
+
+const navSections: NavSection[] = [
+  {
+    title: "Navigation",
+    icon: Compass,
+    defaultOpen: true,
+    items: [
+      { path: "/hub", label: "Navigation Hub", icon: Map },
+      { path: "/command-center", label: "Command Center", icon: Shield },
+      { path: "/", label: "Public Site", icon: Globe },
+    ]
+  },
+  {
+    title: "Community Data",
+    icon: LayoutDashboard,
+    defaultOpen: true,
+    items: [
+      { path: "/admin", label: "Overview", icon: LayoutDashboard },
+      { path: "/admin/geo", label: "Geographic View", icon: Globe },
+      { path: "/admin/infrastructure", label: "Infrastructure", icon: Radio },
+      { path: "/admin/chambers", label: "Chambers", icon: Store },
+      { path: "/admin/naics", label: "NAICS Explorer", icon: TreePine },
+    ]
+  },
+  {
+    title: "Accommodations",
+    icon: Building2,
+    defaultOpen: true,
+    items: [
+      { path: "/admin/accommodations", label: "All Properties", icon: Building2, count: "7,458" },
+      { path: "/staging", label: "Staging Search", icon: Search },
+      { path: "/staging/map", label: "Map View", icon: MapPin },
+      { path: "/host/dashboard", label: "Host Portal", icon: User },
+    ]
+  },
+  {
+    title: "Fleet & Operations",
+    icon: Truck,
+    defaultOpen: true,
+    items: [
+      { path: "/fleet", label: "Vehicle Fleet", icon: Truck },
+      { path: "/admin/civos", label: "CivOS Dashboard", icon: Shield },
+      { path: "/admin/import", label: "Data Import", icon: Download },
+    ]
+  },
+  {
+    title: "Data Management",
+    icon: Database,
+    defaultOpen: false,
+    items: [
+      { path: "/admin/sources", label: "Manage Sources", icon: Database },
+      { path: "/admin/matrix", label: "Source Matrix", icon: Grid3X3 },
+      { path: "/admin/logs", label: "Scrape Logs", icon: FileText },
+    ]
+  },
+  {
+    title: "System",
+    icon: Settings,
+    defaultOpen: false,
+    items: [
+      { path: "/admin/settings", label: "Settings", icon: Settings },
+      { path: "/admin/docs", label: "Documentation", icon: Book },
+    ]
+  },
 ];
 
 export default function AdminLayout({ children }: AdminLayoutProps) {
   const [location] = useLocation();
-  
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>(
+    navSections.reduce((acc, section) => {
+      acc[section.title] = section.defaultOpen ?? true;
+      return acc;
+    }, {} as Record<string, boolean>)
+  );
+
+  const toggleSection = (title: string) => {
+    setOpenSections(prev => ({ ...prev, [title]: !prev[title] }));
+  };
+
+  const isActive = (path: string) => {
+    if (path === "/admin" && location === "/admin") return true;
+    if (path === "/" && location === "/") return true;
+    if (path !== "/admin" && path !== "/" && location.startsWith(path)) return true;
+    return location === path;
+  };
+
   return (
     <div className="flex h-screen w-full bg-background font-mono">
-      <aside className="w-56 border-r border-border/50 bg-card/30 flex flex-col">
-        <div className="p-3 border-b border-border/50">
+      {/* Fixed Left Sidebar - 280px */}
+      <aside className="w-72 border-r border-border/50 bg-card/30 flex flex-col shrink-0">
+        {/* Header */}
+        <div className="p-4 border-b border-border/50">
           <Link href="/hub">
-            <div className="flex items-center gap-2 cursor-pointer hover-elevate p-2 rounded-md" data-testid="link-hub-header">
-              <Activity className="w-4 h-4 text-green-400" />
-              <span className="text-xs font-bold tracking-wider text-muted-foreground">COMMUNITY CANVAS</span>
+            <div className="flex items-center gap-3 cursor-pointer hover-elevate p-2 rounded-md" data-testid="link-sidebar-home">
+              <Activity className="w-5 h-5 text-green-400" />
+              <div>
+                <div className="text-sm font-bold text-foreground">Community Canvas</div>
+                <div className="text-[10px] text-muted-foreground tracking-wider">BC STAGING NETWORK</div>
+              </div>
             </div>
           </Link>
         </div>
-        
-        <ScrollArea className="flex-1 p-2">
-          <nav className="space-y-1">
-            {NAV_ITEMS.map((item, index) => {
-              if ('section' in item) {
-                return (
-                  <div key={item.section} className="pt-4 pb-1 first:pt-0">
-                    <div className="text-[10px] text-muted-foreground uppercase tracking-wider px-3">
-                      {item.section}
-                    </div>
+
+        {/* Navigation Sections */}
+        <ScrollArea className="flex-1">
+          <nav className="p-2">
+            {navSections.map(section => (
+              <div key={section.title} className="mb-1">
+                {/* Section Header - Collapsible */}
+                <button
+                  onClick={() => toggleSection(section.title)}
+                  className="w-full flex items-center justify-between px-3 py-2 text-muted-foreground hover:text-foreground text-xs font-medium tracking-wider uppercase transition-colors"
+                  data-testid={`section-toggle-${section.title.toLowerCase().replace(/\s+/g, '-')}`}
+                >
+                  <div className="flex items-center gap-2">
+                    <section.icon className="w-3.5 h-3.5" />
+                    <span>{section.title}</span>
                   </div>
-                );
-              }
-              
-              const isActive = location === item.path || 
-                (item.path !== "/admin" && location.startsWith(item.path));
-              const isExactAdmin = item.path === "/admin" && location === "/admin";
-              const active = isExactAdmin || (item.path !== "/admin" && isActive);
-              
-              return (
-                <Link key={item.path} href={item.path}>
-                  <div
-                    className={`flex items-center gap-2 px-3 py-2 rounded-md text-xs cursor-pointer transition-colors ${
-                      active 
-                        ? "bg-primary/20 text-primary border border-primary/30" 
-                        : "text-muted-foreground hover-elevate"
-                    }`}
-                    data-testid={`link-admin-${item.label.toLowerCase().replace(/\s+/g, '-')}`}
-                  >
-                    <item.icon className="w-4 h-4" />
-                    <span className="tracking-wide">{item.label}</span>
+                  {openSections[section.title] ? (
+                    <ChevronDown className="w-3 h-3" />
+                  ) : (
+                    <ChevronRight className="w-3 h-3" />
+                  )}
+                </button>
+
+                {/* Section Items */}
+                {openSections[section.title] && (
+                  <div className="ml-2 space-y-0.5">
+                    {section.items.map(item => {
+                      const active = isActive(item.path);
+                      return (
+                        <Link key={item.path} href={item.path}>
+                          <div
+                            className={`flex items-center gap-2 px-3 py-2 rounded-md text-xs cursor-pointer transition-colors ${
+                              active 
+                                ? "bg-primary/20 text-primary border border-primary/30" 
+                                : "text-muted-foreground hover-elevate"
+                            }`}
+                            data-testid={`nav-${item.label.toLowerCase().replace(/\s+/g, '-')}`}
+                          >
+                            <item.icon className="w-4 h-4" />
+                            <span className="flex-1">{item.label}</span>
+                            {item.count && (
+                              <span className="text-[10px] text-muted-foreground">({item.count})</span>
+                            )}
+                          </div>
+                        </Link>
+                      );
+                    })}
                   </div>
-                </Link>
-              );
-            })}
+                )}
+              </div>
+            ))}
           </nav>
-          
-          <div className="mt-6 pt-4 border-t border-border/30">
-            <div className="text-[10px] text-muted-foreground uppercase tracking-wider px-3 mb-2">
-              Quick Actions
-            </div>
-            <Link href="/admin/sources">
-              <Button variant="outline" size="sm" className="w-full justify-start gap-2 text-xs" data-testid="button-add-source">
-                <Plus className="w-3 h-3" />
-                ADD NEW SOURCE
-              </Button>
-            </Link>
-          </div>
         </ScrollArea>
-        
-        <div className="p-3 border-t border-border/50 text-[10px] text-muted-foreground">
-          <div className="flex items-center gap-1">
-            <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-            <span>SYSTEM ONLINE</span>
+
+        {/* Footer - System Status */}
+        <div className="p-4 border-t border-border/50">
+          <div className="text-[10px] text-muted-foreground space-y-1">
+            <div className="flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+              <span>System Online</span>
+            </div>
+            <div className="text-muted-foreground/60">
+              Last sync: {new Date().toLocaleTimeString()}
+            </div>
           </div>
         </div>
       </aside>
-      
+
+      {/* Main Content Area */}
       <main className="flex-1 overflow-hidden">
         {children}
       </main>

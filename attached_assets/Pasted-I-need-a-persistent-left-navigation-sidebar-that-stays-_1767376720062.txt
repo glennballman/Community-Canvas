@@ -1,0 +1,389 @@
+I need a persistent left navigation sidebar that stays visible on ALL admin pages. No big landing pages - just functional navigation with content loading on the right.
+
+## Requirements:
+1. Left sidebar: 280px wide, fixed, always visible
+2. Content area: fills remaining space on right
+3. All navigation items visible and clickable
+4. Sidebar organized into collapsible sections
+5. Admin home shows system health stats (not a big landing page)
+
+## Step 1: Create New AdminLayout with Persistent Sidebar
+
+Replace client/src/pages/AdminLayout.tsx with:
+```tsx
+import React, { useState } from 'react';
+import { Link, Outlet, useLocation } from 'react-router-dom';
+
+interface NavItem {
+  path: string;
+  label: string;
+  icon: string;
+}
+
+interface NavSection {
+  title: string;
+  items: NavItem[];
+  defaultOpen?: boolean;
+}
+
+const navSections: NavSection[] = [
+  {
+    title: '🏠 Navigation',
+    defaultOpen: true,
+    items: [
+      { path: '/hub', label: 'Navigation Hub', icon: '🧭' },
+      { path: '/command-center', label: 'Command Center', icon: '🛡️' },
+      { path: '/', label: 'Public Site', icon: '🌐' },
+    ]
+  },
+  {
+    title: '📊 Community Data',
+    defaultOpen: true,
+    items: [
+      { path: '/admin', label: 'Overview', icon: '📈' },
+      { path: '/admin/geo', label: 'Geographic View', icon: '🗺️' },
+      { path: '/admin/infrastructure', label: 'Infrastructure', icon: '🏗️' },
+      { path: '/admin/chambers', label: 'Chambers', icon: '🏛️' },
+      { path: '/admin/naics', label: 'NAICS Explorer', icon: '📋' },
+    ]
+  },
+  {
+    title: '🏨 Accommodations',
+    defaultOpen: true,
+    items: [
+      { path: '/admin/accommodations', label: 'All Properties (7,458)', icon: '🏠' },
+      { path: '/staging', label: 'Staging Search', icon: '🔍' },
+      { path: '/staging/map', label: 'Map View', icon: '📍' },
+      { path: '/host/dashboard', label: 'Host Portal', icon: '👤' },
+    ]
+  },
+  {
+    title: '🚛 Fleet & Operations',
+    defaultOpen: true,
+    items: [
+      { path: '/fleet', label: 'Vehicle Fleet', icon: '🚐' },
+      { path: '/admin/civos', label: 'CivOS Dashboard', icon: '📡' },
+      { path: '/admin/import', label: 'Data Import', icon: '📥' },
+    ]
+  },
+  {
+    title: '🔧 Data Management',
+    defaultOpen: false,
+    items: [
+      { path: '/admin/sources', label: 'Manage Sources', icon: '🔗' },
+      { path: '/admin/matrix', label: 'Source Matrix', icon: '📊' },
+      { path: '/admin/logs', label: 'Scrape Logs', icon: '📝' },
+    ]
+  },
+  {
+    title: '⚙️ System',
+    defaultOpen: false,
+    items: [
+      { path: '/admin/settings', label: 'Settings', icon: '🔧' },
+      { path: '/admin/docs', label: 'Documentation', icon: '📚' },
+    ]
+  },
+];
+
+export default function AdminLayout() {
+  const location = useLocation();
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>(
+    navSections.reduce((acc, section) => {
+      acc[section.title] = section.defaultOpen ?? true;
+      return acc;
+    }, {} as Record<string, boolean>)
+  );
+
+  const toggleSection = (title: string) => {
+    setOpenSections(prev => ({ ...prev, [title]: !prev[title] }));
+  };
+
+  const isActive = (path: string) => {
+    if (path === '/admin' && location.pathname === '/admin') return true;
+    if (path !== '/admin' && location.pathname.startsWith(path)) return true;
+    return location.pathname === path;
+  };
+
+  return (
+    <div className="flex min-h-screen bg-gray-900">
+      {/* Fixed Left Sidebar */}
+      <aside className="w-72 bg-gray-800 border-r border-gray-700 fixed left-0 top-0 bottom-0 overflow-y-auto">
+        {/* Header */}
+        <div className="p-4 border-b border-gray-700 sticky top-0 bg-gray-800 z-10">
+          <Link to="/hub" className="flex items-center gap-2">
+            <span className="text-2xl">🍁</span>
+            <div>
+              <div className="font-bold text-white">Community Canvas</div>
+              <div className="text-xs text-gray-400">BC Staging Network</div>
+            </div>
+          </Link>
+        </div>
+
+        {/* Navigation Sections */}
+        <nav className="p-2">
+          {navSections.map(section => (
+            <div key={section.title} className="mb-1">
+              {/* Section Header */}
+              <button
+                onClick={() => toggleSection(section.title)}
+                className="w-full flex items-center justify-between px-3 py-2 text-gray-400 hover:text-white text-sm font-medium"
+              >
+                <span>{section.title}</span>
+                <span className="text-xs">{openSections[section.title] ? '▼' : '▶'}</span>
+              </button>
+
+              {/* Section Items */}
+              {openSections[section.title] && (
+                <div className="ml-2 space-y-0.5">
+                  {section.items.map(item => (
+                    <Link
+                      key={item.path}
+                      to={item.path}
+                      className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
+                        isActive(item.path)
+                          ? 'bg-blue-600 text-white'
+                          : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+                      }`}
+                    >
+                      <span>{item.icon}</span>
+                      <span>{item.label}</span>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+        </nav>
+
+        {/* Footer */}
+        <div className="p-4 border-t border-gray-700 mt-auto sticky bottom-0 bg-gray-800">
+          <div className="text-xs text-gray-500">
+            <div>System Status: <span className="text-green-400">● Online</span></div>
+            <div className="mt-1">Last sync: {new Date().toLocaleTimeString()}</div>
+          </div>
+        </div>
+      </aside>
+
+      {/* Main Content Area */}
+      <main className="flex-1 ml-72 min-h-screen">
+        <Outlet />
+      </main>
+    </div>
+  );
+}
+```
+
+## Step 2: Update AdminHome to Show System Health Stats
+
+Replace client/src/pages/AdminHome.tsx with a compact stats dashboard:
+```tsx
+import React, { useState, useEffect } from 'react';
+
+interface SystemStats {
+  municipalities: number;
+  entities: number;
+  accommodations: number;
+  stagingProperties: number;
+  dataSources: number;
+  activeSignals: number;
+  vehicles: number;
+  trailers: number;
+}
+
+export default function AdminHome() {
+  const [stats, setStats] = useState<SystemStats | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadStats() {
+      try {
+        // Load multiple endpoints in parallel
+        const [
+          civosRes,
+          accommodationsRes,
+        ] = await Promise.all([
+          fetch('/api/civos/stats').catch(() => null),
+          fetch('/api/accommodations/stats').catch(() => null),
+        ]);
+
+        const civosData = civosRes ? await civosRes.json() : null;
+        const accommodationsData = accommodationsRes ? await accommodationsRes.json() : null;
+
+        setStats({
+          municipalities: 190,
+          entities: 10791,
+          accommodations: accommodationsData?.total || 7458,
+          stagingProperties: civosData?.stats?.capacity?.properties || 37,
+          dataSources: 238,
+          activeSignals: civosData?.stats?.signals?.active || 0,
+          vehicles: 5,
+          trailers: 4,
+        });
+      } catch (err) {
+        console.error('Failed to load stats:', err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadStats();
+  }, []);
+
+  const statCards = [
+    { label: 'Municipalities', value: stats?.municipalities || 0, icon: '🏛️', color: 'blue' },
+    { label: 'Entities', value: stats?.entities || 0, icon: '📍', color: 'green' },
+    { label: 'Accommodations', value: stats?.accommodations || 0, icon: '🏨', color: 'yellow' },
+    { label: 'Staging Props', value: stats?.stagingProperties || 0, icon: '🚐', color: 'purple' },
+    { label: 'Data Sources', value: stats?.dataSources || 0, icon: '🔗', color: 'cyan' },
+    { label: 'Active Signals', value: stats?.activeSignals || 0, icon: '📡', color: 'red' },
+    { label: 'Vehicles', value: stats?.vehicles || 0, icon: '🚛', color: 'orange' },
+    { label: 'Trailers', value: stats?.trailers || 0, icon: '📦', color: 'pink' },
+  ];
+
+  const colorClasses: Record<string, string> = {
+    blue: 'border-blue-500 text-blue-400',
+    green: 'border-green-500 text-green-400',
+    yellow: 'border-yellow-500 text-yellow-400',
+    purple: 'border-purple-500 text-purple-400',
+    cyan: 'border-cyan-500 text-cyan-400',
+    red: 'border-red-500 text-red-400',
+    orange: 'border-orange-500 text-orange-400',
+    pink: 'border-pink-500 text-pink-400',
+  };
+
+  return (
+    <div className="p-6">
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-white">System Overview</h1>
+        <p className="text-gray-400">BC Staging Network health and statistics</p>
+      </div>
+
+      {/* Stats Grid */}
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4 mb-8">
+        {statCards.map(card => (
+          <div
+            key={card.label}
+            className={`bg-gray-800 rounded-lg p-4 border-l-4 ${colorClasses[card.color]}`}
+          >
+            <div className="text-2xl mb-1">{card.icon}</div>
+            <div className={`text-2xl font-bold ${colorClasses[card.color]}`}>
+              {loading ? '...' : card.value.toLocaleString()}
+            </div>
+            <div className="text-xs text-gray-400">{card.label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Quick Actions */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="bg-gray-800 rounded-lg p-4">
+          <h3 className="text-lg font-semibold text-white mb-3">🚀 Quick Actions</h3>
+          <div className="space-y-2">
+            <a href="/admin/import" className="block px-3 py-2 bg-blue-600 hover:bg-blue-700 rounded text-white text-sm">
+              Import Data
+            </a>
+            <a href="/admin/civos" className="block px-3 py-2 bg-green-600 hover:bg-green-700 rounded text-white text-sm">
+              Generate CivOS Signals
+            </a>
+            <a href="/admin/sources" className="block px-3 py-2 bg-purple-600 hover:bg-purple-700 rounded text-white text-sm">
+              Add Data Source
+            </a>
+          </div>
+        </div>
+
+        <div className="bg-gray-800 rounded-lg p-4">
+          <h3 className="text-lg font-semibold text-white mb-3">📊 Recent Activity</h3>
+          <div className="space-y-2 text-sm text-gray-300">
+            <div className="flex justify-between">
+              <span>Last data import</span>
+              <span className="text-gray-500">2 hours ago</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Signals generated</span>
+              <span className="text-gray-500">34 active</span>
+            </div>
+            <div className="flex justify-between">
+              <span>New bookings</span>
+              <span className="text-gray-500">3 today</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-gray-800 rounded-lg p-4">
+          <h3 className="text-lg font-semibold text-white mb-3">🔗 External Links</h3>
+          <div className="space-y-2">
+            <a href="/command-center" className="block px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded text-white text-sm">
+              🛡️ Command Center
+            </a>
+            <a href="/fleet" className="block px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded text-white text-sm">
+              🚛 Fleet Management
+            </a>
+            <a href="/staging" className="block px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded text-white text-sm">
+              🔍 Staging Search
+            </a>
+          </div>
+        </div>
+      </div>
+
+      {/* System Health */}
+      <div className="bg-gray-800 rounded-lg p-4">
+        <h3 className="text-lg font-semibold text-white mb-3">💚 System Health</h3>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="text-center">
+            <div className="text-green-400 text-3xl mb-1">●</div>
+            <div className="text-white font-medium">Database</div>
+            <div className="text-xs text-gray-400">Connected</div>
+          </div>
+          <div className="text-center">
+            <div className="text-green-400 text-3xl mb-1">●</div>
+            <div className="text-white font-medium">API</div>
+            <div className="text-xs text-gray-400">Responding</div>
+          </div>
+          <div className="text-center">
+            <div className="text-green-400 text-3xl mb-1">●</div>
+            <div className="text-white font-medium">Data Feeds</div>
+            <div className="text-xs text-gray-400">238 active</div>
+          </div>
+          <div className="text-center">
+            <div className="text-green-400 text-3xl mb-1">●</div>
+            <div className="text-white font-medium">CivOS</div>
+            <div className="text-xs text-gray-400">Synced</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+
+## Step 3: Make Sure Routes Use AdminLayout
+
+In App.tsx, ensure admin routes are wrapped in AdminLayout:
+```tsx
+{/* Admin routes with persistent sidebar */}
+<Route element={<AdminLayout />}>
+  <Route path="/admin" element={<AdminHome />} />
+  <Route path="/admin/geo" element={<AdminGeo />} />
+  <Route path="/admin/infrastructure" element={<AdminInfrastructure />} />
+  <Route path="/admin/chambers" element={<AdminChambers />} />
+  <Route path="/admin/naics" element={<AdminNAICS />} />
+  <Route path="/admin/accommodations" element={<Accommodations />} />
+  <Route path="/admin/civos" element={<CivOSDashboard />} />
+  <Route path="/admin/import" element={<DataImport />} />
+  <Route path="/admin/sources" element={<AdminSources />} />
+  <Route path="/admin/matrix" element={<AdminMatrix />} />
+  <Route path="/admin/logs" element={<AdminLogs />} />
+  <Route path="/admin/settings" element={<AdminSettings />} />
+  <Route path="/admin/docs" element={<Documentation />} />
+</Route>
+```
+
+## Step 4: Test the Layout
+
+After implementing, navigate to /admin and verify:
+1. Left sidebar is visible and fixed (280px wide)
+2. Clicking nav items loads content on right without losing sidebar
+3. All sections are expandable/collapsible
+4. Current page is highlighted in nav
+5. Content scrolls independently of sidebar
+
+Report what works and what needs adjustment.
