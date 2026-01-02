@@ -35,25 +35,29 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 
+type TabType = 'overview' | 'map' | 'webcams' | 'alerts' | 'roadtrips' | 'planning' | 'fleet';
+
 interface DashboardLayoutProps {
   defaultRegion?: string;
+  defaultTab?: TabType;
   params?: Record<string, string>;
 }
 
-export function DashboardLayout({ defaultRegion = 'bc' }: DashboardLayoutProps) {
+export function DashboardLayout({ defaultRegion = 'bc', defaultTab }: DashboardLayoutProps) {
   const [selectedRegion, setSelectedRegion] = useState(defaultRegion);
   
-  // Read initial tab from URL query parameter
-  const getInitialTab = (): 'overview' | 'map' | 'webcams' | 'alerts' | 'roadtrips' | 'planning' | 'fleet' => {
+  // Read initial tab from prop or URL query parameter
+  const getInitialTab = (): TabType => {
+    if (defaultTab) return defaultTab;
     const params = new URLSearchParams(window.location.search);
     const tab = params.get('tab');
     if (tab && ['overview', 'map', 'webcams', 'alerts', 'roadtrips', 'planning', 'fleet'].includes(tab)) {
-      return tab as 'overview' | 'map' | 'webcams' | 'alerts' | 'roadtrips' | 'planning' | 'fleet';
+      return tab as TabType;
     }
     return 'overview';
   };
   
-  const [activeTab, setActiveTab] = useState<'overview' | 'map' | 'webcams' | 'alerts' | 'roadtrips' | 'planning' | 'fleet'>(getInitialTab);
+  const [activeTab, setActiveTab] = useState<TabType>(getInitialTab);
   const [alertCount, setAlertCount] = useState(0);
 
   useEffect(() => {

@@ -58,13 +58,13 @@ const navSections: NavSection[] = [
       { path: "/hub", label: "Navigation Hub", icon: Map },
       { path: "/command-center", label: "Command Center", icon: Shield },
       { path: "/", label: "Public Site", icon: Globe },
-      { path: "/?tab=overview", label: "Overview", icon: BarChart3 },
-      { path: "/?tab=map", label: "Map", icon: Map },
-      { path: "/?tab=webcams", label: "Webcams", icon: Camera },
-      { path: "/?tab=alerts", label: "Alerts", icon: AlertTriangle },
-      { path: "/?tab=roadtrips", label: "Road Trips", icon: Navigation2 },
-      { path: "/?tab=planning", label: "Trip Planning", icon: Compass },
-      { path: "/?tab=fleet", label: "Fleet", icon: Truck },
+      { path: "/public/overview", label: "Overview", icon: BarChart3 },
+      { path: "/public/map", label: "Map", icon: Map },
+      { path: "/public/webcams", label: "Webcams", icon: Camera },
+      { path: "/public/alerts", label: "Alerts", icon: AlertTriangle },
+      { path: "/public/roadtrips", label: "Road Trips", icon: Navigation2 },
+      { path: "/public/planning", label: "Trip Planning", icon: Compass },
+      { path: "/public/fleet", label: "Fleet", icon: Truck },
     ]
   },
   {
@@ -135,13 +135,8 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   };
 
   const isActive = (path: string) => {
-    // Handle paths with query params (e.g., /?tab=overview)
-    if (path.includes('?')) {
-      const currentUrl = location + window.location.search;
-      return currentUrl === path;
-    }
     if (path === "/admin" && location === "/admin") return true;
-    if (path === "/" && location === "/" && !window.location.search.includes('tab=')) return true;
+    if (path === "/" && location === "/") return true;
     if (path !== "/admin" && path !== "/" && location.startsWith(path)) return true;
     return location === path;
   };

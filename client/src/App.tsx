@@ -99,6 +99,15 @@ function AppShellRoutes() {
         {/* Accommodations */}
         <Route path="/accommodations" component={Accommodations} />
         
+        {/* Public site pages with AdminLayout */}
+        <Route path="/public/overview" component={PublicOverview} />
+        <Route path="/public/map" component={PublicMap} />
+        <Route path="/public/webcams" component={PublicWebcams} />
+        <Route path="/public/alerts" component={PublicAlerts} />
+        <Route path="/public/roadtrips" component={PublicRoadTrips} />
+        <Route path="/public/planning" component={PublicTripPlanning} />
+        <Route path="/public/fleet" component={PublicFleet} />
+        
         <Route component={NotFound} />
       </Switch>
     </AdminLayout>
@@ -107,6 +116,29 @@ function AppShellRoutes() {
 
 function PublicDashboard() {
   return <DashboardLayout />;
+}
+
+// Wrapper components for public site tabs within AdminLayout
+function PublicOverview() {
+  return <DashboardLayout defaultTab="overview" />;
+}
+function PublicMap() {
+  return <DashboardLayout defaultTab="map" />;
+}
+function PublicWebcams() {
+  return <DashboardLayout defaultTab="webcams" />;
+}
+function PublicAlerts() {
+  return <DashboardLayout defaultTab="alerts" />;
+}
+function PublicRoadTrips() {
+  return <DashboardLayout defaultTab="roadtrips" />;
+}
+function PublicTripPlanning() {
+  return <DashboardLayout defaultTab="planning" />;
+}
+function PublicFleet() {
+  return <DashboardLayout defaultTab="fleet" />;
 }
 
 function Router() {
