@@ -65,7 +65,9 @@ export default function BookingFlow() {
       try {
         const res = await fetch(`/api/staging/properties/${id}`);
         const data = await res.json();
-        if (data.property) {
+        if (data.id) {
+          setProperty(data);
+        } else if (data.property) {
           setProperty(data.property);
         } else {
           setError('Property not found');
