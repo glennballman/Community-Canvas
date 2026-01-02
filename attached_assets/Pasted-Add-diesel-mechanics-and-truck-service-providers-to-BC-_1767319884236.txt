@@ -1,0 +1,273 @@
+Add diesel mechanics and truck service providers to BC properties.
+
+Run this SQL:
+
+-- ============================================================================
+-- SERVICE PROVIDERS - DIESEL MECHANICS
+-- ============================================================================
+
+-- 1. Save Paradise Parking - Resident Diesel Mechanic (THE SHOWCASE)
+INSERT INTO staging_service_providers (
+    property_id,
+    provider_type,
+    business_name,
+    provider_name,
+    is_resident,
+    is_employee,
+    phone,
+    phone_24hr,
+    phone_text_ok,
+    email,
+    
+    hours_regular,
+    available_24hr,
+    available_after_hours,
+    after_hours_fee,
+    available_weekends,
+    response_time_minutes,
+    same_day_service,
+    
+    services_offered,
+    service_descriptions,
+    vehicle_types_served,
+    makes_serviced,
+    
+    certifications,
+    years_experience,
+    specialties,
+    
+    hourly_rate,
+    has_flat_rate_menu,
+    flat_rate_menu,
+    minimum_charge,
+    mobile_service_fee,
+    accepts_cash,
+    accepts_cards,
+    accepts_fleet_accounts,
+    
+    overall_rating,
+    quality_rating,
+    speed_rating,
+    price_rating,
+    review_count,
+    
+    is_verified,
+    is_active,
+    is_featured
+) 
+SELECT 
+    id,
+    'mechanic_diesel',
+    'Bamfield Diesel Doctor',
+    'Mike Thornton',
+    true,  -- LIVES ON PROPERTY!
+    false,
+    '250-728-3456',
+    '250-728-3456',
+    true,
+    'mike@bamfielddiesel.ca',
+    
+    '{"monday": "7:00-18:00", "tuesday": "7:00-18:00", "wednesday": "7:00-18:00", "thursday": "7:00-18:00", "friday": "7:00-18:00", "saturday": "8:00-16:00", "sunday": "emergency_only"}'::jsonb,
+    true,
+    true,
+    75.00,
+    true,
+    30,
+    true,
+    
+    ARRAY['oil_change', 'filter_replacement', 'brake_inspection', 'brake_repair', 'engine_diagnostics', 'electrical_repair', 'belt_replacement', 'hose_replacement', 'coolant_flush', 'fuel_system', 'turbo_service', 'exhaust_repair', 'suspension_check', 'steering_repair', 'transmission_service', 'generator_repair'],
+    '{"oil_change": "Full synthetic oil change with filter - done while you sleep", "brake_inspection": "Complete brake system inspection and measurement", "engine_diagnostics": "Computer diagnostics for all major diesel brands"}'::jsonb,
+    ARRAY['semi_truck', 'work_truck', 'rv_class_a', 'rv_class_c', 'diesel_pickup', 'bus', 'heavy_equipment'],
+    ARRAY['Cummins', 'Caterpillar', 'Detroit Diesel', 'Paccar', 'International', 'Freightliner', 'Peterbilt', 'Kenworth', 'Volvo', 'Mack'],
+    
+    ARRAY['ASE Master Technician', 'Cummins Certified', 'CAT Certified', 'Detroit Diesel Certified', 'EPA 609 Certified'],
+    28,
+    ARRAY['Cummins ISX', 'CAT C15', 'Detroit DD15', 'Turbo diagnostics', 'Electrical systems', 'Remote area service'],
+    
+    125.00,
+    true,
+    '{"oil_change_pickup": 89.00, "oil_change_class_a": 149.00, "oil_change_semi": 189.00, "brake_inspection": 75.00, "diagnostic_scan": 95.00, "belt_replacement": 150.00, "coolant_flush": 175.00}'::jsonb,
+    95.00,
+    0.00,  -- No mobile fee - he's ON SITE
+    true,
+    true,
+    true,
+    
+    4.9,
+    5.0,
+    4.8,
+    4.7,
+    47,
+    
+    true,
+    true,
+    true
+FROM staging_properties WHERE name = 'Save Paradise Parking';
+
+-- 2. Flying J Hope - Mobile Diesel Service
+INSERT INTO staging_service_providers (
+    property_id,
+    provider_type,
+    business_name,
+    provider_name,
+    is_resident,
+    phone,
+    phone_24hr,
+    phone_text_ok,
+    
+    hours_regular,
+    available_24hr,
+    available_after_hours,
+    after_hours_fee,
+    response_time_minutes,
+    same_day_service,
+    advance_booking_required,
+    
+    services_offered,
+    vehicle_types_served,
+    makes_serviced,
+    
+    certifications,
+    years_experience,
+    specialties,
+    
+    hourly_rate,
+    has_flat_rate_menu,
+    minimum_charge,
+    mobile_service_fee,
+    accepts_cash,
+    accepts_cards,
+    accepts_fleet_accounts,
+    accepts_purchase_orders,
+    
+    overall_rating,
+    review_count,
+    
+    is_verified,
+    is_active
+)
+SELECT 
+    id,
+    'mechanic_diesel',
+    'Hope Valley Diesel Repair',
+    'Dave Chen',
+    false,
+    '604-555-8877',
+    '604-555-8877',
+    true,
+    
+    '{"monday": "6:00-22:00", "tuesday": "6:00-22:00", "wednesday": "6:00-22:00", "thursday": "6:00-22:00", "friday": "6:00-22:00", "saturday": "6:00-22:00", "sunday": "8:00-18:00"}'::jsonb,
+    true,
+    true,
+    100.00,
+    45,
+    true,
+    false,
+    
+    ARRAY['oil_change', 'brake_repair', 'engine_diagnostics', 'roadside_repair', 'tire_change', 'electrical_repair', 'fuel_system', 'coolant_system', 'air_system', 'reefer_repair'],
+    ARRAY['semi_truck', 'work_truck', 'reefer_trailer', 'bus'],
+    ARRAY['Freightliner', 'Peterbilt', 'Kenworth', 'Volvo', 'International', 'Western Star', 'Mack'],
+    
+    ARRAY['ASE Certified', 'Freightliner Certified', 'ThermoKing Certified'],
+    15,
+    ARRAY['Roadside repair', 'Reefer units', 'Air brake systems'],
+    
+    145.00,
+    true,
+    125.00,
+    50.00,
+    true,
+    true,
+    true,
+    true,
+    
+    4.6,
+    89,
+    
+    true,
+    true
+FROM staging_properties WHERE name = 'Flying J Travel Plaza - Hope';
+
+-- 3. Gateway Golden - Rockies Diesel
+INSERT INTO staging_service_providers (
+    property_id,
+    provider_type,
+    business_name,
+    provider_name,
+    is_resident,
+    phone,
+    phone_24hr,
+    
+    available_24hr,
+    available_after_hours,
+    after_hours_fee,
+    response_time_minutes,
+    same_day_service,
+    
+    services_offered,
+    vehicle_types_served,
+    makes_serviced,
+    
+    certifications,
+    years_experience,
+    
+    hourly_rate,
+    minimum_charge,
+    mobile_service_fee,
+    accepts_cards,
+    accepts_fleet_accounts,
+    
+    overall_rating,
+    review_count,
+    
+    is_verified,
+    is_active
+)
+SELECT 
+    id,
+    'mechanic_diesel',
+    'Rockies Diesel Service',
+    'Jim MacLeod',
+    false,
+    '250-344-5566',
+    '250-344-9911',
+    
+    true,
+    true,
+    125.00,
+    60,
+    true,
+    
+    ARRAY['oil_change', 'brake_repair', 'engine_diagnostics', 'electrical_repair', 'tire_service', 'transmission_service', 'clutch_repair'],
+    ARRAY['semi_truck', 'work_truck', 'heavy_equipment'],
+    ARRAY['Freightliner', 'Peterbilt', 'Kenworth', 'Volvo', 'CAT', 'John Deere'],
+    
+    ARRAY['ASE Certified', 'CAT Certified', 'Red Seal'],
+    22,
+    
+    135.00,
+    150.00,
+    75.00,
+    true,
+    true,
+    
+    4.5,
+    34,
+    
+    true,
+    true
+FROM staging_properties WHERE name = 'Gateway Travel Centre - Golden';
+
+-- Verify diesel mechanics
+SELECT 
+    sp.name as property,
+    ssp.business_name,
+    ssp.provider_name,
+    CASE WHEN ssp.is_resident THEN '✓ RESIDENT' ELSE 'Mobile' END as type,
+    ssp.available_24hr as "24hr",
+    ssp.hourly_rate,
+    ssp.overall_rating
+FROM staging_service_providers ssp
+JOIN staging_properties sp ON sp.id = ssp.property_id
+WHERE ssp.provider_type = 'mechanic_diesel'
+ORDER BY ssp.is_resident DESC, ssp.overall_rating DESC;
