@@ -1,0 +1,146 @@
+Create data import infrastructure for loading real BC RV parks and campgrounds.
+
+Run this SQL to create import tracking tables:
+
+-- ============================================================================
+-- DATA IMPORT INFRASTRUCTURE
+-- ============================================================================
+
+-- Import batches (track each import run)
+CREATE TABLE IF NOT EXISTS staging_import_batches (
+    id SERIAL PRIMARY KEY,
+    
+    batch_name VARCHAR(255) NOT NULL,
+    source_type VARCHAR(50) NOT NULL,  -- csv, api, scrape, manual
+    source_name VARCHAR(255),           -- filename or API name
+    source_url TEXT,
+    
+    -- Status
+    status VARCHAR(50) DEFAULT 'pending',  -- pending, processing, completed, failed
+    started_at TIMESTAMP,
+    completed_at TIMESTAMP,
+    
+    -- Stats
+    total_records INTEGER DEFAULT 0,
+    processed_records INTEGER DEFAULT 0,
+    imported_records INTEGER DEFAULT 0,
+    skipped_records INTEGER DEFAULT 0,
+    error_records INTEGER DEFAULT 0,
+    
+    -- Errors
+    error_log JSONB DEFAULT '[]',
+    
+    created_by INTEGER REFERENCES staging_users(id),
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Import staging (raw data before processing)
+CREATE TABLE IF NOT EXISTS staging_import_raw (
+    id SERIAL PRIMARY KEY,
+    batch_id INTEGER REFERENCES staging_import_batches(id) ON DELETE CASCADE,
+    
+    -- Raw data
+    raw_data JSONB NOT NULL,
+    
+    -- Extracted/normalized fields
+    name VARCHAR(255),
+    address TEXT,
+    city VARCHAR(100),
+    province VARCHAR(50),
+    postal_code VARCHAR(20),
+    latitude DECIMAL(10, 7),
+    longitude DECIMAL(10, 7),
+    phone VARCHAR(50),
+    email VARCHAR(255),
+    website TEXT,
+    
+    -- Processing status
+    status VARCHAR(50) DEFAULT 'pending',  -- pending, matched, new, error, skipped
+    matched_property_id INTEGER REFERENCES staging_properties(id),
+    confidence_score DECIMAL(5, 2),
+    
+    -- Processing notes
+    processing_notes TEXT,
+    
+    created_at TIMESTAMP DEFAULT NOW(),
+    processed_at TIMESTAMP
+);
+
+CREATE INDEX idx_import_raw_batch ON staging_import_raw(batch_id);
+CREATE INDEX idx_import_raw_status ON staging_import_raw(status);
+
+-- Known data sources
+CREATE TABLE IF NOT EXISTS staging_data_sources (
+    id SERIAL PRIMARY KEY,
+    
+    name VARCHAR(255) NOT NULL,
+    source_type VARCHAR(50) NOT NULL,  -- government, association, aggregator, scrape
+    url TEXT,
+    
+    -- Data mapping
+    field_mapping JSONB,  -- Maps source fields to our schema
+    
+    -- Update frequency
+    update_frequency VARCHAR(50),  -- daily, weekly, monthly, manual
+    last_imported_at TIMESTAMP,
+    next_import_at TIMESTAMP,
+    
+    is_active BOOLEAN DEFAULT true,
+    
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Insert known BC data sources
+INSERT INTO staging_data_sources (name, source_type, url, field_mapping, update_frequency, notes) VALUES
+(
+    'BC Parks Campgrounds',
+    'government',
+    'https://bcparks.ca/explore/camping/',
+    '{"name": "facility_name", "location": "park_name"}',
+    'monthly',
+    'Official BC Parks camping data. ~170 campgrounds.'
+),
+(
+    'Recreation Sites and Trails BC',
+    'government',
+    'https://www.sitesandtrailsbc.ca/',
+    '{"name": "site_name", "region": "forest_district"}',
+    'monthly',
+    'Free/low-cost forest recreation sites. ~1200 sites.'
+),
+(
+    'Camping and RVing BC Coalition',
+    'association',
+    'https://campingrvbc.com/',
+    '{"name": "park_name", "city": "city"}',
+    'quarterly',
+    'Industry association member directory.'
+),
+(
+    'Good Sam Club Directory',
+    'aggregator',
+    'https://www.goodsam.com/campgrounds-rv-parks/',
+    '{}',
+    'manual',
+    'Major RV park directory. Requires scraping or API access.'
+),
+(
+    'iOverlander',
+    'aggregator',
+    'https://www.ioverlander.com/',
+    '{}',
+    'weekly',
+    'Community-contributed camping spots. Has API.'
+),
+(
+    'Harvest Hosts BC',
+    'aggregator',
+    'https://harvesthosts.com/',
+    '{}',
+    'monthly',
+    'Wineries, farms, breweries offering free camping.'
+);
+
+-- Verify
+SELECT name, source_type, update_frequency FROM staging_data_sources;
