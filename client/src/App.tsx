@@ -30,6 +30,7 @@ import HostBookings from "@/pages/host/Bookings";
 import HostSettings from "@/pages/host/Settings";
 import HostPayouts from "@/pages/host/Payouts";
 import AddProperty from "@/pages/host/AddProperty";
+import HostCalendar from "@/pages/host/HostCalendar";
 import StagingSearch from "@/pages/staging/Search";
 import StagingPropertyDetail from "@/pages/staging/PropertyDetail";
 import StagingBook from "@/pages/staging/BookingFlow";
@@ -73,7 +74,7 @@ function Router() {
       <Route path="/host/forgot-password" component={ForgotPassword} />
       <Route path="/host/dashboard" component={HostDashboard} />
       <Route path="/host/properties/add" component={AddProperty} />
-      <Route path="/host/properties/:id/calendar" component={PropertyManage} />
+      <Route path="/host/properties/:id/calendar" component={HostCalendar} />
       <Route path="/host/properties/:id/bookings" component={PropertyManage} />
       <Route path="/host/properties/:id" component={PropertyManage} />
       <Route path="/host/properties" component={HostProperties} />

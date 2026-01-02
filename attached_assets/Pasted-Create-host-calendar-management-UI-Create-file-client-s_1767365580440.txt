@@ -1,0 +1,386 @@
+Create host calendar management UI.
+
+Create file: client/src/pages/host/HostCalendar.tsx
+```tsx
+import React, { useState, useEffect } from 'react';
+import { useParams, Link } from 'react-router-dom';
+
+interface CalendarData {
+    startDate: string;
+    endDate: string;
+    bookings: Array<{
+        id: number;
+        booking_ref: string;
+        guest_name: string;
+        check_in_date: string;
+        check_out_date: string;
+        status: string;
+    }>;
+    blocks: Array<{
+        id: number;
+        block_type: string;
+        title: string;
+        start_date: string;
+        end_date: string;
+    }>;
+    pricingOverrides: Array<{
+        id: number;
+        name: string;
+        start_date: string;
+        end_date: string;
+        nightly_rate: number | null;
+        rate_multiplier: number | null;
+    }>;
+}
+
+interface Property {
+    id: number;
+    name: string;
+    city: string;
+}
+
+export default function HostCalendar() {
+    const { id } = useParams<{ id: string }>();
+    const [property, setProperty] = useState<Property | null>(null);
+    const [calendar, setCalendar] = useState<CalendarData | null>(null);
+    const [currentMonth, setCurrentMonth] = useState(new Date());
+    const [loading, setLoading] = useState(true);
+    const [showAddBlock, setShowAddBlock] = useState(false);
+    
+    // Add block form
+    const [blockType, setBlockType] = useState('blocked');
+    const [blockTitle, setBlockTitle] = useState('');
+    const [blockStart, setBlockStart] = useState('');
+    const [blockEnd, setBlockEnd] = useState('');
+
+    useEffect(() => {
+        loadCalendar();
+    }, [id, currentMonth]);
+
+    async function loadCalendar() {
+        const token = localStorage.getItem('accessToken');
+        const startDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
+        const endDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 2, 0);
+
+        try {
+            const [propRes, calRes] = await Promise.all([
+                fetch(`/api/host/properties/${id}`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                }),
+                fetch(`/api/host/properties/${id}/calendar?startDate=${startDate.toISOString().split('T')[0]}&endDate=${endDate.toISOString().split('T')[0]}`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                })
+            ]);
+
+            const [propData, calData] = await Promise.all([propRes.json(), calRes.json()]);
+
+            if (propData.success) setProperty(propData.property);
+            if (calData.success) setCalendar(calData.calendar);
+        } catch (err) {
+            console.error('Failed to load calendar:', err);
+        } finally {
+            setLoading(false);
+        }
+    }
+
+    async function addBlock() {
+        if (!blockStart || !blockEnd) return;
+
+        const token = localStorage.getItem('accessToken');
+        
+        try {
+            const res = await fetch(`/api/host/properties/${id}/blocks`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    blockType,
+                    title: blockTitle || blockType,
+                    startDate: blockStart,
+                    endDate: blockEnd
+                })
+            });
+
+            if (res.ok) {
+                setShowAddBlock(false);
+                setBlockTitle('');
+                setBlockStart('');
+                setBlockEnd('');
+                loadCalendar();
+            }
+        } catch (err) {
+            console.error('Failed to add block:', err);
+        }
+    }
+
+    async function removeBlock(blockId: number) {
+        const token = localStorage.getItem('accessToken');
+        
+        try {
+            await fetch(`/api/host/properties/${id}/blocks/${blockId}`, {
+                method: 'DELETE',
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            loadCalendar();
+        } catch (err) {
+            console.error('Failed to remove block:', err);
+        }
+    }
+
+    // Generate calendar grid
+    function generateCalendarDays() {
+        const year = currentMonth.getFullYear();
+        const month = currentMonth.getMonth();
+        const firstDay = new Date(year, month, 1);
+        const lastDay = new Date(year, month + 1, 0);
+        const startPadding = firstDay.getDay();
+        const days: Array<{ date: Date | null; bookings: any[]; blocks: any[]; overrides: any[] }> = [];
+
+        // Padding for previous month
+        for (let i = 0; i < startPadding; i++) {
+            days.push({ date: null, bookings: [], blocks: [], overrides: [] });
+        }
+
+        // Actual days
+        for (let d = 1; d <= lastDay.getDate(); d++) {
+            const date = new Date(year, month, d);
+            const dateStr = date.toISOString().split('T')[0];
+
+            const dayBookings = calendar?.bookings.filter(b => 
+                dateStr >= b.check_in_date && dateStr < b.check_out_date
+            ) || [];
+
+            const dayBlocks = calendar?.blocks.filter(b =>
+                dateStr >= b.start_date && dateStr <= b.end_date
+            ) || [];
+
+            const dayOverrides = calendar?.pricingOverrides.filter(o =>
+                dateStr >= o.start_date && dateStr <= o.end_date
+            ) || [];
+
+            days.push({ date, bookings: dayBookings, blocks: dayBlocks, overrides: dayOverrides });
+        }
+
+        return days;
+    }
+
+    const calendarDays = calendar ? generateCalendarDays() : [];
+    const monthName = currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+                <div className="text-white">Loading calendar...</div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="min-h-screen bg-gray-900">
+            {/* Header */}
+            <div className="bg-gray-800 border-b border-gray-700">
+                <div className="max-w-7xl mx-auto px-4 py-4">
+                    <div className="flex items-center gap-4">
+                        <Link to="/host" className="text-gray-400 hover:text-white">
+                            ← Dashboard
+                        </Link>
+                        <div>
+                            <h1 className="text-xl font-bold text-white">{property?.name}</h1>
+                            <p className="text-gray-400 text-sm">Calendar Management</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div className="max-w-7xl mx-auto px-4 py-6">
+                <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                    {/* Calendar Grid */}
+                    <div className="lg:col-span-3 bg-gray-800 rounded-lg p-4">
+                        {/* Month Navigation */}
+                        <div className="flex justify-between items-center mb-4">
+                            <button
+                                onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1))}
+                                className="text-gray-400 hover:text-white px-3 py-1"
+                            >
+                                ← Prev
+                            </button>
+                            <h2 className="text-xl font-semibold text-white">{monthName}</h2>
+                            <button
+                                onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1))}
+                                className="text-gray-400 hover:text-white px-3 py-1"
+                            >
+                                Next →
+                            </button>
+                        </div>
+
+                        {/* Day headers */}
+                        <div className="grid grid-cols-7 gap-1 mb-2">
+                            {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+                                <div key={day} className="text-center text-gray-500 text-sm py-2">
+                                    {day}
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* Calendar days */}
+                        <div className="grid grid-cols-7 gap-1">
+                            {calendarDays.map((day, idx) => (
+                                <div
+                                    key={idx}
+                                    className={`min-h-[80px] p-1 rounded ${
+                                        day.date ? 'bg-gray-700' : 'bg-gray-800'
+                                    } ${day.blocks.length > 0 ? 'bg-red-900/30' : ''}`}
+                                >
+                                    {day.date && (
+                                        <>
+                                            <div className="text-gray-400 text-sm">
+                                                {day.date.getDate()}
+                                            </div>
+                                            {day.bookings.map((b, i) => (
+                                                <div
+                                                    key={i}
+                                                    className={`text-xs px-1 py-0.5 rounded truncate mb-0.5 ${
+                                                        b.status === 'confirmed' 
+                                                            ? 'bg-green-600 text-white' 
+                                                            : 'bg-yellow-600 text-white'
+                                                    }`}
+                                                    title={`${b.guest_name} (${b.status})`}
+                                                >
+                                                    {b.guest_name}
+                                                </div>
+                                            ))}
+                                            {day.blocks.map((b, i) => (
+                                                <div
+                                                    key={i}
+                                                    className="text-xs px-1 py-0.5 rounded bg-red-600 text-white truncate"
+                                                    title={b.title}
+                                                >
+                                                    🚫 {b.title || b.block_type}
+                                                </div>
+                                            ))}
+                                        </>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* Legend */}
+                        <div className="flex gap-4 mt-4 text-sm">
+                            <div className="flex items-center gap-2">
+                                <div className="w-4 h-4 bg-green-600 rounded"></div>
+                                <span className="text-gray-400">Confirmed</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <div className="w-4 h-4 bg-yellow-600 rounded"></div>
+                                <span className="text-gray-400">Pending</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <div className="w-4 h-4 bg-red-600 rounded"></div>
+                                <span className="text-gray-400">Blocked</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Sidebar */}
+                    <div className="space-y-4">
+                        {/* Add Block */}
+                        <div className="bg-gray-800 rounded-lg p-4">
+                            <h3 className="text-white font-medium mb-3">Block Dates</h3>
+                            
+                            {showAddBlock ? (
+                                <div className="space-y-3">
+                                    <select
+                                        value={blockType}
+                                        onChange={(e) => setBlockType(e.target.value)}
+                                        className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white text-sm"
+                                    >
+                                        <option value="blocked">Blocked</option>
+                                        <option value="maintenance">Maintenance</option>
+                                        <option value="owner_use">Owner Use</option>
+                                        <option value="seasonal_closure">Seasonal Closure</option>
+                                    </select>
+                                    <input
+                                        type="text"
+                                        value={blockTitle}
+                                        onChange={(e) => setBlockTitle(e.target.value)}
+                                        placeholder="Title (optional)"
+                                        className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white text-sm"
+                                    />
+                                    <input
+                                        type="date"
+                                        value={blockStart}
+                                        onChange={(e) => setBlockStart(e.target.value)}
+                                        className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white text-sm"
+                                    />
+                                    <input
+                                        type="date"
+                                        value={blockEnd}
+                                        onChange={(e) => setBlockEnd(e.target.value)}
+                                        className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white text-sm"
+                                    />
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={addBlock}
+                                            className="flex-1 bg-red-600 hover:bg-red-700 text-white py-2 rounded text-sm"
+                                        >
+                                            Block
+                                        </button>
+                                        <button
+                                            onClick={() => setShowAddBlock(false)}
+                                            className="flex-1 bg-gray-600 hover:bg-gray-500 text-white py-2 rounded text-sm"
+                                        >
+                                            Cancel
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <button
+                                    onClick={() => setShowAddBlock(true)}
+                                    className="w-full bg-gray-700 hover:bg-gray-600 text-gray-300 py-2 rounded text-sm"
+                                >
+                                    + Add Block
+                                </button>
+                            )}
+                        </div>
+
+                        {/* Active Blocks */}
+                        <div className="bg-gray-800 rounded-lg p-4">
+                            <h3 className="text-white font-medium mb-3">Active Blocks</h3>
+                            <div className="space-y-2">
+                                {calendar?.blocks.map(block => (
+                                    <div key={block.id} className="bg-gray-700 rounded p-2">
+                                        <div className="flex justify-between items-start">
+                                            <div>
+                                                <p className="text-white text-sm">{block.title || block.block_type}</p>
+                                                <p className="text-gray-400 text-xs">
+                                                    {new Date(block.start_date).toLocaleDateString()} - {new Date(block.end_date).toLocaleDateString()}
+                                                </p>
+                                            </div>
+                                            <button
+                                                onClick={() => removeBlock(block.id)}
+                                                className="text-red-400 hover:text-red-300 text-sm"
+                                            >
+                                                ×
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                                {(!calendar?.blocks || calendar.blocks.length === 0) && (
+                                    <p className="text-gray-500 text-sm">No active blocks</p>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+```
+
+Add route:
+```tsx
+<Route path="/host/properties/:id/calendar" element={<HostCalendar />} />
+```
