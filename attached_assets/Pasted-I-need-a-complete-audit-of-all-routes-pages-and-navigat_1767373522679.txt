@@ -1,0 +1,112 @@
+I need a complete audit of all routes, pages, and navigation in the BC Staging Network app. Generate a comprehensive report.
+
+## Step 1: Find All Route Definitions
+```bash
+echo "=== ROUTE DISCOVERY ==="
+echo ""
+echo "--- App.tsx Routes ---"
+grep -n "Route path=" client/src/App.tsx 2>/dev/null || grep -n "path:" client/src/App.tsx 2>/dev/null || cat client/src/App.tsx | grep -A2 -B2 "Route"
+
+echo ""
+echo "--- All Route Files ---"
+find client/src -name "*.tsx" -exec grep -l "Route\|useNavigate\|useParams\|Link to=" {} \;
+```
+
+## Step 2: Find All Page Components
+```bash
+echo ""
+echo "=== PAGE COMPONENTS ==="
+echo ""
+echo "--- Pages Directory Structure ---"
+find client/src/pages -name "*.tsx" 2>/dev/null | sort
+
+echo ""
+echo "--- Components that might be pages ---"
+find client/src/components -name "*.tsx" 2>/dev/null | head -30
+```
+
+## Step 3: Find Navigation Components
+```bash
+echo ""
+echo "=== NAVIGATION COMPONENTS ==="
+echo ""
+echo "--- Files with navigation/menu/nav in name ---"
+find client/src -name "*[Nn]av*" -o -name "*[Mm]enu*" -o -name "*[Ss]idebar*" 2>/dev/null
+
+echo ""
+echo "--- Header/Layout files ---"
+find client/src -name "*[Hh]eader*" -o -name "*[Ll]ayout*" 2>/dev/null
+```
+
+## Step 4: Extract All Link Destinations
+```bash
+echo ""
+echo "=== ALL LINK DESTINATIONS ==="
+echo ""
+echo "--- Links in navigation components ---"
+grep -rh "to=\"/" client/src/components/*[Nn]av* client/src/components/*[Mm]enu* client/src/components/*[Hh]eader* client/src/components/*[Ss]idebar* 2>/dev/null | grep -oE 'to="[^"]*"' | sort | uniq
+
+echo ""
+echo "--- All Links across app ---"
+grep -rh "to=\"/" client/src/ 2>/dev/null | grep -oE 'to="[^"]*"' | sort | uniq -c | sort -rn
+```
+
+## Step 5: Find API Endpoints (for understanding data flows)
+```bash
+echo ""
+echo "=== API ROUTES ==="
+echo ""
+echo "--- Server route files ---"
+ls -la server/routes/ 2>/dev/null
+
+echo ""
+echo "--- All API endpoints defined ---"
+grep -rh "router\.\(get\|post\|put\|delete\)" server/routes/*.ts 2>/dev/null | head -50
+
+echo ""
+echo "--- API endpoints called from frontend ---"
+grep -roh "fetch(['\"][^'\"]*['\"]" client/src/ 2>/dev/null | sort | uniq
+```
+
+## Step 6: Database Tables (for understanding data model)
+```bash
+echo ""
+echo "=== DATABASE TABLES ==="
+echo ""
+echo "--- All staging tables ---"
+curl -s "http://localhost:5000/api/staging/search?limit=1" > /dev/null && echo "API Running" || echo "API Not Running"
+```
+
+Run this SQL to list all tables:
+```sql
+SELECT table_name, 
+       (SELECT COUNT(*) FROM information_schema.columns WHERE table_name = t.table_name) as column_count
+FROM information_schema.tables t
+WHERE table_schema = 'public' 
+AND table_name LIKE 'staging_%' OR table_name LIKE 'civos_%'
+ORDER BY table_name;
+```
+
+## Step 7: Generate Navigation Map
+
+After running the above, create a markdown report with:
+
+1. **Currently Routed Pages** - Pages that have routes in App.tsx
+2. **Orphan Pages** - Page components that exist but have no route
+3. **Navigation Links** - What's actually linked in nav menus
+4. **Missing Links** - Routes that exist but aren't in any navigation
+5. **Dead Links** - Navigation links pointing to non-existent routes
+
+Format as a table:
+
+| Page/Route | Has Route? | In Nav? | Status |
+|------------|------------|---------|--------|
+| /staging | ✅ | ✅ | Active |
+| /admin/civos | ✅ | ✅ | Active |
+| /fleets | ✅ | ❌ | Orphan |
+| etc... | | | |
+
+Also list:
+- Current sidebar/nav menu structure
+- Recommended unified navigation structure
+- Pages that need to be built vs pages that exist but aren't linked
