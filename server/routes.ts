@@ -23,6 +23,7 @@ import hostDashboardRouter from "./routes/host";
 import importRouter from "./routes/import";
 import civosRouter from "./routes/civos";
 import foundationRouter from "./routes/foundation";
+import vehiclesRouter from "./routes/vehicles";
 import { JobberService, getJobberAuthUrl, exchangeCodeForToken } from "./services/jobber";
 import { CompanyCamService, getPhotoUrl } from "./services/companycam";
 
@@ -69,6 +70,9 @@ export async function registerRoutes(
 
   // Register multi-tenant foundation routes
   app.use('/api/foundation', foundationRouter);
+
+  // Register vehicles/trailers/fleets routes
+  app.use('/api/vehicles', vehiclesRouter);
 
   // Jobber OAuth flow - Start authorization
   app.get('/api/v1/integrations/jobber/auth', (req, res) => {
