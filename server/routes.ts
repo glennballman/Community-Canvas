@@ -18,6 +18,7 @@ import { createAccommodationsRouter } from "./routes/accommodations";
 import stagingRouter from "./routes/staging";
 import hostAuthRouter from "./routes/hostAuth";
 import hostPropertiesRouter from "./routes/hostProperties";
+import authRouter from "./routes/auth";
 import { JobberService, getJobberAuthUrl, exchangeCodeForToken } from "./services/jobber";
 import { CompanyCamService, getPhotoUrl } from "./services/companycam";
 
@@ -49,6 +50,9 @@ export async function registerRoutes(
 
   // Register host property management routes
   app.use('/api/host', hostPropertiesRouter);
+
+  // Register user authentication routes
+  app.use('/api/auth', authRouter);
 
   // Jobber OAuth flow - Start authorization
   app.get('/api/v1/integrations/jobber/auth', (req, res) => {

@@ -1,0 +1,444 @@
+Create authentication API endpoints.
+
+## Step 1: Install required packages
+```bash
+npm install bcryptjs jsonwebtoken
+npm install -D @types/bcryptjs @types/jsonwebtoken
+```
+
+## Step 2: Create auth middleware
+
+Create file: server/middleware/auth.ts
+```typescript
+import { Request, Response, NextFunction } from 'express';
+import jwt from 'jsonwebtoken';
+
+const JWT_SECRET = process.env.JWT_SECRET || 'staging-network-secret-change-in-production';
+
+export interface AuthRequest extends Request {
+    user?: {
+        id: number;
+        email: string;
+        userType: string;
+    };
+}
+
+export function authenticateToken(req: AuthRequest, res: Response, next: NextFunction) {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
+
+    if (!token) {
+        return res.status(401).json({ success: false, error: 'Access token required' });
+    }
+
+    try {
+        const decoded = jwt.verify(token, JWT_SECRET) as any;
+        req.user = {
+            id: decoded.userId,
+            email: decoded.email,
+            userType: decoded.userType
+        };
+        next();
+    } catch (error) {
+        return res.status(403).json({ success: false, error: 'Invalid or expired token' });
+    }
+}
+
+export function optionalAuth(req: AuthRequest, res: Response, next: NextFunction) {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+
+    if (token) {
+        try {
+            const decoded = jwt.verify(token, JWT_SECRET) as any;
+            req.user = {
+                id: decoded.userId,
+                email: decoded.email,
+                userType: decoded.userType
+            };
+        } catch (error) {
+            // Token invalid, but continue without auth
+        }
+    }
+    next();
+}
+
+export function requireHost(req: AuthRequest, res: Response, next: NextFunction) {
+    if (!req.user) {
+        return res.status(401).json({ success: false, error: 'Authentication required' });
+    }
+    if (req.user.userType !== 'host' && req.user.userType !== 'admin') {
+        return res.status(403).json({ success: false, error: 'Host access required' });
+    }
+    next();
+}
+
+export function requireAdmin(req: AuthRequest, res: Response, next: NextFunction) {
+    if (!req.user) {
+        return res.status(401).json({ success: false, error: 'Authentication required' });
+    }
+    if (req.user.userType !== 'admin') {
+        return res.status(403).json({ success: false, error: 'Admin access required' });
+    }
+    next();
+}
+
+export function generateTokens(userId: number, email: string, userType: string) {
+    const accessToken = jwt.sign(
+        { userId, email, userType },
+        JWT_SECRET,
+        { expiresIn: '15m' }
+    );
+    
+    const refreshToken = jwt.sign(
+        { userId, email, userType, type: 'refresh' },
+        JWT_SECRET,
+        { expiresIn: '7d' }
+    );
+    
+    return { accessToken, refreshToken };
+}
+
+export { JWT_SECRET };
+```
+
+## Step 3: Create auth routes
+
+Create file: server/routes/auth.ts
+```typescript
+import express, { Request, Response } from 'express';
+import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
+import { db } from '../db';
+import { authenticateToken, generateTokens, AuthRequest, JWT_SECRET } from '../middleware/auth';
+import jwt from 'jsonwebtoken';
+
+const router = express.Router();
+
+// POST /api/auth/register - Create new user
+router.post('/register', async (req: Request, res: Response) => {
+    try {
+        const { email, password, firstName, lastName, phone, userType, companyName } = req.body;
+
+        // Validation
+        if (!email || !password) {
+            return res.status(400).json({ success: false, error: 'Email and password required' });
+        }
+
+        if (password.length < 8) {
+            return res.status(400).json({ success: false, error: 'Password must be at least 8 characters' });
+        }
+
+        // Check if user exists
+        const existing = await db.query(
+            'SELECT id FROM staging_users WHERE email = $1',
+            [email.toLowerCase()]
+        );
+
+        if (existing.rows.length > 0) {
+            return res.status(400).json({ success: false, error: 'Email already registered' });
+        }
+
+        // Hash password
+        const passwordHash = await bcrypt.hash(password, 12);
+
+        // Create user
+        const result = await db.query(`
+            INSERT INTO staging_users (
+                email, password_hash, first_name, last_name, phone,
+                user_type, company_name
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+            RETURNING id, email, first_name, last_name, user_type
+        `, [
+            email.toLowerCase(),
+            passwordHash,
+            firstName || null,
+            lastName || null,
+            phone || null,
+            userType || 'guest',
+            companyName || null
+        ]);
+
+        const user = result.rows[0];
+
+        // Generate tokens
+        const { accessToken, refreshToken } = generateTokens(user.id, user.email, user.user_type);
+
+        // Save refresh token
+        const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+        await db.query(`
+            INSERT INTO staging_sessions (user_id, refresh_token, expires_at)
+            VALUES ($1, $2, $3)
+        `, [user.id, refreshToken, expiresAt]);
+
+        res.status(201).json({
+            success: true,
+            user: {
+                id: user.id,
+                email: user.email,
+                firstName: user.first_name,
+                lastName: user.last_name,
+                userType: user.user_type
+            },
+            accessToken,
+            refreshToken
+        });
+
+    } catch (error: any) {
+        console.error('Register error:', error);
+        res.status(500).json({ success: false, error: 'Registration failed' });
+    }
+});
+
+// POST /api/auth/login - Login user
+router.post('/login', async (req: Request, res: Response) => {
+    try {
+        const { email, password } = req.body;
+
+        if (!email || !password) {
+            return res.status(400).json({ success: false, error: 'Email and password required' });
+        }
+
+        // Find user
+        const result = await db.query(`
+            SELECT id, email, password_hash, first_name, last_name, user_type, status
+            FROM staging_users WHERE email = $1
+        `, [email.toLowerCase()]);
+
+        if (result.rows.length === 0) {
+            return res.status(401).json({ success: false, error: 'Invalid credentials' });
+        }
+
+        const user = result.rows[0];
+
+        if (user.status !== 'active') {
+            return res.status(403).json({ success: false, error: 'Account is suspended' });
+        }
+
+        // Verify password
+        const validPassword = await bcrypt.compare(password, user.password_hash);
+        if (!validPassword) {
+            return res.status(401).json({ success: false, error: 'Invalid credentials' });
+        }
+
+        // Update login stats
+        await db.query(`
+            UPDATE staging_users 
+            SET last_login_at = NOW(), login_count = login_count + 1
+            WHERE id = $1
+        `, [user.id]);
+
+        // Generate tokens
+        const { accessToken, refreshToken } = generateTokens(user.id, user.email, user.user_type);
+
+        // Save refresh token
+        const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+        await db.query(`
+            INSERT INTO staging_sessions (user_id, refresh_token, expires_at)
+            VALUES ($1, $2, $3)
+        `, [user.id, refreshToken, expiresAt]);
+
+        res.json({
+            success: true,
+            user: {
+                id: user.id,
+                email: user.email,
+                firstName: user.first_name,
+                lastName: user.last_name,
+                userType: user.user_type
+            },
+            accessToken,
+            refreshToken
+        });
+
+    } catch (error: any) {
+        console.error('Login error:', error);
+        res.status(500).json({ success: false, error: 'Login failed' });
+    }
+});
+
+// POST /api/auth/refresh - Refresh access token
+router.post('/refresh', async (req: Request, res: Response) => {
+    try {
+        const { refreshToken } = req.body;
+
+        if (!refreshToken) {
+            return res.status(400).json({ success: false, error: 'Refresh token required' });
+        }
+
+        // Verify token
+        let decoded: any;
+        try {
+            decoded = jwt.verify(refreshToken, JWT_SECRET);
+        } catch (err) {
+            return res.status(403).json({ success: false, error: 'Invalid refresh token' });
+        }
+
+        // Check token in database
+        const sessionResult = await db.query(`
+            SELECT s.*, u.email, u.user_type, u.status
+            FROM staging_sessions s
+            JOIN staging_users u ON u.id = s.user_id
+            WHERE s.refresh_token = $1 AND s.revoked_at IS NULL AND s.expires_at > NOW()
+        `, [refreshToken]);
+
+        if (sessionResult.rows.length === 0) {
+            return res.status(403).json({ success: false, error: 'Session expired or revoked' });
+        }
+
+        const session = sessionResult.rows[0];
+
+        if (session.status !== 'active') {
+            return res.status(403).json({ success: false, error: 'Account is suspended' });
+        }
+
+        // Generate new access token
+        const { accessToken, refreshToken: newRefreshToken } = generateTokens(
+            session.user_id, 
+            session.email, 
+            session.user_type
+        );
+
+        // Rotate refresh token
+        const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+        await db.query('UPDATE staging_sessions SET revoked_at = NOW() WHERE id = $1', [session.id]);
+        await db.query(`
+            INSERT INTO staging_sessions (user_id, refresh_token, expires_at)
+            VALUES ($1, $2, $3)
+        `, [session.user_id, newRefreshToken, expiresAt]);
+
+        res.json({
+            success: true,
+            accessToken,
+            refreshToken: newRefreshToken
+        });
+
+    } catch (error: any) {
+        console.error('Refresh error:', error);
+        res.status(500).json({ success: false, error: 'Token refresh failed' });
+    }
+});
+
+// POST /api/auth/logout - Logout user
+router.post('/logout', authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+        const { refreshToken } = req.body;
+
+        if (refreshToken) {
+            await db.query(
+                'UPDATE staging_sessions SET revoked_at = NOW() WHERE refresh_token = $1',
+                [refreshToken]
+            );
+        }
+
+        res.json({ success: true, message: 'Logged out successfully' });
+
+    } catch (error: any) {
+        console.error('Logout error:', error);
+        res.status(500).json({ success: false, error: 'Logout failed' });
+    }
+});
+
+// GET /api/auth/me - Get current user
+router.get('/me', authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+        const result = await db.query(`
+            SELECT id, email, first_name, last_name, phone, avatar_url,
+                   user_type, company_name, company_role,
+                   email_verified, preferences, notification_settings,
+                   created_at, last_login_at
+            FROM staging_users WHERE id = $1
+        `, [req.user!.id]);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ success: false, error: 'User not found' });
+        }
+
+        const user = result.rows[0];
+
+        res.json({
+            success: true,
+            user: {
+                id: user.id,
+                email: user.email,
+                firstName: user.first_name,
+                lastName: user.last_name,
+                phone: user.phone,
+                avatarUrl: user.avatar_url,
+                userType: user.user_type,
+                companyName: user.company_name,
+                companyRole: user.company_role,
+                emailVerified: user.email_verified,
+                preferences: user.preferences,
+                notificationSettings: user.notification_settings,
+                createdAt: user.created_at,
+                lastLoginAt: user.last_login_at
+            }
+        });
+
+    } catch (error: any) {
+        console.error('Get me error:', error);
+        res.status(500).json({ success: false, error: 'Failed to get user' });
+    }
+});
+
+// PUT /api/auth/me - Update current user
+router.put('/me', authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+        const { firstName, lastName, phone, companyName, companyRole, preferences, notificationSettings } = req.body;
+
+        const result = await db.query(`
+            UPDATE staging_users SET
+                first_name = COALESCE($2, first_name),
+                last_name = COALESCE($3, last_name),
+                phone = COALESCE($4, phone),
+                company_name = COALESCE($5, company_name),
+                company_role = COALESCE($6, company_role),
+                preferences = COALESCE($7, preferences),
+                notification_settings = COALESCE($8, notification_settings),
+                updated_at = NOW()
+            WHERE id = $1
+            RETURNING id, email, first_name, last_name, user_type
+        `, [req.user!.id, firstName, lastName, phone, companyName, companyRole, 
+            preferences ? JSON.stringify(preferences) : null,
+            notificationSettings ? JSON.stringify(notificationSettings) : null]);
+
+        res.json({ success: true, user: result.rows[0] });
+
+    } catch (error: any) {
+        console.error('Update me error:', error);
+        res.status(500).json({ success: false, error: 'Failed to update user' });
+    }
+});
+
+export default router;
+```
+
+## Step 4: Register auth routes in server
+
+In your main server file (server/index.ts or similar), add:
+```typescript
+import authRoutes from './routes/auth';
+
+// Add before other routes
+app.use('/api/auth', authRoutes);
+```
+
+## Step 5: Test the auth endpoints
+```bash
+# Register
+curl -X POST http://localhost:5000/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"email": "test@example.com", "password": "password123", "firstName": "Test", "lastName": "User"}'
+
+# Login
+curl -X POST http://localhost:5000/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email": "test@example.com", "password": "password123"}'
+
+# Get me (use token from login)
+curl http://localhost:5000/api/auth/me \
+  -H "Authorization: Bearer [ACCESS_TOKEN]"
+```
+
+Verify all endpoints work before continuing.
