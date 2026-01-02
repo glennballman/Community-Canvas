@@ -1,0 +1,908 @@
+Seed all 16 service categories and ~100+ services. This is the comprehensive service catalog for rural/remote communities.
+
+## Run this SQL:
+```sql
+-- =====================================================================
+-- SERVICE CATEGORIES (16 Categories)
+-- =====================================================================
+
+INSERT INTO sr_service_categories (name, slug, description, icon, sort_order) VALUES
+-- Core Property Services
+('Roof & Chimney', 'roof-chimney', 'Roofing, chimney, gutters, and related services', '🏠', 10),
+('Exterior & Siding', 'exterior-siding', 'Siding, painting, windows, decks, pressure washing', '🎨', 20),
+('Grounds & Property', 'grounds-property', 'Trees, landscaping, fencing, driveways', '🌲', 30),
+
+-- Systems
+('Septic & Water Systems', 'septic-water', 'Septic, wells, cisterns, water treatment', '💧', 40),
+('Heating & Fuel Systems', 'heating-fuel', 'Furnaces, heat pumps, wood stoves, fuel tanks', '🔥', 50),
+('Electrical', 'electrical', 'Electrical systems, generators, solar, EV charging', '⚡', 60),
+
+-- Coastal/Rural Specific
+('Waterfront & Marine', 'waterfront-marine', 'Docks, floats, pilings, boats, shoreline', '⚓', 70),
+('Structural & Foundations', 'structural-foundations', 'Foundation, crawlspace, structural repairs', '🏗️', 80),
+('Drainage & Water Control', 'drainage-water-control', 'Perimeter drains, culverts, flood mitigation', '🌊', 90),
+
+-- Operational
+('Seasonal Property Tasks', 'seasonal-tasks', 'Winterization, spring opening, property watch', '📅', 100),
+('Pest & Wildlife', 'pest-wildlife', 'Pest control, wildlife exclusion, inspections', '🐜', 110),
+('Delivery & Hauling', 'delivery-hauling', 'Fuel delivery, materials, waste removal', '🚛', 120),
+('Safety & Inspections', 'safety-inspections', 'Home inspections, safety audits, testing', '🔍', 130),
+
+-- Special Categories
+('Emergency & Rapid Response', 'emergency-response', 'Storm damage, emergency repairs, urgent response', '🚨', 140),
+('Access & Site Infrastructure', 'access-infrastructure', 'Roads, trails, ramps, site access improvements', '🛤️', 150),
+('Community & Commercial', 'community-commercial', 'Community facilities, commercial properties', '🏛️', 160)
+ON CONFLICT (slug) DO NOTHING;
+
+-- =====================================================================
+-- SERVICES - ROOF & CHIMNEY
+-- =====================================================================
+
+INSERT INTO sr_services (category_id, name, slug, description, typical_duration_min_hours, typical_duration_max_hours, crew_min, crew_typical, crew_max, noise, disruption, failure_risk_if_delayed, can_be_emergency, requires_owner_present, can_be_done_vacant, weather_dependent, revisit_cycle) VALUES
+-- Chimney Services
+((SELECT id FROM sr_service_categories WHERE slug = 'roof-chimney'), 
+ 'Chimney Sweep', 'chimney-sweep', 
+ 'Remove soot and creosote buildup, basic safety check. Excludes repairs.',
+ 1, 2, 1, 1, 2, 'low', 'low', 'high', false, true, false, false, 'annual'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'roof-chimney'), 
+ 'Chimney Inspection', 'chimney-inspection', 
+ 'Detailed inspection of chimney structure, flue, cap, and flashing.',
+ 1, 2, 1, 1, 1, 'low', 'low', 'medium', false, false, true, false, 'annual'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'roof-chimney'), 
+ 'Chimney Cap Install', 'chimney-cap-install', 
+ 'Install or replace chimney cap to prevent water/animal entry.',
+ 1, 3, 1, 2, 2, 'medium', 'low', 'medium', false, false, true, true, 'ad_hoc'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'roof-chimney'), 
+ 'Chimney Repair', 'chimney-repair', 
+ 'Repair chimney masonry, flashing, or structural issues.',
+ 4, 12, 2, 2, 4, 'medium', 'medium', 'high', false, false, true, true, 'ad_hoc'),
+
+-- Roofing Services
+((SELECT id FROM sr_service_categories WHERE slug = 'roof-chimney'), 
+ 'Roof Inspection', 'roof-inspection', 
+ 'Visual inspection of roof condition, identify issues and estimate repairs.',
+ 1, 3, 1, 2, 2, 'low', 'low', 'medium', false, false, true, true, 'annual'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'roof-chimney'), 
+ 'Roof Repair', 'roof-repair', 
+ 'Repair leaks, damaged shingles, flashing, or minor structural issues.',
+ 2, 8, 2, 2, 4, 'medium', 'medium', 'high', true, false, true, true, 'ad_hoc'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'roof-chimney'), 
+ 'Roof Replacement', 'roof-replacement', 
+ 'Complete roof tear-off and replacement.',
+ 16, 40, 3, 4, 6, 'high', 'high', 'high', false, false, true, true, 'ad_hoc'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'roof-chimney'), 
+ 'Moss Treatment', 'moss-treatment', 
+ 'Chemical treatment to kill and prevent moss/algae growth on roof.',
+ 2, 4, 1, 2, 2, 'low', 'low', 'low', false, false, true, true, 'biannual'),
+
+-- Gutter Services
+((SELECT id FROM sr_service_categories WHERE slug = 'roof-chimney'), 
+ 'Gutter Cleaning', 'gutter-cleaning', 
+ 'Remove debris from gutters and downspouts, check flow.',
+ 1, 3, 1, 2, 2, 'low', 'low', 'medium', false, false, true, true, 'biannual'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'roof-chimney'), 
+ 'Gutter Repair', 'gutter-repair', 
+ 'Repair or replace damaged gutter sections, hangers, or downspouts.',
+ 2, 6, 1, 2, 3, 'medium', 'low', 'medium', false, false, true, true, 'ad_hoc'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'roof-chimney'), 
+ 'Gutter Guard Install', 'gutter-guard-install', 
+ 'Install gutter guards to prevent debris buildup.',
+ 3, 8, 1, 2, 3, 'medium', 'low', 'low', false, false, true, true, 'ad_hoc');
+
+-- =====================================================================
+-- SERVICES - EXTERIOR & SIDING
+-- =====================================================================
+
+INSERT INTO sr_services (category_id, name, slug, description, typical_duration_min_hours, typical_duration_max_hours, crew_min, crew_typical, crew_max, noise, disruption, failure_risk_if_delayed, can_be_emergency, requires_owner_present, can_be_done_vacant, weather_dependent, revisit_cycle) VALUES
+-- Pressure Washing
+((SELECT id FROM sr_service_categories WHERE slug = 'exterior-siding'), 
+ 'Pressure Washing - House', 'pressure-wash-house', 
+ 'Pressure wash exterior siding, soffits, and trim.',
+ 3, 8, 1, 2, 3, 'medium', 'medium', 'low', false, false, true, true, 'annual'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'exterior-siding'), 
+ 'Pressure Washing - Deck', 'pressure-wash-deck', 
+ 'Pressure wash deck surface and railings.',
+ 1, 4, 1, 2, 2, 'medium', 'low', 'low', false, false, true, true, 'annual'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'exterior-siding'), 
+ 'Pressure Washing - Driveway', 'pressure-wash-driveway', 
+ 'Pressure wash concrete or paved driveway.',
+ 2, 6, 1, 2, 2, 'medium', 'low', 'low', false, false, true, true, 'annual'),
+
+-- Siding
+((SELECT id FROM sr_service_categories WHERE slug = 'exterior-siding'), 
+ 'Siding Repair', 'siding-repair', 
+ 'Repair damaged siding sections, trim, or fascia.',
+ 2, 8, 1, 2, 3, 'medium', 'medium', 'medium', false, false, true, true, 'ad_hoc'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'exterior-siding'), 
+ 'Siding Replacement', 'siding-replacement', 
+ 'Complete siding replacement on one or more walls.',
+ 16, 80, 2, 3, 5, 'high', 'high', 'medium', false, false, true, true, 'ad_hoc'),
+
+-- Painting
+((SELECT id FROM sr_service_categories WHERE slug = 'exterior-siding'), 
+ 'Exterior Painting', 'exterior-painting', 
+ 'Prep and paint exterior surfaces - siding, trim, doors.',
+ 16, 60, 2, 3, 5, 'low', 'medium', 'low', false, false, true, true, 'ad_hoc'),
+
+-- Windows
+((SELECT id FROM sr_service_categories WHERE slug = 'exterior-siding'), 
+ 'Window Cleaning', 'window-cleaning', 
+ 'Professional window cleaning inside and out.',
+ 2, 6, 1, 2, 2, 'low', 'low', 'low', false, false, true, false, 'biannual'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'exterior-siding'), 
+ 'Window Repair', 'window-repair', 
+ 'Repair window seals, hardware, or broken glass.',
+ 1, 4, 1, 2, 2, 'low', 'low', 'medium', false, false, true, false, 'ad_hoc'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'exterior-siding'), 
+ 'Window Replacement', 'window-replacement', 
+ 'Remove and replace windows.',
+ 2, 4, 1, 2, 3, 'medium', 'medium', 'medium', false, false, true, true, 'ad_hoc'),
+
+-- Decks
+((SELECT id FROM sr_service_categories WHERE slug = 'exterior-siding'), 
+ 'Deck Staining/Sealing', 'deck-staining', 
+ 'Clean, prep, and apply stain or sealant to deck.',
+ 4, 12, 1, 2, 3, 'low', 'medium', 'low', false, false, true, true, 'biannual'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'exterior-siding'), 
+ 'Deck Repair', 'deck-repair', 
+ 'Repair damaged deck boards, railings, or structure.',
+ 3, 12, 1, 2, 3, 'medium', 'medium', 'medium', false, false, true, true, 'ad_hoc'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'exterior-siding'), 
+ 'Deck Building', 'deck-building', 
+ 'Build new deck or deck addition.',
+ 24, 80, 2, 3, 5, 'high', 'high', 'low', false, false, true, true, 'ad_hoc');
+
+-- =====================================================================
+-- SERVICES - GROUNDS & PROPERTY
+-- =====================================================================
+
+INSERT INTO sr_services (category_id, name, slug, description, typical_duration_min_hours, typical_duration_max_hours, crew_min, crew_typical, crew_max, noise, disruption, failure_risk_if_delayed, can_be_emergency, requires_owner_present, can_be_done_vacant, weather_dependent, revisit_cycle) VALUES
+-- Tree Services
+((SELECT id FROM sr_service_categories WHERE slug = 'grounds-property'), 
+ 'Tree Trimming', 'tree-trimming', 
+ 'Prune and shape trees, remove dead branches.',
+ 2, 8, 2, 2, 4, 'high', 'medium', 'medium', false, false, true, true, 'annual'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'grounds-property'), 
+ 'Tree Removal', 'tree-removal', 
+ 'Complete tree removal including limbing and bucking.',
+ 4, 16, 2, 3, 5, 'high', 'high', 'medium', true, false, true, true, 'ad_hoc'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'grounds-property'), 
+ 'Hazard Tree Assessment', 'hazard-tree-assessment', 
+ 'Professional assessment of tree health and hazard risk.',
+ 1, 3, 1, 1, 2, 'low', 'low', 'high', true, false, true, true, 'annual'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'grounds-property'), 
+ 'Stump Grinding', 'stump-grinding', 
+ 'Grind stumps below grade.',
+ 1, 4, 1, 2, 2, 'high', 'medium', 'low', false, false, true, false, 'ad_hoc'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'grounds-property'), 
+ 'Brush Clearing', 'brush-clearing', 
+ 'Clear brush, blackberries, small trees from overgrown areas.',
+ 4, 16, 2, 3, 5, 'high', 'medium', 'low', false, false, true, true, 'ad_hoc'),
+
+-- Lawn & Garden
+((SELECT id FROM sr_service_categories WHERE slug = 'grounds-property'), 
+ 'Lawn Mowing', 'lawn-mowing', 
+ 'Regular lawn mowing and edging.',
+ 1, 3, 1, 2, 2, 'medium', 'low', 'low', false, false, true, true, 'weekly'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'grounds-property'), 
+ 'Lawn Aeration', 'lawn-aeration', 
+ 'Core aeration to improve lawn health.',
+ 2, 5, 1, 2, 2, 'medium', 'low', 'low', false, false, true, true, 'annual'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'grounds-property'), 
+ 'Hedge Trimming', 'hedge-trimming', 
+ 'Trim and shape hedges and shrubs.',
+ 2, 8, 1, 2, 3, 'medium', 'low', 'low', false, false, true, true, 'biannual'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'grounds-property'), 
+ 'Garden Bed Maintenance', 'garden-bed-maintenance', 
+ 'Weeding, mulching, and general garden bed care.',
+ 2, 6, 1, 2, 3, 'low', 'low', 'low', false, false, true, true, 'monthly'),
+
+-- Fencing & Hardscape
+((SELECT id FROM sr_service_categories WHERE slug = 'grounds-property'), 
+ 'Fence Repair', 'fence-repair', 
+ 'Repair damaged fence sections, posts, or gates.',
+ 2, 8, 1, 2, 3, 'medium', 'low', 'low', false, false, true, true, 'ad_hoc'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'grounds-property'), 
+ 'Fence Building', 'fence-building', 
+ 'Install new fence.',
+ 8, 40, 2, 2, 4, 'medium', 'medium', 'low', false, false, true, true, 'ad_hoc'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'grounds-property'), 
+ 'Gravel/Driveway Repair', 'gravel-driveway-repair', 
+ 'Grade and add gravel to driveways or parking areas.',
+ 3, 8, 2, 2, 4, 'medium', 'medium', 'low', false, false, true, true, 'ad_hoc'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'grounds-property'), 
+ 'Retaining Wall Repair', 'retaining-wall-repair', 
+ 'Repair or rebuild damaged retaining walls.',
+ 8, 40, 2, 3, 5, 'medium', 'medium', 'medium', false, false, true, true, 'ad_hoc');
+
+-- =====================================================================
+-- SERVICES - WATERFRONT & MARINE
+-- =====================================================================
+
+INSERT INTO sr_services (category_id, name, slug, description, typical_duration_min_hours, typical_duration_max_hours, crew_min, crew_typical, crew_max, noise, disruption, failure_risk_if_delayed, can_be_emergency, requires_owner_present, can_be_done_vacant, weather_dependent, revisit_cycle) VALUES
+((SELECT id FROM sr_service_categories WHERE slug = 'waterfront-marine'), 
+ 'Dock Launch', 'dock-launch', 
+ 'Launch seasonal dock into water, secure and connect.',
+ 2, 6, 2, 3, 5, 'medium', 'medium', 'medium', false, false, true, true, 'annual'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'waterfront-marine'), 
+ 'Dock Stow/Haul', 'dock-stow-haul', 
+ 'Remove dock from water and store for winter.',
+ 2, 6, 2, 3, 5, 'medium', 'medium', 'high', false, false, true, true, 'annual'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'waterfront-marine'), 
+ 'Dock Inspection', 'dock-inspection', 
+ 'Inspect dock structure, hardware, and safety.',
+ 1, 3, 1, 2, 2, 'low', 'low', 'medium', false, false, true, true, 'annual'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'waterfront-marine'), 
+ 'Dock Repair', 'dock-repair', 
+ 'Repair dock decking, framing, or hardware.',
+ 4, 16, 2, 3, 4, 'medium', 'medium', 'medium', false, false, true, true, 'ad_hoc'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'waterfront-marine'), 
+ 'Float Repair', 'float-repair', 
+ 'Repair or replace dock floats.',
+ 3, 12, 2, 3, 4, 'medium', 'medium', 'medium', false, false, true, true, 'ad_hoc'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'waterfront-marine'), 
+ 'Gangway Service', 'gangway-service', 
+ 'Inspect, repair, or replace dock gangway.',
+ 2, 6, 2, 2, 4, 'medium', 'low', 'medium', false, false, true, true, 'annual'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'waterfront-marine'), 
+ 'Piling Inspection', 'piling-inspection', 
+ 'Underwater and above-water piling inspection.',
+ 2, 6, 1, 2, 3, 'low', 'low', 'medium', false, false, true, true, 'biannual'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'waterfront-marine'), 
+ 'Boat Haul-out/Launch', 'boat-haul-launch', 
+ 'Haul out or launch boat using marine ways or crane.',
+ 2, 4, 2, 2, 4, 'medium', 'low', 'medium', false, true, false, true, 'biannual'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'waterfront-marine'), 
+ 'Boat Winterization', 'boat-winterization', 
+ 'Winterize boat engine, plumbing, and systems.',
+ 2, 6, 1, 2, 2, 'low', 'low', 'high', false, true, false, false, 'annual'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'waterfront-marine'), 
+ 'Shoreline Erosion Control', 'shoreline-erosion', 
+ 'Install erosion control measures - riprap, plantings.',
+ 8, 40, 3, 4, 6, 'medium', 'high', 'medium', false, false, true, true, 'ad_hoc'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'waterfront-marine'), 
+ 'Seawall Inspection', 'seawall-inspection', 
+ 'Professional inspection of seawall condition.',
+ 2, 4, 1, 2, 2, 'low', 'low', 'medium', false, false, true, true, 'annual');
+
+-- =====================================================================
+-- SERVICES - SEPTIC & WATER SYSTEMS
+-- =====================================================================
+
+INSERT INTO sr_services (category_id, name, slug, description, typical_duration_min_hours, typical_duration_max_hours, crew_min, crew_typical, crew_max, noise, disruption, failure_risk_if_delayed, can_be_emergency, requires_owner_present, can_be_done_vacant, weather_dependent, revisit_cycle) VALUES
+((SELECT id FROM sr_service_categories WHERE slug = 'septic-water'), 
+ 'Septic Pumping', 'septic-pumping', 
+ 'Pump septic tank.',
+ 1, 2, 1, 2, 2, 'medium', 'low', 'high', true, false, true, false, 'biannual'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'septic-water'), 
+ 'Septic Inspection', 'septic-inspection', 
+ 'Full inspection of septic system including field.',
+ 2, 4, 1, 1, 2, 'low', 'low', 'medium', false, false, true, false, 'annual'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'septic-water'), 
+ 'Septic Repair', 'septic-repair', 
+ 'Repair septic tank, distribution box, or field issues.',
+ 4, 24, 2, 3, 5, 'medium', 'high', 'high', true, false, true, true, 'ad_hoc'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'septic-water'), 
+ 'Well Pump Service', 'well-pump-service', 
+ 'Service well pump, pressure tank, and controls.',
+ 2, 5, 1, 2, 2, 'low', 'medium', 'high', true, false, false, false, 'annual'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'septic-water'), 
+ 'Well Pump Replacement', 'well-pump-replacement', 
+ 'Replace submersible or jet pump.',
+ 4, 10, 1, 2, 3, 'low', 'medium', 'high', true, false, false, false, 'ad_hoc'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'septic-water'), 
+ 'Cistern Cleaning', 'cistern-cleaning', 
+ 'Clean and sanitize water cistern.',
+ 2, 5, 1, 2, 2, 'low', 'low', 'medium', false, false, true, false, 'annual'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'septic-water'), 
+ 'UV System Service', 'uv-system-service', 
+ 'Service UV water treatment - replace bulb, clean sleeve.',
+ 1, 2, 1, 1, 1, 'low', 'low', 'medium', false, false, true, false, 'annual'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'septic-water'), 
+ 'Water Filtration Service', 'water-filtration-service', 
+ 'Service water filtration system - replace filters.',
+ 1, 2, 1, 1, 1, 'low', 'low', 'low', false, false, true, false, 'quarterly'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'septic-water'), 
+ 'Water Quality Testing', 'water-quality-testing', 
+ 'Collect water samples for lab testing.',
+ 1, 2, 1, 1, 1, 'low', 'low', 'low', false, false, true, false, 'annual'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'septic-water'), 
+ 'Pipe Winterization', 'pipe-winterization', 
+ 'Blow out and protect pipes for winter.',
+ 2, 5, 1, 2, 2, 'low', 'medium', 'high', false, false, true, false, 'annual'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'septic-water'), 
+ 'Spring De-Winterization', 'spring-de-winterization', 
+ 'Restore water system after winter shutdown.',
+ 2, 5, 1, 2, 2, 'low', 'medium', 'medium', false, false, true, false, 'annual'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'septic-water'), 
+ 'Hot Tub Service', 'hot-tub-service', 
+ 'Service hot tub - check equipment, balance chemicals.',
+ 1, 3, 1, 1, 2, 'low', 'low', 'low', false, false, true, false, 'quarterly'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'septic-water'), 
+ 'Hot Tub Winterization', 'hot-tub-winterization', 
+ 'Winterize hot tub for off-season.',
+ 2, 4, 1, 2, 2, 'low', 'low', 'medium', false, false, true, false, 'annual');
+
+-- =====================================================================
+-- SERVICES - HEATING & FUEL SYSTEMS
+-- =====================================================================
+
+INSERT INTO sr_services (category_id, name, slug, description, typical_duration_min_hours, typical_duration_max_hours, crew_min, crew_typical, crew_max, noise, disruption, failure_risk_if_delayed, can_be_emergency, requires_owner_present, can_be_done_vacant, weather_dependent, revisit_cycle) VALUES
+((SELECT id FROM sr_service_categories WHERE slug = 'heating-fuel'), 
+ 'Furnace Service - Oil', 'furnace-service-oil', 
+ 'Annual service of oil furnace - clean, tune, inspect.',
+ 1, 3, 1, 1, 1, 'low', 'low', 'high', true, false, false, false, 'annual'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'heating-fuel'), 
+ 'Furnace Service - Propane', 'furnace-service-propane', 
+ 'Annual service of propane furnace.',
+ 1, 3, 1, 1, 1, 'low', 'low', 'high', true, false, false, false, 'annual'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'heating-fuel'), 
+ 'Furnace Service - Electric', 'furnace-service-electric', 
+ 'Service electric furnace or baseboard heaters.',
+ 1, 3, 1, 1, 1, 'low', 'low', 'medium', false, false, false, false, 'annual'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'heating-fuel'), 
+ 'Heat Pump Service', 'heat-pump-service', 
+ 'Annual heat pump maintenance and cleaning.',
+ 1, 3, 1, 1, 2, 'low', 'low', 'medium', false, false, true, false, 'annual'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'heating-fuel'), 
+ 'Heat Pump Install', 'heat-pump-install', 
+ 'Install mini-split or ducted heat pump system.',
+ 8, 24, 2, 2, 3, 'medium', 'medium', 'low', false, false, true, true, 'ad_hoc'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'heating-fuel'), 
+ 'Wood Stove Service', 'wood-stove-service', 
+ 'Inspect and service wood stove, check gaskets and firebricks.',
+ 1, 3, 1, 1, 2, 'low', 'low', 'high', false, true, false, false, 'annual'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'heating-fuel'), 
+ 'Wood Stove Install', 'wood-stove-install', 
+ 'Install wood stove with chimney system.',
+ 6, 16, 2, 2, 3, 'medium', 'medium', 'low', false, false, true, false, 'ad_hoc'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'heating-fuel'), 
+ 'Pellet Stove Service', 'pellet-stove-service', 
+ 'Clean and service pellet stove.',
+ 1, 3, 1, 1, 2, 'low', 'low', 'high', false, true, false, false, 'annual'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'heating-fuel'), 
+ 'Propane System Inspection', 'propane-system-inspection', 
+ 'Inspect propane tank, lines, and connections.',
+ 1, 2, 1, 1, 1, 'low', 'low', 'high', false, false, true, false, 'annual'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'heating-fuel'), 
+ 'Oil Tank Inspection', 'oil-tank-inspection', 
+ 'Inspect oil tank condition and lines.',
+ 1, 2, 1, 1, 1, 'low', 'low', 'high', false, false, true, false, 'annual'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'heating-fuel'), 
+ 'Oil Tank Replacement', 'oil-tank-replacement', 
+ 'Remove old tank and install new.',
+ 4, 10, 2, 2, 3, 'medium', 'high', 'high', false, false, true, false, 'ad_hoc'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'heating-fuel'), 
+ 'Generator Service', 'generator-service', 
+ 'Service standby or portable generator.',
+ 1, 3, 1, 1, 2, 'medium', 'low', 'high', false, false, true, false, 'annual'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'heating-fuel'), 
+ 'Boiler Service', 'boiler-service', 
+ 'Annual service of hot water boiler.',
+ 2, 4, 1, 1, 2, 'low', 'low', 'high', true, false, false, false, 'annual');
+
+-- =====================================================================
+-- SERVICES - ELECTRICAL
+-- =====================================================================
+
+INSERT INTO sr_services (category_id, name, slug, description, typical_duration_min_hours, typical_duration_max_hours, crew_min, crew_typical, crew_max, noise, disruption, failure_risk_if_delayed, can_be_emergency, requires_owner_present, can_be_done_vacant, weather_dependent, revisit_cycle) VALUES
+((SELECT id FROM sr_service_categories WHERE slug = 'electrical'), 
+ 'Electrical Inspection', 'electrical-inspection', 
+ 'Full electrical system inspection.',
+ 2, 5, 1, 1, 2, 'low', 'low', 'medium', false, false, true, false, 'ad_hoc'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'electrical'), 
+ 'Panel Upgrade', 'panel-upgrade', 
+ 'Upgrade electrical panel to higher amperage.',
+ 4, 12, 1, 2, 2, 'medium', 'high', 'medium', false, false, true, false, 'ad_hoc'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'electrical'), 
+ 'Generator Install', 'generator-install', 
+ 'Install standby generator with transfer switch.',
+ 6, 16, 1, 2, 3, 'medium', 'medium', 'low', false, false, true, false, 'ad_hoc'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'electrical'), 
+ 'Transfer Switch Install', 'transfer-switch-install', 
+ 'Install manual or automatic transfer switch.',
+ 3, 8, 1, 1, 2, 'low', 'medium', 'low', false, false, true, false, 'ad_hoc'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'electrical'), 
+ 'EV Charger Install', 'ev-charger-install', 
+ 'Install Level 2 EV charging station.',
+ 3, 8, 1, 1, 2, 'low', 'low', 'low', false, false, true, false, 'ad_hoc'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'electrical'), 
+ 'Outlet/Switch Replacement', 'outlet-switch-replacement', 
+ 'Replace outlets, switches, or covers.',
+ 1, 4, 1, 1, 1, 'low', 'low', 'low', false, false, true, false, 'ad_hoc'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'electrical'), 
+ 'Lighting Upgrade', 'lighting-upgrade', 
+ 'Upgrade interior or exterior lighting fixtures.',
+ 2, 8, 1, 1, 2, 'low', 'low', 'low', false, false, true, false, 'ad_hoc'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'electrical'), 
+ 'Exterior Electrical Check', 'exterior-electrical-check', 
+ 'Check exterior outlets, lights, and panels.',
+ 1, 2, 1, 1, 1, 'low', 'low', 'medium', false, false, true, false, 'annual'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'electrical'), 
+ 'Surge Protection Install', 'surge-protection-install', 
+ 'Install whole-house surge protection.',
+ 2, 4, 1, 1, 1, 'low', 'low', 'low', false, false, true, false, 'ad_hoc'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'electrical'), 
+ 'Solar Panel Cleaning', 'solar-panel-cleaning', 
+ 'Clean solar panels to maintain efficiency.',
+ 2, 5, 1, 2, 2, 'low', 'low', 'low', false, false, true, true, 'biannual'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'electrical'), 
+ 'Solar System Service', 'solar-system-service', 
+ 'Service solar PV system - check inverters, connections.',
+ 2, 5, 1, 1, 2, 'low', 'low', 'medium', false, false, true, false, 'annual');
+
+-- =====================================================================
+-- SERVICES - SEASONAL PROPERTY TASKS
+-- =====================================================================
+
+INSERT INTO sr_services (category_id, name, slug, description, typical_duration_min_hours, typical_duration_max_hours, crew_min, crew_typical, crew_max, noise, disruption, failure_risk_if_delayed, can_be_emergency, requires_owner_present, can_be_done_vacant, weather_dependent, revisit_cycle) VALUES
+((SELECT id FROM sr_service_categories WHERE slug = 'seasonal-tasks'), 
+ 'Full Winterization', 'full-winterization', 
+ 'Complete property winterization - water, heat, security.',
+ 4, 10, 1, 2, 3, 'low', 'medium', 'high', false, false, true, false, 'annual'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'seasonal-tasks'), 
+ 'Spring Opening', 'spring-opening', 
+ 'Open property for season - restore water, check systems.',
+ 4, 10, 1, 2, 3, 'low', 'medium', 'medium', false, false, true, false, 'annual'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'seasonal-tasks'), 
+ 'Vacation Watch - Weekly', 'vacation-watch-weekly', 
+ 'Weekly property check while owner away.',
+ 0.5, 1, 1, 1, 1, 'low', 'low', 'medium', false, false, true, false, 'weekly'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'seasonal-tasks'), 
+ 'Storm Prep', 'storm-prep', 
+ 'Prepare property for incoming storm.',
+ 2, 5, 1, 2, 3, 'low', 'low', 'high', true, false, true, true, 'ad_hoc'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'seasonal-tasks'), 
+ 'Christmas Light Install', 'christmas-light-install', 
+ 'Install exterior Christmas lights.',
+ 2, 8, 2, 2, 4, 'low', 'low', 'low', false, false, true, true, 'annual'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'seasonal-tasks'), 
+ 'Christmas Light Removal', 'christmas-light-removal', 
+ 'Remove and store Christmas lights.',
+ 1, 5, 1, 2, 3, 'low', 'low', 'low', false, false, true, true, 'annual'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'seasonal-tasks'), 
+ 'Pre-Winter Checklist', 'pre-winter-checklist', 
+ 'Comprehensive pre-winter property assessment.',
+ 2, 4, 1, 1, 2, 'low', 'low', 'medium', false, false, true, false, 'annual'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'seasonal-tasks'), 
+ 'Pre-Sale Prep', 'pre-sale-prep', 
+ 'Prepare property for market listing.',
+ 8, 40, 2, 3, 6, 'medium', 'medium', 'low', false, true, true, true, 'ad_hoc');
+
+-- =====================================================================
+-- SERVICES - PEST & WILDLIFE
+-- =====================================================================
+
+INSERT INTO sr_services (category_id, name, slug, description, typical_duration_min_hours, typical_duration_max_hours, crew_min, crew_typical, crew_max, noise, disruption, failure_risk_if_delayed, can_be_emergency, requires_owner_present, can_be_done_vacant, weather_dependent, revisit_cycle) VALUES
+((SELECT id FROM sr_service_categories WHERE slug = 'pest-wildlife'), 
+ 'Pest Inspection', 'pest-inspection', 
+ 'Full inspection for pest activity and entry points.',
+ 1, 3, 1, 1, 1, 'low', 'low', 'medium', false, false, true, false, 'annual'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'pest-wildlife'), 
+ 'General Pest Treatment', 'general-pest-treatment', 
+ 'Treatment for common household pests.',
+ 1, 3, 1, 1, 2, 'low', 'low', 'medium', false, false, true, false, 'quarterly'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'pest-wildlife'), 
+ 'Rodent Control', 'rodent-control', 
+ 'Set traps and seal entry points for rodents.',
+ 1, 4, 1, 1, 2, 'low', 'low', 'medium', false, false, true, false, 'ad_hoc'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'pest-wildlife'), 
+ 'Wasp Nest Removal', 'wasp-nest-removal', 
+ 'Remove wasp or hornet nests.',
+ 0.5, 2, 1, 1, 1, 'low', 'low', 'medium', true, false, true, true, 'ad_hoc'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'pest-wildlife'), 
+ 'Carpenter Ant Treatment', 'carpenter-ant-treatment', 
+ 'Treat for carpenter ant infestation.',
+ 2, 5, 1, 1, 2, 'low', 'medium', 'high', false, false, true, false, 'ad_hoc'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'pest-wildlife'), 
+ 'Wildlife Exclusion', 'wildlife-exclusion', 
+ 'Seal entry points to exclude raccoons, squirrels, etc.',
+ 2, 8, 1, 2, 3, 'medium', 'low', 'medium', true, false, true, false, 'ad_hoc'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'pest-wildlife'), 
+ 'Crawlspace Cleanup', 'crawlspace-cleanup', 
+ 'Clean crawlspace of debris and pest activity.',
+ 3, 10, 1, 2, 3, 'low', 'medium', 'low', false, false, true, false, 'ad_hoc'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'pest-wildlife'), 
+ 'Bird Exclusion', 'bird-exclusion', 
+ 'Install barriers to prevent bird nesting.',
+ 2, 6, 1, 2, 2, 'low', 'low', 'low', false, false, true, true, 'ad_hoc');
+
+-- =====================================================================
+-- SERVICES - DELIVERY & HAULING
+-- =====================================================================
+
+INSERT INTO sr_services (category_id, name, slug, description, typical_duration_min_hours, typical_duration_max_hours, crew_min, crew_typical, crew_max, noise, disruption, failure_risk_if_delayed, can_be_emergency, requires_owner_present, can_be_done_vacant, weather_dependent, revisit_cycle) VALUES
+((SELECT id FROM sr_service_categories WHERE slug = 'delivery-hauling'), 
+ 'Propane Delivery', 'propane-delivery', 
+ 'Deliver and fill propane tank.',
+ 0.5, 1, 1, 1, 1, 'low', 'low', 'high', true, false, true, false, 'ad_hoc'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'delivery-hauling'), 
+ 'Heating Oil Delivery', 'heating-oil-delivery', 
+ 'Deliver heating oil.',
+ 0.5, 1, 1, 1, 1, 'low', 'low', 'high', true, false, true, false, 'ad_hoc'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'delivery-hauling'), 
+ 'Firewood Delivery', 'firewood-delivery', 
+ 'Deliver split firewood.',
+ 1, 3, 1, 2, 2, 'medium', 'low', 'medium', false, false, true, true, 'annual'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'delivery-hauling'), 
+ 'Water Delivery', 'water-delivery', 
+ 'Deliver potable water to cistern.',
+ 1, 3, 1, 1, 1, 'medium', 'low', 'high', true, false, true, false, 'ad_hoc'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'delivery-hauling'), 
+ 'Gravel/Fill Delivery', 'gravel-fill-delivery', 
+ 'Deliver gravel, sand, or fill material.',
+ 1, 3, 1, 1, 2, 'medium', 'low', 'low', false, false, true, true, 'ad_hoc'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'delivery-hauling'), 
+ 'Appliance Delivery', 'appliance-delivery', 
+ 'Deliver and install major appliances.',
+ 2, 5, 2, 2, 3, 'low', 'medium', 'low', false, true, false, false, 'ad_hoc'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'delivery-hauling'), 
+ 'Construction Waste Haul', 'construction-waste-haul', 
+ 'Remove construction debris to proper disposal.',
+ 2, 5, 1, 2, 3, 'medium', 'low', 'low', false, false, true, false, 'ad_hoc'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'delivery-hauling'), 
+ 'Junk Removal', 'junk-removal', 
+ 'Remove unwanted items and debris.',
+ 2, 8, 1, 2, 4, 'medium', 'medium', 'low', false, false, true, false, 'ad_hoc'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'delivery-hauling'), 
+ 'Metal Recycling Pickup', 'metal-recycling-pickup', 
+ 'Pick up scrap metal for recycling.',
+ 1, 3, 1, 2, 2, 'medium', 'low', 'low', false, false, true, false, 'ad_hoc');
+
+-- =====================================================================
+-- SERVICES - SAFETY & INSPECTIONS
+-- =====================================================================
+
+INSERT INTO sr_services (category_id, name, slug, description, typical_duration_min_hours, typical_duration_max_hours, crew_min, crew_typical, crew_max, noise, disruption, failure_risk_if_delayed, can_be_emergency, requires_owner_present, can_be_done_vacant, weather_dependent, revisit_cycle) VALUES
+((SELECT id FROM sr_service_categories WHERE slug = 'safety-inspections'), 
+ 'Pre-Purchase Inspection', 'pre-purchase-inspection', 
+ 'Comprehensive home inspection for buyers.',
+ 3, 5, 1, 1, 2, 'low', 'low', 'low', false, true, false, false, 'ad_hoc'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'safety-inspections'), 
+ 'Insurance Inspection', 'insurance-inspection', 
+ 'Inspection required by insurance company.',
+ 2, 4, 1, 1, 1, 'low', 'low', 'medium', false, false, true, false, 'ad_hoc'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'safety-inspections'), 
+ 'Fire Safety Inspection', 'fire-safety-inspection', 
+ 'Inspection of fire safety systems and risks.',
+ 2, 4, 1, 1, 1, 'low', 'low', 'high', false, false, true, false, 'annual'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'safety-inspections'), 
+ 'Radon Testing', 'radon-testing', 
+ 'Place and retrieve radon testing device.',
+ 0.5, 1, 1, 1, 1, 'low', 'low', 'medium', false, false, true, false, 'ad_hoc'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'safety-inspections'), 
+ 'Air Quality Testing', 'air-quality-testing', 
+ 'Indoor air quality assessment.',
+ 2, 4, 1, 1, 1, 'low', 'low', 'low', false, false, true, false, 'ad_hoc'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'safety-inspections'), 
+ 'Mold Inspection', 'mold-inspection', 
+ 'Professional mold inspection and sampling.',
+ 2, 5, 1, 1, 2, 'low', 'low', 'medium', false, false, true, false, 'ad_hoc'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'safety-inspections'), 
+ 'Asbestos Testing', 'asbestos-testing', 
+ 'Collect samples for asbestos testing.',
+ 1, 3, 1, 1, 1, 'low', 'low', 'high', false, false, true, false, 'ad_hoc'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'safety-inspections'), 
+ 'Smoke/CO Detector Check', 'smoke-co-detector-check', 
+ 'Test and replace smoke and CO detectors.',
+ 0.5, 2, 1, 1, 1, 'low', 'low', 'high', false, false, true, false, 'annual');
+
+-- =====================================================================
+-- SERVICES - STRUCTURAL & FOUNDATIONS
+-- =====================================================================
+
+INSERT INTO sr_services (category_id, name, slug, description, typical_duration_min_hours, typical_duration_max_hours, crew_min, crew_typical, crew_max, noise, disruption, failure_risk_if_delayed, can_be_emergency, requires_owner_present, can_be_done_vacant, weather_dependent, revisit_cycle) VALUES
+((SELECT id FROM sr_service_categories WHERE slug = 'structural-foundations'), 
+ 'Foundation Inspection', 'foundation-inspection', 
+ 'Professional inspection of foundation condition.',
+ 2, 4, 1, 1, 2, 'low', 'low', 'high', false, false, true, false, 'ad_hoc'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'structural-foundations'), 
+ 'Post & Pier Leveling', 'post-pier-leveling', 
+ 'Adjust and level post and pier foundation.',
+ 4, 12, 2, 2, 4, 'medium', 'medium', 'high', false, false, true, false, 'ad_hoc'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'structural-foundations'), 
+ 'Crawlspace Drainage', 'crawlspace-drainage', 
+ 'Install or improve crawlspace drainage.',
+ 6, 20, 2, 3, 5, 'medium', 'high', 'high', false, false, true, true, 'ad_hoc'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'structural-foundations'), 
+ 'Sill Plate Repair', 'sill-plate-repair', 
+ 'Replace damaged sill plate.',
+ 8, 24, 2, 3, 4, 'high', 'high', 'high', false, false, true, false, 'ad_hoc'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'structural-foundations'), 
+ 'Rot Repair - Structural', 'rot-repair-structural', 
+ 'Repair structural rot in beams, joists, or rim.',
+ 6, 32, 2, 3, 5, 'medium', 'high', 'high', false, false, true, true, 'ad_hoc'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'structural-foundations'), 
+ 'House Lifting', 'house-lifting', 
+ 'Small-scale house lifting for foundation work.',
+ 16, 80, 3, 5, 8, 'high', 'high', 'high', false, false, true, true, 'ad_hoc'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'structural-foundations'), 
+ 'Structural Engineer Visit', 'structural-engineer-visit', 
+ 'On-site structural engineering assessment.',
+ 2, 6, 1, 1, 2, 'low', 'low', 'high', true, true, false, false, 'ad_hoc');
+
+-- =====================================================================
+-- SERVICES - DRAINAGE & WATER CONTROL
+-- =====================================================================
+
+INSERT INTO sr_services (category_id, name, slug, description, typical_duration_min_hours, typical_duration_max_hours, crew_min, crew_typical, crew_max, noise, disruption, failure_risk_if_delayed, can_be_emergency, requires_owner_present, can_be_done_vacant, weather_dependent, revisit_cycle) VALUES
+((SELECT id FROM sr_service_categories WHERE slug = 'drainage-water-control'), 
+ 'Perimeter Drain Inspection', 'perimeter-drain-inspection', 
+ 'Camera inspection of perimeter drain system.',
+ 2, 4, 1, 1, 2, 'low', 'low', 'medium', false, false, true, false, 'annual'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'drainage-water-control'), 
+ 'French Drain Install', 'french-drain-install', 
+ 'Install French drain system.',
+ 8, 32, 2, 3, 5, 'medium', 'high', 'medium', false, false, true, true, 'ad_hoc'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'drainage-water-control'), 
+ 'Downspout Redirection', 'downspout-redirection', 
+ 'Extend or redirect downspouts away from foundation.',
+ 2, 6, 1, 2, 2, 'low', 'low', 'medium', false, false, true, true, 'ad_hoc'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'drainage-water-control'), 
+ 'Sump Pump Install', 'sump-pump-install', 
+ 'Install sump pump system in crawlspace or basement.',
+ 4, 10, 1, 2, 3, 'medium', 'medium', 'high', true, false, true, false, 'ad_hoc'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'drainage-water-control'), 
+ 'Sump Pump Service', 'sump-pump-service', 
+ 'Service and test sump pump.',
+ 1, 2, 1, 1, 1, 'low', 'low', 'high', false, false, true, false, 'annual'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'drainage-water-control'), 
+ 'Culvert Clearing', 'culvert-clearing', 
+ 'Clear blocked culverts.',
+ 2, 6, 1, 2, 3, 'medium', 'low', 'medium', true, false, true, true, 'annual'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'drainage-water-control'), 
+ 'Ditching/Swale Shaping', 'ditching-swale-shaping', 
+ 'Grade ditches and swales for proper drainage.',
+ 4, 16, 2, 2, 4, 'medium', 'medium', 'medium', false, false, true, true, 'ad_hoc'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'drainage-water-control'), 
+ 'Flood Mitigation Prep', 'flood-mitigation-prep', 
+ 'Install flood barriers or prep for flood event.',
+ 2, 8, 2, 3, 5, 'low', 'medium', 'high', true, false, true, false, 'ad_hoc');
+
+-- =====================================================================
+-- SERVICES - EMERGENCY & RAPID RESPONSE
+-- =====================================================================
+
+INSERT INTO sr_services (category_id, name, slug, description, typical_duration_min_hours, typical_duration_max_hours, crew_min, crew_typical, crew_max, noise, disruption, failure_risk_if_delayed, can_be_emergency, requires_owner_present, can_be_done_vacant, weather_dependent, revisit_cycle) VALUES
+((SELECT id FROM sr_service_categories WHERE slug = 'emergency-response'), 
+ 'Storm Damage Tarping', 'storm-damage-tarping', 
+ 'Emergency tarping of roof or structure damage.',
+ 2, 6, 2, 3, 5, 'medium', 'medium', 'high', true, false, true, true, 'ad_hoc'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'emergency-response'), 
+ 'Emergency Tree Removal', 'emergency-tree-removal', 
+ 'Remove fallen or hazardous tree in emergency.',
+ 3, 12, 2, 3, 5, 'high', 'high', 'high', true, false, true, true, 'ad_hoc'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'emergency-response'), 
+ 'Flood Pumping', 'flood-pumping', 
+ 'Emergency pumping of flooded areas.',
+ 2, 12, 1, 2, 4, 'medium', 'high', 'high', true, false, true, false, 'ad_hoc'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'emergency-response'), 
+ 'Generator Hookup', 'generator-hookup', 
+ 'Emergency portable generator connection.',
+ 1, 3, 1, 1, 2, 'medium', 'low', 'high', true, false, false, false, 'ad_hoc'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'emergency-response'), 
+ 'Emergency Dock Stabilization', 'emergency-dock-stabilization', 
+ 'Stabilize damaged dock in emergency.',
+ 2, 8, 2, 3, 5, 'medium', 'medium', 'high', true, false, true, true, 'ad_hoc'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'emergency-response'), 
+ 'Emergency Wildlife Removal', 'emergency-wildlife-removal', 
+ 'Remove wildlife from structure in emergency.',
+ 1, 4, 1, 2, 2, 'low', 'medium', 'medium', true, false, true, false, 'ad_hoc'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'emergency-response'), 
+ 'Emergency Plumbing', 'emergency-plumbing', 
+ 'Emergency plumbing repair.',
+ 1, 6, 1, 1, 2, 'low', 'medium', 'high', true, false, false, false, 'ad_hoc'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'emergency-response'), 
+ 'Emergency Electrical', 'emergency-electrical', 
+ 'Emergency electrical repair.',
+ 1, 6, 1, 1, 2, 'low', 'medium', 'high', true, false, false, false, 'ad_hoc');
+
+-- =====================================================================
+-- SERVICES - ACCESS & SITE INFRASTRUCTURE
+-- =====================================================================
+
+INSERT INTO sr_services (category_id, name, slug, description, typical_duration_min_hours, typical_duration_max_hours, crew_min, crew_typical, crew_max, noise, disruption, failure_risk_if_delayed, can_be_emergency, requires_owner_present, can_be_done_vacant, weather_dependent, revisit_cycle) VALUES
+((SELECT id FROM sr_service_categories WHERE slug = 'access-infrastructure'), 
+ 'Temporary Access Road', 'temporary-access-road', 
+ 'Create temporary access for construction or emergency.',
+ 4, 16, 2, 3, 5, 'high', 'high', 'medium', true, false, true, true, 'ad_hoc'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'access-infrastructure'), 
+ 'Access Road Grading', 'access-road-grading', 
+ 'Grade and maintain access road.',
+ 3, 12, 1, 2, 3, 'high', 'medium', 'medium', false, false, true, true, 'annual'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'access-infrastructure'), 
+ 'Brush Access Clearing', 'brush-access-clearing', 
+ 'Clear brush for emergency or construction access.',
+ 3, 12, 2, 3, 5, 'high', 'medium', 'medium', true, false, true, true, 'ad_hoc'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'access-infrastructure'), 
+ 'Dock Access Ramp', 'dock-access-ramp', 
+ 'Build or repair dock access ramp.',
+ 6, 24, 2, 3, 4, 'medium', 'medium', 'medium', false, false, true, true, 'ad_hoc'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'access-infrastructure'), 
+ 'Stairs/Boardwalk Repair', 'stairs-boardwalk-repair', 
+ 'Repair exterior stairs or boardwalk.',
+ 3, 16, 2, 2, 4, 'medium', 'low', 'medium', false, false, true, true, 'ad_hoc'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'access-infrastructure'), 
+ 'ATV Trail Grading', 'atv-trail-grading', 
+ 'Grade and maintain ATV/UTV trail.',
+ 4, 16, 1, 2, 3, 'high', 'low', 'low', false, false, true, true, 'annual'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'access-infrastructure'), 
+ 'Helipad Clearing', 'helipad-clearing', 
+ 'Clear and prepare helicopter landing area.',
+ 4, 16, 2, 3, 5, 'high', 'high', 'medium', true, false, true, true, 'ad_hoc');
+
+-- =====================================================================
+-- SERVICES - COMMUNITY & COMMERCIAL
+-- =====================================================================
+
+INSERT INTO sr_services (category_id, name, slug, description, typical_duration_min_hours, typical_duration_max_hours, crew_min, crew_typical, crew_max, noise, disruption, failure_risk_if_delayed, can_be_emergency, requires_owner_present, can_be_done_vacant, weather_dependent, revisit_cycle) VALUES
+((SELECT id FROM sr_service_categories WHERE slug = 'community-commercial'), 
+ 'Community Hall Maintenance', 'community-hall-maintenance', 
+ 'General maintenance for community buildings.',
+ 4, 16, 2, 3, 5, 'medium', 'medium', 'medium', false, false, true, false, 'quarterly'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'community-commercial'), 
+ 'Community Water System Service', 'community-water-service', 
+ 'Service community water system.',
+ 2, 8, 1, 2, 3, 'low', 'medium', 'high', true, false, true, false, 'quarterly'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'community-commercial'), 
+ 'FireSmart Property Assessment', 'firesmart-assessment', 
+ 'FireSmart assessment for wildfire risk.',
+ 2, 4, 1, 1, 2, 'low', 'low', 'high', false, false, true, false, 'annual'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'community-commercial'), 
+ 'FireSmart Fuel Reduction', 'firesmart-fuel-reduction', 
+ 'Clear brush and trees per FireSmart standards.',
+ 8, 40, 3, 4, 8, 'high', 'high', 'high', false, false, true, true, 'ad_hoc'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'community-commercial'), 
+ 'Marina Seasonal Service', 'marina-seasonal-service', 
+ 'Seasonal opening/closing of marina facilities.',
+ 8, 24, 3, 4, 6, 'medium', 'medium', 'medium', false, false, true, true, 'biannual'),
+
+((SELECT id FROM sr_service_categories WHERE slug = 'community-commercial'), 
+ 'Waste Transfer Station Service', 'waste-transfer-service', 
+ 'Maintenance of community waste transfer site.',
+ 3, 8, 2, 2, 4, 'medium', 'low', 'medium', false, false, true, false, 'monthly');
+
+-- =====================================================================
+-- VERIFY
+-- =====================================================================
+
+SELECT 'Service catalog created:' as status;
+SELECT 'Categories: ' || COUNT(*) FROM sr_service_categories;
+SELECT 'Services: ' || COUNT(*) FROM sr_services;
+
+SELECT sc.name as category, COUNT(s.id) as services
+FROM sr_service_categories sc
+LEFT JOIN sr_services s ON s.category_id = sc.id
+GROUP BY sc.name, sc.sort_order
+ORDER BY sc.sort_order;
+```
+
+Report the category and service counts.
