@@ -1,0 +1,322 @@
+Create a full map-based search page.
+
+Create file: client/src/pages/staging/MapSearch.tsx
+```tsx
+import React, { useState, useEffect, useCallback } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import PropertyMap from '../../components/PropertyMap';
+
+interface Property {
+    id: number;
+    name: string;
+    city: string;
+    region: string;
+    latitude: number;
+    longitude: number;
+    totalSpots: number;
+    nightlyRate: number | null;
+    rvScore: number;
+    crewScore: number;
+    truckerScore: number;
+    hasMechanic: boolean;
+    hasPower: boolean;
+    hasWater: boolean;
+    petsAllowed: boolean;
+}
+
+export default function MapSearch() {
+    const navigate = useNavigate();
+    const [properties, setProperties] = useState<Property[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
+    
+    // Filters
+    const [region, setRegion] = useState('');
+    const [needsPower, setNeedsPower] = useState(false);
+    const [hasMechanic, setHasMechanic] = useState(false);
+    const [petsAllowed, setPetsAllowed] = useState(false);
+    const [vehicleLength, setVehicleLength] = useState<number | ''>('');
+    
+    const [showFilters, setShowFilters] = useState(false);
+
+    const loadProperties = useCallback(async () => {
+        try {
+            let url = '/api/staging/search?limit=100';
+            if (region) url += `&region=${encodeURIComponent(region)}`;
+            if (needsPower) url += '&needsPower=true';
+            if (hasMechanic) url += '&hasMechanic=true';
+            if (petsAllowed) url += '&petsAllowed=true';
+            if (vehicleLength) url += `&vehicleLengthFt=${vehicleLength}`;
+
+            const res = await fetch(url);
+            const data = await res.json();
+            
+            if (data.success) {
+                // Filter to only properties with coordinates
+                const withCoords = data.properties.filter(
+                    (p: any) => p.latitude && p.longitude
+                );
+                setProperties(withCoords);
+            }
+        } catch (err) {
+            console.error('Failed to load properties:', err);
+        } finally {
+            setLoading(false);
+        }
+    }, [region, needsPower, hasMechanic, petsAllowed, vehicleLength]);
+
+    useEffect(() => {
+        loadProperties();
+    }, [loadProperties]);
+
+    const handlePropertyClick = (property: Property) => {
+        setSelectedProperty(property);
+    };
+
+    const regions = [
+        'Vancouver Island',
+        'Okanagan',
+        'Kootenays',
+        'Sea-to-Sky',
+        'Fraser Valley',
+        'Sunshine Coast',
+        'Northern BC',
+        'BC Interior'
+    ];
+
+    return (
+        <div className="min-h-screen bg-gray-900 flex flex-col">
+            {/* Header */}
+            <div className="bg-gray-800 border-b border-gray-700 px-4 py-3">
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                        <Link to="/staging" className="text-gray-400 hover:text-white">
+                            ← List View
+                        </Link>
+                        <h1 className="text-xl font-bold text-white">Map Search</h1>
+                        <span className="text-gray-400">
+                            {properties.length} properties
+                        </span>
+                    </div>
+                    <button
+                        onClick={() => setShowFilters(!showFilters)}
+                        className="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg"
+                    >
+                        {showFilters ? 'Hide Filters' : 'Show Filters'}
+                    </button>
+                </div>
+
+                {/* Filters Row */}
+                {showFilters && (
+                    <div className="mt-4 flex flex-wrap gap-4">
+                        <select
+                            value={region}
+                            onChange={(e) => setRegion(e.target.value)}
+                            className="bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white"
+                        >
+                            <option value="">All Regions</option>
+                            {regions.map(r => (
+                                <option key={r} value={r}>{r}</option>
+                            ))}
+                        </select>
+
+                        <input
+                            type="number"
+                            value={vehicleLength}
+                            onChange={(e) => setVehicleLength(e.target.value ? parseInt(e.target.value) : '')}
+                            placeholder="Vehicle length (ft)"
+                            className="bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white w-40"
+                        />
+
+                        <label className="flex items-center gap-2 text-gray-300">
+                            <input
+                                type="checkbox"
+                                checked={needsPower}
+                                onChange={(e) => setNeedsPower(e.target.checked)}
+                                className="rounded"
+                            />
+                            Power
+                        </label>
+
+                        <label className="flex items-center gap-2 text-gray-300">
+                            <input
+                                type="checkbox"
+                                checked={hasMechanic}
+                                onChange={(e) => setHasMechanic(e.target.checked)}
+                                className="rounded"
+                            />
+                            🔧 Mechanic
+                        </label>
+
+                        <label className="flex items-center gap-2 text-gray-300">
+                            <input
+                                type="checkbox"
+                                checked={petsAllowed}
+                                onChange={(e) => setPetsAllowed(e.target.checked)}
+                                className="rounded"
+                            />
+                            🐕 Pets
+                        </label>
+                    </div>
+                )}
+            </div>
+
+            {/* Main Content */}
+            <div className="flex-1 flex">
+                {/* Map */}
+                <div className="flex-1 relative">
+                    {loading ? (
+                        <div className="absolute inset-0 flex items-center justify-center bg-gray-800">
+                            <div className="text-white">Loading map...</div>
+                        </div>
+                    ) : (
+                        <PropertyMap
+                            properties={properties}
+                            onPropertyClick={handlePropertyClick}
+                            selectedId={selectedProperty?.id}
+                            height="100%"
+                        />
+                    )}
+
+                    {/* Legend */}
+                    <div className="absolute bottom-4 left-4 bg-gray-800/90 rounded-lg p-3 text-sm">
+                        <p className="text-gray-400 text-xs mb-2">Legend</p>
+                        <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                                <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                                <span className="text-gray-300">Has Mechanic</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <div className="w-3 h-3 rounded-full bg-orange-500"></div>
+                                <span className="text-gray-300">Trucker Friendly</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <div className="w-3 h-3 rounded-full bg-blue-500"></div>
+                                <span className="text-gray-300">Crew Friendly</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <div className="w-3 h-3 rounded-full bg-purple-500"></div>
+                                <span className="text-gray-300">General</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Property Detail Sidebar */}
+                {selectedProperty && (
+                    <div className="w-96 bg-gray-800 border-l border-gray-700 overflow-y-auto">
+                        <div className="p-4">
+                            <div className="flex justify-between items-start mb-4">
+                                <h2 className="text-xl font-bold text-white">
+                                    {selectedProperty.name}
+                                </h2>
+                                <button
+                                    onClick={() => setSelectedProperty(null)}
+                                    className="text-gray-400 hover:text-white"
+                                >
+                                    ×
+                                </button>
+                            </div>
+
+                            <p className="text-gray-400 mb-4">
+                                {selectedProperty.city}, {selectedProperty.region}
+                            </p>
+
+                            {/* Scores */}
+                            <div className="grid grid-cols-3 gap-2 mb-4">
+                                {selectedProperty.rvScore > 0 && (
+                                    <div className="bg-gray-700 rounded p-2 text-center">
+                                        <p className="text-xs text-gray-400">RV</p>
+                                        <p className="text-lg font-bold text-green-400">
+                                            {selectedProperty.rvScore}
+                                        </p>
+                                    </div>
+                                )}
+                                {selectedProperty.crewScore > 0 && (
+                                    <div className="bg-gray-700 rounded p-2 text-center">
+                                        <p className="text-xs text-gray-400">Crew</p>
+                                        <p className="text-lg font-bold text-blue-400">
+                                            {selectedProperty.crewScore}
+                                        </p>
+                                    </div>
+                                )}
+                                {selectedProperty.truckerScore > 0 && (
+                                    <div className="bg-gray-700 rounded p-2 text-center">
+                                        <p className="text-xs text-gray-400">Trucker</p>
+                                        <p className="text-lg font-bold text-orange-400">
+                                            {selectedProperty.truckerScore}
+                                        </p>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Quick Info */}
+                            <div className="space-y-2 mb-4">
+                                <div className="flex justify-between text-sm">
+                                    <span className="text-gray-400">Total Spots</span>
+                                    <span className="text-white">{selectedProperty.totalSpots}</span>
+                                </div>
+                                {selectedProperty.nightlyRate && (
+                                    <div className="flex justify-between text-sm">
+                                        <span className="text-gray-400">Nightly Rate</span>
+                                        <span className="text-green-400 font-medium">
+                                            ${selectedProperty.nightlyRate}
+                                        </span>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Features */}
+                            <div className="flex flex-wrap gap-2 mb-6">
+                                {selectedProperty.hasMechanic && (
+                                    <span className="bg-green-900 text-green-300 text-xs px-2 py-1 rounded">
+                                        🔧 On-site Mechanic
+                                    </span>
+                                )}
+                                {selectedProperty.hasPower && (
+                                    <span className="bg-yellow-900 text-yellow-300 text-xs px-2 py-1 rounded">
+                                        ⚡ Power
+                                    </span>
+                                )}
+                                {selectedProperty.hasWater && (
+                                    <span className="bg-blue-900 text-blue-300 text-xs px-2 py-1 rounded">
+                                        💧 Water
+                                    </span>
+                                )}
+                                {selectedProperty.petsAllowed && (
+                                    <span className="bg-purple-900 text-purple-300 text-xs px-2 py-1 rounded">
+                                        🐕 Pet Friendly
+                                    </span>
+                                )}
+                            </div>
+
+                            {/* Actions */}
+                            <div className="space-y-2">
+                                <Link
+                                    to={`/staging/${selectedProperty.id}`}
+                                    className="block w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg text-center font-medium"
+                                >
+                                    View Details
+                                </Link>
+                                <Link
+                                    to={`/staging/${selectedProperty.id}/book`}
+                                    className="block w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg text-center font-medium"
+                                >
+                                    Book Now
+                                </Link>
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+}
+```
+
+Add route:
+```tsx
+<Route path="/staging/map" element={<MapSearch />} />
+```
+
+Add a link to the map view from your main search page header.

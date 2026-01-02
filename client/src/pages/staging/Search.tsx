@@ -14,7 +14,7 @@ import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { 
   Search, MapPin, Calendar, Truck, Filter, Star, 
   Loader2, ChevronLeft, ChevronRight, Wifi, Droplets,
-  Zap, ShowerHead, Dog, Wrench, TreePine
+  Zap, ShowerHead, Dog, Wrench, TreePine, Map
 } from 'lucide-react';
 
 interface StagingProperty {
@@ -449,7 +449,14 @@ export default function StagingSearch() {
                 </p>
               </div>
 
-              <Select value={filters.sortBy} onValueChange={(v) => setFilters({ ...filters, sortBy: v, page: 1 })}>
+              <div className="flex items-center gap-2">
+                <Link href="/staging/map">
+                  <Button variant="outline" data-testid="link-map-view">
+                    <Map className="h-4 w-4 mr-2" /> Map View
+                  </Button>
+                </Link>
+                
+                <Select value={filters.sortBy} onValueChange={(v) => setFilters({ ...filters, sortBy: v, page: 1 })}>
                 <SelectTrigger className="w-48" data-testid="select-sort">
                   <SelectValue />
                 </SelectTrigger>
@@ -462,6 +469,7 @@ export default function StagingSearch() {
                   <SelectItem value="rv_score">RV Score</SelectItem>
                 </SelectContent>
               </Select>
+              </div>
             </div>
 
             {isLoading ? (

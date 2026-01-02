@@ -37,6 +37,7 @@ import StagingPropertyDetail from "@/pages/staging/PropertyDetail";
 import StagingBook from "@/pages/staging/BookingFlow";
 import MyBookings from "@/pages/staging/MyBookings";
 import ChamberDashboard from "@/pages/staging/ChamberDashboard";
+import MapSearch from "@/pages/staging/MapSearch";
 
 function AdminRoutes() {
   return (
@@ -85,6 +86,7 @@ function Router() {
       <Route path="/host/payouts" component={HostPayouts} />
       <Route path="/staging" component={StagingSearch} />
       <Route path="/find-staging" component={StagingSearch} />
+      <Route path="/staging/map" component={MapSearch} />
       <Route path="/staging/chamber" component={ChamberDashboard} />
       <Route path="/staging/bookings" component={MyBookings} />
       <Route path="/staging/:id/book" component={StagingBook} />
