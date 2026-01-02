@@ -81,6 +81,37 @@ Enhanced schema for comprehensive trip planning:
 - Use react-hook-form with zod validation (currently ad-hoc state)
 - Add PUT/PATCH endpoints for editing (currently POST only)
 
+### Service Runs Platform (sr_* tables)
+Production-grade normalized schema for service bundling, climate-based seasonality, and rural/remote routing:
+
+**Core Tables (28 total):**
+- **sr_service_categories**: Hierarchical service categories with parent relationships
+- **sr_services**: Core service definitions with duration, crew requirements, noise/disruption levels
+- **sr_climate_regions**: Climate zones with Koppen codes and freeze/thaw boundaries
+- **sr_service_seasonality**: Per-region service windows with weather sensitivities
+- **sr_access_requirements**: Access constraint definitions (boat, helicopter, etc.)
+- **sr_mobilization_classes**: Equipment/crew mobilization cost tiers
+- **sr_certifications**: Trade certifications and licensing requirements
+- **sr_constraints**: Cultural, environmental, and regulatory constraints
+
+**Pricing & Requirements:**
+- **sr_pricing_models**: Pricing model types (flat, per_hour, per_sqft, hybrid)
+- **sr_service_pricing**: Service-specific pricing with multipliers
+- **sr_requirement_sets/items**: Photo and measurement requirements for quotes
+
+**Bundling Intelligence:**
+- **sr_service_compatibility**: Service bundling compatibility scores
+- **sr_service_dependencies**: Service requires/blocks relationships
+- **sr_service_addons**: Upsell opportunity mappings
+
+**Bundles & Communities:**
+- **sr_bundles**: Sellable service packages with subscription support
+- **sr_bundle_items/pricing/seasonality**: Bundle composition and availability
+- **sr_communities**: Community-specific climate and access bindings (links to cc_tenants)
+- **sr_run_types**: Seasonal run templates with service compositions
+
+**Enums:** noise_level, disruption_level, risk_level, pricing_model_type, job_context, dependency_type
+
 ### Documentation System
 A Bloomberg-terminal styled documentation library is available at `/admin/docs`, rendering markdown files from the `docs/` directory. Key topics include data collection, architecture, completion criteria, tool selection, member counts, NAICS assignment, date tracking, and manual overrides.
 

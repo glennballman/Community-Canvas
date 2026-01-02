@@ -1,0 +1,444 @@
+Replace the previous service runs schema with this production-grade normalized schema. This supports bundling intelligence, climate-based seasonality, access/mobilization logistics, and Indigenous/environmental constraints.
+
+## Run this SQL in Replit's database console:
+```sql
+-- =====================================================================
+-- COMMUNITY CANVAS - SERVICE RUNS PLATFORM (PRODUCTION SCHEMA)
+-- Designed for: North America, Canada-first, rural/remote routing + bundling
+-- =====================================================================
+
+-- Extensions
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+-- =====================================================================
+-- ENUMS
+-- =====================================================================
+
+DO $$ BEGIN CREATE TYPE noise_level AS ENUM ('low','medium','high');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN CREATE TYPE disruption_level AS ENUM ('low','medium','high');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN CREATE TYPE risk_level AS ENUM ('low','medium','high');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN CREATE TYPE pricing_model_type AS ENUM ('flat','per_hour','per_sqft','per_unit','hybrid');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN CREATE TYPE job_context AS ENUM ('residential','commercial','community');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN CREATE TYPE dependency_type AS ENUM ('requires','blocks');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+-- =====================================================================
+-- 1. SERVICE CATEGORIES (Hierarchical)
+-- =====================================================================
+
+CREATE TABLE IF NOT EXISTS sr_service_categories (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    parent_id UUID REFERENCES sr_service_categories(id) ON DELETE SET NULL,
+    
+    name TEXT NOT NULL,
+    slug TEXT NOT NULL UNIQUE,
+    description TEXT NOT NULL DEFAULT '',
+    icon TEXT DEFAULT '🔧',
+    
+    sort_order INT NOT NULL DEFAULT 0,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_sr_categories_parent ON sr_service_categories(parent_id);
+CREATE INDEX IF NOT EXISTS idx_sr_categories_slug ON sr_service_categories(slug);
+
+-- =====================================================================
+-- 2. SERVICES (Core service definitions)
+-- =====================================================================
+
+CREATE TABLE IF NOT EXISTS sr_services (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    category_id UUID NOT NULL REFERENCES sr_service_categories(id) ON DELETE RESTRICT,
+    
+    name TEXT NOT NULL,
+    slug TEXT NOT NULL UNIQUE,
+    description TEXT NOT NULL DEFAULT '',
+    
+    -- Duration estimates
+    typical_duration_min_hours NUMERIC(6,2) NOT NULL DEFAULT 1,
+    typical_duration_max_hours NUMERIC(6,2) NOT NULL DEFAULT 2,
+    
+    -- Crew requirements
+    crew_min INT NOT NULL DEFAULT 1,
+    crew_typical INT NOT NULL DEFAULT 1,
+    crew_max INT NOT NULL DEFAULT 2,
+    
+    -- Operational characteristics
+    noise noise_level NOT NULL DEFAULT 'low',
+    disruption disruption_level NOT NULL DEFAULT 'low',
+    failure_risk_if_delayed risk_level NOT NULL DEFAULT 'low',
+    
+    -- Scheduling constraints
+    can_be_emergency BOOLEAN NOT NULL DEFAULT FALSE,
+    requires_owner_present BOOLEAN NOT NULL DEFAULT FALSE,
+    can_be_done_vacant BOOLEAN NOT NULL DEFAULT TRUE,
+    weather_dependent BOOLEAN NOT NULL DEFAULT FALSE,
+    
+    -- Context
+    default_context job_context NOT NULL DEFAULT 'residential',
+    
+    -- Revisit cycle (for recurring services)
+    revisit_cycle TEXT DEFAULT '',  -- annual, biannual, quarterly, ad_hoc
+    
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_sr_services_category ON sr_services(category_id);
+CREATE INDEX IF NOT EXISTS idx_sr_services_slug ON sr_services(slug);
+
+-- =====================================================================
+-- 3. CLIMATE REGIONS (Seasonality base)
+-- =====================================================================
+
+CREATE TABLE IF NOT EXISTS sr_climate_regions (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name TEXT NOT NULL UNIQUE,
+    koppen_codes TEXT[] NOT NULL DEFAULT '{}'::TEXT[],
+    description TEXT NOT NULL DEFAULT '',
+    
+    -- Typical seasonal boundaries
+    typical_freeze_week INT,  -- When ground typically freezes (week 40-50)
+    typical_thaw_week INT,    -- When ground typically thaws (week 10-20)
+    
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- =====================================================================
+-- 4. SERVICE SEASONALITY (Per climate region)
+-- =====================================================================
+
+CREATE TABLE IF NOT EXISTS sr_service_seasonality (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    service_id UUID NOT NULL REFERENCES sr_services(id) ON DELETE CASCADE,
+    climate_region_id UUID NOT NULL REFERENCES sr_climate_regions(id) ON DELETE CASCADE,
+    
+    earliest_week INT NOT NULL CHECK (earliest_week BETWEEN 1 AND 52),
+    latest_week INT NOT NULL CHECK (latest_week BETWEEN 1 AND 52),
+    hard_stop BOOLEAN NOT NULL DEFAULT FALSE,
+    
+    -- Weather sensitivity
+    rain_sensitive BOOLEAN NOT NULL DEFAULT FALSE,
+    snow_sensitive BOOLEAN NOT NULL DEFAULT FALSE,
+    wind_sensitive BOOLEAN NOT NULL DEFAULT FALSE,
+    
+    -- Temperature constraints
+    temperature_min_c INT,
+    temperature_max_c INT,
+    
+    notes TEXT NOT NULL DEFAULT '',
+    
+    UNIQUE(service_id, climate_region_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_sr_seasonality_service ON sr_service_seasonality(service_id);
+CREATE INDEX IF NOT EXISTS idx_sr_seasonality_climate ON sr_service_seasonality(climate_region_id);
+
+-- =====================================================================
+-- 5. ACCESS REQUIREMENTS
+-- =====================================================================
+
+CREATE TABLE IF NOT EXISTS sr_access_requirements (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name TEXT NOT NULL UNIQUE,
+    description TEXT NOT NULL DEFAULT '',
+    base_cost_multiplier NUMERIC(6,3) NOT NULL DEFAULT 1.0,
+    sort_order INT NOT NULL DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS sr_service_access_requirements (
+    service_id UUID NOT NULL REFERENCES sr_services(id) ON DELETE CASCADE,
+    access_requirement_id UUID NOT NULL REFERENCES sr_access_requirements(id) ON DELETE RESTRICT,
+    is_required BOOLEAN NOT NULL DEFAULT FALSE,  -- Required vs supported
+    PRIMARY KEY(service_id, access_requirement_id)
+);
+
+-- =====================================================================
+-- 6. MOBILIZATION CLASSES
+-- =====================================================================
+
+CREATE TABLE IF NOT EXISTS sr_mobilization_classes (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name TEXT NOT NULL UNIQUE,
+    description TEXT NOT NULL DEFAULT '',
+    base_cost NUMERIC(12,2) NOT NULL DEFAULT 0,
+    sort_order INT NOT NULL DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS sr_service_mobilization (
+    service_id UUID PRIMARY KEY REFERENCES sr_services(id) ON DELETE CASCADE,
+    mobilization_class_id UUID NOT NULL REFERENCES sr_mobilization_classes(id) ON DELETE RESTRICT
+);
+
+-- =====================================================================
+-- 7. CERTIFICATIONS
+-- =====================================================================
+
+CREATE TABLE IF NOT EXISTS sr_certifications (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name TEXT NOT NULL,
+    authority TEXT NOT NULL DEFAULT '',
+    jurisdiction TEXT NOT NULL DEFAULT '',
+    trade_code TEXT NOT NULL DEFAULT '',
+    description TEXT NOT NULL DEFAULT '',
+    
+    UNIQUE(name, authority, jurisdiction)
+);
+
+CREATE TABLE IF NOT EXISTS sr_service_certifications (
+    service_id UUID NOT NULL REFERENCES sr_services(id) ON DELETE CASCADE,
+    certification_id UUID NOT NULL REFERENCES sr_certifications(id) ON DELETE RESTRICT,
+    is_required BOOLEAN NOT NULL DEFAULT TRUE,
+    PRIMARY KEY(service_id, certification_id)
+);
+
+-- =====================================================================
+-- 8. CONSTRAINTS (Cultural, Environmental, Regulatory)
+-- =====================================================================
+
+CREATE TABLE IF NOT EXISTS sr_constraints (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name TEXT NOT NULL UNIQUE,
+    constraint_type TEXT NOT NULL DEFAULT 'general',  -- cultural, environmental, regulatory, safety
+    description TEXT NOT NULL DEFAULT ''
+);
+
+CREATE TABLE IF NOT EXISTS sr_service_constraints (
+    service_id UUID NOT NULL REFERENCES sr_services(id) ON DELETE CASCADE,
+    constraint_id UUID NOT NULL REFERENCES sr_constraints(id) ON DELETE RESTRICT,
+    PRIMARY KEY(service_id, constraint_id)
+);
+
+-- =====================================================================
+-- 9. PRICING
+-- =====================================================================
+
+CREATE TABLE IF NOT EXISTS sr_pricing_models (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    model pricing_model_type NOT NULL UNIQUE,
+    description TEXT NOT NULL DEFAULT ''
+);
+
+CREATE TABLE IF NOT EXISTS sr_service_pricing (
+    service_id UUID PRIMARY KEY REFERENCES sr_services(id) ON DELETE CASCADE,
+    pricing_model_id UUID NOT NULL REFERENCES sr_pricing_models(id) ON DELETE RESTRICT,
+    
+    base_price NUMERIC(12,2) NOT NULL DEFAULT 0,
+    unit_descriptor TEXT NOT NULL DEFAULT '',
+    
+    -- Multipliers
+    remote_multiplier NUMERIC(6,3) NOT NULL DEFAULT 1.0,
+    access_difficulty_multiplier NUMERIC(6,3) NOT NULL DEFAULT 1.0,
+    seasonal_multiplier NUMERIC(6,3) NOT NULL DEFAULT 1.0,
+    
+    mobilization_surcharge NUMERIC(12,2) NOT NULL DEFAULT 0,
+    minimum_charge NUMERIC(12,2) NOT NULL DEFAULT 0,
+    
+    notes TEXT NOT NULL DEFAULT ''
+);
+
+-- =====================================================================
+-- 10. PHOTO & MEASUREMENT REQUIREMENTS
+-- =====================================================================
+
+CREATE TABLE IF NOT EXISTS sr_requirement_sets (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name TEXT NOT NULL UNIQUE,
+    description TEXT NOT NULL DEFAULT ''
+);
+
+CREATE TABLE IF NOT EXISTS sr_requirement_items (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    requirement_set_id UUID NOT NULL REFERENCES sr_requirement_sets(id) ON DELETE CASCADE,
+    kind TEXT NOT NULL CHECK (kind IN ('photo','measurement','question')),
+    prompt TEXT NOT NULL,
+    is_required BOOLEAN NOT NULL DEFAULT TRUE,
+    sort_order INT NOT NULL DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS sr_service_requirements (
+    service_id UUID PRIMARY KEY REFERENCES sr_services(id) ON DELETE CASCADE,
+    requirement_set_id UUID NOT NULL REFERENCES sr_requirement_sets(id) ON DELETE RESTRICT
+);
+
+-- =====================================================================
+-- 11. BUNDLING INTELLIGENCE
+-- =====================================================================
+
+-- Compatibility graph (which services bundle well together)
+CREATE TABLE IF NOT EXISTS sr_service_compatibility (
+    service_id UUID NOT NULL REFERENCES sr_services(id) ON DELETE CASCADE,
+    compatible_service_id UUID NOT NULL REFERENCES sr_services(id) ON DELETE CASCADE,
+    compatibility_score INT NOT NULL CHECK (compatibility_score BETWEEN 1 AND 100),
+    rationale TEXT NOT NULL DEFAULT '',
+    PRIMARY KEY(service_id, compatible_service_id),
+    CHECK (service_id <> compatible_service_id)
+);
+
+-- Dependencies (requires/blocks)
+CREATE TABLE IF NOT EXISTS sr_service_dependencies (
+    service_id UUID NOT NULL REFERENCES sr_services(id) ON DELETE CASCADE,
+    other_service_id UUID NOT NULL REFERENCES sr_services(id) ON DELETE CASCADE,
+    dep_type dependency_type NOT NULL,
+    rationale TEXT NOT NULL DEFAULT '',
+    PRIMARY KEY(service_id, other_service_id, dep_type),
+    CHECK (service_id <> other_service_id)
+);
+
+-- Add-ons (upsell opportunities)
+CREATE TABLE IF NOT EXISTS sr_service_addons (
+    service_id UUID NOT NULL REFERENCES sr_services(id) ON DELETE CASCADE,
+    addon_service_id UUID NOT NULL REFERENCES sr_services(id) ON DELETE CASCADE,
+    upsell_priority INT NOT NULL DEFAULT 50 CHECK (upsell_priority BETWEEN 1 AND 100),
+    PRIMARY KEY(service_id, addon_service_id),
+    CHECK (service_id <> addon_service_id)
+);
+
+-- =====================================================================
+-- 12. BUNDLES / SKUs (Sellable packages)
+-- =====================================================================
+
+CREATE TABLE IF NOT EXISTS sr_bundles (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name TEXT NOT NULL,
+    slug TEXT NOT NULL UNIQUE,
+    description TEXT NOT NULL DEFAULT '',
+    
+    context job_context NOT NULL DEFAULT 'residential',
+    
+    is_subscription BOOLEAN NOT NULL DEFAULT FALSE,
+    billing_period TEXT NOT NULL DEFAULT '',  -- monthly, annual
+    
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS sr_bundle_items (
+    bundle_id UUID NOT NULL REFERENCES sr_bundles(id) ON DELETE CASCADE,
+    service_id UUID NOT NULL REFERENCES sr_services(id) ON DELETE RESTRICT,
+    quantity NUMERIC(10,2) NOT NULL DEFAULT 1,
+    sort_order INT NOT NULL DEFAULT 0,
+    PRIMARY KEY(bundle_id, service_id)
+);
+
+CREATE TABLE IF NOT EXISTS sr_bundle_seasonality (
+    bundle_id UUID NOT NULL REFERENCES sr_bundles(id) ON DELETE CASCADE,
+    climate_region_id UUID NOT NULL REFERENCES sr_climate_regions(id) ON DELETE CASCADE,
+    earliest_week INT NOT NULL CHECK (earliest_week BETWEEN 1 AND 52),
+    latest_week INT NOT NULL CHECK (latest_week BETWEEN 1 AND 52),
+    hard_stop BOOLEAN NOT NULL DEFAULT FALSE,
+    notes TEXT NOT NULL DEFAULT '',
+    PRIMARY KEY(bundle_id, climate_region_id)
+);
+
+CREATE TABLE IF NOT EXISTS sr_bundle_pricing (
+    bundle_id UUID PRIMARY KEY REFERENCES sr_bundles(id) ON DELETE CASCADE,
+    base_price NUMERIC(12,2) NOT NULL DEFAULT 0,
+    discount_factor NUMERIC(6,3) NOT NULL DEFAULT 0.90,
+    mobilization_surcharge NUMERIC(12,2) NOT NULL DEFAULT 0,
+    remote_multiplier NUMERIC(6,3) NOT NULL DEFAULT 1.0,
+    notes TEXT NOT NULL DEFAULT ''
+);
+
+-- =====================================================================
+-- 13. COMMUNITIES (Bind to climate + access + multipliers)
+-- =====================================================================
+
+CREATE TABLE IF NOT EXISTS sr_communities (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    
+    -- Link to tenant if exists
+    tenant_id UUID REFERENCES cc_tenants(id),
+    
+    name TEXT NOT NULL,
+    region TEXT NOT NULL DEFAULT '',
+    country TEXT NOT NULL DEFAULT 'Canada',
+    
+    latitude NUMERIC(9,6),
+    longitude NUMERIC(9,6),
+    
+    climate_region_id UUID NOT NULL REFERENCES sr_climate_regions(id) ON DELETE RESTRICT,
+    default_access_requirement_id UUID REFERENCES sr_access_requirements(id),
+    
+    remote_multiplier NUMERIC(6,3) NOT NULL DEFAULT 1.0,
+    
+    -- Seasonal boundaries (can override climate region)
+    typical_freeze_week INT,
+    typical_thaw_week INT,
+    
+    notes TEXT NOT NULL DEFAULT '',
+    
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_sr_communities_climate ON sr_communities(climate_region_id);
+
+-- Community-specific bundle availability
+CREATE TABLE IF NOT EXISTS sr_community_bundles (
+    community_id UUID NOT NULL REFERENCES sr_communities(id) ON DELETE CASCADE,
+    bundle_id UUID NOT NULL REFERENCES sr_bundles(id) ON DELETE CASCADE,
+    priority_weight INT NOT NULL DEFAULT 50,
+    notes TEXT NOT NULL DEFAULT '',
+    PRIMARY KEY(community_id, bundle_id)
+);
+
+-- =====================================================================
+-- 14. RUN TYPES (Templates for seasonal runs)
+-- =====================================================================
+
+CREATE TABLE IF NOT EXISTS sr_run_types (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    
+    slug TEXT NOT NULL UNIQUE,
+    name TEXT NOT NULL,
+    description TEXT NOT NULL DEFAULT '',
+    
+    climate_region_id UUID NOT NULL REFERENCES sr_climate_regions(id),
+    
+    earliest_week INT NOT NULL CHECK (earliest_week BETWEEN 1 AND 52),
+    latest_week INT NOT NULL CHECK (latest_week BETWEEN 1 AND 52),
+    hard_stop BOOLEAN NOT NULL DEFAULT FALSE,
+    
+    is_emergency BOOLEAN NOT NULL DEFAULT FALSE,
+    priority_weight INT NOT NULL DEFAULT 50,
+    
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS sr_run_type_services (
+    run_type_id UUID NOT NULL REFERENCES sr_run_types(id) ON DELETE CASCADE,
+    service_id UUID NOT NULL REFERENCES sr_services(id) ON DELETE CASCADE,
+    sort_order INT NOT NULL DEFAULT 0,
+    PRIMARY KEY(run_type_id, service_id)
+);
+
+-- =====================================================================
+-- VERIFY CREATION
+-- =====================================================================
+
+SELECT 'Service Runs schema created:' as status;
+SELECT table_name FROM information_schema.tables 
+WHERE table_schema = 'public' 
+AND table_name LIKE 'sr_%'
+ORDER BY table_name;
+```
+
+Report the list of tables created.
