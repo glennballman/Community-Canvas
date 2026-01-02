@@ -1,0 +1,269 @@
+Add tire service providers and roadside assistance.
+
+Run this SQL:
+
+-- ============================================================================
+-- TIRE SERVICE PROVIDERS
+-- ============================================================================
+
+-- 1. Chilliwack Husky - 24hr Tire Service
+INSERT INTO staging_service_providers (
+    property_id,
+    provider_type,
+    business_name,
+    provider_name,
+    is_resident,
+    phone,
+    phone_24hr,
+    phone_text_ok,
+    
+    available_24hr,
+    available_after_hours,
+    after_hours_fee,
+    response_time_minutes,
+    same_day_service,
+    
+    services_offered,
+    vehicle_types_served,
+    
+    certifications,
+    years_experience,
+    
+    hourly_rate,
+    has_flat_rate_menu,
+    flat_rate_menu,
+    minimum_charge,
+    mobile_service_fee,
+    accepts_cards,
+    accepts_fleet_accounts,
+    
+    overall_rating,
+    review_count,
+    
+    is_verified,
+    is_active
+)
+SELECT 
+    id,
+    'tire_service',
+    'Valley Tire Pros - Mobile',
+    NULL,
+    false,
+    '604-555-TIRE',
+    '604-555-8473',
+    true,
+    
+    true,
+    true,
+    75.00,
+    45,
+    true,
+    
+    ARRAY['tire_change', 'tire_repair', 'tire_rotation', 'tire_balance', 'tire_pressure', 'valve_stem', 'emergency_tire', 'commercial_tire', 'chains_install', 'chains_remove'],
+    ARRAY['semi_truck', 'work_truck', 'rv_class_a', 'rv_class_c', 'trailer', 'pickup'],
+    
+    ARRAY['TIA Certified', 'Commercial Tire Certified'],
+    12,
+    
+    95.00,
+    true,
+    '{"tire_change_single": 75.00, "tire_change_dual": 125.00, "tire_repair": 45.00, "chains_install": 60.00, "chains_remove": 40.00, "emergency_callout": 150.00}'::jsonb,
+    75.00,
+    50.00,
+    true,
+    true,
+    
+    4.7,
+    156,
+    
+    true,
+    true
+FROM staging_properties WHERE name = 'Husky Travel Centre - Chilliwack';
+
+-- 2. Prince George - Northern Tire
+INSERT INTO staging_service_providers (
+    property_id,
+    provider_type,
+    business_name,
+    is_resident,
+    phone,
+    phone_24hr,
+    
+    available_24hr,
+    response_time_minutes,
+    same_day_service,
+    
+    services_offered,
+    vehicle_types_served,
+    
+    years_experience,
+    
+    hourly_rate,
+    minimum_charge,
+    mobile_service_fee,
+    accepts_cards,
+    accepts_fleet_accounts,
+    
+    overall_rating,
+    review_count,
+    
+    is_active
+)
+SELECT 
+    id,
+    'tire_service',
+    'Northern BC Tire Service',
+    false,
+    '250-555-7744',
+    '250-555-7744',
+    
+    true,
+    60,
+    true,
+    
+    ARRAY['tire_change', 'tire_repair', 'commercial_tire', 'chains_install', 'chains_remove', 'tire_pressure'],
+    ARRAY['semi_truck', 'work_truck', 'logging_truck', 'heavy_equipment'],
+    
+    18,
+    
+    115.00,
+    125.00,
+    85.00,
+    true,
+    true,
+    
+    4.4,
+    67,
+    
+    true
+FROM staging_properties WHERE name = 'Husky Travel Centre - Prince George';
+
+-- ============================================================================
+-- TOWING & ROADSIDE ASSISTANCE
+-- ============================================================================
+
+-- 1. Hope - Heavy Towing
+INSERT INTO staging_service_providers (
+    property_id,
+    provider_type,
+    business_name,
+    is_resident,
+    phone,
+    phone_24hr,
+    
+    available_24hr,
+    response_time_minutes,
+    
+    services_offered,
+    vehicle_types_served,
+    
+    certifications,
+    years_experience,
+    specialties,
+    
+    has_flat_rate_menu,
+    flat_rate_menu,
+    accepts_cards,
+    accepts_fleet_accounts,
+    accepts_purchase_orders,
+    
+    overall_rating,
+    review_count,
+    
+    is_active
+)
+SELECT 
+    id,
+    'towing_heavy',
+    'Fraser Valley Heavy Haul & Recovery',
+    false,
+    '604-555-HAUL',
+    '604-555-4285',
+    
+    true,
+    45,
+    
+    ARRAY['heavy_towing', 'semi_recovery', 'load_shift', 'winch_out', 'accident_recovery', 'equipment_transport', 'rv_towing'],
+    ARRAY['semi_truck', 'bus', 'rv_class_a', 'heavy_equipment'],
+    
+    ARRAY['WreckMaster Certified', 'Heavy Recovery Certified'],
+    25,
+    ARRAY['Mountain recovery', 'Jackknife recovery', 'Load transfers'],
+    
+    true,
+    '{"hookup_semi": 350.00, "per_km_loaded": 8.50, "winch_per_hour": 275.00, "load_shift": 450.00, "accident_scene": 500.00}'::jsonb,
+    true,
+    true,
+    true,
+    
+    4.8,
+    203,
+    
+    true
+FROM staging_properties WHERE name = 'Flying J Travel Plaza - Hope';
+
+-- 2. Golden - Mountain Recovery
+INSERT INTO staging_service_providers (
+    property_id,
+    provider_type,
+    business_name,
+    is_resident,
+    phone,
+    phone_24hr,
+    
+    available_24hr,
+    response_time_minutes,
+    
+    services_offered,
+    vehicle_types_served,
+    
+    specialties,
+    
+    has_flat_rate_menu,
+    flat_rate_menu,
+    accepts_cards,
+    accepts_fleet_accounts,
+    
+    overall_rating,
+    review_count,
+    
+    is_active
+)
+SELECT 
+    id,
+    'towing_heavy',
+    'Rocky Mountain Recovery',
+    false,
+    '250-344-HELP',
+    '250-344-4357',
+    
+    true,
+    60,
+    
+    ARRAY['heavy_towing', 'semi_recovery', 'winch_out', 'accident_recovery', 'mountain_recovery'],
+    ARRAY['semi_truck', 'bus', 'rv_class_a'],
+    
+    ARRAY['Rogers Pass recovery', 'Kicking Horse Pass', 'Winter recovery'],
+    
+    true,
+    '{"hookup_semi": 400.00, "per_km_loaded": 9.00, "winch_per_hour": 300.00, "mountain_premium": 150.00}'::jsonb,
+    true,
+    true,
+    
+    4.6,
+    89,
+    
+    true
+FROM staging_properties WHERE name = 'Gateway Travel Centre - Golden';
+
+-- Verify tire and towing
+SELECT 
+    sp.name as property,
+    ssp.provider_type,
+    ssp.business_name,
+    ssp.available_24hr as "24hr",
+    ssp.overall_rating
+FROM staging_service_providers ssp
+JOIN staging_properties sp ON sp.id = ssp.property_id
+WHERE ssp.provider_type IN ('tire_service', 'towing_heavy')
+ORDER BY ssp.provider_type, sp.name;
