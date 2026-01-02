@@ -24,6 +24,8 @@ import HostLogin from "@/pages/host/Login";
 import HostSignup from "@/pages/host/Signup";
 import ForgotPassword from "@/pages/host/ForgotPassword";
 import PropertyManage from "@/pages/host/PropertyManage";
+import StagingSearch from "@/pages/staging/Search";
+import StagingPropertyDetail from "@/pages/staging/PropertyDetail";
 
 function AdminRoutes() {
   return (
@@ -61,6 +63,9 @@ function Router() {
       <Route path="/host/signup" component={HostSignup} />
       <Route path="/host/forgot-password" component={ForgotPassword} />
       <Route path="/host/properties/:id" component={PropertyManage} />
+      <Route path="/staging" component={StagingSearch} />
+      <Route path="/find-staging" component={StagingSearch} />
+      <Route path="/staging/:id" component={StagingPropertyDetail} />
       <Route path="/admin/:rest*" component={AdminRoutes} />
       <Route path="/admin" component={AdminRoutes} />
       <Route component={NotFound} />

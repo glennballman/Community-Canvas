@@ -1,0 +1,104 @@
+Create the public staging search page.
+
+Create file: client/src/pages/staging/Search.tsx
+
+Full search interface at /staging or /find-staging
+
+1. HERO SECTION
+   - "Find Your Perfect Spot"
+   - Quick search bar
+   - Date picker (check-in, check-out)
+   - Vehicle length input
+   - Location (city/region)
+   - "Search" button
+
+2. FILTER SIDEBAR (collapsible on mobile)
+   - Property Type checkboxes
+   - Vehicle Requirements:
+     - Max length slider
+     - Pull-through required toggle
+   - Hookups:
+     - Power (any, 30A, 50A)
+     - Water
+     - Sewer
+   - Amenities:
+     - Bathrooms
+     - Showers
+     - Laundry
+     - WiFi
+   - Special Features:
+     - Dog friendly
+     - Horse friendly
+     - Accepts semi trucks
+     - On-site mechanic!
+   - Price range slider
+   - Rating minimum
+
+3. RESULTS
+   - Sort dropdown: Best Match, Price Low, Price High, Rating, Crew Score, RV Score
+   - Results count
+   - Property cards:
+     - Large thumbnail
+     - Name, city, region
+     - Score badges
+     - Key amenities icons
+     - Price per night
+     - "View" button
+   - Pagination
+
+4. MAP VIEW (optional toggle)
+   - Show results on map
+   - Click marker for mini card
+
+Create file: client/src/pages/staging/PropertyDetail.tsx
+
+Property detail page at /staging/:id
+
+1. PHOTO GALLERY
+   - Main image
+   - Thumbnails
+   - Lightbox
+
+2. HEADER
+   - Name
+   - Location with map link
+   - Rating stars + review count
+   - Score badges
+
+3. BOOKING WIDGET (sticky sidebar)
+   - Date picker
+   - Vehicle selection (if logged in)
+   - Price calculation
+   - "Book Now" or "Check Availability"
+
+4. DESCRIPTION
+   - Full description
+   - Location details
+
+5. AMENITIES GRID
+   - Grouped by category
+   - Icons + labels
+
+6. SPOTS SECTION (if multiple)
+   - Available spots
+   - Dimensions, hookups
+   - Individual pricing
+
+7. SERVICE PROVIDERS
+   - On-site services!
+   - Mechanic highlight
+   - Contact info
+
+8. REVIEWS
+   - Overall rating breakdown
+   - Recent reviews
+   - Review cards
+
+9. POLICIES
+   - Check-in/out times
+   - Pet policy
+   - Cancellation policy
+
+10. MAP
+    - Property location
+    - Nearby attractions
