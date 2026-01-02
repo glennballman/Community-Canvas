@@ -1,4 +1,4 @@
-import { Switch, Route } from "wouter";
+import { Switch, Route, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -44,10 +44,11 @@ import MapSearch from "@/pages/staging/MapSearch";
 import NavigationHub from "@/pages/NavigationHub";
 import FleetPage from "@/pages/FleetPage";
 
-function AdminRoutes() {
+function AppShellRoutes() {
   return (
     <AdminLayout>
       <Switch>
+        {/* Admin routes */}
         <Route path="/admin" component={AdminHome} />
         <Route path="/admin/matrix" component={AdminMatrix} />
         <Route path="/admin/geo" component={AdminGeo} />
@@ -61,6 +62,43 @@ function AdminRoutes() {
         <Route path="/admin/civos" component={CivOSDashboard} />
         <Route path="/admin/docs" component={Documentation} />
         <Route path="/admin/accommodations" component={Accommodations} />
+        
+        {/* Navigation hub */}
+        <Route path="/hub" component={NavigationHub} />
+        
+        {/* Command center */}
+        <Route path="/command-center" component={Dashboard} />
+        <Route path="/legacy" component={Dashboard} />
+        
+        {/* Fleet management */}
+        <Route path="/fleet" component={FleetPage} />
+        
+        {/* Staging routes */}
+        <Route path="/staging" component={StagingSearch} />
+        <Route path="/find-staging" component={StagingSearch} />
+        <Route path="/staging/map" component={MapSearch} />
+        <Route path="/staging/chamber" component={ChamberDashboard} />
+        <Route path="/staging/bookings" component={MyBookings} />
+        <Route path="/staging/:id/book" component={StagingBook} />
+        <Route path="/staging/:id" component={StagingPropertyDetail} />
+        
+        {/* Host routes (dashboard, properties, bookings - NOT login/signup) */}
+        <Route path="/host/dashboard" component={HostDashboard} />
+        <Route path="/host/properties/add" component={AddProperty} />
+        <Route path="/host/properties/:id/calendar" component={HostCalendar} />
+        <Route path="/host/properties/:id/bookings" component={PropertyManage} />
+        <Route path="/host/properties/:id" component={PropertyManage} />
+        <Route path="/host/properties" component={HostProperties} />
+        <Route path="/host/bookings" component={HostBookings} />
+        <Route path="/host/settings" component={HostSettings} />
+        <Route path="/host/payouts" component={HostPayouts} />
+        
+        {/* Trip timeline demo */}
+        <Route path="/trip-timeline-demo" component={TripTimelineDemo} />
+        
+        {/* Accommodations */}
+        <Route path="/accommodations" component={Accommodations} />
+        
         <Route component={NotFound} />
       </Switch>
     </AdminLayout>
@@ -72,39 +110,26 @@ function PublicDashboard() {
 }
 
 function Router() {
-  return (
-    <Switch>
-      <Route path="/" component={PublicDashboard} />
-      <Route path="/hub" component={NavigationHub} />
-      <Route path="/command-center" component={Dashboard} />
-      <Route path="/legacy" component={Dashboard} />
-      <Route path="/fleet" component={FleetPage} />
-      <Route path="/trip-timeline-demo" component={TripTimelineDemo} />
-      <Route path="/accommodations" component={Accommodations} />
-      <Route path="/host/login" component={HostLogin} />
-      <Route path="/host/signup" component={HostSignup} />
-      <Route path="/host/forgot-password" component={ForgotPassword} />
-      <Route path="/host/dashboard" component={HostDashboard} />
-      <Route path="/host/properties/add" component={AddProperty} />
-      <Route path="/host/properties/:id/calendar" component={HostCalendar} />
-      <Route path="/host/properties/:id/bookings" component={PropertyManage} />
-      <Route path="/host/properties/:id" component={PropertyManage} />
-      <Route path="/host/properties" component={HostProperties} />
-      <Route path="/host/bookings" component={HostBookings} />
-      <Route path="/host/settings" component={HostSettings} />
-      <Route path="/host/payouts" component={HostPayouts} />
-      <Route path="/staging" component={StagingSearch} />
-      <Route path="/find-staging" component={StagingSearch} />
-      <Route path="/staging/map" component={MapSearch} />
-      <Route path="/staging/chamber" component={ChamberDashboard} />
-      <Route path="/staging/bookings" component={MyBookings} />
-      <Route path="/staging/:id/book" component={StagingBook} />
-      <Route path="/staging/:id" component={StagingPropertyDetail} />
-      <Route path="/admin/:rest*" component={AdminRoutes} />
-      <Route path="/admin" component={AdminRoutes} />
-      <Route component={NotFound} />
-    </Switch>
-  );
+  const [location] = useLocation();
+  
+  const isPublicRoute = 
+    location === "/" ||
+    location === "/host/login" ||
+    location === "/host/signup" ||
+    location === "/host/forgot-password";
+  
+  if (isPublicRoute) {
+    return (
+      <Switch>
+        <Route path="/" component={PublicDashboard} />
+        <Route path="/host/login" component={HostLogin} />
+        <Route path="/host/signup" component={HostSignup} />
+        <Route path="/host/forgot-password" component={ForgotPassword} />
+      </Switch>
+    );
+  }
+  
+  return <AppShellRoutes />;
 }
 
 function App() {
