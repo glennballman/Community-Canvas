@@ -428,4 +428,322 @@ router.post('/password/reset', async (req: Request, res: Response) => {
     }
 });
 
+router.get('/vehicles', authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+        const result = await pool.query(`
+            SELECT * FROM staging_user_vehicles 
+            WHERE user_id = $1 AND is_active = true
+            ORDER BY is_primary DESC, created_at DESC
+        `, [req.user!.id]);
+
+        res.json({
+            success: true,
+            vehicles: result.rows.map(v => ({
+                id: v.id,
+                nickname: v.nickname,
+                vehicleType: v.vehicle_type,
+                make: v.make,
+                model: v.model,
+                year: v.year,
+                lengthFt: v.length_ft,
+                widthFt: v.width_ft,
+                heightFt: v.height_ft,
+                combinedLengthFt: v.combined_length_ft,
+                powerAmpRequirement: v.power_amp_requirement,
+                hasSlideouts: v.has_slideouts,
+                numSlideouts: v.num_slideouts,
+                hasGenerator: v.has_generator,
+                licensePlate: v.license_plate,
+                isPrimary: v.is_primary
+            }))
+        });
+
+    } catch (error: any) {
+        console.error('Get vehicles error:', error);
+        res.status(500).json({ success: false, error: 'Failed to get vehicles' });
+    }
+});
+
+router.post('/vehicles', authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+        const {
+            nickname, vehicleType, make, model, year,
+            lengthFt, widthFt, heightFt, combinedLengthFt,
+            powerAmpRequirement, hasSlideouts, numSlideouts, hasGenerator,
+            licensePlate, licenseState, isPrimary
+        } = req.body;
+
+        if (!vehicleType) {
+            return res.status(400).json({ success: false, error: 'Vehicle type required' });
+        }
+
+        if (isPrimary) {
+            await pool.query(
+                'UPDATE staging_user_vehicles SET is_primary = false WHERE user_id = $1',
+                [req.user!.id]
+            );
+        }
+
+        const result = await pool.query(`
+            INSERT INTO staging_user_vehicles (
+                user_id, nickname, vehicle_type, make, model, year,
+                length_ft, width_ft, height_ft, combined_length_ft,
+                power_amp_requirement, has_slideouts, num_slideouts, has_generator,
+                license_plate, license_state, is_primary
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+            RETURNING *
+        `, [
+            req.user!.id, nickname, vehicleType, make, model, year,
+            lengthFt, widthFt, heightFt, combinedLengthFt,
+            powerAmpRequirement, hasSlideouts || false, numSlideouts || 0, hasGenerator || false,
+            licensePlate, licenseState, isPrimary || false
+        ]);
+
+        res.status(201).json({ success: true, vehicle: result.rows[0] });
+
+    } catch (error: any) {
+        console.error('Add vehicle error:', error);
+        res.status(500).json({ success: false, error: 'Failed to add vehicle' });
+    }
+});
+
+router.put('/vehicles/:id', authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+        const { id } = req.params;
+        const updates = req.body;
+
+        const check = await pool.query(
+            'SELECT id FROM staging_user_vehicles WHERE id = $1 AND user_id = $2',
+            [id, req.user!.id]
+        );
+
+        if (check.rows.length === 0) {
+            return res.status(404).json({ success: false, error: 'Vehicle not found' });
+        }
+
+        if (updates.isPrimary) {
+            await pool.query(
+                'UPDATE staging_user_vehicles SET is_primary = false WHERE user_id = $1',
+                [req.user!.id]
+            );
+        }
+
+        const result = await pool.query(`
+            UPDATE staging_user_vehicles SET
+                nickname = COALESCE($2, nickname),
+                vehicle_type = COALESCE($3, vehicle_type),
+                make = COALESCE($4, make),
+                model = COALESCE($5, model),
+                year = COALESCE($6, year),
+                length_ft = COALESCE($7, length_ft),
+                combined_length_ft = COALESCE($8, combined_length_ft),
+                power_amp_requirement = COALESCE($9, power_amp_requirement),
+                license_plate = COALESCE($10, license_plate),
+                is_primary = COALESCE($11, is_primary),
+                updated_at = NOW()
+            WHERE id = $1
+            RETURNING *
+        `, [id, updates.nickname, updates.vehicleType, updates.make, updates.model,
+            updates.year, updates.lengthFt, updates.combinedLengthFt,
+            updates.powerAmpRequirement, updates.licensePlate, updates.isPrimary]);
+
+        res.json({ success: true, vehicle: result.rows[0] });
+
+    } catch (error: any) {
+        console.error('Update vehicle error:', error);
+        res.status(500).json({ success: false, error: 'Failed to update vehicle' });
+    }
+});
+
+router.delete('/vehicles/:id', authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+        const { id } = req.params;
+
+        const result = await pool.query(`
+            UPDATE staging_user_vehicles 
+            SET is_active = false, updated_at = NOW()
+            WHERE id = $1 AND user_id = $2
+            RETURNING id
+        `, [id, req.user!.id]);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ success: false, error: 'Vehicle not found' });
+        }
+
+        res.json({ success: true, message: 'Vehicle removed' });
+
+    } catch (error: any) {
+        console.error('Delete vehicle error:', error);
+        res.status(500).json({ success: false, error: 'Failed to remove vehicle' });
+    }
+});
+
+router.get('/favorites', authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+        const result = await pool.query(`
+            SELECT 
+                f.id as favorite_id,
+                f.notes,
+                f.created_at as favorited_at,
+                p.id, p.name, p.city, p.region,
+                p.total_spots, p.rv_score, p.crew_score, p.trucker_score,
+                p.thumbnail_url,
+                pr.nightly_rate
+            FROM staging_user_favorites f
+            JOIN staging_properties p ON p.id = f.property_id
+            LEFT JOIN staging_pricing pr ON pr.property_id = p.id 
+                AND pr.pricing_type = 'base_nightly' AND pr.is_active = true
+            WHERE f.user_id = $1
+            ORDER BY f.created_at DESC
+        `, [req.user!.id]);
+
+        res.json({
+            success: true,
+            favorites: result.rows.map(f => ({
+                favoriteId: f.favorite_id,
+                notes: f.notes,
+                favoritedAt: f.favorited_at,
+                property: {
+                    id: f.id,
+                    name: f.name,
+                    city: f.city,
+                    region: f.region,
+                    totalSpots: f.total_spots,
+                    rvScore: f.rv_score,
+                    crewScore: f.crew_score,
+                    truckerScore: f.trucker_score,
+                    thumbnailUrl: f.thumbnail_url,
+                    nightlyRate: f.nightly_rate ? parseFloat(f.nightly_rate) : null
+                }
+            }))
+        });
+
+    } catch (error: any) {
+        console.error('Get favorites error:', error);
+        res.status(500).json({ success: false, error: 'Failed to get favorites' });
+    }
+});
+
+router.post('/favorites', authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+        const { propertyId, notes } = req.body;
+
+        if (!propertyId) {
+            return res.status(400).json({ success: false, error: 'Property ID required' });
+        }
+
+        const propCheck = await pool.query('SELECT id FROM staging_properties WHERE id = $1', [propertyId]);
+        if (propCheck.rows.length === 0) {
+            return res.status(404).json({ success: false, error: 'Property not found' });
+        }
+
+        const result = await pool.query(`
+            INSERT INTO staging_user_favorites (user_id, property_id, notes)
+            VALUES ($1, $2, $3)
+            ON CONFLICT (user_id, property_id) DO UPDATE SET notes = $3
+            RETURNING id
+        `, [req.user!.id, propertyId, notes]);
+
+        res.status(201).json({ success: true, favoriteId: result.rows[0].id });
+
+    } catch (error: any) {
+        console.error('Add favorite error:', error);
+        res.status(500).json({ success: false, error: 'Failed to add favorite' });
+    }
+});
+
+router.delete('/favorites/:propertyId', authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+        const { propertyId } = req.params;
+
+        const result = await pool.query(`
+            DELETE FROM staging_user_favorites 
+            WHERE user_id = $1 AND property_id = $2
+            RETURNING id
+        `, [req.user!.id, propertyId]);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ success: false, error: 'Favorite not found' });
+        }
+
+        res.json({ success: true, message: 'Removed from favorites' });
+
+    } catch (error: any) {
+        console.error('Remove favorite error:', error);
+        res.status(500).json({ success: false, error: 'Failed to remove favorite' });
+    }
+});
+
+router.get('/bookings', authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+        const result = await pool.query(`
+            SELECT 
+                b.*,
+                p.name as property_name,
+                p.city,
+                p.region,
+                p.thumbnail_url
+            FROM staging_bookings b
+            JOIN staging_properties p ON p.id = b.property_id
+            WHERE b.user_id = $1 OR b.guest_email = $2
+            ORDER BY b.check_in_date DESC
+        `, [req.user!.id, req.user!.email]);
+
+        res.json({
+            success: true,
+            bookings: result.rows.map(b => ({
+                id: b.id,
+                bookingRef: b.booking_ref,
+                propertyId: b.property_id,
+                propertyName: b.property_name,
+                city: b.city,
+                region: b.region,
+                thumbnailUrl: b.thumbnail_url,
+                checkInDate: b.check_in_date,
+                checkOutDate: b.check_out_date,
+                numNights: b.num_nights,
+                totalCost: parseFloat(b.total_cost),
+                status: b.status,
+                createdAt: b.created_at
+            }))
+        });
+
+    } catch (error: any) {
+        console.error('Get bookings error:', error);
+        res.status(500).json({ success: false, error: 'Failed to get bookings' });
+    }
+});
+
+router.get('/trips', authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+        const result = await pool.query(`
+            SELECT 
+                t.*,
+                (SELECT COUNT(*) FROM staging_trip_stops WHERE trip_id = t.id) as stop_count
+            FROM staging_trips t
+            WHERE t.user_id = $1
+            ORDER BY t.created_at DESC
+        `, [req.user!.id]);
+
+        res.json({
+            success: true,
+            trips: result.rows.map(t => ({
+                id: t.id,
+                tripRef: t.trip_ref,
+                name: t.name,
+                originName: t.origin_name,
+                destinationName: t.destination_name,
+                totalDistanceKm: t.total_distance_km ? parseFloat(t.total_distance_km) : null,
+                departureDate: t.departure_date,
+                stopCount: parseInt(t.stop_count),
+                createdAt: t.created_at
+            }))
+        });
+
+    } catch (error: any) {
+        console.error('Get trips error:', error);
+        res.status(500).json({ success: false, error: 'Failed to get trips' });
+    }
+});
+
 export default router;
