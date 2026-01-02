@@ -1,0 +1,271 @@
+Add Okanagan Valley RV parks and campgrounds.
+
+Run this SQL:
+
+-- ============================================================================
+-- OKANAGAN VALLEY - Wine Country RV & Camping
+-- ============================================================================
+
+-- 1. Holiday Park Resort (Kelowna)
+INSERT INTO staging_properties (
+    name, description, short_description, tagline,
+    property_type, property_subtype,
+    region, city, address, postal_code,
+    latitude, longitude,
+    total_spots, spots_small, spots_medium, spots_large, spots_pull_through,
+    max_combined_length_ft, max_vehicle_width_ft,
+    has_shore_power, power_amps, power_included, num_power_hookups,
+    has_water_hookup, has_potable_water, num_water_hookups,
+    has_sewer_hookup, num_sewer_hookups, has_dump_station,
+    has_wifi, wifi_included, has_cell_signal, cell_signal_strength, has_cable_tv,
+    has_bathrooms, bathroom_type, has_showers, showers_free,
+    has_laundry, has_store, has_restaurant,
+    has_pool, has_hot_tub, has_playground, has_game_room,
+    has_beach_access, has_swimming, has_boat_launch, has_kayak_rental,
+    is_waterfront, waterfront_type,
+    pets_allowed, dogs_allowed, has_dog_park,
+    is_fenced, is_gated, has_onsite_manager,
+    access_type, check_in_method,
+    min_nights, max_stay_days,
+    status, is_verified, source
+) VALUES (
+    'Holiday Park Resort',
+    'Premier lakefront RV resort in Kelowna on the shores of Okanagan Lake. Full-service sites with stunning lake views, private beach, heated pool, and hot tub. Walking distance to downtown Kelowna wineries and restaurants. The ultimate Okanagan experience.',
+    'Lakefront resort in Kelowna with beach, pool, and wine country access.',
+    'Okanagan luxury lakeside',
+    'rv_park', 'full_hookup',
+    'Okanagan', 'Kelowna', '415 Commonwealth Road', 'V4V 1P4',
+    49.8623, -119.4912,
+    150, 30, 60, 45, 50,
+    55, 12,
+    true, ARRAY[30, 50], true, 150,
+    true, true, 150,
+    true, 150, true,
+    true, true, true, 5, true,
+    true, 'flush', true, true,
+    true, true, true,
+    true, true, true, true,
+    true, true, true, true,
+    true, 'lake',
+    true, true, true,
+    true, true, true,
+    'office_hours', 'office_check_in',
+    2, 180,
+    'active', true, 'web_research'
+);
+
+INSERT INTO staging_pricing (property_id, pricing_type, nightly_rate, weekly_rate, monthly_rate, is_active)
+SELECT id, 'base_nightly', 75.00, 450.00, 1600.00, true
+FROM staging_properties WHERE name = 'Holiday Park Resort';
+
+-- Peak summer pricing
+INSERT INTO staging_pricing (property_id, pricing_type, nightly_rate, season_name, start_date, end_date, is_active)
+SELECT id, 'seasonal', 95.00, 'Peak Summer', '2026-06-15', '2026-09-15', true
+FROM staging_properties WHERE name = 'Holiday Park Resort';
+
+-- 2. Wood Lake RV Park (Lake Country)
+INSERT INTO staging_properties (
+    name, description, short_description, tagline,
+    property_type, property_subtype,
+    region, city, address, postal_code,
+    latitude, longitude,
+    total_spots, spots_medium, spots_large, spots_pull_through,
+    max_combined_length_ft, max_vehicle_width_ft,
+    has_shore_power, power_amps, power_included, num_power_hookups,
+    has_water_hookup, has_potable_water, num_water_hookups,
+    has_sewer_hookup, num_sewer_hookups, has_dump_station,
+    has_wifi, wifi_included, has_cell_signal,
+    has_bathrooms, bathroom_type, has_showers, showers_free,
+    has_laundry, has_store,
+    has_beach_access, has_swimming, has_fishing, has_kayak_rental,
+    is_waterfront, waterfront_type,
+    pets_allowed, dogs_allowed,
+    has_onsite_manager,
+    access_type, check_in_method,
+    min_nights, max_stay_days,
+    status, is_verified, source
+) VALUES (
+    'Wood Lake RV Park & Marina',
+    'Family-friendly RV park on Wood Lake with private beach, boat launch, and fishing dock. Quieter alternative to Kelowna with easy access to all Okanagan attractions. Great for families and water sports enthusiasts.',
+    'Family lakefront RV park on Wood Lake with beach and marina.',
+    'Family lake fun',
+    'rv_park', 'full_hookup',
+    'Okanagan', 'Lake Country', '11919 Oceola Road', 'V4V 1A1',
+    50.0234, -119.4123,
+    80, 35, 35, 30,
+    50, 12,
+    true, ARRAY[30, 50], true, 80,
+    true, true, 80,
+    true, 80, true,
+    true, true, true,
+    true, 'flush', true, true,
+    true, true,
+    true, true, true, true,
+    true, 'lake',
+    true, true,
+    true,
+    'office_hours', 'office_check_in',
+    1, 180,
+    'active', true, 'web_research'
+);
+
+INSERT INTO staging_pricing (property_id, pricing_type, nightly_rate, weekly_rate, monthly_rate, is_active)
+SELECT id, 'base_nightly', 55.00, 330.00, 1100.00, true
+FROM staging_properties WHERE name = 'Wood Lake RV Park & Marina';
+
+-- 3. Nk'Mip RV Park (Osoyoos - Indigenous owned)
+INSERT INTO staging_properties (
+    name, description, short_description, tagline,
+    property_type, property_subtype,
+    region, city, address, postal_code,
+    latitude, longitude,
+    total_spots, spots_medium, spots_large, spots_oversized, spots_pull_through,
+    max_combined_length_ft, max_vehicle_width_ft,
+    has_shore_power, power_amps, power_included, num_power_hookups,
+    has_water_hookup, has_potable_water, num_water_hookups,
+    has_sewer_hookup, num_sewer_hookups, has_dump_station,
+    has_wifi, wifi_included, has_cell_signal, cell_signal_strength,
+    has_bathrooms, bathroom_type, has_showers, showers_free,
+    has_laundry, has_store, has_restaurant,
+    has_pool, has_hot_tub, has_beach_access, has_swimming,
+    is_waterfront, waterfront_type,
+    pets_allowed, dogs_allowed,
+    is_gated, has_onsite_manager,
+    access_type, check_in_method,
+    min_nights, max_stay_days,
+    status, is_verified, source
+) VALUES (
+    'Nk''Mip RV Park',
+    'Indigenous-owned desert resort in Canada''s only pocket desert. Adjacent to Nk''Mip Cellars winery and the Desert Cultural Centre. Features pool, beach access on Osoyoos Lake, and stunning desert landscape. Unique cultural experience.',
+    'Indigenous-owned desert resort with winery, pool, and lake beach.',
+    'Desert oasis experience',
+    'rv_park', 'full_hookup',
+    'Okanagan', 'Osoyoos', '1000 Rancher Creek Road', 'V0H 1V6',
+    49.0567, -119.5234,
+    200, 60, 80, 40, 70,
+    60, 14,
+    true, ARRAY[30, 50], true, 200,
+    true, true, 200,
+    true, 200, true,
+    true, true, true, 5,
+    true, 'flush', true, true,
+    true, true, true,
+    true, true, true, true,
+    true, 'lake',
+    true, true,
+    true, true,
+    'office_hours', 'office_check_in',
+    1, 180,
+    'active', true, 'web_research'
+);
+
+INSERT INTO staging_pricing (property_id, pricing_type, nightly_rate, weekly_rate, monthly_rate, is_active)
+SELECT id, 'base_nightly', 65.00, 390.00, 1400.00, true
+FROM staging_properties WHERE name = 'Nk''Mip RV Park';
+
+-- 4. Penticton Lakeside Resort
+INSERT INTO staging_properties (
+    name, description, short_description, tagline,
+    property_type, property_subtype,
+    region, city, address, postal_code,
+    latitude, longitude,
+    total_spots, spots_medium, spots_large, spots_pull_through,
+    max_combined_length_ft, max_vehicle_width_ft,
+    has_shore_power, power_amps, power_included, num_power_hookups,
+    has_water_hookup, has_potable_water, num_water_hookups,
+    has_sewer_hookup, num_sewer_hookups, has_dump_station,
+    has_wifi, wifi_included, has_cell_signal,
+    has_bathrooms, bathroom_type, has_showers, showers_free,
+    has_laundry, has_store,
+    has_pool, has_beach_access, has_swimming, has_bike_rental, has_kayak_rental,
+    is_waterfront, waterfront_type,
+    pets_allowed, dogs_allowed, has_dog_park,
+    has_onsite_manager,
+    access_type, check_in_method,
+    min_nights, max_stay_days,
+    status, is_verified, source
+) VALUES (
+    'Penticton Lakeside Resort RV Park',
+    'Located between Okanagan Lake and Skaha Lake in beautiful Penticton. Perfect for the Kettle Valley Rail Trail, wine tours, and beach life. Walking distance to downtown Penticton. Bike rentals available.',
+    'Between two lakes in Penticton with beach access and bike rentals.',
+    'Two lakes, endless fun',
+    'rv_park', 'full_hookup',
+    'Okanagan', 'Penticton', '4085 Skaha Lake Road', 'V2A 6J6',
+    49.4567, -119.5789,
+    120, 50, 50, 40,
+    50, 12,
+    true, ARRAY[30, 50], true, 120,
+    true, true, 120,
+    true, 100, true,
+    true, true, true,
+    true, 'flush', true, true,
+    true, true,
+    true, true, true, true, true,
+    true, 'lake',
+    true, true, true,
+    true,
+    'office_hours', 'office_check_in',
+    2, 180,
+    'active', true, 'web_research'
+);
+
+INSERT INTO staging_pricing (property_id, pricing_type, nightly_rate, weekly_rate, monthly_rate, is_active)
+SELECT id, 'base_nightly', 60.00, 360.00, 1300.00, true
+FROM staging_properties WHERE name = 'Penticton Lakeside Resort RV Park';
+
+-- 5. Vernon KOA (Work crew friendly)
+INSERT INTO staging_properties (
+    name, description, short_description, tagline,
+    property_type, property_subtype,
+    region, city, address, postal_code,
+    latitude, longitude,
+    total_spots, spots_small, spots_medium, spots_large, spots_oversized, spots_pull_through,
+    max_combined_length_ft, max_vehicle_width_ft,
+    has_shore_power, power_amps, power_included, num_power_hookups,
+    has_water_hookup, has_potable_water, num_water_hookups,
+    has_sewer_hookup, num_sewer_hookups, has_dump_station,
+    has_wifi, wifi_included, wifi_speed_mbps, has_cell_signal, cell_signal_strength, has_cable_tv,
+    has_bathrooms, bathroom_type, has_showers, showers_free,
+    has_laundry, has_store,
+    has_pool, has_playground, has_game_room, has_dog_park,
+    pets_allowed, dogs_allowed,
+    -- Work crew friendly
+    accepts_semi_trucks, num_truck_spots, can_drop_trailer,
+    is_fenced, is_gated, has_security_camera, is_well_lit, has_onsite_manager,
+    access_type, check_in_method,
+    min_nights, max_stay_days,
+    status, is_verified, source
+) VALUES (
+    'Vernon KOA Journey',
+    'Well-equipped KOA campground perfect for families and work crews. Large pull-through sites accommodate big rigs. Pool, playground, and dog park. Easy highway access for crews working in the North Okanagan. Long-term rates available.',
+    'KOA with big rig access, pool, and work crew friendly amenities.',
+    'Big rigs welcome',
+    'rv_park', 'full_hookup',
+    'Okanagan', 'Vernon', '15408 Kalamalka Lake Road', 'V1B 1L3',
+    50.2345, -119.2678,
+    100, 20, 35, 30, 15, 45,
+    70, 14,
+    true, ARRAY[30, 50], true, 100,
+    true, true, 100,
+    true, 100, true,
+    true, true, 25, true, 5, true,
+    true, 'flush', true, true,
+    true, true,
+    true, true, true, true,
+    true, true,
+    true, 10, true,
+    true, true, true, true, true,
+    '24/7', 'self_check_in',
+    1, 364,
+    'active', true, 'web_research'
+);
+
+INSERT INTO staging_pricing (property_id, pricing_type, nightly_rate, weekly_rate, monthly_rate, is_active)
+SELECT id, 'base_nightly', 55.00, 330.00, 950.00, true
+FROM staging_properties WHERE name = 'Vernon KOA Journey';
+
+-- Verify Okanagan properties
+SELECT name, city, total_spots, rv_score, crew_score
+FROM staging_properties 
+WHERE region = 'Okanagan'
+ORDER BY rv_score DESC;
