@@ -79,3 +79,30 @@
     background-size: 24px 24px;
   }
 }
+
+/* Leaflet map custom styles */
+.custom-marker {
+  background: transparent;
+  border: none;
+}
+
+.leaflet-popup-content-wrapper {
+  border-radius: 8px;
+}
+
+.leaflet-popup-content {
+  margin: 12px;
+}
+
+.dark .leaflet-popup-content-wrapper {
+  background: hsl(var(--card));
+  color: hsl(var(--foreground));
+}
+
+.dark .leaflet-popup-tip {
+  background: hsl(var(--card));
+}
+
+.leaflet-container {
+  font-family: var(--font-sans);
+}
