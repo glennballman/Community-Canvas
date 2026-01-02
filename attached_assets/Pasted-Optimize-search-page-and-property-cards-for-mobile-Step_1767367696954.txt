@@ -1,0 +1,340 @@
+Optimize search page and property cards for mobile.
+
+## Step 1: Update Property Card for Mobile
+
+Create file: client/src/components/PropertyCard.tsx
+```tsx
+import React from 'react';
+import { Link } from 'react-router-dom';
+
+interface Property {
+    id: number;
+    name: string;
+    city: string;
+    region: string;
+    totalSpots: number;
+    nightlyRate: number | null;
+    rvScore: number;
+    crewScore: number;
+    truckerScore: number;
+    hasMechanic: boolean;
+    hasPower: boolean;
+    petsAllowed: boolean;
+    thumbnailUrl?: string;
+}
+
+interface PropertyCardProps {
+    property: Property;
+    compact?: boolean;
+}
+
+export default function PropertyCard({ property, compact = false }: PropertyCardProps) {
+    // Determine primary score badge
+    const primaryScore = Math.max(property.rvScore, property.crewScore, property.truckerScore);
+    const primaryType = property.rvScore === primaryScore ? 'RV' 
+        : property.crewScore === primaryScore ? 'Crew' 
+        : 'Trucker';
+    const scoreColor = primaryType === 'RV' ? 'bg-green-600' 
+        : primaryType === 'Crew' ? 'bg-blue-600' 
+        : 'bg-orange-600';
+
+    if (compact) {
+        // Compact horizontal card for mobile lists
+        return (
+            <Link to={`/staging/${property.id}`} className="block">
+                <div className="bg-gray-800 rounded-lg p-3 flex gap-3 active:bg-gray-700">
+                    {/* Thumbnail */}
+                    <div className="w-20 h-20 flex-shrink-0 bg-gray-700 rounded-lg overflow-hidden">
+                        {property.thumbnailUrl ? (
+                            <img 
+                                src={property.thumbnailUrl} 
+                                alt={property.name}
+                                className="w-full h-full object-cover"
+                            />
+                        ) : (
+                            <div className="w-full h-full flex items-center justify-center text-2xl">
+                                🏕️
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Content */}
+                    <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-2">
+                            <h3 className="text-white font-medium truncate">{property.name}</h3>
+                            {primaryScore > 0 && (
+                                <span className={`${scoreColor} text-white text-xs px-1.5 py-0.5 rounded flex-shrink-0`}>
+                                    {primaryScore}
+                                </span>
+                            )}
+                        </div>
+                        <p className="text-gray-400 text-sm truncate">{property.city}</p>
+                        
+                        <div className="flex items-center gap-2 mt-1">
+                            {property.hasMechanic && <span className="text-green-400 text-xs">🔧</span>}
+                            {property.hasPower && <span className="text-yellow-400 text-xs">⚡</span>}
+                            {property.petsAllowed && <span className="text-purple-400 text-xs">🐕</span>}
+                            <span className="text-gray-500 text-xs">{property.totalSpots} spots</span>
+                        </div>
+
+                        {property.nightlyRate && (
+                            <p className="text-green-400 font-medium text-sm mt-1">
+                                ${property.nightlyRate}/night
+                            </p>
+                        )}
+                    </div>
+                </div>
+            </Link>
+        );
+    }
+
+    // Full card for desktop/tablet
+    return (
+        <Link to={`/staging/${property.id}`} className="block group">
+            <div className="bg-gray-800 rounded-lg overflow-hidden hover:ring-2 hover:ring-blue-500 transition-all">
+                {/* Image */}
+                <div className="aspect-video bg-gray-700 relative">
+                    {property.thumbnailUrl ? (
+                        <img 
+                            src={property.thumbnailUrl} 
+                            alt={property.name}
+                            className="w-full h-full object-cover"
+                        />
+                    ) : (
+                        <div className="w-full h-full flex items-center justify-center text-4xl">
+                            🏕️
+                        </div>
+                    )}
+
+                    {/* Score Badge */}
+                    {primaryScore > 0 && (
+                        <div className={`absolute top-2 right-2 ${scoreColor} text-white px-2 py-1 rounded-lg text-sm font-medium`}>
+                            {primaryType}: {primaryScore}
+                        </div>
+                    )}
+
+                    {/* Mechanic Badge */}
+                    {property.hasMechanic && (
+                        <div className="absolute top-2 left-2 bg-green-600 text-white px-2 py-1 rounded-lg text-xs">
+                            🔧 Mechanic
+                        </div>
+                    )}
+                </div>
+
+                {/* Content */}
+                <div className="p-4">
+                    <h3 className="text-white font-semibold text-lg group-hover:text-blue-400 transition-colors">
+                        {property.name}
+                    </h3>
+                    <p className="text-gray-400">{property.city}, {property.region}</p>
+
+                    <div className="flex items-center gap-3 mt-3 text-sm">
+                        <span className="text-gray-500">{property.totalSpots} spots</span>
+                        {property.hasPower && <span className="text-yellow-400">⚡ Power</span>}
+                        {property.petsAllowed && <span className="text-purple-400">🐕 Pets</span>}
+                    </div>
+
+                    {property.nightlyRate && (
+                        <div className="mt-3 flex items-center justify-between">
+                            <span className="text-green-400 font-bold text-lg">
+                                ${property.nightlyRate}
+                                <span className="text-gray-500 font-normal text-sm">/night</span>
+                            </span>
+                        </div>
+                    )}
+                </div>
+            </div>
+        </Link>
+    );
+}
+```
+
+## Step 2: Create Mobile Filter Sheet
+
+Create file: client/src/components/MobileFilterSheet.tsx
+```tsx
+import React from 'react';
+
+interface MobileFilterSheetProps {
+    isOpen: boolean;
+    onClose: () => void;
+    children: React.ReactNode;
+    title?: string;
+    onApply?: () => void;
+    onClear?: () => void;
+}
+
+export default function MobileFilterSheet({ 
+    isOpen, 
+    onClose, 
+    children, 
+    title = 'Filters',
+    onApply,
+    onClear
+}: MobileFilterSheetProps) {
+    if (!isOpen) return null;
+
+    return (
+        <div className="fixed inset-0 z-50 lg:hidden">
+            {/* Backdrop */}
+            <div 
+                className="absolute inset-0 bg-black/50"
+                onClick={onClose}
+            />
+
+            {/* Sheet */}
+            <div className="absolute bottom-0 left-0 right-0 bg-gray-800 rounded-t-2xl max-h-[85vh] overflow-hidden flex flex-col">
+                {/* Handle */}
+                <div className="flex justify-center py-2">
+                    <div className="w-10 h-1 bg-gray-600 rounded-full" />
+                </div>
+
+                {/* Header */}
+                <div className="flex items-center justify-between px-4 py-2 border-b border-gray-700">
+                    <button
+                        onClick={onClear}
+                        className="text-gray-400 hover:text-white"
+                    >
+                        Clear
+                    </button>
+                    <h2 className="text-lg font-semibold text-white">{title}</h2>
+                    <button
+                        onClick={onClose}
+                        className="text-gray-400 hover:text-white"
+                    >
+                        ✕
+                    </button>
+                </div>
+
+                {/* Content */}
+                <div className="flex-1 overflow-y-auto p-4">
+                    {children}
+                </div>
+
+                {/* Footer */}
+                <div className="p-4 border-t border-gray-700">
+                    <button
+                        onClick={() => { onApply?.(); onClose(); }}
+                        className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-medium"
+                    >
+                        Apply Filters
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
+```
+
+## Step 3: Update Search Page for Mobile
+
+Update your main search page to use these components:
+```tsx
+import PropertyCard from '../../components/PropertyCard';
+import MobileFilterSheet from '../../components/MobileFilterSheet';
+
+// In your search component:
+const [showMobileFilters, setShowMobileFilters] = useState(false);
+const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
+
+// Mobile uses list view by default, desktop uses grid
+useEffect(() => {
+    const isMobile = window.innerWidth < 1024;
+    setViewMode(isMobile ? 'list' : 'grid');
+}, []);
+
+// In your JSX:
+return (
+    <div className="min-h-screen bg-gray-900">
+        {/* Mobile Filter Button */}
+        <div className="lg:hidden fixed bottom-20 left-4 right-4 z-30">
+            <button
+                onClick={() => setShowMobileFilters(true)}
+                className="w-full bg-gray-800 border border-gray-700 text-white py-3 rounded-lg font-medium shadow-lg"
+            >
+                🔍 Filters {activeFilterCount > 0 && `(${activeFilterCount})`}
+            </button>
+        </div>
+
+        {/* Mobile Filter Sheet */}
+        <MobileFilterSheet
+            isOpen={showMobileFilters}
+            onClose={() => setShowMobileFilters(false)}
+            onClear={() => clearFilters()}
+            onApply={() => applyFilters()}
+        >
+            {/* Your filter controls here */}
+            <div className="space-y-4">
+                {/* Region */}
+                <div>
+                    <label className="block text-gray-400 text-sm mb-2">Region</label>
+                    <select className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-3 text-white">
+                        {/* options */}
+                    </select>
+                </div>
+                
+                {/* Vehicle Length */}
+                <div>
+                    <label className="block text-gray-400 text-sm mb-2">Vehicle Length (ft)</label>
+                    <input 
+                        type="number" 
+                        className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-3 text-white"
+                    />
+                </div>
+
+                {/* Checkboxes */}
+                <div className="space-y-3">
+                    <label className="flex items-center gap-3 text-white">
+                        <input type="checkbox" className="w-5 h-5 rounded" />
+                        <span>⚡ Power Required</span>
+                    </label>
+                    <label className="flex items-center gap-3 text-white">
+                        <input type="checkbox" className="w-5 h-5 rounded" />
+                        <span>🔧 On-site Mechanic</span>
+                    </label>
+                    <label className="flex items-center gap-3 text-white">
+                        <input type="checkbox" className="w-5 h-5 rounded" />
+                        <span>🐕 Pet Friendly</span>
+                    </label>
+                </div>
+            </div>
+        </MobileFilterSheet>
+
+        {/* View Toggle (Mobile) */}
+        <div className="lg:hidden flex gap-2 p-4">
+            <button
+                onClick={() => setViewMode('list')}
+                className={`flex-1 py-2 rounded-lg ${viewMode === 'list' ? 'bg-blue-600' : 'bg-gray-700'} text-white`}
+            >
+                List
+            </button>
+            <button
+                onClick={() => setViewMode('grid')}
+                className={`flex-1 py-2 rounded-lg ${viewMode === 'grid' ? 'bg-blue-600' : 'bg-gray-700'} text-white`}
+            >
+                Grid
+            </button>
+        </div>
+
+        {/* Results */}
+        <div className={viewMode === 'grid' 
+            ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-4' 
+            : 'space-y-2 p-4'
+        }>
+            {properties.map(property => (
+                <PropertyCard 
+                    key={property.id} 
+                    property={property} 
+                    compact={viewMode === 'list'}
+                />
+            ))}
+        </div>
+    </div>
+);
+```
+
+This creates:
+- Touch-friendly filter sheet that slides up from bottom
+- Compact horizontal cards for mobile list view
+- Full cards for desktop grid view
+- Easy view mode toggle on mobile

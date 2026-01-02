@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'wouter';
 import { Button } from '@/components/ui/button';
@@ -10,11 +10,11 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import MobileFilterSheet from '@/components/MobileFilterSheet';
 import { 
-  Search, MapPin, Calendar, Truck, Filter, Star, 
-  Loader2, ChevronLeft, ChevronRight, Wifi, Droplets,
-  Zap, ShowerHead, Dog, Wrench, TreePine, Map
+  Search, MapPin, Filter, Star, 
+  Loader2, ChevronLeft, ChevronRight, Wifi,
+  Zap, ShowerHead, Dog, Wrench, TreePine, Map, List, Grid
 } from 'lucide-react';
 
 interface StagingProperty {
@@ -263,7 +263,56 @@ function FilterPanel({ filters, setFilters }: { filters: SearchFilters; setFilte
   );
 }
 
-function PropertyCard({ property }: { property: StagingProperty }) {
+function PropertyCard({ property, compact = false }: { property: StagingProperty; compact?: boolean }) {
+  const primaryScore = Math.max(property.rvScore, property.crewScore, property.truckerScore);
+  const primaryType = property.rvScore === primaryScore ? 'RV' 
+    : property.crewScore === primaryScore ? 'Crew' 
+    : 'Trucker';
+  const scoreColor = primaryType === 'RV' ? 'bg-green-500' 
+    : primaryType === 'Crew' ? 'bg-orange-500' 
+    : 'bg-blue-500';
+
+  if (compact) {
+    return (
+      <Link href={`/staging/${property.id}`}>
+        <Card className="hover-elevate cursor-pointer" data-testid={`card-property-${property.id}`}>
+          <CardContent className="p-3 flex gap-3">
+            <div className="w-20 h-20 flex-shrink-0 bg-muted rounded-lg overflow-hidden">
+              {property.thumbnailUrl ? (
+                <img src={property.thumbnailUrl} alt={property.name} className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center">
+                  <TreePine className="h-8 w-8 text-muted-foreground" />
+                </div>
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-start justify-between gap-2">
+                <h3 className="font-medium truncate" data-testid={`text-property-name-${property.id}`}>
+                  {property.name}
+                </h3>
+                {primaryScore > 0 && (
+                  <Badge className={`${scoreColor} text-xs flex-shrink-0`}>{primaryScore}</Badge>
+                )}
+              </div>
+              <p className="text-muted-foreground text-sm truncate">{property.city}</p>
+              <div className="flex items-center gap-2 mt-1 text-muted-foreground">
+                {property.hasPower && <Zap className="h-3 w-3" />}
+                {property.petsAllowed && <Dog className="h-3 w-3" />}
+                <span className="text-xs">{property.totalSpots} spots</span>
+              </div>
+              {property.baseNightlyRate && (
+                <p className="text-green-600 dark:text-green-400 font-medium text-sm mt-1">
+                  ${parseFloat(property.baseNightlyRate).toFixed(0)}/night
+                </p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </Link>
+    );
+  }
+
   return (
     <Link href={`/staging/${property.id}`}>
       <Card className="overflow-hidden hover-elevate cursor-pointer" data-testid={`card-property-${property.id}`}>
@@ -320,6 +369,16 @@ function PropertyCard({ property }: { property: StagingProperty }) {
 export default function StagingSearch() {
   const [filters, setFilters] = useState<SearchFilters>(defaultFilters);
   const [showFilters, setShowFilters] = useState(false);
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+
+  useEffect(() => {
+    const isMobile = window.innerWidth < 1024;
+    setViewMode(isMobile ? 'list' : 'grid');
+  }, []);
+
+  const clearFilters = () => {
+    setFilters(defaultFilters);
+  };
 
   const buildSearchParams = () => {
     const params = new URLSearchParams();
@@ -431,46 +490,65 @@ export default function StagingSearch() {
 
           <div className="flex-1">
             <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
-              <div className="flex items-center gap-4">
-                <Sheet open={showFilters} onOpenChange={setShowFilters}>
-                  <SheetTrigger asChild>
-                    <Button variant="outline" className="lg:hidden" data-testid="button-mobile-filters">
-                      <Filter className="h-4 w-4 mr-2" /> Filters
-                    </Button>
-                  </SheetTrigger>
-                  <SheetContent side="left" className="w-80 overflow-y-auto">
-                    <h2 className="font-semibold mb-4">Filters</h2>
-                    <FilterPanel filters={filters} setFilters={setFilters} />
-                  </SheetContent>
-                </Sheet>
+              <div className="flex items-center gap-4 flex-wrap">
+                <Button variant="outline" className="lg:hidden" onClick={() => setShowFilters(true)} data-testid="button-mobile-filters">
+                  <Filter className="h-4 w-4 mr-2" /> Filters
+                </Button>
                 
                 <p className="text-sm text-muted-foreground" data-testid="text-results-count">
                   {isLoading ? 'Searching...' : `${data?.total || 0} properties found`}
                 </p>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                <div className="lg:hidden flex gap-1">
+                  <Button 
+                    variant={viewMode === 'list' ? 'default' : 'outline'} 
+                    size="icon"
+                    onClick={() => setViewMode('list')}
+                    data-testid="button-view-list"
+                  >
+                    <List className="h-4 w-4" />
+                  </Button>
+                  <Button 
+                    variant={viewMode === 'grid' ? 'default' : 'outline'} 
+                    size="icon"
+                    onClick={() => setViewMode('grid')}
+                    data-testid="button-view-grid"
+                  >
+                    <Grid className="h-4 w-4" />
+                  </Button>
+                </div>
+                
                 <Link href="/staging/map">
                   <Button variant="outline" data-testid="link-map-view">
-                    <Map className="h-4 w-4 mr-2" /> Map View
+                    <Map className="h-4 w-4 mr-2" /> Map
                   </Button>
                 </Link>
                 
                 <Select value={filters.sortBy} onValueChange={(v) => setFilters({ ...filters, sortBy: v, page: 1 })}>
-                <SelectTrigger className="w-48" data-testid="select-sort">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="best_match">Best Match</SelectItem>
-                  <SelectItem value="price_low">Price: Low to High</SelectItem>
-                  <SelectItem value="price_high">Price: High to Low</SelectItem>
-                  <SelectItem value="rating">Highest Rated</SelectItem>
-                  <SelectItem value="crew_score">Crew Score</SelectItem>
-                  <SelectItem value="rv_score">RV Score</SelectItem>
-                </SelectContent>
-              </Select>
+                  <SelectTrigger className="w-36 lg:w-48" data-testid="select-sort">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="best_match">Best Match</SelectItem>
+                    <SelectItem value="price_low">Price: Low to High</SelectItem>
+                    <SelectItem value="price_high">Price: High to Low</SelectItem>
+                    <SelectItem value="rating">Highest Rated</SelectItem>
+                    <SelectItem value="crew_score">Crew Score</SelectItem>
+                    <SelectItem value="rv_score">RV Score</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
+            
+            <MobileFilterSheet
+              isOpen={showFilters}
+              onClose={() => setShowFilters(false)}
+              onClear={clearFilters}
+            >
+              <FilterPanel filters={filters} setFilters={setFilters} />
+            </MobileFilterSheet>
 
             {isLoading ? (
               <div className="flex items-center justify-center py-12">
@@ -483,9 +561,12 @@ export default function StagingSearch() {
               </div>
             ) : (
               <>
-                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                <div className={viewMode === 'grid' 
+                  ? 'grid gap-4 sm:grid-cols-2 lg:grid-cols-3' 
+                  : 'space-y-2'
+                }>
                   {data?.properties?.map((property: StagingProperty) => (
-                    <PropertyCard key={property.id} property={property} />
+                    <PropertyCard key={property.id} property={property} compact={viewMode === 'list'} />
                   ))}
                 </div>
 
