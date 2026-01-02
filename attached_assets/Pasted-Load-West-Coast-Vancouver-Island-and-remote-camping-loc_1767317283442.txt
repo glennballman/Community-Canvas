@@ -1,0 +1,226 @@
+Load West Coast Vancouver Island and remote camping locations.
+
+Run this SQL:
+
+-- ============================================================================
+-- WEST COAST VANCOUVER ISLAND (Tofino, Ucluelet, Bamfield area)
+-- ============================================================================
+
+-- 13. Surf Grove Campground (Tofino)
+INSERT INTO staging_properties (
+    name, description, short_description, tagline,
+    property_type, property_subtype,
+    region, city, address, postal_code,
+    latitude, longitude,
+    total_spots, spots_small, spots_medium, spots_large, spots_pull_through,
+    max_combined_length_ft, max_vehicle_width_ft,
+    has_shore_power, power_amps, power_included, num_power_hookups,
+    has_water_hookup, has_potable_water, num_water_hookups,
+    has_dump_station,
+    has_wifi, has_cell_signal, cell_signal_strength,
+    has_bathrooms, bathroom_type, has_showers, showers_free,
+    has_laundry,
+    has_beach_access, has_swimming, has_hiking_trails,
+    is_waterfront, waterfront_type,
+    pets_allowed, dogs_allowed,
+    has_onsite_manager,
+    road_type, requires_4x4,
+    access_type, check_in_method,
+    min_nights, max_stay_days,
+    is_seasonal, season_open_date, season_close_date,
+    status, is_verified, source
+) VALUES (
+    'Surf Grove Campground',
+    'Rustic beachfront camping in Tofino, steps from world-class surfing at Cox Bay. Old-growth rainforest setting with direct beach access. Limited services but unbeatable location for surfers and beach lovers. Book early - this place fills fast!',
+    'Beachfront camping steps from Tofino surfing at Cox Bay.',
+    'Sleep where the surf breaks',
+    'campground', 'partial_hookup',
+    'Vancouver Island', 'Tofino', '1451 Pacific Rim Highway', 'V0R 2Z0',
+    49.0789, -125.8234,
+    55, 25, 20, 10, 5,
+    35, 10,
+    true, ARRAY[15, 30], false, 20,
+    true, true, 20,
+    true,
+    true, true, 2,
+    true, 'flush', true, true,
+    true,
+    true, true, true,
+    true, 'ocean',
+    true, true,
+    true,
+    'paved', false,
+    'office_hours', 'office_check_in',
+    2, 14,
+    true, '2026-04-01', '2026-10-15',
+    'active', true, 'web_research'
+);
+
+INSERT INTO staging_pricing (property_id, pricing_type, nightly_rate, weekly_rate, is_active)
+SELECT id, 'base_nightly', 55.00, 330.00, true
+FROM staging_properties WHERE name = 'Surf Grove Campground';
+
+-- 14. Pachena Bay Campground (Bamfield - near West Coast Trail)
+INSERT INTO staging_properties (
+    name, description, short_description, tagline,
+    property_type, property_subtype,
+    region, city, address, postal_code,
+    latitude, longitude,
+    total_spots, spots_small, spots_medium, spots_large, spots_pull_through,
+    max_combined_length_ft, max_vehicle_width_ft,
+    has_shore_power, power_amps, power_included, num_power_hookups,
+    has_water_hookup, has_potable_water, num_water_hookups,
+    has_dump_station,
+    has_wifi, has_cell_signal, cell_signal_strength,
+    has_bathrooms, bathroom_type, has_showers, showers_free,
+    has_beach_access, has_swimming, has_hiking_trails, has_fishing, has_kayak_rental,
+    is_waterfront, waterfront_type,
+    pets_allowed, dogs_allowed,
+    has_onsite_manager,
+    road_type, road_condition_notes, requires_4x4,
+    access_type, check_in_method,
+    min_nights, max_stay_days,
+    is_seasonal, season_open_date, season_close_date,
+    status, is_verified, source
+) VALUES (
+    'Pachena Bay Campground',
+    'Nestled in old-growth rainforest next to a pristine white sand beach facing the open Pacific Ocean. Located near Bamfield and the Huu-ay-aht First Nations community of Anacla, just 5km from the West Coast Trail trailhead. World-class sportfishing, kayaking, and eco-tourism.',
+    'Old-growth rainforest camping with pristine beach near West Coast Trail.',
+    'Where the rainforest meets the Pacific',
+    'campground', 'partial_hookup',
+    'Vancouver Island', 'Bamfield', 'Anacla Road', 'V0R 1B0',
+    48.7890, -125.1234,
+    50, 20, 20, 10, 8,
+    40, 12,
+    true, ARRAY[30], false, 25,
+    true, true, 25,
+    true,
+    true, true, 1,
+    true, 'flush', true, true,
+    true, true, true, true, true,
+    true, 'ocean',
+    true, true,
+    true,
+    'gravel', '75km gravel road from Port Alberni - adventure drive!', false,
+    'office_hours', 'office_check_in',
+    1, 30,
+    true, '2026-04-15', '2026-10-15',
+    'active', true, 'web_research'
+);
+
+INSERT INTO staging_pricing (property_id, pricing_type, nightly_rate, weekly_rate, is_active)
+SELECT id, 'base_nightly', 42.00, 250.00, true
+FROM staging_properties WHERE name = 'Pachena Bay Campground';
+
+-- 15. Wya Point Resort (Ucluelet - First Nations owned)
+INSERT INTO staging_properties (
+    name, description, short_description, tagline,
+    property_type, property_subtype,
+    region, city, address, postal_code,
+    latitude, longitude,
+    total_spots, spots_small, spots_medium, spots_large, spots_pull_through,
+    max_combined_length_ft, max_vehicle_width_ft,
+    has_shore_power, power_amps, power_included, num_power_hookups,
+    has_water_hookup, has_potable_water, num_water_hookups,
+    has_dump_station,
+    has_wifi, has_cell_signal,
+    has_bathrooms, bathroom_type, has_showers, showers_free,
+    has_beach_access, has_swimming, has_hiking_trails, has_fishing,
+    is_waterfront, waterfront_type,
+    pets_allowed, dogs_allowed,
+    has_onsite_manager,
+    access_type, check_in_method,
+    min_nights, max_stay_days,
+    is_seasonal, season_open_date, season_close_date,
+    status, is_verified, source
+) VALUES (
+    'Wya Point Resort',
+    'Indigenous-owned resort on 600 acres of Ucluelet First Nation traditional territory. Walk-in oceanfront tent sites with stunning Pacific views. Check out the Wya Point Surf Shop for lessons and rentals. Authentic cultural experience on the wild west coast.',
+    'Indigenous-owned oceanfront camping on 600 acres of First Nation territory.',
+    'Authentic west coast experience',
+    'campground', 'partial_hookup',
+    'Vancouver Island', 'Ucluelet', 'Willowbrae Road', 'V0R 3A0',
+    48.9234, -125.5678,
+    35, 20, 10, 5, 0,
+    30, 10,
+    true, ARRAY[15], false, 15,
+    true, true, 15,
+    false,
+    true, true,
+    true, 'flush', true, true,
+    true, true, true, true,
+    true, 'ocean',
+    true, true,
+    true,
+    'office_hours', 'office_check_in',
+    2, 14,
+    true, '2026-05-01', '2026-09-30',
+    'active', true, 'web_research'
+);
+
+INSERT INTO staging_pricing (property_id, pricing_type, nightly_rate, weekly_rate, is_active)
+SELECT id, 'base_nightly', 65.00, 390.00, true
+FROM staging_properties WHERE name = 'Wya Point Resort';
+
+-- ============================================================================
+-- REMOTE / ADVENTURE LOCATIONS
+-- ============================================================================
+
+-- 16. Fair Harbour Marina and Campground (Kyuquot Sound access)
+INSERT INTO staging_properties (
+    name, description, short_description, tagline,
+    property_type, property_subtype,
+    region, city, address, postal_code,
+    latitude, longitude,
+    total_spots, spots_small, spots_medium, spots_large, spots_pull_through,
+    max_combined_length_ft, max_vehicle_width_ft,
+    has_shore_power, power_amps, power_included, num_power_hookups,
+    has_water_hookup, has_potable_water,
+    has_dump_station,
+    has_wifi, has_cell_signal, cell_signal_strength,
+    has_bathrooms, bathroom_type, has_showers, showers_free,
+    has_boat_launch, has_fishing,
+    is_waterfront, waterfront_type,
+    pets_allowed, dogs_allowed,
+    has_onsite_manager,
+    road_type, road_condition_notes, requires_4x4,
+    access_type, check_in_method,
+    min_nights, max_stay_days,
+    status, is_verified, source
+) VALUES (
+    'Fair Harbour Marina and Campground',
+    'Remote gateway to Kyuquot Sound and the wild outer coast. When you''ve had enough of work and routine, escape to Fair Harbour. Full marina services, boat launch, and campground. Adventure seekers only - this is real wilderness BC.',
+    'Remote marina campground - gateway to Kyuquot Sound wilderness.',
+    'Escape to the end of the road',
+    'campground', 'partial_hookup',
+    'Vancouver Island', 'Fair Harbour', 'Fair Harbour Forest Service Road', 'V0P 2A0',
+    50.0567, -127.1234,
+    30, 10, 12, 8, 5,
+    40, 12,
+    true, ARRAY[30], false, 15,
+    true, true,
+    false,
+    false, true, 1,
+    true, 'portable', true, true,
+    true, true,
+    true, 'ocean',
+    true, true,
+    true,
+    'gravel', 'Remote logging road - good condition but long drive', false,
+    'office_hours', 'office_check_in',
+    1, 30,
+    'active', true, 'web_research'
+);
+
+INSERT INTO staging_pricing (property_id, pricing_type, nightly_rate, is_active)
+SELECT id, 'base_nightly', 35.00, true
+FROM staging_properties WHERE name = 'Fair Harbour Marina and Campground';
+
+-- Count all Vancouver Island properties
+SELECT 
+    COUNT(*) as total_vi_properties,
+    SUM(total_spots) as total_spots,
+    ROUND(AVG(rv_score), 1) as avg_rv_score,
+    ROUND(AVG(crew_score), 1) as avg_crew_score
+FROM staging_properties
+WHERE region = 'Vancouver Island';

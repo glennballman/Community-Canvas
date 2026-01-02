@@ -1,0 +1,324 @@
+Continue loading Vancouver Island RV parks - Central and North Island locations.
+
+Run this SQL:
+
+-- ============================================================================
+-- VANCOUVER ISLAND RV PARKS - CENTRAL (Parksville to Campbell River)
+-- ============================================================================
+
+-- 7. Rathtrevor Beach Provincial Park Area - Park Sands Beach Resort (Parksville)
+INSERT INTO staging_properties (
+    name, description, short_description, tagline,
+    property_type, property_subtype,
+    region, city, address, postal_code,
+    latitude, longitude,
+    total_spots, spots_small, spots_medium, spots_large, spots_pull_through,
+    max_combined_length_ft, max_vehicle_width_ft,
+    has_shore_power, power_amps, power_included, num_power_hookups,
+    has_water_hookup, has_potable_water, num_water_hookups,
+    has_sewer_hookup, num_sewer_hookups, has_dump_station,
+    has_wifi, wifi_included, has_cell_signal, cell_signal_strength,
+    has_bathrooms, bathroom_type, has_showers, showers_free,
+    has_laundry, has_store,
+    has_pool, has_hot_tub, has_playground, has_hiking_trails,
+    has_beach_access, has_swimming,
+    is_waterfront, waterfront_type,
+    pets_allowed, dogs_allowed, has_dog_park,
+    is_fenced, has_onsite_manager,
+    access_type, check_in_method,
+    min_nights, max_stay_days,
+    status, is_verified, source
+) VALUES (
+    'Park Sands Beach Resort',
+    'Beachfront RV resort in Parksville near the famous Rathtrevor Beach. Features 2 kilometres of sandy beaches and direct ocean access. Full-service RV sites, pool, hot tub, and playground. Open year-round with seasonal on-site RV rentals available.',
+    'Beachfront resort near Rathtrevor Beach with pool, hot tub, and full hookups.',
+    'Beach life, perfected',
+    'rv_park', 'full_hookup',
+    'Vancouver Island', 'Parksville', '105 E. Island Highway', 'V9P 2G7',
+    49.3245, -124.3012,
+    85, 20, 35, 25, 30,
+    50, 12,
+    true, ARRAY[30, 50], true, 85,
+    true, true, 85,
+    true, 85, true,
+    true, true, true, 5,
+    true, 'flush', true, true,
+    true, true,
+    true, true, true, true,
+    true, true,
+    true, 'ocean',
+    true, true, true,
+    true, true,
+    'office_hours', 'office_check_in',
+    2, 180,
+    'active', true, 'web_research'
+);
+
+INSERT INTO staging_pricing (property_id, pricing_type, nightly_rate, weekly_rate, monthly_rate, is_active)
+SELECT id, 'base_nightly', 58.00, 350.00, 1250.00, true
+FROM staging_properties WHERE name = 'Park Sands Beach Resort';
+
+-- 8. Qualicum Bay Resort (Qualicum Beach)
+INSERT INTO staging_properties (
+    name, description, short_description, tagline,
+    property_type, property_subtype,
+    region, city, address, postal_code,
+    latitude, longitude,
+    total_spots, spots_medium, spots_large, spots_pull_through,
+    max_combined_length_ft, max_vehicle_width_ft,
+    has_shore_power, power_amps, power_included, num_power_hookups,
+    has_water_hookup, has_potable_water, num_water_hookups,
+    has_sewer_hookup, num_sewer_hookups, has_dump_station,
+    has_wifi, wifi_included, has_cell_signal, has_cable_tv,
+    has_bathrooms, bathroom_type, has_showers, showers_free,
+    has_laundry, has_store, has_ice,
+    has_playground, has_game_room, has_hiking_trails,
+    is_waterfront, waterfront_type,
+    pets_allowed, dogs_allowed,
+    has_onsite_manager,
+    access_type, check_in_method,
+    min_nights, max_stay_days,
+    is_seasonal, season_open_date, season_close_date,
+    status, is_verified, source
+) VALUES (
+    'Qualicum Bay Resort',
+    'Year-round RV resort on Vancouver Island with full hookups and cable connectivity. Features ice cream shop, ATV trails nearby, clubhouse for events, and disc golf. Close to Horne Lake Caves Provincial Park and Qualicum Beach attractions.',
+    'Year-round resort with full hookups, clubhouse, and nearby caves exploration.',
+    'Adventure starts here',
+    'rv_park', 'full_hookup',
+    'Vancouver Island', 'Qualicum Beach', '5970 West Island Highway', 'V9K 2E1',
+    49.4123, -124.6234,
+    70, 30, 30, 25,
+    50, 12,
+    true, ARRAY[30, 50], true, 70,
+    true, true, 70,
+    true, 70, true,
+    true, true, true, true,
+    true, 'flush', true, true,
+    true, true, true,
+    true, true, true,
+    true, 'ocean',
+    true, true,
+    true,
+    'office_hours', 'office_check_in',
+    1, 364,
+    false, NULL, NULL,
+    'active', true, 'web_research'
+);
+
+INSERT INTO staging_pricing (property_id, pricing_type, nightly_rate, weekly_rate, monthly_rate, is_active)
+SELECT id, 'base_nightly', 50.00, 300.00, 1000.00, true
+FROM staging_properties WHERE name = 'Qualicum Bay Resort';
+
+-- 9. Country Maples RV Resort (Chemainus)
+INSERT INTO staging_properties (
+    name, description, short_description, tagline,
+    property_type, property_subtype,
+    region, city, address, postal_code,
+    latitude, longitude,
+    total_spots, spots_medium, spots_large, spots_pull_through,
+    max_combined_length_ft, max_vehicle_width_ft,
+    has_shore_power, power_amps, power_included, num_power_hookups,
+    has_water_hookup, has_potable_water, num_water_hookups,
+    has_sewer_hookup, num_sewer_hookups, has_dump_station,
+    has_wifi, wifi_included, has_cell_signal, has_cable_tv,
+    has_bathrooms, bathroom_type, has_showers, showers_free,
+    has_laundry, has_store,
+    has_pool, has_hot_tub, has_playground, has_game_room,
+    is_waterfront, waterfront_type,
+    pets_allowed, dogs_allowed, has_dog_park,
+    is_fenced, has_onsite_manager,
+    access_type, check_in_method,
+    min_nights, max_stay_days,
+    status, is_verified, source
+) VALUES (
+    'Country Maples RV Resort',
+    'Beautiful RV resort located along the Chemainus River with views of old-growth forest. Features 18-hole mini golf course, pool, hot tub, and is close to the famous Chemainus murals. Friendly staff and well-maintained facilities.',
+    'Riverside resort with mini golf, pool, and old-growth forest views.',
+    'Riverside relaxation',
+    'rv_park', 'full_hookup',
+    'Vancouver Island', 'Chemainus', '9010 Trans-Canada Highway', 'V0R 1K5',
+    48.9234, -123.7345,
+    90, 35, 40, 35,
+    55, 12,
+    true, ARRAY[30, 50], true, 90,
+    true, true, 90,
+    true, 90, true,
+    true, true, true, true,
+    true, 'flush', true, true,
+    true, true,
+    true, true, true, true,
+    true, 'river',
+    true, true, true,
+    true, true,
+    'office_hours', 'office_check_in',
+    1, 364,
+    'active', true, 'web_research'
+);
+
+INSERT INTO staging_pricing (property_id, pricing_type, nightly_rate, weekly_rate, monthly_rate, is_active)
+SELECT id, 'base_nightly', 55.00, 330.00, 1150.00, true
+FROM staging_properties WHERE name = 'Country Maples RV Resort';
+
+-- ============================================================================
+-- VANCOUVER ISLAND RV PARKS - NORTH (Campbell River to Port Hardy)
+-- ============================================================================
+
+-- 10. Alder Bay RV Park & Marina (Port McNeill area)
+INSERT INTO staging_properties (
+    name, description, short_description, tagline,
+    property_type, property_subtype,
+    region, city, address, postal_code,
+    latitude, longitude,
+    total_spots, spots_small, spots_medium, spots_large, spots_pull_through,
+    max_combined_length_ft, max_vehicle_width_ft,
+    has_shore_power, power_amps, power_included, num_power_hookups,
+    has_water_hookup, has_potable_water, num_water_hookups,
+    has_sewer_hookup, num_sewer_hookups, has_dump_station,
+    has_wifi, wifi_included, has_cell_signal,
+    has_bathrooms, bathroom_type, has_showers, showers_free,
+    has_laundry, has_store,
+    has_boat_launch, has_kayak_rental, has_fishing,
+    is_waterfront, waterfront_type,
+    pets_allowed, dogs_allowed,
+    has_onsite_manager,
+    access_type, check_in_method,
+    min_nights, max_stay_days,
+    status, is_verified, source
+) VALUES (
+    'Alder Bay RV Park & Marina',
+    'Civilized camping at the north end of Vancouver Island - perfect for orca whale watching! Over 80 campsites with 12 walk-in tent sites right on the water. Full marina facilities, kayak launching area, and store. Don''t forget to watch for orca whales as you relax!',
+    'North Island RV park with marina and world-class orca whale watching.',
+    'Where orcas come to play',
+    'rv_park', 'full_hookup',
+    'Vancouver Island', 'Port McNeill', 'Alder Bay Road', 'V0N 2R0',
+    50.5456, -127.0234,
+    80, 12, 30, 28, 25,
+    50, 12,
+    true, ARRAY[30, 50], true, 68,
+    true, true, 68,
+    true, 50, true,
+    true, false, true,
+    true, 'flush', true, true,
+    true, true,
+    true, true, true,
+    true, 'ocean',
+    true, true,
+    true,
+    'office_hours', 'office_check_in',
+    1, 180,
+    'active', true, 'web_research'
+);
+
+INSERT INTO staging_pricing (property_id, pricing_type, nightly_rate, weekly_rate, is_active)
+SELECT id, 'base_nightly', 45.00, 270.00, true
+FROM staging_properties WHERE name = 'Alder Bay RV Park & Marina';
+
+-- Peak summer pricing
+INSERT INTO staging_pricing (property_id, pricing_type, nightly_rate, season_name, start_date, end_date, is_active)
+SELECT id, 'seasonal', 63.00, 'Peak Summer', '2026-06-15', '2026-09-15', true
+FROM staging_properties WHERE name = 'Alder Bay RV Park & Marina';
+
+-- 11. Telegraph Cove Marina & RV Park
+INSERT INTO staging_properties (
+    name, description, short_description, tagline,
+    property_type, property_subtype,
+    region, city, address, postal_code,
+    latitude, longitude,
+    total_spots, spots_small, spots_medium, spots_large, spots_pull_through,
+    max_combined_length_ft, max_vehicle_width_ft,
+    has_shore_power, power_amps, power_included, num_power_hookups,
+    has_water_hookup, has_potable_water, num_water_hookups,
+    has_sewer_hookup, has_dump_station,
+    has_wifi, has_cell_signal, cell_signal_strength,
+    has_bathrooms, bathroom_type, has_showers, showers_free,
+    has_laundry, has_store, has_restaurant,
+    has_boat_launch, has_kayak_rental, has_fishing,
+    is_waterfront, waterfront_type,
+    pets_allowed, dogs_allowed,
+    has_onsite_manager,
+    access_type, check_in_method,
+    min_nights, max_stay_days,
+    status, is_verified, source
+) VALUES (
+    'Telegraph Cove Marina & RV Park',
+    'Historic Telegraph Cove offers a unique camping experience on Vancouver Island''s wild north coast. Famous for whale watching, grizzly bear tours, and the Whale Interpretive Centre. Boardwalk village with restaurant and store.',
+    'Historic cove with whale watching, grizzly tours, and boardwalk village.',
+    'Wild BC at its finest',
+    'rv_park', 'partial_hookup',
+    'Vancouver Island', 'Telegraph Cove', 'Telegraph Cove Road', 'V0N 3J0',
+    50.5489, -126.8367,
+    45, 15, 18, 12, 10,
+    45, 12,
+    true, ARRAY[30], true, 30,
+    true, true, 30,
+    false, true,
+    true, true, 2,
+    true, 'flush', true, true,
+    true, true, true,
+    true, true, true,
+    true, 'ocean',
+    true, true,
+    true,
+    'office_hours', 'office_check_in',
+    1, 30,
+    'active', true, 'web_research'
+);
+
+INSERT INTO staging_pricing (property_id, pricing_type, nightly_rate, weekly_rate, is_active)
+SELECT id, 'base_nightly', 48.00, 290.00, true
+FROM staging_properties WHERE name = 'Telegraph Cove Marina & RV Park';
+
+-- 12. Port Hardy RV Resort
+INSERT INTO staging_properties (
+    name, description, short_description, tagline,
+    property_type, property_subtype,
+    region, city, address, postal_code,
+    latitude, longitude,
+    total_spots, spots_medium, spots_large, spots_oversized, spots_pull_through,
+    max_combined_length_ft, max_vehicle_width_ft,
+    has_shore_power, power_amps, power_included, num_power_hookups,
+    has_water_hookup, has_potable_water, num_water_hookups,
+    has_sewer_hookup, num_sewer_hookups, has_dump_station,
+    has_wifi, wifi_included, has_cell_signal,
+    has_bathrooms, bathroom_type, has_showers, showers_free,
+    has_laundry, has_store,
+    has_fishing, has_hiking_trails,
+    pets_allowed, dogs_allowed,
+    is_fenced, has_onsite_manager, is_well_lit,
+    access_type, check_in_method,
+    min_nights, max_stay_days,
+    status, is_verified, source
+) VALUES (
+    'Port Hardy RV Resort',
+    'Located at the northern tip of Vancouver Island, gateway to the Inside Passage ferry and Cape Scott Provincial Park. Full-service sites with pull-through access for large rigs. Perfect base for exploring wild northern Vancouver Island.',
+    'Northern gateway with full hookups and access to Inside Passage ferry.',
+    'Gateway to the wild north',
+    'rv_park', 'full_hookup',
+    'Vancouver Island', 'Port Hardy', '8080 Goodspeed Road', 'V0N 2P0',
+    50.7234, -127.4567,
+    65, 25, 25, 15, 30,
+    60, 14,
+    true, ARRAY[30, 50], true, 65,
+    true, true, 65,
+    true, 65, true,
+    true, true, true,
+    true, 'flush', true, true,
+    true, true,
+    true, true,
+    true, true,
+    true, true, true,
+    '24/7', 'self_check_in',
+    1, 180,
+    'active', true, 'web_research'
+);
+
+INSERT INTO staging_pricing (property_id, pricing_type, nightly_rate, weekly_rate, monthly_rate, is_active)
+SELECT id, 'base_nightly', 52.00, 310.00, 1100.00, true
+FROM staging_properties WHERE name = 'Port Hardy RV Resort';
+
+-- Verify North Island properties
+SELECT name, city, property_type, total_spots, max_combined_length_ft, rv_score
+FROM staging_properties
+WHERE region = 'Vancouver Island'
+ORDER BY rv_score DESC;
