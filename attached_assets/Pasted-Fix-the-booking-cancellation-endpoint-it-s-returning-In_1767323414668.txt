@@ -1,0 +1,194 @@
+Fix the booking cancellation endpoint - it's returning "Invalid booking ID" for valid bookingRefs.
+
+## Step 1: Find and examine the cancel endpoint
+
+Look in server/routes/staging.ts for the cancel booking endpoint. It should look something like:
+
+router.post('/bookings/:id/cancel', ...)
+
+The issue is likely:
+1. The route parameter isn't being parsed correctly
+2. The query isn't matching on booking_ref properly
+3. There's a type mismatch (string vs number)
+
+## Step 2: Fix the cancel endpoint
+
+Replace the existing cancel endpoint with this corrected version:
+```typescript
+// POST /api/staging/bookings/:id/cancel - Cancel a booking
+router.post('/bookings/:id/cancel', async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
+        const { reason } = req.body;
+
+        // First, find the booking (by ID or booking_ref)
+        const findResult = await db.query(`
+            SELECT id, booking_ref, status 
+            FROM staging_bookings 
+            WHERE id::text = $1 OR booking_ref = $1
+        `, [id]);
+
+        if (findResult.rows.length === 0) {
+            return res.status(404).json({ 
+                success: false, 
+                error: 'Booking not found' 
+            });
+        }
+
+        const booking = findResult.rows[0];
+
+        // Check if already cancelled or completed
+        if (booking.status === 'cancelled') {
+            return res.status(400).json({ 
+                success: false, 
+                error: 'Booking is already cancelled' 
+            });
+        }
+
+        if (booking.status === 'completed') {
+            return res.status(400).json({ 
+                success: false, 
+                error: 'Cannot cancel a completed booking' 
+            });
+        }
+
+        if (!['pending', 'confirmed'].includes(booking.status)) {
+            return res.status(400).json({ 
+                success: false, 
+                error: `Cannot cancel booking with status: ${booking.status}` 
+            });
+        }
+
+        // Cancel the booking
+        const updateResult = await db.query(`
+            UPDATE staging_bookings 
+            SET status = 'cancelled', 
+                cancelled_at = NOW(),
+                cancellation_reason = $2,
+                updated_at = NOW()
+            WHERE id = $1
+            RETURNING id, booking_ref, status, cancelled_at
+        `, [booking.id, reason || 'Guest requested cancellation']);
+
+        res.json({
+            success: true,
+            message: 'Booking cancelled successfully',
+            booking: {
+                id: updateResult.rows[0].id,
+                bookingRef: updateResult.rows[0].booking_ref,
+                status: updateResult.rows[0].status,
+                cancelledAt: updateResult.rows[0].cancelled_at
+            }
+        });
+
+    } catch (error: any) {
+        console.error('Cancel booking error:', error);
+        res.status(500).json({ success: false, error: 'Failed to cancel booking' });
+    }
+});
+```
+
+Key fixes:
+1. Cast id to text for comparison: `id::text = $1`
+2. Separate find and update queries for better error handling
+3. Check booking status before attempting cancel
+4. Return proper error messages for different scenarios
+
+## Step 3: Also fix the vehicle length validation error message
+
+Find the booking creation endpoint and update the vehicle length check:
+```typescript
+// Check vehicle length fits
+if (vehicleLengthFt && property.max_combined_length_ft && 
+    vehicleLengthFt > property.max_combined_length_ft) {
+    return res.status(400).json({ 
+        success: false, 
+        error: `Vehicle length (${vehicleLengthFt}ft) exceeds property maximum (${property.max_combined_length_ft}ft)`,
+        code: 'VEHICLE_TOO_LONG'
+    });
+}
+```
+
+## Step 4: Fix non-existent property error message
+
+In the same booking creation endpoint, update:
+```typescript
+// Check property exists and is active
+const propResult = await db.query(
+    'SELECT id, name, max_combined_length_ft, status FROM staging_properties WHERE id = $1',
+    [propertyId]
+);
+
+if (propResult.rows.length === 0) {
+    return res.status(404).json({ 
+        success: false, 
+        error: 'Property not found',
+        code: 'PROPERTY_NOT_FOUND'
+    });
+}
+
+const property = propResult.rows[0];
+
+if (property.status !== 'active') {
+    return res.status(400).json({ 
+        success: false, 
+        error: `Property is not accepting bookings (status: ${property.status})`,
+        code: 'PROPERTY_NOT_ACTIVE'
+    });
+}
+```
+
+## Step 5: Test the fixes
+
+After restarting the server, run these tests:
+```bash
+# Create a test booking
+curl -X POST http://localhost:5000/api/staging/bookings \
+  -H "Content-Type: application/json" \
+  -d '{
+    "propertyId": 1,
+    "guestName": "Cancel Test",
+    "guestEmail": "cancel@test.com",
+    "checkInDate": "2026-03-15",
+    "checkOutDate": "2026-03-17"
+  }'
+# Note the bookingRef
+
+# Test cancel with bookingRef
+curl -X POST http://localhost:5000/api/staging/bookings/[BOOKING_REF]/cancel \
+  -H "Content-Type: application/json" \
+  -d '{"reason": "QA Test"}'
+# EXPECTED: success, status=cancelled
+
+# Test double cancel
+curl -X POST http://localhost:5000/api/staging/bookings/[SAME_REF]/cancel \
+  -H "Content-Type: application/json"
+# EXPECTED: 400 error "already cancelled"
+
+# Test vehicle too long
+curl -X POST http://localhost:5000/api/staging/bookings \
+  -H "Content-Type: application/json" \
+  -d '{
+    "propertyId": 1,
+    "guestName": "Big Rig",
+    "guestEmail": "big@test.com",
+    "checkInDate": "2026-03-20",
+    "checkOutDate": "2026-03-22",
+    "vehicleLengthFt": 999
+  }'
+# EXPECTED: 400 error with vehicle length message
+
+# Test non-existent property
+curl -X POST http://localhost:5000/api/staging/bookings \
+  -H "Content-Type: application/json" \
+  -d '{
+    "propertyId": 99999,
+    "guestName": "Test",
+    "guestEmail": "test@test.com",
+    "checkInDate": "2026-03-20",
+    "checkOutDate": "2026-03-22"
+  }'
+# EXPECTED: 404 "Property not found"
+```
+
+Report results of all tests.

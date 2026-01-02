@@ -434,7 +434,33 @@ router.post('/bookings', async (req: Request, res: Response) => {
       return res.status(400).json({ success: false, error: 'Check-out must be after check-in' });
     }
 
-    // Check availability first
+    // Check property exists and is active
+    const property = await stagingStorage.getPropertyById(propertyId);
+    if (!property) {
+      return res.status(404).json({ 
+        success: false, 
+        error: 'Property not found',
+        code: 'PROPERTY_NOT_FOUND'
+      });
+    }
+    if (property.status !== 'active') {
+      return res.status(400).json({ 
+        success: false, 
+        error: `Property is not accepting bookings (status: ${property.status})`,
+        code: 'PROPERTY_NOT_ACTIVE'
+      });
+    }
+
+    // Check vehicle length fits before availability check
+    if (vehicleLengthFt && property.maxCombinedLengthFt && vehicleLengthFt > property.maxCombinedLengthFt) {
+      return res.status(400).json({ 
+        success: false, 
+        error: `Vehicle length (${vehicleLengthFt}ft) exceeds property maximum (${property.maxCombinedLengthFt}ft)`,
+        code: 'VEHICLE_TOO_LONG'
+      });
+    }
+
+    // Check availability
     const availability = await stagingStorage.checkAvailability(propertyId, checkInDate, checkOutDate, vehicleLengthFt);
     if (!availability.isAvailable) {
       return res.status(400).json({ 
@@ -459,9 +485,7 @@ router.post('/bookings', async (req: Request, res: Response) => {
     const taxes = Math.round(pricing.subtotal * 0.12 * 100) / 100;
     const totalCost = pricing.subtotal + serviceFee + taxes;
 
-    // Get property name for response
-    const property = await stagingStorage.getPropertyById(propertyId);
-
+    // property already fetched above for validation
     const booking = await stagingStorage.createBooking({
       propertyId,
       spotId,
@@ -535,23 +559,46 @@ router.put('/bookings/:id', async (req: Request, res: Response) => {
   }
 });
 
-// POST /api/staging/bookings/:id/cancel - Cancel booking
+// POST /api/staging/bookings/:id/cancel - Cancel booking (accepts ID or bookingRef)
 router.post('/bookings/:id/cancel', async (req: Request, res: Response) => {
   try {
-    const id = parseInt(req.params.id);
-    if (isNaN(id)) {
-      return res.status(400).json({ error: 'Invalid booking ID' });
+    const { id } = req.params;
+    const { reason } = req.body;
+
+    // Find booking by ID or booking_ref
+    const booking = await stagingStorage.findBookingByIdOrRef(id);
+    
+    if (!booking) {
+      return res.status(404).json({ success: false, error: 'Booking not found' });
     }
 
-    const { reason } = req.body;
-    const booking = await stagingStorage.cancelBooking(id, reason);
-    if (!booking) {
-      return res.status(404).json({ error: 'Booking not found' });
+    // Check if already cancelled
+    if (booking.status === 'cancelled') {
+      return res.status(400).json({ success: false, error: 'Booking is already cancelled' });
     }
-    res.json(booking);
+
+    // Check if completed
+    if (booking.status === 'completed') {
+      return res.status(400).json({ success: false, error: 'Cannot cancel a completed booking' });
+    }
+
+    // Only allow cancelling pending or confirmed bookings
+    if (!['pending', 'confirmed'].includes(booking.status)) {
+      return res.status(400).json({ 
+        success: false, 
+        error: `Cannot cancel booking with status: ${booking.status}` 
+      });
+    }
+
+    const cancelled = await stagingStorage.cancelBooking(booking.id, reason || 'Guest requested cancellation');
+    res.json({
+      success: true,
+      message: 'Booking cancelled successfully',
+      booking: cancelled
+    });
   } catch (error) {
     console.error('[Staging Cancel Booking] Error:', error);
-    res.status(500).json({ error: 'Failed to cancel booking' });
+    res.status(500).json({ success: false, error: 'Failed to cancel booking' });
   }
 });
 

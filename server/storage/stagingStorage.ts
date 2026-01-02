@@ -626,6 +626,20 @@ export async function updateBooking(id: number, data: Partial<StagingBooking>): 
   return snakeToCamel(result.rows[0] as Record<string, any>) as StagingBooking;
 }
 
+export async function findBookingByIdOrRef(idOrRef: string): Promise<StagingBooking | null> {
+  const numericId = parseInt(idOrRef, 10);
+  
+  const result = await db.execute(sql`
+    SELECT * FROM staging_bookings 
+    WHERE id = ${isNaN(numericId) ? -1 : numericId} 
+       OR booking_ref = ${idOrRef}
+    LIMIT 1
+  `);
+  
+  if (result.rows.length === 0) return null;
+  return snakeToCamel(result.rows[0] as Record<string, any>) as StagingBooking;
+}
+
 export async function cancelBooking(id: number, reason?: string): Promise<StagingBooking | null> {
   const result = await db.execute(sql`
     UPDATE staging_bookings 
