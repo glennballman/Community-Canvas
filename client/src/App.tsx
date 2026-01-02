@@ -19,6 +19,7 @@ import AdminLogs from "@/pages/AdminLogs";
 import AdminSettings from "@/pages/AdminSettings";
 import DataImport from "@/pages/admin/DataImport";
 import CivOSDashboard from "@/pages/admin/CivOSDashboard";
+import UsersManagement from "@/pages/admin/UsersManagement";
 import Documentation from "@/pages/Documentation";
 import TripTimelineDemo from "@/pages/TripTimelineDemo";
 import Accommodations from "@/pages/Accommodations";
@@ -62,6 +63,7 @@ function AppShellRoutes() {
         <Route path="/admin/civos" component={CivOSDashboard} />
         <Route path="/admin/docs" component={Documentation} />
         <Route path="/admin/accommodations" component={Accommodations} />
+        <Route path="/admin/users" component={UsersManagement} />
         
         {/* Navigation hub */}
         <Route path="/hub" component={NavigationHub} />
