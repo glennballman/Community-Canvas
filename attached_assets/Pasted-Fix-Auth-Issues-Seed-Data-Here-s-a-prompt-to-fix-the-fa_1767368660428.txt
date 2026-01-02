@@ -1,0 +1,213 @@
+Fix: Auth Issues + Seed Data
+Here's a prompt to fix the failing tests and continue with remaining QA:
+Fix authentication issues found in QA testing.
+
+## Issue 1: Missing Seed Users (E2-1, E2-5)
+
+Run this SQL to create the test users:
+```sql
+-- Create admin user (password: 'password')
+-- bcrypt hash for 'password' with 12 rounds
+INSERT INTO staging_users (
+    email, 
+    password_hash, 
+    first_name, 
+    last_name, 
+    user_type, 
+    email_verified,
+    status
+) VALUES (
+    'admin@example.com',
+    '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/X4S1J1q5HhX9q5/Aq',
+    'Admin',
+    'User',
+    'admin',
+    true,
+    'active'
+) ON CONFLICT (email) DO UPDATE SET 
+    password_hash = EXCLUDED.password_hash,
+    user_type = 'admin',
+    status = 'active';
+
+-- Create host user (password: 'password')
+INSERT INTO staging_users (
+    email, 
+    password_hash, 
+    first_name, 
+    last_name, 
+    user_type, 
+    email_verified,
+    status,
+    company_name
+) VALUES (
+    'host@example.com',
+    '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/X4S1J1q5HhX9q5/Aq',
+    'Demo',
+    'Host',
+    'host',
+    true,
+    'active',
+    'Demo Properties LLC'
+) ON CONFLICT (email) DO UPDATE SET 
+    password_hash = EXCLUDED.password_hash,
+    user_type = 'host',
+    status = 'active';
+
+-- Link host to first 3 properties
+INSERT INTO staging_property_hosts (property_id, user_id, role, is_primary_contact, can_edit_property, can_manage_bookings, can_manage_calendar, can_view_revenue)
+SELECT 
+    p.id,
+    (SELECT id FROM staging_users WHERE email = 'host@example.com'),
+    'owner',
+    true,
+    true,
+    true,
+    true,
+    true
+FROM staging_properties p
+WHERE p.id <= 3
+ON CONFLICT (property_id, user_id) DO NOTHING;
+
+-- Verify users created
+SELECT id, email, user_type, status FROM staging_users WHERE email IN ('admin@example.com', 'host@example.com');
+
+-- Verify host linked to properties
+SELECT u.email, p.name as property_name, ph.role
+FROM staging_property_hosts ph
+JOIN staging_users u ON u.id = ph.user_id
+JOIN staging_properties p ON p.id = ph.property_id
+WHERE u.email = 'host@example.com';
+```
+
+## Issue 2: Token Refresh (E3-4)
+
+The token refresh is likely failing due to one of these reasons. Check and fix in server/routes/auth.ts:
+```typescript
+// POST /api/auth/refresh - Refresh access token
+router.post('/refresh', async (req: Request, res: Response) => {
+    try {
+        const { refreshToken } = req.body;
+
+        if (!refreshToken) {
+            return res.status(400).json({ success: false, error: 'Refresh token required' });
+        }
+
+        // Verify the JWT first
+        let decoded: any;
+        try {
+            decoded = jwt.verify(refreshToken, JWT_SECRET);
+        } catch (err: any) {
+            console.error('JWT verify error:', err.message);
+            return res.status(403).json({ success: false, error: 'Invalid refresh token' });
+        }
+
+        // Check token exists in database and is not revoked
+        const sessionResult = await db.query(`
+            SELECT s.id, s.user_id, s.expires_at, s.revoked_at,
+                   u.email, u.user_type, u.status
+            FROM staging_sessions s
+            JOIN staging_users u ON u.id = s.user_id
+            WHERE s.refresh_token = $1
+        `, [refreshToken]);
+
+        if (sessionResult.rows.length === 0) {
+            console.error('Session not found in DB');
+            return res.status(403).json({ success: false, error: 'Session not found' });
+        }
+
+        const session = sessionResult.rows[0];
+
+        // Check if revoked
+        if (session.revoked_at) {
+            return res.status(403).json({ success: false, error: 'Session revoked' });
+        }
+
+        // Check if expired
+        if (new Date(session.expires_at) < new Date()) {
+            return res.status(403).json({ success: false, error: 'Session expired' });
+        }
+
+        // Check user status
+        if (session.status !== 'active') {
+            return res.status(403).json({ success: false, error: 'Account is suspended' });
+        }
+
+        // Generate new tokens
+        const { accessToken, refreshToken: newRefreshToken } = generateTokens(
+            session.user_id, 
+            session.email, 
+            session.user_type
+        );
+
+        // Revoke old session and create new one
+        await db.query('UPDATE staging_sessions SET revoked_at = NOW() WHERE id = $1', [session.id]);
+        
+        const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+        await db.query(`
+            INSERT INTO staging_sessions (user_id, refresh_token, expires_at)
+            VALUES ($1, $2, $3)
+        `, [session.user_id, newRefreshToken, expiresAt]);
+
+        res.json({
+            success: true,
+            accessToken,
+            refreshToken: newRefreshToken
+        });
+
+    } catch (error: any) {
+        console.error('Refresh error:', error);
+        res.status(500).json({ success: false, error: 'Token refresh failed' });
+    }
+});
+```
+
+## Issue 3: Email Validation (Optional Enhancement)
+
+Add basic email validation to register endpoint:
+```typescript
+// At the top of the register handler, add:
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+if (!emailRegex.test(email)) {
+    return res.status(400).json({ success: false, error: 'Invalid email format' });
+}
+```
+
+## Verify Fixes
+
+After applying fixes, run these quick tests:
+```bash
+echo "=== VERIFY FIXES ==="
+
+# Test admin login
+echo "1. Admin login:"
+curl -s -X POST http://localhost:5000/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email": "admin@example.com", "password": "password"}' | jq '{success, userType: .user.userType}'
+
+# Test host login
+echo "2. Host login:"
+HOST_LOGIN=$(curl -s -X POST http://localhost:5000/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email": "host@example.com", "password": "password"}')
+echo $HOST_LOGIN | jq '{success, userType: .user.userType}'
+
+# Test token refresh
+echo "3. Token refresh:"
+REFRESH_TOKEN=$(echo $HOST_LOGIN | jq -r '.refreshToken')
+curl -s -X POST http://localhost:5000/api/auth/refresh \
+  -H "Content-Type: application/json" \
+  -d "{\"refreshToken\": \"$REFRESH_TOKEN\"}" | jq '{success, hasNewToken: (.accessToken != null)}'
+
+# Test host has properties
+echo "4. Host properties:"
+HOST_TOKEN=$(echo $HOST_LOGIN | jq -r '.accessToken')
+curl -s http://localhost:5000/api/host/properties \
+  -H "Authorization: Bearer $HOST_TOKEN" | jq '{success, propertyCount: (.properties | length)}'
+
+echo ""
+echo "All 4 should show success: true"
+```
+
+Report results of verification tests, then continue with remaining QA batches (F complete, G, H, I).
+
+Once you've applied the fixes and verified, continue running QA Batches F (complete), G, H, and I and report back with the full results!
