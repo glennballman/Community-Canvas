@@ -1,0 +1,131 @@
+RUTHLESS QA - BATCH 1: Data Integrity for New Regions
+
+Run these SQL queries and report ANY failures:
+
+-- ============================================================================
+-- TEST 1: Property counts by region (should match expected)
+-- ============================================================================
+SELECT region, COUNT(*) as count, SUM(total_spots) as spots
+FROM staging_properties
+WHERE status = 'active'
+GROUP BY region
+ORDER BY count DESC;
+
+-- EXPECTED: 8 regions, ~40 properties, ~2500+ spots
+-- FAIL if: any region has 0 properties or NULL spots
+
+-- ============================================================================
+-- TEST 2: Orphaned pricing records
+-- ============================================================================
+SELECT pr.id, pr.property_id, pr.pricing_type
+FROM staging_pricing pr
+LEFT JOIN staging_properties sp ON sp.id = pr.property_id
+WHERE sp.id IS NULL;
+
+-- EXPECTED: 0 rows
+-- FAIL if: any orphaned pricing exists
+
+-- ============================================================================
+-- TEST 3: Properties without pricing
+-- ============================================================================
+SELECT sp.id, sp.name, sp.region
+FROM staging_properties sp
+LEFT JOIN staging_pricing pr ON pr.property_id = sp.id AND pr.pricing_type = 'base_nightly'
+WHERE pr.id IS NULL AND sp.status = 'active';
+
+-- EXPECTED: 0 rows (every active property needs base pricing)
+-- FAIL if: any property missing pricing
+
+-- ============================================================================
+-- TEST 4: Invalid coordinates (outside BC)
+-- ============================================================================
+SELECT id, name, latitude, longitude
+FROM staging_properties
+WHERE latitude < 48 OR latitude > 60
+   OR longitude < -140 OR longitude > -114;
+
+-- EXPECTED: 0 rows (all properties should be in BC)
+-- FAIL if: any coordinates outside BC bounds
+
+-- ============================================================================
+-- TEST 5: Score sanity check
+-- ============================================================================
+SELECT id, name, rv_score, crew_score, trucker_score, equestrian_score
+FROM staging_properties
+WHERE rv_score < 0 OR rv_score > 100
+   OR crew_score < 0 OR crew_score > 100
+   OR trucker_score < 0 OR trucker_score > 100
+   OR equestrian_score < 0 OR equestrian_score > 100;
+
+-- EXPECTED: 0 rows
+-- FAIL if: any score outside 0-100 range
+
+-- ============================================================================
+-- TEST 6: Duplicate properties
+-- ============================================================================
+SELECT name, region, COUNT(*) as dupes
+FROM staging_properties
+GROUP BY name, region
+HAVING COUNT(*) > 1;
+
+-- EXPECTED: 0 rows
+-- FAIL if: duplicate property names in same region
+
+-- ============================================================================
+-- TEST 7: Service provider orphans
+-- ============================================================================
+SELECT ssp.id, ssp.business_name, ssp.property_id
+FROM staging_service_providers ssp
+LEFT JOIN staging_properties sp ON sp.id = ssp.property_id
+WHERE sp.id IS NULL;
+
+-- EXPECTED: 0 rows
+-- FAIL if: orphaned service providers exist
+
+-- ============================================================================
+-- TEST 8: New region specific checks
+-- ============================================================================
+
+-- Okanagan should have wineries/lakes
+SELECT COUNT(*) as okanagan_waterfront
+FROM staging_properties
+WHERE region = 'Okanagan' AND is_waterfront = true;
+-- EXPECTED: >= 3
+
+-- Kootenays should have hot springs property
+SELECT COUNT(*) as kootenay_hotsprings
+FROM staging_properties
+WHERE region = 'Kootenays' AND name ILIKE '%hot springs%';
+-- EXPECTED: >= 1
+
+-- Sea-to-Sky should have Whistler
+SELECT COUNT(*) as whistler_exists
+FROM staging_properties
+WHERE city = 'Whistler';
+-- EXPECTED: >= 1
+
+-- ============================================================================
+-- TEST 9: Pricing sanity
+-- ============================================================================
+SELECT sp.name, pr.nightly_rate
+FROM staging_properties sp
+JOIN staging_pricing pr ON pr.property_id = sp.id AND pr.pricing_type = 'base_nightly'
+WHERE pr.nightly_rate <= 0 OR pr.nightly_rate > 500;
+
+-- EXPECTED: 0 rows (no free or absurdly expensive properties)
+-- FAIL if: pricing outside reasonable range
+
+-- ============================================================================
+-- TEST 10: Capacity sanity
+-- ============================================================================
+SELECT id, name, total_spots, max_combined_length_ft
+FROM staging_properties
+WHERE total_spots <= 0 
+   OR total_spots > 500
+   OR max_combined_length_ft < 20
+   OR max_combined_length_ft > 150;
+
+-- EXPECTED: 0 rows
+-- FAIL if: unreasonable capacity values
+
+Report results for all 10 tests. Mark each PASS or FAIL.
