@@ -24,6 +24,12 @@ import HostLogin from "@/pages/host/Login";
 import HostSignup from "@/pages/host/Signup";
 import ForgotPassword from "@/pages/host/ForgotPassword";
 import PropertyManage from "@/pages/host/PropertyManage";
+import HostDashboard from "@/pages/host/Dashboard";
+import HostProperties from "@/pages/host/Properties";
+import HostBookings from "@/pages/host/Bookings";
+import HostSettings from "@/pages/host/Settings";
+import HostPayouts from "@/pages/host/Payouts";
+import AddProperty from "@/pages/host/AddProperty";
 import StagingSearch from "@/pages/staging/Search";
 import StagingPropertyDetail from "@/pages/staging/PropertyDetail";
 import StagingBook from "@/pages/staging/Book";
@@ -64,7 +70,15 @@ function Router() {
       <Route path="/host/login" component={HostLogin} />
       <Route path="/host/signup" component={HostSignup} />
       <Route path="/host/forgot-password" component={ForgotPassword} />
+      <Route path="/host/dashboard" component={HostDashboard} />
+      <Route path="/host/properties/add" component={AddProperty} />
+      <Route path="/host/properties/:id/calendar" component={PropertyManage} />
+      <Route path="/host/properties/:id/bookings" component={PropertyManage} />
       <Route path="/host/properties/:id" component={PropertyManage} />
+      <Route path="/host/properties" component={HostProperties} />
+      <Route path="/host/bookings" component={HostBookings} />
+      <Route path="/host/settings" component={HostSettings} />
+      <Route path="/host/payouts" component={HostPayouts} />
       <Route path="/staging" component={StagingSearch} />
       <Route path="/find-staging" component={StagingSearch} />
       <Route path="/staging/bookings" component={MyBookings} />
