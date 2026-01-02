@@ -24,6 +24,7 @@ import importRouter from "./routes/import";
 import civosRouter from "./routes/civos";
 import foundationRouter from "./routes/foundation";
 import vehiclesRouter from "./routes/vehicles";
+import serviceRunsRouter from "./routes/serviceRuns";
 import { JobberService, getJobberAuthUrl, exchangeCodeForToken } from "./services/jobber";
 import { CompanyCamService, getPhotoUrl } from "./services/companycam";
 
@@ -73,6 +74,12 @@ export async function registerRoutes(
 
   // Register vehicles/trailers/fleets routes
   app.use('/api/vehicles', vehiclesRouter);
+
+  // Set pool on app for routes that need it
+  app.set('db', pool);
+
+  // Register Service Runs API routes
+  app.use('/api/service-runs', serviceRunsRouter);
 
   // Jobber OAuth flow - Start authorization
   app.get('/api/v1/integrations/jobber/auth', (req, res) => {
