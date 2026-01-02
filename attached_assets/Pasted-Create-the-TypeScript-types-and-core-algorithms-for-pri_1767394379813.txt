@@ -1,0 +1,1128 @@
+Create the TypeScript types and core algorithms for pricing calculation and bundle compatibility scoring.
+
+## Create file: server/types/serviceRuns.ts
+```typescript
+// =====================================================================
+// SERVICE RUNS - TYPE DEFINITIONS
+// =====================================================================
+
+// Enums matching database
+export type NoiseLevel = 'low' | 'medium' | 'high';
+export type DisruptionLevel = 'low' | 'medium' | 'high';
+export type RiskLevel = 'low' | 'medium' | 'high';
+export type PricingModelType = 'flat' | 'per_hour' | 'per_sqft' | 'per_unit' | 'hybrid';
+export type JobContext = 'residential' | 'commercial' | 'community';
+export type DependencyType = 'requires' | 'blocks';
+
+export type ServiceRunStatus = 
+  | 'collecting'      // Accepting signups
+  | 'bidding'         // Contractors bidding
+  | 'bid_review'      // Reviewing bids
+  | 'confirmed'       // Bid accepted
+  | 'scheduled'       // Dates locked
+  | 'in_progress'     // Work underway
+  | 'completed'       // Done
+  | 'cancelled';      // Cancelled
+
+export type SlotStatus =
+  | 'pending'         // Awaiting run confirmation
+  | 'confirmed'       // Run confirmed
+  | 'scheduled'       // Date assigned
+  | 'in_progress'     // Work being done
+  | 'completed'       // Finished
+  | 'cancelled'       // Customer cancelled
+  | 'opted_out';      // Customer opted out after bid
+
+export type BidStatus =
+  | 'submitted'
+  | 'under_review'
+  | 'shortlisted'
+  | 'accepted'
+  | 'rejected'
+  | 'withdrawn';
+
+// =====================================================================
+// CORE ENTITIES
+// =====================================================================
+
+export interface ServiceCategory {
+  id: string;
+  parentId: string | null;
+  name: string;
+  slug: string;
+  description: string;
+  icon: string;
+  sortOrder: number;
+  isActive: boolean;
+}
+
+export interface Service {
+  id: string;
+  categoryId: string;
+  name: string;
+  slug: string;
+  description: string;
+  
+  typicalDurationMinHours: number;
+  typicalDurationMaxHours: number;
+  
+  crewMin: number;
+  crewTypical: number;
+  crewMax: number;
+  
+  noise: NoiseLevel;
+  disruption: DisruptionLevel;
+  failureRiskIfDelayed: RiskLevel;
+  
+  canBeEmergency: boolean;
+  requiresOwnerPresent: boolean;
+  canBeDoneVacant: boolean;
+  weatherDependent: boolean;
+  
+  defaultContext: JobContext;
+  revisitCycle: string;
+  
+  isActive: boolean;
+}
+
+export interface ServiceWithDetails extends Service {
+  category: ServiceCategory;
+  seasonality: ServiceSeasonality[];
+  pricing: ServicePricing | null;
+  certifications: Certification[];
+  accessRequirements: AccessRequirement[];
+  mobilizationClass: MobilizationClass | null;
+}
+
+export interface ClimateRegion {
+  id: string;
+  name: string;
+  koppenCodes: string[];
+  description: string;
+  typicalFreezeWeek: number | null;
+  typicalThawWeek: number | null;
+}
+
+export interface ServiceSeasonality {
+  serviceId: string;
+  climateRegionId: string;
+  climateRegionName?: string;
+  earliestWeek: number;
+  latestWeek: number;
+  hardStop: boolean;
+  rainSensitive: boolean;
+  snowSensitive: boolean;
+  windSensitive: boolean;
+  temperatureMinC: number | null;
+  temperatureMaxC: number | null;
+  notes: string;
+}
+
+export interface AccessRequirement {
+  id: string;
+  name: string;
+  description: string;
+  baseCostMultiplier: number;
+}
+
+export interface MobilizationClass {
+  id: string;
+  name: string;
+  description: string;
+  baseCost: number;
+}
+
+export interface Certification {
+  id: string;
+  name: string;
+  authority: string;
+  jurisdiction: string;
+  tradeCode: string;
+  description: string;
+  isRequired?: boolean;
+}
+
+export interface ServicePricing {
+  serviceId: string;
+  pricingModelId: string;
+  pricingModel?: PricingModelType;
+  basePrice: number;
+  unitDescriptor: string;
+  remoteMultiplier: number;
+  accessDifficultyMultiplier: number;
+  seasonalMultiplier: number;
+  mobilizationSurcharge: number;
+  minimumCharge: number;
+  notes: string;
+}
+
+// =====================================================================
+// BUNDLES
+// =====================================================================
+
+export interface Bundle {
+  id: string;
+  name: string;
+  slug: string;
+  description: string;
+  context: JobContext;
+  isSubscription: boolean;
+  billingPeriod: string;
+  isActive: boolean;
+}
+
+export interface BundleItem {
+  bundleId: string;
+  serviceId: string;
+  service?: Service;
+  quantity: number;
+  sortOrder: number;
+}
+
+export interface BundlePricing {
+  bundleId: string;
+  basePrice: number;
+  discountFactor: number;
+  mobilizationSurcharge: number;
+  remoteMultiplier: number;
+  notes: string;
+}
+
+export interface BundleSeasonality {
+  bundleId: string;
+  climateRegionId: string;
+  climateRegionName?: string;
+  earliestWeek: number;
+  latestWeek: number;
+  hardStop: boolean;
+  notes: string;
+}
+
+export interface BundleWithDetails extends Bundle {
+  items: BundleItem[];
+  pricing: BundlePricing | null;
+  seasonality: BundleSeasonality[];
+}
+
+// =====================================================================
+// COMMUNITIES
+// =====================================================================
+
+export interface Community {
+  id: string;
+  tenantId: string | null;
+  name: string;
+  region: string;
+  country: string;
+  latitude: number | null;
+  longitude: number | null;
+  climateRegionId: string;
+  climateRegion?: ClimateRegion;
+  defaultAccessRequirementId: string | null;
+  remoteMultiplier: number;
+  typicalFreezeWeek: number | null;
+  typicalThawWeek: number | null;
+  notes: string;
+}
+
+// =====================================================================
+// SERVICE RUNS
+// =====================================================================
+
+export interface ServiceRun {
+  id: string;
+  title: string;
+  slug: string;
+  description: string;
+  
+  serviceCategoryId: string;
+  
+  communityName: string;
+  regionName: string;
+  serviceAreaDescription: string;
+  
+  initiatorType: 'platform' | 'resident' | 'contractor';
+  initiatorUserId: string | null;
+  initiatorTenantId: string | null;
+  
+  targetStartDate: string | null;
+  targetEndDate: string | null;
+  flexibleDates: boolean;
+  
+  minSlots: number;
+  maxSlots: number;
+  currentSlots: number;
+  
+  status: ServiceRunStatus;
+  
+  biddingOpensAt: string | null;
+  biddingClosesAt: string | null;
+  winningBidId: string | null;
+  
+  tripDetails: TripDetails | null;
+  
+  estimatedMobilizationCost: number | null;
+  mobilizationCostPerSlot: number | null;
+  
+  allowResidentExclusions: boolean;
+  requirePhotos: boolean;
+  requireDeposit: boolean;
+  depositAmount: number | null;
+  cancellationPolicy: string;
+  
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ServiceSlot {
+  id: string;
+  runId: string;
+  
+  customerUserId: string | null;
+  customerName: string;
+  customerEmail: string;
+  customerPhone: string;
+  
+  propertyAddress: string;
+  propertyLat: number | null;
+  propertyLng: number | null;
+  propertyAccessNotes: string;
+  
+  serviceDescription: string;
+  specialRequirements: string;
+  
+  photos: SlotPhoto[];
+  measurements: Record<string, any>;
+  
+  excludedContractors: ContractorExclusion[];
+  preferredContractors: ContractorPreference[];
+  
+  preferredDates: PreferredDate[];
+  blackoutDates: string[];
+  requiresOwnerPresent: boolean;
+  
+  status: SlotStatus;
+  optOutReason: string | null;
+  optOutAt: string | null;
+  
+  estimatedCost: number | null;
+  finalCost: number | null;
+  mobilizationShare: number | null;
+  depositPaid: number | null;
+  depositPaidAt: string | null;
+  
+  scheduledDate: string | null;
+  scheduledTimeStart: string | null;
+  scheduledTimeEnd: string | null;
+  completedAt: string | null;
+  completionNotes: string;
+  customerRating: number | null;
+  customerReview: string;
+  
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SlotPhoto {
+  url: string;
+  description: string;
+  uploadedAt: string;
+}
+
+export interface ContractorExclusion {
+  contractorId: string;
+  reason: string;
+}
+
+export interface ContractorPreference {
+  contractorId: string;
+  reason: string;
+}
+
+export interface PreferredDate {
+  date: string;
+  timeOfDay: 'morning' | 'afternoon' | 'anytime';
+}
+
+// =====================================================================
+// CONTRACTORS & BIDS
+// =====================================================================
+
+export interface Contractor {
+  id: string;
+  tenantId: string | null;
+  businessName: string;
+  contactName: string;
+  email: string;
+  phone: string;
+  website: string;
+  
+  baseCity: string;
+  baseProvince: string;
+  serviceRadiusKm: number;
+  
+  servicesOffered: string[];
+  certifications: ContractorCertification[];
+  insuranceInfo: InsuranceInfo | null;
+  wcbNumber: string;
+  
+  crewSize: number;
+  vehiclesAvailable: number;
+  
+  totalJobsCompleted: number;
+  averageRating: number;
+  totalReviews: number;
+  
+  status: 'active' | 'suspended' | 'pending_verification';
+  verifiedAt: string | null;
+  verifiedBy: string | null;
+}
+
+export interface ContractorCertification {
+  name: string;
+  number: string;
+  expiry: string;
+}
+
+export interface InsuranceInfo {
+  provider: string;
+  policyNumber: string;
+  coverage: string;
+  expiry: string;
+}
+
+export interface ServiceRunBid {
+  id: string;
+  runId: string;
+  contractorId: string;
+  contractor?: Contractor;
+  
+  bidType: 'per_slot' | 'bundle' | 'hybrid';
+  
+  mobilizationCost: number;
+  perSlotCostLow: number;
+  perSlotCostHigh: number;
+  bundleTotalCost: number | null;
+  
+  includesMaterials: boolean;
+  materialsEstimate: number | null;
+  includesDisposal: boolean;
+  disposalEstimate: number | null;
+  
+  proposedStartDate: string | null;
+  proposedEndDate: string | null;
+  estimatedDaysOnSite: number;
+  
+  crewSize: number;
+  crewNeedsAccommodation: boolean;
+  accommodationPreferences: string;
+  
+  bidNotes: string;
+  termsAndConditions: string;
+  
+  status: BidStatus;
+  submittedAt: string;
+  reviewedAt: string | null;
+  reviewedBy: string | null;
+  decisionNotes: string;
+}
+
+// =====================================================================
+// TRIP PLANNING (Magic Button Output)
+// =====================================================================
+
+export interface TripDetails {
+  ferryOutbound: FerryBooking | null;
+  ferryReturn: FerryBooking | null;
+  ferryTotalCost: number;
+  accommodations: AccommodationBooking[];
+  accommodationTotalCost: number;
+  dailySchedule: DailySchedule[];
+  routeOptimizationNotes: string;
+}
+
+export interface FerryBooking {
+  route: string;
+  date: string;
+  time: string;
+  confirmation: string;
+  cost: number;
+  vehicleType: string;
+  passengerCount: number;
+}
+
+export interface AccommodationBooking {
+  propertyId: string;
+  propertyName: string;
+  checkIn: string;
+  checkOut: string;
+  cost: number;
+  confirmation: string;
+  beds: number;
+  crewCapacity: number;
+}
+
+export interface DailySchedule {
+  date: string;
+  slots: ScheduledSlot[];
+  notes: string;
+}
+
+export interface ScheduledSlot {
+  slotId: string;
+  address: string;
+  scheduledTime: string;
+  estimatedDuration: number;
+  notes: string;
+}
+
+// =====================================================================
+// BUNDLING INTELLIGENCE
+// =====================================================================
+
+export interface ServiceCompatibility {
+  serviceId: string;
+  compatibleServiceId: string;
+  compatibilityScore: number;
+  rationale: string;
+}
+
+export interface CompatibilityWeights {
+  mobilization: number;    // Same mobilization class bonus
+  access: number;          // Shared access requirements bonus
+  certification: number;   // Shared certifications bonus
+  sameVisit: number;       // Same category / practical synergy bonus
+}
+
+export interface BundleEdgeScore {
+  serviceASlug: string;
+  serviceBSlug: string;
+  score: number;
+  reasons: string[];
+}
+
+export interface SuggestedBundle {
+  services: string[];      // Service slugs
+  totalScore: number;
+  name: string;
+  rationale: string;
+}
+
+// =====================================================================
+// PRICING CALCULATION
+// =====================================================================
+
+export interface PriceCalculationInput {
+  service: ServiceWithDetails;
+  quantity: number;
+  community: Community;
+  accessDifficulty?: number;    // Override multiplier
+  seasonalFactor?: number;      // Override multiplier
+  isEmergency?: boolean;
+}
+
+export interface PriceCalculationResult {
+  basePrice: number;
+  quantityTotal: number;
+  remoteMultiplier: number;
+  accessMultiplier: number;
+  seasonalMultiplier: number;
+  emergencyMultiplier: number;
+  mobilizationSurcharge: number;
+  subtotal: number;
+  minimumApplied: boolean;
+  finalPrice: number;
+  breakdown: PriceBreakdownItem[];
+}
+
+export interface PriceBreakdownItem {
+  label: string;
+  amount: number;
+  type: 'base' | 'multiplier' | 'surcharge' | 'adjustment';
+}
+
+export interface BundlePriceCalculationInput {
+  bundle: BundleWithDetails;
+  community: Community;
+  quantities?: Record<string, number>;  // Override quantities by service slug
+}
+
+export interface BundlePriceCalculationResult {
+  serviceTotals: { serviceSlug: string; price: number }[];
+  sumBeforeDiscount: number;
+  discountFactor: number;
+  discountAmount: number;
+  mobilizationSurcharge: number;
+  remoteMultiplier: number;
+  finalPrice: number;
+  savingsVsAlaCarte: number;
+  breakdown: PriceBreakdownItem[];
+}
+```
+
+## Create file: server/lib/pricing.ts
+```typescript
+// =====================================================================
+// PRICING CALCULATOR
+// =====================================================================
+
+import {
+  PriceCalculationInput,
+  PriceCalculationResult,
+  BundlePriceCalculationInput,
+  BundlePriceCalculationResult,
+  PriceBreakdownItem,
+  ServiceWithDetails,
+  Community
+} from '../types/serviceRuns';
+
+const EMERGENCY_MULTIPLIER = 1.5;
+
+/**
+ * Calculate price for a single service
+ */
+export function calculateServicePrice(input: PriceCalculationInput): PriceCalculationResult {
+  const { service, quantity, community, accessDifficulty, seasonalFactor, isEmergency } = input;
+  const pricing = service.pricing;
+  
+  if (!pricing) {
+    throw new Error(`No pricing configured for service: ${service.slug}`);
+  }
+  
+  const breakdown: PriceBreakdownItem[] = [];
+  
+  // Base price calculation based on pricing model
+  let basePrice = pricing.basePrice;
+  let quantityTotal = basePrice;
+  
+  switch (pricing.pricingModel) {
+    case 'flat':
+      quantityTotal = basePrice;
+      breakdown.push({ label: 'Flat rate', amount: basePrice, type: 'base' });
+      break;
+    case 'per_unit':
+    case 'per_sqft':
+    case 'per_hour':
+      quantityTotal = basePrice * quantity;
+      breakdown.push({ 
+        label: `${quantity} × $${basePrice.toFixed(2)} ${pricing.unitDescriptor}`, 
+        amount: quantityTotal, 
+        type: 'base' 
+      });
+      break;
+    case 'hybrid':
+      // Base fee + variable component
+      const variablePortion = basePrice * 0.35 * quantity;
+      quantityTotal = basePrice + variablePortion;
+      breakdown.push({ label: 'Base fee', amount: basePrice, type: 'base' });
+      breakdown.push({ label: `Variable (${quantity} units)`, amount: variablePortion, type: 'base' });
+      break;
+    default:
+      quantityTotal = basePrice * quantity;
+  }
+  
+  // Apply multipliers
+  const remoteMultiplier = pricing.remoteMultiplier * community.remoteMultiplier;
+  const accessMultiplier = accessDifficulty ?? pricing.accessDifficultyMultiplier;
+  const seasonalMultiplier = seasonalFactor ?? pricing.seasonalMultiplier;
+  const emergencyMultiplier = isEmergency ? EMERGENCY_MULTIPLIER : 1.0;
+  
+  let subtotal = quantityTotal;
+  
+  if (remoteMultiplier !== 1.0) {
+    const remoteAmount = subtotal * (remoteMultiplier - 1);
+    breakdown.push({ 
+      label: `Remote location (×${remoteMultiplier.toFixed(2)})`, 
+      amount: remoteAmount, 
+      type: 'multiplier' 
+    });
+    subtotal *= remoteMultiplier;
+  }
+  
+  if (accessMultiplier !== 1.0) {
+    const accessAmount = subtotal * (accessMultiplier - 1);
+    breakdown.push({ 
+      label: `Access difficulty (×${accessMultiplier.toFixed(2)})`, 
+      amount: accessAmount, 
+      type: 'multiplier' 
+    });
+    subtotal *= accessMultiplier;
+  }
+  
+  if (seasonalMultiplier !== 1.0) {
+    const seasonalAmount = subtotal * (seasonalMultiplier - 1);
+    breakdown.push({ 
+      label: `Seasonal adjustment (×${seasonalMultiplier.toFixed(2)})`, 
+      amount: seasonalAmount, 
+      type: 'multiplier' 
+    });
+    subtotal *= seasonalMultiplier;
+  }
+  
+  if (emergencyMultiplier !== 1.0) {
+    const emergencyAmount = subtotal * (emergencyMultiplier - 1);
+    breakdown.push({ 
+      label: `Emergency response (×${emergencyMultiplier.toFixed(2)})`, 
+      amount: emergencyAmount, 
+      type: 'multiplier' 
+    });
+    subtotal *= emergencyMultiplier;
+  }
+  
+  // Add mobilization surcharge
+  const mobilizationSurcharge = pricing.mobilizationSurcharge;
+  if (mobilizationSurcharge > 0) {
+    breakdown.push({ 
+      label: 'Mobilization surcharge', 
+      amount: mobilizationSurcharge, 
+      type: 'surcharge' 
+    });
+    subtotal += mobilizationSurcharge;
+  }
+  
+  // Apply minimum charge
+  let finalPrice = subtotal;
+  let minimumApplied = false;
+  
+  if (pricing.minimumCharge > 0 && finalPrice < pricing.minimumCharge) {
+    const adjustment = pricing.minimumCharge - finalPrice;
+    breakdown.push({ 
+      label: `Minimum charge adjustment`, 
+      amount: adjustment, 
+      type: 'adjustment' 
+    });
+    finalPrice = pricing.minimumCharge;
+    minimumApplied = true;
+  }
+  
+  // Round to cents
+  finalPrice = Math.round(finalPrice * 100) / 100;
+  
+  return {
+    basePrice,
+    quantityTotal,
+    remoteMultiplier,
+    accessMultiplier,
+    seasonalMultiplier,
+    emergencyMultiplier,
+    mobilizationSurcharge,
+    subtotal,
+    minimumApplied,
+    finalPrice,
+    breakdown
+  };
+}
+
+/**
+ * Calculate price for a bundle
+ */
+export function calculateBundlePrice(input: BundlePriceCalculationInput): BundlePriceCalculationResult {
+  const { bundle, community, quantities } = input;
+  const bundlePricing = bundle.pricing;
+  
+  if (!bundlePricing) {
+    throw new Error(`No pricing configured for bundle: ${bundle.slug}`);
+  }
+  
+  const breakdown: PriceBreakdownItem[] = [];
+  const serviceTotals: { serviceSlug: string; price: number }[] = [];
+  
+  // Calculate individual service prices
+  let sumBeforeDiscount = 0;
+  let sumStandaloneMobilization = 0;
+  
+  for (const item of bundle.items) {
+    if (!item.service) continue;
+    
+    const service = item.service as ServiceWithDetails;
+    const qty = quantities?.[service.slug] ?? item.quantity;
+    
+    // Calculate à la carte price (for comparison)
+    try {
+      const serviceResult = calculateServicePrice({
+        service,
+        quantity: qty,
+        community,
+        isEmergency: false
+      });
+      
+      serviceTotals.push({
+        serviceSlug: service.slug,
+        price: serviceResult.finalPrice
+      });
+      
+      sumBeforeDiscount += serviceResult.finalPrice;
+      sumStandaloneMobilization += serviceResult.mobilizationSurcharge;
+    } catch (e) {
+      // Service might not have pricing configured yet
+      console.warn(`Could not calculate price for ${service.slug}:`, e);
+    }
+  }
+  
+  breakdown.push({ 
+    label: 'Services total (à la carte)', 
+    amount: sumBeforeDiscount, 
+    type: 'base' 
+  });
+  
+  // Apply bundle discount
+  const discountFactor = bundlePricing.discountFactor;
+  const discountAmount = sumBeforeDiscount * (1 - discountFactor);
+  const afterDiscount = sumBeforeDiscount * discountFactor;
+  
+  breakdown.push({ 
+    label: `Bundle discount (${((1 - discountFactor) * 100).toFixed(0)}% off)`, 
+    amount: -discountAmount, 
+    type: 'adjustment' 
+  });
+  
+  // Add bundle mobilization (replaces individual mobilizations)
+  const mobilizationSurcharge = bundlePricing.mobilizationSurcharge;
+  breakdown.push({ 
+    label: 'Bundle mobilization', 
+    amount: mobilizationSurcharge, 
+    type: 'surcharge' 
+  });
+  
+  // Apply remote multiplier
+  const remoteMultiplier = bundlePricing.remoteMultiplier * community.remoteMultiplier;
+  let finalPrice = (afterDiscount + mobilizationSurcharge) * remoteMultiplier;
+  
+  if (remoteMultiplier !== 1.0) {
+    const remoteAmount = (afterDiscount + mobilizationSurcharge) * (remoteMultiplier - 1);
+    breakdown.push({ 
+      label: `Remote location (×${remoteMultiplier.toFixed(2)})`, 
+      amount: remoteAmount, 
+      type: 'multiplier' 
+    });
+  }
+  
+  // Discount cap rule: customer discount cannot exceed mobilization savings
+  const mobilizationSavings = Math.max(0, sumStandaloneMobilization - mobilizationSurcharge);
+  const effectiveDiscount = sumBeforeDiscount - finalPrice;
+  
+  if (effectiveDiscount > mobilizationSavings && mobilizationSavings > 0) {
+    // Cap the discount
+    const cappedPrice = sumBeforeDiscount - mobilizationSavings;
+    if (cappedPrice > finalPrice) {
+      const capAdjustment = cappedPrice - finalPrice;
+      breakdown.push({ 
+        label: 'Discount cap adjustment', 
+        amount: capAdjustment, 
+        type: 'adjustment' 
+      });
+      finalPrice = cappedPrice;
+    }
+  }
+  
+  // Round to cents
+  finalPrice = Math.round(finalPrice * 100) / 100;
+  
+  const savingsVsAlaCarte = sumBeforeDiscount - finalPrice;
+  
+  return {
+    serviceTotals,
+    sumBeforeDiscount,
+    discountFactor,
+    discountAmount,
+    mobilizationSurcharge,
+    remoteMultiplier,
+    finalPrice,
+    savingsVsAlaCarte,
+    breakdown
+  };
+}
+
+/**
+ * Calculate mobilization cost split across slots
+ */
+export function calculateMobilizationPerSlot(
+  totalMobilization: number,
+  activeSlots: number
+): number {
+  if (activeSlots <= 0) return 0;
+  return Math.round((totalMobilization / activeSlots) * 100) / 100;
+}
+```
+
+## Create file: server/lib/bundling.ts
+```typescript
+// =====================================================================
+// BUNDLING INTELLIGENCE
+// =====================================================================
+
+import {
+  ServiceWithDetails,
+  CompatibilityWeights,
+  BundleEdgeScore,
+  SuggestedBundle
+} from '../types/serviceRuns';
+
+// Default weights for compatibility scoring
+export const DEFAULT_COMPATIBILITY_WEIGHTS: CompatibilityWeights = {
+  mobilization: 30,    // Same mobilization class
+  access: 20,          // Shared access requirements
+  certification: 20,   // Shared certifications
+  sameVisit: 30        // Same category / practical synergy
+};
+
+// Known category adjacencies (categories that work well together)
+const CATEGORY_ADJACENCIES = new Set([
+  'roof-chimney|seasonal-tasks',
+  'roof-chimney|pest-wildlife',
+  'septic-water|seasonal-tasks',
+  'waterfront-marine|seasonal-tasks',
+  'grounds-property|safety-inspections',
+  'structural-foundations|drainage-water-control',
+  'heating-fuel|seasonal-tasks',
+  'electrical|seasonal-tasks',
+  'drainage-water-control|septic-water'
+]);
+
+/**
+ * Calculate intersection size of two arrays
+ */
+function intersectionSize(a: string[], b: string[]): number {
+  const setA = new Set(a);
+  return b.filter(x => setA.has(x)).length;
+}
+
+/**
+ * Check if two categories are adjacent (work well together)
+ */
+function areCategoriesAdjacent(catA: string, catB: string): boolean {
+  const key1 = `${catA}|${catB}`;
+  const key2 = `${catB}|${catA}`;
+  return CATEGORY_ADJACENCIES.has(key1) || CATEGORY_ADJACENCIES.has(key2);
+}
+
+/**
+ * Score compatibility between two services
+ */
+export function scoreServicePair(
+  a: ServiceWithDetails,
+  b: ServiceWithDetails,
+  weights: CompatibilityWeights = DEFAULT_COMPATIBILITY_WEIGHTS
+): BundleEdgeScore {
+  let score = 0;
+  const reasons: string[] = [];
+  
+  // Same mobilization class
+  const mobA = a.mobilizationClass?.name;
+  const mobB = b.mobilizationClass?.name;
+  if (mobA && mobB && mobA === mobB) {
+    score += weights.mobilization;
+    reasons.push('same mobilization class');
+  }
+  
+  // Shared access requirements
+  const accessA = a.accessRequirements.map(ar => ar.name);
+  const accessB = b.accessRequirements.map(ar => ar.name);
+  const accessOverlap = intersectionSize(accessA, accessB);
+  if (accessOverlap > 0) {
+    score += Math.min(weights.access, accessOverlap * 10);
+    reasons.push('shared access requirements');
+  }
+  
+  // Shared certifications
+  const certA = a.certifications.map(c => c.name);
+  const certB = b.certifications.map(c => c.name);
+  const certOverlap = intersectionSize(certA, certB);
+  if (certOverlap > 0) {
+    score += Math.min(weights.certification, certOverlap * 10);
+    reasons.push('shared certifications/trades');
+  }
+  
+  // Same category or adjacent categories
+  const catA = a.category?.slug;
+  const catB = b.category?.slug;
+  if (catA && catB) {
+    if (catA === catB) {
+      score += weights.sameVisit;
+      reasons.push('same category / same visit synergy');
+    } else if (areCategoriesAdjacent(catA, catB)) {
+      score += Math.floor(weights.sameVisit * 0.6);
+      reasons.push('category adjacency synergy');
+    }
+  }
+  
+  // Weather dependency matching
+  if (a.weatherDependent === b.weatherDependent) {
+    score += 5;
+    reasons.push('matching weather dependency');
+  }
+  
+  // Crew size compatibility (similar crew needs)
+  const crewDiff = Math.abs(a.crewTypical - b.crewTypical);
+  if (crewDiff <= 1) {
+    score += 5;
+    reasons.push('similar crew requirements');
+  }
+  
+  // Cap at 100
+  score = Math.min(100, score);
+  
+  return {
+    serviceASlug: a.slug,
+    serviceBSlug: b.slug,
+    score,
+    reasons
+  };
+}
+
+/**
+ * Build compatibility graph for all services
+ */
+export function buildCompatibilityGraph(
+  services: ServiceWithDetails[],
+  weights: CompatibilityWeights = DEFAULT_COMPATIBILITY_WEIGHTS,
+  threshold: number = 50
+): BundleEdgeScore[] {
+  const edges: BundleEdgeScore[] = [];
+  
+  for (let i = 0; i < services.length; i++) {
+    for (let j = i + 1; j < services.length; j++) {
+      const edge = scoreServicePair(services[i], services[j], weights);
+      if (edge.score >= threshold) {
+        edges.push(edge);
+      }
+    }
+  }
+  
+  return edges;
+}
+
+/**
+ * Suggest bundles based on compatibility graph
+ */
+export function suggestBundles(
+  services: ServiceWithDetails[],
+  edges: BundleEdgeScore[],
+  maxBundleSize: number = 8,
+  minBundleSize: number = 3
+): SuggestedBundle[] {
+  // Build adjacency map
+  const edgeMap = new Map<string, Map<string, number>>();
+  for (const e of edges) {
+    if (!edgeMap.has(e.serviceASlug)) edgeMap.set(e.serviceASlug, new Map());
+    if (!edgeMap.has(e.serviceBSlug)) edgeMap.set(e.serviceBSlug, new Map());
+    edgeMap.get(e.serviceASlug)!.set(e.serviceBSlug, e.score);
+    edgeMap.get(e.serviceBSlug)!.set(e.serviceASlug, e.score);
+  }
+  
+  // Rank services by degree (number of compatible services)
+  const degrees = services
+    .map(s => ({ slug: s.slug, name: s.name, deg: edgeMap.get(s.slug)?.size ?? 0 }))
+    .sort((x, y) => y.deg - x.deg);
+  
+  const remaining = new Set(services.map(s => s.slug));
+  const bundles: SuggestedBundle[] = [];
+  
+  // Greedy bundle building
+  for (const seed of degrees) {
+    if (!remaining.has(seed.slug) || seed.deg === 0) continue;
+    
+    const bundle: string[] = [seed.slug];
+    remaining.delete(seed.slug);
+    
+    let totalScore = 0;
+    
+    while (bundle.length < maxBundleSize) {
+      // Find candidate that has strong edges with ALL bundle members
+      const candidates = Array.from(remaining)
+        .map(slug => {
+          let minEdge = Infinity;
+          let sumEdge = 0;
+          for (const b of bundle) {
+            const s = edgeMap.get(slug)?.get(b) ?? 0;
+            minEdge = Math.min(minEdge, s);
+            sumEdge += s;
+          }
+          return { slug, minEdge, sumEdge };
+        })
+        .filter(x => x.minEdge >= 50);  // Must be compatible with all members
+      
+      if (candidates.length === 0) break;
+      
+      // Pick candidate with highest total compatibility
+      candidates.sort((a, b) => b.sumEdge - a.sumEdge);
+      const pick = candidates[0];
+      
+      bundle.push(pick.slug);
+      remaining.delete(pick.slug);
+      totalScore += pick.sumEdge;
+    }
+    
+    // Only keep bundles with minimum size
+    if (bundle.length >= minBundleSize) {
+      const bundleServices = bundle.map(slug => 
+        services.find(s => s.slug === slug)?.name ?? slug
+      );
+      
+      bundles.push({
+        services: bundle,
+        totalScore,
+        name: `Bundle: ${bundleServices[0]} + ${bundle.length - 1} more`,
+        rationale: `${bundle.length} compatible services with total score ${totalScore}`
+      });
+    }
+  }
+  
+  return bundles;
+}
+
+/**
+ * Check if a service is eligible for a run based on seasonality
+ */
+export function isServiceEligibleForWeek(
+  service: ServiceWithDetails,
+  climateRegionId: string,
+  week: number
+): { eligible: boolean; reason: string } {
+  const seasonality = service.seasonality.find(s => s.climateRegionId === climateRegionId);
+  
+  if (!seasonality) {
+    return { eligible: true, reason: 'No seasonality restrictions' };
+  }
+  
+  const { earliestWeek, latestWeek, hardStop } = seasonality;
+  
+  // Handle wrap-around (e.g., week 46 to week 10)
+  let inRange: boolean;
+  if (earliestWeek <= latestWeek) {
+    inRange = week >= earliestWeek && week <= latestWeek;
+  } else {
+    // Wraps around year end
+    inRange = week >= earliestWeek || week <= latestWeek;
+  }
+  
+  if (inRange) {
+    return { eligible: true, reason: 'Within seasonal window' };
+  }
+  
+  if (hardStop) {
+    return { 
+      eligible: false, 
+      reason: `Hard stop: only available weeks ${earliestWeek}-${latestWeek}` 
+    };
+  }
+  
+  return { 
+    eligible: true, 
+    reason: `Outside optimal window (${earliestWeek}-${latestWeek}) but can be scheduled` 
+  };
+}
+
+/**
+ * Get current week of year (1-52)
+ */
+export function getCurrentWeek(): number {
+  const now = new Date();
+  const start = new Date(now.getFullYear(), 0, 1);
+  const diff = now.getTime() - start.getTime();
+  const oneWeek = 1000 * 60 * 60 * 24 * 7;
+  return Math.ceil(diff / oneWeek);
+}
+```
+
+Report when the files are created.
