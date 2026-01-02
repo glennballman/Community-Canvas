@@ -1,4 +1,4 @@
-import { db } from '../db';
+import { db, pool } from '../db';
 import { sql } from 'drizzle-orm';
 import type {
   StagingProperty,
@@ -1027,4 +1027,13 @@ export async function getPropertyStats(propertyId: number): Promise<{
     occupancyRate: 0,
     avgRating: Number(property?.overall_rating) || 0,
   };
+}
+
+// ============================================================================
+// RAW QUERY HELPER
+// ============================================================================
+
+export async function rawQuery(query: string, params: any[] = []): Promise<{ rows: any[] }> {
+  const result = await pool.query(query, params);
+  return { rows: result.rows };
 }

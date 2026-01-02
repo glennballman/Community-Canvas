@@ -1,0 +1,478 @@
+Create API endpoints and dashboard for managing Chamber member opportunities.
+
+## Step 1: Add API Endpoints
+
+Add to server/routes/staging.ts:
+```typescript
+// ============================================================================
+// CHAMBER INTEGRATION ENDPOINTS
+// ============================================================================
+
+// GET /api/staging/chamber/opportunities - List all opportunities
+router.get('/chamber/opportunities', async (req: Request, res: Response) => {
+    try {
+        const { status, chamber, sort } = req.query;
+        
+        let query = `
+            SELECT 
+                cl.*,
+                p.name as property_name,
+                p.status as property_status
+            FROM staging_chamber_links cl
+            LEFT JOIN staging_properties p ON p.id = cl.property_id
+            WHERE 1=1
+        `;
+        const params: any[] = [];
+        let paramCount = 0;
+
+        if (status) {
+            paramCount++;
+            query += ` AND cl.opportunity_status = $${paramCount}`;
+            params.push(status);
+        }
+
+        if (chamber) {
+            paramCount++;
+            query += ` AND cl.chamber_name ILIKE $${paramCount}`;
+            params.push(`%${chamber}%`);
+        }
+
+        query += ` ORDER BY ${sort === 'spots' ? 'cl.estimated_spots DESC NULLS LAST' : 'cl.created_at DESC'}`;
+
+        const result = await db.query(query, params);
+
+        // Summary stats
+        const statsResult = await db.query(`
+            SELECT 
+                opportunity_status as status,
+                COUNT(*) as count,
+                SUM(estimated_spots) as spots
+            FROM staging_chamber_links
+            GROUP BY opportunity_status
+        `);
+
+        res.json({
+            success: true,
+            opportunities: result.rows,
+            stats: statsResult.rows,
+            total: result.rows.length
+        });
+
+    } catch (error: any) {
+        console.error('Chamber opportunities error:', error);
+        res.status(500).json({ success: false, error: 'Failed to load opportunities' });
+    }
+});
+
+// GET /api/staging/chamber/opportunities/:id - Get single opportunity
+router.get('/chamber/opportunities/:id', async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
+        
+        const result = await db.query(`
+            SELECT cl.*, p.name as property_name
+            FROM staging_chamber_links cl
+            LEFT JOIN staging_properties p ON p.id = cl.property_id
+            WHERE cl.id = $1
+        `, [id]);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ success: false, error: 'Opportunity not found' });
+        }
+
+        res.json({ success: true, opportunity: result.rows[0] });
+
+    } catch (error: any) {
+        res.status(500).json({ success: false, error: 'Failed to load opportunity' });
+    }
+});
+
+// PUT /api/staging/chamber/opportunities/:id - Update opportunity
+router.put('/chamber/opportunities/:id', async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
+        const {
+            opportunityStatus,
+            primaryContactName,
+            primaryContactEmail,
+            primaryContactPhone,
+            estimatedSpots,
+            estimatedSpotTypes,
+            hasPowerPotential,
+            hasWaterPotential,
+            contactNotes,
+            nextFollowupDate
+        } = req.body;
+
+        const result = await db.query(`
+            UPDATE staging_chamber_links SET
+                opportunity_status = COALESCE($2, opportunity_status),
+                primary_contact_name = COALESCE($3, primary_contact_name),
+                primary_contact_email = COALESCE($4, primary_contact_email),
+                primary_contact_phone = COALESCE($5, primary_contact_phone),
+                estimated_spots = COALESCE($6, estimated_spots),
+                estimated_spot_types = COALESCE($7, estimated_spot_types),
+                has_power_potential = COALESCE($8, has_power_potential),
+                has_water_potential = COALESCE($9, has_water_potential),
+                contact_notes = COALESCE($10, contact_notes),
+                next_followup_date = $11,
+                last_contacted_at = CASE WHEN $2 IS NOT NULL THEN NOW() ELSE last_contacted_at END,
+                updated_at = NOW()
+            WHERE id = $1
+            RETURNING *
+        `, [id, opportunityStatus, primaryContactName, primaryContactEmail, 
+            primaryContactPhone, estimatedSpots, estimatedSpotTypes,
+            hasPowerPotential, hasWaterPotential, contactNotes, nextFollowupDate]);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ success: false, error: 'Opportunity not found' });
+        }
+
+        res.json({ success: true, opportunity: result.rows[0] });
+
+    } catch (error: any) {
+        res.status(500).json({ success: false, error: 'Failed to update opportunity' });
+    }
+});
+
+// POST /api/staging/chamber/opportunities/:id/convert - Convert to active property
+router.post('/chamber/opportunities/:id/convert', async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
+        
+        // Get the opportunity
+        const oppResult = await db.query(
+            'SELECT * FROM staging_chamber_links WHERE id = $1',
+            [id]
+        );
+        
+        if (oppResult.rows.length === 0) {
+            return res.status(404).json({ success: false, error: 'Opportunity not found' });
+        }
+        
+        const opp = oppResult.rows[0];
+        
+        if (opp.property_id) {
+            return res.status(400).json({ success: false, error: 'Already converted to property' });
+        }
+
+        // Create a new property from the opportunity
+        const propResult = await db.query(`
+            INSERT INTO staging_properties (
+                name,
+                description,
+                property_type,
+                property_subtype,
+                region,
+                city,
+                total_spots,
+                has_shore_power,
+                has_water_hookup,
+                status,
+                source
+            ) VALUES (
+                $1,
+                $2,
+                'parking_lot',
+                'chamber_member',
+                'Vancouver Island',
+                'TBD',
+                $3,
+                $4,
+                $5,
+                'pending_setup',
+                'chamber_conversion'
+            )
+            RETURNING id, name
+        `, [
+            opp.business_name + ' Parking',
+            'Chamber member parking opportunity. ' + (opp.contact_notes || ''),
+            opp.estimated_spots || 10,
+            opp.has_power_potential || false,
+            opp.has_water_potential || false
+        ]);
+
+        const newProperty = propResult.rows[0];
+
+        // Link the opportunity to the property
+        await db.query(`
+            UPDATE staging_chamber_links 
+            SET property_id = $1, 
+                opportunity_status = 'active',
+                updated_at = NOW()
+            WHERE id = $2
+        `, [newProperty.id, id]);
+
+        res.json({
+            success: true,
+            message: 'Opportunity converted to property',
+            property: newProperty
+        });
+
+    } catch (error: any) {
+        console.error('Convert opportunity error:', error);
+        res.status(500).json({ success: false, error: 'Failed to convert opportunity' });
+    }
+});
+
+// GET /api/staging/chamber/stats - Dashboard stats
+router.get('/chamber/stats', async (req: Request, res: Response) => {
+    try {
+        const result = await db.query(`
+            SELECT 
+                COUNT(*) as total_opportunities,
+                COUNT(*) FILTER (WHERE opportunity_status = 'potential') as potential,
+                COUNT(*) FILTER (WHERE opportunity_status = 'contacted') as contacted,
+                COUNT(*) FILTER (WHERE opportunity_status = 'interested') as interested,
+                COUNT(*) FILTER (WHERE opportunity_status = 'active') as active,
+                COUNT(*) FILTER (WHERE opportunity_status = 'declined') as declined,
+                SUM(estimated_spots) as total_potential_spots,
+                SUM(estimated_spots) FILTER (WHERE opportunity_status = 'active') as active_spots,
+                COUNT(DISTINCT chamber_name) as chambers_represented
+            FROM staging_chamber_links
+        `);
+
+        res.json({ success: true, stats: result.rows[0] });
+
+    } catch (error: any) {
+        res.status(500).json({ success: false, error: 'Failed to load stats' });
+    }
+});
+```
+
+## Step 2: Create Chamber Dashboard Component
+
+Create file: client/src/pages/staging/ChamberDashboard.tsx
+```tsx
+import React, { useState, useEffect } from 'react';
+
+interface Opportunity {
+    id: number;
+    chamber_name: string;
+    business_name: string;
+    business_type: string;
+    opportunity_status: string;
+    estimated_spots: number;
+    has_power_potential: boolean;
+    has_water_potential: boolean;
+    primary_contact_name: string;
+    contact_notes: string;
+    property_id?: number;
+}
+
+interface Stats {
+    total_opportunities: number;
+    potential: number;
+    contacted: number;
+    interested: number;
+    active: number;
+    declined: number;
+    total_potential_spots: number;
+    active_spots: number;
+    chambers_represented: number;
+}
+
+export default function ChamberDashboard() {
+    const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
+    const [stats, setStats] = useState<Stats | null>(null);
+    const [filter, setFilter] = useState('all');
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        loadData();
+    }, [filter]);
+
+    async function loadData() {
+        try {
+            const [oppsRes, statsRes] = await Promise.all([
+                fetch(`/api/staging/chamber/opportunities${filter !== 'all' ? `?status=${filter}` : ''}`),
+                fetch('/api/staging/chamber/stats')
+            ]);
+            
+            const oppsData = await oppsRes.json();
+            const statsData = await statsRes.json();
+            
+            if (oppsData.success) setOpportunities(oppsData.opportunities);
+            if (statsData.success) setStats(statsData.stats);
+        } catch (err) {
+            console.error('Failed to load data:', err);
+        } finally {
+            setLoading(false);
+        }
+    }
+
+    async function updateStatus(id: number, newStatus: string) {
+        try {
+            await fetch(`/api/staging/chamber/opportunities/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ opportunityStatus: newStatus })
+            });
+            loadData();
+        } catch (err) {
+            console.error('Failed to update:', err);
+        }
+    }
+
+    async function convertToProperty(id: number) {
+        if (!confirm('Convert this opportunity to an active property?')) return;
+        
+        try {
+            const res = await fetch(`/api/staging/chamber/opportunities/${id}/convert`, {
+                method: 'POST'
+            });
+            const data = await res.json();
+            if (data.success) {
+                alert(`Created property: ${data.property.name}`);
+                loadData();
+            }
+        } catch (err) {
+            console.error('Failed to convert:', err);
+        }
+    }
+
+    const statusColors: Record<string, string> = {
+        potential: 'bg-gray-600',
+        contacted: 'bg-yellow-600',
+        interested: 'bg-blue-600',
+        active: 'bg-green-600',
+        declined: 'bg-red-600'
+    };
+
+    if (loading) return <div className="p-8 text-white">Loading...</div>;
+
+    return (
+        <div className="min-h-screen bg-gray-900 p-8">
+            <h1 className="text-3xl font-bold text-white mb-2">Chamber Integration Dashboard</h1>
+            <p className="text-gray-400 mb-8">Manage parking opportunities from Chamber members</p>
+
+            {/* Stats Cards */}
+            {stats && (
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
+                    <div className="bg-gray-800 rounded-lg p-4">
+                        <p className="text-gray-400 text-sm">Total Opportunities</p>
+                        <p className="text-2xl font-bold text-white">{stats.total_opportunities}</p>
+                    </div>
+                    <div className="bg-gray-800 rounded-lg p-4">
+                        <p className="text-gray-400 text-sm">Potential Spots</p>
+                        <p className="text-2xl font-bold text-blue-400">{stats.total_potential_spots || 0}</p>
+                    </div>
+                    <div className="bg-gray-800 rounded-lg p-4">
+                        <p className="text-gray-400 text-sm">Active Spots</p>
+                        <p className="text-2xl font-bold text-green-400">{stats.active_spots || 0}</p>
+                    </div>
+                    <div className="bg-gray-800 rounded-lg p-4">
+                        <p className="text-gray-400 text-sm">Interested</p>
+                        <p className="text-2xl font-bold text-yellow-400">{stats.interested}</p>
+                    </div>
+                    <div className="bg-gray-800 rounded-lg p-4">
+                        <p className="text-gray-400 text-sm">Chambers</p>
+                        <p className="text-2xl font-bold text-purple-400">{stats.chambers_represented}</p>
+                    </div>
+                </div>
+            )}
+
+            {/* Filter Tabs */}
+            <div className="flex gap-2 mb-6">
+                {['all', 'potential', 'contacted', 'interested', 'active', 'declined'].map(status => (
+                    <button
+                        key={status}
+                        onClick={() => setFilter(status)}
+                        className={`px-4 py-2 rounded-lg text-sm font-medium ${
+                            filter === status 
+                                ? 'bg-blue-600 text-white' 
+                                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                        }`}
+                    >
+                        {status.charAt(0).toUpperCase() + status.slice(1)}
+                    </button>
+                ))}
+            </div>
+
+            {/* Opportunities Table */}
+            <div className="bg-gray-800 rounded-lg overflow-hidden">
+                <table className="w-full">
+                    <thead className="bg-gray-700">
+                        <tr>
+                            <th className="text-left px-4 py-3 text-gray-300 text-sm">Business</th>
+                            <th className="text-left px-4 py-3 text-gray-300 text-sm">Chamber</th>
+                            <th className="text-left px-4 py-3 text-gray-300 text-sm">Type</th>
+                            <th className="text-center px-4 py-3 text-gray-300 text-sm">Est. Spots</th>
+                            <th className="text-center px-4 py-3 text-gray-300 text-sm">Power</th>
+                            <th className="text-left px-4 py-3 text-gray-300 text-sm">Status</th>
+                            <th className="text-right px-4 py-3 text-gray-300 text-sm">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {opportunities.map(opp => (
+                            <tr key={opp.id} className="border-t border-gray-700 hover:bg-gray-750">
+                                <td className="px-4 py-3">
+                                    <p className="text-white font-medium">{opp.business_name}</p>
+                                    {opp.primary_contact_name && (
+                                        <p className="text-gray-400 text-sm">{opp.primary_contact_name}</p>
+                                    )}
+                                </td>
+                                <td className="px-4 py-3 text-gray-400 text-sm">{opp.chamber_name}</td>
+                                <td className="px-4 py-3 text-gray-400 text-sm">{opp.business_type}</td>
+                                <td className="px-4 py-3 text-center text-white">{opp.estimated_spots || '-'}</td>
+                                <td className="px-4 py-3 text-center">
+                                    {opp.has_power_potential ? '⚡' : '-'}
+                                    {opp.has_water_potential ? '💧' : ''}
+                                </td>
+                                <td className="px-4 py-3">
+                                    <span className={`${statusColors[opp.opportunity_status]} px-2 py-1 rounded text-white text-xs`}>
+                                        {opp.opportunity_status}
+                                    </span>
+                                </td>
+                                <td className="px-4 py-3 text-right">
+                                    <div className="flex gap-2 justify-end">
+                                        {opp.opportunity_status === 'potential' && (
+                                            <button
+                                                onClick={() => updateStatus(opp.id, 'contacted')}
+                                                className="text-yellow-400 hover:text-yellow-300 text-sm"
+                                            >
+                                                Mark Contacted
+                                            </button>
+                                        )}
+                                        {opp.opportunity_status === 'contacted' && (
+                                            <button
+                                                onClick={() => updateStatus(opp.id, 'interested')}
+                                                className="text-blue-400 hover:text-blue-300 text-sm"
+                                            >
+                                                Mark Interested
+                                            </button>
+                                        )}
+                                        {opp.opportunity_status === 'interested' && !opp.property_id && (
+                                            <button
+                                                onClick={() => convertToProperty(opp.id)}
+                                                className="text-green-400 hover:text-green-300 text-sm"
+                                            >
+                                                Convert to Property
+                                            </button>
+                                        )}
+                                        {opp.property_id && (
+                                            <a 
+                                                href={`/staging/${opp.property_id}`}
+                                                className="text-blue-400 hover:text-blue-300 text-sm"
+                                            >
+                                                View Property
+                                            </a>
+                                        )}
+                                    </div>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    );
+}
+```
+
+Add route:
+```tsx
+<Route path="/staging/chamber" element={<ChamberDashboard />} />
+```
+
+Test the Chamber dashboard at /staging/chamber

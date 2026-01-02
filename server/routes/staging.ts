@@ -707,6 +707,205 @@ router.delete('/calendar/:id', async (req: Request, res: Response) => {
 });
 
 // ============================================================================
+// CHAMBER INTEGRATION ENDPOINTS
+// ============================================================================
+
+// GET /api/staging/chamber/opportunities - List all opportunities
+router.get('/chamber/opportunities', async (req: Request, res: Response) => {
+  try {
+    const { status, chamber, sort } = req.query;
+    
+    let query = `
+      SELECT 
+        cl.*,
+        p.name as property_name,
+        p.status as property_status
+      FROM staging_chamber_links cl
+      LEFT JOIN staging_properties p ON p.id = cl.property_id
+      WHERE 1=1
+    `;
+    const params: any[] = [];
+    let paramCount = 0;
+
+    if (status) {
+      paramCount++;
+      query += ` AND cl.opportunity_status = $${paramCount}`;
+      params.push(status);
+    }
+
+    if (chamber) {
+      paramCount++;
+      query += ` AND cl.chamber_name ILIKE $${paramCount}`;
+      params.push(`%${chamber}%`);
+    }
+
+    query += ` ORDER BY ${sort === 'spots' ? 'cl.estimated_spots DESC NULLS LAST' : 'cl.created_at DESC'}`;
+
+    const result = await stagingStorage.rawQuery(query, params);
+
+    const statsResult = await stagingStorage.rawQuery(`
+      SELECT 
+        opportunity_status as status,
+        COUNT(*) as count,
+        SUM(estimated_spots) as spots
+      FROM staging_chamber_links
+      GROUP BY opportunity_status
+    `);
+
+    res.json({
+      success: true,
+      opportunities: result.rows,
+      stats: statsResult.rows,
+      total: result.rows.length
+    });
+
+  } catch (error: any) {
+    console.error('Chamber opportunities error:', error);
+    res.status(500).json({ success: false, error: 'Failed to load opportunities' });
+  }
+});
+
+// GET /api/staging/chamber/stats - Dashboard stats
+router.get('/chamber/stats', async (_req: Request, res: Response) => {
+  try {
+    const result = await stagingStorage.rawQuery(`
+      SELECT 
+        COUNT(*) as total_opportunities,
+        COUNT(*) FILTER (WHERE opportunity_status = 'potential') as potential,
+        COUNT(*) FILTER (WHERE opportunity_status = 'contacted') as contacted,
+        COUNT(*) FILTER (WHERE opportunity_status = 'interested') as interested,
+        COUNT(*) FILTER (WHERE opportunity_status = 'active') as active,
+        COUNT(*) FILTER (WHERE opportunity_status = 'declined') as declined,
+        SUM(estimated_spots) as total_potential_spots,
+        SUM(estimated_spots) FILTER (WHERE opportunity_status = 'active') as active_spots,
+        COUNT(DISTINCT chamber_name) as chambers_represented
+      FROM staging_chamber_links
+    `);
+
+    res.json({ success: true, stats: result.rows[0] });
+
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: 'Failed to load stats' });
+  }
+});
+
+// PUT /api/staging/chamber/opportunities/:id - Update opportunity
+router.put('/chamber/opportunities/:id', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const {
+      opportunityStatus,
+      primaryContactName,
+      primaryContactEmail,
+      primaryContactPhone,
+      estimatedSpots,
+      estimatedSpotTypes,
+      hasPowerPotential,
+      hasWaterPotential,
+      contactNotes,
+      nextFollowupDate
+    } = req.body;
+
+    const result = await stagingStorage.rawQuery(`
+      UPDATE staging_chamber_links SET
+        opportunity_status = COALESCE($2, opportunity_status),
+        primary_contact_name = COALESCE($3, primary_contact_name),
+        primary_contact_email = COALESCE($4, primary_contact_email),
+        primary_contact_phone = COALESCE($5, primary_contact_phone),
+        estimated_spots = COALESCE($6, estimated_spots),
+        estimated_spot_types = COALESCE($7, estimated_spot_types),
+        has_power_potential = COALESCE($8, has_power_potential),
+        has_water_potential = COALESCE($9, has_water_potential),
+        contact_notes = COALESCE($10, contact_notes),
+        next_followup_date = $11,
+        last_contacted_at = CASE WHEN $2 IS NOT NULL THEN NOW() ELSE last_contacted_at END,
+        updated_at = NOW()
+      WHERE id = $1
+      RETURNING *
+    `, [id, opportunityStatus, primaryContactName, primaryContactEmail, 
+        primaryContactPhone, estimatedSpots, estimatedSpotTypes,
+        hasPowerPotential, hasWaterPotential, contactNotes, nextFollowupDate]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Opportunity not found' });
+    }
+
+    res.json({ success: true, opportunity: result.rows[0] });
+
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: 'Failed to update opportunity' });
+  }
+});
+
+// POST /api/staging/chamber/opportunities/:id/convert - Convert to active property
+router.post('/chamber/opportunities/:id/convert', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    
+    const oppResult = await stagingStorage.rawQuery(
+      'SELECT * FROM staging_chamber_links WHERE id = $1',
+      [id]
+    );
+    
+    if (oppResult.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Opportunity not found' });
+    }
+    
+    const opp = oppResult.rows[0];
+    
+    if (opp.property_id) {
+      return res.status(400).json({ success: false, error: 'Already converted to property' });
+    }
+
+    const propResult = await stagingStorage.rawQuery(`
+      INSERT INTO staging_properties (
+        name,
+        description,
+        property_type,
+        property_subtype,
+        region,
+        city,
+        total_spots,
+        has_shore_power,
+        has_water_hookup,
+        status,
+        source
+      ) VALUES (
+        $1, $2, 'parking_lot', 'chamber_member', 'Vancouver Island', 'TBD',
+        $3, $4, $5, 'pending_setup', 'chamber_conversion'
+      )
+      RETURNING id, name
+    `, [
+      opp.business_name + ' Parking',
+      'Chamber member parking opportunity. ' + (opp.contact_notes || ''),
+      opp.estimated_spots || 10,
+      opp.has_power_potential || false,
+      opp.has_water_potential || false
+    ]);
+
+    const newProperty = propResult.rows[0];
+
+    await stagingStorage.rawQuery(`
+      UPDATE staging_chamber_links 
+      SET property_id = $1, 
+          opportunity_status = 'active',
+          updated_at = NOW()
+      WHERE id = $2
+    `, [newProperty.id, id]);
+
+    res.json({
+      success: true,
+      message: 'Opportunity converted to property',
+      property: newProperty
+    });
+
+  } catch (error: any) {
+    console.error('Convert opportunity error:', error);
+    res.status(500).json({ success: false, error: 'Failed to convert opportunity' });
+  }
+});
+
+// ============================================================================
 // 404 CATCH-ALL (must be last)
 // ============================================================================
 router.use('*', (_req: Request, res: Response) => {

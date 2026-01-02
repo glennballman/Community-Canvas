@@ -1,0 +1,179 @@
+Create the trip planner backend that finds staging along a route.
+
+## Step 1: Create Trip Tables
+
+Run this SQL:
+
+-- ============================================================================
+-- TRIP PLANNING TABLES
+-- ============================================================================
+
+-- Saved trips
+CREATE TABLE IF NOT EXISTS staging_trips (
+    id SERIAL PRIMARY KEY,
+    trip_ref VARCHAR(20) UNIQUE DEFAULT 'TRIP-' || LPAD(FLOOR(RANDOM() * 999999)::TEXT, 6, '0'),
+    
+    -- Trip details
+    name VARCHAR(255),
+    description TEXT,
+    
+    -- Route
+    origin_name VARCHAR(255),
+    origin_lat DECIMAL(10, 7),
+    origin_lng DECIMAL(10, 7),
+    destination_name VARCHAR(255),
+    destination_lat DECIMAL(10, 7),
+    destination_lng DECIMAL(10, 7),
+    
+    -- Route metadata
+    total_distance_km DECIMAL(10, 2),
+    total_drive_time_hours DECIMAL(5, 2),
+    route_polyline TEXT,  -- Encoded polyline for map display
+    
+    -- Trip preferences
+    vehicle_length_ft INTEGER,
+    vehicle_type VARCHAR(50),
+    needs_power BOOLEAN DEFAULT false,
+    needs_water BOOLEAN DEFAULT false,
+    needs_sewer BOOLEAN DEFAULT false,
+    needs_pull_through BOOLEAN DEFAULT false,
+    dogs_allowed BOOLEAN DEFAULT false,
+    max_nightly_rate DECIMAL(10, 2),
+    
+    -- Dates
+    departure_date DATE,
+    return_date DATE,
+    
+    -- User
+    user_id INTEGER,
+    guest_email VARCHAR(255),
+    
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Trip stops (properties along route)
+CREATE TABLE IF NOT EXISTS staging_trip_stops (
+    id SERIAL PRIMARY KEY,
+    trip_id INTEGER REFERENCES staging_trips(id) ON DELETE CASCADE,
+    property_id INTEGER REFERENCES staging_properties(id),
+    
+    stop_order INTEGER NOT NULL,
+    stop_type VARCHAR(50) DEFAULT 'overnight',  -- overnight, lunch, fuel, service
+    
+    -- Distance from route
+    distance_from_route_km DECIMAL(10, 2),
+    distance_from_origin_km DECIMAL(10, 2),
+    estimated_arrival_time TIME,
+    
+    -- Booking
+    check_in_date DATE,
+    check_out_date DATE,
+    booking_id INTEGER REFERENCES staging_bookings(id),
+    
+    notes TEXT,
+    
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_trip_stops_trip ON staging_trip_stops(trip_id);
+CREATE INDEX idx_trips_user ON staging_trips(user_id);
+
+-- ============================================================================
+-- HELPER FUNCTION: Find properties along route
+-- ============================================================================
+
+-- This function finds properties within a certain distance of a route
+-- Using simple bounding box for now (proper route distance requires PostGIS)
+
+CREATE OR REPLACE FUNCTION find_properties_along_route(
+    p_origin_lat DECIMAL,
+    p_origin_lng DECIMAL,
+    p_dest_lat DECIMAL,
+    p_dest_lng DECIMAL,
+    p_buffer_km DECIMAL DEFAULT 50,
+    p_vehicle_length_ft INTEGER DEFAULT NULL,
+    p_needs_power BOOLEAN DEFAULT false,
+    p_needs_sewer BOOLEAN DEFAULT false,
+    p_max_price DECIMAL DEFAULT NULL,
+    p_limit INTEGER DEFAULT 20
+)
+RETURNS TABLE (
+    id INTEGER,
+    name VARCHAR,
+    city VARCHAR,
+    region VARCHAR,
+    latitude DECIMAL,
+    longitude DECIMAL,
+    distance_from_origin_km DECIMAL,
+    total_spots INTEGER,
+    nightly_rate DECIMAL,
+    rv_score INTEGER,
+    crew_score INTEGER,
+    trucker_score INTEGER,
+    has_power BOOLEAN,
+    has_sewer BOOLEAN,
+    has_mechanic BOOLEAN
+) AS $$
+DECLARE
+    min_lat DECIMAL;
+    max_lat DECIMAL;
+    min_lng DECIMAL;
+    max_lng DECIMAL;
+    buffer_deg DECIMAL;
+BEGIN
+    -- Convert km to approximate degrees (1 degree ≈ 111km)
+    buffer_deg := p_buffer_km / 111.0;
+    
+    -- Calculate bounding box
+    min_lat := LEAST(p_origin_lat, p_dest_lat) - buffer_deg;
+    max_lat := GREATEST(p_origin_lat, p_dest_lat) + buffer_deg;
+    min_lng := LEAST(p_origin_lng, p_dest_lng) - buffer_deg;
+    max_lng := GREATEST(p_origin_lng, p_dest_lng) + buffer_deg;
+
+    RETURN QUERY
+    SELECT 
+        sp.id,
+        sp.name,
+        sp.city,
+        sp.region,
+        sp.latitude,
+        sp.longitude,
+        -- Approximate distance from origin (Haversine would be better)
+        ROUND((
+            111.0 * SQRT(
+                POW(sp.latitude - p_origin_lat, 2) + 
+                POW((sp.longitude - p_origin_lng) * COS(RADIANS(p_origin_lat)), 2)
+            )
+        )::DECIMAL, 1) as distance_from_origin_km,
+        sp.total_spots,
+        pr.nightly_rate,
+        sp.rv_score,
+        sp.crew_score,
+        sp.trucker_score,
+        sp.has_shore_power as has_power,
+        sp.has_sewer_hookup as has_sewer,
+        sp.has_onsite_mechanic as has_mechanic
+    FROM staging_properties sp
+    LEFT JOIN staging_pricing pr ON pr.property_id = sp.id 
+        AND pr.pricing_type = 'base_nightly' AND pr.is_active = true
+    WHERE sp.status = 'active'
+    AND sp.latitude BETWEEN min_lat AND max_lat
+    AND sp.longitude BETWEEN min_lng AND max_lng
+    AND (p_vehicle_length_ft IS NULL OR sp.max_combined_length_ft >= p_vehicle_length_ft)
+    AND (p_needs_power = false OR sp.has_shore_power = true)
+    AND (p_needs_sewer = false OR sp.has_sewer_hookup = true)
+    AND (p_max_price IS NULL OR pr.nightly_rate <= p_max_price)
+    ORDER BY distance_from_origin_km
+    LIMIT p_limit;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Test the function
+SELECT * FROM find_properties_along_route(
+    49.2827, -123.1207,  -- Vancouver
+    48.4284, -123.3656,  -- Victoria
+    100,                  -- 100km buffer
+    35,                   -- 35ft vehicle
+    true                  -- needs power
+);
