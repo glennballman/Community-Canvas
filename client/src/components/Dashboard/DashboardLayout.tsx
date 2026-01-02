@@ -42,7 +42,18 @@ interface DashboardLayoutProps {
 
 export function DashboardLayout({ defaultRegion = 'bc' }: DashboardLayoutProps) {
   const [selectedRegion, setSelectedRegion] = useState(defaultRegion);
-  const [activeTab, setActiveTab] = useState<'overview' | 'map' | 'webcams' | 'alerts' | 'roadtrips' | 'planning' | 'fleet'>('overview');
+  
+  // Read initial tab from URL query parameter
+  const getInitialTab = (): 'overview' | 'map' | 'webcams' | 'alerts' | 'roadtrips' | 'planning' | 'fleet' => {
+    const params = new URLSearchParams(window.location.search);
+    const tab = params.get('tab');
+    if (tab && ['overview', 'map', 'webcams', 'alerts', 'roadtrips', 'planning', 'fleet'].includes(tab)) {
+      return tab as 'overview' | 'map' | 'webcams' | 'alerts' | 'roadtrips' | 'planning' | 'fleet';
+    }
+    return 'overview';
+  };
+  
+  const [activeTab, setActiveTab] = useState<'overview' | 'map' | 'webcams' | 'alerts' | 'roadtrips' | 'planning' | 'fleet'>(getInitialTab);
   const [alertCount, setAlertCount] = useState(0);
 
   useEffect(() => {
