@@ -1,0 +1,307 @@
+Create host dashboard UI - main dashboard page.
+
+Create file: client/src/pages/host/HostDashboard.tsx
+```tsx
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
+
+interface Property {
+    id: number;
+    name: string;
+    city: string;
+    region: string;
+    status: string;
+    totalSpots: number;
+    role: string;
+    pendingBookings: number;
+    activeGuests: number;
+    monthRevenue: number;
+}
+
+interface Stats {
+    totalProperties: number;
+    pendingBookings: number;
+    activeGuests: number;
+    monthRevenue: number;
+    yearRevenue: number;
+}
+
+interface Booking {
+    id: number;
+    bookingRef: string;
+    propertyName: string;
+    guestName: string;
+    checkInDate: string;
+    checkOutDate: string;
+    numNights: number;
+    totalCost: number;
+    status: string;
+}
+
+export default function HostDashboard() {
+    const { user } = useAuth();
+    const navigate = useNavigate();
+    const [stats, setStats] = useState<Stats | null>(null);
+    const [properties, setProperties] = useState<Property[]>([]);
+    const [recentBookings, setRecentBookings] = useState<Booking[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        if (user?.userType !== 'host' && user?.userType !== 'admin') {
+            navigate('/');
+            return;
+        }
+        loadDashboard();
+    }, [user, navigate]);
+
+    async function loadDashboard() {
+        const token = localStorage.getItem('accessToken');
+        
+        try {
+            const [statsRes, propsRes, bookingsRes] = await Promise.all([
+                fetch('/api/host/stats', { headers: { Authorization: `Bearer ${token}` } }),
+                fetch('/api/host/properties', { headers: { Authorization: `Bearer ${token}` } }),
+                fetch('/api/host/bookings?status=pending', { headers: { Authorization: `Bearer ${token}` } })
+            ]);
+
+            const [statsData, propsData, bookingsData] = await Promise.all([
+                statsRes.json(),
+                propsRes.json(),
+                bookingsRes.json()
+            ]);
+
+            if (statsData.success) setStats(statsData.stats);
+            if (propsData.success) setProperties(propsData.properties);
+            if (bookingsData.success) setRecentBookings(bookingsData.bookings.slice(0, 5));
+        } catch (err) {
+            console.error('Failed to load dashboard:', err);
+        } finally {
+            setLoading(false);
+        }
+    }
+
+    async function handleBookingAction(bookingId: number, status: string) {
+        const token = localStorage.getItem('accessToken');
+        
+        try {
+            const res = await fetch(`/api/host/bookings/${bookingId}/status`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ status })
+            });
+
+            if (res.ok) {
+                loadDashboard(); // Refresh data
+            }
+        } catch (err) {
+            console.error('Action failed:', err);
+        }
+    }
+
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+                <div className="text-white">Loading dashboard...</div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="min-h-screen bg-gray-900">
+            {/* Header */}
+            <div className="bg-gray-800 border-b border-gray-700">
+                <div className="max-w-7xl mx-auto px-4 py-6">
+                    <h1 className="text-2xl font-bold text-white">Host Dashboard</h1>
+                    <p className="text-gray-400">Welcome back, {user?.firstName || 'Host'}!</p>
+                </div>
+            </div>
+
+            <div className="max-w-7xl mx-auto px-4 py-8">
+                {/* Stats Cards */}
+                {stats && (
+                    <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
+                        <div className="bg-gray-800 rounded-lg p-4">
+                            <p className="text-gray-400 text-sm">Properties</p>
+                            <p className="text-2xl font-bold text-white">{stats.totalProperties}</p>
+                        </div>
+                        <div className="bg-gray-800 rounded-lg p-4">
+                            <p className="text-gray-400 text-sm">Pending Bookings</p>
+                            <p className="text-2xl font-bold text-yellow-400">{stats.pendingBookings}</p>
+                        </div>
+                        <div className="bg-gray-800 rounded-lg p-4">
+                            <p className="text-gray-400 text-sm">Active Guests</p>
+                            <p className="text-2xl font-bold text-green-400">{stats.activeGuests}</p>
+                        </div>
+                        <div className="bg-gray-800 rounded-lg p-4">
+                            <p className="text-gray-400 text-sm">This Month</p>
+                            <p className="text-2xl font-bold text-blue-400">${stats.monthRevenue.toFixed(0)}</p>
+                        </div>
+                        <div className="bg-gray-800 rounded-lg p-4">
+                            <p className="text-gray-400 text-sm">Year to Date</p>
+                            <p className="text-2xl font-bold text-purple-400">${stats.yearRevenue.toFixed(0)}</p>
+                        </div>
+                    </div>
+                )}
+
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    {/* Properties List */}
+                    <div className="lg:col-span-2">
+                        <div className="bg-gray-800 rounded-lg">
+                            <div className="px-4 py-3 border-b border-gray-700 flex justify-between items-center">
+                                <h2 className="text-lg font-semibold text-white">My Properties</h2>
+                                <button className="text-blue-400 hover:text-blue-300 text-sm">
+                                    + Add Property
+                                </button>
+                            </div>
+                            <div className="divide-y divide-gray-700">
+                                {properties.map(property => (
+                                    <div key={property.id} className="p-4 hover:bg-gray-750">
+                                        <div className="flex justify-between items-start">
+                                            <div>
+                                                <Link 
+                                                    to={`/host/properties/${property.id}`}
+                                                    className="text-white font-medium hover:text-blue-400"
+                                                >
+                                                    {property.name}
+                                                </Link>
+                                                <p className="text-gray-400 text-sm">
+                                                    {property.city}, {property.region}
+                                                </p>
+                                                <div className="flex gap-4 mt-2 text-sm">
+                                                    <span className="text-gray-500">
+                                                        {property.totalSpots} spots
+                                                    </span>
+                                                    {property.pendingBookings > 0 && (
+                                                        <span className="text-yellow-400">
+                                                            {property.pendingBookings} pending
+                                                        </span>
+                                                    )}
+                                                    {property.activeGuests > 0 && (
+                                                        <span className="text-green-400">
+                                                            {property.activeGuests} active
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className="text-green-400 font-medium">
+                                                    ${property.monthRevenue.toFixed(0)}
+                                                </p>
+                                                <p className="text-gray-500 text-xs">this month</p>
+                                                <span className={`text-xs px-2 py-0.5 rounded ${
+                                                    property.status === 'active' 
+                                                        ? 'bg-green-900 text-green-300' 
+                                                        : 'bg-yellow-900 text-yellow-300'
+                                                }`}>
+                                                    {property.status}
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div className="flex gap-2 mt-3">
+                                            <Link 
+                                                to={`/host/properties/${property.id}/calendar`}
+                                                className="text-xs bg-gray-700 hover:bg-gray-600 text-gray-300 px-3 py-1 rounded"
+                                            >
+                                                Calendar
+                                            </Link>
+                                            <Link 
+                                                to={`/host/properties/${property.id}/bookings`}
+                                                className="text-xs bg-gray-700 hover:bg-gray-600 text-gray-300 px-3 py-1 rounded"
+                                            >
+                                                Bookings
+                                            </Link>
+                                            <Link 
+                                                to={`/staging/${property.id}`}
+                                                className="text-xs bg-gray-700 hover:bg-gray-600 text-gray-300 px-3 py-1 rounded"
+                                            >
+                                                View Listing
+                                            </Link>
+                                        </div>
+                                    </div>
+                                ))}
+
+                                {properties.length === 0 && (
+                                    <div className="p-8 text-center text-gray-500">
+                                        No properties yet. Add your first property to get started!
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Pending Bookings */}
+                    <div>
+                        <div className="bg-gray-800 rounded-lg">
+                            <div className="px-4 py-3 border-b border-gray-700">
+                                <h2 className="text-lg font-semibold text-white">Pending Bookings</h2>
+                            </div>
+                            <div className="divide-y divide-gray-700">
+                                {recentBookings.map(booking => (
+                                    <div key={booking.id} className="p-4">
+                                        <div className="flex justify-between items-start mb-2">
+                                            <div>
+                                                <p className="text-white font-medium">{booking.guestName}</p>
+                                                <p className="text-gray-400 text-sm">{booking.propertyName}</p>
+                                            </div>
+                                            <p className="text-green-400 font-medium">
+                                                ${booking.totalCost.toFixed(0)}
+                                            </p>
+                                        </div>
+                                        <p className="text-gray-500 text-sm mb-3">
+                                            {new Date(booking.checkInDate).toLocaleDateString()} → {' '}
+                                            {new Date(booking.checkOutDate).toLocaleDateString()}
+                                            {' '}({booking.numNights} nights)
+                                        </p>
+                                        <div className="flex gap-2">
+                                            <button
+                                                onClick={() => handleBookingAction(booking.id, 'confirmed')}
+                                                className="flex-1 bg-green-600 hover:bg-green-700 text-white text-sm py-1.5 rounded"
+                                            >
+                                                Confirm
+                                            </button>
+                                            <button
+                                                onClick={() => handleBookingAction(booking.id, 'cancelled')}
+                                                className="flex-1 bg-red-600 hover:bg-red-700 text-white text-sm py-1.5 rounded"
+                                            >
+                                                Decline
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+
+                                {recentBookings.length === 0 && (
+                                    <div className="p-8 text-center text-gray-500">
+                                        No pending bookings
+                                    </div>
+                                )}
+                            </div>
+                            
+                            {recentBookings.length > 0 && (
+                                <div className="px-4 py-3 border-t border-gray-700">
+                                    <Link 
+                                        to="/host/bookings" 
+                                        className="text-blue-400 hover:text-blue-300 text-sm"
+                                    >
+                                        View all bookings →
+                                    </Link>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+```
+
+Add route:
+```tsx
+<Route path="/host" element={<HostDashboard />} />
+```
+
+Test by logging in as host@example.com and navigating to /host

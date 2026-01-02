@@ -1,59 +1,100 @@
-import { useQuery } from '@tanstack/react-query';
-import { Link } from 'wouter';
-import { ProtectedHostRoute } from '@/contexts/HostAuthContext';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import { Link, useLocation } from 'wouter';
+import { useAuth } from '@/contexts/AuthContext';
 import { HostLayout } from '@/components/HostLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { 
   Building2, Calendar, DollarSign, TrendingUp, Plus, 
-  Loader2, MapPin, ArrowRight
+  Loader2, MapPin, ArrowRight, Users, Bell, Clock, Check, X
 } from 'lucide-react';
+import { queryClient } from '@/lib/queryClient';
+import { useEffect } from 'react';
 
 function getAuthHeaders() {
-  const token = localStorage.getItem('hostToken');
+  const token = localStorage.getItem('accessToken');
   return { 'Authorization': `Bearer ${token}` };
 }
 
 function DashboardContent() {
-  const { data: propertiesData, isLoading: loadingProperties } = useQuery({
-    queryKey: ['/api/host/properties'],
+  const { user } = useAuth();
+  const [, setLocation] = useLocation();
+
+  useEffect(() => {
+    if (user && user.userType !== 'host' && user.userType !== 'admin') {
+      setLocation('/');
+    }
+  }, [user, setLocation]);
+
+  const { data: statsData, isLoading: loadingStats } = useQuery({
+    queryKey: ['/api/host-dashboard', 'stats'],
     queryFn: async () => {
-      const res = await fetch('/api/host/properties', { headers: getAuthHeaders() });
+      const res = await fetch('/api/host-dashboard/dashboard/stats', { headers: getAuthHeaders() });
+      if (!res.ok) throw new Error('Failed to load stats');
+      return res.json();
+    },
+    enabled: !!user
+  });
+
+  const { data: propertiesData, isLoading: loadingProperties } = useQuery({
+    queryKey: ['/api/host-dashboard', 'properties'],
+    queryFn: async () => {
+      const res = await fetch('/api/host-dashboard/properties', { headers: getAuthHeaders() });
       if (!res.ok) throw new Error('Failed to load properties');
       return res.json();
-    }
+    },
+    enabled: !!user
   });
 
   const { data: bookingsData, isLoading: loadingBookings } = useQuery({
-    queryKey: ['/api/host/bookings'],
+    queryKey: ['/api/host-dashboard', 'bookings', 'pending'],
     queryFn: async () => {
-      const res = await fetch('/api/host/bookings', { headers: getAuthHeaders() });
+      const res = await fetch('/api/host-dashboard/bookings?status=pending', { headers: getAuthHeaders() });
       if (!res.ok) throw new Error('Failed to load bookings');
       return res.json();
+    },
+    enabled: !!user
+  });
+
+  const updateBookingStatus = useMutation({
+    mutationFn: async ({ bookingId, status }: { bookingId: number; status: string }) => {
+      const res = await fetch(`/api/host-dashboard/bookings/${bookingId}/status`, {
+        method: 'PUT',
+        headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status })
+      });
+      if (!res.ok) throw new Error('Failed to update booking');
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/host-dashboard'] });
     }
   });
 
+  const stats = statsData?.stats;
   const properties = propertiesData?.properties || [];
-  const bookings = bookingsData?.bookings || [];
-  const upcomingBookings = bookings.filter((b: any) => 
-    new Date(b.checkInDate) >= new Date() && b.status !== 'cancelled'
-  );
+  const pendingBookings = bookingsData?.bookings || [];
 
-  const stats = [
-    { label: 'Properties', value: properties.length, icon: Building2 },
-    { label: 'Upcoming Bookings', value: upcomingBookings.length, icon: Calendar },
-    { label: 'This Month', value: '$0', icon: DollarSign },
-    { label: 'Total Revenue', value: '$0', icon: TrendingUp },
-  ];
+  const isLoading = loadingStats || loadingProperties || loadingBookings;
+
+  if (isLoading) {
+    return (
+      <HostLayout>
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      </HostLayout>
+    );
+  }
 
   return (
     <HostLayout>
       <div className="container mx-auto px-4 py-6">
         <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
           <div>
-            <h1 className="text-2xl font-bold" data-testid="text-dashboard-title">Dashboard</h1>
-            <p className="text-muted-foreground">Manage your properties and bookings</p>
+            <h1 className="text-2xl font-bold" data-testid="text-dashboard-title">Host Dashboard</h1>
+            <p className="text-muted-foreground">Welcome back, {user?.firstName || 'Host'}!</p>
           </div>
           <Link href="/host/properties/add">
             <Button data-testid="button-add-property">
@@ -62,24 +103,68 @@ function DashboardContent() {
           </Link>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
-          {stats.map((stat, i) => (
-            <Card key={i}>
+        {stats && (
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5 mb-8">
+            <Card>
               <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-2">
                   <div>
-                    <p className="text-sm text-muted-foreground">{stat.label}</p>
-                    <p className="text-2xl font-bold">{stat.value}</p>
+                    <p className="text-sm text-muted-foreground">Properties</p>
+                    <p className="text-2xl font-bold" data-testid="stat-properties">{stats.totalProperties}</p>
                   </div>
-                  <stat.icon className="h-8 w-8 text-muted-foreground" />
+                  <Building2 className="h-8 w-8 text-muted-foreground" />
                 </div>
               </CardContent>
             </Card>
-          ))}
-        </div>
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between gap-2">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Pending</p>
+                    <p className="text-2xl font-bold text-yellow-500" data-testid="stat-pending">{stats.pendingBookings}</p>
+                  </div>
+                  <Clock className="h-8 w-8 text-yellow-500" />
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between gap-2">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Active Guests</p>
+                    <p className="text-2xl font-bold text-green-500" data-testid="stat-active">{stats.activeGuests}</p>
+                  </div>
+                  <Users className="h-8 w-8 text-green-500" />
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between gap-2">
+                  <div>
+                    <p className="text-sm text-muted-foreground">This Month</p>
+                    <p className="text-2xl font-bold text-blue-500" data-testid="stat-revenue">${stats.monthRevenue?.toFixed(0) || 0}</p>
+                  </div>
+                  <DollarSign className="h-8 w-8 text-blue-500" />
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between gap-2">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Notifications</p>
+                    <p className="text-2xl font-bold" data-testid="stat-notifications">{stats.unreadNotifications}</p>
+                  </div>
+                  <Bell className="h-8 w-8 text-muted-foreground" />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
-        <div className="grid gap-6 lg:grid-cols-2">
-          <Card>
+        <div className="grid gap-6 lg:grid-cols-3">
+          <Card className="lg:col-span-2">
             <CardHeader className="flex flex-row items-center justify-between gap-2">
               <div>
                 <CardTitle>Your Properties</CardTitle>
@@ -92,11 +177,7 @@ function DashboardContent() {
               </Link>
             </CardHeader>
             <CardContent>
-              {loadingProperties ? (
-                <div className="flex justify-center py-8">
-                  <Loader2 className="h-6 w-6 animate-spin" />
-                </div>
-              ) : properties.length === 0 ? (
+              {properties.length === 0 ? (
                 <div className="text-center py-8">
                   <Building2 className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                   <p className="text-muted-foreground mb-4">No properties yet</p>
@@ -107,27 +188,61 @@ function DashboardContent() {
               ) : (
                 <div className="space-y-3">
                   {properties.slice(0, 5).map((property: any) => (
-                    <Link key={property.id} href={`/host/properties/${property.id}`}>
-                      <div className="flex items-center gap-3 p-3 rounded-lg hover-elevate cursor-pointer">
-                        <div className="w-12 h-12 rounded-md bg-muted flex items-center justify-center overflow-hidden">
-                          {property.thumbnailUrl ? (
-                            <img src={property.thumbnailUrl} alt="" className="w-full h-full object-cover" />
-                          ) : (
-                            <Building2 className="h-5 w-5 text-muted-foreground" />
-                          )}
+                    <div key={property.id} className="p-4 rounded-lg hover-elevate border" data-testid={`property-${property.id}`}>
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-12 h-12 rounded-md bg-muted flex items-center justify-center overflow-hidden">
+                            {property.thumbnailUrl ? (
+                              <img src={property.thumbnailUrl} alt="" className="w-full h-full object-cover" />
+                            ) : (
+                              <Building2 className="h-5 w-5 text-muted-foreground" />
+                            )}
+                          </div>
+                          <div>
+                            <Link href={`/host/properties/${property.id}`} className="font-medium hover:text-primary">
+                              {property.name}
+                            </Link>
+                            <p className="text-sm text-muted-foreground flex items-center gap-1">
+                              <MapPin className="h-3 w-3" />
+                              {property.city}, {property.region}
+                            </p>
+                            <div className="flex flex-wrap gap-2 mt-1">
+                              <span className="text-xs text-muted-foreground">{property.totalSpots} spots</span>
+                              {property.pendingBookings > 0 && (
+                                <Badge variant="outline" className="text-yellow-500 border-yellow-500 text-xs">
+                                  {property.pendingBookings} pending
+                                </Badge>
+                              )}
+                              {property.activeGuests > 0 && (
+                                <Badge variant="outline" className="text-green-500 border-green-500 text-xs">
+                                  {property.activeGuests} active
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium truncate">{property.name}</p>
-                          <p className="text-sm text-muted-foreground flex items-center gap-1">
-                            <MapPin className="h-3 w-3" />
-                            {property.city || property.region}
-                          </p>
+                        <div className="text-right">
+                          <p className="text-green-500 font-medium">${property.monthRevenue?.toFixed(0) || 0}</p>
+                          <p className="text-xs text-muted-foreground">this month</p>
+                          <Badge variant={property.status === 'active' ? 'default' : 'secondary'} className="mt-1">
+                            {property.status}
+                          </Badge>
                         </div>
-                        <Badge variant={property.status === 'active' ? 'default' : 'secondary'}>
-                          {property.status}
-                        </Badge>
                       </div>
-                    </Link>
+                      <div className="flex flex-wrap gap-2 mt-3">
+                        <Button variant="outline" size="sm" asChild>
+                          <Link href={`/host/properties/${property.id}/calendar`}>
+                            <Calendar className="h-3 w-3 mr-1" /> Calendar
+                          </Link>
+                        </Button>
+                        <Button variant="outline" size="sm" asChild>
+                          <Link href={`/host/properties/${property.id}/bookings`}>Bookings</Link>
+                        </Button>
+                        <Button variant="outline" size="sm" asChild>
+                          <Link href={`/staging/${property.id}`}>View Listing</Link>
+                        </Button>
+                      </div>
+                    </div>
                   ))}
                 </div>
               )}
@@ -137,8 +252,8 @@ function DashboardContent() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between gap-2">
               <div>
-                <CardTitle>Upcoming Bookings</CardTitle>
-                <CardDescription>Next arrivals</CardDescription>
+                <CardTitle>Pending Bookings</CardTitle>
+                <CardDescription>Requires action</CardDescription>
               </div>
               <Link href="/host/bookings">
                 <Button variant="ghost" size="sm">
@@ -147,28 +262,45 @@ function DashboardContent() {
               </Link>
             </CardHeader>
             <CardContent>
-              {loadingBookings ? (
-                <div className="flex justify-center py-8">
-                  <Loader2 className="h-6 w-6 animate-spin" />
-                </div>
-              ) : upcomingBookings.length === 0 ? (
+              {pendingBookings.length === 0 ? (
                 <div className="text-center py-8">
                   <Calendar className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                  <p className="text-muted-foreground">No upcoming bookings</p>
+                  <p className="text-muted-foreground">No pending bookings</p>
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {upcomingBookings.slice(0, 5).map((booking: any) => (
-                    <div key={booking.id} className="flex items-center justify-between p-3 rounded-lg bg-muted">
-                      <div>
-                        <p className="font-medium">{booking.guestName}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {booking.checkInDate} - {booking.checkOutDate}
-                        </p>
+                  {pendingBookings.slice(0, 5).map((booking: any) => (
+                    <div key={booking.id} className="p-3 rounded-lg border" data-testid={`booking-${booking.id}`}>
+                      <div className="flex justify-between items-start mb-2 gap-2">
+                        <div>
+                          <p className="font-medium">{booking.guestName}</p>
+                          <p className="text-sm text-muted-foreground">{booking.propertyName}</p>
+                        </div>
+                        <p className="text-green-500 font-medium">${booking.totalCost?.toFixed(0) || 0}</p>
                       </div>
-                      <Badge variant={booking.status === 'confirmed' ? 'default' : 'secondary'}>
-                        {booking.status}
-                      </Badge>
+                      <p className="text-sm text-muted-foreground mb-3">
+                        {new Date(booking.checkInDate).toLocaleDateString()} - {new Date(booking.checkOutDate).toLocaleDateString()}
+                        <span className="ml-2">({booking.numNights} nights)</span>
+                      </p>
+                      <div className="flex gap-2">
+                        <Button 
+                          size="sm" 
+                          onClick={() => updateBookingStatus.mutate({ bookingId: booking.id, status: 'confirmed' })}
+                          disabled={updateBookingStatus.isPending}
+                          data-testid={`confirm-booking-${booking.id}`}
+                        >
+                          <Check className="h-3 w-3 mr-1" /> Confirm
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="destructive"
+                          onClick={() => updateBookingStatus.mutate({ bookingId: booking.id, status: 'cancelled' })}
+                          disabled={updateBookingStatus.isPending}
+                          data-testid={`cancel-booking-${booking.id}`}
+                        >
+                          <X className="h-3 w-3 mr-1" /> Decline
+                        </Button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -182,9 +314,21 @@ function DashboardContent() {
 }
 
 export default function HostDashboard() {
-  return (
-    <ProtectedHostRoute>
-      <DashboardContent />
-    </ProtectedHostRoute>
-  );
+  const { user, loading } = useAuth();
+  const [, setLocation] = useLocation();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (!user || (user.userType !== 'host' && user.userType !== 'admin')) {
+    setLocation('/');
+    return null;
+  }
+
+  return <DashboardContent />;
 }
