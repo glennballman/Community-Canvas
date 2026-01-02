@@ -1,0 +1,128 @@
+Run these database integrity tests. Report ALL failures.
+
+-- ============================================================================
+-- TEST 1: Verify all tables exist
+-- ============================================================================
+SELECT table_name FROM information_schema.tables 
+WHERE table_schema = 'public' 
+AND table_name IN (
+    'host_accounts', 'host_sessions', 'staging_properties', 'staging_spots',
+    'staging_pricing', 'staging_service_providers', 'vehicle_profiles',
+    'staging_bookings', 'staging_calendar_blocks', 'staging_ical_feeds',
+    'staging_reviews', 'rental_inventory'
+)
+ORDER BY table_name;
+-- EXPECTED: 12 tables
+
+-- ============================================================================
+-- TEST 2: Verify Save Paradise Parking exists and has correct scores
+-- ============================================================================
+SELECT 
+    name, 
+    canvas_id,
+    property_type,
+    status,
+    crew_score,
+    rv_score,
+    trucker_score,
+    equestrian_score,
+    total_spots,
+    max_combined_length_ft,
+    has_shore_power,
+    accepts_semi_trucks
+FROM staging_properties 
+WHERE name = 'Save Paradise Parking';
+-- EXPECTED: 1 row, scores should be > 0, status = 'active'
+
+-- ============================================================================
+-- TEST 3: Verify spots were created
+-- ============================================================================
+SELECT COUNT(*) as spot_count,
+       SUM(CASE WHEN is_pull_through THEN 1 ELSE 0 END) as pull_through_count,
+       SUM(CASE WHEN has_power THEN 1 ELSE 0 END) as powered_count
+FROM staging_spots
+WHERE property_id = (SELECT id FROM staging_properties WHERE name = 'Save Paradise Parking');
+-- EXPECTED: 10 spots, some pull-through, some powered
+
+-- ============================================================================
+-- TEST 4: Verify pricing was created
+-- ============================================================================
+SELECT pricing_type, nightly_rate, weekly_rate, monthly_rate, season_name
+FROM staging_pricing
+WHERE property_id = (SELECT id FROM staging_properties WHERE name = 'Save Paradise Parking');
+-- EXPECTED: At least 2 rows (base + seasonal)
+
+-- ============================================================================
+-- TEST 5: Test canvas_id auto-generation
+-- ============================================================================
+INSERT INTO staging_properties (name, property_type, city, region, total_spots)
+VALUES ('QA Test Property 1', 'parking_lot', 'Test City', 'Test Region', 5)
+RETURNING id, canvas_id, crew_score, rv_score;
+-- EXPECTED: canvas_id should be auto-generated like CC-STG-00002
+
+-- ============================================================================
+-- TEST 6: Test score calculation trigger
+-- ============================================================================
+UPDATE staging_properties 
+SET has_shore_power = true, 
+    power_amps = ARRAY[30, 50],
+    has_water_hookup = true,
+    has_sewer_hookup = true,
+    has_dump_station = true,
+    max_combined_length_ft = 85,
+    accepts_semi_trucks = true,
+    has_onsite_mechanic = true,
+    is_horse_friendly = true,
+    num_horse_stalls = 5,
+    has_paddocks = true,
+    has_hay_available = true
+WHERE name = 'QA Test Property 1'
+RETURNING name, crew_score, rv_score, trucker_score, equestrian_score;
+-- EXPECTED: All scores should be significantly higher now (>50)
+
+-- ============================================================================
+-- TEST 7: Test booking reference auto-generation
+-- ============================================================================
+INSERT INTO staging_bookings (
+    property_id, guest_type, guest_name, guest_email,
+    check_in_date, check_out_date, num_adults
+)
+SELECT id, 'individual', 'QA Test Guest', 'qa@test.com',
+       CURRENT_DATE + 7, CURRENT_DATE + 10, 2
+FROM staging_properties WHERE name = 'Save Paradise Parking'
+RETURNING id, booking_ref, num_nights;
+-- EXPECTED: booking_ref like CC-STG-20260101-001, num_nights = 3
+
+-- ============================================================================
+-- TEST 8: Test date constraint on bookings
+-- ============================================================================
+INSERT INTO staging_bookings (
+    property_id, guest_type, guest_name,
+    check_in_date, check_out_date, num_adults
+)
+SELECT id, 'individual', 'Bad Date Guest',
+       CURRENT_DATE + 10, CURRENT_DATE + 5, 1  -- checkout before checkin!
+FROM staging_properties WHERE name = 'Save Paradise Parking';
+-- EXPECTED: ERROR - violates check constraint "valid_booking_dates"
+
+-- ============================================================================
+-- TEST 9: Test foreign key constraints
+-- ============================================================================
+INSERT INTO staging_spots (property_id, spot_number, spot_type)
+VALUES (99999, 'X1', 'parking_standard');
+-- EXPECTED: ERROR - foreign key violation
+
+-- ============================================================================
+-- TEST 10: Cleanup test data
+-- ============================================================================
+DELETE FROM staging_bookings WHERE guest_email = 'qa@test.com';
+DELETE FROM staging_properties WHERE name = 'QA Test Property 1';
+
+-- Final verification
+SELECT 
+    (SELECT COUNT(*) FROM staging_properties) as properties,
+    (SELECT COUNT(*) FROM staging_spots) as spots,
+    (SELECT COUNT(*) FROM staging_bookings) as bookings,
+    (SELECT COUNT(*) FROM staging_pricing) as pricing_rules;
+
+Report results for each test. Any unexpected results = BUG.
