@@ -1,0 +1,382 @@
+Create Bamfield as a community and seed the seasonal bundles from our earlier design.
+
+## Run this SQL:
+```sql
+-- =====================================================================
+-- BAMFIELD COMMUNITY PRESET
+-- =====================================================================
+
+-- First, get the Coastal Wet climate region ID
+DO $$
+DECLARE
+    v_coastal_wet_id UUID;
+    v_water_only_id UUID;
+    v_bamfield_id UUID;
+    v_bundle_id UUID;
+BEGIN
+    -- Get reference IDs
+    SELECT id INTO v_coastal_wet_id FROM sr_climate_regions WHERE name = 'Coastal Wet';
+    SELECT id INTO v_water_only_id FROM sr_access_requirements WHERE name = 'water_only';
+    
+    -- Create Bamfield community
+    INSERT INTO sr_communities (
+        name, region, country, latitude, longitude, 
+        climate_region_id, default_access_requirement_id, 
+        remote_multiplier, typical_freeze_week, typical_thaw_week, notes
+    ) VALUES (
+        'Bamfield', 'BC', 'Canada', 48.833, -125.136,
+        v_coastal_wet_id, NULL,
+        1.25, 48, 10,
+        'Coastal community on Vancouver Island west coast. Mix of road and water-only access properties. High precipitation, storm-driven scheduling. Strong marine services demand.'
+    )
+    ON CONFLICT DO NOTHING
+    RETURNING id INTO v_bamfield_id;
+    
+    -- If already exists, get the ID
+    IF v_bamfield_id IS NULL THEN
+        SELECT id INTO v_bamfield_id FROM sr_communities WHERE name = 'Bamfield';
+    END IF;
+    
+    RAISE NOTICE 'Bamfield community ID: %', v_bamfield_id;
+END $$;
+
+-- =====================================================================
+-- SEASONAL RUN TYPES FOR COASTAL WET CLIMATE
+-- =====================================================================
+
+INSERT INTO sr_run_types (slug, name, description, climate_region_id, earliest_week, latest_week, hard_stop, is_emergency, priority_weight)
+SELECT 
+    'coastal-spring-opening',
+    'Coastal Spring Opening Run',
+    'Re-open seasonal properties after winter. Prioritize water systems, safety checks, and dock launches.',
+    id, 12, 18, false, false, 90
+FROM sr_climate_regions WHERE name = 'Coastal Wet'
+ON CONFLICT (slug) DO NOTHING;
+
+INSERT INTO sr_run_types (slug, name, description, climate_region_id, earliest_week, latest_week, hard_stop, is_emergency, priority_weight)
+SELECT 
+    'coastal-fall-shutdown',
+    'Coastal Fall Shutdown Run',
+    'Shut down and harden properties before storm season. Bundle roof/water/septic/marine services.',
+    id, 38, 45, true, false, 95
+FROM sr_climate_regions WHERE name = 'Coastal Wet'
+ON CONFLICT (slug) DO NOTHING;
+
+INSERT INTO sr_run_types (slug, name, description, climate_region_id, earliest_week, latest_week, hard_stop, is_emergency, priority_weight)
+SELECT 
+    'coastal-storm-response',
+    'Coastal Storm Response',
+    'Emergency response for storm damage, downed trees, flooding, power failures.',
+    id, 40, 15, false, true, 100
+FROM sr_climate_regions WHERE name = 'Coastal Wet'
+ON CONFLICT (slug) DO NOTHING;
+
+INSERT INTO sr_run_types (slug, name, description, climate_region_id, earliest_week, latest_week, hard_stop, is_emergency, priority_weight)
+SELECT 
+    'summer-maintenance',
+    'Summer Maintenance Window',
+    'Optimal window for exterior work, painting, deck work, tree services.',
+    id, 20, 35, false, false, 70
+FROM sr_climate_regions WHERE name = 'Coastal Wet'
+ON CONFLICT (slug) DO NOTHING;
+
+-- Link services to run types
+-- Spring Opening Run
+INSERT INTO sr_run_type_services (run_type_id, service_id, sort_order)
+SELECT rt.id, s.id, 
+    CASE s.slug 
+        WHEN 'spring-de-winterization' THEN 10
+        WHEN 'water-quality-testing' THEN 20
+        WHEN 'uv-system-service' THEN 30
+        WHEN 'generator-service' THEN 40
+        WHEN 'dock-launch' THEN 50
+        WHEN 'exterior-electrical-check' THEN 60
+        WHEN 'septic-inspection' THEN 70
+        WHEN 'hot-tub-service' THEN 80
+    END
+FROM sr_run_types rt, sr_services s
+WHERE rt.slug = 'coastal-spring-opening'
+AND s.slug IN ('spring-de-winterization', 'water-quality-testing', 'uv-system-service', 
+               'generator-service', 'dock-launch', 'exterior-electrical-check', 
+               'septic-inspection', 'hot-tub-service')
+ON CONFLICT DO NOTHING;
+
+-- Fall Shutdown Run
+INSERT INTO sr_run_type_services (run_type_id, service_id, sort_order)
+SELECT rt.id, s.id,
+    CASE s.slug
+        WHEN 'chimney-sweep' THEN 10
+        WHEN 'roof-inspection' THEN 20
+        WHEN 'gutter-cleaning' THEN 30
+        WHEN 'septic-pumping' THEN 40
+        WHEN 'pipe-winterization' THEN 50
+        WHEN 'dock-stow-haul' THEN 60
+        WHEN 'full-winterization' THEN 70
+        WHEN 'hot-tub-winterization' THEN 80
+        WHEN 'boat-winterization' THEN 90
+    END
+FROM sr_run_types rt, sr_services s
+WHERE rt.slug = 'coastal-fall-shutdown'
+AND s.slug IN ('chimney-sweep', 'roof-inspection', 'gutter-cleaning', 'septic-pumping',
+               'pipe-winterization', 'dock-stow-haul', 'full-winterization', 
+               'hot-tub-winterization', 'boat-winterization')
+ON CONFLICT DO NOTHING;
+
+-- Storm Response
+INSERT INTO sr_run_type_services (run_type_id, service_id, sort_order)
+SELECT rt.id, s.id,
+    CASE s.slug
+        WHEN 'storm-damage-tarping' THEN 10
+        WHEN 'emergency-tree-removal' THEN 20
+        WHEN 'flood-pumping' THEN 30
+        WHEN 'generator-hookup' THEN 40
+        WHEN 'emergency-dock-stabilization' THEN 50
+        WHEN 'emergency-plumbing' THEN 60
+        WHEN 'emergency-electrical' THEN 70
+    END
+FROM sr_run_types rt, sr_services s
+WHERE rt.slug = 'coastal-storm-response'
+AND s.slug IN ('storm-damage-tarping', 'emergency-tree-removal', 'flood-pumping',
+               'generator-hookup', 'emergency-dock-stabilization', 'emergency-plumbing',
+               'emergency-electrical')
+ON CONFLICT DO NOTHING;
+
+-- =====================================================================
+-- BAMFIELD BUNDLES (SKUs)
+-- =====================================================================
+
+-- Bundle 1: Fall Coastal Close-Down Package
+INSERT INTO sr_bundles (name, slug, description, context, is_subscription, billing_period)
+VALUES (
+    'Bamfield Fall Coastal Close-Down Package',
+    'bamfield-fall-close-down',
+    'Single mobilization, multi-trade fall shutdown for seasonal coastal properties. Includes chimney, roof, gutters, septic, winterization, and dock haul-out.',
+    'residential',
+    false,
+    ''
+) ON CONFLICT (slug) DO NOTHING;
+
+-- Bundle 1 items
+INSERT INTO sr_bundle_items (bundle_id, service_id, quantity, sort_order)
+SELECT b.id, s.id, 1,
+    CASE s.slug
+        WHEN 'chimney-sweep' THEN 10
+        WHEN 'roof-inspection' THEN 20
+        WHEN 'gutter-cleaning' THEN 30
+        WHEN 'septic-pumping' THEN 40
+        WHEN 'pipe-winterization' THEN 50
+        WHEN 'dock-stow-haul' THEN 60
+    END
+FROM sr_bundles b, sr_services s
+WHERE b.slug = 'bamfield-fall-close-down'
+AND s.slug IN ('chimney-sweep', 'roof-inspection', 'gutter-cleaning', 
+               'septic-pumping', 'pipe-winterization', 'dock-stow-haul')
+ON CONFLICT DO NOTHING;
+
+-- Bundle 1 pricing
+INSERT INTO sr_bundle_pricing (bundle_id, base_price, discount_factor, mobilization_surcharge, remote_multiplier, notes)
+SELECT id, 0, 0.88, 250, 1.25, 
+    'Discount capped by mobilization savings. Single crew visit saves ~$400 in separate mobilizations.'
+FROM sr_bundles WHERE slug = 'bamfield-fall-close-down'
+ON CONFLICT DO NOTHING;
+
+-- Bundle 1 seasonality
+INSERT INTO sr_bundle_seasonality (bundle_id, climate_region_id, earliest_week, latest_week, hard_stop, notes)
+SELECT b.id, cr.id, 38, 45, true, 'Must complete before heavy storm season begins.'
+FROM sr_bundles b, sr_climate_regions cr
+WHERE b.slug = 'bamfield-fall-close-down' AND cr.name = 'Coastal Wet'
+ON CONFLICT DO NOTHING;
+
+-- Bundle 2: Spring Coastal Re-Opening Package
+INSERT INTO sr_bundles (name, slug, description, context, is_subscription, billing_period)
+VALUES (
+    'Bamfield Spring Coastal Re-Opening Package',
+    'bamfield-spring-opening',
+    'Re-open seasonal property: water systems, power, exterior readiness, dock launch. Single coordinated visit.',
+    'residential',
+    false,
+    ''
+) ON CONFLICT (slug) DO NOTHING;
+
+-- Bundle 2 items
+INSERT INTO sr_bundle_items (bundle_id, service_id, quantity, sort_order)
+SELECT b.id, s.id, 1,
+    CASE s.slug
+        WHEN 'spring-de-winterization' THEN 10
+        WHEN 'water-quality-testing' THEN 20
+        WHEN 'uv-system-service' THEN 30
+        WHEN 'generator-service' THEN 40
+        WHEN 'dock-launch' THEN 50
+        WHEN 'exterior-electrical-check' THEN 60
+    END
+FROM sr_bundles b, sr_services s
+WHERE b.slug = 'bamfield-spring-opening'
+AND s.slug IN ('spring-de-winterization', 'water-quality-testing', 'uv-system-service',
+               'generator-service', 'dock-launch', 'exterior-electrical-check')
+ON CONFLICT DO NOTHING;
+
+-- Bundle 2 pricing
+INSERT INTO sr_bundle_pricing (bundle_id, base_price, discount_factor, mobilization_surcharge, remote_multiplier, notes)
+SELECT id, 0, 0.90, 200, 1.25, 
+    'Optimized for single visit + dock coordination.'
+FROM sr_bundles WHERE slug = 'bamfield-spring-opening'
+ON CONFLICT DO NOTHING;
+
+-- Bundle 2 seasonality
+INSERT INTO sr_bundle_seasonality (bundle_id, climate_region_id, earliest_week, latest_week, hard_stop, notes)
+SELECT b.id, cr.id, 12, 18, false, 'After winter storms ease. Flexible timing.'
+FROM sr_bundles b, sr_climate_regions cr
+WHERE b.slug = 'bamfield-spring-opening' AND cr.name = 'Coastal Wet'
+ON CONFLICT DO NOTHING;
+
+-- Bundle 3: Storm-Ready Property Audit
+INSERT INTO sr_bundles (name, slug, description, context, is_subscription, billing_period)
+VALUES (
+    'Bamfield Storm-Ready Property Audit',
+    'bamfield-storm-ready-audit',
+    'Pre-storm vulnerability audit with prioritized fixes and emergency planning. Identifies risks before storm season.',
+    'residential',
+    false,
+    ''
+) ON CONFLICT (slug) DO NOTHING;
+
+-- Bundle 3 items
+INSERT INTO sr_bundle_items (bundle_id, service_id, quantity, sort_order)
+SELECT b.id, s.id, 1,
+    CASE s.slug
+        WHEN 'hazard-tree-assessment' THEN 10
+        WHEN 'roof-inspection' THEN 20
+        WHEN 'perimeter-drain-inspection' THEN 30
+        WHEN 'generator-service' THEN 40
+    END
+FROM sr_bundles b, sr_services s
+WHERE b.slug = 'bamfield-storm-ready-audit'
+AND s.slug IN ('hazard-tree-assessment', 'roof-inspection', 'perimeter-drain-inspection', 'generator-service')
+ON CONFLICT DO NOTHING;
+
+-- Bundle 3 pricing
+INSERT INTO sr_bundle_pricing (bundle_id, base_price, discount_factor, mobilization_surcharge, remote_multiplier, notes)
+SELECT id, 0, 0.93, 175, 1.25, 
+    'Audit priced to sell. Follow-on work drives revenue.'
+FROM sr_bundles WHERE slug = 'bamfield-storm-ready-audit'
+ON CONFLICT DO NOTHING;
+
+-- Bundle 3 seasonality
+INSERT INTO sr_bundle_seasonality (bundle_id, climate_region_id, earliest_week, latest_week, hard_stop, notes)
+SELECT b.id, cr.id, 34, 48, false, 'Pre-storm to early storm season.'
+FROM sr_bundles b, sr_climate_regions cr
+WHERE b.slug = 'bamfield-storm-ready-audit' AND cr.name = 'Coastal Wet'
+ON CONFLICT DO NOTHING;
+
+-- Bundle 4: Marine Asset Protection Package
+INSERT INTO sr_bundles (name, slug, description, context, is_subscription, billing_period)
+VALUES (
+    'Bamfield Marine Asset Protection Package',
+    'bamfield-marine-protection',
+    'Comprehensive marine infrastructure inspection and maintenance: docks, floats, gangways, pilings.',
+    'residential',
+    false,
+    ''
+) ON CONFLICT (slug) DO NOTHING;
+
+-- Bundle 4 items
+INSERT INTO sr_bundle_items (bundle_id, service_id, quantity, sort_order)
+SELECT b.id, s.id, 1,
+    CASE s.slug
+        WHEN 'dock-inspection' THEN 10
+        WHEN 'gangway-service' THEN 20
+        WHEN 'piling-inspection' THEN 30
+        WHEN 'float-repair' THEN 40
+    END
+FROM sr_bundles b, sr_services s
+WHERE b.slug = 'bamfield-marine-protection'
+AND s.slug IN ('dock-inspection', 'gangway-service', 'piling-inspection', 'float-repair')
+ON CONFLICT DO NOTHING;
+
+-- Bundle 4 pricing
+INSERT INTO sr_bundle_pricing (bundle_id, base_price, discount_factor, mobilization_surcharge, remote_multiplier, notes)
+SELECT id, 0, 0.90, 300, 1.30, 
+    'Often water-only access. Adjust access/mobilization accordingly.'
+FROM sr_bundles WHERE slug = 'bamfield-marine-protection'
+ON CONFLICT DO NOTHING;
+
+-- Bundle 4 seasonality
+INSERT INTO sr_bundle_seasonality (bundle_id, climate_region_id, earliest_week, latest_week, hard_stop, notes)
+SELECT b.id, cr.id, 15, 40, false, 'Best in calmer months. Storm follow-up as needed.'
+FROM sr_bundles b, sr_climate_regions cr
+WHERE b.slug = 'bamfield-marine-protection' AND cr.name = 'Coastal Wet'
+ON CONFLICT DO NOTHING;
+
+-- Bundle 5: Annual Care Plan (Subscription)
+INSERT INTO sr_bundles (name, slug, description, context, is_subscription, billing_period)
+VALUES (
+    'Bamfield Remote Cabin Annual Care Plan',
+    'bamfield-annual-care-plan',
+    '12-month subscription: Spring opening + Fall close-down + monthly property checks + priority emergency response.',
+    'residential',
+    true,
+    'annual'
+) ON CONFLICT (slug) DO NOTHING;
+
+-- Bundle 5 items (references other bundles conceptually, but we list core services)
+INSERT INTO sr_bundle_items (bundle_id, service_id, quantity, sort_order)
+SELECT b.id, s.id, 
+    CASE s.slug WHEN 'vacation-watch-weekly' THEN 12 ELSE 1 END,
+    CASE s.slug
+        WHEN 'spring-de-winterization' THEN 10
+        WHEN 'full-winterization' THEN 20
+        WHEN 'vacation-watch-weekly' THEN 30
+        WHEN 'septic-pumping' THEN 40
+        WHEN 'chimney-sweep' THEN 50
+    END
+FROM sr_bundles b, sr_services s
+WHERE b.slug = 'bamfield-annual-care-plan'
+AND s.slug IN ('spring-de-winterization', 'full-winterization', 'vacation-watch-weekly', 
+               'septic-pumping', 'chimney-sweep')
+ON CONFLICT DO NOTHING;
+
+-- Bundle 5 pricing
+INSERT INTO sr_bundle_pricing (bundle_id, base_price, discount_factor, mobilization_surcharge, remote_multiplier, notes)
+SELECT id, 2500, 0.85, 0, 1.25, 
+    'Annual subscription. Includes priority emergency response. Set-and-forget property care.'
+FROM sr_bundles WHERE slug = 'bamfield-annual-care-plan'
+ON CONFLICT DO NOTHING;
+
+-- Bundle 5 seasonality (year-round)
+INSERT INTO sr_bundle_seasonality (bundle_id, climate_region_id, earliest_week, latest_week, hard_stop, notes)
+SELECT b.id, cr.id, 1, 52, false, 'Year-round subscription. Individual services follow their own windows.'
+FROM sr_bundles b, sr_climate_regions cr
+WHERE b.slug = 'bamfield-annual-care-plan' AND cr.name = 'Coastal Wet'
+ON CONFLICT DO NOTHING;
+
+-- Link bundles to Bamfield community
+INSERT INTO sr_community_bundles (community_id, bundle_id, priority_weight, notes)
+SELECT c.id, b.id, 
+    CASE b.slug
+        WHEN 'bamfield-fall-close-down' THEN 95
+        WHEN 'bamfield-spring-opening' THEN 90
+        WHEN 'bamfield-annual-care-plan' THEN 85
+        WHEN 'bamfield-storm-ready-audit' THEN 80
+        WHEN 'bamfield-marine-protection' THEN 75
+    END,
+    'Bamfield community default bundle'
+FROM sr_communities c, sr_bundles b
+WHERE c.name = 'Bamfield'
+AND b.slug LIKE 'bamfield-%'
+ON CONFLICT DO NOTHING;
+
+-- =====================================================================
+-- VERIFY
+-- =====================================================================
+
+SELECT 'Bamfield setup complete:' as status;
+SELECT 'Communities: ' || COUNT(*) FROM sr_communities;
+SELECT 'Run Types: ' || COUNT(*) FROM sr_run_types;
+SELECT 'Bundles: ' || COUNT(*) FROM sr_bundles;
+
+SELECT name, slug FROM sr_communities;
+SELECT name, earliest_week, latest_week FROM sr_run_types ORDER BY priority_weight DESC;
+SELECT name, is_subscription FROM sr_bundles ORDER BY name;
+```
+
+Report the counts and list of bundles created.
