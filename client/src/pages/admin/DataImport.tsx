@@ -227,8 +227,8 @@ export default function DataImport() {
                         </Button>
                     </Link>
                     <div>
-                        <h1 className="text-2xl font-bold" data-testid="text-import-title">Data Import</h1>
-                        <p className="text-muted-foreground">Import and manage property data from external sources</p>
+                        <h1 className="text-2xl font-bold" data-testid="text-import-title">Accommodations Data Import</h1>
+                        <p className="text-muted-foreground">Import and manage accommodation property data from external sources</p>
                     </div>
                 </div>
 

@@ -86,7 +86,6 @@ const navSections: NavSection[] = [
     items: [
       { path: "/fleet", label: "Vehicle Fleet", icon: Truck },
       { path: "/admin/civos", label: "CivOS Dashboard", icon: Shield },
-      { path: "/admin/import", label: "Data Import", icon: Download },
     ]
   },
   {
@@ -94,6 +93,7 @@ const navSections: NavSection[] = [
     icon: Database,
     defaultOpen: false,
     items: [
+      { path: "/admin/import", label: "Accommodations Data Import", icon: Download },
       { path: "/admin/sources", label: "Manage Sources", icon: Database },
       { path: "/admin/matrix", label: "Source Matrix", icon: Grid3X3 },
       { path: "/admin/logs", label: "Scrape Logs", icon: FileText },
