@@ -1,0 +1,572 @@
+Create the API routes for the multi-tenant foundation. These handle user authentication, tenant management, and role-based access.
+
+## Create file: server/routes/foundation.ts
+```typescript
+import express, { Request, Response, NextFunction } from 'express';
+import { db } from '../db';
+import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
+
+const router = express.Router();
+
+const JWT_SECRET = process.env.JWT_SECRET || 'cc-dev-secret-change-in-prod';
+
+// ============================================================================
+// TYPES
+// ============================================================================
+
+interface JWTPayload {
+    userId: string;
+    email: string;
+    isPlatformAdmin: boolean;
+    activeTenantId?: string;
+}
+
+interface AuthRequest extends Request {
+    user?: JWTPayload;
+    tenantContext?: {
+        tenantId: string;
+        tenantType: string;
+        role: string;
+        permissions: Record<string, boolean>;
+    };
+}
+
+// ============================================================================
+// MIDDLEWARE
+// ============================================================================
+
+// Authenticate JWT token
+export function authenticateToken(req: AuthRequest, res: Response, next: NextFunction) {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+
+    if (!token) {
+        return res.status(401).json({ success: false, error: 'Authentication required' });
+    }
+
+    try {
+        const decoded = jwt.verify(token, JWT_SECRET) as JWTPayload;
+        req.user = decoded;
+        next();
+    } catch (err) {
+        return res.status(403).json({ success: false, error: 'Invalid or expired token' });
+    }
+}
+
+// Require platform admin
+export function requirePlatformAdmin(req: AuthRequest, res: Response, next: NextFunction) {
+    if (!req.user?.isPlatformAdmin) {
+        return res.status(403).json({ success: false, error: 'Platform admin access required' });
+    }
+    next();
+}
+
+// Load tenant context from header or query
+export async function loadTenantContext(req: AuthRequest, res: Response, next: NextFunction) {
+    const tenantId = req.headers['x-tenant-id'] as string || req.query.tenantId as string;
+    
+    if (!tenantId || !req.user) {
+        return next();
+    }
+
+    try {
+        // Check user's role in this tenant
+        const result = await db.query(`
+            SELECT 
+                t.id as tenant_id,
+                t.tenant_type,
+                tu.role,
+                COALESCE(tu.permissions, r.default_permissions, '{}') as permissions
+            FROM cc_tenants t
+            JOIN cc_tenant_users tu ON tu.tenant_id = t.id
+            LEFT JOIN cc_roles r ON r.tenant_type = t.tenant_type AND r.role_name = tu.role
+            WHERE t.id = $1 AND tu.user_id = $2 AND tu.status = 'active'
+        `, [tenantId, req.user.userId]);
+
+        if (result.rows.length > 0) {
+            req.tenantContext = {
+                tenantId: result.rows[0].tenant_id,
+                tenantType: result.rows[0].tenant_type,
+                role: result.rows[0].role,
+                permissions: result.rows[0].permissions
+            };
+        } else if (req.user.isPlatformAdmin) {
+            // Platform admins can access any tenant
+            const tenantResult = await db.query(
+                'SELECT id, tenant_type FROM cc_tenants WHERE id = $1',
+                [tenantId]
+            );
+            if (tenantResult.rows.length > 0) {
+                req.tenantContext = {
+                    tenantId: tenantResult.rows[0].id,
+                    tenantType: tenantResult.rows[0].tenant_type,
+                    role: 'platform_admin',
+                    permissions: { all: true }
+                };
+            }
+        }
+    } catch (err) {
+        console.error('Error loading tenant context:', err);
+    }
+
+    next();
+}
+
+// ============================================================================
+// AUTH ROUTES
+// ============================================================================
+
+// POST /api/foundation/auth/login
+router.post('/auth/login', async (req: Request, res: Response) => {
+    try {
+        const { email, password } = req.body;
+
+        if (!email || !password) {
+            return res.status(400).json({ success: false, error: 'Email and password required' });
+        }
+
+        // Find user
+        const userResult = await db.query(
+            'SELECT * FROM cc_users WHERE email = $1 AND status = $2',
+            [email.toLowerCase(), 'active']
+        );
+
+        if (userResult.rows.length === 0) {
+            return res.status(401).json({ success: false, error: 'Invalid credentials' });
+        }
+
+        const user = userResult.rows[0];
+
+        // Check password
+        const validPassword = await bcrypt.compare(password, user.password_hash);
+        if (!validPassword) {
+            return res.status(401).json({ success: false, error: 'Invalid credentials' });
+        }
+
+        // Get user's tenants
+        const tenantsResult = await db.query(`
+            SELECT 
+                t.id, t.name, t.slug, t.tenant_type,
+                tu.role, tu.title
+            FROM cc_tenant_users tu
+            JOIN cc_tenants t ON t.id = tu.tenant_id
+            WHERE tu.user_id = $1 AND tu.status = 'active' AND t.status = 'active'
+            ORDER BY t.tenant_type, t.name
+        `, [user.id]);
+
+        // Generate token
+        const payload: JWTPayload = {
+            userId: user.id,
+            email: user.email,
+            isPlatformAdmin: user.is_platform_admin
+        };
+
+        const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '24h' });
+
+        // Update login stats
+        await db.query(
+            'UPDATE cc_users SET last_login_at = NOW(), login_count = login_count + 1 WHERE id = $1',
+            [user.id]
+        );
+
+        res.json({
+            success: true,
+            token,
+            user: {
+                id: user.id,
+                email: user.email,
+                firstName: user.first_name,
+                lastName: user.last_name,
+                displayName: user.display_name || `${user.first_name} ${user.last_name}`,
+                avatarUrl: user.avatar_url,
+                isPlatformAdmin: user.is_platform_admin
+            },
+            tenants: tenantsResult.rows.map(t => ({
+                id: t.id,
+                name: t.name,
+                slug: t.slug,
+                type: t.tenant_type,
+                role: t.role,
+                title: t.title
+            }))
+        });
+
+    } catch (error: any) {
+        console.error('Login error:', error);
+        res.status(500).json({ success: false, error: 'Login failed' });
+    }
+});
+
+// GET /api/foundation/auth/me - Get current user
+router.get('/auth/me', authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+        const userResult = await db.query(`
+            SELECT id, email, first_name, last_name, display_name, avatar_url, 
+                   is_platform_admin, status, last_login_at
+            FROM cc_users WHERE id = $1
+        `, [req.user!.userId]);
+
+        if (userResult.rows.length === 0) {
+            return res.status(404).json({ success: false, error: 'User not found' });
+        }
+
+        const user = userResult.rows[0];
+
+        // Get tenants
+        const tenantsResult = await db.query(`
+            SELECT t.id, t.name, t.slug, t.tenant_type, tu.role, tu.title
+            FROM cc_tenant_users tu
+            JOIN cc_tenants t ON t.id = tu.tenant_id
+            WHERE tu.user_id = $1 AND tu.status = 'active' AND t.status = 'active'
+            ORDER BY t.tenant_type, t.name
+        `, [user.id]);
+
+        res.json({
+            success: true,
+            user: {
+                id: user.id,
+                email: user.email,
+                firstName: user.first_name,
+                lastName: user.last_name,
+                displayName: user.display_name || `${user.first_name} ${user.last_name}`,
+                avatarUrl: user.avatar_url,
+                isPlatformAdmin: user.is_platform_admin,
+                status: user.status,
+                lastLoginAt: user.last_login_at
+            },
+            tenants: tenantsResult.rows.map(t => ({
+                id: t.id,
+                name: t.name,
+                slug: t.slug,
+                type: t.tenant_type,
+                role: t.role,
+                title: t.title
+            }))
+        });
+
+    } catch (error: any) {
+        console.error('Get me error:', error);
+        res.status(500).json({ success: false, error: 'Failed to get user' });
+    }
+});
+
+// ============================================================================
+// USER MANAGEMENT ROUTES (Platform Admin)
+// ============================================================================
+
+// GET /api/foundation/users - List all users
+router.get('/users', authenticateToken, requirePlatformAdmin, async (req: AuthRequest, res: Response) => {
+    try {
+        const { search, status, limit = 50, offset = 0 } = req.query;
+
+        let query = `
+            SELECT 
+                u.id, u.email, u.first_name, u.last_name, u.display_name,
+                u.is_platform_admin, u.status, u.created_at, u.last_login_at,
+                COUNT(DISTINCT tu.tenant_id) as tenant_count
+            FROM cc_users u
+            LEFT JOIN cc_tenant_users tu ON tu.user_id = u.id AND tu.status = 'active'
+            WHERE 1=1
+        `;
+        const params: any[] = [];
+        let paramCount = 0;
+
+        if (search) {
+            paramCount++;
+            query += ` AND (u.email ILIKE $${paramCount} OR u.first_name ILIKE $${paramCount} OR u.last_name ILIKE $${paramCount})`;
+            params.push(`%${search}%`);
+        }
+
+        if (status) {
+            paramCount++;
+            query += ` AND u.status = $${paramCount}`;
+            params.push(status);
+        }
+
+        query += ` GROUP BY u.id ORDER BY u.created_at DESC`;
+        query += ` LIMIT $${paramCount + 1} OFFSET $${paramCount + 2}`;
+        params.push(parseInt(limit as string), parseInt(offset as string));
+
+        const result = await db.query(query, params);
+
+        // Get total count
+        const countResult = await db.query('SELECT COUNT(*) FROM cc_users');
+
+        res.json({
+            success: true,
+            users: result.rows,
+            total: parseInt(countResult.rows[0].count),
+            limit: parseInt(limit as string),
+            offset: parseInt(offset as string)
+        });
+
+    } catch (error: any) {
+        console.error('List users error:', error);
+        res.status(500).json({ success: false, error: 'Failed to list users' });
+    }
+});
+
+// GET /api/foundation/users/:id - Get user details
+router.get('/users/:id', authenticateToken, requirePlatformAdmin, async (req: AuthRequest, res: Response) => {
+    try {
+        const { id } = req.params;
+
+        const userResult = await db.query(`
+            SELECT * FROM cc_users WHERE id = $1
+        `, [id]);
+
+        if (userResult.rows.length === 0) {
+            return res.status(404).json({ success: false, error: 'User not found' });
+        }
+
+        const user = userResult.rows[0];
+
+        // Get profile
+        const profileResult = await db.query(
+            'SELECT * FROM cc_user_profiles WHERE user_id = $1',
+            [id]
+        );
+
+        // Get qualifications
+        const qualResult = await db.query(
+            'SELECT * FROM cc_user_qualifications WHERE user_id = $1 ORDER BY qualification_type, name',
+            [id]
+        );
+
+        // Get tenant memberships
+        const tenantsResult = await db.query(`
+            SELECT t.*, tu.role, tu.title, tu.status as membership_status, tu.joined_at
+            FROM cc_tenant_users tu
+            JOIN cc_tenants t ON t.id = tu.tenant_id
+            WHERE tu.user_id = $1
+            ORDER BY t.tenant_type, t.name
+        `, [id]);
+
+        res.json({
+            success: true,
+            user: {
+                ...user,
+                password_hash: undefined  // Don't send password hash
+            },
+            profile: profileResult.rows[0] || null,
+            qualifications: qualResult.rows,
+            tenants: tenantsResult.rows
+        });
+
+    } catch (error: any) {
+        console.error('Get user error:', error);
+        res.status(500).json({ success: false, error: 'Failed to get user' });
+    }
+});
+
+// ============================================================================
+// TENANT MANAGEMENT ROUTES
+// ============================================================================
+
+// GET /api/foundation/tenants - List tenants
+router.get('/tenants', authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+        const { type, status, search } = req.query;
+
+        let query = `
+            SELECT 
+                t.*,
+                COUNT(DISTINCT tu.user_id) as member_count,
+                u.email as owner_email,
+                u.first_name as owner_first_name,
+                u.last_name as owner_last_name
+            FROM cc_tenants t
+            LEFT JOIN cc_tenant_users tu ON tu.tenant_id = t.id AND tu.status = 'active'
+            LEFT JOIN cc_users u ON u.id = t.owner_user_id
+            WHERE 1=1
+        `;
+        const params: any[] = [];
+        let paramCount = 0;
+
+        // If not platform admin, only show tenants user belongs to
+        if (!req.user!.isPlatformAdmin) {
+            paramCount++;
+            query += ` AND t.id IN (SELECT tenant_id FROM cc_tenant_users WHERE user_id = $${paramCount} AND status = 'active')`;
+            params.push(req.user!.userId);
+        }
+
+        if (type) {
+            paramCount++;
+            query += ` AND t.tenant_type = $${paramCount}`;
+            params.push(type);
+        }
+
+        if (status) {
+            paramCount++;
+            query += ` AND t.status = $${paramCount}`;
+            params.push(status);
+        }
+
+        if (search) {
+            paramCount++;
+            query += ` AND (t.name ILIKE $${paramCount} OR t.slug ILIKE $${paramCount})`;
+            params.push(`%${search}%`);
+        }
+
+        query += ` GROUP BY t.id, u.email, u.first_name, u.last_name ORDER BY t.tenant_type, t.name`;
+
+        const result = await db.query(query, params);
+
+        res.json({
+            success: true,
+            tenants: result.rows
+        });
+
+    } catch (error: any) {
+        console.error('List tenants error:', error);
+        res.status(500).json({ success: false, error: 'Failed to list tenants' });
+    }
+});
+
+// GET /api/foundation/tenants/:id - Get tenant details
+router.get('/tenants/:id', authenticateToken, loadTenantContext, async (req: AuthRequest, res: Response) => {
+    try {
+        const { id } = req.params;
+
+        // Check access
+        if (!req.user!.isPlatformAdmin && !req.tenantContext) {
+            return res.status(403).json({ success: false, error: 'Access denied' });
+        }
+
+        const tenantResult = await db.query('SELECT * FROM cc_tenants WHERE id = $1', [id]);
+
+        if (tenantResult.rows.length === 0) {
+            return res.status(404).json({ success: false, error: 'Tenant not found' });
+        }
+
+        // Get members
+        const membersResult = await db.query(`
+            SELECT 
+                u.id, u.email, u.first_name, u.last_name, u.avatar_url,
+                tu.role, tu.title, tu.status, tu.joined_at
+            FROM cc_tenant_users tu
+            JOIN cc_users u ON u.id = tu.user_id
+            WHERE tu.tenant_id = $1
+            ORDER BY tu.role, u.first_name
+        `, [id]);
+
+        res.json({
+            success: true,
+            tenant: tenantResult.rows[0],
+            members: membersResult.rows,
+            currentUserRole: req.tenantContext?.role || (req.user!.isPlatformAdmin ? 'platform_admin' : null)
+        });
+
+    } catch (error: any) {
+        console.error('Get tenant error:', error);
+        res.status(500).json({ success: false, error: 'Failed to get tenant' });
+    }
+});
+
+// GET /api/foundation/roles - Get available roles
+router.get('/roles', async (req: Request, res: Response) => {
+    try {
+        const { tenantType } = req.query;
+
+        let query = 'SELECT * FROM cc_roles';
+        const params: any[] = [];
+
+        if (tenantType) {
+            query += ' WHERE tenant_type = $1';
+            params.push(tenantType);
+        }
+
+        query += ' ORDER BY tenant_type, role_name';
+
+        const result = await db.query(query, params);
+
+        res.json({
+            success: true,
+            roles: result.rows
+        });
+
+    } catch (error: any) {
+        console.error('Get roles error:', error);
+        res.status(500).json({ success: false, error: 'Failed to get roles' });
+    }
+});
+
+// GET /api/foundation/stats - Platform statistics
+router.get('/stats', authenticateToken, requirePlatformAdmin, async (req: AuthRequest, res: Response) => {
+    try {
+        const stats = await db.query(`
+            SELECT
+                (SELECT COUNT(*) FROM cc_users) as total_users,
+                (SELECT COUNT(*) FROM cc_users WHERE status = 'active') as active_users,
+                (SELECT COUNT(*) FROM cc_users WHERE is_platform_admin = true) as platform_admins,
+                (SELECT COUNT(*) FROM cc_tenants) as total_tenants,
+                (SELECT COUNT(*) FROM cc_tenants WHERE tenant_type = 'government') as government_tenants,
+                (SELECT COUNT(*) FROM cc_tenants WHERE tenant_type = 'business') as business_tenants,
+                (SELECT COUNT(*) FROM cc_tenants WHERE tenant_type = 'property') as property_tenants,
+                (SELECT COUNT(*) FROM cc_tenants WHERE tenant_type = 'individual') as individual_tenants,
+                (SELECT COUNT(*) FROM cc_tenant_users) as total_memberships
+        `);
+
+        res.json({
+            success: true,
+            stats: stats.rows[0]
+        });
+
+    } catch (error: any) {
+        console.error('Get stats error:', error);
+        res.status(500).json({ success: false, error: 'Failed to get stats' });
+    }
+});
+
+export default router;
+export { authenticateToken, requirePlatformAdmin, loadTenantContext, AuthRequest };
+```
+
+## Register the routes in server/index.ts:
+```typescript
+import foundationRoutes from './routes/foundation';
+
+// Add with other routes
+app.use('/api/foundation', foundationRoutes);
+```
+
+## Test the API:
+```bash
+echo "=== TEST FOUNDATION API ==="
+
+# 1. Login as Glenn
+echo "1. Login as platform admin:"
+LOGIN_RESULT=$(curl -s -X POST http://localhost:5000/api/foundation/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email": "glenn@communitycanvas.ca", "password": "admin123"}')
+echo $LOGIN_RESULT | jq '{success, user: .user.email, tenantCount: (.tenants | length), isPlatformAdmin: .user.isPlatformAdmin}'
+
+TOKEN=$(echo $LOGIN_RESULT | jq -r '.token')
+
+# 2. Get current user
+echo "2. Get me:"
+curl -s http://localhost:5000/api/foundation/auth/me \
+  -H "Authorization: Bearer $TOKEN" | jq '{success, email: .user.email, tenants: [.tenants[].name]}'
+
+# 3. List all users
+echo "3. List users:"
+curl -s http://localhost:5000/api/foundation/users \
+  -H "Authorization: Bearer $TOKEN" | jq '{success, total, users: [.users[].email]}'
+
+# 4. List all tenants
+echo "4. List tenants:"
+curl -s http://localhost:5000/api/foundation/tenants \
+  -H "Authorization: Bearer $TOKEN" | jq '{success, tenants: [.tenants[] | {name, type: .tenant_type}]}'
+
+# 5. Get platform stats
+echo "5. Platform stats:"
+curl -s http://localhost:5000/api/foundation/stats \
+  -H "Authorization: Bearer $TOKEN" | jq '.stats'
+
+# 6. Get roles
+echo "6. Available roles:"
+curl -s http://localhost:5000/api/foundation/roles | jq '{success, roleCount: (.roles | length)}'
+```
+
+Report test results. All 6 should pass.
