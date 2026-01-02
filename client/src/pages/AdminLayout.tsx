@@ -77,6 +77,7 @@ const navSections: NavSection[] = [
       { path: "/admin/infrastructure", label: "Infrastructure", icon: Radio },
       { path: "/admin/chambers", label: "Chambers", icon: Store },
       { path: "/admin/naics", label: "NAICS Explorer", icon: TreePine },
+      { path: "/admin/civos", label: "CivOS Dashboard", icon: Shield },
     ]
   },
   {
@@ -96,7 +97,6 @@ const navSections: NavSection[] = [
     defaultOpen: true,
     items: [
       { path: "/fleet", label: "Vehicle Fleet", icon: Truck },
-      { path: "/admin/civos", label: "CivOS Dashboard", icon: Shield },
     ]
   },
   {
