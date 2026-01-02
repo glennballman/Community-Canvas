@@ -1,0 +1,155 @@
+RUTHLESS QA - BATCH 6: Final Network Statistics & Sanity Check
+
+Run this comprehensive verification query and report results:
+
+-- ============================================================================
+-- FINAL NETWORK STATISTICS
+-- ============================================================================
+
+SELECT '=== PROPERTIES ===' as section;
+SELECT 
+    COUNT(*) as total_properties,
+    COUNT(*) FILTER (WHERE status = 'active') as active,
+    COUNT(*) FILTER (WHERE status = 'pending_setup') as pending,
+    SUM(total_spots) as total_spots,
+    COUNT(DISTINCT region) as regions,
+    COUNT(DISTINCT city) as cities
+FROM staging_properties;
+
+SELECT '=== BY REGION ===' as section;
+SELECT 
+    region,
+    COUNT(*) as properties,
+    SUM(total_spots) as spots,
+    ROUND(AVG(NULLIF(rv_score, 0)), 1) as avg_rv,
+    ROUND(AVG(NULLIF(trucker_score, 0)), 1) as avg_trucker
+FROM staging_properties
+WHERE status = 'active'
+GROUP BY region
+ORDER BY properties DESC;
+
+SELECT '=== PRICING ===' as section;
+SELECT 
+    sp.property_type,
+    COUNT(*) as count,
+    ROUND(AVG(pr.nightly_rate), 2) as avg_rate,
+    MIN(pr.nightly_rate) as min_rate,
+    MAX(pr.nightly_rate) as max_rate
+FROM staging_properties sp
+LEFT JOIN staging_pricing pr ON pr.property_id = sp.id AND pr.pricing_type = 'base_nightly'
+WHERE sp.status = 'active'
+GROUP BY sp.property_type;
+
+SELECT '=== SERVICE PROVIDERS ===' as section;
+SELECT 
+    provider_type,
+    COUNT(*) as count,
+    COUNT(*) FILTER (WHERE is_resident) as resident,
+    COUNT(*) FILTER (WHERE available_24hr) as available_24hr,
+    ROUND(AVG(overall_rating), 2) as avg_rating
+FROM staging_service_providers
+WHERE is_active = true
+GROUP BY provider_type
+ORDER BY count DESC;
+
+SELECT '=== BOOKINGS ===' as section;
+SELECT 
+    status,
+    COUNT(*) as count,
+    SUM(total_cost) as total_revenue
+FROM staging_bookings
+GROUP BY status;
+
+SELECT '=== CHAMBER ===' as section;
+SELECT 
+    opportunity_status,
+    COUNT(*) as count,
+    SUM(estimated_spots) as potential_spots
+FROM staging_chamber_links
+GROUP BY opportunity_status
+ORDER BY count DESC;
+
+SELECT '=== TRIPS ===' as section;
+SELECT 
+    COUNT(*) as total_trips,
+    COUNT(DISTINCT guest_email) as unique_planners,
+    SUM((SELECT COUNT(*) FROM staging_trip_stops ts WHERE ts.trip_id = staging_trips.id)) as total_stops
+FROM staging_trips;
+
+SELECT '=== FEATURE FLAGS ===' as section;
+SELECT 
+    COUNT(*) FILTER (WHERE has_onsite_mechanic) as has_mechanic,
+    COUNT(*) FILTER (WHERE has_pool) as has_pool,
+    COUNT(*) FILTER (WHERE is_waterfront) as waterfront,
+    COUNT(*) FILTER (WHERE accepts_semi_trucks) as semi_friendly,
+    COUNT(*) FILTER (WHERE is_horse_friendly) as horse_friendly,
+    COUNT(*) FILTER (WHERE pets_allowed) as pet_friendly
+FROM staging_properties
+WHERE status = 'active';
+
+-- ============================================================================
+-- SANITY CHECKS
+-- ============================================================================
+
+SELECT '=== SANITY CHECKS ===' as section;
+
+-- Check 1: All required tables exist
+SELECT 'Tables exist' as check_name,
+    CASE WHEN COUNT(*) >= 10 THEN 'PASS' ELSE 'FAIL' END as result
+FROM information_schema.tables 
+WHERE table_name LIKE 'staging_%';
+
+-- Check 2: No NULL names
+SELECT 'No NULL names' as check_name,
+    CASE WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END as result
+FROM staging_properties WHERE name IS NULL;
+
+-- Check 3: All properties have coordinates
+SELECT 'All have coordinates' as check_name,
+    CASE WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END as result
+FROM staging_properties 
+WHERE latitude IS NULL OR longitude IS NULL;
+
+-- Check 4: Service providers linked properly
+SELECT 'Providers linked' as check_name,
+    CASE WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END as result
+FROM staging_service_providers ssp
+LEFT JOIN staging_properties sp ON sp.id = ssp.property_id
+WHERE sp.id IS NULL;
+
+-- Check 5: Pricing linked properly
+SELECT 'Pricing linked' as check_name,
+    CASE WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END as result
+FROM staging_pricing pr
+LEFT JOIN staging_properties sp ON sp.id = pr.property_id
+WHERE sp.id IS NULL;
+
+-- Check 6: Trip stops linked properly
+SELECT 'Trip stops linked' as check_name,
+    CASE WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END as result
+FROM staging_trip_stops ts
+LEFT JOIN staging_properties sp ON sp.id = ts.property_id
+WHERE sp.id IS NULL;
+
+-- Check 7: At least one resident mechanic
+SELECT 'Resident mechanic exists' as check_name,
+    CASE WHEN COUNT(*) >= 1 THEN 'PASS' ELSE 'FAIL' END as result
+FROM staging_service_providers 
+WHERE is_resident = true AND provider_type LIKE 'mechanic_%';
+
+-- Check 8: Scores calculated
+SELECT 'Scores calculated' as check_name,
+    CASE WHEN COUNT(*) > 0 THEN 'PASS' ELSE 'FAIL' END as result
+FROM staging_properties 
+WHERE rv_score > 0 OR crew_score > 0 OR trucker_score > 0;
+
+Report the full output and highlight any FAIL results.
+
+## EXPECTED MINIMUMS:
+- Total Properties: >= 35
+- Active Properties: >= 30
+- Regions: >= 8
+- Cities: >= 25
+- Service Providers: >= 15
+- At least 1 resident mechanic
+- All sanity checks PASS
