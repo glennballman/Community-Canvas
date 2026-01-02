@@ -1,0 +1,110 @@
+Generate summary statistics and verify all data loaded correctly.
+
+Run this SQL:
+
+-- ============================================================================
+-- FINAL SUMMARY
+-- ============================================================================
+
+-- Count by property type
+SELECT 
+    property_type,
+    property_subtype,
+    COUNT(*) as count,
+    SUM(total_spots) as total_spots,
+    ROUND(AVG(rv_score), 1) as avg_rv_score,
+    ROUND(AVG(crew_score), 1) as avg_crew_score,
+    ROUND(AVG(trucker_score), 1) as avg_trucker_score
+FROM staging_properties
+GROUP BY property_type, property_subtype
+ORDER BY count DESC;
+
+-- Count by region
+SELECT 
+    region,
+    COUNT(*) as properties,
+    SUM(total_spots) as total_spots,
+    STRING_AGG(DISTINCT city, ', ' ORDER BY city) as cities
+FROM staging_properties
+GROUP BY region
+ORDER BY properties DESC;
+
+-- Top properties by RV score
+SELECT name, city, rv_score, total_spots, max_combined_length_ft
+FROM staging_properties
+WHERE rv_score > 0
+ORDER BY rv_score DESC
+LIMIT 10;
+
+-- Top properties by trucker score
+SELECT name, city, trucker_score, num_truck_spots, 
+       CASE WHEN has_cat_scale THEN 'Yes' ELSE 'No' END as cat_scale,
+       CASE WHEN has_onsite_mechanic THEN 'Yes' ELSE 'No' END as mechanic
+FROM staging_properties
+WHERE trucker_score > 0
+ORDER BY trucker_score DESC
+LIMIT 10;
+
+-- Properties with special features
+SELECT 
+    'Dog Parks' as feature, COUNT(*) as count FROM staging_properties WHERE has_dog_park = true
+UNION ALL
+SELECT 'Waterfront', COUNT(*) FROM staging_properties WHERE is_waterfront = true
+UNION ALL
+SELECT 'Pool', COUNT(*) FROM staging_properties WHERE has_pool = true
+UNION ALL  
+SELECT 'Hot Tub', COUNT(*) FROM staging_properties WHERE has_hot_tub = true
+UNION ALL
+SELECT 'Boat Launch', COUNT(*) FROM staging_properties WHERE has_boat_launch = true
+UNION ALL
+SELECT 'Fishing', COUNT(*) FROM staging_properties WHERE has_fishing = true
+UNION ALL
+SELECT 'CAT Scale', COUNT(*) FROM staging_properties WHERE has_cat_scale = true
+UNION ALL
+SELECT 'Truck Wash', COUNT(*) FROM staging_properties WHERE has_rv_wash = true
+ORDER BY count DESC;
+
+-- Pricing summary
+SELECT 
+    p.property_type,
+    COUNT(DISTINCT p.id) as properties,
+    ROUND(AVG(pr.nightly_rate), 2) as avg_nightly,
+    MIN(pr.nightly_rate) as min_nightly,
+    MAX(pr.nightly_rate) as max_nightly
+FROM staging_properties p
+LEFT JOIN staging_pricing pr ON pr.property_id = p.id AND pr.pricing_type = 'base_nightly'
+GROUP BY p.property_type
+ORDER BY avg_nightly DESC NULLS LAST;
+
+-- Final totals
+SELECT 
+    COUNT(*) as total_properties,
+    SUM(total_spots) as total_spots,
+    SUM(num_truck_spots) as truck_spots,
+    COUNT(*) FILTER (WHERE is_waterfront) as waterfront_properties,
+    COUNT(*) FILTER (WHERE has_pool) as properties_with_pool,
+    COUNT(*) FILTER (WHERE accepts_semi_trucks) as semi_friendly,
+    COUNT(*) FILTER (WHERE has_cat_scale) as with_cat_scale,
+    ROUND(AVG(rv_score), 1) as avg_rv_score,
+    ROUND(AVG(trucker_score), 1) as avg_trucker_score
+FROM staging_properties;
+
+Now run a quick search test to make sure everything works:
+
+-- Test search for big rigs on Vancouver Island
+SELECT name, city, max_combined_length_ft, rv_score
+FROM find_available_staging(
+    p_vehicle_length_ft := 45,
+    p_needs_power := true,
+    p_region := 'Vancouver Island',
+    p_sort_by := 'rv_score',
+    p_limit := 10
+);
+
+-- Test search for truck parking
+SELECT name, city, num_truck_spots, trucker_score
+FROM find_available_staging(
+    p_accepts_semi := true,
+    p_sort_by := 'trucker_score',
+    p_limit := 10
+);
