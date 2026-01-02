@@ -1,0 +1,110 @@
+Update properties to flag which have on-site mechanics, and generate final summary.
+
+Run this SQL:
+
+-- ============================================================================
+-- UPDATE PROPERTIES WITH SERVICE PROVIDER FLAGS
+-- ============================================================================
+
+-- Set has_onsite_mechanic for properties with resident mechanics
+UPDATE staging_properties sp
+SET has_onsite_mechanic = true
+WHERE EXISTS (
+    SELECT 1 FROM staging_service_providers ssp
+    WHERE ssp.property_id = sp.id
+    AND ssp.provider_type LIKE 'mechanic_%'
+    AND ssp.is_resident = true
+    AND ssp.is_active = true
+);
+
+-- Set has_24hr_repair for properties with 24hr mechanics
+UPDATE staging_properties sp
+SET has_24hr_repair = true
+WHERE EXISTS (
+    SELECT 1 FROM staging_service_providers ssp
+    WHERE ssp.property_id = sp.id
+    AND ssp.provider_type LIKE 'mechanic_%'
+    AND ssp.available_24hr = true
+    AND ssp.is_active = true
+);
+
+-- Set has_tire_service
+UPDATE staging_properties sp
+SET has_tire_service = true
+WHERE EXISTS (
+    SELECT 1 FROM staging_service_providers ssp
+    WHERE ssp.property_id = sp.id
+    AND ssp.provider_type = 'tire_service'
+    AND ssp.is_active = true
+);
+
+-- ============================================================================
+-- FINAL SERVICE PROVIDER SUMMARY
+-- ============================================================================
+
+-- All providers by property
+SELECT 
+    sp.name as property,
+    sp.city,
+    STRING_AGG(
+        CASE 
+            WHEN ssp.is_resident THEN '★ ' || ssp.provider_type
+            ELSE ssp.provider_type
+        END, 
+        ', ' ORDER BY ssp.is_resident DESC, ssp.provider_type
+    ) as services,
+    COUNT(*) as provider_count
+FROM staging_properties sp
+JOIN staging_service_providers ssp ON ssp.property_id = sp.id
+WHERE ssp.is_active = true
+GROUP BY sp.id, sp.name, sp.city
+ORDER BY provider_count DESC;
+
+-- The KILLER FEATURE showcase
+SELECT 
+    sp.name as property,
+    sp.city,
+    ssp.business_name,
+    ssp.provider_name,
+    '★ RESIDENT MECHANIC' as status,
+    ssp.available_24hr as "24hr",
+    ssp.hourly_rate,
+    ssp.overall_rating,
+    ssp.review_count
+FROM staging_properties sp
+JOIN staging_service_providers ssp ON ssp.property_id = sp.id
+WHERE ssp.is_resident = true
+AND ssp.provider_type LIKE 'mechanic_%';
+
+-- Properties with updated scores (should see trucker_score increase)
+SELECT 
+    name,
+    city,
+    has_onsite_mechanic,
+    has_24hr_repair,
+    has_tire_service,
+    trucker_score,
+    crew_score
+FROM staging_properties
+WHERE has_onsite_mechanic = true OR has_24hr_repair = true OR has_tire_service = true
+ORDER BY trucker_score DESC;
+
+-- Final counts
+SELECT 
+    'Total Service Providers' as metric, COUNT(*)::text as value FROM staging_service_providers WHERE is_active = true
+UNION ALL
+SELECT 'Diesel Mechanics', COUNT(*)::text FROM staging_service_providers WHERE provider_type = 'mechanic_diesel' AND is_active = true
+UNION ALL
+SELECT 'RV Mechanics', COUNT(*)::text FROM staging_service_providers WHERE provider_type = 'mechanic_rv' AND is_active = true
+UNION ALL
+SELECT 'Tire Services', COUNT(*)::text FROM staging_service_providers WHERE provider_type = 'tire_service' AND is_active = true
+UNION ALL
+SELECT 'Heavy Towing', COUNT(*)::text FROM staging_service_providers WHERE provider_type = 'towing_heavy' AND is_active = true
+UNION ALL
+SELECT 'Farriers', COUNT(*)::text FROM staging_service_providers WHERE provider_type = 'farrier' AND is_active = true
+UNION ALL
+SELECT 'RESIDENT Mechanics', COUNT(*)::text FROM staging_service_providers WHERE is_resident = true AND provider_type LIKE 'mechanic_%'
+UNION ALL
+SELECT '24hr Available', COUNT(*)::text FROM staging_service_providers WHERE available_24hr = true AND is_active = true
+UNION ALL
+SELECT 'Avg Rating', ROUND(AVG(overall_rating), 2)::text FROM staging_service_providers WHERE overall_rating IS NOT NULL;
