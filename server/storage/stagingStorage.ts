@@ -372,7 +372,8 @@ export async function createProvider(data: Partial<ServiceProvider>): Promise<Se
   for (const [key, value] of Object.entries(data)) {
     if (value !== undefined && key !== 'id') {
       columns.push(camelToSnake(key));
-      values.push(typeof value === 'object' ? JSON.stringify(value) : value);
+      // Keep arrays as arrays, not JSON strings
+      values.push(value);
       placeholders.push(`$${idx++}`);
     }
   }
@@ -386,6 +387,11 @@ export async function createProvider(data: Partial<ServiceProvider>): Promise<Se
   const paramQuery = query.replace(/\$(\d+)/g, (_, n) => {
     const val = values[parseInt(n) - 1];
     if (val === null) return 'NULL';
+    // Handle arrays - convert to PostgreSQL array format using single quotes
+    if (Array.isArray(val)) {
+      const escaped = val.map(v => `'${String(v).replace(/'/g, "''")}'`);
+      return `ARRAY[${escaped.join(',')}]::text[]`;
+    }
     if (typeof val === 'string') return `'${val.replace(/'/g, "''")}'`;
     if (typeof val === 'boolean') return val ? 'true' : 'false';
     return String(val);
@@ -403,7 +409,8 @@ export async function updateProvider(id: number, data: Partial<ServiceProvider>)
   for (const [key, value] of Object.entries(data)) {
     if (value !== undefined && key !== 'id') {
       updates.push(`${camelToSnake(key)} = $${idx++}`);
-      values.push(typeof value === 'object' ? JSON.stringify(value) : value);
+      // Keep arrays as arrays, not JSON strings
+      values.push(value);
     }
   }
 
@@ -420,6 +427,11 @@ export async function updateProvider(id: number, data: Partial<ServiceProvider>)
   const paramQuery = query.replace(/\$(\d+)/g, (_, n) => {
     const val = values[parseInt(n) - 1];
     if (val === null) return 'NULL';
+    // Handle arrays - convert to PostgreSQL array format using single quotes
+    if (Array.isArray(val)) {
+      const escaped = val.map(v => `'${String(v).replace(/'/g, "''")}'`);
+      return `ARRAY[${escaped.join(',')}]::text[]`;
+    }
     if (typeof val === 'string') return `'${val.replace(/'/g, "''")}'`;
     if (typeof val === 'boolean') return val ? 'true' : 'false';
     return String(val);
@@ -546,8 +558,10 @@ export async function createBooking(data: Partial<StagingBooking>): Promise<Stag
   const values: any[] = [];
   let idx = 1;
 
+  // Exclude generated columns like numNights
+  const excludedColumns = ['id', 'bookingRef', 'numNights'];
   for (const [key, value] of Object.entries(data)) {
-    if (value !== undefined && key !== 'id' && key !== 'bookingRef') {
+    if (value !== undefined && !excludedColumns.includes(key)) {
       columns.push(camelToSnake(key));
       values.push(value);
       placeholders.push(`$${idx++}`);
@@ -577,8 +591,10 @@ export async function updateBooking(id: number, data: Partial<StagingBooking>): 
   const values: any[] = [];
   let idx = 1;
 
+  // Exclude generated columns like numNights
+  const excludedColumns = ['id', 'bookingRef', 'numNights'];
   for (const [key, value] of Object.entries(data)) {
-    if (value !== undefined && key !== 'id' && key !== 'bookingRef') {
+    if (value !== undefined && !excludedColumns.includes(key)) {
       updates.push(`${camelToSnake(key)} = $${idx++}`);
       values.push(value);
     }
@@ -912,6 +928,7 @@ export async function calculatePrice(
   const totalFees = Object.values(fees).reduce((sum, fee) => sum + fee, 0);
 
   return {
+    nights: numNights,
     nightly,
     subtotal,
     fees,
