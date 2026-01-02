@@ -102,20 +102,30 @@ router.get('/properties/:id', async (req: Request, res: Response) => {
     }
     
     if (!property) {
-      return res.status(404).json({ error: 'Property not found', code: 'PROPERTY_NOT_FOUND' });
+      return res.status(404).json({ success: false, error: 'Property not found', code: 'PROPERTY_NOT_FOUND' });
     }
 
-    // Get service providers for this property
-    const providers = await stagingStorage.getProvidersForProperty(property.id);
+    // Get service providers, spots, and pricing for this property
+    const [providers, spots, pricing] = await Promise.all([
+      stagingStorage.getProvidersForProperty(property.id),
+      stagingStorage.getSpotsForProperty(property.id),
+      stagingStorage.getPricingForProperty(property.id)
+    ]);
     
-    // Return property with service providers included
+    // Return property wrapped in object with related data
     res.json({
-      ...property,
+      success: true,
+      property: {
+        ...property,
+        serviceProviders: providers
+      },
+      spots,
+      pricing,
       serviceProviders: providers
     });
   } catch (error) {
     console.error('[Staging Property] Error:', error);
-    res.status(500).json({ error: 'Failed to get property' });
+    res.status(500).json({ success: false, error: 'Failed to get property' });
   }
 });
 

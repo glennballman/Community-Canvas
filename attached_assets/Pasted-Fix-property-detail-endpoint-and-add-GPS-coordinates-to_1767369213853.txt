@@ -1,0 +1,468 @@
+Fix property detail endpoint and add GPS coordinates to all properties.
+
+## Issue 1: Property Detail Endpoint Returns Incomplete Data
+
+The `/api/staging/properties/:id` endpoint is returning null for fields. Check and fix in server/routes/staging.ts:
+```typescript
+// GET /api/staging/properties/:id - Get property details
+router.get('/properties/:id', async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
+
+        // Get property with all fields
+        const propResult = await db.query(`
+            SELECT 
+                id, name, slug, description, short_description,
+                property_type, property_subtype,
+                region, city, address, postal_code,
+                latitude, longitude,
+                phone, email, website,
+                total_spots, num_rv_spots, num_tent_spots, num_truck_spots, num_cabins,
+                max_rv_length_ft, max_combined_length_ft,
+                has_pull_through, has_back_in,
+                has_shore_power, power_amps_available, has_water_hookup, has_sewer_hookup,
+                has_wifi, has_laundry, has_showers, has_restrooms, has_dump_station,
+                has_pool, has_hot_tub, has_playground, has_dog_park, has_store,
+                has_propane, has_fuel,
+                has_onsite_mechanic, has_mobile_mechanic, has_24hr_repair,
+                mechanic_services_offered, mechanic_makes_serviced,
+                allows_pets, allows_big_rigs, allows_tents, allows_horses,
+                accepts_reservations, accepts_walk_ins, accepts_monthly,
+                accepts_semi_trucks, accepts_work_crews,
+                has_security, has_gated_access, has_24hr_access,
+                check_in_time, check_out_time,
+                rv_score, crew_score, trucker_score,
+                overall_rating, review_count,
+                thumbnail_url, hero_image_url, gallery_images,
+                status, source, source_id, source_url,
+                notes,
+                created_at, updated_at
+            FROM staging_properties 
+            WHERE id = $1
+        `, [id]);
+
+        if (propResult.rows.length === 0) {
+            return res.status(404).json({ success: false, error: 'Property not found' });
+        }
+
+        const p = propResult.rows[0];
+
+        // Get pricing
+        const pricingResult = await db.query(`
+            SELECT id, pricing_type, rate_period, nightly_rate, weekly_rate, monthly_rate,
+                   peak_season_multiplier, peak_season_start, peak_season_end,
+                   discount_weekly_percent, discount_monthly_percent,
+                   notes, is_active
+            FROM staging_pricing 
+            WHERE property_id = $1 AND is_active = true
+            ORDER BY pricing_type
+        `, [id]);
+
+        // Get spots
+        const spotsResult = await db.query(`
+            SELECT id, name, spot_type, length_ft, width_ft, surface_type,
+                   is_pull_through, is_waterfront, is_shaded, is_level,
+                   has_power, power_amps, has_water, has_sewer,
+                   accommodates_slideout, max_vehicle_length_ft,
+                   base_nightly_rate, is_active
+            FROM staging_spots 
+            WHERE property_id = $1 AND is_active = true
+            ORDER BY name
+        `, [id]);
+
+        // Get service providers
+        const providersResult = await db.query(`
+            SELECT 
+                id, provider_type, business_name, provider_name,
+                is_resident, is_employee,
+                phone, phone_24hr, phone_text_ok, email, website,
+                hours_regular, available_24hr, available_after_hours, after_hours_fee,
+                available_weekends, response_time_minutes, same_day_service,
+                services_offered, service_descriptions, vehicle_types_served,
+                makes_serviced, certifications, years_experience, specialties,
+                hourly_rate, has_flat_rate_menu, flat_rate_menu, minimum_charge, mobile_service_fee,
+                overall_rating, quality_rating, speed_rating, price_rating, review_count,
+                is_verified, is_featured
+            FROM staging_service_providers
+            WHERE property_id = $1 AND is_active = true
+            ORDER BY is_resident DESC, is_featured DESC, overall_rating DESC NULLS LAST
+        `, [id]);
+
+        // Format response with camelCase
+        res.json({
+            success: true,
+            property: {
+                id: p.id,
+                name: p.name,
+                slug: p.slug,
+                description: p.description,
+                shortDescription: p.short_description,
+                propertyType: p.property_type,
+                propertySubtype: p.property_subtype,
+                region: p.region,
+                city: p.city,
+                address: p.address,
+                postalCode: p.postal_code,
+                latitude: p.latitude ? parseFloat(p.latitude) : null,
+                longitude: p.longitude ? parseFloat(p.longitude) : null,
+                phone: p.phone,
+                email: p.email,
+                website: p.website,
+                totalSpots: p.total_spots,
+                numRvSpots: p.num_rv_spots,
+                numTentSpots: p.num_tent_spots,
+                numTruckSpots: p.num_truck_spots,
+                numCabins: p.num_cabins,
+                maxRvLengthFt: p.max_rv_length_ft,
+                maxCombinedLengthFt: p.max_combined_length_ft,
+                hasPullThrough: p.has_pull_through,
+                hasBackIn: p.has_back_in,
+                hasShorePower: p.has_shore_power,
+                powerAmpsAvailable: p.power_amps_available,
+                hasWaterHookup: p.has_water_hookup,
+                hasSewerHookup: p.has_sewer_hookup,
+                hasWifi: p.has_wifi,
+                hasLaundry: p.has_laundry,
+                hasShowers: p.has_showers,
+                hasRestrooms: p.has_restrooms,
+                hasDumpStation: p.has_dump_station,
+                hasPool: p.has_pool,
+                hasHotTub: p.has_hot_tub,
+                hasPlayground: p.has_playground,
+                hasDogPark: p.has_dog_park,
+                hasStore: p.has_store,
+                hasPropane: p.has_propane,
+                hasFuel: p.has_fuel,
+                hasOnsiteMechanic: p.has_onsite_mechanic,
+                hasMobileMechanic: p.has_mobile_mechanic,
+                has24hrRepair: p.has_24hr_repair,
+                mechanicServicesOffered: p.mechanic_services_offered,
+                mechanicMakesServiced: p.mechanic_makes_serviced,
+                allowsPets: p.allows_pets,
+                allowsBigRigs: p.allows_big_rigs,
+                allowsTents: p.allows_tents,
+                allowsHorses: p.allows_horses,
+                acceptsReservations: p.accepts_reservations,
+                acceptsWalkIns: p.accepts_walk_ins,
+                acceptsMonthly: p.accepts_monthly,
+                acceptsSemiTrucks: p.accepts_semi_trucks,
+                acceptsWorkCrews: p.accepts_work_crews,
+                hasSecurity: p.has_security,
+                hasGatedAccess: p.has_gated_access,
+                has24hrAccess: p.has_24hr_access,
+                checkInTime: p.check_in_time,
+                checkOutTime: p.check_out_time,
+                rvScore: p.rv_score,
+                crewScore: p.crew_score,
+                truckerScore: p.trucker_score,
+                overallRating: p.overall_rating ? parseFloat(p.overall_rating) : null,
+                reviewCount: p.review_count,
+                thumbnailUrl: p.thumbnail_url,
+                heroImageUrl: p.hero_image_url,
+                galleryImages: p.gallery_images,
+                status: p.status,
+                notes: p.notes,
+                createdAt: p.created_at,
+                updatedAt: p.updated_at
+            },
+            pricing: pricingResult.rows.map(pr => ({
+                id: pr.id,
+                pricingType: pr.pricing_type,
+                ratePeriod: pr.rate_period,
+                nightlyRate: pr.nightly_rate ? parseFloat(pr.nightly_rate) : null,
+                weeklyRate: pr.weekly_rate ? parseFloat(pr.weekly_rate) : null,
+                monthlyRate: pr.monthly_rate ? parseFloat(pr.monthly_rate) : null,
+                peakSeasonMultiplier: pr.peak_season_multiplier ? parseFloat(pr.peak_season_multiplier) : null,
+                peakSeasonStart: pr.peak_season_start,
+                peakSeasonEnd: pr.peak_season_end,
+                discountWeeklyPercent: pr.discount_weekly_percent,
+                discountMonthlyPercent: pr.discount_monthly_percent,
+                notes: pr.notes,
+                isActive: pr.is_active
+            })),
+            spots: spotsResult.rows.map(s => ({
+                id: s.id,
+                name: s.name,
+                spotType: s.spot_type,
+                lengthFt: s.length_ft,
+                widthFt: s.width_ft,
+                surfaceType: s.surface_type,
+                isPullThrough: s.is_pull_through,
+                isWaterfront: s.is_waterfront,
+                isShaded: s.is_shaded,
+                isLevel: s.is_level,
+                hasPower: s.has_power,
+                powerAmps: s.power_amps,
+                hasWater: s.has_water,
+                hasSewer: s.has_sewer,
+                accommodatesSlideout: s.accommodates_slideout,
+                maxVehicleLengthFt: s.max_vehicle_length_ft,
+                baseNightlyRate: s.base_nightly_rate ? parseFloat(s.base_nightly_rate) : null,
+                isActive: s.is_active
+            })),
+            serviceProviders: providersResult.rows.map(sp => ({
+                id: sp.id,
+                providerType: sp.provider_type,
+                businessName: sp.business_name,
+                providerName: sp.provider_name,
+                isResident: sp.is_resident,
+                isEmployee: sp.is_employee,
+                phone: sp.phone,
+                phone24hr: sp.phone_24hr,
+                phoneTextOk: sp.phone_text_ok,
+                email: sp.email,
+                website: sp.website,
+                hoursRegular: sp.hours_regular,
+                available24hr: sp.available_24hr,
+                availableAfterHours: sp.available_after_hours,
+                afterHoursFee: sp.after_hours_fee ? parseFloat(sp.after_hours_fee) : null,
+                availableWeekends: sp.available_weekends,
+                responseTimeMinutes: sp.response_time_minutes,
+                sameDayService: sp.same_day_service,
+                servicesOffered: sp.services_offered,
+                serviceDescriptions: sp.service_descriptions,
+                vehicleTypesServed: sp.vehicle_types_served,
+                makesServiced: sp.makes_serviced,
+                certifications: sp.certifications,
+                yearsExperience: sp.years_experience,
+                specialties: sp.specialties,
+                hourlyRate: sp.hourly_rate ? parseFloat(sp.hourly_rate) : null,
+                hasFlatRateMenu: sp.has_flat_rate_menu,
+                flatRateMenu: sp.flat_rate_menu,
+                minimumCharge: sp.minimum_charge ? parseFloat(sp.minimum_charge) : null,
+                mobileServiceFee: sp.mobile_service_fee ? parseFloat(sp.mobile_service_fee) : null,
+                overallRating: sp.overall_rating ? parseFloat(sp.overall_rating) : null,
+                qualityRating: sp.quality_rating ? parseFloat(sp.quality_rating) : null,
+                speedRating: sp.speed_rating ? parseFloat(sp.speed_rating) : null,
+                priceRating: sp.price_rating ? parseFloat(sp.price_rating) : null,
+                reviewCount: sp.review_count,
+                isVerified: sp.is_verified,
+                isFeatured: sp.is_featured
+            }))
+        });
+
+    } catch (error: any) {
+        console.error('Get property error:', error);
+        res.status(500).json({ success: false, error: 'Failed to load property' });
+    }
+});
+```
+
+## Issue 2: Add GPS Coordinates to All Properties
+
+Run this SQL to add realistic BC coordinates to all properties based on their city:
+```sql
+-- Add GPS coordinates based on city names
+-- This uses approximate city center coordinates with small random offsets
+
+UPDATE staging_properties SET
+    latitude = CASE city
+        -- Vancouver Island
+        WHEN 'Bamfield' THEN 48.8334 + (random() - 0.5) * 0.02
+        WHEN 'Victoria' THEN 48.4284 + (random() - 0.5) * 0.05
+        WHEN 'Nanaimo' THEN 49.1659 + (random() - 0.5) * 0.05
+        WHEN 'Parksville' THEN 49.3150 + (random() - 0.5) * 0.03
+        WHEN 'Qualicum Beach' THEN 49.3500 + (random() - 0.5) * 0.02
+        WHEN 'Port Alberni' THEN 49.2339 + (random() - 0.5) * 0.03
+        WHEN 'Tofino' THEN 49.1530 + (random() - 0.5) * 0.02
+        WHEN 'Ucluelet' THEN 48.9424 + (random() - 0.5) * 0.02
+        WHEN 'Campbell River' THEN 50.0244 + (random() - 0.5) * 0.03
+        WHEN 'Courtenay' THEN 49.6879 + (random() - 0.5) * 0.03
+        WHEN 'Comox' THEN 49.6733 + (random() - 0.5) * 0.02
+        WHEN 'Duncan' THEN 48.7787 + (random() - 0.5) * 0.03
+        WHEN 'Sooke' THEN 48.3745 + (random() - 0.5) * 0.02
+        WHEN 'Sidney' THEN 48.6500 + (random() - 0.5) * 0.02
+        WHEN 'Ladysmith' THEN 48.9975 + (random() - 0.5) * 0.02
+        WHEN 'Port Hardy' THEN 50.7225 + (random() - 0.5) * 0.02
+        -- Okanagan
+        WHEN 'Kelowna' THEN 49.8880 + (random() - 0.5) * 0.05
+        WHEN 'Lake Country' THEN 50.0583 + (random() - 0.5) * 0.03
+        WHEN 'Penticton' THEN 49.4991 + (random() - 0.5) * 0.03
+        WHEN 'Vernon' THEN 50.2670 + (random() - 0.5) * 0.03
+        WHEN 'Osoyoos' THEN 49.0321 + (random() - 0.5) * 0.02
+        WHEN 'Oliver' THEN 49.1823 + (random() - 0.5) * 0.02
+        WHEN 'Summerland' THEN 49.6006 + (random() - 0.5) * 0.02
+        WHEN 'Peachland' THEN 49.7733 + (random() - 0.5) * 0.02
+        -- Kootenays
+        WHEN 'Nelson' THEN 49.4928 + (random() - 0.5) * 0.03
+        WHEN 'Balfour' THEN 49.6333 + (random() - 0.5) * 0.02
+        WHEN 'Fairmont Hot Springs' THEN 50.3361 + (random() - 0.5) * 0.02
+        WHEN 'Revelstoke' THEN 50.9981 + (random() - 0.5) * 0.03
+        WHEN 'Golden' THEN 51.2984 + (random() - 0.5) * 0.02
+        WHEN 'Invermere' THEN 50.5067 + (random() - 0.5) * 0.02
+        WHEN 'Cranbrook' THEN 49.5097 + (random() - 0.5) * 0.03
+        WHEN 'Fernie' THEN 49.5040 + (random() - 0.5) * 0.02
+        WHEN 'Castlegar' THEN 49.3256 + (random() - 0.5) * 0.02
+        -- Sea-to-Sky
+        WHEN 'Whistler' THEN 50.1163 + (random() - 0.5) * 0.03
+        WHEN 'Squamish' THEN 49.7016 + (random() - 0.5) * 0.03
+        WHEN 'Pemberton' THEN 50.3225 + (random() - 0.5) * 0.02
+        -- Fraser Valley / Vancouver Area
+        WHEN 'Vancouver' THEN 49.2827 + (random() - 0.5) * 0.05
+        WHEN 'Burnaby' THEN 49.2488 + (random() - 0.5) * 0.03
+        WHEN 'Surrey' THEN 49.1913 + (random() - 0.5) * 0.05
+        WHEN 'Langley' THEN 49.1044 + (random() - 0.5) * 0.03
+        WHEN 'Abbotsford' THEN 49.0504 + (random() - 0.5) * 0.04
+        WHEN 'Chilliwack' THEN 49.1579 + (random() - 0.5) * 0.03
+        WHEN 'Mission' THEN 49.1327 + (random() - 0.5) * 0.02
+        WHEN 'Hope' THEN 49.3858 + (random() - 0.5) * 0.02
+        WHEN 'Harrison Hot Springs' THEN 49.2858 + (random() - 0.5) * 0.01
+        -- Sunshine Coast
+        WHEN 'Sechelt' THEN 49.4742 + (random() - 0.5) * 0.02
+        WHEN 'Gibsons' THEN 49.3968 + (random() - 0.5) * 0.02
+        WHEN 'Powell River' THEN 49.8353 + (random() - 0.5) * 0.02
+        -- Northern BC
+        WHEN 'Prince George' THEN 53.9171 + (random() - 0.5) * 0.05
+        WHEN 'Terrace' THEN 54.5182 + (random() - 0.5) * 0.03
+        WHEN 'Prince Rupert' THEN 54.3150 + (random() - 0.5) * 0.02
+        WHEN 'Fort Nelson' THEN 58.8050 + (random() - 0.5) * 0.02
+        WHEN 'Dawson Creek' THEN 55.7596 + (random() - 0.5) * 0.02
+        -- Thompson / Cariboo
+        WHEN 'Kamloops' THEN 50.6745 + (random() - 0.5) * 0.05
+        WHEN 'Merritt' THEN 50.1113 + (random() - 0.5) * 0.02
+        WHEN 'Salmon Arm' THEN 50.7022 + (random() - 0.5) * 0.02
+        WHEN 'Williams Lake' THEN 52.1417 + (random() - 0.5) * 0.02
+        WHEN 'Quesnel' THEN 52.9784 + (random() - 0.5) * 0.02
+        WHEN '100 Mile House' THEN 51.6418 + (random() - 0.5) * 0.02
+        -- Default for unknown cities - somewhere in central BC
+        ELSE 50.5 + (random() - 0.5) * 2.0
+    END,
+    longitude = CASE city
+        -- Vancouver Island
+        WHEN 'Bamfield' THEN -125.1353 + (random() - 0.5) * 0.02
+        WHEN 'Victoria' THEN -123.3656 + (random() - 0.5) * 0.05
+        WHEN 'Nanaimo' THEN -123.9401 + (random() - 0.5) * 0.05
+        WHEN 'Parksville' THEN -124.3150 + (random() - 0.5) * 0.03
+        WHEN 'Qualicum Beach' THEN -124.4350 + (random() - 0.5) * 0.02
+        WHEN 'Port Alberni' THEN -124.8055 + (random() - 0.5) * 0.03
+        WHEN 'Tofino' THEN -125.9066 + (random() - 0.5) * 0.02
+        WHEN 'Ucluelet' THEN -125.5466 + (random() - 0.5) * 0.02
+        WHEN 'Campbell River' THEN -125.2733 + (random() - 0.5) * 0.03
+        WHEN 'Courtenay' THEN -124.9936 + (random() - 0.5) * 0.03
+        WHEN 'Comox' THEN -124.9450 + (random() - 0.5) * 0.02
+        WHEN 'Duncan' THEN -123.7079 + (random() - 0.5) * 0.03
+        WHEN 'Sooke' THEN -123.7256 + (random() - 0.5) * 0.02
+        WHEN 'Sidney' THEN -123.4000 + (random() - 0.5) * 0.02
+        WHEN 'Ladysmith' THEN -123.8175 + (random() - 0.5) * 0.02
+        WHEN 'Port Hardy' THEN -127.4946 + (random() - 0.5) * 0.02
+        -- Okanagan
+        WHEN 'Kelowna' THEN -119.4960 + (random() - 0.5) * 0.05
+        WHEN 'Lake Country' THEN -119.4144 + (random() - 0.5) * 0.03
+        WHEN 'Penticton' THEN -119.5937 + (random() - 0.5) * 0.03
+        WHEN 'Vernon' THEN -119.2720 + (random() - 0.5) * 0.03
+        WHEN 'Osoyoos' THEN -119.4696 + (random() - 0.5) * 0.02
+        WHEN 'Oliver' THEN -119.5503 + (random() - 0.5) * 0.02
+        WHEN 'Summerland' THEN -119.6769 + (random() - 0.5) * 0.02
+        WHEN 'Peachland' THEN -119.7317 + (random() - 0.5) * 0.02
+        -- Kootenays
+        WHEN 'Nelson' THEN -117.2948 + (random() - 0.5) * 0.03
+        WHEN 'Balfour' THEN -116.9500 + (random() - 0.5) * 0.02
+        WHEN 'Fairmont Hot Springs' THEN -115.8783 + (random() - 0.5) * 0.02
+        WHEN 'Revelstoke' THEN -118.1957 + (random() - 0.5) * 0.03
+        WHEN 'Golden' THEN -116.9636 + (random() - 0.5) * 0.02
+        WHEN 'Invermere' THEN -116.0318 + (random() - 0.5) * 0.02
+        WHEN 'Cranbrook' THEN -115.7694 + (random() - 0.5) * 0.03
+        WHEN 'Fernie' THEN -115.0631 + (random() - 0.5) * 0.02
+        WHEN 'Castlegar' THEN -117.6660 + (random() - 0.5) * 0.02
+        -- Sea-to-Sky
+        WHEN 'Whistler' THEN -122.9574 + (random() - 0.5) * 0.03
+        WHEN 'Squamish' THEN -123.1559 + (random() - 0.5) * 0.03
+        WHEN 'Pemberton' THEN -122.8072 + (random() - 0.5) * 0.02
+        -- Fraser Valley / Vancouver Area
+        WHEN 'Vancouver' THEN -123.1207 + (random() - 0.5) * 0.05
+        WHEN 'Burnaby' THEN -122.9805 + (random() - 0.5) * 0.03
+        WHEN 'Surrey' THEN -122.8490 + (random() - 0.5) * 0.05
+        WHEN 'Langley' THEN -122.6604 + (random() - 0.5) * 0.03
+        WHEN 'Abbotsford' THEN -122.2840 + (random() - 0.5) * 0.04
+        WHEN 'Chilliwack' THEN -121.9514 + (random() - 0.5) * 0.03
+        WHEN 'Mission' THEN -122.3093 + (random() - 0.5) * 0.02
+        WHEN 'Hope' THEN -121.4419 + (random() - 0.5) * 0.02
+        WHEN 'Harrison Hot Springs' THEN -121.7850 + (random() - 0.5) * 0.01
+        -- Sunshine Coast
+        WHEN 'Sechelt' THEN -123.7545 + (random() - 0.5) * 0.02
+        WHEN 'Gibsons' THEN -123.5049 + (random() - 0.5) * 0.02
+        WHEN 'Powell River' THEN -124.5226 + (random() - 0.5) * 0.02
+        -- Northern BC
+        WHEN 'Prince George' THEN -122.7497 + (random() - 0.5) * 0.05
+        WHEN 'Terrace' THEN -128.6032 + (random() - 0.5) * 0.03
+        WHEN 'Prince Rupert' THEN -130.3208 + (random() - 0.5) * 0.02
+        WHEN 'Fort Nelson' THEN -122.7002 + (random() - 0.5) * 0.02
+        WHEN 'Dawson Creek' THEN -120.2377 + (random() - 0.5) * 0.02
+        -- Thompson / Cariboo
+        WHEN 'Kamloops' THEN -120.3273 + (random() - 0.5) * 0.05
+        WHEN 'Merritt' THEN -120.7862 + (random() - 0.5) * 0.02
+        WHEN 'Salmon Arm' THEN -119.2726 + (random() - 0.5) * 0.02
+        WHEN 'Williams Lake' THEN -122.1417 + (random() - 0.5) * 0.02
+        WHEN 'Quesnel' THEN -122.4936 + (random() - 0.5) * 0.02
+        WHEN '100 Mile House' THEN -121.2929 + (random() - 0.5) * 0.02
+        -- Default for unknown cities
+        ELSE -122.0 + (random() - 0.5) * 3.0
+    END
+WHERE latitude IS NULL OR longitude IS NULL;
+
+-- Verify coordinates were added
+SELECT 
+    COUNT(*) as total,
+    COUNT(latitude) as with_lat,
+    COUNT(longitude) as with_lng,
+    COUNT(*) FILTER (WHERE latitude IS NULL) as missing_coords
+FROM staging_properties;
+
+-- Show sample coordinates by region
+SELECT region, city, name, 
+       ROUND(latitude::numeric, 4) as lat, 
+       ROUND(longitude::numeric, 4) as lng
+FROM staging_properties
+ORDER BY region, city
+LIMIT 20;
+```
+
+## Verify Fixes
+
+After applying both fixes, run these tests:
+```bash
+echo "=== VERIFY FIXES ==="
+
+# Test 1: Property detail returns full data
+echo "1. Property detail endpoint:"
+curl -s "http://localhost:5000/api/staging/properties/1" | jq '{
+  success,
+  hasCoords: (.property.latitude != null),
+  lat: .property.latitude,
+  lng: .property.longitude,
+  hasScores: (.property.rvScore != null),
+  hasPricing: (.pricing | length > 0),
+  hasProviders: (.serviceProviders != null)
+}'
+
+# Test 2: All properties have coordinates
+echo "2. Properties with coordinates:"
+curl -s "http://localhost:5000/api/staging/search?limit=50" | jq '{
+  total: (.properties | length),
+  withCoords: ([.properties[] | select(.latitude != null and .longitude != null)] | length),
+  sampleCoords: .properties[0] | {name, lat: .latitude, lng: .longitude}
+}'
+
+# Test 3: Coordinates are within BC bounds
+echo "3. Coordinate validity (BC bounds):"
+curl -s "http://localhost:5000/api/staging/search?limit=100" | jq '{
+  total: (.properties | length),
+  inBCBounds: ([.properties[] | select(.latitude >= 48 and .latitude <= 60 and .longitude >= -140 and .longitude <= -114)] | length),
+  outOfBounds: ([.properties[] | select(.latitude != null and (.latitude < 48 or .latitude > 60 or .longitude < -140 or .longitude > -114))] | length)
+}'
+
+# Test 4: Map view should work now
+echo "4. Trip planning with coords:"
+curl -s -X POST http://localhost:5000/api/staging/trips/plan \
+  -H "Content-Type: application/json" \
+  -d '{"originLat": 49.2827, "originLng": -123.1207, "destinationLat": 49.8880, "destinationLng": -119.4960, "bufferKm": 100}' | jq '{
+  success,
+  propertiesFound: (.properties | length),
+  allHaveCoords: ([.properties[] | select(.latitude == null)] | length == 0)
+}'
+
+echo ""
+echo "All 4 tests should show success with data"
+```
+
+Report verification results, then we'll proceed to Phase J: CivOS Integration!
