@@ -1,0 +1,506 @@
+Create host dashboard API endpoints.
+
+Create file: server/routes/host.ts
+```typescript
+import express, { Response } from 'express';
+import { db } from '../db';
+import { authenticateToken, requireHost, AuthRequest } from '../middleware/auth';
+
+const router = express.Router();
+
+// All host routes require authentication
+router.use(authenticateToken);
+
+// ============================================================================
+// HOST PROPERTIES
+// ============================================================================
+
+// GET /api/host/properties - Get properties owned/managed by user
+router.get('/properties', async (req: AuthRequest, res: Response) => {
+    try {
+        const result = await db.query(`
+            SELECT 
+                p.*,
+                ph.role,
+                ph.can_edit_property,
+                ph.can_manage_bookings,
+                ph.can_view_revenue,
+                ph.is_primary_contact,
+                (SELECT COUNT(*) FROM staging_bookings b 
+                 WHERE b.property_id = p.id AND b.status = 'pending') as pending_bookings,
+                (SELECT COUNT(*) FROM staging_bookings b 
+                 WHERE b.property_id = p.id AND b.status = 'confirmed' 
+                 AND b.check_in_date <= CURRENT_DATE AND b.check_out_date > CURRENT_DATE) as active_guests,
+                (SELECT COALESCE(SUM(b.total_cost), 0) FROM staging_bookings b 
+                 WHERE b.property_id = p.id AND b.status IN ('confirmed', 'completed')
+                 AND b.created_at >= DATE_TRUNC('month', CURRENT_DATE)) as month_revenue
+            FROM staging_properties p
+            JOIN staging_property_hosts ph ON ph.property_id = p.id
+            WHERE ph.user_id = $1
+            ORDER BY p.name
+        `, [req.user!.id]);
+
+        res.json({
+            success: true,
+            properties: result.rows.map(p => ({
+                id: p.id,
+                name: p.name,
+                city: p.city,
+                region: p.region,
+                status: p.status,
+                totalSpots: p.total_spots,
+                thumbnailUrl: p.thumbnail_url,
+                role: p.role,
+                canEdit: p.can_edit_property,
+                canManageBookings: p.can_manage_bookings,
+                canViewRevenue: p.can_view_revenue,
+                isPrimaryContact: p.is_primary_contact,
+                pendingBookings: parseInt(p.pending_bookings),
+                activeGuests: parseInt(p.active_guests),
+                monthRevenue: parseFloat(p.month_revenue)
+            }))
+        });
+
+    } catch (error: any) {
+        console.error('Get host properties error:', error);
+        res.status(500).json({ success: false, error: 'Failed to load properties' });
+    }
+});
+
+// GET /api/host/properties/:id - Get detailed property for host
+router.get('/properties/:id', async (req: AuthRequest, res: Response) => {
+    try {
+        const { id } = req.params;
+
+        // Verify ownership/access
+        const accessCheck = await db.query(
+            'SELECT role FROM staging_property_hosts WHERE property_id = $1 AND user_id = $2',
+            [id, req.user!.id]
+        );
+
+        if (accessCheck.rows.length === 0) {
+            return res.status(403).json({ success: false, error: 'Access denied' });
+        }
+
+        const propResult = await db.query('SELECT * FROM staging_properties WHERE id = $1', [id]);
+        if (propResult.rows.length === 0) {
+            return res.status(404).json({ success: false, error: 'Property not found' });
+        }
+
+        const pricingResult = await db.query(
+            'SELECT * FROM staging_pricing WHERE property_id = $1 ORDER BY pricing_type',
+            [id]
+        );
+
+        const spotsResult = await db.query(
+            'SELECT * FROM staging_spots WHERE property_id = $1 ORDER BY name',
+            [id]
+        );
+
+        res.json({
+            success: true,
+            property: propResult.rows[0],
+            pricing: pricingResult.rows,
+            spots: spotsResult.rows
+        });
+
+    } catch (error: any) {
+        console.error('Get host property error:', error);
+        res.status(500).json({ success: false, error: 'Failed to load property' });
+    }
+});
+
+// ============================================================================
+// BOOKINGS MANAGEMENT
+// ============================================================================
+
+// GET /api/host/bookings - Get bookings for host's properties
+router.get('/bookings', async (req: AuthRequest, res: Response) => {
+    try {
+        const { propertyId, status, startDate, endDate } = req.query;
+
+        let query = `
+            SELECT 
+                b.*,
+                p.name as property_name,
+                p.city
+            FROM staging_bookings b
+            JOIN staging_properties p ON p.id = b.property_id
+            JOIN staging_property_hosts ph ON ph.property_id = p.id
+            WHERE ph.user_id = $1
+        `;
+        const params: any[] = [req.user!.id];
+        let paramCount = 1;
+
+        if (propertyId) {
+            paramCount++;
+            query += ` AND b.property_id = $${paramCount}`;
+            params.push(propertyId);
+        }
+
+        if (status) {
+            paramCount++;
+            query += ` AND b.status = $${paramCount}`;
+            params.push(status);
+        }
+
+        if (startDate) {
+            paramCount++;
+            query += ` AND b.check_in_date >= $${paramCount}`;
+            params.push(startDate);
+        }
+
+        if (endDate) {
+            paramCount++;
+            query += ` AND b.check_out_date <= $${paramCount}`;
+            params.push(endDate);
+        }
+
+        query += ' ORDER BY b.check_in_date DESC';
+
+        const result = await db.query(query, params);
+
+        res.json({
+            success: true,
+            bookings: result.rows.map(b => ({
+                id: b.id,
+                bookingRef: b.booking_ref,
+                propertyId: b.property_id,
+                propertyName: b.property_name,
+                city: b.city,
+                guestName: b.guest_name,
+                guestEmail: b.guest_email,
+                guestPhone: b.guest_phone,
+                companyName: b.company_name,
+                checkInDate: b.check_in_date,
+                checkOutDate: b.check_out_date,
+                numNights: b.num_nights,
+                numAdults: b.num_adults,
+                numChildren: b.num_children,
+                numPets: b.num_pets,
+                vehicleDescription: b.vehicle_description,
+                vehicleLengthFt: b.vehicle_length_ft,
+                specialRequests: b.special_requests,
+                totalCost: parseFloat(b.total_cost),
+                status: b.status,
+                createdAt: b.created_at
+            }))
+        });
+
+    } catch (error: any) {
+        console.error('Get host bookings error:', error);
+        res.status(500).json({ success: false, error: 'Failed to load bookings' });
+    }
+});
+
+// PUT /api/host/bookings/:id/status - Update booking status
+router.put('/bookings/:id/status', async (req: AuthRequest, res: Response) => {
+    try {
+        const { id } = req.params;
+        const { status, notes } = req.body;
+
+        // Verify access
+        const accessCheck = await db.query(`
+            SELECT b.id FROM staging_bookings b
+            JOIN staging_property_hosts ph ON ph.property_id = b.property_id
+            WHERE b.id = $1 AND ph.user_id = $2 AND ph.can_manage_bookings = true
+        `, [id, req.user!.id]);
+
+        if (accessCheck.rows.length === 0) {
+            return res.status(403).json({ success: false, error: 'Access denied' });
+        }
+
+        const validStatuses = ['pending', 'confirmed', 'cancelled', 'completed', 'no_show'];
+        if (!validStatuses.includes(status)) {
+            return res.status(400).json({ success: false, error: 'Invalid status' });
+        }
+
+        const result = await db.query(`
+            UPDATE staging_bookings 
+            SET status = $2, 
+                host_notes = COALESCE($3, host_notes),
+                updated_at = NOW()
+            WHERE id = $1
+            RETURNING id, booking_ref, status
+        `, [id, status, notes]);
+
+        res.json({ success: true, booking: result.rows[0] });
+
+    } catch (error: any) {
+        console.error('Update booking status error:', error);
+        res.status(500).json({ success: false, error: 'Failed to update booking' });
+    }
+});
+
+// ============================================================================
+// CALENDAR MANAGEMENT
+// ============================================================================
+
+// GET /api/host/properties/:id/calendar - Get calendar view
+router.get('/properties/:id/calendar', async (req: AuthRequest, res: Response) => {
+    try {
+        const { id } = req.params;
+        const { startDate, endDate } = req.query;
+
+        // Verify access
+        const accessCheck = await db.query(
+            'SELECT role FROM staging_property_hosts WHERE property_id = $1 AND user_id = $2',
+            [id, req.user!.id]
+        );
+
+        if (accessCheck.rows.length === 0) {
+            return res.status(403).json({ success: false, error: 'Access denied' });
+        }
+
+        const start = startDate || new Date().toISOString().split('T')[0];
+        const end = endDate || new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+        // Get bookings
+        const bookingsResult = await db.query(`
+            SELECT id, booking_ref, guest_name, check_in_date, check_out_date, status, num_nights
+            FROM staging_bookings
+            WHERE property_id = $1 
+            AND status IN ('pending', 'confirmed')
+            AND check_out_date >= $2 AND check_in_date <= $3
+            ORDER BY check_in_date
+        `, [id, start, end]);
+
+        // Get blocks
+        const blocksResult = await db.query(`
+            SELECT id, block_type, title, start_date, end_date
+            FROM staging_calendar_blocks
+            WHERE property_id = $1 
+            AND end_date >= $2 AND start_date <= $3
+            ORDER BY start_date
+        `, [id, start, end]);
+
+        // Get pricing overrides
+        const overridesResult = await db.query(`
+            SELECT id, name, override_type, start_date, end_date, nightly_rate, rate_multiplier
+            FROM staging_pricing_overrides
+            WHERE property_id = $1 
+            AND end_date >= $2 AND start_date <= $3
+            AND is_active = true
+            ORDER BY start_date
+        `, [id, start, end]);
+
+        res.json({
+            success: true,
+            calendar: {
+                startDate: start,
+                endDate: end,
+                bookings: bookingsResult.rows,
+                blocks: blocksResult.rows,
+                pricingOverrides: overridesResult.rows
+            }
+        });
+
+    } catch (error: any) {
+        console.error('Get calendar error:', error);
+        res.status(500).json({ success: false, error: 'Failed to load calendar' });
+    }
+});
+
+// POST /api/host/properties/:id/blocks - Add calendar block
+router.post('/properties/:id/blocks', async (req: AuthRequest, res: Response) => {
+    try {
+        const { id } = req.params;
+        const { blockType, title, description, startDate, endDate, spotId } = req.body;
+
+        // Verify access
+        const accessCheck = await db.query(
+            'SELECT role FROM staging_property_hosts WHERE property_id = $1 AND user_id = $2 AND can_manage_calendar = true',
+            [id, req.user!.id]
+        );
+
+        if (accessCheck.rows.length === 0) {
+            return res.status(403).json({ success: false, error: 'Access denied' });
+        }
+
+        if (!blockType || !startDate || !endDate) {
+            return res.status(400).json({ success: false, error: 'Block type and dates required' });
+        }
+
+        const result = await db.query(`
+            INSERT INTO staging_calendar_blocks 
+            (property_id, spot_id, block_type, title, description, start_date, end_date, created_by)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            RETURNING *
+        `, [id, spotId || null, blockType, title, description, startDate, endDate, req.user!.id]);
+
+        res.status(201).json({ success: true, block: result.rows[0] });
+
+    } catch (error: any) {
+        console.error('Add block error:', error);
+        res.status(500).json({ success: false, error: 'Failed to add block' });
+    }
+});
+
+// DELETE /api/host/properties/:id/blocks/:blockId - Remove block
+router.delete('/properties/:id/blocks/:blockId', async (req: AuthRequest, res: Response) => {
+    try {
+        const { id, blockId } = req.params;
+
+        // Verify access
+        const accessCheck = await db.query(
+            'SELECT role FROM staging_property_hosts WHERE property_id = $1 AND user_id = $2 AND can_manage_calendar = true',
+            [id, req.user!.id]
+        );
+
+        if (accessCheck.rows.length === 0) {
+            return res.status(403).json({ success: false, error: 'Access denied' });
+        }
+
+        const result = await db.query(
+            'DELETE FROM staging_calendar_blocks WHERE id = $1 AND property_id = $2 RETURNING id',
+            [blockId, id]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ success: false, error: 'Block not found' });
+        }
+
+        res.json({ success: true, message: 'Block removed' });
+
+    } catch (error: any) {
+        console.error('Delete block error:', error);
+        res.status(500).json({ success: false, error: 'Failed to remove block' });
+    }
+});
+
+// ============================================================================
+// REVENUE & STATS
+// ============================================================================
+
+// GET /api/host/stats - Get overall host stats
+router.get('/stats', async (req: AuthRequest, res: Response) => {
+    try {
+        const result = await db.query(`
+            SELECT 
+                COUNT(DISTINCT ph.property_id) as total_properties,
+                (SELECT COUNT(*) FROM staging_bookings b 
+                 JOIN staging_property_hosts ph2 ON ph2.property_id = b.property_id 
+                 WHERE ph2.user_id = $1 AND b.status = 'pending') as pending_bookings,
+                (SELECT COUNT(*) FROM staging_bookings b 
+                 JOIN staging_property_hosts ph2 ON ph2.property_id = b.property_id 
+                 WHERE ph2.user_id = $1 AND b.status = 'confirmed' 
+                 AND b.check_in_date <= CURRENT_DATE AND b.check_out_date > CURRENT_DATE) as active_guests,
+                (SELECT COALESCE(SUM(b.total_cost), 0) FROM staging_bookings b 
+                 JOIN staging_property_hosts ph2 ON ph2.property_id = b.property_id 
+                 WHERE ph2.user_id = $1 AND b.status IN ('confirmed', 'completed')
+                 AND b.created_at >= DATE_TRUNC('month', CURRENT_DATE)) as month_revenue,
+                (SELECT COALESCE(SUM(b.total_cost), 0) FROM staging_bookings b 
+                 JOIN staging_property_hosts ph2 ON ph2.property_id = b.property_id 
+                 WHERE ph2.user_id = $1 AND b.status IN ('confirmed', 'completed')
+                 AND b.created_at >= DATE_TRUNC('year', CURRENT_DATE)) as year_revenue
+            FROM staging_property_hosts ph
+            WHERE ph.user_id = $1
+        `, [req.user!.id]);
+
+        const stats = result.rows[0];
+
+        res.json({
+            success: true,
+            stats: {
+                totalProperties: parseInt(stats.total_properties),
+                pendingBookings: parseInt(stats.pending_bookings),
+                activeGuests: parseInt(stats.active_guests),
+                monthRevenue: parseFloat(stats.month_revenue),
+                yearRevenue: parseFloat(stats.year_revenue)
+            }
+        });
+
+    } catch (error: any) {
+        console.error('Get host stats error:', error);
+        res.status(500).json({ success: false, error: 'Failed to load stats' });
+    }
+});
+
+// GET /api/host/properties/:id/revenue - Get property revenue details
+router.get('/properties/:id/revenue', async (req: AuthRequest, res: Response) => {
+    try {
+        const { id } = req.params;
+        const { period } = req.query; // 'week', 'month', 'year'
+
+        // Verify access
+        const accessCheck = await db.query(
+            'SELECT role FROM staging_property_hosts WHERE property_id = $1 AND user_id = $2 AND can_view_revenue = true',
+            [id, req.user!.id]
+        );
+
+        if (accessCheck.rows.length === 0) {
+            return res.status(403).json({ success: false, error: 'Access denied' });
+        }
+
+        let dateFilter: string;
+        switch (period) {
+            case 'week':
+                dateFilter = "created_at >= CURRENT_DATE - INTERVAL '7 days'";
+                break;
+            case 'year':
+                dateFilter = "created_at >= DATE_TRUNC('year', CURRENT_DATE)";
+                break;
+            default:
+                dateFilter = "created_at >= DATE_TRUNC('month', CURRENT_DATE)";
+        }
+
+        const result = await db.query(`
+            SELECT 
+                COUNT(*) as booking_count,
+                SUM(num_nights) as nights_sold,
+                SUM(subtotal) as gross_revenue,
+                SUM(service_fee) as platform_fees,
+                SUM(total_cost) as total_revenue,
+                AVG(nightly_rate) as avg_rate
+            FROM staging_bookings
+            WHERE property_id = $1 
+            AND status IN ('confirmed', 'completed')
+            AND ${dateFilter}
+        `, [id]);
+
+        const stats = result.rows[0];
+
+        res.json({
+            success: true,
+            revenue: {
+                period: period || 'month',
+                bookingCount: parseInt(stats.booking_count) || 0,
+                nightsSold: parseInt(stats.nights_sold) || 0,
+                grossRevenue: parseFloat(stats.gross_revenue) || 0,
+                platformFees: parseFloat(stats.platform_fees) || 0,
+                totalRevenue: parseFloat(stats.total_revenue) || 0,
+                averageRate: parseFloat(stats.avg_rate) || 0
+            }
+        });
+
+    } catch (error: any) {
+        console.error('Get revenue error:', error);
+        res.status(500).json({ success: false, error: 'Failed to load revenue' });
+    }
+});
+
+export default router;
+```
+
+Register the routes in your server:
+```typescript
+import hostRoutes from './routes/host';
+
+app.use('/api/host', hostRoutes);
+```
+
+Test the host API:
+```bash
+# Login as host (password is 'password' for demo host)
+curl -X POST http://localhost:5000/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email": "host@example.com", "password": "password"}'
+
+# Get host properties
+curl http://localhost:5000/api/host/properties \
+  -H "Authorization: Bearer [TOKEN]"
+
+# Get host stats
+curl http://localhost:5000/api/host/stats \
+  -H "Authorization: Bearer [TOKEN]"
+```
