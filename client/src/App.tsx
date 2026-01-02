@@ -45,6 +45,7 @@ import ChamberDashboard from "@/pages/staging/ChamberDashboard";
 import MapSearch from "@/pages/staging/MapSearch";
 import NavigationHub from "@/pages/NavigationHub";
 import FleetPage from "@/pages/FleetPage";
+import MyProfile from "@/pages/MyProfile";
 
 function AppShellRoutes() {
   return (
@@ -66,6 +67,7 @@ function AppShellRoutes() {
         <Route path="/admin/accommodations" component={Accommodations} />
         <Route path="/admin/users" component={UsersManagement} />
         <Route path="/admin/tenants" component={TenantsManagement} />
+        <Route path="/profile" component={MyProfile} />
         
         {/* Navigation hub */}
         <Route path="/hub" component={NavigationHub} />

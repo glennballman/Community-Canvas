@@ -1,0 +1,557 @@
+Create a "My Profile" page where users can view and edit their Sovereign Individual data - personal info, qualifications, vehicles, and tenant memberships.
+
+## Create file: client/src/pages/MyProfile.tsx
+```tsx
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '../contexts/AuthContext';
+
+interface Profile {
+    id: string;
+    user_id: string;
+    date_of_birth: string;
+    gender: string;
+    bio: string;
+    address_line1: string;
+    address_line2: string;
+    city: string;
+    province: string;
+    postal_code: string;
+    country: string;
+    emergency_contact_name: string;
+    emergency_contact_phone: string;
+    emergency_contact_relationship: string;
+    sleeping_preferences: {
+        snores?: boolean;
+        cpap?: boolean;
+        needs_private_room?: boolean;
+        early_riser?: boolean;
+    };
+    dietary_restrictions: string[];
+    occupation: string;
+    employer: string;
+}
+
+interface Qualification {
+    id: string;
+    qualification_type: string;
+    name: string;
+    category: string;
+    issuing_authority: string;
+    credential_number: string;
+    issued_date: string;
+    expiry_date: string;
+    is_verified: boolean;
+}
+
+interface Vehicle {
+    id: string;
+    name: string;
+    year: number;
+    make: string;
+    model: string;
+    license_plate: string;
+    vehicle_type: string;
+    status: string;
+}
+
+interface Trailer {
+    id: string;
+    name: string;
+    year: number;
+    make: string;
+    model: string;
+    trailer_type: string;
+    length_ft: number;
+    status: string;
+}
+
+export default function MyProfile() {
+    const { user, tenants, token } = useAuth();
+    const [profile, setProfile] = useState<Profile | null>(null);
+    const [qualifications, setQualifications] = useState<Qualification[]>([]);
+    const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+    const [trailers, setTrailers] = useState<Trailer[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [activeTab, setActiveTab] = useState('overview');
+    const [editing, setEditing] = useState(false);
+
+    useEffect(() => {
+        if (token && user) {
+            loadProfileData();
+        }
+    }, [token, user]);
+
+    async function loadProfileData() {
+        setLoading(true);
+        try {
+            // Load user details (includes profile and qualifications)
+            const userRes = await fetch(`/api/foundation/users/${user?.id}`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            const userData = await userRes.json();
+            
+            if (userData.success) {
+                setProfile(userData.profile);
+                setQualifications(userData.qualifications || []);
+            }
+
+            // Load personal vehicles
+            const vehiclesRes = await fetch('/api/vehicles/my', {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            const vehiclesData = await vehiclesRes.json();
+            if (vehiclesData.success) {
+                setVehicles(vehiclesData.vehicles || []);
+            }
+
+            // Load personal trailers
+            const trailersRes = await fetch('/api/vehicles/trailers/my', {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            const trailersData = await trailersRes.json();
+            if (trailersData.success) {
+                setTrailers(trailersData.trailers || []);
+            }
+
+        } catch (err) {
+            console.error('Failed to load profile:', err);
+        } finally {
+            setLoading(false);
+        }
+    }
+
+    const tabs = [
+        { id: 'overview', label: 'Overview', icon: '👤' },
+        { id: 'qualifications', label: 'Qualifications', icon: '📜' },
+        { id: 'vehicles', label: 'Vehicles & Trailers', icon: '🚗' },
+        { id: 'tenants', label: 'Organizations', icon: '🏢' },
+        { id: 'preferences', label: 'Preferences', icon: '⚙️' },
+    ];
+
+    const tenantTypeColors: Record<string, string> = {
+        platform: 'bg-purple-500/20 text-purple-400 border-purple-500/50',
+        government: 'bg-blue-500/20 text-blue-400 border-blue-500/50',
+        business: 'bg-green-500/20 text-green-400 border-green-500/50',
+        property: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/50',
+        individual: 'bg-gray-500/20 text-gray-400 border-gray-500/50',
+    };
+
+    if (loading) {
+        return (
+            <div className="p-6 text-center text-gray-400">
+                Loading your profile...
+            </div>
+        );
+    }
+
+    return (
+        <div className="p-6 max-w-6xl mx-auto">
+            {/* Header */}
+            <div className="bg-gray-800 rounded-lg p-6 mb-6">
+                <div className="flex items-start gap-6">
+                    <div className="w-24 h-24 bg-blue-600 rounded-full flex items-center justify-center text-white text-3xl font-bold">
+                        {(user?.firstName?.[0] || user?.email?.[0] || '?').toUpperCase()}
+                    </div>
+                    <div className="flex-1">
+                        <h1 className="text-2xl font-bold text-white">
+                            {user?.firstName} {user?.lastName}
+                        </h1>
+                        <p className="text-gray-400">{user?.email}</p>
+                        {user?.isPlatformAdmin && (
+                            <span className="inline-block mt-2 bg-purple-600 text-white text-xs px-3 py-1 rounded">
+                                Platform Administrator
+                            </span>
+                        )}
+                        <div className="flex gap-4 mt-4 text-sm">
+                            <div className="text-center">
+                                <div className="text-2xl font-bold text-blue-400">{tenants.length}</div>
+                                <div className="text-gray-500">Organizations</div>
+                            </div>
+                            <div className="text-center">
+                                <div className="text-2xl font-bold text-green-400">{qualifications.length}</div>
+                                <div className="text-gray-500">Qualifications</div>
+                            </div>
+                            <div className="text-center">
+                                <div className="text-2xl font-bold text-yellow-400">{vehicles.length}</div>
+                                <div className="text-gray-500">Vehicles</div>
+                            </div>
+                            <div className="text-center">
+                                <div className="text-2xl font-bold text-orange-400">{trailers.length}</div>
+                                <div className="text-gray-500">Trailers</div>
+                            </div>
+                        </div>
+                    </div>
+                    <button 
+                        onClick={() => setEditing(!editing)}
+                        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg"
+                    >
+                        {editing ? 'Cancel' : 'Edit Profile'}
+                    </button>
+                </div>
+            </div>
+
+            {/* Tabs */}
+            <div className="flex gap-2 mb-6 border-b border-gray-700 pb-2">
+                {tabs.map(tab => (
+                    <button
+                        key={tab.id}
+                        onClick={() => setActiveTab(tab.id)}
+                        className={`px-4 py-2 rounded-t-lg transition-colors ${
+                            activeTab === tab.id
+                                ? 'bg-gray-800 text-white'
+                                : 'text-gray-400 hover:text-white hover:bg-gray-800/50'
+                        }`}
+                    >
+                        <span className="mr-2">{tab.icon}</span>
+                        {tab.label}
+                    </button>
+                ))}
+            </div>
+
+            {/* Tab Content */}
+            <div className="bg-gray-800 rounded-lg p-6">
+                {activeTab === 'overview' && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {/* Personal Info */}
+                        <div>
+                            <h3 className="text-lg font-semibold text-white mb-4">Personal Information</h3>
+                            <div className="space-y-3">
+                                <div>
+                                    <label className="text-gray-400 text-sm">Full Name</label>
+                                    <p className="text-white">{user?.firstName} {user?.lastName}</p>
+                                </div>
+                                <div>
+                                    <label className="text-gray-400 text-sm">Email</label>
+                                    <p className="text-white">{user?.email}</p>
+                                </div>
+                                {profile?.occupation && (
+                                    <div>
+                                        <label className="text-gray-400 text-sm">Occupation</label>
+                                        <p className="text-white">{profile.occupation}</p>
+                                    </div>
+                                )}
+                                {profile?.employer && (
+                                    <div>
+                                        <label className="text-gray-400 text-sm">Employer</label>
+                                        <p className="text-white">{profile.employer}</p>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Address */}
+                        <div>
+                            <h3 className="text-lg font-semibold text-white mb-4">Location</h3>
+                            {profile?.city ? (
+                                <div className="space-y-3">
+                                    {profile.address_line1 && (
+                                        <div>
+                                            <label className="text-gray-400 text-sm">Address</label>
+                                            <p className="text-white">
+                                                {profile.address_line1}
+                                                {profile.address_line2 && <br />}
+                                                {profile.address_line2}
+                                            </p>
+                                        </div>
+                                    )}
+                                    <div>
+                                        <label className="text-gray-400 text-sm">City</label>
+                                        <p className="text-white">
+                                            {profile.city}, {profile.province} {profile.postal_code}
+                                        </p>
+                                    </div>
+                                </div>
+                            ) : (
+                                <p className="text-gray-500">No location set</p>
+                            )}
+                        </div>
+
+                        {/* Emergency Contact */}
+                        <div>
+                            <h3 className="text-lg font-semibold text-white mb-4">Emergency Contact</h3>
+                            {profile?.emergency_contact_name ? (
+                                <div className="space-y-3">
+                                    <div>
+                                        <label className="text-gray-400 text-sm">Name</label>
+                                        <p className="text-white">{profile.emergency_contact_name}</p>
+                                    </div>
+                                    <div>
+                                        <label className="text-gray-400 text-sm">Phone</label>
+                                        <p className="text-white">{profile.emergency_contact_phone}</p>
+                                    </div>
+                                    <div>
+                                        <label className="text-gray-400 text-sm">Relationship</label>
+                                        <p className="text-white">{profile.emergency_contact_relationship}</p>
+                                    </div>
+                                </div>
+                            ) : (
+                                <p className="text-gray-500">No emergency contact set</p>
+                            )}
+                        </div>
+
+                        {/* Bio */}
+                        <div>
+                            <h3 className="text-lg font-semibold text-white mb-4">Bio</h3>
+                            <p className="text-gray-300">{profile?.bio || 'No bio set'}</p>
+                        </div>
+                    </div>
+                )}
+
+                {activeTab === 'qualifications' && (
+                    <div>
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-lg font-semibold text-white">Qualifications & Certifications</h3>
+                            <button className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm">
+                                + Add Qualification
+                            </button>
+                        </div>
+                        
+                        {qualifications.length === 0 ? (
+                            <p className="text-gray-500 text-center py-8">No qualifications added yet</p>
+                        ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {qualifications.map(q => (
+                                    <div key={q.id} className="bg-gray-700 rounded-lg p-4">
+                                        <div className="flex items-start justify-between">
+                                            <div>
+                                                <h4 className="text-white font-medium">{q.name}</h4>
+                                                <p className="text-gray-400 text-sm">{q.issuing_authority || q.category}</p>
+                                            </div>
+                                            <span className={`text-xs px-2 py-1 rounded ${
+                                                q.qualification_type === 'license' ? 'bg-blue-500/20 text-blue-400' :
+                                                q.qualification_type === 'certification' ? 'bg-green-500/20 text-green-400' :
+                                                'bg-gray-500/20 text-gray-400'
+                                            }`}>
+                                                {q.qualification_type}
+                                            </span>
+                                        </div>
+                                        <div className="mt-2 flex items-center gap-4 text-sm">
+                                            {q.expiry_date && (
+                                                <span className={`${
+                                                    new Date(q.expiry_date) < new Date() 
+                                                        ? 'text-red-400' 
+                                                        : 'text-gray-400'
+                                                }`}>
+                                                    Expires: {new Date(q.expiry_date).toLocaleDateString()}
+                                                </span>
+                                            )}
+                                            {q.is_verified && (
+                                                <span className="text-green-400">✓ Verified</span>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {activeTab === 'vehicles' && (
+                    <div className="space-y-6">
+                        {/* Vehicles */}
+                        <div>
+                            <div className="flex items-center justify-between mb-4">
+                                <h3 className="text-lg font-semibold text-white">My Vehicles ({vehicles.length})</h3>
+                                <button className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm">
+                                    + Add Vehicle
+                                </button>
+                            </div>
+                            
+                            {vehicles.length === 0 ? (
+                                <p className="text-gray-500 text-center py-4">No vehicles registered</p>
+                            ) : (
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                    {vehicles.map(v => (
+                                        <div key={v.id} className="bg-gray-700 rounded-lg p-4">
+                                            <div className="flex items-center gap-3 mb-2">
+                                                <span className="text-2xl">
+                                                    {v.vehicle_type === 'car' ? '🚗' : 
+                                                     v.vehicle_type === 'truck' ? '🚛' : 
+                                                     v.vehicle_type === 'van' ? '🚐' : '🚙'}
+                                                </span>
+                                                <div>
+                                                    <h4 className="text-white font-medium">{v.name || `${v.make} ${v.model}`}</h4>
+                                                    <p className="text-gray-400 text-sm">{v.year} {v.make} {v.model}</p>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center justify-between text-sm">
+                                                <span className="text-gray-400">{v.license_plate || 'No plate'}</span>
+                                                <span className={`px-2 py-0.5 rounded ${
+                                                    v.status === 'available' ? 'bg-green-500/20 text-green-400' :
+                                                    v.status === 'in_use' ? 'bg-blue-500/20 text-blue-400' :
+                                                    'bg-yellow-500/20 text-yellow-400'
+                                                }`}>
+                                                    {v.status}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Trailers */}
+                        <div>
+                            <div className="flex items-center justify-between mb-4">
+                                <h3 className="text-lg font-semibold text-white">My Trailers ({trailers.length})</h3>
+                                <button className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm">
+                                    + Add Trailer
+                                </button>
+                            </div>
+                            
+                            {trailers.length === 0 ? (
+                                <p className="text-gray-500 text-center py-4">No trailers registered</p>
+                            ) : (
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                    {trailers.map(t => (
+                                        <div key={t.id} className="bg-gray-700 rounded-lg p-4">
+                                            <div className="flex items-center gap-3 mb-2">
+                                                <span className="text-2xl">🚛</span>
+                                                <div>
+                                                    <h4 className="text-white font-medium">{t.name || `${t.make} ${t.model}`}</h4>
+                                                    <p className="text-gray-400 text-sm">
+                                                        {t.trailer_type} • {t.length_ft}ft
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center justify-between text-sm">
+                                                <span className="text-gray-400">{t.year} {t.make}</span>
+                                                <span className={`px-2 py-0.5 rounded ${
+                                                    t.status === 'available' ? 'bg-green-500/20 text-green-400' :
+                                                    'bg-yellow-500/20 text-yellow-400'
+                                                }`}>
+                                                    {t.status}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
+
+                {activeTab === 'tenants' && (
+                    <div>
+                        <h3 className="text-lg font-semibold text-white mb-4">My Organizations</h3>
+                        <div className="space-y-3">
+                            {tenants.map(t => (
+                                <div key={t.id} className="bg-gray-700 rounded-lg p-4 flex items-center justify-between">
+                                    <div className="flex items-center gap-4">
+                                        <span className={`px-3 py-1 rounded text-sm border ${tenantTypeColors[t.type]}`}>
+                                            {t.type}
+                                        </span>
+                                        <div>
+                                            <h4 className="text-white font-medium">{t.name}</h4>
+                                            <p className="text-gray-400 text-sm">Role: {t.role}</p>
+                                        </div>
+                                    </div>
+                                    <button className="text-blue-400 hover:text-blue-300 text-sm">
+                                        View →
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {activeTab === 'preferences' && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {/* Sleeping Preferences */}
+                        <div>
+                            <h3 className="text-lg font-semibold text-white mb-4">Sleeping Preferences</h3>
+                            <p className="text-gray-400 text-sm mb-4">
+                                Used for accommodation matching when traveling with crews
+                            </p>
+                            <div className="space-y-3">
+                                <label className="flex items-center gap-3 text-gray-300">
+                                    <input 
+                                        type="checkbox" 
+                                        checked={profile?.sleeping_preferences?.snores || false}
+                                        disabled={!editing}
+                                        className="w-5 h-5 rounded"
+                                    />
+                                    I snore
+                                </label>
+                                <label className="flex items-center gap-3 text-gray-300">
+                                    <input 
+                                        type="checkbox" 
+                                        checked={profile?.sleeping_preferences?.cpap || false}
+                                        disabled={!editing}
+                                        className="w-5 h-5 rounded"
+                                    />
+                                    I use a CPAP machine
+                                </label>
+                                <label className="flex items-center gap-3 text-gray-300">
+                                    <input 
+                                        type="checkbox" 
+                                        checked={profile?.sleeping_preferences?.needs_private_room || false}
+                                        disabled={!editing}
+                                        className="w-5 h-5 rounded"
+                                    />
+                                    I need a private room
+                                </label>
+                                <label className="flex items-center gap-3 text-gray-300">
+                                    <input 
+                                        type="checkbox" 
+                                        checked={profile?.sleeping_preferences?.early_riser || false}
+                                        disabled={!editing}
+                                        className="w-5 h-5 rounded"
+                                    />
+                                    I'm an early riser (before 6am)
+                                </label>
+                            </div>
+                        </div>
+
+                        {/* Dietary Restrictions */}
+                        <div>
+                            <h3 className="text-lg font-semibold text-white mb-4">Dietary Restrictions</h3>
+                            <p className="text-gray-400 text-sm mb-4">
+                                For meal planning during service runs
+                            </p>
+                            <div className="space-y-2">
+                                {(profile?.dietary_restrictions || []).length > 0 ? (
+                                    profile?.dietary_restrictions.map((r, i) => (
+                                        <span key={i} className="inline-block bg-gray-700 px-3 py-1 rounded mr-2 text-gray-300">
+                                            {r}
+                                        </span>
+                                    ))
+                                ) : (
+                                    <p className="text-gray-500">No dietary restrictions set</p>
+                                )}
+                            </div>
+                            {editing && (
+                                <button className="mt-3 text-blue-400 text-sm hover:underline">
+                                    + Add restriction
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+}
+```
+
+## Add route to App.tsx:
+```tsx
+import MyProfile from './pages/MyProfile';
+
+// Add route (inside AdminLayout or as standalone):
+<Route path="/profile" element={<MyProfile />} />
+```
+
+## Add to navigation sidebar:
+
+In AdminLayout, add to NAVIGATION section:
+```tsx
+{ path: '/profile', label: 'My Profile', icon: '👤' },
+```
+
+## Test the profile page at /profile
+
+It should show:
+- Glenn's header with stats (4 orgs, 3 qualifications, 5 vehicles, 4 trailers)
+- Tabbed interface for Overview, Qualifications, Vehicles, Organizations, Preferences
+- All the Sovereign Individual data we've been building

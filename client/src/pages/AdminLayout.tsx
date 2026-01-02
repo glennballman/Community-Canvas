@@ -106,6 +106,7 @@ const navSections: NavSection[] = [
     items: [
       { path: "/admin/users", label: "Users", icon: User },
       { path: "/admin/tenants", label: "Tenants", icon: Building2 },
+      { path: "/profile", label: "My Profile", icon: User },
     ]
   },
   {
