@@ -359,6 +359,9 @@ export interface StagingSearchParams {
   acceptsSemi?: boolean;
   hasMechanic?: boolean;
   dogsAllowed?: boolean;
+  hasWifi?: boolean;
+  hasShowers?: boolean;
+  hasLaundry?: boolean;
   region?: string;
   city?: string;
   propertyType?: PropertyType;

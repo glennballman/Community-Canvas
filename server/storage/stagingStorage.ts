@@ -238,7 +238,10 @@ export async function searchAvailableProperties(params: StagingSearchParams): Pr
       ${params.maxNightlyRate || null}::decimal,
       ${params.sortBy || 'rv_score'}::varchar,
       ${params.limit || 50}::integer,
-      ${params.offset || 0}::integer
+      ${params.offset || 0}::integer,
+      ${params.hasWifi || false}::boolean,
+      ${params.hasShowers || false}::boolean,
+      ${params.hasLaundry || false}::boolean
     )
   `);
 

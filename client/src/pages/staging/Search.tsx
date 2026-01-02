@@ -331,6 +331,9 @@ export default function StagingSearch() {
     if (filters.petFriendly) params.set('dogsAllowed', 'true');
     if (filters.horseFriendly) params.set('isHorseFriendly', 'true');
     if (filters.acceptsTrucks) params.set('acceptsSemi', 'true');
+    if (filters.wifi) params.set('hasWifi', 'true');
+    if (filters.showers) params.set('hasShowers', 'true');
+    if (filters.laundry) params.set('hasLaundry', 'true');
     params.set('sortBy', filters.sortBy);
     params.set('limit', '50');
     params.set('offset', ((filters.page - 1) * 50).toString());
