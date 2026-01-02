@@ -707,6 +707,309 @@ router.delete('/calendar/:id', async (req: Request, res: Response) => {
 });
 
 // ============================================================================
+// TRIP PLANNER ENDPOINTS
+// ============================================================================
+
+// POST /api/staging/trips/plan - Find properties along a route
+router.post('/trips/plan', async (req: Request, res: Response) => {
+  try {
+    const {
+      originLat,
+      originLng,
+      originName,
+      destLat,
+      destLng,
+      destName,
+      bufferKm = 50,
+      vehicleLengthFt,
+      needsPower,
+      needsSewer,
+      maxPrice,
+      limit = 20
+    } = req.body;
+
+    if (!originLat || !originLng || !destLat || !destLng) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Origin and destination coordinates required' 
+      });
+    }
+
+    const result = await stagingStorage.rawQuery(`
+      SELECT * FROM find_properties_along_route($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+    `, [
+      originLat, originLng, destLat, destLng,
+      bufferKm,
+      vehicleLengthFt || null,
+      needsPower || false,
+      needsSewer || false,
+      maxPrice || null,
+      limit
+    ]);
+
+    const totalDistanceKm = Math.round(
+      111.0 * Math.sqrt(
+        Math.pow(destLat - originLat, 2) + 
+        Math.pow((destLng - originLng) * Math.cos(originLat * Math.PI / 180), 2)
+      )
+    );
+
+    res.json({
+      success: true,
+      route: {
+        origin: { lat: originLat, lng: originLng, name: originName },
+        destination: { lat: destLat, lng: destLng, name: destName },
+        totalDistanceKm,
+        estimatedDriveHours: Math.round(totalDistanceKm / 80 * 10) / 10
+      },
+      properties: result.rows.map((row: any) => ({
+        id: row.id,
+        name: row.name,
+        city: row.city,
+        region: row.region,
+        latitude: parseFloat(row.latitude),
+        longitude: parseFloat(row.longitude),
+        distanceFromOriginKm: parseFloat(row.distance_from_origin_km),
+        totalSpots: row.total_spots,
+        nightlyRate: row.nightly_rate ? parseFloat(row.nightly_rate) : null,
+        rvScore: row.rv_score,
+        crewScore: row.crew_score,
+        truckerScore: row.trucker_score,
+        hasPower: row.has_power,
+        hasSewer: row.has_sewer,
+        hasMechanic: row.has_mechanic
+      })),
+      totalFound: result.rows.length
+    });
+
+  } catch (error: any) {
+    console.error('Trip plan error:', error);
+    res.status(500).json({ success: false, error: 'Failed to plan trip' });
+  }
+});
+
+// GET /api/staging/trips/popular-routes - Get popular BC routes
+router.get('/trips/popular-routes', async (_req: Request, res: Response) => {
+  try {
+    const popularRoutes = [
+      {
+        id: 'vancouver-victoria',
+        name: 'Vancouver to Victoria',
+        description: 'Classic BC ferry route with island exploration',
+        origin: { name: 'Vancouver', lat: 49.2827, lng: -123.1207 },
+        destination: { name: 'Victoria', lat: 48.4284, lng: -123.3656 },
+        distanceKm: 110,
+        highlights: ['BC Ferries', 'Gulf Islands', 'Butchart Gardens']
+      },
+      {
+        id: 'vancouver-tofino',
+        name: 'Vancouver to Tofino',
+        description: 'Surf trip to the west coast',
+        origin: { name: 'Vancouver', lat: 49.2827, lng: -123.1207 },
+        destination: { name: 'Tofino', lat: 49.1530, lng: -125.9066 },
+        distanceKm: 315,
+        highlights: ['Cathedral Grove', 'Pacific Rim', 'Surfing']
+      },
+      {
+        id: 'vancouver-kelowna',
+        name: 'Vancouver to Kelowna',
+        description: 'Wine country road trip',
+        origin: { name: 'Vancouver', lat: 49.2827, lng: -123.1207 },
+        destination: { name: 'Kelowna', lat: 49.8880, lng: -119.4960 },
+        distanceKm: 390,
+        highlights: ['Coquihalla Highway', 'Okanagan Wineries', 'Lakes']
+      },
+      {
+        id: 'vancouver-whistler',
+        name: 'Vancouver to Whistler',
+        description: 'Sea-to-Sky adventure',
+        origin: { name: 'Vancouver', lat: 49.2827, lng: -123.1207 },
+        destination: { name: 'Whistler', lat: 50.1163, lng: -122.9574 },
+        distanceKm: 125,
+        highlights: ['Sea-to-Sky Highway', 'Shannon Falls', 'Squamish Chief']
+      },
+      {
+        id: 'victoria-porthardy',
+        name: 'Victoria to Port Hardy',
+        description: 'Full Vancouver Island road trip',
+        origin: { name: 'Victoria', lat: 48.4284, lng: -123.3656 },
+        destination: { name: 'Port Hardy', lat: 50.7235, lng: -127.4937 },
+        distanceKm: 500,
+        highlights: ['Cathedral Grove', 'Campbell River', 'Inside Passage']
+      }
+    ];
+
+    res.json({ success: true, routes: popularRoutes });
+
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: 'Failed to load routes' });
+  }
+});
+
+// POST /api/staging/trips - Save a trip
+router.post('/trips', async (req: Request, res: Response) => {
+  try {
+    const {
+      name,
+      description,
+      originName,
+      originLat,
+      originLng,
+      destinationName,
+      destinationLat,
+      destinationLng,
+      totalDistanceKm,
+      totalDriveTimeHours,
+      vehicleLengthFt,
+      vehicleType,
+      needsPower,
+      needsWater,
+      needsSewer,
+      departureDate,
+      returnDate,
+      guestEmail,
+      stops
+    } = req.body;
+
+    const tripResult = await stagingStorage.rawQuery(`
+      INSERT INTO staging_trips (
+        name, description,
+        origin_name, origin_lat, origin_lng,
+        destination_name, destination_lat, destination_lng,
+        total_distance_km, total_drive_time_hours,
+        vehicle_length_ft, vehicle_type,
+        needs_power, needs_water, needs_sewer,
+        departure_date, return_date,
+        guest_email
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
+      RETURNING id, trip_ref
+    `, [
+      name, description,
+      originName, originLat, originLng,
+      destinationName, destinationLat, destinationLng,
+      totalDistanceKm, totalDriveTimeHours,
+      vehicleLengthFt, vehicleType,
+      needsPower || false, needsWater || false, needsSewer || false,
+      departureDate, returnDate,
+      guestEmail
+    ]);
+
+    const trip = tripResult.rows[0];
+
+    if (stops && stops.length > 0) {
+      for (const stop of stops) {
+        await stagingStorage.rawQuery(`
+          INSERT INTO staging_trip_stops (
+            trip_id, property_id, stop_order, stop_type,
+            check_in_date, check_out_date, notes
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+        `, [
+          trip.id,
+          stop.propertyId,
+          stop.stopOrder,
+          stop.stopType || 'overnight',
+          stop.checkInDate,
+          stop.checkOutDate,
+          stop.notes
+        ]);
+      }
+    }
+
+    res.status(201).json({
+      success: true,
+      trip: {
+        id: trip.id,
+        tripRef: trip.trip_ref
+      }
+    });
+
+  } catch (error: any) {
+    console.error('Save trip error:', error);
+    res.status(500).json({ success: false, error: 'Failed to save trip' });
+  }
+});
+
+// GET /api/staging/trips/:id - Get trip details
+router.get('/trips/:id', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const tripResult = await stagingStorage.rawQuery(`
+      SELECT * FROM staging_trips WHERE id = $1 OR trip_ref = $1
+    `, [id]);
+
+    if (tripResult.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Trip not found' });
+    }
+
+    const trip = tripResult.rows[0];
+
+    const stopsResult = await stagingStorage.rawQuery(`
+      SELECT 
+        ts.*,
+        sp.name as property_name,
+        sp.city,
+        sp.region,
+        sp.latitude,
+        sp.longitude,
+        sp.thumbnail_url,
+        pr.nightly_rate
+      FROM staging_trip_stops ts
+      JOIN staging_properties sp ON sp.id = ts.property_id
+      LEFT JOIN staging_pricing pr ON pr.property_id = sp.id 
+        AND pr.pricing_type = 'base_nightly' AND pr.is_active = true
+      WHERE ts.trip_id = $1
+      ORDER BY ts.stop_order
+    `, [trip.id]);
+
+    res.json({
+      success: true,
+      trip: {
+        id: trip.id,
+        tripRef: trip.trip_ref,
+        name: trip.name,
+        description: trip.description,
+        origin: {
+          name: trip.origin_name,
+          lat: parseFloat(trip.origin_lat),
+          lng: parseFloat(trip.origin_lng)
+        },
+        destination: {
+          name: trip.destination_name,
+          lat: parseFloat(trip.destination_lat),
+          lng: parseFloat(trip.destination_lng)
+        },
+        totalDistanceKm: parseFloat(trip.total_distance_km),
+        totalDriveTimeHours: parseFloat(trip.total_drive_time_hours),
+        vehicleLengthFt: trip.vehicle_length_ft,
+        vehicleType: trip.vehicle_type,
+        departureDate: trip.departure_date,
+        returnDate: trip.return_date,
+        stops: stopsResult.rows.map((s: any) => ({
+          id: s.id,
+          propertyId: s.property_id,
+          propertyName: s.property_name,
+          city: s.city,
+          region: s.region,
+          latitude: parseFloat(s.latitude),
+          longitude: parseFloat(s.longitude),
+          thumbnailUrl: s.thumbnail_url,
+          stopOrder: s.stop_order,
+          stopType: s.stop_type,
+          checkInDate: s.check_in_date,
+          checkOutDate: s.check_out_date,
+          nightlyRate: s.nightly_rate ? parseFloat(s.nightly_rate) : null
+        }))
+      }
+    });
+
+  } catch (error: any) {
+    console.error('Get trip error:', error);
+    res.status(500).json({ success: false, error: 'Failed to load trip' });
+  }
+});
+
+// ============================================================================
 // CHAMBER INTEGRATION ENDPOINTS
 // ============================================================================
 
