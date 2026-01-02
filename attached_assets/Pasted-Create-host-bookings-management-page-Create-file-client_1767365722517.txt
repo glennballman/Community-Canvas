@@ -1,0 +1,356 @@
+Create host bookings management page.
+
+Create file: client/src/pages/host/HostBookings.tsx
+```tsx
+import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
+
+interface Booking {
+    id: number;
+    bookingRef: string;
+    propertyId: number;
+    propertyName: string;
+    city: string;
+    guestName: string;
+    guestEmail: string;
+    guestPhone: string;
+    companyName: string | null;
+    checkInDate: string;
+    checkOutDate: string;
+    numNights: number;
+    numAdults: number;
+    numChildren: number;
+    numPets: number;
+    vehicleDescription: string | null;
+    vehicleLengthFt: number | null;
+    specialRequests: string | null;
+    totalCost: number;
+    status: string;
+    createdAt: string;
+}
+
+interface Property {
+    id: number;
+    name: string;
+}
+
+export default function HostBookings() {
+    const [bookings, setBookings] = useState<Booking[]>([]);
+    const [properties, setProperties] = useState<Property[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
+    
+    // Filters
+    const [statusFilter, setStatusFilter] = useState('all');
+    const [propertyFilter, setPropertyFilter] = useState('all');
+
+    useEffect(() => {
+        loadData();
+    }, [statusFilter, propertyFilter]);
+
+    async function loadData() {
+        const token = localStorage.getItem('accessToken');
+        
+        try {
+            // Load properties for filter
+            const propsRes = await fetch('/api/host/properties', {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            const propsData = await propsRes.json();
+            if (propsData.success) setProperties(propsData.properties);
+
+            // Build query
+            let url = '/api/host/bookings?';
+            if (statusFilter !== 'all') url += `status=${statusFilter}&`;
+            if (propertyFilter !== 'all') url += `propertyId=${propertyFilter}&`;
+
+            const bookingsRes = await fetch(url, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            const bookingsData = await bookingsRes.json();
+            if (bookingsData.success) setBookings(bookingsData.bookings);
+        } catch (err) {
+            console.error('Failed to load bookings:', err);
+        } finally {
+            setLoading(false);
+        }
+    }
+
+    async function updateStatus(bookingId: number, newStatus: string) {
+        const token = localStorage.getItem('accessToken');
+        
+        try {
+            const res = await fetch(`/api/host/bookings/${bookingId}/status`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ status: newStatus })
+            });
+
+            if (res.ok) {
+                loadData();
+                setSelectedBooking(null);
+            }
+        } catch (err) {
+            console.error('Failed to update status:', err);
+        }
+    }
+
+    const statusColors: Record<string, string> = {
+        pending: 'bg-yellow-600',
+        confirmed: 'bg-green-600',
+        cancelled: 'bg-red-600',
+        completed: 'bg-blue-600',
+        no_show: 'bg-gray-600'
+    };
+
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+                <div className="text-white">Loading bookings...</div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="min-h-screen bg-gray-900">
+            {/* Header */}
+            <div className="bg-gray-800 border-b border-gray-700">
+                <div className="max-w-7xl mx-auto px-4 py-4">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                            <Link to="/host" className="text-gray-400 hover:text-white">
+                                ← Dashboard
+                            </Link>
+                            <h1 className="text-xl font-bold text-white">Bookings</h1>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div className="max-w-7xl mx-auto px-4 py-6">
+                {/* Filters */}
+                <div className="flex gap-4 mb-6">
+                    <select
+                        value={statusFilter}
+                        onChange={(e) => setStatusFilter(e.target.value)}
+                        className="bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white"
+                    >
+                        <option value="all">All Statuses</option>
+                        <option value="pending">Pending</option>
+                        <option value="confirmed">Confirmed</option>
+                        <option value="cancelled">Cancelled</option>
+                        <option value="completed">Completed</option>
+                    </select>
+
+                    <select
+                        value={propertyFilter}
+                        onChange={(e) => setPropertyFilter(e.target.value)}
+                        className="bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white"
+                    >
+                        <option value="all">All Properties</option>
+                        {properties.map(p => (
+                            <option key={p.id} value={p.id}>{p.name}</option>
+                        ))}
+                    </select>
+
+                    <div className="flex-1"></div>
+
+                    <div className="text-gray-400">
+                        {bookings.length} booking{bookings.length !== 1 ? 's' : ''}
+                    </div>
+                </div>
+
+                {/* Bookings Table */}
+                <div className="bg-gray-800 rounded-lg overflow-hidden">
+                    <table className="w-full">
+                        <thead className="bg-gray-700">
+                            <tr>
+                                <th className="text-left px-4 py-3 text-gray-300 text-sm">Guest</th>
+                                <th className="text-left px-4 py-3 text-gray-300 text-sm">Property</th>
+                                <th className="text-left px-4 py-3 text-gray-300 text-sm">Dates</th>
+                                <th className="text-center px-4 py-3 text-gray-300 text-sm">Nights</th>
+                                <th className="text-right px-4 py-3 text-gray-300 text-sm">Total</th>
+                                <th className="text-center px-4 py-3 text-gray-300 text-sm">Status</th>
+                                <th className="text-right px-4 py-3 text-gray-300 text-sm">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {bookings.map(booking => (
+                                <tr key={booking.id} className="border-t border-gray-700 hover:bg-gray-750">
+                                    <td className="px-4 py-3">
+                                        <p className="text-white font-medium">{booking.guestName}</p>
+                                        <p className="text-gray-400 text-sm">{booking.guestEmail}</p>
+                                        {booking.companyName && (
+                                            <p className="text-blue-400 text-sm">{booking.companyName}</p>
+                                        )}
+                                    </td>
+                                    <td className="px-4 py-3">
+                                        <p className="text-white">{booking.propertyName}</p>
+                                        <p className="text-gray-400 text-sm">{booking.city}</p>
+                                    </td>
+                                    <td className="px-4 py-3 text-gray-300">
+                                        {new Date(booking.checkInDate).toLocaleDateString()} →<br />
+                                        {new Date(booking.checkOutDate).toLocaleDateString()}
+                                    </td>
+                                    <td className="px-4 py-3 text-center text-white">
+                                        {booking.numNights}
+                                    </td>
+                                    <td className="px-4 py-3 text-right text-green-400 font-medium">
+                                        ${booking.totalCost.toFixed(2)}
+                                    </td>
+                                    <td className="px-4 py-3 text-center">
+                                        <span className={`${statusColors[booking.status]} px-2 py-1 rounded text-white text-xs`}>
+                                            {booking.status}
+                                        </span>
+                                    </td>
+                                    <td className="px-4 py-3 text-right">
+                                        <button
+                                            onClick={() => setSelectedBooking(booking)}
+                                            className="text-blue-400 hover:text-blue-300 text-sm"
+                                        >
+                                            View
+                                        </button>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+
+                    {bookings.length === 0 && (
+                        <div className="p-8 text-center text-gray-500">
+                            No bookings found
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {/* Booking Detail Modal */}
+            {selectedBooking && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                    <div className="bg-gray-800 rounded-lg p-6 w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
+                        <div className="flex justify-between items-start mb-4">
+                            <div>
+                                <h2 className="text-xl font-bold text-white">
+                                    Booking {selectedBooking.bookingRef}
+                                </h2>
+                                <span className={`${statusColors[selectedBooking.status]} px-2 py-1 rounded text-white text-xs`}>
+                                    {selectedBooking.status}
+                                </span>
+                            </div>
+                            <button
+                                onClick={() => setSelectedBooking(null)}
+                                className="text-gray-400 hover:text-white text-2xl"
+                            >
+                                ×
+                            </button>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4 mb-6">
+                            <div>
+                                <h3 className="text-gray-400 text-sm mb-1">Guest</h3>
+                                <p className="text-white">{selectedBooking.guestName}</p>
+                                <p className="text-gray-400 text-sm">{selectedBooking.guestEmail}</p>
+                                {selectedBooking.guestPhone && (
+                                    <p className="text-gray-400 text-sm">{selectedBooking.guestPhone}</p>
+                                )}
+                                {selectedBooking.companyName && (
+                                    <p className="text-blue-400 text-sm">{selectedBooking.companyName}</p>
+                                )}
+                            </div>
+                            <div>
+                                <h3 className="text-gray-400 text-sm mb-1">Property</h3>
+                                <p className="text-white">{selectedBooking.propertyName}</p>
+                            </div>
+                            <div>
+                                <h3 className="text-gray-400 text-sm mb-1">Dates</h3>
+                                <p className="text-white">
+                                    {new Date(selectedBooking.checkInDate).toLocaleDateString()} → {new Date(selectedBooking.checkOutDate).toLocaleDateString()}
+                                </p>
+                                <p className="text-gray-400 text-sm">{selectedBooking.numNights} nights</p>
+                            </div>
+                            <div>
+                                <h3 className="text-gray-400 text-sm mb-1">Guests</h3>
+                                <p className="text-white">
+                                    {selectedBooking.numAdults} adult{selectedBooking.numAdults !== 1 ? 's' : ''}
+                                    {selectedBooking.numChildren > 0 && `, ${selectedBooking.numChildren} child${selectedBooking.numChildren !== 1 ? 'ren' : ''}`}
+                                    {selectedBooking.numPets > 0 && `, ${selectedBooking.numPets} pet${selectedBooking.numPets !== 1 ? 's' : ''}`}
+                                </p>
+                            </div>
+                        </div>
+
+                        {selectedBooking.vehicleDescription && (
+                            <div className="mb-4">
+                                <h3 className="text-gray-400 text-sm mb-1">Vehicle</h3>
+                                <p className="text-white">{selectedBooking.vehicleDescription}</p>
+                                {selectedBooking.vehicleLengthFt && (
+                                    <p className="text-gray-400 text-sm">{selectedBooking.vehicleLengthFt} ft</p>
+                                )}
+                            </div>
+                        )}
+
+                        {selectedBooking.specialRequests && (
+                            <div className="mb-4">
+                                <h3 className="text-gray-400 text-sm mb-1">Special Requests</h3>
+                                <p className="text-gray-300 bg-gray-700 rounded p-2">
+                                    {selectedBooking.specialRequests}
+                                </p>
+                            </div>
+                        )}
+
+                        <div className="border-t border-gray-700 pt-4 mb-4">
+                            <div className="flex justify-between text-lg">
+                                <span className="text-white font-medium">Total</span>
+                                <span className="text-green-400 font-bold">${selectedBooking.totalCost.toFixed(2)}</span>
+                            </div>
+                        </div>
+
+                        {/* Status Actions */}
+                        {selectedBooking.status === 'pending' && (
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={() => updateStatus(selectedBooking.id, 'confirmed')}
+                                    className="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 rounded font-medium"
+                                >
+                                    ✓ Confirm Booking
+                                </button>
+                                <button
+                                    onClick={() => updateStatus(selectedBooking.id, 'cancelled')}
+                                    className="flex-1 bg-red-600 hover:bg-red-700 text-white py-2 rounded font-medium"
+                                >
+                                    ✗ Decline
+                                </button>
+                            </div>
+                        )}
+
+                        {selectedBooking.status === 'confirmed' && (
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={() => updateStatus(selectedBooking.id, 'completed')}
+                                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded font-medium"
+                                >
+                                    Mark Completed
+                                </button>
+                                <button
+                                    onClick={() => updateStatus(selectedBooking.id, 'no_show')}
+                                    className="flex-1 bg-gray-600 hover:bg-gray-500 text-white py-2 rounded font-medium"
+                                >
+                                    No Show
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
+```
+
+Add routes:
+```tsx
+<Route path="/host/bookings" element={<HostBookings />} />
+<Route path="/host/properties/:id/bookings" element={<HostBookings />} />
+```
