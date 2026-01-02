@@ -976,14 +976,15 @@ router.post('/trips', async (req: Request, res: Response) => {
   }
 });
 
-// GET /api/staging/trips/:id - Get trip details
+// GET /api/staging/trips/:id - Get trip details (accepts ID or tripRef)
 router.get('/trips/:id', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    const numericId = parseInt(id, 10);
 
     const tripResult = await stagingStorage.rawQuery(`
-      SELECT * FROM staging_trips WHERE id = $1 OR trip_ref = $1
-    `, [id]);
+      SELECT * FROM staging_trips WHERE id = $1 OR trip_ref = $2
+    `, [isNaN(numericId) ? -1 : numericId, id]);
 
     if (tripResult.rows.length === 0) {
       return res.status(404).json({ success: false, error: 'Trip not found' });
@@ -1059,6 +1060,32 @@ router.get('/trips/:id', async (req: Request, res: Response) => {
 // ============================================================================
 // CHAMBER INTEGRATION ENDPOINTS
 // ============================================================================
+
+// GET /api/staging/chamber/opportunities/:id - Get single opportunity (must be before list route)
+router.get('/chamber/opportunities/:id', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    
+    const result = await stagingStorage.rawQuery(`
+      SELECT 
+        cl.*,
+        p.name as property_name,
+        p.status as property_status
+      FROM staging_chamber_links cl
+      LEFT JOIN staging_properties p ON p.id = cl.property_id
+      WHERE cl.id = $1
+    `, [id]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Opportunity not found' });
+    }
+
+    res.json({ success: true, opportunity: result.rows[0] });
+  } catch (error: any) {
+    console.error('Get opportunity error:', error);
+    res.status(500).json({ success: false, error: 'Failed to load opportunity' });
+  }
+});
 
 // GET /api/staging/chamber/opportunities - List all opportunities
 router.get('/chamber/opportunities', async (req: Request, res: Response) => {
