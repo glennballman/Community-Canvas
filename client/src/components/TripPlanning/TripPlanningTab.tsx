@@ -7,7 +7,8 @@ import {
   MapPin, 
   Wrench,
   Target,
-  ChevronRight
+  ChevronRight,
+  Route
 } from 'lucide-react';
 import { ParticipantProfile, VehicleProfile } from '../../types/tripPlanning';
 import { ParticipantProfileForm } from './ParticipantProfileForm';
@@ -16,11 +17,12 @@ import { TripQualificationCheck } from './TripQualificationCheck';
 import { ServiceRunsBoard } from './ServiceRunsBoard';
 import { RouteExplorer } from './RouteExplorer';
 import { QuickTripQualification } from './QuickTripQualification';
+import { TripRoutePlanner } from './TripRoutePlanner';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 
-type PlanningView = 'overview' | 'participant' | 'vehicle' | 'qualify' | 'service-runs' | 'routes';
+type PlanningView = 'overview' | 'participant' | 'vehicle' | 'qualify' | 'service-runs' | 'routes' | 'route-planner';
 
 export function TripPlanningTab() {
   const [activeView, setActiveView] = useState<PlanningView>('overview');
@@ -161,6 +163,12 @@ export function TripPlanningTab() {
             onBack={() => setActiveView('overview')}
           />
         );
+      case 'route-planner':
+        return (
+          <TripRoutePlanner
+            onBack={() => setActiveView('overview')}
+          />
+        );
       default:
         return renderOverview();
     }
@@ -291,7 +299,21 @@ export function TripPlanningTab() {
         </Card>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card 
+          className="cursor-pointer hover-elevate transition-shadow"
+          onClick={() => setActiveView('route-planner')}
+          data-testid="card-route-planner"
+        >
+          <CardContent className="pt-6">
+            <Route className="w-8 h-8 text-primary mb-3" />
+            <h3 className="font-semibold mb-1">Plan a Trip</h3>
+            <p className="text-sm text-muted-foreground">
+              Plan your route and find stops along the way
+            </p>
+          </CardContent>
+        </Card>
+
         <Card 
           className="cursor-pointer hover-elevate transition-shadow"
           onClick={() => setActiveView('qualify')}
@@ -299,9 +321,9 @@ export function TripPlanningTab() {
         >
           <CardContent className="pt-6">
             <CheckCircle className="w-8 h-8 text-primary mb-3" />
-            <h3 className="font-semibold mb-1">Check Trip Qualification</h3>
+            <h3 className="font-semibold mb-1">Check Qualification</h3>
             <p className="text-sm text-muted-foreground">
-              See if you're ready for a specific trip and what gaps to fill
+              See if you're ready for a specific trip
             </p>
           </CardContent>
         </Card>
@@ -315,7 +337,7 @@ export function TripPlanningTab() {
             <MapPin className="w-8 h-8 text-primary mb-3" />
             <h3 className="font-semibold mb-1">Explore Routes</h3>
             <p className="text-sm text-muted-foreground">
-              View route segments, conditions, and alternatives
+              View route segments and conditions
             </p>
           </CardContent>
         </Card>

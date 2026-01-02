@@ -6,3 +6,4 @@ export { ServiceRunsBoard } from './ServiceRunsBoard';
 export { RouteExplorer } from './RouteExplorer';
 export { QuickTripQualification } from './QuickTripQualification';
 export { SafetyEquipmentChecklist } from './SafetyEquipmentChecklist';
+export { TripRoutePlanner } from './TripRoutePlanner';
