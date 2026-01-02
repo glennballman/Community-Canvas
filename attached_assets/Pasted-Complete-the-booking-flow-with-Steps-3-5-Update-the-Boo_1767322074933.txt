@@ -1,0 +1,248 @@
+Complete the booking flow with Steps 3-5.
+
+Update the BookingFlow.tsx component to add the remaining steps inside the main form section (replace the placeholder):
+```tsx
+                        {/* Step 3: Guest Info */}
+                        {step === 3 && (
+                            <div>
+                                <h2 className="text-xl font-semibold text-white mb-6">Guest Information</h2>
+                                
+                                <div className="mb-4">
+                                    <label className="block text-gray-400 text-sm mb-1">Full Name *</label>
+                                    <input
+                                        type="text"
+                                        value={guestName}
+                                        onChange={(e) => setGuestName(e.target.value)}
+                                        placeholder="John Smith"
+                                        className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white"
+                                        required
+                                    />
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4 mb-4">
+                                    <div>
+                                        <label className="block text-gray-400 text-sm mb-1">Email *</label>
+                                        <input
+                                            type="email"
+                                            value={guestEmail}
+                                            onChange={(e) => setGuestEmail(e.target.value)}
+                                            placeholder="john@example.com"
+                                            className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white"
+                                            required
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-gray-400 text-sm mb-1">Phone</label>
+                                        <input
+                                            type="tel"
+                                            value={guestPhone}
+                                            onChange={(e) => setGuestPhone(e.target.value)}
+                                            placeholder="250-555-1234"
+                                            className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="mb-4">
+                                    <label className="block text-gray-400 text-sm mb-1">Company Name (if booking for work)</label>
+                                    <input
+                                        type="text"
+                                        value={companyName}
+                                        onChange={(e) => setCompanyName(e.target.value)}
+                                        placeholder="ABC Construction Ltd."
+                                        className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white"
+                                    />
+                                </div>
+
+                                <div className="mb-6">
+                                    <label className="block text-gray-400 text-sm mb-1">Special Requests</label>
+                                    <textarea
+                                        value={specialRequests}
+                                        onChange={(e) => setSpecialRequests(e.target.value)}
+                                        placeholder="Early check-in, specific spot preference, etc."
+                                        rows={3}
+                                        className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white"
+                                    />
+                                </div>
+
+                                <div className="flex gap-4">
+                                    <button
+                                        onClick={() => setStep(2)}
+                                        className="flex-1 bg-gray-600 hover:bg-gray-500 text-white py-3 rounded-lg font-medium"
+                                    >
+                                        Back
+                                    </button>
+                                    <button
+                                        onClick={() => setStep(4)}
+                                        disabled={!guestName || !guestEmail}
+                                        className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white py-3 rounded-lg font-medium"
+                                    >
+                                        Review Booking
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Step 4: Review */}
+                        {step === 4 && (
+                            <div>
+                                <h2 className="text-xl font-semibold text-white mb-6">Review Your Booking</h2>
+                                
+                                {error && (
+                                    <div className="bg-red-900/50 border border-red-500 text-red-200 px-4 py-3 rounded mb-4">
+                                        {error}
+                                    </div>
+                                )}
+
+                                {/* Property */}
+                                <div className="bg-gray-700 rounded-lg p-4 mb-4">
+                                    <h3 className="text-white font-medium mb-2">Property</h3>
+                                    <p className="text-gray-300">{property?.name}</p>
+                                    <p className="text-gray-400 text-sm">{property?.city}, {property?.region}</p>
+                                </div>
+
+                                {/* Dates */}
+                                <div className="bg-gray-700 rounded-lg p-4 mb-4">
+                                    <h3 className="text-white font-medium mb-2">Dates</h3>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <p className="text-gray-400 text-sm">Check-in</p>
+                                            <p className="text-gray-200">{new Date(checkInDate).toLocaleDateString('en-CA', { weekday: 'short', month: 'short', day: 'numeric' })}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-gray-400 text-sm">Check-out</p>
+                                            <p className="text-gray-200">{new Date(checkOutDate).toLocaleDateString('en-CA', { weekday: 'short', month: 'short', day: 'numeric' })}</p>
+                                        </div>
+                                    </div>
+                                    <p className="text-gray-400 text-sm mt-2">
+                                        {pricing?.numNights} night{pricing?.numNights !== 1 ? 's' : ''} • {numAdults} adult{numAdults !== 1 ? 's' : ''}
+                                        {numChildren > 0 && `, ${numChildren} child${numChildren !== 1 ? 'ren' : ''}`}
+                                        {numPets > 0 && `, ${numPets} pet${numPets !== 1 ? 's' : ''}`}
+                                    </p>
+                                </div>
+
+                                {/* Vehicle */}
+                                {vehicleType && (
+                                    <div className="bg-gray-700 rounded-lg p-4 mb-4">
+                                        <h3 className="text-white font-medium mb-2">Vehicle</h3>
+                                        <p className="text-gray-300">
+                                            {vehicleType.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                                            {vehicleLengthFt && ` • ${vehicleLengthFt}ft`}
+                                        </p>
+                                        {vehicleDescription && <p className="text-gray-400 text-sm">{vehicleDescription}</p>}
+                                        {licensePlate && <p className="text-gray-400 text-sm">Plate: {licensePlate}</p>}
+                                    </div>
+                                )}
+
+                                {/* Guest */}
+                                <div className="bg-gray-700 rounded-lg p-4 mb-4">
+                                    <h3 className="text-white font-medium mb-2">Guest</h3>
+                                    <p className="text-gray-300">{guestName}</p>
+                                    <p className="text-gray-400 text-sm">{guestEmail}</p>
+                                    {guestPhone && <p className="text-gray-400 text-sm">{guestPhone}</p>}
+                                    {companyName && <p className="text-gray-400 text-sm">Company: {companyName}</p>}
+                                </div>
+
+                                {/* Special Requests */}
+                                {specialRequests && (
+                                    <div className="bg-gray-700 rounded-lg p-4 mb-4">
+                                        <h3 className="text-white font-medium mb-2">Special Requests</h3>
+                                        <p className="text-gray-400 text-sm">{specialRequests}</p>
+                                    </div>
+                                )}
+
+                                {/* Cancellation Policy */}
+                                <div className="bg-gray-700 rounded-lg p-4 mb-6">
+                                    <h3 className="text-white font-medium mb-2">Cancellation Policy</h3>
+                                    <p className="text-gray-400 text-sm">
+                                        Free cancellation up to 48 hours before check-in. 
+                                        Cancellations within 48 hours are subject to a one-night charge.
+                                    </p>
+                                </div>
+
+                                <div className="flex gap-4">
+                                    <button
+                                        onClick={() => setStep(3)}
+                                        className="flex-1 bg-gray-600 hover:bg-gray-500 text-white py-3 rounded-lg font-medium"
+                                    >
+                                        Back
+                                    </button>
+                                    <button
+                                        onClick={handleSubmit}
+                                        disabled={submitting}
+                                        className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white py-3 rounded-lg font-medium"
+                                    >
+                                        {submitting ? 'Submitting...' : `Confirm Booking • $${pricing?.totalCost.toFixed(2)}`}
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Step 5: Confirmation */}
+                        {step === 5 && bookingResult && (
+                            <div className="text-center">
+                                <div className="text-green-400 text-6xl mb-4">✓</div>
+                                <h2 className="text-2xl font-bold text-white mb-2">Booking Confirmed!</h2>
+                                <p className="text-gray-400 mb-6">
+                                    Your reservation has been submitted successfully.
+                                </p>
+
+                                <div className="bg-gray-700 rounded-lg p-6 mb-6 text-left">
+                                    <div className="text-center mb-4">
+                                        <p className="text-gray-400 text-sm">Confirmation Number</p>
+                                        <p className="text-2xl font-mono text-white">{bookingResult.booking.bookingRef}</p>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-4 text-sm">
+                                        <div>
+                                            <p className="text-gray-400">Property</p>
+                                            <p className="text-white">{bookingResult.booking.propertyName}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-gray-400">Total</p>
+                                            <p className="text-white">${bookingResult.pricing.totalCost.toFixed(2)}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-gray-400">Check-in</p>
+                                            <p className="text-white">{new Date(bookingResult.booking.checkInDate).toLocaleDateString()}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-gray-400">Check-out</p>
+                                            <p className="text-white">{new Date(bookingResult.booking.checkOutDate).toLocaleDateString()}</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <p className="text-gray-400 text-sm mb-6">
+                                    A confirmation email has been sent to <span className="text-white">{guestEmail}</span>
+                                </p>
+
+                                <div className="flex gap-4">
+                                    <button
+                                        onClick={() => navigate(`/staging/${id}`)}
+                                        className="flex-1 bg-gray-600 hover:bg-gray-500 text-white py-3 rounded-lg font-medium"
+                                    >
+                                        Back to Property
+                                    </button>
+                                    <button
+                                        onClick={() => navigate('/staging')}
+                                        className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-medium"
+                                    >
+                                        Find More Spots
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+```
+
+Also update the property detail page to link to the booking flow. Find the "Book Now" button and update it:
+```tsx
+<Link 
+    to={`/staging/${property.id}/book?checkIn=${checkIn}&checkOut=${checkOut}`}
+    className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-medium text-center block"
+>
+    Book Now
+</Link>
+```
+
+Test the full booking flow from property detail through confirmation.
