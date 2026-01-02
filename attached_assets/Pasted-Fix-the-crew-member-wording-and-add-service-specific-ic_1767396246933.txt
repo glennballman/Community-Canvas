@@ -1,0 +1,328 @@
+Fix the crew member wording and add service-specific icons to make the catalog more intuitive.
+
+## Step 1: Add icon column to services table
+```sql
+-- Add icon column to services
+ALTER TABLE sr_services ADD COLUMN IF NOT EXISTS icon TEXT DEFAULT '🔧';
+
+-- Update icons for all services (service-specific, not category)
+-- Roof & Chimney
+UPDATE sr_services SET icon = '🔥' WHERE slug = 'chimney-sweep';
+UPDATE sr_services SET icon = '🔍' WHERE slug = 'chimney-inspection';
+UPDATE sr_services SET icon = '🎩' WHERE slug = 'chimney-cap-install';
+UPDATE sr_services SET icon = '🧱' WHERE slug = 'chimney-repair';
+UPDATE sr_services SET icon = '🔍' WHERE slug = 'roof-inspection';
+UPDATE sr_services SET icon = '🔨' WHERE slug = 'roof-repair';
+UPDATE sr_services SET icon = '🏠' WHERE slug = 'roof-replacement';
+UPDATE sr_services SET icon = '🌿' WHERE slug = 'moss-treatment';
+UPDATE sr_services SET icon = '🍂' WHERE slug = 'gutter-cleaning';
+UPDATE sr_services SET icon = '🔧' WHERE slug = 'gutter-repair';
+UPDATE sr_services SET icon = '🛡️' WHERE slug = 'gutter-guard-install';
+
+-- Exterior & Siding
+UPDATE sr_services SET icon = '💦' WHERE slug = 'pressure-wash-house';
+UPDATE sr_services SET icon = '💦' WHERE slug = 'pressure-wash-deck';
+UPDATE sr_services SET icon = '💦' WHERE slug = 'pressure-wash-driveway';
+UPDATE sr_services SET icon = '🔧' WHERE slug = 'siding-repair';
+UPDATE sr_services SET icon = '🏠' WHERE slug = 'siding-replacement';
+UPDATE sr_services SET icon = '🖌️' WHERE slug = 'exterior-painting';
+UPDATE sr_services SET icon = '🪟' WHERE slug = 'window-cleaning';
+UPDATE sr_services SET icon = '🔧' WHERE slug = 'window-repair';
+UPDATE sr_services SET icon = '🪟' WHERE slug = 'window-replacement';
+UPDATE sr_services SET icon = '🪵' WHERE slug = 'deck-staining';
+UPDATE sr_services SET icon = '🔨' WHERE slug = 'deck-repair';
+UPDATE sr_services SET icon = '🪵' WHERE slug = 'deck-building';
+
+-- Grounds & Property
+UPDATE sr_services SET icon = '✂️' WHERE slug = 'tree-trimming';
+UPDATE sr_services SET icon = '🪓' WHERE slug = 'tree-removal';
+UPDATE sr_services SET icon = '🔍' WHERE slug = 'hazard-tree-assessment';
+UPDATE sr_services SET icon = '🪵' WHERE slug = 'stump-grinding';
+UPDATE sr_services SET icon = '🌿' WHERE slug = 'brush-clearing';
+UPDATE sr_services SET icon = '🌱' WHERE slug = 'lawn-mowing';
+UPDATE sr_services SET icon = '🌱' WHERE slug = 'lawn-aeration';
+UPDATE sr_services SET icon = '✂️' WHERE slug = 'hedge-trimming';
+UPDATE sr_services SET icon = '🌺' WHERE slug = 'garden-bed-maintenance';
+UPDATE sr_services SET icon = '🔧' WHERE slug = 'fence-repair';
+UPDATE sr_services SET icon = '🚧' WHERE slug = 'fence-building';
+UPDATE sr_services SET icon = '🪨' WHERE slug = 'gravel-driveway-repair';
+UPDATE sr_services SET icon = '🧱' WHERE slug = 'retaining-wall-repair';
+
+-- Waterfront & Marine
+UPDATE sr_services SET icon = '⚓' WHERE slug = 'dock-launch';
+UPDATE sr_services SET icon = '⚓' WHERE slug = 'dock-stow-haul';
+UPDATE sr_services SET icon = '🔍' WHERE slug = 'dock-inspection';
+UPDATE sr_services SET icon = '🔨' WHERE slug = 'dock-repair';
+UPDATE sr_services SET icon = '🛟' WHERE slug = 'float-repair';
+UPDATE sr_services SET icon = '🪜' WHERE slug = 'gangway-service';
+UPDATE sr_services SET icon = '🔍' WHERE slug = 'piling-inspection';
+UPDATE sr_services SET icon = '🚤' WHERE slug = 'boat-haul-launch';
+UPDATE sr_services SET icon = '❄️' WHERE slug = 'boat-winterization';
+UPDATE sr_services SET icon = '🌊' WHERE slug = 'shoreline-erosion';
+UPDATE sr_services SET icon = '🧱' WHERE slug = 'seawall-inspection';
+
+-- Septic & Water Systems
+UPDATE sr_services SET icon = '🚽' WHERE slug = 'septic-pumping';
+UPDATE sr_services SET icon = '🔍' WHERE slug = 'septic-inspection';
+UPDATE sr_services SET icon = '🔧' WHERE slug = 'septic-repair';
+UPDATE sr_services SET icon = '💧' WHERE slug = 'well-pump-service';
+UPDATE sr_services SET icon = '💧' WHERE slug = 'well-pump-replacement';
+UPDATE sr_services SET icon = '🪣' WHERE slug = 'cistern-cleaning';
+UPDATE sr_services SET icon = '☀️' WHERE slug = 'uv-system-service';
+UPDATE sr_services SET icon = '🚰' WHERE slug = 'water-filtration-service';
+UPDATE sr_services SET icon = '🧪' WHERE slug = 'water-quality-testing';
+UPDATE sr_services SET icon = '❄️' WHERE slug = 'pipe-winterization';
+UPDATE sr_services SET icon = '🌸' WHERE slug = 'spring-de-winterization';
+UPDATE sr_services SET icon = '♨️' WHERE slug = 'hot-tub-service';
+UPDATE sr_services SET icon = '❄️' WHERE slug = 'hot-tub-winterization';
+
+-- Heating & Fuel Systems
+UPDATE sr_services SET icon = '🛢️' WHERE slug = 'furnace-service-oil';
+UPDATE sr_services SET icon = '🔥' WHERE slug = 'furnace-service-propane';
+UPDATE sr_services SET icon = '⚡' WHERE slug = 'furnace-service-electric';
+UPDATE sr_services SET icon = '❄️' WHERE slug = 'heat-pump-service';
+UPDATE sr_services SET icon = '❄️' WHERE slug = 'heat-pump-install';
+UPDATE sr_services SET icon = '🪵' WHERE slug = 'wood-stove-service';
+UPDATE sr_services SET icon = '🪵' WHERE slug = 'wood-stove-install';
+UPDATE sr_services SET icon = '🔥' WHERE slug = 'pellet-stove-service';
+UPDATE sr_services SET icon = '🔍' WHERE slug = 'propane-system-inspection';
+UPDATE sr_services SET icon = '🔍' WHERE slug = 'oil-tank-inspection';
+UPDATE sr_services SET icon = '🛢️' WHERE slug = 'oil-tank-replacement';
+UPDATE sr_services SET icon = '⚡' WHERE slug = 'generator-service';
+UPDATE sr_services SET icon = '🔥' WHERE slug = 'boiler-service';
+
+-- Electrical
+UPDATE sr_services SET icon = '🔍' WHERE slug = 'electrical-inspection';
+UPDATE sr_services SET icon = '⚡' WHERE slug = 'panel-upgrade';
+UPDATE sr_services SET icon = '🔌' WHERE slug = 'generator-install';
+UPDATE sr_services SET icon = '🔌' WHERE slug = 'transfer-switch-install';
+UPDATE sr_services SET icon = '🔋' WHERE slug = 'ev-charger-install';
+UPDATE sr_services SET icon = '🔌' WHERE slug = 'outlet-switch-replacement';
+UPDATE sr_services SET icon = '💡' WHERE slug = 'lighting-upgrade';
+UPDATE sr_services SET icon = '💡' WHERE slug = 'exterior-electrical-check';
+UPDATE sr_services SET icon = '⚡' WHERE slug = 'surge-protection-install';
+UPDATE sr_services SET icon = '☀️' WHERE slug = 'solar-panel-cleaning';
+UPDATE sr_services SET icon = '☀️' WHERE slug = 'solar-system-service';
+
+-- Seasonal Property Tasks
+UPDATE sr_services SET icon = '❄️' WHERE slug = 'full-winterization';
+UPDATE sr_services SET icon = '🌸' WHERE slug = 'spring-opening';
+UPDATE sr_services SET icon = '👀' WHERE slug = 'vacation-watch-weekly';
+UPDATE sr_services SET icon = '🌪️' WHERE slug = 'storm-prep';
+UPDATE sr_services SET icon = '🎄' WHERE slug = 'christmas-light-install';
+UPDATE sr_services SET icon = '🎄' WHERE slug = 'christmas-light-removal';
+UPDATE sr_services SET icon = '📋' WHERE slug = 'pre-winter-checklist';
+UPDATE sr_services SET icon = '🏷️' WHERE slug = 'pre-sale-prep';
+
+-- Pest & Wildlife
+UPDATE sr_services SET icon = '🔍' WHERE slug = 'pest-inspection';
+UPDATE sr_services SET icon = '🐜' WHERE slug = 'general-pest-treatment';
+UPDATE sr_services SET icon = '🐀' WHERE slug = 'rodent-control';
+UPDATE sr_services SET icon = '🐝' WHERE slug = 'wasp-nest-removal';
+UPDATE sr_services SET icon = '🐜' WHERE slug = 'carpenter-ant-treatment';
+UPDATE sr_services SET icon = '🦝' WHERE slug = 'wildlife-exclusion';
+UPDATE sr_services SET icon = '🧹' WHERE slug = 'crawlspace-cleanup';
+UPDATE sr_services SET icon = '🐦' WHERE slug = 'bird-exclusion';
+
+-- Delivery & Hauling
+UPDATE sr_services SET icon = '🔥' WHERE slug = 'propane-delivery';
+UPDATE sr_services SET icon = '🛢️' WHERE slug = 'heating-oil-delivery';
+UPDATE sr_services SET icon = '🪵' WHERE slug = 'firewood-delivery';
+UPDATE sr_services SET icon = '💧' WHERE slug = 'water-delivery';
+UPDATE sr_services SET icon = '🪨' WHERE slug = 'gravel-fill-delivery';
+UPDATE sr_services SET icon = '📦' WHERE slug = 'appliance-delivery';
+UPDATE sr_services SET icon = '🚛' WHERE slug = 'construction-waste-haul';
+UPDATE sr_services SET icon = '🗑️' WHERE slug = 'junk-removal';
+UPDATE sr_services SET icon = '♻️' WHERE slug = 'metal-recycling-pickup';
+
+-- Safety & Inspections
+UPDATE sr_services SET icon = '🏠' WHERE slug = 'pre-purchase-inspection';
+UPDATE sr_services SET icon = '📋' WHERE slug = 'insurance-inspection';
+UPDATE sr_services SET icon = '🔥' WHERE slug = 'fire-safety-inspection';
+UPDATE sr_services SET icon = '☢️' WHERE slug = 'radon-testing';
+UPDATE sr_services SET icon = '💨' WHERE slug = 'air-quality-testing';
+UPDATE sr_services SET icon = '🦠' WHERE slug = 'mold-inspection';
+UPDATE sr_services SET icon = '⚠️' WHERE slug = 'asbestos-testing';
+UPDATE sr_services SET icon = '🚨' WHERE slug = 'smoke-co-detector-check';
+
+-- Structural & Foundations
+UPDATE sr_services SET icon = '🔍' WHERE slug = 'foundation-inspection';
+UPDATE sr_services SET icon = '📐' WHERE slug = 'post-pier-leveling';
+UPDATE sr_services SET icon = '💧' WHERE slug = 'crawlspace-drainage';
+UPDATE sr_services SET icon = '🪵' WHERE slug = 'sill-plate-repair';
+UPDATE sr_services SET icon = '🪵' WHERE slug = 'rot-repair-structural';
+UPDATE sr_services SET icon = '🏗️' WHERE slug = 'house-lifting';
+UPDATE sr_services SET icon = '👷' WHERE slug = 'structural-engineer-visit';
+
+-- Drainage & Water Control
+UPDATE sr_services SET icon = '🔍' WHERE slug = 'perimeter-drain-inspection';
+UPDATE sr_services SET icon = '🚿' WHERE slug = 'french-drain-install';
+UPDATE sr_services SET icon = '⬇️' WHERE slug = 'downspout-redirection';
+UPDATE sr_services SET icon = '💧' WHERE slug = 'sump-pump-install';
+UPDATE sr_services SET icon = '💧' WHERE slug = 'sump-pump-service';
+UPDATE sr_services SET icon = '🌊' WHERE slug = 'culvert-clearing';
+UPDATE sr_services SET icon = '🚜' WHERE slug = 'ditching-swale-shaping';
+UPDATE sr_services SET icon = '🌊' WHERE slug = 'flood-mitigation-prep';
+
+-- Emergency & Rapid Response
+UPDATE sr_services SET icon = '🛡️' WHERE slug = 'storm-damage-tarping';
+UPDATE sr_services SET icon = '🌲' WHERE slug = 'emergency-tree-removal';
+UPDATE sr_services SET icon = '💦' WHERE slug = 'flood-pumping';
+UPDATE sr_services SET icon = '🔌' WHERE slug = 'generator-hookup';
+UPDATE sr_services SET icon = '⚓' WHERE slug = 'emergency-dock-stabilization';
+UPDATE sr_services SET icon = '🦝' WHERE slug = 'emergency-wildlife-removal';
+UPDATE sr_services SET icon = '🔧' WHERE slug = 'emergency-plumbing';
+UPDATE sr_services SET icon = '⚡' WHERE slug = 'emergency-electrical';
+
+-- Access & Site Infrastructure
+UPDATE sr_services SET icon = '🛤️' WHERE slug = 'temporary-access-road';
+UPDATE sr_services SET icon = '🚜' WHERE slug = 'access-road-grading';
+UPDATE sr_services SET icon = '🌿' WHERE slug = 'brush-access-clearing';
+UPDATE sr_services SET icon = '🪜' WHERE slug = 'dock-access-ramp';
+UPDATE sr_services SET icon = '🪜' WHERE slug = 'stairs-boardwalk-repair';
+UPDATE sr_services SET icon = '🏍️' WHERE slug = 'atv-trail-grading';
+UPDATE sr_services SET icon = '🚁' WHERE slug = 'helipad-clearing';
+
+-- Community & Commercial
+UPDATE sr_services SET icon = '🏛️' WHERE slug = 'community-hall-maintenance';
+UPDATE sr_services SET icon = '💧' WHERE slug = 'community-water-service';
+UPDATE sr_services SET icon = '🔥' WHERE slug = 'firesmart-assessment';
+UPDATE sr_services SET icon = '🔥' WHERE slug = 'firesmart-fuel-reduction';
+UPDATE sr_services SET icon = '⚓' WHERE slug = 'marina-seasonal-service';
+UPDATE sr_services SET icon = '🗑️' WHERE slug = 'waste-transfer-service';
+
+-- Verify
+SELECT 'Icons updated:' as status;
+SELECT icon, name FROM sr_services ORDER BY name LIMIT 20;
+```
+
+## Step 2: Update the API to include service icon
+
+In server/routes/serviceRuns.ts, update the services query to include the icon field:
+
+Find this section in the `/services` endpoint and add `s.icon`:
+```typescript
+// In the services list query, add s.icon
+let query = `
+  SELECT s.*, 
+         s.icon as service_icon,
+         sc.name as category_name, 
+         sc.slug as category_slug,
+         sc.icon as category_icon
+  FROM sr_services s
+  JOIN sr_service_categories sc ON sc.id = s.category_id
+  WHERE s.is_active = true
+`;
+
+// Then in the mapping, use service_icon:
+let services = result.rows.map(row => ({
+  id: row.id,
+  categoryId: row.category_id,
+  name: row.name,
+  slug: row.slug,
+  description: row.description,
+  icon: row.service_icon || row.category_icon,  // Use service icon, fallback to category
+  // ... rest of fields
+}));
+```
+
+Also update the service detail endpoint `/services/:slug`:
+```typescript
+// In loadServiceWithDetails, include icon
+const serviceResult = await pool.query(`
+  SELECT s.*, s.icon as service_icon, sc.name as category_name, sc.slug as category_slug, sc.icon as category_icon
+  FROM sr_services s
+  JOIN sr_service_categories sc ON sc.id = s.category_id
+  WHERE s.id = $1
+`, [serviceId]);
+```
+
+## Step 3: Update the UI to fix crew wording and use service icon
+
+In client/src/pages/services/ServiceCatalog.tsx, make these changes:
+
+### Change 1: Add icon to Service interface
+```typescript
+interface Service {
+  id: string;
+  name: string;
+  slug: string;
+  description: string;
+  icon: string;  // ADD THIS
+  // ... rest of fields
+}
+```
+
+### Change 2: Helper function for crew wording (add near top of component)
+```typescript
+function formatCrew(count: number): string {
+  return count === 1 ? '1 Crew Member' : `${count} Crew Members`;
+}
+```
+
+### Change 3: Update Grid view cards - replace the icon and crew display
+
+Find this in the grid view:
+```tsx
+<span className="text-xl">{service.category.icon}</span>
+```
+Replace with:
+```tsx
+<span className="text-xl">{service.icon || service.category.icon}</span>
+```
+
+Find this:
+```tsx
+<span className="bg-gray-700 px-2 py-1 rounded text-gray-300">
+  👥 {service.crewTypical} crew
+</span>
+```
+Replace with:
+```tsx
+<span className="bg-gray-700 px-2 py-1 rounded text-gray-300">
+  👥 {formatCrew(service.crewTypical)}
+</span>
+```
+
+### Change 4: Update List view - same changes
+
+Find in the table view:
+```tsx
+<span>{service.category.icon}</span>
+```
+Replace with:
+```tsx
+<span>{service.icon || service.category.icon}</span>
+```
+
+And update the crew column:
+```tsx
+<td className="px-4 py-3 text-gray-300">{formatCrew(service.crewTypical)}</td>
+```
+
+### Change 5: Update Detail Panel - crew display
+
+Find the crew size stat:
+```tsx
+<div className="text-lg font-bold text-white">
+  {selectedService.crewMin}-{selectedService.crewMax}
+</div>
+<div className="text-xs text-gray-400">Crew Size</div>
+```
+Replace with:
+```tsx
+<div className="text-lg font-bold text-white">
+  {selectedService.crewMin === selectedService.crewMax 
+    ? formatCrew(selectedService.crewMin)
+    : `${selectedService.crewMin}-${selectedService.crewMax}`
+  }
+</div>
+<div className="text-xs text-gray-400">Crew Members</div>
+```
+
+## Test
+After these changes:
+1. Pressure Washing should show 💦
+2. Exterior Painting should show 🖌️  
+3. Siding Replacement should show 🏠
+4. Crew should read "2 Crew Members" not "2 crew"

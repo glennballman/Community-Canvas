@@ -58,6 +58,7 @@ export interface Service {
   name: string;
   slug: string;
   description: string;
+  icon?: string;
   
   typicalDurationMinHours: number;
   typicalDurationMaxHours: number;

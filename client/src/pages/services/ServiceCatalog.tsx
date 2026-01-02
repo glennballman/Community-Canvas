@@ -15,6 +15,7 @@ interface Service {
   name: string;
   slug: string;
   description: string;
+  icon: string;
   typicalDurationMinHours: number;
   typicalDurationMaxHours: number;
   crewMin: number;
@@ -35,6 +36,7 @@ interface ServiceDetail {
   name: string;
   slug: string;
   description: string;
+  icon: string;
   typicalDurationMinHours: number;
   typicalDurationMaxHours: number;
   crewMin: number;
@@ -91,6 +93,10 @@ interface Stats {
   communities: number;
   climateRegions: number;
   currentWeek: number;
+}
+
+function formatCrew(count: number): string {
+  return count === 1 ? '1 Crew Member' : `${count} Crew Members`;
 }
 
 export default function ServiceCatalog() {
@@ -329,7 +335,7 @@ export default function ServiceCatalog() {
                   >
                     <div className="flex items-start justify-between gap-2 mb-2">
                       <div className="flex items-center gap-2">
-                        <span className="text-xl">{service.category.icon}</span>
+                        <span className="text-xl">{service.icon || service.category.icon}</span>
                         <h3 className="font-medium">{service.name}</h3>
                       </div>
                       {service.canBeEmergency && (
@@ -344,7 +350,7 @@ export default function ServiceCatalog() {
                         {service.typicalDurationMinHours}-{service.typicalDurationMaxHours}h
                       </span>
                       <span className="bg-muted px-2 py-1 rounded">
-                        {service.crewTypical} crew
+                        {formatCrew(service.crewTypical)}
                       </span>
                       {service.weatherDependent && (
                         <span className="bg-yellow-500/20 px-2 py-1 rounded text-yellow-600 dark:text-yellow-400">
@@ -383,7 +389,7 @@ export default function ServiceCatalog() {
                       >
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-2">
-                            <span>{service.category.icon}</span>
+                            <span>{service.icon || service.category.icon}</span>
                             <div>
                               <div className="font-medium">{service.name}</div>
                               <div className="text-muted-foreground text-xs truncate max-w-xs">{service.description}</div>
@@ -393,7 +399,7 @@ export default function ServiceCatalog() {
                         <td className="px-4 py-3">
                           {service.typicalDurationMinHours}-{service.typicalDurationMaxHours}h
                         </td>
-                        <td className="px-4 py-3">{service.crewTypical}</td>
+                        <td className="px-4 py-3">{formatCrew(service.crewTypical)}</td>
                         <td className="px-4 py-3 text-muted-foreground text-sm">
                           {revisitCycleLabels[service.revisitCycle] || '-'}
                         </td>
@@ -416,7 +422,7 @@ export default function ServiceCatalog() {
                   <>
                     <div className="pb-4 border-b mb-4">
                       <div className="flex items-center gap-2 mb-2">
-                        <span className="text-2xl">{selectedService.category.icon}</span>
+                        <span className="text-2xl">{selectedService.icon || selectedService.category.icon}</span>
                         <h3 className="text-xl font-bold">{selectedService.name}</h3>
                       </div>
                       <p className="text-muted-foreground text-sm">{selectedService.description}</p>
@@ -444,9 +450,12 @@ export default function ServiceCatalog() {
                       </div>
                       <div className="bg-muted rounded p-2 text-center">
                         <div className="text-lg font-bold">
-                          {selectedService.crewMin}-{selectedService.crewMax}
+                          {selectedService.crewMin === selectedService.crewMax 
+                            ? formatCrew(selectedService.crewMin)
+                            : `${selectedService.crewMin}-${selectedService.crewMax}`
+                          }
                         </div>
-                        <div className="text-xs text-muted-foreground">Crew Size</div>
+                        <div className="text-xs text-muted-foreground">Crew Members</div>
                       </div>
                       <div className="bg-muted rounded p-2 text-center">
                         <div className={`text-lg font-bold ${riskColors[selectedService.failureRiskIfDelayed]}`}>

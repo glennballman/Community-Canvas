@@ -35,7 +35,7 @@ function getPool(req: Request): Pool {
 async function loadServiceWithDetails(pool: Pool, serviceId: string): Promise<ServiceWithDetails | null> {
   // Main service
   const serviceResult = await pool.query(`
-    SELECT s.*, sc.name as category_name, sc.slug as category_slug, sc.icon as category_icon
+    SELECT s.*, s.icon as service_icon, sc.name as category_name, sc.slug as category_slug, sc.icon as category_icon
     FROM sr_services s
     JOIN sr_service_categories sc ON sc.id = s.category_id
     WHERE s.id = $1
@@ -91,6 +91,7 @@ async function loadServiceWithDetails(pool: Pool, serviceId: string): Promise<Se
     name: row.name,
     slug: row.slug,
     description: row.description,
+    icon: row.service_icon || row.category_icon,
     typicalDurationMinHours: parseFloat(row.typical_duration_min_hours),
     typicalDurationMaxHours: parseFloat(row.typical_duration_max_hours),
     crewMin: row.crew_min,
@@ -217,6 +218,7 @@ router.get('/services', async (req: Request, res: Response) => {
     
     let query = `
       SELECT s.*, 
+             s.icon as service_icon,
              sc.name as category_name, 
              sc.slug as category_slug,
              sc.icon as category_icon
@@ -254,6 +256,7 @@ router.get('/services', async (req: Request, res: Response) => {
       name: row.name,
       slug: row.slug,
       description: row.description,
+      icon: row.service_icon || row.category_icon,
       typicalDurationMinHours: parseFloat(row.typical_duration_min_hours),
       typicalDurationMaxHours: parseFloat(row.typical_duration_max_hours),
       crewMin: row.crew_min,
