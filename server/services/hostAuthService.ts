@@ -19,14 +19,21 @@ export interface HostAccount {
   firstName: string;
   lastName: string;
   phone?: string;
+  profilePhotoUrl?: string;
   businessName?: string;
   businessType?: string;
   emailVerified: boolean;
+  phoneVerified?: boolean;
   emailVerifyToken?: string;
   emailVerifyExpires?: Date;
   passwordResetToken?: string;
   passwordResetExpires?: Date;
   status: string;
+  totalProperties?: number;
+  totalBookings?: number;
+  memberSince?: Date;
+  lastLoginAt?: Date;
+  timezone?: string;
   createdAt: Date;
   updatedAt: Date;
 }

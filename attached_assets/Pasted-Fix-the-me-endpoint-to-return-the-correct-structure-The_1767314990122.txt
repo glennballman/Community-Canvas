@@ -1,0 +1,94 @@
+Fix the /me endpoint to return the correct structure.
+
+The test expects `{ host: {...} }` but it's returning something else.
+
+Find the /me endpoint in server/routes/hostAuth.ts and update it:
+
+// GET /api/host/auth/me - Get current host info
+router.get('/me', requireHostAuth, async (req: Request, res: Response) => {
+    try {
+        const host = (req as any).host;
+        
+        // Make sure we're returning { success: true, host: {...} }
+        res.json({ 
+            success: true, 
+            host: {
+                id: host.id,
+                email: host.email,
+                firstName: host.firstName || host.first_name,
+                lastName: host.lastName || host.last_name,
+                phone: host.phone,
+                profilePhotoUrl: host.profilePhotoUrl || host.profile_photo_url,
+                businessName: host.businessName || host.business_name,
+                businessType: host.businessType || host.business_type,
+                emailVerified: host.emailVerified || host.email_verified,
+                phoneVerified: host.phoneVerified || host.phone_verified,
+                status: host.status,
+                totalProperties: host.totalProperties || host.total_properties || 0,
+                totalBookings: host.totalBookings || host.total_bookings || 0,
+                memberSince: host.memberSince || host.member_since,
+                lastLoginAt: host.lastLoginAt || host.last_login_at,
+                timezone: host.timezone || 'America/Vancouver'
+            }
+        });
+    } catch (error: any) {
+        console.error('Get me error:', error);
+        res.status(500).json({ success: false, error: 'Failed to get host info' });
+    }
+});
+
+The issue might also be in the verifySession function in hostAuthService.ts. Check that it's returning the host data in camelCase format:
+
+// In hostAuthService.ts - update the formatHost function if it exists, or add one:
+
+private formatHost(row: any): any {
+    return {
+        id: row.id,
+        email: row.email,
+        firstName: row.first_name,
+        lastName: row.last_name,
+        phone: row.phone,
+        profilePhotoUrl: row.profile_photo_url,
+        businessName: row.business_name,
+        businessType: row.business_type,
+        emailVerified: row.email_verified,
+        phoneVerified: row.phone_verified,
+        status: row.status,
+        totalProperties: row.total_properties || 0,
+        totalBookings: row.total_bookings || 0,
+        memberSince: row.member_since,
+        lastLoginAt: row.last_login_at,
+        timezone: row.timezone || 'America/Vancouver'
+    };
+}
+
+// Make sure verifySession uses this formatter:
+async verifySession(token: string): Promise<{ valid: boolean; host?: any }> {
+    const result = await db.query(`
+        SELECT s.*, h.*
+        FROM host_sessions s
+        JOIN host_accounts h ON h.id = s.host_account_id
+        WHERE s.session_token = $1 
+          AND s.is_valid = true 
+          AND s.expires_at > NOW()
+    `, [token]);
+
+    if (result.rows.length === 0) {
+        return { valid: false };
+    }
+
+    const row = result.rows[0];
+
+    // Update last used
+    await db.query(
+        'UPDATE host_sessions SET last_used_at = NOW() WHERE session_token = $1',
+        [token]
+    );
+
+    return { 
+        valid: true, 
+        host: this.formatHost(row)  // Use the formatter!
+    };
+}
+
+Test the /me endpoint again - it should now return { success: true, host: { id, email, firstName, ... } }

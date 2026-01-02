@@ -235,20 +235,30 @@ router.get('/me', requireHostAuth as any, async (req: HostAuthRequest, res: Resp
     const host = req.hostAccount!;
 
     res.json({
-      id: host.id,
-      email: host.email,
-      firstName: host.firstName,
-      lastName: host.lastName,
-      phone: host.phone,
-      businessName: host.businessName,
-      businessType: host.businessType,
-      emailVerified: host.emailVerified,
-      status: host.status,
-      createdAt: host.createdAt
+      success: true,
+      host: {
+        id: host.id,
+        email: host.email,
+        firstName: host.firstName,
+        lastName: host.lastName,
+        phone: host.phone,
+        profilePhotoUrl: host.profilePhotoUrl,
+        businessName: host.businessName,
+        businessType: host.businessType,
+        emailVerified: host.emailVerified,
+        phoneVerified: host.phoneVerified,
+        status: host.status,
+        totalProperties: host.totalProperties || 0,
+        totalBookings: host.totalBookings || 0,
+        memberSince: host.memberSince || host.createdAt,
+        lastLoginAt: host.lastLoginAt,
+        timezone: host.timezone || 'America/Vancouver',
+        createdAt: host.createdAt
+      }
     });
   } catch (error) {
     console.error('[HostAuth Route] Get me error:', error);
-    res.status(500).json({ error: 'Failed to get user info' });
+    res.status(500).json({ success: false, error: 'Failed to get user info' });
   }
 });
 
