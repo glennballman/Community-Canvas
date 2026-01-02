@@ -395,31 +395,56 @@ router.post('/bookings', async (req: Request, res: Response) => {
       guestEmail,
       guestPhone,
       guestType,
+      companyName,
       checkInDate,
       checkOutDate,
       vehicleProfileId,
       vehicleDescription,
       vehicleLengthFt,
       vehicleType,
+      licensePlate,
       numHorses,
+      horseDetails,
       numAdults,
       numChildren,
       numPets,
       numVehicles,
-      specialRequests
+      specialRequests,
+      servicesRequested
     } = req.body;
 
-    if (!propertyId || !guestName || !checkInDate || !checkOutDate) {
-      return res.status(400).json({ error: 'propertyId, guestName, checkInDate, and checkOutDate are required' });
+    // Validation
+    if (!propertyId || !guestName || !guestEmail || !checkInDate || !checkOutDate) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Missing required fields: propertyId, guestName, guestEmail, checkInDate, checkOutDate' 
+      });
+    }
+
+    // Validate dates
+    const checkIn = new Date(checkInDate);
+    const checkOut = new Date(checkOutDate);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    if (checkIn < today) {
+      return res.status(400).json({ success: false, error: 'Check-in date cannot be in the past' });
+    }
+    if (checkOut <= checkIn) {
+      return res.status(400).json({ success: false, error: 'Check-out must be after check-in' });
     }
 
     // Check availability first
     const availability = await stagingStorage.checkAvailability(propertyId, checkInDate, checkOutDate, vehicleLengthFt);
     if (!availability.isAvailable) {
-      return res.status(400).json({ error: 'Property not available for selected dates', availability });
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Property not available for selected dates', 
+        availability 
+      });
     }
 
-    // Calculate pricing
+    // Calculate pricing with fees and taxes
     const pricing = await stagingStorage.calculatePrice(propertyId, checkInDate, checkOutDate, {
       spotId,
       vehicleLengthFt,
@@ -427,7 +452,15 @@ router.post('/bookings', async (req: Request, res: Response) => {
       numPets
     });
 
-    const numNights = Math.ceil((new Date(checkOutDate).getTime() - new Date(checkInDate).getTime()) / (1000 * 60 * 60 * 24));
+    const numNights = Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24));
+    
+    // Calculate service fee (5%) and taxes (12% GST+PST)
+    const serviceFee = Math.round(pricing.subtotal * 0.05 * 100) / 100;
+    const taxes = Math.round(pricing.subtotal * 0.12 * 100) / 100;
+    const totalCost = pricing.subtotal + serviceFee + taxes;
+
+    // Get property name for response
+    const property = await stagingStorage.getPropertyById(propertyId);
 
     const booking = await stagingStorage.createBooking({
       propertyId,
@@ -450,16 +483,36 @@ router.post('/bookings', async (req: Request, res: Response) => {
       numVehicles: numVehicles || 1,
       nightlyRate: pricing.nightly,
       subtotal: pricing.subtotal,
-      totalCost: pricing.total,
+      totalCost,
       status: 'pending',
       paymentStatus: 'pending',
       specialRequests
-    });
+    } as any);
 
-    res.status(201).json(booking);
+    res.status(201).json({
+      success: true,
+      booking: {
+        id: booking.id,
+        bookingRef: booking.bookingRef,
+        propertyName: property?.name,
+        checkInDate: booking.checkInDate,
+        checkOutDate: booking.checkOutDate,
+        numNights: booking.numNights,
+        totalCost: booking.totalCost,
+        status: booking.status
+      },
+      pricing: {
+        nightlyRate: pricing.nightly,
+        numNights,
+        subtotal: pricing.subtotal,
+        serviceFee,
+        taxes,
+        totalCost
+      }
+    });
   } catch (error) {
     console.error('[Staging Create Booking] Error:', error);
-    res.status(500).json({ error: 'Failed to create booking' });
+    res.status(500).json({ success: false, error: 'Failed to create booking' });
   }
 });
 

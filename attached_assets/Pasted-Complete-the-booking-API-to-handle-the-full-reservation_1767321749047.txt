@@ -1,0 +1,305 @@
+Complete the booking API to handle the full reservation flow.
+
+## Step 1: Update the booking creation endpoint
+
+In server/routes/staging.ts, update or add the booking creation endpoint:
+```typescript
+// POST /api/staging/bookings - Create a new booking
+router.post('/bookings', async (req: Request, res: Response) => {
+    try {
+        const {
+            propertyId,
+            spotId,
+            guestType,
+            guestName,
+            guestEmail,
+            guestPhone,
+            companyName,
+            checkInDate,
+            checkOutDate,
+            numAdults,
+            numChildren,
+            numPets,
+            vehicleProfileId,
+            vehicleDescription,
+            vehicleLengthFt,
+            vehicleType,
+            licensePlate,
+            numHorses,
+            horseDetails,
+            specialRequests,
+            servicesRequested
+        } = req.body;
+
+        // Validation
+        if (!propertyId || !guestName || !guestEmail || !checkInDate || !checkOutDate) {
+            return res.status(400).json({ 
+                success: false, 
+                error: 'Missing required fields: propertyId, guestName, guestEmail, checkInDate, checkOutDate' 
+            });
+        }
+
+        // Validate dates
+        const checkIn = new Date(checkInDate);
+        const checkOut = new Date(checkOutDate);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        if (checkIn < today) {
+            return res.status(400).json({ success: false, error: 'Check-in date cannot be in the past' });
+        }
+        if (checkOut <= checkIn) {
+            return res.status(400).json({ success: false, error: 'Check-out must be after check-in' });
+        }
+
+        // Check property exists and is active
+        const propResult = await db.query(
+            'SELECT id, name, max_combined_length_ft, status FROM staging_properties WHERE id = $1',
+            [propertyId]
+        );
+        if (propResult.rows.length === 0) {
+            return res.status(404).json({ success: false, error: 'Property not found' });
+        }
+        const property = propResult.rows[0];
+        if (property.status !== 'active') {
+            return res.status(400).json({ success: false, error: 'Property is not accepting bookings' });
+        }
+
+        // Check vehicle length fits
+        if (vehicleLengthFt && property.max_combined_length_ft && vehicleLengthFt > property.max_combined_length_ft) {
+            return res.status(400).json({ 
+                success: false, 
+                error: `Vehicle (${vehicleLengthFt}ft) exceeds property maximum (${property.max_combined_length_ft}ft)` 
+            });
+        }
+
+        // Check availability (no blocking calendar events)
+        const blockResult = await db.query(`
+            SELECT id FROM staging_calendar_blocks 
+            WHERE property_id = $1 
+            AND ($2::date, $3::date) OVERLAPS (start_date, end_date)
+        `, [propertyId, checkInDate, checkOutDate]);
+
+        if (blockResult.rows.length > 0) {
+            return res.status(400).json({ success: false, error: 'Property not available for selected dates' });
+        }
+
+        // Get pricing
+        const priceResult = await db.query(`
+            SELECT nightly_rate, weekly_rate, monthly_rate 
+            FROM staging_pricing 
+            WHERE property_id = $1 AND pricing_type = 'base_nightly' AND is_active = true
+            LIMIT 1
+        `, [propertyId]);
+        
+        const nightlyRate = priceResult.rows[0]?.nightly_rate || 0;
+        const numNights = Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24));
+        const subtotal = nightlyRate * numNights;
+        
+        // Calculate fees
+        const serviceFee = Math.round(subtotal * 0.05 * 100) / 100; // 5% service fee
+        const taxes = Math.round(subtotal * 0.12 * 100) / 100; // 12% taxes (GST + PST)
+        const totalCost = subtotal + serviceFee + taxes;
+
+        // Create the booking
+        const insertResult = await db.query(`
+            INSERT INTO staging_bookings (
+                property_id,
+                spot_id,
+                guest_type,
+                guest_name,
+                guest_email,
+                guest_phone,
+                company_name,
+                check_in_date,
+                check_out_date,
+                num_adults,
+                num_children,
+                num_pets,
+                vehicle_profile_id,
+                vehicle_description,
+                vehicle_length_ft,
+                vehicle_type,
+                license_plate,
+                num_horses,
+                horse_details,
+                special_requests,
+                services_requested,
+                nightly_rate,
+                subtotal,
+                service_fee,
+                taxes,
+                total_cost,
+                status,
+                payment_status,
+                source
+            ) VALUES (
+                $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+                $11, $12, $13, $14, $15, $16, $17, $18, $19, $20,
+                $21, $22, $23, $24, $25, $26, $27, $28, $29
+            )
+            RETURNING id, booking_ref, check_in_date, check_out_date, num_nights, total_cost, status
+        `, [
+            propertyId,
+            spotId || null,
+            guestType || 'individual',
+            guestName,
+            guestEmail,
+            guestPhone || null,
+            companyName || null,
+            checkInDate,
+            checkOutDate,
+            numAdults || 1,
+            numChildren || 0,
+            numPets || 0,
+            vehicleProfileId || null,
+            vehicleDescription || null,
+            vehicleLengthFt || null,
+            vehicleType || null,
+            licensePlate || null,
+            numHorses || 0,
+            horseDetails ? JSON.stringify(horseDetails) : null,
+            specialRequests || null,
+            servicesRequested ? JSON.stringify(servicesRequested) : null,
+            nightlyRate,
+            subtotal,
+            serviceFee,
+            taxes,
+            totalCost,
+            'pending',
+            'pending',
+            'website'
+        ]);
+
+        const booking = insertResult.rows[0];
+
+        res.status(201).json({
+            success: true,
+            booking: {
+                id: booking.id,
+                bookingRef: booking.booking_ref,
+                propertyName: property.name,
+                checkInDate: booking.check_in_date,
+                checkOutDate: booking.check_out_date,
+                numNights: booking.num_nights,
+                totalCost: booking.total_cost,
+                status: booking.status
+            },
+            pricing: {
+                nightlyRate,
+                numNights,
+                subtotal,
+                serviceFee,
+                taxes,
+                totalCost
+            }
+        });
+
+    } catch (error: any) {
+        console.error('Create booking error:', error);
+        res.status(500).json({ success: false, error: 'Failed to create booking' });
+    }
+});
+
+// GET /api/staging/bookings/:id - Get booking details
+router.get('/bookings/:id', async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
+        
+        const result = await db.query(`
+            SELECT 
+                b.*,
+                p.name as property_name,
+                p.city,
+                p.region,
+                p.address,
+                p.check_in_time,
+                p.check_out_time,
+                p.thumbnail_url
+            FROM staging_bookings b
+            JOIN staging_properties p ON p.id = b.property_id
+            WHERE b.id = $1 OR b.booking_ref = $1
+        `, [id]);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ success: false, error: 'Booking not found' });
+        }
+
+        const row = result.rows[0];
+        
+        res.json({
+            success: true,
+            booking: {
+                id: row.id,
+                bookingRef: row.booking_ref,
+                propertyId: row.property_id,
+                propertyName: row.property_name,
+                propertyCity: row.city,
+                propertyRegion: row.region,
+                propertyAddress: row.address,
+                thumbnailUrl: row.thumbnail_url,
+                checkInDate: row.check_in_date,
+                checkOutDate: row.check_out_date,
+                checkInTime: row.check_in_time || '14:00',
+                checkOutTime: row.check_out_time || '11:00',
+                numNights: row.num_nights,
+                guestName: row.guest_name,
+                guestEmail: row.guest_email,
+                guestPhone: row.guest_phone,
+                numAdults: row.num_adults,
+                numChildren: row.num_children,
+                numPets: row.num_pets,
+                vehicleDescription: row.vehicle_description,
+                vehicleLengthFt: row.vehicle_length_ft,
+                specialRequests: row.special_requests,
+                nightlyRate: row.nightly_rate,
+                subtotal: row.subtotal,
+                serviceFee: row.service_fee,
+                taxes: row.taxes,
+                totalCost: row.total_cost,
+                status: row.status,
+                paymentStatus: row.payment_status,
+                createdAt: row.created_at
+            }
+        });
+
+    } catch (error: any) {
+        console.error('Get booking error:', error);
+        res.status(500).json({ success: false, error: 'Failed to get booking' });
+    }
+});
+
+// POST /api/staging/bookings/:id/cancel - Cancel a booking
+router.post('/bookings/:id/cancel', async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
+        const { reason } = req.body;
+
+        const result = await db.query(`
+            UPDATE staging_bookings 
+            SET status = 'cancelled', 
+                cancelled_at = NOW(),
+                cancellation_reason = $2
+            WHERE (id = $1 OR booking_ref = $1) 
+            AND status IN ('pending', 'confirmed')
+            RETURNING id, booking_ref, status
+        `, [id, reason || 'Guest requested cancellation']);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ success: false, error: 'Booking not found or cannot be cancelled' });
+        }
+
+        res.json({
+            success: true,
+            message: 'Booking cancelled successfully',
+            booking: result.rows[0]
+        });
+
+    } catch (error: any) {
+        console.error('Cancel booking error:', error);
+        res.status(500).json({ success: false, error: 'Failed to cancel booking' });
+    }
+});
+```
+
+Verify the endpoints work by testing with curl or the API test file.
