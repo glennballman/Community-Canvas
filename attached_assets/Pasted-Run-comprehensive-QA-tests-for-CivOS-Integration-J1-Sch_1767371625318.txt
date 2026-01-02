@@ -1,0 +1,163 @@
+Run comprehensive QA tests for CivOS Integration.
+
+## J1: Schema & Signal Types (4 tests)
+```bash
+echo "=== J1: CIVOS SCHEMA TESTS ==="
+
+# J1-1: Signal types exist
+echo "J1-1: Signal types"
+curl -s http://localhost:5000/api/civos/signal-types | jq '{
+  success,
+  count: (.signalTypes | length),
+  codes: [.signalTypes[].signal_code]
+}'
+
+# J1-2: CivOS tables exist
+echo "J1-2: Tables created (check DB)"
+# This would be a SQL check: SELECT table_name FROM information_schema.tables WHERE table_name LIKE 'civos%';
+
+# J1-3: Stats endpoint
+echo "J1-3: Stats endpoint"
+curl -s http://localhost:5000/api/civos/stats | jq '{
+  success,
+  hasSignalStats: (.stats.signals != null),
+  hasCapacityStats: (.stats.capacity != null)
+}'
+
+# J1-4: Config endpoint (requires auth)
+echo "J1-4: Config (requires admin)"
+ADMIN_TOKEN=$(curl -s -X POST http://localhost:5000/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email": "admin@example.com", "password": "password"}' | jq -r '.accessToken')
+curl -s http://localhost:5000/api/civos/config \
+  -H "Authorization: Bearer $ADMIN_TOKEN" | jq '{success, hasConfig: (.config != null)}'
+```
+
+## J2: Capacity & Properties (5 tests)
+```bash
+echo "=== J2: CAPACITY & PROPERTIES TESTS ==="
+
+# J2-1: Capacity summary
+echo "J2-1: Capacity summary"
+curl -s http://localhost:5000/api/civos/capacity | jq '{
+  success,
+  total: .capacity.total,
+  regionCount: (.capacity.byRegion | length)
+}'
+
+# J2-2: Properties for CivOS
+echo "J2-2: Properties list"
+curl -s http://localhost:5000/api/civos/properties | jq '{
+  success,
+  count,
+  hasCoords: ([.properties[] | select(.location.coordinates.lat != null)] | length > 0),
+  sample: .properties[0] | {name: .name, region: .location.region, spots: .capacity.totalSpots}
+}'
+
+# J2-3: Filter by region
+echo "J2-3: Filter by region"
+curl -s "http://localhost:5000/api/civos/properties?region=Vancouver%20Island" | jq '{
+  success,
+  count,
+  allSameRegion: ([.properties[].location.region] | unique | length == 1)
+}'
+
+# J2-4: Filter with mechanic
+echo "J2-4: Filter mechanic"
+curl -s "http://localhost:5000/api/civos/properties?hasMechanic=true" | jq '{
+  success,
+  count,
+  allHaveMechanic: ([.properties[] | select(.amenities.hasMechanic != true)] | length == 0)
+}'
+
+# J2-5: Full export payload
+echo "J2-5: Export payload"
+curl -s http://localhost:5000/api/civos/export | jq '{
+  success,
+  hasTimestamp: (.export_timestamp != null),
+  hasSignals: (.signals != null),
+  hasCapacity: (.capacity_summary != null),
+  sourceSystem: .source_system
+}'
+```
+
+## J3: Signal Generation & Management (6 tests)
+```bash
+echo "=== J3: SIGNAL MANAGEMENT TESTS ==="
+
+# J3-1: Generate signals (requires auth)
+echo "J3-1: Generate signals"
+GEN_RESULT=$(curl -s -X POST http://localhost:5000/api/civos/signals/generate \
+  -H "Authorization: Bearer $ADMIN_TOKEN")
+echo $GEN_RESULT | jq '{success, generated, failed}'
+
+# J3-2: Get active signals
+echo "J3-2: Get active signals"
+curl -s http://localhost:5000/api/civos/signals | jq '{
+  success,
+  count,
+  sample: .signals[0] | {signalCode, severity, region, message}
+}'
+
+# J3-3: Filter by severity
+echo "J3-3: Filter by severity"
+curl -s "http://localhost:5000/api/civos/signals?severity=low" | jq '{
+  success,
+  count,
+  allLow: ([.signals[] | select(.severity != "low")] | length == 0)
+}'
+
+# J3-4: Filter by region
+echo "J3-4: Filter by region"
+curl -s "http://localhost:5000/api/civos/signals?region=Vancouver%20Island" | jq '{
+  success,
+  count
+}'
+
+# J3-5: Create manual signal
+echo "J3-5: Create manual signal"
+curl -s -X POST http://localhost:5000/api/civos/signals \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "signalCode": "EVACUATION_READY",
+    "propertyId": 1,
+    "severity": "high",
+    "message": "QA Test: Property ready for evacuation staging",
+    "expiresInHours": 1
+  }' | jq '{success, signal}'
+
+# J3-6: Resolve signal
+echo "J3-6: Resolve signal"
+SIGNAL_ID=$(curl -s http://localhost:5000/api/civos/signals | jq -r '.signals[0].id')
+curl -s -X PUT http://localhost:5000/api/civos/signals/$SIGNAL_ID/resolve \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"reason": "QA Test resolution"}' | jq '{success}'
+
+echo ""
+echo "=== J: CIVOS QA COMPLETE ==="
+echo "Expected: 15 tests"
+```
+
+Report results in this format:
+
+| Test | Description | Result | Notes |
+|------|-------------|--------|-------|
+| J1-1 | Signal types | ? | |
+| J1-2 | Tables created | ? | |
+| J1-3 | Stats endpoint | ? | |
+| J1-4 | Config (admin) | ? | |
+| J2-1 | Capacity summary | ? | |
+| J2-2 | Properties list | ? | |
+| J2-3 | Filter by region | ? | |
+| J2-4 | Filter mechanic | ? | |
+| J2-5 | Export payload | ? | |
+| J3-1 | Generate signals | ? | |
+| J3-2 | Get active signals | ? | |
+| J3-3 | Filter by severity | ? | |
+| J3-4 | Filter by region | ? | |
+| J3-5 | Create manual signal | ? | |
+| J3-6 | Resolve signal | ? | |
+
+TOTAL: __/15 PASS

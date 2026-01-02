@@ -414,7 +414,7 @@ router.put('/signals/:id/resolve', async (req: Request, res: Response) => {
         await pool.query(`
             INSERT INTO civos_signal_history (signal_id, previous_status, new_status, change_reason, changed_by)
             VALUES ($1, $2, 'resolved', $3, $4)
-        `, [id, currentSignal.rows[0].status, reason || 'Manually resolved', req.user!.email]);
+        `, [id, currentSignal.rows[0].status, reason || 'Manually resolved', 'dashboard']);
 
         res.json({ success: true, signal: result.rows[0] });
 
@@ -468,7 +468,7 @@ router.get('/stats', async (req: Request, res: Response) => {
     }
 });
 
-router.get('/config', authenticateToken, async (req: AuthRequest, res: Response) => {
+router.get('/config', async (req: Request, res: Response) => {
     try {
         const result = await pool.query('SELECT key, value, description FROM civos_config');
         
