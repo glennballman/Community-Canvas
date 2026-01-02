@@ -32,7 +32,7 @@ import HostPayouts from "@/pages/host/Payouts";
 import AddProperty from "@/pages/host/AddProperty";
 import StagingSearch from "@/pages/staging/Search";
 import StagingPropertyDetail from "@/pages/staging/PropertyDetail";
-import StagingBook from "@/pages/staging/Book";
+import StagingBook from "@/pages/staging/BookingFlow";
 import MyBookings from "@/pages/staging/MyBookings";
 
 function AdminRoutes() {

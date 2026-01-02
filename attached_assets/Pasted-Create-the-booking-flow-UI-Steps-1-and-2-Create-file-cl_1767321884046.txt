@@ -1,0 +1,436 @@
+Create the booking flow UI - Steps 1 and 2.
+
+Create file: client/src/pages/staging/BookingFlow.tsx
+```tsx
+import React, { useState, useEffect } from 'react';
+import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
+
+interface Property {
+    id: number;
+    name: string;
+    city: string;
+    region: string;
+    maxCombinedLengthFt: number;
+    thumbnailUrl?: string;
+}
+
+interface PricingEstimate {
+    nightlyRate: number;
+    numNights: number;
+    subtotal: number;
+    serviceFee: number;
+    taxes: number;
+    totalCost: number;
+}
+
+export default function BookingFlow() {
+    const { id } = useParams<{ id: string }>();
+    const [searchParams] = useSearchParams();
+    const navigate = useNavigate();
+    
+    const [step, setStep] = useState(1);
+    const [property, setProperty] = useState<Property | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [submitting, setSubmitting] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    
+    // Form data
+    const [checkInDate, setCheckInDate] = useState(searchParams.get('checkIn') || '');
+    const [checkOutDate, setCheckOutDate] = useState(searchParams.get('checkOut') || '');
+    const [numAdults, setNumAdults] = useState(1);
+    const [numChildren, setNumChildren] = useState(0);
+    const [numPets, setNumPets] = useState(0);
+    
+    // Vehicle info
+    const [vehicleType, setVehicleType] = useState('');
+    const [vehicleLengthFt, setVehicleLengthFt] = useState<number | ''>('');
+    const [vehicleDescription, setVehicleDescription] = useState('');
+    const [licensePlate, setLicensePlate] = useState('');
+    
+    // Guest info
+    const [guestName, setGuestName] = useState('');
+    const [guestEmail, setGuestEmail] = useState('');
+    const [guestPhone, setGuestPhone] = useState('');
+    const [companyName, setCompanyName] = useState('');
+    const [specialRequests, setSpecialRequests] = useState('');
+    
+    // Pricing
+    const [pricing, setPricing] = useState<PricingEstimate | null>(null);
+    
+    // Booking result
+    const [bookingResult, setBookingResult] = useState<any>(null);
+
+    // Load property details
+    useEffect(() => {
+        async function loadProperty() {
+            try {
+                const res = await fetch(`/api/staging/properties/${id}`);
+                const data = await res.json();
+                if (data.property) {
+                    setProperty(data.property);
+                } else {
+                    setError('Property not found');
+                }
+            } catch (err) {
+                setError('Failed to load property');
+            } finally {
+                setLoading(false);
+            }
+        }
+        loadProperty();
+    }, [id]);
+
+    // Calculate pricing when dates change
+    useEffect(() => {
+        if (checkInDate && checkOutDate && property) {
+            const checkIn = new Date(checkInDate);
+            const checkOut = new Date(checkOutDate);
+            const nights = Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24));
+            
+            if (nights > 0) {
+                // Fetch actual pricing from API
+                fetch(`/api/staging/properties/${id}/pricing?checkIn=${checkInDate}&checkOut=${checkOutDate}`)
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.pricing) {
+                            setPricing(data.pricing);
+                        } else {
+                            // Fallback calculation
+                            const nightlyRate = 50; // Default
+                            const subtotal = nightlyRate * nights;
+                            const serviceFee = Math.round(subtotal * 0.05 * 100) / 100;
+                            const taxes = Math.round(subtotal * 0.12 * 100) / 100;
+                            setPricing({
+                                nightlyRate,
+                                numNights: nights,
+                                subtotal,
+                                serviceFee,
+                                taxes,
+                                totalCost: subtotal + serviceFee + taxes
+                            });
+                        }
+                    })
+                    .catch(() => {
+                        // Fallback
+                        const nightlyRate = 50;
+                        const subtotal = nightlyRate * nights;
+                        const serviceFee = Math.round(subtotal * 0.05 * 100) / 100;
+                        const taxes = Math.round(subtotal * 0.12 * 100) / 100;
+                        setPricing({
+                            nightlyRate,
+                            numNights: nights,
+                            subtotal,
+                            serviceFee,
+                            taxes,
+                            totalCost: subtotal + serviceFee + taxes
+                        });
+                    });
+            }
+        }
+    }, [checkInDate, checkOutDate, property, id]);
+
+    const handleSubmit = async () => {
+        setSubmitting(true);
+        setError(null);
+        
+        try {
+            const res = await fetch('/api/staging/bookings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    propertyId: property?.id,
+                    guestType: companyName ? 'company' : 'individual',
+                    guestName,
+                    guestEmail,
+                    guestPhone,
+                    companyName: companyName || undefined,
+                    checkInDate,
+                    checkOutDate,
+                    numAdults,
+                    numChildren,
+                    numPets,
+                    vehicleType,
+                    vehicleLengthFt: vehicleLengthFt || undefined,
+                    vehicleDescription,
+                    licensePlate,
+                    specialRequests
+                })
+            });
+            
+            const data = await res.json();
+            
+            if (data.success) {
+                setBookingResult(data);
+                setStep(5); // Confirmation step
+            } else {
+                setError(data.error || 'Failed to create booking');
+            }
+        } catch (err) {
+            setError('Failed to submit booking');
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+                <div className="text-white">Loading...</div>
+            </div>
+        );
+    }
+
+    if (error && !property) {
+        return (
+            <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+                <div className="text-red-400">{error}</div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="min-h-screen bg-gray-900 py-8">
+            <div className="max-w-4xl mx-auto px-4">
+                {/* Header */}
+                <div className="mb-8">
+                    <h1 className="text-2xl font-bold text-white">Book Your Stay</h1>
+                    <p className="text-gray-400">{property?.name} - {property?.city}, {property?.region}</p>
+                </div>
+
+                {/* Progress Steps */}
+                <div className="flex mb-8">
+                    {['Dates', 'Vehicle', 'Guest Info', 'Review', 'Confirmation'].map((label, i) => (
+                        <div key={i} className={`flex-1 text-center ${i < 4 ? 'border-b-2' : ''} ${
+                            step > i + 1 ? 'border-green-500' : step === i + 1 ? 'border-blue-500' : 'border-gray-700'
+                        } pb-2`}>
+                            <span className={`text-sm ${
+                                step > i + 1 ? 'text-green-400' : step === i + 1 ? 'text-blue-400' : 'text-gray-500'
+                            }`}>
+                                {label}
+                            </span>
+                        </div>
+                    ))}
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    {/* Main Form */}
+                    <div className="lg:col-span-2 bg-gray-800 rounded-lg p-6">
+                        {/* Step 1: Dates & Guests */}
+                        {step === 1 && (
+                            <div>
+                                <h2 className="text-xl font-semibold text-white mb-6">Select Dates & Guests</h2>
+                                
+                                <div className="grid grid-cols-2 gap-4 mb-6">
+                                    <div>
+                                        <label className="block text-gray-400 text-sm mb-1">Check-in Date</label>
+                                        <input
+                                            type="date"
+                                            value={checkInDate}
+                                            onChange={(e) => setCheckInDate(e.target.value)}
+                                            min={new Date().toISOString().split('T')[0]}
+                                            className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-gray-400 text-sm mb-1">Check-out Date</label>
+                                        <input
+                                            type="date"
+                                            value={checkOutDate}
+                                            onChange={(e) => setCheckOutDate(e.target.value)}
+                                            min={checkInDate || new Date().toISOString().split('T')[0]}
+                                            className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-3 gap-4 mb-6">
+                                    <div>
+                                        <label className="block text-gray-400 text-sm mb-1">Adults</label>
+                                        <select
+                                            value={numAdults}
+                                            onChange={(e) => setNumAdults(parseInt(e.target.value))}
+                                            className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white"
+                                        >
+                                            {[1,2,3,4,5,6,7,8].map(n => (
+                                                <option key={n} value={n}>{n}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-gray-400 text-sm mb-1">Children</label>
+                                        <select
+                                            value={numChildren}
+                                            onChange={(e) => setNumChildren(parseInt(e.target.value))}
+                                            className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white"
+                                        >
+                                            {[0,1,2,3,4,5,6].map(n => (
+                                                <option key={n} value={n}>{n}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-gray-400 text-sm mb-1">Pets</label>
+                                        <select
+                                            value={numPets}
+                                            onChange={(e) => setNumPets(parseInt(e.target.value))}
+                                            className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white"
+                                        >
+                                            {[0,1,2,3,4].map(n => (
+                                                <option key={n} value={n}>{n}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <button
+                                    onClick={() => setStep(2)}
+                                    disabled={!checkInDate || !checkOutDate}
+                                    className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white py-3 rounded-lg font-medium"
+                                >
+                                    Continue to Vehicle Info
+                                </button>
+                            </div>
+                        )}
+
+                        {/* Step 2: Vehicle Info */}
+                        {step === 2 && (
+                            <div>
+                                <h2 className="text-xl font-semibold text-white mb-6">Vehicle Information</h2>
+                                
+                                <div className="mb-4">
+                                    <label className="block text-gray-400 text-sm mb-1">Vehicle Type</label>
+                                    <select
+                                        value={vehicleType}
+                                        onChange={(e) => setVehicleType(e.target.value)}
+                                        className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white"
+                                    >
+                                        <option value="">Select type...</option>
+                                        <option value="class_a">Class A Motorhome</option>
+                                        <option value="class_b">Class B (Camper Van)</option>
+                                        <option value="class_c">Class C Motorhome</option>
+                                        <option value="travel_trailer">Travel Trailer</option>
+                                        <option value="fifth_wheel">Fifth Wheel</option>
+                                        <option value="truck_camper">Truck Camper</option>
+                                        <option value="popup">Pop-up Camper</option>
+                                        <option value="tent">Tent</option>
+                                        <option value="semi_truck">Semi Truck</option>
+                                        <option value="work_truck">Work Truck</option>
+                                        <option value="horse_trailer">Horse Trailer</option>
+                                        <option value="boat_trailer">Boat Trailer</option>
+                                        <option value="other">Other</option>
+                                    </select>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4 mb-4">
+                                    <div>
+                                        <label className="block text-gray-400 text-sm mb-1">
+                                            Total Length (ft)
+                                            {property?.maxCombinedLengthFt && (
+                                                <span className="text-gray-500 ml-1">
+                                                    (max {property.maxCombinedLengthFt}ft)
+                                                </span>
+                                            )}
+                                        </label>
+                                        <input
+                                            type="number"
+                                            value={vehicleLengthFt}
+                                            onChange={(e) => setVehicleLengthFt(e.target.value ? parseInt(e.target.value) : '')}
+                                            placeholder="e.g. 35"
+                                            className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white"
+                                        />
+                                        {vehicleLengthFt && property?.maxCombinedLengthFt && vehicleLengthFt > property.maxCombinedLengthFt && (
+                                            <p className="text-red-400 text-sm mt-1">
+                                                ⚠️ Vehicle may be too long for this property
+                                            </p>
+                                        )}
+                                    </div>
+                                    <div>
+                                        <label className="block text-gray-400 text-sm mb-1">License Plate</label>
+                                        <input
+                                            type="text"
+                                            value={licensePlate}
+                                            onChange={(e) => setLicensePlate(e.target.value.toUpperCase())}
+                                            placeholder="ABC 123"
+                                            className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="mb-6">
+                                    <label className="block text-gray-400 text-sm mb-1">Vehicle Description (optional)</label>
+                                    <input
+                                        type="text"
+                                        value={vehicleDescription}
+                                        onChange={(e) => setVehicleDescription(e.target.value)}
+                                        placeholder="e.g. 2020 Winnebago Vista, white"
+                                        className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white"
+                                    />
+                                </div>
+
+                                <div className="flex gap-4">
+                                    <button
+                                        onClick={() => setStep(1)}
+                                        className="flex-1 bg-gray-600 hover:bg-gray-500 text-white py-3 rounded-lg font-medium"
+                                    >
+                                        Back
+                                    </button>
+                                    <button
+                                        onClick={() => setStep(3)}
+                                        className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-medium"
+                                    >
+                                        Continue to Guest Info
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Steps 3-5 will be in the next prompt */}
+                        {step >= 3 && step <= 5 && (
+                            <div className="text-gray-400">
+                                Step {step} content - see next prompt
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Pricing Sidebar */}
+                    <div className="bg-gray-800 rounded-lg p-6 h-fit sticky top-4">
+                        <h3 className="text-lg font-semibold text-white mb-4">Price Summary</h3>
+                        
+                        {pricing ? (
+                            <div className="space-y-2">
+                                <div className="flex justify-between text-gray-300">
+                                    <span>${pricing.nightlyRate} × {pricing.numNights} nights</span>
+                                    <span>${pricing.subtotal.toFixed(2)}</span>
+                                </div>
+                                <div className="flex justify-between text-gray-400 text-sm">
+                                    <span>Service fee</span>
+                                    <span>${pricing.serviceFee.toFixed(2)}</span>
+                                </div>
+                                <div className="flex justify-between text-gray-400 text-sm">
+                                    <span>Taxes (GST + PST)</span>
+                                    <span>${pricing.taxes.toFixed(2)}</span>
+                                </div>
+                                <div className="border-t border-gray-700 pt-2 mt-2">
+                                    <div className="flex justify-between text-white font-semibold">
+                                        <span>Total</span>
+                                        <span>${pricing.totalCost.toFixed(2)}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        ) : (
+                            <p className="text-gray-500">Select dates to see pricing</p>
+                        )}
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+```
+
+Add route to your router:
+```tsx
+<Route path="/staging/:id/book" element={<BookingFlow />} />
+```
+
+Continue to the next prompt for Steps 3-5.
