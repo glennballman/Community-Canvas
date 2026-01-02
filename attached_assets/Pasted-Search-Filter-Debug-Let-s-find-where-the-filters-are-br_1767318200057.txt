@@ -1,0 +1,85 @@
+Search Filter Debug
+Let's find where the filters are breaking. Run this diagnostic prompt:
+
+DEBUG PROMPT 1: Identify the Issue
+The search filters aren't working - all queries return the same 12 properties. Let's diagnose and fix this.
+
+## Step 1: Test the database function directly
+
+Run these SQL queries to verify the function works:
+
+-- Test 1: No filters (should return all active properties)
+SELECT COUNT(*) as total FROM find_available_staging();
+
+-- Test 2: Vehicle length filter (should return fewer)
+SELECT COUNT(*) as fits_45ft FROM find_available_staging(p_vehicle_length_ft := 45);
+SELECT COUNT(*) as fits_80ft FROM find_available_staging(p_vehicle_length_ft := 80);
+
+-- Test 3: Power filter
+SELECT COUNT(*) as needs_power FROM find_available_staging(p_needs_power := true);
+
+-- Test 4: Region filter
+SELECT COUNT(*) as vancouver_island FROM find_available_staging(p_region := 'Vancouver Island');
+SELECT COUNT(*) as fraser_valley FROM find_available_staging(p_region := 'Fraser Valley');
+
+-- Test 5: Semi trucks
+SELECT COUNT(*) as accepts_semi FROM find_available_staging(p_accepts_semi := true);
+
+-- Test 6: Combined filters
+SELECT COUNT(*) as vi_with_power_45ft FROM find_available_staging(
+    p_vehicle_length_ft := 45,
+    p_needs_power := true,
+    p_region := 'Vancouver Island'
+);
+
+Report the counts for each test.
+
+## Step 2: Check the API endpoint
+
+Look at the search route in server/routes/staging.ts and find the /search endpoint.
+
+Check these potential issues:
+
+1. Is it calling find_available_staging or doing a simple SELECT?
+2. Are the query parameters being parsed correctly?
+3. Are the parameters being passed to the function?
+
+Show me the current search endpoint code.
+
+## Step 3: Check the frontend
+
+Look at the Search page component and check:
+
+1. Are filter values being added to the API request URL?
+2. Is the fetch URL correct?
+3. Are the query parameter names matching what the API expects?
+
+Show me how the frontend builds the search request.
+
+Most Likely Causes
+Based on "always returns 12 properties", the issue is probably one of these:
+Cause A: API Not Using the Function
+The API might be doing a simple SELECT * FROM staging_properties instead of calling find_available_staging():
+typescript// BAD - ignores filters
+const result = await db.query('SELECT * FROM staging_properties WHERE status = $1', ['active']);
+
+// GOOD - uses the function with parameters
+const result = await db.query('SELECT * FROM find_available_staging($1, $2, $3, ...)', [params]);
+Cause B: Parameters Not Parsed
+Query parameters might not be converted to the right types:
+typescript// BAD - sends strings instead of numbers/booleans
+p_vehicle_length_ft := 'undefined'
+p_needs_power := 'true'  // string, not boolean
+
+// GOOD - properly parsed
+p_vehicle_length_ft := 45  // number
+p_needs_power := true      // boolean
+Cause C: Frontend Not Sending Params
+The frontend might not be appending filters to the URL:
+typescript// BAD - always fetches without params
+fetch('/api/staging/search')
+
+// GOOD - includes filter params
+fetch(`/api/staging/search?vehicleLengthFt=${length}&needsPower=${power}`)
+
+Run the SQL tests first and tell me the counts. That will tell us if the problem is in the database function or in the API/frontend layer

@@ -323,19 +323,17 @@ export default function StagingSearch() {
 
   const buildSearchParams = () => {
     const params = new URLSearchParams();
-    if (filters.query) params.set('q', filters.query);
+    if (filters.query) params.set('city', filters.query);
     if (filters.region) params.set('region', filters.region);
-    if (filters.propertyTypes.length) params.set('types', filters.propertyTypes.join(','));
-    if (filters.vehicleLength) params.set('minLength', filters.vehicleLength.toString());
-    if (filters.pullThrough) params.set('pullThrough', 'true');
-    if (filters.wifi) params.set('wifi', 'true');
-    if (filters.showers) params.set('showers', 'true');
-    if (filters.petFriendly) params.set('pets', 'true');
-    if (filters.horseFriendly) params.set('horses', 'true');
-    if (filters.acceptsTrucks) params.set('trucks', 'true');
-    params.set('sort', filters.sortBy);
-    params.set('page', filters.page.toString());
-    params.set('limit', '12');
+    if (filters.propertyTypes.length) params.set('propertyType', filters.propertyTypes[0]);
+    if (filters.vehicleLength) params.set('vehicleLengthFt', filters.vehicleLength.toString());
+    if (filters.pullThrough) params.set('needsPullThrough', 'true');
+    if (filters.petFriendly) params.set('dogsAllowed', 'true');
+    if (filters.horseFriendly) params.set('isHorseFriendly', 'true');
+    if (filters.acceptsTrucks) params.set('acceptsSemi', 'true');
+    params.set('sortBy', filters.sortBy);
+    params.set('limit', '50');
+    params.set('offset', ((filters.page - 1) * 50).toString());
     return params.toString();
   };
 
@@ -353,7 +351,7 @@ export default function StagingSearch() {
     setFilters({ ...filters, page: 1 });
   };
 
-  const totalPages = Math.ceil((data?.total || 0) / 12);
+  const totalPages = Math.ceil((data?.total || 0) / 50);
 
   return (
     <div className="min-h-screen bg-background">
