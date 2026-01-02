@@ -1,0 +1,241 @@
+We found bugs in QA testing. Fix these database issues:
+
+## BUG 1: Missing 3 tables
+Create the missing tables:
+
+-- ============================================================================
+-- MISSING TABLE 1: staging_ical_feeds
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS staging_ical_feeds (
+    id SERIAL PRIMARY KEY,
+    property_id INTEGER REFERENCES staging_properties(id) ON DELETE CASCADE,
+    spot_id INTEGER REFERENCES staging_spots(id),
+    host_account_id INTEGER REFERENCES host_accounts(id),
+    
+    ical_url TEXT NOT NULL,
+    feed_name VARCHAR(100),
+    feed_source VARCHAR(30), -- 'airbnb', 'booking', 'vrbo', 'google', 'other'
+    
+    is_active BOOLEAN DEFAULT true,
+    last_synced_at TIMESTAMP WITH TIME ZONE,
+    last_sync_status VARCHAR(20), -- 'success', 'failed', 'pending'
+    last_sync_error TEXT,
+    sync_frequency_minutes INTEGER DEFAULT 60,
+    total_syncs INTEGER DEFAULT 0,
+    failed_syncs INTEGER DEFAULT 0,
+    
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    
+    UNIQUE(property_id, ical_url)
+);
+
+CREATE INDEX IF NOT EXISTS idx_ical_feeds_property ON staging_ical_feeds(property_id);
+CREATE INDEX IF NOT EXISTS idx_ical_feeds_active ON staging_ical_feeds(is_active) WHERE is_active = true;
+
+-- ============================================================================
+-- MISSING TABLE 2: staging_reviews
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS staging_reviews (
+    id SERIAL PRIMARY KEY,
+    
+    -- What's being reviewed
+    review_type VARCHAR(20) NOT NULL, -- 'property', 'spot', 'provider', 'guest'
+    property_id INTEGER REFERENCES staging_properties(id),
+    spot_id INTEGER REFERENCES staging_spots(id),
+    provider_id INTEGER REFERENCES staging_service_providers(id),
+    booking_id INTEGER REFERENCES staging_bookings(id),
+    
+    -- Reviewer
+    reviewer_type VARCHAR(20), -- 'guest', 'host', 'crew_lead'
+    reviewer_name VARCHAR(100),
+    reviewer_id INTEGER,
+    
+    -- Ratings (1-5)
+    overall_rating INTEGER NOT NULL CHECK (overall_rating >= 1 AND overall_rating <= 5),
+    cleanliness_rating INTEGER CHECK (cleanliness_rating >= 1 AND cleanliness_rating <= 5),
+    accuracy_rating INTEGER CHECK (accuracy_rating >= 1 AND accuracy_rating <= 5),
+    communication_rating INTEGER CHECK (communication_rating >= 1 AND communication_rating <= 5),
+    location_rating INTEGER CHECK (location_rating >= 1 AND location_rating <= 5),
+    value_rating INTEGER CHECK (value_rating >= 1 AND value_rating <= 5),
+    
+    -- For service provider reviews
+    quality_rating INTEGER CHECK (quality_rating >= 1 AND quality_rating <= 5),
+    speed_rating INTEGER CHECK (speed_rating >= 1 AND speed_rating <= 5),
+    price_rating INTEGER CHECK (price_rating >= 1 AND price_rating <= 5),
+    
+    -- Content
+    review_title VARCHAR(200),
+    review_text TEXT,
+    
+    -- Context
+    stay_date DATE,
+    vehicle_type VARCHAR(50),
+    vehicle_length_ft INTEGER,
+    traveler_type VARCHAR(30), -- 'family', 'couple', 'solo', 'work_crew', 'trucker'
+    
+    -- Status
+    is_verified BOOLEAN DEFAULT false,
+    is_published BOOLEAN DEFAULT true,
+    
+    -- Host response
+    host_response TEXT,
+    host_response_at TIMESTAMP WITH TIME ZONE,
+    
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_reviews_property ON staging_reviews(property_id);
+CREATE INDEX IF NOT EXISTS idx_reviews_provider ON staging_reviews(provider_id);
+CREATE INDEX IF NOT EXISTS idx_reviews_booking ON staging_reviews(booking_id);
+CREATE INDEX IF NOT EXISTS idx_reviews_published ON staging_reviews(is_published) WHERE is_published = true;
+
+-- ============================================================================
+-- MISSING TABLE 3: rental_inventory
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS rental_inventory (
+    id SERIAL PRIMARY KEY,
+    
+    -- Owner
+    owner_type VARCHAR(30) NOT NULL, -- 'rental_company', 'auction', 'private', 'dealer'
+    owner_company_id INTEGER,
+    owner_host_id INTEGER REFERENCES host_accounts(id),
+    owner_name VARCHAR(255),
+    
+    -- Vehicle
+    vehicle_profile_id INTEGER REFERENCES vehicle_profiles(id),
+    
+    -- Listing
+    title VARCHAR(255) NOT NULL,
+    description TEXT,
+    year INTEGER,
+    make VARCHAR(100),
+    model VARCHAR(100),
+    
+    -- Condition
+    condition VARCHAR(30), -- 'new', 'excellent', 'good', 'fair', 'project'
+    mileage INTEGER,
+    hours INTEGER,
+    
+    -- Type
+    availability_type VARCHAR(30) NOT NULL, -- 'rental', 'for_sale', 'auction', 'rent_to_own'
+    
+    -- Rental pricing
+    daily_rate DECIMAL(8, 2),
+    weekly_rate DECIMAL(8, 2),
+    monthly_rate DECIMAL(8, 2),
+    security_deposit DECIMAL(8, 2),
+    cleaning_fee DECIMAL(8, 2),
+    mileage_included INTEGER,
+    mileage_overage_rate DECIMAL(4, 2),
+    generator_hours_included INTEGER,
+    generator_overage_rate DECIMAL(4, 2),
+    
+    -- Sale pricing
+    asking_price DECIMAL(10, 2),
+    reserve_price DECIMAL(10, 2),
+    obo_accepted BOOLEAN DEFAULT false,
+    financing_available BOOLEAN DEFAULT false,
+    
+    -- Location
+    pickup_location_id INTEGER REFERENCES staging_properties(id),
+    pickup_address TEXT,
+    pickup_city VARCHAR(100),
+    pickup_region VARCHAR(100),
+    delivery_available BOOLEAN DEFAULT false,
+    delivery_fee DECIMAL(8, 2),
+    delivery_radius_km INTEGER,
+    
+    -- Requirements
+    min_renter_age INTEGER DEFAULT 25,
+    license_required VARCHAR(30),
+    insurance_required BOOLEAN DEFAULT true,
+    
+    -- Media
+    thumbnail_url TEXT,
+    images JSONB DEFAULT '[]',
+    video_url TEXT,
+    
+    -- Status
+    status VARCHAR(20) DEFAULT 'available', -- 'available', 'rented', 'sold', 'maintenance', 'pending'
+    
+    -- Meta
+    source VARCHAR(30),
+    external_id VARCHAR(100),
+    external_url TEXT,
+    
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_rental_type ON rental_inventory(availability_type);
+CREATE INDEX IF NOT EXISTS idx_rental_status ON rental_inventory(status);
+CREATE INDEX IF NOT EXISTS idx_rental_location ON rental_inventory(pickup_city);
+
+-- ============================================================================
+-- BUG 2: Fix num_nights calculation
+-- The GENERATED ALWAYS AS column needs the dates to be non-null
+-- Let's check the column definition and fix it
+-- ============================================================================
+
+-- First, check current definition
+SELECT column_name, data_type, generation_expression 
+FROM information_schema.columns 
+WHERE table_name = 'staging_bookings' AND column_name = 'num_nights';
+
+-- The issue is likely that the GENERATED column syntax wasn't applied correctly
+-- Let's drop and recreate it properly
+ALTER TABLE staging_bookings DROP COLUMN IF EXISTS num_nights;
+ALTER TABLE staging_bookings ADD COLUMN num_nights INTEGER 
+    GENERATED ALWAYS AS (check_out_date - check_in_date) STORED;
+
+-- ============================================================================
+-- BUG 3: Add date constraint to staging_bookings
+-- ============================================================================
+
+-- First check if constraint exists
+SELECT constraint_name FROM information_schema.table_constraints 
+WHERE table_name = 'staging_bookings' AND constraint_type = 'CHECK';
+
+-- Add the constraint if missing
+ALTER TABLE staging_bookings DROP CONSTRAINT IF EXISTS valid_staging_dates;
+ALTER TABLE staging_bookings ADD CONSTRAINT valid_staging_dates 
+    CHECK (check_out_date > check_in_date);
+
+-- ============================================================================
+-- VERIFY FIXES
+-- ============================================================================
+
+-- Check all 12 tables exist
+SELECT table_name FROM information_schema.tables 
+WHERE table_schema = 'public' 
+AND table_name IN (
+    'host_accounts', 'host_sessions', 'staging_properties', 'staging_spots',
+    'staging_pricing', 'staging_service_providers', 'vehicle_profiles',
+    'staging_bookings', 'staging_calendar_blocks', 'staging_ical_feeds',
+    'staging_reviews', 'rental_inventory'
+)
+ORDER BY table_name;
+-- EXPECTED: 12 tables
+
+-- Test num_nights calculation
+INSERT INTO staging_bookings (
+    property_id, guest_type, guest_name, check_in_date, check_out_date, num_adults
+)
+SELECT id, 'individual', 'Nights Test', CURRENT_DATE + 5, CURRENT_DATE + 8, 1
+FROM staging_properties LIMIT 1
+RETURNING booking_ref, check_in_date, check_out_date, num_nights;
+-- EXPECTED: num_nights = 3
+
+-- Test date constraint
+INSERT INTO staging_bookings (
+    property_id, guest_type, guest_name, check_in_date, check_out_date, num_adults
+)
+SELECT id, 'individual', 'Bad Dates', CURRENT_DATE + 10, CURRENT_DATE + 5, 1
+FROM staging_properties LIMIT 1;
+-- EXPECTED: ERROR due to constraint violation
+
+-- Cleanup test booking
+DELETE FROM staging_bookings WHERE guest_name IN ('Nights Test', 'Bad Dates');
+
+Confirm all 12 tables exist and the constraints work.
