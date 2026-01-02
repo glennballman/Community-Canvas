@@ -1,0 +1,326 @@
+Load BC truck stops with parking and services for commercial vehicles.
+
+Run this SQL:
+
+-- ============================================================================
+-- BC TRUCK STOPS - Lower Mainland
+-- ============================================================================
+
+-- 1. Flying J Travel Plaza - Hope
+INSERT INTO staging_properties (
+    name, description, short_description, tagline,
+    property_type, property_subtype,
+    region, city, address, postal_code,
+    latitude, longitude,
+    total_spots, spots_large, spots_oversized, spots_pull_through,
+    max_combined_length_ft, max_vehicle_width_ft, max_weight_lbs,
+    has_shore_power, power_amps, num_power_hookups,
+    has_wifi, wifi_included, has_cell_signal, cell_signal_strength,
+    has_bathrooms, bathroom_type, has_showers, showers_free, shower_cost, num_showers,
+    has_laundry, num_washers, num_dryers,
+    has_restaurant, restaurant_hours, has_store, store_hours,
+    -- Trucking specific
+    accepts_semi_trucks, accepts_tandem_trailers, num_truck_spots,
+    has_diesel, has_high_flow_diesel, num_diesel_lanes,
+    has_def_fluid, has_cat_scale, scale_cost,
+    has_truck_showers, truck_shower_cost,
+    accepted_fuel_cards,
+    -- Security
+    is_fenced, is_well_lit, has_security_camera,
+    access_type,
+    min_nights, max_stay_days,
+    status, is_verified, source
+) VALUES (
+    'Flying J Travel Plaza - Hope',
+    'Major truck stop at Highway 1 Exit 168 in Hope. Full service facility with 7 diesel lanes, CAT Scale, showers, laundry, and Subway restaurant. Bulk DEF available. Internet and trucker lounges. Gateway to the Coquihalla Highway.',
+    'Full-service truck plaza with CAT Scale, 7 diesel lanes, and amenities.',
+    'Fuel up for the Coq',
+    'parking_lot', 'truck_stop',
+    'Fraser Valley', 'Hope', '63100 Flood Hope Road', 'V0X 1L3',
+    49.3845, -121.4234,
+    50, 30, 20, 40,
+    85, 14, 140000,
+    false, NULL, 0,
+    true, true, true, 5,
+    true, 'flush', true, false, 12.00, 4,
+    true, 4, 4,
+    true, '24/7', true, '24/7',
+    true, true, 50,
+    true, true, 7,
+    true, true, 12.00,
+    true, 12.00,
+    ARRAY['Comdata', 'EFS', 'Fleet One', 'T-Check', 'TCH'],
+    false, true, true,
+    '24/7',
+    1, 3,
+    'active', true, 'web_research'
+);
+
+INSERT INTO staging_pricing (property_id, pricing_type, nightly_rate, is_active)
+SELECT id, 'base_nightly', 0.00, true  -- Free with fuel purchase typically
+FROM staging_properties WHERE name = 'Flying J Travel Plaza - Hope';
+
+-- 2. Husky Travel Centre - Chilliwack
+INSERT INTO staging_properties (
+    name, description, short_description, tagline,
+    property_type, property_subtype,
+    region, city, address, postal_code,
+    latitude, longitude,
+    total_spots, spots_large, spots_oversized, spots_pull_through,
+    max_combined_length_ft, max_vehicle_width_ft, max_weight_lbs,
+    has_wifi, has_cell_signal, cell_signal_strength,
+    has_bathrooms, bathroom_type, has_showers, showers_free, shower_cost, num_showers,
+    has_laundry, num_washers, num_dryers,
+    has_restaurant, restaurant_hours, has_store, store_hours, has_vending,
+    -- Trucking specific
+    accepts_semi_trucks, accepts_tandem_trailers, num_truck_spots,
+    has_diesel, num_diesel_lanes,
+    has_def_fluid,
+    has_truck_showers, truck_shower_cost,
+    has_rv_wash,
+    has_propane_refill,
+    accepted_fuel_cards,
+    -- Security
+    is_well_lit, has_security_camera,
+    access_type,
+    min_nights, max_stay_days,
+    status, is_verified, source
+) VALUES (
+    'Husky Travel Centre - Chilliwack',
+    '24-hour truck stop with 40 truck parking spaces, restaurant, showers, and laundry. Starbucks and shopping nearby. Truck wash on site. Popular overnight spot for truckers heading to/from Vancouver.',
+    '24-hour truck stop with 40 spaces, restaurant, and truck wash.',
+    'Your Chilliwack pit stop',
+    'parking_lot', 'truck_stop',
+    'Fraser Valley', 'Chilliwack', '7620 Vedder Road', 'V2R 4E4',
+    49.0912, -121.9534,
+    40, 25, 15, 30,
+    80, 14, 120000,
+    true, true, 5,
+    true, 'flush', true, false, 7.00, 3,
+    true, 2, 2,
+    true, '24/7', true, '24/7', true,
+    true, true, 40,
+    true, 4,
+    true,
+    true, 7.00,
+    true,
+    true,
+    ARRAY['Comdata', 'EFS', 'Fleet One'],
+    true, true,
+    '24/7',
+    1, 2,
+    'active', true, 'web_research'
+);
+
+INSERT INTO staging_pricing (property_id, pricing_type, nightly_rate, is_active)
+SELECT id, 'base_nightly', 0.00, true
+FROM staging_properties WHERE name = 'Husky Travel Centre - Chilliwack';
+
+-- 3. Flying J Fuel Stop - Chilliwack
+INSERT INTO staging_properties (
+    name, description, short_description, tagline,
+    property_type, property_subtype,
+    region, city, address, postal_code,
+    latitude, longitude,
+    total_spots, spots_large, spots_oversized, spots_pull_through,
+    max_combined_length_ft, max_vehicle_width_ft,
+    has_wifi, has_cell_signal,
+    has_bathrooms, bathroom_type, has_showers, shower_cost, num_showers,
+    has_laundry,
+    has_store, store_hours,
+    accepts_semi_trucks, num_truck_spots,
+    has_diesel, has_high_flow_diesel, num_diesel_lanes,
+    has_def_fluid,
+    accepted_fuel_cards,
+    is_well_lit, has_security_camera,
+    access_type,
+    status, is_verified, source
+) VALUES (
+    'Flying J Fuel Stop - Chilliwack',
+    'Fuel stop with 21 truck parking spaces, 7 diesel lanes, 2 showers, and laundry facilities. ATM and check cashing available. Trucker lounge on site.',
+    'Fuel stop with 21 truck spaces, showers, and laundry.',
+    'Quick stop, quality service',
+    'parking_lot', 'truck_stop',
+    'Fraser Valley', 'Chilliwack', '7970 Lickman Road', 'V2R 3Z9',
+    49.1023, -121.9267,
+    21, 15, 6, 18,
+    80, 14,
+    true, true,
+    true, 'flush', true, 12.00, 2,
+    true,
+    true, '24/7',
+    true, 21,
+    true, true, 7,
+    true,
+    ARRAY['Comdata', 'EFS', 'Fleet One', 'T-Check'],
+    true, true,
+    '24/7',
+    'active', true, 'web_research'
+);
+
+INSERT INTO staging_pricing (property_id, pricing_type, nightly_rate, is_active)
+SELECT id, 'base_nightly', 0.00, true
+FROM staging_properties WHERE name = 'Flying J Fuel Stop - Chilliwack';
+
+-- ============================================================================
+-- BC TRUCK STOPS - Interior
+-- ============================================================================
+
+-- 4. Gateway Travel Centre - Golden
+INSERT INTO staging_properties (
+    name, description, short_description, tagline,
+    property_type, property_subtype,
+    region, city, address, postal_code,
+    latitude, longitude,
+    total_spots, spots_large, spots_oversized, spots_pull_through,
+    max_combined_length_ft, max_vehicle_width_ft, max_weight_lbs,
+    has_wifi, has_cell_signal, cell_signal_strength,
+    has_bathrooms, bathroom_type, has_showers, num_showers,
+    has_laundry,
+    has_restaurant, restaurant_hours, has_store,
+    has_propane_refill,
+    accepts_semi_trucks, accepts_tandem_trailers, num_truck_spots,
+    has_diesel, has_high_flow_diesel, num_diesel_lanes,
+    has_def_fluid,
+    accepted_fuel_cards,
+    is_well_lit, has_security_camera,
+    access_type,
+    status, is_verified, source
+) VALUES (
+    'Gateway Travel Centre - Golden',
+    'Major truck stop in Golden with 125 parking spaces - one of the largest in BC! 7 diesel lanes, 4 showers, Billy Miners Roadhouse restaurant, propane, and trucker lounge. Strategic location at the junction of Trans-Canada and Highway 95.',
+    'Largest truck stop in Golden with 125 spaces and full services.',
+    'Gateway to the Rockies',
+    'parking_lot', 'truck_stop',
+    'BC Interior', 'Golden', '175 Kokanee Way', 'V0A 1H0',
+    51.2978, -116.9612,
+    125, 80, 45, 100,
+    90, 14, 150000,
+    true, true, 4,
+    true, 'flush', true, 4,
+    true,
+    true, '24/7', true,
+    true,
+    true, true, 125,
+    true, true, 7,
+    true,
+    ARRAY['Comdata', 'EFS', 'Fleet One', 'T-Check', 'TCH'],
+    true, true,
+    '24/7',
+    'active', true, 'web_research'
+);
+
+INSERT INTO staging_pricing (property_id, pricing_type, nightly_rate, is_active)
+SELECT id, 'base_nightly', 0.00, true
+FROM staging_properties WHERE name = 'Gateway Travel Centre - Golden';
+
+-- 5. Husky Travel Centre - Prince George
+INSERT INTO staging_properties (
+    name, description, short_description, tagline,
+    property_type, property_subtype,
+    region, city, address, postal_code,
+    latitude, longitude,
+    total_spots, spots_large, spots_oversized, spots_pull_through,
+    max_combined_length_ft, max_vehicle_width_ft,
+    has_wifi, has_cell_signal, cell_signal_strength,
+    has_bathrooms, bathroom_type, has_showers, num_showers,
+    has_restaurant, has_store, has_vending,
+    has_propane_refill,
+    accepts_semi_trucks, num_truck_spots,
+    has_diesel, num_diesel_lanes,
+    has_def_fluid,
+    has_rv_wash,
+    accepted_fuel_cards,
+    is_well_lit, has_security_camera,
+    access_type,
+    status, is_verified, source
+) VALUES (
+    'Husky Travel Centre - Prince George',
+    '25 truck parking spaces with 24/7 store, deli, and restaurant. ATM, travel store, truck wash, and air fill available. Key stop for truckers on Highway 97 and Highway 16.',
+    'Highway 97/16 hub with 25 truck spaces and 24/7 services.',
+    'Northern BC headquarters',
+    'parking_lot', 'truck_stop',
+    'Northern BC', 'Prince George', '1148 Pacific Street', 'V2L 4B1',
+    53.9023, -122.7912,
+    25, 15, 10, 20,
+    80, 14,
+    true, true, 5,
+    true, 'flush', true, 2,
+    true, true, true,
+    true,
+    true, 25,
+    true, 4,
+    true,
+    true,
+    ARRAY['Comdata', 'EFS'],
+    true, true,
+    '24/7',
+    'active', true, 'web_research'
+);
+
+INSERT INTO staging_pricing (property_id, pricing_type, nightly_rate, is_active)
+SELECT id, 'base_nightly', 0.00, true
+FROM staging_properties WHERE name = 'Husky Travel Centre - Prince George';
+
+-- 6. Petro-Canada Kamloops
+INSERT INTO staging_properties (
+    name, description, short_description, tagline,
+    property_type, property_subtype,
+    region, city, address, postal_code,
+    latitude, longitude,
+    total_spots, spots_large, spots_oversized, spots_pull_through,
+    max_combined_length_ft, max_vehicle_width_ft,
+    has_wifi, has_cell_signal,
+    has_bathrooms, bathroom_type, has_showers, num_showers,
+    has_laundry,
+    has_store,
+    accepts_semi_trucks, num_truck_spots,
+    has_diesel, num_diesel_lanes,
+    has_def_fluid,
+    has_cat_scale, has_truck_scale,
+    has_parts_store,
+    accepted_fuel_cards,
+    is_well_lit,
+    access_type,
+    status, is_verified, source
+) VALUES (
+    'Petro-Canada Kamloops',
+    '35 truck parking spaces with showers, trucker lounge, laundry, and truck parts. Weigh scale on site (currently needs repair). Strategic Kamloops location on Trans-Canada Highway.',
+    '35 truck spaces with showers, laundry, and parts shop.',
+    'Kamloops truck hub',
+    'parking_lot', 'truck_stop',
+    'BC Interior', 'Kamloops', '1885 West Trans-Canada Highway', 'V2C 5T2',
+    50.6789, -120.3456,
+    35, 22, 13, 28,
+    80, 14,
+    true, true,
+    true, 'flush', true, 3,
+    true,
+    true,
+    true, 35,
+    true, 4,
+    true,
+    false, true,
+    true,
+    ARRAY['Petro-Pass', 'Comdata', 'EFS'],
+    true,
+    '24/7',
+    'active', true, 'web_research'
+);
+
+INSERT INTO staging_pricing (property_id, pricing_type, nightly_rate, is_active)
+SELECT id, 'base_nightly', 0.00, true
+FROM staging_properties WHERE name = 'Petro-Canada Kamloops';
+
+-- Summary of truck stops
+SELECT 
+    name, 
+    city, 
+    num_truck_spots,
+    CASE WHEN has_cat_scale THEN 'Yes' ELSE 'No' END as cat_scale,
+    CASE WHEN has_showers THEN 'Yes' ELSE 'No' END as showers,
+    CASE WHEN has_restaurant THEN 'Yes' ELSE 'No' END as restaurant,
+    trucker_score
+FROM staging_properties
+WHERE property_type = 'parking_lot' AND property_subtype = 'truck_stop'
+ORDER BY trucker_score DESC;
