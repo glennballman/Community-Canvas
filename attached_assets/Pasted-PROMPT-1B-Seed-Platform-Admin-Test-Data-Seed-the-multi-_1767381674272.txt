@@ -1,0 +1,313 @@
+PROMPT 1B: Seed Platform Admin & Test Data
+Seed the multi-tenant foundation with test data including Glenn as Platform Super Admin.
+
+## Run this SQL to create initial data:
+```sql
+-- ============================================================================
+-- SEED DATA FOR COMMUNITY CANVAS
+-- ============================================================================
+
+-- 1. Create Glenn as Platform Super Admin
+INSERT INTO cc_users (
+    id,
+    email, 
+    password_hash,
+    first_name, 
+    last_name, 
+    display_name,
+    email_verified,
+    is_platform_admin,
+    status
+) VALUES (
+    'a0000000-0000-0000-0000-000000000001',
+    'glenn@communitycanvas.ca',
+    '$2b$10$rPQwKvGvQgCLqd7VLHhR4.YvXNmDy8XbTmGKT.2ZKx.oD1eLqXxXq',  -- password: admin123
+    'Glenn',
+    'Ballman',
+    'Glenn Ballman',
+    true,
+    true,  -- Platform Super Admin
+    'active'
+) ON CONFLICT (email) DO UPDATE SET
+    is_platform_admin = true,
+    first_name = 'Glenn',
+    last_name = 'Ballman';
+
+-- Get Glenn's ID for subsequent inserts
+-- (Using the fixed UUID we set above)
+
+-- 2. Create Glenn's Profile (Sovereign Individual data)
+INSERT INTO cc_user_profiles (
+    user_id,
+    city,
+    province,
+    country,
+    sleeping_preferences,
+    occupation
+) VALUES (
+    'a0000000-0000-0000-0000-000000000001',
+    'Bamfield',
+    'British Columbia',
+    'Canada',
+    '{"needs_private_room": true, "early_riser": true}',
+    'Tech Executive'
+) ON CONFLICT (user_id) DO UPDATE SET
+    city = 'Bamfield',
+    province = 'British Columbia';
+
+-- 3. Create Platform Tenant (Community Canvas itself)
+INSERT INTO cc_tenants (
+    id,
+    name,
+    slug,
+    tenant_type,
+    email,
+    status,
+    owner_user_id,
+    settings
+) VALUES (
+    'b0000000-0000-0000-0000-000000000001',
+    'Community Canvas',
+    'community-canvas',
+    'platform',
+    'admin@communitycanvas.ca',
+    'active',
+    'a0000000-0000-0000-0000-000000000001',
+    '{"is_root_tenant": true}'
+) ON CONFLICT (slug) DO NOTHING;
+
+-- 4. Add Glenn to Platform tenant as owner
+INSERT INTO cc_tenant_users (
+    tenant_id,
+    user_id,
+    role,
+    title,
+    status,
+    joined_at
+) VALUES (
+    'b0000000-0000-0000-0000-000000000001',
+    'a0000000-0000-0000-0000-000000000001',
+    'owner',
+    'Founder',
+    'active',
+    NOW()
+) ON CONFLICT (tenant_id, user_id) DO NOTHING;
+
+-- 5. Create Glenn's Individual Tenant (his personal "sovereign" space)
+INSERT INTO cc_tenants (
+    id,
+    name,
+    slug,
+    tenant_type,
+    status,
+    owner_user_id
+) VALUES (
+    'c0000000-0000-0000-0000-000000000001',
+    'Glenn Ballman',
+    'glenn-ballman',
+    'individual',
+    'active',
+    'a0000000-0000-0000-0000-000000000001'
+) ON CONFLICT (slug) DO NOTHING;
+
+INSERT INTO cc_tenant_users (
+    tenant_id,
+    user_id,
+    role,
+    status,
+    joined_at
+) VALUES (
+    'c0000000-0000-0000-0000-000000000001',
+    'a0000000-0000-0000-0000-000000000001',
+    'owner',
+    'active',
+    NOW()
+) ON CONFLICT (tenant_id, user_id) DO NOTHING;
+
+-- 6. Create a sample Business tenant (Glenn's Test Fleet)
+INSERT INTO cc_tenants (
+    id,
+    name,
+    slug,
+    tenant_type,
+    business_type,
+    city,
+    province,
+    status,
+    owner_user_id
+) VALUES (
+    'd0000000-0000-0000-0000-000000000001',
+    'Ballman Enterprises',
+    'ballman-enterprises',
+    'business',
+    'fleet_operator',
+    'Bamfield',
+    'British Columbia',
+    'active',
+    'a0000000-0000-0000-0000-000000000001'
+) ON CONFLICT (slug) DO NOTHING;
+
+INSERT INTO cc_tenant_users (
+    tenant_id,
+    user_id,
+    role,
+    title,
+    status,
+    joined_at
+) VALUES (
+    'd0000000-0000-0000-0000-000000000001',
+    'a0000000-0000-0000-0000-000000000001',
+    'owner',
+    'Owner',
+    'active',
+    NOW()
+) ON CONFLICT (tenant_id, user_id) DO NOTHING;
+
+-- 7. Create a sample Government tenant (District of Bamfield)
+INSERT INTO cc_tenants (
+    id,
+    name,
+    slug,
+    tenant_type,
+    government_level,
+    city,
+    province,
+    status,
+    created_by
+) VALUES (
+    'e0000000-0000-0000-0000-000000000001',
+    'Bamfield Community',
+    'bamfield',
+    'government',
+    'municipal',
+    'Bamfield',
+    'British Columbia',
+    'active',
+    'a0000000-0000-0000-0000-000000000001'
+) ON CONFLICT (slug) DO NOTHING;
+
+-- Glenn is also admin of Bamfield for testing
+INSERT INTO cc_tenant_users (
+    tenant_id,
+    user_id,
+    role,
+    title,
+    status,
+    joined_at
+) VALUES (
+    'e0000000-0000-0000-0000-000000000001',
+    'a0000000-0000-0000-0000-000000000001',
+    'admin',
+    'Community Admin',
+    'active',
+    NOW()
+) ON CONFLICT (tenant_id, user_id) DO NOTHING;
+
+-- 8. Add some qualifications for Glenn
+INSERT INTO cc_user_qualifications (user_id, qualification_type, name, category, issued_date) VALUES
+('a0000000-0000-0000-0000-000000000001', 'license', 'Class 5 Driver''s License', 'driving', '2020-01-15'),
+('a0000000-0000-0000-0000-000000000001', 'certification', 'First Aid & CPR', 'safety', '2024-06-01'),
+('a0000000-0000-0000-0000-000000000001', 'skill', 'Project Management', 'professional', '2010-01-01');
+
+-- 9. Create a test regular user
+INSERT INTO cc_users (
+    id,
+    email,
+    password_hash,
+    first_name,
+    last_name,
+    email_verified,
+    is_platform_admin,
+    status
+) VALUES (
+    'a0000000-0000-0000-0000-000000000002',
+    'testuser@example.com',
+    '$2b$10$rPQwKvGvQgCLqd7VLHhR4.YvXNmDy8XbTmGKT.2ZKx.oD1eLqXxXq',  -- password: admin123
+    'Test',
+    'User',
+    true,
+    false,
+    'active'
+) ON CONFLICT (email) DO NOTHING;
+
+-- Test user's individual tenant
+INSERT INTO cc_tenants (
+    id,
+    name,
+    slug,
+    tenant_type,
+    status,
+    owner_user_id
+) VALUES (
+    'c0000000-0000-0000-0000-000000000002',
+    'Test User',
+    'test-user',
+    'individual',
+    'active',
+    'a0000000-0000-0000-0000-000000000002'
+) ON CONFLICT (slug) DO NOTHING;
+
+INSERT INTO cc_tenant_users (
+    tenant_id,
+    user_id,
+    role,
+    status,
+    joined_at
+) VALUES (
+    'c0000000-0000-0000-0000-000000000002',
+    'a0000000-0000-0000-0000-000000000002',
+    'owner',
+    'active',
+    NOW()
+) ON CONFLICT (tenant_id, user_id) DO NOTHING;
+
+-- ============================================================================
+-- VERIFY SEED DATA
+-- ============================================================================
+
+SELECT '=== USERS ===' as section;
+SELECT id, email, first_name, last_name, is_platform_admin, status 
+FROM cc_users ORDER BY created_at;
+
+SELECT '=== TENANTS ===' as section;
+SELECT id, name, slug, tenant_type, status 
+FROM cc_tenants ORDER BY tenant_type, name;
+
+SELECT '=== USER TENANT MEMBERSHIPS ===' as section;
+SELECT 
+    u.email,
+    t.name as tenant_name,
+    t.tenant_type,
+    tu.role,
+    tu.title
+FROM cc_tenant_users tu
+JOIN cc_users u ON u.id = tu.user_id
+JOIN cc_tenants t ON t.id = tu.tenant_id
+ORDER BY u.email, t.tenant_type;
+
+SELECT '=== GLENN''S QUALIFICATIONS ===' as section;
+SELECT qualification_type, name, category 
+FROM cc_user_qualifications 
+WHERE user_id = 'a0000000-0000-0000-0000-000000000001';
+```
+
+## Expected Output:
+
+**Users:**
+- glenn@communitycanvas.ca (Platform Super Admin)
+- testuser@example.com (Regular user)
+
+**Tenants:**
+- Community Canvas (platform)
+- Glenn Ballman (individual - Glenn's sovereign space)
+- Ballman Enterprises (business - Glenn's fleet)
+- Bamfield Community (government)
+- Test User (individual)
+
+**Glenn's Memberships:**
+- Community Canvas → owner (Founder)
+- Glenn Ballman → owner
+- Ballman Enterprises → owner (Owner)
+- Bamfield Community → admin (Community Admin)
+
+Report the verification output.
