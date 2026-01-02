@@ -46,6 +46,7 @@ import MapSearch from "@/pages/staging/MapSearch";
 import NavigationHub from "@/pages/NavigationHub";
 import FleetPage from "@/pages/FleetPage";
 import MyProfile from "@/pages/MyProfile";
+import ServiceCatalog from "@/pages/services/ServiceCatalog";
 
 function AppShellRoutes() {
   return (
@@ -68,6 +69,10 @@ function AppShellRoutes() {
         <Route path="/admin/users" component={UsersManagement} />
         <Route path="/admin/tenants" component={TenantsManagement} />
         <Route path="/profile" component={MyProfile} />
+        
+        {/* Service catalog */}
+        <Route path="/services" component={ServiceCatalog} />
+        <Route path="/services/catalog" component={ServiceCatalog} />
         
         {/* Navigation hub */}
         <Route path="/hub" component={NavigationHub} />
