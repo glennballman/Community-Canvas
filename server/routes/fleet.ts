@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
-import { serviceQuery, withServiceTransaction, tenantQuery, publicQuery } from '../db/tenantDb';
-import { requireAuth, requireTenant } from '../middleware/guards';
+import { serviceQuery, withServiceTransaction, tenantQuery, publicQuery, withTenantTransaction } from '../db/tenantDb';
+import type { PoolClient } from 'pg';
+import { requireAuth, requireTenant, requireSelfOrAdmin } from '../middleware/guards';
 import { TenantRequest, getTenantContext } from '../middleware/tenantContext';
 import type { Pool } from 'pg';
 
@@ -569,13 +570,28 @@ export function createFleetRouter(_db?: Pool) {
   // VEHICLE PHOTOS
   // =====================================================
 
+  // Photo reads: tenant context sees all accessible vehicles' photos, anonymous sees shared vehicles' photos only
   router.get('/vehicles/:id/photos', async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
-      const result = await serviceQuery(
-        'SELECT * FROM vehicle_photos WHERE vehicle_id = $1 ORDER BY photo_order, created_at',
-        [id]
-      );
+      const ctx = getTenantContext(req);
+      const hasTenantContext = !!ctx.tenant_id;
+      
+      // Join to vehicle_profiles to respect tenant visibility (RLS enforces access)
+      const query = hasTenantContext
+        ? `SELECT vp.* FROM vehicle_photos vp 
+           JOIN vehicle_profiles v ON vp.vehicle_id = v.id 
+           WHERE vp.vehicle_id = $1 
+           ORDER BY vp.photo_order, vp.created_at`
+        : `SELECT vp.* FROM vehicle_photos vp 
+           JOIN vehicle_profiles v ON vp.vehicle_id = v.id 
+           WHERE vp.vehicle_id = $1 AND v.tenant_id IS NULL
+           ORDER BY vp.photo_order, vp.created_at`;
+      
+      const result = hasTenantContext
+        ? await tenantQuery(req, query, [id])
+        : await publicQuery(query, [id]);
+      
       res.json({ photos: result.rows });
     } catch (error) {
       console.error('Error fetching photos:', error);
@@ -583,40 +599,76 @@ export function createFleetRouter(_db?: Pool) {
     }
   });
 
-  router.post('/vehicles/:id/photos', async (req: Request, res: Response) => {
+  // SECURITY: Require auth + tenant for photo mutations (ownership via vehicle_profiles)
+  router.post('/vehicles/:id/photos', requireAuth, requireTenant, async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
       const { photo_type, photo_url, thumbnail_url, caption, photo_order } = req.body;
       
-      const result = await serviceQuery(`
-        INSERT INTO vehicle_photos (vehicle_id, photo_type, photo_url, thumbnail_url, caption, photo_order)
-        VALUES ($1, $2, $3, $4, $5, $6)
-        RETURNING *
-      `, [id, photo_type, photo_url, thumbnail_url || null, caption || null, photo_order || 0]);
-      
-      if (photo_type === 'primary') {
-        await serviceQuery(
-          'UPDATE vehicle_profiles SET primary_photo_url = $1 WHERE id = $2',
-          [photo_url, id]
+      // Use tenantTransaction with ownership check via vehicle_profiles
+      const result = await withTenantTransaction(req, async (client: PoolClient) => {
+        // Verify caller owns or has access to this vehicle (RLS enforces tenant isolation)
+        const vehicleCheck = await client.query(
+          'SELECT id FROM vehicle_profiles WHERE id = $1 FOR UPDATE',
+          [id]
         );
-      }
+        if (vehicleCheck.rows.length === 0) {
+          throw new Error('VEHICLE_NOT_FOUND');
+        }
+        
+        const insertResult = await client.query(`
+          INSERT INTO vehicle_photos (vehicle_id, photo_type, photo_url, thumbnail_url, caption, photo_order)
+          VALUES ($1, $2, $3, $4, $5, $6)
+          RETURNING *
+        `, [id, photo_type, photo_url, thumbnail_url || null, caption || null, photo_order || 0]);
+        
+        if (photo_type === 'primary') {
+          await client.query(
+            'UPDATE vehicle_profiles SET primary_photo_url = $1 WHERE id = $2',
+            [photo_url, id]
+          );
+        }
+        
+        return insertResult.rows[0];
+      });
       
-      res.json(result.rows[0]);
-    } catch (error) {
+      res.json(result);
+    } catch (error: any) {
+      if (error.message === 'VEHICLE_NOT_FOUND') {
+        return res.status(404).json({ error: 'Vehicle not found or access denied' });
+      }
       console.error('Error adding photo:', error);
       res.status(500).json({ error: 'Failed to add photo' });
     }
   });
 
-  router.delete('/vehicles/:vehicleId/photos/:photoId', async (req: Request, res: Response) => {
+  // SECURITY: Require auth + tenant for photo deletion (ownership via vehicle_profiles)
+  router.delete('/vehicles/:vehicleId/photos/:photoId', requireAuth, requireTenant, async (req: Request, res: Response) => {
     try {
       const { vehicleId, photoId } = req.params;
-      await serviceQuery(
-        'DELETE FROM vehicle_photos WHERE id = $1 AND vehicle_id = $2',
-        [photoId, vehicleId]
-      );
+      
+      // Use tenantTransaction with ownership check via vehicle_profiles
+      await withTenantTransaction(req, async (client: PoolClient) => {
+        // Verify caller owns or has access to this vehicle (RLS enforces tenant isolation)
+        const vehicleCheck = await client.query(
+          'SELECT id FROM vehicle_profiles WHERE id = $1 FOR UPDATE',
+          [vehicleId]
+        );
+        if (vehicleCheck.rows.length === 0) {
+          throw new Error('VEHICLE_NOT_FOUND');
+        }
+        
+        await client.query(
+          'DELETE FROM vehicle_photos WHERE id = $1 AND vehicle_id = $2',
+          [photoId, vehicleId]
+        );
+      });
+      
       res.json({ success: true });
-    } catch (error) {
+    } catch (error: any) {
+      if (error.message === 'VEHICLE_NOT_FOUND') {
+        return res.status(404).json({ error: 'Vehicle not found or access denied' });
+      }
       console.error('Error deleting photo:', error);
       res.status(500).json({ error: 'Failed to delete photo' });
     }
@@ -1092,7 +1144,8 @@ export function createFleetRouter(_db?: Pool) {
     }
   });
 
-  router.patch('/driver-qualifications/:driverId', async (req: Request, res: Response) => {
+  // SECURITY: Require auth + self-or-admin for driver qualification updates
+  router.patch('/driver-qualifications/:driverId', requireAuth, requireSelfOrAdmin('driverId'), async (req: Request, res: Response) => {
     try {
       const { driverId } = req.params;
       const updates = req.body;
@@ -1134,7 +1187,11 @@ export function createFleetRouter(_db?: Pool) {
         RETURNING *
       `;
 
-      const result = await serviceQuery(query, values);
+      // Use tenantTransaction for proper context (even though participant_profiles 
+      // doesn't have tenant_id, the guard already enforced self-or-admin)
+      const result = await withTenantTransaction(req, async (client: PoolClient) => {
+        return client.query(query, values);
+      });
 
       if (result.rows.length === 0) {
         return res.status(404).json({ error: 'Driver not found' });
