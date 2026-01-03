@@ -1,0 +1,569 @@
+PASTE THIS INTO REPLIT
+Create file: server/migrations/023_portal_private_label.sql
+
+Then paste this complete DDL:
+
+-- ============================================================================
+-- MIGRATION 023 — PORTAL / PRIVATE-LABEL SYSTEM
+-- Purpose:
+--   Enable multiple branded, stand-alone "sites" (portals) over the same
+--   canonical Community Canvas backend and data model.
+--
+-- Core ideas:
+--   - Portal = Brand + Audience + Feature Flags + Copy + Theme + Domains
+--   - Domain → portal_id routing (multi-site, single platform)
+--   - Content localization and per-portal vocabulary ("gigs" vs "contracts")
+--   - Optional portal scoping for publishing Opportunities and Assets
+--   - Memberships to support portal-specific onboarding & roles
+--
+-- Assumptions:
+--   - Existing tables: cc_tenants, cc_individuals, opportunities, assets
+--   - Uses UUID PKs and TIMESTAMPTZ timestamps
+--   - gen_random_uuid() available (pgcrypto)
+-- ============================================================================
+
+BEGIN;
+
+-- ============================================================================
+-- 0) ENUM TYPES
+-- ============================================================================
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'portal_status') THEN
+    CREATE TYPE portal_status AS ENUM (
+      'draft',
+      'active',
+      'paused',
+      'retired'
+    );
+  END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'portal_domain_status') THEN
+    CREATE TYPE portal_domain_status AS ENUM (
+      'pending',
+      'verified',
+      'active',
+      'disabled'
+    );
+  END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'portal_audience_type') THEN
+    CREATE TYPE portal_audience_type AS ENUM (
+      'host',
+      'traveler',
+      'worker',
+      'contractor',
+      'buyer',
+      'coordinator',
+      'admin'
+    );
+  END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'publish_visibility') THEN
+    CREATE TYPE publish_visibility AS ENUM (
+      'public',
+      'tenant_only',
+      'portal_only',
+      'invite_only'
+    );
+  END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'portal_membership_status') THEN
+    CREATE TYPE portal_membership_status AS ENUM (
+      'invited',
+      'active',
+      'suspended',
+      'left'
+    );
+  END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'casl_consent_status') THEN
+    CREATE TYPE casl_consent_status AS ENUM (
+      'unknown',
+      'implied',
+      'express',
+      'withdrawn'
+    );
+  END IF;
+END $$;
+
+-- ============================================================================
+-- 1) PORTALS (Core)
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS portals (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  owning_tenant_id UUID REFERENCES cc_tenants(id) ON DELETE SET NULL,
+  name TEXT NOT NULL,
+  slug TEXT NOT NULL UNIQUE,
+  status portal_status NOT NULL DEFAULT 'draft',
+  primary_audience portal_audience_type NOT NULL DEFAULT 'traveler',
+  tagline TEXT,
+  description TEXT,
+  default_locale TEXT NOT NULL DEFAULT 'en-CA',
+  default_currency TEXT NOT NULL DEFAULT 'CAD',
+  supported_locales TEXT[] NOT NULL DEFAULT ARRAY['en-CA'],
+  default_route TEXT NOT NULL DEFAULT '/',
+  onboarding_flow_key TEXT,
+  terms_url TEXT,
+  privacy_url TEXT,
+  settings JSONB NOT NULL DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_portals_owning_tenant ON portals(owning_tenant_id);
+CREATE INDEX IF NOT EXISTS idx_portals_status ON portals(status);
+CREATE INDEX IF NOT EXISTS idx_portals_primary_audience ON portals(primary_audience);
+
+CREATE OR REPLACE FUNCTION portals_set_updated_at()
+RETURNS TRIGGER LANGUAGE plpgsql AS $$
+BEGIN
+  NEW.updated_at = now();
+  RETURN NEW;
+END $$;
+
+DROP TRIGGER IF EXISTS trg_portals_updated_at ON portals;
+CREATE TRIGGER trg_portals_updated_at
+BEFORE UPDATE ON portals
+FOR EACH ROW EXECUTE FUNCTION portals_set_updated_at();
+
+-- ============================================================================
+-- 2) PORTAL DOMAINS
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS portal_domains (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  portal_id UUID NOT NULL REFERENCES portals(id) ON DELETE CASCADE,
+  domain TEXT NOT NULL,
+  is_primary BOOLEAN NOT NULL DEFAULT false,
+  status portal_domain_status NOT NULL DEFAULT 'pending',
+  verification_method TEXT,
+  verification_token TEXT,
+  verified_at TIMESTAMPTZ,
+  ssl_status TEXT DEFAULT 'unknown',
+  ssl_issued_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (domain)
+);
+
+CREATE INDEX IF NOT EXISTS idx_portal_domains_portal ON portal_domains(portal_id);
+CREATE INDEX IF NOT EXISTS idx_portal_domains_status ON portal_domains(status);
+CREATE INDEX IF NOT EXISTS idx_portal_domains_primary ON portal_domains(portal_id, is_primary);
+
+CREATE OR REPLACE FUNCTION portal_domains_set_updated_at()
+RETURNS TRIGGER LANGUAGE plpgsql AS $$
+BEGIN
+  NEW.updated_at = now();
+  RETURN NEW;
+END $$;
+
+DROP TRIGGER IF EXISTS trg_portal_domains_updated_at ON portal_domains;
+CREATE TRIGGER trg_portal_domains_updated_at
+BEFORE UPDATE ON portal_domains
+FOR EACH ROW EXECUTE FUNCTION portal_domains_set_updated_at();
+
+CREATE OR REPLACE FUNCTION portal_domains_enforce_single_primary()
+RETURNS TRIGGER LANGUAGE plpgsql AS $$
+BEGIN
+  IF NEW.is_primary THEN
+    UPDATE portal_domains
+    SET is_primary = false
+    WHERE portal_id = NEW.portal_id
+      AND id <> NEW.id
+      AND is_primary = true;
+  END IF;
+  RETURN NEW;
+END $$;
+
+DROP TRIGGER IF EXISTS trg_portal_domains_single_primary ON portal_domains;
+CREATE TRIGGER trg_portal_domains_single_primary
+AFTER INSERT OR UPDATE OF is_primary ON portal_domains
+FOR EACH ROW EXECUTE FUNCTION portal_domains_enforce_single_primary();
+
+-- ============================================================================
+-- 3) PORTAL THEME (Design Tokens)
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS portal_theme (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  portal_id UUID NOT NULL UNIQUE REFERENCES portals(id) ON DELETE CASCADE,
+  tokens JSONB NOT NULL DEFAULT '{}'::jsonb,
+  theme_version INTEGER NOT NULL DEFAULT 1,
+  is_live BOOLEAN NOT NULL DEFAULT true,
+  updated_by UUID,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_portal_theme_portal ON portal_theme(portal_id);
+
+-- ============================================================================
+-- 4) PORTAL COPY (Localized vocabulary)
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS portal_copy (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  portal_id UUID NOT NULL REFERENCES portals(id) ON DELETE CASCADE,
+  namespace TEXT NOT NULL DEFAULT 'ui',
+  key TEXT NOT NULL,
+  locale TEXT NOT NULL,
+  value TEXT NOT NULL,
+  metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+  updated_by UUID,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (portal_id, namespace, key, locale)
+);
+
+CREATE INDEX IF NOT EXISTS idx_portal_copy_portal ON portal_copy(portal_id);
+CREATE INDEX IF NOT EXISTS idx_portal_copy_lookup ON portal_copy(portal_id, namespace, key, locale);
+
+-- ============================================================================
+-- 5) PORTAL FEATURE FLAGS
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS portal_feature_flags (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  portal_id UUID NOT NULL REFERENCES portals(id) ON DELETE CASCADE,
+  flag_key TEXT NOT NULL,
+  is_enabled BOOLEAN NOT NULL DEFAULT false,
+  config JSONB NOT NULL DEFAULT '{}'::jsonb,
+  updated_by UUID,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (portal_id, flag_key)
+);
+
+CREATE INDEX IF NOT EXISTS idx_portal_feature_flags_portal ON portal_feature_flags(portal_id);
+CREATE INDEX IF NOT EXISTS idx_portal_feature_flags_key ON portal_feature_flags(flag_key);
+
+-- ============================================================================
+-- 6) PORTAL AUDIENCE PROFILES
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS portal_audience_profiles (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  portal_id UUID NOT NULL REFERENCES portals(id) ON DELETE CASCADE,
+  audience portal_audience_type NOT NULL,
+  default_route TEXT NOT NULL DEFAULT '/',
+  navigation JSONB NOT NULL DEFAULT '{}'::jsonb,
+  onboarding_flow_key TEXT,
+  theme_overrides JSONB NOT NULL DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (portal_id, audience)
+);
+
+CREATE INDEX IF NOT EXISTS idx_portal_audience_profiles_portal ON portal_audience_profiles(portal_id);
+
+CREATE OR REPLACE FUNCTION portal_audience_profiles_set_updated_at()
+RETURNS TRIGGER LANGUAGE plpgsql AS $$
+BEGIN
+  NEW.updated_at = now();
+  RETURN NEW;
+END $$;
+
+DROP TRIGGER IF EXISTS trg_portal_audience_profiles_updated_at ON portal_audience_profiles;
+CREATE TRIGGER trg_portal_audience_profiles_updated_at
+BEFORE UPDATE ON portal_audience_profiles
+FOR EACH ROW EXECUTE FUNCTION portal_audience_profiles_set_updated_at();
+
+-- ============================================================================
+-- 7) PORTAL MEMBERSHIPS
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS portal_memberships (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  portal_id UUID NOT NULL REFERENCES portals(id) ON DELETE CASCADE,
+  individual_id UUID NOT NULL REFERENCES cc_individuals(id) ON DELETE CASCADE,
+  status portal_membership_status NOT NULL DEFAULT 'invited',
+  roles TEXT[] NOT NULL DEFAULT ARRAY[]::text[],
+  preferred_locale TEXT,
+  onboarding_state JSONB NOT NULL DEFAULT '{}'::jsonb,
+  casl_consent casl_consent_status NOT NULL DEFAULT 'unknown',
+  casl_consent_at TIMESTAMPTZ,
+  casl_withdrawn_at TIMESTAMPTZ,
+  acquisition JSONB NOT NULL DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (portal_id, individual_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_portal_memberships_portal ON portal_memberships(portal_id);
+CREATE INDEX IF NOT EXISTS idx_portal_memberships_individual ON portal_memberships(individual_id);
+CREATE INDEX IF NOT EXISTS idx_portal_memberships_status ON portal_memberships(status);
+
+CREATE OR REPLACE FUNCTION portal_memberships_set_updated_at()
+RETURNS TRIGGER LANGUAGE plpgsql AS $$
+BEGIN
+  NEW.updated_at = now();
+  RETURN NEW;
+END $$;
+
+DROP TRIGGER IF EXISTS trg_portal_memberships_updated_at ON portal_memberships;
+CREATE TRIGGER trg_portal_memberships_updated_at
+BEFORE UPDATE ON portal_memberships
+FOR EACH ROW EXECUTE FUNCTION portal_memberships_set_updated_at();
+
+-- ============================================================================
+-- 8) PORTAL PAGES (Lightweight CMS)
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS portal_pages (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  portal_id UUID NOT NULL REFERENCES portals(id) ON DELETE CASCADE,
+  slug TEXT NOT NULL,
+  locale TEXT NOT NULL DEFAULT 'en-CA',
+  title TEXT NOT NULL,
+  description TEXT,
+  content JSONB NOT NULL DEFAULT '{}'::jsonb,
+  is_published BOOLEAN NOT NULL DEFAULT false,
+  published_at TIMESTAMPTZ,
+  created_by UUID,
+  updated_by UUID,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (portal_id, slug, locale)
+);
+
+CREATE INDEX IF NOT EXISTS idx_portal_pages_portal ON portal_pages(portal_id);
+CREATE INDEX IF NOT EXISTS idx_portal_pages_published ON portal_pages(portal_id, is_published);
+
+CREATE OR REPLACE FUNCTION portal_pages_set_updated_at()
+RETURNS TRIGGER LANGUAGE plpgsql AS $$
+BEGIN
+  NEW.updated_at = now();
+  RETURN NEW;
+END $$;
+
+DROP TRIGGER IF EXISTS trg_portal_pages_updated_at ON portal_pages;
+CREATE TRIGGER trg_portal_pages_updated_at
+BEFORE UPDATE ON portal_pages
+FOR EACH ROW EXECUTE FUNCTION portal_pages_set_updated_at();
+
+-- ============================================================================
+-- 9) ADD PORTAL SCOPING TO OPPORTUNITIES AND ASSETS
+-- ============================================================================
+
+ALTER TABLE opportunities
+  ADD COLUMN IF NOT EXISTS portal_id UUID REFERENCES portals(id) ON DELETE SET NULL,
+  ADD COLUMN IF NOT EXISTS visibility_scope publish_visibility NOT NULL DEFAULT 'public',
+  ADD COLUMN IF NOT EXISTS invite_token TEXT;
+
+CREATE INDEX IF NOT EXISTS idx_opportunities_portal ON opportunities(portal_id);
+CREATE INDEX IF NOT EXISTS idx_opportunities_visibility ON opportunities(visibility_scope);
+
+ALTER TABLE assets
+  ADD COLUMN IF NOT EXISTS portal_id UUID REFERENCES portals(id) ON DELETE SET NULL,
+  ADD COLUMN IF NOT EXISTS visibility_scope publish_visibility NOT NULL DEFAULT 'public';
+
+CREATE INDEX IF NOT EXISTS idx_assets_portal ON assets(portal_id);
+CREATE INDEX IF NOT EXISTS idx_assets_visibility ON assets(visibility_scope);
+
+ALTER TABLE asset_terms
+  ADD COLUMN IF NOT EXISTS portal_id UUID REFERENCES portals(id) ON DELETE SET NULL;
+
+CREATE INDEX IF NOT EXISTS idx_asset_terms_portal ON asset_terms(portal_id);
+
+ALTER TABLE asset_availability
+  ADD COLUMN IF NOT EXISTS portal_id UUID REFERENCES portals(id) ON DELETE SET NULL;
+
+CREATE INDEX IF NOT EXISTS idx_asset_availability_portal ON asset_availability(portal_id);
+
+-- ============================================================================
+-- 10) CONSTRAINTS
+-- ============================================================================
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'chk_opportunities_portal_only_requires_portal'
+  ) THEN
+    ALTER TABLE opportunities
+      ADD CONSTRAINT chk_opportunities_portal_only_requires_portal
+      CHECK (
+        (visibility_scope <> 'portal_only') OR (portal_id IS NOT NULL)
+      );
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'chk_opportunities_invite_only_requires_token'
+  ) THEN
+    ALTER TABLE opportunities
+      ADD CONSTRAINT chk_opportunities_invite_only_requires_token
+      CHECK (
+        (visibility_scope <> 'invite_only') OR (invite_token IS NOT NULL AND length(invite_token) >= 10)
+      );
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'chk_assets_portal_only_requires_portal'
+  ) THEN
+    ALTER TABLE assets
+      ADD CONSTRAINT chk_assets_portal_only_requires_portal
+      CHECK (
+        (visibility_scope <> 'portal_only') OR (portal_id IS NOT NULL)
+      );
+  END IF;
+END $$;
+
+-- ============================================================================
+-- 11) PORTAL DOMAIN RESOLUTION VIEW
+-- ============================================================================
+
+CREATE OR REPLACE VIEW v_portal_domain_resolution AS
+SELECT
+  d.domain,
+  d.status AS domain_status,
+  d.is_primary,
+  p.id AS portal_id,
+  p.slug AS portal_slug,
+  p.name AS portal_name,
+  p.status AS portal_status,
+  p.primary_audience,
+  p.default_locale,
+  p.default_currency
+FROM portal_domains d
+JOIN portals p ON p.id = d.portal_id;
+
+COMMIT;
+
+-- ============================================================================
+-- END MIGRATION 023
+-- ============================================================================
+After the migration completes, run verification:
+sql-- Count Portal tables
+SELECT 'portals' as tbl, COUNT(*) FROM portals
+UNION ALL SELECT 'portal_domains', COUNT(*) FROM portal_domains
+UNION ALL SELECT 'portal_theme', COUNT(*) FROM portal_theme
+UNION ALL SELECT 'portal_copy', COUNT(*) FROM portal_copy
+UNION ALL SELECT 'portal_feature_flags', COUNT(*) FROM portal_feature_flags
+UNION ALL SELECT 'portal_audience_profiles', COUNT(*) FROM portal_audience_profiles
+UNION ALL SELECT 'portal_memberships', COUNT(*) FROM portal_memberships
+UNION ALL SELECT 'portal_pages', COUNT(*) FROM portal_pages;
+
+-- Verify new columns on opportunities/assets
+SELECT column_name FROM information_schema.columns 
+WHERE table_name = 'opportunities' 
+AND column_name IN ('portal_id', 'visibility_scope', 'invite_token');
+
+SELECT column_name FROM information_schema.columns 
+WHERE table_name = 'assets' 
+AND column_name IN ('portal_id', 'visibility_scope');
+
+-- Verify portal enums
+SELECT typname FROM pg_type 
+WHERE typname IN ('portal_status', 'portal_domain_status', 'portal_audience_type', 
+                  'publish_visibility', 'portal_membership_status', 'casl_consent_status');
+
+-- Test domain resolution view
+SELECT * FROM v_portal_domain_resolution;
+Then seed example portals:
+sql-- Create OffpeakAirBNB portal (for hosts)
+INSERT INTO portals (name, slug, status, primary_audience, tagline, default_locale, supported_locales)
+VALUES (
+  'OffpeakAirBNB', 
+  'offpeakairbnb', 
+  'active', 
+  'host', 
+  'Fill your off-season with working crews',
+  'en-CA', 
+  ARRAY['en-CA', 'fr-CA']
+);
+
+-- Create AdrenalineCanada portal (for international workers)
+INSERT INTO portals (name, slug, status, primary_audience, tagline, default_locale, supported_locales)
+VALUES (
+  'AdrenalineCanada', 
+  'adrenalinecanada', 
+  'active', 
+  'worker', 
+  'Work hard. Play harder. See Canada.',
+  'en-CA', 
+  ARRAY['en-CA', 'pl-PL', 'cs-CZ', 'de-DE']
+);
+
+-- Add domains
+INSERT INTO portal_domains (portal_id, domain, is_primary, status)
+SELECT id, 'offpeakairbnb.ca', true, 'pending' 
+FROM portals WHERE slug = 'offpeakairbnb';
+
+INSERT INTO portal_domains (portal_id, domain, is_primary, status)
+SELECT id, 'adrenalinecanada.com', true, 'pending' 
+FROM portals WHERE slug = 'adrenalinecanada';
+
+-- Add vocabulary for AdrenalineCanada ("Gigs" not "Opportunities")
+INSERT INTO portal_copy (portal_id, namespace, key, locale, value)
+SELECT id, 'ui', 'opportunity.label', 'en-CA', 'Gig'
+FROM portals WHERE slug = 'adrenalinecanada';
+
+INSERT INTO portal_copy (portal_id, namespace, key, locale, value)
+SELECT id, 'ui', 'opportunity.label.plural', 'en-CA', 'Gigs'
+FROM portals WHERE slug = 'adrenalinecanada';
+
+-- Polish translations
+INSERT INTO portal_copy (portal_id, namespace, key, locale, value)
+SELECT id, 'ui', 'opportunity.label', 'pl-PL', 'Fucha'
+FROM portals WHERE slug = 'adrenalinecanada';
+
+INSERT INTO portal_copy (portal_id, namespace, key, locale, value)
+SELECT id, 'marketing', 'hero.headline', 'pl-PL', 'Pracuj ciężko. Baw się jeszcze ciężej. Zobacz Kanadę.'
+FROM portals WHERE slug = 'adrenalinecanada';
+
+-- Feature flags for OffpeakAirBNB
+INSERT INTO portal_feature_flags (portal_id, flag_key, is_enabled)
+SELECT id, 'accommodation_marketplace', true FROM portals WHERE slug = 'offpeakairbnb';
+
+INSERT INTO portal_feature_flags (portal_id, flag_key, is_enabled)
+SELECT id, 'crew_calendar', true FROM portals WHERE slug = 'offpeakairbnb';
+
+-- Feature flags for AdrenalineCanada
+INSERT INTO portal_feature_flags (portal_id, flag_key, is_enabled)
+SELECT id, 'gig_board', true FROM portals WHERE slug = 'adrenalinecanada';
+
+INSERT INTO portal_feature_flags (portal_id, flag_key, is_enabled)
+SELECT id, 'bidding_enabled', true FROM portals WHERE slug = 'adrenalinecanada';
+
+INSERT INTO portal_feature_flags (portal_id, flag_key, is_enabled)
+SELECT id, 'worker_verification', true FROM portals WHERE slug = 'adrenalinecanada';
+
+-- Verify
+SELECT p.name, p.slug, p.primary_audience, pd.domain
+FROM portals p
+LEFT JOIN portal_domains pd ON pd.portal_id = p.id;
+
+SELECT p.name, pc.key, pc.locale, pc.value
+FROM portals p
+JOIN portal_copy pc ON pc.portal_id = p.id
+ORDER BY p.name, pc.locale;
+OUTPUT
+Tell me:
+
+Did Migration 023 complete without errors?
+How many portal tables were created?
+Were the example portals seeded successfully?
+Can you query v_portal_domain_resolution?
+
+
+---Orchestrated portal system foundation atop construction OS architecture.The user has confirmed Migration 022 is complete and Replit is ready for Migration 023. I've provided the complete prompt with the Portal System DDL from ChatGPT's architecture, along with verification queries and seed data for the example portals (OffpeakAirBNB for hosts, AdrenalineCanada for international workers).
+This sets up:
+
+8 new tables for the portal system
+6 new enums
+Portal scoping added to opportunities and assets
+Domain → portal routing view
+Example portals with localized vocabulary and feature flags
+
+Once this is complete, they'll have the full Construction OS + Portal system foundation ready for UI development.This gives Replit everything needed to run Migration 023. Once complete, you'll have:
+ComponentTablesMigration 022~50 tables (Construction OS)Migration 0238 tables (Portal System)Total New~58 tables
+And two example portals ready:
+
+OffpeakAirBNB (host-focused, en-CA/fr-CA)
+AdrenalineCanada (worker-focused, en-CA/pl-PL/cs-CZ/de-DE with "Gig" vocabulary)
+Claude is AI and can make mistakes. Please double-check responses. Opus 4.5
