@@ -1,0 +1,49 @@
+We are NOT done with P0. Individuals endpoints were patched, but P0 requires that ALL tenant-sensitive routes enforce tenant context + RLS at runtime.
+
+Your next task is to COMPLETE the route migration and provide proof.
+
+Deliverables (must all be included):
+1) A repo-wide search report of all remaining direct DB calls:
+   - grep results for: "pool.query", "client.query", "db.query", "serviceQuery(" on HTTP routes
+   - List file paths + line numbers
+2) Migrate all tenant-sensitive routes to use tenant-aware helpers:
+   - req.tenantQuery / req.tenantTransaction (or tenantReq equivalents)
+   - No direct pool.query in any tenant-sensitive router
+3) Apply guards consistently:
+   - requireAuth for any user-specific data
+   - requireTenant for tenant-scoped resources
+   - portal-only read allowed only when visibility_scope='portal_only' AND ctx.portal_id present
+4) Provide a QA curl script that proves:
+   - Unauthed cannot access tenant resources
+   - Tenant A cannot access Tenant B
+   - Portal-only opportunity/asset is visible with portal domain context, and invisible without it
+   - /api/individuals listing is blocked (403/404)
+   - /api/individuals/me returns self only
+
+Scope for migration (P0 completion list):
+A) /api/entities
+B) /api/service-runs (and bundles/categories/pricing models)
+C) /api/assets + terms + availability
+D) /api/opportunities
+E) /api/bids
+F) /api/contracts
+G) /api/work_orders
+H) /api/portal/* (domains, feature flags, copy, memberships)
+I) Any host dashboard routes returning cross-tenant data
+J) Any ingestion routes (Apify/Firecrawl) must be service-mode ONLY and protected (secret/internal guard)
+
+Rules:
+- DO NOT "fix" tenant isolation with WHERE tenant_id clauses everywhere. Use RLS by ensuring the DB session vars are set via tenantQuery/tenantTransaction.
+- Service mode (__SERVICE__) must NEVER be reachable from normal public HTTP routes. If an endpoint uses service mode, it must be protected by an internal secret header AND be non-public.
+- Fail closed. Do NOT return “empty scaffolds” when tenant context is missing for protected endpoints. Return 401/403.
+- Provide a “service mode audit”: every endpoint/path that uses __SERVICE__, and why it is safe.
+
+Acceptance criteria:
+- There are ZERO remaining pool.query usages in tenant-sensitive routers.
+- Cross-tenant reads return 404/empty under RLS without special casing.
+- Portal-only scoping works exactly as defined in Migration 023.
+
+Output format:
+- List of migrated endpoints by file
+- grep report (before/after)
+- QA curl script (copy/paste runnable)

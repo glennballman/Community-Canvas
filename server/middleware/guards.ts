@@ -1,6 +1,25 @@
 import { Request, Response, NextFunction, RequestHandler } from 'express';
 import { TenantRequest } from './tenantContext';
 
+// Internal service key for background jobs and ingestion routes
+// These endpoints must NEVER be reachable from public HTTP without this key
+const INTERNAL_SERVICE_KEY = process.env.INTERNAL_SERVICE_KEY || 'dev-internal-key-change-in-prod';
+
+// Guard for internal/service-mode endpoints that should never be exposed publicly
+// Requires X-Internal-Service-Key header to match the configured key
+export const requireServiceKey: RequestHandler = (req: Request, res: Response, next: NextFunction) => {
+  const providedKey = req.headers['x-internal-service-key'];
+  
+  if (!providedKey || providedKey !== INTERNAL_SERVICE_KEY) {
+    return res.status(403).json({ 
+      success: false, 
+      error: 'Internal service access required',
+      code: 'SERVICE_ACCESS_REQUIRED'
+    });
+  }
+  next();
+};
+
 // Cast to RequestHandler for Express Router compatibility
 export const requireAuth: RequestHandler = (req: Request, res: Response, next: NextFunction) => {
   const tenantReq = req as TenantRequest;
