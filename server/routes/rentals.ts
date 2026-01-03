@@ -542,4 +542,233 @@ router.get('/my-bookings', authenticateToken, async (req: AuthRequest, res: Resp
   }
 });
 
+router.get('/bookings', authenticateToken, async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user?.id;
+    
+    if (!userId) {
+      return res.status(401).json({ success: false, error: 'Not authenticated' });
+    }
+    
+    const indResult = await pool.query(
+      'SELECT id FROM cc_individuals WHERE user_id = $1',
+      [userId]
+    );
+    
+    if (indResult.rows.length === 0) {
+      return res.json({ success: true, bookings: [] });
+    }
+    
+    const individualId = indResult.rows[0].id;
+    
+    const result = await pool.query(`
+      SELECT 
+        b.id,
+        b.status,
+        b.starts_at,
+        b.ends_at,
+        b.actual_checkout_at,
+        b.actual_checkin_at,
+        b.pricing_model,
+        b.rate_applied,
+        b.duration_hours,
+        b.price_subtotal as subtotal,
+        b.price_tax as tax,
+        b.price_deposit as damage_deposit_held,
+        b.price_total as total,
+        b.payment_status,
+        b.condition_at_checkout,
+        b.condition_at_return,
+        b.damage_reported,
+        b.damage_notes,
+        b.notes,
+        b.created_at,
+        
+        ri.id as item_id,
+        ri.name as item_name,
+        ri.slug as item_slug,
+        ri.description as item_description,
+        ri.location_name,
+        ri.owner_name,
+        ri.photos as item_photos,
+        
+        rc.name as category_name,
+        rc.slug as category_slug,
+        rc.icon as category_icon,
+        
+        c.name as community_name
+        
+      FROM cc_rental_bookings b
+      JOIN cc_rental_items ri ON ri.id = b.rental_item_id
+      JOIN cc_rental_categories rc ON rc.id = ri.category_id
+      LEFT JOIN sr_communities c ON c.id = ri.home_community_id
+      WHERE b.renter_individual_id = $1
+      ORDER BY 
+        CASE b.status 
+          WHEN 'active' THEN 1
+          WHEN 'checked_out' THEN 2
+          WHEN 'confirmed' THEN 3
+          WHEN 'pending' THEN 4
+          ELSE 5
+        END,
+        b.starts_at DESC
+    `, [individualId]);
+    
+    res.json({ 
+      success: true, 
+      bookings: result.rows.map(row => ({
+        id: row.id,
+        status: row.status,
+        startsAt: row.starts_at,
+        endsAt: row.ends_at,
+        actualCheckoutAt: row.actual_checkout_at,
+        actualCheckinAt: row.actual_checkin_at,
+        pricingModel: row.pricing_model,
+        rateApplied: row.rate_applied ? parseFloat(row.rate_applied) : null,
+        durationHours: row.duration_hours ? parseFloat(row.duration_hours) : null,
+        subtotal: row.subtotal ? parseFloat(row.subtotal) : 0,
+        tax: row.tax ? parseFloat(row.tax) : 0,
+        damageDepositHeld: row.damage_deposit_held ? parseFloat(row.damage_deposit_held) : 0,
+        total: row.total ? parseFloat(row.total) : 0,
+        paymentStatus: row.payment_status,
+        conditionAtCheckout: row.condition_at_checkout,
+        conditionAtReturn: row.condition_at_return,
+        damageReported: row.damage_reported,
+        damageNotes: row.damage_notes,
+        notes: row.notes,
+        createdAt: row.created_at,
+        item: {
+          id: row.item_id,
+          name: row.item_name,
+          slug: row.item_slug,
+          description: row.item_description || '',
+          locationName: row.location_name || '',
+          ownerName: row.owner_name || 'Owner',
+          photos: row.item_photos || [],
+          category: row.category_name,
+          categorySlug: row.category_slug,
+          categoryIcon: row.category_icon,
+          communityName: row.community_name
+        }
+      }))
+    });
+  } catch (error) {
+    console.error('Error fetching bookings:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch bookings' });
+  }
+});
+
+router.post('/bookings/:id/cancel', authenticateToken, async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user?.id;
+    const bookingIdParsed = uuidSchema.safeParse(req.params.id);
+    
+    if (!bookingIdParsed.success) {
+      return res.status(400).json({ success: false, error: 'Invalid booking ID' });
+    }
+    
+    if (!userId) {
+      return res.status(401).json({ success: false, error: 'Not authenticated' });
+    }
+    
+    const bookingId = bookingIdParsed.data;
+    
+    const indResult = await pool.query(
+      'SELECT id FROM cc_individuals WHERE user_id = $1',
+      [userId]
+    );
+    
+    if (indResult.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'User not found' });
+    }
+    
+    const individualId = indResult.rows[0].id;
+    
+    const bookingResult = await pool.query(`
+      SELECT id, status, starts_at 
+      FROM cc_rental_bookings 
+      WHERE id = $1 AND renter_individual_id = $2
+    `, [bookingId, individualId]);
+    
+    if (bookingResult.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Booking not found' });
+    }
+    
+    const booking = bookingResult.rows[0];
+    
+    if (!['pending', 'confirmed'].includes(booking.status)) {
+      return res.status(400).json({ 
+        success: false, 
+        error: `Cannot cancel booking with status: ${booking.status}` 
+      });
+    }
+    
+    await pool.query(`
+      UPDATE cc_rental_bookings 
+      SET status = 'cancelled', updated_at = NOW()
+      WHERE id = $1
+    `, [bookingId]);
+    
+    res.json({ success: true, message: 'Booking cancelled' });
+  } catch (error) {
+    console.error('Error cancelling booking:', error);
+    res.status(500).json({ success: false, error: 'Failed to cancel booking' });
+  }
+});
+
+router.get('/bookings/:id', authenticateToken, async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user?.id;
+    const bookingIdParsed = uuidSchema.safeParse(req.params.id);
+    
+    if (!bookingIdParsed.success) {
+      return res.status(400).json({ success: false, error: 'Invalid booking ID' });
+    }
+    
+    if (!userId) {
+      return res.status(401).json({ success: false, error: 'Not authenticated' });
+    }
+    
+    const bookingId = bookingIdParsed.data;
+    
+    const indResult = await pool.query(
+      'SELECT id FROM cc_individuals WHERE user_id = $1',
+      [userId]
+    );
+    
+    if (indResult.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'User not found' });
+    }
+    
+    const individualId = indResult.rows[0].id;
+    
+    const result = await pool.query(`
+      SELECT 
+        b.*,
+        ri.name as item_name,
+        ri.description as item_description,
+        ri.location_name,
+        ri.owner_name,
+        ri.included_items,
+        rc.name as category_name,
+        rc.icon as category_icon,
+        c.name as community_name
+      FROM cc_rental_bookings b
+      JOIN cc_rental_items ri ON ri.id = b.rental_item_id
+      JOIN cc_rental_categories rc ON rc.id = ri.category_id
+      LEFT JOIN sr_communities c ON c.id = ri.home_community_id
+      WHERE b.id = $1 AND b.renter_individual_id = $2
+    `, [bookingId, individualId]);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Booking not found' });
+    }
+    
+    res.json({ success: true, booking: result.rows[0] });
+  } catch (error) {
+    console.error('Error fetching booking:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch booking' });
+  }
+});
+
 export default router;

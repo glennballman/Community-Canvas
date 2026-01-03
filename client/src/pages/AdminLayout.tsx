@@ -31,7 +31,9 @@ import {
   Wrench,
   Package,
   Play,
-  ListChecks
+  ListChecks,
+  Sailboat,
+  ClipboardList
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
@@ -101,6 +103,15 @@ const navSections: NavSection[] = [
     defaultOpen: true,
     items: [
       { path: "/fleet", label: "Vehicle Fleet", icon: Truck },
+    ]
+  },
+  {
+    title: "Rentals",
+    icon: Sailboat,
+    defaultOpen: true,
+    items: [
+      { path: "/rentals", label: "Rent Equipment", icon: Sailboat },
+      { path: "/rentals/bookings", label: "My Bookings", icon: ClipboardList },
     ]
   },
   {

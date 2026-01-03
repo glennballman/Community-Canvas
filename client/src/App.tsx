@@ -53,6 +53,7 @@ import ServiceRunDetail from "@/pages/services/ServiceRunDetail";
 import CreateServiceRun from "@/pages/services/CreateServiceRun";
 import IndividualProfile from "@/pages/profile/IndividualProfile";
 import RentalBrowser from "@/pages/rentals/RentalBrowser";
+import RentalBookings from "@/pages/rentals/MyBookings";
 
 function AppShellRoutes() {
   return (
@@ -123,6 +124,7 @@ function AppShellRoutes() {
         
         {/* Rentals */}
         <Route path="/rentals" component={RentalBrowser} />
+        <Route path="/rentals/bookings" component={RentalBookings} />
         
         {/* Public site pages with AdminLayout */}
         <Route path="/public/overview" component={PublicOverview} />
