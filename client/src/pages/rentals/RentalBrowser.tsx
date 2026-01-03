@@ -83,6 +83,12 @@ interface CheckoutEligibility {
   hasDocument: boolean;
   hasPayment: boolean;
   blockers: string[];
+  warnings: string[];
+  requirements: {
+    waiver: string;
+    document: string;
+    payment: string;
+  };
   requiredWaiver: string | null;
   requiredDocument: string | null;
 }
@@ -499,38 +505,76 @@ export default function RentalBrowser() {
                 )}
                 
                 {eligibility && (
-                  <Card className={eligibility.ready ? 'bg-green-500/10 border-green-500/30' : 'bg-yellow-500/10 border-yellow-500/30'}>
+                  <Card className={eligibility.ready ? 'bg-green-500/10 border-green-500/30' : 'bg-red-500/10 border-red-500/30'}>
                     <CardContent className="py-3">
                       {eligibility.ready ? (
-                        <div className="flex items-center gap-2 text-green-600 dark:text-green-400">
-                          <Check className="w-5 h-5" />
-                          <span>Ready to book! Waiver valid, payment on file.</span>
+                        <div>
+                          <div className="flex items-center gap-2 text-green-600 dark:text-green-400 mb-2">
+                            <Check className="w-5 h-5" />
+                            <span>Ready to book!</span>
+                          </div>
+                          
+                          {eligibility.warnings && eligibility.warnings.length > 0 && (
+                            <div className="mt-2 text-sm border-t border-yellow-500/30 pt-2">
+                              <div className="text-yellow-600 dark:text-yellow-400 font-medium mb-1 flex items-center gap-1">
+                                <Clock className="w-4 h-4" />
+                                Complete before pickup:
+                              </div>
+                              {eligibility.warnings.map((warning: string, i: number) => {
+                                const parts = warning.split(':');
+                                const timingPart = parts[0] || '';
+                                const item = parts[1] || '';
+                                const timingLabel = timingPart.includes('checkout') ? 'at checkout' : 'before use';
+                                const isWaiver = timingPart.includes('waiver');
+                                return (
+                                  <div key={i} className="flex items-center gap-2 text-yellow-500/80 text-xs">
+                                    <span>-</span>
+                                    <span>
+                                      {isWaiver 
+                                        ? `Sign ${item.replace(/-/g, ' ')} waiver (${timingLabel})`
+                                        : `Provide ${item.replace(/-/g, ' ')} (${timingLabel})`
+                                      }
+                                    </span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
                         </div>
                       ) : (
                         <div>
-                          <div className="flex items-center gap-2 text-yellow-600 dark:text-yellow-400 font-medium mb-2">
+                          <div className="flex items-center gap-2 text-red-600 dark:text-red-400 font-medium mb-2">
                             <AlertTriangle className="w-5 h-5" />
-                            Complete these before booking:
+                            Required to book:
                           </div>
                           <div className="space-y-1 text-sm">
-                            {!eligibility.hasWaiver && (
-                              <div className="flex items-center justify-between">
-                                <span>Sign {eligibility.requiredWaiver} waiver</span>
-                                <Button size="sm" variant="ghost">Sign Now</Button>
-                              </div>
-                            )}
-                            {!eligibility.hasDocument && (
-                              <div className="flex items-center justify-between">
-                                <span>Add {eligibility.requiredDocument}</span>
-                                <Button size="sm" variant="ghost">Add</Button>
-                              </div>
-                            )}
-                            {!eligibility.hasPayment && (
-                              <div className="flex items-center justify-between">
-                                <span>Add payment method</span>
-                                <Button size="sm" variant="ghost">Add</Button>
-                              </div>
-                            )}
+                            {eligibility.blockers?.map((blocker: string, i: number) => {
+                              if (blocker === 'payment_method') {
+                                return (
+                                  <div key={i} className="flex items-center justify-between">
+                                    <span>Add payment method</span>
+                                    <Button size="sm" variant="ghost">Add</Button>
+                                  </div>
+                                );
+                              }
+                              if (blocker.startsWith('waiver:')) {
+                                return (
+                                  <div key={i} className="flex items-center justify-between">
+                                    <span>Sign {blocker.split(':')[1]?.replace(/-/g, ' ')} waiver</span>
+                                    <Button size="sm" variant="ghost">Sign Now</Button>
+                                  </div>
+                                );
+                              }
+                              if (blocker.startsWith('document:')) {
+                                return (
+                                  <div key={i} className="flex items-center justify-between">
+                                    <span>Add {blocker.split(':')[1]?.replace(/-/g, ' ')}</span>
+                                    <Button size="sm" variant="ghost">Add</Button>
+                                  </div>
+                                );
+                              }
+                              return null;
+                            })}
                           </div>
                         </div>
                       )}

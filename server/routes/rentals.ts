@@ -224,6 +224,8 @@ router.get('/:id/eligibility', authenticateToken, async (req: AuthRequest, res: 
           hasDocument: false,
           hasPayment: false,
           blockers: ['profile'],
+          warnings: [],
+          requirements: { waiver: 'none', document: 'none', payment: 'at_booking' },
           requiredWaiver: item.required_waiver_slug,
           requiredDocument: item.required_document_type
         }
@@ -232,59 +234,25 @@ router.get('/:id/eligibility', authenticateToken, async (req: AuthRequest, res: 
     
     const individualId = individualResult.rows[0].id;
     
-    let hasWaiver = true;
-    if (item.required_waiver_slug) {
-      const waiverResult = await pool.query(`
-        SELECT EXISTS(
-          SELECT 1 FROM cc_signed_waivers sw
-          JOIN cc_waiver_templates wt ON wt.id = sw.waiver_template_id
-          WHERE sw.individual_id = $1
-          AND wt.slug = $2
-          AND sw.is_expired = false
-        ) as has_waiver
-      `, [individualId, item.required_waiver_slug]);
-      hasWaiver = waiverResult.rows[0].has_waiver;
-    }
+    const eligibilityResult = await pool.query(
+      `SELECT can_checkout_unified($1, 'equipment', $2) as eligibility`,
+      [individualId, itemId]
+    );
     
-    let hasDocument = true;
-    if (item.required_document_type) {
-      const docResult = await pool.query(`
-        SELECT EXISTS(
-          SELECT 1 FROM cc_identity_documents
-          WHERE individual_id = $1
-          AND document_type = $2
-          AND verified = true
-          AND is_expired = false
-        ) as has_document
-      `, [individualId, item.required_document_type]);
-      hasDocument = docResult.rows[0].has_document;
-    }
-    
-    const paymentResult = await pool.query(`
-      SELECT EXISTS(
-        SELECT 1 FROM cc_payment_methods
-        WHERE individual_id = $1
-        AND verified = true
-        AND is_expired = false
-      ) as has_payment
-    `, [individualId]);
-    const hasPayment = paymentResult.rows[0].has_payment;
-    
-    const blockers: string[] = [];
-    if (!hasWaiver) blockers.push(`waiver:${item.required_waiver_slug}`);
-    if (!hasDocument) blockers.push(`document:${item.required_document_type}`);
-    if (!hasPayment) blockers.push('payment_method');
+    const elig = eligibilityResult.rows[0].eligibility;
     
     res.json({
       success: true,
       eligibility: {
-        ready: hasWaiver && hasDocument && hasPayment,
-        hasWaiver,
-        hasDocument,
-        hasPayment,
-        blockers,
-        requiredWaiver: item.required_waiver_slug,
-        requiredDocument: item.required_document_type
+        ready: elig.ready,
+        hasWaiver: elig.has_waiver,
+        hasDocument: elig.has_document,
+        hasPayment: elig.has_payment,
+        blockers: elig.blockers || [],
+        warnings: elig.warnings || [],
+        requirements: elig.requirements || { waiver: 'at_checkout', document: 'at_checkout', payment: 'at_booking' },
+        requiredWaiver: elig.required_waiver,
+        requiredDocument: elig.required_document
       }
     });
   } catch (error) {
