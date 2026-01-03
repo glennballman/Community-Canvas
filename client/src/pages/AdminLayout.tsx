@@ -160,10 +160,19 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   };
 
   const isActive = (path: string) => {
+    // Exact match first
+    if (location === path) return true;
+    // Special case for /admin root
     if (path === "/admin" && location === "/admin") return true;
     if (path === "/" && location === "/") return true;
-    if (path !== "/admin" && path !== "/" && location.startsWith(path)) return true;
-    return location === path;
+    // For nested routes, only match if exact or if it's a true sub-path
+    // But avoid matching /services/runs when on /services/runs/new
+    if (path !== "/admin" && path !== "/" && path !== "/services/runs") {
+      if (location.startsWith(path + '/') || location === path) return true;
+    }
+    // For /services/runs specifically, only exact match
+    if (path === "/services/runs" && location === "/services/runs") return true;
+    return false;
   };
 
   return (
@@ -251,7 +260,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       </aside>
 
       {/* Main Content Area */}
-      <main className="flex-1 overflow-hidden">
+      <main className="flex-1 overflow-auto">
         {children}
       </main>
     </div>
