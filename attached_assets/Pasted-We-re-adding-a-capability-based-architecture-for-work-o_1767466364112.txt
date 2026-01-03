@@ -1,0 +1,751 @@
+We're adding a capability-based architecture for work order planning, BUT we must preserve the ability to search by detailed attributes (coffee pot, hot tub, bedding, etc.).
+
+## Architecture Principle
+
+The 270-column staging_properties table and 200-column trailer_profiles table are GOLD. They contain the human-searchable attributes that real users care about.
+
+We're NOT replacing those. We're adding:
+1. `assets` - lightweight identity layer that links everything
+2. `asset_capabilities` - operational capabilities for work order matching
+3. `asset_terms` - commercial terms
+4. `asset_availability` - weather-aware availability
+
+The source tables REMAIN the source of truth for detailed attributes.
+
+## Phase 1: Create New Schema (Migration 021)
+
+### 1. Core Asset Registry (identity + linking)
+```sql
+-- Lean identity table that links to detailed source tables
+CREATE TABLE assets (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  
+  -- Classification
+  asset_type TEXT NOT NULL,  -- 'property','spot','trailer','equipment','vehicle','vessel','camp'
+  asset_subtype TEXT,        -- 'rv_park','cargo_trailer','skid_steer', etc.
+  
+  -- CRITICAL: Link to source tables where all the details live
+  source_table TEXT NOT NULL,  -- 'staging_properties','trailer_profiles','cc_rental_items', etc.
+  source_id TEXT NOT NULL,     -- ID in source table (as text for flexibility)
+  
+  -- Ownership
+  owner_type TEXT DEFAULT 'platform',  -- 'individual','tenant','nation','platform'
+  owner_individual_id UUID,
+  owner_tenant_id UUID,
+  owner_nation_id UUID,  -- for First Nation owned assets
+  
+  -- Identity
+  canvas_id VARCHAR(20) UNIQUE,
+  name TEXT NOT NULL,
+  slug TEXT,
+  
+  -- Location (denormalized for geo queries)
+  home_community_id UUID,
+  region TEXT,
+  city TEXT,
+  latitude NUMERIC(10,7),
+  longitude NUMERIC(10,7),
+  
+  -- Media (denormalized for listings)
+  thumbnail_url TEXT,
+  
+  -- Scores (denormalized for sorting)
+  crew_score INTEGER DEFAULT 0,
+  family_score INTEGER DEFAULT 0,
+  trucker_score INTEGER DEFAULT 0,
+  equestrian_score INTEGER DEFAULT 0,
+  overall_rating NUMERIC(3,2),
+  review_count INTEGER DEFAULT 0,
+  
+  -- Status
+  status TEXT DEFAULT 'active',
+  is_verified BOOLEAN DEFAULT false,
+  
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now(),
+  
+  UNIQUE(source_table, source_id)
+);
+
+CREATE INDEX idx_assets_type ON assets(asset_type);
+CREATE INDEX idx_assets_source ON assets(source_table, source_id);
+CREATE INDEX idx_assets_owner ON assets(owner_type, owner_tenant_id);
+CREATE INDEX idx_assets_community ON assets(home_community_id);
+CREATE INDEX idx_assets_location ON assets USING gist (
+  ll_to_earth(latitude, longitude)
+) WHERE latitude IS NOT NULL;
+CREATE INDEX idx_assets_scores ON assets(crew_score DESC, overall_rating DESC);
+```
+
+### 2. Asset Capabilities (for operational/work order matching)
+```sql
+-- Operational capabilities - NOT for human browsing, for system matching
+CREATE TABLE asset_capabilities (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  asset_id UUID NOT NULL REFERENCES assets(id) ON DELETE CASCADE,
+  
+  capability_type TEXT NOT NULL,
+  -- Standard capability types:
+  -- 'sleeping'        - can accommodate people overnight
+  -- 'parking'         - can park/store vehicles or trailers  
+  -- 'power_supply'    - provides electrical power
+  -- 'water_supply'    - provides water
+  -- 'waste_handling'  - handles sewage/waste
+  -- 'self_contained'  - operates without external hookups
+  -- 'cold_weather'    - operates in extreme cold
+  -- 'transportable'   - can be moved to site
+  -- 'cooking'         - provides food preparation
+  -- 'workspace'       - provides work area
+  -- 'connectivity'    - provides internet/phone
+  -- 'laundry'         - provides laundry facilities
+  
+  -- Capability parameters (what the capability provides)
+  attributes JSONB NOT NULL DEFAULT '{}',
+  -- Examples:
+  -- sleeping: { "people": 4, "private_bedrooms": 1, "comfort_days": 21 }
+  -- parking: { "max_length_ft": 45, "surface": "gravel", "pull_through": true }
+  -- cold_weather: { "min_temp_c": -40, "heating_btu": 30000 }
+  -- self_contained: { "days_autonomy": 14, "fresh_water_l": 200 }
+  
+  -- Constraints (what's required to use this capability)
+  constraints JSONB DEFAULT '{}',
+  -- Examples:
+  -- { "requires_hookup": true }
+  -- { "requires_operator_cert": "class_1" }
+  
+  is_active BOOLEAN DEFAULT true,
+  
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX idx_capabilities_asset ON asset_capabilities(asset_id);
+CREATE INDEX idx_capabilities_type ON asset_capabilities(capability_type);
+CREATE INDEX idx_capabilities_attrs ON asset_capabilities USING gin(attributes);
+```
+
+### 3. Asset Terms (commercial)
+```sql
+CREATE TABLE asset_terms (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  asset_id UUID NOT NULL REFERENCES assets(id) ON DELETE CASCADE,
+  
+  -- Pricing
+  rate_hourly NUMERIC,
+  rate_half_day NUMERIC,
+  rate_daily NUMERIC,
+  rate_weekly NUMERIC,
+  rate_monthly NUMERIC,
+  currency TEXT DEFAULT 'CAD',
+  
+  -- Fees
+  cleaning_fee NUMERIC DEFAULT 0,
+  
+  -- Deposits
+  deposit_required NUMERIC DEFAULT 0,
+  deposit_type TEXT DEFAULT 'per_booking',  -- 'per_booking','bond_eligible'
+  
+  -- Requirements
+  waiver_template_ids UUID[],
+  min_renter_age INTEGER DEFAULT 18,
+  license_required TEXT,
+  insurance_required BOOLEAN DEFAULT false,
+  
+  -- Booking rules
+  min_nights INTEGER DEFAULT 1,
+  max_nights INTEGER,
+  instant_book BOOLEAN DEFAULT false,
+  
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX idx_terms_asset ON asset_terms(asset_id);
+```
+
+### 4. Asset Availability (weather-aware)
+```sql
+CREATE TABLE asset_availability (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  asset_id UUID NOT NULL REFERENCES assets(id) ON DELETE CASCADE,
+  
+  available_from DATE NOT NULL,
+  available_until DATE NOT NULL,
+  
+  -- Location during this window (assets can move)
+  location_community_id UUID,
+  location_latitude NUMERIC(10,7),
+  location_longitude NUMERIC(10,7),
+  
+  -- Weather constraints
+  weather_constraints JSONB DEFAULT '{}',
+  -- { "min_temp_c": -20, "ground_condition": ["frozen","dry"] }
+  
+  -- Access constraints  
+  access_constraints JSONB DEFAULT '{}',
+  -- { "road_access": true, "barge_schedule": "weekly" }
+  
+  booking_status TEXT DEFAULT 'available',
+  
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX idx_availability_asset ON asset_availability(asset_id);
+CREATE INDEX idx_availability_dates ON asset_availability(available_from, available_until);
+```
+
+### 5. Work Orders (authority for jobs)
+```sql
+CREATE TABLE work_orders (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  work_order_ref VARCHAR(20) DEFAULT 'WO-' || to_char(now(), 'YYMMDD') || '-' || lpad(floor(random()*1000)::text, 3, '0'),
+  
+  -- Location
+  community_id UUID NOT NULL,
+  site_description TEXT,
+  site_latitude NUMERIC(10,7),
+  site_longitude NUMERIC(10,7),
+  
+  -- Job details
+  title TEXT NOT NULL,
+  description TEXT,
+  service_bundle_id UUID,
+  scope_of_work TEXT,
+  
+  -- Customer
+  customer_type TEXT,  -- 'individual','tenant','nation','government'
+  customer_tenant_id UUID,
+  customer_individual_id UUID,
+  customer_contact_name TEXT,
+  customer_contact_email TEXT,
+  customer_contact_phone TEXT,
+  
+  -- Timing
+  weather_window JSONB NOT NULL,
+  -- { "earliest_start": "2026-06-15", "latest_end": "2026-08-15", "constraints": {...} }
+  estimated_duration_days INTEGER,
+  
+  -- Crew
+  crew_size_min INTEGER DEFAULT 1,
+  crew_size_max INTEGER,
+  required_certifications TEXT[],
+  
+  -- Budget
+  estimated_cost NUMERIC,
+  quoted_price NUMERIC,
+  deposit_required NUMERIC,
+  deposit_received NUMERIC DEFAULT 0,
+  
+  -- Status
+  status TEXT DEFAULT 'draft',
+  -- 'draft','planning','bidding','awarded','mobilizing','in_progress','complete','invoiced','paid'
+  
+  awarded_to_tenant_id UUID,
+  awarded_at TIMESTAMPTZ,
+  
+  -- Bundling (neighbors sharing mobilization)
+  is_bundleable BOOLEAN DEFAULT true,
+  bundle_id UUID,
+  
+  created_by UUID,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX idx_work_orders_community ON work_orders(community_id);
+CREATE INDEX idx_work_orders_status ON work_orders(status);
+```
+
+### 6. Work Order Requirements (what capabilities needed)
+```sql
+CREATE TABLE work_order_requirements (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  work_order_id UUID NOT NULL REFERENCES work_orders(id) ON DELETE CASCADE,
+  
+  requirement_type TEXT NOT NULL,  -- 'accommodation','equipment','transport','material'
+  capability_type TEXT,  -- 'sleeping','parking', etc.
+  capability_requirements JSONB,  -- { "people": 3, "private_bedrooms": 1 }
+  
+  quantity INTEGER DEFAULT 1,
+  needed_from_day INTEGER DEFAULT 1,
+  needed_until_day INTEGER,
+  
+  -- Fulfillment
+  fulfilled_by_asset_id UUID REFERENCES assets(id),
+  fulfillment_status TEXT DEFAULT 'needed',
+  
+  notes TEXT,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX idx_wo_req_order ON work_order_requirements(work_order_id);
+```
+
+### 7. Work Order Materials (with logistics)
+```sql
+CREATE TABLE work_order_materials (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  work_order_id UUID NOT NULL REFERENCES work_orders(id) ON DELETE CASCADE,
+  
+  item_name TEXT NOT NULL,
+  quantity NUMERIC NOT NULL,
+  unit TEXT DEFAULT 'each',
+  
+  -- Logistics
+  weight_kg NUMERIC,
+  volume_m3 NUMERIC,
+  transport_modes TEXT[],  -- ['truck','barge','floatplane']
+  
+  -- Sourcing
+  supplier_entity_id UUID,
+  supplier_lead_time_days INTEGER,
+  order_cutoff_date DATE,
+  
+  -- Status
+  status TEXT DEFAULT 'planned',
+  estimated_cost NUMERIC,
+  
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX idx_wo_mat_order ON work_order_materials(work_order_id);
+```
+
+### 8. Mobilization Plans
+```sql
+CREATE TABLE mobilization_plans (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  work_order_id UUID NOT NULL REFERENCES work_orders(id) ON DELETE CASCADE,
+  
+  staging_community_id UUID,
+  staging_location TEXT,
+  
+  travel_segments JSONB,
+  -- [{ "from": "Vancouver", "to": "Site", "mode": "barge", "days": 2 }]
+  
+  arrival_date DATE NOT NULL,
+  departure_date DATE NOT NULL,
+  
+  risk_factors JSONB DEFAULT '{}',
+  readiness_score INTEGER,
+  readiness_blockers TEXT[],
+  
+  status TEXT DEFAULT 'draft',
+  estimated_cost NUMERIC,
+  
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX idx_mob_work_order ON mobilization_plans(work_order_id);
+```
+
+### 9. Bonds (unified deposits)
+```sql
+CREATE TABLE bonds (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  bond_ref VARCHAR(20) DEFAULT 'BOND-' || to_char(now(), 'YYMMDD') || '-' || lpad(floor(random()*1000)::text, 3, '0'),
+  
+  guarantor_type TEXT NOT NULL,  -- 'individual','tenant','employer_backed'
+  guarantor_individual_id UUID,
+  guarantor_tenant_id UUID,
+  backing_tenant_id UUID,  -- if employer-backed
+  
+  total_amount NUMERIC NOT NULL,
+  max_claim_per_asset NUMERIC,
+  currency TEXT DEFAULT 'CAD',
+  
+  valid_from DATE NOT NULL,
+  valid_until DATE NOT NULL,
+  work_order_id UUID REFERENCES work_orders(id),
+  
+  payment_method TEXT,
+  payment_confirmed_at TIMESTAMPTZ,
+  
+  amount_claimed NUMERIC DEFAULT 0,
+  status TEXT DEFAULT 'pending',
+  
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX idx_bonds_guarantor ON bonds(guarantor_individual_id);
+```
+
+### 10. Bond Claims
+```sql
+CREATE TABLE bond_claims (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  bond_id UUID NOT NULL REFERENCES bonds(id),
+  asset_id UUID NOT NULL REFERENCES assets(id),
+  
+  claim_type TEXT NOT NULL,  -- 'damage','loss','cleaning'
+  claim_amount NUMERIC NOT NULL,
+  description TEXT,
+  photos JSONB DEFAULT '[]',
+  
+  status TEXT DEFAULT 'filed',
+  
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX idx_claims_bond ON bond_claims(bond_id);
+```
+
+### 11. Asset Inspections
+```sql
+CREATE TABLE asset_inspections (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  asset_id UUID NOT NULL REFERENCES assets(id),
+  booking_id UUID,
+  
+  inspection_type TEXT NOT NULL,  -- 'pre_use','post_use','periodic'
+  inspection_date TIMESTAMPTZ DEFAULT now(),
+  
+  inspector_name TEXT,
+  overall_condition TEXT,
+  condition_details JSONB DEFAULT '{}',
+  photos JSONB DEFAULT '[]',
+  damage_noted BOOLEAN DEFAULT false,
+  damage_description TEXT,
+  
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX idx_inspect_asset ON asset_inspections(asset_id);
+```
+
+## Phase 2: Create UNIFIED SEARCH VIEW (preserves attribute search!)
+
+This is the key - a view that joins assets to their source tables for full attribute access:
+```sql
+-- View for searching with ALL attributes from source tables
+CREATE OR REPLACE VIEW searchable_assets AS
+SELECT 
+  a.id,
+  a.asset_type,
+  a.source_table,
+  a.source_id,
+  a.name,
+  a.slug,
+  a.owner_type,
+  a.region,
+  a.city,
+  a.latitude,
+  a.longitude,
+  a.thumbnail_url,
+  a.crew_score,
+  a.family_score,
+  a.trucker_score,
+  a.equestrian_score,
+  a.overall_rating,
+  a.review_count,
+  a.status,
+  
+  -- Commercial terms (joined)
+  t.rate_daily,
+  t.rate_weekly,
+  t.rate_monthly,
+  t.cleaning_fee,
+  t.deposit_required,
+  t.min_nights,
+  t.instant_book,
+  
+  -- ALL the detailed attributes from staging_properties (for properties/spots)
+  CASE WHEN a.source_table = 'staging_properties' THEN
+    (SELECT row_to_json(sp.*)::jsonb FROM staging_properties sp WHERE sp.id = a.source_id::integer)
+  ELSE NULL END as property_details,
+  
+  -- ALL the detailed attributes from trailer_profiles (for trailers)
+  CASE WHEN a.source_table = 'trailer_profiles' THEN
+    (SELECT row_to_json(tp.*)::jsonb FROM trailer_profiles tp WHERE tp.id = a.source_id::uuid)
+  ELSE NULL END as trailer_details,
+  
+  -- ALL the detailed attributes from cc_rental_items (for equipment)
+  CASE WHEN a.source_table = 'cc_rental_items' THEN
+    (SELECT row_to_json(ri.*)::jsonb FROM cc_rental_items ri WHERE ri.id = a.source_id::uuid)
+  ELSE NULL END as rental_details,
+  
+  -- Aggregated capabilities for quick filtering
+  (SELECT jsonb_agg(jsonb_build_object('type', ac.capability_type, 'attrs', ac.attributes))
+   FROM asset_capabilities ac WHERE ac.asset_id = a.id) as capabilities
+
+FROM assets a
+LEFT JOIN asset_terms t ON t.asset_id = a.id
+WHERE a.status = 'active';
+```
+
+## Phase 3: Create Helper Functions for Both Search Modes
+
+### Human-Friendly Attribute Search (e.g., "has coffee maker and hot tub")
+```sql
+-- Search staging properties by specific amenities
+CREATE OR REPLACE FUNCTION search_properties_by_amenities(
+  p_amenities TEXT[],  -- ['has_coffee_maker', 'has_hot_tub', 'pets_allowed']
+  p_latitude NUMERIC DEFAULT NULL,
+  p_longitude NUMERIC DEFAULT NULL,
+  p_radius_km NUMERIC DEFAULT 50,
+  p_min_beds INTEGER DEFAULT NULL,
+  p_max_price NUMERIC DEFAULT NULL
+)
+RETURNS TABLE (
+  asset_id UUID,
+  name TEXT,
+  city TEXT,
+  latitude NUMERIC,
+  longitude NUMERIC,
+  distance_km NUMERIC,
+  beds INTEGER,
+  rate_daily NUMERIC,
+  thumbnail_url TEXT,
+  crew_score INTEGER,
+  overall_rating NUMERIC,
+  matching_amenities TEXT[]
+) AS $$
+BEGIN
+  RETURN QUERY
+  SELECT 
+    a.id,
+    a.name,
+    a.city,
+    a.latitude,
+    a.longitude,
+    CASE WHEN p_latitude IS NOT NULL THEN
+      earth_distance(ll_to_earth(a.latitude, a.longitude), ll_to_earth(p_latitude, p_longitude)) / 1000
+    ELSE NULL END,
+    sp.beds,
+    t.rate_daily,
+    a.thumbnail_url,
+    a.crew_score,
+    a.overall_rating,
+    ARRAY(
+      SELECT unnest FROM unnest(p_amenities) 
+      WHERE (
+        (unnest = 'has_coffee_maker' AND sp.has_kitchen) OR
+        (unnest = 'has_hot_tub' AND sp.has_hot_tub) OR
+        (unnest = 'has_pool' AND sp.has_pool) OR
+        (unnest = 'pets_allowed' AND sp.pets_allowed) OR
+        (unnest = 'has_wifi' AND sp.has_wifi) OR
+        (unnest = 'has_laundry' AND sp.has_laundry) OR
+        (unnest = 'has_bbq' AND sp.has_bbq_grills) OR
+        (unnest = 'has_fire_pit' AND sp.has_fire_pits) OR
+        (unnest = 'has_kitchen' AND sp.has_kitchen) OR
+        (unnest = 'has_showers' AND sp.has_showers) OR
+        (unnest = 'is_waterfront' AND sp.is_waterfront) OR
+        (unnest = 'has_boat_launch' AND sp.has_boat_launch)
+      )
+    )
+  FROM assets a
+  JOIN staging_properties sp ON sp.id = a.source_id::integer AND a.source_table = 'staging_properties'
+  LEFT JOIN asset_terms t ON t.asset_id = a.id
+  WHERE a.status = 'active'
+    AND (p_min_beds IS NULL OR sp.beds >= p_min_beds)
+    AND (p_max_price IS NULL OR t.rate_daily <= p_max_price)
+    AND (p_latitude IS NULL OR 
+         earth_distance(ll_to_earth(a.latitude, a.longitude), ll_to_earth(p_latitude, p_longitude)) / 1000 <= p_radius_km)
+    -- Check that ALL requested amenities are present
+    AND (
+      (NOT 'has_coffee_maker' = ANY(p_amenities) OR sp.has_kitchen = true) AND
+      (NOT 'has_hot_tub' = ANY(p_amenities) OR sp.has_hot_tub = true) AND
+      (NOT 'has_pool' = ANY(p_amenities) OR sp.has_pool = true) AND
+      (NOT 'pets_allowed' = ANY(p_amenities) OR sp.pets_allowed = true) AND
+      (NOT 'has_wifi' = ANY(p_amenities) OR sp.has_wifi = true) AND
+      (NOT 'has_laundry' = ANY(p_amenities) OR sp.has_laundry = true) AND
+      (NOT 'has_bbq' = ANY(p_amenities) OR sp.has_bbq_grills = true) AND
+      (NOT 'has_fire_pit' = ANY(p_amenities) OR sp.has_fire_pits = true) AND
+      (NOT 'has_showers' = ANY(p_amenities) OR sp.has_showers = true) AND
+      (NOT 'is_waterfront' = ANY(p_amenities) OR sp.is_waterfront = true) AND
+      (NOT 'has_boat_launch' = ANY(p_amenities) OR sp.has_boat_launch = true)
+    )
+  ORDER BY 
+    CASE WHEN p_latitude IS NOT NULL THEN 
+      earth_distance(ll_to_earth(a.latitude, a.longitude), ll_to_earth(p_latitude, p_longitude))
+    ELSE NULL END ASC NULLS LAST,
+    a.crew_score DESC
+  LIMIT 100;
+END;
+$$ LANGUAGE plpgsql;
+```
+
+### Capability-Based Search (for work order matching)
+```sql
+-- Find assets that can fulfill a capability requirement
+CREATE OR REPLACE FUNCTION find_assets_by_capability(
+  p_capability_type TEXT,
+  p_min_attributes JSONB DEFAULT '{}',  -- e.g., {"people": 3}
+  p_community_id UUID DEFAULT NULL,
+  p_radius_km NUMERIC DEFAULT 100
+)
+RETURNS TABLE (
+  asset_id UUID,
+  name TEXT,
+  asset_type TEXT,
+  capability_attributes JSONB,
+  distance_km NUMERIC,
+  rate_daily NUMERIC
+) AS $$
+BEGIN
+  RETURN QUERY
+  SELECT 
+    a.id,
+    a.name,
+    a.asset_type,
+    ac.attributes,
+    NULL::NUMERIC, -- would calculate distance if community has coords
+    t.rate_daily
+  FROM assets a
+  JOIN asset_capabilities ac ON ac.asset_id = a.id
+  LEFT JOIN asset_terms t ON t.asset_id = a.id
+  WHERE a.status = 'active'
+    AND ac.capability_type = p_capability_type
+    AND ac.is_active = true
+    -- Check minimum attribute requirements
+    AND (p_min_attributes = '{}' OR
+         (p_min_attributes ? 'people' AND (ac.attributes->>'people')::int >= (p_min_attributes->>'people')::int) OR
+         (p_min_attributes ? 'private_bedrooms' AND (ac.attributes->>'private_bedrooms')::int >= (p_min_attributes->>'private_bedrooms')::int) OR
+         (p_min_attributes ? 'max_length_ft' AND (ac.attributes->>'max_length_ft')::int >= (p_min_attributes->>'max_length_ft')::int)
+    )
+  ORDER BY t.rate_daily ASC NULLS LAST
+  LIMIT 50;
+END;
+$$ LANGUAGE plpgsql;
+```
+
+## Phase 4: Migrate Data
+```sql
+-- Migrate from unified_assets to new structure
+CREATE OR REPLACE FUNCTION migrate_to_capability_architecture()
+RETURNS TABLE(assets_created INT, capabilities_created INT, terms_created INT) AS $$
+DECLARE
+  asset_count INT := 0;
+  cap_count INT := 0;
+  term_count INT := 0;
+  ua RECORD;
+  new_asset_id UUID;
+BEGIN
+  FOR ua IN SELECT * FROM unified_assets WHERE status = 'active' LOOP
+    -- Create asset record
+    INSERT INTO assets (
+      asset_type, source_table, source_id,
+      owner_type, owner_individual_id, owner_tenant_id,
+      canvas_id, name,
+      home_community_id, region, city, latitude, longitude,
+      thumbnail_url,
+      crew_score, family_score, trucker_score, equestrian_score,
+      overall_rating, review_count,
+      status, is_verified
+    ) VALUES (
+      ua.asset_type, ua.source_table, ua.source_id,
+      ua.owner_type, ua.owner_individual_id, ua.owner_tenant_id,
+      ua.canvas_id, ua.name,
+      ua.community_id, ua.region, ua.city, ua.latitude, ua.longitude,
+      ua.thumbnail_url,
+      ua.crew_score, ua.family_score, ua.trucker_score, ua.equestrian_score,
+      ua.overall_rating, ua.review_count,
+      'active', ua.is_verified
+    )
+    ON CONFLICT (source_table, source_id) DO UPDATE SET updated_at = now()
+    RETURNING id INTO new_asset_id;
+    
+    asset_count := asset_count + 1;
+    
+    -- Create sleeping capability if applicable
+    IF COALESCE(ua.sleeps_total, 0) > 0 OR ua.is_accommodation THEN
+      INSERT INTO asset_capabilities (asset_id, capability_type, attributes)
+      VALUES (new_asset_id, 'sleeping', jsonb_build_object(
+        'people', COALESCE(ua.sleeps_total, 0),
+        'private_bedrooms', COALESCE(ua.private_bedrooms, 0)
+      ));
+      cap_count := cap_count + 1;
+    END IF;
+    
+    -- Create parking capability if applicable
+    IF ua.is_parkable_spot THEN
+      INSERT INTO asset_capabilities (asset_id, capability_type, attributes)
+      VALUES (new_asset_id, 'parking', jsonb_build_object(
+        'max_length_ft', ua.max_vehicle_length_ft,
+        'max_height_ft', ua.max_vehicle_height_ft,
+        'pull_through', ua.is_pull_through
+      ));
+      cap_count := cap_count + 1;
+    END IF;
+    
+    -- Create power capability if applicable
+    IF ua.has_power_hookup THEN
+      INSERT INTO asset_capabilities (asset_id, capability_type, attributes)
+      VALUES (new_asset_id, 'power_supply', jsonb_build_object('amps', ua.power_amps));
+      cap_count := cap_count + 1;
+    END IF;
+    
+    -- Create self-contained capability if applicable
+    IF ua.is_self_contained THEN
+      INSERT INTO asset_capabilities (asset_id, capability_type, attributes)
+      VALUES (new_asset_id, 'self_contained', jsonb_build_object(
+        'days_autonomy', ua.days_self_sufficient,
+        'fresh_water_gallons', ua.fresh_water_gallons
+      ));
+      cap_count := cap_count + 1;
+    END IF;
+    
+    -- Create commercial terms
+    INSERT INTO asset_terms (
+      asset_id, rate_daily, rate_weekly, rate_monthly,
+      cleaning_fee, deposit_required, min_nights, instant_book
+    ) VALUES (
+      new_asset_id, ua.rate_daily, ua.rate_weekly, ua.rate_monthly,
+      ua.cleaning_fee, ua.deposit_amount, 
+      COALESCE(ua.min_booking_hours / 24, 1)::integer, 
+      ua.instant_book
+    );
+    term_count := term_count + 1;
+    
+  END LOOP;
+  
+  RETURN QUERY SELECT asset_count, cap_count, term_count;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Run migration
+SELECT * FROM migrate_to_capability_architecture();
+```
+
+## Phase 5: Verify Both Search Modes Work
+```sql
+-- Test 1: Human attribute search - "properties with hot tub and wifi near Vancouver"
+SELECT * FROM search_properties_by_amenities(
+  ARRAY['has_hot_tub', 'has_wifi'],
+  49.2827, -123.1207,  -- Vancouver
+  50  -- 50km radius
+);
+
+-- Test 2: Capability search - "find accommodation for 3 people"
+SELECT * FROM find_assets_by_capability(
+  'sleeping',
+  '{"people": 3}'::jsonb
+);
+
+-- Test 3: Direct attribute query on staging_properties through view
+SELECT 
+  sa.name,
+  sa.city,
+  sa.rate_daily,
+  sa.property_details->>'has_hot_tub' as has_hot_tub,
+  sa.property_details->>'has_wifi' as has_wifi,
+  sa.property_details->>'has_laundry' as has_laundry,
+  sa.property_details->>'pets_allowed' as pets_allowed
+FROM searchable_assets sa
+WHERE sa.asset_type = 'property'
+  AND (sa.property_details->>'has_hot_tub')::boolean = true
+LIMIT 10;
+
+-- Verify counts
+SELECT 'assets' as table_name, COUNT(*) FROM assets
+UNION ALL
+SELECT 'asset_capabilities', COUNT(*) FROM asset_capabilities
+UNION ALL
+SELECT 'asset_terms', COUNT(*) FROM asset_terms;
+```
+
+## Output Required
+
+Tell me:
+1. Migration results (assets, capabilities, terms created)
+2. Results from Test 1 (attribute search) - how many with hot tub + wifi?
+3. Results from Test 2 (capability search) - how many sleep 3+?
+4. Does the searchable_assets view return property_details with all 270 columns accessible?
