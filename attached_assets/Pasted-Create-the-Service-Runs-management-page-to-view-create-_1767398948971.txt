@@ -1,0 +1,1198 @@
+Create the Service Runs management page to view, create, and manage service runs with their slots.
+
+## First, add API endpoints for service runs. Add to server/routes/serviceRuns.ts:
+```typescript
+// =====================================================================
+// SERVICE RUNS MANAGEMENT
+// =====================================================================
+
+// GET /api/service-runs/runs - List all service runs
+router.get('/runs', async (req: Request, res: Response) => {
+  try {
+    const pool = getPool(req);
+    const { status, community } = req.query;
+    
+    let query = `
+      SELECT 
+        r.*,
+        c.name as community_name,
+        rt.name as run_type_name,
+        b.name as bundle_name,
+        (SELECT COUNT(*) FROM sr_service_slots s WHERE s.run_id = r.id) as slot_count,
+        (SELECT COALESCE(SUM(s.estimated_cost), 0) FROM sr_service_slots s WHERE s.run_id = r.id) as total_estimated_revenue
+      FROM sr_service_runs r
+      LEFT JOIN sr_communities c ON c.id = r.community_id
+      LEFT JOIN sr_run_types rt ON rt.id = r.run_type_id
+      LEFT JOIN sr_bundles b ON b.id = r.bundle_id
+      WHERE 1=1
+    `;
+    const params: any[] = [];
+    let paramIndex = 1;
+    
+    if (status) {
+      query += ` AND r.status = $${paramIndex}`;
+      params.push(status);
+      paramIndex++;
+    }
+    
+    if (community) {
+      query += ` AND c.id = $${paramIndex}`;
+      params.push(community);
+      paramIndex++;
+    }
+    
+    query += ` ORDER BY r.target_start_date DESC, r.created_at DESC`;
+    
+    const result = await pool.query(query, params);
+    
+    res.json({
+      success: true,
+      runs: result.rows.map(row => ({
+        id: row.id,
+        title: row.title,
+        slug: row.slug,
+        description: row.description,
+        communityId: row.community_id,
+        communityName: row.community_name,
+        runTypeName: row.run_type_name,
+        bundleName: row.bundle_name,
+        initiatorType: row.initiator_type,
+        targetStartDate: row.target_start_date,
+        targetEndDate: row.target_end_date,
+        flexibleDates: row.flexible_dates,
+        minSlots: row.min_slots,
+        maxSlots: row.max_slots,
+        currentSlots: parseInt(row.slot_count),
+        status: row.status,
+        biddingOpensAt: row.bidding_opens_at,
+        biddingClosesAt: row.bidding_closes_at,
+        estimatedMobilizationCost: row.estimated_mobilization_cost ? parseFloat(row.estimated_mobilization_cost) : null,
+        totalEstimatedRevenue: parseFloat(row.total_estimated_revenue),
+        allowResidentExclusions: row.allow_resident_exclusions,
+        requirePhotos: row.require_photos,
+        requireDeposit: row.require_deposit,
+        depositAmount: row.deposit_amount ? parseFloat(row.deposit_amount) : null,
+        cancellationPolicy: row.cancellation_policy,
+        publishedAt: row.published_at,
+        createdAt: row.created_at
+      }))
+    });
+  } catch (err) {
+    console.error('Failed to load service runs:', err);
+    res.status(500).json({ success: false, error: 'Failed to load service runs' });
+  }
+});
+
+// GET /api/service-runs/runs/:slug - Get run details with slots
+router.get('/runs/:slug', async (req: Request, res: Response) => {
+  try {
+    const pool = getPool(req);
+    const { slug } = req.params;
+    
+    // Get run
+    const runResult = await pool.query(`
+      SELECT 
+        r.*,
+        c.name as community_name, c.remote_multiplier,
+        rt.name as run_type_name, rt.description as run_type_description,
+        b.name as bundle_name, b.slug as bundle_slug
+      FROM sr_service_runs r
+      LEFT JOIN sr_communities c ON c.id = r.community_id
+      LEFT JOIN sr_run_types rt ON rt.id = r.run_type_id
+      LEFT JOIN sr_bundles b ON b.id = r.bundle_id
+      WHERE r.slug = $1
+    `, [slug]);
+    
+    if (runResult.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Run not found' });
+    }
+    
+    const run = runResult.rows[0];
+    
+    // Get slots
+    const slotsResult = await pool.query(`
+      SELECT * FROM sr_service_slots
+      WHERE run_id = $1
+      ORDER BY created_at
+    `, [run.id]);
+    
+    // Get bids
+    const bidsResult = await pool.query(`
+      SELECT * FROM sr_contractor_bids
+      WHERE run_id = $1
+      ORDER BY submitted_at DESC
+    `, [run.id]);
+    
+    // Calculate stats
+    const slots = slotsResult.rows;
+    const totalEstimatedRevenue = slots.reduce((sum, s) => sum + (parseFloat(s.estimated_cost) || 0), 0);
+    const waterAccessCount = slots.filter(s => s.property_access_type === 'water_only').length;
+    const roadAccessCount = slots.filter(s => s.property_access_type === 'road').length;
+    
+    res.json({
+      success: true,
+      run: {
+        id: run.id,
+        title: run.title,
+        slug: run.slug,
+        description: run.description,
+        communityId: run.community_id,
+        communityName: run.community_name,
+        remoteMultiplier: run.remote_multiplier ? parseFloat(run.remote_multiplier) : 1,
+        runTypeId: run.run_type_id,
+        runTypeName: run.run_type_name,
+        runTypeDescription: run.run_type_description,
+        bundleId: run.bundle_id,
+        bundleName: run.bundle_name,
+        bundleSlug: run.bundle_slug,
+        serviceAreaDescription: run.service_area_description,
+        initiatorType: run.initiator_type,
+        targetStartDate: run.target_start_date,
+        targetEndDate: run.target_end_date,
+        flexibleDates: run.flexible_dates,
+        minSlots: run.min_slots,
+        maxSlots: run.max_slots,
+        currentSlots: slots.length,
+        status: run.status,
+        biddingOpensAt: run.bidding_opens_at,
+        biddingClosesAt: run.bidding_closes_at,
+        winningBidId: run.winning_bid_id,
+        estimatedMobilizationCost: run.estimated_mobilization_cost ? parseFloat(run.estimated_mobilization_cost) : null,
+        mobilizationCostPerSlot: run.mobilization_cost_per_slot ? parseFloat(run.mobilization_cost_per_slot) : null,
+        allowResidentExclusions: run.allow_resident_exclusions,
+        requirePhotos: run.require_photos,
+        requireDeposit: run.require_deposit,
+        depositAmount: run.deposit_amount ? parseFloat(run.deposit_amount) : null,
+        cancellationPolicy: run.cancellation_policy,
+        publishedAt: run.published_at,
+        confirmedAt: run.confirmed_at,
+        completedAt: run.completed_at,
+        createdAt: run.created_at
+      },
+      slots: slots.map(s => ({
+        id: s.id,
+        customerName: s.customer_name,
+        customerEmail: s.customer_email,
+        customerPhone: s.customer_phone,
+        propertyAddress: s.property_address,
+        propertyLat: s.property_lat ? parseFloat(s.property_lat) : null,
+        propertyLng: s.property_lng ? parseFloat(s.property_lng) : null,
+        propertyAccessNotes: s.property_access_notes,
+        propertyAccessType: s.property_access_type,
+        servicesRequested: s.services_requested,
+        specialRequirements: s.special_requirements,
+        photos: s.photos,
+        measurements: s.measurements,
+        excludedContractors: s.excluded_contractors,
+        preferredContractors: s.preferred_contractors,
+        preferredDates: s.preferred_dates,
+        blackoutDates: s.blackout_dates,
+        requiresOwnerPresent: s.requires_owner_present,
+        status: s.status,
+        optOutReason: s.opt_out_reason,
+        estimatedCost: s.estimated_cost ? parseFloat(s.estimated_cost) : null,
+        finalCost: s.final_cost ? parseFloat(s.final_cost) : null,
+        mobilizationShare: s.mobilization_share ? parseFloat(s.mobilization_share) : null,
+        scheduledDate: s.scheduled_date,
+        scheduledTimeStart: s.scheduled_time_start,
+        scheduledTimeEnd: s.scheduled_time_end,
+        completedAt: s.completed_at,
+        customerRating: s.customer_rating,
+        customerReview: s.customer_review,
+        createdAt: s.created_at
+      })),
+      bids: bidsResult.rows.map(b => ({
+        id: b.id,
+        contractorName: b.contractor_name,
+        contractorEmail: b.contractor_email,
+        bidType: b.bid_type,
+        mobilizationCost: parseFloat(b.mobilization_cost),
+        perSlotCostLow: b.per_slot_cost_low ? parseFloat(b.per_slot_cost_low) : null,
+        perSlotCostHigh: b.per_slot_cost_high ? parseFloat(b.per_slot_cost_high) : null,
+        bundleTotalCost: b.bundle_total_cost ? parseFloat(b.bundle_total_cost) : null,
+        crewSize: b.crew_size,
+        crewNeedsAccommodation: b.crew_needs_accommodation,
+        proposedStartDate: b.proposed_start_date,
+        proposedEndDate: b.proposed_end_date,
+        estimatedDaysOnSite: b.estimated_days_on_site,
+        status: b.status,
+        bidNotes: b.bid_notes,
+        submittedAt: b.submitted_at
+      })),
+      stats: {
+        totalEstimatedRevenue,
+        waterAccessCount,
+        roadAccessCount,
+        pendingCount: slots.filter(s => s.status === 'pending').length,
+        confirmedCount: slots.filter(s => s.status === 'confirmed').length,
+        bidCount: bidsResult.rows.length
+      }
+    });
+  } catch (err) {
+    console.error('Failed to load run details:', err);
+    res.status(500).json({ success: false, error: 'Failed to load run details' });
+  }
+});
+
+// POST /api/service-runs/runs - Create new run
+router.post('/runs', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const pool = getPool(req);
+    const {
+      title, description, runTypeId, bundleId, communityId,
+      serviceAreaDescription, targetStartDate, targetEndDate,
+      minSlots, maxSlots, biddingOpensAt, biddingClosesAt,
+      estimatedMobilizationCost, requirePhotos, requireDeposit,
+      depositAmount, cancellationPolicy
+    } = req.body;
+    
+    // Generate slug
+    const slug = title.toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '');
+    
+    const result = await pool.query(`
+      INSERT INTO sr_service_runs (
+        title, slug, description, run_type_id, bundle_id, community_id,
+        service_area_description, target_start_date, target_end_date,
+        min_slots, max_slots, bidding_opens_at, bidding_closes_at,
+        estimated_mobilization_cost, require_photos, require_deposit,
+        deposit_amount, cancellation_policy, status, published_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, 'collecting', NOW())
+      RETURNING *
+    `, [
+      title, slug, description, runTypeId, bundleId, communityId,
+      serviceAreaDescription, targetStartDate, targetEndDate,
+      minSlots || 5, maxSlots || 25, biddingOpensAt, biddingClosesAt,
+      estimatedMobilizationCost, requirePhotos !== false, requireDeposit || false,
+      depositAmount, cancellationPolicy || 'Full refund if cancelled 7+ days before scheduled date'
+    ]);
+    
+    res.json({
+      success: true,
+      run: result.rows[0]
+    });
+  } catch (err: any) {
+    console.error('Failed to create run:', err);
+    if (err.code === '23505') {
+      res.status(400).json({ success: false, error: 'A run with that title already exists' });
+    } else {
+      res.status(500).json({ success: false, error: 'Failed to create run' });
+    }
+  }
+});
+
+// PATCH /api/service-runs/runs/:id/status - Update run status
+router.patch('/runs/:id/status', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const pool = getPool(req);
+    const { id } = req.params;
+    const { status } = req.body;
+    
+    const validStatuses = ['draft', 'collecting', 'bidding', 'bid_review', 'confirmed', 'scheduled', 'in_progress', 'completed', 'cancelled'];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({ success: false, error: 'Invalid status' });
+    }
+    
+    const result = await pool.query(`
+      UPDATE sr_service_runs 
+      SET status = $1, updated_at = NOW()
+      WHERE id = $2
+      RETURNING *
+    `, [status, id]);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Run not found' });
+    }
+    
+    res.json({ success: true, run: result.rows[0] });
+  } catch (err) {
+    console.error('Failed to update run status:', err);
+    res.status(500).json({ success: false, error: 'Failed to update status' });
+  }
+});
+
+// POST /api/service-runs/runs/:id/slots - Add slot to run
+router.post('/runs/:id/slots', async (req: Request, res: Response) => {
+  try {
+    const pool = getPool(req);
+    const { id } = req.params;
+    const {
+      customerName, customerEmail, customerPhone,
+      propertyAddress, propertyLat, propertyLng,
+      propertyAccessNotes, propertyAccessType,
+      servicesRequested, specialRequirements,
+      requiresOwnerPresent, estimatedCost
+    } = req.body;
+    
+    // Verify run exists and is accepting signups
+    const runCheck = await pool.query(
+      `SELECT id, status, current_slots, max_slots FROM sr_service_runs WHERE id = $1`,
+      [id]
+    );
+    
+    if (runCheck.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Run not found' });
+    }
+    
+    const run = runCheck.rows[0];
+    if (run.status !== 'collecting') {
+      return res.status(400).json({ success: false, error: 'Run is not accepting signups' });
+    }
+    
+    if (run.current_slots >= run.max_slots) {
+      return res.status(400).json({ success: false, error: 'Run is full' });
+    }
+    
+    // Create slot
+    const result = await pool.query(`
+      INSERT INTO sr_service_slots (
+        run_id, customer_name, customer_email, customer_phone,
+        property_address, property_lat, property_lng,
+        property_access_notes, property_access_type,
+        services_requested, special_requirements,
+        requires_owner_present, estimated_cost, status
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, 'pending')
+      RETURNING *
+    `, [
+      id, customerName, customerEmail, customerPhone,
+      propertyAddress, propertyLat, propertyLng,
+      propertyAccessNotes, propertyAccessType || 'road',
+      JSON.stringify(servicesRequested || []), specialRequirements,
+      requiresOwnerPresent || false, estimatedCost
+    ]);
+    
+    // Update run slot count
+    await pool.query(`
+      UPDATE sr_service_runs 
+      SET current_slots = current_slots + 1, updated_at = NOW()
+      WHERE id = $1
+    `, [id]);
+    
+    res.json({
+      success: true,
+      slot: result.rows[0]
+    });
+  } catch (err) {
+    console.error('Failed to add slot:', err);
+    res.status(500).json({ success: false, error: 'Failed to add slot' });
+  }
+});
+```
+
+## Now create the UI. Create file: client/src/pages/services/ServiceRuns.tsx
+```tsx
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+
+interface ServiceRun {
+  id: string;
+  title: string;
+  slug: string;
+  description: string;
+  communityName: string;
+  runTypeName: string;
+  bundleName: string;
+  initiatorType: string;
+  targetStartDate: string;
+  targetEndDate: string;
+  minSlots: number;
+  maxSlots: number;
+  currentSlots: number;
+  status: string;
+  biddingOpensAt: string | null;
+  biddingClosesAt: string | null;
+  estimatedMobilizationCost: number | null;
+  totalEstimatedRevenue: number;
+  createdAt: string;
+}
+
+const STATUS_COLORS: Record<string, string> = {
+  draft: 'bg-gray-500/20 text-gray-400 border-gray-500/50',
+  collecting: 'bg-blue-500/20 text-blue-400 border-blue-500/50',
+  bidding: 'bg-purple-500/20 text-purple-400 border-purple-500/50',
+  bid_review: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/50',
+  confirmed: 'bg-green-500/20 text-green-400 border-green-500/50',
+  scheduled: 'bg-cyan-500/20 text-cyan-400 border-cyan-500/50',
+  in_progress: 'bg-orange-500/20 text-orange-400 border-orange-500/50',
+  completed: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/50',
+  cancelled: 'bg-red-500/20 text-red-400 border-red-500/50'
+};
+
+const STATUS_LABELS: Record<string, string> = {
+  draft: 'Draft',
+  collecting: 'Collecting Signups',
+  bidding: 'Open for Bidding',
+  bid_review: 'Reviewing Bids',
+  confirmed: 'Confirmed',
+  scheduled: 'Scheduled',
+  in_progress: 'In Progress',
+  completed: 'Completed',
+  cancelled: 'Cancelled'
+};
+
+export default function ServiceRuns() {
+  const navigate = useNavigate();
+  const [runs, setRuns] = useState<ServiceRun[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [statusFilter, setStatusFilter] = useState<string>('');
+
+  useEffect(() => {
+    loadRuns();
+  }, [statusFilter]);
+
+  async function loadRuns() {
+    setLoading(true);
+    try {
+      let url = '/api/service-runs/runs';
+      if (statusFilter) url += `?status=${statusFilter}`;
+      
+      const res = await fetch(url);
+      const data = await res.json();
+      
+      if (data.success) {
+        setRuns(data.runs);
+      }
+    } catch (err) {
+      console.error('Failed to load runs:', err);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function formatDate(dateStr: string): string {
+    if (!dateStr) return '-';
+    return new Date(dateStr).toLocaleDateString('en-CA', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  }
+
+  function getSlotProgress(current: number, min: number, max: number) {
+    const percentage = (current / max) * 100;
+    const atMinimum = current >= min;
+    
+    return (
+      <div className="w-full">
+        <div className="flex justify-between text-xs mb-1">
+          <span className={atMinimum ? 'text-green-400' : 'text-yellow-400'}>
+            {current} / {max} slots
+          </span>
+          <span className="text-gray-500">min: {min}</span>
+        </div>
+        <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
+          <div 
+            className={`h-full rounded-full transition-all ${atMinimum ? 'bg-green-500' : 'bg-yellow-500'}`}
+            style={{ width: `${Math.min(percentage, 100)}%` }}
+          />
+          {/* Minimum marker */}
+          <div 
+            className="h-full w-0.5 bg-white/50 absolute top-0"
+            style={{ left: `${(min / max) * 100}%` }}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  // Calculate summary stats
+  const stats = {
+    total: runs.length,
+    collecting: runs.filter(r => r.status === 'collecting').length,
+    bidding: runs.filter(r => r.status === 'bidding' || r.status === 'bid_review').length,
+    active: runs.filter(r => ['confirmed', 'scheduled', 'in_progress'].includes(r.status)).length,
+    totalRevenue: runs.reduce((sum, r) => sum + r.totalEstimatedRevenue, 0),
+    totalSlots: runs.reduce((sum, r) => sum + r.currentSlots, 0)
+  };
+
+  if (loading) {
+    return (
+      <div className="p-6 text-center text-gray-400">
+        Loading service runs...
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-6">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-white">Service Runs</h1>
+          <p className="text-gray-400">Manage bundled service runs and resident signups</p>
+        </div>
+        <button
+          onClick={() => navigate('/services/runs/new')}
+          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2"
+        >
+          <span>➕</span> Create Run
+        </button>
+      </div>
+
+      {/* Stats */}
+      <div className="grid grid-cols-6 gap-4 mb-6">
+        <div className="bg-gray-800 rounded-lg p-4 text-center">
+          <div className="text-2xl font-bold text-white">{stats.total}</div>
+          <div className="text-sm text-gray-400">Total Runs</div>
+        </div>
+        <div className="bg-gray-800 rounded-lg p-4 text-center">
+          <div className="text-2xl font-bold text-blue-400">{stats.collecting}</div>
+          <div className="text-sm text-gray-400">Collecting</div>
+        </div>
+        <div className="bg-gray-800 rounded-lg p-4 text-center">
+          <div className="text-2xl font-bold text-purple-400">{stats.bidding}</div>
+          <div className="text-sm text-gray-400">Bidding</div>
+        </div>
+        <div className="bg-gray-800 rounded-lg p-4 text-center">
+          <div className="text-2xl font-bold text-green-400">{stats.active}</div>
+          <div className="text-sm text-gray-400">Active</div>
+        </div>
+        <div className="bg-gray-800 rounded-lg p-4 text-center">
+          <div className="text-2xl font-bold text-white">{stats.totalSlots}</div>
+          <div className="text-sm text-gray-400">Total Slots</div>
+        </div>
+        <div className="bg-gray-800 rounded-lg p-4 text-center">
+          <div className="text-2xl font-bold text-green-400">
+            ${stats.totalRevenue.toLocaleString()}
+          </div>
+          <div className="text-sm text-gray-400">Est. Revenue</div>
+        </div>
+      </div>
+
+      {/* Filters */}
+      <div className="bg-gray-800 rounded-lg p-4 mb-6">
+        <div className="flex items-center gap-4">
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white"
+          >
+            <option value="">All Statuses</option>
+            <option value="collecting">Collecting Signups</option>
+            <option value="bidding">Open for Bidding</option>
+            <option value="bid_review">Reviewing Bids</option>
+            <option value="confirmed">Confirmed</option>
+            <option value="scheduled">Scheduled</option>
+            <option value="in_progress">In Progress</option>
+            <option value="completed">Completed</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
+          <span className="text-gray-500 text-sm">
+            Showing {runs.length} run{runs.length !== 1 ? 's' : ''}
+          </span>
+        </div>
+      </div>
+
+      {/* Runs List */}
+      {runs.length === 0 ? (
+        <div className="bg-gray-800 rounded-lg p-12 text-center">
+          <div className="text-4xl mb-3">🏃</div>
+          <h3 className="text-lg font-medium text-white mb-2">No Service Runs</h3>
+          <p className="text-gray-400 mb-4">Create your first service run to start collecting signups.</p>
+          <button
+            onClick={() => navigate('/services/runs/new')}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg"
+          >
+            Create Run
+          </button>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {runs.map(run => (
+            <div
+              key={run.id}
+              onClick={() => navigate(`/services/runs/${run.slug}`)}
+              className="bg-gray-800 rounded-lg p-4 cursor-pointer hover:bg-gray-750 transition-colors border border-gray-700 hover:border-gray-600"
+            >
+              <div className="flex items-start justify-between mb-3">
+                <div className="flex-1">
+                  <div className="flex items-center gap-3 mb-1">
+                    <h3 className="font-semibold text-white text-lg">{run.title}</h3>
+                    <span className={`text-xs px-2 py-0.5 rounded border ${STATUS_COLORS[run.status]}`}>
+                      {STATUS_LABELS[run.status]}
+                    </span>
+                  </div>
+                  <p className="text-sm text-gray-400">{run.description?.substring(0, 150)}...</p>
+                </div>
+                <div className="text-right">
+                  <div className="text-lg font-bold text-green-400">
+                    ${run.totalEstimatedRevenue.toLocaleString()}
+                  </div>
+                  <div className="text-xs text-gray-500">est. revenue</div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-4 gap-4 mb-3">
+                <div>
+                  <div className="text-xs text-gray-500 mb-1">Community</div>
+                  <div className="text-sm text-white">{run.communityName || '-'}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-gray-500 mb-1">Bundle</div>
+                  <div className="text-sm text-white truncate">{run.bundleName || run.runTypeName || '-'}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-gray-500 mb-1">Target Dates</div>
+                  <div className="text-sm text-white">
+                    {formatDate(run.targetStartDate)} - {formatDate(run.targetEndDate)}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-xs text-gray-500 mb-1">Mobilization</div>
+                  <div className="text-sm text-white">
+                    {run.estimatedMobilizationCost ? `$${run.estimatedMobilizationCost}` : '-'}
+                  </div>
+                </div>
+              </div>
+
+              {/* Slot progress */}
+              <div className="relative">
+                {getSlotProgress(run.currentSlots, run.minSlots, run.maxSlots)}
+              </div>
+
+              {/* Bidding info */}
+              {run.status === 'collecting' && run.biddingOpensAt && (
+                <div className="mt-3 text-xs text-gray-500">
+                  Bidding opens: {formatDate(run.biddingOpensAt)}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+```
+
+## Create the Run Detail page: client/src/pages/services/ServiceRunDetail.tsx
+```tsx
+import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+
+interface Slot {
+  id: string;
+  customerName: string;
+  customerEmail: string;
+  customerPhone: string;
+  propertyAddress: string;
+  propertyAccessType: string;
+  propertyAccessNotes: string;
+  servicesRequested: string[];
+  specialRequirements: string;
+  requiresOwnerPresent: boolean;
+  status: string;
+  estimatedCost: number | null;
+  scheduledDate: string | null;
+  createdAt: string;
+}
+
+interface Bid {
+  id: string;
+  contractorName: string;
+  contractorEmail: string;
+  bidType: string;
+  mobilizationCost: number;
+  perSlotCostLow: number | null;
+  perSlotCostHigh: number | null;
+  crewSize: number;
+  crewNeedsAccommodation: boolean;
+  proposedStartDate: string | null;
+  estimatedDaysOnSite: number;
+  status: string;
+  bidNotes: string;
+  submittedAt: string;
+}
+
+interface RunDetail {
+  id: string;
+  title: string;
+  slug: string;
+  description: string;
+  communityName: string;
+  runTypeName: string;
+  bundleName: string;
+  bundleSlug: string;
+  serviceAreaDescription: string;
+  targetStartDate: string;
+  targetEndDate: string;
+  minSlots: number;
+  maxSlots: number;
+  currentSlots: number;
+  status: string;
+  biddingOpensAt: string | null;
+  biddingClosesAt: string | null;
+  estimatedMobilizationCost: number | null;
+  cancellationPolicy: string;
+}
+
+interface Stats {
+  totalEstimatedRevenue: number;
+  waterAccessCount: number;
+  roadAccessCount: number;
+  pendingCount: number;
+  confirmedCount: number;
+  bidCount: number;
+}
+
+const STATUS_COLORS: Record<string, string> = {
+  draft: 'bg-gray-500/20 text-gray-400',
+  collecting: 'bg-blue-500/20 text-blue-400',
+  bidding: 'bg-purple-500/20 text-purple-400',
+  bid_review: 'bg-yellow-500/20 text-yellow-400',
+  confirmed: 'bg-green-500/20 text-green-400',
+  scheduled: 'bg-cyan-500/20 text-cyan-400',
+  in_progress: 'bg-orange-500/20 text-orange-400',
+  completed: 'bg-emerald-500/20 text-emerald-400',
+  cancelled: 'bg-red-500/20 text-red-400',
+  pending: 'bg-yellow-500/20 text-yellow-400',
+  submitted: 'bg-blue-500/20 text-blue-400',
+  shortlisted: 'bg-purple-500/20 text-purple-400',
+  accepted: 'bg-green-500/20 text-green-400',
+  rejected: 'bg-red-500/20 text-red-400'
+};
+
+const ACCESS_ICONS: Record<string, string> = {
+  road: '🚗',
+  water_only: '🚤',
+  '4x4': '🚙',
+  helicopter: '🚁',
+  ferry: '⛴️'
+};
+
+export default function ServiceRunDetail() {
+  const { slug } = useParams<{ slug: string }>();
+  const navigate = useNavigate();
+  const [run, setRun] = useState<RunDetail | null>(null);
+  const [slots, setSlots] = useState<Slot[]>([]);
+  const [bids, setBids] = useState<Bid[]>([]);
+  const [stats, setStats] = useState<Stats | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<'slots' | 'bids' | 'schedule'>('slots');
+  const [selectedSlot, setSelectedSlot] = useState<Slot | null>(null);
+
+  useEffect(() => {
+    loadRunDetail();
+  }, [slug]);
+
+  async function loadRunDetail() {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/service-runs/runs/${slug}`);
+      const data = await res.json();
+      
+      if (data.success) {
+        setRun(data.run);
+        setSlots(data.slots);
+        setBids(data.bids);
+        setStats(data.stats);
+      }
+    } catch (err) {
+      console.error('Failed to load run:', err);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function formatDate(dateStr: string): string {
+    if (!dateStr) return '-';
+    return new Date(dateStr).toLocaleDateString('en-CA', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  }
+
+  if (loading) {
+    return (
+      <div className="p-6 text-center text-gray-400">
+        Loading run details...
+      </div>
+    );
+  }
+
+  if (!run) {
+    return (
+      <div className="p-6 text-center">
+        <div className="text-4xl mb-3">❌</div>
+        <h3 className="text-lg font-medium text-white mb-2">Run Not Found</h3>
+        <button
+          onClick={() => navigate('/services/runs')}
+          className="text-blue-400 hover:text-blue-300"
+        >
+          ← Back to Runs
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-6">
+      {/* Header */}
+      <div className="flex items-center gap-4 mb-6">
+        <button
+          onClick={() => navigate('/services/runs')}
+          className="text-gray-400 hover:text-white"
+        >
+          ← Back
+        </button>
+        <div className="flex-1">
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-bold text-white">{run.title}</h1>
+            <span className={`text-sm px-3 py-1 rounded ${STATUS_COLORS[run.status]}`}>
+              {run.status.replace('_', ' ').toUpperCase()}
+            </span>
+          </div>
+          <p className="text-gray-400">{run.communityName} • {run.bundleName || run.runTypeName}</p>
+        </div>
+        <div className="flex gap-2">
+          {run.status === 'collecting' && (
+            <button className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg">
+              Open Bidding
+            </button>
+          )}
+          {run.status === 'bidding' && (
+            <button className="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-lg">
+              Review Bids
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Stats */}
+      <div className="grid grid-cols-6 gap-4 mb-6">
+        <div className="bg-gray-800 rounded-lg p-4 text-center">
+          <div className="text-2xl font-bold text-white">{run.currentSlots}</div>
+          <div className="text-sm text-gray-400">Slots</div>
+          <div className="text-xs text-gray-500">{run.minSlots} min / {run.maxSlots} max</div>
+        </div>
+        <div className="bg-gray-800 rounded-lg p-4 text-center">
+          <div className="text-2xl font-bold text-green-400">
+            ${stats?.totalEstimatedRevenue.toLocaleString()}
+          </div>
+          <div className="text-sm text-gray-400">Est. Revenue</div>
+        </div>
+        <div className="bg-gray-800 rounded-lg p-4 text-center">
+          <div className="text-2xl font-bold text-white">{stats?.roadAccessCount || 0}</div>
+          <div className="text-sm text-gray-400">🚗 Road Access</div>
+        </div>
+        <div className="bg-gray-800 rounded-lg p-4 text-center">
+          <div className="text-2xl font-bold text-blue-400">{stats?.waterAccessCount || 0}</div>
+          <div className="text-sm text-gray-400">🚤 Water Only</div>
+        </div>
+        <div className="bg-gray-800 rounded-lg p-4 text-center">
+          <div className="text-2xl font-bold text-purple-400">{stats?.bidCount || 0}</div>
+          <div className="text-sm text-gray-400">Bids</div>
+        </div>
+        <div className="bg-gray-800 rounded-lg p-4 text-center">
+          <div className="text-lg font-bold text-white">
+            {formatDate(run.targetStartDate)}
+          </div>
+          <div className="text-sm text-gray-400">Target Start</div>
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex gap-2 mb-6">
+        <button
+          onClick={() => setActiveTab('slots')}
+          className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+            activeTab === 'slots' 
+              ? 'bg-blue-600 text-white' 
+              : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+          }`}
+        >
+          📋 Slots ({slots.length})
+        </button>
+        <button
+          onClick={() => setActiveTab('bids')}
+          className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+            activeTab === 'bids' 
+              ? 'bg-blue-600 text-white' 
+              : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+          }`}
+        >
+          💰 Bids ({bids.length})
+        </button>
+        <button
+          onClick={() => setActiveTab('schedule')}
+          className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+            activeTab === 'schedule' 
+              ? 'bg-blue-600 text-white' 
+              : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+          }`}
+        >
+          📅 Schedule
+        </button>
+      </div>
+
+      {/* Slots Tab */}
+      {activeTab === 'slots' && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 space-y-4">
+            {slots.length === 0 ? (
+              <div className="bg-gray-800 rounded-lg p-8 text-center">
+                <div className="text-4xl mb-3">📭</div>
+                <h3 className="text-lg font-medium text-white mb-2">No Signups Yet</h3>
+                <p className="text-gray-400">Share this run with property owners to collect signups.</p>
+              </div>
+            ) : (
+              slots.map(slot => (
+                <div
+                  key={slot.id}
+                  onClick={() => setSelectedSlot(slot)}
+                  className={`bg-gray-800 rounded-lg p-4 cursor-pointer hover:bg-gray-750 transition-colors border ${
+                    selectedSlot?.id === slot.id 
+                      ? 'border-blue-500' 
+                      : 'border-gray-700 hover:border-gray-600'
+                  }`}
+                >
+                  <div className="flex items-start justify-between mb-2">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg">{ACCESS_ICONS[slot.propertyAccessType] || '📍'}</span>
+                        <h4 className="font-medium text-white">{slot.customerName}</h4>
+                        <span className={`text-xs px-2 py-0.5 rounded ${STATUS_COLORS[slot.status]}`}>
+                          {slot.status}
+                        </span>
+                      </div>
+                      <p className="text-sm text-gray-400">{slot.propertyAddress}</p>
+                    </div>
+                    <div className="text-right">
+                      <div className="font-bold text-green-400">
+                        ${slot.estimatedCost?.toLocaleString() || '—'}
+                      </div>
+                      <div className="text-xs text-gray-500">estimated</div>
+                    </div>
+                  </div>
+                  
+                  <div className="flex flex-wrap gap-2 text-xs">
+                    {slot.servicesRequested?.map((service, i) => (
+                      <span key={i} className="bg-gray-700 px-2 py-1 rounded text-gray-300">
+                        {service}
+                      </span>
+                    ))}
+                    {slot.requiresOwnerPresent && (
+                      <span className="bg-yellow-500/20 px-2 py-1 rounded text-yellow-400">
+                        👤 Owner Present
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          {/* Slot Detail Panel */}
+          <div className="lg:col-span-1">
+            {selectedSlot ? (
+              <div className="bg-gray-800 rounded-lg p-4 sticky top-4">
+                <h3 className="font-semibold text-white mb-4">{selectedSlot.customerName}</h3>
+                
+                <div className="space-y-4">
+                  <div>
+                    <div className="text-xs text-gray-500 mb-1">Contact</div>
+                    <div className="text-sm text-white">{selectedSlot.customerEmail}</div>
+                    <div className="text-sm text-gray-400">{selectedSlot.customerPhone}</div>
+                  </div>
+                  
+                  <div>
+                    <div className="text-xs text-gray-500 mb-1">Property</div>
+                    <div className="text-sm text-white">{selectedSlot.propertyAddress}</div>
+                    <div className="text-sm text-gray-400 capitalize">
+                      {ACCESS_ICONS[selectedSlot.propertyAccessType]} {selectedSlot.propertyAccessType.replace('_', ' ')} access
+                    </div>
+                  </div>
+                  
+                  {selectedSlot.propertyAccessNotes && (
+                    <div>
+                      <div className="text-xs text-gray-500 mb-1">Access Notes</div>
+                      <div className="text-sm text-gray-300 bg-gray-700 rounded p-2">
+                        {selectedSlot.propertyAccessNotes}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {selectedSlot.specialRequirements && (
+                    <div>
+                      <div className="text-xs text-gray-500 mb-1">Special Requirements</div>
+                      <div className="text-sm text-gray-300 bg-gray-700 rounded p-2">
+                        {selectedSlot.specialRequirements}
+                      </div>
+                    </div>
+                  )}
+                  
+                  <div>
+                    <div className="text-xs text-gray-500 mb-1">Services Requested</div>
+                    <div className="space-y-1">
+                      {selectedSlot.servicesRequested?.map((service, i) => (
+                        <div key={i} className="text-sm text-white bg-gray-700 rounded px-2 py-1">
+                          {service}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  <div className="pt-4 border-t border-gray-700">
+                    <div className="flex justify-between mb-2">
+                      <span className="text-gray-400">Estimated Cost</span>
+                      <span className="text-white font-bold">${selectedSlot.estimatedCost?.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-500">Signed up</span>
+                      <span className="text-gray-400">{formatDate(selectedSlot.createdAt)}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="bg-gray-800 rounded-lg p-8 text-center text-gray-500 sticky top-4">
+                <div className="text-4xl mb-3">📋</div>
+                <p>Select a slot to view details</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Bids Tab */}
+      {activeTab === 'bids' && (
+        <div className="space-y-4">
+          {bids.length === 0 ? (
+            <div className="bg-gray-800 rounded-lg p-8 text-center">
+              <div className="text-4xl mb-3">💰</div>
+              <h3 className="text-lg font-medium text-white mb-2">No Bids Yet</h3>
+              <p className="text-gray-400">
+                {run.status === 'collecting' 
+                  ? 'Bidding will open once signup collection is complete.'
+                  : 'Contractors can submit bids during the bidding period.'}
+              </p>
+            </div>
+          ) : (
+            bids.map(bid => (
+              <div key={bid.id} className="bg-gray-800 rounded-lg p-4 border border-gray-700">
+                <div className="flex items-start justify-between mb-3">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h4 className="font-medium text-white">{bid.contractorName}</h4>
+                      <span className={`text-xs px-2 py-0.5 rounded ${STATUS_COLORS[bid.status]}`}>
+                        {bid.status}
+                      </span>
+                    </div>
+                    <p className="text-sm text-gray-400">{bid.contractorEmail}</p>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-lg font-bold text-green-400">
+                      ${bid.mobilizationCost}
+                    </div>
+                    <div className="text-xs text-gray-500">mobilization</div>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-4 gap-4 text-sm">
+                  <div>
+                    <div className="text-gray-500">Per Slot</div>
+                    <div className="text-white">
+                      ${bid.perSlotCostLow} - ${bid.perSlotCostHigh}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-gray-500">Crew Size</div>
+                    <div className="text-white">{bid.crewSize}</div>
+                  </div>
+                  <div>
+                    <div className="text-gray-500">Days On Site</div>
+                    <div className="text-white">{bid.estimatedDaysOnSite}</div>
+                  </div>
+                  <div>
+                    <div className="text-gray-500">Accommodation</div>
+                    <div className="text-white">{bid.crewNeedsAccommodation ? 'Needed' : 'No'}</div>
+                  </div>
+                </div>
+                
+                {bid.bidNotes && (
+                  <div className="mt-3 text-sm text-gray-400 bg-gray-700 rounded p-2">
+                    {bid.bidNotes}
+                  </div>
+                )}
+              </div>
+            ))
+          )}
+        </div>
+      )}
+
+      {/* Schedule Tab */}
+      {activeTab === 'schedule' && (
+        <div className="bg-gray-800 rounded-lg p-8 text-center">
+          <div className="text-4xl mb-3">📅</div>
+          <h3 className="text-lg font-medium text-white mb-2">Schedule Coming Soon</h3>
+          <p className="text-gray-400">
+            Once a bid is accepted, the schedule builder will help optimize the route and timing.
+          </p>
+        </div>
+      )}
+
+      {/* Run Info Sidebar */}
+      <div className="mt-6 bg-gray-800 rounded-lg p-4">
+        <h3 className="font-semibold text-white mb-4">Run Details</h3>
+        <div className="grid grid-cols-3 gap-6 text-sm">
+          <div>
+            <div className="text-gray-500 mb-1">Service Area</div>
+            <div className="text-white">{run.serviceAreaDescription || '-'}</div>
+          </div>
+          <div>
+            <div className="text-gray-500 mb-1">Target Window</div>
+            <div className="text-white">{formatDate(run.targetStartDate)} - {formatDate(run.targetEndDate)}</div>
+          </div>
+          <div>
+            <div className="text-gray-500 mb-1">Bidding Period</div>
+            <div className="text-white">
+              {run.biddingOpensAt 
+                ? `${formatDate(run.biddingOpensAt)} - ${formatDate(run.biddingClosesAt!)}`
+                : 'Not set'}
+            </div>
+          </div>
+          <div>
+            <div className="text-gray-500 mb-1">Mobilization Est.</div>
+            <div className="text-white">${run.estimatedMobilizationCost || '-'}</div>
+          </div>
+          <div>
+            <div className="text-gray-500 mb-1">Bundle</div>
+            <div className="text-white">{run.bundleName || '-'}</div>
+          </div>
+          <div>
+            <div className="text-gray-500 mb-1">Cancellation Policy</div>
+            <div className="text-white text-xs">{run.cancellationPolicy}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+
+## Add routes to App.tsx:
+```tsx
+import ServiceRuns from './pages/services/ServiceRuns';
+import ServiceRunDetail from './pages/services/ServiceRunDetail';
+
+// Add routes:
+<Route path="/services/runs" element={<ServiceRuns />} />
+<Route path="/services/runs/:slug" element={<ServiceRunDetail />} />
+```
+
+## Update navigation:
+```tsx
+{
+  title: '🔧 Services',
+  defaultOpen: true,
+  items: [
+    { path: '/services/catalog', label: 'Service Catalog', icon: '📚' },
+    { path: '/services/bundles', label: 'Bundles & Packages', icon: '📦' },
+    { path: '/services/runs', label: 'Service Runs', icon: '🏃' },
+  ]
+}
+```
+
+Test the pages at /services/runs and click into the Bamfield Fall 2025 run to see the slots.

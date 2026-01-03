@@ -723,6 +723,375 @@ router.post('/suggest-bundles', async (req: Request, res: Response) => {
 });
 
 // =====================================================================
+// SERVICE RUNS MANAGEMENT
+// =====================================================================
+
+// GET /api/service-runs/runs - List all service runs
+router.get('/runs', async (req: Request, res: Response) => {
+  try {
+    const pool = getPool(req);
+    const { status, community } = req.query;
+    
+    let query = `
+      SELECT 
+        r.*,
+        c.name as community_name,
+        rt.name as run_type_name,
+        b.name as bundle_name,
+        (SELECT COUNT(*) FROM sr_service_slots s WHERE s.run_id = r.id) as slot_count,
+        (SELECT COALESCE(SUM(s.estimated_cost), 0) FROM sr_service_slots s WHERE s.run_id = r.id) as total_estimated_revenue
+      FROM sr_service_runs r
+      LEFT JOIN sr_communities c ON c.id = r.community_id
+      LEFT JOIN sr_run_types rt ON rt.id = r.run_type_id
+      LEFT JOIN sr_bundles b ON b.id = r.bundle_id
+      WHERE 1=1
+    `;
+    const params: any[] = [];
+    let paramIndex = 1;
+    
+    if (status) {
+      query += ` AND r.status = $${paramIndex}`;
+      params.push(status);
+      paramIndex++;
+    }
+    
+    if (community) {
+      query += ` AND c.id = $${paramIndex}`;
+      params.push(community);
+      paramIndex++;
+    }
+    
+    query += ` ORDER BY r.target_start_date DESC, r.created_at DESC`;
+    
+    const result = await pool.query(query, params);
+    
+    res.json({
+      success: true,
+      runs: result.rows.map(row => ({
+        id: row.id,
+        title: row.title,
+        slug: row.slug,
+        description: row.description,
+        communityId: row.community_id,
+        communityName: row.community_name,
+        runTypeName: row.run_type_name,
+        bundleName: row.bundle_name,
+        initiatorType: row.initiator_type,
+        targetStartDate: row.target_start_date,
+        targetEndDate: row.target_end_date,
+        flexibleDates: row.flexible_dates,
+        minSlots: row.min_slots,
+        maxSlots: row.max_slots,
+        currentSlots: parseInt(row.slot_count),
+        status: row.status,
+        biddingOpensAt: row.bidding_opens_at,
+        biddingClosesAt: row.bidding_closes_at,
+        estimatedMobilizationCost: row.estimated_mobilization_cost ? parseFloat(row.estimated_mobilization_cost) : null,
+        totalEstimatedRevenue: parseFloat(row.total_estimated_revenue),
+        allowResidentExclusions: row.allow_resident_exclusions,
+        requirePhotos: row.require_photos,
+        requireDeposit: row.require_deposit,
+        depositAmount: row.deposit_amount ? parseFloat(row.deposit_amount) : null,
+        cancellationPolicy: row.cancellation_policy,
+        publishedAt: row.published_at,
+        createdAt: row.created_at
+      }))
+    });
+  } catch (err) {
+    console.error('Failed to load service runs:', err);
+    res.status(500).json({ success: false, error: 'Failed to load service runs' });
+  }
+});
+
+// GET /api/service-runs/runs/:slug - Get run details with slots
+router.get('/runs/:slug', async (req: Request, res: Response) => {
+  try {
+    const pool = getPool(req);
+    const { slug } = req.params;
+    
+    const runResult = await pool.query(`
+      SELECT 
+        r.*,
+        c.name as community_name, c.remote_multiplier,
+        rt.name as run_type_name, rt.description as run_type_description,
+        b.name as bundle_name, b.slug as bundle_slug
+      FROM sr_service_runs r
+      LEFT JOIN sr_communities c ON c.id = r.community_id
+      LEFT JOIN sr_run_types rt ON rt.id = r.run_type_id
+      LEFT JOIN sr_bundles b ON b.id = r.bundle_id
+      WHERE r.slug = $1
+    `, [slug]);
+    
+    if (runResult.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Run not found' });
+    }
+    
+    const run = runResult.rows[0];
+    
+    const slotsResult = await pool.query(`
+      SELECT * FROM sr_service_slots
+      WHERE run_id = $1
+      ORDER BY created_at
+    `, [run.id]);
+    
+    const bidsResult = await pool.query(`
+      SELECT * FROM sr_contractor_bids
+      WHERE run_id = $1
+      ORDER BY submitted_at DESC
+    `, [run.id]);
+    
+    const slots = slotsResult.rows;
+    const totalEstimatedRevenue = slots.reduce((sum, s) => sum + (parseFloat(s.estimated_cost) || 0), 0);
+    const waterAccessCount = slots.filter(s => s.property_access_type === 'water_only').length;
+    const roadAccessCount = slots.filter(s => s.property_access_type === 'road').length;
+    
+    res.json({
+      success: true,
+      run: {
+        id: run.id,
+        title: run.title,
+        slug: run.slug,
+        description: run.description,
+        communityId: run.community_id,
+        communityName: run.community_name,
+        remoteMultiplier: run.remote_multiplier ? parseFloat(run.remote_multiplier) : 1,
+        runTypeId: run.run_type_id,
+        runTypeName: run.run_type_name,
+        runTypeDescription: run.run_type_description,
+        bundleId: run.bundle_id,
+        bundleName: run.bundle_name,
+        bundleSlug: run.bundle_slug,
+        serviceAreaDescription: run.service_area_description,
+        initiatorType: run.initiator_type,
+        targetStartDate: run.target_start_date,
+        targetEndDate: run.target_end_date,
+        flexibleDates: run.flexible_dates,
+        minSlots: run.min_slots,
+        maxSlots: run.max_slots,
+        currentSlots: slots.length,
+        status: run.status,
+        biddingOpensAt: run.bidding_opens_at,
+        biddingClosesAt: run.bidding_closes_at,
+        winningBidId: run.winning_bid_id,
+        estimatedMobilizationCost: run.estimated_mobilization_cost ? parseFloat(run.estimated_mobilization_cost) : null,
+        mobilizationCostPerSlot: run.mobilization_cost_per_slot ? parseFloat(run.mobilization_cost_per_slot) : null,
+        allowResidentExclusions: run.allow_resident_exclusions,
+        requirePhotos: run.require_photos,
+        requireDeposit: run.require_deposit,
+        depositAmount: run.deposit_amount ? parseFloat(run.deposit_amount) : null,
+        cancellationPolicy: run.cancellation_policy,
+        publishedAt: run.published_at,
+        confirmedAt: run.confirmed_at,
+        completedAt: run.completed_at,
+        createdAt: run.created_at
+      },
+      slots: slots.map(s => ({
+        id: s.id,
+        customerName: s.customer_name,
+        customerEmail: s.customer_email,
+        customerPhone: s.customer_phone,
+        propertyAddress: s.property_address,
+        propertyLat: s.property_lat ? parseFloat(s.property_lat) : null,
+        propertyLng: s.property_lng ? parseFloat(s.property_lng) : null,
+        propertyAccessNotes: s.property_access_notes,
+        propertyAccessType: s.property_access_type,
+        servicesRequested: s.services_requested,
+        specialRequirements: s.special_requirements,
+        photos: s.photos,
+        measurements: s.measurements,
+        excludedContractors: s.excluded_contractors,
+        preferredContractors: s.preferred_contractors,
+        preferredDates: s.preferred_dates,
+        blackoutDates: s.blackout_dates,
+        requiresOwnerPresent: s.requires_owner_present,
+        status: s.status,
+        optOutReason: s.opt_out_reason,
+        estimatedCost: s.estimated_cost ? parseFloat(s.estimated_cost) : null,
+        finalCost: s.final_cost ? parseFloat(s.final_cost) : null,
+        mobilizationShare: s.mobilization_share ? parseFloat(s.mobilization_share) : null,
+        scheduledDate: s.scheduled_date,
+        scheduledTimeStart: s.scheduled_time_start,
+        scheduledTimeEnd: s.scheduled_time_end,
+        completedAt: s.completed_at,
+        customerRating: s.customer_rating,
+        customerReview: s.customer_review,
+        createdAt: s.created_at
+      })),
+      bids: bidsResult.rows.map(b => ({
+        id: b.id,
+        contractorName: b.contractor_name,
+        contractorEmail: b.contractor_email,
+        bidType: b.bid_type,
+        mobilizationCost: parseFloat(b.mobilization_cost),
+        perSlotCostLow: b.per_slot_cost_low ? parseFloat(b.per_slot_cost_low) : null,
+        perSlotCostHigh: b.per_slot_cost_high ? parseFloat(b.per_slot_cost_high) : null,
+        bundleTotalCost: b.bundle_total_cost ? parseFloat(b.bundle_total_cost) : null,
+        crewSize: b.crew_size,
+        crewNeedsAccommodation: b.crew_needs_accommodation,
+        proposedStartDate: b.proposed_start_date,
+        proposedEndDate: b.proposed_end_date,
+        estimatedDaysOnSite: b.estimated_days_on_site,
+        status: b.status,
+        bidNotes: b.bid_notes,
+        submittedAt: b.submitted_at
+      })),
+      stats: {
+        totalEstimatedRevenue,
+        waterAccessCount,
+        roadAccessCount,
+        pendingCount: slots.filter(s => s.status === 'pending').length,
+        confirmedCount: slots.filter(s => s.status === 'confirmed').length,
+        bidCount: bidsResult.rows.length
+      }
+    });
+  } catch (err) {
+    console.error('Failed to load run details:', err);
+    res.status(500).json({ success: false, error: 'Failed to load run details' });
+  }
+});
+
+// POST /api/service-runs/runs - Create new run
+router.post('/runs', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const pool = getPool(req);
+    const {
+      title, description, runTypeId, bundleId, communityId,
+      serviceAreaDescription, targetStartDate, targetEndDate,
+      minSlots, maxSlots, biddingOpensAt, biddingClosesAt,
+      estimatedMobilizationCost, requirePhotos, requireDeposit,
+      depositAmount, cancellationPolicy
+    } = req.body;
+    
+    const slug = title.toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '');
+    
+    const result = await pool.query(`
+      INSERT INTO sr_service_runs (
+        title, slug, description, run_type_id, bundle_id, community_id,
+        service_area_description, target_start_date, target_end_date,
+        min_slots, max_slots, bidding_opens_at, bidding_closes_at,
+        estimated_mobilization_cost, require_photos, require_deposit,
+        deposit_amount, cancellation_policy, status, published_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, 'collecting', NOW())
+      RETURNING *
+    `, [
+      title, slug, description, runTypeId, bundleId, communityId,
+      serviceAreaDescription, targetStartDate, targetEndDate,
+      minSlots || 5, maxSlots || 25, biddingOpensAt, biddingClosesAt,
+      estimatedMobilizationCost, requirePhotos !== false, requireDeposit || false,
+      depositAmount, cancellationPolicy || 'Full refund if cancelled 7+ days before scheduled date'
+    ]);
+    
+    res.json({
+      success: true,
+      run: result.rows[0]
+    });
+  } catch (err: any) {
+    console.error('Failed to create run:', err);
+    if (err.code === '23505') {
+      res.status(400).json({ success: false, error: 'A run with that title already exists' });
+    } else {
+      res.status(500).json({ success: false, error: 'Failed to create run' });
+    }
+  }
+});
+
+// PATCH /api/service-runs/runs/:id/status - Update run status
+router.patch('/runs/:id/status', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const pool = getPool(req);
+    const { id } = req.params;
+    const { status } = req.body;
+    
+    const validStatuses = ['draft', 'collecting', 'bidding', 'bid_review', 'confirmed', 'scheduled', 'in_progress', 'completed', 'cancelled'];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({ success: false, error: 'Invalid status' });
+    }
+    
+    const result = await pool.query(`
+      UPDATE sr_service_runs 
+      SET status = $1, updated_at = NOW()
+      WHERE id = $2
+      RETURNING *
+    `, [status, id]);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Run not found' });
+    }
+    
+    res.json({ success: true, run: result.rows[0] });
+  } catch (err) {
+    console.error('Failed to update run status:', err);
+    res.status(500).json({ success: false, error: 'Failed to update status' });
+  }
+});
+
+// POST /api/service-runs/runs/:id/slots - Add slot to run
+router.post('/runs/:id/slots', async (req: Request, res: Response) => {
+  try {
+    const pool = getPool(req);
+    const { id } = req.params;
+    const {
+      customerName, customerEmail, customerPhone,
+      propertyAddress, propertyLat, propertyLng,
+      propertyAccessNotes, propertyAccessType,
+      servicesRequested, specialRequirements,
+      requiresOwnerPresent, estimatedCost
+    } = req.body;
+    
+    const runCheck = await pool.query(
+      `SELECT id, status, current_slots, max_slots FROM sr_service_runs WHERE id = $1`,
+      [id]
+    );
+    
+    if (runCheck.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Run not found' });
+    }
+    
+    const run = runCheck.rows[0];
+    if (run.status !== 'collecting') {
+      return res.status(400).json({ success: false, error: 'Run is not accepting signups' });
+    }
+    
+    if (run.current_slots >= run.max_slots) {
+      return res.status(400).json({ success: false, error: 'Run is full' });
+    }
+    
+    const result = await pool.query(`
+      INSERT INTO sr_service_slots (
+        run_id, customer_name, customer_email, customer_phone,
+        property_address, property_lat, property_lng,
+        property_access_notes, property_access_type,
+        services_requested, special_requirements,
+        requires_owner_present, estimated_cost, status
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, 'pending')
+      RETURNING *
+    `, [
+      id, customerName, customerEmail, customerPhone,
+      propertyAddress, propertyLat, propertyLng,
+      propertyAccessNotes, propertyAccessType || 'road',
+      JSON.stringify(servicesRequested || []), specialRequirements,
+      requiresOwnerPresent || false, estimatedCost
+    ]);
+    
+    await pool.query(`
+      UPDATE sr_service_runs 
+      SET current_slots = current_slots + 1, updated_at = NOW()
+      WHERE id = $1
+    `, [id]);
+    
+    res.json({
+      success: true,
+      slot: result.rows[0]
+    });
+  } catch (err) {
+    console.error('Failed to add slot:', err);
+    res.status(500).json({ success: false, error: 'Failed to add slot' });
+  }
+});
+
+// =====================================================================
 // STATS
 // =====================================================================
 
