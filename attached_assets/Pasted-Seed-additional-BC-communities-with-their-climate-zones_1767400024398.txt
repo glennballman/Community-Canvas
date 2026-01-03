@@ -1,0 +1,353 @@
+Seed additional BC communities with their climate zones, access types, and community-specific bundles.
+
+## Run this SQL:
+```sql
+-- =====================================================================
+-- BC COMMUNITIES - Vancouver Island & Coastal
+-- =====================================================================
+
+-- Get climate region IDs for reference
+DO $$
+DECLARE
+    v_coastal_wet_id UUID;
+    v_coastal_dry_id UUID;
+    v_mountain_id UUID;
+BEGIN
+    SELECT id INTO v_coastal_wet_id FROM sr_climate_regions WHERE name = 'Coastal Wet';
+    SELECT id INTO v_coastal_dry_id FROM sr_climate_regions WHERE name = 'Coastal Dry';
+    SELECT id INTO v_mountain_id FROM sr_climate_regions WHERE name = 'Mountain';
+    
+    -- =====================================================================
+    -- VANCOUVER ISLAND - WEST COAST (Coastal Wet)
+    -- =====================================================================
+    
+    INSERT INTO sr_communities (name, region, country, latitude, longitude, climate_region_id, remote_multiplier, typical_freeze_week, typical_thaw_week, notes)
+    VALUES
+    ('Tofino', 'BC', 'Canada', 49.1530, -125.9066, v_coastal_wet_id, 1.15, 50, 8, 
+     'Tourism hub, good road access via Hwy 4. High demand for vacation property services. Storm season Oct-Mar.'),
+    ('Ucluelet', 'BC', 'Canada', 48.9424, -125.5466, v_coastal_wet_id, 1.15, 50, 8, 
+     'Adjacent to Tofino, similar market. Wild Pacific Trail area popular for vacation homes.'),
+    ('Port Alberni', 'BC', 'Canada', 49.2339, -124.8055, v_coastal_wet_id, 1.05, 48, 10, 
+     'Hub city for west coast access. Good contractor base. Gateway to Bamfield and Ucluelet.'),
+    ('Tahsis', 'BC', 'Canada', 49.9167, -126.6667, v_coastal_wet_id, 1.35, 46, 12, 
+     'Remote logging town. Long gravel road access. Limited local contractors.'),
+    ('Zeballos', 'BC', 'Canada', 49.9833, -126.8500, v_coastal_wet_id, 1.40, 46, 12, 
+     'Very remote, gravel road access. Mining history. Few services available locally.'),
+    ('Gold River', 'BC', 'Canada', 49.7833, -126.1167, v_coastal_wet_id, 1.20, 46, 12, 
+     'Former mill town. Access point for Nootka Sound water-only properties.')
+    ON CONFLICT DO NOTHING;
+    
+    -- =====================================================================
+    -- VANCOUVER ISLAND - NORTH (Coastal Wet)
+    -- =====================================================================
+    
+    INSERT INTO sr_communities (name, region, country, latitude, longitude, climate_region_id, remote_multiplier, typical_freeze_week, typical_thaw_week, notes)
+    VALUES
+    ('Port Hardy', 'BC', 'Canada', 50.7225, -127.4947, v_coastal_wet_id, 1.20, 46, 12, 
+     'Northern tip of island. Ferry to Prince Rupert/Bella Coola. Good contractor hub for north island.'),
+    ('Port McNeill', 'BC', 'Canada', 50.5903, -127.0847, v_coastal_wet_id, 1.15, 46, 12, 
+     'Logging and fishing. Access to Telegraph Cove and Broughton Archipelago.'),
+    ('Alert Bay', 'BC', 'Canada', 50.5833, -126.9333, v_coastal_wet_id, 1.30, 46, 12, 
+     'Cormorant Island, ferry access only. Namgis First Nation. Water-only for all services.'),
+    ('Sointula', 'BC', 'Canada', 50.6167, -127.0167, v_coastal_wet_id, 1.30, 46, 12, 
+     'Malcolm Island, ferry access. Finnish heritage community. Limited local services.')
+    ON CONFLICT DO NOTHING;
+    
+    -- =====================================================================
+    -- VANCOUVER ISLAND - EAST COAST (Coastal Dry)
+    -- =====================================================================
+    
+    INSERT INTO sr_communities (name, region, country, latitude, longitude, climate_region_id, remote_multiplier, typical_freeze_week, typical_thaw_week, notes)
+    VALUES
+    ('Campbell River', 'BC', 'Canada', 50.0244, -125.2475, v_coastal_dry_id, 1.00, 50, 8, 
+     'Major service hub. Excellent contractor base. Gateway to Discovery Islands and Strathcona.'),
+    ('Courtenay', 'BC', 'Canada', 49.6878, -124.9944, v_coastal_dry_id, 1.00, 50, 8, 
+     'Comox Valley hub. Strong contractor market. Mt Washington ski area nearby.'),
+    ('Comox', 'BC', 'Canada', 49.6733, -124.9022, v_coastal_dry_id, 1.00, 50, 8, 
+     'Adjacent to Courtenay. Marina and waterfront properties. CFB Comox.'),
+    ('Qualicum Beach', 'BC', 'Canada', 49.3500, -124.4333, v_coastal_dry_id, 1.00, 51, 7, 
+     'Retirement community. High-end properties. Good local contractor availability.'),
+    ('Parksville', 'BC', 'Canada', 49.3150, -124.3117, v_coastal_dry_id, 1.00, 51, 7, 
+     'Tourism and retirement. Beach properties. Adjacent to Qualicum.'),
+    ('Nanaimo', 'BC', 'Canada', 49.1659, -123.9401, v_coastal_dry_id, 0.95, 51, 7, 
+     'Major city, excellent contractor base. Ferry hub. Lowest multiplier on island.'),
+    ('Ladysmith', 'BC', 'Canada', 48.9975, -123.8181, v_coastal_dry_id, 1.00, 51, 7, 
+     'Heritage town. Waterfront redevelopment. Growing service demand.'),
+    ('Duncan', 'BC', 'Canada', 48.7787, -123.7079, v_coastal_dry_id, 1.00, 51, 7, 
+     'Cowichan Valley hub. Wine country. Mix of rural and residential.')
+    ON CONFLICT DO NOTHING;
+    
+    -- =====================================================================
+    -- GULF ISLANDS (Coastal Dry - Ferry Access)
+    -- =====================================================================
+    
+    INSERT INTO sr_communities (name, region, country, latitude, longitude, climate_region_id, remote_multiplier, typical_freeze_week, typical_thaw_week, notes)
+    VALUES
+    ('Salt Spring Island', 'BC', 'Canada', 48.8333, -123.5000, v_coastal_dry_id, 1.20, 51, 7, 
+     'Largest Gulf Island. Ferry from Swartz Bay, Crofton, or Tsawwassen. Strong seasonal property market.'),
+    ('Galiano Island', 'BC', 'Canada', 48.9167, -123.4167, v_coastal_dry_id, 1.25, 51, 7, 
+     'Ferry access. Smaller island, limited services. Vacation properties.'),
+    ('Mayne Island', 'BC', 'Canada', 48.8500, -123.3000, v_coastal_dry_id, 1.25, 51, 7, 
+     'Small island, ferry access. Historic properties. Limited contractor access.'),
+    ('Pender Islands', 'BC', 'Canada', 48.7833, -123.2667, v_coastal_dry_id, 1.25, 51, 7, 
+     'North and South Pender connected by bridge. Ferry access. Vacation homes.'),
+    ('Saturna Island', 'BC', 'Canada', 48.7833, -123.1333, v_coastal_dry_id, 1.30, 51, 7, 
+     'Most remote southern Gulf Island. Limited ferry service. Eco-tourism focus.'),
+    ('Gabriola Island', 'BC', 'Canada', 49.1667, -123.7833, v_coastal_dry_id, 1.15, 51, 7, 
+     'Short ferry from Nanaimo. Growing community. Arts and recreation focus.'),
+    ('Denman Island', 'BC', 'Canada', 49.5333, -124.8167, v_coastal_dry_id, 1.20, 50, 8, 
+     'Ferry from Buckley Bay. Gateway to Hornby. Rural agricultural character.'),
+    ('Hornby Island', 'BC', 'Canada', 49.5167, -124.6667, v_coastal_dry_id, 1.25, 50, 8, 
+     'Two ferries required (Buckley Bay + Denman). Popular summer destination. Tribune Bay.')
+    ON CONFLICT DO NOTHING;
+    
+    -- =====================================================================
+    -- DISCOVERY ISLANDS (Coastal Wet - Water/Ferry Access)
+    -- =====================================================================
+    
+    INSERT INTO sr_communities (name, region, country, latitude, longitude, climate_region_id, remote_multiplier, typical_freeze_week, typical_thaw_week, notes)
+    VALUES
+    ('Quadra Island', 'BC', 'Canada', 50.1000, -125.2167, v_coastal_wet_id, 1.15, 48, 10, 
+     '10 min ferry from Campbell River. Good local services. Gateway to outer islands.'),
+    ('Cortes Island', 'BC', 'Canada', 50.0833, -124.9667, v_coastal_wet_id, 1.25, 48, 10, 
+     'Two ferries required (Campbell River + Quadra). Remote feel. Eco-community.'),
+    ('Read Island', 'BC', 'Canada', 50.1333, -125.0167, v_coastal_wet_id, 1.45, 48, 10, 
+     'Water access only from Quadra. Very remote. Seasonal properties.'),
+    ('Maurelle Island', 'BC', 'Canada', 50.1000, -125.1000, v_coastal_wet_id, 1.50, 48, 10, 
+     'Water access only. Private island feel. High-end remote properties.')
+    ON CONFLICT DO NOTHING;
+    
+    -- =====================================================================
+    -- SUNSHINE COAST (Coastal Wet - Ferry Access)
+    -- =====================================================================
+    
+    INSERT INTO sr_communities (name, region, country, latitude, longitude, climate_region_id, remote_multiplier, typical_freeze_week, typical_thaw_week, notes)
+    VALUES
+    ('Gibsons', 'BC', 'Canada', 49.3964, -123.5053, v_coastal_wet_id, 1.10, 50, 8, 
+     '40 min ferry from Horseshoe Bay. Good contractor base. Beachcomber filming location.'),
+    ('Sechelt', 'BC', 'Canada', 49.4747, -123.7547, v_coastal_wet_id, 1.10, 50, 8, 
+     'Sunshine Coast hub. Sechelt Inlet properties. Growing retirement community.'),
+    ('Halfmoon Bay', 'BC', 'Canada', 49.5167, -123.9167, v_coastal_wet_id, 1.15, 50, 8, 
+     'Between Sechelt and Egmont. Waterfront properties. Welcome Beach area.'),
+    ('Pender Harbour', 'BC', 'Canada', 49.6167, -124.0167, v_coastal_wet_id, 1.15, 48, 10, 
+     'Madeira Park, Garden Bay. Major marina area. Fishing lodges.'),
+    ('Egmont', 'BC', 'Canada', 49.7500, -123.9333, v_coastal_wet_id, 1.20, 48, 10, 
+     'Skookumchuck Narrows. Remote end of lower Sunshine Coast. Princess Louisa access.'),
+    ('Powell River', 'BC', 'Canada', 49.8353, -124.5247, v_coastal_wet_id, 1.15, 48, 10, 
+     'Second ferry from Earls Cove. Former mill town. Good contractor base.'),
+    ('Lund', 'BC', 'Canada', 49.9833, -124.7667, v_coastal_wet_id, 1.20, 48, 10, 
+     'End of Highway 101. Desolation Sound access. Tourism and fishing.')
+    ON CONFLICT DO NOTHING;
+    
+    -- =====================================================================
+    -- CENTRAL COAST (Coastal Wet - Remote)
+    -- =====================================================================
+    
+    INSERT INTO sr_communities (name, region, country, latitude, longitude, climate_region_id, remote_multiplier, typical_freeze_week, typical_thaw_week, notes)
+    VALUES
+    ('Bella Coola', 'BC', 'Canada', 52.3833, -126.7500, v_coastal_wet_id, 1.45, 44, 14, 
+     'Remote valley. Road access via steep hill or ferry from Port Hardy. Nuxalk First Nation.'),
+    ('Ocean Falls', 'BC', 'Canada', 52.3500, -127.6833, v_coastal_wet_id, 1.60, 44, 14, 
+     'Water/air access only. Former company town. Very limited services.'),
+    ('Shearwater', 'BC', 'Canada', 52.1500, -128.0833, v_coastal_wet_id, 1.55, 44, 14, 
+     'Denny Island. BC Ferries stop. Marina and fishing lodges.'),
+    ('Klemtu', 'BC', 'Canada', 52.5833, -128.5167, v_coastal_wet_id, 1.65, 44, 14, 
+     'Kitasoo/Xai''xais First Nation. Water/air access. Spirit Bear Lodge.')
+    ON CONFLICT DO NOTHING;
+    
+    -- =====================================================================
+    -- HAIDA GWAII (Coastal Wet - Remote)
+    -- =====================================================================
+    
+    INSERT INTO sr_communities (name, region, country, latitude, longitude, climate_region_id, remote_multiplier, typical_freeze_week, typical_thaw_week, notes)
+    VALUES
+    ('Queen Charlotte', 'BC', 'Canada', 53.2500, -132.0833, v_coastal_wet_id, 1.50, 46, 12, 
+     'Main town on Graham Island. Ferry from Prince Rupert. Good local services hub.'),
+    ('Skidegate', 'BC', 'Canada', 53.2667, -131.9833, v_coastal_wet_id, 1.50, 46, 12, 
+     'Haida Nation administrative centre. Ferry terminal. Cultural centre.'),
+    ('Masset', 'BC', 'Canada', 54.0167, -132.1500, v_coastal_wet_id, 1.55, 46, 12, 
+     'Northern Graham Island. Old Masset Haida village. Military history.'),
+    ('Port Clements', 'BC', 'Canada', 53.6833, -132.1833, v_coastal_wet_id, 1.55, 46, 12, 
+     'Small community. Golden Spruce site. Limited services.'),
+    ('Sandspit', 'BC', 'Canada', 53.2333, -131.8167, v_coastal_wet_id, 1.55, 46, 12, 
+     'Moresby Island. Airport. Ferry to Graham Island. Gateway to Gwaii Haanas.')
+    ON CONFLICT DO NOTHING;
+    
+    -- =====================================================================
+    -- NORTH COAST (Coastal Wet)
+    -- =====================================================================
+    
+    INSERT INTO sr_communities (name, region, country, latitude, longitude, climate_region_id, remote_multiplier, typical_freeze_week, typical_thaw_week, notes)
+    VALUES
+    ('Prince Rupert', 'BC', 'Canada', 54.3150, -130.3208, v_coastal_wet_id, 1.25, 44, 14, 
+     'Major port city. Ferry hub to Haida Gwaii and Alaska. Good contractor base.'),
+    ('Kitimat', 'BC', 'Canada', 54.0525, -128.6536, v_coastal_wet_id, 1.20, 42, 16, 
+     'Industrial town. LNG development. Road access. Good services.'),
+    ('Terrace', 'BC', 'Canada', 54.5164, -128.5997, v_coastal_wet_id, 1.15, 42, 16, 
+     'Regional hub. Good contractor market. Gateway to coastal communities.')
+    ON CONFLICT DO NOTHING;
+    
+    RAISE NOTICE 'BC communities seeded successfully';
+END $$;
+
+-- =====================================================================
+-- CREATE REGIONAL BUNDLES FOR KEY AREAS
+-- =====================================================================
+
+-- Gulf Islands Spring Opening
+INSERT INTO sr_bundles (name, slug, description, context, is_subscription, billing_period)
+VALUES (
+    'Gulf Islands Spring Opening Package',
+    'gulf-islands-spring-opening',
+    'Spring property opening for Gulf Islands. Ferry-coordinated single visit: water systems, dock, electrical check, generator.',
+    'residential',
+    false,
+    ''
+) ON CONFLICT (slug) DO NOTHING;
+
+-- Gulf Islands Fall Shutdown
+INSERT INTO sr_bundles (name, slug, description, context, is_subscription, billing_period)
+VALUES (
+    'Gulf Islands Fall Shutdown Package',
+    'gulf-islands-fall-shutdown',
+    'Fall shutdown for Gulf Islands properties. Winterization, chimney, roof, gutters. Coordinated with ferry schedules.',
+    'residential',
+    false,
+    ''
+) ON CONFLICT (slug) DO NOTHING;
+
+-- Sunshine Coast Seasonal Bundle
+INSERT INTO sr_bundles (name, slug, description, context, is_subscription, billing_period)
+VALUES (
+    'Sunshine Coast Seasonal Care Package',
+    'sunshine-coast-seasonal',
+    'Seasonal maintenance for Sunshine Coast properties. Includes pressure washing, gutter cleaning, roof inspection.',
+    'residential',
+    false,
+    ''
+) ON CONFLICT (slug) DO NOTHING;
+
+-- Haida Gwaii Remote Property Bundle
+INSERT INTO sr_bundles (name, slug, description, context, is_subscription, billing_period)
+VALUES (
+    'Haida Gwaii Remote Property Package',
+    'haida-gwaii-remote',
+    'Comprehensive remote property care for Haida Gwaii. Extended service visits to maximize mobilization value.',
+    'residential',
+    false,
+    ''
+) ON CONFLICT (slug) DO NOTHING;
+
+-- Discovery Islands Water Access Bundle
+INSERT INTO sr_bundles (name, slug, description, context, is_subscription, billing_period)
+VALUES (
+    'Discovery Islands Water Access Package',
+    'discovery-islands-water',
+    'Service package for water-only access properties in Discovery Islands. Boat-based crew mobilization.',
+    'residential',
+    false,
+    ''
+) ON CONFLICT (slug) DO NOTHING;
+
+-- Add bundle items for Gulf Islands Spring Opening
+INSERT INTO sr_bundle_items (bundle_id, service_id, quantity, sort_order)
+SELECT b.id, s.id, 1,
+    CASE s.slug
+        WHEN 'spring-de-winterization' THEN 10
+        WHEN 'water-quality-testing' THEN 20
+        WHEN 'dock-launch' THEN 30
+        WHEN 'exterior-electrical-check' THEN 40
+        WHEN 'generator-service' THEN 50
+    END
+FROM sr_bundles b, sr_services s
+WHERE b.slug = 'gulf-islands-spring-opening'
+AND s.slug IN ('spring-de-winterization', 'water-quality-testing', 'dock-launch', 'exterior-electrical-check', 'generator-service')
+ON CONFLICT DO NOTHING;
+
+-- Add pricing for new bundles
+INSERT INTO sr_bundle_pricing (bundle_id, base_price, discount_factor, mobilization_surcharge, remote_multiplier, notes)
+SELECT id, 0, 0.90, 175, 1.20, 'Ferry-coordinated. Single visit optimizes crossing costs.'
+FROM sr_bundles WHERE slug = 'gulf-islands-spring-opening'
+ON CONFLICT DO NOTHING;
+
+INSERT INTO sr_bundle_pricing (bundle_id, base_price, discount_factor, mobilization_surcharge, remote_multiplier, notes)
+SELECT id, 0, 0.88, 200, 1.20, 'Fall shutdown with ferry coordination.'
+FROM sr_bundles WHERE slug = 'gulf-islands-fall-shutdown'
+ON CONFLICT DO NOTHING;
+
+INSERT INTO sr_bundle_pricing (bundle_id, base_price, discount_factor, mobilization_surcharge, remote_multiplier, notes)
+SELECT id, 0, 0.92, 150, 1.15, 'Lower mobilization due to road access from ferry.'
+FROM sr_bundles WHERE slug = 'sunshine-coast-seasonal'
+ON CONFLICT DO NOTHING;
+
+INSERT INTO sr_bundle_pricing (bundle_id, base_price, discount_factor, mobilization_surcharge, remote_multiplier, notes)
+SELECT id, 0, 0.85, 450, 1.50, 'High mobilization reflects ferry + remote access. Extended visits maximize value.'
+FROM sr_bundles WHERE slug = 'haida-gwaii-remote'
+ON CONFLICT DO NOTHING;
+
+INSERT INTO sr_bundle_pricing (bundle_id, base_price, discount_factor, mobilization_surcharge, remote_multiplier, notes)
+SELECT id, 0, 0.87, 350, 1.35, 'Boat-based mobilization. Weather-dependent scheduling.'
+FROM sr_bundles WHERE slug = 'discovery-islands-water'
+ON CONFLICT DO NOTHING;
+
+-- Add seasonality for new bundles
+INSERT INTO sr_bundle_seasonality (bundle_id, climate_region_id, earliest_week, latest_week, hard_stop, notes)
+SELECT b.id, cr.id, 14, 20, false, 'Spring opening after winter storms ease.'
+FROM sr_bundles b, sr_climate_regions cr
+WHERE b.slug = 'gulf-islands-spring-opening' AND cr.name = 'Coastal Dry'
+ON CONFLICT DO NOTHING;
+
+INSERT INTO sr_bundle_seasonality (bundle_id, climate_region_id, earliest_week, latest_week, hard_stop, notes)
+SELECT b.id, cr.id, 40, 48, true, 'Fall shutdown before hard winter.'
+FROM sr_bundles b, sr_climate_regions cr
+WHERE b.slug = 'gulf-islands-fall-shutdown' AND cr.name = 'Coastal Dry'
+ON CONFLICT DO NOTHING;
+
+INSERT INTO sr_bundle_seasonality (bundle_id, climate_region_id, earliest_week, latest_week, hard_stop, notes)
+SELECT b.id, cr.id, 16, 42, false, 'Extended season due to milder climate.'
+FROM sr_bundles b, sr_climate_regions cr
+WHERE b.slug = 'sunshine-coast-seasonal' AND cr.name = 'Coastal Wet'
+ON CONFLICT DO NOTHING;
+
+INSERT INTO sr_bundle_seasonality (bundle_id, climate_region_id, earliest_week, latest_week, hard_stop, notes)
+SELECT b.id, cr.id, 18, 38, true, 'Limited window due to storm exposure and ferry schedules.'
+FROM sr_bundles b, sr_climate_regions cr
+WHERE b.slug = 'haida-gwaii-remote' AND cr.name = 'Coastal Wet'
+ON CONFLICT DO NOTHING;
+
+INSERT INTO sr_bundle_seasonality (bundle_id, climate_region_id, earliest_week, latest_week, hard_stop, notes)
+SELECT b.id, cr.id, 16, 40, false, 'Weather-dependent water access.'
+FROM sr_bundles b, sr_climate_regions cr
+WHERE b.slug = 'discovery-islands-water' AND cr.name = 'Coastal Wet'
+ON CONFLICT DO NOTHING;
+
+-- =====================================================================
+-- VERIFY
+-- =====================================================================
+
+SELECT 'BC Communities seeded:' as status;
+SELECT 'Total communities: ' || COUNT(*) FROM sr_communities;
+SELECT 'Total bundles: ' || COUNT(*) FROM sr_bundles;
+
+-- Show communities by region
+SELECT region, COUNT(*) as count, 
+       ROUND(AVG(remote_multiplier)::numeric, 2) as avg_multiplier
+FROM sr_communities 
+GROUP BY region 
+ORDER BY region;
+
+-- Show communities with highest multipliers (most remote)
+SELECT name, remote_multiplier, notes 
+FROM sr_communities 
+WHERE remote_multiplier >= 1.4 
+ORDER BY remote_multiplier DESC;
+
+-- Show all bundles
+SELECT name, 
+       (SELECT discount_factor FROM sr_bundle_pricing WHERE bundle_id = sr_bundles.id) as discount,
+       (SELECT mobilization_surcharge FROM sr_bundle_pricing WHERE bundle_id = sr_bundles.id) as mobilization
+FROM sr_bundles
+ORDER BY name;
+```
+
+Report the community counts and list of most remote communities.
