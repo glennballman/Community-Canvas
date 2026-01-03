@@ -1,0 +1,528 @@
+PROMPT 4U: Unified Booking Notifications + Checkout Gate
+sql-- =====================================================================
+-- UNIFIED NOTIFICATION SYSTEM FOR ALL RENTALS
+-- Same flow: Book → Email → Reminders → Checkout gate
+-- =====================================================================
+
+-- =====================================================================
+-- 1. BOOKING NOTIFICATIONS TABLE
+-- Tracks all emails sent for any booking type
+-- =====================================================================
+
+CREATE TABLE IF NOT EXISTS cc_booking_notifications (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    
+    -- Polymorphic booking reference
+    booking_type TEXT NOT NULL CHECK (booking_type IN ('equipment', 'accommodation')),
+    booking_id UUID NOT NULL,
+    
+    -- Notification details
+    notification_type TEXT NOT NULL CHECK (notification_type IN (
+        'confirmation',           -- Immediate: booking confirmed + waiver link
+        'waiver_reminder_7day',   -- 7 days before
+        'waiver_reminder_3day',   -- 3 days before
+        'waiver_reminder_1day',   -- 1 day before
+        'waiver_completed',       -- Waiver signed confirmation
+        'checkin_ready',          -- All requirements met, ready for pickup
+        'checkin_reminder',       -- Day of pickup reminder
+        'checkout_reminder',      -- Return reminder
+        'review_request'          -- Post-rental review request
+    )),
+    
+    -- Recipient
+    recipient_individual_id UUID REFERENCES cc_individuals(id),
+    recipient_email TEXT NOT NULL,
+    recipient_name TEXT DEFAULT '',
+    
+    -- Content
+    subject TEXT NOT NULL,
+    body_text TEXT,
+    body_html TEXT,
+    
+    -- Status
+    status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'sent', 'failed', 'skipped')),
+    scheduled_for TIMESTAMPTZ NOT NULL,
+    sent_at TIMESTAMPTZ,
+    error_message TEXT,
+    
+    -- Tracking
+    opened_at TIMESTAMPTZ,
+    clicked_at TIMESTAMPTZ,
+    waiver_signed_at TIMESTAMPTZ,
+    
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_booking_notifications_booking ON cc_booking_notifications(booking_type, booking_id);
+CREATE INDEX idx_booking_notifications_scheduled ON cc_booking_notifications(scheduled_for) WHERE status = 'pending';
+CREATE INDEX idx_booking_notifications_type ON cc_booking_notifications(notification_type);
+
+-- =====================================================================
+-- 2. ADD CHECKOUT GATE FIELDS TO BOOKINGS
+-- =====================================================================
+
+-- Equipment bookings
+ALTER TABLE cc_rental_bookings
+ADD COLUMN IF NOT EXISTS waiver_signed BOOLEAN DEFAULT false;
+
+ALTER TABLE cc_rental_bookings
+ADD COLUMN IF NOT EXISTS waiver_signed_at TIMESTAMPTZ;
+
+ALTER TABLE cc_rental_bookings
+ADD COLUMN IF NOT EXISTS waiver_signed_id UUID REFERENCES cc_signed_waivers(id);
+
+ALTER TABLE cc_rental_bookings
+ADD COLUMN IF NOT EXISTS checkout_allowed BOOLEAN GENERATED ALWAYS AS (
+    waiver_valid OR waiver_signed
+) STORED;
+
+ALTER TABLE cc_rental_bookings
+ADD COLUMN IF NOT EXISTS confirmation_email_sent BOOLEAN DEFAULT false;
+
+ALTER TABLE cc_rental_bookings
+ADD COLUMN IF NOT EXISTS waiver_link_token TEXT DEFAULT encode(gen_random_bytes(32), 'hex');
+
+-- =====================================================================
+-- 3. FUNCTION: Schedule notifications for new booking
+-- =====================================================================
+
+CREATE OR REPLACE FUNCTION schedule_booking_notifications(
+    p_booking_type TEXT,
+    p_booking_id UUID
+) RETURNS INTEGER AS $$
+DECLARE
+    v_individual_id UUID;
+    v_email TEXT;
+    v_name TEXT;
+    v_item_name TEXT;
+    v_start_time TIMESTAMPTZ;
+    v_waiver_required TEXT;
+    v_waiver_token TEXT;
+    v_notifications_created INTEGER := 0;
+BEGIN
+    -- Get booking details based on type
+    IF p_booking_type = 'equipment' THEN
+        SELECT 
+            b.renter_individual_id,
+            i.email,
+            i.full_name,
+            ri.name,
+            b.starts_at,
+            COALESCE(ri.waiver_requirement, 'at_checkout'),
+            b.waiver_link_token
+        INTO 
+            v_individual_id, v_email, v_name, v_item_name, 
+            v_start_time, v_waiver_required, v_waiver_token
+        FROM cc_rental_bookings b
+        JOIN cc_individuals i ON i.id = b.renter_individual_id
+        JOIN cc_rental_items ri ON ri.id = b.rental_item_id
+        WHERE b.id = p_booking_id;
+        
+    ELSIF p_booking_type = 'accommodation' THEN
+        SELECT 
+            ab.guest_individual_id,
+            i.email,
+            i.full_name,
+            ap.name,
+            ab.check_in_date::timestamptz,
+            COALESCE(ap.waiver_requirement, 'before_checkin'),
+            encode(gen_random_bytes(32), 'hex')
+        INTO 
+            v_individual_id, v_email, v_name, v_item_name, 
+            v_start_time, v_waiver_required, v_waiver_token
+        FROM accommodation_bookings ab
+        JOIN cc_individuals i ON i.id = ab.guest_individual_id
+        JOIN accommodation_properties ap ON ap.id = ab.property_id
+        WHERE ab.id = p_booking_id;
+    END IF;
+    
+    -- Skip if no waiver required
+    IF v_waiver_required = 'none' THEN
+        -- Still send confirmation, just without waiver link
+        INSERT INTO cc_booking_notifications (
+            booking_type, booking_id, notification_type,
+            recipient_individual_id, recipient_email, recipient_name,
+            subject, scheduled_for
+        ) VALUES (
+            p_booking_type, p_booking_id, 'confirmation',
+            v_individual_id, v_email, v_name,
+            'Booking Confirmed: ' || v_item_name,
+            NOW()
+        );
+        RETURN 1;
+    END IF;
+    
+    -- 1. Immediate confirmation with waiver link
+    INSERT INTO cc_booking_notifications (
+        booking_type, booking_id, notification_type,
+        recipient_individual_id, recipient_email, recipient_name,
+        subject, scheduled_for
+    ) VALUES (
+        p_booking_type, p_booking_id, 'confirmation',
+        v_individual_id, v_email, v_name,
+        'Booking Confirmed: ' || v_item_name || ' - Please Sign Waiver',
+        NOW()
+    );
+    v_notifications_created := v_notifications_created + 1;
+    
+    -- 2. 7-day reminder (if booking is more than 7 days out)
+    IF v_start_time > NOW() + INTERVAL '7 days' THEN
+        INSERT INTO cc_booking_notifications (
+            booking_type, booking_id, notification_type,
+            recipient_individual_id, recipient_email, recipient_name,
+            subject, scheduled_for
+        ) VALUES (
+            p_booking_type, p_booking_id, 'waiver_reminder_7day',
+            v_individual_id, v_email, v_name,
+            'Reminder: Sign Waiver for ' || v_item_name || ' (7 days)',
+            v_start_time - INTERVAL '7 days'
+        );
+        v_notifications_created := v_notifications_created + 1;
+    END IF;
+    
+    -- 3. 3-day reminder (if booking is more than 3 days out)
+    IF v_start_time > NOW() + INTERVAL '3 days' THEN
+        INSERT INTO cc_booking_notifications (
+            booking_type, booking_id, notification_type,
+            recipient_individual_id, recipient_email, recipient_name,
+            subject, scheduled_for
+        ) VALUES (
+            p_booking_type, p_booking_id, 'waiver_reminder_3day',
+            v_individual_id, v_email, v_name,
+            'Reminder: Sign Waiver for ' || v_item_name || ' (3 days)',
+            v_start_time - INTERVAL '3 days'
+        );
+        v_notifications_created := v_notifications_created + 1;
+    END IF;
+    
+    -- 4. 1-day reminder
+    IF v_start_time > NOW() + INTERVAL '1 day' THEN
+        INSERT INTO cc_booking_notifications (
+            booking_type, booking_id, notification_type,
+            recipient_individual_id, recipient_email, recipient_name,
+            subject, scheduled_for
+        ) VALUES (
+            p_booking_type, p_booking_id, 'waiver_reminder_1day',
+            v_individual_id, v_email, v_name,
+            'Action Required: Sign Waiver for ' || v_item_name || ' (Tomorrow!)',
+            v_start_time - INTERVAL '1 day'
+        );
+        v_notifications_created := v_notifications_created + 1;
+    END IF;
+    
+    RETURN v_notifications_created;
+END;
+$$ LANGUAGE plpgsql;
+
+-- =====================================================================
+-- 4. TRIGGER: Auto-schedule notifications on new booking
+-- =====================================================================
+
+CREATE OR REPLACE FUNCTION trigger_schedule_rental_notifications()
+RETURNS TRIGGER AS $$
+BEGIN
+    PERFORM schedule_booking_notifications('equipment', NEW.id);
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_rental_booking_notifications ON cc_rental_bookings;
+CREATE TRIGGER trg_rental_booking_notifications
+    AFTER INSERT ON cc_rental_bookings
+    FOR EACH ROW
+    WHEN (NEW.status IN ('pending', 'confirmed'))
+    EXECUTE FUNCTION trigger_schedule_rental_notifications();
+
+-- =====================================================================
+-- 5. FUNCTION: Cancel pending notifications when waiver signed
+-- =====================================================================
+
+CREATE OR REPLACE FUNCTION cancel_waiver_reminders(
+    p_booking_type TEXT,
+    p_booking_id UUID
+) RETURNS INTEGER AS $$
+DECLARE
+    v_updated INTEGER;
+BEGIN
+    UPDATE cc_booking_notifications
+    SET status = 'skipped'
+    WHERE booking_type = p_booking_type
+    AND booking_id = p_booking_id
+    AND notification_type LIKE 'waiver_reminder%'
+    AND status = 'pending';
+    
+    GET DIAGNOSTICS v_updated = ROW_COUNT;
+    
+    -- Send "waiver completed" notification
+    INSERT INTO cc_booking_notifications (
+        booking_type, booking_id, notification_type,
+        recipient_individual_id, recipient_email, recipient_name,
+        subject, scheduled_for
+    )
+    SELECT 
+        p_booking_type, 
+        p_booking_id, 
+        'waiver_completed',
+        recipient_individual_id,
+        recipient_email,
+        recipient_name,
+        'Waiver Signed - You''re All Set!',
+        NOW()
+    FROM cc_booking_notifications
+    WHERE booking_type = p_booking_type
+    AND booking_id = p_booking_id
+    AND notification_type = 'confirmation'
+    LIMIT 1;
+    
+    RETURN v_updated;
+END;
+$$ LANGUAGE plpgsql;
+
+-- =====================================================================
+-- 6. VIEW: Pending notifications to send
+-- =====================================================================
+
+CREATE OR REPLACE VIEW v_pending_notifications AS
+SELECT 
+    n.*,
+    
+    -- Check if waiver already signed (skip if so)
+    CASE 
+        WHEN n.booking_type = 'equipment' THEN (
+            SELECT waiver_signed FROM cc_rental_bookings WHERE id = n.booking_id
+        )
+        ELSE false
+    END as waiver_already_signed,
+    
+    -- Item details
+    CASE 
+        WHEN n.booking_type = 'equipment' THEN (
+            SELECT ri.name FROM cc_rental_bookings b 
+            JOIN cc_rental_items ri ON ri.id = b.rental_item_id 
+            WHERE b.id = n.booking_id
+        )
+        WHEN n.booking_type = 'accommodation' THEN (
+            SELECT ap.name FROM accommodation_bookings ab 
+            JOIN accommodation_properties ap ON ap.id = ab.property_id 
+            WHERE ab.id = n.booking_id
+        )
+    END as item_name,
+    
+    -- Waiver link token
+    CASE 
+        WHEN n.booking_type = 'equipment' THEN (
+            SELECT waiver_link_token FROM cc_rental_bookings WHERE id = n.booking_id
+        )
+        ELSE NULL
+    END as waiver_token
+
+FROM cc_booking_notifications n
+WHERE n.status = 'pending'
+AND n.scheduled_for <= NOW()
+ORDER BY n.scheduled_for;
+
+-- =====================================================================
+-- 7. VIEW: Checkout gate status
+-- =====================================================================
+
+CREATE OR REPLACE VIEW v_rental_checkout_gate AS
+SELECT 
+    b.id as booking_id,
+    b.status,
+    b.starts_at,
+    b.ends_at,
+    i.full_name as renter_name,
+    i.email as renter_email,
+    ri.name as item_name,
+    ri.location_name,
+    rc.name as category,
+    
+    -- Waiver status
+    ri.waiver_requirement,
+    rc.required_waiver_slug,
+    b.waiver_signed,
+    b.waiver_signed_at,
+    
+    -- Can they check out?
+    CASE
+        WHEN ri.waiver_requirement = 'none' THEN true
+        WHEN b.waiver_signed THEN true
+        WHEN b.waiver_valid THEN true
+        ELSE false
+    END as can_checkout,
+    
+    -- What's blocking?
+    CASE
+        WHEN ri.waiver_requirement = 'none' THEN NULL
+        WHEN b.waiver_signed OR b.waiver_valid THEN NULL
+        ELSE 'Waiver not signed'
+    END as checkout_blocker,
+    
+    -- Time pressure
+    CASE
+        WHEN b.starts_at <= NOW() AND NOT (b.waiver_signed OR b.waiver_valid OR ri.waiver_requirement = 'none')
+        THEN 'CUSTOMER WAITING - Waiver needed!'
+        WHEN b.starts_at <= NOW() + INTERVAL '1 hour' AND NOT (b.waiver_signed OR b.waiver_valid OR ri.waiver_requirement = 'none')
+        THEN 'Starting soon - Waiver needed'
+        ELSE NULL
+    END as urgency
+
+FROM cc_rental_bookings b
+JOIN cc_individuals i ON i.id = b.renter_individual_id
+JOIN cc_rental_items ri ON ri.id = b.rental_item_id
+JOIN cc_rental_categories rc ON rc.id = ri.category_id
+WHERE b.status IN ('pending', 'confirmed')
+AND b.starts_at >= NOW() - INTERVAL '1 hour';
+
+-- =====================================================================
+-- 8. API FUNCTION: Sign waiver via link token
+-- =====================================================================
+
+CREATE OR REPLACE FUNCTION sign_waiver_by_token(
+    p_token TEXT,
+    p_signature_data TEXT DEFAULT 'Electronic Signature'
+) RETURNS JSON AS $$
+DECLARE
+    v_booking_id UUID;
+    v_individual_id UUID;
+    v_waiver_slug TEXT;
+    v_waiver_template_id UUID;
+    v_signed_waiver_id UUID;
+BEGIN
+    -- Find booking by token
+    SELECT b.id, b.renter_individual_id, rc.required_waiver_slug
+    INTO v_booking_id, v_individual_id, v_waiver_slug
+    FROM cc_rental_bookings b
+    JOIN cc_rental_items ri ON ri.id = b.rental_item_id
+    JOIN cc_rental_categories rc ON rc.id = ri.category_id
+    WHERE b.waiver_link_token = p_token;
+    
+    IF v_booking_id IS NULL THEN
+        RETURN json_build_object('success', false, 'error', 'Invalid or expired link');
+    END IF;
+    
+    -- Get waiver template
+    SELECT id INTO v_waiver_template_id
+    FROM cc_waiver_templates
+    WHERE slug = v_waiver_slug;
+    
+    IF v_waiver_template_id IS NULL THEN
+        RETURN json_build_object('success', false, 'error', 'Waiver template not found');
+    END IF;
+    
+    -- Create signed waiver
+    INSERT INTO cc_signed_waivers (
+        individual_id,
+        waiver_template_id,
+        signed_at,
+        signature_data,
+        signature_method,
+        expires_at
+    ) VALUES (
+        v_individual_id,
+        v_waiver_template_id,
+        NOW(),
+        p_signature_data,
+        'typed',
+        NOW() + INTERVAL '365 days'
+    )
+    RETURNING id INTO v_signed_waiver_id;
+    
+    -- Update booking
+    UPDATE cc_rental_bookings
+    SET 
+        waiver_signed = true,
+        waiver_signed_at = NOW(),
+        waiver_signed_id = v_signed_waiver_id
+    WHERE id = v_booking_id;
+    
+    -- Cancel pending reminder notifications
+    PERFORM cancel_waiver_reminders('equipment', v_booking_id);
+    
+    RETURN json_build_object(
+        'success', true,
+        'booking_id', v_booking_id,
+        'waiver_id', v_signed_waiver_id,
+        'message', 'Waiver signed successfully! You''re all set.'
+    );
+END;
+$$ LANGUAGE plpgsql;
+
+-- =====================================================================
+-- VERIFY
+-- =====================================================================
+
+SELECT 'Unified notification system created' as status;
+
+-- Show the complete flow
+SELECT '
+UNIFIED BOOKING FLOW:
+─────────────────────
+1. Customer books & pays
+2. Immediate email: Confirmation + Waiver Link
+3. Reminders: 7 days, 3 days, 1 day (if not signed)
+4. Customer signs waiver (via email link)
+5. Reminders cancelled, "All Set" email sent
+6. Checkout allowed ✓
+
+CHECKOUT GATE:
+─────────────
+- Waiver requirement: none → Always allowed
+- Waiver requirement: at_checkout/before_checkin → Must sign first
+- No waiver signed → "Please sign waiver" (can do on tablet at counter)
+- Waiver signed → "Here are your keys!"
+' as flow_description;
+```
+
+---
+
+## The Unified Flow
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    BOOK & PAY                                    │
+│                 (Always succeeds)                                │
+└─────────────────────────┬───────────────────────────────────────┘
+                          │
+                          ▼
+┌─────────────────────────────────────────────────────────────────┐
+│              IMMEDIATE EMAIL                                     │
+│  📧 "Booking Confirmed: Ocean Kayak"                            │
+│     • Confirmation details                                       │
+│     • Waiver link: click to sign                                │
+│     • What to bring                                              │
+└─────────────────────────┬───────────────────────────────────────┘
+                          │
+            ┌─────────────┴─────────────┐
+            │                           │
+            ▼                           ▼
+    ┌───────────────┐           ┌───────────────┐
+    │ SIGNS WAIVER  │           │ DOESN'T SIGN  │
+    │   (via link)  │           │               │
+    └───────┬───────┘           └───────┬───────┘
+            │                           │
+            ▼                           ▼
+    ┌───────────────┐           ┌───────────────┐
+    │ "All Set!"    │           │ REMINDERS     │
+    │  email sent   │           │ 7d, 3d, 1d    │
+    │ Reminders     │           │               │
+    │ cancelled     │           └───────┬───────┘
+    └───────┬───────┘                   │
+            │                           │
+            └─────────────┬─────────────┘
+                          │
+                          ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                    CHECKOUT GATE                                 │
+│                                                                  │
+│  Waiver signed? ───► YES ───► "Here are your keys! 🔑"          │
+│        │                                                         │
+│        └─────────► NO ────► "Sign here please" (tablet)         │
+│                              [Signs on spot]                     │
+│                                   │                              │
+│                                   ▼                              │
+│                          "Here are your keys! 🔑"                │
+└─────────────────────────────────────────────────────────────────┘
+
+Same Flow, Different Assets
+AssetEmail SubjectWaiverPickupKayak"Booking Confirmed: Ocean Kayak"Watercraft WaiverDockCottage"Booking Confirmed: Beachfront Cottage"Guest AgreementKeysATV"Booking Confirmed: Polaris RZR"Motorized Vehicle WaiverShopChainsaw"Booking Confirmed: Chainsaw 16""Power Tool WaiverShopParking"Booking Confirmed: Boat Trailer Spot"(none)Spot #
+One system. Infinitely flexible. 
