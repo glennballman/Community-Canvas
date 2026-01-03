@@ -51,6 +51,7 @@ import BundlesBrowser from "@/pages/services/BundlesBrowser";
 import ServiceRuns from "@/pages/services/ServiceRuns";
 import ServiceRunDetail from "@/pages/services/ServiceRunDetail";
 import CreateServiceRun from "@/pages/services/CreateServiceRun";
+import IndividualProfile from "@/pages/profile/IndividualProfile";
 
 function AppShellRoutes() {
   return (
@@ -72,7 +73,8 @@ function AppShellRoutes() {
         <Route path="/admin/accommodations" component={Accommodations} />
         <Route path="/admin/users" component={UsersManagement} />
         <Route path="/admin/tenants" component={TenantsManagement} />
-        <Route path="/profile" component={MyProfile} />
+        <Route path="/profile" component={IndividualProfile} />
+        <Route path="/profile/legacy" component={MyProfile} />
         
         {/* Service catalog */}
         <Route path="/services" component={ServiceCatalog} />
