@@ -38,6 +38,15 @@ The application uses a modern web stack: React 18 with TypeScript and Vite for t
 - **External Data Lake V2**: Entity-graph architecture for managing scraped external data with entity resolution, consent-based outreach, and CASL compliance.
 - **Unified Assets Registry**: Central registry unifying all rentable assets (properties, spots, trailers, vehicles, equipment) into a single searchable system with unified bookings and traveler bonds.
 - **Capability Architecture**: Operational layer for work order planning, preserving detailed attribute search from source tables, linking assets to source data, capabilities, terms, and availability.
+- **Multi-Tenant Security**: RLS-based tenant isolation with `is_service_mode()` bypass, tenant context middleware, and route guards.
+
+### Multi-Tenant Infrastructure
+- **Tenant Context Middleware**: `server/middleware/tenantContext.ts` - Resolves tenant/portal from request headers
+- **Tenant-Aware Queries**: `server/db/tenantDb.ts` - Attaches `req.tenantQuery`/`req.tenantTransaction` to requests
+- **Route Guards**: `server/middleware/guards.ts` - Role-based access control
+- **RLS Policies**: `server/migrations/024_rls_policies.sql` - Database-level row security
+- **Service Mode**: Use `serviceQuery`/`withServiceTransaction` for background jobs (bypasses RLS with `__SERVICE__` sentinel)
+- **QA Checklist**: `docs/QA_TENANT_ISOLATION.md` - Testing and migration guide
 
 ### Feature Specifications
 - **Dual-view Mode**: Sources View (data source URLs) and Data View (live monitoring).
