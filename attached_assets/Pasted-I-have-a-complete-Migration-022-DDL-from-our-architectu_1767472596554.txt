@@ -1,0 +1,120 @@
+I have a complete Migration 022 DDL from our architecture session. This adds the full Construction OS schema:
+
+- Opportunities (pre-award job postings)
+- Estimates (versioned quotes)
+- Bids (contractor proposals)
+- Contracts (binding agreements)
+- Plan Packs (Materials, Crew, Equipment, Compliance, Accommodation)
+- Change Orders
+- Closeout (deficiencies, acceptance, holdbacks)
+- Events/Outbox (cursor-based sync)
+- Lifecycle enforcement triggers
+
+## BEFORE RUNNING THE MIGRATION
+
+1. **Backup the database** - This is a large migration
+2. **Check if sr_bundles table exists** - If yes, we'll add the FK
+
+## CREATE FILE: server/db/migrations/0022_construction_os_expansion.sql
+
+Paste the entire migration DDL (I'll provide it below).
+
+## AFTER THE MIGRATION
+
+We need a data migration to handle existing work_orders:
+```sql
+-- Map existing status values to new phase_status
+UPDATE work_orders SET phase_status = 
+  CASE status
+    WHEN 'draft' THEN 'created'::work_order_phase_status
+    WHEN 'planning' THEN 'planning'::work_order_phase_status
+    WHEN 'bidding' THEN 'created'::work_order_phase_status  -- bidding is pre-award, shouldn't be in work_orders
+    WHEN 'awarded' THEN 'planning'::work_order_phase_status
+    WHEN 'mobilizing' THEN 'mobilizing'::work_order_phase_status
+    WHEN 'in_progress' THEN 'in_progress'::work_order_phase_status
+    WHEN 'complete' THEN 'final_completion'::work_order_phase_status
+    WHEN 'invoiced' THEN 'closed'::work_order_phase_status
+    WHEN 'paid' THEN 'closed'::work_order_phase_status
+    ELSE 'created'::work_order_phase_status
+  END
+WHERE phase_status = 'created';
+
+-- Map financial status from old status
+UPDATE work_orders SET finance_status = 
+  CASE status
+    WHEN 'invoiced' THEN 'invoiced'
+    WHEN 'paid' THEN 'paid'
+    ELSE 'unfunded'
+  END
+WHERE finance_status = 'unfunded';
+```
+
+## VERIFICATION QUERIES
+
+After migration, run these to verify:
+```sql
+-- Count new tables
+SELECT 'parties' as tbl, COUNT(*) FROM parties
+UNION ALL SELECT 'opportunities', COUNT(*) FROM opportunities
+UNION ALL SELECT 'estimates', COUNT(*) FROM estimates
+UNION ALL SELECT 'bids', COUNT(*) FROM bids
+UNION ALL SELECT 'contracts', COUNT(*) FROM contracts
+UNION ALL SELECT 'change_orders', COUNT(*) FROM change_orders
+UNION ALL SELECT 'events', COUNT(*) FROM events;
+
+-- Verify work_orders has new columns
+SELECT column_name, data_type 
+FROM information_schema.columns 
+WHERE table_name = 'work_orders' 
+AND column_name IN ('contract_id', 'phase_status', 'finance_status', 'baseline_estimate_version_id');
+
+-- Verify enums created
+SELECT typname FROM pg_type WHERE typname LIKE '%_status' OR typname LIKE '%_type';
+
+-- Verify triggers created
+SELECT tgname FROM pg_trigger WHERE tgname LIKE 'trg_%transition%';
+```
+
+## OUTPUT
+
+Tell me:
+1. Did the migration complete without errors?
+2. How many tables were created?
+3. Were all triggers created?
+4. Any warnings or issues?
+
+THE MIGRATION FILE
+The DDL from ChatGPT is ready to use. However, I recommend one small addition at the top to handle the sr_bundles FK properly:
+sql-- Add this after the ENUMS section, before PARTIES:
+
+-- ============================================================================
+-- 0.5) VERIFY/CREATE MISSING REFERENCES
+-- ============================================================================
+
+-- Add FK for service_bundle_id if sr_bundles exists
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'sr_bundles') THEN
+    -- Will add FK constraint after opportunities table is created
+    NULL;
+  END IF;
+END $$;
+And add this after the opportunities table:
+sql-- Add FK to sr_bundles if it exists
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'sr_bundles') THEN
+    IF NOT EXISTS (
+      SELECT 1 FROM information_schema.table_constraints 
+      WHERE constraint_name = 'opportunities_service_bundle_id_fkey'
+    ) THEN
+      ALTER TABLE opportunities 
+        ADD CONSTRAINT opportunities_service_bundle_id_fkey 
+        FOREIGN KEY (service_bundle_id) REFERENCES sr_bundles(id) ON DELETE SET NULL;
+    END IF;
+  END IF;
+END $$;
+
+Summary of What Migration 022 Creates
+CategoryTables AddedPre-Awardparties, opportunities, opportunity_media, opportunity_measurements, estimates, estimate_versions, estimate_line_items, estimate_allowances, bids, bid_breakdown_lines, bid_messagesContractscontracts, contract_payment_scheduleChange Orderschange_orders, change_order_lines, change_order_impactsPlan Packsmaterials_plans, crew_plans, equipment_plans, compliance_plans, accommodation_plansCrew Detailscrew_roles, crew_requirements, crew_assignments, crew_lodging_links, worker_verification_eventsEquipment Detailsequipment_requirements, equipment_assignments, equipment_rentals, tool_manifestsMaterials Enhancedmaterials_quotes, purchase_orders, purchase_order_lines, receipts, receipt_lines, materials_substitutionsMobilization Enhancedmobilization_manifests, manifest_items, transport_bookings, route_constraintsCompliance Detailspermits, inspections, safety_requirements, funding_requirementsCloseoutdeficiency_items, closeout_documents, acceptance, holdbacksEventsevents, event_subscriptions, event_outbox
+Total: ~50 new tables + 10 ENUMs + 6 lifecycle triggers
