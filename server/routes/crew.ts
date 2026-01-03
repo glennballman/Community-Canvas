@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { Pool } from 'pg';
+import { serviceQuery } from '../db/tenantDb';
 import { z } from 'zod';
 
 const searchFiltersSchema = z.object({
@@ -20,7 +20,7 @@ const searchFiltersSchema = z.object({
   workOrderId: z.string().nullable().optional(),
 });
 
-export function createCrewRouter(pool: Pool) {
+export function createCrewRouter() {
   const router = Router();
 
   router.post('/accommodation-search', async (req, res) => {
@@ -28,7 +28,7 @@ export function createCrewRouter(pool: Pool) {
       const filters = searchFiltersSchema.parse(req.body);
       
       if (filters.searchMode === 'work_order' && filters.workOrderId) {
-        const woResult = await pool.query(
+        const woResult = await serviceQuery(
           `SELECT * FROM work_orders WHERE id = $1`,
           [filters.workOrderId]
         );
@@ -37,7 +37,7 @@ export function createCrewRouter(pool: Pool) {
           return res.status(404).json({ error: 'Work order not found' });
         }
 
-        const matchResult = await pool.query(`
+        const matchResult = await serviceQuery(`
           SELECT * FROM match_work_order_requirements($1)
         `, [filters.workOrderId]);
 
@@ -70,7 +70,7 @@ export function createCrewRouter(pool: Pool) {
       let locationLng: number | null = null;
 
       if (filters.nearLocation && filters.nearLocation.trim()) {
-        const geoQuery = await pool.query(`
+        const geoQuery = await serviceQuery(`
           SELECT latitude, longitude 
           FROM bc_municipalities 
           WHERE name ILIKE $1 
@@ -81,7 +81,7 @@ export function createCrewRouter(pool: Pool) {
           locationLat = geoQuery.rows[0].latitude;
           locationLng = geoQuery.rows[0].longitude;
         } else {
-          const regionQuery = await pool.query(`
+          const regionQuery = await serviceQuery(`
             SELECT latitude, longitude 
             FROM regional_districts 
             WHERE name ILIKE $1 
@@ -286,7 +286,7 @@ export function createCrewRouter(pool: Pool) {
         LIMIT 100
       `;
 
-      const result = await pool.query(query, params);
+      const result = await serviceQuery(query, params);
 
       return res.json({
         results: result.rows,
@@ -306,7 +306,7 @@ export function createCrewRouter(pool: Pool) {
 
   router.get('/work-orders', async (req, res) => {
     try {
-      const result = await pool.query(`
+      const result = await serviceQuery(`
         SELECT id, work_order_ref, title, status, crew_size_min, crew_size_max
         FROM work_orders
         WHERE status IN ('draft', 'pending', 'active')

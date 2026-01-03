@@ -1,7 +1,7 @@
 import express, { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
-import { pool } from '../db';
+import { serviceQuery, withServiceTransaction } from '../db/tenantDb';
 import { authenticateToken, generateTokens, AuthRequest, JWT_SECRET } from '../middleware/auth';
 import jwt from 'jsonwebtoken';
 
@@ -24,7 +24,7 @@ router.post('/register', async (req: Request, res: Response) => {
             return res.status(400).json({ success: false, error: 'Password must be at least 8 characters' });
         }
 
-        const existing = await pool.query(
+        const existing = await serviceQuery(
             'SELECT id FROM staging_users WHERE email = $1',
             [email.toLowerCase()]
         );
@@ -35,7 +35,7 @@ router.post('/register', async (req: Request, res: Response) => {
 
         const passwordHash = await bcrypt.hash(password, 12);
 
-        const result = await pool.query(`
+        const result = await serviceQuery(`
             INSERT INTO staging_users (
                 email, password_hash, first_name, last_name, phone,
                 user_type, company_name
@@ -56,7 +56,7 @@ router.post('/register', async (req: Request, res: Response) => {
         const { accessToken, refreshToken } = generateTokens(user.id, user.email, user.user_type);
 
         const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-        await pool.query(`
+        await serviceQuery(`
             INSERT INTO staging_sessions (user_id, refresh_token, expires_at)
             VALUES ($1, $2, $3)
         `, [user.id, refreshToken, expiresAt]);
@@ -88,7 +88,7 @@ router.post('/login', async (req: Request, res: Response) => {
             return res.status(400).json({ success: false, error: 'Email and password required' });
         }
 
-        const result = await pool.query(`
+        const result = await serviceQuery(`
             SELECT id, email, password_hash, first_name, last_name, user_type, status
             FROM staging_users WHERE email = $1
         `, [email.toLowerCase()]);
@@ -108,7 +108,7 @@ router.post('/login', async (req: Request, res: Response) => {
             return res.status(401).json({ success: false, error: 'Invalid credentials' });
         }
 
-        await pool.query(`
+        await serviceQuery(`
             UPDATE staging_users 
             SET last_login_at = NOW(), login_count = login_count + 1
             WHERE id = $1
@@ -117,7 +117,7 @@ router.post('/login', async (req: Request, res: Response) => {
         const { accessToken, refreshToken } = generateTokens(user.id, user.email, user.user_type);
 
         const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-        await pool.query(`
+        await serviceQuery(`
             INSERT INTO staging_sessions (user_id, refresh_token, expires_at)
             VALUES ($1, $2, $3)
         `, [user.id, refreshToken, expiresAt]);
@@ -156,7 +156,7 @@ router.post('/refresh', async (req: Request, res: Response) => {
             return res.status(403).json({ success: false, error: 'Invalid refresh token' });
         }
 
-        const sessionResult = await pool.query(`
+        const sessionResult = await serviceQuery(`
             SELECT s.*, u.email, u.user_type, u.status
             FROM staging_sessions s
             JOIN staging_users u ON u.id = s.user_id
@@ -180,8 +180,8 @@ router.post('/refresh', async (req: Request, res: Response) => {
         );
 
         const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-        await pool.query('UPDATE staging_sessions SET revoked_at = NOW() WHERE id = $1', [session.id]);
-        await pool.query(`
+        await serviceQuery('UPDATE staging_sessions SET revoked_at = NOW() WHERE id = $1', [session.id]);
+        await serviceQuery(`
             INSERT INTO staging_sessions (user_id, refresh_token, expires_at)
             VALUES ($1, $2, $3)
         `, [session.user_id, newRefreshToken, expiresAt]);
@@ -203,7 +203,7 @@ router.post('/logout', authenticateToken, async (req: AuthRequest, res: Response
         const { refreshToken } = req.body;
 
         if (refreshToken) {
-            await pool.query(
+            await serviceQuery(
                 'UPDATE staging_sessions SET revoked_at = NOW() WHERE refresh_token = $1',
                 [refreshToken]
             );
@@ -219,7 +219,7 @@ router.post('/logout', authenticateToken, async (req: AuthRequest, res: Response
 
 router.get('/me', authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
-        const result = await pool.query(`
+        const result = await serviceQuery(`
             SELECT id, email, first_name, last_name, phone, avatar_url,
                    user_type, company_name, company_role,
                    email_verified, preferences, notification_settings,
@@ -263,7 +263,7 @@ router.put('/me', authenticateToken, async (req: AuthRequest, res: Response) => 
     try {
         const { firstName, lastName, phone, companyName, companyRole, preferences, notificationSettings } = req.body;
 
-        const result = await pool.query(`
+        const result = await serviceQuery(`
             UPDATE staging_users SET
                 first_name = COALESCE($2, first_name),
                 last_name = COALESCE($3, last_name),
@@ -320,7 +320,7 @@ router.post('/password/change', authenticateToken, async (req: AuthRequest, res:
             return res.status(400).json({ success: false, error: 'Password must be at least 8 characters' });
         }
 
-        const result = await pool.query(
+        const result = await serviceQuery(
             'SELECT password_hash FROM staging_users WHERE id = $1',
             [req.user!.id]
         );
@@ -331,12 +331,12 @@ router.post('/password/change', authenticateToken, async (req: AuthRequest, res:
         }
 
         const newHash = await bcrypt.hash(newPassword, 12);
-        await pool.query(
+        await serviceQuery(
             'UPDATE staging_users SET password_hash = $2, updated_at = NOW() WHERE id = $1',
             [req.user!.id, newHash]
         );
 
-        await pool.query(
+        await serviceQuery(
             'UPDATE staging_sessions SET revoked_at = NOW() WHERE user_id = $1',
             [req.user!.id]
         );
@@ -357,7 +357,7 @@ router.post('/password/forgot', async (req: Request, res: Response) => {
             return res.status(400).json({ success: false, error: 'Email required' });
         }
 
-        const result = await pool.query(
+        const result = await serviceQuery(
             'SELECT id FROM staging_users WHERE email = $1 AND status = $2',
             [email.toLowerCase(), 'active']
         );
@@ -369,7 +369,7 @@ router.post('/password/forgot', async (req: Request, res: Response) => {
         const token = crypto.randomBytes(32).toString('hex');
         const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
 
-        await pool.query(`
+        await serviceQuery(`
             INSERT INTO staging_password_resets (user_id, token, expires_at)
             VALUES ($1, $2, $3)
         `, [result.rows[0].id, token, expiresAt]);
@@ -396,7 +396,7 @@ router.post('/password/reset', async (req: Request, res: Response) => {
             return res.status(400).json({ success: false, error: 'Password must be at least 8 characters' });
         }
 
-        const result = await pool.query(`
+        const result = await serviceQuery(`
             SELECT pr.*, u.id as user_id
             FROM staging_password_resets pr
             JOIN staging_users u ON u.id = pr.user_id
@@ -410,17 +410,17 @@ router.post('/password/reset', async (req: Request, res: Response) => {
         const resetRecord = result.rows[0];
         const newHash = await bcrypt.hash(newPassword, 12);
 
-        await pool.query(
+        await serviceQuery(
             'UPDATE staging_users SET password_hash = $2, updated_at = NOW() WHERE id = $1',
             [resetRecord.user_id, newHash]
         );
 
-        await pool.query(
+        await serviceQuery(
             'UPDATE staging_password_resets SET used_at = NOW() WHERE id = $1',
             [resetRecord.id]
         );
 
-        await pool.query(
+        await serviceQuery(
             'UPDATE staging_sessions SET revoked_at = NOW() WHERE user_id = $1',
             [resetRecord.user_id]
         );
@@ -435,7 +435,7 @@ router.post('/password/reset', async (req: Request, res: Response) => {
 
 router.get('/vehicles', authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
-        const result = await pool.query(`
+        const result = await serviceQuery(`
             SELECT * FROM staging_user_vehicles 
             WHERE user_id = $1 AND is_active = true
             ORDER BY is_primary DESC, created_at DESC
@@ -483,13 +483,13 @@ router.post('/vehicles', authenticateToken, async (req: AuthRequest, res: Respon
         }
 
         if (isPrimary) {
-            await pool.query(
+            await serviceQuery(
                 'UPDATE staging_user_vehicles SET is_primary = false WHERE user_id = $1',
                 [req.user!.id]
             );
         }
 
-        const result = await pool.query(`
+        const result = await serviceQuery(`
             INSERT INTO staging_user_vehicles (
                 user_id, nickname, vehicle_type, make, model, year,
                 length_ft, width_ft, height_ft, combined_length_ft,
@@ -517,7 +517,7 @@ router.put('/vehicles/:id', authenticateToken, async (req: AuthRequest, res: Res
         const { id } = req.params;
         const updates = req.body;
 
-        const check = await pool.query(
+        const check = await serviceQuery(
             'SELECT id FROM staging_user_vehicles WHERE id = $1 AND user_id = $2',
             [id, req.user!.id]
         );
@@ -527,13 +527,13 @@ router.put('/vehicles/:id', authenticateToken, async (req: AuthRequest, res: Res
         }
 
         if (updates.isPrimary) {
-            await pool.query(
+            await serviceQuery(
                 'UPDATE staging_user_vehicles SET is_primary = false WHERE user_id = $1',
                 [req.user!.id]
             );
         }
 
-        const result = await pool.query(`
+        const result = await serviceQuery(`
             UPDATE staging_user_vehicles SET
                 nickname = COALESCE($2, nickname),
                 vehicle_type = COALESCE($3, vehicle_type),
@@ -564,7 +564,7 @@ router.delete('/vehicles/:id', authenticateToken, async (req: AuthRequest, res: 
     try {
         const { id } = req.params;
 
-        const result = await pool.query(`
+        const result = await serviceQuery(`
             UPDATE staging_user_vehicles 
             SET is_active = false, updated_at = NOW()
             WHERE id = $1 AND user_id = $2
@@ -585,7 +585,7 @@ router.delete('/vehicles/:id', authenticateToken, async (req: AuthRequest, res: 
 
 router.get('/favorites', authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
-        const result = await pool.query(`
+        const result = await serviceQuery(`
             SELECT 
                 f.id as favorite_id,
                 f.notes,
@@ -637,12 +637,12 @@ router.post('/favorites', authenticateToken, async (req: AuthRequest, res: Respo
             return res.status(400).json({ success: false, error: 'Property ID required' });
         }
 
-        const propCheck = await pool.query('SELECT id FROM staging_properties WHERE id = $1', [propertyId]);
+        const propCheck = await serviceQuery('SELECT id FROM staging_properties WHERE id = $1', [propertyId]);
         if (propCheck.rows.length === 0) {
             return res.status(404).json({ success: false, error: 'Property not found' });
         }
 
-        const result = await pool.query(`
+        const result = await serviceQuery(`
             INSERT INTO staging_user_favorites (user_id, property_id, notes)
             VALUES ($1, $2, $3)
             ON CONFLICT (user_id, property_id) DO UPDATE SET notes = $3
@@ -661,7 +661,7 @@ router.delete('/favorites/:propertyId', authenticateToken, async (req: AuthReque
     try {
         const { propertyId } = req.params;
 
-        const result = await pool.query(`
+        const result = await serviceQuery(`
             DELETE FROM staging_user_favorites 
             WHERE user_id = $1 AND property_id = $2
             RETURNING id
@@ -681,7 +681,7 @@ router.delete('/favorites/:propertyId', authenticateToken, async (req: AuthReque
 
 router.get('/bookings', authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
-        const result = await pool.query(`
+        const result = await serviceQuery(`
             SELECT 
                 b.*,
                 p.name as property_name,
@@ -721,7 +721,7 @@ router.get('/bookings', authenticateToken, async (req: AuthRequest, res: Respons
 
 router.get('/trips', authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
-        const result = await pool.query(`
+        const result = await serviceQuery(`
             SELECT 
                 t.*,
                 (SELECT COUNT(*) FROM staging_trip_stops WHERE trip_id = t.id) as stop_count

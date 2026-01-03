@@ -1,18 +1,28 @@
-import express, { Response } from 'express';
-import { pool } from '../db';
-import { authenticateToken, AuthRequest } from '../middleware/auth';
+import express, { Request, Response } from 'express';
 import multer from 'multer';
+import { requireServiceKey, requireRole } from '../middleware/guards';
+import { serviceQuery, withServiceTransaction } from '../db/tenantDb';
 
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage() });
 
-// Auth temporarily disabled for testing - uncomment below to re-enable
-// router.use(authenticateToken);
+/**
+ * P0-E: Import Routes - SERVICE MODE ONLY
+ * 
+ * Security model:
+ * - ALL import routes are internal operations for data ingestion
+ * - Protected by requireServiceKey - requires X-Internal-Service-Key header
+ * - Uses serviceQuery/withServiceTransaction for RLS bypass (legitimate for platform ops)
+ * - NEVER expose to public HTTP without internal service key
+ */
 
-// GET /api/import/batches - List import batches
-router.get('/batches', async (req: AuthRequest, res: Response) => {
+// Apply service key guard to ALL import routes
+router.use(requireServiceKey);
+
+// GET /api/import/batches - List import batches (SERVICE MODE)
+router.get('/batches', async (req: Request, res: Response) => {
     try {
-        const result = await pool.query(`
+        const result = await serviceQuery(`
             SELECT * FROM staging_import_batches
             ORDER BY created_at DESC
             LIMIT 50
@@ -24,12 +34,12 @@ router.get('/batches', async (req: AuthRequest, res: Response) => {
     }
 });
 
-// GET /api/import/batches/:id - Get batch details with records
-router.get('/batches/:id', async (req: AuthRequest, res: Response) => {
+// GET /api/import/batches/:id - Get batch details with records (SERVICE MODE)
+router.get('/batches/:id', async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
 
-        const batchResult = await pool.query(
+        const batchResult = await serviceQuery(
             'SELECT * FROM staging_import_batches WHERE id = $1',
             [id]
         );
@@ -38,7 +48,7 @@ router.get('/batches/:id', async (req: AuthRequest, res: Response) => {
             return res.status(404).json({ success: false, error: 'Batch not found' });
         }
 
-        const recordsResult = await pool.query(`
+        const recordsResult = await serviceQuery(`
             SELECT id, name, city, status, matched_property_id, confidence_score, processing_notes
             FROM staging_import_raw
             WHERE batch_id = $1
@@ -55,8 +65,8 @@ router.get('/batches/:id', async (req: AuthRequest, res: Response) => {
     }
 });
 
-// POST /api/import/csv - Upload and parse CSV
-router.post('/csv', upload.single('file'), async (req: AuthRequest, res: Response) => {
+// POST /api/import/csv - Upload and parse CSV (SERVICE MODE)
+router.post('/csv', upload.single('file'), async (req: Request, res: Response) => {
     try {
         if (!req.file) {
             return res.status(400).json({ success: false, error: 'No file uploaded' });
@@ -84,49 +94,50 @@ router.post('/csv', upload.single('file'), async (req: AuthRequest, res: Respons
             }
         }
 
-        const batchResult = await pool.query(`
-            INSERT INTO staging_import_batches 
-            (batch_name, source_type, source_name, status, total_records, created_by)
-            VALUES ($1, $2, $3, 'processing', $4, $5)
-            RETURNING id
-        `, [
-            `CSV Import - ${req.file.originalname}`,
-            sourceType || 'csv',
-            sourceName || req.file.originalname,
-            records.length,
-            req.user!.id
-        ]);
-
-        const batchId = batchResult.rows[0].id;
-
-        for (const record of records) {
-            await pool.query(`
-                INSERT INTO staging_import_raw (batch_id, raw_data, name, city, latitude, longitude, phone, email, website)
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        const result = await withServiceTransaction(async (client) => {
+            const batchResult = await client.query(`
+                INSERT INTO staging_import_batches 
+                (batch_name, source_type, source_name, status, total_records, created_by)
+                VALUES ($1, $2, $3, 'processing', $4, 'service')
+                RETURNING id
             `, [
-                batchId,
-                JSON.stringify(record),
-                record.name || record.park_name || record.facility_name,
-                record.city || record.location,
-                record.latitude || record.lat,
-                record.longitude || record.lng || record.lon,
-                record.phone || record.telephone,
-                record.email,
-                record.website || record.url
+                `CSV Import - ${req.file!.originalname}`,
+                sourceType || 'csv',
+                sourceName || req.file!.originalname,
+                records.length
             ]);
-        }
 
-        await pool.query(`
-            UPDATE staging_import_batches 
-            SET status = 'pending_review', processed_records = $2
-            WHERE id = $1
-        `, [batchId, records.length]);
+            const batchId = batchResult.rows[0].id;
+
+            for (const record of records) {
+                await client.query(`
+                    INSERT INTO staging_import_raw (batch_id, raw_data, name, city, latitude, longitude, phone, email, website)
+                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+                `, [
+                    batchId,
+                    JSON.stringify(record),
+                    record.name || record.park_name || record.facility_name,
+                    record.city || record.location,
+                    record.latitude || record.lat,
+                    record.longitude || record.lng || record.lon,
+                    record.phone || record.telephone,
+                    record.email,
+                    record.website || record.url
+                ]);
+            }
+
+            await client.query(`
+                UPDATE staging_import_batches 
+                SET status = 'pending_review', processed_records = $2
+                WHERE id = $1
+            `, [batchId, records.length]);
+
+            return { batchId, recordCount: records.length, headers };
+        });
 
         res.json({
             success: true,
-            batchId,
-            recordCount: records.length,
-            headers
+            ...result
         });
 
     } catch (error: any) {
@@ -155,12 +166,12 @@ function parseCSVLine(line: string): string[] {
     return result;
 }
 
-// POST /api/import/batches/:id/detect-duplicates
-router.post('/batches/:id/detect-duplicates', async (req: AuthRequest, res: Response) => {
+// POST /api/import/batches/:id/detect-duplicates (SERVICE MODE)
+router.post('/batches/:id/detect-duplicates', async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
 
-        const rawRecords = await pool.query(`
+        const rawRecords = await serviceQuery(`
             SELECT id, name, city, latitude, longitude
             FROM staging_import_raw
             WHERE batch_id = $1 AND status = 'pending'
@@ -203,7 +214,7 @@ router.post('/batches/:id/detect-duplicates', async (req: AuthRequest, res: Resp
                 params.push(record.latitude, record.longitude);
             }
 
-            const matches = await pool.query(matchQuery + ' LIMIT 5', params);
+            const matches = await serviceQuery(matchQuery + ' LIMIT 5', params);
 
             let bestMatch = null;
             let confidence = 0;
@@ -222,7 +233,7 @@ router.post('/batches/:id/detect-duplicates', async (req: AuthRequest, res: Resp
             }
 
             if (bestMatch && confidence >= 70) {
-                await pool.query(`
+                await serviceQuery(`
                     UPDATE staging_import_raw 
                     SET status = 'matched', 
                         matched_property_id = $2, 
@@ -233,7 +244,7 @@ router.post('/batches/:id/detect-duplicates', async (req: AuthRequest, res: Resp
                 `, [record.id, bestMatch.id, confidence, `Matched to: ${bestMatch.name}`]);
                 matchedCount++;
             } else if (bestMatch && confidence >= 50) {
-                await pool.query(`
+                await serviceQuery(`
                     UPDATE staging_import_raw 
                     SET status = 'review', 
                         matched_property_id = $2, 
@@ -243,7 +254,7 @@ router.post('/batches/:id/detect-duplicates', async (req: AuthRequest, res: Resp
                     WHERE id = $1
                 `, [record.id, bestMatch.id, confidence, `Possible match: ${bestMatch.name} (${confidence.toFixed(0)}%)`]);
             } else {
-                await pool.query(`
+                await serviceQuery(`
                     UPDATE staging_import_raw 
                     SET status = 'new', 
                         confidence_score = 0,
@@ -255,7 +266,7 @@ router.post('/batches/:id/detect-duplicates', async (req: AuthRequest, res: Resp
             }
         }
 
-        await pool.query(`
+        await serviceQuery(`
             UPDATE staging_import_batches
             SET imported_records = (SELECT COUNT(*) FROM staging_import_raw WHERE batch_id = $1 AND status = 'matched'),
                 skipped_records = (SELECT COUNT(*) FROM staging_import_raw WHERE batch_id = $1 AND status = 'review')
@@ -276,8 +287,8 @@ router.post('/batches/:id/detect-duplicates', async (req: AuthRequest, res: Resp
     }
 });
 
-// POST /api/import/batches/:id/import - Import new records as properties
-router.post('/batches/:id/import', async (req: AuthRequest, res: Response) => {
+// POST /api/import/batches/:id/import - Import new records as properties (SERVICE MODE)
+router.post('/batches/:id/import', async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
         const { recordIds } = req.body;
@@ -293,7 +304,7 @@ router.post('/batches/:id/import', async (req: AuthRequest, res: Response) => {
             params.push(recordIds);
         }
 
-        const records = await pool.query(query, params);
+        const records = await serviceQuery(query, params);
 
         let importedCount = 0;
         const errors: any[] = [];
@@ -315,7 +326,7 @@ router.post('/batches/:id/import', async (req: AuthRequest, res: Response) => {
                     propertySubtype = 'provincial';
                 }
 
-                const propResult = await pool.query(`
+                const propResult = await serviceQuery(`
                     INSERT INTO staging_properties (
                         name, description, short_description,
                         property_type, property_subtype,
@@ -346,7 +357,7 @@ router.post('/batches/:id/import', async (req: AuthRequest, res: Response) => {
                     `import_${id}_${record.id}`
                 ]);
 
-                await pool.query(`
+                await serviceQuery(`
                     UPDATE staging_import_raw
                     SET status = 'imported', matched_property_id = $2, processed_at = NOW()
                     WHERE id = $1
@@ -356,7 +367,7 @@ router.post('/batches/:id/import', async (req: AuthRequest, res: Response) => {
 
             } catch (err: any) {
                 errors.push({ recordId: record.id, name: record.name, error: err.message });
-                await pool.query(`
+                await serviceQuery(`
                     UPDATE staging_import_raw
                     SET status = 'error', processing_notes = $2, processed_at = NOW()
                     WHERE id = $1
@@ -364,7 +375,7 @@ router.post('/batches/:id/import', async (req: AuthRequest, res: Response) => {
             }
         }
 
-        await pool.query(`
+        await serviceQuery(`
             UPDATE staging_import_batches
             SET imported_records = imported_records + $2,
                 error_records = error_records + $3,
@@ -413,10 +424,10 @@ function determineRegion(city: string): string {
     return 'British Columbia';
 }
 
-// GET /api/import/sources - List data sources
-router.get('/sources', async (req: AuthRequest, res: Response) => {
+// GET /api/import/sources - List data sources (SERVICE MODE)
+router.get('/sources', async (req: Request, res: Response) => {
     try {
-        const result = await pool.query('SELECT * FROM staging_data_sources ORDER BY name');
+        const result = await serviceQuery('SELECT * FROM staging_data_sources ORDER BY name');
         res.json({ success: true, sources: result.rows });
     } catch (error: any) {
         res.status(500).json({ success: false, error: 'Failed to load sources' });

@@ -199,10 +199,10 @@ router.get('/:id/eligibility', requireAuth, async (req: Request, res: Response) 
     
     const itemId = idParsed.data;
     const tenantReq = req as any;
-    const userEmail = tenantReq.user?.email || tenantReq.ctx?.email;
+    const individualId = tenantReq.ctx?.individual_id;
     
-    if (!userEmail) {
-      return res.status(401).json({ success: false, error: 'Not authenticated' });
+    if (!individualId) {
+      return res.status(401).json({ success: false, error: 'Individual profile required' });
     }
     
     // SERVICE MODE: Item details are public catalog data
@@ -222,31 +222,6 @@ router.get('/:id/eligibility', requireAuth, async (req: Request, res: Response) 
     }
     
     const item = itemResult.rows[0];
-    
-    // Use tenantQuery for user-specific data
-    const individualResult = await req.tenantQuery(
-      `SELECT id FROM cc_individuals WHERE email = $1`,
-      [userEmail]
-    );
-    
-    if (individualResult.rows.length === 0) {
-      return res.json({
-        success: true,
-        eligibility: {
-          ready: false,
-          hasWaiver: false,
-          hasDocument: false,
-          hasPayment: false,
-          blockers: ['profile'],
-          warnings: [],
-          requirements: { waiver: 'none', document: 'none', payment: 'at_booking' },
-          requiredWaiver: item.required_waiver_slug,
-          requiredDocument: item.required_document_type
-        }
-      });
-    }
-    
-    const individualId = individualResult.rows[0].id;
     
     // SERVICE MODE: Platform eligibility function
     const eligibilityResult = await serviceQuery(
@@ -389,25 +364,14 @@ router.post('/:id/book', requireAuth, async (req: Request, res: Response) => {
     const itemId = idParsed.data;
     const { startTs, endTs } = bodyParsed.data;
     const tenantReq = req as any;
-    const userEmail = tenantReq.user?.email || tenantReq.ctx?.email;
+    const individualId = tenantReq.ctx?.individual_id;
     
-    if (!userEmail) {
-      return res.status(401).json({ success: false, error: 'Not authenticated' });
+    if (!individualId) {
+      return res.status(401).json({ success: false, error: 'Individual profile required to book' });
     }
     
     // Use tenantTransaction for booking creation - user can only book for themselves
     const result = await req.tenantTransaction(async (client) => {
-      const individualResult = await client.query(
-        `SELECT id FROM cc_individuals WHERE email = $1`,
-        [userEmail]
-      );
-      
-      if (individualResult.rows.length === 0) {
-        return { error: 'Profile required to book', status: 400 };
-      }
-      
-      const individualId = individualResult.rows[0].id;
-      
       // Check item exists (service mode for catalog data)
       const itemCheck = await client.query(
         `SELECT id, buffer_minutes FROM cc_rental_items WHERE id = $1`,
@@ -511,10 +475,10 @@ router.post('/:id/book', requireAuth, async (req: Request, res: Response) => {
 router.get('/my-bookings', requireAuth, async (req: Request, res: Response) => {
   try {
     const tenantReq = req as any;
-    const userEmail = tenantReq.user?.email || tenantReq.ctx?.email;
+    const individualId = tenantReq.ctx?.individual_id;
     
-    if (!userEmail) {
-      return res.status(401).json({ success: false, error: 'Not authenticated' });
+    if (!individualId) {
+      return res.status(401).json({ success: false, error: 'Individual profile required' });
     }
     
     // Use tenantQuery - user can only see their own bookings
@@ -532,10 +496,9 @@ router.get('/my-bookings', requireAuth, async (req: Request, res: Response) => {
       FROM cc_rental_bookings b
       JOIN cc_rental_items ri ON ri.id = b.rental_item_id
       JOIN cc_rental_categories rc ON rc.id = ri.category_id
-      JOIN cc_individuals i ON i.id = b.renter_individual_id
-      WHERE i.email = $1
+      WHERE b.renter_individual_id = $1
       ORDER BY b.starts_at DESC
-    `, [userEmail]);
+    `, [individualId]);
     
     res.json({
       success: true,
@@ -561,23 +524,11 @@ router.get('/my-bookings', requireAuth, async (req: Request, res: Response) => {
 router.get('/bookings', requireAuth, async (req: Request, res: Response) => {
   try {
     const tenantReq = req as any;
-    const userEmail = tenantReq.user?.email || tenantReq.ctx?.email;
+    const individualId = tenantReq.ctx?.individual_id;
     
-    if (!userEmail) {
-      return res.status(401).json({ success: false, error: 'Not authenticated' });
+    if (!individualId) {
+      return res.status(401).json({ success: false, error: 'Individual profile required' });
     }
-    
-    // Use tenantQuery - user can only see their own bookings
-    const indResult = await req.tenantQuery(
-      'SELECT id FROM cc_individuals WHERE email = $1',
-      [userEmail]
-    );
-    
-    if (indResult.rows.length === 0) {
-      return res.json({ success: true, bookings: [] });
-    }
-    
-    const individualId = indResult.rows[0].id;
     
     const result = await req.tenantQuery(`
       SELECT 
@@ -680,32 +631,21 @@ router.get('/bookings', requireAuth, async (req: Request, res: Response) => {
 router.post('/bookings/:id/cancel', requireAuth, async (req: Request, res: Response) => {
   try {
     const tenantReq = req as any;
-    const userEmail = tenantReq.user?.email || tenantReq.ctx?.email;
+    const individualId = tenantReq.ctx?.individual_id;
     const bookingIdParsed = uuidSchema.safeParse(req.params.id);
     
     if (!bookingIdParsed.success) {
       return res.status(400).json({ success: false, error: 'Invalid booking ID' });
     }
     
-    if (!userEmail) {
-      return res.status(401).json({ success: false, error: 'Not authenticated' });
+    if (!individualId) {
+      return res.status(401).json({ success: false, error: 'Individual profile required' });
     }
     
     const bookingId = bookingIdParsed.data;
     
     // Use tenantTransaction - user can only cancel their own bookings
     const result = await req.tenantTransaction(async (client) => {
-      const indResult = await client.query(
-        'SELECT id FROM cc_individuals WHERE email = $1',
-        [userEmail]
-      );
-      
-      if (indResult.rows.length === 0) {
-        return { error: 'User not found', status: 404 };
-      }
-      
-      const individualId = indResult.rows[0].id;
-      
       const bookingResult = await client.query(`
         SELECT id, status, starts_at 
         FROM cc_rental_bookings 

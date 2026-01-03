@@ -99,7 +99,7 @@ export async function registerRoutes(
   app.use('/api/apify', apifyRouter);
 
   // Register crew accommodation search routes
-  app.use('/api/crew', createCrewRouter(pool));
+  app.use('/api/crew', createCrewRouter());
 
   // Jobber OAuth flow - Start authorization
   app.get('/api/v1/integrations/jobber/auth', (req, res) => {

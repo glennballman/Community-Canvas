@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { Pool } from 'pg';
+import { serviceQuery, withServiceTransaction } from '../db/tenantDb';
 
 // Whitelist of allowed vehicle_profiles columns for dynamic updates/inserts
 const ALLOWED_VEHICLE_COLUMNS = new Set([

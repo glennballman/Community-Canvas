@@ -1,5 +1,5 @@
 import express, { Response } from 'express';
-import { pool } from '../db';
+import { serviceQuery } from '../db/tenantDb';
 import { authenticateToken, AuthRequest } from '../middleware/auth';
 
 const router = express.Router();
@@ -8,7 +8,7 @@ router.use(authenticateToken);
 
 router.get('/properties', async (req: AuthRequest, res: Response) => {
     try {
-        const result = await pool.query(`
+        const result = await serviceQuery(`
             SELECT 
                 p.*,
                 ph.role,
@@ -61,7 +61,7 @@ router.get('/properties/:id', async (req: AuthRequest, res: Response) => {
     try {
         const { id } = req.params;
 
-        const accessCheck = await pool.query(
+        const accessCheck = await serviceQuery(
             'SELECT role FROM staging_property_hosts WHERE property_id = $1 AND user_id = $2',
             [id, req.user!.id]
         );
@@ -70,17 +70,17 @@ router.get('/properties/:id', async (req: AuthRequest, res: Response) => {
             return res.status(403).json({ success: false, error: 'Access denied' });
         }
 
-        const propResult = await pool.query('SELECT * FROM staging_properties WHERE id = $1', [id]);
+        const propResult = await serviceQuery('SELECT * FROM staging_properties WHERE id = $1', [id]);
         if (propResult.rows.length === 0) {
             return res.status(404).json({ success: false, error: 'Property not found' });
         }
 
-        const pricingResult = await pool.query(
+        const pricingResult = await serviceQuery(
             'SELECT * FROM staging_pricing WHERE property_id = $1 ORDER BY pricing_type',
             [id]
         );
 
-        const spotsResult = await pool.query(
+        const spotsResult = await serviceQuery(
             'SELECT * FROM staging_spots WHERE property_id = $1 ORDER BY name',
             [id]
         );
@@ -141,7 +141,7 @@ router.get('/bookings', async (req: AuthRequest, res: Response) => {
 
         query += ' ORDER BY b.check_in_date DESC';
 
-        const result = await pool.query(query, params);
+        const result = await serviceQuery(query, params);
 
         res.json({
             success: true,
@@ -181,7 +181,7 @@ router.put('/bookings/:id/status', async (req: AuthRequest, res: Response) => {
         const { id } = req.params;
         const { status, notes } = req.body;
 
-        const accessCheck = await pool.query(`
+        const accessCheck = await serviceQuery(`
             SELECT b.id FROM staging_bookings b
             JOIN staging_property_hosts ph ON ph.property_id = b.property_id
             WHERE b.id = $1 AND ph.user_id = $2 AND ph.can_manage_bookings = true
@@ -196,7 +196,7 @@ router.put('/bookings/:id/status', async (req: AuthRequest, res: Response) => {
             return res.status(400).json({ success: false, error: 'Invalid status' });
         }
 
-        const result = await pool.query(`
+        const result = await serviceQuery(`
             UPDATE staging_bookings 
             SET status = $2, 
                 host_notes = COALESCE($3, host_notes),
@@ -218,7 +218,7 @@ router.get('/properties/:id/calendar', async (req: AuthRequest, res: Response) =
         const { id } = req.params;
         const { startDate, endDate } = req.query;
 
-        const accessCheck = await pool.query(
+        const accessCheck = await serviceQuery(
             'SELECT role FROM staging_property_hosts WHERE property_id = $1 AND user_id = $2',
             [id, req.user!.id]
         );
@@ -230,7 +230,7 @@ router.get('/properties/:id/calendar', async (req: AuthRequest, res: Response) =
         const start = startDate || new Date().toISOString().split('T')[0];
         const end = endDate || new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
-        const bookingsResult = await pool.query(`
+        const bookingsResult = await serviceQuery(`
             SELECT id, booking_ref, guest_name, check_in_date, check_out_date, status, num_nights
             FROM staging_bookings
             WHERE property_id = $1 
@@ -239,7 +239,7 @@ router.get('/properties/:id/calendar', async (req: AuthRequest, res: Response) =
             ORDER BY check_in_date
         `, [id, start, end]);
 
-        const blocksResult = await pool.query(`
+        const blocksResult = await serviceQuery(`
             SELECT id, block_type, title, start_date, end_date
             FROM staging_calendar_blocks
             WHERE property_id = $1 
@@ -247,7 +247,7 @@ router.get('/properties/:id/calendar', async (req: AuthRequest, res: Response) =
             ORDER BY start_date
         `, [id, start, end]);
 
-        const overridesResult = await pool.query(`
+        const overridesResult = await serviceQuery(`
             SELECT id, name, override_type, start_date, end_date, nightly_rate, rate_multiplier
             FROM staging_pricing_overrides
             WHERE property_id = $1 
@@ -278,7 +278,7 @@ router.post('/properties/:id/blocks', async (req: AuthRequest, res: Response) =>
         const { id } = req.params;
         const { blockType, title, description, startDate, endDate, spotId } = req.body;
 
-        const accessCheck = await pool.query(
+        const accessCheck = await serviceQuery(
             'SELECT role FROM staging_property_hosts WHERE property_id = $1 AND user_id = $2 AND can_manage_calendar = true',
             [id, req.user!.id]
         );
@@ -291,7 +291,7 @@ router.post('/properties/:id/blocks', async (req: AuthRequest, res: Response) =>
             return res.status(400).json({ success: false, error: 'Block type and dates required' });
         }
 
-        const result = await pool.query(`
+        const result = await serviceQuery(`
             INSERT INTO staging_calendar_blocks 
             (property_id, spot_id, block_type, title, description, start_date, end_date, created_by)
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
@@ -310,7 +310,7 @@ router.delete('/properties/:id/blocks/:blockId', async (req: AuthRequest, res: R
     try {
         const { id, blockId } = req.params;
 
-        const accessCheck = await pool.query(
+        const accessCheck = await serviceQuery(
             'SELECT role FROM staging_property_hosts WHERE property_id = $1 AND user_id = $2 AND can_manage_calendar = true',
             [id, req.user!.id]
         );
@@ -319,7 +319,7 @@ router.delete('/properties/:id/blocks/:blockId', async (req: AuthRequest, res: R
             return res.status(403).json({ success: false, error: 'Access denied' });
         }
 
-        const result = await pool.query(
+        const result = await serviceQuery(
             'DELETE FROM staging_calendar_blocks WHERE id = $1 AND property_id = $2 RETURNING id',
             [blockId, id]
         );
@@ -341,7 +341,7 @@ router.post('/properties/:id/pricing-overrides', async (req: AuthRequest, res: R
         const { id } = req.params;
         const { overrideType, name, description, startDate, endDate, nightlyRate, rateMultiplier, minimumNights } = req.body;
 
-        const accessCheck = await pool.query(
+        const accessCheck = await serviceQuery(
             'SELECT role FROM staging_property_hosts WHERE property_id = $1 AND user_id = $2',
             [id, req.user!.id]
         );
@@ -354,7 +354,7 @@ router.post('/properties/:id/pricing-overrides', async (req: AuthRequest, res: R
             return res.status(400).json({ success: false, error: 'Override type and dates required' });
         }
 
-        const result = await pool.query(`
+        const result = await serviceQuery(`
             INSERT INTO staging_pricing_overrides 
             (property_id, override_type, name, description, start_date, end_date, nightly_rate, rate_multiplier, minimum_nights, created_by)
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
@@ -373,7 +373,7 @@ router.delete('/properties/:id/pricing-overrides/:overrideId', async (req: AuthR
     try {
         const { id, overrideId } = req.params;
 
-        const accessCheck = await pool.query(
+        const accessCheck = await serviceQuery(
             'SELECT role FROM staging_property_hosts WHERE property_id = $1 AND user_id = $2',
             [id, req.user!.id]
         );
@@ -382,7 +382,7 @@ router.delete('/properties/:id/pricing-overrides/:overrideId', async (req: AuthR
             return res.status(403).json({ success: false, error: 'Access denied' });
         }
 
-        const result = await pool.query(
+        const result = await serviceQuery(
             'DELETE FROM staging_pricing_overrides WHERE id = $1 AND property_id = $2 RETURNING id',
             [overrideId, id]
         );
@@ -416,7 +416,7 @@ router.get('/notifications', async (req: AuthRequest, res: Response) => {
 
         query += ' ORDER BY n.created_at DESC LIMIT 50';
 
-        const result = await pool.query(query, [req.user!.id]);
+        const result = await serviceQuery(query, [req.user!.id]);
 
         res.json({
             success: true,
@@ -444,7 +444,7 @@ router.put('/notifications/:id/read', async (req: AuthRequest, res: Response) =>
     try {
         const { id } = req.params;
 
-        await pool.query(
+        await serviceQuery(
             'UPDATE staging_host_notifications SET is_read = true, read_at = NOW() WHERE id = $1 AND user_id = $2',
             [id, req.user!.id]
         );
@@ -459,7 +459,7 @@ router.put('/notifications/:id/read', async (req: AuthRequest, res: Response) =>
 
 router.put('/notifications/read-all', async (req: AuthRequest, res: Response) => {
     try {
-        await pool.query(
+        await serviceQuery(
             'UPDATE staging_host_notifications SET is_read = true, read_at = NOW() WHERE user_id = $1 AND is_read = false',
             [req.user!.id]
         );
@@ -474,7 +474,7 @@ router.put('/notifications/read-all', async (req: AuthRequest, res: Response) =>
 
 router.get('/dashboard/stats', async (req: AuthRequest, res: Response) => {
     try {
-        const statsResult = await pool.query(`
+        const statsResult = await serviceQuery(`
             SELECT 
                 COUNT(DISTINCT p.id) as total_properties,
                 COALESCE(SUM(p.total_spots), 0) as total_spots,

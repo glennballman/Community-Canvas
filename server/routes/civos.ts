@@ -1,8 +1,16 @@
 import express, { Request, Response } from 'express';
-import { pool } from '../db';
-import { authenticateToken, AuthRequest } from '../middleware/auth';
+import { serviceQuery } from '../db/tenantDb';
 
 const router = express.Router();
+
+/**
+ * P0-C: CivOS Routes - Platform-global public API
+ * 
+ * Security model:
+ * - PUBLIC GET endpoints: No auth required, use serviceQuery for platform-wide data
+ * - CivOS data (signals, capacity, analytics) is platform-global, not tenant-scoped
+ * - All queries use serviceQuery as this is public dashboard data for the BC Status Dashboard
+ */
 
 // ============================================================================
 // PUBLIC ENDPOINTS (for CivOS to pull data)
@@ -57,7 +65,7 @@ router.get('/signals', async (req: Request, res: Response) => {
             LIMIT $${paramCount + 1}`;
         params.push(parseInt(limit as string) || 100);
 
-        const result = await pool.query(query, params);
+        const result = await serviceQuery(query, params);
 
         res.json({
             success: true,
@@ -96,7 +104,7 @@ router.get('/capacity', async (req: Request, res: Response) => {
     try {
         const { region } = req.query;
 
-        const overallResult = await pool.query(`
+        const overallResult = await serviceQuery(`
             SELECT 
                 COUNT(*) as total_properties,
                 COALESCE(SUM(total_spots), 0) as total_spots,
@@ -108,7 +116,7 @@ router.get('/capacity', async (req: Request, res: Response) => {
             ${region ? 'AND region = $1' : ''}
         `, region ? [region] : []);
 
-        const regionResult = await pool.query(`
+        const regionResult = await serviceQuery(`
             SELECT 
                 region,
                 COUNT(*) as properties,
@@ -122,7 +130,7 @@ router.get('/capacity', async (req: Request, res: Response) => {
             ORDER BY spots DESC
         `);
 
-        const utilizationResult = await pool.query(`
+        const utilizationResult = await serviceQuery(`
             SELECT 
                 p.region,
                 COUNT(DISTINCT b.id) as active_bookings
@@ -170,7 +178,7 @@ router.get('/capacity', async (req: Request, res: Response) => {
 
 router.get('/export', async (req: Request, res: Response) => {
     try {
-        const result = await pool.query('SELECT get_civos_export_payload() as payload');
+        const result = await serviceQuery('SELECT get_civos_export_payload() as payload');
         
         res.json({
             success: true,
@@ -219,7 +227,7 @@ router.get('/properties', async (req: Request, res: Response) => {
 
         query += ' ORDER BY p.region, p.name';
 
-        const result = await pool.query(query, params);
+        const result = await serviceQuery(query, params);
 
         res.json({
             success: true,
@@ -264,7 +272,7 @@ router.get('/properties', async (req: Request, res: Response) => {
 
 router.get('/signal-types', async (req: Request, res: Response) => {
     try {
-        const result = await pool.query(`
+        const result = await serviceQuery(`
             SELECT signal_code, signal_name, category, severity_levels, description
             FROM civos_signal_types
             WHERE is_active = true
@@ -288,7 +296,7 @@ router.get('/signal-types', async (req: Request, res: Response) => {
 
 router.post('/signals/generate', async (req: Request, res: Response) => {
     try {
-        const properties = await pool.query(
+        const properties = await serviceQuery(
             'SELECT id FROM staging_properties WHERE status = $1',
             ['active']
         );
@@ -298,7 +306,7 @@ router.post('/signals/generate', async (req: Request, res: Response) => {
 
         for (const prop of properties.rows) {
             try {
-                const result = await pool.query('SELECT generate_capacity_signal($1) as signal_id', [prop.id]);
+                const result = await serviceQuery('SELECT generate_capacity_signal($1) as signal_id', [prop.id]);
                 if (result.rows[0].signal_id) {
                     generated++;
                 }
@@ -338,7 +346,7 @@ router.post('/signals', async (req: Request, res: Response) => {
             return res.status(400).json({ success: false, error: 'Signal code required' });
         }
 
-        const typeResult = await pool.query(
+        const typeResult = await serviceQuery(
             'SELECT id FROM civos_signal_types WHERE signal_code = $1',
             [signalCode]
         );
@@ -349,7 +357,7 @@ router.post('/signals', async (req: Request, res: Response) => {
 
         let lat = null, lng = null, propRegion = region;
         if (propertyId) {
-            const propResult = await pool.query(
+            const propResult = await serviceQuery(
                 'SELECT latitude, longitude, region FROM staging_properties WHERE id = $1',
                 [propertyId]
             );
@@ -360,7 +368,7 @@ router.post('/signals', async (req: Request, res: Response) => {
             }
         }
 
-        const result = await pool.query(`
+        const result = await serviceQuery(`
             INSERT INTO civos_signals (
                 signal_type_id, signal_code, property_id, region,
                 latitude, longitude, severity, message, signal_value, expires_at
@@ -395,7 +403,7 @@ router.put('/signals/:id/resolve', async (req: Request, res: Response) => {
         const { id } = req.params;
         const { reason } = req.body;
 
-        const currentSignal = await pool.query(
+        const currentSignal = await serviceQuery(
             'SELECT severity, status FROM civos_signals WHERE id = $1',
             [id]
         );
@@ -404,14 +412,14 @@ router.put('/signals/:id/resolve', async (req: Request, res: Response) => {
             return res.status(404).json({ success: false, error: 'Signal not found' });
         }
 
-        const result = await pool.query(`
+        const result = await serviceQuery(`
             UPDATE civos_signals
             SET status = 'resolved', resolved_at = NOW(), updated_at = NOW()
             WHERE id = $1
             RETURNING id, signal_code, status
         `, [id]);
 
-        await pool.query(`
+        await serviceQuery(`
             INSERT INTO civos_signal_history (signal_id, previous_status, new_status, change_reason, changed_by)
             VALUES ($1, $2, 'resolved', $3, $4)
         `, [id, currentSignal.rows[0].status, reason || 'Manually resolved', 'dashboard']);
@@ -426,7 +434,7 @@ router.put('/signals/:id/resolve', async (req: Request, res: Response) => {
 
 router.get('/stats', async (req: Request, res: Response) => {
     try {
-        const statsResult = await pool.query(`
+        const statsResult = await serviceQuery(`
             SELECT 
                 (SELECT COUNT(*) FROM civos_signals WHERE status = 'active') as active_signals,
                 (SELECT COUNT(*) FROM civos_signals WHERE status = 'active' AND severity = 'critical') as critical_signals,
@@ -435,7 +443,7 @@ router.get('/stats', async (req: Request, res: Response) => {
                 (SELECT COUNT(DISTINCT region) FROM civos_signals WHERE status = 'active') as regions_with_signals
         `);
 
-        const capacityResult = await pool.query(`
+        const capacityResult = await serviceQuery(`
             SELECT 
                 COUNT(*) as total_properties,
                 COALESCE(SUM(total_spots), 0) as total_spots,
@@ -470,7 +478,7 @@ router.get('/stats', async (req: Request, res: Response) => {
 
 router.get('/config', async (req: Request, res: Response) => {
     try {
-        const result = await pool.query('SELECT key, value, description FROM civos_config');
+        const result = await serviceQuery('SELECT key, value, description FROM civos_config');
         
         const config: Record<string, any> = {};
         result.rows.forEach(row => {

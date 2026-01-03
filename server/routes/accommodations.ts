@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { Pool } from 'pg';
+import { serviceQuery } from '../db/tenantDb';
 import { AccommodationStorage } from '../storage/accommodationStorage';
 import { AccommodationImportService } from '../services/accommodationImportService';
 import { ICalSyncService } from '../services/icalSyncService';

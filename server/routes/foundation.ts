@@ -1,5 +1,5 @@
 import express, { Request, Response, NextFunction } from 'express';
-import { pool } from '../db';
+import { serviceQuery, withServiceTransaction } from '../db/tenantDb';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 
@@ -56,7 +56,7 @@ export async function loadTenantContext(req: AuthRequest, res: Response, next: N
     }
 
     try {
-        const result = await pool.query(`
+        const result = await serviceQuery(`
             SELECT 
                 t.id as tenant_id,
                 t.tenant_type,
@@ -76,7 +76,7 @@ export async function loadTenantContext(req: AuthRequest, res: Response, next: N
                 permissions: result.rows[0].permissions
             };
         } else if (req.user.isPlatformAdmin) {
-            const tenantResult = await pool.query(
+            const tenantResult = await serviceQuery(
                 'SELECT id, tenant_type FROM cc_tenants WHERE id = $1',
                 [tenantId]
             );
@@ -104,7 +104,7 @@ router.post('/auth/login', async (req: Request, res: Response) => {
             return res.status(400).json({ success: false, error: 'Email and password required' });
         }
 
-        const userResult = await pool.query(
+        const userResult = await serviceQuery(
             'SELECT * FROM cc_users WHERE email = $1 AND status = $2',
             [email.toLowerCase(), 'active']
         );
@@ -120,7 +120,7 @@ router.post('/auth/login', async (req: Request, res: Response) => {
             return res.status(401).json({ success: false, error: 'Invalid credentials' });
         }
 
-        const tenantsResult = await pool.query(`
+        const tenantsResult = await serviceQuery(`
             SELECT 
                 t.id, t.name, t.slug, t.tenant_type,
                 tu.role, tu.title
@@ -138,7 +138,7 @@ router.post('/auth/login', async (req: Request, res: Response) => {
 
         const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '24h' });
 
-        await pool.query(
+        await serviceQuery(
             'UPDATE cc_users SET last_login_at = NOW(), login_count = login_count + 1 WHERE id = $1',
             [user.id]
         );
@@ -173,7 +173,7 @@ router.post('/auth/login', async (req: Request, res: Response) => {
 
 router.get('/auth/me', authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
-        const userResult = await pool.query(`
+        const userResult = await serviceQuery(`
             SELECT id, email, first_name, last_name, display_name, avatar_url, 
                    is_platform_admin, status, last_login_at
             FROM cc_users WHERE id = $1
@@ -185,7 +185,7 @@ router.get('/auth/me', authenticateToken, async (req: AuthRequest, res: Response
 
         const user = userResult.rows[0];
 
-        const tenantsResult = await pool.query(`
+        const tenantsResult = await serviceQuery(`
             SELECT t.id, t.name, t.slug, t.tenant_type, tu.role, tu.title
             FROM cc_tenant_users tu
             JOIN cc_tenants t ON t.id = tu.tenant_id
@@ -254,9 +254,9 @@ router.get('/users', authenticateToken, requirePlatformAdmin, async (req: AuthRe
         query += ` LIMIT $${paramCount + 1} OFFSET $${paramCount + 2}`;
         params.push(parseInt(limit as string), parseInt(offset as string));
 
-        const result = await pool.query(query, params);
+        const result = await serviceQuery(query, params);
 
-        const countResult = await pool.query('SELECT COUNT(*) FROM cc_users');
+        const countResult = await serviceQuery('SELECT COUNT(*) FROM cc_users');
 
         res.json({
             success: true,
@@ -276,7 +276,7 @@ router.get('/users/:id', authenticateToken, requirePlatformAdmin, async (req: Au
     try {
         const { id } = req.params;
 
-        const userResult = await pool.query(`
+        const userResult = await serviceQuery(`
             SELECT * FROM cc_users WHERE id = $1
         `, [id]);
 
@@ -286,17 +286,17 @@ router.get('/users/:id', authenticateToken, requirePlatformAdmin, async (req: Au
 
         const user = userResult.rows[0];
 
-        const profileResult = await pool.query(
+        const profileResult = await serviceQuery(
             'SELECT * FROM cc_user_profiles WHERE user_id = $1',
             [id]
         );
 
-        const qualResult = await pool.query(
+        const qualResult = await serviceQuery(
             'SELECT * FROM cc_user_qualifications WHERE user_id = $1 ORDER BY qualification_type, name',
             [id]
         );
 
-        const tenantsResult = await pool.query(`
+        const tenantsResult = await serviceQuery(`
             SELECT t.*, tu.role, tu.title, tu.status as membership_status, tu.joined_at
             FROM cc_tenant_users tu
             JOIN cc_tenants t ON t.id = tu.tenant_id
@@ -366,7 +366,7 @@ router.get('/tenants', authenticateToken, async (req: AuthRequest, res: Response
 
         query += ` GROUP BY t.id, u.email, u.first_name, u.last_name ORDER BY t.tenant_type, t.name`;
 
-        const result = await pool.query(query, params);
+        const result = await serviceQuery(query, params);
 
         res.json({
             success: true,
@@ -387,13 +387,13 @@ router.get('/tenants/:id', authenticateToken, loadTenantContext, async (req: Aut
             return res.status(403).json({ success: false, error: 'Access denied' });
         }
 
-        const tenantResult = await pool.query('SELECT * FROM cc_tenants WHERE id = $1', [id]);
+        const tenantResult = await serviceQuery('SELECT * FROM cc_tenants WHERE id = $1', [id]);
 
         if (tenantResult.rows.length === 0) {
             return res.status(404).json({ success: false, error: 'Tenant not found' });
         }
 
-        const membersResult = await pool.query(`
+        const membersResult = await serviceQuery(`
             SELECT 
                 u.id, u.email, u.first_name, u.last_name, u.avatar_url,
                 tu.role, tu.title, tu.status, tu.joined_at
@@ -430,7 +430,7 @@ router.get('/roles', async (req: Request, res: Response) => {
 
         query += ' ORDER BY tenant_type, role_name';
 
-        const result = await pool.query(query, params);
+        const result = await serviceQuery(query, params);
 
         res.json({
             success: true,
@@ -445,7 +445,7 @@ router.get('/roles', async (req: Request, res: Response) => {
 
 router.get('/stats', authenticateToken, requirePlatformAdmin, async (req: AuthRequest, res: Response) => {
     try {
-        const stats = await pool.query(`
+        const stats = await serviceQuery(`
             SELECT
                 (SELECT COUNT(*) FROM cc_users) as total_users,
                 (SELECT COUNT(*) FROM cc_users WHERE status = 'active') as active_users,
