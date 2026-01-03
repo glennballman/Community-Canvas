@@ -1,13 +1,14 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 
-const JWT_SECRET = process.env.JWT_SECRET || process.env.SESSION_SECRET || 'staging-network-secret-change-in-production';
+const JWT_SECRET = process.env.JWT_SECRET || 'cc-dev-secret-change-in-prod';
 
 export interface AuthRequest extends Request {
     user?: {
-        id: number;
+        id: string;
         email: string;
-        userType: string;
+        userType?: string;
+        isPlatformAdmin?: boolean;
     };
 }
 
@@ -24,7 +25,8 @@ export function authenticateToken(req: AuthRequest, res: Response, next: NextFun
         req.user = {
             id: decoded.userId,
             email: decoded.email,
-            userType: decoded.userType
+            userType: decoded.userType,
+            isPlatformAdmin: decoded.isPlatformAdmin
         };
         next();
     } catch (error) {

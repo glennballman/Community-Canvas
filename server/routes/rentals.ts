@@ -187,9 +187,9 @@ router.get('/:id/eligibility', authenticateToken, async (req: AuthRequest, res: 
     }
     
     const itemId = idParsed.data;
-    const userId = req.user?.id;
+    const userEmail = req.user?.email;
     
-    if (!userId) {
+    if (!userEmail) {
       return res.status(401).json({ success: false, error: 'Not authenticated' });
     }
     
@@ -211,8 +211,8 @@ router.get('/:id/eligibility', authenticateToken, async (req: AuthRequest, res: 
     const item = itemResult.rows[0];
     
     const individualResult = await pool.query(
-      `SELECT id FROM cc_individuals WHERE user_id = $1`,
-      [userId]
+      `SELECT id FROM cc_individuals WHERE email = $1`,
+      [userEmail]
     );
     
     if (individualResult.rows.length === 0) {
@@ -402,15 +402,15 @@ router.post('/:id/book', authenticateToken, async (req: AuthRequest, res: Respon
     
     const itemId = idParsed.data;
     const { startTs, endTs } = bodyParsed.data;
-    const userId = req.user?.id;
+    const userEmail = req.user?.email;
     
-    if (!userId) {
+    if (!userEmail) {
       return res.status(401).json({ success: false, error: 'Not authenticated' });
     }
     
     const individualResult = await pool.query(
-      `SELECT id FROM cc_individuals WHERE user_id = $1`,
-      [userId]
+      `SELECT id FROM cc_individuals WHERE email = $1`,
+      [userEmail]
     );
     
     if (individualResult.rows.length === 0) {
@@ -471,10 +471,10 @@ router.post('/:id/book', authenticateToken, async (req: AuthRequest, res: Respon
         renter_individual_id,
         starts_at,
         ends_at,
-        price_subtotal,
-        price_tax,
-        price_deposit,
-        price_total,
+        subtotal,
+        tax,
+        damage_deposit_held,
+        total,
         status
       ) VALUES ($1, $2, $3::timestamptz, $4::timestamptz, $5, $6, $7, $8, 'confirmed')
       RETURNING id
@@ -497,9 +497,9 @@ router.post('/:id/book', authenticateToken, async (req: AuthRequest, res: Respon
 
 router.get('/my-bookings', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
-    const userId = req.user?.id;
+    const userEmail = req.user?.email;
     
-    if (!userId) {
+    if (!userEmail) {
       return res.status(401).json({ success: false, error: 'Not authenticated' });
     }
     
@@ -508,7 +508,7 @@ router.get('/my-bookings', authenticateToken, async (req: AuthRequest, res: Resp
         b.id,
         b.starts_at,
         b.ends_at,
-        b.price_total,
+        b.total,
         b.status,
         ri.name as item_name,
         ri.location_name,
@@ -518,9 +518,9 @@ router.get('/my-bookings', authenticateToken, async (req: AuthRequest, res: Resp
       JOIN cc_rental_items ri ON ri.id = b.rental_item_id
       JOIN cc_rental_categories rc ON rc.id = ri.category_id
       JOIN cc_individuals i ON i.id = b.renter_individual_id
-      WHERE i.user_id = $1
+      WHERE i.email = $1
       ORDER BY b.starts_at DESC
-    `, [userId]);
+    `, [userEmail]);
     
     res.json({
       success: true,
@@ -528,7 +528,7 @@ router.get('/my-bookings', authenticateToken, async (req: AuthRequest, res: Resp
         id: row.id,
         startsAt: row.starts_at,
         endsAt: row.ends_at,
-        priceTotal: parseFloat(row.price_total),
+        priceTotal: parseFloat(row.total),
         status: row.status,
         itemName: row.item_name,
         locationName: row.location_name,
@@ -544,15 +544,15 @@ router.get('/my-bookings', authenticateToken, async (req: AuthRequest, res: Resp
 
 router.get('/bookings', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
-    const userId = req.user?.id;
+    const userEmail = req.user?.email;
     
-    if (!userId) {
+    if (!userEmail) {
       return res.status(401).json({ success: false, error: 'Not authenticated' });
     }
     
     const indResult = await pool.query(
-      'SELECT id FROM cc_individuals WHERE user_id = $1',
-      [userId]
+      'SELECT id FROM cc_individuals WHERE email = $1',
+      [userEmail]
     );
     
     if (indResult.rows.length === 0) {
@@ -572,10 +572,10 @@ router.get('/bookings', authenticateToken, async (req: AuthRequest, res: Respons
         b.pricing_model,
         b.rate_applied,
         b.duration_hours,
-        b.price_subtotal as subtotal,
-        b.price_tax as tax,
-        b.price_deposit as damage_deposit_held,
-        b.price_total as total,
+        b.subtotal,
+        b.tax,
+        b.damage_deposit_held,
+        b.total,
         b.payment_status,
         b.condition_at_checkout,
         b.condition_at_return,
@@ -660,22 +660,22 @@ router.get('/bookings', authenticateToken, async (req: AuthRequest, res: Respons
 
 router.post('/bookings/:id/cancel', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
-    const userId = req.user?.id;
+    const userEmail = req.user?.email;
     const bookingIdParsed = uuidSchema.safeParse(req.params.id);
     
     if (!bookingIdParsed.success) {
       return res.status(400).json({ success: false, error: 'Invalid booking ID' });
     }
     
-    if (!userId) {
+    if (!userEmail) {
       return res.status(401).json({ success: false, error: 'Not authenticated' });
     }
     
     const bookingId = bookingIdParsed.data;
     
     const indResult = await pool.query(
-      'SELECT id FROM cc_individuals WHERE user_id = $1',
-      [userId]
+      'SELECT id FROM cc_individuals WHERE email = $1',
+      [userEmail]
     );
     
     if (indResult.rows.length === 0) {
@@ -718,22 +718,22 @@ router.post('/bookings/:id/cancel', authenticateToken, async (req: AuthRequest, 
 
 router.get('/bookings/:id', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
-    const userId = req.user?.id;
+    const userEmail = req.user?.email;
     const bookingIdParsed = uuidSchema.safeParse(req.params.id);
     
     if (!bookingIdParsed.success) {
       return res.status(400).json({ success: false, error: 'Invalid booking ID' });
     }
     
-    if (!userId) {
+    if (!userEmail) {
       return res.status(401).json({ success: false, error: 'Not authenticated' });
     }
     
     const bookingId = bookingIdParsed.data;
     
     const indResult = await pool.query(
-      'SELECT id FROM cc_individuals WHERE user_id = $1',
-      [userId]
+      'SELECT id FROM cc_individuals WHERE email = $1',
+      [userEmail]
     );
     
     if (indResult.rows.length === 0) {

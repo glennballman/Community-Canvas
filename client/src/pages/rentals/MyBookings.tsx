@@ -5,7 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { queryClient, apiRequest } from '@/lib/queryClient';
+import { queryClient } from '@/lib/queryClient';
+import { useAuth } from '@/contexts/AuthContext';
 import { 
   Sailboat, 
   Plus, 
@@ -72,14 +73,28 @@ type FilterType = 'all' | 'active' | 'upcoming' | 'past';
 
 export default function MyBookings() {
   const [filter, setFilter] = useState<FilterType>('all');
+  const { token } = useAuth();
 
   const { data, isLoading, error } = useQuery<{ success: boolean; bookings: Booking[] }>({
     queryKey: ['/api/rentals/bookings'],
+    queryFn: async () => {
+      const res = await fetch('/api/rentals/bookings', {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!res.ok) throw new Error('Failed to fetch bookings');
+      return res.json();
+    },
+    enabled: !!token,
   });
 
   const cancelMutation = useMutation({
     mutationFn: async (bookingId: string) => {
-      return apiRequest('POST', `/api/rentals/bookings/${bookingId}/cancel`);
+      const res = await fetch(`/api/rentals/bookings/${bookingId}/cancel`, {
+        method: 'POST',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!res.ok) throw new Error('Failed to cancel booking');
+      return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/rentals/bookings'] });
