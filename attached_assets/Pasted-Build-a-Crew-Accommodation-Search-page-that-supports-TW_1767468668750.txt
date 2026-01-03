@@ -1,0 +1,1000 @@
+Build a Crew Accommodation Search page that supports TWO search modes:
+1. **Browse Mode** - Human-friendly attribute search (hot tub, wifi, pets, etc.)
+2. **Work Order Mode** - Capability matching for job planning
+
+## File 1: client/src/pages/crew/AccommodationSearch.tsx
+```tsx
+import React, { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Slider } from '@/components/ui/slider';
+import { 
+  Search, Bed, Car, Plug, Droplets, MapPin, Users, Home, Truck, Tent, 
+  Calendar, DollarSign, Star, Filter, Grid, List, Wifi, Dog, Coffee,
+  Waves, Flame, UtensilsCrossed, Shirt, TreePine, Ship, Briefcase,
+  ChevronDown, ChevronUp, X
+} from 'lucide-react';
+
+// Amenity definitions with icons
+const AMENITIES = {
+  // Accommodation
+  has_wifi: { label: 'WiFi', icon: Wifi, category: 'essentials' },
+  has_kitchen: { label: 'Kitchen', icon: UtensilsCrossed, category: 'essentials' },
+  has_laundry: { label: 'Laundry', icon: Shirt, category: 'essentials' },
+  bedding_provided: { label: 'Bedding Provided', icon: Bed, category: 'essentials' },
+  
+  // Comfort
+  has_hot_tub: { label: 'Hot Tub', icon: Waves, category: 'comfort' },
+  has_pool: { label: 'Pool', icon: Waves, category: 'comfort' },
+  has_bbq_grills: { label: 'BBQ/Grill', icon: Flame, category: 'comfort' },
+  has_fire_pits: { label: 'Fire Pit', icon: Flame, category: 'comfort' },
+  has_coffee_maker: { label: 'Coffee Maker', icon: Coffee, category: 'comfort' },
+  
+  // Outdoor
+  is_waterfront: { label: 'Waterfront', icon: Waves, category: 'outdoor' },
+  has_boat_launch: { label: 'Boat Launch', icon: Ship, category: 'outdoor' },
+  has_hiking_trails: { label: 'Hiking Trails', icon: TreePine, category: 'outdoor' },
+  has_fishing: { label: 'Fishing', icon: Ship, category: 'outdoor' },
+  has_kayak_rental: { label: 'Kayak Rental', icon: Ship, category: 'outdoor' },
+  
+  // Pets & Family
+  pets_allowed: { label: 'Pets Allowed', icon: Dog, category: 'pets' },
+  has_dog_park: { label: 'Dog Park', icon: Dog, category: 'pets' },
+  has_playground: { label: 'Playground', icon: Users, category: 'family' },
+  
+  // RV/Camping
+  has_shore_power: { label: 'Shore Power', icon: Plug, category: 'rv' },
+  has_water_hookup: { label: 'Water Hookup', icon: Droplets, category: 'rv' },
+  has_sewer_hookup: { label: 'Sewer Hookup', icon: Droplets, category: 'rv' },
+  has_dump_station: { label: 'Dump Station', icon: Droplets, category: 'rv' },
+  has_propane_refill: { label: 'Propane Refill', icon: Flame, category: 'rv' },
+  
+  // Work/Crew
+  has_workspace: { label: 'Workspace', icon: Briefcase, category: 'work' },
+  long_term_ok: { label: 'Long Term OK', icon: Calendar, category: 'work' },
+  crew_friendly: { label: 'Crew Friendly', icon: Users, category: 'work' },
+};
+
+interface SearchFilters {
+  // Mode
+  searchMode: 'browse' | 'work_order';
+  
+  // Location
+  nearLocation: string;
+  radiusKm: number;
+  
+  // Dates
+  startDate: string;
+  endDate: string;
+  
+  // Capacity
+  totalPeople: number;
+  privateBedroomsNeeded: number;
+  
+  // Vehicle situation
+  vehicleSituation: 'none' | 'has_trailer' | 'needs_rental' | 'needs_spot';
+  trailerLengthFt: number;
+  
+  // Budget
+  maxDailyRate: number | null;
+  
+  // Amenities (for browse mode)
+  selectedAmenities: string[];
+  
+  // Asset types
+  includeProperties: boolean;
+  includeSpots: boolean;
+  includeTrailers: boolean;
+  
+  // Work order context (for work order mode)
+  workOrderId: string | null;
+}
+
+export default function AccommodationSearch() {
+  const [filters, setFilters] = useState<SearchFilters>({
+    searchMode: 'browse',
+    nearLocation: '',
+    radiusKm: 50,
+    startDate: '',
+    endDate: '',
+    totalPeople: 1,
+    privateBedroomsNeeded: 0,
+    vehicleSituation: 'none',
+    trailerLengthFt: 25,
+    maxDailyRate: null,
+    selectedAmenities: [],
+    includeProperties: true,
+    includeSpots: true,
+    includeTrailers: true,
+    workOrderId: null,
+  });
+  
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+
+  // Main search query
+  const { data: results, isLoading, refetch } = useQuery({
+    queryKey: ['/api/crew/accommodation-search', filters],
+    queryFn: async () => {
+      const response = await fetch('/api/crew/accommodation-search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(filters),
+      });
+      if (!response.ok) throw new Error('Search failed');
+      return response.json();
+    },
+    enabled: false, // Manual trigger
+  });
+
+  // Work orders for dropdown
+  const { data: workOrders } = useQuery({
+    queryKey: ['/api/work-orders/active'],
+  });
+
+  const updateFilter = <K extends keyof SearchFilters>(key: K, value: SearchFilters[K]) => {
+    setFilters(prev => ({ ...prev, [key]: value }));
+  };
+
+  const toggleAmenity = (amenity: string) => {
+    setFilters(prev => ({
+      ...prev,
+      selectedAmenities: prev.selectedAmenities.includes(amenity)
+        ? prev.selectedAmenities.filter(a => a !== amenity)
+        : [...prev.selectedAmenities, amenity]
+    }));
+  };
+
+  const clearAmenities = () => {
+    setFilters(prev => ({ ...prev, selectedAmenities: [] }));
+  };
+
+  const handleSearch = () => {
+    refetch();
+  };
+
+  return (
+    <div className="container mx-auto p-6 max-w-7xl">
+      {/* Header */}
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold mb-2">Find Crew Accommodation</h1>
+        <p className="text-gray-600">
+          Search across Airbnb, RV parks, campgrounds, trailers - everything in one place
+        </p>
+      </div>
+
+      {/* Search Mode Tabs */}
+      <Tabs 
+        value={filters.searchMode} 
+        onValueChange={(v) => updateFilter('searchMode', v as 'browse' | 'work_order')}
+        className="mb-6"
+      >
+        <TabsList className="grid w-full max-w-md grid-cols-2">
+          <TabsTrigger value="browse" className="flex items-center gap-2">
+            <Search className="w-4 h-4" />
+            Browse & Filter
+          </TabsTrigger>
+          <TabsTrigger value="work_order" className="flex items-center gap-2">
+            <Briefcase className="w-4 h-4" />
+            Match to Work Order
+          </TabsTrigger>
+        </TabsList>
+
+        {/* Browse Mode */}
+        <TabsContent value="browse">
+          <Card>
+            <CardContent className="pt-6">
+              {/* Primary Filters Row */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                {/* Location */}
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Location</label>
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="City or community"
+                      value={filters.nearLocation}
+                      onChange={(e) => updateFilter('nearLocation', e.target.value)}
+                      className="flex-1"
+                    />
+                  </div>
+                  <div className="flex items-center gap-2 mt-2">
+                    <span className="text-xs text-gray-500">Within</span>
+                    <Select 
+                      value={filters.radiusKm.toString()}
+                      onValueChange={(v) => updateFilter('radiusKm', parseInt(v))}
+                    >
+                      <SelectTrigger className="w-24 h-8">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="10">10 km</SelectItem>
+                        <SelectItem value="25">25 km</SelectItem>
+                        <SelectItem value="50">50 km</SelectItem>
+                        <SelectItem value="100">100 km</SelectItem>
+                        <SelectItem value="200">200 km</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {/* Dates */}
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Dates</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Input
+                      type="date"
+                      value={filters.startDate}
+                      onChange={(e) => updateFilter('startDate', e.target.value)}
+                      className="text-sm"
+                    />
+                    <Input
+                      type="date"
+                      value={filters.endDate}
+                      onChange={(e) => updateFilter('endDate', e.target.value)}
+                      className="text-sm"
+                    />
+                  </div>
+                </div>
+
+                {/* Crew Size */}
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Crew Size</label>
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2">
+                      <Users className="w-4 h-4 text-gray-400" />
+                      <Input
+                        type="number"
+                        min={1}
+                        max={20}
+                        value={filters.totalPeople}
+                        onChange={(e) => updateFilter('totalPeople', parseInt(e.target.value) || 1)}
+                        className="w-16"
+                      />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-gray-500">Private BR:</span>
+                      <Input
+                        type="number"
+                        min={0}
+                        max={10}
+                        value={filters.privateBedroomsNeeded}
+                        onChange={(e) => updateFilter('privateBedroomsNeeded', parseInt(e.target.value) || 0)}
+                        className="w-14"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Price */}
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Max Price/Night</label>
+                  <div className="flex items-center gap-2">
+                    <DollarSign className="w-4 h-4 text-gray-400" />
+                    <Input
+                      type="number"
+                      placeholder="Any"
+                      value={filters.maxDailyRate || ''}
+                      onChange={(e) => updateFilter('maxDailyRate', e.target.value ? parseInt(e.target.value) : null)}
+                      className="w-24"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Vehicle Situation */}
+              <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+                <label className="text-sm font-medium mb-3 block">Vehicle Situation</label>
+                <div className="flex flex-wrap gap-3">
+                  {[
+                    { value: 'none', label: 'No trailer/RV', icon: Home },
+                    { value: 'has_trailer', label: 'I have a trailer/RV', icon: Truck },
+                    { value: 'needs_rental', label: 'Need to rent RV', icon: Truck },
+                    { value: 'needs_spot', label: 'Just need parking spot', icon: Car },
+                  ].map(option => (
+                    <Button
+                      key={option.value}
+                      variant={filters.vehicleSituation === option.value ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => updateFilter('vehicleSituation', option.value as any)}
+                      className="flex items-center gap-2"
+                    >
+                      <option.icon className="w-4 h-4" />
+                      {option.label}
+                    </Button>
+                  ))}
+                </div>
+                {filters.vehicleSituation === 'has_trailer' && (
+                  <div className="mt-3 flex items-center gap-2">
+                    <span className="text-sm">Trailer length:</span>
+                    <Input
+                      type="number"
+                      value={filters.trailerLengthFt}
+                      onChange={(e) => updateFilter('trailerLengthFt', parseInt(e.target.value) || 20)}
+                      className="w-20"
+                    />
+                    <span className="text-sm">ft</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Amenities Section */}
+              <div className="mb-6">
+                <div className="flex items-center justify-between mb-3">
+                  <label className="text-sm font-medium">Amenities & Features</label>
+                  {filters.selectedAmenities.length > 0 && (
+                    <Button variant="ghost" size="sm" onClick={clearAmenities}>
+                      Clear all ({filters.selectedAmenities.length})
+                    </Button>
+                  )}
+                </div>
+                
+                {/* Selected amenities as badges */}
+                {filters.selectedAmenities.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    {filters.selectedAmenities.map(amenity => {
+                      const def = AMENITIES[amenity as keyof typeof AMENITIES];
+                      if (!def) return null;
+                      return (
+                        <Badge 
+                          key={amenity} 
+                          variant="secondary"
+                          className="flex items-center gap-1 cursor-pointer hover:bg-gray-200"
+                          onClick={() => toggleAmenity(amenity)}
+                        >
+                          <def.icon className="w-3 h-3" />
+                          {def.label}
+                          <X className="w-3 h-3 ml-1" />
+                        </Badge>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Amenity categories */}
+                <div className="space-y-4">
+                  {/* Essentials */}
+                  <div>
+                    <span className="text-xs font-medium text-gray-500 uppercase">Essentials</span>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {Object.entries(AMENITIES)
+                        .filter(([_, def]) => def.category === 'essentials')
+                        .map(([key, def]) => (
+                          <Button
+                            key={key}
+                            variant={filters.selectedAmenities.includes(key) ? 'default' : 'outline'}
+                            size="sm"
+                            onClick={() => toggleAmenity(key)}
+                            className="flex items-center gap-1"
+                          >
+                            <def.icon className="w-3 h-3" />
+                            {def.label}
+                          </Button>
+                        ))}
+                    </div>
+                  </div>
+
+                  {/* Comfort */}
+                  <div>
+                    <span className="text-xs font-medium text-gray-500 uppercase">Comfort</span>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {Object.entries(AMENITIES)
+                        .filter(([_, def]) => def.category === 'comfort')
+                        .map(([key, def]) => (
+                          <Button
+                            key={key}
+                            variant={filters.selectedAmenities.includes(key) ? 'default' : 'outline'}
+                            size="sm"
+                            onClick={() => toggleAmenity(key)}
+                            className="flex items-center gap-1"
+                          >
+                            <def.icon className="w-3 h-3" />
+                            {def.label}
+                          </Button>
+                        ))}
+                    </div>
+                  </div>
+
+                  {/* Advanced Filters Toggle */}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+                    className="flex items-center gap-1"
+                  >
+                    {showAdvancedFilters ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                    {showAdvancedFilters ? 'Less filters' : 'More filters (Outdoor, RV, Work)'}
+                  </Button>
+
+                  {showAdvancedFilters && (
+                    <>
+                      {/* Outdoor */}
+                      <div>
+                        <span className="text-xs font-medium text-gray-500 uppercase">Outdoor</span>
+                        <div className="flex flex-wrap gap-2 mt-2">
+                          {Object.entries(AMENITIES)
+                            .filter(([_, def]) => def.category === 'outdoor')
+                            .map(([key, def]) => (
+                              <Button
+                                key={key}
+                                variant={filters.selectedAmenities.includes(key) ? 'default' : 'outline'}
+                                size="sm"
+                                onClick={() => toggleAmenity(key)}
+                                className="flex items-center gap-1"
+                              >
+                                <def.icon className="w-3 h-3" />
+                                {def.label}
+                              </Button>
+                            ))}
+                        </div>
+                      </div>
+
+                      {/* Pets */}
+                      <div>
+                        <span className="text-xs font-medium text-gray-500 uppercase">Pets & Family</span>
+                        <div className="flex flex-wrap gap-2 mt-2">
+                          {Object.entries(AMENITIES)
+                            .filter(([_, def]) => def.category === 'pets' || def.category === 'family')
+                            .map(([key, def]) => (
+                              <Button
+                                key={key}
+                                variant={filters.selectedAmenities.includes(key) ? 'default' : 'outline'}
+                                size="sm"
+                                onClick={() => toggleAmenity(key)}
+                                className="flex items-center gap-1"
+                              >
+                                <def.icon className="w-3 h-3" />
+                                {def.label}
+                              </Button>
+                            ))}
+                        </div>
+                      </div>
+
+                      {/* RV */}
+                      <div>
+                        <span className="text-xs font-medium text-gray-500 uppercase">RV & Camping</span>
+                        <div className="flex flex-wrap gap-2 mt-2">
+                          {Object.entries(AMENITIES)
+                            .filter(([_, def]) => def.category === 'rv')
+                            .map(([key, def]) => (
+                              <Button
+                                key={key}
+                                variant={filters.selectedAmenities.includes(key) ? 'default' : 'outline'}
+                                size="sm"
+                                onClick={() => toggleAmenity(key)}
+                                className="flex items-center gap-1"
+                              >
+                                <def.icon className="w-3 h-3" />
+                                {def.label}
+                              </Button>
+                            ))}
+                        </div>
+                      </div>
+
+                      {/* Work */}
+                      <div>
+                        <span className="text-xs font-medium text-gray-500 uppercase">Work & Crew</span>
+                        <div className="flex flex-wrap gap-2 mt-2">
+                          {Object.entries(AMENITIES)
+                            .filter(([_, def]) => def.category === 'work')
+                            .map(([key, def]) => (
+                              <Button
+                                key={key}
+                                variant={filters.selectedAmenities.includes(key) ? 'default' : 'outline'}
+                                size="sm"
+                                onClick={() => toggleAmenity(key)}
+                                className="flex items-center gap-1"
+                              >
+                                <def.icon className="w-3 h-3" />
+                                {def.label}
+                              </Button>
+                            ))}
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* Search Button */}
+              <div className="flex justify-end">
+                <Button size="lg" onClick={handleSearch} className="px-8">
+                  <Search className="w-5 h-5 mr-2" />
+                  Search Accommodation
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Work Order Mode */}
+        <TabsContent value="work_order">
+          <Card>
+            <CardContent className="pt-6">
+              <div className="space-y-4">
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Select Work Order</label>
+                  <Select
+                    value={filters.workOrderId || ''}
+                    onValueChange={(v) => updateFilter('workOrderId', v || null)}
+                  >
+                    <SelectTrigger className="w-full max-w-md">
+                      <SelectValue placeholder="Choose a work order to find matching accommodation" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {workOrders?.map((wo: any) => (
+                        <SelectItem key={wo.id} value={wo.id}>
+                          {wo.work_order_ref} - {wo.title}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {filters.workOrderId && (
+                  <div className="p-4 bg-blue-50 rounded-lg">
+                    <p className="text-sm text-blue-800">
+                      This will find accommodation that fulfills all requirements defined in the work order,
+                      including crew size, weather window, and location constraints.
+                    </p>
+                  </div>
+                )}
+
+                <Button size="lg" onClick={handleSearch} disabled={!filters.workOrderId}>
+                  <Search className="w-5 h-5 mr-2" />
+                  Find Matching Accommodation
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+
+      {/* Results */}
+      {results && (
+        <div className="mt-6">
+          {/* Results Header */}
+          <div className="flex justify-between items-center mb-4">
+            <div className="text-sm text-gray-600">
+              {results.length} options found
+              {filters.selectedAmenities.length > 0 && (
+                <span className="ml-2">
+                  (filtered by {filters.selectedAmenities.length} amenities)
+                </span>
+              )}
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant={viewMode === 'grid' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setViewMode('grid')}
+              >
+                <Grid className="w-4 h-4" />
+              </Button>
+              <Button
+                variant={viewMode === 'list' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setViewMode('list')}
+              >
+                <List className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+
+          {/* Results Grid/List */}
+          <div className={
+            viewMode === 'grid'
+              ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'
+              : 'space-y-4'
+          }>
+            {results.map((asset: any) => (
+              <AssetCard key={asset.id} asset={asset} viewMode={viewMode} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {isLoading && (
+        <div className="mt-6 text-center py-12">
+          <div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-4" />
+          <p className="text-gray-500">Searching across all accommodation types...</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Asset Card Component
+function AssetCard({ asset, viewMode }: { asset: any; viewMode: 'grid' | 'list' }) {
+  const getTypeIcon = () => {
+    switch (asset.asset_type) {
+      case 'property': return <Home className="w-4 h-4" />;
+      case 'spot': return <Tent className="w-4 h-4" />;
+      case 'trailer': return <Truck className="w-4 h-4" />;
+      default: return <Home className="w-4 h-4" />;
+    }
+  };
+
+  const getTypeBadgeColor = () => {
+    switch (asset.asset_type) {
+      case 'property': return 'bg-blue-100 text-blue-800';
+      case 'spot': return 'bg-green-100 text-green-800';
+      case 'trailer': return 'bg-orange-100 text-orange-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  // Extract key amenities from property_details for display
+  const amenities = [];
+  if (asset.property_details) {
+    if (asset.property_details.has_wifi) amenities.push('WiFi');
+    if (asset.property_details.has_kitchen) amenities.push('Kitchen');
+    if (asset.property_details.has_hot_tub) amenities.push('Hot Tub');
+    if (asset.property_details.pets_allowed) amenities.push('Pets OK');
+    if (asset.property_details.has_laundry) amenities.push('Laundry');
+  }
+
+  if (viewMode === 'list') {
+    return (
+      <Card className="flex overflow-hidden hover:shadow-md transition-shadow">
+        <div className="w-48 h-36 bg-gray-200 flex-shrink-0">
+          {asset.thumbnail_url ? (
+            <img src={asset.thumbnail_url} alt={asset.name} className="w-full h-full object-cover" />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-gray-400">
+              {getTypeIcon()}
+            </div>
+          )}
+        </div>
+        <CardContent className="flex-1 p-4">
+          <div className="flex justify-between items-start">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <Badge className={getTypeBadgeColor()}>{asset.asset_type}</Badge>
+                {asset.crew_score >= 70 && (
+                  <Badge variant="outline" className="text-green-600 border-green-600">
+                    Crew Friendly
+                  </Badge>
+                )}
+              </div>
+              <h3 className="font-semibold">{asset.name}</h3>
+              <p className="text-sm text-gray-500">{asset.city}, {asset.region}</p>
+            </div>
+            <div className="text-right">
+              {asset.rate_daily && (
+                <div className="text-lg font-bold">${asset.rate_daily}</div>
+              )}
+              <div className="text-sm text-gray-500">/night</div>
+              {asset.overall_rating && (
+                <div className="flex items-center gap-1 mt-1">
+                  <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                  <span>{asset.overall_rating}</span>
+                </div>
+              )}
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2 mt-3">
+            {asset.sleeps_total > 0 && (
+              <span className="text-sm flex items-center gap-1 bg-gray-100 px-2 py-1 rounded">
+                <Bed className="w-3 h-3" /> Sleeps {asset.sleeps_total}
+              </span>
+            )}
+            {amenities.slice(0, 4).map(a => (
+              <span key={a} className="text-sm bg-gray-100 px-2 py-1 rounded">{a}</span>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Grid view
+  return (
+    <Card className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer">
+      <div className="h-48 bg-gray-200 relative">
+        {asset.thumbnail_url ? (
+          <img src={asset.thumbnail_url} alt={asset.name} className="w-full h-full object-cover" />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center text-gray-400">
+            {getTypeIcon()}
+          </div>
+        )}
+        <Badge className={`absolute top-2 left-2 ${getTypeBadgeColor()}`}>
+          {asset.asset_type}
+        </Badge>
+        {asset.crew_score >= 70 && (
+          <Badge className="absolute top-2 right-2 bg-green-600 text-white">
+            Crew Friendly
+          </Badge>
+        )}
+      </div>
+      <CardContent className="p-4">
+        <h3 className="font-semibold line-clamp-1">{asset.name}</h3>
+        <p className="text-sm text-gray-500 line-clamp-1">{asset.city}, {asset.region}</p>
+
+        <div className="flex flex-wrap gap-1 mt-2">
+          {asset.sleeps_total > 0 && (
+            <span className="text-xs flex items-center gap-1 bg-gray-100 px-2 py-1 rounded">
+              <Bed className="w-3 h-3" /> {asset.sleeps_total}
+            </span>
+          )}
+          {amenities.slice(0, 3).map(a => (
+            <span key={a} className="text-xs bg-gray-100 px-2 py-1 rounded">{a}</span>
+          ))}
+          {amenities.length > 3 && (
+            <span className="text-xs bg-gray-100 px-2 py-1 rounded">+{amenities.length - 3}</span>
+          )}
+        </div>
+
+        <div className="flex items-center justify-between mt-4 pt-3 border-t">
+          <div>
+            {asset.rate_daily ? (
+              <>
+                <span className="font-bold">${asset.rate_daily}</span>
+                <span className="text-gray-500 text-sm">/night</span>
+              </>
+            ) : (
+              <span className="text-gray-400 text-sm">Contact for price</span>
+            )}
+          </div>
+          {asset.overall_rating && (
+            <div className="flex items-center gap-1">
+              <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+              <span className="font-medium">{asset.overall_rating}</span>
+            </div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+```
+
+## File 2: server/routes/crew.ts
+```typescript
+import { Router } from 'express';
+import { db } from '../db';
+import { sql } from 'drizzle-orm';
+
+const router = Router();
+
+// Main accommodation search endpoint
+router.post('/accommodation-search', async (req, res) => {
+  try {
+    const {
+      searchMode,
+      nearLocation,
+      radiusKm,
+      startDate,
+      endDate,
+      totalPeople,
+      privateBedroomsNeeded,
+      vehicleSituation,
+      trailerLengthFt,
+      maxDailyRate,
+      selectedAmenities,
+      includeProperties,
+      includeSpots,
+      includeTrailers,
+      workOrderId,
+    } = req.body;
+
+    // If work order mode, use capability matching
+    if (searchMode === 'work_order' && workOrderId) {
+      const results = await db.execute(sql`
+        SELECT * FROM match_work_order_requirements(${workOrderId}::uuid)
+      `);
+      return res.json(results.rows);
+    }
+
+    // Browse mode - attribute-based search
+    let query = `
+      SELECT 
+        a.id,
+        a.asset_type,
+        a.name,
+        a.region,
+        a.city,
+        a.latitude,
+        a.longitude,
+        a.thumbnail_url,
+        a.crew_score,
+        a.overall_rating,
+        a.review_count,
+        t.rate_daily,
+        t.rate_weekly,
+        t.cleaning_fee,
+        t.min_nights,
+        -- Get sleeping capability
+        (SELECT (ac.attributes->>'people')::int 
+         FROM asset_capabilities ac 
+         WHERE ac.asset_id = a.id AND ac.capability_type = 'sleeping'
+         LIMIT 1) as sleeps_total,
+        -- Get full property details for attribute filtering
+        CASE WHEN a.source_table = 'staging_properties' THEN
+          (SELECT row_to_json(sp.*) FROM staging_properties sp WHERE sp.id = a.source_id::integer)
+        ELSE NULL END as property_details
+      FROM assets a
+      LEFT JOIN asset_terms t ON t.asset_id = a.id
+      WHERE a.status = 'active'
+    `;
+
+    const params: any[] = [];
+    let paramIndex = 1;
+
+    // Asset type filters
+    const assetTypes: string[] = [];
+    if (includeProperties) assetTypes.push('property');
+    if (includeSpots) assetTypes.push('spot');
+    if (includeTrailers) assetTypes.push('trailer');
+
+    if (assetTypes.length > 0) {
+      query += ` AND a.asset_type = ANY($${paramIndex}::text[])`;
+      params.push(assetTypes);
+      paramIndex++;
+    }
+
+    // Vehicle situation logic
+    if (vehicleSituation === 'has_trailer' || vehicleSituation === 'needs_spot') {
+      // They need parking spots
+      query += ` AND EXISTS (
+        SELECT 1 FROM asset_capabilities ac 
+        WHERE ac.asset_id = a.id 
+        AND ac.capability_type = 'parking'
+        ${trailerLengthFt ? `AND (ac.attributes->>'max_length_ft')::int >= $${paramIndex}` : ''}
+      )`;
+      if (trailerLengthFt) {
+        params.push(trailerLengthFt);
+        paramIndex++;
+      }
+    } else if (vehicleSituation === 'needs_rental') {
+      // They need trailers with sleeping
+      query += ` AND a.asset_type = 'trailer' 
+        AND EXISTS (
+          SELECT 1 FROM asset_capabilities ac 
+          WHERE ac.asset_id = a.id 
+          AND ac.capability_type = 'sleeping'
+          AND (ac.attributes->>'people')::int >= $${paramIndex}
+        )`;
+      params.push(totalPeople);
+      paramIndex++;
+    } else {
+      // Standard - needs sleeping capacity
+      if (totalPeople > 1) {
+        query += ` AND EXISTS (
+          SELECT 1 FROM asset_capabilities ac 
+          WHERE ac.asset_id = a.id 
+          AND ac.capability_type = 'sleeping'
+          AND (ac.attributes->>'people')::int >= $${paramIndex}
+        )`;
+        params.push(totalPeople);
+        paramIndex++;
+      }
+    }
+
+    // Price filter
+    if (maxDailyRate) {
+      query += ` AND (t.rate_daily IS NULL OR t.rate_daily <= $${paramIndex})`;
+      params.push(maxDailyRate);
+      paramIndex++;
+    }
+
+    // Amenity filters - applied to staging_properties via subquery
+    if (selectedAmenities && selectedAmenities.length > 0) {
+      const amenityConditions = selectedAmenities.map((amenity: string) => {
+        switch (amenity) {
+          case 'has_wifi': return 'sp.has_wifi = true';
+          case 'has_kitchen': return 'sp.has_kitchen = true';
+          case 'has_laundry': return 'sp.has_laundry = true';
+          case 'has_hot_tub': return 'sp.has_hot_tub = true';
+          case 'has_pool': return 'sp.has_pool = true';
+          case 'has_bbq_grills': return 'sp.has_bbq_grills = true';
+          case 'has_fire_pits': return 'sp.has_fire_pits = true';
+          case 'pets_allowed': return 'sp.pets_allowed = true';
+          case 'has_dog_park': return 'sp.has_dog_park = true';
+          case 'is_waterfront': return 'sp.is_waterfront = true';
+          case 'has_boat_launch': return 'sp.has_boat_launch = true';
+          case 'has_hiking_trails': return 'sp.has_hiking_trails = true';
+          case 'has_fishing': return 'sp.has_fishing = true';
+          case 'has_shore_power': return 'sp.has_shore_power = true';
+          case 'has_water_hookup': return 'sp.has_water_hookup = true';
+          case 'has_sewer_hookup': return 'sp.has_sewer_hookup = true';
+          case 'has_dump_station': return 'sp.has_dump_station = true';
+          case 'has_propane_refill': return 'sp.has_propane_refill = true';
+          case 'has_playground': return 'sp.has_playground = true';
+          default: return null;
+        }
+      }).filter(Boolean);
+
+      if (amenityConditions.length > 0) {
+        query += ` AND (
+          a.source_table != 'staging_properties' 
+          OR EXISTS (
+            SELECT 1 FROM staging_properties sp 
+            WHERE sp.id = a.source_id::integer 
+            AND ${amenityConditions.join(' AND ')}
+          )
+        )`;
+      }
+    }
+
+    // Location filter (if provided)
+    // For now, simple text match on city/region
+    if (nearLocation) {
+      query += ` AND (
+        a.city ILIKE $${paramIndex} 
+        OR a.region ILIKE $${paramIndex}
+      )`;
+      params.push(`%${nearLocation}%`);
+      paramIndex++;
+    }
+
+    // Order by crew_score and rating
+    query += ` ORDER BY a.crew_score DESC, a.overall_rating DESC NULLS LAST LIMIT 100`;
+
+    const results = await db.execute(sql.raw(query, params));
+    res.json(results.rows);
+
+  } catch (error) {
+    console.error('Accommodation search error:', error);
+    res.status(500).json({ error: 'Search failed', details: (error as Error).message });
+  }
+});
+
+// Get active work orders for dropdown
+router.get('/work-orders/active', async (req, res) => {
+  try {
+    const results = await db.execute(sql`
+      SELECT id, work_order_ref, title, status, community_id
+      FROM work_orders
+      WHERE status IN ('draft', 'planning', 'bidding', 'awarded', 'mobilizing')
+      ORDER BY created_at DESC
+      LIMIT 50
+    `);
+    res.json(results.rows);
+  } catch (error) {
+    console.error('Error fetching work orders:', error);
+    res.status(500).json({ error: 'Failed to fetch work orders' });
+  }
+});
+
+export default router;
+```
+
+## File 3: Register route in server/index.ts
+```typescript
+import crewRouter from './routes/crew';
+
+// Add with other routes
+app.use('/api/crew', crewRouter);
+```
+
+## File 4: Add to client routing
+```tsx
+import AccommodationSearch from './pages/crew/AccommodationSearch';
+
+// Add route
+<Route path="/crew/accommodation-search" element={<AccommodationSearch />} />
+```
+
+## Test Scenarios
+
+After implementation:
+
+1. **Basic browse**: Go to `/crew/accommodation-search`, select "WiFi" and "Kitchen" amenities, search
+2. **Crew search**: Set 3 people, 1 private bedroom, search
+3. **Has trailer**: Select "I have a trailer/RV", enter 32ft, search - should show spots
+4. **Needs rental**: Select "Need to rent RV", 2 people - should show trailers with sleeping
+
+## Output
+
+Tell me:
+1. Does the page load with both Browse and Work Order tabs?
+2. How many results for basic search (no filters)?
+3. Do amenity filters work (e.g., selecting "Hot Tub")?
+4. Does "I have a trailer" switch results to parking spots?
