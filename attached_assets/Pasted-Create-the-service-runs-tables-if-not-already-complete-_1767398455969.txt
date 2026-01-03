@@ -1,0 +1,382 @@
+Create the service runs tables (if not already complete) and seed a sample run for Bamfield Fall 2026.
+
+## First, verify/create the service runs tables:
+```sql
+-- =====================================================================
+-- SERVICE RUNS TABLES (Core operational tables)
+-- =====================================================================
+
+-- Service Runs (the actual scheduled runs)
+CREATE TABLE IF NOT EXISTS sr_service_runs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    
+    -- Identity
+    title TEXT NOT NULL,
+    slug TEXT NOT NULL UNIQUE,
+    description TEXT DEFAULT '',
+    
+    -- What services
+    run_type_id UUID REFERENCES sr_run_types(id),
+    bundle_id UUID REFERENCES sr_bundles(id),
+    
+    -- Where
+    community_id UUID REFERENCES sr_communities(id),
+    service_area_description TEXT DEFAULT '',
+    
+    -- Who initiated
+    initiator_type TEXT NOT NULL DEFAULT 'platform' CHECK (initiator_type IN ('platform', 'resident', 'contractor')),
+    initiator_user_id UUID,
+    initiator_tenant_id UUID REFERENCES cc_tenants(id),
+    
+    -- When
+    target_start_date DATE,
+    target_end_date DATE,
+    flexible_dates BOOLEAN DEFAULT true,
+    
+    -- Capacity
+    min_slots INTEGER DEFAULT 3,
+    max_slots INTEGER DEFAULT 20,
+    current_slots INTEGER DEFAULT 0,
+    
+    -- Status
+    status TEXT NOT NULL DEFAULT 'collecting' CHECK (status IN (
+        'draft', 'collecting', 'bidding', 'bid_review', 'confirmed', 
+        'scheduled', 'in_progress', 'completed', 'cancelled'
+    )),
+    
+    -- Bidding
+    bidding_opens_at TIMESTAMPTZ,
+    bidding_closes_at TIMESTAMPTZ,
+    winning_bid_id UUID,
+    
+    -- Costs
+    estimated_mobilization_cost DECIMAL(10,2),
+    mobilization_cost_per_slot DECIMAL(10,2),
+    
+    -- Policies
+    allow_resident_exclusions BOOLEAN DEFAULT true,
+    require_photos BOOLEAN DEFAULT true,
+    require_deposit BOOLEAN DEFAULT false,
+    deposit_amount DECIMAL(10,2),
+    cancellation_policy TEXT DEFAULT 'Full refund if cancelled 7+ days before scheduled date',
+    
+    -- Timestamps
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    published_at TIMESTAMPTZ,
+    confirmed_at TIMESTAMPTZ,
+    completed_at TIMESTAMPTZ
+);
+
+-- Service Slots (individual customer signups within a run)
+CREATE TABLE IF NOT EXISTS sr_service_slots (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    run_id UUID NOT NULL REFERENCES sr_service_runs(id) ON DELETE CASCADE,
+    
+    -- Customer info
+    customer_user_id UUID,
+    customer_name TEXT NOT NULL,
+    customer_email TEXT NOT NULL,
+    customer_phone TEXT DEFAULT '',
+    
+    -- Property info
+    property_address TEXT NOT NULL,
+    property_lat DECIMAL(10,7),
+    property_lng DECIMAL(10,7),
+    property_access_notes TEXT DEFAULT '',
+    property_access_type TEXT DEFAULT 'road',
+    
+    -- Service details
+    services_requested JSONB DEFAULT '[]',
+    special_requirements TEXT DEFAULT '',
+    
+    -- Photos and measurements
+    photos JSONB DEFAULT '[]',
+    measurements JSONB DEFAULT '{}',
+    
+    -- Preferences
+    excluded_contractors JSONB DEFAULT '[]',
+    preferred_contractors JSONB DEFAULT '[]',
+    preferred_dates JSONB DEFAULT '[]',
+    blackout_dates JSONB DEFAULT '[]',
+    requires_owner_present BOOLEAN DEFAULT false,
+    
+    -- Status
+    status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN (
+        'pending', 'confirmed', 'scheduled', 'in_progress', 
+        'completed', 'cancelled', 'opted_out'
+    )),
+    opt_out_reason TEXT,
+    opt_out_at TIMESTAMPTZ,
+    
+    -- Costs
+    estimated_cost DECIMAL(10,2),
+    final_cost DECIMAL(10,2),
+    mobilization_share DECIMAL(10,2),
+    deposit_paid DECIMAL(10,2),
+    deposit_paid_at TIMESTAMPTZ,
+    
+    -- Scheduling
+    scheduled_date DATE,
+    scheduled_time_start TIME,
+    scheduled_time_end TIME,
+    actual_start_at TIMESTAMPTZ,
+    actual_end_at TIMESTAMPTZ,
+    
+    -- Completion
+    completed_at TIMESTAMPTZ,
+    completion_notes TEXT DEFAULT '',
+    customer_rating INTEGER CHECK (customer_rating >= 1 AND customer_rating <= 5),
+    customer_review TEXT DEFAULT '',
+    
+    -- Timestamps
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Contractor Bids
+CREATE TABLE IF NOT EXISTS sr_contractor_bids (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    run_id UUID NOT NULL REFERENCES sr_service_runs(id) ON DELETE CASCADE,
+    
+    -- Contractor
+    contractor_tenant_id UUID REFERENCES cc_tenants(id),
+    contractor_name TEXT NOT NULL,
+    contractor_email TEXT NOT NULL,
+    contractor_phone TEXT DEFAULT '',
+    
+    -- Bid details
+    bid_type TEXT NOT NULL DEFAULT 'per_slot' CHECK (bid_type IN ('per_slot', 'bundle', 'hybrid')),
+    
+    mobilization_cost DECIMAL(10,2) NOT NULL,
+    per_slot_cost_low DECIMAL(10,2),
+    per_slot_cost_high DECIMAL(10,2),
+    bundle_total_cost DECIMAL(10,2),
+    
+    includes_materials BOOLEAN DEFAULT false,
+    materials_estimate DECIMAL(10,2),
+    includes_disposal BOOLEAN DEFAULT false,
+    disposal_estimate DECIMAL(10,2),
+    
+    -- Schedule
+    proposed_start_date DATE,
+    proposed_end_date DATE,
+    estimated_days_on_site INTEGER,
+    
+    -- Crew
+    crew_size INTEGER DEFAULT 2,
+    crew_needs_accommodation BOOLEAN DEFAULT false,
+    accommodation_preferences TEXT DEFAULT '',
+    
+    -- Notes
+    bid_notes TEXT DEFAULT '',
+    terms_and_conditions TEXT DEFAULT '',
+    
+    -- Status
+    status TEXT NOT NULL DEFAULT 'submitted' CHECK (status IN (
+        'draft', 'submitted', 'under_review', 'shortlisted', 
+        'accepted', 'rejected', 'withdrawn'
+    )),
+    
+    -- Timestamps
+    submitted_at TIMESTAMPTZ DEFAULT NOW(),
+    reviewed_at TIMESTAMPTZ,
+    reviewed_by UUID,
+    decision_notes TEXT DEFAULT ''
+);
+
+-- Indexes
+CREATE INDEX IF NOT EXISTS idx_sr_service_runs_status ON sr_service_runs(status);
+CREATE INDEX IF NOT EXISTS idx_sr_service_runs_community ON sr_service_runs(community_id);
+CREATE INDEX IF NOT EXISTS idx_sr_service_slots_run ON sr_service_slots(run_id);
+CREATE INDEX IF NOT EXISTS idx_sr_service_slots_status ON sr_service_slots(status);
+CREATE INDEX IF NOT EXISTS idx_sr_contractor_bids_run ON sr_contractor_bids(run_id);
+CREATE INDEX IF NOT EXISTS idx_sr_contractor_bids_status ON sr_contractor_bids(status);
+
+-- =====================================================================
+-- SEED SAMPLE SERVICE RUN: Bamfield Fall 2025 Shutdown
+-- =====================================================================
+
+-- Create a sample run
+INSERT INTO sr_service_runs (
+    title, slug, description,
+    run_type_id, bundle_id, community_id,
+    service_area_description,
+    initiator_type,
+    target_start_date, target_end_date, flexible_dates,
+    min_slots, max_slots, current_slots,
+    status,
+    bidding_opens_at, bidding_closes_at,
+    estimated_mobilization_cost,
+    allow_resident_exclusions, require_photos, require_deposit,
+    cancellation_policy,
+    published_at
+)
+SELECT 
+    'Bamfield Fall 2025 Shutdown',
+    'bamfield-fall-2025-shutdown',
+    'Annual fall shutdown service run for Bamfield seasonal properties. Bundle services include chimney sweep, roof inspection, gutter cleaning, septic pumping, pipe winterization, and dock haul-out. Single mobilization for all participating properties.',
+    rt.id,
+    b.id,
+    c.id,
+    'All of Bamfield - East and West sides, including water-access properties on Bamfield Inlet',
+    'platform',
+    '2025-10-01'::DATE,
+    '2025-10-31'::DATE,
+    true,
+    5,  -- min slots
+    25, -- max slots
+    0,  -- current slots (will update as we add)
+    'collecting',
+    '2025-09-01 00:00:00'::TIMESTAMPTZ,
+    '2025-09-20 23:59:59'::TIMESTAMPTZ,
+    800.00,
+    true,
+    true,
+    true,
+    'Full refund if cancelled 14+ days before scheduled date. 50% refund if cancelled 7-13 days before. No refund within 7 days.',
+    NOW()
+FROM sr_run_types rt, sr_bundles b, sr_communities c
+WHERE rt.slug = 'coastal-fall-shutdown'
+  AND b.slug = 'bamfield-fall-close-down'
+  AND c.name = 'Bamfield'
+ON CONFLICT (slug) DO NOTHING;
+
+-- Add some sample slots (simulated resident signups)
+INSERT INTO sr_service_slots (
+    run_id,
+    customer_name, customer_email, customer_phone,
+    property_address, property_lat, property_lng, property_access_notes, property_access_type,
+    services_requested,
+    special_requirements,
+    requires_owner_present,
+    status,
+    estimated_cost
+)
+SELECT 
+    r.id,
+    'Sarah Johnson',
+    'sarah.johnson@example.com',
+    '250-555-0101',
+    '142 Boardwalk, Bamfield West, BC',
+    48.8341, -125.1352,
+    'Park at community lot, 5 min walk on boardwalk. Yellow house with red door.',
+    'road',
+    '["chimney-sweep", "roof-inspection", "gutter-cleaning", "pipe-winterization"]'::JSONB,
+    'Wood stove is primary heat source - please prioritize chimney. Roof has some moss.',
+    false,
+    'pending',
+    850.00
+FROM sr_service_runs r WHERE r.slug = 'bamfield-fall-2025-shutdown'
+ON CONFLICT DO NOTHING;
+
+INSERT INTO sr_service_slots (
+    run_id,
+    customer_name, customer_email, customer_phone,
+    property_address, property_lat, property_lng, property_access_notes, property_access_type,
+    services_requested,
+    special_requirements,
+    requires_owner_present,
+    status,
+    estimated_cost
+)
+SELECT 
+    r.id,
+    'Mike Chen',
+    'mike.chen@example.com',
+    '604-555-0202',
+    '87 Inlet Road, Bamfield East, BC',
+    48.8289, -125.1298,
+    'Road access. Gravel driveway, can fit service truck.',
+    'road',
+    '["chimney-sweep", "roof-inspection", "gutter-cleaning", "septic-pumping", "dock-stow-haul"]'::JSONB,
+    'Dock is floating, need low tide for haul-out. Septic tank lid is behind garage.',
+    true,
+    'pending',
+    1250.00
+FROM sr_service_runs r WHERE r.slug = 'bamfield-fall-2025-shutdown'
+ON CONFLICT DO NOTHING;
+
+INSERT INTO sr_service_slots (
+    run_id,
+    customer_name, customer_email, customer_phone,
+    property_address, property_lat, property_lng, property_access_notes, property_access_type,
+    services_requested,
+    special_requirements,
+    requires_owner_present,
+    status,
+    estimated_cost
+)
+SELECT 
+    r.id,
+    'The Williams Family Trust',
+    'williams.trust@example.com',
+    '778-555-0303',
+    'Lot 12, Brady Beach, Bamfield, BC',
+    48.8156, -125.1589,
+    'WATER ACCESS ONLY. Pick up at government dock, 10 min boat ride. Radio ahead on Ch 16.',
+    'water_only',
+    '["chimney-sweep", "roof-inspection", "gutter-cleaning", "pipe-winterization", "full-winterization", "generator-service"]'::JSONB,
+    'Remote cabin, no road access. Generator is Honda EU7000. All shutoffs labeled in utility room.',
+    false,
+    'pending',
+    1650.00
+FROM sr_service_runs r WHERE r.slug = 'bamfield-fall-2025-shutdown'
+ON CONFLICT DO NOTHING;
+
+INSERT INTO sr_service_slots (
+    run_id,
+    customer_name, customer_email, customer_phone,
+    property_address, property_lat, property_lng, property_access_notes, property_access_type,
+    services_requested,
+    special_requirements,
+    requires_owner_present,
+    status,
+    estimated_cost
+)
+SELECT 
+    r.id,
+    'Pacific Rim Adventures Ltd',
+    'ops@pacificrimadventures.ca',
+    '250-555-0404',
+    '200 Main Street, Bamfield West, BC',
+    48.8332, -125.1365,
+    'Commercial lodge. Large parking area. Contact caretaker Tom at 250-555-0405.',
+    'road',
+    '["chimney-sweep", "chimney-sweep", "roof-inspection", "gutter-cleaning", "septic-pumping", "septic-pumping"]'::JSONB,
+    'Lodge has 2 chimneys and 2 septic systems (main building + staff quarters). Need commercial pricing.',
+    false,
+    'pending',
+    2200.00
+FROM sr_service_runs r WHERE r.slug = 'bamfield-fall-2025-shutdown'
+ON CONFLICT DO NOTHING;
+
+-- Update the run's current_slots count
+UPDATE sr_service_runs 
+SET current_slots = (
+    SELECT COUNT(*) FROM sr_service_slots WHERE run_id = sr_service_runs.id
+)
+WHERE slug = 'bamfield-fall-2025-shutdown';
+
+-- =====================================================================
+-- VERIFY
+-- =====================================================================
+
+SELECT 'Service Runs tables created and seeded:' as status;
+SELECT 'Service Runs: ' || COUNT(*) FROM sr_service_runs;
+SELECT 'Service Slots: ' || COUNT(*) FROM sr_service_slots;
+SELECT 'Contractor Bids: ' || COUNT(*) FROM sr_contractor_bids;
+
+-- Show the sample run
+SELECT title, status, current_slots, min_slots, max_slots, 
+       target_start_date, target_end_date
+FROM sr_service_runs WHERE slug = 'bamfield-fall-2025-shutdown';
+
+-- Show slots
+SELECT customer_name, property_access_type, status, estimated_cost
+FROM sr_service_slots s
+JOIN sr_service_runs r ON r.id = s.run_id
+WHERE r.slug = 'bamfield-fall-2025-shutdown';
+```
+
+Report the run and slot counts, then I'll build the Service Runs management UI.
