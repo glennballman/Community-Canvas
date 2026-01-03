@@ -1,13 +1,13 @@
 import { Router } from 'express';
 import { pool } from '../db';
-import { authenticateToken, AuthRequest } from '../middleware/auth';
+import { authenticateToken, AuthRequest } from './foundation';
 
 const router = Router();
 
 // GET /api/individuals/me - Get current user's individual profile
 router.get('/me', authenticateToken, async (req: AuthRequest, res) => {
   try {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     const userEmail = req.user?.email;
     
     if (!userId || !userEmail) {
