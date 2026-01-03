@@ -1,0 +1,482 @@
+We're unifying all rentable assets into a single queryable system. This will allow crews to search "find me beds for 3 people + parking for my trailer" and get results across STR, RV parks, trailers for rent, campground spots - everything.
+
+## PHASE 1: Create the Unified Assets Registry
+
+Create these new tables that LINK to existing tables (no data migration yet):
+
+### Table 1: unified_assets
+```sql
+CREATE TABLE unified_assets (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  
+  -- Source Linking (which existing table has the details)
+  asset_type VARCHAR(30) NOT NULL,  -- 'property', 'spot', 'trailer', 'vehicle', 'equipment', 'watercraft'
+  source_table VARCHAR(50) NOT NULL,  -- 'staging_properties', 'staging_spots', 'trailer_profiles', 'cc_vehicles', 'cc_rental_items'
+  source_id TEXT NOT NULL,  -- UUID or INTEGER as text
+  
+  -- Canonical Identity
+  canvas_id VARCHAR(20) UNIQUE,  -- CC-ASSET-XXXXX
+  name VARCHAR(255) NOT NULL,
+  description TEXT,
+  slug VARCHAR(100),
+  
+  -- Ownership
+  owner_type VARCHAR(20) NOT NULL DEFAULT 'platform',  -- 'individual', 'tenant', 'platform'
+  owner_individual_id UUID REFERENCES cc_individuals(id),
+  owner_tenant_id UUID REFERENCES cc_tenants(id),
+  
+  -- Location (denormalized for search)
+  community_id UUID,  -- links to sr_communities
+  region VARCHAR(100),
+  city VARCHAR(100),
+  latitude NUMERIC(10, 7),
+  longitude NUMERIC(10, 7),
+  location_description TEXT,
+  
+  -- === ACCOMMODATION CAPABILITY ===
+  is_accommodation BOOLEAN DEFAULT false,
+  sleeps_total INTEGER,  -- total people that can sleep
+  sleeps_comfortably INTEGER,  -- without pull-out couches
+  bedrooms INTEGER,
+  beds_king INTEGER DEFAULT 0,
+  beds_queen INTEGER DEFAULT 0,
+  beds_double INTEGER DEFAULT 0,
+  beds_single INTEGER DEFAULT 0,
+  beds_bunk INTEGER DEFAULT 0,
+  beds_sofa INTEGER DEFAULT 0,  -- sofa beds / pull-outs
+  
+  -- Privacy (critical for crews - Grazi needs private space with Liz)
+  private_bedrooms INTEGER DEFAULT 0,  -- bedrooms with doors that lock
+  has_separate_entrance BOOLEAN DEFAULT false,
+  
+  -- Bathrooms
+  bathrooms_full INTEGER DEFAULT 0,  -- toilet + shower/tub
+  bathrooms_half INTEGER DEFAULT 0,  -- toilet only
+  has_outdoor_shower BOOLEAN DEFAULT false,
+  bathroom_private BOOLEAN DEFAULT false,  -- not shared with other guests
+  
+  -- === SELF-CONTAINED / BOONDOCKING CAPABILITY ===
+  is_self_contained BOOLEAN DEFAULT false,  -- can operate without hookups
+  fresh_water_gallons INTEGER,
+  gray_water_gallons INTEGER,
+  black_water_gallons INTEGER,
+  propane_capacity_lbs INTEGER,
+  battery_capacity_ah INTEGER,
+  solar_watts INTEGER,
+  generator_watts INTEGER,
+  days_self_sufficient INTEGER,  -- estimated based on tanks/power
+  
+  -- === PARKING / SPOT CAPABILITY ===
+  is_parkable_spot BOOLEAN DEFAULT false,  -- this IS a spot where things park
+  can_be_parked BOOLEAN DEFAULT false,  -- this CAN be parked somewhere
+  
+  -- For spots: what can park here
+  spot_length_ft INTEGER,
+  spot_width_ft INTEGER,
+  spot_surface VARCHAR(50),
+  max_vehicle_length_ft INTEGER,
+  max_vehicle_height_ft INTEGER,
+  max_vehicle_weight_lbs INTEGER,
+  is_pull_through BOOLEAN DEFAULT false,
+  is_level BOOLEAN DEFAULT true,
+  
+  -- Hookups available (for spots)
+  has_power_hookup BOOLEAN DEFAULT false,
+  power_amps INTEGER[],  -- [15, 30, 50]
+  has_water_hookup BOOLEAN DEFAULT false,
+  has_sewer_hookup BOOLEAN DEFAULT false,
+  
+  -- Nearby facilities (for spots without their own bathrooms)
+  bathroom_distance_meters INTEGER,  -- null if has own bathroom
+  shower_distance_meters INTEGER,
+  water_fill_distance_meters INTEGER,
+  dump_station_distance_meters INTEGER,
+  
+  -- === TOWABLE / MOBILE ===
+  is_towable BOOLEAN DEFAULT false,
+  requires_tow_vehicle BOOLEAN DEFAULT false,
+  hitch_type VARCHAR(50),
+  gvwr_lbs INTEGER,
+  tongue_weight_lbs INTEGER,
+  
+  -- === EQUIPMENT / TOOL ATTRIBUTES ===
+  is_equipment BOOLEAN DEFAULT false,
+  equipment_category_id UUID,
+  brand VARCHAR(100),
+  model VARCHAR(100),
+  condition VARCHAR(20),
+  
+  -- === REQUIREMENTS ===
+  waiver_template_ids UUID[],  -- which waivers required
+  min_renter_age INTEGER DEFAULT 18,
+  license_required VARCHAR(50),  -- 'none', 'drivers', 'motorcycle', 'class_1', 'boat'
+  certification_required VARCHAR(100),  -- specific cert needed
+  insurance_required BOOLEAN DEFAULT false,
+  
+  -- === PRICING ===
+  rate_hourly NUMERIC,
+  rate_half_day NUMERIC,
+  rate_daily NUMERIC,
+  rate_weekly NUMERIC,
+  rate_monthly NUMERIC,
+  deposit_amount NUMERIC DEFAULT 0,
+  cleaning_fee NUMERIC DEFAULT 0,
+  currency VARCHAR(3) DEFAULT 'CAD',
+  
+  -- === AVAILABILITY ===
+  is_available BOOLEAN DEFAULT true,
+  available_from DATE,
+  available_until DATE,
+  min_booking_hours INTEGER DEFAULT 1,
+  max_booking_days INTEGER,
+  booking_lead_time_hours INTEGER DEFAULT 0,
+  instant_book BOOLEAN DEFAULT false,
+  
+  -- === MEDIA ===
+  thumbnail_url TEXT,
+  images JSONB DEFAULT '[]',
+  
+  -- === SCORES (denormalized for search) ===
+  crew_score INTEGER DEFAULT 0,  -- 0-100
+  family_score INTEGER DEFAULT 0,
+  trucker_score INTEGER DEFAULT 0,
+  equestrian_score INTEGER DEFAULT 0,
+  overall_rating NUMERIC(3,2),
+  review_count INTEGER DEFAULT 0,
+  
+  -- === STATUS ===
+  status VARCHAR(30) DEFAULT 'active',  -- 'active', 'maintenance', 'retired', 'pending_approval'
+  is_verified BOOLEAN DEFAULT false,
+  verified_at TIMESTAMPTZ,
+  
+  -- === TIMESTAMPS ===
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now(),
+  
+  -- Prevent duplicates
+  UNIQUE(source_table, source_id)
+);
+
+-- Indexes for common searches
+CREATE INDEX idx_unified_assets_type ON unified_assets(asset_type);
+CREATE INDEX idx_unified_assets_accommodation ON unified_assets(is_accommodation) WHERE is_accommodation = true;
+CREATE INDEX idx_unified_assets_location ON unified_assets USING gist (
+  ll_to_earth(latitude, longitude)
+) WHERE latitude IS NOT NULL;
+CREATE INDEX idx_unified_assets_sleeps ON unified_assets(sleeps_total) WHERE sleeps_total > 0;
+CREATE INDEX idx_unified_assets_community ON unified_assets(community_id);
+```
+
+### Table 2: traveler_bonds (Glenn's unified deposit idea)
+```sql
+CREATE TABLE traveler_bonds (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  
+  -- Who holds this bond
+  individual_id UUID NOT NULL REFERENCES cc_individuals(id),
+  
+  -- Bond Details
+  bond_amount NUMERIC NOT NULL,
+  currency VARCHAR(3) DEFAULT 'CAD',
+  status VARCHAR(30) DEFAULT 'active',  -- 'pending', 'active', 'released', 'claimed'
+  
+  -- Payment
+  payment_method VARCHAR(30),  -- 'card_hold', 'etransfer', 'cash', 'company_account'
+  payment_reference TEXT,
+  stripe_payment_intent_id TEXT,
+  
+  -- Coverage Period
+  valid_from DATE NOT NULL,
+  valid_until DATE NOT NULL,
+  
+  -- Linked to work
+  service_run_id UUID,  -- if bond is for a specific job
+  trip_id UUID,  -- if bond is for a trip
+  tenant_id UUID,  -- if employer is guaranteeing
+  
+  -- Claims/Deductions
+  claims JSONB DEFAULT '[]',  -- array of {asset_id, amount, reason, date}
+  total_claimed NUMERIC DEFAULT 0,
+  
+  -- Release
+  released_at TIMESTAMPTZ,
+  released_by UUID,
+  release_notes TEXT,
+  
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- Track which bookings are covered by which bond
+CREATE TABLE bond_coverage (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  bond_id UUID NOT NULL REFERENCES traveler_bonds(id),
+  booking_id UUID NOT NULL,  -- links to unified_bookings
+  asset_id UUID NOT NULL REFERENCES unified_assets(id),
+  coverage_amount NUMERIC NOT NULL,
+  status VARCHAR(20) DEFAULT 'active',  -- 'active', 'released', 'claimed'
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+```
+
+### Table 3: unified_bookings
+```sql
+CREATE TABLE unified_bookings (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  booking_ref VARCHAR(30) DEFAULT 'UB-' || to_char(now(), 'YYMMDD') || '-' || lpad(floor(random()*10000)::text, 4, '0'),
+  
+  -- What's being booked
+  asset_id UUID NOT NULL REFERENCES unified_assets(id),
+  
+  -- Who's booking
+  booker_individual_id UUID REFERENCES cc_individuals(id),
+  booker_tenant_id UUID REFERENCES cc_tenants(id),  -- if company booking
+  
+  -- Guest Details (may differ from booker)
+  primary_guest_name VARCHAR(255) NOT NULL,
+  primary_guest_email VARCHAR(255),
+  primary_guest_phone VARCHAR(50),
+  num_guests INTEGER DEFAULT 1,
+  guest_names TEXT[],  -- all guest names
+  
+  -- Context
+  booking_context VARCHAR(30) DEFAULT 'direct',  -- 'direct', 'service_run', 'trip', 'bundle'
+  service_run_id UUID,
+  trip_id UUID,
+  
+  -- Dates/Times
+  starts_at TIMESTAMPTZ NOT NULL,
+  ends_at TIMESTAMPTZ NOT NULL,
+  actual_checkin_at TIMESTAMPTZ,
+  actual_checkout_at TIMESTAMPTZ,
+  
+  -- Pricing
+  rate_type VARCHAR(20),  -- 'hourly', 'daily', 'weekly', 'monthly'
+  rate_amount NUMERIC,
+  nights_or_units INTEGER,
+  subtotal NUMERIC,
+  cleaning_fee NUMERIC DEFAULT 0,
+  service_fee NUMERIC DEFAULT 0,
+  taxes NUMERIC DEFAULT 0,
+  total NUMERIC,
+  
+  -- Deposit/Bond
+  deposit_required NUMERIC DEFAULT 0,
+  bond_id UUID REFERENCES traveler_bonds(id),  -- if covered by bond instead of individual deposit
+  deposit_paid BOOLEAN DEFAULT false,
+  deposit_returned BOOLEAN DEFAULT false,
+  
+  -- Requirements Tracking
+  waiver_required BOOLEAN DEFAULT false,
+  waiver_signed BOOLEAN DEFAULT false,
+  waiver_signed_at TIMESTAMPTZ,
+  signed_waiver_id UUID,
+  
+  license_required BOOLEAN DEFAULT false,
+  license_verified BOOLEAN DEFAULT false,
+  license_document_id UUID,
+  
+  insurance_required BOOLEAN DEFAULT false,
+  insurance_verified BOOLEAN DEFAULT false,
+  
+  ready_for_use BOOLEAN DEFAULT false,
+  
+  -- Status
+  status VARCHAR(30) DEFAULT 'pending',  -- 'pending', 'confirmed', 'active', 'completed', 'cancelled', 'no_show'
+  payment_status VARCHAR(30) DEFAULT 'pending',  -- 'pending', 'partial', 'paid', 'refunded'
+  
+  -- Condition Tracking (for equipment/vehicles)
+  condition_at_start TEXT,
+  condition_at_end TEXT,
+  photos_at_start JSONB DEFAULT '[]',
+  photos_at_end JSONB DEFAULT '[]',
+  damage_reported BOOLEAN DEFAULT false,
+  damage_notes TEXT,
+  
+  -- Communication
+  confirmation_sent BOOLEAN DEFAULT false,
+  reminder_sent BOOLEAN DEFAULT false,
+  special_requests TEXT,
+  internal_notes TEXT,
+  
+  -- Cancellation
+  cancelled_at TIMESTAMPTZ,
+  cancellation_reason TEXT,
+  refund_amount NUMERIC,
+  
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- Indexes
+CREATE INDEX idx_unified_bookings_asset ON unified_bookings(asset_id);
+CREATE INDEX idx_unified_bookings_dates ON unified_bookings(starts_at, ends_at);
+CREATE INDEX idx_unified_bookings_status ON unified_bookings(status);
+CREATE INDEX idx_unified_bookings_booker ON unified_bookings(booker_individual_id);
+CREATE INDEX idx_unified_bookings_context ON unified_bookings(booking_context, service_run_id);
+```
+
+## PHASE 2: Create Sync Functions
+
+Create a function to populate unified_assets from existing tables:
+```sql
+-- Function to sync staging_properties to unified_assets
+CREATE OR REPLACE FUNCTION sync_staging_property_to_unified(property_id INTEGER)
+RETURNS UUID AS $$
+DECLARE
+  asset_uuid UUID;
+  prop RECORD;
+BEGIN
+  SELECT * INTO prop FROM staging_properties WHERE id = property_id;
+  
+  INSERT INTO unified_assets (
+    asset_type, source_table, source_id,
+    name, description, slug,
+    community_id, region, city, latitude, longitude,
+    is_accommodation, sleeps_total, bedrooms,
+    bathrooms_full,
+    is_parkable_spot, spot_length_ft, spot_width_ft,
+    max_vehicle_length_ft, max_vehicle_height_ft,
+    has_power_hookup, power_amps, has_water_hookup, has_sewer_hookup,
+    rate_daily, rate_weekly, rate_monthly,
+    crew_score, family_score, trucker_score, equestrian_score,
+    overall_rating, review_count,
+    thumbnail_url, images, status
+  ) VALUES (
+    CASE WHEN prop.property_type IN ('rv_park', 'campground', 'parking_lot', 'industrial_yard', 'boondocking') 
+         THEN 'spot' ELSE 'property' END,
+    'staging_properties', property_id::text,
+    prop.name, prop.description, lower(replace(prop.name, ' ', '-')),
+    prop.municipality_id::uuid, prop.region, prop.city, prop.latitude, prop.longitude,
+    COALESCE(prop.beds > 0 OR prop.bedrooms > 0, false),
+    COALESCE(prop.max_guests, prop.beds),
+    prop.bedrooms,
+    COALESCE(prop.bathrooms, 0)::integer,
+    prop.property_type IN ('rv_park', 'campground', 'parking_lot', 'industrial_yard', 'boondocking', 'marina'),
+    prop.spot_length_ft, prop.spot_width_ft,
+    prop.max_vehicle_length_ft, prop.max_vehicle_height_ft,
+    prop.has_shore_power, prop.power_amps, prop.has_water_hookup, prop.has_sewer_hookup,
+    NULL, NULL, NULL,  -- pricing from staging_pricing
+    prop.crew_score, prop.family_score, prop.trucker_score, prop.equestrian_score,
+    prop.overall_rating, prop.review_count,
+    prop.thumbnail_url, prop.images, 
+    CASE WHEN prop.status = 'active' THEN 'active' ELSE 'pending_approval' END
+  )
+  ON CONFLICT (source_table, source_id) DO UPDATE SET
+    name = EXCLUDED.name,
+    updated_at = now()
+  RETURNING id INTO asset_uuid;
+  
+  RETURN asset_uuid;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Similar function for trailer_profiles
+CREATE OR REPLACE FUNCTION sync_trailer_to_unified(trailer_id UUID)
+RETURNS UUID AS $$
+DECLARE
+  asset_uuid UUID;
+  t RECORD;
+BEGIN
+  SELECT * INTO t FROM trailer_profiles WHERE id = trailer_id;
+  
+  INSERT INTO unified_assets (
+    asset_type, source_table, source_id,
+    name, description,
+    owner_type, owner_tenant_id,
+    -- Accommodation
+    is_accommodation,
+    sleeps_total,
+    sleeps_comfortably,
+    bathrooms_full,
+    bathroom_private,
+    -- Self-contained
+    is_self_contained,
+    fresh_water_gallons,
+    gray_water_gallons,
+    black_water_gallons,
+    propane_capacity_lbs,
+    battery_capacity_ah,
+    solar_watts,
+    -- Towable
+    is_towable, can_be_parked,
+    hitch_type, gvwr_lbs, tongue_weight_lbs,
+    -- Status
+    status,
+    thumbnail_url
+  ) VALUES (
+    'trailer', 'trailer_profiles', trailer_id::text,
+    COALESCE(t.nickname, t.make || ' ' || t.model), t.notes,
+    COALESCE(t.owner_type, 'tenant'), t.organization_id,
+    -- Is accommodation if has sleeping capacity
+    COALESCE(t.is_rv_trailer OR t.has_living_quarters, false),
+    COALESCE(t.rv_sleep_capacity, t.lq_sleep_capacity, 0),
+    COALESCE(t.lq_bed_count, 0),
+    CASE WHEN t.lq_has_bathroom THEN 1 ELSE 0 END,
+    true,  -- trailer bathrooms are always private
+    -- Self-contained check
+    COALESCE(t.fresh_water_gallons > 0 AND t.black_water_gallons > 0, false),
+    t.fresh_water_gallons,
+    t.gray_water_gallons,
+    t.black_water_gallons,
+    t.propane_capacity_lbs,
+    t.battery_amp_hours,
+    t.solar_watts,
+    -- Towable
+    true, true,
+    t.hitch_type, t.gvwr_lbs, t.tongue_weight_lbs,
+    CASE t.fleet_status WHEN 'available' THEN 'active' ELSE 'maintenance' END,
+    t.primary_photo_url
+  )
+  ON CONFLICT (source_table, source_id) DO UPDATE SET
+    name = EXCLUDED.name,
+    sleeps_total = EXCLUDED.sleeps_total,
+    updated_at = now()
+  RETURNING id INTO asset_uuid;
+  
+  RETURN asset_uuid;
+END;
+$$ LANGUAGE plpgsql;
+```
+
+## PHASE 3: Run Initial Sync
+```sql
+-- Sync all staging_properties
+SELECT sync_staging_property_to_unified(id) FROM staging_properties WHERE status = 'active';
+
+-- Sync all trailers with sleeping capacity
+SELECT sync_trailer_to_unified(id) FROM trailer_profiles 
+WHERE is_rv_trailer = true OR has_living_quarters = true;
+
+-- Sync all rental items
+INSERT INTO unified_assets (
+  asset_type, source_table, source_id,
+  name, description,
+  owner_individual_id, owner_tenant_id,
+  is_equipment, equipment_category_id,
+  brand, model, condition,
+  rate_hourly, rate_half_day, rate_daily, rate_weekly,
+  deposit_amount,
+  status, is_available
+)
+SELECT 
+  'equipment', 'cc_rental_items', id::text,
+  name, description,
+  owner_individual_id, owner_tenant_id,
+  true, category_id,
+  brand, model, condition,
+  rate_hourly, rate_half_day, rate_daily, rate_weekly,
+  damage_deposit,
+  status, is_available
+FROM cc_rental_items;
+```
+
+## OUTPUT
+
+After running this, tell me:
+1. How many unified_assets were created
+2. Breakdown by asset_type
+3. How many have is_accommodation = true
+4. How many have sleeps_total > 0
+
+This gives us the foundation. Next we'll build the search UI that queries across all asset types.
