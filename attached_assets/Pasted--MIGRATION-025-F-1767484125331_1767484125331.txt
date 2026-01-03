@@ -1,0 +1,507 @@
+-- ============================================================================
+-- MIGRATION 025 — FLEET SPLIT: PUBLIC CATALOG vs TENANT-OWNED FLEET
+-- Purpose:
+--   Separate "world objects" (catalog, listings, imports) from tenant-owned
+--   operational fleet records to eliminate scoping ambiguity and harden RLS.
+--
+-- Creates:
+--   - vehicle_catalog, trailer_catalog
+--   - catalog_listings (Craigslist/FB/auction records)
+--   - tenant_vehicles, tenant_trailers
+--   - tenant_vehicle_photos, tenant_trailer_photos
+--
+-- Migrates from existing:
+--   - vehicle_profiles -> (public rows) vehicle_catalog, (tenant rows) tenant_vehicles
+--   - trailer_profiles -> (public rows) trailer_catalog, (tenant rows) tenant_trailers
+--   - vehicle_photos   -> tenant_vehicle_photos (via tenant vehicles mapping)
+--
+-- Notes:
+--   - Assumes existing tables:
+--       vehicle_profiles, trailer_profiles, vehicle_photos
+--   - Assumes vehicle_profiles/trailer_profiles currently contain a mix of:
+--       * shared/public rows (no owner) and tenant-owned rows (owner)
+--   - If owner column name differs, adjust in the mapping section.
+-- ============================================================================
+
+BEGIN;
+
+-- ---------------------------------------------------------------------------
+-- 0) Helper: ensure pgcrypto exists for gen_random_uuid()
+-- ---------------------------------------------------------------------------
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+
+-- ---------------------------------------------------------------------------
+-- 1) Create PUBLIC CATALOG tables
+-- ---------------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS vehicle_catalog (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+
+  -- "Identity" (best-effort; may be partial for marketplace data)
+  vin TEXT,
+  serial_number TEXT,
+  make TEXT,
+  model TEXT,
+  year INTEGER,
+  trim TEXT,
+
+  -- Normalized characteristics
+  vehicle_type TEXT,        -- 'truck','van','suv','car','bus','motorhome' etc.
+  drivetrain TEXT,          -- '2wd','4wd','awd'
+  fuel_type TEXT,           -- 'gas','diesel','electric','hybrid'
+  payload_kg NUMERIC,
+  tow_capacity_kg NUMERIC,
+  gvwr_kg NUMERIC,
+
+  -- Dimensions (useful for ferry/barges/parking)
+  length_m NUMERIC,
+  height_m NUMERIC,
+  width_m NUMERIC,
+
+  -- Source provenance
+  source_system TEXT,       -- 'seed','auction','craigslist','facebook','manual'
+  source_ref TEXT,          -- listing id / external id
+  source_url TEXT,
+  raw JSONB NOT NULL DEFAULT '{}'::jsonb,
+
+  -- Media / docs pointers (optional: use catalog_media table later)
+  thumbnail_url TEXT,
+
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+
+  UNIQUE (vin),
+  UNIQUE (source_system, source_ref)
+);
+
+CREATE INDEX IF NOT EXISTS idx_vehicle_catalog_make_model_year ON vehicle_catalog(make, model, year);
+CREATE INDEX IF NOT EXISTS idx_vehicle_catalog_active ON vehicle_catalog(is_active);
+
+CREATE TABLE IF NOT EXISTS trailer_catalog (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+
+  serial_number TEXT,
+  make TEXT,
+  model TEXT,
+  year INTEGER,
+
+  trailer_type TEXT,         -- 'rv','cargo','horse','flatbed','toyhauler', etc.
+  hitch_type TEXT,           -- 'bumper','fifth_wheel','gooseneck'
+  dry_weight_kg NUMERIC,
+  gvwr_kg NUMERIC,
+  length_m NUMERIC,
+  height_m NUMERIC,
+  width_m NUMERIC,
+
+  -- RV/camping traits (for worker travel planning)
+  sleeps INTEGER,
+  has_kitchen BOOLEAN,
+  has_bathroom BOOLEAN,
+  has_shower BOOLEAN,
+  power_amps INTEGER,
+
+  source_system TEXT,
+  source_ref TEXT,
+  source_url TEXT,
+  raw JSONB NOT NULL DEFAULT '{}'::jsonb,
+  thumbnail_url TEXT,
+
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+
+  UNIQUE (serial_number),
+  UNIQUE (source_system, source_ref)
+);
+
+CREATE INDEX IF NOT EXISTS idx_trailer_catalog_make_model_year ON trailer_catalog(make, model, year);
+CREATE INDEX IF NOT EXISTS idx_trailer_catalog_active ON trailer_catalog(is_active);
+
+-- Listings table to model Craigslist/FB/auction posts (many listings can point to same catalog item)
+CREATE TABLE IF NOT EXISTS catalog_listings (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+
+  listing_type TEXT NOT NULL,        -- 'vehicle'|'trailer'|'accommodation' (extend later)
+  vehicle_catalog_id UUID REFERENCES vehicle_catalog(id) ON DELETE SET NULL,
+  trailer_catalog_id UUID REFERENCES trailer_catalog(id) ON DELETE SET NULL,
+
+  source_system TEXT NOT NULL,       -- 'craigslist','facebook','auction','dealer','manual'
+  source_ref TEXT NOT NULL,          -- listing id
+  source_url TEXT,
+  title TEXT,
+  description TEXT,
+
+  price NUMERIC,
+  currency TEXT DEFAULT 'CAD',
+  location_text TEXT,
+  latitude NUMERIC(10,7),
+  longitude NUMERIC(10,7),
+
+  posted_at TIMESTAMPTZ,
+  expires_at TIMESTAMPTZ,
+  status TEXT NOT NULL DEFAULT 'active', -- 'active','sold','expired','removed'
+
+  raw JSONB NOT NULL DEFAULT '{}'::jsonb,
+
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+
+  UNIQUE (source_system, source_ref),
+  CHECK (
+    (listing_type = 'vehicle' AND vehicle_catalog_id IS NOT NULL AND trailer_catalog_id IS NULL)
+ OR (listing_type = 'trailer' AND trailer_catalog_id IS NOT NULL AND vehicle_catalog_id IS NULL)
+  )
+);
+
+CREATE INDEX IF NOT EXISTS idx_catalog_listings_status ON catalog_listings(status);
+CREATE INDEX IF NOT EXISTS idx_catalog_listings_vehicle ON catalog_listings(vehicle_catalog_id);
+CREATE INDEX IF NOT EXISTS idx_catalog_listings_trailer ON catalog_listings(trailer_catalog_id);
+
+-- ---------------------------------------------------------------------------
+-- 2) Create TENANT-OWNED fleet tables
+-- ---------------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS tenant_vehicles (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id UUID NOT NULL REFERENCES cc_tenants(id) ON DELETE CASCADE,
+
+  -- Optional link to catalog identity
+  catalog_vehicle_id UUID REFERENCES vehicle_catalog(id) ON DELETE SET NULL,
+
+  -- Operational identity fields (tenant truth)
+  nickname TEXT,
+  vin TEXT,
+  plate TEXT,
+  province TEXT,
+
+  -- Operational readiness
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  status TEXT NOT NULL DEFAULT 'active', -- 'active','maintenance','retired'
+  home_community_id UUID REFERENCES sr_communities(id) ON DELETE SET NULL,
+
+  -- Store operational-specific data (maintenance, gear, insurance references)
+  attributes JSONB NOT NULL DEFAULT '{}'::jsonb,
+
+  created_by UUID,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+
+  UNIQUE (tenant_id, vin),
+  UNIQUE (tenant_id, plate)
+);
+
+CREATE INDEX IF NOT EXISTS idx_tenant_vehicles_tenant ON tenant_vehicles(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_tenant_vehicles_catalog ON tenant_vehicles(catalog_vehicle_id);
+
+CREATE TABLE IF NOT EXISTS tenant_trailers (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id UUID NOT NULL REFERENCES cc_tenants(id) ON DELETE CASCADE,
+
+  catalog_trailer_id UUID REFERENCES trailer_catalog(id) ON DELETE SET NULL,
+
+  nickname TEXT,
+  serial_number TEXT,
+  plate TEXT,
+  province TEXT,
+
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  status TEXT NOT NULL DEFAULT 'active',
+  home_community_id UUID REFERENCES sr_communities(id) ON DELETE SET NULL,
+
+  attributes JSONB NOT NULL DEFAULT '{}'::jsonb,
+
+  created_by UUID,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+
+  UNIQUE (tenant_id, serial_number),
+  UNIQUE (tenant_id, plate)
+);
+
+CREATE INDEX IF NOT EXISTS idx_tenant_trailers_tenant ON tenant_trailers(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_tenant_trailers_catalog ON tenant_trailers(catalog_trailer_id);
+
+-- Photos: tenant-owned media
+CREATE TABLE IF NOT EXISTS tenant_vehicle_photos (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id UUID NOT NULL REFERENCES cc_tenants(id) ON DELETE CASCADE,
+  tenant_vehicle_id UUID NOT NULL REFERENCES tenant_vehicles(id) ON DELETE CASCADE,
+
+  url TEXT NOT NULL,
+  caption TEXT,
+  sort_order INTEGER DEFAULT 0,
+  uploaded_by UUID,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_tenant_vehicle_photos_vehicle ON tenant_vehicle_photos(tenant_vehicle_id);
+CREATE INDEX IF NOT EXISTS idx_tenant_vehicle_photos_tenant ON tenant_vehicle_photos(tenant_id);
+
+CREATE TABLE IF NOT EXISTS tenant_trailer_photos (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id UUID NOT NULL REFERENCES cc_tenants(id) ON DELETE CASCADE,
+  tenant_trailer_id UUID NOT NULL REFERENCES tenant_trailers(id) ON DELETE CASCADE,
+
+  url TEXT NOT NULL,
+  caption TEXT,
+  sort_order INTEGER DEFAULT 0,
+  uploaded_by UUID,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_tenant_trailer_photos_trailer ON tenant_trailer_photos(tenant_trailer_id);
+CREATE INDEX IF NOT EXISTS idx_tenant_trailer_photos_tenant ON tenant_trailer_photos(tenant_id);
+
+-- ---------------------------------------------------------------------------
+-- 3) Data migration from existing mixed tables
+-- IMPORTANT: Adjust owner column names if different.
+-- Assumptions:
+--   vehicle_profiles.owner_tenant_id (nullable)
+--   trailer_profiles.owner_tenant_id (nullable)
+-- ---------------------------------------------------------------------------
+
+-- 3A) Migrate public/shared vehicles -> vehicle_catalog
+INSERT INTO vehicle_catalog (
+  vin, make, model, year, vehicle_type, drivetrain, fuel_type,
+  payload_kg, tow_capacity_kg, gvwr_kg,
+  length_m, height_m, width_m,
+  source_system, source_ref, source_url, raw, thumbnail_url,
+  created_at, updated_at
+)
+SELECT
+  vp.vin,
+  vp.make,
+  vp.model,
+  vp.year,
+  vp.vehicle_type,
+  vp.drivetrain,
+  vp.fuel_type,
+  vp.payload_kg,
+  vp.tow_capacity_kg,
+  vp.gvwr_kg,
+  vp.length_m,
+  vp.height_m,
+  vp.width_m,
+  COALESCE(vp.source_system, 'seed'),
+  vp.id::text,
+  vp.source_url,
+  to_jsonb(vp.*) - 'raw', -- best-effort capture
+  vp.thumbnail_url,
+  COALESCE(vp.created_at, now()),
+  COALESCE(vp.updated_at, now())
+FROM vehicle_profiles vp
+WHERE vp.owner_tenant_id IS NULL
+ON CONFLICT DO NOTHING;
+
+-- 3B) Migrate tenant-owned vehicles -> tenant_vehicles
+INSERT INTO tenant_vehicles (
+  tenant_id,
+  catalog_vehicle_id,
+  nickname,
+  vin,
+  plate,
+  province,
+  is_active,
+  status,
+  home_community_id,
+  attributes,
+  created_by,
+  created_at,
+  updated_at
+)
+SELECT
+  vp.owner_tenant_id,
+  vc.id,
+  vp.nickname,
+  vp.vin,
+  vp.plate,
+  vp.province,
+  COALESCE(vp.is_active, true),
+  COALESCE(vp.status, 'active'),
+  vp.home_community_id,
+  jsonb_build_object('legacy_vehicle_profile_id', vp.id) || COALESCE(vp.attributes, '{}'::jsonb),
+  vp.created_by,
+  COALESCE(vp.created_at, now()),
+  COALESCE(vp.updated_at, now())
+FROM vehicle_profiles vp
+LEFT JOIN vehicle_catalog vc ON vc.vin = vp.vin
+WHERE vp.owner_tenant_id IS NOT NULL
+ON CONFLICT DO NOTHING;
+
+-- 3C) Migrate public/shared trailers -> trailer_catalog
+INSERT INTO trailer_catalog (
+  serial_number, make, model, year,
+  trailer_type, hitch_type, dry_weight_kg, gvwr_kg,
+  length_m, height_m, width_m,
+  sleeps, has_kitchen, has_bathroom, has_shower, power_amps,
+  source_system, source_ref, source_url, raw, thumbnail_url,
+  created_at, updated_at
+)
+SELECT
+  tp.serial_number,
+  tp.make,
+  tp.model,
+  tp.year,
+  tp.trailer_type,
+  tp.hitch_type,
+  tp.dry_weight_kg,
+  tp.gvwr_kg,
+  tp.length_m,
+  tp.height_m,
+  tp.width_m,
+  tp.sleeps,
+  tp.has_kitchen,
+  tp.has_bathroom,
+  tp.has_shower,
+  tp.power_amps,
+  COALESCE(tp.source_system, 'seed'),
+  tp.id::text,
+  tp.source_url,
+  to_jsonb(tp.*) - 'raw',
+  tp.thumbnail_url,
+  COALESCE(tp.created_at, now()),
+  COALESCE(tp.updated_at, now())
+FROM trailer_profiles tp
+WHERE tp.owner_tenant_id IS NULL
+ON CONFLICT DO NOTHING;
+
+-- 3D) Migrate tenant-owned trailers -> tenant_trailers
+INSERT INTO tenant_trailers (
+  tenant_id,
+  catalog_trailer_id,
+  nickname,
+  serial_number,
+  plate,
+  province,
+  is_active,
+  status,
+  home_community_id,
+  attributes,
+  created_by,
+  created_at,
+  updated_at
+)
+SELECT
+  tp.owner_tenant_id,
+  tc.id,
+  tp.nickname,
+  tp.serial_number,
+  tp.plate,
+  tp.province,
+  COALESCE(tp.is_active, true),
+  COALESCE(tp.status, 'active'),
+  tp.home_community_id,
+  jsonb_build_object('legacy_trailer_profile_id', tp.id) || COALESCE(tp.attributes, '{}'::jsonb),
+  tp.created_by,
+  COALESCE(tp.created_at, now()),
+  COALESCE(tp.updated_at, now())
+FROM trailer_profiles tp
+LEFT JOIN trailer_catalog tc ON tc.serial_number = tp.serial_number
+WHERE tp.owner_tenant_id IS NOT NULL
+ON CONFLICT DO NOTHING;
+
+-- 3E) Migrate vehicle_photos -> tenant_vehicle_photos
+-- Assumes vehicle_photos references vehicle_profiles via vehicle_id
+INSERT INTO tenant_vehicle_photos (
+  tenant_id,
+  tenant_vehicle_id,
+  url,
+  caption,
+  sort_order,
+  uploaded_by,
+  created_at
+)
+SELECT
+  tv.tenant_id,
+  tv.id,
+  vp.url,
+  vp.caption,
+  COALESCE(vp.sort_order, 0),
+  vp.uploaded_by,
+  COALESCE(vp.created_at, now())
+FROM vehicle_photos vp
+JOIN tenant_vehicles tv
+  ON (tv.attributes->>'legacy_vehicle_profile_id')::uuid = vp.vehicle_id
+ON CONFLICT DO NOTHING;
+
+-- ---------------------------------------------------------------------------
+-- 4) Compatibility views (optional, to keep older code limping while refactoring)
+-- Create read-only views mirroring old mixed tables.
+-- ---------------------------------------------------------------------------
+
+CREATE OR REPLACE VIEW v_vehicle_profiles_public AS
+SELECT
+  vc.id,
+  NULL::uuid AS owner_tenant_id,
+  vc.vin, vc.make, vc.model, vc.year,
+  vc.vehicle_type, vc.drivetrain, vc.fuel_type,
+  vc.payload_kg, vc.tow_capacity_kg, vc.gvwr_kg,
+  vc.length_m, vc.height_m, vc.width_m,
+  vc.thumbnail_url,
+  vc.source_system, vc.source_ref, vc.source_url,
+  vc.created_at, vc.updated_at
+FROM vehicle_catalog vc
+WHERE vc.is_active = true;
+
+CREATE OR REPLACE VIEW v_trailer_profiles_public AS
+SELECT
+  tc.id,
+  NULL::uuid AS owner_tenant_id,
+  tc.serial_number, tc.make, tc.model, tc.year,
+  tc.trailer_type, tc.hitch_type,
+  tc.dry_weight_kg, tc.gvwr_kg,
+  tc.length_m, tc.height_m, tc.width_m,
+  tc.sleeps, tc.has_kitchen, tc.has_bathroom, tc.has_shower, tc.power_amps,
+  tc.thumbnail_url,
+  tc.source_system, tc.source_ref, tc.source_url,
+  tc.created_at, tc.updated_at
+FROM trailer_catalog tc
+WHERE tc.is_active = true;
+
+-- ---------------------------------------------------------------------------
+-- 5) RLS enablement for tenant-owned tables (keep catalog public for now)
+-- Assumes helper function app_tenant_id() exists from your RLS migration.
+-- ---------------------------------------------------------------------------
+
+ALTER TABLE tenant_vehicles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE tenant_trailers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE tenant_vehicle_photos ENABLE ROW LEVEL SECURITY;
+ALTER TABLE tenant_trailer_photos ENABLE ROW LEVEL SECURITY;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE polname='tenant_vehicles_rw') THEN
+    CREATE POLICY tenant_vehicles_rw ON tenant_vehicles
+    FOR ALL
+    USING (tenant_id = app_tenant_id())
+    WITH CHECK (tenant_id = app_tenant_id());
+  END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE polname='tenant_trailers_rw') THEN
+    CREATE POLICY tenant_trailers_rw ON tenant_trailers
+    FOR ALL
+    USING (tenant_id = app_tenant_id())
+    WITH CHECK (tenant_id = app_tenant_id());
+  END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE polname='tenant_vehicle_photos_rw') THEN
+    CREATE POLICY tenant_vehicle_photos_rw ON tenant_vehicle_photos
+    FOR ALL
+    USING (tenant_id = app_tenant_id())
+    WITH CHECK (tenant_id = app_tenant_id());
+  END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE polname='tenant_trailer_photos_rw') THEN
+    CREATE POLICY tenant_trailer_photos_rw ON tenant_trailer_photos
+    FOR ALL
+    USING (tenant_id = app_tenant_id())
+    WITH CHECK (tenant_id = app_tenant_id());
+  END IF;
+END $$;
+
+COMMIT;
+
+-- ============================================================================
+-- END MIGRATION 025
+-- ============================================================================
