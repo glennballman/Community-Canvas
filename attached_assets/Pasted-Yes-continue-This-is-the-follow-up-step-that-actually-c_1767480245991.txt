@@ -1,0 +1,66 @@
+Yes, continue. This is the follow-up step that actually completes P0.
+
+Task: Convert every tenant-sensitive route to use proper tenant context + guards + portal scoping, and PROVE it with an endpoint inventory + QA script.
+
+DELIVERABLES (must all be included):
+1) Endpoint inventory table:
+   - Method + Path
+   - Scope classification: {tenant_scoped, portal_scoped_readonly, public_reference_readonly, service_internal_only}
+   - Guards applied: requireAuth / requireTenant / requireRole(admin) / internalSecret
+   - DB helper used: tenantQuery/tenantTransaction vs serviceQuery/serviceTransaction
+   - Notes: which RLS policy it relies on (table names)
+
+2) Enforce scoping rules:
+   A) tenant_scoped:
+      - requireTenant REQUIRED
+      - requireAuth REQUIRED for any mutation
+      - Must use tenantQuery/tenantTransaction (sets app.tenant_id/app.portal_id/app.individual_id)
+   B) portal_scoped_readonly:
+      - requirePortalContext (domain→portal_id) REQUIRED
+      - Only returns records where visibility_scope='portal_only' AND portal_id=ctx.portal_id
+      - NO mutations (read-only)
+   C) public_reference_readonly (e.g., service runs categories):
+      - Read-only only
+      - Uses serviceQuery/serviceTransaction
+      - Must not include tenant/private fields
+   D) service_internal_only (ingestion/jobs/outbox processors):
+      - Must require an internal secret header (e.g., X-INTERNAL-SECRET)
+      - Uses serviceQuery/serviceTransaction
+      - Not accessible without the secret (return 403)
+
+3) Add/verify these guard middlewares if missing:
+   - requirePortalContext (403 if ctx.portal_id missing)
+   - requireInternalSecret (403 unless header matches env var)
+   - requireTenant
+   - requireAuth
+   - requireRole('admin')
+
+4) Remove “fail-open scaffolds”:
+   - Any protected endpoint must fail closed:
+     - missing ctx.individual_id => 401
+     - missing ctx.tenant_id on tenant_scoped => 401
+     - missing ctx.portal_id on portal_scoped_readonly => 403
+   - Do NOT return empty scaffolds as a fallback.
+
+5) Provide a QA curl script (copy/paste runnable) that proves:
+   - Unauthed cannot access tenant resources
+   - Tenant A cannot access Tenant B assets/opportunities/work_orders by id
+   - Portal-only listing is visible ONLY with correct Host header/domain context and invisible otherwise
+   - /api/individuals listing is blocked
+   - /api/individuals/me returns only self
+   - Service-internal endpoints are blocked without secret
+
+REQUIRED QA CASES (minimum):
+- assets: list + fetch by id (tenant A vs tenant B)
+- opportunities: list + fetch by id (tenant A vs tenant B)
+- work_orders: fetch by id (tenant A vs tenant B)
+- entities/service-runs: confirm classification is either public_reference_readonly or tenant_scoped (no cross-tenant)
+- portal endpoints: feature flags and domains are admin-only
+- ingestion route: blocked without internal secret
+
+Output:
+- Provide the endpoint inventory table
+- Provide the curl script
+- Provide the list of files changed
+
+Do not claim completion without the inventory + curl script.

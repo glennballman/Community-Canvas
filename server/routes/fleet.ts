@@ -1,5 +1,8 @@
 import { Router, Request, Response } from 'express';
-import { serviceQuery, withServiceTransaction } from '../db/tenantDb';
+import { serviceQuery, withServiceTransaction, tenantQuery, publicQuery } from '../db/tenantDb';
+import { requireAuth, requireTenant } from '../middleware/guards';
+import { TenantRequest, getTenantContext } from '../middleware/tenantContext';
+import type { Pool } from 'pg';
 
 // Whitelist of allowed vehicle_profiles columns for dynamic updates/inserts
 const ALLOWED_VEHICLE_COLUMNS = new Set([
@@ -309,16 +312,24 @@ function filterAllowedColumns(data: Record<string, any>, allowedColumns: Set<str
   return filtered;
 }
 
-export function createFleetRouter(db: Pool) {
+export function createFleetRouter(_db?: Pool) {
+  // Note: _db parameter kept for backwards compatibility but unused - all queries use serviceQuery
   const router = Router();
 
   // =====================================================
   // FLEET VEHICLES
   // =====================================================
 
+  // Fleet read: tenant context shows shared + tenant-owned, anonymous shows shared only
   router.get('/vehicles', async (req: Request, res: Response) => {
     try {
       const { status, assigned_to } = req.query;
+      const ctx = getTenantContext(req);
+      const hasTenantContext = !!ctx.tenant_id;
+      
+      let baseWhere = hasTenantContext 
+        ? 'WHERE 1=1'  // tenantQuery + RLS handles visibility
+        : 'WHERE v.tenant_id IS NULL';  // Public: shared assets only
       
       let query = `
         SELECT v.*, 
@@ -327,7 +338,7 @@ export function createFleetRouter(db: Pool) {
                (SELECT COUNT(*) FROM vehicle_safety_equipment WHERE vehicle_id = v.id AND present = true) as equipment_count
         FROM vehicle_profiles v
         LEFT JOIN participant_profiles p ON v.assigned_to_id = p.id
-        WHERE 1=1
+        ${baseWhere}
       `;
       const params: any[] = [];
       let paramIndex = 1;
@@ -344,7 +355,10 @@ export function createFleetRouter(db: Pool) {
       
       query += ' ORDER BY v.fleet_number, v.nickname, v.make, v.model';
       
-      const result = await db.query(query, params);
+      // tenantQuery for tenant context (RLS handles visibility), publicQuery for anonymous (shared only)
+      const result = hasTenantContext 
+        ? await tenantQuery(req, query, params)
+        : await publicQuery(query, params);
       res.json({ vehicles: result.rows });
     } catch (error) {
       console.error('Error fetching fleet vehicles:', error);
@@ -352,18 +366,31 @@ export function createFleetRouter(db: Pool) {
     }
   });
 
+  // Fleet read: tenant context shows shared + tenant-owned, anonymous shows shared only
   router.get('/vehicles/:id', async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
-      const result = await db.query(`
+      const ctx = getTenantContext(req);
+      const hasTenantContext = !!ctx.tenant_id;
+      
+      // Tenant: RLS handles visibility; Anonymous: shared only
+      const visibilityClause = hasTenantContext 
+        ? '' 
+        : ' AND v.tenant_id IS NULL';
+      
+      const query = `
         SELECT v.*, 
                p.name as assigned_to_display_name,
                (SELECT COUNT(*) FROM vehicle_photos WHERE vehicle_id = v.id) as photo_count,
                (SELECT COUNT(*) FROM vehicle_safety_equipment WHERE vehicle_id = v.id AND present = true) as equipment_count
         FROM vehicle_profiles v
         LEFT JOIN participant_profiles p ON v.assigned_to_id = p.id
-        WHERE v.id = $1
-      `, [id]);
+        WHERE v.id = $1${visibilityClause}
+      `;
+      
+      const result = hasTenantContext 
+        ? await tenantQuery(req, query, [id])
+        : await publicQuery(query, [id]);
       
       if (result.rows.length === 0) {
         return res.status(404).json({ error: 'Vehicle not found' });
@@ -376,9 +403,16 @@ export function createFleetRouter(db: Pool) {
     }
   });
 
+  // Fleet stats: tenant context shows combined counts, anonymous shows shared only
   router.get('/stats', async (req: Request, res: Response) => {
     try {
-      const vehicleStats = await db.query(`
+      const ctx = getTenantContext(req);
+      const hasTenantContext = !!ctx.tenant_id;
+      
+      // Anonymous: only count shared assets
+      const whereClause = hasTenantContext ? '' : 'WHERE tenant_id IS NULL';
+      
+      const vehicleQuery = `
         SELECT 
           COUNT(*) as total_vehicles,
           COUNT(*) FILTER (WHERE fleet_status = 'available') as available,
@@ -386,17 +420,21 @@ export function createFleetRouter(db: Pool) {
           COUNT(*) FILTER (WHERE fleet_status = 'maintenance') as maintenance,
           COUNT(*) FILTER (WHERE fleet_status = 'reserved') as reserved,
           COUNT(*) FILTER (WHERE fleet_status = 'retired') as retired
-        FROM vehicle_profiles
-      `);
+        FROM vehicle_profiles ${whereClause}
+      `;
       
-      const trailerStats = await db.query(`
+      const trailerQuery = `
         SELECT 
           COUNT(*) as total_trailers,
           COUNT(*) FILTER (WHERE fleet_status = 'available') as available,
           COUNT(*) FILTER (WHERE fleet_status = 'in_use') as in_use,
           COUNT(*) FILTER (WHERE fleet_status = 'maintenance') as maintenance
-        FROM trailer_profiles
-      `);
+        FROM trailer_profiles ${whereClause}
+      `;
+      
+      const [vehicleStats, trailerStats] = hasTenantContext
+        ? await Promise.all([tenantQuery(req, vehicleQuery), tenantQuery(req, trailerQuery)])
+        : await Promise.all([publicQuery(vehicleQuery), publicQuery(trailerQuery)]);
       
       res.json({
         vehicles: vehicleStats.rows[0],
@@ -408,11 +446,15 @@ export function createFleetRouter(db: Pool) {
     }
   });
 
-  router.post('/vehicles', async (req: Request, res: Response) => {
+  // SECURITY: Require auth + tenant context for vehicle mutations (RLS enforces isolation)
+  router.post('/vehicles', requireAuth, requireTenant, async (req: Request, res: Response) => {
     try {
-      // Set defaults and required fields
+      const ctx = getTenantContext(req);
+      
+      // Set defaults and required fields, inject tenant_id
       const rawData = {
         ...req.body,
+        tenant_id: ctx.tenant_id,  // Enforce tenant ownership
         owner_type: req.body.owner_type || 'company',
         is_fleet_vehicle: true,
         fleet_status: req.body.fleet_status || 'available',
@@ -420,6 +462,7 @@ export function createFleetRouter(db: Pool) {
       
       // Filter to only allowed columns (prevents SQL injection)
       const safeData = filterAllowedColumns(rawData, ALLOWED_VEHICLE_COLUMNS);
+      safeData.tenant_id = ctx.tenant_id;  // Always include tenant_id
       
       const fields = Object.keys(safeData);
       if (fields.length === 0) {
@@ -430,7 +473,8 @@ export function createFleetRouter(db: Pool) {
       const placeholders = fields.map((_, i) => `$${i + 1}`).join(', ');
       const values = fields.map(f => safeData[f]);
       
-      const result = await db.query(`
+      // Use tenantQuery for RLS enforcement
+      const result = await tenantQuery(req, `
         INSERT INTO vehicle_profiles (${columns})
         VALUES (${placeholders})
         RETURNING *
@@ -443,7 +487,8 @@ export function createFleetRouter(db: Pool) {
     }
   });
 
-  router.patch('/vehicles/:id', async (req: Request, res: Response) => {
+  // SECURITY: Require auth + tenant context for vehicle mutations (RLS enforces isolation)
+  router.patch('/vehicles/:id', requireAuth, requireTenant, async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
       
@@ -469,7 +514,8 @@ export function createFleetRouter(db: Pool) {
       
       values.push(id);
       
-      const result = await db.query(`
+      // Use tenantQuery for RLS enforcement
+      const result = await tenantQuery(req, `
         UPDATE vehicle_profiles 
         SET ${setClause}${extraSets}, updated_at = NOW()
         WHERE id = $${values.length}
@@ -487,7 +533,8 @@ export function createFleetRouter(db: Pool) {
     }
   });
 
-  router.patch('/vehicles/:id/hitch', async (req: Request, res: Response) => {
+  // SECURITY: Require auth + tenant context for vehicle mutations (RLS enforces isolation)
+  router.patch('/vehicles/:id/hitch', requireAuth, requireTenant, async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
       const { 
@@ -496,7 +543,8 @@ export function createFleetRouter(db: Pool) {
         has_brake_controller, trailer_wiring 
       } = req.body;
       
-      const result = await db.query(`
+      // Use tenantQuery for RLS enforcement
+      const result = await tenantQuery(req, `
         UPDATE vehicle_profiles 
         SET has_hitch = $1, hitch_class = $2, hitch_ball_size = $3,
             has_gooseneck_hitch = $4, has_fifth_wheel_hitch = $5,
@@ -524,7 +572,7 @@ export function createFleetRouter(db: Pool) {
   router.get('/vehicles/:id/photos', async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
-      const result = await db.query(
+      const result = await serviceQuery(
         'SELECT * FROM vehicle_photos WHERE vehicle_id = $1 ORDER BY photo_order, created_at',
         [id]
       );
@@ -540,14 +588,14 @@ export function createFleetRouter(db: Pool) {
       const { id } = req.params;
       const { photo_type, photo_url, thumbnail_url, caption, photo_order } = req.body;
       
-      const result = await db.query(`
+      const result = await serviceQuery(`
         INSERT INTO vehicle_photos (vehicle_id, photo_type, photo_url, thumbnail_url, caption, photo_order)
         VALUES ($1, $2, $3, $4, $5, $6)
         RETURNING *
       `, [id, photo_type, photo_url, thumbnail_url || null, caption || null, photo_order || 0]);
       
       if (photo_type === 'primary') {
-        await db.query(
+        await serviceQuery(
           'UPDATE vehicle_profiles SET primary_photo_url = $1 WHERE id = $2',
           [photo_url, id]
         );
@@ -563,7 +611,7 @@ export function createFleetRouter(db: Pool) {
   router.delete('/vehicles/:vehicleId/photos/:photoId', async (req: Request, res: Response) => {
     try {
       const { vehicleId, photoId } = req.params;
-      await db.query(
+      await serviceQuery(
         'DELETE FROM vehicle_photos WHERE id = $1 AND vehicle_id = $2',
         [photoId, vehicleId]
       );
@@ -578,9 +626,16 @@ export function createFleetRouter(db: Pool) {
   // TRAILERS
   // =====================================================
 
+  // Fleet read: tenant context shows shared + tenant-owned, anonymous shows shared only
   router.get('/trailers', async (req: Request, res: Response) => {
     try {
       const { status, type } = req.query;
+      const ctx = getTenantContext(req);
+      const hasTenantContext = !!ctx.tenant_id;
+      
+      let baseWhere = hasTenantContext 
+        ? 'WHERE 1=1'  // tenantQuery + RLS handles visibility
+        : 'WHERE t.tenant_id IS NULL';  // Public: shared assets only
       
       let query = `
         SELECT t.*, 
@@ -589,7 +644,7 @@ export function createFleetRouter(db: Pool) {
                (SELECT COUNT(*) FROM trailer_photos WHERE trailer_id = t.id) as photo_count
         FROM trailer_profiles t
         LEFT JOIN vehicle_profiles v ON t.currently_hitched_to = v.id
-        WHERE 1=1
+        ${baseWhere}
       `;
       const params: any[] = [];
       let paramIndex = 1;
@@ -606,7 +661,10 @@ export function createFleetRouter(db: Pool) {
       
       query += ' ORDER BY t.fleet_number, t.nickname';
       
-      const result = await db.query(query, params);
+      // tenantQuery for tenant context (RLS handles visibility), publicQuery for anonymous (shared only)
+      const result = hasTenantContext 
+        ? await tenantQuery(req, query, params)
+        : await publicQuery(query, params);
       res.json({ trailers: result.rows });
     } catch (error) {
       console.error('Error fetching trailers:', error);
@@ -614,18 +672,31 @@ export function createFleetRouter(db: Pool) {
     }
   });
 
+  // Fleet read: tenant context shows shared + tenant-owned, anonymous shows shared only
   router.get('/trailers/:id', async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
-      const result = await db.query(`
+      const ctx = getTenantContext(req);
+      const hasTenantContext = !!ctx.tenant_id;
+      
+      // Tenant: RLS handles visibility; Anonymous: shared only
+      const visibilityClause = hasTenantContext 
+        ? '' 
+        : ' AND t.tenant_id IS NULL';
+      
+      const query = `
         SELECT t.*, 
                v.nickname as hitched_to_nickname,
                v.fleet_number as hitched_to_fleet_number,
                (SELECT COUNT(*) FROM trailer_photos WHERE trailer_id = t.id) as photo_count
         FROM trailer_profiles t
         LEFT JOIN vehicle_profiles v ON t.currently_hitched_to = v.id
-        WHERE t.id = $1
-      `, [id]);
+        WHERE t.id = $1${visibilityClause}
+      `;
+      
+      const result = hasTenantContext 
+        ? await tenantQuery(req, query, [id])
+        : await publicQuery(query, [id]);
       
       if (result.rows.length === 0) {
         return res.status(404).json({ error: 'Trailer not found' });
@@ -638,17 +709,22 @@ export function createFleetRouter(db: Pool) {
     }
   });
 
-  router.post('/trailers', async (req: Request, res: Response) => {
+  // SECURITY: Require auth + tenant context for trailer mutations (RLS enforces isolation)
+  router.post('/trailers', requireAuth, requireTenant, async (req: Request, res: Response) => {
     try {
-      // Set defaults and required fields
+      const ctx = getTenantContext(req);
+      
+      // Set defaults and required fields, inject tenant_id
       const rawData = {
         ...req.body,
+        tenant_id: ctx.tenant_id,  // Enforce tenant ownership
         owner_type: req.body.owner_type || 'company',
         fleet_status: req.body.fleet_status || 'available',
       };
       
       // Filter to only allowed columns (prevents SQL injection)
       const safeData = filterAllowedColumns(rawData, ALLOWED_TRAILER_COLUMNS);
+      safeData.tenant_id = ctx.tenant_id;  // Always include tenant_id
       
       const fields = Object.keys(safeData);
       if (fields.length === 0) {
@@ -659,7 +735,8 @@ export function createFleetRouter(db: Pool) {
       const placeholders = fields.map((_, i) => `$${i + 1}`).join(', ');
       const values = fields.map(f => safeData[f]);
       
-      const result = await db.query(`
+      // Use tenantQuery for RLS enforcement
+      const result = await tenantQuery(req, `
         INSERT INTO trailer_profiles (${columns})
         VALUES (${placeholders})
         RETURNING *
@@ -672,41 +749,8 @@ export function createFleetRouter(db: Pool) {
     }
   });
 
-  router.get('/trailers/:id', async (req: Request, res: Response) => {
-    try {
-      const { id } = req.params;
-      
-      const result = await db.query(`
-        SELECT t.*, 
-               v.nickname as hitched_to_nickname,
-               v.fleet_number as hitched_to_fleet_number,
-               v.make as hitched_to_make,
-               v.model as hitched_to_model
-        FROM trailer_profiles t
-        LEFT JOIN vehicle_profiles v ON t.currently_hitched_to = v.id
-        WHERE t.id = $1
-      `, [id]);
-      
-      if (result.rows.length === 0) {
-        return res.status(404).json({ error: 'Trailer not found' });
-      }
-      
-      const photos = await db.query(
-        'SELECT * FROM trailer_photos WHERE trailer_id = $1 ORDER BY photo_order',
-        [id]
-      );
-      
-      res.json({ 
-        ...result.rows[0],
-        photos: photos.rows
-      });
-    } catch (error) {
-      console.error('Error fetching trailer:', error);
-      res.status(500).json({ error: 'Failed to fetch trailer' });
-    }
-  });
-
-  router.patch('/trailers/:id', async (req: Request, res: Response) => {
+  // SECURITY: Require auth + tenant context for trailer mutations (RLS enforces isolation)
+  router.patch('/trailers/:id', requireAuth, requireTenant, async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
       
@@ -722,7 +766,8 @@ export function createFleetRouter(db: Pool) {
       const values = fields.map(f => safeUpdates[f]);
       values.push(id);
       
-      const result = await db.query(`
+      // Use tenantQuery for RLS enforcement
+      const result = await tenantQuery(req, `
         UPDATE trailer_profiles 
         SET ${setClause}, updated_at = NOW()
         WHERE id = $${values.length}
@@ -740,18 +785,20 @@ export function createFleetRouter(db: Pool) {
     }
   });
 
-  router.post('/trailers/:id/hitch', async (req: Request, res: Response) => {
+  // SECURITY: Require auth + tenant context for trailer mutations (RLS enforces isolation)
+  router.post('/trailers/:id/hitch', requireAuth, requireTenant, async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
       const { vehicle_id } = req.body;
       
-      const trailerResult = await db.query('SELECT * FROM trailer_profiles WHERE id = $1', [id]);
+      // Use tenantQuery for RLS enforcement - only see tenant's assets
+      const trailerResult = await tenantQuery(req, 'SELECT * FROM trailer_profiles WHERE id = $1', [id]);
       if (trailerResult.rows.length === 0) {
         return res.status(404).json({ error: 'Trailer not found' });
       }
       const trailer = trailerResult.rows[0];
       
-      const vehicleResult = await db.query('SELECT * FROM vehicle_profiles WHERE id = $1', [vehicle_id]);
+      const vehicleResult = await tenantQuery(req, 'SELECT * FROM vehicle_profiles WHERE id = $1', [vehicle_id]);
       if (vehicleResult.rows.length === 0) {
         return res.status(404).json({ error: 'Vehicle not found' });
       }
@@ -796,7 +843,8 @@ export function createFleetRouter(db: Pool) {
         });
       }
       
-      await db.query(
+      // Use tenantQuery for RLS enforcement
+      await tenantQuery(req,
         'UPDATE trailer_profiles SET currently_hitched_to = $1, fleet_status = $2 WHERE id = $3',
         [vehicle_id, 'in_use', id]
       );
@@ -813,11 +861,13 @@ export function createFleetRouter(db: Pool) {
     }
   });
 
-  router.post('/trailers/:id/unhitch', async (req: Request, res: Response) => {
+  // SECURITY: Require auth + tenant context for trailer mutations (RLS enforces isolation)
+  router.post('/trailers/:id/unhitch', requireAuth, requireTenant, async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
       
-      await db.query(
+      // Use tenantQuery for RLS enforcement
+      await tenantQuery(req,
         'UPDATE trailer_profiles SET currently_hitched_to = NULL, fleet_status = $1 WHERE id = $2',
         ['available', id]
       );
@@ -829,12 +879,14 @@ export function createFleetRouter(db: Pool) {
     }
   });
 
-  router.post('/compatibility-check', async (req: Request, res: Response) => {
+  // SECURITY: Require auth + tenant context for compatibility checks (prevents enumeration)
+  router.post('/compatibility-check', requireAuth, requireTenant, async (req: Request, res: Response) => {
     try {
       const { vehicle_id, trailer_id } = req.body;
       
-      const trailerResult = await db.query('SELECT * FROM trailer_profiles WHERE id = $1', [trailer_id]);
-      const vehicleResult = await db.query('SELECT * FROM vehicle_profiles WHERE id = $1', [vehicle_id]);
+      // Use tenantQuery to only see shared + tenant-owned assets
+      const trailerResult = await tenantQuery(req, 'SELECT * FROM trailer_profiles WHERE id = $1', [trailer_id]);
+      const vehicleResult = await tenantQuery(req, 'SELECT * FROM vehicle_profiles WHERE id = $1', [vehicle_id]);
       
       if (trailerResult.rows.length === 0 || vehicleResult.rows.length === 0) {
         return res.status(404).json({ error: 'Vehicle or trailer not found' });
@@ -891,7 +943,8 @@ export function createFleetRouter(db: Pool) {
   // DRIVER QUALIFICATION CHECKING ENDPOINTS
   // ============================================
 
-  router.post('/check-driver-qualification', async (req: Request, res: Response) => {
+  // SECURITY: Require auth + tenant context for driver qualification checks
+  router.post('/check-driver-qualification', requireAuth, requireTenant, async (req: Request, res: Response) => {
     try {
       const { driverId, trailerId, province = 'BC' } = req.body;
 
@@ -901,7 +954,8 @@ export function createFleetRouter(db: Pool) {
         });
       }
 
-      const result = await db.query(`
+      // Use tenantQuery for RLS enforcement
+      const result = await tenantQuery(req, `
         SELECT 
           (check_driver_trailer_qualification($1::uuid, $2::uuid, $3)).*
       `, [driverId, trailerId, province]);
@@ -934,7 +988,7 @@ export function createFleetRouter(db: Pool) {
     try {
       const { driverId } = req.params;
 
-      const driverResult = await db.query(`
+      const driverResult = await serviceQuery(`
         SELECT 
           id, name,
           license_class, license_province, license_country, license_expiry,
@@ -954,7 +1008,7 @@ export function createFleetRouter(db: Pool) {
 
       const driverRow = driverResult.rows[0];
 
-      const qualResult = await db.query(`
+      const qualResult = await serviceQuery(`
         SELECT * FROM get_driver_qualification_summary($1::uuid)
       `, [driverId]);
 
@@ -1010,7 +1064,7 @@ export function createFleetRouter(db: Pool) {
     try {
       const { driverId } = req.params;
 
-      const result = await db.query(`
+      const result = await serviceQuery(`
         SELECT 
           id, name, 
           license_class, license_province, license_country, license_expiry,
@@ -1080,7 +1134,7 @@ export function createFleetRouter(db: Pool) {
         RETURNING *
       `;
 
-      const result = await db.query(query, values);
+      const result = await serviceQuery(query, values);
 
       if (result.rows.length === 0) {
         return res.status(404).json({ error: 'Driver not found' });

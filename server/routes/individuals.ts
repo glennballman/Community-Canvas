@@ -327,7 +327,7 @@ router.post('/my-skills', requireAuth, async (req: Request, res: Response) => {
     }
 
     // Use tenantTransaction for mutation - RLS enforces individual can only modify own data
-    const result = await tenantReq.tenantTransaction(async (client) => {
+    await tenantReq.tenantTransaction(async (client) => {
       // Insert skill (individual can only modify their own skills)
       await client.query(
         `INSERT INTO cc_individual_skills (individual_id, skill_id, proficiency_level, years_experience, verified)
@@ -338,13 +338,7 @@ router.post('/my-skills', requireAuth, async (req: Request, res: Response) => {
            updated_at = NOW()`,
         [individualId, skillId, proficiencyLevel || 'competent', yearsExperience || null]
       );
-
-      return { success: true };
     });
-
-    if (result.error) {
-      return res.status(result.status || 400).json({ success: false, message: result.error });
-    }
 
     res.json({ success: true, message: 'Skill added' });
   } catch (error) {
@@ -370,7 +364,7 @@ router.post('/my-tools', requireAuth, async (req: Request, res: Response) => {
     }
 
     // Use tenantTransaction for mutation - RLS enforces individual can only modify own data
-    const result = await tenantReq.tenantTransaction(async (client) => {
+    await tenantReq.tenantTransaction(async (client) => {
       // Insert tool
       await client.query(
         `INSERT INTO cc_individual_tools (
@@ -390,13 +384,7 @@ router.post('/my-tools', requireAuth, async (req: Request, res: Response) => {
           rentalRateDaily || null
         ]
       );
-
-      return { success: true };
     });
-
-    if (result.error) {
-      return res.status(result.status || 400).json({ success: false, message: result.error });
-    }
 
     res.json({ success: true, message: 'Tool added' });
   } catch (error) {
