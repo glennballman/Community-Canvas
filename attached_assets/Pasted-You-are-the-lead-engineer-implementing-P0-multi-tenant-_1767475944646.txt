@@ -1,0 +1,82 @@
+You are the lead engineer implementing P0 multi-tenant security hardening for the Community Canvas codebase.
+
+CRITICAL GOAL:
+Stop all cross-tenant leakage immediately by enforcing tenant context in BOTH:
+1) API middleware (Express)
+2) Postgres Row-Level Security (RLS) via session variables (set_config)
+
+Your implementation must be grounded in the existing repo structure. Do not invent unrelated frameworks. Use what exists (express-session/connect-pg-simple, current db helper). Keep changes minimal but correct.
+
+DELIVERABLES:
+A) Implement tenant/portal/individual context resolution middleware
+B) Ensure every DB query runs with Postgres session vars set:
+   - app.tenant_id
+   - app.portal_id
+   - app.individual_id
+C) Add route guard middleware:
+   - requireAuth
+   - requireTenant
+   - requireRole('admin') (simple roles array in session ok for now)
+D) Apply guards to the highest-risk endpoints:
+   - /api/individuals (PII) => auth required; self-only for now
+   - /api/entities, /api/service-runs, /api/assets, /api/opportunities => tenant or portal scoped
+   - portal admin endpoints (domains, feature flags) => admin only
+E) Provide a concise "QA Verification Checklist" with 10 curl examples that prove tenant isolation.
+
+IMPLEMENTATION DETAILS (follow exactly):
+
+1) Add middleware file:
+   server/middleware/tenantContext.ts
+   - Read host from x-forwarded-host or host header
+   - Normalize domain = host without port
+   - Resolve portal by domain:
+     SELECT d.portal_id, p.owning_tenant_id
+     FROM portal_domains d JOIN portals p ON p.id=d.portal_id
+     WHERE d.domain=$1 AND d.status IN ('verified','active') AND p.status='active' LIMIT 1
+   - Set req.ctx = { domain, portal_id, tenant_id, individual_id, roles, scopes }
+   - individual_id should come from session if available.
+   - roles/scopes can come from session if present; else empty arrays.
+
+2) Add db wrapper so every request sets Postgres session vars before queries:
+   - Create helper: server/db/withRequestContext.ts (or similar)
+   - Ensure that for any route handler that hits db, queries execute inside a transaction:
+        SELECT set_config('app.tenant_id', $1, true);
+        SELECT set_config('app.portal_id', $2, true);
+        SELECT set_config('app.individual_id', $3, true);
+   - Then execute the route’s queries inside that same transaction.
+   - If tenant_id is null, set empty string.
+   - This is required for RLS enforcement.
+
+3) Add guards:
+   server/middleware/guards.ts
+   - requireAuth: 401 if no req.ctx.individual_id
+   - requireTenant: 401 if no req.ctx.tenant_id (for tenant-scoped routes)
+   - requireRole('admin'): 403 unless roles includes 'admin'
+
+4) Apply middleware globally:
+   - In server entrypoint (e.g., server/index.ts or server/app.ts), mount tenantContext early:
+     app.use(tenantContext)
+   - Then mount routers.
+
+5) Lock down the riskiest endpoints immediately:
+   - /api/individuals:
+     - requireAuth
+     - Only allow GET /api/individuals/me which returns the record matching req.ctx.individual_id
+     - Disable any listing endpoint or require admin.
+   - /api/entities and /api/service-runs:
+     - Must requireTenant OR portal context (if public)
+     - Ensure queries include tenant filters (temporary) until RLS is live.
+   - portal admin endpoints:
+     - requireAuth + requireRole('admin')
+   - If any route currently returns everything, change it to:
+     - tenant-owned only OR portal-visible only
+
+6) Token handling hotfix:
+   - Stop returning portal verification tokens in any response.
+   - If code generates/stores portal verification tokens, update it to store ONLY hashes (bcrypt/argon2) and compare on verify.
+   - If hashing implementation needs DB migration, leave TODO and reference Prompt 2.
+
+OUTPUT:
+- List all files changed with brief notes.
+- Include 10 curl commands for QA (tenant A vs tenant B, portal-only listing, PII access attempts).
+- Do NOT skip applying guards because "RLS will handle it" — we need both.
