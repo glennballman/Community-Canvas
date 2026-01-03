@@ -144,6 +144,38 @@ Entity-graph architecture for managing scraped external data with entity resolut
 
 **Enums:** data_source_type, contact_type, link_status, consent_basis, verification_status, entity_type, inquiry_status, outreach_status, outreach_channel
 
+### Apify Sync Integration (Migration 019)
+External data ingestion from Apify datasets with streaming support for large files (343MB+).
+
+**Tables:**
+- **apify_datasets**: Dataset configurations with sync settings, field mappings, and source types (airbnb, vrbo, equipment, retail, service)
+- **apify_sync_history**: Sync run logs with record counts, timing, and error tracking
+
+**Extended external_records Fields (Migration 019):**
+- Rental: price_per_night, bedrooms, bathrooms, max_guests, amenities[], property_type
+- Host: host_name, host_id, superhost, response_rate, reviews_count, rating
+- Product: sku, brand, price, original_price, in_stock, item_condition
+- Media: photo_urls[], main_photo_url, listing_url
+
+**SQL Functions:**
+- `create_entity_from_record(uuid)`: Auto-creates canonical entity from external record
+- `resolve_community(lat, lng)`: PostGIS-based community matching for external records
+
+**API Routes (/api/apify):**
+- GET /datasets, POST /datasets - List/create dataset configurations
+- PATCH /datasets/:id, DELETE /datasets/:id - Update/delete datasets
+- POST /sync/:slug - Trigger sync for a dataset
+- GET /stats - Entity resolution statistics
+- GET /records, GET /records/:id - Query external records
+- DELETE /records/:id - Delete records
+- POST /records/:id/resolve - Accept/reject entity links
+- DELETE /records/stale - Cleanup old records
+
+**Service (server/services/apifySync.ts):**
+- Lazy-loaded apify-client and stream-json dependencies
+- MD5-based change detection to skip unchanged records
+- Supports both Apify API streaming and local file streaming
+
 ### Documentation System
 A Bloomberg-terminal styled documentation library is available at `/admin/docs`, rendering markdown files from the `docs/` directory. Key topics include data collection, architecture, completion criteria, tool selection, member counts, NAICS assignment, date tracking, and manual overrides.
 
