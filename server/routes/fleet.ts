@@ -1036,35 +1036,41 @@ export function createFleetRouter(_db?: Pool) {
     }
   });
 
-  router.get('/driver-qualification-summary/:driverId', async (req: Request, res: Response) => {
+  // SECURITY: Self-scoped - users can only view their own qualification summary
+  router.get('/driver-qualification-summary/:driverId', requireAuth, requireSelfOrAdmin('driverId'), async (req: Request, res: Response) => {
     try {
       const { driverId } = req.params;
 
-      const driverResult = await serviceQuery(`
-        SELECT 
-          id, name,
-          license_class, license_province, license_country, license_expiry,
-          has_air_brake_endorsement,
-          has_house_trailer_endorsement,
-          has_heavy_trailer_endorsement,
-          heavy_trailer_medical_expiry,
-          fifth_wheel_experience, gooseneck_experience,
-          horse_trailer_experience, boat_launching_experience
-        FROM participant_profiles
-        WHERE id = $1
-      `, [driverId]);
+      // Use tenantTransaction for proper context isolation
+      const { driverRow, qualRows } = await withTenantTransaction(req, async (client: PoolClient) => {
+        const driverResult = await client.query(`
+          SELECT 
+            id, name,
+            license_class, license_province, license_country, license_expiry,
+            has_air_brake_endorsement,
+            has_house_trailer_endorsement,
+            has_heavy_trailer_endorsement,
+            heavy_trailer_medical_expiry,
+            fifth_wheel_experience, gooseneck_experience,
+            horse_trailer_experience, boat_launching_experience
+          FROM participant_profiles
+          WHERE id = $1
+        `, [driverId]);
 
-      if (driverResult.rows.length === 0) {
-        return res.status(404).json({ error: 'Driver not found' });
-      }
+        if (driverResult.rows.length === 0) {
+          throw new Error('DRIVER_NOT_FOUND');
+        }
 
-      const driverRow = driverResult.rows[0];
+        const qualResult = await client.query(`
+          SELECT * FROM get_driver_qualification_summary($1::uuid)
+        `, [driverId]);
 
-      const qualResult = await serviceQuery(`
-        SELECT * FROM get_driver_qualification_summary($1::uuid)
-      `, [driverId]);
+        return { driverRow: driverResult.rows[0], qualRows: qualResult.rows };
+      });
 
-      const trailerQualifications = qualResult.rows.map(row => ({
+      const driverData = driverRow;
+
+      const trailerQualifications = qualRows.map((row: any) => ({
         trailerId: row.trailer_id,
         trailerName: row.trailer_nickname || row.trailer_type,
         trailerType: row.trailer_type,
@@ -1106,39 +1112,51 @@ export function createFleetRouter(_db?: Pool) {
         trailerQualifications,
         checkedAt: new Date().toISOString()
       });
-    } catch (error) {
+    } catch (error: any) {
+      if (error.message === 'DRIVER_NOT_FOUND') {
+        return res.status(404).json({ error: 'Driver not found' });
+      }
       console.error('Error getting driver qualification summary:', error);
       res.status(500).json({ error: 'Failed to get driver qualification summary' });
     }
   });
 
-  router.get('/driver-qualifications/:driverId', async (req: Request, res: Response) => {
+  // SECURITY: Self-scoped - users can only view their own qualifications
+  router.get('/driver-qualifications/:driverId', requireAuth, requireSelfOrAdmin('driverId'), async (req: Request, res: Response) => {
     try {
       const { driverId } = req.params;
 
-      const result = await serviceQuery(`
-        SELECT 
-          id, name, 
-          license_class, license_province, license_country, license_expiry,
-          has_air_brake_endorsement, air_brake_endorsement_date,
-          has_house_trailer_endorsement, house_trailer_endorsement_date,
-          has_heavy_trailer_endorsement, heavy_trailer_endorsement_date,
-          heavy_trailer_medical_expiry,
-          max_trailer_weight_certified_kg, max_combination_weight_certified_kg,
-          double_tow_experience, fifth_wheel_experience, gooseneck_experience,
-          heavy_equipment_loading_experience, horse_trailer_experience,
-          livestock_handling_experience, boat_launching_experience,
-          rv_driving_course_completed, rv_course_provider, rv_course_date
-        FROM participant_profiles
-        WHERE id = $1
-      `, [driverId]);
+      // Use tenantTransaction for proper context isolation
+      const result = await withTenantTransaction(req, async (client: PoolClient) => {
+        const queryResult = await client.query(`
+          SELECT 
+            id, name, 
+            license_class, license_province, license_country, license_expiry,
+            has_air_brake_endorsement, air_brake_endorsement_date,
+            has_house_trailer_endorsement, house_trailer_endorsement_date,
+            has_heavy_trailer_endorsement, heavy_trailer_endorsement_date,
+            heavy_trailer_medical_expiry,
+            max_trailer_weight_certified_kg, max_combination_weight_certified_kg,
+            double_tow_experience, fifth_wheel_experience, gooseneck_experience,
+            heavy_equipment_loading_experience, horse_trailer_experience,
+            livestock_handling_experience, boat_launching_experience,
+            rv_driving_course_completed, rv_course_provider, rv_course_date
+          FROM participant_profiles
+          WHERE id = $1
+        `, [driverId]);
 
-      if (result.rows.length === 0) {
+        if (queryResult.rows.length === 0) {
+          throw new Error('DRIVER_NOT_FOUND');
+        }
+
+        return queryResult.rows[0];
+      });
+
+      res.json(result);
+    } catch (error: any) {
+      if (error.message === 'DRIVER_NOT_FOUND') {
         return res.status(404).json({ error: 'Driver not found' });
       }
-
-      res.json(result.rows[0]);
-    } catch (error) {
       console.error('Error getting driver qualifications:', error);
       res.status(500).json({ error: 'Failed to get driver qualifications' });
     }
