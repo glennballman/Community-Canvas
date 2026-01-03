@@ -111,6 +111,7 @@ const navSections: NavSection[] = [
       { path: "/services/catalog", label: "Service Catalog", icon: ListChecks },
       { path: "/services/bundles", label: "Bundles & Packages", icon: Package },
       { path: "/services/runs", label: "Service Runs", icon: Play },
+      { path: "/services/runs/new", label: "Create Service Run", icon: Play },
     ]
   },
   {
