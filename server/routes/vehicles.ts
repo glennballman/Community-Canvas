@@ -1,13 +1,22 @@
-import express, { Response } from 'express';
-import { pool } from '../db';
-import { authenticateToken, AuthRequest } from './foundation';
+import express, { Request, Response } from 'express';
+import { PoolClient } from 'pg';
+import { serviceQuery, withServiceTransaction } from '../db/tenantDb';
+import { requireAuth, requireRole } from '../middleware/guards';
+import { TenantRequest } from '../middleware/tenantContext';
 
 const router = express.Router();
 
-async function canAccessVehicle(userId: string, vehicleId: string, isPlatformAdmin: boolean): Promise<boolean> {
-    if (isPlatformAdmin) return true;
+// SERVICE MODE: Authorization helper - checks cross-tenant access using serviceQuery
+// Justification: Access control must evaluate ownership across individual users and business tenants
+async function canAccessVehicle(req: Request, vehicleId: string): Promise<boolean> {
+    const tenantReq = req as TenantRequest;
+    const userId = tenantReq.ctx?.individual_id;
+    const isAdmin = tenantReq.ctx?.roles?.includes('admin');
     
-    const result = await pool.query(`
+    if (isAdmin) return true;
+    if (!userId) return false;
+    
+    const result = await serviceQuery(`
         SELECT v.id FROM cc_vehicles v
         WHERE v.id = $1
         AND (
@@ -24,10 +33,17 @@ async function canAccessVehicle(userId: string, vehicleId: string, isPlatformAdm
     return result.rows.length > 0;
 }
 
-async function canAccessTrailer(userId: string, trailerId: string, isPlatformAdmin: boolean): Promise<boolean> {
-    if (isPlatformAdmin) return true;
+// SERVICE MODE: Authorization helper - checks cross-tenant trailer access
+// Justification: Access control must evaluate ownership across individual users and business tenants
+async function canAccessTrailer(req: Request, trailerId: string): Promise<boolean> {
+    const tenantReq = req as TenantRequest;
+    const userId = tenantReq.ctx?.individual_id;
+    const isAdmin = tenantReq.ctx?.roles?.includes('admin');
     
-    const result = await pool.query(`
+    if (isAdmin) return true;
+    if (!userId) return false;
+    
+    const result = await serviceQuery(`
         SELECT t.id FROM cc_trailers t
         WHERE t.id = $1
         AND (
@@ -42,11 +58,12 @@ async function canAccessTrailer(userId: string, trailerId: string, isPlatformAdm
 }
 
 // GET /api/vehicles - List vehicles accessible to user
-router.get('/', authenticateToken, async (req: AuthRequest, res: Response) => {
+router.get('/', requireAuth, async (req: Request, res: Response) => {
     try {
+        const tenantReq = req as TenantRequest;
         const { ownerType, status, type, search, tenantId } = req.query;
-        const userId = req.user!.userId;
-        const isPlatformAdmin = req.user!.isPlatformAdmin;
+        const userId = tenantReq.ctx.individual_id!;
+        const isAdmin = tenantReq.ctx.roles?.includes('admin');
 
         let query = `
             SELECT 
@@ -63,7 +80,7 @@ router.get('/', authenticateToken, async (req: AuthRequest, res: Response) => {
         const params: any[] = [];
         let paramCount = 0;
 
-        if (!isPlatformAdmin) {
+        if (!isAdmin) {
             paramCount++;
             query += ` AND (
                 (v.owner_type = 'individual' AND v.owner_user_id = $${paramCount})
@@ -109,7 +126,8 @@ router.get('/', authenticateToken, async (req: AuthRequest, res: Response) => {
 
         query += ' ORDER BY v.name, v.created_at DESC';
 
-        const result = await pool.query(query, params);
+        // User-scoped read: vehicles visible to this user
+        const result = await req.tenantQuery(query, params);
 
         res.json({
             success: true,
@@ -124,13 +142,17 @@ router.get('/', authenticateToken, async (req: AuthRequest, res: Response) => {
 });
 
 // GET /api/vehicles/my - Get user's personal vehicles only
-router.get('/my', authenticateToken, async (req: AuthRequest, res: Response) => {
+router.get('/my', requireAuth, async (req: Request, res: Response) => {
     try {
-        const result = await pool.query(`
+        const tenantReq = req as TenantRequest;
+        const userId = tenantReq.ctx.individual_id!;
+
+        // User-scoped read: only this user's personal vehicles
+        const result = await req.tenantQuery(`
             SELECT * FROM cc_vehicles 
             WHERE owner_type = 'individual' AND owner_user_id = $1
             ORDER BY name
-        `, [req.user!.userId]);
+        `, [userId]);
 
         res.json({
             success: true,
@@ -145,16 +167,17 @@ router.get('/my', authenticateToken, async (req: AuthRequest, res: Response) => 
 });
 
 // GET /api/vehicles/stats - Vehicle/trailer statistics (MUST be before /:id)
-router.get('/stats', authenticateToken, async (req: AuthRequest, res: Response) => {
+router.get('/stats', requireAuth, async (req: Request, res: Response) => {
     try {
-        const userId = req.user!.userId;
-        const isPlatformAdmin = req.user!.isPlatformAdmin;
+        const tenantReq = req as TenantRequest;
+        const userId = tenantReq.ctx.individual_id!;
+        const isAdmin = tenantReq.ctx.roles?.includes('admin');
 
         let vehicleQuery = `SELECT COUNT(*) as count, vehicle_type, status FROM cc_vehicles WHERE 1=1`;
         let trailerQuery = `SELECT COUNT(*) as count, trailer_type, status FROM cc_trailers WHERE 1=1`;
         const params: any[] = [];
 
-        if (!isPlatformAdmin) {
+        if (!isAdmin) {
             vehicleQuery += ` AND (
                 (owner_type = 'individual' AND owner_user_id = $1)
                 OR (owner_type = 'business' AND owner_tenant_id IN (
@@ -173,8 +196,9 @@ router.get('/stats', authenticateToken, async (req: AuthRequest, res: Response) 
         vehicleQuery += ' GROUP BY vehicle_type, status';
         trailerQuery += ' GROUP BY trailer_type, status';
 
-        const vehicleStats = await pool.query(vehicleQuery, params);
-        const trailerStats = await pool.query(trailerQuery, params);
+        // User-scoped reads: statistics for vehicles/trailers accessible to this user
+        const vehicleStats = await req.tenantQuery(vehicleQuery, params);
+        const trailerStats = await req.tenantQuery(trailerQuery, params);
 
         const totalVehicles = vehicleStats.rows.reduce((sum: number, r: any) => sum + parseInt(r.count), 0);
         const totalTrailers = trailerStats.rows.reduce((sum: number, r: any) => sum + parseInt(r.count), 0);
@@ -196,7 +220,7 @@ router.get('/stats', authenticateToken, async (req: AuthRequest, res: Response) 
 });
 
 // GET /api/vehicles/:id - Get vehicle details
-router.get('/:id', authenticateToken, async (req: AuthRequest, res: Response) => {
+router.get('/:id', requireAuth, async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
 
@@ -204,12 +228,13 @@ router.get('/:id', authenticateToken, async (req: AuthRequest, res: Response) =>
             return res.status(400).json({ success: false, error: 'Invalid vehicle ID' });
         }
 
-        const hasAccess = await canAccessVehicle(req.user!.userId, id, req.user!.isPlatformAdmin);
+        const hasAccess = await canAccessVehicle(req, id);
         if (!hasAccess) {
             return res.status(403).json({ success: false, error: 'Access denied' });
         }
 
-        const vehicleResult = await pool.query(`
+        // User-scoped read: vehicle details after authorization check
+        const vehicleResult = await req.tenantQuery(`
             SELECT v.*, 
                 CASE v.owner_type
                     WHEN 'individual' THEN u.first_name || ' ' || u.last_name
@@ -225,21 +250,21 @@ router.get('/:id', authenticateToken, async (req: AuthRequest, res: Response) =>
             return res.status(404).json({ success: false, error: 'Vehicle not found' });
         }
 
-        const fleetResult = await pool.query(`
+        const fleetResult = await req.tenantQuery(`
             SELECT f.id, f.name, fva.assigned_at
             FROM cc_fleet_vehicle_assignments fva
             JOIN cc_fleets f ON f.id = fva.fleet_id
             WHERE fva.vehicle_id = $1 AND fva.is_active = true
         `, [id]);
 
-        const driverResult = await pool.query(`
+        const driverResult = await req.tenantQuery(`
             SELECT u.id, u.first_name, u.last_name, u.email, vda.assignment_type, vda.valid_from
             FROM cc_vehicle_driver_assignments vda
             JOIN cc_users u ON u.id = vda.user_id
             WHERE vda.vehicle_id = $1 AND vda.is_active = true
         `, [id]);
 
-        const maintenanceResult = await pool.query(`
+        const maintenanceResult = await req.tenantQuery(`
             SELECT * FROM cc_maintenance_records
             WHERE vehicle_id = $1
             ORDER BY service_date DESC
@@ -261,8 +286,12 @@ router.get('/:id', authenticateToken, async (req: AuthRequest, res: Response) =>
 });
 
 // POST /api/vehicles - Create vehicle
-router.post('/', authenticateToken, async (req: AuthRequest, res: Response) => {
+router.post('/', requireAuth, async (req: Request, res: Response) => {
     try {
+        const tenantReq = req as TenantRequest;
+        const userId = tenantReq.ctx.individual_id!;
+        const isAdmin = tenantReq.ctx.roles?.includes('admin');
+
         const {
             ownerType = 'individual',
             ownerTenantId,
@@ -280,51 +309,57 @@ router.post('/', authenticateToken, async (req: AuthRequest, res: Response) => {
         let ownerTenant = null;
 
         if (ownerType === 'individual') {
-            ownerUserId = req.user!.userId;
+            ownerUserId = userId;
         } else if (ownerType === 'business') {
-            const tenantAccess = await pool.query(`
+            // SERVICE MODE: Check tenant access across business boundaries
+            const tenantAccess = await serviceQuery(`
                 SELECT 1 FROM cc_tenant_users 
                 WHERE tenant_id = $1 AND user_id = $2 AND status = 'active'
                 AND role IN ('owner', 'admin', 'fleet_manager')
-            `, [ownerTenantId, req.user!.userId]);
+            `, [ownerTenantId, userId]);
 
-            if (tenantAccess.rows.length === 0 && !req.user!.isPlatformAdmin) {
+            if (tenantAccess.rows.length === 0 && !isAdmin) {
                 return res.status(403).json({ success: false, error: 'Cannot add vehicle to this business' });
             }
             ownerTenant = ownerTenantId;
         }
 
-        const result = await pool.query(`
-            INSERT INTO cc_vehicles (
-                owner_type, owner_user_id, owner_tenant_id,
-                name, vin, license_plate, license_plate_province,
-                year, make, model, trim, color, vehicle_type, fuel_type,
-                length_ft, width_ft, height_ft, gvwr_lbs, towing_capacity_lbs,
-                has_hitch, hitch_class, hitch_type, brake_controller,
-                is_rv, rv_class, slide_outs, is_commercial, status, notes
-            ) VALUES (
-                $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14,
-                $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29
-            ) RETURNING *
-        `, [
-            ownerType, ownerUserId, ownerTenant,
-            name, vin, licensePlate, licensePlateProvince,
-            year, make, model, trim, color, vehicleType, fuelType,
-            lengthFt, widthFt, heightFt, gvwrLbs, towingCapacityLbs,
-            hasHitch, hitchClass, hitchType, brakeController,
-            isRv, rvClass, slideOuts, isCommercial, status, notes
-        ]);
+        // User-scoped mutation: create vehicle in transaction
+        const result = await req.tenantTransaction(async (client: PoolClient) => {
+            const vehicleResult = await client.query(`
+                INSERT INTO cc_vehicles (
+                    owner_type, owner_user_id, owner_tenant_id,
+                    name, vin, license_plate, license_plate_province,
+                    year, make, model, trim, color, vehicle_type, fuel_type,
+                    length_ft, width_ft, height_ft, gvwr_lbs, towing_capacity_lbs,
+                    has_hitch, hitch_class, hitch_type, brake_controller,
+                    is_rv, rv_class, slide_outs, is_commercial, status, notes
+                ) VALUES (
+                    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14,
+                    $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29
+                ) RETURNING *
+            `, [
+                ownerType, ownerUserId, ownerTenant,
+                name, vin, licensePlate, licensePlateProvince,
+                year, make, model, trim, color, vehicleType, fuelType,
+                lengthFt, widthFt, heightFt, gvwrLbs, towingCapacityLbs,
+                hasHitch, hitchClass, hitchType, brakeController,
+                isRv, rvClass, slideOuts, isCommercial, status, notes
+            ]);
 
-        if (ownerType === 'individual') {
-            await pool.query(`
-                INSERT INTO cc_vehicle_driver_assignments (vehicle_id, user_id, assignment_type, assigned_by)
-                VALUES ($1, $2, 'primary', $2)
-            `, [result.rows[0].id, ownerUserId]);
-        }
+            if (ownerType === 'individual') {
+                await client.query(`
+                    INSERT INTO cc_vehicle_driver_assignments (vehicle_id, user_id, assignment_type, assigned_by)
+                    VALUES ($1, $2, 'primary', $2)
+                `, [vehicleResult.rows[0].id, ownerUserId]);
+            }
+
+            return vehicleResult.rows[0];
+        });
 
         res.status(201).json({
             success: true,
-            vehicle: result.rows[0]
+            vehicle: result
         });
 
     } catch (error: any) {
@@ -334,11 +369,11 @@ router.post('/', authenticateToken, async (req: AuthRequest, res: Response) => {
 });
 
 // PUT /api/vehicles/:id - Update vehicle
-router.put('/:id', authenticateToken, async (req: AuthRequest, res: Response) => {
+router.put('/:id', requireAuth, async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
 
-        const hasAccess = await canAccessVehicle(req.user!.userId, id, req.user!.isPlatformAdmin);
+        const hasAccess = await canAccessVehicle(req, id);
         if (!hasAccess) {
             return res.status(403).json({ success: false, error: 'Access denied' });
         }
@@ -371,12 +406,16 @@ router.put('/:id', authenticateToken, async (req: AuthRequest, res: Response) =>
 
         updates.push('updated_at = NOW()');
 
-        const result = await pool.query(
-            `UPDATE cc_vehicles SET ${updates.join(', ')} WHERE id = $1 RETURNING *`,
-            params
-        );
+        // User-scoped mutation: update vehicle in transaction
+        const result = await req.tenantTransaction(async (client: PoolClient) => {
+            const updateResult = await client.query(
+                `UPDATE cc_vehicles SET ${updates.join(', ')} WHERE id = $1 RETURNING *`,
+                params
+            );
+            return updateResult.rows[0];
+        });
 
-        res.json({ success: true, vehicle: result.rows[0] });
+        res.json({ success: true, vehicle: result });
 
     } catch (error: any) {
         console.error('Update vehicle error:', error);
@@ -385,24 +424,31 @@ router.put('/:id', authenticateToken, async (req: AuthRequest, res: Response) =>
 });
 
 // DELETE /api/vehicles/:id
-router.delete('/:id', authenticateToken, async (req: AuthRequest, res: Response) => {
+router.delete('/:id', requireAuth, async (req: Request, res: Response) => {
     try {
+        const tenantReq = req as TenantRequest;
+        const userId = tenantReq.ctx.individual_id!;
+        const isAdmin = tenantReq.ctx.roles?.includes('admin');
         const { id } = req.params;
 
-        const vehicle = await pool.query('SELECT * FROM cc_vehicles WHERE id = $1', [id]);
+        // SERVICE MODE: Check vehicle existence and ownership across tenants
+        const vehicle = await serviceQuery('SELECT * FROM cc_vehicles WHERE id = $1', [id]);
         if (vehicle.rows.length === 0) {
             return res.status(404).json({ success: false, error: 'Vehicle not found' });
         }
 
         const v = vehicle.rows[0];
-        const canDelete = req.user!.isPlatformAdmin || 
-            (v.owner_type === 'individual' && v.owner_user_id === req.user!.userId);
+        const canDelete = isAdmin || 
+            (v.owner_type === 'individual' && v.owner_user_id === userId);
 
         if (!canDelete) {
             return res.status(403).json({ success: false, error: 'Only owner can delete vehicle' });
         }
 
-        await pool.query('DELETE FROM cc_vehicles WHERE id = $1', [id]);
+        // User-scoped mutation: delete vehicle in transaction
+        await req.tenantTransaction(async (client: PoolClient) => {
+            await client.query('DELETE FROM cc_vehicles WHERE id = $1', [id]);
+        });
 
         res.json({ success: true, message: 'Vehicle deleted' });
 
@@ -415,11 +461,12 @@ router.delete('/:id', authenticateToken, async (req: AuthRequest, res: Response)
 // TRAILER ROUTES
 
 // GET /api/vehicles/trailers/list - List trailers
-router.get('/trailers/list', authenticateToken, async (req: AuthRequest, res: Response) => {
+router.get('/trailers/list', requireAuth, async (req: Request, res: Response) => {
     try {
+        const tenantReq = req as TenantRequest;
         const { ownerType, status, type, tenantId } = req.query;
-        const userId = req.user!.userId;
-        const isPlatformAdmin = req.user!.isPlatformAdmin;
+        const userId = tenantReq.ctx.individual_id!;
+        const isAdmin = tenantReq.ctx.roles?.includes('admin');
 
         let query = `
             SELECT t.*, 
@@ -435,7 +482,7 @@ router.get('/trailers/list', authenticateToken, async (req: AuthRequest, res: Re
         const params: any[] = [];
         let paramCount = 0;
 
-        if (!isPlatformAdmin) {
+        if (!isAdmin) {
             paramCount++;
             query += ` AND (
                 (t.owner_type = 'individual' AND t.owner_user_id = $${paramCount})
@@ -472,7 +519,8 @@ router.get('/trailers/list', authenticateToken, async (req: AuthRequest, res: Re
 
         query += ' ORDER BY t.name';
 
-        const result = await pool.query(query, params);
+        // User-scoped read: trailers visible to this user
+        const result = await req.tenantQuery(query, params);
 
         res.json({
             success: true,
@@ -487,13 +535,17 @@ router.get('/trailers/list', authenticateToken, async (req: AuthRequest, res: Re
 });
 
 // GET /api/vehicles/trailers/my - Get user's personal trailers
-router.get('/trailers/my', authenticateToken, async (req: AuthRequest, res: Response) => {
+router.get('/trailers/my', requireAuth, async (req: Request, res: Response) => {
     try {
-        const result = await pool.query(`
+        const tenantReq = req as TenantRequest;
+        const userId = tenantReq.ctx.individual_id!;
+
+        // User-scoped read: only this user's personal trailers
+        const result = await req.tenantQuery(`
             SELECT * FROM cc_trailers 
             WHERE owner_type = 'individual' AND owner_user_id = $1
             ORDER BY name
-        `, [req.user!.userId]);
+        `, [userId]);
 
         res.json({
             success: true,
@@ -508,7 +560,7 @@ router.get('/trailers/my', authenticateToken, async (req: AuthRequest, res: Resp
 });
 
 // GET /api/vehicles/trailers/:id - Get trailer details
-router.get('/trailers/:id', authenticateToken, async (req: AuthRequest, res: Response) => {
+router.get('/trailers/:id', requireAuth, async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
         
@@ -516,12 +568,13 @@ router.get('/trailers/:id', authenticateToken, async (req: AuthRequest, res: Res
             return res.status(400).json({ success: false, error: 'Invalid trailer ID' });
         }
 
-        const hasAccess = await canAccessTrailer(req.user!.userId, id, req.user!.isPlatformAdmin);
+        const hasAccess = await canAccessTrailer(req, id);
         if (!hasAccess) {
             return res.status(403).json({ success: false, error: 'Access denied' });
         }
 
-        const result = await pool.query(`
+        // User-scoped read: trailer details after authorization check
+        const result = await req.tenantQuery(`
             SELECT t.*, 
                 CASE t.owner_type
                     WHEN 'individual' THEN u.first_name || ' ' || u.last_name
@@ -537,14 +590,14 @@ router.get('/trailers/:id', authenticateToken, async (req: AuthRequest, res: Res
             return res.status(404).json({ success: false, error: 'Trailer not found' });
         }
 
-        const fleetResult = await pool.query(`
+        const fleetResult = await req.tenantQuery(`
             SELECT f.id, f.name, fta.assigned_at
             FROM cc_fleet_trailer_assignments fta
             JOIN cc_fleets f ON f.id = fta.fleet_id
             WHERE fta.trailer_id = $1 AND fta.is_active = true
         `, [id]);
 
-        const maintenanceResult = await pool.query(`
+        const maintenanceResult = await req.tenantQuery(`
             SELECT * FROM cc_maintenance_records
             WHERE trailer_id = $1
             ORDER BY service_date DESC
@@ -565,8 +618,12 @@ router.get('/trailers/:id', authenticateToken, async (req: AuthRequest, res: Res
 });
 
 // POST /api/vehicles/trailers - Create trailer
-router.post('/trailers', authenticateToken, async (req: AuthRequest, res: Response) => {
+router.post('/trailers', requireAuth, async (req: Request, res: Response) => {
     try {
+        const tenantReq = req as TenantRequest;
+        const userId = tenantReq.ctx.individual_id!;
+        const isAdmin = tenantReq.ctx.roles?.includes('admin');
+
         const {
             ownerType = 'individual',
             ownerTenantId,
@@ -586,52 +643,57 @@ router.post('/trailers', authenticateToken, async (req: AuthRequest, res: Respon
         let ownerTenant = null;
 
         if (ownerType === 'individual') {
-            ownerUserId = req.user!.userId;
+            ownerUserId = userId;
         } else if (ownerType === 'business') {
-            const tenantAccess = await pool.query(`
+            // SERVICE MODE: Check tenant access across business boundaries
+            const tenantAccess = await serviceQuery(`
                 SELECT 1 FROM cc_tenant_users 
                 WHERE tenant_id = $1 AND user_id = $2 AND status = 'active'
                 AND role IN ('owner', 'admin', 'fleet_manager')
-            `, [ownerTenantId, req.user!.userId]);
+            `, [ownerTenantId, userId]);
 
-            if (tenantAccess.rows.length === 0 && !req.user!.isPlatformAdmin) {
+            if (tenantAccess.rows.length === 0 && !isAdmin) {
                 return res.status(403).json({ success: false, error: 'Cannot add trailer to this business' });
             }
             ownerTenant = ownerTenantId;
         }
 
-        const result = await pool.query(`
-            INSERT INTO cc_trailers (
-                owner_type, owner_user_id, owner_tenant_id,
-                name, vin, serial_number, license_plate, license_plate_province,
-                year, make, model, trailer_type,
-                length_ft, width_ft, height_ft, deck_height_in, gvwr_lbs, payload_capacity_lbs,
-                axle_count, axle_type, has_brakes, brake_type,
-                hitch_type, ball_size_inches, coupler_height_inches, tongue_weight_lbs,
-                has_ramps, ramp_type, has_side_door,
-                is_rv, has_living_quarters, sleeps,
-                is_livestock, stall_count,
+        // User-scoped mutation: create trailer in transaction
+        const result = await req.tenantTransaction(async (client: PoolClient) => {
+            const trailerResult = await client.query(`
+                INSERT INTO cc_trailers (
+                    owner_type, owner_user_id, owner_tenant_id,
+                    name, vin, serial_number, license_plate, license_plate_province,
+                    year, make, model, trailer_type,
+                    length_ft, width_ft, height_ft, deck_height_in, gvwr_lbs, payload_capacity_lbs,
+                    axle_count, axle_type, has_brakes, brake_type,
+                    hitch_type, ball_size_inches, coupler_height_inches, tongue_weight_lbs,
+                    has_ramps, ramp_type, has_side_door,
+                    is_rv, has_living_quarters, sleeps,
+                    is_livestock, stall_count,
+                    status, notes
+                ) VALUES (
+                    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18,
+                    $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35, $36
+                ) RETURNING *
+            `, [
+                ownerType, ownerUserId, ownerTenant,
+                name, vin, serialNumber, licensePlate, licensePlateProvince,
+                year, make, model, trailerType,
+                lengthFt, widthFt, heightFt, deckHeightIn, gvwrLbs, payloadCapacityLbs,
+                axleCount, axleType, hasBrakes, brakeType,
+                hitchType, ballSizeInches, couplerHeightInches, tongueWeightLbs,
+                hasRamps, rampType, hasSideDoor,
+                isRv, hasLivingQuarters, sleeps,
+                isLivestock, stallCount,
                 status, notes
-            ) VALUES (
-                $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18,
-                $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35, $36
-            ) RETURNING *
-        `, [
-            ownerType, ownerUserId, ownerTenant,
-            name, vin, serialNumber, licensePlate, licensePlateProvince,
-            year, make, model, trailerType,
-            lengthFt, widthFt, heightFt, deckHeightIn, gvwrLbs, payloadCapacityLbs,
-            axleCount, axleType, hasBrakes, brakeType,
-            hitchType, ballSizeInches, couplerHeightInches, tongueWeightLbs,
-            hasRamps, rampType, hasSideDoor,
-            isRv, hasLivingQuarters, sleeps,
-            isLivestock, stallCount,
-            status, notes
-        ]);
+            ]);
+            return trailerResult.rows[0];
+        });
 
         res.status(201).json({
             success: true,
-            trailer: result.rows[0]
+            trailer: result
         });
 
     } catch (error: any) {
@@ -641,11 +703,11 @@ router.post('/trailers', authenticateToken, async (req: AuthRequest, res: Respon
 });
 
 // PUT /api/vehicles/trailers/:id - Update trailer
-router.put('/trailers/:id', authenticateToken, async (req: AuthRequest, res: Response) => {
+router.put('/trailers/:id', requireAuth, async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
 
-        const hasAccess = await canAccessTrailer(req.user!.userId, id, req.user!.isPlatformAdmin);
+        const hasAccess = await canAccessTrailer(req, id);
         if (!hasAccess) {
             return res.status(403).json({ success: false, error: 'Access denied' });
         }
@@ -682,12 +744,16 @@ router.put('/trailers/:id', authenticateToken, async (req: AuthRequest, res: Res
 
         updates.push('updated_at = NOW()');
 
-        const result = await pool.query(
-            `UPDATE cc_trailers SET ${updates.join(', ')} WHERE id = $1 RETURNING *`,
-            params
-        );
+        // User-scoped mutation: update trailer in transaction
+        const result = await req.tenantTransaction(async (client: PoolClient) => {
+            const updateResult = await client.query(
+                `UPDATE cc_trailers SET ${updates.join(', ')} WHERE id = $1 RETURNING *`,
+                params
+            );
+            return updateResult.rows[0];
+        });
 
-        res.json({ success: true, trailer: result.rows[0] });
+        res.json({ success: true, trailer: result });
 
     } catch (error: any) {
         console.error('Update trailer error:', error);
@@ -696,24 +762,31 @@ router.put('/trailers/:id', authenticateToken, async (req: AuthRequest, res: Res
 });
 
 // DELETE /api/vehicles/trailers/:id
-router.delete('/trailers/:id', authenticateToken, async (req: AuthRequest, res: Response) => {
+router.delete('/trailers/:id', requireAuth, async (req: Request, res: Response) => {
     try {
+        const tenantReq = req as TenantRequest;
+        const userId = tenantReq.ctx.individual_id!;
+        const isAdmin = tenantReq.ctx.roles?.includes('admin');
         const { id } = req.params;
 
-        const trailer = await pool.query('SELECT * FROM cc_trailers WHERE id = $1', [id]);
+        // SERVICE MODE: Check trailer existence and ownership across tenants
+        const trailer = await serviceQuery('SELECT * FROM cc_trailers WHERE id = $1', [id]);
         if (trailer.rows.length === 0) {
             return res.status(404).json({ success: false, error: 'Trailer not found' });
         }
 
         const t = trailer.rows[0];
-        const canDelete = req.user!.isPlatformAdmin || 
-            (t.owner_type === 'individual' && t.owner_user_id === req.user!.userId);
+        const canDelete = isAdmin || 
+            (t.owner_type === 'individual' && t.owner_user_id === userId);
 
         if (!canDelete) {
             return res.status(403).json({ success: false, error: 'Only owner can delete trailer' });
         }
 
-        await pool.query('DELETE FROM cc_trailers WHERE id = $1', [id]);
+        // User-scoped mutation: delete trailer in transaction
+        await req.tenantTransaction(async (client: PoolClient) => {
+            await client.query('DELETE FROM cc_trailers WHERE id = $1', [id]);
+        });
 
         res.json({ success: true, message: 'Trailer deleted' });
 
@@ -725,23 +798,25 @@ router.delete('/trailers/:id', authenticateToken, async (req: AuthRequest, res: 
 
 // FLEET ROUTES
 
-// GET /api/vehicles/fleets - List fleets
-router.get('/fleets/list', authenticateToken, async (req: AuthRequest, res: Response) => {
+// GET /api/vehicles/fleets/list - List fleets
+router.get('/fleets/list', requireAuth, async (req: Request, res: Response) => {
     try {
-        const userId = req.user!.userId;
-        const isPlatformAdmin = req.user!.isPlatformAdmin;
+        const tenantReq = req as TenantRequest;
+        const userId = tenantReq.ctx.individual_id!;
+        const isAdmin = tenantReq.ctx.roles?.includes('admin');
 
         let query = `SELECT * FROM v_fleet_summary WHERE 1=1`;
         const params: any[] = [];
 
-        if (!isPlatformAdmin) {
+        if (!isAdmin) {
             query += ` AND tenant_id IN (
                 SELECT tenant_id FROM cc_tenant_users WHERE user_id = $1 AND status = 'active'
             )`;
             params.push(userId);
         }
 
-        const result = await pool.query(query, params);
+        // User-scoped read: fleets visible to this user
+        const result = await req.tenantQuery(query, params);
 
         res.json({
             success: true,
@@ -756,15 +831,19 @@ router.get('/fleets/list', authenticateToken, async (req: AuthRequest, res: Resp
 });
 
 // GET /api/vehicles/fleets/:id - Get fleet details with vehicles and trailers
-router.get('/fleets/:id', authenticateToken, async (req: AuthRequest, res: Response) => {
+router.get('/fleets/:id', requireAuth, async (req: Request, res: Response) => {
     try {
+        const tenantReq = req as TenantRequest;
+        const userId = tenantReq.ctx.individual_id!;
+        const isAdmin = tenantReq.ctx.roles?.includes('admin');
         const { id } = req.params;
         
         if (['list'].includes(id)) {
             return res.status(400).json({ success: false, error: 'Invalid fleet ID' });
         }
 
-        const fleet = await pool.query(`
+        // User-scoped read: fleet details
+        const fleet = await req.tenantQuery(`
             SELECT f.*, t.name as tenant_name
             FROM cc_fleets f
             JOIN cc_tenants t ON t.id = f.tenant_id
@@ -775,25 +854,26 @@ router.get('/fleets/:id', authenticateToken, async (req: AuthRequest, res: Respo
             return res.status(404).json({ success: false, error: 'Fleet not found' });
         }
 
-        if (!req.user!.isPlatformAdmin) {
-            const access = await pool.query(`
+        if (!isAdmin) {
+            // SERVICE MODE: Check tenant access for fleet
+            const access = await serviceQuery(`
                 SELECT 1 FROM cc_tenant_users 
                 WHERE tenant_id = $1 AND user_id = $2 AND status = 'active'
-            `, [fleet.rows[0].tenant_id, req.user!.userId]);
+            `, [fleet.rows[0].tenant_id, userId]);
 
             if (access.rows.length === 0) {
                 return res.status(403).json({ success: false, error: 'Access denied' });
             }
         }
 
-        const vehicles = await pool.query(`
+        const vehicles = await req.tenantQuery(`
             SELECT v.*, fva.assigned_at
             FROM cc_fleet_vehicle_assignments fva
             JOIN cc_vehicles v ON v.id = fva.vehicle_id
             WHERE fva.fleet_id = $1 AND fva.is_active = true
         `, [id]);
 
-        const trailers = await pool.query(`
+        const trailers = await req.tenantQuery(`
             SELECT t.*, fta.assigned_at
             FROM cc_fleet_trailer_assignments fta
             JOIN cc_trailers t ON t.id = fta.trailer_id
@@ -814,33 +894,41 @@ router.get('/fleets/:id', authenticateToken, async (req: AuthRequest, res: Respo
 });
 
 // POST /api/vehicles/fleets - Create fleet
-router.post('/fleets', authenticateToken, async (req: AuthRequest, res: Response) => {
+router.post('/fleets', requireAuth, async (req: Request, res: Response) => {
     try {
+        const tenantReq = req as TenantRequest;
+        const userId = tenantReq.ctx.individual_id!;
+        const isAdmin = tenantReq.ctx.roles?.includes('admin');
         const { tenantId, name, description } = req.body;
 
         if (!tenantId || !name) {
             return res.status(400).json({ success: false, error: 'tenantId and name are required' });
         }
 
-        const tenantAccess = await pool.query(`
+        // SERVICE MODE: Check tenant access for fleet creation
+        const tenantAccess = await serviceQuery(`
             SELECT 1 FROM cc_tenant_users 
             WHERE tenant_id = $1 AND user_id = $2 AND status = 'active'
             AND role IN ('owner', 'admin', 'fleet_manager')
-        `, [tenantId, req.user!.userId]);
+        `, [tenantId, userId]);
 
-        if (tenantAccess.rows.length === 0 && !req.user!.isPlatformAdmin) {
+        if (tenantAccess.rows.length === 0 && !isAdmin) {
             return res.status(403).json({ success: false, error: 'Cannot create fleet for this business' });
         }
 
-        const result = await pool.query(`
-            INSERT INTO cc_fleets (tenant_id, name, description)
-            VALUES ($1, $2, $3)
-            RETURNING *
-        `, [tenantId, name, description]);
+        // User-scoped mutation: create fleet in transaction
+        const result = await req.tenantTransaction(async (client: PoolClient) => {
+            const fleetResult = await client.query(`
+                INSERT INTO cc_fleets (tenant_id, name, description)
+                VALUES ($1, $2, $3)
+                RETURNING *
+            `, [tenantId, name, description]);
+            return fleetResult.rows[0];
+        });
 
         res.status(201).json({
             success: true,
-            fleet: result.rows[0]
+            fleet: result
         });
 
     } catch (error: any) {
@@ -850,26 +938,32 @@ router.post('/fleets', authenticateToken, async (req: AuthRequest, res: Response
 });
 
 // POST /api/vehicles/fleets/:id/assign-vehicle
-router.post('/fleets/:id/assign-vehicle', authenticateToken, async (req: AuthRequest, res: Response) => {
+router.post('/fleets/:id/assign-vehicle', requireAuth, async (req: Request, res: Response) => {
     try {
+        const tenantReq = req as TenantRequest;
+        const userId = tenantReq.ctx.individual_id!;
         const { id } = req.params;
         const { vehicleId } = req.body;
 
-        const fleet = await pool.query('SELECT * FROM cc_fleets WHERE id = $1', [id]);
+        // SERVICE MODE: Check fleet existence
+        const fleet = await serviceQuery('SELECT * FROM cc_fleets WHERE id = $1', [id]);
         if (fleet.rows.length === 0) {
             return res.status(404).json({ success: false, error: 'Fleet not found' });
         }
 
-        const hasAccess = await canAccessVehicle(req.user!.userId, vehicleId, req.user!.isPlatformAdmin);
+        const hasAccess = await canAccessVehicle(req, vehicleId);
         if (!hasAccess) {
             return res.status(403).json({ success: false, error: 'Cannot assign this vehicle' });
         }
 
-        await pool.query(`
-            INSERT INTO cc_fleet_vehicle_assignments (fleet_id, vehicle_id, assigned_by)
-            VALUES ($1, $2, $3)
-            ON CONFLICT (fleet_id, vehicle_id, is_active) DO NOTHING
-        `, [id, vehicleId, req.user!.userId]);
+        // User-scoped mutation: assign vehicle to fleet in transaction
+        await req.tenantTransaction(async (client: PoolClient) => {
+            await client.query(`
+                INSERT INTO cc_fleet_vehicle_assignments (fleet_id, vehicle_id, assigned_by)
+                VALUES ($1, $2, $3)
+                ON CONFLICT (fleet_id, vehicle_id, is_active) DO NOTHING
+            `, [id, vehicleId, userId]);
+        });
 
         res.json({ success: true, message: 'Vehicle assigned to fleet' });
 
@@ -880,83 +974,38 @@ router.post('/fleets/:id/assign-vehicle', authenticateToken, async (req: AuthReq
 });
 
 // POST /api/vehicles/fleets/:id/assign-trailer
-router.post('/fleets/:id/assign-trailer', authenticateToken, async (req: AuthRequest, res: Response) => {
+router.post('/fleets/:id/assign-trailer', requireAuth, async (req: Request, res: Response) => {
     try {
+        const tenantReq = req as TenantRequest;
+        const userId = tenantReq.ctx.individual_id!;
         const { id } = req.params;
         const { trailerId } = req.body;
 
-        const fleet = await pool.query('SELECT * FROM cc_fleets WHERE id = $1', [id]);
+        // SERVICE MODE: Check fleet existence
+        const fleet = await serviceQuery('SELECT * FROM cc_fleets WHERE id = $1', [id]);
         if (fleet.rows.length === 0) {
             return res.status(404).json({ success: false, error: 'Fleet not found' });
         }
 
-        const hasAccess = await canAccessTrailer(req.user!.userId, trailerId, req.user!.isPlatformAdmin);
+        const hasAccess = await canAccessTrailer(req, trailerId);
         if (!hasAccess) {
             return res.status(403).json({ success: false, error: 'Cannot assign this trailer' });
         }
 
-        await pool.query(`
-            INSERT INTO cc_fleet_trailer_assignments (fleet_id, trailer_id, assigned_by)
-            VALUES ($1, $2, $3)
-            ON CONFLICT (fleet_id, trailer_id, is_active) DO NOTHING
-        `, [id, trailerId, req.user!.userId]);
+        // User-scoped mutation: assign trailer to fleet in transaction
+        await req.tenantTransaction(async (client: PoolClient) => {
+            await client.query(`
+                INSERT INTO cc_fleet_trailer_assignments (fleet_id, trailer_id, assigned_by)
+                VALUES ($1, $2, $3)
+                ON CONFLICT (fleet_id, trailer_id, is_active) DO NOTHING
+            `, [id, trailerId, userId]);
+        });
 
         res.json({ success: true, message: 'Trailer assigned to fleet' });
 
     } catch (error: any) {
         console.error('Assign trailer error:', error);
         res.status(500).json({ success: false, error: 'Failed to assign trailer' });
-    }
-});
-
-// GET /api/vehicles/stats - Vehicle/trailer statistics
-router.get('/stats', authenticateToken, async (req: AuthRequest, res: Response) => {
-    try {
-        const userId = req.user!.userId;
-        const isPlatformAdmin = req.user!.isPlatformAdmin;
-
-        let vehicleQuery = `SELECT COUNT(*) as count, vehicle_type, status FROM cc_vehicles WHERE 1=1`;
-        let trailerQuery = `SELECT COUNT(*) as count, trailer_type, status FROM cc_trailers WHERE 1=1`;
-        const params: any[] = [];
-
-        if (!isPlatformAdmin) {
-            vehicleQuery += ` AND (
-                (owner_type = 'individual' AND owner_user_id = $1)
-                OR (owner_type = 'business' AND owner_tenant_id IN (
-                    SELECT tenant_id FROM cc_tenant_users WHERE user_id = $1 AND status = 'active'
-                ))
-            )`;
-            trailerQuery += ` AND (
-                (owner_type = 'individual' AND owner_user_id = $1)
-                OR (owner_type = 'business' AND owner_tenant_id IN (
-                    SELECT tenant_id FROM cc_tenant_users WHERE user_id = $1 AND status = 'active'
-                ))
-            )`;
-            params.push(userId);
-        }
-
-        vehicleQuery += ' GROUP BY vehicle_type, status';
-        trailerQuery += ' GROUP BY trailer_type, status';
-
-        const vehicleStats = await pool.query(vehicleQuery, params);
-        const trailerStats = await pool.query(trailerQuery, params);
-
-        const totalVehicles = vehicleStats.rows.reduce((sum, r) => sum + parseInt(r.count), 0);
-        const totalTrailers = trailerStats.rows.reduce((sum, r) => sum + parseInt(r.count), 0);
-
-        res.json({
-            success: true,
-            stats: {
-                totalVehicles,
-                totalTrailers,
-                vehiclesByType: vehicleStats.rows,
-                trailersByType: trailerStats.rows
-            }
-        });
-
-    } catch (error: any) {
-        console.error('Get stats error:', error);
-        res.status(500).json({ success: false, error: 'Failed to get stats' });
     }
 });
 

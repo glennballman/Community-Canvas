@@ -1,10 +1,15 @@
 // =====================================================================
 // SERVICE RUNS API ROUTES
 // =====================================================================
+// SERVICE MODE: This file primarily reads platform-global reference data
+// (services, categories, bundles, communities, climate regions, etc.)
+// that is shared across all tenants. Uses serviceQuery for reads.
+// User-initiated mutations use tenantTransaction for tenant isolation.
+// =====================================================================
 
 import { Router, Request, Response } from 'express';
-import { Pool } from 'pg';
-import { authenticateToken } from './foundation';
+import { serviceQuery, withServiceTransaction } from '../db/tenantDb';
+import { requireAuth } from '../middleware/guards';
 import { calculateServicePrice, calculateBundlePrice, calculateMobilizationPerSlot } from '../lib/pricing';
 import { 
   scoreServicePair, 
@@ -23,18 +28,14 @@ import {
 
 const router = Router();
 
-// Get pool from app
-function getPool(req: Request): Pool {
-  return req.app.get('db');
-}
-
 // =====================================================================
 // HELPER: Load service with all details
+// SERVICE MODE: Reads platform-global service catalog reference data
 // =====================================================================
 
-async function loadServiceWithDetails(pool: Pool, serviceId: string): Promise<ServiceWithDetails | null> {
+async function loadServiceWithDetails(serviceId: string): Promise<ServiceWithDetails | null> {
   // Main service
-  const serviceResult = await pool.query(`
+  const serviceResult = await serviceQuery(`
     SELECT s.*, s.icon as service_icon, sc.name as category_name, sc.slug as category_slug, sc.icon as category_icon
     FROM sr_services s
     JOIN sr_service_categories sc ON sc.id = s.category_id
@@ -46,7 +47,7 @@ async function loadServiceWithDetails(pool: Pool, serviceId: string): Promise<Se
   const row = serviceResult.rows[0];
   
   // Seasonality
-  const seasonalityResult = await pool.query(`
+  const seasonalityResult = await serviceQuery(`
     SELECT ss.*, cr.name as climate_region_name
     FROM sr_service_seasonality ss
     JOIN sr_climate_regions cr ON cr.id = ss.climate_region_id
@@ -54,7 +55,7 @@ async function loadServiceWithDetails(pool: Pool, serviceId: string): Promise<Se
   `, [serviceId]);
   
   // Pricing
-  const pricingResult = await pool.query(`
+  const pricingResult = await serviceQuery(`
     SELECT sp.*, pm.model as pricing_model
     FROM sr_service_pricing sp
     JOIN sr_pricing_models pm ON pm.id = sp.pricing_model_id
@@ -62,7 +63,7 @@ async function loadServiceWithDetails(pool: Pool, serviceId: string): Promise<Se
   `, [serviceId]);
   
   // Certifications
-  const certResult = await pool.query(`
+  const certResult = await serviceQuery(`
     SELECT c.*, sc.is_required
     FROM sr_service_certifications sc
     JOIN sr_certifications c ON c.id = sc.certification_id
@@ -70,7 +71,7 @@ async function loadServiceWithDetails(pool: Pool, serviceId: string): Promise<Se
   `, [serviceId]);
   
   // Access requirements
-  const accessResult = await pool.query(`
+  const accessResult = await serviceQuery(`
     SELECT ar.*, sar.is_required
     FROM sr_service_access_requirements sar
     JOIN sr_access_requirements ar ON ar.id = sar.access_requirement_id
@@ -78,7 +79,7 @@ async function loadServiceWithDetails(pool: Pool, serviceId: string): Promise<Se
   `, [serviceId]);
   
   // Mobilization class
-  const mobResult = await pool.query(`
+  const mobResult = await serviceQuery(`
     SELECT mc.*
     FROM sr_service_mobilization sm
     JOIN sr_mobilization_classes mc ON mc.id = sm.mobilization_class_id
@@ -170,14 +171,13 @@ async function loadServiceWithDetails(pool: Pool, serviceId: string): Promise<Se
 
 // =====================================================================
 // SERVICE CATEGORIES
+// SERVICE MODE: Platform-global service category reference data
 // =====================================================================
 
 // GET /api/service-runs/categories - List all categories
 router.get('/categories', async (req: Request, res: Response) => {
   try {
-    const pool = getPool(req);
-    
-    const result = await pool.query(`
+    const result = await serviceQuery(`
       SELECT sc.*, 
              COUNT(s.id) as service_count
       FROM sr_service_categories sc
@@ -208,12 +208,12 @@ router.get('/categories', async (req: Request, res: Response) => {
 
 // =====================================================================
 // SERVICES
+// SERVICE MODE: Platform-global service catalog reference data
 // =====================================================================
 
 // GET /api/service-runs/services - List services with filtering
 router.get('/services', async (req: Request, res: Response) => {
   try {
-    const pool = getPool(req);
     const { category, search, emergency, climateRegion, week } = req.query;
     
     let query = `
@@ -247,7 +247,7 @@ router.get('/services', async (req: Request, res: Response) => {
     
     query += ` ORDER BY sc.sort_order, s.name`;
     
-    const result = await pool.query(query, params);
+    const result = await serviceQuery(query, params);
     
     // If climate region and week specified, check eligibility
     let services = result.rows.map(row => ({
@@ -286,11 +286,10 @@ router.get('/services', async (req: Request, res: Response) => {
 // GET /api/service-runs/services/:slug - Get service details
 router.get('/services/:slug', async (req: Request, res: Response) => {
   try {
-    const pool = getPool(req);
     const { slug } = req.params;
     
     // Get service ID first
-    const idResult = await pool.query(
+    const idResult = await serviceQuery(
       'SELECT id FROM sr_services WHERE slug = $1',
       [slug]
     );
@@ -299,7 +298,7 @@ router.get('/services/:slug', async (req: Request, res: Response) => {
       return res.status(404).json({ success: false, error: 'Service not found' });
     }
     
-    const service = await loadServiceWithDetails(pool, idResult.rows[0].id);
+    const service = await loadServiceWithDetails(idResult.rows[0].id);
     
     res.json({
       success: true,
@@ -313,13 +312,13 @@ router.get('/services/:slug', async (req: Request, res: Response) => {
 
 // =====================================================================
 // REFERENCE DATA
+// SERVICE MODE: Platform-global reference data tables
 // =====================================================================
 
 // GET /api/service-runs/climate-regions
 router.get('/climate-regions', async (req: Request, res: Response) => {
   try {
-    const pool = getPool(req);
-    const result = await pool.query('SELECT * FROM sr_climate_regions ORDER BY name');
+    const result = await serviceQuery('SELECT * FROM sr_climate_regions ORDER BY name');
     
     res.json({
       success: true,
@@ -341,8 +340,7 @@ router.get('/climate-regions', async (req: Request, res: Response) => {
 // GET /api/service-runs/access-requirements
 router.get('/access-requirements', async (req: Request, res: Response) => {
   try {
-    const pool = getPool(req);
-    const result = await pool.query('SELECT * FROM sr_access_requirements ORDER BY sort_order');
+    const result = await serviceQuery('SELECT * FROM sr_access_requirements ORDER BY sort_order');
     
     res.json({
       success: true,
@@ -362,8 +360,7 @@ router.get('/access-requirements', async (req: Request, res: Response) => {
 // GET /api/service-runs/mobilization-classes
 router.get('/mobilization-classes', async (req: Request, res: Response) => {
   try {
-    const pool = getPool(req);
-    const result = await pool.query('SELECT * FROM sr_mobilization_classes ORDER BY sort_order');
+    const result = await serviceQuery('SELECT * FROM sr_mobilization_classes ORDER BY sort_order');
     
     res.json({
       success: true,
@@ -383,8 +380,7 @@ router.get('/mobilization-classes', async (req: Request, res: Response) => {
 // GET /api/service-runs/certifications
 router.get('/certifications', async (req: Request, res: Response) => {
   try {
-    const pool = getPool(req);
-    const result = await pool.query('SELECT * FROM sr_certifications ORDER BY name');
+    const result = await serviceQuery('SELECT * FROM sr_certifications ORDER BY name');
     
     res.json({
       success: true,
@@ -405,14 +401,14 @@ router.get('/certifications', async (req: Request, res: Response) => {
 
 // =====================================================================
 // COMMUNITIES
+// SERVICE MODE: Platform-global community reference data for reads
+// Mutations require authentication and use tenant transaction
 // =====================================================================
 
 // GET /api/service-runs/communities - List communities
 router.get('/communities', async (req: Request, res: Response) => {
   try {
-    const pool = getPool(req);
-    
-    const result = await pool.query(`
+    const result = await serviceQuery(`
       SELECT c.*, cr.name as climate_region_name
       FROM sr_communities c
       JOIN sr_climate_regions cr ON cr.id = c.climate_region_id
@@ -441,20 +437,22 @@ router.get('/communities', async (req: Request, res: Response) => {
 });
 
 // POST /api/service-runs/communities - Create community
-router.post('/communities', authenticateToken, async (req: Request, res: Response) => {
+// Requires authentication; uses tenant transaction for audit trail
+router.post('/communities', requireAuth, async (req: Request, res: Response) => {
   try {
-    const pool = getPool(req);
     const { 
       name, region, country, latitude, longitude, 
       climateRegionId, remoteMultiplier, notes 
     } = req.body;
     
-    const result = await pool.query(`
-      INSERT INTO sr_communities 
-        (name, region, country, latitude, longitude, climate_region_id, remote_multiplier, notes)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-      RETURNING *
-    `, [name, region || 'BC', country || 'Canada', latitude, longitude, climateRegionId, remoteMultiplier || 1.0, notes || '']);
+    const result = await req.tenantTransaction(async (client) => {
+      return await client.query(`
+        INSERT INTO sr_communities 
+          (name, region, country, latitude, longitude, climate_region_id, remote_multiplier, notes)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        RETURNING *
+      `, [name, region || 'BC', country || 'Canada', latitude, longitude, climateRegionId, remoteMultiplier || 1.0, notes || '']);
+    });
     
     res.json({
       success: true,
@@ -468,12 +466,12 @@ router.post('/communities', authenticateToken, async (req: Request, res: Respons
 
 // =====================================================================
 // BUNDLES
+// SERVICE MODE: Platform-global bundle reference data
 // =====================================================================
 
 // GET /api/service-runs/bundles - List bundles
 router.get('/bundles', async (req: Request, res: Response) => {
   try {
-    const pool = getPool(req);
     const { climateRegion, week, community } = req.query;
     
     let query = `
@@ -489,7 +487,7 @@ router.get('/bundles', async (req: Request, res: Response) => {
     
     query += ' ORDER BY b.name';
     
-    const result = await pool.query(query);
+    const result = await serviceQuery(query);
     
     res.json({
       success: true,
@@ -519,11 +517,10 @@ router.get('/bundles', async (req: Request, res: Response) => {
 // GET /api/service-runs/bundles/:slug - Get bundle details
 router.get('/bundles/:slug', async (req: Request, res: Response) => {
   try {
-    const pool = getPool(req);
     const { slug } = req.params;
     
     // Get bundle
-    const bundleResult = await pool.query(`
+    const bundleResult = await serviceQuery(`
       SELECT b.*, bp.base_price, bp.discount_factor, bp.mobilization_surcharge, bp.remote_multiplier, bp.notes as pricing_notes
       FROM sr_bundles b
       LEFT JOIN sr_bundle_pricing bp ON bp.bundle_id = b.id
@@ -537,7 +534,7 @@ router.get('/bundles/:slug', async (req: Request, res: Response) => {
     const bundle = bundleResult.rows[0];
     
     // Get bundle items with services
-    const itemsResult = await pool.query(`
+    const itemsResult = await serviceQuery(`
       SELECT bi.*, s.name as service_name, s.slug as service_slug, s.description as service_description
       FROM sr_bundle_items bi
       JOIN sr_services s ON s.id = bi.service_id
@@ -546,7 +543,7 @@ router.get('/bundles/:slug', async (req: Request, res: Response) => {
     `, [bundle.id]);
     
     // Get bundle seasonality
-    const seasonalityResult = await pool.query(`
+    const seasonalityResult = await serviceQuery(`
       SELECT bs.*, cr.name as climate_region_name
       FROM sr_bundle_seasonality bs
       JOIN sr_climate_regions cr ON cr.id = bs.climate_region_id
@@ -596,12 +593,12 @@ router.get('/bundles/:slug', async (req: Request, res: Response) => {
 
 // =====================================================================
 // RUN TYPES (Seasonal run templates)
+// SERVICE MODE: Platform-global run type reference data
 // =====================================================================
 
 // GET /api/service-runs/run-types - List run types
 router.get('/run-types', async (req: Request, res: Response) => {
   try {
-    const pool = getPool(req);
     const { climateRegion, week } = req.query;
     
     let query = `
@@ -619,7 +616,7 @@ router.get('/run-types', async (req: Request, res: Response) => {
     
     query += ' ORDER BY rt.priority_weight DESC, rt.name';
     
-    const result = await pool.query(query, params);
+    const result = await serviceQuery(query, params);
     
     // Filter by week eligibility if specified
     let runTypes = result.rows.map(row => ({
@@ -662,12 +659,12 @@ router.get('/run-types', async (req: Request, res: Response) => {
 
 // =====================================================================
 // BUNDLING SUGGESTIONS
+// SERVICE MODE: Reads service catalog to generate bundle suggestions
 // =====================================================================
 
 // POST /api/service-runs/suggest-bundles - Get bundle suggestions for selected services
 router.post('/suggest-bundles', async (req: Request, res: Response) => {
   try {
-    const pool = getPool(req);
     const { serviceSlugs, climateRegionId, week } = req.body;
     
     if (!serviceSlugs || serviceSlugs.length === 0) {
@@ -677,9 +674,9 @@ router.post('/suggest-bundles', async (req: Request, res: Response) => {
     // Load all specified services with details
     const services: ServiceWithDetails[] = [];
     for (const slug of serviceSlugs) {
-      const idResult = await pool.query('SELECT id FROM sr_services WHERE slug = $1', [slug]);
+      const idResult = await serviceQuery('SELECT id FROM sr_services WHERE slug = $1', [slug]);
       if (idResult.rows.length > 0) {
-        const service = await loadServiceWithDetails(pool, idResult.rows[0].id);
+        const service = await loadServiceWithDetails(idResult.rows[0].id);
         if (service) services.push(service);
       }
     }
@@ -724,12 +721,13 @@ router.post('/suggest-bundles', async (req: Request, res: Response) => {
 
 // =====================================================================
 // SERVICE RUNS MANAGEMENT
+// SERVICE MODE: Reads for listing/viewing runs are platform-global
+// Mutations require authentication and use tenant transactions
 // =====================================================================
 
 // GET /api/service-runs/runs - List all service runs
 router.get('/runs', async (req: Request, res: Response) => {
   try {
-    const pool = getPool(req);
     const { status, community } = req.query;
     
     let query = `
@@ -763,7 +761,7 @@ router.get('/runs', async (req: Request, res: Response) => {
     
     query += ` ORDER BY r.target_start_date DESC, r.created_at DESC`;
     
-    const result = await pool.query(query, params);
+    const result = await serviceQuery(query, params);
     
     res.json({
       success: true,
@@ -806,10 +804,9 @@ router.get('/runs', async (req: Request, res: Response) => {
 // GET /api/service-runs/runs/:slug - Get run details with slots
 router.get('/runs/:slug', async (req: Request, res: Response) => {
   try {
-    const pool = getPool(req);
     const { slug } = req.params;
     
-    const runResult = await pool.query(`
+    const runResult = await serviceQuery(`
       SELECT 
         r.*,
         c.name as community_name, c.remote_multiplier,
@@ -828,13 +825,13 @@ router.get('/runs/:slug', async (req: Request, res: Response) => {
     
     const run = runResult.rows[0];
     
-    const slotsResult = await pool.query(`
+    const slotsResult = await serviceQuery(`
       SELECT * FROM sr_service_slots
       WHERE run_id = $1
       ORDER BY created_at
     `, [run.id]);
     
-    const bidsResult = await pool.query(`
+    const bidsResult = await serviceQuery(`
       SELECT * FROM sr_contractor_bids
       WHERE run_id = $1
       ORDER BY submitted_at DESC
@@ -951,9 +948,9 @@ router.get('/runs/:slug', async (req: Request, res: Response) => {
 });
 
 // POST /api/service-runs/runs - Create new run
-router.post('/runs', authenticateToken, async (req: Request, res: Response) => {
+// Requires authentication; uses tenant transaction for audit trail
+router.post('/runs', requireAuth, async (req: Request, res: Response) => {
   try {
-    const pool = getPool(req);
     const {
       title, description, runTypeId, bundleId, communityId,
       serviceAreaDescription, targetStartDate, targetEndDate,
@@ -966,22 +963,24 @@ router.post('/runs', authenticateToken, async (req: Request, res: Response) => {
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-|-$/g, '');
     
-    const result = await pool.query(`
-      INSERT INTO sr_service_runs (
-        title, slug, description, run_type_id, bundle_id, community_id,
-        service_area_description, target_start_date, target_end_date,
-        min_slots, max_slots, bidding_opens_at, bidding_closes_at,
-        estimated_mobilization_cost, require_photos, require_deposit,
-        deposit_amount, cancellation_policy, status, published_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, 'collecting', NOW())
-      RETURNING *
-    `, [
-      title, slug, description, runTypeId, bundleId, communityId,
-      serviceAreaDescription, targetStartDate, targetEndDate,
-      minSlots || 5, maxSlots || 25, biddingOpensAt, biddingClosesAt,
-      estimatedMobilizationCost, requirePhotos !== false, requireDeposit || false,
-      depositAmount, cancellationPolicy || 'Full refund if cancelled 7+ days before scheduled date'
-    ]);
+    const result = await req.tenantTransaction(async (client) => {
+      return await client.query(`
+        INSERT INTO sr_service_runs (
+          title, slug, description, run_type_id, bundle_id, community_id,
+          service_area_description, target_start_date, target_end_date,
+          min_slots, max_slots, bidding_opens_at, bidding_closes_at,
+          estimated_mobilization_cost, require_photos, require_deposit,
+          deposit_amount, cancellation_policy, status, published_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, 'collecting', NOW())
+        RETURNING *
+      `, [
+        title, slug, description, runTypeId, bundleId, communityId,
+        serviceAreaDescription, targetStartDate, targetEndDate,
+        minSlots || 5, maxSlots || 25, biddingOpensAt, biddingClosesAt,
+        estimatedMobilizationCost, requirePhotos !== false, requireDeposit || false,
+        depositAmount, cancellationPolicy || 'Full refund if cancelled 7+ days before scheduled date'
+      ]);
+    });
     
     res.json({
       success: true,
@@ -998,9 +997,9 @@ router.post('/runs', authenticateToken, async (req: Request, res: Response) => {
 });
 
 // PATCH /api/service-runs/runs/:id/status - Update run status
-router.patch('/runs/:id/status', authenticateToken, async (req: Request, res: Response) => {
+// Requires authentication; uses tenant transaction for audit trail
+router.patch('/runs/:id/status', requireAuth, async (req: Request, res: Response) => {
   try {
-    const pool = getPool(req);
     const { id } = req.params;
     const { status } = req.body;
     
@@ -1009,12 +1008,14 @@ router.patch('/runs/:id/status', authenticateToken, async (req: Request, res: Re
       return res.status(400).json({ success: false, error: 'Invalid status' });
     }
     
-    const result = await pool.query(`
-      UPDATE sr_service_runs 
-      SET status = $1, updated_at = NOW()
-      WHERE id = $2
-      RETURNING *
-    `, [status, id]);
+    const result = await req.tenantTransaction(async (client) => {
+      return await client.query(`
+        UPDATE sr_service_runs 
+        SET status = $1, updated_at = NOW()
+        WHERE id = $2
+        RETURNING *
+      `, [status, id]);
+    });
     
     if (result.rows.length === 0) {
       return res.status(404).json({ success: false, error: 'Run not found' });
@@ -1028,9 +1029,9 @@ router.patch('/runs/:id/status', authenticateToken, async (req: Request, res: Re
 });
 
 // POST /api/service-runs/runs/:id/slots - Add slot to run
+// User-initiated action; uses tenant transaction for audit trail
 router.post('/runs/:id/slots', async (req: Request, res: Response) => {
   try {
-    const pool = getPool(req);
     const { id } = req.params;
     const {
       customerName, customerEmail, customerPhone,
@@ -1040,7 +1041,8 @@ router.post('/runs/:id/slots', async (req: Request, res: Response) => {
       requiresOwnerPresent, estimatedCost
     } = req.body;
     
-    const runCheck = await pool.query(
+    // Check run status first (read operation)
+    const runCheck = await serviceQuery(
       `SELECT id, status, current_slots, max_slots FROM sr_service_runs WHERE id = $1`,
       [id]
     );
@@ -1058,28 +1060,33 @@ router.post('/runs/:id/slots', async (req: Request, res: Response) => {
       return res.status(400).json({ success: false, error: 'Run is full' });
     }
     
-    const result = await pool.query(`
-      INSERT INTO sr_service_slots (
-        run_id, customer_name, customer_email, customer_phone,
-        property_address, property_lat, property_lng,
-        property_access_notes, property_access_type,
-        services_requested, special_requirements,
-        requires_owner_present, estimated_cost, status
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, 'pending')
-      RETURNING *
-    `, [
-      id, customerName, customerEmail, customerPhone,
-      propertyAddress, propertyLat, propertyLng,
-      propertyAccessNotes, propertyAccessType || 'road',
-      JSON.stringify(servicesRequested || []), specialRequirements,
-      requiresOwnerPresent || false, estimatedCost
-    ]);
-    
-    await pool.query(`
-      UPDATE sr_service_runs 
-      SET current_slots = current_slots + 1, updated_at = NOW()
-      WHERE id = $1
-    `, [id]);
+    // Use tenant transaction for the mutation
+    const result = await req.tenantTransaction(async (client) => {
+      const slotResult = await client.query(`
+        INSERT INTO sr_service_slots (
+          run_id, customer_name, customer_email, customer_phone,
+          property_address, property_lat, property_lng,
+          property_access_notes, property_access_type,
+          services_requested, special_requirements,
+          requires_owner_present, estimated_cost, status
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, 'pending')
+        RETURNING *
+      `, [
+        id, customerName, customerEmail, customerPhone,
+        propertyAddress, propertyLat, propertyLng,
+        propertyAccessNotes, propertyAccessType || 'road',
+        JSON.stringify(servicesRequested || []), specialRequirements,
+        requiresOwnerPresent || false, estimatedCost
+      ]);
+      
+      await client.query(`
+        UPDATE sr_service_runs 
+        SET current_slots = current_slots + 1, updated_at = NOW()
+        WHERE id = $1
+      `, [id]);
+      
+      return slotResult;
+    });
     
     res.json({
       success: true,
@@ -1093,19 +1100,18 @@ router.post('/runs/:id/slots', async (req: Request, res: Response) => {
 
 // =====================================================================
 // STATS
+// SERVICE MODE: Platform-global aggregate statistics
 // =====================================================================
 
 // GET /api/service-runs/stats - Get overall stats
 router.get('/stats', async (req: Request, res: Response) => {
   try {
-    const pool = getPool(req);
-    
     const [categories, services, bundles, communities, climateRegions] = await Promise.all([
-      pool.query('SELECT COUNT(*) FROM sr_service_categories WHERE is_active = true'),
-      pool.query('SELECT COUNT(*) FROM sr_services WHERE is_active = true'),
-      pool.query('SELECT COUNT(*) FROM sr_bundles WHERE is_active = true'),
-      pool.query('SELECT COUNT(*) FROM sr_communities'),
-      pool.query('SELECT COUNT(*) FROM sr_climate_regions')
+      serviceQuery('SELECT COUNT(*) FROM sr_service_categories WHERE is_active = true'),
+      serviceQuery('SELECT COUNT(*) FROM sr_services WHERE is_active = true'),
+      serviceQuery('SELECT COUNT(*) FROM sr_bundles WHERE is_active = true'),
+      serviceQuery('SELECT COUNT(*) FROM sr_communities'),
+      serviceQuery('SELECT COUNT(*) FROM sr_climate_regions')
     ]);
     
     res.json({

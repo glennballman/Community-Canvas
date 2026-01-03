@@ -1,8 +1,10 @@
-import { Response, NextFunction } from 'express';
+import { Request, Response, NextFunction, RequestHandler } from 'express';
 import { TenantRequest } from './tenantContext';
 
-export function requireAuth(req: TenantRequest, res: Response, next: NextFunction) {
-  if (!req.ctx?.individual_id) {
+// Cast to RequestHandler for Express Router compatibility
+export const requireAuth: RequestHandler = (req: Request, res: Response, next: NextFunction) => {
+  const tenantReq = req as TenantRequest;
+  if (!tenantReq.ctx?.individual_id) {
     return res.status(401).json({ 
       success: false, 
       error: 'Authentication required',
@@ -10,10 +12,11 @@ export function requireAuth(req: TenantRequest, res: Response, next: NextFunctio
     });
   }
   next();
-}
+};
 
-export function requireTenant(req: TenantRequest, res: Response, next: NextFunction) {
-  if (!req.ctx?.tenant_id) {
+export const requireTenant: RequestHandler = (req: Request, res: Response, next: NextFunction) => {
+  const tenantReq = req as TenantRequest;
+  if (!tenantReq.ctx?.tenant_id) {
     return res.status(401).json({ 
       success: false, 
       error: 'Tenant context required',
@@ -21,10 +24,11 @@ export function requireTenant(req: TenantRequest, res: Response, next: NextFunct
     });
   }
   next();
-}
+};
 
-export function requirePortal(req: TenantRequest, res: Response, next: NextFunction) {
-  if (!req.ctx?.portal_id) {
+export const requirePortal: RequestHandler = (req: Request, res: Response, next: NextFunction) => {
+  const tenantReq = req as TenantRequest;
+  if (!tenantReq.ctx?.portal_id) {
     return res.status(401).json({ 
       success: false, 
       error: 'Portal context required',
@@ -32,10 +36,11 @@ export function requirePortal(req: TenantRequest, res: Response, next: NextFunct
     });
   }
   next();
-}
+};
 
-export function requireTenantOrPortal(req: TenantRequest, res: Response, next: NextFunction) {
-  if (!req.ctx?.tenant_id && !req.ctx?.portal_id) {
+export const requireTenantOrPortal: RequestHandler = (req: Request, res: Response, next: NextFunction) => {
+  const tenantReq = req as TenantRequest;
+  if (!tenantReq.ctx?.tenant_id && !tenantReq.ctx?.portal_id) {
     return res.status(401).json({ 
       success: false, 
       error: 'Tenant or portal context required',
@@ -43,11 +48,12 @@ export function requireTenantOrPortal(req: TenantRequest, res: Response, next: N
     });
   }
   next();
-}
+};
 
-export function requireRole(...requiredRoles: string[]) {
-  return (req: TenantRequest, res: Response, next: NextFunction) => {
-    if (!req.ctx?.individual_id) {
+export function requireRole(...requiredRoles: string[]): RequestHandler {
+  return (req: Request, res: Response, next: NextFunction) => {
+    const tenantReq = req as TenantRequest;
+    if (!tenantReq.ctx?.individual_id) {
       return res.status(401).json({ 
         success: false, 
         error: 'Authentication required',
@@ -55,7 +61,7 @@ export function requireRole(...requiredRoles: string[]) {
       });
     }
 
-    const userRoles = req.ctx.roles || [];
+    const userRoles = tenantReq.ctx.roles || [];
     const hasRole = requiredRoles.some(role => userRoles.includes(role));
     
     if (!hasRole) {
@@ -70,9 +76,10 @@ export function requireRole(...requiredRoles: string[]) {
   };
 }
 
-export function requireScope(...requiredScopes: string[]) {
-  return (req: TenantRequest, res: Response, next: NextFunction) => {
-    const userScopes = req.ctx?.scopes || [];
+export function requireScope(...requiredScopes: string[]): RequestHandler {
+  return (req: Request, res: Response, next: NextFunction) => {
+    const tenantReq = req as TenantRequest;
+    const userScopes = tenantReq.ctx?.scopes || [];
     const hasScope = requiredScopes.every(scope => userScopes.includes(scope));
     
     if (!hasScope) {
@@ -87,9 +94,10 @@ export function requireScope(...requiredScopes: string[]) {
   };
 }
 
-export function requireSelfOrAdmin(paramName: string = 'id') {
-  return (req: TenantRequest, res: Response, next: NextFunction) => {
-    if (!req.ctx?.individual_id) {
+export function requireSelfOrAdmin(paramName: string = 'id'): RequestHandler {
+  return (req: Request, res: Response, next: NextFunction) => {
+    const tenantReq = req as TenantRequest;
+    if (!tenantReq.ctx?.individual_id) {
       return res.status(401).json({ 
         success: false, 
         error: 'Authentication required',
@@ -98,8 +106,8 @@ export function requireSelfOrAdmin(paramName: string = 'id') {
     }
 
     const requestedId = req.params[paramName];
-    const isAdmin = req.ctx.roles?.includes('admin');
-    const isSelf = req.ctx.individual_id === requestedId;
+    const isAdmin = tenantReq.ctx.roles?.includes('admin');
+    const isSelf = tenantReq.ctx.individual_id === requestedId;
     
     if (!isAdmin && !isSelf) {
       return res.status(403).json({ 
@@ -113,6 +121,34 @@ export function requireSelfOrAdmin(paramName: string = 'id') {
   };
 }
 
-export function optionalAuth(req: TenantRequest, res: Response, next: NextFunction) {
+export const optionalAuth: RequestHandler = (req: Request, res: Response, next: NextFunction) => {
   next();
-}
+};
+
+// Require authenticated session but allow missing individual profile
+// Use this for endpoints like /me that need to serve both new and existing users
+// Only trusts VERIFIED authentication signals: Passport session or req.user (set by Passport)
+export const requireSession: RequestHandler = (req: Request, res: Response, next: NextFunction) => {
+  // Method 1: Passport's isAuthenticated() - set after successful deserializeUser
+  const isPassportAuth = typeof (req as any).isAuthenticated === 'function' && (req as any).isAuthenticated();
+  
+  // Method 2: req.user object - set by Passport during session hydration
+  // This is a TRUSTED source as Passport validates the session cookie
+  const hasUser = !!(req as any).user;
+  
+  // Method 3: Session userId - set by our session middleware after login
+  // This is TRUSTED as express-session validates the session cookie signature
+  const hasSessionAuth = !!(req as any).session?.userId;
+  
+  // SECURITY: Only accept verified authentication signals
+  // ctx.individual_id is populated FROM these sources by tenantContext middleware,
+  // so checking it directly would be redundant and less secure
+  if (!isPassportAuth && !hasUser && !hasSessionAuth) {
+    return res.status(401).json({ 
+      success: false, 
+      error: 'Authentication required',
+      code: 'AUTH_REQUIRED'
+    });
+  }
+  next();
+};

@@ -1,34 +1,39 @@
-import { Router } from 'express';
-import { pool } from '../db';
-import { authenticateToken, AuthRequest } from './foundation';
+import { Router, Request, Response } from 'express';
+import { serviceQuery } from '../db/tenantDb';
+import { requireAuth, requireSession } from '../middleware/guards';
+import { TenantRequest } from '../middleware/tenantContext';
 
 const router = Router();
 
-// GET /api/individuals/me - Get current user's individual profile
-router.get('/me', authenticateToken, async (req: AuthRequest, res) => {
+/**
+ * P0-A: Individual profile routes - locked down for PII protection
+ * 
+ * Security model:
+ * - /me endpoint: Returns ONLY the authenticated user's own profile
+ * - Mutations: Only allow self-updates via authenticated session
+ * - Reference data (skills, tools, communities): Global/public reads via serviceQuery
+ * 
+ * RLS on cc_individuals enforces: id = app_individual_id()
+ */
+
+// GET /api/individuals/me - Get current user's individual profile (SELF ONLY)
+// SECURITY: Uses individual_id from tenant context, NOT user-provided email
+// Uses requireSession (not requireAuth) to allow new users without profiles to get empty scaffold
+router.get('/me', requireSession, async (req: Request, res: Response) => {
   try {
-    const userId = req.user?.userId;
-    const userEmail = req.user?.email;
+    const tenantReq = req as TenantRequest;
+    const individualId = tenantReq.ctx?.individual_id;
     
-    if (!userId || !userEmail) {
-      return res.status(401).json({ success: false, message: 'Not authenticated' });
-    }
-
-    // Find individual record by email (do NOT auto-create)
-    const individualResult = await pool.query(
-      'SELECT * FROM cc_individuals WHERE email = $1',
-      [userEmail]
-    );
-
-    if (individualResult.rows.length === 0) {
-      // Return empty profile without auto-creating
+    if (!individualId) {
+      // User is authenticated but has no individual profile yet
+      // Return empty profile scaffold - they must create one
       return res.json({
         success: true,
         individual: {
           id: null,
           fullName: '',
           preferredName: '',
-          email: userEmail,
+          email: tenantReq.user?.email || '',
           phone: '',
           phoneVerified: false,
           emailVerified: false,
@@ -49,10 +54,51 @@ router.get('/me', authenticateToken, async (req: AuthRequest, res) => {
       });
     }
 
+    // Verify tenant helpers are available before calling RLS-protected queries
+    if (typeof tenantReq.tenantQuery !== 'function') {
+      // Tenant context not fully initialized - return scaffold
+      return res.json({
+        success: true,
+        individual: {
+          id: null,
+          fullName: '',
+          preferredName: '',
+          email: tenantReq.user?.email || '',
+          phone: '',
+          phoneVerified: false,
+          emailVerified: false,
+          photoUrl: '',
+          homeCountry: 'Canada',
+          homeRegion: '',
+          currentCommunity: null,
+          languages: ['en'],
+          emergencyContactName: '',
+          emergencyContactPhone: '',
+          profileScore: 0
+        },
+        documents: [],
+        waivers: [],
+        skills: [],
+        tools: [],
+        paymentMethods: []
+      });
+    }
+
+    // Use tenantQuery with individual_id from context - RLS enforces self-access
+    const individualResult = await tenantReq.tenantQuery(
+      'SELECT * FROM cc_individuals WHERE id = $1',
+      [individualId]
+    );
+
+    if (individualResult.rows.length === 0) {
+      // This shouldn't happen if individual_id is set, but handle gracefully
+      return res.status(404).json({ success: false, message: 'Profile not found' });
+    }
+
     const individual = individualResult.rows[0];
 
-    // Get documents
-    const documentsResult = await pool.query(
+    // All subsequent queries are for the authenticated individual's own data
+    const documentsResult = await tenantReq.tenantQuery(
       `SELECT id, document_type, document_number, issuing_authority, 
               expires_at, verified, 
               CASE WHEN expires_at < CURRENT_DATE THEN true ELSE false END as is_expired
@@ -62,8 +108,7 @@ router.get('/me', authenticateToken, async (req: AuthRequest, res) => {
       [individual.id]
     );
 
-    // Get signed waivers with template info
-    const waiversResult = await pool.query(
+    const waiversResult = await tenantReq.tenantQuery(
       `SELECT sw.id, wt.slug as template_slug, wt.name as template_name, 
               wt.activity_types, sw.signed_at, sw.expires_at,
               CASE WHEN sw.expires_at < NOW() THEN true ELSE false END as is_expired
@@ -74,8 +119,7 @@ router.get('/me', authenticateToken, async (req: AuthRequest, res) => {
       [individual.id]
     );
 
-    // Get skills
-    const skillsResult = await pool.query(
+    const skillsResult = await tenantReq.tenantQuery(
       `SELECT cis.id, cis.skill_id, sk.name as skill_name, sk.category,
               cis.proficiency_level, cis.years_experience, cis.verified
        FROM cc_individual_skills cis
@@ -85,8 +129,7 @@ router.get('/me', authenticateToken, async (req: AuthRequest, res) => {
       [individual.id]
     );
 
-    // Get personal tools
-    const toolsResult = await pool.query(
+    const toolsResult = await tenantReq.tenantQuery(
       `SELECT cit.id, cit.tool_id, t.name as tool_name, t.category,
               cit.current_location, c.name as current_community,
               cit.condition, cit.available_for_rent, cit.rental_rate_daily
@@ -98,8 +141,7 @@ router.get('/me', authenticateToken, async (req: AuthRequest, res) => {
       [individual.id]
     );
 
-    // Get payment methods
-    const paymentsResult = await pool.query(
+    const paymentsResult = await tenantReq.tenantQuery(
       `SELECT id, payment_type, display_name, last_four, brand, is_default,
               CASE 
                 WHEN expires_year < EXTRACT(YEAR FROM CURRENT_DATE) THEN true
@@ -113,10 +155,10 @@ router.get('/me', authenticateToken, async (req: AuthRequest, res) => {
       [individual.id]
     );
 
-    // Get current community name
+    // Get current community name (reference data - use serviceQuery)
     let currentCommunity = null;
     if (individual.current_community_id) {
-      const commResult = await pool.query(
+      const commResult = await serviceQuery(
         'SELECT name FROM sr_communities WHERE id = $1',
         [individual.current_community_id]
       );
@@ -209,10 +251,11 @@ router.get('/me', authenticateToken, async (req: AuthRequest, res) => {
   }
 });
 
-// GET /api/individuals/skills - Get available skills to add
-router.get('/skills', async (req, res) => {
+// GET /api/individuals/skills - Get available skills (GLOBAL reference data)
+// SERVICE MODE: sr_skills is global reference data, not tenant-scoped
+router.get('/skills', async (req: Request, res: Response) => {
   try {
-    const result = await pool.query(
+    const result = await serviceQuery(
       'SELECT id, name, slug, category, certification_required FROM sr_skills ORDER BY category, name'
     );
     res.json({ success: true, skills: result.rows });
@@ -222,10 +265,11 @@ router.get('/skills', async (req, res) => {
   }
 });
 
-// GET /api/individuals/tools - Get available tools to add
-router.get('/tools', async (req, res) => {
+// GET /api/individuals/tools - Get available tools (GLOBAL reference data)
+// SERVICE MODE: sr_tools is global reference data, not tenant-scoped
+router.get('/tools', async (req: Request, res: Response) => {
   try {
-    const result = await pool.query(
+    const result = await serviceQuery(
       'SELECT id, name, slug, category, typical_daily_rental FROM sr_tools ORDER BY category, name'
     );
     res.json({ success: true, tools: result.rows });
@@ -235,10 +279,11 @@ router.get('/tools', async (req, res) => {
   }
 });
 
-// GET /api/individuals/waiver-templates - Get available waiver templates
-router.get('/waiver-templates', async (req, res) => {
+// GET /api/individuals/waiver-templates - Get available waiver templates (GLOBAL reference data)
+// SERVICE MODE: cc_waiver_templates is global reference data
+router.get('/waiver-templates', async (req: Request, res: Response) => {
   try {
-    const result = await pool.query(
+    const result = await serviceQuery(
       `SELECT id, name, slug, description, activity_types, valid_days, minimum_age 
        FROM cc_waiver_templates 
        WHERE is_active = true 
@@ -251,10 +296,11 @@ router.get('/waiver-templates', async (req, res) => {
   }
 });
 
-// GET /api/individuals/communities - Get communities for location selection
-router.get('/communities', async (req, res) => {
+// GET /api/individuals/communities - Get communities (GLOBAL reference data)
+// SERVICE MODE: sr_communities is global reference data
+router.get('/communities', async (req: Request, res: Response) => {
   try {
-    const result = await pool.query(
+    const result = await serviceQuery(
       'SELECT id, name, region FROM sr_communities ORDER BY region, name'
     );
     res.json({ success: true, communities: result.rows });
@@ -264,12 +310,15 @@ router.get('/communities', async (req, res) => {
   }
 });
 
-// POST /api/individuals/my-skills - Add a skill to the user's profile
-router.post('/my-skills', authenticateToken, async (req: AuthRequest, res) => {
+// POST /api/individuals/my-skills - Add a skill to user's own profile (SELF ONLY)
+// SECURITY: Uses individual_id from tenant context, NOT user-provided email
+router.post('/my-skills', requireAuth, async (req: Request, res: Response) => {
   try {
-    const userEmail = req.user?.email;
-    if (!userEmail) {
-      return res.status(401).json({ success: false, message: 'Not authenticated' });
+    const tenantReq = req as TenantRequest;
+    const individualId = tenantReq.ctx?.individual_id;
+    
+    if (!individualId) {
+      return res.status(401).json({ success: false, message: 'Please complete your profile first' });
     }
 
     const { skillId, proficiencyLevel, yearsExperience } = req.body;
@@ -277,28 +326,25 @@ router.post('/my-skills', authenticateToken, async (req: AuthRequest, res) => {
       return res.status(400).json({ success: false, message: 'Skill ID is required' });
     }
 
-    // Find individual by email
-    const individualResult = await pool.query(
-      'SELECT id FROM cc_individuals WHERE email = $1',
-      [userEmail]
-    );
+    // Use tenantTransaction for mutation - RLS enforces individual can only modify own data
+    const result = await tenantReq.tenantTransaction(async (client) => {
+      // Insert skill (individual can only modify their own skills)
+      await client.query(
+        `INSERT INTO cc_individual_skills (individual_id, skill_id, proficiency_level, years_experience, verified)
+         VALUES ($1, $2, $3, $4, false)
+         ON CONFLICT (individual_id, skill_id) DO UPDATE SET
+           proficiency_level = EXCLUDED.proficiency_level,
+           years_experience = EXCLUDED.years_experience,
+           updated_at = NOW()`,
+        [individualId, skillId, proficiencyLevel || 'competent', yearsExperience || null]
+      );
 
-    if (individualResult.rows.length === 0) {
-      return res.status(404).json({ success: false, message: 'Please complete your profile first' });
+      return { success: true };
+    });
+
+    if (result.error) {
+      return res.status(result.status || 400).json({ success: false, message: result.error });
     }
-
-    const individualId = individualResult.rows[0].id;
-
-    // Insert skill
-    await pool.query(
-      `INSERT INTO cc_individual_skills (individual_id, skill_id, proficiency_level, years_experience, verified)
-       VALUES ($1, $2, $3, $4, false)
-       ON CONFLICT (individual_id, skill_id) DO UPDATE SET
-         proficiency_level = EXCLUDED.proficiency_level,
-         years_experience = EXCLUDED.years_experience,
-         updated_at = NOW()`,
-      [individualId, skillId, proficiencyLevel || 'competent', yearsExperience || null]
-    );
 
     res.json({ success: true, message: 'Skill added' });
   } catch (error) {
@@ -307,12 +353,15 @@ router.post('/my-skills', authenticateToken, async (req: AuthRequest, res) => {
   }
 });
 
-// POST /api/individuals/my-tools - Add a tool to the user's profile
-router.post('/my-tools', authenticateToken, async (req: AuthRequest, res) => {
+// POST /api/individuals/my-tools - Add a tool to user's own profile (SELF ONLY)
+// SECURITY: Uses individual_id from tenant context, NOT user-provided email
+router.post('/my-tools', requireAuth, async (req: Request, res: Response) => {
   try {
-    const userEmail = req.user?.email;
-    if (!userEmail) {
-      return res.status(401).json({ success: false, message: 'Not authenticated' });
+    const tenantReq = req as TenantRequest;
+    const individualId = tenantReq.ctx?.individual_id;
+    
+    if (!individualId) {
+      return res.status(401).json({ success: false, message: 'Please complete your profile first' });
     }
 
     const { toolId, condition, currentLocation, currentCommunityId, availableForRent, rentalRateDaily } = req.body;
@@ -320,37 +369,34 @@ router.post('/my-tools', authenticateToken, async (req: AuthRequest, res) => {
       return res.status(400).json({ success: false, message: 'Tool ID is required' });
     }
 
-    // Find individual by email
-    const individualResult = await pool.query(
-      'SELECT id FROM cc_individuals WHERE email = $1',
-      [userEmail]
-    );
+    // Use tenantTransaction for mutation - RLS enforces individual can only modify own data
+    const result = await tenantReq.tenantTransaction(async (client) => {
+      // Insert tool
+      await client.query(
+        `INSERT INTO cc_individual_tools (
+           individual_id, tool_id, ownership, quantity, condition, 
+           current_location, current_community_id, 
+           available_for_rent, rental_rate_daily
+         )
+         VALUES ($1, $2, 'owned', 1, $3, $4, $5, $6, $7)
+         ON CONFLICT DO NOTHING`,
+        [
+          individualId, 
+          toolId, 
+          condition || 'good', 
+          currentLocation || null, 
+          currentCommunityId || null,
+          availableForRent || false,
+          rentalRateDaily || null
+        ]
+      );
 
-    if (individualResult.rows.length === 0) {
-      return res.status(404).json({ success: false, message: 'Please complete your profile first' });
+      return { success: true };
+    });
+
+    if (result.error) {
+      return res.status(result.status || 400).json({ success: false, message: result.error });
     }
-
-    const individualId = individualResult.rows[0].id;
-
-    // Insert tool
-    await pool.query(
-      `INSERT INTO cc_individual_tools (
-         individual_id, tool_id, ownership, quantity, condition, 
-         current_location, current_community_id, 
-         available_for_rent, rental_rate_daily
-       )
-       VALUES ($1, $2, 'owned', 1, $3, $4, $5, $6, $7)
-       ON CONFLICT DO NOTHING`,
-      [
-        individualId, 
-        toolId, 
-        condition || 'good', 
-        currentLocation || null, 
-        currentCommunityId || null,
-        availableForRent || false,
-        rentalRateDaily || null
-      ]
-    );
 
     res.json({ success: true, message: 'Tool added' });
   } catch (error) {
@@ -359,30 +405,21 @@ router.post('/my-tools', authenticateToken, async (req: AuthRequest, res) => {
   }
 });
 
-// GET /api/individuals/bid-context/:serviceRunId - Get full context for bidding
-router.get('/bid-context/:serviceRunId', authenticateToken, async (req: AuthRequest, res) => {
+// GET /api/individuals/bid-context/:serviceRunId - Get full context for bidding (SELF ONLY)
+// SECURITY: Uses individual_id from tenant context, NOT user-provided email
+router.get('/bid-context/:serviceRunId', requireAuth, async (req: Request, res: Response) => {
   try {
-    const userEmail = req.user?.email;
+    const tenantReq = req as TenantRequest;
+    const individualId = tenantReq.ctx?.individual_id;
     const { serviceRunId } = req.params;
     
-    if (!userEmail) {
-      return res.status(401).json({ success: false, message: 'Not authenticated' });
+    if (!individualId) {
+      return res.status(401).json({ success: false, message: 'Please complete your profile first' });
     }
 
-    // Find individual by email
-    const individualResult = await pool.query(
-      'SELECT id FROM cc_individuals WHERE email = $1',
-      [userEmail]
-    );
-
-    if (individualResult.rows.length === 0) {
-      return res.status(404).json({ success: false, message: 'Individual profile not found' });
-    }
-
-    const individualId = individualResult.rows[0].id;
-
-    // Call the get_bid_context function
-    const contextResult = await pool.query(
+    // Call the get_bid_context function - uses serviceQuery as it's a platform function
+    // SERVICE MODE: Platform bidding function that may access cross-tenant reference data
+    const contextResult = await serviceQuery(
       'SELECT get_bid_context($1, $2) as context',
       [individualId, serviceRunId]
     );

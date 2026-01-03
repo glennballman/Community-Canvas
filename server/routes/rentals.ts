@@ -1,10 +1,18 @@
 import { Router, Request, Response } from 'express';
-import { db, pool } from '../db';
-import { sql } from 'drizzle-orm';
-import { authenticateToken, AuthRequest } from '../middleware/auth';
+import { serviceQuery } from '../db/tenantDb';
+import { requireAuth } from '../middleware/guards';
 import { z } from 'zod';
 
 const router = Router();
+
+/**
+ * P0-C: Rental Routes - Assets, availability, and bookings
+ * 
+ * Security model:
+ * - /browse, /quote: Public reads, use serviceQuery (global inventory)
+ * - Authenticated endpoints: Use tenantQuery/tenantTransaction for user-scoped data
+ * - Bookings: User can only see/modify their own bookings
+ */
 
 interface RentalCategory {
   id: string;
@@ -56,6 +64,8 @@ const quoteBodySchema = z.object({
 
 const uuidSchema = z.string().uuid();
 
+// GET /api/rentals/browse - Browse rental items (PUBLIC)
+// SERVICE MODE: Rental catalog is public inventory
 router.get('/browse', async (req: Request, res: Response) => {
   try {
     const parsed = browseQuerySchema.safeParse(req.query);
@@ -65,7 +75,7 @@ router.get('/browse', async (req: Request, res: Response) => {
     
     const { category, community, search } = parsed.data;
     
-    const categoriesResult = await pool.query(`
+    const categoriesResult = await serviceQuery(`
       SELECT 
         rc.id,
         rc.name,
@@ -133,7 +143,7 @@ router.get('/browse', async (req: Request, res: Response) => {
     
     itemsQuery += ` ORDER BY rc.sort_order, ri.name`;
     
-    const itemsResult = await pool.query(itemsQuery, params);
+    const itemsResult = await serviceQuery(itemsQuery, params);
     
     const categories: RentalCategory[] = categoriesResult.rows.map(row => ({
       id: row.id,
@@ -179,7 +189,8 @@ router.get('/browse', async (req: Request, res: Response) => {
   }
 });
 
-router.get('/:id/eligibility', authenticateToken, async (req: AuthRequest, res: Response) => {
+// GET /api/rentals/:id/eligibility - Check rental eligibility (SELF)
+router.get('/:id/eligibility', requireAuth, async (req: Request, res: Response) => {
   try {
     const idParsed = uuidSchema.safeParse(req.params.id);
     if (!idParsed.success) {
@@ -187,13 +198,15 @@ router.get('/:id/eligibility', authenticateToken, async (req: AuthRequest, res: 
     }
     
     const itemId = idParsed.data;
-    const userEmail = req.user?.email;
+    const tenantReq = req as any;
+    const userEmail = tenantReq.user?.email || tenantReq.ctx?.email;
     
     if (!userEmail) {
       return res.status(401).json({ success: false, error: 'Not authenticated' });
     }
     
-    const itemResult = await pool.query(`
+    // SERVICE MODE: Item details are public catalog data
+    const itemResult = await serviceQuery(`
       SELECT 
         ri.id,
         rc.required_waiver_slug,
@@ -210,7 +223,8 @@ router.get('/:id/eligibility', authenticateToken, async (req: AuthRequest, res: 
     
     const item = itemResult.rows[0];
     
-    const individualResult = await pool.query(
+    // Use tenantQuery for user-specific data
+    const individualResult = await req.tenantQuery(
       `SELECT id FROM cc_individuals WHERE email = $1`,
       [userEmail]
     );
@@ -234,7 +248,8 @@ router.get('/:id/eligibility', authenticateToken, async (req: AuthRequest, res: 
     
     const individualId = individualResult.rows[0].id;
     
-    const eligibilityResult = await pool.query(
+    // SERVICE MODE: Platform eligibility function
+    const eligibilityResult = await serviceQuery(
       `SELECT can_checkout_unified($1, 'equipment', $2) as eligibility`,
       [individualId, itemId]
     );
@@ -261,6 +276,8 @@ router.get('/:id/eligibility', authenticateToken, async (req: AuthRequest, res: 
   }
 });
 
+// POST /api/rentals/:id/quote - Get price quote (PUBLIC)
+// SERVICE MODE: Pricing calculation is public
 router.post('/:id/quote', async (req: Request, res: Response) => {
   try {
     const idParsed = uuidSchema.safeParse(req.params.id);
@@ -276,7 +293,7 @@ router.post('/:id/quote', async (req: Request, res: Response) => {
     const itemId = idParsed.data;
     const { startTs, endTs } = bodyParsed.data;
     
-    const itemResult = await pool.query(`
+    const itemResult = await serviceQuery(`
       SELECT 
         pricing_model,
         rate_hourly,
@@ -356,7 +373,8 @@ router.post('/:id/quote', async (req: Request, res: Response) => {
   }
 });
 
-router.post('/:id/book', authenticateToken, async (req: AuthRequest, res: Response) => {
+// POST /api/rentals/:id/book - Create booking (SELF)
+router.post('/:id/book', requireAuth, async (req: Request, res: Response) => {
   try {
     const idParsed = uuidSchema.safeParse(req.params.id);
     if (!idParsed.success) {
@@ -370,107 +388,117 @@ router.post('/:id/book', authenticateToken, async (req: AuthRequest, res: Respon
     
     const itemId = idParsed.data;
     const { startTs, endTs } = bodyParsed.data;
-    const userEmail = req.user?.email;
+    const tenantReq = req as any;
+    const userEmail = tenantReq.user?.email || tenantReq.ctx?.email;
     
     if (!userEmail) {
       return res.status(401).json({ success: false, error: 'Not authenticated' });
     }
     
-    const individualResult = await pool.query(
-      `SELECT id FROM cc_individuals WHERE email = $1`,
-      [userEmail]
-    );
+    // Use tenantTransaction for booking creation - user can only book for themselves
+    const result = await req.tenantTransaction(async (client) => {
+      const individualResult = await client.query(
+        `SELECT id FROM cc_individuals WHERE email = $1`,
+        [userEmail]
+      );
+      
+      if (individualResult.rows.length === 0) {
+        return { error: 'Profile required to book', status: 400 };
+      }
+      
+      const individualId = individualResult.rows[0].id;
+      
+      // Check item exists (service mode for catalog data)
+      const itemCheck = await client.query(
+        `SELECT id, buffer_minutes FROM cc_rental_items WHERE id = $1`,
+        [itemId]
+      );
+      
+      if (itemCheck.rows.length === 0) {
+        return { error: 'Item not found', status: 404 };
+      }
+      
+      const bufferMinutes = itemCheck.rows[0].buffer_minutes || 15;
+      
+      // Check conflicts
+      const conflictResult = await client.query(`
+        SELECT COUNT(*) as conflicts
+        FROM cc_rental_bookings
+        WHERE rental_item_id = $1
+        AND status NOT IN ('cancelled', 'completed')
+        AND (
+          (starts_at < $2::timestamptz + ($4 || ' minutes')::interval)
+          AND
+          (ends_at + ($4 || ' minutes')::interval > $3::timestamptz)
+        )
+      `, [itemId, endTs, startTs, bufferMinutes.toString()]);
+      
+      const conflicts = parseInt(conflictResult.rows[0].conflicts);
+      if (conflicts > 0) {
+        return { error: 'Time slot not available', status: 409 };
+      }
+      
+      const start = new Date(startTs);
+      const end = new Date(endTs);
+      const durationHours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+      const durationDays = Math.ceil(durationHours / 24);
+      
+      const priceResult = await client.query(
+        `SELECT rate_hourly, rate_half_day, rate_daily, rate_weekly, damage_deposit FROM cc_rental_items WHERE id = $1`,
+        [itemId]
+      );
+      const priceRow = priceResult.rows[0];
+      const rateHourly = priceRow.rate_hourly ? parseFloat(priceRow.rate_hourly) : null;
+      const rateHalfDay = priceRow.rate_half_day ? parseFloat(priceRow.rate_half_day) : null;
+      const rateDaily = priceRow.rate_daily ? parseFloat(priceRow.rate_daily) : null;
+      const rateWeekly = priceRow.rate_weekly ? parseFloat(priceRow.rate_weekly) : null;
+      const damageDeposit = parseFloat(priceRow.damage_deposit) || 0;
+      
+      let subtotal = 0;
+      if (durationHours <= 4 && rateHourly) {
+        subtotal = rateHourly * durationHours;
+      } else if (durationHours <= 5 && rateHalfDay) {
+        subtotal = rateHalfDay;
+      } else if (durationDays <= 6 && rateDaily) {
+        subtotal = rateDaily * durationDays;
+      } else if (rateWeekly) {
+        subtotal = rateWeekly * Math.ceil(durationDays / 7);
+      } else if (rateDaily) {
+        subtotal = rateDaily * durationDays;
+      } else if (rateHourly) {
+        subtotal = rateHourly * durationHours;
+      }
+      
+      const tax = subtotal * 0.12;
+      const total = subtotal + tax + damageDeposit;
+      
+      const bookingResult = await client.query(`
+        INSERT INTO cc_rental_bookings (
+          rental_item_id,
+          renter_individual_id,
+          starts_at,
+          ends_at,
+          subtotal,
+          tax,
+          damage_deposit_held,
+          total,
+          status
+        ) VALUES ($1, $2, $3::timestamptz, $4::timestamptz, $5, $6, $7, $8, 'confirmed')
+        RETURNING id
+      `, [itemId, individualId, startTs, endTs, subtotal, tax, damageDeposit, total]);
+      
+      return { bookingId: bookingResult.rows[0].id, total };
+    });
     
-    if (individualResult.rows.length === 0) {
-      return res.status(400).json({ success: false, error: 'Profile required to book' });
+    if (result.error) {
+      return res.status(result.status || 400).json({ success: false, error: result.error });
     }
-    
-    const individualId = individualResult.rows[0].id;
-    
-    const itemResult = await pool.query(
-      `SELECT id, buffer_minutes FROM cc_rental_items WHERE id = $1`,
-      [itemId]
-    );
-    
-    if (itemResult.rows.length === 0) {
-      return res.status(404).json({ success: false, error: 'Item not found' });
-    }
-    
-    const bufferMinutes = itemResult.rows[0].buffer_minutes || 15;
-    
-    const conflictResult = await pool.query(`
-      SELECT COUNT(*) as conflicts
-      FROM cc_rental_bookings
-      WHERE rental_item_id = $1
-      AND status NOT IN ('cancelled', 'completed')
-      AND (
-        (starts_at < $2::timestamptz + ($4 || ' minutes')::interval)
-        AND
-        (ends_at + ($4 || ' minutes')::interval > $3::timestamptz)
-      )
-    `, [itemId, endTs, startTs, bufferMinutes.toString()]);
-    
-    const conflicts = parseInt(conflictResult.rows[0].conflicts);
-    if (conflicts > 0) {
-      return res.status(409).json({ success: false, error: 'Time slot not available' });
-    }
-    
-    const start = new Date(startTs);
-    const end = new Date(endTs);
-    const durationHours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
-    const durationDays = Math.ceil(durationHours / 24);
-    
-    const priceResult = await pool.query(
-      `SELECT rate_hourly, rate_half_day, rate_daily, rate_weekly, damage_deposit FROM cc_rental_items WHERE id = $1`,
-      [itemId]
-    );
-    const priceRow = priceResult.rows[0];
-    const rateHourly = priceRow.rate_hourly ? parseFloat(priceRow.rate_hourly) : null;
-    const rateHalfDay = priceRow.rate_half_day ? parseFloat(priceRow.rate_half_day) : null;
-    const rateDaily = priceRow.rate_daily ? parseFloat(priceRow.rate_daily) : null;
-    const rateWeekly = priceRow.rate_weekly ? parseFloat(priceRow.rate_weekly) : null;
-    const damageDeposit = parseFloat(priceRow.damage_deposit) || 0;
-    
-    let subtotal = 0;
-    if (durationHours <= 4 && rateHourly) {
-      subtotal = rateHourly * durationHours;
-    } else if (durationHours <= 5 && rateHalfDay) {
-      subtotal = rateHalfDay;
-    } else if (durationDays <= 6 && rateDaily) {
-      subtotal = rateDaily * durationDays;
-    } else if (rateWeekly) {
-      subtotal = rateWeekly * Math.ceil(durationDays / 7);
-    } else if (rateDaily) {
-      subtotal = rateDaily * durationDays;
-    } else if (rateHourly) {
-      subtotal = rateHourly * durationHours;
-    }
-    
-    const tax = subtotal * 0.12;
-    const total = subtotal + tax + damageDeposit;
-    
-    const bookingResult = await pool.query(`
-      INSERT INTO cc_rental_bookings (
-        rental_item_id,
-        renter_individual_id,
-        starts_at,
-        ends_at,
-        subtotal,
-        tax,
-        damage_deposit_held,
-        total,
-        status
-      ) VALUES ($1, $2, $3::timestamptz, $4::timestamptz, $5, $6, $7, $8, 'confirmed')
-      RETURNING id
-    `, [itemId, individualId, startTs, endTs, subtotal, tax, damageDeposit, total]);
-    
-    const bookingId = bookingResult.rows[0].id;
     
     res.json({
       success: true,
       booking: {
-        id: bookingId,
-        total
+        id: result.bookingId,
+        total: result.total
       }
     });
   } catch (error) {
@@ -479,15 +507,18 @@ router.post('/:id/book', authenticateToken, async (req: AuthRequest, res: Respon
   }
 });
 
-router.get('/my-bookings', authenticateToken, async (req: AuthRequest, res: Response) => {
+// GET /api/rentals/my-bookings - Get user's bookings (SELF)
+router.get('/my-bookings', requireAuth, async (req: Request, res: Response) => {
   try {
-    const userEmail = req.user?.email;
+    const tenantReq = req as any;
+    const userEmail = tenantReq.user?.email || tenantReq.ctx?.email;
     
     if (!userEmail) {
       return res.status(401).json({ success: false, error: 'Not authenticated' });
     }
     
-    const result = await pool.query(`
+    // Use tenantQuery - user can only see their own bookings
+    const result = await req.tenantQuery(`
       SELECT 
         b.id,
         b.starts_at,
@@ -526,15 +557,18 @@ router.get('/my-bookings', authenticateToken, async (req: AuthRequest, res: Resp
   }
 });
 
-router.get('/bookings', authenticateToken, async (req: AuthRequest, res: Response) => {
+// GET /api/rentals/bookings - Get user's detailed bookings (SELF)
+router.get('/bookings', requireAuth, async (req: Request, res: Response) => {
   try {
-    const userEmail = req.user?.email;
+    const tenantReq = req as any;
+    const userEmail = tenantReq.user?.email || tenantReq.ctx?.email;
     
     if (!userEmail) {
       return res.status(401).json({ success: false, error: 'Not authenticated' });
     }
     
-    const indResult = await pool.query(
+    // Use tenantQuery - user can only see their own bookings
+    const indResult = await req.tenantQuery(
       'SELECT id FROM cc_individuals WHERE email = $1',
       [userEmail]
     );
@@ -545,7 +579,7 @@ router.get('/bookings', authenticateToken, async (req: AuthRequest, res: Respons
     
     const individualId = indResult.rows[0].id;
     
-    const result = await pool.query(`
+    const result = await req.tenantQuery(`
       SELECT 
         b.id,
         b.status,
@@ -642,9 +676,11 @@ router.get('/bookings', authenticateToken, async (req: AuthRequest, res: Respons
   }
 });
 
-router.post('/bookings/:id/cancel', authenticateToken, async (req: AuthRequest, res: Response) => {
+// POST /api/rentals/bookings/:id/cancel - Cancel booking (SELF)
+router.post('/bookings/:id/cancel', requireAuth, async (req: Request, res: Response) => {
   try {
-    const userEmail = req.user?.email;
+    const tenantReq = req as any;
+    const userEmail = tenantReq.user?.email || tenantReq.ctx?.email;
     const bookingIdParsed = uuidSchema.safeParse(req.params.id);
     
     if (!bookingIdParsed.success) {
@@ -657,101 +693,52 @@ router.post('/bookings/:id/cancel', authenticateToken, async (req: AuthRequest, 
     
     const bookingId = bookingIdParsed.data;
     
-    const indResult = await pool.query(
-      'SELECT id FROM cc_individuals WHERE email = $1',
-      [userEmail]
-    );
+    // Use tenantTransaction - user can only cancel their own bookings
+    const result = await req.tenantTransaction(async (client) => {
+      const indResult = await client.query(
+        'SELECT id FROM cc_individuals WHERE email = $1',
+        [userEmail]
+      );
+      
+      if (indResult.rows.length === 0) {
+        return { error: 'User not found', status: 404 };
+      }
+      
+      const individualId = indResult.rows[0].id;
+      
+      const bookingResult = await client.query(`
+        SELECT id, status, starts_at 
+        FROM cc_rental_bookings 
+        WHERE id = $1 AND renter_individual_id = $2
+      `, [bookingId, individualId]);
+      
+      if (bookingResult.rows.length === 0) {
+        return { error: 'Booking not found', status: 404 };
+      }
+      
+      const booking = bookingResult.rows[0];
+      
+      if (!['pending', 'confirmed'].includes(booking.status)) {
+        return { error: `Cannot cancel booking with status: ${booking.status}`, status: 400 };
+      }
+      
+      await client.query(`
+        UPDATE cc_rental_bookings 
+        SET status = 'cancelled', updated_at = NOW()
+        WHERE id = $1
+      `, [bookingId]);
+      
+      return { success: true };
+    });
     
-    if (indResult.rows.length === 0) {
-      return res.status(404).json({ success: false, error: 'User not found' });
+    if (result.error) {
+      return res.status(result.status || 400).json({ success: false, error: result.error });
     }
-    
-    const individualId = indResult.rows[0].id;
-    
-    const bookingResult = await pool.query(`
-      SELECT id, status, starts_at 
-      FROM cc_rental_bookings 
-      WHERE id = $1 AND renter_individual_id = $2
-    `, [bookingId, individualId]);
-    
-    if (bookingResult.rows.length === 0) {
-      return res.status(404).json({ success: false, error: 'Booking not found' });
-    }
-    
-    const booking = bookingResult.rows[0];
-    
-    if (!['pending', 'confirmed'].includes(booking.status)) {
-      return res.status(400).json({ 
-        success: false, 
-        error: `Cannot cancel booking with status: ${booking.status}` 
-      });
-    }
-    
-    await pool.query(`
-      UPDATE cc_rental_bookings 
-      SET status = 'cancelled', updated_at = NOW()
-      WHERE id = $1
-    `, [bookingId]);
     
     res.json({ success: true, message: 'Booking cancelled' });
   } catch (error) {
     console.error('Error cancelling booking:', error);
     res.status(500).json({ success: false, error: 'Failed to cancel booking' });
-  }
-});
-
-router.get('/bookings/:id', authenticateToken, async (req: AuthRequest, res: Response) => {
-  try {
-    const userEmail = req.user?.email;
-    const bookingIdParsed = uuidSchema.safeParse(req.params.id);
-    
-    if (!bookingIdParsed.success) {
-      return res.status(400).json({ success: false, error: 'Invalid booking ID' });
-    }
-    
-    if (!userEmail) {
-      return res.status(401).json({ success: false, error: 'Not authenticated' });
-    }
-    
-    const bookingId = bookingIdParsed.data;
-    
-    const indResult = await pool.query(
-      'SELECT id FROM cc_individuals WHERE email = $1',
-      [userEmail]
-    );
-    
-    if (indResult.rows.length === 0) {
-      return res.status(404).json({ success: false, error: 'User not found' });
-    }
-    
-    const individualId = indResult.rows[0].id;
-    
-    const result = await pool.query(`
-      SELECT 
-        b.*,
-        ri.name as item_name,
-        ri.description as item_description,
-        ri.location_name,
-        ri.owner_name,
-        ri.included_items,
-        rc.name as category_name,
-        rc.icon as category_icon,
-        c.name as community_name
-      FROM cc_rental_bookings b
-      JOIN cc_rental_items ri ON ri.id = b.rental_item_id
-      JOIN cc_rental_categories rc ON rc.id = ri.category_id
-      LEFT JOIN sr_communities c ON c.id = ri.home_community_id
-      WHERE b.id = $1 AND b.renter_individual_id = $2
-    `, [bookingId, individualId]);
-    
-    if (result.rows.length === 0) {
-      return res.status(404).json({ success: false, error: 'Booking not found' });
-    }
-    
-    res.json({ success: true, booking: result.rows[0] });
-  } catch (error) {
-    console.error('Error fetching booking:', error);
-    res.status(500).json({ success: false, error: 'Failed to fetch booking' });
   }
 });
 

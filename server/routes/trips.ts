@@ -1,7 +1,8 @@
 import { Router, Request, Response } from 'express';
-import { Pool } from 'pg';
+import { serviceQuery } from '../db/tenantDb';
+import { requireAuth } from '../middleware/guards';
 
-export function createTripsRouter(db: Pool) {
+export function createTripsRouter() {
   const router = Router();
 
   router.get('/', async (req: Request, res: Response) => {
@@ -53,9 +54,9 @@ export function createTripsRouter(db: Pool) {
       params.push(limit, offset);
       query += ` LIMIT $${paramIndex++} OFFSET $${paramIndex++}`;
       
-      const result = await db.query(query, params);
+      const result = await serviceQuery(query, params);
       
-      const countResult = await db.query(`SELECT COUNT(*) FROM road_trips WHERE is_published = true`);
+      const countResult = await serviceQuery(`SELECT COUNT(*) FROM road_trips WHERE is_published = true`);
       
       res.json({
         trips: result.rows,
@@ -73,7 +74,7 @@ export function createTripsRouter(db: Pool) {
     try {
       const { id } = req.params;
       
-      const tripResult = await db.query(
+      const tripResult = await serviceQuery(
         `SELECT * FROM road_trips WHERE id = $1 OR slug = $1`,
         [id]
       );
@@ -84,15 +85,13 @@ export function createTripsRouter(db: Pool) {
       
       const trip = tripResult.rows[0];
       
-      const segmentsResult = await db.query(
+      const segmentsResult = await serviceQuery(
         `SELECT * FROM trip_segments WHERE trip_id = $1 ORDER BY segment_order`,
         [trip.id]
       );
       
-      await db.query(
-        `INSERT INTO trip_analytics (trip_id, event_type) VALUES ($1, 'view')`,
-        [trip.id]
-      ).catch(() => {});
+      // Analytics logging removed - should be handled by separate background job
+      // to avoid unauthenticated users bypassing RLS
       
       res.json({ ...trip, segments: segmentsResult.rows });
     } catch (error) {
@@ -105,7 +104,7 @@ export function createTripsRouter(db: Pool) {
     try {
       const { id } = req.params;
       
-      const tripResult = await db.query(
+      const tripResult = await serviceQuery(
         `SELECT * FROM road_trips WHERE id = $1 OR slug = $1`,
         [id]
       );
@@ -114,7 +113,7 @@ export function createTripsRouter(db: Pool) {
         return res.status(404).json({ error: 'Trip not found' });
       }
       
-      const alertsResult = await db.query(
+      const alertsResult = await serviceQuery(
         `SELECT * FROM alerts WHERE is_active = true ORDER BY severity DESC LIMIT 10`
       ).catch(() => ({ rows: [] }));
       
@@ -137,7 +136,7 @@ export function createTripsRouter(db: Pool) {
     try {
       const { id } = req.params;
       
-      const segmentsResult = await db.query(
+      const segmentsResult = await serviceQuery(
         `SELECT segment_order, title, webcam_ids FROM trip_segments WHERE trip_id = $1 ORDER BY segment_order`,
         [id]
       );
@@ -146,7 +145,7 @@ export function createTripsRouter(db: Pool) {
       
       let webcams: any[] = [];
       if (allWebcamIds.length > 0) {
-        const webcamsResult = await db.query(
+        const webcamsResult = await serviceQuery(
           `SELECT * FROM entities WHERE id = ANY($1::int[])`,
           [allWebcamIds]
         ).catch(() => ({ rows: [] }));
@@ -174,7 +173,7 @@ export function createTripsRouter(db: Pool) {
 
   router.get('/featured/list', async (_req: Request, res: Response) => {
     try {
-      const result = await db.query(`
+      const result = await serviceQuery(`
         SELECT * FROM road_trips 
         WHERE is_published = true AND is_featured = true 
         ORDER BY popularity_score DESC 

@@ -1,0 +1,87 @@
+Proceed with migrating all API routes from pool.query (or direct DB calls) to the new tenant-aware helpers (req.tenantQuery / req.tenantTransaction) so RLS is enforced at runtime.
+
+CRITICAL REQUIREMENTS:
+- Any route touching tenant data MUST use req.tenantQuery or req.tenantTransaction (or serviceQuery/serviceTransaction ONLY for explicit background/admin service-mode tasks).
+- Remove or block any unauthenticated listing endpoints that return cross-tenant data.
+- Apply guard middleware consistently:
+  - requireAuth for PII and anything that mutates data
+  - requireTenant for tenant-scoped resources
+  - allow portal-only read where explicitly designed (portal_id + visibility_scope)
+
+ORDER OF OPERATIONS (must follow):
+P0-A) Lock down PII immediately
+1) /api/individuals:
+   - Replace all direct queries with req.tenantQuery/tenantTransaction OR selfQuery pattern.
+   - Create GET /api/individuals/me only:
+       SELECT * FROM cc_individuals WHERE id = app_individual_id()
+     using tenant-aware context (tenant_id may be empty; RLS for cc_individuals should allow self read via individual id config).
+   - Disable any endpoint that lists all individuals unless requireRole('admin') AND service mode.
+   - Ensure updates only allow self update and use req.tenantTransaction.
+
+P0-B) Stop cross-tenant “entities” leakage
+2) /api/entities:
+   - Migrate to req.tenantQuery.
+   - If entities are truly global/public, move them to service mode with explicit rationale OR add portal/public filters.
+   - If it’s a tenant resource, enforce requireTenant and filter by tenant_id or RLS.
+   - No endpoint should return “all entities” without tenant/portal scoping.
+
+P0-C) Service runs / bundles / bids / opportunities / assets
+3) /api/service-runs:
+   - Migrate to req.tenantQuery.
+   - If service runs are platform-global reference data, mark queries as serviceQuery and make the endpoint read-only.
+   - If any tenant customizations exist, enforce tenant scope.
+
+4) /api/assets (+ /api/asset_terms / /api/availability if separate):
+   - Migrate to req.tenantQuery.
+   - Enforce that reads return only:
+       - tenant-owned assets (owner_tenant_id = app_tenant_id())
+       - OR portal-only assets when portal context exists and visibility_scope='portal_only'
+   - Mutations requireTenant + requireAuth and must never use service mode.
+
+5) /api/opportunities:
+   - Migrate to req.tenantQuery.
+   - Read endpoints return only:
+       - tenant-owned opportunities
+       - OR portal-only opportunities scoped to app_portal_id
+   - Mutations requireTenant + requireAuth.
+
+6) /api/bids, /api/contracts, /api/work_orders:
+   - Migrate to req.tenantTransaction for multi-step operations.
+   - Ensure award/contract creation uses tenantTransaction so all inserts/updates share the same RLS context.
+
+P0-D) Portal admin routes
+7) /api/portal/* (domains, feature flags, copy):
+   - Migrate to req.tenantQuery.
+   - Require requireAuth + requireRole('admin') + requireTenant.
+   - Do NOT expose verification tokens.
+
+P0-E) Data ingestion / Apify / Firecrawl routes
+8) Any ingestion routes MUST be:
+   - service mode only (serviceQuery/withServiceTransaction)
+   - protected with a server-side secret or internal-only guard
+   - rate limited if easy (even minimal)
+
+IMPLEMENTATION CONSTRAINTS:
+- Do not “fix” RLS by adding WHERE tenant_id clauses everywhere. The goal is: RLS enforces it.
+- Only use service mode when absolutely necessary. Any use of __SERVICE__ must be justified in code comments.
+- Update each route file with a consistent pattern:
+   Before: pool.query(...)
+   After: req.tenantQuery(...) OR req.tenantTransaction(async (tx)=>{ ... })
+
+DELIVERABLES:
+1) A commit that migrates routes in the order above.
+2) A list of migrated files + endpoints.
+3) A QA script (curl commands) demonstrating:
+   - unauthenticated cannot access tenant resources
+   - tenant A cannot access tenant B
+   - portal-only reads work with portal domain header
+   - /api/individuals returns self only
+4) A “service mode audit” list: where __SERVICE__ is used and why.
+
+ACCEPTANCE TESTS (must pass):
+- Attempt GET /api/individuals (list) => 403 or 404
+- GET /api/individuals/me with auth => returns only self
+- GET tenant A asset by id from tenant B => 404/empty
+- GET portal-only opportunity with portal domain host header => returns it
+- GET portal-only opportunity without portal context => not returned
+- No route uses pool.query directly anymore for tenant data
