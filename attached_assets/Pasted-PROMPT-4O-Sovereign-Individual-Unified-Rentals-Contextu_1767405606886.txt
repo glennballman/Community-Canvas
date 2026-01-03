@@ -1,0 +1,1071 @@
+PROMPT 4O: Sovereign Individual + Unified Rentals + Contextual Tool Matching
+sql-- =====================================================================
+-- SOVEREIGN INDIVIDUAL PROFILE
+-- One identity that travels across all of Community Canvas
+-- =====================================================================
+
+-- =====================================================================
+-- 1. CORE IDENTITY (The "Passport")
+-- =====================================================================
+
+CREATE TABLE IF NOT EXISTS cc_individuals (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    
+    -- Core identity
+    full_name TEXT NOT NULL,
+    preferred_name TEXT DEFAULT '',
+    email TEXT NOT NULL UNIQUE,
+    phone TEXT DEFAULT '',
+    phone_verified BOOLEAN DEFAULT false,
+    email_verified BOOLEAN DEFAULT false,
+    
+    -- Photo/Avatar
+    photo_url TEXT DEFAULT '',
+    photo_verified_at TIMESTAMPTZ,
+    
+    -- Location context
+    home_country TEXT DEFAULT 'Canada',
+    home_region TEXT DEFAULT '',  -- Province/State
+    home_community_id UUID REFERENCES sr_communities(id),
+    current_community_id UUID REFERENCES sr_communities(id),
+    
+    -- Languages
+    languages TEXT[] DEFAULT '{"en"}',
+    
+    -- Emergency contact
+    emergency_contact_name TEXT DEFAULT '',
+    emergency_contact_phone TEXT DEFAULT '',
+    emergency_contact_relationship TEXT DEFAULT '',
+    
+    -- Profile completeness
+    profile_complete BOOLEAN DEFAULT false,
+    profile_score INTEGER DEFAULT 0, -- 0-100
+    
+    -- Status
+    status TEXT DEFAULT 'active' CHECK (status IN ('pending', 'active', 'suspended', 'deactivated')),
+    
+    -- Timestamps
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    last_active_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- =====================================================================
+-- 2. IDENTITY DOCUMENTS (Licenses, IDs - captured ONCE)
+-- =====================================================================
+
+CREATE TABLE IF NOT EXISTS cc_identity_documents (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    individual_id UUID NOT NULL REFERENCES cc_individuals(id) ON DELETE CASCADE,
+    
+    document_type TEXT NOT NULL CHECK (document_type IN (
+        'drivers_license',
+        'passport',
+        'boat_license',
+        'atv_license', 
+        'photo_id',
+        'work_permit',
+        'trade_certificate',
+        'insurance_certificate',
+        'background_check'
+    )),
+    
+    -- Document details
+    document_number TEXT DEFAULT '',
+    issuing_authority TEXT DEFAULT '',
+    issuing_region TEXT DEFAULT '', -- Province/State/Country
+    
+    -- Validity
+    issued_at DATE,
+    expires_at DATE,
+    is_expired BOOLEAN GENERATED ALWAYS AS (expires_at < CURRENT_DATE) STORED,
+    
+    -- Verification
+    verified BOOLEAN DEFAULT false,
+    verified_at TIMESTAMPTZ,
+    verified_by UUID,
+    verification_method TEXT DEFAULT '', -- 'manual', 'automated', 'third_party'
+    
+    -- Document images (encrypted storage reference)
+    front_image_url TEXT DEFAULT '',
+    back_image_url TEXT DEFAULT '',
+    
+    -- Extracted data
+    extracted_data JSONB DEFAULT '{}',
+    -- e.g., {"class": "5", "restrictions": ["corrective lenses"], "dob": "1985-03-15"}
+    
+    notes TEXT DEFAULT '',
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    
+    UNIQUE(individual_id, document_type, document_number)
+);
+
+CREATE INDEX idx_cc_identity_docs_individual ON cc_identity_documents(individual_id);
+CREATE INDEX idx_cc_identity_docs_type ON cc_identity_documents(document_type);
+CREATE INDEX idx_cc_identity_docs_expires ON cc_identity_documents(expires_at);
+
+-- =====================================================================
+-- 3. WAIVERS & LIABILITY (Sign ONCE per activity type)
+-- =====================================================================
+
+CREATE TABLE IF NOT EXISTS cc_waiver_templates (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    
+    name TEXT NOT NULL,
+    slug TEXT NOT NULL UNIQUE,
+    description TEXT DEFAULT '',
+    
+    -- What this waiver covers
+    activity_types TEXT[] NOT NULL,
+    -- e.g., ['kayak', 'paddleboard', 'canoe'] or ['atv', 'side_by_side'] or ['power_tools', 'ladders']
+    
+    -- The actual waiver content
+    waiver_text TEXT NOT NULL,
+    version TEXT DEFAULT '1.0',
+    
+    -- Validity
+    valid_days INTEGER DEFAULT 365, -- How long signature is valid
+    requires_witness BOOLEAN DEFAULT false,
+    requires_guardian_if_minor BOOLEAN DEFAULT true,
+    minimum_age INTEGER DEFAULT 18,
+    
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Seed common waivers
+INSERT INTO cc_waiver_templates (name, slug, activity_types, waiver_text, valid_days) VALUES
+('Watercraft Liability Waiver', 'watercraft-waiver', 
+ '{"kayak", "canoe", "paddleboard", "rowboat", "small_boat"}',
+ 'I acknowledge the inherent risks of watercraft activities...', 365),
+ 
+('Motorized Vehicle Waiver', 'motorized-vehicle-waiver',
+ '{"atv", "side_by_side", "golf_cart", "ebike", "scooter"}',
+ 'I acknowledge the risks of operating motorized vehicles...', 365),
+ 
+('Power Tool & Equipment Waiver', 'power-tool-waiver',
+ '{"power_tools", "ladders", "scaffolding", "pressure_washer", "chainsaw"}',
+ 'I acknowledge the risks of operating power tools and equipment...', 365),
+ 
+('General Activity Waiver', 'general-activity-waiver',
+ '{"hiking", "fishing", "general_recreation"}',
+ 'I acknowledge the risks of recreational activities...', 365)
+ON CONFLICT (slug) DO NOTHING;
+
+CREATE TABLE IF NOT EXISTS cc_signed_waivers (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    individual_id UUID NOT NULL REFERENCES cc_individuals(id) ON DELETE CASCADE,
+    waiver_template_id UUID NOT NULL REFERENCES cc_waiver_templates(id),
+    
+    -- Signature details
+    signed_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    signature_data TEXT DEFAULT '', -- Base64 signature image or typed name
+    signature_method TEXT DEFAULT 'typed' CHECK (signature_method IN ('typed', 'drawn', 'digital_certificate')),
+    
+    -- IP/device for legal record
+    signed_from_ip TEXT DEFAULT '',
+    signed_from_device TEXT DEFAULT '',
+    
+    -- Validity
+    expires_at TIMESTAMPTZ,
+    is_expired BOOLEAN GENERATED ALWAYS AS (expires_at < NOW()) STORED,
+    
+    -- Guardian signature if minor
+    guardian_name TEXT DEFAULT '',
+    guardian_signature_data TEXT DEFAULT '',
+    guardian_relationship TEXT DEFAULT '',
+    
+    -- Witness if required
+    witness_name TEXT DEFAULT '',
+    witness_signature_data TEXT DEFAULT '',
+    
+    notes TEXT DEFAULT '',
+    
+    UNIQUE(individual_id, waiver_template_id, signed_at)
+);
+
+CREATE INDEX idx_cc_signed_waivers_individual ON cc_signed_waivers(individual_id);
+CREATE INDEX idx_cc_signed_waivers_expires ON cc_signed_waivers(expires_at);
+
+-- =====================================================================
+-- 4. PAYMENT METHODS (On file, use anywhere)
+-- =====================================================================
+
+CREATE TABLE IF NOT EXISTS cc_payment_methods (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    individual_id UUID NOT NULL REFERENCES cc_individuals(id) ON DELETE CASCADE,
+    
+    -- Payment type
+    payment_type TEXT NOT NULL CHECK (payment_type IN (
+        'credit_card', 'debit_card', 'bank_account', 'paypal', 'crypto_wallet'
+    )),
+    
+    -- Display info (masked)
+    display_name TEXT DEFAULT '', -- "Visa ending in 4242"
+    last_four TEXT DEFAULT '',
+    brand TEXT DEFAULT '', -- Visa, Mastercard, etc.
+    
+    -- Stripe/processor reference
+    processor TEXT DEFAULT 'stripe',
+    processor_customer_id TEXT DEFAULT '',
+    processor_payment_method_id TEXT DEFAULT '',
+    
+    -- Validity
+    expires_month INTEGER,
+    expires_year INTEGER,
+    is_expired BOOLEAN GENERATED ALWAYS AS (
+        expires_year < EXTRACT(YEAR FROM CURRENT_DATE) OR 
+        (expires_year = EXTRACT(YEAR FROM CURRENT_DATE) AND expires_month < EXTRACT(MONTH FROM CURRENT_DATE))
+    ) STORED,
+    
+    -- Preferences
+    is_default BOOLEAN DEFAULT false,
+    
+    -- Verification
+    verified BOOLEAN DEFAULT false,
+    verified_at TIMESTAMPTZ,
+    
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_cc_payment_methods_individual ON cc_payment_methods(individual_id);
+
+-- =====================================================================
+-- 5. INDIVIDUAL CAPABILITIES (Skills + Tools that travel with them)
+-- =====================================================================
+
+-- Skills (links to sr_skills)
+CREATE TABLE IF NOT EXISTS cc_individual_skills (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    individual_id UUID NOT NULL REFERENCES cc_individuals(id) ON DELETE CASCADE,
+    skill_id UUID NOT NULL REFERENCES sr_skills(id),
+    
+    proficiency_level TEXT DEFAULT 'competent' 
+        CHECK (proficiency_level IN ('learning', 'competent', 'proficient', 'expert')),
+    years_experience INTEGER,
+    
+    -- Verification
+    verified BOOLEAN DEFAULT false,
+    verified_at TIMESTAMPTZ,
+    verified_by UUID,
+    
+    notes TEXT DEFAULT '',
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    
+    UNIQUE(individual_id, skill_id)
+);
+
+-- Personal tools (links to sr_tools)
+CREATE TABLE IF NOT EXISTS cc_individual_tools (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    individual_id UUID NOT NULL REFERENCES cc_individuals(id) ON DELETE CASCADE,
+    tool_id UUID NOT NULL REFERENCES sr_tools(id),
+    
+    -- Ownership
+    ownership TEXT DEFAULT 'owned' CHECK (ownership IN ('owned', 'leased', 'borrowed')),
+    
+    -- Condition
+    quantity INTEGER DEFAULT 1,
+    condition TEXT DEFAULT 'good' CHECK (condition IN ('excellent', 'good', 'fair', 'needs_repair')),
+    
+    -- Current location
+    current_location TEXT DEFAULT '',
+    current_community_id UUID REFERENCES sr_communities(id),
+    
+    -- Availability for rental
+    available_for_rent BOOLEAN DEFAULT false,
+    rental_rate_daily DECIMAL(10,2),
+    rental_rate_weekly DECIMAL(10,2),
+    damage_deposit DECIMAL(10,2),
+    
+    -- Photos
+    photos JSONB DEFAULT '[]',
+    
+    notes TEXT DEFAULT '',
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_cc_individual_tools_individual ON cc_individual_tools(individual_id);
+CREATE INDEX idx_cc_individual_tools_community ON cc_individual_tools(current_community_id);
+
+-- =====================================================================
+-- 6. UNIFIED RENTAL EQUIPMENT CATALOG
+-- (Replaces Booqable - kayaks, ATVs, tools, parking, everything)
+-- =====================================================================
+
+CREATE TABLE IF NOT EXISTS cc_rental_categories (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name TEXT NOT NULL,
+    slug TEXT NOT NULL UNIQUE,
+    description TEXT DEFAULT '',
+    icon TEXT DEFAULT '📦',
+    
+    -- What waiver is needed
+    required_waiver_slug TEXT REFERENCES cc_waiver_templates(slug),
+    
+    -- What license/document is needed
+    required_document_type TEXT,
+    
+    -- Age restrictions
+    minimum_age INTEGER DEFAULT 18,
+    
+    sort_order INTEGER DEFAULT 0
+);
+
+INSERT INTO cc_rental_categories (name, slug, icon, required_waiver_slug, required_document_type, minimum_age, sort_order) VALUES
+('Kayaks & Paddleboards', 'watercraft', '🚣', 'watercraft-waiver', NULL, 16, 10),
+('ATVs & Side-by-Sides', 'motorized-recreation', '🏎️', 'motorized-vehicle-waiver', 'drivers_license', 18, 20),
+('Bicycles & E-Bikes', 'bicycles', '🚴', 'general-activity-waiver', NULL, 14, 30),
+('Boats & Marine', 'boats', '⛵', 'watercraft-waiver', 'boat_license', 18, 40),
+('Tools & Equipment', 'tools', '🔧', 'power-tool-waiver', NULL, 18, 50),
+('Parking & Storage', 'parking', '🅿️', NULL, NULL, 18, 60),
+('Moorage', 'moorage', '⚓', NULL, 'boat_license', 18, 70)
+ON CONFLICT (slug) DO NOTHING;
+
+CREATE TABLE IF NOT EXISTS cc_rental_items (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    
+    -- Owner
+    owner_individual_id UUID REFERENCES cc_individuals(id),
+    owner_tenant_id UUID REFERENCES cc_tenants(id),
+    owner_name TEXT DEFAULT '',
+    
+    -- Location
+    home_community_id UUID REFERENCES sr_communities(id),
+    location_name TEXT DEFAULT '', -- "West Bamfield Marina", "Resort Dock"
+    location_address TEXT DEFAULT '',
+    
+    -- Category
+    category_id UUID NOT NULL REFERENCES cc_rental_categories(id),
+    
+    -- Item details
+    name TEXT NOT NULL,
+    slug TEXT NOT NULL,
+    description TEXT DEFAULT '',
+    
+    -- Specifics
+    brand TEXT DEFAULT '',
+    model TEXT DEFAULT '',
+    year INTEGER,
+    color TEXT DEFAULT '',
+    size TEXT DEFAULT '', -- "12ft", "Large", etc.
+    capacity INTEGER DEFAULT 1, -- People it can hold
+    
+    -- Included accessories
+    included_items JSONB DEFAULT '[]',
+    -- e.g., ["lifejacket", "paddle", "safety whistle", "dry bag"]
+    
+    -- Condition
+    condition TEXT DEFAULT 'good',
+    
+    -- Pricing
+    pricing_model TEXT DEFAULT 'hourly' CHECK (pricing_model IN ('hourly', 'half_day', 'daily', 'weekly', 'flat')),
+    rate_hourly DECIMAL(10,2),
+    rate_half_day DECIMAL(10,2),
+    rate_daily DECIMAL(10,2),
+    rate_weekly DECIMAL(10,2),
+    
+    -- Deposit
+    damage_deposit DECIMAL(10,2) DEFAULT 0,
+    
+    -- Availability
+    is_available BOOLEAN DEFAULT true,
+    available_from TIME DEFAULT '08:00',
+    available_until TIME DEFAULT '20:00',
+    
+    -- Buffer time between rentals
+    buffer_minutes INTEGER DEFAULT 15,
+    
+    -- Minimum/maximum rental
+    min_rental_hours DECIMAL(4,2) DEFAULT 1,
+    max_rental_hours DECIMAL(6,2),
+    
+    -- Photos
+    photos JSONB DEFAULT '[]',
+    
+    -- Status
+    status TEXT DEFAULT 'active' CHECK (status IN ('active', 'maintenance', 'retired', 'lost')),
+    
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    
+    UNIQUE(owner_individual_id, slug),
+    UNIQUE(owner_tenant_id, slug)
+);
+
+CREATE INDEX idx_cc_rental_items_owner_individual ON cc_rental_items(owner_individual_id);
+CREATE INDEX idx_cc_rental_items_owner_tenant ON cc_rental_items(owner_tenant_id);
+CREATE INDEX idx_cc_rental_items_community ON cc_rental_items(home_community_id);
+CREATE INDEX idx_cc_rental_items_category ON cc_rental_items(category_id);
+
+-- =====================================================================
+-- 7. UNIFIED RENTAL BOOKINGS
+-- (One booking system for everything - kayaks, tools, parking)
+-- =====================================================================
+
+CREATE TABLE IF NOT EXISTS cc_rental_bookings (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    
+    -- What's being rented
+    rental_item_id UUID NOT NULL REFERENCES cc_rental_items(id),
+    
+    -- Who's renting
+    renter_individual_id UUID NOT NULL REFERENCES cc_individuals(id),
+    
+    -- Context (where did this booking come from?)
+    booking_context TEXT DEFAULT 'direct' CHECK (booking_context IN (
+        'direct',           -- Direct rental (like current Booqable)
+        'accommodation',    -- Part of resort stay
+        'service_run',      -- Tool for service work
+        'crew_equipment'    -- Equipment for crew member
+    )),
+    
+    -- Link to related bookings
+    accommodation_booking_id UUID, -- Link to STR booking if applicable
+    service_run_id UUID REFERENCES sr_service_runs(id),
+    service_slot_id UUID REFERENCES sr_service_slots(id),
+    
+    -- Timing
+    starts_at TIMESTAMPTZ NOT NULL,
+    ends_at TIMESTAMPTZ NOT NULL,
+    actual_checkout_at TIMESTAMPTZ,
+    actual_checkin_at TIMESTAMPTZ,
+    
+    -- Status
+    status TEXT DEFAULT 'pending' CHECK (status IN (
+        'pending', 'confirmed', 'checked_out', 'active', 
+        'returned', 'completed', 'cancelled', 'no_show', 'overdue'
+    )),
+    
+    -- Authorization checks (pre-validated)
+    waiver_valid BOOLEAN DEFAULT false,
+    waiver_id UUID REFERENCES cc_signed_waivers(id),
+    license_valid BOOLEAN DEFAULT false,
+    license_document_id UUID REFERENCES cc_identity_documents(id),
+    payment_method_valid BOOLEAN DEFAULT false,
+    payment_method_id UUID REFERENCES cc_payment_methods(id),
+    
+    -- All checks passed?
+    ready_for_checkout BOOLEAN GENERATED ALWAYS AS (
+        waiver_valid AND 
+        (license_document_id IS NOT NULL OR license_valid) AND
+        payment_method_valid
+    ) STORED,
+    
+    -- Pricing (snapshot)
+    pricing_model TEXT,
+    rate_applied DECIMAL(10,2),
+    duration_hours DECIMAL(6,2),
+    subtotal DECIMAL(10,2),
+    tax DECIMAL(10,2) DEFAULT 0,
+    damage_deposit_held DECIMAL(10,2) DEFAULT 0,
+    total DECIMAL(10,2),
+    
+    -- Payment
+    payment_status TEXT DEFAULT 'pending' CHECK (payment_status IN (
+        'pending', 'authorized', 'captured', 'refunded', 'failed'
+    )),
+    payment_intent_id TEXT DEFAULT '',
+    
+    -- Condition tracking
+    condition_at_checkout TEXT DEFAULT '',
+    condition_at_return TEXT DEFAULT '',
+    checkout_photos JSONB DEFAULT '[]',
+    return_photos JSONB DEFAULT '[]',
+    
+    -- Damage
+    damage_reported BOOLEAN DEFAULT false,
+    damage_notes TEXT DEFAULT '',
+    damage_fee DECIMAL(10,2) DEFAULT 0,
+    
+    -- Special notes
+    notes TEXT DEFAULT '',
+    
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    
+    CHECK (ends_at > starts_at)
+);
+
+CREATE INDEX idx_cc_rental_bookings_item ON cc_rental_bookings(rental_item_id);
+CREATE INDEX idx_cc_rental_bookings_renter ON cc_rental_bookings(renter_individual_id);
+CREATE INDEX idx_cc_rental_bookings_dates ON cc_rental_bookings(starts_at, ends_at);
+CREATE INDEX idx_cc_rental_bookings_status ON cc_rental_bookings(status);
+CREATE INDEX idx_cc_rental_bookings_service_run ON cc_rental_bookings(service_run_id);
+
+-- =====================================================================
+-- 8. AUTHORIZATION CHECK (What does this person have valid?)
+-- =====================================================================
+
+CREATE OR REPLACE VIEW v_individual_authorizations AS
+SELECT 
+    i.id as individual_id,
+    i.full_name,
+    i.email,
+    
+    -- Identity verification
+    i.email_verified,
+    i.phone_verified,
+    (SELECT bool_or(verified) FROM cc_identity_documents WHERE individual_id = i.id AND document_type = 'photo_id') as photo_id_verified,
+    
+    -- Documents on file
+    (SELECT json_agg(json_build_object(
+        'type', document_type,
+        'verified', verified,
+        'expires_at', expires_at,
+        'is_expired', is_expired
+    )) FROM cc_identity_documents WHERE individual_id = i.id) as documents,
+    
+    -- Valid waivers
+    (SELECT json_agg(json_build_object(
+        'waiver_slug', wt.slug,
+        'activity_types', wt.activity_types,
+        'signed_at', sw.signed_at,
+        'expires_at', sw.expires_at,
+        'is_expired', sw.is_expired
+    )) FROM cc_signed_waivers sw 
+    JOIN cc_waiver_templates wt ON wt.id = sw.waiver_template_id
+    WHERE sw.individual_id = i.id AND NOT sw.is_expired) as valid_waivers,
+    
+    -- Payment methods
+    (SELECT bool_or(verified AND NOT is_expired) FROM cc_payment_methods WHERE individual_id = i.id) as has_valid_payment,
+    
+    -- Skills count
+    (SELECT COUNT(*) FROM cc_individual_skills WHERE individual_id = i.id) as skill_count,
+    
+    -- Tools count
+    (SELECT COUNT(*) FROM cc_individual_tools WHERE individual_id = i.id) as tool_count
+
+FROM cc_individuals i;
+
+-- =====================================================================
+-- 9. CONTEXTUAL TOOL AVAILABILITY (What Pavel sees when bidding)
+-- =====================================================================
+
+CREATE OR REPLACE VIEW v_tools_available_for_job AS
+SELECT 
+    sr.id as service_run_id,
+    sr.title as run_title,
+    ss.id as slot_id,
+    ss.property_address,
+    c.id as community_id,
+    c.name as community_name,
+    
+    -- Service and its tool requirements
+    s.id as service_id,
+    s.name as service_name,
+    t.id as tool_id,
+    t.name as tool_name,
+    str.is_required,
+    
+    -- Tool sources (prioritized)
+    COALESCE(
+        -- 1. Property has it on-site
+        (SELECT json_build_object(
+            'source', 'property',
+            'available', true,
+            'owner', pt.owner_user_id,
+            'usage_fee', pt.usage_fee,
+            'condition', pt.condition
+        ) FROM sr_property_tools pt 
+        WHERE pt.tool_id = t.id 
+        AND pt.property_address = ss.property_address
+        AND pt.available_to_providers = true
+        LIMIT 1),
+        
+        -- 2. Available for rent in community
+        (SELECT json_build_object(
+            'source', 'community_rental',
+            'available', true,
+            'owner_name', COALESCE(i.full_name, ten.name),
+            'daily_rate', it.rental_rate_daily,
+            'location', it.current_location
+        ) FROM cc_individual_tools it
+        LEFT JOIN cc_individuals i ON i.id = it.individual_id
+        LEFT JOIN cc_tenants ten ON ten.id = it.tenant_id
+        WHERE it.tool_id = t.id
+        AND it.current_community_id = c.id
+        AND it.available_for_rent = true
+        LIMIT 1),
+        
+        -- 3. Provider tools in community
+        (SELECT json_build_object(
+            'source', 'provider_inventory',
+            'available', true,
+            'owner_name', ten.name,
+            'daily_rate', pt.rental_rate_daily,
+            'location', pt.current_location
+        ) FROM sr_provider_tools pt
+        JOIN cc_tenants ten ON ten.id = pt.tenant_id
+        WHERE pt.tool_id = t.id
+        AND pt.current_community_id = c.id
+        AND pt.is_available_for_rent = true
+        LIMIT 1),
+        
+        -- 4. Not available locally
+        json_build_object(
+            'source', 'not_available',
+            'available', false,
+            'typical_rental', t.typical_daily_rental
+        )
+    ) as availability
+
+FROM sr_service_runs sr
+JOIN sr_communities c ON c.id = sr.community_id
+JOIN sr_service_slots ss ON ss.run_id = sr.id
+JOIN sr_bundles b ON b.id = sr.bundle_id
+JOIN sr_bundle_items bi ON bi.bundle_id = b.id
+JOIN sr_services s ON s.id = bi.service_id
+JOIN sr_service_tool_requirements str ON str.service_id = s.id
+JOIN sr_tools t ON t.id = str.tool_id;
+
+-- =====================================================================
+-- 10. PROVIDER BID VIEW (What Pavel sees - his tools + what's available)
+-- =====================================================================
+
+CREATE OR REPLACE FUNCTION get_bid_context(
+    p_individual_id UUID,
+    p_service_run_id UUID
+) RETURNS JSON AS $$
+DECLARE
+    result JSON;
+BEGIN
+    SELECT json_build_object(
+        'individual', (
+            SELECT json_build_object(
+                'id', i.id,
+                'name', i.full_name,
+                'skills', (
+                    SELECT json_agg(json_build_object(
+                        'skill', sk.name,
+                        'proficiency', isk.proficiency_level
+                    ))
+                    FROM cc_individual_skills isk
+                    JOIN sr_skills sk ON sk.id = isk.skill_id
+                    WHERE isk.individual_id = i.id
+                ),
+                'personal_tools', (
+                    SELECT json_agg(json_build_object(
+                        'tool', t.name,
+                        'location', it.current_location,
+                        'condition', it.condition
+                    ))
+                    FROM cc_individual_tools it
+                    JOIN sr_tools t ON t.id = it.tool_id
+                    WHERE it.individual_id = i.id
+                )
+            )
+            FROM cc_individuals i
+            WHERE i.id = p_individual_id
+        ),
+        'service_run', (
+            SELECT json_build_object(
+                'id', sr.id,
+                'title', sr.title,
+                'community', c.name,
+                'dates', json_build_object(
+                    'start', sr.target_start_date,
+                    'end', sr.target_end_date
+                )
+            )
+            FROM sr_service_runs sr
+            JOIN sr_communities c ON c.id = sr.community_id
+            WHERE sr.id = p_service_run_id
+        ),
+        'tool_requirements', (
+            SELECT json_agg(tool_info)
+            FROM v_tools_available_for_job
+            WHERE service_run_id = p_service_run_id
+        ),
+        'authorization_status', (
+            SELECT json_build_object(
+                'waivers_valid', COALESCE((
+                    SELECT bool_and(NOT sw.is_expired)
+                    FROM cc_signed_waivers sw
+                    WHERE sw.individual_id = p_individual_id
+                ), false),
+                'payment_valid', COALESCE((
+                    SELECT bool_or(verified AND NOT is_expired)
+                    FROM cc_payment_methods
+                    WHERE individual_id = p_individual_id
+                ), false)
+            )
+        )
+    ) INTO result;
+    
+    RETURN result;
+END;
+$$ LANGUAGE plpgsql;
+
+-- =====================================================================
+-- 11. QUICK CHECKOUT CHECK (Can this person rent this item RIGHT NOW?)
+-- =====================================================================
+
+CREATE OR REPLACE FUNCTION can_checkout_rental(
+    p_individual_id UUID,
+    p_rental_item_id UUID
+) RETURNS JSON AS $$
+DECLARE
+    v_category_slug TEXT;
+    v_required_waiver TEXT;
+    v_required_document TEXT;
+    v_min_age INTEGER;
+    v_has_waiver BOOLEAN;
+    v_has_document BOOLEAN;
+    v_has_payment BOOLEAN;
+    v_all_clear BOOLEAN;
+    v_blockers TEXT[];
+BEGIN
+    -- Get rental item requirements
+    SELECT rc.slug, rc.required_waiver_slug, rc.required_document_type, rc.minimum_age
+    INTO v_category_slug, v_required_waiver, v_required_document, v_min_age
+    FROM cc_rental_items ri
+    JOIN cc_rental_categories rc ON rc.id = ri.category_id
+    WHERE ri.id = p_rental_item_id;
+    
+    v_blockers := '{}';
+    
+    -- Check waiver
+    IF v_required_waiver IS NOT NULL THEN
+        SELECT EXISTS(
+            SELECT 1 FROM cc_signed_waivers sw
+            JOIN cc_waiver_templates wt ON wt.id = sw.waiver_template_id
+            WHERE sw.individual_id = p_individual_id
+            AND wt.slug = v_required_waiver
+            AND NOT sw.is_expired
+        ) INTO v_has_waiver;
+        
+        IF NOT v_has_waiver THEN
+            v_blockers := array_append(v_blockers, 'waiver_required:' || v_required_waiver);
+        END IF;
+    ELSE
+        v_has_waiver := true;
+    END IF;
+    
+    -- Check document/license
+    IF v_required_document IS NOT NULL THEN
+        SELECT EXISTS(
+            SELECT 1 FROM cc_identity_documents
+            WHERE individual_id = p_individual_id
+            AND document_type = v_required_document
+            AND verified = true
+            AND NOT is_expired
+        ) INTO v_has_document;
+        
+        IF NOT v_has_document THEN
+            v_blockers := array_append(v_blockers, 'document_required:' || v_required_document);
+        END IF;
+    ELSE
+        v_has_document := true;
+    END IF;
+    
+    -- Check payment method
+    SELECT EXISTS(
+        SELECT 1 FROM cc_payment_methods
+        WHERE individual_id = p_individual_id
+        AND verified = true
+        AND NOT is_expired
+    ) INTO v_has_payment;
+    
+    IF NOT v_has_payment THEN
+        v_blockers := array_append(v_blockers, 'payment_method_required');
+    END IF;
+    
+    v_all_clear := v_has_waiver AND v_has_document AND v_has_payment;
+    
+    RETURN json_build_object(
+        'can_checkout', v_all_clear,
+        'has_waiver', v_has_waiver,
+        'has_document', v_has_document,
+        'has_payment', v_has_payment,
+        'blockers', v_blockers,
+        'message', CASE 
+            WHEN v_all_clear THEN 'Ready for checkout!'
+            ELSE 'Missing requirements: ' || array_to_string(v_blockers, ', ')
+        END
+    );
+END;
+$$ LANGUAGE plpgsql;
+
+-- =====================================================================
+-- SEED: Sample rental items (Glenn's equipment)
+-- =====================================================================
+
+-- First, create Glenn as an individual if not exists
+-- (In real app, this links to auth user)
+
+INSERT INTO cc_rental_items (
+    owner_name, home_community_id, category_id, name, slug, description,
+    brand, capacity, included_items, 
+    pricing_model, rate_hourly, rate_half_day, rate_daily,
+    damage_deposit
+) 
+SELECT 
+    'Glenn Ballman',
+    (SELECT id FROM sr_communities WHERE slug = 'bamfield'),
+    (SELECT id FROM cc_rental_categories WHERE slug = 'watercraft'),
+    'Ocean Kayak - Single',
+    'kayak-single-1',
+    'Stable sit-on-top kayak, perfect for beginners',
+    'Ocean Kayak',
+    1,
+    '["lifejacket", "paddle", "safety whistle", "dry bag"]'::jsonb,
+    'hourly',
+    25.00,
+    60.00,
+    100.00,
+    100.00
+WHERE NOT EXISTS (SELECT 1 FROM cc_rental_items WHERE slug = 'kayak-single-1');
+
+INSERT INTO cc_rental_items (
+    owner_name, home_community_id, category_id, name, slug, description,
+    brand, model, capacity, included_items,
+    pricing_model, rate_half_day, rate_daily, rate_weekly,
+    damage_deposit
+)
+SELECT 
+    'Glenn Ballman',
+    (SELECT id FROM sr_communities WHERE slug = 'bamfield'),
+    (SELECT id FROM cc_rental_categories WHERE slug = 'motorized-recreation'),
+    'Polaris RZR Side-by-Side',
+    'rzr-1',
+    '4-seat side-by-side, great for exploring logging roads',
+    'Polaris',
+    'RZR XP 4 1000',
+    4,
+    '["helmets", "first_aid_kit", "fire_extinguisher", "recovery_strap"]'::jsonb,
+    'half_day',
+    150.00,
+    250.00,
+    1200.00,
+    500.00
+WHERE NOT EXISTS (SELECT 1 FROM cc_rental_items WHERE slug = 'rzr-1');
+
+INSERT INTO cc_rental_items (
+    owner_name, home_community_id, category_id, name, slug, description,
+    included_items,
+    pricing_model, rate_daily, rate_weekly,
+    damage_deposit
+)
+SELECT 
+    'Glenn Ballman',
+    (SELECT id FROM sr_communities WHERE slug = 'bamfield'),
+    (SELECT id FROM cc_rental_categories WHERE slug = 'parking'),
+    'Covered Parking - West Bamfield',
+    'parking-covered-1',
+    'Covered parking spot near the dock',
+    '["power_outlet"]'::jsonb,
+    'daily',
+    15.00,
+    75.00,
+    0
+WHERE NOT EXISTS (SELECT 1 FROM cc_rental_items WHERE slug = 'parking-covered-1');
+
+-- =====================================================================
+-- VERIFY
+-- =====================================================================
+
+SELECT 'Sovereign Individual + Unified Rentals schema created' as status;
+SELECT 'Rental Categories: ' || COUNT(*) FROM cc_rental_categories;
+SELECT 'Waiver Templates: ' || COUNT(*) FROM cc_waiver_templates;
+SELECT 'Rental Items: ' || COUNT(*) FROM cc_rental_items;
+
+TypeScript: Unified Authorization Check + Contextual Tool Display
+typescript// src/individual/authorization.ts
+
+export interface AuthorizationStatus {
+  individualId: string;
+  name: string;
+  
+  // Identity
+  emailVerified: boolean;
+  phoneVerified: boolean;
+  photoIdVerified: boolean;
+  
+  // Documents
+  documents: {
+    type: string;
+    verified: boolean;
+    expiresAt: string | null;
+    isExpired: boolean;
+  }[];
+  
+  // Waivers
+  validWaivers: {
+    slug: string;
+    activityTypes: string[];
+    signedAt: string;
+    expiresAt: string;
+  }[];
+  
+  // Payment
+  hasValidPayment: boolean;
+  
+  // Capabilities
+  skillCount: number;
+  toolCount: number;
+}
+
+export interface CheckoutEligibility {
+  canCheckout: boolean;
+  hasWaiver: boolean;
+  hasDocument: boolean;
+  hasPayment: boolean;
+  blockers: string[];
+  message: string;
+}
+
+export interface ToolAvailability {
+  toolId: string;
+  toolName: string;
+  isRequired: boolean;
+  source: 'personal' | 'property' | 'community_rental' | 'provider_inventory' | 'not_available';
+  available: boolean;
+  ownerName?: string;
+  usageFee?: number;
+  dailyRate?: number;
+  location?: string;
+  condition?: string;
+}
+
+export interface BidContext {
+  individual: {
+    id: string;
+    name: string;
+    skills: { skill: string; proficiency: string }[];
+    personalTools: { tool: string; location: string; condition: string }[];
+  };
+  serviceRun: {
+    id: string;
+    title: string;
+    community: string;
+    dates: { start: string; end: string };
+  };
+  toolRequirements: ToolAvailability[];
+  authorizationStatus: {
+    waiversValid: boolean;
+    paymentValid: boolean;
+  };
+}
+
+// What Pavel sees when viewing a job opportunity
+export function formatBidContext(ctx: BidContext): string {
+  const lines: string[] = [];
+  
+  lines.push(`🔨 JOB: ${ctx.serviceRun.title}`);
+  lines.push(`📍 ${ctx.serviceRun.community}`);
+  lines.push(`📅 ${ctx.serviceRun.dates.start} → ${ctx.serviceRun.dates.end}`);
+  lines.push('');
+  
+  // Your capabilities
+  lines.push('═══ YOUR CAPABILITIES ═══');
+  lines.push(`Skills: ${ctx.individual.skills.map(s => s.skill).join(', ') || 'None listed'}`);
+  lines.push(`Your Tools: ${ctx.individual.personalTools.length} items`);
+  ctx.individual.personalTools.forEach(t => {
+    lines.push(`  • ${t.tool} (${t.location}) - ${t.condition}`);
+  });
+  lines.push('');
+  
+  // Tool requirements for this job
+  lines.push('═══ TOOLS NEEDED FOR JOB ═══');
+  
+  const required = ctx.toolRequirements.filter(t => t.isRequired);
+  const optional = ctx.toolRequirements.filter(t => !t.isRequired);
+  
+  if (required.length > 0) {
+    lines.push('REQUIRED:');
+    required.forEach(t => {
+      const icon = t.available ? '✅' : '❌';
+      let detail = '';
+      
+      switch (t.source) {
+        case 'personal':
+          detail = 'You have this';
+          break;
+        case 'property':
+          detail = `On-site (${t.usageFee ? `$${t.usageFee}/day` : 'Free'})`;
+          break;
+        case 'community_rental':
+          detail = `Rent from ${t.ownerName} ($${t.dailyRate}/day)`;
+          break;
+        case 'provider_inventory':
+          detail = `Available from ${t.ownerName} ($${t.dailyRate}/day)`;
+          break;
+        case 'not_available':
+          detail = 'NOT AVAILABLE LOCALLY - you must bring';
+          break;
+      }
+      
+      lines.push(`  ${icon} ${t.toolName}: ${detail}`);
+    });
+  }
+  
+  if (optional.length > 0) {
+    lines.push('');
+    lines.push('OPTIONAL (nice to have):');
+    optional.forEach(t => {
+      lines.push(`  • ${t.toolName}: ${t.available ? 'Available' : 'Not available'}`);
+    });
+  }
+  
+  // Authorization status
+  lines.push('');
+  lines.push('═══ YOUR STATUS ═══');
+  lines.push(`Waivers: ${ctx.authorizationStatus.waiversValid ? '✅ Valid' : '⚠️ Needs signing'}`);
+  lines.push(`Payment: ${ctx.authorizationStatus.paymentValid ? '✅ On file' : '⚠️ Add payment method'}`);
+  
+  return lines.join('\n');
+}
+
+// Quick check for rental checkout
+export function formatCheckoutStatus(eligibility: CheckoutEligibility): string {
+  if (eligibility.canCheckout) {
+    return '✅ Ready for checkout! Tap to confirm.';
+  }
+  
+  const missing: string[] = [];
+  if (!eligibility.hasWaiver) missing.push('Sign waiver');
+  if (!eligibility.hasDocument) missing.push('Verify license');
+  if (!eligibility.hasPayment) missing.push('Add payment method');
+  
+  return `⚠️ Before checkout: ${missing.join(', ')}`;
+}
+```
+
+---
+
+## Key Improvements Summary
+
+| Current Pain | Solution |
+|--------------|----------|
+| **3 separate forms** (Booqable, Waiver Forever, Check-in) | **One Sovereign Individual profile** |
+| **Re-enter credit card** | **Payment methods on file, use anywhere** |
+| **Re-sign waivers** | **Sign once per activity type, valid 365 days** |
+| **Re-capture license** | **Documents stored, verified once** |
+| **Pavel doesn't see available tools** | **Contextual tool display when bidding** |
+| **Tools scattered across systems** | **Unified rental catalog (kayaks + ATVs + tools + parking)** |
+
+---
+
+## The "One and Done" Flow
+```
+GUEST ARRIVES:
+1. Create/login Sovereign Individual profile
+2. System checks: documents, waivers, payment ✓
+
+WANTS TO RENT KAYAK:
+1. Tap "Rent Kayak"
+2. System: "Waiver valid, payment on file"
+3. "Confirm rental?" → Yes
+4. Done. Go paddle.
+
+PAVEL VIEWS A JOB:
+1. See job details
+2. See "You have: Pro Ladders, Chainsaw"
+3. See "Property has: Pressure Washer ($50/day)"
+4. See "Community has: Concrete Mixer (rent from Mike)"
+5. Bid with full cost visibility
