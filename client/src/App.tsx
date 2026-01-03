@@ -128,7 +128,7 @@ function AppShellRoutes() {
         <Route path="/rentals/bookings" component={RentalBookings} />
         
         {/* Crew accommodation search */}
-        <Route path="/crew/accommodation" component={AccommodationSearch} />
+        <Route path="/crew/accommodation-search" component={AccommodationSearch} />
         
         {/* Public site pages with AdminLayout */}
         <Route path="/public/overview" component={PublicOverview} />
