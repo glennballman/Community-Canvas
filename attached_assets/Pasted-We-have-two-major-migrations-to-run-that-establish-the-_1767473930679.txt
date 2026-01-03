@@ -1,0 +1,193 @@
+We have two major migrations to run that establish the Construction OS foundation and Portal system. These were architecturally designed with ChatGPT and reviewed for compatibility.
+
+## STEP 1: Create Migration 022 (Construction OS)
+
+Create file: server/db/migrations/0022_construction_os_expansion.sql
+
+This migration adds ~50 tables including:
+- Pre-award layer (opportunities, estimates, bids)
+- Contracts and payment schedules
+- Plan Packs (materials, crew, equipment, compliance, accommodation)
+- Change orders with lifecycle enforcement
+- Closeout (deficiencies, acceptance, holdbacks)
+- Events/Outbox for integration sync
+
+I will paste the full DDL in the next message.
+
+## STEP 2: Create Migration 023 (Portal System)
+
+Create file: server/db/migrations/0023_portal_private_label.sql
+
+This migration adds the private-label portal system:
+- portals (branded sites like OffpeakAirBNB, AdrenalineCanada)
+- portal_domains (domain → portal routing)
+- portal_theme (design tokens)
+- portal_copy (localized vocabulary - "gigs" vs "contracts")
+- portal_feature_flags (enable/disable modules per portal)
+- portal_audience_profiles (host vs worker vs contractor navigation)
+- portal_memberships (individual participation in portals)
+- portal_pages (lightweight CMS)
+- Adds portal_id + visibility_scope to opportunities and assets
+
+I will paste the full DDL after 022.
+
+## STEP 3: Run Migrations
+
+After creating both files, run:
+```bash
+npm run db:migrate
+```
+
+Or if using direct psql:
+```bash
+psql $DATABASE_URL -f server/db/migrations/0022_construction_os_expansion.sql
+psql $DATABASE_URL -f server/db/migrations/0023_portal_private_label.sql
+```
+
+## STEP 4: Verification Queries
+
+After migrations complete, run these verification queries:
+```sql
+-- Count Migration 022 tables
+SELECT 'opportunities' as tbl, COUNT(*) FROM opportunities
+UNION ALL SELECT 'estimates', COUNT(*) FROM estimates
+UNION ALL SELECT 'bids', COUNT(*) FROM bids
+UNION ALL SELECT 'contracts', COUNT(*) FROM contracts
+UNION ALL SELECT 'change_orders', COUNT(*) FROM change_orders
+UNION ALL SELECT 'crew_plans', COUNT(*) FROM crew_plans
+UNION ALL SELECT 'materials_plans', COUNT(*) FROM materials_plans
+UNION ALL SELECT 'events', COUNT(*) FROM events;
+
+-- Count Migration 023 tables
+SELECT 'portals' as tbl, COUNT(*) FROM portals
+UNION ALL SELECT 'portal_domains', COUNT(*) FROM portal_domains
+UNION ALL SELECT 'portal_theme', COUNT(*) FROM portal_theme
+UNION ALL SELECT 'portal_copy', COUNT(*) FROM portal_copy
+UNION ALL SELECT 'portal_feature_flags', COUNT(*) FROM portal_feature_flags
+UNION ALL SELECT 'portal_memberships', COUNT(*) FROM portal_memberships
+UNION ALL SELECT 'portal_pages', COUNT(*) FROM portal_pages;
+
+-- Verify new columns on opportunities
+SELECT column_name FROM information_schema.columns 
+WHERE table_name = 'opportunities' 
+AND column_name IN ('portal_id', 'visibility_scope', 'invite_token');
+
+-- Verify new columns on assets
+SELECT column_name FROM information_schema.columns 
+WHERE table_name = 'assets' 
+AND column_name IN ('portal_id', 'visibility_scope');
+
+-- Verify enums created
+SELECT typname FROM pg_type 
+WHERE typname IN (
+  'opportunity_status', 'estimate_status', 'bid_status', 
+  'contract_status', 'work_order_phase_status', 'change_order_status',
+  'portal_status', 'portal_audience_type', 'publish_visibility'
+);
+
+-- Verify lifecycle triggers
+SELECT tgname FROM pg_trigger 
+WHERE tgname LIKE 'trg_%transition%' OR tgname LIKE 'trg_%updated_at%';
+
+-- Test portal domain resolution view
+SELECT * FROM v_portal_domain_resolution;
+```
+
+## STEP 5: Seed Example Portals (Optional)
+
+If verification passes, uncomment and run the seed section in Migration 023, or run this:
+```sql
+-- Create OffpeakAirBNB portal (for hosts)
+INSERT INTO portals (name, slug, status, primary_audience, tagline, default_locale, supported_locales)
+VALUES (
+  'OffpeakAirBNB', 
+  'offpeakairbnb', 
+  'active', 
+  'host', 
+  'Fill your off-season with working crews',
+  'en-CA', 
+  ARRAY['en-CA', 'fr-CA']
+);
+
+-- Create AdrenalineCanada portal (for international workers)
+INSERT INTO portals (name, slug, status, primary_audience, tagline, default_locale, supported_locales)
+VALUES (
+  'AdrenalineCanada', 
+  'adrenalinecanada', 
+  'active', 
+  'worker', 
+  'Work hard. Play harder. See Canada.',
+  'en-CA', 
+  ARRAY['en-CA', 'pl-PL', 'cs-CZ', 'de-DE']
+);
+
+-- Add domains
+INSERT INTO portal_domains (portal_id, domain, is_primary, status)
+SELECT id, 'offpeakairbnb.ca', true, 'pending' 
+FROM portals WHERE slug = 'offpeakairbnb';
+
+INSERT INTO portal_domains (portal_id, domain, is_primary, status)
+SELECT id, 'adrenalinecanada.com', true, 'pending' 
+FROM portals WHERE slug = 'adrenalinecanada';
+
+-- Add vocabulary for AdrenalineCanada ("gigs" not "opportunities")
+INSERT INTO portal_copy (portal_id, namespace, key, locale, value)
+SELECT id, 'ui', 'opportunity.label', 'en-CA', 'Gig'
+FROM portals WHERE slug = 'adrenalinecanada';
+
+INSERT INTO portal_copy (portal_id, namespace, key, locale, value)
+SELECT id, 'ui', 'opportunity.label.plural', 'en-CA', 'Gigs'
+FROM portals WHERE slug = 'adrenalinecanada';
+
+INSERT INTO portal_copy (portal_id, namespace, key, locale, value)
+SELECT id, 'ui', 'bid.label', 'en-CA', 'Offer'
+FROM portals WHERE slug = 'adrenalinecanada';
+
+-- Add Polish translations
+INSERT INTO portal_copy (portal_id, namespace, key, locale, value)
+SELECT id, 'ui', 'opportunity.label', 'pl-PL', 'Fuch'
+FROM portals WHERE slug = 'adrenalinecanada';
+
+INSERT INTO portal_copy (portal_id, namespace, key, locale, value)
+SELECT id, 'marketing', 'hero.headline', 'pl-PL', 'Pracuj ciężko. Baw się jeszcze ciężej. Zobacz Kanadę.'
+FROM portals WHERE slug = 'adrenalinecanada';
+
+-- Add feature flags for OffpeakAirBNB (host-focused)
+INSERT INTO portal_feature_flags (portal_id, flag_key, is_enabled)
+SELECT id, 'accommodation_marketplace', true FROM portals WHERE slug = 'offpeakairbnb';
+
+INSERT INTO portal_feature_flags (portal_id, flag_key, is_enabled)
+SELECT id, 'crew_calendar', true FROM portals WHERE slug = 'offpeakairbnb';
+
+INSERT INTO portal_feature_flags (portal_id, flag_key, is_enabled)
+SELECT id, 'bidding_enabled', false FROM portals WHERE slug = 'offpeakairbnb';
+
+-- Add feature flags for AdrenalineCanada (worker-focused)
+INSERT INTO portal_feature_flags (portal_id, flag_key, is_enabled)
+SELECT id, 'gig_board', true FROM portals WHERE slug = 'adrenalinecanada';
+
+INSERT INTO portal_feature_flags (portal_id, flag_key, is_enabled)
+SELECT id, 'bidding_enabled', true FROM portals WHERE slug = 'adrenalinecanada';
+
+INSERT INTO portal_feature_flags (portal_id, flag_key, is_enabled)
+SELECT id, 'accommodation_search', true FROM portals WHERE slug = 'adrenalinecanada';
+
+INSERT INTO portal_feature_flags (portal_id, flag_key, is_enabled)
+SELECT id, 'worker_verification', true FROM portals WHERE slug = 'adrenalinecanada';
+
+-- Verify seed data
+SELECT p.name, p.slug, p.primary_audience, pd.domain, pf.flag_key, pf.is_enabled
+FROM portals p
+LEFT JOIN portal_domains pd ON pd.portal_id = p.id
+LEFT JOIN portal_feature_flags pf ON pf.portal_id = p.id
+ORDER BY p.name, pf.flag_key;
+```
+
+## OUTPUT
+
+Tell me:
+1. Did Migration 022 complete without errors?
+2. Did Migration 023 complete without errors?
+3. How many new tables were created total?
+4. Did the verification queries return expected results?
+5. Any warnings or issues?
