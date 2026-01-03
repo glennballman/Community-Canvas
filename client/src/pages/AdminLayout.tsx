@@ -27,7 +27,11 @@ import {
   BarChart3,
   Camera,
   AlertTriangle,
-  Navigation2
+  Navigation2,
+  Wrench,
+  Package,
+  Play,
+  ListChecks
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
@@ -97,6 +101,16 @@ const navSections: NavSection[] = [
     defaultOpen: true,
     items: [
       { path: "/fleet", label: "Vehicle Fleet", icon: Truck },
+    ]
+  },
+  {
+    title: "Services",
+    icon: Wrench,
+    defaultOpen: true,
+    items: [
+      { path: "/services/catalog", label: "Service Catalog", icon: ListChecks },
+      { path: "/services/bundles", label: "Bundles & Packages", icon: Package },
+      { path: "/services/runs", label: "Service Runs", icon: Play },
     ]
   },
   {
