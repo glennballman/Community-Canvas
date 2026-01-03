@@ -421,15 +421,31 @@ router.post('/:id/book', authenticateToken, async (req: AuthRequest, res: Respon
     const durationDays = Math.ceil(durationHours / 24);
     
     const priceResult = await pool.query(
-      `SELECT rate_daily, rate_hourly, damage_deposit FROM cc_rental_items WHERE id = $1`,
+      `SELECT rate_hourly, rate_half_day, rate_daily, rate_weekly, damage_deposit FROM cc_rental_items WHERE id = $1`,
       [itemId]
     );
     const priceRow = priceResult.rows[0];
-    const rateDaily = parseFloat(priceRow.rate_daily) || 0;
-    const rateHourly = parseFloat(priceRow.rate_hourly) || 0;
+    const rateHourly = priceRow.rate_hourly ? parseFloat(priceRow.rate_hourly) : null;
+    const rateHalfDay = priceRow.rate_half_day ? parseFloat(priceRow.rate_half_day) : null;
+    const rateDaily = priceRow.rate_daily ? parseFloat(priceRow.rate_daily) : null;
+    const rateWeekly = priceRow.rate_weekly ? parseFloat(priceRow.rate_weekly) : null;
     const damageDeposit = parseFloat(priceRow.damage_deposit) || 0;
     
-    let subtotal = rateDaily ? rateDaily * durationDays : rateHourly * durationHours;
+    let subtotal = 0;
+    if (durationHours <= 4 && rateHourly) {
+      subtotal = rateHourly * durationHours;
+    } else if (durationHours <= 5 && rateHalfDay) {
+      subtotal = rateHalfDay;
+    } else if (durationDays <= 6 && rateDaily) {
+      subtotal = rateDaily * durationDays;
+    } else if (rateWeekly) {
+      subtotal = rateWeekly * Math.ceil(durationDays / 7);
+    } else if (rateDaily) {
+      subtotal = rateDaily * durationDays;
+    } else if (rateHourly) {
+      subtotal = rateHourly * durationHours;
+    }
+    
     const tax = subtotal * 0.12;
     const total = subtotal + tax + damageDeposit;
     

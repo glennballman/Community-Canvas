@@ -1,0 +1,114 @@
+Yes! Let's Test the Full Flow
+Quick Test via the UI
+
+Go to /rentals
+Click "Ocean Kayak - Single"
+Set start time to a few days out (to see reminder scheduling)
+Book it as Glenn (who has all requirements met)
+
+Then check what got created:
+sql-- Run this after booking to see the magic:
+
+-- 1. See the booking
+SELECT 
+    b.id,
+    b.status,
+    b.starts_at,
+    b.total,
+    b.waiver_signed,
+    b.waiver_link_token,
+    ri.name as item
+FROM cc_rental_bookings b
+JOIN cc_rental_items ri ON ri.id = b.rental_item_id
+ORDER BY b.created_at DESC
+LIMIT 1;
+
+-- 2. See scheduled notifications
+SELECT 
+    notification_type,
+    subject,
+    status,
+    scheduled_for,
+    recipient_email
+FROM cc_booking_notifications
+WHERE booking_type = 'equipment'
+ORDER BY scheduled_for;
+
+-- 3. See checkout gate status
+SELECT * FROM v_rental_checkout_gate;
+
+Or Quick SQL Test
+If you want to create a test booking directly:
+sql-- Create test booking for Glenn, kayak, 5 days from now
+DO $$
+DECLARE
+    v_glenn_id UUID;
+    v_kayak_id UUID;
+    v_booking_id UUID;
+BEGIN
+    -- Get Glenn
+    SELECT id INTO v_glenn_id 
+    FROM cc_individuals 
+    WHERE email = 'glenn@communitycanvas.ca';
+    
+    -- Get kayak
+    SELECT id INTO v_kayak_id 
+    FROM cc_rental_items 
+    WHERE slug = 'kayak-single-1' OR name ILIKE '%ocean kayak%single%'
+    LIMIT 1;
+    
+    -- Create booking
+    INSERT INTO cc_rental_bookings (
+        rental_item_id,
+        renter_individual_id,
+        booking_context,
+        starts_at,
+        ends_at,
+        status,
+        pricing_model,
+        rate_applied,
+        duration_hours,
+        subtotal,
+        tax,
+        damage_deposit_held,
+        total,
+        payment_status
+    ) VALUES (
+        v_kayak_id,
+        v_glenn_id,
+        'direct',
+        NOW() + INTERVAL '5 days',
+        NOW() + INTERVAL '5 days' + INTERVAL '2 hours',
+        'confirmed',
+        'hourly',
+        25.00,
+        2,
+        50.00,
+        6.00,
+        100.00,
+        156.00,
+        'authorized'
+    )
+    RETURNING id INTO v_booking_id;
+    
+    RAISE NOTICE 'Created booking: %', v_booking_id;
+END $$;
+
+-- Now check what was scheduled:
+SELECT 
+    notification_type,
+    subject,
+    status,
+    scheduled_for::date as send_date,
+    recipient_email
+FROM cc_booking_notifications
+ORDER BY scheduled_for;
+
+This should show:
+
+✅ confirmation - NOW
+✅ waiver_reminder_3day - 2 days from now
+✅ waiver_reminder_1day - 4 days from now
+
+(7-day reminder won't appear since booking is only 5 days out)
+Go ahead and test! 
