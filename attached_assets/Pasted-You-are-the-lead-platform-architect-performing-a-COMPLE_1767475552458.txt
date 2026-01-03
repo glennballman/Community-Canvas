@@ -1,0 +1,106 @@
+You are the lead platform architect performing a COMPLETE multi-tenant SaaS QA + architecture review of the existing Community Canvas codebase and database.
+
+Goal:
+We must ensure Community Canvas is “sovereign-grade” multi-tenant, secure, auditable, scalable, and ready to interoperate seamlessly with CivOS (government/jurisdiction platform) plus Sovereign Individual (portable identity) plus Genesis Exchange (business registry & operations). We need a factual review grounded in the actual repo and schema.
+
+Deliverable Format:
+Return a structured report with:
+1) Findings (what exists)
+2) Gaps/Risks (what’s missing or unsafe)
+3) Recommendations (exact fixes)
+4) Priority plan (P0/P1/P2)
+5) Evidence (file paths, code references, table names, RLS policies, middleware names)
+
+Scope (must review all of these with code + DB evidence):
+
+A) Multi-Tenant Isolation & Authorization
+- Tenant boundary definition: what is a “tenant” vs “workspace/branch” vs “portal”
+- Row-Level Security (RLS): confirm which tables use RLS; show the policy list; identify any tables missing RLS that contain tenant data
+- Authorization model: RBAC/ABAC checks in API; confirm no “trusting the client”
+- Cross-tenant shared entities: cc_individuals portability, assets marketplace, opportunities
+- “Portal” isolation: portal-scoped listings and memberships
+- Data leakage tests: list plausible ways tenant A could access tenant B’s data
+
+B) Identity & Auth (the “OAuth-like” federation)
+We need an interoperability model between:
+- CivOS (Jurisdiction / Government tenants)
+- Sovereign Individual (portable identity, documents, permits)
+- Genesis Exchange (Businesses / contractors / suppliers)
+- Community Canvas (data feeds + jobs + assets + accommodations + logistics)
+
+Review current auth stack:
+- How users authenticate today
+- How sessions/JWT are issued
+- How tenant context is derived (subdomain, header, claim, membership)
+- How cc_individuals maps to auth user_id and memberships
+
+Then propose a federation architecture:
+- “Authorization Server” concept: who issues tokens?
+- Token types: user tokens, service tokens, tenant tokens
+- Consent and scopes: citizen consent to share data; business consent; government consent
+- Recommended OAuth2/OIDC patterns (or equivalent): auth code + PKCE, service-to-service client credentials
+- Suggested scopes:
+  - civos.read_jurisdiction_feed
+  - civos.write_case_or_alert (if applicable)
+  - canvas.read_opportunities / write_bids / read_assets / book_assets
+  - sovereign.read_identity / read_documents / verify_work_permit
+  - genesis.read_business / write_service_offers
+- Tenant-aware token claims (tenant_id, portal_id, roles, ABAC attributes)
+- Audit logging requirements for cross-system access
+
+C) Data Model Consistency & “Source of Truth”
+- Identify the canonical tables for: tenants, individuals, assets, opportunities/work orders, bids, contracts, materials, mobilization
+- Confirm there is no duplicated conflicting “source-of-truth” data
+- Confirm foreign keys and referential integrity for new migrations (021–023)
+- Confirm naming conventions and indexing patterns
+- Validate that “portal_id” scoping cannot accidentally hide data from admins or expose it across portals
+
+D) Security QA
+- Secrets handling, env vars, API keys
+- Injection risks, validation, file upload risks
+- Audit logging coverage: who did what, when, from what tenant, to what record
+- PII isolation: cc_individuals and identity docs must be strongly protected
+- CASL compliance tracking fields where communications exist
+- Rate limiting and abuse prevention
+
+E) Operational & Scalability QA
+- Background jobs and retries (outbox pattern, idempotency)
+- Event spine readiness: does an events table exist? outbox delivery? subscription cursors?
+- Data feed ingestion stability (238 sources): error handling, schema drift, dedupe
+- Performance: top slow queries (if known), missing indexes, N+1 patterns
+- Offline-first readiness: event sync approach, conflict rules
+
+F) Testing & QA Coverage
+- What automated tests exist
+- What’s missing: unit/integration/e2e
+- Provide a QA checklist we can run every release:
+  - tenant isolation tests
+  - RLS regression tests
+  - permission matrix sampling
+  - portal scoping tests
+  - event outbox delivery tests
+  - audit log tests
+  - seed data + smoke tests
+
+G) Integration Readiness (CivOS/Jobber/QB/ServiceTitan)
+- List current adapter code (if any) and what it syncs
+- Recommend adapter boundaries: event-driven, source-of-truth rules
+- Confirm idempotency keys and replay mechanisms
+- Define minimum viable integration contract for CivOS:
+  - how Community Canvas reads jurisdiction feeds
+  - how it publishes work opportunities back to CivOS (if intended)
+  - how consent and scope gating works
+
+Output Requirements:
+- Be concrete and specific.
+- Include a “Top 20 risks” section with severity and blast radius.
+- Include a “Fix Plan” with exact tasks and ownership.
+- Include 10–20 “attack scenarios” (tenant data leak, privilege escalation, token reuse, portal bypass) and whether current system passes/fails them.
+
+Start by enumerating:
+1) Auth entrypoints (middleware, session handlers)
+2) Tenant resolution logic
+3) RLS policies across all cc_* and new work order / portal tables
+4) Any cross-tenant share logic
+
+Then produce the report.
