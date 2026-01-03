@@ -1,0 +1,1289 @@
+This is a strong “data network effect” story, and the general architecture is directionally right. But if you ship it as-is, you’ll run into (a) legal/compliance risk, (b) entity resolution brittleness, (c) schema coupling that will slow iteration, and (d) outreach deliverability/spam issues.
+
+Here’s the ruthless critique + concrete fixes.
+
+0) The biggest risk: Outreach + Claim flow assumes you can email scraped people
+
+Your diagram says: “System emails Sarah: ‘Someone wants to book!’” and your schema stores email on external_entities.
+
+This is the #1 danger area. In Canada (CASL) and elsewhere (anti-spam + privacy), sending unsolicited commercial email based on scraped contact info is risky, and deliverability will be awful (bounces, spam complaints). Also many listings won’t expose usable emails at all.
+
+Fix (practical + safer):
+
+Don’t treat scraped email as default outreach channel.
+
+Make the bridge flow work even if you never have email:
+
+“Pending Inquiry” becomes an internal object.
+
+Outreach channel must be explicitly acquired:
+
+customer provides contact (“I know Sarah, here’s her email/phone”) with consent flow
+
+or Sarah opts-in via a public “Claim your listing” page where she searches and proves ownership
+
+or outreach happens via allowed platform messaging if applicable (rare)
+
+Add a consent + lawful basis field to any outbound contact attempt.
+
+Schema additions:
+
+external_contact_points table (typed, verified, consented)
+
+outreach_attempts table (channel, consent basis, result, bounce, complaint)
+
+1) Your “external_entities” table is doing too much (and will break resolution)
+
+Right now, external_entities is simultaneously:
+
+a raw scraped record store
+
+a “resolved canonical entity”
+
+a claimable object
+
+a linked internal object
+
+an outreach target
+
+That’s 5 jobs in one table. It will get messy the moment you add VRBO + Chamber + Facebook + trades directories because you’ll have multiple records per real-world entity.
+
+Fix: split into two layers
+
+A) External records (immutable-ish)
+external_records = one row per scraped listing/profile/product record.
+
+B) Canonical resolved entities (merge graph)
+entities = your internal canonical “Sarah Miller”, “Sarah’s Cabin”, “Ballman Enterprises”.
+
+Then you maintain:
+
+entity_links (external_record_id → entity_id, with confidence + match reasons)
+
+entity_claims (entity_id claimed by cc_individual/tenant)
+
+That gives you real entity resolution.
+
+2) Unique constraint bug: UNIQUE(external_source, external_id) isn’t enough
+
+You’re using external_source inconsistently:
+
+sometimes “airbnb”
+
+sometimes dataset slug like “airbnb-bc”
+
+If the same Airbnb listing appears in multiple datasets (BC run + Canada run), you can collide or create duplicates depending on how you set external_source.
+
+Fix:
+
+Use a stable source enum:
+
+external_source = 'airbnb' | 'vrbo' | 'booking' | 'canadian_tire' | ...
+And separate:
+
+dataset_id for the run/context.
+
+Change uniqueness to:
+
+UNIQUE(external_source, external_id) ✅ for global IDs
+
+OR if IDs aren’t global, use: UNIQUE(dataset_id, external_id).
+
+3) Entity resolution needs first-class scoring + explainability
+
+Your diagram shows “Sarah M.” merging into “Sarah Miller” → claimed.
+
+But you have no place to store:
+
+match confidence
+
+evidence features (name similarity, geo proximity, url, phone, domain)
+
+manual overrides (“force match”)
+
+Fix:
+
+Add:
+
+entity_matches table:
+
+external_record_id
+
+candidate_entity_id
+
+score
+
+reasons JSONB
+
+status: suggested/accepted/rejected
+
+allow human review queue for low-confidence matches.
+
+Without this, you’ll mis-merge people constantly (especially common names in small towns).
+
+4) Claiming is underspecified (fraud + disputes)
+
+You have entity_claim_requests, which is good, but verification options are weak for Airbnb-style records.
+
+Fix: make verification evidence explicit and auditable
+
+Add fields for:
+
+“proof of control” challenges:
+
+upload screenshot from Airbnb host dashboard showing listing ID
+
+confirm a token placed in listing description (if possible)
+
+phone-based verification if phone is public
+
+micro-deposit verification (for businesses)
+
+dispute workflow:
+
+arbitration notes
+
+temporary dual-control access
+
+“freeze entity” status
+
+Also: claims should attach to canonical entity, not raw scraped record (see #1).
+
+5) Product catalog scope creep: Canadian Tire / Home Depot is a trap
+
+Scraping retail product catalogs and store inventory is:
+
+high churn
+
+huge volume
+
+hard to keep accurate
+
+often restricted
+
+And you don’t need it for V1 bundling.
+
+Fix (V1):
+
+Model materials categories, not every SKU.
+
+“Exterior caulk”
+
+“Pressure treated 2x6”
+
+“Gutter guard roll”
+Then later optionally link to vendors/affiliate feeds.
+
+If you do keep product_catalog, make it explicitly “best effort” and avoid promising availability accuracy.
+
+6) Geo indexing as written will fail unless PostGIS is installed + columns are numeric
+
+You have:
+
+CREATE INDEX ... USING GIST (ST_SetSRID(ST_MakePoint(longitude, latitude), 4326))
+
+
+But:
+
+no CREATE EXTENSION postgis;
+
+longitude/latitude are NUMERIC; ST_MakePoint wants numeric but performance-wise you typically want DOUBLE PRECISION
+
+also: computed GiST index like that is OK, but better is a stored geography(Point,4326) column.
+
+Fix:
+
+Add postgis extension
+
+Add geom GEOGRAPHY(POINT,4326) generated or set on write
+
+Index geom
+
+7) resolve_community() uses naive Euclidean distance on lat/long
+
+This:
+
+SQRT(POWER(latitude - p_lat, 2) + POWER(longitude - p_lng, 2))
+
+
+is not accurate and will behave badly at scale.
+
+Fix:
+
+Use PostGIS distance:
+
+ORDER BY geom <-> ST_SetSRID(ST_MakePoint(p_lng,p_lat),4326)::geography
+
+And store community geoms.
+
+8) “target_table” + JSON field mapping is dangerous without a mapping engine
+
+You have field_mapping JSONB, but in your sync code you mostly ignore it and hardcode “accommodation_properties” and “product_catalog”.
+
+Fix:
+
+Either:
+
+commit to a real mapping engine (dot-path extraction, transforms, defaults, type casting), or
+
+delete field_mapping for now and keep per-source adapters.
+
+Right now it’s false confidence.
+
+9) Data retention + PII governance is missing
+
+You store:
+
+email
+
+phone
+
+raw_data (which may include personal content)
+
+But there’s no:
+
+retention policy
+
+deletion pipeline
+
+“do not contact” registry
+
+audit log of outreach and consent
+
+Fix (minimum):
+
+Add:
+
+external_entities.do_not_contact BOOLEAN
+
+external_entities.pii_classification (low/med/high)
+
+outreach_attempts log table
+
+retention job: purge raw_data fields after N days for unclaimed records (or strip PII)
+
+10) Deliverability + operational reality: “email templates” aren’t enough
+
+You need:
+
+bounce handling
+
+throttling
+
+spam complaint handling
+
+domain warmup
+
+unsubscribe mechanism
+
+Fix:
+
+Add outreach_attempts with status codes
+
+Add unsubscribes table keyed by email + source
+
+Always include opt-out language if emailing (and only email when you have a safe basis)
+
+11) Your API route starts “sync in background” but then actually runs inline
+
+This pattern:
+
+res.json(...)
+const result = await syncDataset(...)
+
+
+still runs in the same process and can crash/timeout under load.
+
+Fix:
+
+Use a job queue (even a simple DB-backed queue) or a worker process.
+If you’re not ready for that, at least:
+
+limit dataset size per call
+
+paginate Apify dataset fetching
+
+add concurrency limits
+
+What’s excellent and should stay
+
+Dataset registry + sync history ✅
+
+Inquiry object separate from claim ✅
+
+Outreach templates as data ✅
+
+“Pending inquiry → claim → convert” growth loop ✅
+
+Views for dashboards ✅
+
+Recommended “V1-safe” rewrite of the concept (still your network effect)
+
+Keep Apify data lake
+
+Store as external_records
+
+Resolve into canonical entities
+
+Build “claim” on canonical entities
+
+Do “bridge inquiry” without assuming scraped email
+
+Add consented contact points for outreach
+
+If you want, I can rewrite your schema into that split model (external_records + entities + entity_links + contact_points + outreach_attempts) while keeping 90% of your current tables and API routes intact—so Claude can refactor instead of restart.
+
+Yes give me your rewrite
+
+Below is a clean rewrite that preserves your intent (data lake → resolution → claim → bridge inquiries) but fixes the core issues:
+
+separates external records from canonical entities
+
+makes entity resolution first-class (scores + reasons + review)
+
+makes outreach safe/operational (contact points + consent + attempts + unsubscribes)
+
+fixes geo (PostGIS) and community resolution
+
+Paste this whole block into Claude → Replit as your “PROMPT 4W v2”.
+
+PROMPT 4W v2: External Data Lake → Entity Graph → Claim & Bridge (Normalized + Safe)
+Design Principles
+
+External records are not truth (they’re evidence)
+
+Canonical entities are the truth; external records link to entities
+
+Outreach must use contact points with consent/verification; never assume scraped email is OK
+
+Entity resolution must store score + reasons + status
+
+Part 1: Core Schema (DDL)
+
+Assumes Postgres. Adds PostGIS. Uses your existing cc_individuals, cc_tenants, sr_communities (or rename to your actual communities table).
+
+-- =====================================================================
+-- COMMUNITY CANVAS: EXTERNAL DATA → ENTITY GRAPH → CLAIM & BRIDGE
+-- Rewrite v2 (normalized, resolution-ready, outreach-safe)
+-- =====================================================================
+
+-- -----------------------------
+-- Extensions
+-- -----------------------------
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+CREATE EXTENSION IF NOT EXISTS postgis;
+
+-- -----------------------------
+-- ENUMS
+-- -----------------------------
+DO $$ BEGIN
+  CREATE TYPE external_source AS ENUM ('airbnb','vrbo','booking','facebook','chamber','trades_dir','canadian_tire','home_depot','other');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE TYPE external_record_type AS ENUM ('property_listing','host_profile','service_provider','business_listing','product','poi','person_profile','equipment_listing','other');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE TYPE entity_type AS ENUM ('property','organization','person','product','equipment','service_provider','poi','other');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE TYPE link_status AS ENUM ('suggested','accepted','rejected');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE TYPE claim_status AS ENUM ('none','pending','approved','rejected','disputed');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE TYPE contact_type AS ENUM ('email','phone','website','social','platform_handle','other');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE TYPE consent_basis AS ENUM ('unknown','provided_by_user','public_opt_in','direct_relationship','transactional_request','verified_owner','other');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE TYPE outreach_channel AS ENUM ('email','sms','phone','postal','in_app','none');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE TYPE outreach_result AS ENUM ('queued','sent','delivered','opened','clicked','replied','bounced','complained','unsubscribed','failed','skipped');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+-- =====================================================================
+-- 1) DATASET REGISTRY + SYNC HISTORY
+-- =====================================================================
+
+CREATE TABLE IF NOT EXISTS apify_datasets (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+
+  -- Apify identifiers
+  apify_actor_id TEXT NOT NULL,
+  apify_dataset_id TEXT,
+  apify_run_id TEXT,
+
+  name TEXT NOT NULL,
+  slug TEXT NOT NULL UNIQUE,
+
+  source external_source NOT NULL DEFAULT 'other',
+  record_type external_record_type NOT NULL DEFAULT 'other',
+
+  -- Geographic scope
+  country TEXT NOT NULL DEFAULT 'Canada',
+  region TEXT,
+  community_id UUID REFERENCES sr_communities(id),
+
+  sync_enabled BOOLEAN NOT NULL DEFAULT true,
+  sync_frequency_hours INTEGER NOT NULL DEFAULT 168,
+  last_sync_at TIMESTAMPTZ,
+  last_sync_record_count INTEGER,
+  last_sync_error TEXT,
+
+  api_key_ref TEXT,
+  field_mapping JSONB NOT NULL DEFAULT '{}', -- keep if you truly implement mapping engine later
+
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS apify_sync_history (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  dataset_id UUID NOT NULL REFERENCES apify_datasets(id) ON DELETE CASCADE,
+
+  apify_run_id TEXT,
+  started_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  completed_at TIMESTAMPTZ,
+
+  status TEXT NOT NULL DEFAULT 'running' CHECK (status IN ('running','completed','failed','cancelled')),
+  records_processed INTEGER NOT NULL DEFAULT 0,
+  records_inserted INTEGER NOT NULL DEFAULT 0,
+  records_updated INTEGER NOT NULL DEFAULT 0,
+  records_skipped INTEGER NOT NULL DEFAULT 0,
+  records_errored INTEGER NOT NULL DEFAULT 0,
+
+  duration_seconds INTEGER,
+  error_message TEXT,
+  error_details JSONB,
+
+  triggered_by TEXT NOT NULL DEFAULT 'manual',
+  triggered_by_user_id UUID
+);
+
+CREATE INDEX IF NOT EXISTS idx_apify_sync_history_dataset ON apify_sync_history(dataset_id);
+CREATE INDEX IF NOT EXISTS idx_apify_sync_history_started ON apify_sync_history(started_at DESC);
+
+-- =====================================================================
+-- 2) EXTERNAL RECORDS (raw scraped evidence, many-per-real-world-entity)
+-- =====================================================================
+
+CREATE TABLE IF NOT EXISTS external_records (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+
+  dataset_id UUID NOT NULL REFERENCES apify_datasets(id) ON DELETE CASCADE,
+  source external_source NOT NULL,
+  record_type external_record_type NOT NULL,
+
+  -- External identifiers (global if possible)
+  external_id TEXT NOT NULL,
+  external_url TEXT,
+
+  -- Normalized fields (best effort)
+  name TEXT NOT NULL DEFAULT '',
+  description TEXT,
+
+  -- Location fields
+  address TEXT,
+  city TEXT,
+  region TEXT,
+  country TEXT NOT NULL DEFAULT 'Canada',
+
+  latitude DOUBLE PRECISION,
+  longitude DOUBLE PRECISION,
+  geom GEOGRAPHY(POINT, 4326),
+
+  community_id UUID REFERENCES sr_communities(id),
+
+  -- Raw payload
+  raw_data JSONB NOT NULL DEFAULT '{}',
+
+  -- Change detection
+  sync_hash TEXT,
+  first_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  last_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  last_changed_at TIMESTAMPTZ,
+
+  -- Governance
+  pii_risk TEXT NOT NULL DEFAULT 'unknown' CHECK (pii_risk IN ('low','medium','high','unknown')),
+  do_not_contact BOOLEAN NOT NULL DEFAULT FALSE,
+
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+  -- IMPORTANT: uniqueness should not depend on dataset slug; use stable source+external_id
+  UNIQUE(source, external_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_external_records_source_id ON external_records(source, external_id);
+CREATE INDEX IF NOT EXISTS idx_external_records_type ON external_records(record_type);
+CREATE INDEX IF NOT EXISTS idx_external_records_community ON external_records(community_id);
+CREATE INDEX IF NOT EXISTS idx_external_records_geom ON external_records USING GIST (geom) WHERE geom IS NOT NULL;
+
+-- Keep geom updated when lat/lng present
+CREATE OR REPLACE FUNCTION set_external_record_geom()
+RETURNS trigger AS $$
+BEGIN
+  IF NEW.latitude IS NOT NULL AND NEW.longitude IS NOT NULL THEN
+    NEW.geom := ST_SetSRID(ST_MakePoint(NEW.longitude, NEW.latitude), 4326)::geography;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_external_records_geom ON external_records;
+CREATE TRIGGER trg_external_records_geom
+BEFORE INSERT OR UPDATE OF latitude, longitude ON external_records
+FOR EACH ROW EXECUTE FUNCTION set_external_record_geom();
+
+-- =====================================================================
+-- 3) CONTACT POINTS (do NOT store "email/phone" as default fields on external_records)
+-- Instead store contact points with consent + verification status.
+-- =====================================================================
+
+CREATE TABLE IF NOT EXISTS external_contact_points (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+
+  external_record_id UUID REFERENCES external_records(id) ON DELETE CASCADE,
+
+  contact_type contact_type NOT NULL,
+  contact_value TEXT NOT NULL,          -- email address, phone number, handle, url
+  normalized_value TEXT NOT NULL,       -- lowercase email, normalized phone, canonical url, etc.
+
+  is_verified BOOLEAN NOT NULL DEFAULT FALSE,
+  verified_at TIMESTAMPTZ,
+
+  consent consent_basis NOT NULL DEFAULT 'unknown',
+  consent_notes TEXT,
+
+  is_primary BOOLEAN NOT NULL DEFAULT FALSE,
+  do_not_contact BOOLEAN NOT NULL DEFAULT FALSE,
+
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+  UNIQUE(contact_type, normalized_value)
+);
+
+CREATE INDEX IF NOT EXISTS idx_external_contact_points_record ON external_contact_points(external_record_id);
+CREATE INDEX IF NOT EXISTS idx_external_contact_points_value ON external_contact_points(contact_type, normalized_value);
+
+-- =====================================================================
+-- 4) CANONICAL ENTITIES (your truth layer)
+-- =====================================================================
+
+CREATE TABLE IF NOT EXISTS entities (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+
+  entity_type entity_type NOT NULL,
+  display_name TEXT NOT NULL,
+  description TEXT,
+
+  -- Canonical location (optional)
+  address TEXT,
+  city TEXT,
+  region TEXT,
+  country TEXT NOT NULL DEFAULT 'Canada',
+
+  latitude DOUBLE PRECISION,
+  longitude DOUBLE PRECISION,
+  geom GEOGRAPHY(POINT, 4326),
+  community_id UUID REFERENCES sr_communities(id),
+
+  -- Governance
+  visibility TEXT NOT NULL DEFAULT 'private' CHECK (visibility IN ('private','community','public')),
+  created_by_individual_id UUID REFERENCES cc_individuals(id),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_entities_type ON entities(entity_type);
+CREATE INDEX IF NOT EXISTS idx_entities_community ON entities(community_id);
+CREATE INDEX IF NOT EXISTS idx_entities_geom ON entities USING GIST (geom) WHERE geom IS NOT NULL;
+
+CREATE OR REPLACE FUNCTION set_entity_geom()
+RETURNS trigger AS $$
+BEGIN
+  IF NEW.latitude IS NOT NULL AND NEW.longitude IS NOT NULL THEN
+    NEW.geom := ST_SetSRID(ST_MakePoint(NEW.longitude, NEW.latitude), 4326)::geography;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_entities_geom ON entities;
+CREATE TRIGGER trg_entities_geom
+BEFORE INSERT OR UPDATE OF latitude, longitude ON entities
+FOR EACH ROW EXECUTE FUNCTION set_entity_geom();
+
+-- =====================================================================
+-- 5) ENTITY LINKS (external_records → entities) with confidence + explainability
+-- =====================================================================
+
+CREATE TABLE IF NOT EXISTS entity_links (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+
+  external_record_id UUID NOT NULL REFERENCES external_records(id) ON DELETE CASCADE,
+  entity_id UUID NOT NULL REFERENCES entities(id) ON DELETE CASCADE,
+
+  status link_status NOT NULL DEFAULT 'suggested',
+  confidence NUMERIC(5,4) NOT NULL DEFAULT 0.0,   -- 0.0000 - 1.0000
+  reasons JSONB NOT NULL DEFAULT '{}',            -- explainability: {"name_sim":0.91,"geo":0.8,"phone_match":1}
+  resolver_version TEXT NOT NULL DEFAULT 'v1',
+
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  decided_at TIMESTAMPTZ,
+  decided_by UUID,
+
+  UNIQUE(external_record_id, entity_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_entity_links_record ON entity_links(external_record_id);
+CREATE INDEX IF NOT EXISTS idx_entity_links_entity ON entity_links(entity_id);
+CREATE INDEX IF NOT EXISTS idx_entity_links_status ON entity_links(status);
+
+-- =====================================================================
+-- 6) CLAIMS (claim canonical entity, not external record)
+-- =====================================================================
+
+CREATE TABLE IF NOT EXISTS entity_claim_requests (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+
+  entity_id UUID NOT NULL REFERENCES entities(id) ON DELETE CASCADE,
+
+  claimant_individual_id UUID REFERENCES cc_individuals(id),
+  claimant_tenant_id UUID REFERENCES cc_tenants(id),
+
+  claimant_email TEXT NOT NULL,
+  claimant_name TEXT NOT NULL,
+
+  verification_method TEXT CHECK (verification_method IN (
+    'email_domain','phone_callback','document_upload','platform_proof','manual_review','existing_account'
+  )),
+  verification_data JSONB NOT NULL DEFAULT '{}',
+
+  status claim_status NOT NULL DEFAULT 'pending',
+  reviewed_at TIMESTAMPTZ,
+  reviewed_by_user_id UUID,
+  review_notes TEXT,
+  rejection_reason TEXT,
+
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_entity_claim_requests_entity ON entity_claim_requests(entity_id);
+CREATE INDEX IF NOT EXISTS idx_entity_claim_requests_status ON entity_claim_requests(status);
+
+-- The approved claim state (single source of truth)
+CREATE TABLE IF NOT EXISTS entity_claims (
+  entity_id UUID PRIMARY KEY REFERENCES entities(id) ON DELETE CASCADE,
+  claimed_by_individual_id UUID REFERENCES cc_individuals(id),
+  claimed_by_tenant_id UUID REFERENCES cc_tenants(id),
+  claimed_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  claim_status claim_status NOT NULL DEFAULT 'approved',
+  notes TEXT
+);
+
+-- =====================================================================
+-- 7) INQUIRIES (bridge flow)
+-- Inquiry references canonical entity when possible.
+-- If only external record exists, link it and resolution can attach later.
+-- =====================================================================
+
+CREATE TABLE IF NOT EXISTS entity_inquiries (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+
+  entity_id UUID REFERENCES entities(id) ON DELETE SET NULL,
+  external_record_id UUID REFERENCES external_records(id) ON DELETE SET NULL,
+
+  inquirer_individual_id UUID NOT NULL REFERENCES cc_individuals(id),
+
+  inquiry_type TEXT NOT NULL CHECK (inquiry_type IN (
+    'booking_request','rental_request','service_request','purchase_intent','general_inquiry'
+  )),
+
+  message TEXT,
+  requested_dates JSONB,
+  requested_quantity INTEGER,
+  budget_range JSONB,
+
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN (
+    'pending','outreach_queued','outreach_sent','owner_responded','connected','converted','declined','expired','cancelled'
+  )),
+
+  expires_at TIMESTAMPTZ,
+  converted_object_type TEXT,     -- 'booking','run','contract','rental'
+  converted_object_id UUID,
+
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+  CHECK (entity_id IS NOT NULL OR external_record_id IS NOT NULL)
+);
+
+CREATE INDEX IF NOT EXISTS idx_entity_inquiries_entity ON entity_inquiries(entity_id);
+CREATE INDEX IF NOT EXISTS idx_entity_inquiries_record ON entity_inquiries(external_record_id);
+CREATE INDEX IF NOT EXISTS idx_entity_inquiries_inquirer ON entity_inquiries(inquirer_individual_id);
+CREATE INDEX IF NOT EXISTS idx_entity_inquiries_status ON entity_inquiries(status);
+
+-- =====================================================================
+-- 8) OUTREACH: attempts + unsubscribes (deliverability + compliance)
+-- =====================================================================
+
+CREATE TABLE IF NOT EXISTS outreach_templates (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL,
+  slug TEXT NOT NULL UNIQUE,
+
+  entity_type entity_type NOT NULL,
+  trigger_type TEXT NOT NULL, -- 'inquiry_received','first_contact','reminder'
+
+  channel outreach_channel NOT NULL DEFAULT 'email',
+
+  subject TEXT NOT NULL,
+  body_text TEXT NOT NULL,
+  body_html TEXT,
+
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS outreach_attempts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+
+  inquiry_id UUID REFERENCES entity_inquiries(id) ON DELETE SET NULL,
+  entity_id UUID REFERENCES entities(id) ON DELETE SET NULL,
+  external_record_id UUID REFERENCES external_records(id) ON DELETE SET NULL,
+
+  template_id UUID REFERENCES outreach_templates(id) ON DELETE SET NULL,
+
+  channel outreach_channel NOT NULL DEFAULT 'email',
+  contact_point_id UUID REFERENCES external_contact_points(id) ON DELETE SET NULL,
+
+  consent consent_basis NOT NULL DEFAULT 'unknown',
+  result outreach_result NOT NULL DEFAULT 'queued',
+  provider_message_id TEXT,     -- Sendgrid/Mailgun/etc message id
+  error TEXT,
+
+  sent_at TIMESTAMPTZ,
+  last_event_at TIMESTAMPTZ,
+
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_outreach_attempts_inquiry ON outreach_attempts(inquiry_id);
+CREATE INDEX IF NOT EXISTS idx_outreach_attempts_entity ON outreach_attempts(entity_id);
+CREATE INDEX IF NOT EXISTS idx_outreach_attempts_result ON outreach_attempts(result);
+
+CREATE TABLE IF NOT EXISTS unsubscribes (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  channel outreach_channel NOT NULL DEFAULT 'email',
+  contact_type contact_type NOT NULL DEFAULT 'email',
+  normalized_value TEXT NOT NULL,      -- email lowercased
+  reason TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE(channel, contact_type, normalized_value)
+);
+
+-- =====================================================================
+-- 9) COMMUNITY RESOLUTION (proper geo, not euclidean)
+-- =====================================================================
+
+-- Assumes sr_communities has latitude/longitude; ideally it also has geom.
+ALTER TABLE sr_communities
+  ADD COLUMN IF NOT EXISTS geom GEOGRAPHY(POINT, 4326);
+
+CREATE OR REPLACE FUNCTION set_community_geom()
+RETURNS trigger AS $$
+BEGIN
+  IF NEW.latitude IS NOT NULL AND NEW.longitude IS NOT NULL THEN
+    NEW.geom := ST_SetSRID(ST_MakePoint(NEW.longitude, NEW.latitude), 4326)::geography;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_sr_communities_geom ON sr_communities;
+CREATE TRIGGER trg_sr_communities_geom
+BEFORE INSERT OR UPDATE OF latitude, longitude ON sr_communities
+FOR EACH ROW EXECUTE FUNCTION set_community_geom();
+
+CREATE INDEX IF NOT EXISTS idx_sr_communities_geom ON sr_communities USING GIST (geom) WHERE geom IS NOT NULL;
+
+CREATE OR REPLACE FUNCTION resolve_community(p_lat DOUBLE PRECISION, p_lng DOUBLE PRECISION, p_city TEXT DEFAULT NULL, p_region TEXT DEFAULT NULL)
+RETURNS UUID AS $$
+DECLARE v_id UUID;
+BEGIN
+  IF p_city IS NOT NULL THEN
+    SELECT id INTO v_id
+    FROM sr_communities
+    WHERE LOWER(name) = LOWER(p_city)
+      AND (p_region IS NULL OR LOWER(region) = LOWER(p_region))
+    LIMIT 1;
+    IF v_id IS NOT NULL THEN RETURN v_id; END IF;
+  END IF;
+
+  IF p_lat IS NOT NULL AND p_lng IS NOT NULL THEN
+    SELECT id INTO v_id
+    FROM sr_communities
+    WHERE geom IS NOT NULL
+    ORDER BY geom <-> ST_SetSRID(ST_MakePoint(p_lng, p_lat), 4326)::geography
+    LIMIT 1;
+  END IF;
+
+  RETURN v_id;
+END;
+$$ LANGUAGE plpgsql;
+
+-- =====================================================================
+-- 10) VIEWS (dashboards)
+-- =====================================================================
+
+-- Unclaimed entities with pending inquiries (resolution/outreach queue)
+CREATE OR REPLACE VIEW v_unclaimed_entities_with_inquiries AS
+SELECT
+  e.id AS entity_id,
+  e.entity_type,
+  e.display_name,
+  e.community_id,
+  COUNT(i.id) FILTER (WHERE i.status = 'pending') AS pending_inquiries,
+  MIN(i.created_at) AS oldest_inquiry
+FROM entities e
+LEFT JOIN entity_claims c ON c.entity_id = e.id
+LEFT JOIN entity_inquiries i ON i.entity_id = e.id
+WHERE c.entity_id IS NULL
+GROUP BY e.id
+HAVING COUNT(i.id) FILTER (WHERE i.status = 'pending') > 0
+ORDER BY pending_inquiries DESC, oldest_inquiry ASC;
+
+-- Records needing resolution (no accepted link yet)
+CREATE OR REPLACE VIEW v_external_records_needing_resolution AS
+SELECT
+  r.id,
+  r.source,
+  r.record_type,
+  r.name,
+  r.city,
+  r.region,
+  r.community_id,
+  r.last_seen_at
+FROM external_records r
+LEFT JOIN LATERAL (
+  SELECT 1
+  FROM entity_links l
+  WHERE l.external_record_id = r.id AND l.status = 'accepted'
+  LIMIT 1
+) accepted ON true
+WHERE accepted IS NULL
+ORDER BY r.last_seen_at DESC;
+
+-- =====================================================================
+-- VERIFY
+-- =====================================================================
+SELECT 'Community Canvas v2 schema installed' AS status;
+
+Part 2: Minimal sync changes (important corrections)
+Key changes from your current sync service
+
+Write to external_records only (always)
+
+Store email/phone into external_contact_points (with consent=unknown and do_not_contact=true by default if scraped)
+
+Create/refresh entity_links suggestions (optional V1), but do not auto-merge without confidence threshold + review
+
+server/services/apifySyncV2.ts (core record ingest)
+
+Create file: server/services/apifySyncV2.ts
+
+// server/services/apifySyncV2.ts
+// V2 ingest: external_records + optional external_contact_points.
+// Does NOT auto-claim, does NOT auto-email.
+// Entity resolution is separate (scoring + review).
+
+import crypto from "crypto";
+import { pool } from "../db";
+
+function md5(input: any) {
+  return crypto.createHash("md5").update(JSON.stringify(input)).digest("hex");
+}
+
+function getNested(obj: any, path: string) {
+  return path.split(".").reduce((cur, key) => (cur == null ? cur : cur[key]), obj);
+}
+
+function extractCoordinates(data: any): { lat: number | null; lng: number | null } {
+  const formats = [
+    { lat: "coordinates.lat", lng: "coordinates.lng" },
+    { lat: "coordinates.latitude", lng: "coordinates.longitude" },
+    { lat: "location.lat", lng: "location.lng" },
+    { lat: "lat", lng: "lng" },
+    { lat: "latitude", lng: "longitude" },
+    { lat: "geoLocation.lat", lng: "geoLocation.lng" }
+  ];
+
+  for (const f of formats) {
+    const lat = getNested(data, f.lat);
+    const lng = getNested(data, f.lng);
+    if (lat != null && lng != null) return { lat: Number(lat), lng: Number(lng) };
+  }
+  return { lat: null, lng: null };
+}
+
+function normalizeEmail(email: string) {
+  return email.trim().toLowerCase();
+}
+
+function normalizePhone(phone: string) {
+  return phone.replace(/[^\d+]/g, "");
+}
+
+type DatasetRow = {
+  id: string;
+  slug: string;
+  source: string;       // external_source enum
+  record_type: string;  // external_record_type enum
+  region?: string | null;
+};
+
+export async function upsertExternalRecord(args: {
+  dataset: DatasetRow;
+  record: any;
+}): Promise<"inserted" | "updated" | "skipped"> {
+  const { dataset, record } = args;
+
+  // 1) derive external id (required)
+  const externalId = String(
+    record.id || record.listingId || record.roomId || record.productId || record.sku || ""
+  ).trim();
+  if (!externalId) return "skipped";
+
+  const hash = md5(record);
+  const coords = extractCoordinates(record);
+
+  const name = String(record.title || record.name || record.productName || "Unknown").slice(0, 500);
+  const description = String(record.description || "").slice(0, 20000);
+
+  const city = String(record.location?.city || record.city || record.address?.city || "").slice(0, 200);
+  const region = String(record.location?.region || record.region || dataset.region || "").slice(0, 200);
+  const url = String(record.url || record.listingUrl || record.productUrl || "").slice(0, 2000);
+
+  // 2) check existing
+  const existing = await pool.query(
+    `SELECT id, sync_hash FROM external_records WHERE source = $1 AND external_id = $2`,
+    [dataset.source, externalId]
+  );
+
+  // NOTE: We never store scraped email/phone on external_records directly.
+  // If present, we put it into external_contact_points with consent='unknown'
+  // and do_not_contact=true by default unless later upgraded.
+
+  if (existing.rows.length > 0) {
+    const row = existing.rows[0];
+    if (row.sync_hash === hash) {
+      await pool.query(`UPDATE external_records SET last_seen_at = NOW() WHERE id = $1`, [row.id]);
+      return "skipped";
+    }
+
+    await pool.query(
+      `
+      UPDATE external_records SET
+        dataset_id = $1,
+        record_type = $2::external_record_type,
+        name = $3,
+        description = $4,
+        external_url = $5,
+        latitude = $6,
+        longitude = $7,
+        city = $8,
+        region = $9,
+        community_id = resolve_community($6, $7, $8, $9),
+        raw_data = $10,
+        sync_hash = $11,
+        last_seen_at = NOW(),
+        last_changed_at = NOW(),
+        updated_at = NOW()
+      WHERE source = $12::external_source AND external_id = $13
+      `,
+      [
+        dataset.id,
+        dataset.record_type,
+        name,
+        description,
+        url,
+        coords.lat,
+        coords.lng,
+        city,
+        region,
+        JSON.stringify(record),
+        hash,
+        dataset.source,
+        externalId
+      ]
+    );
+
+    await upsertContactPointsFromRecord(row.id, record);
+    return "updated";
+  }
+
+  const inserted = await pool.query(
+    `
+    INSERT INTO external_records (
+      dataset_id, source, record_type,
+      external_id, external_url,
+      name, description,
+      latitude, longitude, city, region, country,
+      community_id, raw_data, sync_hash, pii_risk, do_not_contact
+    ) VALUES (
+      $1, $2::external_source, $3::external_record_type,
+      $4, $5,
+      $6, $7,
+      $8, $9, $10, $11, 'Canada',
+      resolve_community($8, $9, $10, $11),
+      $12, $13, 'unknown', false
+    )
+    RETURNING id
+    `,
+    [
+      dataset.id,
+      dataset.source,
+      dataset.record_type,
+      externalId,
+      url,
+      name,
+      description,
+      coords.lat,
+      coords.lng,
+      city,
+      region,
+      JSON.stringify(record),
+      hash
+    ]
+  );
+
+  const externalRecordId = inserted.rows[0].id;
+  await upsertContactPointsFromRecord(externalRecordId, record);
+
+  return "inserted";
+}
+
+async function upsertContactPointsFromRecord(externalRecordId: string, record: any) {
+  const emails: string[] = [];
+  const phones: string[] = [];
+
+  // best-effort extraction (you’ll expand per source adapter)
+  const maybeEmail =
+    record.email ||
+    record.host?.email ||
+    record.contactEmail ||
+    null;
+
+  const maybePhone =
+    record.phone ||
+    record.host?.phone ||
+    record.contactPhone ||
+    null;
+
+  if (typeof maybeEmail === "string" && maybeEmail.includes("@")) emails.push(maybeEmail);
+  if (typeof maybePhone === "string" && maybePhone.length >= 7) phones.push(maybePhone);
+
+  for (const e of emails) {
+    const norm = normalizeEmail(e);
+    await pool.query(
+      `
+      INSERT INTO external_contact_points (
+        external_record_id, contact_type, contact_value, normalized_value,
+        is_verified, consent, do_not_contact, is_primary
+      ) VALUES ($1, 'email', $2, $3, false, 'unknown', true, false)
+      ON CONFLICT (contact_type, normalized_value) DO NOTHING
+      `,
+      [externalRecordId, e, norm]
+    );
+  }
+
+  for (const p of phones) {
+    const norm = normalizePhone(p);
+    await pool.query(
+      `
+      INSERT INTO external_contact_points (
+        external_record_id, contact_type, contact_value, normalized_value,
+        is_verified, consent, do_not_contact, is_primary
+      ) VALUES ($1, 'phone', $2, $3, false, 'unknown', true, false)
+      ON CONFLICT (contact_type, normalized_value) DO NOTHING
+      `,
+      [externalRecordId, p, norm]
+    );
+  }
+}
+
+Part 3: Entity Resolution (V1 suggestion engine)
+
+This does not auto-merge. It creates entity_links with status='suggested'.
+
+Create file: server/services/entityResolution.ts
+
+// server/services/entityResolution.ts
+// Minimal V1: propose entity links by geo + name similarity.
+// Stores reasons + confidence into entity_links as "suggested".
+// A reviewer (or later automation threshold) can accept.
+
+import { pool } from "../db";
+
+function jaccardTokens(a: string, b: string) {
+  const ta = new Set(a.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean));
+  const tb = new Set(b.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean));
+  if (ta.size === 0 || tb.size === 0) return 0;
+  const inter = [...ta].filter(x => tb.has(x)).length;
+  const union = new Set([...ta, ...tb]).size;
+  return inter / union;
+}
+
+export async function proposeLinksForExternalRecord(externalRecordId: string) {
+  const r = await pool.query(
+    `SELECT id, name, geom, community_id, source, record_type FROM external_records WHERE id=$1`,
+    [externalRecordId]
+  );
+  if (r.rows.length === 0) return;
+
+  const rec = r.rows[0];
+  const name = String(rec.name || "");
+
+  // candidate entities: same community OR within 5km if geom exists
+  const candidates = await pool.query(
+    `
+    SELECT id, display_name, geom, community_id
+    FROM entities
+    WHERE
+      ( $1::uuid IS NOT NULL AND community_id = $1 )
+      OR ( $2::geography IS NOT NULL AND geom IS NOT NULL AND ST_DWithin(geom, $2::geography, 5000) )
+    LIMIT 200
+    `,
+    [rec.community_id, rec.geom]
+  );
+
+  for (const e of candidates.rows) {
+    const sim = jaccardTokens(name, e.display_name || "");
+    if (sim < 0.35) continue;
+
+    // Confidence is a simple blend; you’ll improve later
+    const confidence = Math.min(1, 0.6 * sim + 0.4 * 0.7);
+
+    const reasons = {
+      name_jaccard: sim,
+      geo_hint: rec.geom ? 0.7 : 0.2,
+      rule: "v1_geo_name"
+    };
+
+    await pool.query(
+      `
+      INSERT INTO entity_links (external_record_id, entity_id, status, confidence, reasons, resolver_version)
+      VALUES ($1, $2, 'suggested', $3, $4, 'v1')
+      ON CONFLICT (external_record_id, entity_id) DO UPDATE SET
+        confidence = GREATEST(entity_links.confidence, EXCLUDED.confidence),
+        reasons = EXCLUDED.reasons,
+        resolver_version = EXCLUDED.resolver_version
+      `,
+      [externalRecordId, e.id, confidence, JSON.stringify(reasons)]
+    );
+  }
+}
+
+Part 4: Claim & Bridge Flow (rewired correctly)
+What changes conceptually
+
+The claim is against entities, not external_records.
+
+“Pending inquiry” can exist even if you never have contact info.
+
+Outreach is only attempted if you have a contact point with a consent basis you accept.
+
+Example rule (safe default)
+
+Only allow email outreach if:
+
+external_contact_points.do_not_contact = false
+
+consent IN ('provided_by_user','public_opt_in','transactional_request','verified_owner')
+Otherwise: status stays “outreach_queued” and you prompt the inquirer to supply contact or send an invitation link themselves.
+
+Outreach gate helper (paste into Claude to implement)
+// pseudo: choose contact point to outreach
+// only choose if consent basis is acceptable and not unsubscribed
+
+const ACCEPTABLE_CONSENT: any[] = [
+  "provided_by_user",
+  "public_opt_in",
+  "transactional_request",
+  "verified_owner"
+];
+
+// Query:
+SELECT cp.*
+FROM external_contact_points cp
+LEFT JOIN unsubscribes u
+  ON u.channel='email' AND u.contact_type='email' AND u.normalized_value = cp.normalized_value
+WHERE cp.external_record_id=$1
+  AND cp.contact_type='email'
+  AND cp.do_not_contact=false
+  AND cp.consent = ANY($2)
+  AND u.id IS NULL
+ORDER BY cp.is_primary DESC, cp.is_verified DESC
+LIMIT 1;
+
+Part 5: What to do with your existing “accommodation_properties / product_catalog”
+
+Keep them optional projections.
+
+external_records is the true ingestion sink
+
+“accommodation_properties” can be built as a projection table later:
+
+either populate it from accepted links (entity_type=property)
+
+or directly from source adapter if you insist
+
+But don’t entangle projection tables with your core entity/claim system.
+
+Seed Examples (optional)
+INSERT INTO apify_datasets (apify_actor_id, name, slug, source, record_type, region)
+VALUES
+('tri_angle/airbnb-scraper', 'Airbnb British Columbia', 'airbnb-bc', 'airbnb', 'property_listing', 'British Columbia')
+ON CONFLICT (slug) DO NOTHING;
+
+The updated diagram (truthful)
+
+APIFY DATA LAKE → external_records (evidence)
+
+ENTITY RESOLUTION → entity_links (suggested/accepted)
+
+CANONICAL ENTITIES → entities (+ entity_claims)
+
+INQUIRIES → entity_inquiries
+
+OUTREACH (optional) → outreach_attempts against consented contact points
+
+If you want the ruthless “migration plan” (no downtime)
+
+Create new tables alongside old ones
+
+Backfill: external_entities → external_records
+
+Backfill: create entities for each unique thing you care about (start with properties)
+
+Create entity_links suggested for each record → entity
+
+Swap APIs/UI to new objects
+
+Deprecate old tables
+
+If you paste this into Claude, tell it: “Refactor my existing Apify sync + claim flow to this v2 schema; keep endpoints but point them at external_records/entities; implement outreach gating by consent.”
