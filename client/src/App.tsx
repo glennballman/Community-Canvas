@@ -50,6 +50,7 @@ import ServiceCatalog from "@/pages/services/ServiceCatalog";
 import BundlesBrowser from "@/pages/services/BundlesBrowser";
 import ServiceRuns from "@/pages/services/ServiceRuns";
 import ServiceRunDetail from "@/pages/services/ServiceRunDetail";
+import CreateServiceRun from "@/pages/services/CreateServiceRun";
 
 function AppShellRoutes() {
   return (
@@ -78,6 +79,7 @@ function AppShellRoutes() {
         <Route path="/services/catalog" component={ServiceCatalog} />
         <Route path="/services/bundles" component={BundlesBrowser} />
         <Route path="/services/runs" component={ServiceRuns} />
+        <Route path="/services/runs/new" component={CreateServiceRun} />
         <Route path="/services/runs/:slug" component={ServiceRunDetail} />
         
         {/* Navigation hub */}
