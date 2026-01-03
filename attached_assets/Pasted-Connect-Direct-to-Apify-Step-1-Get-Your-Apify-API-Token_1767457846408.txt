@@ -1,0 +1,125 @@
+Connect Direct to Apify
+Step 1: Get Your Apify API Token
+
+Go to Apify Console → Settings → Integrations
+Copy your Personal API Token
+
+Step 2: Add Token to Replit Secrets
+
+In Replit, click Tools → Secrets
+Add new secret:
+
+Key: APIFY_API_TOKEN
+Value: Your token from step 1
+
+
+
+Step 3: Get Your Dataset ID
+From your Apify screenshot, I can see:
+
+Run ID: ihc81fhy6d5mzRqQg
+The dataset ID is typically the same or found in the run details
+
+To find it:
+
+Go to your completed run in Apify
+Click Storage → Dataset
+Copy the Dataset ID from the URL or header
+
+It usually looks like: ihc81fhy6d5mzRqQg or similar
+Step 4: Update Dataset Config
+Run this SQL in Replit (replace with your actual dataset ID):
+sql-- Update with your Apify dataset ID
+UPDATE apify_datasets 
+SET 
+    apify_dataset_id = 'ihc81fhy6d5mzRqQg',  -- Replace with your actual ID
+    sync_enabled = true
+WHERE slug = 'airbnb-bc';
+
+-- Verify
+SELECT name, slug, apify_actor_id, apify_dataset_id, sync_enabled 
+FROM apify_datasets 
+WHERE slug = 'airbnb-bc';
+Step 5: Trigger the Sync
+Once the token and dataset ID are configured:
+bash# Via curl
+curl -X POST http://localhost:5000/api/apify/sync/airbnb-bc
+
+# Or via the Replit shell
+wget -qO- --post-data='' http://localhost:5000/api/apify/sync/airbnb-bc
+Or if you have a UI button, just click it!
+
+What Happens Next
+The sync will:
+
+Connect to Apify API
+Fetch all 12,795 records
+Process each one → external_records
+Auto-create entities → entities
+Geo-match to BC communities
+Report progress every 500 records
+
+
+Quick Check: Is Everything Ready?
+Run this to verify setup:
+sql-- Check dataset is configured
+SELECT 
+    name,
+    slug,
+    apify_actor_id,
+    apify_dataset_id,
+    sync_enabled,
+    last_sync_at
+FROM apify_datasets 
+WHERE slug = 'airbnb-bc';
+What's your Apify dataset ID? Once you have it, paste it and I'll give you the exact SQL to run.Apify dataset ID: hK5JtJUO3SIqyfhVP8:29 AMIdentified dataset ID and prepared configuration instructions.The user has provided their Apify dataset ID. I need to give them the SQL to update the dataset config and then the command to trigger the sync.Perfect! Let's Configure and Sync
+Step 1: Update Dataset Config
+Run this SQL in Replit:
+sql-- Configure Apify dataset ID
+UPDATE apify_datasets 
+SET 
+    apify_dataset_id = 'hK5JtJUO3SIqyfhVP',
+    sync_enabled = true
+WHERE slug = 'airbnb-bc';
+
+-- Verify it's set
+SELECT name, slug, apify_dataset_id, sync_enabled 
+FROM apify_datasets 
+WHERE slug = 'airbnb-bc';
+Step 2: Make Sure APIFY_API_TOKEN is Set
+In Replit Secrets, confirm you have:
+
+Key: APIFY_API_TOKEN
+Value: Your Apify personal API token
+
+Step 3: Trigger the Sync
+bashcurl -X POST http://localhost:5000/api/apify/sync/airbnb-bc
+Or in Replit shell:
+bashnode -e "fetch('http://localhost:5000/api/apify/sync/airbnb-bc', {method:'POST'}).then(r=>r.json()).then(console.log)"
+```
+
+---
+
+## Expected Output
+```
+🚀 Starting sync for airbnb-bc...
+📥 Fetching from Apify dataset: hK5JtJUO3SIqyfhVP
+📊 Processing 12795 records...
+  ✓ 500 processed...
+  ✓ 1,000 processed...
+  ✓ 2,000 processed...
+  ...
+  ✓ 12,500 processed...
+
+✅ Sync completed:
+{
+  "success": true,
+  "result": {
+    "recordsProcessed": 12795,
+    "recordsInserted": 12743,
+    "entitiesCreated": 12743,
+    "durationSeconds": 90
+  }
+}
+
+Go ahead and run Steps 1-3!
