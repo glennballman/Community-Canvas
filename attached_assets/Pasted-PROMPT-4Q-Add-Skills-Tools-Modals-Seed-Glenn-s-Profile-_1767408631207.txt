@@ -1,0 +1,797 @@
+PROMPT 4Q: Add Skills/Tools Modals + Seed Glenn's Profile
+sql-- =====================================================================
+-- SEED GLENN'S SOVEREIGN INDIVIDUAL PROFILE
+-- =====================================================================
+
+-- First, create or get Glenn's individual record
+INSERT INTO cc_individuals (
+    id,
+    full_name,
+    preferred_name,
+    email,
+    phone,
+    phone_verified,
+    email_verified,
+    home_country,
+    home_region,
+    home_community_id,
+    current_community_id,
+    languages,
+    emergency_contact_name,
+    emergency_contact_phone,
+    emergency_contact_relationship,
+    profile_complete,
+    profile_score,
+    status
+) VALUES (
+    '00000000-0000-0000-0000-000000000001'::uuid,
+    'Glenn Ballman',
+    'Glenn',
+    'glenn@communitycanvas.ca',
+    '+1-604-555-0100',
+    true,
+    true,
+    'Canada',
+    'British Columbia',
+    (SELECT id FROM sr_communities WHERE slug = 'bamfield' LIMIT 1),
+    (SELECT id FROM sr_communities WHERE slug = 'bamfield' LIMIT 1),
+    ARRAY['en'],
+    'Emergency Contact',
+    '+1-604-555-0199',
+    'Family',
+    false,
+    25,
+    'active'
+) ON CONFLICT (email) DO UPDATE SET
+    full_name = EXCLUDED.full_name,
+    phone_verified = true,
+    email_verified = true,
+    profile_score = 25;
+
+-- Get Glenn's ID for subsequent inserts
+DO $$
+DECLARE
+    glenn_id UUID;
+BEGIN
+    SELECT id INTO glenn_id FROM cc_individuals WHERE email = 'glenn@communitycanvas.ca';
+    
+    -- Add Glenn's skills
+    INSERT INTO cc_individual_skills (individual_id, skill_id, proficiency_level, years_experience, verified)
+    SELECT 
+        glenn_id,
+        s.id,
+        CASE 
+            WHEN s.slug IN ('project-management', 'estimating') THEN 'expert'
+            WHEN s.slug IN ('general-carpentry', 'deck-building') THEN 'proficient'
+            ELSE 'competent'
+        END,
+        CASE 
+            WHEN s.slug IN ('project-management', 'estimating') THEN 25
+            WHEN s.slug IN ('general-carpentry', 'deck-building') THEN 15
+            ELSE 10
+        END,
+        true
+    FROM sr_skills s
+    WHERE s.slug IN (
+        'project-management',
+        'estimating',
+        'general-carpentry',
+        'deck-building',
+        'pressure-washing',
+        'landscaping',
+        'boat-handling',
+        'customer-service'
+    )
+    ON CONFLICT (individual_id, skill_id) DO NOTHING;
+
+    -- Add Glenn's personal tools (at West Bamfield property)
+    INSERT INTO cc_individual_tools (
+        individual_id, 
+        tool_id, 
+        ownership, 
+        quantity, 
+        condition,
+        current_location,
+        current_community_id,
+        available_for_rent,
+        rental_rate_daily,
+        rental_rate_weekly,
+        damage_deposit
+    )
+    SELECT 
+        glenn_id,
+        t.id,
+        'owned',
+        CASE WHEN t.slug = 'chainsaw-professional' THEN 2 ELSE 1 END,
+        'good',
+        'West Bamfield Shop',
+        (SELECT id FROM sr_communities WHERE slug = 'bamfield' LIMIT 1),
+        true,
+        CASE 
+            WHEN t.slug = 'pressure-washer-3000' THEN 75
+            WHEN t.slug = 'chainsaw-professional' THEN 50
+            WHEN t.slug = 'mower-zero-turn' THEN 150
+            WHEN t.slug = 'landscaping-ladders-pro' THEN 50
+            WHEN t.slug = 'generator-10kw' THEN 100
+            ELSE t.typical_daily_rental
+        END,
+        CASE 
+            WHEN t.slug = 'pressure-washer-3000' THEN 300
+            WHEN t.slug = 'chainsaw-professional' THEN 200
+            WHEN t.slug = 'mower-zero-turn' THEN 600
+            WHEN t.slug = 'landscaping-ladders-pro' THEN 200
+            WHEN t.slug = 'generator-10kw' THEN 400
+            ELSE t.typical_weekly_rental
+        END,
+        CASE 
+            WHEN t.slug IN ('mower-zero-turn', 'generator-10kw') THEN 500
+            ELSE 200
+        END
+    FROM sr_tools t
+    WHERE t.slug IN (
+        'pressure-washer-3000',
+        'chainsaw-professional',
+        'mower-zero-turn',
+        'string-trimmer-commercial',
+        'hedge-trimmer-long',
+        'pole-saw-electric',
+        'landscaping-ladders-pro',
+        'extension-ladder-32',
+        'generator-10kw'
+    )
+    ON CONFLICT DO NOTHING;
+
+    -- Sign waivers for Glenn
+    INSERT INTO cc_signed_waivers (
+        individual_id,
+        waiver_template_id,
+        signed_at,
+        signature_data,
+        signature_method,
+        expires_at
+    )
+    SELECT 
+        glenn_id,
+        wt.id,
+        NOW() - INTERVAL '30 days',
+        'Glenn Ballman',
+        'typed',
+        NOW() + INTERVAL '335 days'
+    FROM cc_waiver_templates wt
+    WHERE wt.slug IN ('watercraft-waiver', 'motorized-vehicle-waiver', 'power-tool-waiver', 'general-activity-waiver')
+    ON CONFLICT DO NOTHING;
+
+    -- Add a payment method placeholder (in real app, this comes from Stripe)
+    INSERT INTO cc_payment_methods (
+        individual_id,
+        payment_type,
+        display_name,
+        last_four,
+        brand,
+        processor,
+        processor_customer_id,
+        processor_payment_method_id,
+        expires_month,
+        expires_year,
+        is_default,
+        verified
+    ) VALUES (
+        glenn_id,
+        'credit_card',
+        'Visa ending in 4242',
+        '4242',
+        'Visa',
+        'stripe',
+        'cus_test_glenn',
+        'pm_test_glenn',
+        12,
+        2027,
+        true,
+        true
+    ) ON CONFLICT DO NOTHING;
+
+    -- Add a driver's license document
+    INSERT INTO cc_identity_documents (
+        individual_id,
+        document_type,
+        document_number,
+        issuing_authority,
+        issuing_region,
+        issued_at,
+        expires_at,
+        verified,
+        verified_at,
+        verification_method
+    ) VALUES (
+        glenn_id,
+        'drivers_license',
+        'BC1234567',
+        'ICBC',
+        'British Columbia',
+        '2020-06-15',
+        '2027-06-15',
+        true,
+        NOW() - INTERVAL '60 days',
+        'manual'
+    ) ON CONFLICT DO NOTHING;
+
+    -- Update profile score
+    UPDATE cc_individuals 
+    SET profile_score = 85, profile_complete = true
+    WHERE id = glenn_id;
+
+END $$;
+
+-- =====================================================================
+-- SEED PAVEL'S PROFILE (Employee/Contractor)
+-- =====================================================================
+
+INSERT INTO cc_individuals (
+    id,
+    full_name,
+    preferred_name,
+    email,
+    phone,
+    phone_verified,
+    email_verified,
+    home_country,
+    home_region,
+    home_community_id,
+    current_community_id,
+    languages,
+    profile_score,
+    status
+) VALUES (
+    '00000000-0000-0000-0000-000000000002'::uuid,
+    'Pavel Kowalski',
+    'Pavel',
+    'pavel@ballmanenterprises.ca',
+    '+1-604-555-0201',
+    true,
+    true,
+    'Poland',
+    'British Columbia',
+    (SELECT id FROM sr_communities WHERE slug = 'surrey' LIMIT 1),
+    (SELECT id FROM sr_communities WHERE slug = 'bamfield' LIMIT 1),
+    ARRAY['en', 'pl'],
+    70,
+    'active'
+) ON CONFLICT (email) DO UPDATE SET
+    current_community_id = (SELECT id FROM sr_communities WHERE slug = 'bamfield' LIMIT 1);
+
+DO $$
+DECLARE
+    pavel_id UUID;
+BEGIN
+    SELECT id INTO pavel_id FROM cc_individuals WHERE email = 'pavel@ballmanenterprises.ca';
+    
+    -- Pavel's skills (hands-on tradesperson)
+    INSERT INTO cc_individual_skills (individual_id, skill_id, proficiency_level, years_experience, verified)
+    SELECT 
+        pavel_id,
+        s.id,
+        CASE 
+            WHEN s.slug IN ('landscaping', 'pressure-washing', 'gutter-work') THEN 'proficient'
+            WHEN s.slug IN ('roofing', 'painting') THEN 'competent'
+            ELSE 'learning'
+        END,
+        CASE 
+            WHEN s.slug IN ('landscaping', 'pressure-washing') THEN 8
+            ELSE 3
+        END,
+        false
+    FROM sr_skills s
+    WHERE s.slug IN (
+        'landscaping',
+        'pressure-washing',
+        'gutter-work',
+        'roofing',
+        'painting',
+        'tree-work',
+        'general-carpentry',
+        'chainsaw-professional'
+    )
+    ON CONFLICT (individual_id, skill_id) DO NOTHING;
+
+    -- Pavel's personal tools (traveling with him)
+    INSERT INTO cc_individual_tools (
+        individual_id, 
+        tool_id, 
+        ownership, 
+        quantity, 
+        condition,
+        current_location,
+        current_community_id,
+        available_for_rent,
+        rental_rate_daily
+    )
+    SELECT 
+        pavel_id,
+        t.id,
+        'owned',
+        1,
+        'good',
+        'Bamfield (traveling)',
+        (SELECT id FROM sr_communities WHERE slug = 'bamfield' LIMIT 1),
+        false, -- Pavel's tools are for his own use
+        NULL
+    FROM sr_tools t
+    WHERE t.slug IN (
+        'landscaping-ladders-pro',
+        'string-trimmer-commercial',
+        'chainsaw-professional'
+    )
+    ON CONFLICT DO NOTHING;
+
+    -- Pavel signed the power tool waiver
+    INSERT INTO cc_signed_waivers (
+        individual_id,
+        waiver_template_id,
+        signed_at,
+        signature_data,
+        signature_method,
+        expires_at
+    )
+    SELECT 
+        pavel_id,
+        wt.id,
+        NOW() - INTERVAL '10 days',
+        'Pavel Kowalski',
+        'typed',
+        NOW() + INTERVAL '355 days'
+    FROM cc_waiver_templates wt
+    WHERE wt.slug = 'power-tool-waiver'
+    ON CONFLICT DO NOTHING;
+
+END $$;
+
+-- =====================================================================
+-- API ENDPOINT FOR INDIVIDUAL PROFILE
+-- =====================================================================
+
+-- This is the query your /api/individuals/me endpoint should use:
+
+-- Replace with actual query in your Express route:
+/*
+SELECT json_build_object(
+    'individual', (
+        SELECT json_build_object(
+            'id', i.id,
+            'fullName', i.full_name,
+            'preferredName', i.preferred_name,
+            'email', i.email,
+            'phone', i.phone,
+            'phoneVerified', i.phone_verified,
+            'emailVerified', i.email_verified,
+            'photoUrl', i.photo_url,
+            'homeCountry', i.home_country,
+            'homeRegion', i.home_region,
+            'currentCommunity', (SELECT name FROM sr_communities WHERE id = i.current_community_id),
+            'languages', i.languages,
+            'emergencyContactName', i.emergency_contact_name,
+            'emergencyContactPhone', i.emergency_contact_phone,
+            'profileScore', i.profile_score,
+            'profileComplete', i.profile_complete
+        )
+        FROM cc_individuals i
+        WHERE i.email = $1  -- Pass user email from auth
+    ),
+    'documents', (
+        SELECT COALESCE(json_agg(json_build_object(
+            'id', d.id,
+            'documentType', d.document_type,
+            'documentNumber', d.document_number,
+            'issuingAuthority', d.issuing_authority,
+            'expiresAt', d.expires_at,
+            'verified', d.verified,
+            'isExpired', d.is_expired
+        )), '[]'::json)
+        FROM cc_identity_documents d
+        JOIN cc_individuals i ON i.id = d.individual_id
+        WHERE i.email = $1
+    ),
+    'waivers', (
+        SELECT COALESCE(json_agg(json_build_object(
+            'id', sw.id,
+            'templateSlug', wt.slug,
+            'templateName', wt.name,
+            'activityTypes', wt.activity_types,
+            'signedAt', sw.signed_at,
+            'expiresAt', sw.expires_at,
+            'isExpired', sw.is_expired
+        )), '[]'::json)
+        FROM cc_signed_waivers sw
+        JOIN cc_waiver_templates wt ON wt.id = sw.waiver_template_id
+        JOIN cc_individuals i ON i.id = sw.individual_id
+        WHERE i.email = $1
+    ),
+    'skills', (
+        SELECT COALESCE(json_agg(json_build_object(
+            'id', isk.id,
+            'skillId', s.id,
+            'skillName', s.name,
+            'category', s.category,
+            'proficiencyLevel', isk.proficiency_level,
+            'yearsExperience', isk.years_experience,
+            'verified', isk.verified
+        )), '[]'::json)
+        FROM cc_individual_skills isk
+        JOIN sr_skills s ON s.id = isk.skill_id
+        JOIN cc_individuals i ON i.id = isk.individual_id
+        WHERE i.email = $1
+    ),
+    'tools', (
+        SELECT COALESCE(json_agg(json_build_object(
+            'id', it.id,
+            'toolId', t.id,
+            'toolName', t.name,
+            'category', tc.name,
+            'currentLocation', it.current_location,
+            'currentCommunity', (SELECT name FROM sr_communities WHERE id = it.current_community_id),
+            'condition', it.condition,
+            'availableForRent', it.available_for_rent,
+            'rentalRateDaily', it.rental_rate_daily
+        )), '[]'::json)
+        FROM cc_individual_tools it
+        JOIN sr_tools t ON t.id = it.tool_id
+        LEFT JOIN sr_tool_categories tc ON tc.id = t.category_id
+        JOIN cc_individuals i ON i.id = it.individual_id
+        WHERE i.email = $1
+    ),
+    'paymentMethods', (
+        SELECT COALESCE(json_agg(json_build_object(
+            'id', pm.id,
+            'paymentType', pm.payment_type,
+            'displayName', pm.display_name,
+            'lastFour', pm.last_four,
+            'brand', pm.brand,
+            'isDefault', pm.is_default,
+            'isExpired', pm.is_expired
+        )), '[]'::json)
+        FROM cc_payment_methods pm
+        JOIN cc_individuals i ON i.id = pm.individual_id
+        WHERE i.email = $1
+    )
+) as profile
+*/
+
+-- =====================================================================
+-- VERIFY
+-- =====================================================================
+
+SELECT 'Profile data seeded' as status;
+
+SELECT 'Glenn profile:' as check,
+    (SELECT json_build_object(
+        'name', full_name,
+        'score', profile_score,
+        'skills', (SELECT COUNT(*) FROM cc_individual_skills WHERE individual_id = i.id),
+        'tools', (SELECT COUNT(*) FROM cc_individual_tools WHERE individual_id = i.id),
+        'waivers', (SELECT COUNT(*) FROM cc_signed_waivers WHERE individual_id = i.id),
+        'payments', (SELECT COUNT(*) FROM cc_payment_methods WHERE individual_id = i.id)
+    ) FROM cc_individuals i WHERE email = 'glenn@communitycanvas.ca') as data;
+
+SELECT 'Pavel profile:' as check,
+    (SELECT json_build_object(
+        'name', full_name,
+        'score', profile_score,
+        'skills', (SELECT COUNT(*) FROM cc_individual_skills WHERE individual_id = i.id),
+        'tools', (SELECT COUNT(*) FROM cc_individual_tools WHERE individual_id = i.id)
+    ) FROM cc_individuals i WHERE email = 'pavel@ballmanenterprises.ca') as data;
+Now add the API endpoint to fetch the profile:
+typescript// server/routes/individuals.ts
+
+import { Router } from 'express';
+import { pool } from '../db';
+import { authenticateToken } from '../middleware/auth';
+
+const router = Router();
+
+// GET /api/individuals/me - Get current user's individual profile
+router.get('/me', authenticateToken, async (req, res) => {
+  try {
+    const userEmail = (req as any).user?.email;
+    
+    if (!userEmail) {
+      return res.status(401).json({ success: false, error: 'Not authenticated' });
+    }
+
+    const result = await pool.query(`
+      SELECT json_build_object(
+        'individual', (
+          SELECT json_build_object(
+            'id', i.id,
+            'fullName', i.full_name,
+            'preferredName', i.preferred_name,
+            'email', i.email,
+            'phone', i.phone,
+            'phoneVerified', i.phone_verified,
+            'emailVerified', i.email_verified,
+            'photoUrl', i.photo_url,
+            'homeCountry', i.home_country,
+            'homeRegion', i.home_region,
+            'currentCommunity', (SELECT name FROM sr_communities WHERE id = i.current_community_id),
+            'languages', i.languages,
+            'emergencyContactName', i.emergency_contact_name,
+            'emergencyContactPhone', i.emergency_contact_phone,
+            'profileScore', i.profile_score,
+            'profileComplete', i.profile_complete
+          )
+          FROM cc_individuals i
+          WHERE i.email = $1
+        ),
+        'documents', (
+          SELECT COALESCE(json_agg(json_build_object(
+            'id', d.id,
+            'documentType', d.document_type,
+            'documentNumber', d.document_number,
+            'issuingAuthority', d.issuing_authority,
+            'expiresAt', d.expires_at,
+            'verified', d.verified,
+            'isExpired', d.is_expired
+          )), '[]'::json)
+          FROM cc_identity_documents d
+          JOIN cc_individuals i ON i.id = d.individual_id
+          WHERE i.email = $1
+        ),
+        'waivers', (
+          SELECT COALESCE(json_agg(json_build_object(
+            'id', sw.id,
+            'templateSlug', wt.slug,
+            'templateName', wt.name,
+            'activityTypes', wt.activity_types,
+            'signedAt', sw.signed_at,
+            'expiresAt', sw.expires_at,
+            'isExpired', sw.is_expired
+          )), '[]'::json)
+          FROM cc_signed_waivers sw
+          JOIN cc_waiver_templates wt ON wt.id = sw.waiver_template_id
+          JOIN cc_individuals i ON i.id = sw.individual_id
+          WHERE i.email = $1
+        ),
+        'skills', (
+          SELECT COALESCE(json_agg(json_build_object(
+            'id', isk.id,
+            'skillId', s.id,
+            'skillName', s.name,
+            'category', s.category,
+            'proficiencyLevel', isk.proficiency_level,
+            'yearsExperience', isk.years_experience,
+            'verified', isk.verified
+          )), '[]'::json)
+          FROM cc_individual_skills isk
+          JOIN sr_skills s ON s.id = isk.skill_id
+          JOIN cc_individuals i ON i.id = isk.individual_id
+          WHERE i.email = $1
+        ),
+        'tools', (
+          SELECT COALESCE(json_agg(json_build_object(
+            'id', it.id,
+            'toolId', t.id,
+            'toolName', t.name,
+            'category', tc.name,
+            'currentLocation', it.current_location,
+            'currentCommunity', (SELECT name FROM sr_communities WHERE id = it.current_community_id),
+            'condition', it.condition,
+            'availableForRent', it.available_for_rent,
+            'rentalRateDaily', it.rental_rate_daily
+          )), '[]'::json)
+          FROM cc_individual_tools it
+          JOIN sr_tools t ON t.id = it.tool_id
+          LEFT JOIN sr_tool_categories tc ON tc.id = t.category_id
+          JOIN cc_individuals i ON i.id = it.individual_id
+          WHERE i.email = $1
+        ),
+        'paymentMethods', (
+          SELECT COALESCE(json_agg(json_build_object(
+            'id', pm.id,
+            'paymentType', pm.payment_type,
+            'displayName', pm.display_name,
+            'lastFour', pm.last_four,
+            'brand', pm.brand,
+            'isDefault', pm.is_default,
+            'isExpired', pm.is_expired
+          )), '[]'::json)
+          FROM cc_payment_methods pm
+          JOIN cc_individuals i ON i.id = pm.individual_id
+          WHERE i.email = $1
+        )
+      ) as profile
+    `, [userEmail]);
+
+    const profile = result.rows[0]?.profile;
+    
+    if (!profile || !profile.individual) {
+      // Create individual record if doesn't exist
+      await pool.query(`
+        INSERT INTO cc_individuals (email, full_name, status, profile_score)
+        VALUES ($1, $1, 'active', 0)
+        ON CONFLICT (email) DO NOTHING
+      `, [userEmail]);
+      
+      // Return empty profile structure
+      return res.json({
+        success: true,
+        individual: { email: userEmail, profileScore: 0 },
+        documents: [],
+        waivers: [],
+        skills: [],
+        tools: [],
+        paymentMethods: []
+      });
+    }
+
+    res.json({
+      success: true,
+      ...profile
+    });
+  } catch (error) {
+    console.error('Error fetching individual profile:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch profile' });
+  }
+});
+
+// GET /api/individuals/skills/available - Get all skills that can be added
+router.get('/skills/available', authenticateToken, async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT id, name, slug, description, category
+      FROM sr_skills
+      WHERE is_active = true
+      ORDER BY category, name
+    `);
+    
+    res.json({ success: true, skills: result.rows });
+  } catch (error) {
+    console.error('Error fetching skills:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch skills' });
+  }
+});
+
+// POST /api/individuals/me/skills - Add a skill
+router.post('/me/skills', authenticateToken, async (req, res) => {
+  try {
+    const userEmail = (req as any).user?.email;
+    const { skillId, proficiencyLevel, yearsExperience } = req.body;
+
+    // Get individual ID
+    const indResult = await pool.query(
+      'SELECT id FROM cc_individuals WHERE email = $1',
+      [userEmail]
+    );
+    
+    if (indResult.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Individual not found' });
+    }
+
+    const individualId = indResult.rows[0].id;
+
+    await pool.query(`
+      INSERT INTO cc_individual_skills (individual_id, skill_id, proficiency_level, years_experience)
+      VALUES ($1, $2, $3, $4)
+      ON CONFLICT (individual_id, skill_id) DO UPDATE SET
+        proficiency_level = EXCLUDED.proficiency_level,
+        years_experience = EXCLUDED.years_experience
+    `, [individualId, skillId, proficiencyLevel || 'competent', yearsExperience]);
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error adding skill:', error);
+    res.status(500).json({ success: false, error: 'Failed to add skill' });
+  }
+});
+
+// GET /api/individuals/tools/available - Get all tools that can be added
+router.get('/tools/available', authenticateToken, async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT t.id, t.name, t.slug, t.description, 
+             tc.name as category, tc.icon,
+             t.typical_daily_rental, t.typical_weekly_rental
+      FROM sr_tools t
+      LEFT JOIN sr_tool_categories tc ON tc.id = t.category_id
+      WHERE t.is_active = true
+      ORDER BY tc.sort_order, t.name
+    `);
+    
+    res.json({ success: true, tools: result.rows });
+  } catch (error) {
+    console.error('Error fetching tools:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch tools' });
+  }
+});
+
+// POST /api/individuals/me/tools - Add a personal tool
+router.post('/me/tools', authenticateToken, async (req, res) => {
+  try {
+    const userEmail = (req as any).user?.email;
+    const { 
+      toolId, 
+      currentLocation, 
+      currentCommunityId,
+      condition,
+      availableForRent,
+      rentalRateDaily,
+      rentalRateWeekly,
+      damageDeposit
+    } = req.body;
+
+    // Get individual ID
+    const indResult = await pool.query(
+      'SELECT id FROM cc_individuals WHERE email = $1',
+      [userEmail]
+    );
+    
+    if (indResult.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Individual not found' });
+    }
+
+    const individualId = indResult.rows[0].id;
+
+    const result = await pool.query(`
+      INSERT INTO cc_individual_tools (
+        individual_id, tool_id, ownership, condition,
+        current_location, current_community_id,
+        available_for_rent, rental_rate_daily, rental_rate_weekly, damage_deposit
+      )
+      VALUES ($1, $2, 'owned', $3, $4, $5, $6, $7, $8, $9)
+      RETURNING id
+    `, [
+      individualId, 
+      toolId, 
+      condition || 'good',
+      currentLocation,
+      currentCommunityId,
+      availableForRent || false,
+      rentalRateDaily,
+      rentalRateWeekly,
+      damageDeposit
+    ]);
+
+    res.json({ success: true, toolId: result.rows[0].id });
+  } catch (error) {
+    console.error('Error adding tool:', error);
+    res.status(500).json({ success: false, error: 'Failed to add tool' });
+  }
+});
+
+// GET /api/communities/list - Get communities for dropdown
+router.get('/communities/list', async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT id, name, region, slug
+      FROM sr_communities
+      WHERE is_active = true
+      ORDER BY region, name
+    `);
+    
+    res.json({ success: true, communities: result.rows });
+  } catch (error) {
+    console.error('Error fetching communities:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch communities' });
+  }
+});
+
+export default router;
+Register the route in your main server file:
+typescriptimport individualsRouter from './routes/individuals';
+app.use('/api/individuals', individualsRouter);
+
+After running the SQL:
+Glenn's profile will show:
+
+8 Skills (Project Management, Estimating, Carpentry, etc.)
+9 Personal Tools (Pressure washer, chainsaws, ladders, mower, etc.)
+4 Valid Waivers (All activity types covered)
+1 Payment Method (Visa)
+1 Document (Driver's License)
+85% Profile Complete
+
+Pavel's profile will show:
+
+8 Skills (Landscaping, Pressure Washing, etc.)
+3 Personal Tools (traveling with him to Bamfield)
+1 Waiver (Power Tool)
+70% Profile Complete
+
+Run this and refresh the profile page!

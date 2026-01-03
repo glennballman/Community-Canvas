@@ -6,10 +6,16 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
+import { useToast } from '@/hooks/use-toast';
 import { 
   User, FileText, Award, Wrench, ClipboardCheck, CreditCard,
   CheckCircle, AlertCircle, MapPin, Phone, Shield,
-  Sailboat, Car, Package, Plus
+  Sailboat, Car, Package, Plus, Loader2
 } from 'lucide-react';
 
 interface Individual {
@@ -82,12 +88,35 @@ interface PaymentMethod {
   isExpired: boolean;
 }
 
+interface AvailableSkill {
+  id: string;
+  name: string;
+  slug: string;
+  category: string;
+  certification_required: boolean;
+}
+
+interface AvailableTool {
+  id: string;
+  name: string;
+  slug: string;
+  category: string;
+  typical_daily_rental: number | null;
+}
+
+interface Community {
+  id: string;
+  name: string;
+  region: string;
+}
+
 function formatDocumentType(type: string): string {
   return type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
 }
 
 export default function IndividualProfile() {
   const { token, loading: authLoading } = useAuth();
+  const { toast } = useToast();
   
   const [individual, setIndividual] = useState<Individual | null>(null);
   const [documents, setDocuments] = useState<Document[]>([]);
@@ -97,6 +126,27 @@ export default function IndividualProfile() {
   const [payments, setPayments] = useState<PaymentMethod[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Modal states
+  const [showAddSkillModal, setShowAddSkillModal] = useState(false);
+  const [showAddToolModal, setShowAddToolModal] = useState(false);
+  const [availableSkills, setAvailableSkills] = useState<AvailableSkill[]>([]);
+  const [availableTools, setAvailableTools] = useState<AvailableTool[]>([]);
+  const [communities, setCommunities] = useState<Community[]>([]);
+  const [saving, setSaving] = useState(false);
+
+  // Add Skill form state
+  const [selectedSkillId, setSelectedSkillId] = useState('');
+  const [proficiencyLevel, setProficiencyLevel] = useState('competent');
+  const [yearsExperience, setYearsExperience] = useState('');
+
+  // Add Tool form state
+  const [selectedToolId, setSelectedToolId] = useState('');
+  const [toolCondition, setToolCondition] = useState('good');
+  const [toolLocation, setToolLocation] = useState('');
+  const [toolCommunityId, setToolCommunityId] = useState('');
+  const [availableForRent, setAvailableForRent] = useState(false);
+  const [rentalRateDaily, setRentalRateDaily] = useState('');
 
   const loadProfile = useCallback(async () => {
     if (!token) return;
@@ -131,16 +181,155 @@ export default function IndividualProfile() {
     }
   }, [token]);
 
+  const loadReferenceData = useCallback(async () => {
+    try {
+      const [skillsRes, toolsRes, communitiesRes] = await Promise.all([
+        fetch('/api/individuals/skills'),
+        fetch('/api/individuals/tools'),
+        fetch('/api/individuals/communities')
+      ]);
+      
+      const [skillsData, toolsData, communitiesData] = await Promise.all([
+        skillsRes.json(),
+        toolsRes.json(),
+        communitiesRes.json()
+      ]);
+      
+      if (skillsData.success) setAvailableSkills(skillsData.skills);
+      if (toolsData.success) setAvailableTools(toolsData.tools);
+      if (communitiesData.success) setCommunities(communitiesData.communities);
+    } catch (err) {
+      console.error('Error loading reference data:', err);
+    }
+  }, []);
+
   useEffect(() => {
     if (token && !authLoading) {
       loadProfile();
+      loadReferenceData();
     }
-  }, [token, authLoading, loadProfile]);
+  }, [token, authLoading, loadProfile, loadReferenceData]);
+
+  const handleAddSkill = async () => {
+    if (!selectedSkillId || !token) return;
+    
+    const parsedYears = yearsExperience ? parseInt(yearsExperience, 10) : null;
+    if (yearsExperience && (isNaN(parsedYears!) || parsedYears! < 0)) {
+      toast({ title: 'Please enter a valid number for years of experience', variant: 'destructive' });
+      return;
+    }
+    
+    setSaving(true);
+    
+    try {
+      const res = await fetch('/api/individuals/my-skills', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          skillId: selectedSkillId,
+          proficiencyLevel,
+          yearsExperience: parsedYears
+        })
+      });
+      
+      const data = await res.json();
+      if (data.success) {
+        toast({ title: 'Skill added successfully' });
+        setShowAddSkillModal(false);
+        resetSkillForm();
+        loadProfile();
+      } else {
+        toast({ title: 'Failed to add skill', description: data.message, variant: 'destructive' });
+      }
+    } catch (err) {
+      toast({ title: 'Error adding skill', variant: 'destructive' });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleAddTool = async () => {
+    if (!selectedToolId || !token) return;
+    
+    let parsedRate: number | null = null;
+    if (availableForRent && rentalRateDaily) {
+      parsedRate = parseFloat(rentalRateDaily);
+      if (isNaN(parsedRate) || parsedRate < 0) {
+        toast({ title: 'Please enter a valid rental rate', variant: 'destructive' });
+        return;
+      }
+    }
+    
+    setSaving(true);
+    
+    try {
+      const res = await fetch('/api/individuals/my-tools', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          toolId: selectedToolId,
+          condition: toolCondition,
+          currentLocation: toolLocation,
+          currentCommunityId: toolCommunityId || null,
+          availableForRent,
+          rentalRateDaily: parsedRate
+        })
+      });
+      
+      const data = await res.json();
+      if (data.success) {
+        toast({ title: 'Tool added successfully' });
+        setShowAddToolModal(false);
+        resetToolForm();
+        loadProfile();
+      } else {
+        toast({ title: 'Failed to add tool', description: data.message, variant: 'destructive' });
+      }
+    } catch (err) {
+      toast({ title: 'Error adding tool', variant: 'destructive' });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const resetSkillForm = () => {
+    setSelectedSkillId('');
+    setProficiencyLevel('competent');
+    setYearsExperience('');
+  };
+
+  const resetToolForm = () => {
+    setSelectedToolId('');
+    setToolCondition('good');
+    setToolLocation('');
+    setToolCommunityId('');
+    setAvailableForRent(false);
+    setRentalRateDaily('');
+  };
+
+  // Filter out skills already added
+  const filteredAvailableSkills = availableSkills.filter(
+    s => !skills.some(existing => existing.skillId === s.id)
+  );
+
+  // Filter out tools already added
+  const filteredAvailableTools = availableTools.filter(
+    t => !tools.some(existing => existing.toolId === t.id)
+  );
 
   const profileComplete = individual?.profileScore || 0;
   const missingItems: string[] = [];
   if (!individual?.phoneVerified) missingItems.push('Verify phone');
-  if (documents.filter(d => d.documentType === 'photo_id' && d.verified).length === 0) missingItems.push('Add photo ID');
+  if (documents.filter(d => d.documentType === 'photo_id' && d.verified).length === 0 &&
+      documents.filter(d => d.documentType === 'drivers_license' && d.verified).length === 0) {
+    missingItems.push('Add photo ID');
+  }
   if (payments.filter(p => !p.isExpired).length === 0) missingItems.push('Add payment method');
   if (waivers.filter(w => !w.isExpired).length === 0) missingItems.push('Sign waiver');
 
@@ -175,7 +364,6 @@ export default function IndividualProfile() {
       <Card data-testid="card-profile-header">
         <CardContent className="pt-6">
           <div className="flex items-start gap-6">
-            {/* Avatar */}
             <Avatar className="w-24 h-24" data-testid="avatar-profile">
               <AvatarImage src={individual.photoUrl} alt={individual.fullName} />
               <AvatarFallback className="text-2xl">
@@ -183,7 +371,6 @@ export default function IndividualProfile() {
               </AvatarFallback>
             </Avatar>
             
-            {/* Info */}
             <div className="flex-1">
               <h1 className="text-2xl font-bold" data-testid="text-profile-name">
                 {individual.fullName || 'Complete Your Profile'}
@@ -212,7 +399,6 @@ export default function IndividualProfile() {
               </div>
             </div>
             
-            {/* Profile Score */}
             <div className="text-right" data-testid="profile-score-container">
               <div className="text-3xl font-bold" data-testid="text-profile-score">{profileComplete}%</div>
               <div className="text-sm text-muted-foreground">Profile Complete</div>
@@ -220,7 +406,6 @@ export default function IndividualProfile() {
             </div>
           </div>
           
-          {/* Missing Items */}
           {missingItems.length > 0 && (
             <div className="mt-4 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg" data-testid="alert-missing-items">
               <div className="text-yellow-500 text-sm font-medium mb-1 flex items-center gap-2">
@@ -309,7 +494,6 @@ export default function IndividualProfile() {
             <TabsContent value="overview" className="space-y-6 mt-0" data-testid="panel-overview">
               <h2 className="text-lg font-semibold">Profile Overview</h2>
               
-              {/* Quick Actions */}
               <div className="grid grid-cols-3 gap-4">
                 <Button variant="outline" className="h-auto p-4 flex flex-col items-start gap-1" data-testid="button-rent-equipment">
                   <Sailboat className="w-5 h-5 text-blue-500" />
@@ -328,7 +512,6 @@ export default function IndividualProfile() {
                 </Button>
               </div>
               
-              {/* Capabilities Summary */}
               <div>
                 <h3 className="font-medium mb-3">Your Capabilities Summary</h3>
                 <Card className="bg-muted/50" data-testid="card-capabilities">
@@ -371,7 +554,7 @@ export default function IndividualProfile() {
             <TabsContent value="skills" className="mt-0" data-testid="panel-skills">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-lg font-semibold">My Skills</h2>
-                <Button data-testid="button-add-skill">
+                <Button onClick={() => setShowAddSkillModal(true)} data-testid="button-add-skill">
                   <Plus className="w-4 h-4 mr-2" />
                   Add Skill
                 </Button>
@@ -412,7 +595,7 @@ export default function IndividualProfile() {
             <TabsContent value="tools" className="mt-0" data-testid="panel-tools">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-lg font-semibold">My Personal Tools</h2>
-                <Button data-testid="button-add-tool">
+                <Button onClick={() => setShowAddToolModal(true)} data-testid="button-add-tool">
                   <Plus className="w-4 h-4 mr-2" />
                   Add Tool
                 </Button>
@@ -500,7 +683,6 @@ export default function IndividualProfile() {
                   </Card>
                 ))}
                 
-                {/* Available waivers to sign */}
                 <div className="border-t pt-4 mt-4">
                   <div className="text-sm text-muted-foreground mb-3">Available waivers to sign:</div>
                   <div className="grid grid-cols-2 gap-3">
@@ -627,6 +809,176 @@ export default function IndividualProfile() {
           </CardContent>
         </Tabs>
       </Card>
+
+      {/* Add Skill Modal */}
+      <Dialog open={showAddSkillModal} onOpenChange={setShowAddSkillModal}>
+        <DialogContent data-testid="modal-add-skill">
+          <DialogHeader>
+            <DialogTitle>Add a Skill</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="skill-select">Select Skill</Label>
+              <Select value={selectedSkillId} onValueChange={setSelectedSkillId}>
+                <SelectTrigger id="skill-select" data-testid="select-skill">
+                  <SelectValue placeholder="Choose a skill..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {filteredAvailableSkills.map(skill => (
+                    <SelectItem key={skill.id} value={skill.id} data-testid={`option-skill-${skill.id}`}>
+                      {skill.name} ({skill.category})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="proficiency-select">Proficiency Level</Label>
+              <Select value={proficiencyLevel} onValueChange={setProficiencyLevel}>
+                <SelectTrigger id="proficiency-select" data-testid="select-proficiency">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="learning">Learning</SelectItem>
+                  <SelectItem value="competent">Competent</SelectItem>
+                  <SelectItem value="proficient">Proficient</SelectItem>
+                  <SelectItem value="expert">Expert</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="years-experience">Years of Experience</Label>
+              <Input
+                id="years-experience"
+                type="number"
+                min="0"
+                value={yearsExperience}
+                onChange={(e) => setYearsExperience(e.target.value)}
+                placeholder="Optional"
+                data-testid="input-years-experience"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAddSkillModal(false)} data-testid="button-cancel-skill">
+              Cancel
+            </Button>
+            <Button onClick={handleAddSkill} disabled={!selectedSkillId || saving} data-testid="button-save-skill">
+              {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Add Skill
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Tool Modal */}
+      <Dialog open={showAddToolModal} onOpenChange={setShowAddToolModal}>
+        <DialogContent className="max-w-lg" data-testid="modal-add-tool">
+          <DialogHeader>
+            <DialogTitle>Add a Personal Tool</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="tool-select">Select Tool</Label>
+              <Select value={selectedToolId} onValueChange={setSelectedToolId}>
+                <SelectTrigger id="tool-select" data-testid="select-tool">
+                  <SelectValue placeholder="Choose a tool..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {filteredAvailableTools.map(tool => (
+                    <SelectItem key={tool.id} value={tool.id} data-testid={`option-tool-${tool.id}`}>
+                      {tool.name} ({tool.category})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="condition-select">Condition</Label>
+                <Select value={toolCondition} onValueChange={setToolCondition}>
+                  <SelectTrigger id="condition-select" data-testid="select-condition">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="excellent">Excellent</SelectItem>
+                    <SelectItem value="good">Good</SelectItem>
+                    <SelectItem value="fair">Fair</SelectItem>
+                    <SelectItem value="needs_repair">Needs Repair</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="community-select">Current Community</Label>
+                <Select value={toolCommunityId} onValueChange={setToolCommunityId}>
+                  <SelectTrigger id="community-select" data-testid="select-community">
+                    <SelectValue placeholder="Select..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {communities.map(comm => (
+                      <SelectItem key={comm.id} value={comm.id} data-testid={`option-community-${comm.id}`}>
+                        {comm.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="location-input">Specific Location</Label>
+              <Input
+                id="location-input"
+                value={toolLocation}
+                onChange={(e) => setToolLocation(e.target.value)}
+                placeholder="e.g., West Bamfield Shop, Truck Box"
+                data-testid="input-tool-location"
+              />
+            </div>
+            
+            <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+              <div>
+                <div className="font-medium">Available for Rent</div>
+                <div className="text-sm text-muted-foreground">Allow others to rent this tool</div>
+              </div>
+              <Switch
+                checked={availableForRent}
+                onCheckedChange={setAvailableForRent}
+                data-testid="switch-available-for-rent"
+              />
+            </div>
+            
+            {availableForRent && (
+              <div className="space-y-2">
+                <Label htmlFor="rental-rate-input">Daily Rental Rate ($)</Label>
+                <Input
+                  id="rental-rate-input"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={rentalRateDaily}
+                  onChange={(e) => setRentalRateDaily(e.target.value)}
+                  placeholder="e.g., 50.00"
+                  data-testid="input-rental-rate"
+                />
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAddToolModal(false)} data-testid="button-cancel-tool">
+              Cancel
+            </Button>
+            <Button onClick={handleAddTool} disabled={!selectedToolId || saving} data-testid="button-save-tool">
+              {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Add Tool
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

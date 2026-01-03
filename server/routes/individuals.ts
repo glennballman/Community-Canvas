@@ -264,6 +264,101 @@ router.get('/communities', async (req, res) => {
   }
 });
 
+// POST /api/individuals/my-skills - Add a skill to the user's profile
+router.post('/my-skills', authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    const userEmail = req.user?.email;
+    if (!userEmail) {
+      return res.status(401).json({ success: false, message: 'Not authenticated' });
+    }
+
+    const { skillId, proficiencyLevel, yearsExperience } = req.body;
+    if (!skillId) {
+      return res.status(400).json({ success: false, message: 'Skill ID is required' });
+    }
+
+    // Find individual by email
+    const individualResult = await pool.query(
+      'SELECT id FROM cc_individuals WHERE email = $1',
+      [userEmail]
+    );
+
+    if (individualResult.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Please complete your profile first' });
+    }
+
+    const individualId = individualResult.rows[0].id;
+
+    // Insert skill
+    await pool.query(
+      `INSERT INTO cc_individual_skills (individual_id, skill_id, proficiency_level, years_experience, verified)
+       VALUES ($1, $2, $3, $4, false)
+       ON CONFLICT (individual_id, skill_id) DO UPDATE SET
+         proficiency_level = EXCLUDED.proficiency_level,
+         years_experience = EXCLUDED.years_experience,
+         updated_at = NOW()`,
+      [individualId, skillId, proficiencyLevel || 'competent', yearsExperience || null]
+    );
+
+    res.json({ success: true, message: 'Skill added' });
+  } catch (error) {
+    console.error('Error adding skill:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+});
+
+// POST /api/individuals/my-tools - Add a tool to the user's profile
+router.post('/my-tools', authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    const userEmail = req.user?.email;
+    if (!userEmail) {
+      return res.status(401).json({ success: false, message: 'Not authenticated' });
+    }
+
+    const { toolId, condition, currentLocation, currentCommunityId, availableForRent, rentalRateDaily } = req.body;
+    if (!toolId) {
+      return res.status(400).json({ success: false, message: 'Tool ID is required' });
+    }
+
+    // Find individual by email
+    const individualResult = await pool.query(
+      'SELECT id FROM cc_individuals WHERE email = $1',
+      [userEmail]
+    );
+
+    if (individualResult.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Please complete your profile first' });
+    }
+
+    const individualId = individualResult.rows[0].id;
+
+    // Insert tool
+    await pool.query(
+      `INSERT INTO cc_individual_tools (
+         individual_id, tool_id, ownership, quantity, condition, 
+         current_location, current_community_id, 
+         available_for_rent, rental_rate_daily
+       )
+       VALUES ($1, $2, 'owned', 1, $3, $4, $5, $6, $7)
+       ON CONFLICT DO NOTHING`,
+      [
+        individualId, 
+        toolId, 
+        condition || 'good', 
+        currentLocation || null, 
+        currentCommunityId || null,
+        availableForRent || false,
+        rentalRateDaily || null
+      ]
+    );
+
+    res.json({ success: true, message: 'Tool added' });
+  } catch (error) {
+    console.error('Error adding tool:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+});
+
 // GET /api/individuals/bid-context/:serviceRunId - Get full context for bidding
 router.get('/bid-context/:serviceRunId', authenticateToken, async (req: AuthRequest, res) => {
   try {
