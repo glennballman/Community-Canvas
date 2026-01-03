@@ -28,6 +28,7 @@ import serviceRunsRouter from "./routes/serviceRuns";
 import individualsRouter from "./routes/individuals";
 import rentalsRouter from "./routes/rentals";
 import entitiesRouter from "./routes/entities";
+import apifyRouter from "./routes/apify";
 import { JobberService, getJobberAuthUrl, exchangeCodeForToken } from "./services/jobber";
 import { CompanyCamService, getPhotoUrl } from "./services/companycam";
 
@@ -92,6 +93,9 @@ export async function registerRoutes(
 
   // Register external data lake + entity resolution routes
   app.use('/api/entities', entitiesRouter);
+
+  // Register Apify sync and external records routes
+  app.use('/api/apify', apifyRouter);
 
   // Jobber OAuth flow - Start authorization
   app.get('/api/v1/integrations/jobber/auth', (req, res) => {
