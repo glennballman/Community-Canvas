@@ -27,6 +27,7 @@ import vehiclesRouter from "./routes/vehicles";
 import serviceRunsRouter from "./routes/serviceRuns";
 import individualsRouter from "./routes/individuals";
 import rentalsRouter from "./routes/rentals";
+import entitiesRouter from "./routes/entities";
 import { JobberService, getJobberAuthUrl, exchangeCodeForToken } from "./services/jobber";
 import { CompanyCamService, getPhotoUrl } from "./services/companycam";
 
@@ -88,6 +89,9 @@ export async function registerRoutes(
 
   // Register Rentals browser routes
   app.use('/api/rentals', rentalsRouter);
+
+  // Register external data lake + entity resolution routes
+  app.use('/api/entities', entitiesRouter);
 
   // Jobber OAuth flow - Start authorization
   app.get('/api/v1/integrations/jobber/auth', (req, res) => {

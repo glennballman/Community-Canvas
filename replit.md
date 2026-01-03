@@ -112,6 +112,38 @@ Production-grade normalized schema for service bundling, climate-based seasonali
 
 **Enums:** noise_level, disruption_level, risk_level, pricing_model_type, job_context, dependency_type
 
+### External Data Lake V2 (Migration 018)
+Entity-graph architecture for managing scraped external data with entity resolution, consent-based outreach, and CASL compliance.
+
+**Core Architecture:**
+- **external_records**: Immutable scraped records from Apify datasets (name, address, phone, email, hours, etc.)
+- **entity_links**: Confidence-scored connections between external_records and canonical entities
+- **entities**: Extended with geom (PostGIS), community_id, visibility columns
+
+**Entity Resolution:**
+- Uses Jaccard token similarity + geo-proximity (<5km = bonus)
+- Stores confidence scores (NUMERIC 0.0000-1.0000) and reasons as JSONB
+- Links start as 'suggested' until human review accepts/rejects
+
+**CASL-Compliant Contact Handling:**
+- **external_contact_points**: Stores phone/email with consent_basis enum
+- Scraped data defaults to consent='unknown', do_not_contact=true
+- Outreach only allowed for: provided_by_user, public_opt_in, transactional_request, verified_owner
+- Unsubscribe list with automatic 24-hour cooldown enforcement
+
+**Claims & Inquiries:**
+- **entity_claim_requests**: Business owners claim their canonical entity
+- **entity_claims**: Approved claims linking individuals to entities
+- **entity_inquiries**: Public questions routed to claimed entities
+
+**Views:**
+- v_unclaimed_entities_with_inquiries: Dashboard for unclaimed entities needing attention
+- v_external_records_needing_resolution: Records without accepted entity links
+- v_entity_resolution_queue: Suggested links awaiting human review
+- v_outreach_ready: Contacts with valid consent for marketing
+
+**Enums:** data_source_type, contact_type, link_status, consent_basis, verification_status, entity_type, inquiry_status, outreach_status, outreach_channel
+
 ### Documentation System
 A Bloomberg-terminal styled documentation library is available at `/admin/docs`, rendering markdown files from the `docs/` directory. Key topics include data collection, architecture, completion criteria, tool selection, member counts, NAICS assignment, date tracking, and manual overrides.
 
