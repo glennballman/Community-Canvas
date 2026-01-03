@@ -1,0 +1,1193 @@
+My Recommendation: Option 3 - Build Browse UI
+You now have thousands of BC properties. Let's make them visible! A simple listing browser would:
+
+Show all imported STR properties
+Filter by community, bedrooms, price
+See which are claimed vs unclaimed
+Click to view details + trigger inquiry flow
+
+This makes the data real and testable.
+Want me to write PROMPT 4Y: STR Listing Browser UI?write PROMPT 4Y: STR Listing Browser UI8:49 AMArchitected comprehensive STR listing browser with filtering and inquiry capabilities.The user wants me to write a prompt for building a UI to browse the STR (Short Term Rental) listings that were just imported from Apify. This should be a comprehensive browser page that shows the imported properties with filtering, search, and the ability to view details and trigger the inquiry/claim flow.
+Let me create a detailed prompt that includes:
+
+API endpoints for browsing listings
+React component for the browser
+Filters for community, bedrooms, price, etc.
+Detail modal with inquiry capability
+Claim flow for hosts
+PROMPT 4Y: STR Listing Browser UI
+Part 1: API Endpoints
+typescript// server/routes/listings.ts
+// Browse and interact with imported STR listings
+
+import { Router } from 'express';
+import { pool } from '../db';
+import { authenticateToken } from '../middleware/auth';
+
+const router = Router();
+
+// GET /api/listings - Browse all STR listings
+router.get('/', async (req, res) => {
+    try {
+        const { 
+            community, 
+            minBedrooms, 
+            maxBedrooms,
+            minPrice,
+            maxPrice,
+            minOccupancy,
+            search,
+            claimStatus,
+            sortBy = 'rating',
+            sortOrder = 'desc',
+            limit = 24, 
+            offset = 0 
+        } = req.query;
+        
+        let query = `
+            SELECT 
+                e.id as entity_id,
+                e.display_name,
+                e.description,
+                e.city,
+                e.claim_status,
+                e.claimed_at,
+                e.merged_photos,
+                e.merged_rating,
+                e.merged_review_count,
+                e.primary_email,
+                e.latitude,
+                e.longitude,
+                c.name as community_name,
+                c.id as community_id,
+                
+                -- Get details from linked external record
+                er.bedrooms,
+                er.bathrooms,
+                er.beds,
+                er.max_occupancy,
+                er.price,
+                er.property_type,
+                er.amenities,
+                er.photos,
+                er.host_name,
+                er.external_url,
+                er.rating,
+                er.review_count
+                
+            FROM entities e
+            LEFT JOIN sr_communities c ON c.id = e.community_id
+            LEFT JOIN entity_links el ON el.entity_id = e.id AND el.status = 'accepted'
+            LEFT JOIN external_records er ON er.id = el.external_record_id
+            WHERE e.entity_type = 'property'
+        `;
+        
+        const params: any[] = [];
+        let paramIndex = 1;
+        
+        // Filters
+        if (community) {
+            query += ` AND e.community_id = $${paramIndex++}`;
+            params.push(community);
+        }
+        
+        if (minBedrooms) {
+            query += ` AND er.bedrooms >= $${paramIndex++}`;
+            params.push(minBedrooms);
+        }
+        
+        if (maxBedrooms) {
+            query += ` AND er.bedrooms <= $${paramIndex++}`;
+            params.push(maxBedrooms);
+        }
+        
+        if (minPrice) {
+            query += ` AND er.price >= $${paramIndex++}`;
+            params.push(minPrice);
+        }
+        
+        if (maxPrice) {
+            query += ` AND er.price <= $${paramIndex++}`;
+            params.push(maxPrice);
+        }
+        
+        if (minOccupancy) {
+            query += ` AND er.max_occupancy >= $${paramIndex++}`;
+            params.push(minOccupancy);
+        }
+        
+        if (search) {
+            query += ` AND (e.display_name ILIKE $${paramIndex} OR e.description ILIKE $${paramIndex} OR e.city ILIKE $${paramIndex})`;
+            params.push(`%${search}%`);
+            paramIndex++;
+        }
+        
+        if (claimStatus) {
+            query += ` AND e.claim_status = $${paramIndex++}::claim_status_enum`;
+            params.push(claimStatus);
+        }
+        
+        // Sorting
+        const sortColumns: Record<string, string> = {
+            rating: 'COALESCE(er.rating, 0)',
+            price: 'COALESCE(er.price, 0)',
+            bedrooms: 'COALESCE(er.bedrooms, 0)',
+            occupancy: 'COALESCE(er.max_occupancy, 0)',
+            reviews: 'COALESCE(er.review_count, 0)',
+            name: 'e.display_name',
+            newest: 'e.created_at'
+        };
+        
+        const sortColumn = sortColumns[sortBy as string] || sortColumns.rating;
+        const order = sortOrder === 'asc' ? 'ASC' : 'DESC';
+        query += ` ORDER BY ${sortColumn} ${order} NULLS LAST`;
+        
+        // Pagination
+        query += ` LIMIT $${paramIndex++} OFFSET $${paramIndex++}`;
+        params.push(limit, offset);
+        
+        const result = await pool.query(query, params);
+        
+        // Get total count
+        let countQuery = `
+            SELECT COUNT(DISTINCT e.id)
+            FROM entities e
+            LEFT JOIN entity_links el ON el.entity_id = e.id AND el.status = 'accepted'
+            LEFT JOIN external_records er ON er.id = el.external_record_id
+            WHERE e.entity_type = 'property'
+        `;
+        const countParams: any[] = [];
+        let countParamIndex = 1;
+        
+        if (community) {
+            countQuery += ` AND e.community_id = $${countParamIndex++}`;
+            countParams.push(community);
+        }
+        if (minBedrooms) {
+            countQuery += ` AND er.bedrooms >= $${countParamIndex++}`;
+            countParams.push(minBedrooms);
+        }
+        if (maxBedrooms) {
+            countQuery += ` AND er.bedrooms <= $${countParamIndex++}`;
+            countParams.push(maxBedrooms);
+        }
+        if (minPrice) {
+            countQuery += ` AND er.price >= $${countParamIndex++}`;
+            countParams.push(minPrice);
+        }
+        if (maxPrice) {
+            countQuery += ` AND er.price <= $${countParamIndex++}`;
+            countParams.push(maxPrice);
+        }
+        if (minOccupancy) {
+            countQuery += ` AND er.max_occupancy >= $${countParamIndex++}`;
+            countParams.push(minOccupancy);
+        }
+        if (search) {
+            countQuery += ` AND (e.display_name ILIKE $${countParamIndex} OR e.description ILIKE $${countParamIndex})`;
+            countParams.push(`%${search}%`);
+            countParamIndex++;
+        }
+        if (claimStatus) {
+            countQuery += ` AND e.claim_status = $${countParamIndex++}::claim_status_enum`;
+            countParams.push(claimStatus);
+        }
+        
+        const countResult = await pool.query(countQuery, countParams);
+        
+        res.json({
+            success: true,
+            listings: result.rows,
+            total: parseInt(countResult.rows[0].count),
+            limit: Number(limit),
+            offset: Number(offset)
+        });
+        
+    } catch (error: any) {
+        console.error('Error fetching listings:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// GET /api/listings/communities - Get communities with listing counts
+router.get('/communities', async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT 
+                c.id,
+                c.name,
+                c.region,
+                COUNT(e.id) as listing_count
+            FROM sr_communities c
+            JOIN entities e ON e.community_id = c.id AND e.entity_type = 'property'
+            GROUP BY c.id, c.name, c.region
+            HAVING COUNT(e.id) > 0
+            ORDER BY COUNT(e.id) DESC
+        `);
+        
+        res.json({ success: true, communities: result.rows });
+    } catch (error: any) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// GET /api/listings/stats - Get overall statistics
+router.get('/stats', async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT 
+                COUNT(*) as total_listings,
+                COUNT(*) FILTER (WHERE claim_status = 'approved') as claimed,
+                COUNT(*) FILTER (WHERE claim_status = 'none') as unclaimed,
+                COUNT(DISTINCT community_id) as communities,
+                ROUND(AVG(merged_rating)::numeric, 2) as avg_rating
+            FROM entities
+            WHERE entity_type = 'property'
+        `);
+        
+        const bedroomStats = await pool.query(`
+            SELECT 
+                er.bedrooms,
+                COUNT(*) as count
+            FROM entities e
+            JOIN entity_links el ON el.entity_id = e.id AND el.status = 'accepted'
+            JOIN external_records er ON er.id = el.external_record_id
+            WHERE e.entity_type = 'property' AND er.bedrooms IS NOT NULL
+            GROUP BY er.bedrooms
+            ORDER BY er.bedrooms
+        `);
+        
+        res.json({ 
+            success: true, 
+            stats: result.rows[0],
+            bedroomDistribution: bedroomStats.rows
+        });
+    } catch (error: any) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// GET /api/listings/:id - Get single listing details
+router.get('/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        
+        const result = await pool.query(`
+            SELECT 
+                e.*,
+                c.name as community_name,
+                c.region as community_region,
+                er.bedrooms,
+                er.bathrooms,
+                er.beds,
+                er.max_occupancy,
+                er.price,
+                er.property_type,
+                er.amenities,
+                er.photos,
+                er.host_name,
+                er.host_id,
+                er.external_url,
+                er.rating,
+                er.review_count,
+                er.raw_data
+            FROM entities e
+            LEFT JOIN sr_communities c ON c.id = e.community_id
+            LEFT JOIN entity_links el ON el.entity_id = e.id AND el.status = 'accepted'
+            LEFT JOIN external_records er ON er.id = el.external_record_id
+            WHERE e.id = $1
+        `, [id]);
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({ success: false, error: 'Listing not found' });
+        }
+        
+        // Get inquiry count
+        const inquiryCount = await pool.query(`
+            SELECT COUNT(*) FROM entity_inquiries WHERE entity_id = $1
+        `, [id]);
+        
+        res.json({ 
+            success: true, 
+            listing: {
+                ...result.rows[0],
+                inquiryCount: parseInt(inquiryCount.rows[0].count)
+            }
+        });
+        
+    } catch (error: any) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// POST /api/listings/:id/inquire - Create inquiry for a listing
+router.post('/:id/inquire', authenticateToken, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { message, startDate, endDate, guests } = req.body;
+        const userEmail = (req as any).user?.email;
+        
+        // Get individual ID
+        const indResult = await pool.query(
+            'SELECT id, full_name FROM cc_individuals WHERE email = $1',
+            [userEmail]
+        );
+        
+        if (indResult.rows.length === 0) {
+            return res.status(404).json({ success: false, error: 'Please complete your profile first' });
+        }
+        
+        const individual = indResult.rows[0];
+        
+        // Create inquiry
+        const result = await pool.query(`
+            INSERT INTO entity_inquiries (
+                entity_id,
+                inquirer_individual_id,
+                inquiry_type,
+                message,
+                requested_dates,
+                requested_quantity,
+                status,
+                expires_at
+            ) VALUES (
+                $1, $2, 'booking_request', $3, $4, $5, 'pending',
+                NOW() + INTERVAL '14 days'
+            )
+            RETURNING id
+        `, [
+            id,
+            individual.id,
+            message,
+            JSON.stringify({ start: startDate, end: endDate }),
+            guests
+        ]);
+        
+        // Update entity to show it has pending inquiries
+        // (Could trigger outreach to owner here)
+        
+        res.json({ 
+            success: true, 
+            inquiryId: result.rows[0].id,
+            message: 'Your inquiry has been submitted. We will contact the host on your behalf.'
+        });
+        
+    } catch (error: any) {
+        console.error('Error creating inquiry:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// POST /api/listings/:id/claim - Request to claim a listing
+router.post('/:id/claim', authenticateToken, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const userEmail = (req as any).user?.email;
+        
+        // Get individual
+        const indResult = await pool.query(
+            'SELECT id, full_name FROM cc_individuals WHERE email = $1',
+            [userEmail]
+        );
+        
+        if (indResult.rows.length === 0) {
+            return res.status(404).json({ success: false, error: 'Please complete your profile first' });
+        }
+        
+        const individual = indResult.rows[0];
+        
+        // Check if already claimed
+        const entityResult = await pool.query(
+            'SELECT claim_status FROM entities WHERE id = $1',
+            [id]
+        );
+        
+        if (entityResult.rows.length === 0) {
+            return res.status(404).json({ success: false, error: 'Listing not found' });
+        }
+        
+        if (entityResult.rows[0].claim_status === 'approved') {
+            return res.status(400).json({ success: false, error: 'This listing has already been claimed' });
+        }
+        
+        // Create claim request
+        const result = await pool.query(`
+            INSERT INTO entity_claim_requests (
+                entity_id,
+                claimant_individual_id,
+                claimant_email,
+                claimant_name,
+                status
+            ) VALUES ($1, $2, $3, $4, 'pending')
+            RETURNING id, verification_token
+        `, [id, individual.id, userEmail, individual.full_name]);
+        
+        // Update entity status
+        await pool.query(`
+            UPDATE entities SET claim_status = 'pending' WHERE id = $1
+        `, [id]);
+        
+        res.json({ 
+            success: true, 
+            claimId: result.rows[0].id,
+            message: 'Your claim request has been submitted. We will verify your ownership.'
+        });
+        
+    } catch (error: any) {
+        console.error('Error creating claim:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+export default router;
+Part 2: Register Routes
+typescript// In server/index.ts or server/routes/index.ts, add:
+
+import listingsRoutes from './routes/listings';
+
+app.use('/api/listings', listingsRoutes);
+
+Part 3: STR Listing Browser UI
+tsx// client/src/pages/listings/STRBrowser.tsx
+
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '../../contexts/AuthContext';
+
+interface Listing {
+    entity_id: string;
+    display_name: string;
+    description: string;
+    city: string;
+    community_name: string;
+    community_id: string;
+    claim_status: string;
+    bedrooms: number | null;
+    bathrooms: number | null;
+    beds: number | null;
+    max_occupancy: number | null;
+    price: number | null;
+    property_type: string;
+    amenities: string[];
+    photos: { url: string; caption: string }[];
+    host_name: string;
+    external_url: string;
+    rating: number | null;
+    review_count: number | null;
+    latitude: number;
+    longitude: number;
+}
+
+interface Community {
+    id: string;
+    name: string;
+    region: string;
+    listing_count: number;
+}
+
+interface Stats {
+    total_listings: number;
+    claimed: number;
+    unclaimed: number;
+    communities: number;
+    avg_rating: number;
+}
+
+export default function STRBrowser() {
+    const { token } = useAuth();
+    
+    // Data
+    const [listings, setListings] = useState<Listing[]>([]);
+    const [communities, setCommunities] = useState<Community[]>([]);
+    const [stats, setStats] = useState<Stats | null>(null);
+    const [total, setTotal] = useState(0);
+    const [loading, setLoading] = useState(true);
+    
+    // Filters
+    const [search, setSearch] = useState('');
+    const [community, setCommunity] = useState('');
+    const [minBedrooms, setMinBedrooms] = useState('');
+    const [maxPrice, setMaxPrice] = useState('');
+    const [minOccupancy, setMinOccupancy] = useState('');
+    const [sortBy, setSortBy] = useState('rating');
+    
+    // Pagination
+    const [page, setPage] = useState(0);
+    const limit = 24;
+    
+    // Selected listing
+    const [selectedListing, setSelectedListing] = useState<Listing | null>(null);
+    const [showInquiryModal, setShowInquiryModal] = useState(false);
+
+    // Load communities and stats on mount
+    useEffect(() => {
+        loadCommunities();
+        loadStats();
+    }, []);
+
+    // Load listings when filters change
+    useEffect(() => {
+        loadListings();
+    }, [search, community, minBedrooms, maxPrice, minOccupancy, sortBy, page]);
+
+    async function loadCommunities() {
+        try {
+            const res = await fetch('/api/listings/communities');
+            const data = await res.json();
+            if (data.success) {
+                setCommunities(data.communities);
+            }
+        } catch (err) {
+            console.error('Failed to load communities:', err);
+        }
+    }
+
+    async function loadStats() {
+        try {
+            const res = await fetch('/api/listings/stats');
+            const data = await res.json();
+            if (data.success) {
+                setStats(data.stats);
+            }
+        } catch (err) {
+            console.error('Failed to load stats:', err);
+        }
+    }
+
+    async function loadListings() {
+        setLoading(true);
+        try {
+            const params = new URLSearchParams();
+            if (search) params.set('search', search);
+            if (community) params.set('community', community);
+            if (minBedrooms) params.set('minBedrooms', minBedrooms);
+            if (maxPrice) params.set('maxPrice', maxPrice);
+            if (minOccupancy) params.set('minOccupancy', minOccupancy);
+            params.set('sortBy', sortBy);
+            params.set('limit', String(limit));
+            params.set('offset', String(page * limit));
+            
+            const res = await fetch(`/api/listings?${params}`);
+            const data = await res.json();
+            
+            if (data.success) {
+                setListings(data.listings);
+                setTotal(data.total);
+            }
+        } catch (err) {
+            console.error('Failed to load listings:', err);
+        } finally {
+            setLoading(false);
+        }
+    }
+
+    function getPhotoUrl(listing: Listing): string {
+        if (listing.photos && listing.photos.length > 0) {
+            return listing.photos[0].url || listing.photos[0] as any;
+        }
+        return 'https://via.placeholder.com/400x300?text=No+Photo';
+    }
+
+    function formatPrice(price: number | null): string {
+        if (!price) return 'Price N/A';
+        return `$${Math.round(price)}/night`;
+    }
+
+    function getClaimBadge(status: string) {
+        switch (status) {
+            case 'approved':
+                return <span className="bg-green-600/20 text-green-400 text-xs px-2 py-1 rounded">✓ Verified Host</span>;
+            case 'pending':
+                return <span className="bg-yellow-600/20 text-yellow-400 text-xs px-2 py-1 rounded">⏳ Claim Pending</span>;
+            default:
+                return <span className="bg-gray-600/20 text-gray-400 text-xs px-2 py-1 rounded">Unclaimed</span>;
+        }
+    }
+
+    const totalPages = Math.ceil(total / limit);
+
+    return (
+        <div className="p-6">
+            {/* Header */}
+            <div className="mb-6">
+                <h1 className="text-2xl font-bold text-white">BC Accommodations</h1>
+                <p className="text-gray-400">Browse {total.toLocaleString()} properties across British Columbia</p>
+            </div>
+
+            {/* Stats Bar */}
+            {stats && (
+                <div className="grid grid-cols-5 gap-4 mb-6">
+                    <div className="bg-gray-800 rounded-lg p-4">
+                        <div className="text-2xl font-bold text-white">{Number(stats.total_listings).toLocaleString()}</div>
+                        <div className="text-sm text-gray-400">Total Listings</div>
+                    </div>
+                    <div className="bg-gray-800 rounded-lg p-4">
+                        <div className="text-2xl font-bold text-green-400">{Number(stats.claimed).toLocaleString()}</div>
+                        <div className="text-sm text-gray-400">Verified Hosts</div>
+                    </div>
+                    <div className="bg-gray-800 rounded-lg p-4">
+                        <div className="text-2xl font-bold text-gray-400">{Number(stats.unclaimed).toLocaleString()}</div>
+                        <div className="text-sm text-gray-400">Available to Claim</div>
+                    </div>
+                    <div className="bg-gray-800 rounded-lg p-4">
+                        <div className="text-2xl font-bold text-blue-400">{Number(stats.communities)}</div>
+                        <div className="text-sm text-gray-400">Communities</div>
+                    </div>
+                    <div className="bg-gray-800 rounded-lg p-4">
+                        <div className="text-2xl font-bold text-yellow-400">⭐ {stats.avg_rating || 'N/A'}</div>
+                        <div className="text-sm text-gray-400">Avg Rating</div>
+                    </div>
+                </div>
+            )}
+
+            {/* Filters */}
+            <div className="bg-gray-800 rounded-lg p-4 mb-6">
+                <div className="grid grid-cols-6 gap-4">
+                    {/* Search */}
+                    <div className="col-span-2">
+                        <input
+                            type="text"
+                            placeholder="Search listings..."
+                            value={search}
+                            onChange={(e) => { setSearch(e.target.value); setPage(0); }}
+                            className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white placeholder-gray-400"
+                        />
+                    </div>
+                    
+                    {/* Community */}
+                    <div>
+                        <select
+                            value={community}
+                            onChange={(e) => { setCommunity(e.target.value); setPage(0); }}
+                            className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white"
+                        >
+                            <option value="">All Communities</option>
+                            {communities.map(c => (
+                                <option key={c.id} value={c.id}>
+                                    {c.name} ({c.listing_count})
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+                    
+                    {/* Bedrooms */}
+                    <div>
+                        <select
+                            value={minBedrooms}
+                            onChange={(e) => { setMinBedrooms(e.target.value); setPage(0); }}
+                            className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white"
+                        >
+                            <option value="">Any Bedrooms</option>
+                            <option value="1">1+ Bedrooms</option>
+                            <option value="2">2+ Bedrooms</option>
+                            <option value="3">3+ Bedrooms</option>
+                            <option value="4">4+ Bedrooms</option>
+                            <option value="5">5+ Bedrooms</option>
+                        </select>
+                    </div>
+                    
+                    {/* Occupancy */}
+                    <div>
+                        <select
+                            value={minOccupancy}
+                            onChange={(e) => { setMinOccupancy(e.target.value); setPage(0); }}
+                            className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white"
+                        >
+                            <option value="">Any Guests</option>
+                            <option value="2">2+ Guests</option>
+                            <option value="4">4+ Guests</option>
+                            <option value="6">6+ Guests</option>
+                            <option value="8">8+ Guests</option>
+                            <option value="10">10+ Guests</option>
+                        </select>
+                    </div>
+                    
+                    {/* Sort */}
+                    <div>
+                        <select
+                            value={sortBy}
+                            onChange={(e) => { setSortBy(e.target.value); setPage(0); }}
+                            className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white"
+                        >
+                            <option value="rating">Top Rated</option>
+                            <option value="reviews">Most Reviews</option>
+                            <option value="price">Lowest Price</option>
+                            <option value="bedrooms">Most Bedrooms</option>
+                            <option value="occupancy">Most Guests</option>
+                            <option value="newest">Newest</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            {/* Results Count */}
+            <div className="flex items-center justify-between mb-4">
+                <div className="text-gray-400">
+                    Showing {Math.min(page * limit + 1, total)} - {Math.min((page + 1) * limit, total)} of {total.toLocaleString()} listings
+                </div>
+                <div className="flex gap-2">
+                    <button
+                        onClick={() => setPage(p => Math.max(0, p - 1))}
+                        disabled={page === 0}
+                        className="px-3 py-1 bg-gray-700 text-white rounded disabled:opacity-50"
+                    >
+                        ← Prev
+                    </button>
+                    <span className="px-3 py-1 text-gray-400">
+                        Page {page + 1} of {totalPages}
+                    </span>
+                    <button
+                        onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
+                        disabled={page >= totalPages - 1}
+                        className="px-3 py-1 bg-gray-700 text-white rounded disabled:opacity-50"
+                    >
+                        Next →
+                    </button>
+                </div>
+            </div>
+
+            {/* Listings Grid */}
+            {loading ? (
+                <div className="text-center py-12 text-gray-400">Loading listings...</div>
+            ) : listings.length === 0 ? (
+                <div className="text-center py-12">
+                    <div className="text-4xl mb-4">🏠</div>
+                    <div className="text-gray-400">No listings match your filters</div>
+                </div>
+            ) : (
+                <div className="grid grid-cols-4 gap-4">
+                    {listings.map(listing => (
+                        <div
+                            key={listing.entity_id}
+                            className="bg-gray-800 rounded-lg overflow-hidden cursor-pointer hover:ring-2 hover:ring-blue-500 transition-all"
+                            onClick={() => setSelectedListing(listing)}
+                        >
+                            {/* Photo */}
+                            <div className="aspect-[4/3] bg-gray-700 relative">
+                                <img
+                                    src={getPhotoUrl(listing)}
+                                    alt={listing.display_name}
+                                    className="w-full h-full object-cover"
+                                    onError={(e) => {
+                                        (e.target as HTMLImageElement).src = 'https://via.placeholder.com/400x300?text=No+Photo';
+                                    }}
+                                />
+                                {listing.rating && (
+                                    <div className="absolute top-2 right-2 bg-black/70 text-white text-sm px-2 py-1 rounded">
+                                        ⭐ {listing.rating.toFixed(1)}
+                                        {listing.review_count && (
+                                            <span className="text-gray-400 text-xs ml-1">({listing.review_count})</span>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                            
+                            {/* Info */}
+                            <div className="p-3">
+                                <div className="flex items-start justify-between gap-2 mb-1">
+                                    <h3 className="text-white font-medium text-sm line-clamp-2 flex-1">
+                                        {listing.display_name}
+                                    </h3>
+                                </div>
+                                
+                                <div className="text-gray-400 text-xs mb-2">
+                                    📍 {listing.community_name || listing.city}
+                                </div>
+                                
+                                <div className="flex items-center gap-3 text-xs text-gray-400 mb-2">
+                                    {listing.bedrooms && <span>🛏 {listing.bedrooms} bed</span>}
+                                    {listing.bathrooms && <span>🚿 {listing.bathrooms} bath</span>}
+                                    {listing.max_occupancy && <span>👥 {listing.max_occupancy}</span>}
+                                </div>
+                                
+                                <div className="flex items-center justify-between">
+                                    <div className="text-blue-400 font-semibold">
+                                        {formatPrice(listing.price)}
+                                    </div>
+                                    {getClaimBadge(listing.claim_status)}
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
+
+            {/* Detail Modal */}
+            {selectedListing && (
+                <ListingDetailModal
+                    listing={selectedListing}
+                    onClose={() => setSelectedListing(null)}
+                    onInquire={() => {
+                        setShowInquiryModal(true);
+                    }}
+                    token={token}
+                />
+            )}
+
+            {/* Inquiry Modal */}
+            {showInquiryModal && selectedListing && (
+                <InquiryModal
+                    listing={selectedListing}
+                    onClose={() => setShowInquiryModal(false)}
+                    token={token}
+                />
+            )}
+        </div>
+    );
+}
+
+// =====================================================================
+// LISTING DETAIL MODAL
+// =====================================================================
+
+function ListingDetailModal({ 
+    listing, 
+    onClose, 
+    onInquire,
+    token 
+}: { 
+    listing: Listing; 
+    onClose: () => void; 
+    onInquire: () => void;
+    token: string | null;
+}) {
+    const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
+    
+    const photos = listing.photos || [];
+    
+    return (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+            <div className="bg-gray-800 rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+                {/* Header */}
+                <div className="sticky top-0 bg-gray-800 border-b border-gray-700 p-4 flex items-center justify-between">
+                    <h2 className="text-xl font-bold text-white">{listing.display_name}</h2>
+                    <button onClick={onClose} className="text-gray-400 hover:text-white text-2xl">×</button>
+                </div>
+                
+                <div className="p-6">
+                    {/* Photo Gallery */}
+                    {photos.length > 0 && (
+                        <div className="mb-6">
+                            <div className="aspect-video bg-gray-700 rounded-lg overflow-hidden mb-2">
+                                <img
+                                    src={photos[currentPhotoIndex]?.url || photos[currentPhotoIndex]}
+                                    alt=""
+                                    className="w-full h-full object-cover"
+                                />
+                            </div>
+                            {photos.length > 1 && (
+                                <div className="flex gap-2 overflow-x-auto pb-2">
+                                    {photos.slice(0, 10).map((photo, idx) => (
+                                        <img
+                                            key={idx}
+                                            src={photo.url || photo}
+                                            alt=""
+                                            className={`w-20 h-14 object-cover rounded cursor-pointer ${
+                                                idx === currentPhotoIndex ? 'ring-2 ring-blue-500' : 'opacity-60 hover:opacity-100'
+                                            }`}
+                                            onClick={() => setCurrentPhotoIndex(idx)}
+                                        />
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    )}
+                    
+                    {/* Quick Stats */}
+                    <div className="grid grid-cols-4 gap-4 mb-6">
+                        {listing.bedrooms && (
+                            <div className="bg-gray-700 rounded-lg p-3 text-center">
+                                <div className="text-2xl">🛏</div>
+                                <div className="text-white font-semibold">{listing.bedrooms}</div>
+                                <div className="text-xs text-gray-400">Bedrooms</div>
+                            </div>
+                        )}
+                        {listing.bathrooms && (
+                            <div className="bg-gray-700 rounded-lg p-3 text-center">
+                                <div className="text-2xl">🚿</div>
+                                <div className="text-white font-semibold">{listing.bathrooms}</div>
+                                <div className="text-xs text-gray-400">Bathrooms</div>
+                            </div>
+                        )}
+                        {listing.max_occupancy && (
+                            <div className="bg-gray-700 rounded-lg p-3 text-center">
+                                <div className="text-2xl">👥</div>
+                                <div className="text-white font-semibold">{listing.max_occupancy}</div>
+                                <div className="text-xs text-gray-400">Max Guests</div>
+                            </div>
+                        )}
+                        {listing.rating && (
+                            <div className="bg-gray-700 rounded-lg p-3 text-center">
+                                <div className="text-2xl">⭐</div>
+                                <div className="text-white font-semibold">{listing.rating.toFixed(1)}</div>
+                                <div className="text-xs text-gray-400">{listing.review_count} reviews</div>
+                            </div>
+                        )}
+                    </div>
+                    
+                    {/* Location & Host */}
+                    <div className="grid grid-cols-2 gap-6 mb-6">
+                        <div>
+                            <h3 className="text-gray-400 text-sm mb-2">Location</h3>
+                            <div className="text-white">📍 {listing.community_name || listing.city}</div>
+                            {listing.property_type && (
+                                <div className="text-gray-400 text-sm mt-1">
+                                    {listing.property_type.replace(/_/g, ' ')}
+                                </div>
+                            )}
+                        </div>
+                        <div>
+                            <h3 className="text-gray-400 text-sm mb-2">Host</h3>
+                            <div className="text-white">{listing.host_name || 'Unknown Host'}</div>
+                            {listing.claim_status === 'approved' ? (
+                                <div className="text-green-400 text-sm mt-1">✓ Verified on Community Canvas</div>
+                            ) : (
+                                <div className="text-gray-400 text-sm mt-1">Not yet verified</div>
+                            )}
+                        </div>
+                    </div>
+                    
+                    {/* Description */}
+                    {listing.description && (
+                        <div className="mb-6">
+                            <h3 className="text-gray-400 text-sm mb-2">Description</h3>
+                            <p className="text-white text-sm leading-relaxed line-clamp-6">
+                                {listing.description}
+                            </p>
+                        </div>
+                    )}
+                    
+                    {/* Amenities */}
+                    {listing.amenities && listing.amenities.length > 0 && (
+                        <div className="mb-6">
+                            <h3 className="text-gray-400 text-sm mb-2">Amenities</h3>
+                            <div className="flex flex-wrap gap-2">
+                                {(listing.amenities as string[]).slice(0, 15).map((amenity, idx) => (
+                                    <span key={idx} className="bg-gray-700 text-gray-300 text-xs px-2 py-1 rounded">
+                                        {amenity}
+                                    </span>
+                                ))}
+                                {listing.amenities.length > 15 && (
+                                    <span className="text-gray-500 text-xs px-2 py-1">
+                                        +{listing.amenities.length - 15} more
+                                    </span>
+                                )}
+                            </div>
+                        </div>
+                    )}
+                    
+                    {/* Actions */}
+                    <div className="border-t border-gray-700 pt-6 flex items-center justify-between">
+                        <div>
+                            <div className="text-2xl font-bold text-blue-400">
+                                {listing.price ? `$${Math.round(listing.price)}/night` : 'Contact for pricing'}
+                            </div>
+                        </div>
+                        
+                        <div className="flex gap-3">
+                            {listing.external_url && (
+                                
+                                    href={listing.external_url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600"
+                                >
+                                    View on Airbnb ↗
+                                </a>
+                            )}
+                            
+                            <button
+                                onClick={onInquire}
+                                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                            >
+                                Request to Book
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// =====================================================================
+// INQUIRY MODAL
+// =====================================================================
+
+function InquiryModal({ 
+    listing, 
+    onClose, 
+    token 
+}: { 
+    listing: Listing; 
+    onClose: () => void;
+    token: string | null;
+}) {
+    const [message, setMessage] = useState('');
+    const [startDate, setStartDate] = useState('');
+    const [endDate, setEndDate] = useState('');
+    const [guests, setGuests] = useState(2);
+    const [submitting, setSubmitting] = useState(false);
+    const [success, setSuccess] = useState(false);
+    const [error, setError] = useState('');
+
+    async function handleSubmit(e: React.FormEvent) {
+        e.preventDefault();
+        setSubmitting(true);
+        setError('');
+        
+        try {
+            const res = await fetch(`/api/listings/${listing.entity_id}/inquire`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    message,
+                    startDate,
+                    endDate,
+                    guests
+                })
+            });
+            
+            const data = await res.json();
+            
+            if (data.success) {
+                setSuccess(true);
+            } else {
+                setError(data.error || 'Failed to submit inquiry');
+            }
+        } catch (err) {
+            setError('Failed to submit inquiry');
+        } finally {
+            setSubmitting(false);
+        }
+    }
+
+    if (success) {
+        return (
+            <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+                <div className="bg-gray-800 rounded-lg p-8 max-w-md w-full text-center">
+                    <div className="text-6xl mb-4">✅</div>
+                    <h2 className="text-xl font-bold text-white mb-2">Inquiry Submitted!</h2>
+                    <p className="text-gray-400 mb-6">
+                        We'll contact the host on your behalf and let you know when they respond.
+                    </p>
+                    <button
+                        onClick={onClose}
+                        className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                    >
+                        Done
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+            <div className="bg-gray-800 rounded-lg p-6 max-w-md w-full">
+                <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-xl font-bold text-white">Request to Book</h2>
+                    <button onClick={onClose} className="text-gray-400 hover:text-white text-2xl">×</button>
+                </div>
+                
+                <div className="text-gray-400 text-sm mb-4">
+                    {listing.display_name}
+                </div>
+                
+                <form onSubmit={handleSubmit} className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-gray-400 text-sm mb-1">Check-in</label>
+                            <input
+                                type="date"
+                                value={startDate}
+                                onChange={(e) => setStartDate(e.target.value)}
+                                required
+                                className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-gray-400 text-sm mb-1">Check-out</label>
+                            <input
+                                type="date"
+                                value={endDate}
+                                onChange={(e) => setEndDate(e.target.value)}
+                                required
+                                className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white"
+                            />
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label className="block text-gray-400 text-sm mb-1">Number of Guests</label>
+                        <select
+                            value={guests}
+                            onChange={(e) => setGuests(Number(e.target.value))}
+                            className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white"
+                        >
+                            {[1,2,3,4,5,6,7,8,9,10,11,12].map(n => (
+                                <option key={n} value={n}>{n} guest{n > 1 ? 's' : ''}</option>
+                            ))}
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label className="block text-gray-400 text-sm mb-1">Message to Host</label>
+                        <textarea
+                            value={message}
+                            onChange={(e) => setMessage(e.target.value)}
+                            placeholder="Tell the host about your trip..."
+                            rows={4}
+                            required
+                            className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white placeholder-gray-500 resize-none"
+                        />
+                    </div>
+                    
+                    {error && (
+                        <div className="text-red-400 text-sm">{error}</div>
+                    )}
+                    
+                    <div className="flex gap-3">
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            className="flex-1 px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            type="submit"
+                            disabled={submitting}
+                            className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                        >
+                            {submitting ? 'Sending...' : 'Send Request'}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
+}
+
+Part 4: Add Route & Sidebar
+tsx// In App.tsx router
+import STRBrowser from './pages/listings/STRBrowser';
+
+<Route path="/listings" element={<STRBrowser />} />
+tsx// In sidebar navigation, add to ACCOMMODATIONS section:
+{
+    title: 'ACCOMMODATIONS',
+    items: [
+        { name: 'Browse Listings', path: '/listings', icon: '🏠' },  // NEW
+        { name: 'All Properties', path: '/accommodations', icon: '🏘️' },
+        { name: 'Staging Search', path: '/accommodations/search', icon: '🔍' },
+        { name: 'Map View', path: '/accommodations/map', icon: '🗺️' },
+        { name: 'Host Portal', path: '/accommodations/host', icon: '⭐' },
+    ]
+}
+
+Summary
+FeatureDescriptionStats BarTotal listings, claimed, unclaimed, communities, avg ratingFiltersSearch, community, bedrooms, occupancy, price, sortGrid ViewPhoto, rating, beds/baths, price, claim statusDetail ModalPhoto gallery, full details, amenities, actionsInquiry FlowDates, guests, message → creates entity_inquiryClaim FlowHost can claim their listingPagination24 per page with prev/next
+This gives you a real, browsable inventory of your 12,795 BC properties!
