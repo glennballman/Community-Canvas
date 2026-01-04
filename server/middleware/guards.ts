@@ -188,17 +188,13 @@ export const optionalAuth: RequestHandler = (req: Request, res: Response, next: 
   next();
 };
 
-// Require tenant admin role OR service mode (for platform reviewers)
-// HARDENED: Uses timing-safe comparison, no fallback key
+// Require tenant admin role (no service-key bypass)
+// P0 HARDENED: Service-key removed per security requirement - use session auth only
 export const requireTenantAdminOrService: RequestHandler = (req: Request, res: Response, next: NextFunction) => {
   const tenantReq = req as TenantRequest;
   
-  // Check for valid service key (uses timing-safe compare, no fallback)
-  if (isServiceKeyRequest(req)) {
-    // Mark request as service-mode for downstream handlers
-    (req as any)._isServiceMode = true;
-    return next();
-  }
+  // P0 HARDENED: Service-key NO LONGER accepted here - use platform staff session instead
+  // Service-key is only valid for /api/jobs/* background automation routes
   
   // Must have authenticated individual
   if (!tenantReq.ctx?.individual_id) {
@@ -355,6 +351,23 @@ export const blockTenantAccess: RequestHandler = (req: Request, res: Response, n
     });
   }
   
+  next();
+};
+
+// ================================================================================
+// P0 HARDENING: Block service-key on tenant API routes
+// Service-key MUST NOT grant access to /api/* routes that can mutate tenant data
+// Only /api/jobs/* (background automation) may use service-key
+// ================================================================================
+
+export const blockServiceKeyOnTenantRoutes: RequestHandler = (req: Request, res: Response, next: NextFunction) => {
+  if (isServiceKeyRequest(req)) {
+    return res.status(403).json({
+      success: false,
+      error: 'Service key not accepted on tenant API routes',
+      code: 'SERVICE_KEY_BLOCKED'
+    });
+  }
   next();
 };
 

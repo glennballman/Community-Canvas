@@ -8,6 +8,7 @@ import { createServer } from "http";
 import { startPipelineScheduler } from "./pipelines";
 import { tenantContext } from "./middleware/tenantContext";
 import { attachTenantDb } from "./db/tenantDb";
+import { blockServiceKeyOnTenantRoutes } from "./middleware/guards";
 
 const app = express();
 const httpServer = createServer(app);
@@ -126,6 +127,18 @@ app.use((req, res, next) => {
 
 app.use(tenantContext as any);
 app.use(attachTenantDb);
+
+// P0 HARDENING: Block service-key on tenant API routes
+// Service-key is NOT accepted on /api/* routes (except /api/internal and /api/jobs)
+// This prevents service-key from being used to bypass tenant authentication
+app.use('/api', (req, res, next) => {
+  // Allow /api/internal (uses platform staff session) and /api/jobs (background automation)
+  if (req.path.startsWith('/internal') || req.path.startsWith('/jobs')) {
+    return next();
+  }
+  // Block service-key on all other /api/* routes
+  return blockServiceKeyOnTenantRoutes(req, res, next);
+});
 
 (async () => {
   await registerRoutes(httpServer, app);

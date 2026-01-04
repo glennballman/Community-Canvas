@@ -600,6 +600,120 @@ echo "    - rentals.ts: Uses serviceQuery for public catalog reads only"
 echo "    - individuals.ts: Uses serviceQuery for reference data only"
 
 # ============================================
+# PART D: SERVICE-KEY BLOCKING PROOF
+# P0 Hardening: Service-key MUST NOT grant access on /api/* routes
+# ============================================
+echo ""
+echo -e "${CYAN}=== PART D: SERVICE-KEY BLOCKING PROOF ===${NC}"
+echo ""
+
+# Brief pause to ensure server is fully ready for API tests
+sleep 1
+
+# D.1) Test that service-key is blocked on claim creation endpoint
+echo "D.1) Testing service-key blocked on POST /api/v1/catalog/claims..."
+CLAIM_RESPONSE=$(curl -s $CURL_TIMEOUT -X POST "$BASE_URL/api/v1/catalog/claims" \
+  -H "Content-Type: application/json" \
+  -H "X-Internal-Service-Key: test-service-key-12345" \
+  -d '{"target_type":"vehicle","catalog_vehicle_id":"674a20f8-b137-40bc-9593-9700e32af839","claim_note":"Service-key spoof attempt"}')
+
+# SERVICE_KEY_BLOCKED from middleware, or AUTH_REQUIRED/TENANT_REQUIRED from route guard (service-key ignored)
+if echo "$CLAIM_RESPONSE" | grep -qE "SERVICE_KEY_BLOCKED|AUTH_REQUIRED|TENANT_REQUIRED"; then
+  echo -e "  ${GREEN}PASS${NC}: Service-key blocked on claim creation (request rejected)"
+  ((PASS++))
+else
+  echo -e "  ${RED}FAIL${NC}: Service-key NOT blocked on claim creation"
+  echo "  Response: $CLAIM_RESPONSE"
+  ((FAIL++))
+fi
+
+# D.2) Test that service-key is blocked on claim review start endpoint
+echo ""
+echo "D.2) Testing service-key blocked on POST /api/v1/catalog/claims/:id/review/start..."
+STATUS_RESPONSE=$(curl -s $CURL_TIMEOUT -X POST "$BASE_URL/api/v1/catalog/claims/00000000-0000-0000-0000-000000000001/review/start" \
+  -H "Content-Type: application/json" \
+  -H "X-Internal-Service-Key: test-service-key-12345" \
+  -d '{}')
+
+# SERVICE_KEY_BLOCKED from middleware, or AUTH_REQUIRED/TENANT_REQUIRED from route guard (service-key ignored)
+if echo "$STATUS_RESPONSE" | grep -qE "SERVICE_KEY_BLOCKED|AUTH_REQUIRED|TENANT_REQUIRED"; then
+  echo -e "  ${GREEN}PASS${NC}: Service-key blocked on claim review start (request rejected)"
+  ((PASS++))
+else
+  echo -e "  ${RED}FAIL${NC}: Service-key NOT blocked on claim review start"
+  echo "  Response: $STATUS_RESPONSE"
+  ((FAIL++))
+fi
+
+# D.3) Test that service-key is blocked on fleet mutation endpoint
+echo ""
+echo "D.3) Testing service-key blocked on POST /api/v1/fleet/trailers..."
+FLEET_RESPONSE=$(curl -s $CURL_TIMEOUT -X POST "$BASE_URL/api/v1/fleet/trailers" \
+  -H "Content-Type: application/json" \
+  -H "X-Internal-Service-Key: test-service-key-12345" \
+  -d '{"nickname":"Spoofed Trailer"}')
+
+# SERVICE_KEY_BLOCKED from middleware, or AUTH_REQUIRED/TENANT_REQUIRED from route guard (service-key ignored)
+if echo "$FLEET_RESPONSE" | grep -qE "SERVICE_KEY_BLOCKED|AUTH_REQUIRED|TENANT_REQUIRED"; then
+  echo -e "  ${GREEN}PASS${NC}: Service-key blocked on fleet mutation (request rejected)"
+  ((PASS++))
+else
+  echo -e "  ${RED}FAIL${NC}: Service-key NOT blocked on fleet mutation"
+  echo "  Response: $FLEET_RESPONSE"
+  ((FAIL++))
+fi
+
+# D.4) Test that /api/internal ALSO blocks service-key (uses platform session only)
+echo ""
+echo "D.4) Testing service-key blocked on /api/internal/impersonate/start..."
+INTERNAL_RESPONSE=$(curl -s $CURL_TIMEOUT -X POST "$BASE_URL/api/internal/impersonate/start" \
+  -H "Content-Type: application/json" \
+  -H "X-Internal-Service-Key: test-service-key-12345" \
+  -d '{"tenant_id":"b0000000-0000-0000-0000-000000000001","reason":"Spoof attempt"}')
+
+# Internal routes require platform staff session, service-key should be rejected
+if echo "$INTERNAL_RESPONSE" | grep -q "PLATFORM_AUTH_REQUIRED\|SERVICE_KEY_BLOCKED"; then
+  echo -e "  ${GREEN}PASS${NC}: Service-key blocked on internal route"
+  ((PASS++))
+else
+  echo -e "  ${RED}FAIL${NC}: Service-key NOT blocked on internal route"
+  echo "  Response: $INTERNAL_RESPONSE"
+  ((FAIL++))
+fi
+
+# D.5) Verify service-key headers are detected
+echo ""
+echo "D.5) Verifying middleware detects X-Internal-Service-Key header..."
+# Check the guards.ts file has the blocking logic
+if grep -q "blockServiceKeyOnTenantRoutes" server/middleware/guards.ts && \
+   grep -q "SERVICE_KEY_BLOCKED" server/middleware/guards.ts; then
+  echo -e "  ${GREEN}PASS${NC}: blockServiceKeyOnTenantRoutes middleware exists"
+  ((PASS++))
+else
+  echo -e "  ${RED}FAIL${NC}: blockServiceKeyOnTenantRoutes middleware missing"
+  ((FAIL++))
+fi
+
+# D.6) Verify index.ts applies the middleware globally
+echo ""
+echo "D.6) Verifying index.ts applies service-key blocking globally..."
+if grep -q "blockServiceKeyOnTenantRoutes" server/index.ts && \
+   grep -q "P0 HARDENING" server/index.ts; then
+  echo -e "  ${GREEN}PASS${NC}: Service-key blocking applied globally in index.ts"
+  ((PASS++))
+else
+  echo -e "  ${RED}FAIL${NC}: Service-key blocking NOT applied in index.ts"
+  ((FAIL++))
+fi
+
+echo ""
+echo "D.7) Summary: Service-key access hardening..."
+echo "    - /api/* routes: Service-key blocked (except /api/internal, /api/jobs)"
+echo "    - /api/internal/*: Requires platform staff session, rejects service-key"
+echo "    - requireTenantAdminOrService: No longer accepts service-key"
+echo "    - Blocking returns 403 with code SERVICE_KEY_BLOCKED"
+
+# ============================================
 # CLEANUP
 # ============================================
 echo ""
