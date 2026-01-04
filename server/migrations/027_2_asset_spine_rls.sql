@@ -1,0 +1,114 @@
+-- ============================================================================
+-- MIGRATION 027.2 — Asset Spine RLS Hardening (IMMEDIATE)
+-- Purpose: close remaining tenant isolation gaps in assets + asset_capabilities
+-- ============================================================================
+
+BEGIN;
+
+-- 1) ASSETS: already RLS-enabled, force it so even table owner is constrained
+ALTER TABLE assets FORCE ROW LEVEL SECURITY;
+
+-- Ensure tenant_id exists (your triggers write tenant_id; if column missing, Replit must stop and report)
+-- NOTE: If assets uses owner_tenant_id instead, adjust policies accordingly.
+
+-- Policies for assets (tenant-scoped + service mode)
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='assets' AND policyname='assets_select') THEN
+    CREATE POLICY assets_select ON assets
+    FOR SELECT
+    USING (is_service_mode() OR (tenant_id IS NOT NULL AND tenant_id = current_tenant_id()));
+  END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='assets' AND policyname='assets_insert') THEN
+    CREATE POLICY assets_insert ON assets
+    FOR INSERT
+    WITH CHECK (is_service_mode() OR (tenant_id IS NOT NULL AND tenant_id = current_tenant_id()));
+  END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='assets' AND policyname='assets_update') THEN
+    CREATE POLICY assets_update ON assets
+    FOR UPDATE
+    USING (is_service_mode() OR (tenant_id IS NOT NULL AND tenant_id = current_tenant_id()))
+    WITH CHECK (is_service_mode() OR (tenant_id IS NOT NULL AND tenant_id = current_tenant_id()));
+  END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='assets' AND policyname='assets_delete') THEN
+    CREATE POLICY assets_delete ON assets
+    FOR DELETE
+    USING (is_service_mode() OR (tenant_id IS NOT NULL AND tenant_id = current_tenant_id()));
+  END IF;
+END $$;
+
+-- 2) ASSET_CAPABILITIES: enable + force RLS, then policy derived from asset ownership
+ALTER TABLE asset_capabilities ENABLE ROW LEVEL SECURITY;
+ALTER TABLE asset_capabilities FORCE ROW LEVEL SECURITY;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='asset_capabilities' AND policyname='asset_capabilities_select') THEN
+    CREATE POLICY asset_capabilities_select ON asset_capabilities
+    FOR SELECT
+    USING (
+      is_service_mode()
+      OR EXISTS (
+        SELECT 1 FROM assets a
+        WHERE a.id = asset_capabilities.asset_id
+          AND a.tenant_id = current_tenant_id()
+      )
+    );
+  END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='asset_capabilities' AND policyname='asset_capabilities_insert') THEN
+    CREATE POLICY asset_capabilities_insert ON asset_capabilities
+    FOR INSERT
+    WITH CHECK (
+      is_service_mode()
+      OR EXISTS (
+        SELECT 1 FROM assets a
+        WHERE a.id = asset_capabilities.asset_id
+          AND a.tenant_id = current_tenant_id()
+      )
+    );
+  END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='asset_capabilities' AND policyname='asset_capabilities_update') THEN
+    CREATE POLICY asset_capabilities_update ON asset_capabilities
+    FOR UPDATE
+    USING (
+      is_service_mode()
+      OR EXISTS (
+        SELECT 1 FROM assets a
+        WHERE a.id = asset_capabilities.asset_id
+          AND a.tenant_id = current_tenant_id()
+      )
+    )
+    WITH CHECK (
+      is_service_mode()
+      OR EXISTS (
+        SELECT 1 FROM assets a
+        WHERE a.id = asset_capabilities.asset_id
+          AND a.tenant_id = current_tenant_id()
+      )
+    );
+  END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='asset_capabilities' AND policyname='asset_capabilities_delete') THEN
+    CREATE POLICY asset_capabilities_delete ON asset_capabilities
+    FOR DELETE
+    USING (
+      is_service_mode()
+      OR EXISTS (
+        SELECT 1 FROM assets a
+        WHERE a.id = asset_capabilities.asset_id
+          AND a.tenant_id = current_tenant_id()
+      )
+    );
+  END IF;
+END $$;
+
+COMMIT;
+
+-- ============================================================================
+-- END MIGRATION 027.2
+-- ============================================================================
