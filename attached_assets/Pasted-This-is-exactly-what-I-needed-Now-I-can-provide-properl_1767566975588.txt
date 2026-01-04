@@ -1,0 +1,77 @@
+This is exactly what I needed. Now I can provide properly targeted prompts that work with your actual setup.
+Key Findings & Adjustments
+What I AssumedWhat Actually ExistsAdjustmentRaw SQL migrationsDrizzle ORMUse Drizzle schema definitionsreq.ctx.partyIdHybrid auth with cc_individuals + tenantsNeed to verify party resolution patternGeneric mapsMapbox already configured!Use Mapbox GL directlyParties tablecc_individuals + tenant membershipMay need to add parties or use existing pattern
+Quick Clarifying Questions
+Before I provide the final prompts, I need two quick answers:
+1. How does the current auth middleware expose the user?
+Looking at your existing routes, what's available on req? For example:
+typescript// In your existing routes, which of these work?
+req.ctx?.tenantId      // ?
+req.ctx?.userId        // ?
+req.ctx?.individualId  // ?
+req.user?.id           // ?
+```
+
+**Can you paste a snippet from an existing authenticated route** (like `server/routes/opportunities.ts`) showing how you access the current user?
+
+### 2. Is there a `parties` table or equivalent?
+
+The previous transcript mentioned `getOrCreatePartyForTenant()`. Does this table exist, or is the "party" concept handled differently (maybe just `cc_individuals` + tenant context)?
+
+---
+
+## While You Check That, Here's the Updated Plan
+
+Based on your stack, here's the refined implementation sequence:
+
+### Phase 0: Database Schema (Drizzle Style)
+
+I'll provide Drizzle schema files instead of raw SQL:
+```
+server/db/schema/
+├── conversations.ts    # Conversation rooms + messages
+├── payments.ts         # Payment promises + milestones
+├── preferences.ts      # Private preferences + favor ledger
+├── community.ts        # Community constraint packs
+├── spatial.ts          # Spatial constraints + landing zones
+├── trust.ts            # Trust signals
+└── bundles.ts          # Bundle opportunities
+```
+
+### Phase 1: Core Backend Routes
+```
+server/routes/
+├── conversations.ts    # CRUD + messaging + redaction
+├── payments.ts         # Payment promises + milestones
+├── preferences.ts      # Private preferences + favors
+├── community.ts        # CCP lookup + management
+└── bundles.ts          # Bundle matching
+```
+
+### Phase 2: Frontend Components
+```
+client/src/
+├── pages/
+│   ├── ConversationView.tsx     # Fiverr-style chat
+│   ├── PaymentPlanBuilder.tsx   # Payment promise UI
+│   └── PreferencesManager.tsx   # Private exclusions
+├── components/
+│   ├── conversation/
+│   │   ├── MessageList.tsx
+│   │   ├── MessageInput.tsx
+│   │   ├── RedactionNotice.tsx
+│   │   └── StructuredInserts.tsx
+│   ├── maps/
+│   │   ├── PropertyMap.tsx
+│   │   ├── LandingZoneEditor.tsx
+│   │   └── AccessPathDrawer.tsx
+│   └── payments/
+│       ├── MilestoneTracker.tsx
+│       └── PaymentMethodSelector.tsx
+
+Quick Test: Verify Existing Pattern
+Run this in your Replit shell to see your current auth pattern:
+bashgrep -r "req\." server/routes/*.ts | grep -E "(ctx|user|tenant|individual)" | head -20
+Or just tell me what you see when you look at an authenticated route like the bid submission handler.
+
+Once you confirm the auth pattern, I'll provide the exact prompts
