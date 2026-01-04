@@ -184,6 +184,7 @@ function Router() {
   
   const isPublicRoute = 
     location === "/" ||
+    location.startsWith("/public/") ||
     location === "/host/login" ||
     location === "/host/signup" ||
     location === "/host/forgot-password";
@@ -192,6 +193,13 @@ function Router() {
     return (
       <Switch>
         <Route path="/" component={PublicDashboard} />
+        <Route path="/public/overview" component={PublicOverview} />
+        <Route path="/public/map" component={PublicMap} />
+        <Route path="/public/webcams" component={PublicWebcams} />
+        <Route path="/public/alerts" component={PublicAlerts} />
+        <Route path="/public/roadtrips" component={PublicRoadTrips} />
+        <Route path="/public/planning" component={PublicTripPlanning} />
+        <Route path="/public/fleet" component={PublicFleet} />
         <Route path="/host/login" component={HostLogin} />
         <Route path="/host/signup" component={HostSignup} />
         <Route path="/host/forgot-password" component={ForgotPassword} />
