@@ -452,7 +452,7 @@ export default function OpportunityDetail() {
               <div className="text-sm text-foreground">{opp.site_address}</div>
               {opp.site_latitude && opp.site_longitude && (
                 <div className="text-xs text-muted-foreground mt-1 font-mono">
-                  {opp.site_latitude.toFixed(4)}N, {Math.abs(opp.site_longitude).toFixed(4)}W
+                  {parseFloat(String(opp.site_latitude)).toFixed(4)}N, {Math.abs(parseFloat(String(opp.site_longitude))).toFixed(4)}W
                 </div>
               )}
             </div>
