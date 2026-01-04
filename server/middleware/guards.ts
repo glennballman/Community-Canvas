@@ -266,6 +266,15 @@ export const requireSession: RequestHandler = (req: Request, res: Response, next
 // For internal platform review console - completely separate from tenant auth
 // ================================================================================
 
+export interface ImpersonationSession {
+  id: string;
+  tenant_id: string;
+  individual_id: string | null;
+  reason: string;
+  expires_at: Date;
+  created_at: Date;
+}
+
 export interface PlatformStaffRequest extends Request {
   platformStaff?: {
     id: string;
@@ -273,6 +282,7 @@ export interface PlatformStaffRequest extends Request {
     full_name: string;
     role: 'platform_reviewer' | 'platform_admin';
   };
+  impersonation?: ImpersonationSession;
 }
 
 // Check if request has authenticated platform staff (via separate session store)
@@ -343,6 +353,106 @@ export const blockTenantAccess: RequestHandler = (req: Request, res: Response, n
       error: 'Internal endpoint - service key not accepted',
       code: 'SERVICE_KEY_BLOCKED'
     });
+  }
+  
+  next();
+};
+
+// ================================================================================
+// IMPERSONATION MIDDLEWARE
+// Resolves active impersonation session and attaches to request
+// ================================================================================
+
+import { serviceQuery } from '../db/tenantDb';
+
+// Resolve active impersonation session for platform staff
+// This should be called AFTER requirePlatformStaff
+export const resolveImpersonation: RequestHandler = async (req: Request, res: Response, next: NextFunction) => {
+  const platformReq = req as PlatformStaffRequest;
+  
+  if (!platformReq.platformStaff?.id) {
+    return next();
+  }
+  
+  try {
+    const result = await serviceQuery<{
+      id: string;
+      tenant_id: string;
+      individual_id: string | null;
+      reason: string;
+      expires_at: Date;
+      created_at: Date;
+    }>(`
+      SELECT id, tenant_id, individual_id, reason, expires_at, created_at
+      FROM cc_impersonation_sessions
+      WHERE platform_staff_id = $1
+        AND revoked_at IS NULL
+        AND expires_at > now()
+      ORDER BY created_at DESC
+      LIMIT 1
+    `, [platformReq.platformStaff.id]);
+    
+    if (result.rows.length > 0) {
+      platformReq.impersonation = result.rows[0];
+    }
+    
+    next();
+  } catch (error) {
+    console.error('Error resolving impersonation:', error);
+    next();
+  }
+};
+
+// Require active impersonation for accessing tenant resources
+export const requireImpersonation: RequestHandler = (req: Request, res: Response, next: NextFunction) => {
+  const platformReq = req as PlatformStaffRequest;
+  
+  if (!platformReq.platformStaff?.id) {
+    return res.status(401).json({
+      success: false,
+      error: 'Platform staff authentication required',
+      code: 'PLATFORM_AUTH_REQUIRED'
+    });
+  }
+  
+  if (!platformReq.impersonation) {
+    return res.status(403).json({
+      success: false,
+      error: 'Active impersonation session required to access tenant resources',
+      code: 'IMPERSONATION_REQUIRED'
+    });
+  }
+  
+  // Check if impersonation has expired (redundant but defensive)
+  if (new Date(platformReq.impersonation.expires_at) < new Date()) {
+    return res.status(403).json({
+      success: false,
+      error: 'Impersonation session has expired',
+      code: 'IMPERSONATION_EXPIRED'
+    });
+  }
+  
+  next();
+};
+
+// Block platform staff from tenant endpoints unless impersonating
+// Use this on /api/* routes (non-internal) to prevent direct platform staff access
+export const blockPlatformStaffWithoutImpersonation: RequestHandler = (req: Request, res: Response, next: NextFunction) => {
+  // Check if this is a platform staff session trying to access tenant routes
+  const platformSession = (req as any).session?.platformStaff;
+  
+  if (platformSession?.id) {
+    // Platform staff detected - block unless impersonating
+    // Note: Impersonation context would be set by impersonation middleware
+    const hasImpersonation = !!(req as PlatformStaffRequest).impersonation;
+    
+    if (!hasImpersonation) {
+      return res.status(403).json({
+        success: false,
+        error: 'Platform staff cannot access tenant endpoints without impersonation',
+        code: 'IMPERSONATION_REQUIRED'
+      });
+    }
   }
   
   next();

@@ -1,0 +1,51 @@
+We must untangle platform staff identity from tenant identity. Current UI shows platform staff with tenant memberships, which is wrong.
+
+Deliverables (P0):
+
+A) Hard separation of auth
+1) Platform staff auth stays on /api/internal/auth/* with cc_platform_staff
+2) Tenant/individual auth stays on /api/auth/* with cc_individuals (or current user auth)
+3) Cookies must be separate names + separate session stores OR at minimum separate session keys and middleware.
+4) /api/internal/* must NEVER accept tenant sessions
+5) /api/* must NEVER accept platform staff sessions unless impersonation is active
+
+B) Impersonation system (audited + timeboxed)
+Tables:
+- cc_impersonation_sessions (
+  id uuid pk,
+  platform_staff_id uuid fk cc_platform_staff,
+  tenant_id uuid fk cc_tenants,
+  individual_id uuid nullable fk cc_individuals,
+  reason text,
+  expires_at timestamptz,
+  revoked_at timestamptz,
+  created_at timestamptz
+)
+Endpoints:
+- POST /api/internal/impersonate/start { tenant_id, individual_id?, reason }
+  -> creates session, returns success + expires_at
+- POST /api/internal/impersonate/stop -> revokes
+- GET /api/internal/impersonate/status -> current context
+Middleware:
+- If platform staff session + active impersonation session, set DB GUCs:
+  app.tenant_id = tenant_id
+  app.individual_id = individual_id (or blank)
+  app.portal_id = blank
+  app.platform_staff_id = staff_id (new GUC)
+- Ensure no leakage: clearSessionVars before/after every pooled query
+
+Audit:
+- Insert event on start/stop
+- Every internal action taken while impersonating logs platform_staff_id + impersonation_session_id
+
+C) UI changes
+- Platform console shows “Start Impersonation” control
+- When impersonating, banner always visible + “Exit impersonation”
+- Tenant UI should never show platform staff list or platform roles.
+
+D) QA proofs
+1) Platform staff can view internal claims queue without tenant context (serviceQuery)
+2) Platform staff cannot call tenant endpoints without impersonation (401/403)
+3) After impersonation start, platform staff can access tenant-scoped fleet/assets for that tenant only
+4) Cross-tenant attempt fails
+5) Logs show platform_staff_id + tenant_id for impersonated actions

@@ -293,6 +293,310 @@ router.get('/auth/me', (req: Request, res: Response) => {
   });
 });
 
+// ================================================================================
+// IMPERSONATION ENDPOINTS
+// Allow platform staff to temporarily act as a tenant for support/debugging
+// ================================================================================
+
+const impersonateStartSchema = z.object({
+  tenant_id: z.string().uuid(),
+  individual_id: z.string().uuid().optional(),
+  reason: z.string().min(10).max(500),
+  duration_hours: z.number().min(0.5).max(8).default(2)
+});
+
+router.post(
+  '/impersonate/start',
+  requirePlatformRole('platform_reviewer', 'platform_admin'),
+  async (req: Request, res: Response) => {
+    try {
+      const platformReq = req as PlatformStaffRequest;
+      const parsed = impersonateStartSchema.safeParse(req.body);
+      
+      if (!parsed.success) {
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid request',
+          details: parsed.error.errors
+        });
+      }
+      
+      const { tenant_id, individual_id, reason, duration_hours } = parsed.data;
+      const staffId = platformReq.platformStaff!.id;
+      
+      // Check for existing active impersonation
+      const existingSession = await serviceQuery(
+        `SELECT id FROM cc_impersonation_sessions 
+         WHERE platform_staff_id = $1 
+           AND revoked_at IS NULL 
+           AND expires_at > now()`,
+        [staffId]
+      );
+      
+      if (existingSession.rows.length > 0) {
+        return res.status(409).json({
+          success: false,
+          error: 'Active impersonation session already exists. Stop it first.',
+          code: 'IMPERSONATION_ACTIVE',
+          active_session_id: existingSession.rows[0].id
+        });
+      }
+      
+      // Verify tenant exists
+      const tenantCheck = await serviceQuery(
+        `SELECT id, name FROM cc_tenants WHERE id = $1`,
+        [tenant_id]
+      );
+      
+      if (tenantCheck.rows.length === 0) {
+        return res.status(404).json({
+          success: false,
+          error: 'Tenant not found',
+          code: 'TENANT_NOT_FOUND'
+        });
+      }
+      
+      // If individual_id provided, verify they belong to tenant
+      let individualName = null;
+      if (individual_id) {
+        const individualCheck = await serviceQuery(
+          `SELECT i.id, i.full_name FROM cc_individuals i
+           JOIN cc_tenant_users tu ON tu.individual_id = i.id
+           WHERE i.id = $1 AND tu.tenant_id = $2`,
+          [individual_id, tenant_id]
+        );
+        
+        if (individualCheck.rows.length === 0) {
+          return res.status(404).json({
+            success: false,
+            error: 'Individual not found or not a member of this tenant',
+            code: 'INDIVIDUAL_NOT_FOUND'
+          });
+        }
+        individualName = individualCheck.rows[0].full_name;
+      }
+      
+      const expiresAt = new Date(Date.now() + duration_hours * 60 * 60 * 1000);
+      
+      // Create impersonation session
+      const sessionResult = await serviceQuery(
+        `INSERT INTO cc_impersonation_sessions 
+         (platform_staff_id, tenant_id, individual_id, reason, expires_at)
+         VALUES ($1, $2, $3, $4, $5)
+         RETURNING id, created_at`,
+        [staffId, tenant_id, individual_id || null, reason, expiresAt]
+      );
+      
+      const newSession = sessionResult.rows[0];
+      
+      // Log audit event
+      await serviceQuery(
+        `INSERT INTO cc_impersonation_events 
+         (impersonation_session_id, event_type, ip, user_agent)
+         VALUES ($1, 'started', $2, $3)`,
+        [
+          newSession.id,
+          req.ip || req.socket.remoteAddress || 'unknown',
+          req.headers['user-agent'] || 'unknown'
+        ]
+      );
+      
+      console.log(`[SECURITY] Impersonation started: staff=${platformReq.platformStaff!.email} tenant=${tenantCheck.rows[0].name} reason="${reason}"`);
+      
+      return res.json({
+        success: true,
+        impersonation: {
+          id: newSession.id,
+          tenant_id,
+          tenant_name: tenantCheck.rows[0].name,
+          individual_id: individual_id || null,
+          individual_name: individualName,
+          reason,
+          expires_at: expiresAt,
+          created_at: newSession.created_at
+        }
+      });
+    } catch (error: any) {
+      console.error('Impersonation start error:', error.message, error.stack);
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to start impersonation'
+      });
+    }
+  }
+);
+
+router.post(
+  '/impersonate/stop',
+  requirePlatformRole('platform_reviewer', 'platform_admin'),
+  async (req: Request, res: Response) => {
+    try {
+      const platformReq = req as PlatformStaffRequest;
+      const staffId = platformReq.platformStaff!.id;
+      
+      // Find and revoke active session
+      const revokeResult = await serviceQuery(
+        `UPDATE cc_impersonation_sessions 
+         SET revoked_at = now()
+         WHERE platform_staff_id = $1 
+           AND revoked_at IS NULL 
+           AND expires_at > now()
+         RETURNING id, tenant_id`,
+        [staffId]
+      );
+      
+      if (revokeResult.rows.length === 0) {
+        return res.status(404).json({
+          success: false,
+          error: 'No active impersonation session found',
+          code: 'NO_ACTIVE_SESSION'
+        });
+      }
+      
+      const revokedSession = revokeResult.rows[0];
+      
+      // Log audit event
+      await serviceQuery(
+        `INSERT INTO cc_impersonation_events 
+         (impersonation_session_id, event_type, ip, user_agent)
+         VALUES ($1, 'stopped', $2, $3)`,
+        [
+          revokedSession.id,
+          req.ip || req.socket.remoteAddress || 'unknown',
+          req.headers['user-agent'] || 'unknown'
+        ]
+      );
+      
+      console.log(`[SECURITY] Impersonation stopped: staff=${platformReq.platformStaff!.email} session=${revokedSession.id}`);
+      
+      return res.json({
+        success: true,
+        message: 'Impersonation session stopped',
+        session_id: revokedSession.id
+      });
+    } catch (error: any) {
+      console.error('Impersonation stop error:', error.message, error.stack);
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to stop impersonation'
+      });
+    }
+  }
+);
+
+router.get(
+  '/impersonate/status',
+  requirePlatformRole('platform_reviewer', 'platform_admin'),
+  async (req: Request, res: Response) => {
+    try {
+      const platformReq = req as PlatformStaffRequest;
+      const staffId = platformReq.platformStaff!.id;
+      
+      const sessionResult = await serviceQuery(
+        `SELECT 
+           s.id,
+           s.tenant_id,
+           t.name as tenant_name,
+           s.individual_id,
+           i.full_name as individual_name,
+           s.reason,
+           s.expires_at,
+           s.created_at
+         FROM cc_impersonation_sessions s
+         JOIN cc_tenants t ON t.id = s.tenant_id
+         LEFT JOIN cc_individuals i ON i.id = s.individual_id
+         WHERE s.platform_staff_id = $1
+           AND s.revoked_at IS NULL
+           AND s.expires_at > now()
+         ORDER BY s.created_at DESC
+         LIMIT 1`,
+        [staffId]
+      );
+      
+      if (sessionResult.rows.length === 0) {
+        return res.json({
+          success: true,
+          active: false,
+          impersonation: null
+        });
+      }
+      
+      const session = sessionResult.rows[0];
+      const now = new Date();
+      const expiresAt = new Date(session.expires_at);
+      const remainingMs = expiresAt.getTime() - now.getTime();
+      
+      return res.json({
+        success: true,
+        active: true,
+        impersonation: {
+          id: session.id,
+          tenant_id: session.tenant_id,
+          tenant_name: session.tenant_name,
+          individual_id: session.individual_id,
+          individual_name: session.individual_name,
+          reason: session.reason,
+          expires_at: session.expires_at,
+          created_at: session.created_at,
+          remaining_seconds: Math.max(0, Math.floor(remainingMs / 1000))
+        }
+      });
+    } catch (error: any) {
+      console.error('Impersonation status error:', error.message, error.stack);
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to get impersonation status'
+      });
+    }
+  }
+);
+
+// Get list of tenants for impersonation selection
+router.get(
+  '/tenants',
+  requirePlatformRole('platform_reviewer', 'platform_admin'),
+  async (req: Request, res: Response) => {
+    try {
+      const { q, limit = '50', offset = '0' } = req.query;
+      
+      let query = `
+        SELECT 
+          id,
+          name,
+          slug,
+          created_at,
+          (SELECT COUNT(*) FROM cc_tenant_users WHERE tenant_id = cc_tenants.id) as member_count
+        FROM cc_tenants
+        WHERE 1=1
+      `;
+      const params: any[] = [];
+      let paramIdx = 1;
+      
+      if (q && typeof q === 'string' && q.trim()) {
+        query += ` AND (name ILIKE $${paramIdx} OR slug ILIKE $${paramIdx})`;
+        params.push(`%${q.trim()}%`);
+        paramIdx++;
+      }
+      
+      query += ` ORDER BY name ASC LIMIT $${paramIdx} OFFSET $${paramIdx + 1}`;
+      params.push(parseInt(limit as string), parseInt(offset as string));
+      
+      const result = await serviceQuery(query, params);
+      
+      return res.json({
+        success: true,
+        tenants: result.rows
+      });
+    } catch (error: any) {
+      console.error('Tenants list error:', error.message);
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to fetch tenants'
+      });
+    }
+  }
+);
+
 const claimsQueueSchema = z.object({
   status: z.enum(['submitted', 'under_review', 'approved', 'rejected', 'draft']).optional(),
   tenant_id: z.string().uuid().optional(),

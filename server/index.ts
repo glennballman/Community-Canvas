@@ -34,12 +34,39 @@ const sessionPool = new pg.Pool({
   connectionString: process.env.DATABASE_URL 
 });
 
-app.use(session({
+// DUAL SESSION ARCHITECTURE:
+// 1. Platform staff session (cookie: platform_sid) - stored in cc_platform_sessions
+// 2. Tenant session (cookie: tenant_sid) - stored in session table
+// This ensures complete session isolation between platform staff and tenant users
+
+// Platform staff session middleware - only used on /api/internal routes
+const platformSession = session({
+  store: new PgSession({
+    pool: sessionPool,
+    tableName: 'cc_platform_sessions',
+    createTableIfMissing: true
+  }),
+  name: 'platform_sid',
+  secret: (process.env.SESSION_SECRET || 'dev-session-secret') + '-platform',
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: process.env.NODE_ENV === 'production',
+    httpOnly: true,
+    maxAge: 8 * 60 * 60 * 1000, // 8 hours for platform staff
+    sameSite: 'strict', // Stricter for internal routes
+    path: '/api/internal'
+  }
+});
+
+// Tenant session middleware - used on all other routes
+const tenantSession = session({
   store: new PgSession({
     pool: sessionPool,
     tableName: 'session',
     createTableIfMissing: true
   }),
+  name: 'tenant_sid',
   secret: process.env.SESSION_SECRET || 'dev-session-secret',
   resave: false,
   saveUninitialized: false,
@@ -49,7 +76,16 @@ app.use(session({
     maxAge: 24 * 60 * 60 * 1000,
     sameSite: 'lax'
   }
-}));
+});
+
+// Route-based session middleware
+// Platform routes get platform session, all others get tenant session
+app.use((req, res, next) => {
+  if (req.path.startsWith('/api/internal')) {
+    return platformSession(req, res, next);
+  }
+  return tenantSession(req, res, next);
+});
 
 export function log(message: string, source = "express") {
   const formattedTime = new Date().toLocaleTimeString("en-US", {

@@ -50,6 +50,13 @@ export async function registerRoutes(
   app: Express
 ): Promise<Server> {
 
+  // SECURITY NOTE: Platform staff session isolation is enforced via cookie path restriction
+  // The platform_sid cookie has path=/api/internal, so it's ONLY sent to /api/internal routes
+  // This means platform staff sessions are invisible on tenant routes by design:
+  // - Public endpoints are accessible by anyone (expected behavior)
+  // - Tenant-protected endpoints require tenant_sid which platform staff don't have
+  // - Platform staff must use impersonation system to access tenant data on /api/internal routes
+
   // Register fleet management routes
   app.use('/api/v1/fleet', createFleetRouter(pool));
 
