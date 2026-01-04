@@ -101,6 +101,59 @@ export async function registerRoutes(
   // Register crew accommodation search routes
   app.use('/api/crew', createCrewRouter());
 
+  // Debug endpoint to prove db connection runs as cc_app with RLS
+  app.get('/api/_debug/db-whoami', async (req, res) => {
+    try {
+      const client = await pool.connect();
+      try {
+        // Get current user info
+        const userResult = await client.query('SELECT current_user, session_user');
+        
+        // Get role info
+        const roleResult = await client.query(`
+          SELECT rolname, rolsuper, rolbypassrls, rolcanlogin
+          FROM pg_roles
+          WHERE rolname = current_user
+        `);
+        
+        // Test RLS enforcement - clear context first
+        await client.query(`SELECT set_config('app.tenant_id', '', true)`);
+        await client.query(`SELECT set_config('app.portal_id', '', true)`);
+        await client.query(`SELECT set_config('app.individual_id', '', true)`);
+        
+        // Count should be 0 with no tenant context
+        const countResult = await client.query('SELECT COUNT(*) as count FROM tenant_vehicles');
+        
+        // Try insert - should fail
+        let insertError = null;
+        try {
+          await client.query(`
+            INSERT INTO tenant_vehicles (tenant_id, nickname, is_active, status)
+            VALUES (gen_random_uuid(), 'should_fail', true, 'active')
+          `);
+        } catch (e: any) {
+          insertError = e.message;
+        }
+        
+        res.json({
+          current_user: userResult.rows[0].current_user,
+          session_user: userResult.rows[0].session_user,
+          role_info: roleResult.rows[0],
+          rls_test: {
+            context: 'none (cleared)',
+            count_without_context: parseInt(countResult.rows[0].count),
+            insert_blocked: insertError ? true : false,
+            insert_error: insertError
+          }
+        });
+      } finally {
+        client.release();
+      }
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
   // Jobber OAuth flow - Start authorization
   app.get('/api/v1/integrations/jobber/auth', (req, res) => {
     const clientId = process.env.JOBBER_CLIENT_ID;
