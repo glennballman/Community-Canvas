@@ -45,15 +45,15 @@ export function StatusCards({ regionId, onCardClick }: StatusCardsProps) {
     );
   }
 
-  const alertColor = status?.alerts.critical && status.alerts.critical > 0 ? 'red' 
-    : status?.alerts.major && status.alerts.major > 0 ? 'orange'
-    : status?.alerts.total && status.alerts.total > 0 ? 'yellow' 
+  const alertColor = status?.alerts?.critical && status.alerts.critical > 0 ? 'red' 
+    : status?.alerts?.major && status.alerts.major > 0 ? 'orange'
+    : status?.alerts?.total && status.alerts.total > 0 ? 'yellow' 
     : 'green';
 
-  const ferryColor = status?.ferries.delays && status.ferries.delays > 0 ? 'yellow' : 'green';
+  const ferryColor = status?.ferries?.delays && status.ferries.delays > 0 ? 'yellow' : 'green';
 
-  const roadColor = status?.roads.closures && status.roads.closures > 0 ? 'red'
-    : status?.roads.incidents && status.roads.incidents > 0 ? 'orange'
+  const roadColor = status?.roads?.closures && status.roads.closures > 0 ? 'red'
+    : status?.roads?.incidents && status.roads.incidents > 0 ? 'orange'
     : 'green';
 
   return (
@@ -61,45 +61,45 @@ export function StatusCards({ regionId, onCardClick }: StatusCardsProps) {
       <StatusCard
         icon={AlertTriangle}
         title="Alerts"
-        value={status?.alerts.total || 0}
+        value={status?.alerts?.total || 0}
         subtitle={
-          status?.alerts.critical 
+          status?.alerts?.critical 
             ? `${status.alerts.critical} critical` 
-            : status?.alerts.major 
+            : status?.alerts?.major 
             ? `${status.alerts.major} major`
             : 'All clear'
         }
         color={alertColor}
         onClick={() => onCardClick?.('alerts')}
-        pulse={!!(status?.alerts.critical && status.alerts.critical > 0)}
+        pulse={!!(status?.alerts?.critical && status.alerts.critical > 0)}
       />
 
       <StatusCard
         icon={Ship}
         title="Ferries"
-        value={status?.ferries.delays ? `${status.ferries.delays} Delays` : 'On Time'}
-        subtitle={`${status?.ferries.onTime || 0} routes normal`}
+        value={status?.ferries?.delays ? `${status.ferries.delays} Delays` : 'On Time'}
+        subtitle={`${status?.ferries?.onTime || 0} routes normal`}
         color={ferryColor}
         onClick={() => onCardClick?.('ferries')}
       />
 
       <StatusCard
-        icon={getWeatherIcon(status?.weather.condition)}
+        icon={getWeatherIcon(status?.weather?.condition)}
         title="Weather"
-        value={status?.weather.temperature !== undefined ? `${status.weather.temperature}°C` : '--'}
-        subtitle={status?.weather.condition || 'Loading...'}
-        color={status?.weather.warnings ? 'yellow' : 'blue'}
+        value={status?.weather?.temperature !== undefined ? `${status.weather.temperature}°C` : '--'}
+        subtitle={status?.weather?.condition || 'Loading...'}
+        color={status?.weather?.warnings ? 'yellow' : 'blue'}
         onClick={() => onCardClick?.('weather')}
       />
 
       <StatusCard
         icon={Car}
         title="Roads"
-        value={`${status?.roads.total || 0} Events`}
+        value={`${status?.roads?.total || 0} Events`}
         subtitle={
-          status?.roads.closures 
+          status?.roads?.closures 
             ? `${status.roads.closures} closures` 
-            : status?.roads.incidents
+            : status?.roads?.incidents
             ? `${status.roads.incidents} incidents`
             : 'Roads clear'
         }

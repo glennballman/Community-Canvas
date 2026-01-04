@@ -43,3 +43,4 @@ waitForPort = 5000
 
 [userenv.shared]
 VITE_MAPBOX_TOKEN = "${MAPBOX_ACCESS_TOKEN}"
+CC_APP_DATABASE_URL = "postgresql://cc_app:XO14Z2XsXua7t8xbWq1SWwcYDhaFpoOQ6jgZHgcD6XI@helium:5432/heliumdb"
