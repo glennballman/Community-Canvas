@@ -1,0 +1,75 @@
+I need the production DB security posture for RLS, roles, and ownership (no summaries).
+
+Deliverables:
+
+A) Identify the exact DB role used by the application at runtime
+- What username/role does the API connect as in production and in dev?
+- Confirm it is NOT a superuser.
+- Confirm whether it is the OWNER of any tenant-scoped tables.
+
+B) Run and paste the output of these SQL queries (run as the same role the API uses, not as postgres/db owner):
+
+1) Who am I / am I superuser?
+SELECT
+  current_user,
+  session_user,
+  current_setting('is_superuser', true) AS is_superuser_guc,
+  rolsuper,
+  rolbypassrls
+FROM pg_roles
+WHERE rolname = current_user;
+
+2) Table ownership + RLS force status for key tables:
+SELECT
+  n.nspname AS schema,
+  c.relname AS table,
+  pg_get_userbyid(c.relowner) AS owner,
+  c.relrowsecurity AS rls_enabled,
+  c.relforcerowsecurity AS rls_forced
+FROM pg_class c
+JOIN pg_namespace n ON n.oid = c.relnamespace
+WHERE c.relkind = 'r'
+  AND c.relname IN (
+    'tenant_vehicles','tenant_trailers','tenant_vehicle_photos','tenant_trailer_photos',
+    'catalog_claims','catalog_claim_evidence','catalog_claim_events',
+    'assets','asset_capabilities'
+  )
+ORDER BY c.relname;
+
+3) List RLS policies for the same tables:
+SELECT
+  schemaname,
+  tablename,
+  policyname,
+  permissive,
+  roles,
+  cmd,
+  qual,
+  with_check
+FROM pg_policies
+WHERE tablename IN (
+  'tenant_vehicles','tenant_trailers','tenant_vehicle_photos','tenant_trailer_photos',
+  'catalog_claims','catalog_claim_evidence','catalog_claim_events'
+)
+ORDER BY tablename, policyname;
+
+4) Prove RLS actually blocks tenant writes without service mode:
+- Ensure GUCs are cleared, then attempt inserts and show the error.
+DO $$
+BEGIN
+  PERFORM set_config('app.tenant_id','',true);
+  PERFORM set_config('app.service_mode','',true);
+  BEGIN
+    INSERT INTO catalog_claim_events (id, claim_id, event_type, payload)
+    VALUES (gen_random_uuid(), gen_random_uuid(), 'created', '{}'::jsonb);
+    RAISE EXCEPTION 'FAIL: insert unexpectedly succeeded';
+  EXCEPTION WHEN others THEN
+    RAISE NOTICE 'PASS: insert blocked: %', SQLERRM;
+  END;
+END $$;
+
+C) Based on the above, tell me whether we should add:
+ALTER TABLE <...> FORCE ROW LEVEL SECURITY;
+for the tenant_* and catalog_claim_* tables (yes/no, with reasons).
+
+Important: run these checks using the same DB role and connection path the API uses in production. If you cannot simulate that, explain exactly why and provide the closest equivalent.
