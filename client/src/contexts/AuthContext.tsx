@@ -68,7 +68,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         async function devAutoLogin() {
             if (!token && !loading) {
                 console.log('Dev mode: Auto-logging in as platform admin...');
-                await login('glenn@communitycanvas.ca', 'TestPass123!');
+                await login('glenn@envirogroupe.com', 'TestPass123!');
             }
         }
         if (!token && !loading) {

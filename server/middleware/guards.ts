@@ -312,65 +312,34 @@ export const requirePlatformStaff: RequestHandler = (req: Request, res: Response
 };
 
 // Require specific platform role
-// Accepts ANY of:
-// 1. Platform staff session (from /api/internal/auth/login)
-// 2. Foundation auth JWT with isPlatformAdmin = true (from /api/foundation/auth/login)
-// 3. Foundation auth session user with isPlatformAdmin = true
+// P0 SECURITY HARDENED: ONLY accepts platform staff session (platform_sid cookie)
+// Foundation JWTs and session users are NOT accepted directly
+// Use POST /api/internal/auth/exchange to convert foundation admin JWT to platform session
 export function requirePlatformRole(...requiredRoles: ('platform_reviewer' | 'platform_admin')[]): RequestHandler {
   return (req: Request, res: Response, next: NextFunction) => {
     const platformReq = req as PlatformStaffRequest;
     const staffSession = (req as any).session?.platformStaff;
     
-    // Option 1: Platform staff session from /api/internal/auth/login
-    if (staffSession?.id) {
-      if (!requiredRoles.includes(staffSession.role)) {
-        return res.status(403).json({
-          success: false,
-          error: `Platform role required: ${requiredRoles.join(' or ')}`,
-          code: 'PLATFORM_ROLE_REQUIRED'
-        });
-      }
-      platformReq.platformStaff = staffSession;
-      return next();
+    // ONLY accept platform staff session from /api/internal/auth/login or /api/internal/auth/exchange
+    // P0 SECURITY: Do NOT accept Authorization Bearer JWT or foundation session directly
+    if (!staffSession?.id) {
+      return res.status(401).json({
+        success: false,
+        error: 'Platform staff session required. Use /api/internal/auth/login or /api/internal/auth/exchange',
+        code: 'PLATFORM_AUTH_REQUIRED'
+      });
     }
     
-    // Option 2: Foundation auth JWT token in Authorization header
-    const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1];
-    if (token) {
-      try {
-        const decoded = jwt.verify(token, JWT_SECRET) as JWTPayload;
-        if (decoded.isPlatformAdmin) {
-          platformReq.platformStaff = {
-            id: decoded.userId,
-            email: decoded.email,
-            full_name: decoded.email, // JWT doesn't have full_name
-            role: 'platform_admin'
-          };
-          return next();
-        }
-      } catch (err) {
-        // Invalid JWT - fall through to check other auth methods
-      }
+    if (!requiredRoles.includes(staffSession.role)) {
+      return res.status(403).json({
+        success: false,
+        error: `Platform role required: ${requiredRoles.join(' or ')}`,
+        code: 'PLATFORM_ROLE_REQUIRED'
+      });
     }
     
-    // Option 3: Foundation auth session user (already decoded by middleware)
-    const foundationUser = (req as any).user;
-    if (foundationUser?.isPlatformAdmin) {
-      platformReq.platformStaff = {
-        id: foundationUser.id || foundationUser.userId,
-        email: foundationUser.email,
-        full_name: foundationUser.displayName || foundationUser.email,
-        role: 'platform_admin'
-      };
-      return next();
-    }
-    
-    return res.status(401).json({
-      success: false,
-      error: 'Platform staff authentication required',
-      code: 'PLATFORM_AUTH_REQUIRED'
-    });
+    platformReq.platformStaff = staffSession;
+    next();
   };
 }
 

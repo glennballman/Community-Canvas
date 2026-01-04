@@ -30,31 +30,91 @@ interface StartParams {
 
 const ImpersonationContext = createContext<ImpersonationContextType | undefined>(undefined);
 
-function getAuthHeaders(): HeadersInit {
+// P0 SECURITY: /api/internal/* routes use platform session cookie only (no Authorization header)
+// We use credentials: 'include' to send the platform_sid cookie
+function getInternalHeaders(): HeadersInit {
+  return { 'Content-Type': 'application/json' };
+}
+
+// Exchange foundation JWT for platform session
+// This must be called before any other /api/internal/* requests
+async function exchangeTokenForSession(): Promise<boolean> {
   const token = localStorage.getItem('cc_token');
-  const headers: HeadersInit = { 'Content-Type': 'application/json' };
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
+  if (!token) {
+    return false;
   }
-  return headers;
+  
+  try {
+    const res = await fetch('/api/internal/auth/exchange', {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    
+    if (res.ok) {
+      const data = await res.json();
+      return data.success === true;
+    }
+    return false;
+  } catch (err) {
+    console.error('[ImpersonationContext] Token exchange failed:', err);
+    return false;
+  }
 }
 
 export function ImpersonationProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<ImpersonationSession | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [hasExchanged, setHasExchanged] = useState(false);
+
+  // Exchange token on first load
+  useEffect(() => {
+    if (!hasExchanged) {
+      exchangeTokenForSession().then(success => {
+        setHasExchanged(true);
+        if (!success) {
+          console.log('[ImpersonationContext] Token exchange not successful (may not be platform admin)');
+        }
+      });
+    }
+  }, [hasExchanged]);
 
   const refresh = useCallback(async () => {
     try {
+      // P0 SECURITY: Use session cookie only, no Authorization header
       const res = await fetch('/api/internal/impersonate/status', {
         credentials: 'include',
-        headers: getAuthHeaders()
+        headers: getInternalHeaders()
       });
       
       if (res.ok) {
         const data = await res.json();
         if (data.success && data.active && data.session) {
           setSession(data.session);
+        } else {
+          setSession(null);
+        }
+      } else if (res.status === 401 && hasExchanged) {
+        // Session expired, try to re-exchange
+        const exchanged = await exchangeTokenForSession();
+        if (exchanged) {
+          // Retry the status check
+          const retryRes = await fetch('/api/internal/impersonate/status', {
+            credentials: 'include',
+            headers: getInternalHeaders()
+          });
+          if (retryRes.ok) {
+            const data = await retryRes.json();
+            if (data.success && data.active && data.session) {
+              setSession(data.session);
+            } else {
+              setSession(null);
+            }
+          }
         } else {
           setSession(null);
         }
@@ -68,7 +128,7 @@ export function ImpersonationProvider({ children }: { children: ReactNode }) {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [hasExchanged]);
 
   useEffect(() => {
     refresh();
@@ -81,9 +141,10 @@ export function ImpersonationProvider({ children }: { children: ReactNode }) {
     setError(null);
     
     try {
+      // P0 SECURITY: Use session cookie only, no Authorization header
       const res = await fetch('/api/internal/impersonate/start', {
         method: 'POST',
-        headers: getAuthHeaders(),
+        headers: getInternalHeaders(),
         credentials: 'include',
         body: JSON.stringify(params)
       });
@@ -120,9 +181,10 @@ export function ImpersonationProvider({ children }: { children: ReactNode }) {
     setError(null);
     
     try {
+      // P0 SECURITY: Use session cookie only, no Authorization header
       const res = await fetch('/api/internal/impersonate/stop', {
         method: 'POST',
-        headers: getAuthHeaders(),
+        headers: getInternalHeaders(),
         credentials: 'include'
       });
       

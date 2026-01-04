@@ -126,6 +126,106 @@ router.post('/auth/logout', (req: Request, res: Response) => {
   return res.json({ success: true });
 });
 
+// P0 SECURITY: Exchange foundation JWT for platform session
+// This is the ONLY way for platform admins to convert their foundation auth to platform session
+// Input: Authorization: Bearer <foundation JWT>
+// Output: Sets platform_sid session cookie (HttpOnly, SameSite=Strict, Path=/api/internal)
+router.post('/auth/exchange', async (req: Request, res: Response) => {
+  try {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+    
+    if (!token) {
+      return res.status(401).json({
+        success: false,
+        error: 'Authorization Bearer token required',
+        code: 'TOKEN_REQUIRED'
+      });
+    }
+    
+    // Validate the foundation JWT
+    const jwt = await import('jsonwebtoken');
+    const JWT_SECRET = process.env.JWT_SECRET || 'cc-dev-secret-change-in-prod';
+    
+    interface JWTPayload {
+      userId: string;
+      email: string;
+      isPlatformAdmin: boolean;
+      exp?: number;
+      iat?: number;
+    }
+    
+    let decoded: JWTPayload;
+    try {
+      decoded = jwt.default.verify(token, JWT_SECRET) as JWTPayload;
+    } catch (jwtError: any) {
+      console.log(`[SECURITY] JWT exchange rejected: ${jwtError.message}`);
+      return res.status(401).json({
+        success: false,
+        error: 'Invalid or expired token',
+        code: 'INVALID_TOKEN'
+      });
+    }
+    
+    // Verify the user is a platform admin
+    if (!decoded.isPlatformAdmin) {
+      console.log(`[SECURITY] JWT exchange rejected: not platform admin (${decoded.email})`);
+      return res.status(403).json({
+        success: false,
+        error: 'Platform admin privileges required',
+        code: 'NOT_PLATFORM_ADMIN'
+      });
+    }
+    
+    // Fetch the user from cc_users to get their full details
+    const userResult = await superuserPool.query(
+      `SELECT id, email, first_name, last_name, display_name, is_platform_admin 
+       FROM cc_users 
+       WHERE id = $1 AND is_platform_admin = true`,
+      [decoded.userId]
+    );
+    
+    if (userResult.rows.length === 0) {
+      console.log(`[SECURITY] JWT exchange rejected: user not found or not admin (${decoded.userId})`);
+      return res.status(403).json({
+        success: false,
+        error: 'Platform admin user not found',
+        code: 'USER_NOT_FOUND'
+      });
+    }
+    
+    const user = userResult.rows[0];
+    const displayName = user.display_name || `${user.first_name} ${user.last_name}`.trim() || user.email;
+    
+    // Set platform staff session
+    (req as any).session.platformStaff = {
+      id: user.id,
+      email: user.email,
+      full_name: displayName,
+      role: 'platform_admin'
+    };
+    
+    console.log(`[SECURITY] Platform session exchanged for: ${user.email}`);
+    
+    return res.json({
+      success: true,
+      staff: {
+        id: user.id,
+        email: user.email,
+        full_name: displayName,
+        role: 'platform_admin'
+      }
+    });
+  } catch (error: any) {
+    console.error('Platform exchange error:', error.message, error.stack);
+    return res.status(500).json({
+      success: false,
+      error: 'Exchange failed',
+      details: process.env.NODE_ENV !== 'production' ? error.message : undefined
+    });
+  }
+});
+
 router.post('/bootstrap/init', async (req: Request, res: Response) => {
   try {
     const existingStaff = await superuserPool.query(
