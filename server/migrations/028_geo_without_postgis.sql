@@ -95,15 +95,22 @@ $$;
 
 -- =====================================================================
 -- PHASE 2: Add Grid Columns to Location Tables
+-- NOTE: Using regular columns + UPDATE + trigger instead of GENERATED ALWAYS
+-- because GENERATED ALWAYS requires function to exist at parse time which
+-- fails migration validation against production.
+-- We DROP COLUMN first to handle migration from GENERATED to regular columns.
 -- =====================================================================
 
 -- sr_communities grid columns
-ALTER TABLE sr_communities ADD COLUMN IF NOT EXISTS lat_cell INTEGER 
-  GENERATED ALWAYS AS (fn_lat_cell(latitude)) STORED;
-ALTER TABLE sr_communities ADD COLUMN IF NOT EXISTS lon_cell INTEGER 
-  GENERATED ALWAYS AS (fn_lon_cell(longitude)) STORED;
+ALTER TABLE sr_communities DROP COLUMN IF EXISTS lat_cell;
+ALTER TABLE sr_communities DROP COLUMN IF EXISTS lon_cell;
+ALTER TABLE sr_communities ADD COLUMN lat_cell INTEGER;
+ALTER TABLE sr_communities ADD COLUMN lon_cell INTEGER;
+UPDATE sr_communities SET lat_cell = floor(latitude * 100)::integer WHERE latitude IS NOT NULL;
+UPDATE sr_communities SET lon_cell = floor(longitude * 100)::integer WHERE longitude IS NOT NULL;
 
-CREATE INDEX IF NOT EXISTS idx_sr_communities_grid ON sr_communities(lat_cell, lon_cell) 
+DROP INDEX IF EXISTS idx_sr_communities_grid;
+CREATE INDEX idx_sr_communities_grid ON sr_communities(lat_cell, lon_cell) 
   WHERE lat_cell IS NOT NULL AND lon_cell IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_sr_communities_lat ON sr_communities(latitude) 
   WHERE latitude IS NOT NULL;
@@ -111,67 +118,151 @@ CREATE INDEX IF NOT EXISTS idx_sr_communities_lon ON sr_communities(longitude)
   WHERE longitude IS NOT NULL;
 
 -- external_records grid columns
-ALTER TABLE external_records ADD COLUMN IF NOT EXISTS lat_cell INTEGER 
-  GENERATED ALWAYS AS (fn_lat_cell(latitude)) STORED;
-ALTER TABLE external_records ADD COLUMN IF NOT EXISTS lon_cell INTEGER 
-  GENERATED ALWAYS AS (fn_lon_cell(longitude)) STORED;
+ALTER TABLE external_records DROP COLUMN IF EXISTS lat_cell;
+ALTER TABLE external_records DROP COLUMN IF EXISTS lon_cell;
+ALTER TABLE external_records ADD COLUMN lat_cell INTEGER;
+ALTER TABLE external_records ADD COLUMN lon_cell INTEGER;
+UPDATE external_records SET lat_cell = floor(latitude * 100)::integer WHERE latitude IS NOT NULL;
+UPDATE external_records SET lon_cell = floor(longitude * 100)::integer WHERE longitude IS NOT NULL;
 
-CREATE INDEX IF NOT EXISTS idx_external_records_grid ON external_records(lat_cell, lon_cell) 
+DROP INDEX IF EXISTS idx_external_records_grid;
+CREATE INDEX idx_external_records_grid ON external_records(lat_cell, lon_cell) 
   WHERE lat_cell IS NOT NULL AND lon_cell IS NOT NULL;
 
 -- entities grid columns
-ALTER TABLE entities ADD COLUMN IF NOT EXISTS lat_cell INTEGER 
-  GENERATED ALWAYS AS (fn_lat_cell(latitude::double precision)) STORED;
-ALTER TABLE entities ADD COLUMN IF NOT EXISTS lon_cell INTEGER 
-  GENERATED ALWAYS AS (fn_lon_cell(longitude::double precision)) STORED;
+ALTER TABLE entities DROP COLUMN IF EXISTS lat_cell;
+ALTER TABLE entities DROP COLUMN IF EXISTS lon_cell;
+ALTER TABLE entities ADD COLUMN lat_cell INTEGER;
+ALTER TABLE entities ADD COLUMN lon_cell INTEGER;
+UPDATE entities SET lat_cell = floor(latitude::double precision * 100)::integer WHERE latitude IS NOT NULL;
+UPDATE entities SET lon_cell = floor(longitude::double precision * 100)::integer WHERE longitude IS NOT NULL;
 
-CREATE INDEX IF NOT EXISTS idx_entities_grid ON entities(lat_cell, lon_cell) 
+DROP INDEX IF EXISTS idx_entities_grid;
+CREATE INDEX idx_entities_grid ON entities(lat_cell, lon_cell) 
   WHERE lat_cell IS NOT NULL AND lon_cell IS NOT NULL;
 
 -- unified_assets grid columns
-ALTER TABLE unified_assets ADD COLUMN IF NOT EXISTS lat_cell INTEGER 
-  GENERATED ALWAYS AS (fn_lat_cell(latitude::double precision)) STORED;
-ALTER TABLE unified_assets ADD COLUMN IF NOT EXISTS lon_cell INTEGER 
-  GENERATED ALWAYS AS (fn_lon_cell(longitude::double precision)) STORED;
+ALTER TABLE unified_assets DROP COLUMN IF EXISTS lat_cell;
+ALTER TABLE unified_assets DROP COLUMN IF EXISTS lon_cell;
+ALTER TABLE unified_assets ADD COLUMN lat_cell INTEGER;
+ALTER TABLE unified_assets ADD COLUMN lon_cell INTEGER;
+UPDATE unified_assets SET lat_cell = floor(latitude::double precision * 100)::integer WHERE latitude IS NOT NULL;
+UPDATE unified_assets SET lon_cell = floor(longitude::double precision * 100)::integer WHERE longitude IS NOT NULL;
 
-CREATE INDEX IF NOT EXISTS idx_unified_assets_grid ON unified_assets(lat_cell, lon_cell) 
+DROP INDEX IF EXISTS idx_unified_assets_grid;
+CREATE INDEX idx_unified_assets_grid ON unified_assets(lat_cell, lon_cell) 
   WHERE lat_cell IS NOT NULL AND lon_cell IS NOT NULL;
 
 -- assets (from 021) grid columns
-ALTER TABLE assets ADD COLUMN IF NOT EXISTS lat_cell INTEGER 
-  GENERATED ALWAYS AS (fn_lat_cell(latitude::double precision)) STORED;
-ALTER TABLE assets ADD COLUMN IF NOT EXISTS lon_cell INTEGER 
-  GENERATED ALWAYS AS (fn_lon_cell(longitude::double precision)) STORED;
+ALTER TABLE assets DROP COLUMN IF EXISTS lat_cell;
+ALTER TABLE assets DROP COLUMN IF EXISTS lon_cell;
+ALTER TABLE assets ADD COLUMN lat_cell INTEGER;
+ALTER TABLE assets ADD COLUMN lon_cell INTEGER;
+UPDATE assets SET lat_cell = floor(latitude::double precision * 100)::integer WHERE latitude IS NOT NULL;
+UPDATE assets SET lon_cell = floor(longitude::double precision * 100)::integer WHERE longitude IS NOT NULL;
 
-CREATE INDEX IF NOT EXISTS idx_assets_grid ON assets(lat_cell, lon_cell) 
+DROP INDEX IF EXISTS idx_assets_grid;
+CREATE INDEX idx_assets_grid ON assets(lat_cell, lon_cell) 
   WHERE lat_cell IS NOT NULL AND lon_cell IS NOT NULL;
 
 -- work_orders site grid columns
-ALTER TABLE work_orders ADD COLUMN IF NOT EXISTS site_lat_cell INTEGER 
-  GENERATED ALWAYS AS (fn_lat_cell(site_latitude::double precision)) STORED;
-ALTER TABLE work_orders ADD COLUMN IF NOT EXISTS site_lon_cell INTEGER 
-  GENERATED ALWAYS AS (fn_lon_cell(site_longitude::double precision)) STORED;
+ALTER TABLE work_orders DROP COLUMN IF EXISTS site_lat_cell;
+ALTER TABLE work_orders DROP COLUMN IF EXISTS site_lon_cell;
+ALTER TABLE work_orders ADD COLUMN site_lat_cell INTEGER;
+ALTER TABLE work_orders ADD COLUMN site_lon_cell INTEGER;
+UPDATE work_orders SET site_lat_cell = floor(site_latitude::double precision * 100)::integer WHERE site_latitude IS NOT NULL;
+UPDATE work_orders SET site_lon_cell = floor(site_longitude::double precision * 100)::integer WHERE site_longitude IS NOT NULL;
 
-CREATE INDEX IF NOT EXISTS idx_work_orders_site_grid ON work_orders(site_lat_cell, site_lon_cell) 
+DROP INDEX IF EXISTS idx_work_orders_site_grid;
+CREATE INDEX idx_work_orders_site_grid ON work_orders(site_lat_cell, site_lon_cell) 
   WHERE site_lat_cell IS NOT NULL AND site_lon_cell IS NOT NULL;
 
 -- asset_availability location grid columns
-ALTER TABLE asset_availability ADD COLUMN IF NOT EXISTS location_lat_cell INTEGER 
-  GENERATED ALWAYS AS (fn_lat_cell(location_latitude::double precision)) STORED;
-ALTER TABLE asset_availability ADD COLUMN IF NOT EXISTS location_lon_cell INTEGER 
-  GENERATED ALWAYS AS (fn_lon_cell(location_longitude::double precision)) STORED;
+ALTER TABLE asset_availability DROP COLUMN IF EXISTS location_lat_cell;
+ALTER TABLE asset_availability DROP COLUMN IF EXISTS location_lon_cell;
+ALTER TABLE asset_availability ADD COLUMN location_lat_cell INTEGER;
+ALTER TABLE asset_availability ADD COLUMN location_lon_cell INTEGER;
+UPDATE asset_availability SET location_lat_cell = floor(location_latitude::double precision * 100)::integer WHERE location_latitude IS NOT NULL;
+UPDATE asset_availability SET location_lon_cell = floor(location_longitude::double precision * 100)::integer WHERE location_longitude IS NOT NULL;
 
-CREATE INDEX IF NOT EXISTS idx_asset_availability_grid ON asset_availability(location_lat_cell, location_lon_cell) 
+DROP INDEX IF EXISTS idx_asset_availability_grid;
+CREATE INDEX idx_asset_availability_grid ON asset_availability(location_lat_cell, location_lon_cell) 
   WHERE location_lat_cell IS NOT NULL AND location_lon_cell IS NOT NULL;
 
 -- opportunities site grid columns (already has site_latitude/site_longitude)
-ALTER TABLE opportunities ADD COLUMN IF NOT EXISTS site_lat_cell INTEGER 
-  GENERATED ALWAYS AS (fn_lat_cell(site_latitude::double precision)) STORED;
-ALTER TABLE opportunities ADD COLUMN IF NOT EXISTS site_lon_cell INTEGER 
-  GENERATED ALWAYS AS (fn_lon_cell(site_longitude::double precision)) STORED;
+ALTER TABLE opportunities DROP COLUMN IF EXISTS site_lat_cell;
+ALTER TABLE opportunities DROP COLUMN IF EXISTS site_lon_cell;
+ALTER TABLE opportunities ADD COLUMN site_lat_cell INTEGER;
+ALTER TABLE opportunities ADD COLUMN site_lon_cell INTEGER;
+UPDATE opportunities SET site_lat_cell = floor(site_latitude::double precision * 100)::integer WHERE site_latitude IS NOT NULL;
+UPDATE opportunities SET site_lon_cell = floor(site_longitude::double precision * 100)::integer WHERE site_longitude IS NOT NULL;
 
-CREATE INDEX IF NOT EXISTS idx_opportunities_site_grid ON opportunities(site_lat_cell, site_lon_cell) 
+DROP INDEX IF EXISTS idx_opportunities_site_grid;
+CREATE INDEX idx_opportunities_site_grid ON opportunities(site_lat_cell, site_lon_cell) 
   WHERE site_lat_cell IS NOT NULL AND site_lon_cell IS NOT NULL;
+
+-- =====================================================================
+-- PHASE 2B: Triggers to maintain grid cells on INSERT/UPDATE
+-- =====================================================================
+
+CREATE OR REPLACE FUNCTION trg_set_grid_cells()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  -- Handle different column name patterns
+  IF TG_TABLE_NAME = 'sr_communities' OR TG_TABLE_NAME = 'external_records' THEN
+    NEW.lat_cell := CASE WHEN NEW.latitude IS NOT NULL THEN floor(NEW.latitude * 100)::integer ELSE NULL END;
+    NEW.lon_cell := CASE WHEN NEW.longitude IS NOT NULL THEN floor(NEW.longitude * 100)::integer ELSE NULL END;
+  ELSIF TG_TABLE_NAME = 'entities' OR TG_TABLE_NAME = 'unified_assets' OR TG_TABLE_NAME = 'assets' THEN
+    NEW.lat_cell := CASE WHEN NEW.latitude IS NOT NULL THEN floor(NEW.latitude::double precision * 100)::integer ELSE NULL END;
+    NEW.lon_cell := CASE WHEN NEW.longitude IS NOT NULL THEN floor(NEW.longitude::double precision * 100)::integer ELSE NULL END;
+  ELSIF TG_TABLE_NAME = 'work_orders' THEN
+    NEW.site_lat_cell := CASE WHEN NEW.site_latitude IS NOT NULL THEN floor(NEW.site_latitude::double precision * 100)::integer ELSE NULL END;
+    NEW.site_lon_cell := CASE WHEN NEW.site_longitude IS NOT NULL THEN floor(NEW.site_longitude::double precision * 100)::integer ELSE NULL END;
+  ELSIF TG_TABLE_NAME = 'asset_availability' THEN
+    NEW.location_lat_cell := CASE WHEN NEW.location_latitude IS NOT NULL THEN floor(NEW.location_latitude::double precision * 100)::integer ELSE NULL END;
+    NEW.location_lon_cell := CASE WHEN NEW.location_longitude IS NOT NULL THEN floor(NEW.location_longitude::double precision * 100)::integer ELSE NULL END;
+  ELSIF TG_TABLE_NAME = 'opportunities' THEN
+    NEW.site_lat_cell := CASE WHEN NEW.site_latitude IS NOT NULL THEN floor(NEW.site_latitude::double precision * 100)::integer ELSE NULL END;
+    NEW.site_lon_cell := CASE WHEN NEW.site_longitude IS NOT NULL THEN floor(NEW.site_longitude::double precision * 100)::integer ELSE NULL END;
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+-- Create triggers for each table
+DROP TRIGGER IF EXISTS trg_sr_communities_grid ON sr_communities;
+CREATE TRIGGER trg_sr_communities_grid BEFORE INSERT OR UPDATE OF latitude, longitude ON sr_communities
+  FOR EACH ROW EXECUTE FUNCTION trg_set_grid_cells();
+
+DROP TRIGGER IF EXISTS trg_external_records_grid ON external_records;
+CREATE TRIGGER trg_external_records_grid BEFORE INSERT OR UPDATE OF latitude, longitude ON external_records
+  FOR EACH ROW EXECUTE FUNCTION trg_set_grid_cells();
+
+DROP TRIGGER IF EXISTS trg_entities_grid ON entities;
+CREATE TRIGGER trg_entities_grid BEFORE INSERT OR UPDATE OF latitude, longitude ON entities
+  FOR EACH ROW EXECUTE FUNCTION trg_set_grid_cells();
+
+DROP TRIGGER IF EXISTS trg_unified_assets_grid ON unified_assets;
+CREATE TRIGGER trg_unified_assets_grid BEFORE INSERT OR UPDATE OF latitude, longitude ON unified_assets
+  FOR EACH ROW EXECUTE FUNCTION trg_set_grid_cells();
+
+DROP TRIGGER IF EXISTS trg_assets_grid ON assets;
+CREATE TRIGGER trg_assets_grid BEFORE INSERT OR UPDATE OF latitude, longitude ON assets
+  FOR EACH ROW EXECUTE FUNCTION trg_set_grid_cells();
+
+DROP TRIGGER IF EXISTS trg_work_orders_grid ON work_orders;
+CREATE TRIGGER trg_work_orders_grid BEFORE INSERT OR UPDATE OF site_latitude, site_longitude ON work_orders
+  FOR EACH ROW EXECUTE FUNCTION trg_set_grid_cells();
+
+DROP TRIGGER IF EXISTS trg_asset_availability_grid ON asset_availability;
+CREATE TRIGGER trg_asset_availability_grid BEFORE INSERT OR UPDATE OF location_latitude, location_longitude ON asset_availability
+  FOR EACH ROW EXECUTE FUNCTION trg_set_grid_cells();
+
+DROP TRIGGER IF EXISTS trg_opportunities_grid ON opportunities;
+CREATE TRIGGER trg_opportunities_grid BEFORE INSERT OR UPDATE OF site_latitude, site_longitude ON opportunities
+  FOR EACH ROW EXECUTE FUNCTION trg_set_grid_cells();
 
 -- =====================================================================
 -- PHASE 3: Drop Dependent Views, Triggers, and Columns
