@@ -1,8 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
 import { Session } from 'express-session';
-import crypto from 'crypto';
 import { pool } from '../db';
 import { ActorContext } from '../db/tenantDb';
+import { hashImpersonationToken, isPepperAvailable } from '../lib/impersonationPepper';
 
 interface SessionData extends Session {
   userId?: string;
@@ -79,48 +79,59 @@ export async function tenantContext(req: TenantRequest, res: Response, next: Nex
   // Check for impersonation_sid cookie (platform staff impersonating tenant)
   const impersonationToken = (req as any).cookies?.impersonation_sid;
   if (impersonationToken && typeof impersonationToken === 'string' && impersonationToken.length === 64) {
-    try {
-      const tokenHash = crypto.createHash('sha256').update(impersonationToken).digest('hex');
-      const impersonationResult = await pool.query(`
-        SELECT id, platform_staff_id, tenant_id, individual_id, reason, expires_at, created_at
-        FROM cc_impersonation_sessions
-        WHERE impersonation_token_hash = $1
-          AND revoked_at IS NULL
-          AND expires_at > now()
-        LIMIT 1
-      `, [tokenHash]);
+    // Fail closed: if pepper is not available, skip impersonation validation entirely
+    if (!isPepperAvailable()) {
+      console.warn('[tenantContext] Impersonation cookie present but pepper unavailable - ignoring');
+    } else {
+      try {
+        const tokenHash = hashImpersonationToken(impersonationToken);
+        
+        // If hashing fails (pepper cleared mid-request), skip impersonation
+        if (!tokenHash) {
+          console.warn('[tenantContext] Token hashing failed - ignoring impersonation cookie');
+        } else {
+          const impersonationResult = await pool.query(`
+            SELECT id, platform_staff_id, tenant_id, individual_id, reason, expires_at, created_at
+            FROM cc_impersonation_sessions
+            WHERE impersonation_token_hash = $1
+              AND revoked_at IS NULL
+              AND expires_at > now()
+            LIMIT 1
+          `, [tokenHash]);
 
-      if (impersonationResult.rows.length > 0) {
-        const session = impersonationResult.rows[0];
-        req.impersonation = {
-          id: session.id,
-          platform_staff_id: session.platform_staff_id,
-          tenant_id: session.tenant_id,
-          individual_id: session.individual_id,
-          reason: session.reason,
-          expires_at: session.expires_at,
-          created_at: session.created_at
-        };
-        
-        // Override tenant context with impersonated tenant
-        req.ctx.tenant_id = session.tenant_id;
-        req.ctx.individual_id = session.individual_id || null;
-        req.ctx.roles = ['impersonator'];
-        
-        // Set actor context for GUC propagation
-        req.actorContext = {
-          tenant_id: session.tenant_id,
-          portal_id: req.ctx.portal_id || undefined,
-          individual_id: session.individual_id || undefined,
-          platform_staff_id: session.platform_staff_id,
-          impersonation_session_id: session.id,
-          actor_type: 'platform'
-        };
-        
-        console.log(`[tenantContext] Impersonation active: staff=${session.platform_staff_id} tenant=${session.tenant_id}`);
+          if (impersonationResult.rows.length > 0) {
+            const session = impersonationResult.rows[0];
+            req.impersonation = {
+              id: session.id,
+              platform_staff_id: session.platform_staff_id,
+              tenant_id: session.tenant_id,
+              individual_id: session.individual_id,
+              reason: session.reason,
+              expires_at: session.expires_at,
+              created_at: session.created_at
+            };
+            
+            // Override tenant context with impersonated tenant
+            req.ctx.tenant_id = session.tenant_id;
+            req.ctx.individual_id = session.individual_id || null;
+            req.ctx.roles = ['impersonator'];
+            
+            // Set actor context for GUC propagation
+            req.actorContext = {
+              tenant_id: session.tenant_id,
+              portal_id: req.ctx.portal_id || undefined,
+              individual_id: session.individual_id || undefined,
+              platform_staff_id: session.platform_staff_id,
+              impersonation_session_id: session.id,
+              actor_type: 'platform'
+            };
+            
+            console.log(`[tenantContext] Impersonation active: staff=${session.platform_staff_id} tenant=${session.tenant_id}`);
+          }
+        }
+      } catch (err) {
+        console.error('[tenantContext] Impersonation validation error:', err);
       }
-    } catch (err) {
-      console.error('[tenantContext] Impersonation validation error:', err);
     }
   }
 

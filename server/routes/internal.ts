@@ -10,6 +10,7 @@ import {
   createServiceKeyAuditEvent
 } from '../middleware/guards';
 import { serviceQuery, withServiceTransaction } from '../db/tenantDb';
+import { hashImpersonationToken, isPepperAvailable } from '../lib/impersonationPepper';
 
 const { Pool } = pg;
 const superuserPool = new Pool({ 
@@ -378,9 +379,28 @@ router.post(
       
       const expiresAt = new Date(Date.now() + duration_hours * 60 * 60 * 1000);
       
+      // Fail closed: reject impersonation if pepper is not configured
+      if (!isPepperAvailable()) {
+        console.error('[SECURITY] Impersonation rejected: IMPERSONATION_PEPPER not configured');
+        return res.status(503).json({
+          success: false,
+          error: 'Impersonation service unavailable',
+          code: 'PEPPER_NOT_CONFIGURED'
+        });
+      }
+      
       // Generate secure random token for impersonation cookie
       const impersonationToken = crypto.randomBytes(32).toString('hex');
-      const tokenHash = crypto.createHash('sha256').update(impersonationToken).digest('hex');
+      const tokenHash = hashImpersonationToken(impersonationToken);
+      
+      if (!tokenHash) {
+        console.error('[SECURITY] Token hashing failed - pepper may have been cleared');
+        return res.status(503).json({
+          success: false,
+          error: 'Impersonation service unavailable',
+          code: 'HASH_FAILED'
+        });
+      }
       
       // Create impersonation session with token hash
       const sessionResult = await serviceQuery(
