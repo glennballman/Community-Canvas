@@ -1,0 +1,860 @@
+-- ============================================================
+-- COMMUNITY CANVAS v2.5 - COLLABORATION & TRUST LAYER (FINAL)
+-- Migration 034 - Incorporates all review fixes
+-- ============================================================
+
+-- Ensure pgcrypto for gen_random_uuid()
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
+-- ============================================================
+-- 1. PARTY SYSTEM UPGRADES (Hybrid Model - Option C)
+-- ============================================================
+
+-- Add party_kind to existing parties table
+ALTER TABLE parties
+  ADD COLUMN IF NOT EXISTS party_kind TEXT;
+
+-- Backfill existing parties
+UPDATE parties
+SET party_kind = CASE
+  WHEN tenant_id IS NOT NULL THEN 'organization'
+  ELSE 'individual'
+END
+WHERE party_kind IS NULL;
+
+ALTER TABLE parties
+  ALTER COLUMN party_kind SET DEFAULT 'organization';
+
+-- Add constraint (if not exists pattern)
+DO $$ BEGIN
+  ALTER TABLE parties
+    ADD CONSTRAINT parties_party_kind_check
+    CHECK (party_kind IN ('individual','organization'));
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+-- Enforce org parties have tenant
+DO $$ BEGIN
+  ALTER TABLE parties
+    ADD CONSTRAINT parties_org_requires_tenant
+    CHECK (party_kind <> 'organization' OR tenant_id IS NOT NULL);
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+-- Party memberships: individuals acting for org parties
+CREATE TABLE IF NOT EXISTS party_memberships (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  party_id UUID NOT NULL REFERENCES parties(id) ON DELETE CASCADE,
+  individual_id UUID NOT NULL REFERENCES cc_individuals(id) ON DELETE CASCADE,
+  
+  role TEXT NOT NULL DEFAULT 'member'
+    CHECK (role IN ('owner','admin','member')),
+  is_active BOOLEAN DEFAULT true,
+  
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now(),
+  
+  UNIQUE (party_id, individual_id)
+);
+
+CREATE INDEX IF NOT EXISTS party_memberships_party_idx ON party_memberships(party_id);
+CREATE INDEX IF NOT EXISTS party_memberships_individual_idx ON party_memberships(individual_id);
+
+-- ============================================================
+-- 2. CONVERSATION SYSTEM
+-- ============================================================
+
+DO $$ BEGIN
+  CREATE TYPE conversation_state AS ENUM (
+    'interest',
+    'pre_bid',
+    'negotiation',
+    'awarded_pending',
+    'contracted',
+    'in_progress',
+    'completed',
+    'closed',
+    'cancelled'
+  );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+  CREATE TYPE contact_unlock_gate AS ENUM (
+    'none',
+    'prior_relationship',
+    'deposit_verified',
+    'escrow_authorized',
+    'owner_override'
+  );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+CREATE TABLE IF NOT EXISTS conversations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  opportunity_id UUID NOT NULL REFERENCES opportunities(id) ON DELETE CASCADE,
+  
+  -- Party entities (the orgs/individuals in conversation)
+  contractor_party_id UUID NOT NULL REFERENCES parties(id),
+  owner_party_id UUID NOT NULL REFERENCES parties(id),
+  
+  -- Actor parties (which entity each side is "speaking as")
+  contractor_actor_party_id UUID REFERENCES parties(id),
+  owner_actor_party_id UUID REFERENCES parties(id),
+  
+  state conversation_state NOT NULL DEFAULT 'interest',
+  state_changed_at TIMESTAMPTZ DEFAULT now(),
+  
+  -- Contact gating (Fiverr-grade)
+  contact_unlocked BOOLEAN DEFAULT false,
+  contact_unlocked_at TIMESTAMPTZ,
+  contact_unlock_gate contact_unlock_gate DEFAULT 'none',
+  contact_unlock_reason TEXT,
+  
+  -- Metadata
+  last_message_at TIMESTAMPTZ,
+  last_message_id UUID,
+  message_count INTEGER DEFAULT 0,
+  unread_owner INTEGER DEFAULT 0,
+  unread_contractor INTEGER DEFAULT 0,
+  
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now(),
+  
+  UNIQUE(opportunity_id, contractor_party_id)
+);
+
+CREATE INDEX IF NOT EXISTS conversations_opportunity_idx ON conversations(opportunity_id);
+CREATE INDEX IF NOT EXISTS conversations_contractor_idx ON conversations(contractor_party_id);
+CREATE INDEX IF NOT EXISTS conversations_owner_idx ON conversations(owner_party_id);
+CREATE INDEX IF NOT EXISTS conversations_state_idx ON conversations(state);
+CREATE INDEX IF NOT EXISTS conversations_last_message_idx ON conversations(last_message_at DESC);
+
+-- Message types
+DO $$ BEGIN
+  CREATE TYPE message_type AS ENUM (
+    'text',
+    'clarification',
+    'logistics_proposal',
+    'price_adjustment',
+    'timing_proposal',
+    'risk_flag',
+    'photo_request',
+    'site_annotation',
+    'bid_draft',
+    'bid_revision',
+    'acceptance',
+    'milestone_update',
+    'system'
+  );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+CREATE TABLE IF NOT EXISTS messages (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  conversation_id UUID NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+  
+  -- Party entity (org/company)
+  sender_party_id UUID REFERENCES parties(id), -- Nullable for system messages
+  -- Individual actor (the actual person)
+  sender_individual_id UUID REFERENCES cc_individuals(id),
+  
+  message_type message_type NOT NULL DEFAULT 'text',
+  content TEXT NOT NULL,
+  structured_data JSONB,
+  attachments JSONB,
+  
+  -- Moderation fields
+  was_redacted BOOLEAN DEFAULT false,
+  redacted_content TEXT,
+  redaction_reason TEXT,
+  
+  -- Editability (Fiverr-grade)
+  edited_at TIMESTAMPTZ,
+  deleted_at TIMESTAMPTZ,
+  visibility TEXT DEFAULT 'normal' CHECK (visibility IN ('normal','system_only','hidden')),
+  
+  read_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS messages_conversation_idx ON messages(conversation_id);
+CREATE INDEX IF NOT EXISTS messages_created_idx ON messages(created_at DESC);
+CREATE INDEX IF NOT EXISTS messages_sender_party_idx ON messages(sender_party_id);
+CREATE INDEX IF NOT EXISTS messages_sender_individual_idx ON messages(sender_individual_id);
+
+-- Update conversations.last_message_id FK (after messages exists)
+ALTER TABLE conversations
+  DROP CONSTRAINT IF EXISTS conversations_last_message_id_fkey;
+  
+DO $$ BEGIN
+  ALTER TABLE conversations
+    ADD CONSTRAINT conversations_last_message_id_fkey
+    FOREIGN KEY (last_message_id) REFERENCES messages(id) ON DELETE SET NULL;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+-- Redaction log (with proper FK and jsonb details)
+CREATE TABLE IF NOT EXISTS message_redactions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  message_id UUID NOT NULL REFERENCES messages(id) ON DELETE CASCADE,
+  conversation_id UUID NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+  sender_party_id UUID REFERENCES parties(id),
+  sender_individual_id UUID REFERENCES cc_individuals(id),
+  
+  original_content TEXT NOT NULL,
+  detected_items JSONB, -- [{type: 'phone', value: '250-555-1234', pattern: '...'}]
+  
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS redactions_conversation_idx ON message_redactions(conversation_id);
+CREATE INDEX IF NOT EXISTS redactions_sender_idx ON message_redactions(sender_party_id);
+
+-- ============================================================
+-- 3. PAYMENT SYSTEM (Reality-based, not card-forced)
+-- ============================================================
+
+DO $$ BEGIN
+  CREATE TYPE payment_method AS ENUM (
+    'etransfer',
+    'cheque',
+    'card',
+    'cash',
+    'financing',
+    'barter'
+  );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+  CREATE TYPE payment_status AS ENUM (
+    'pending',
+    'promised',
+    'in_transit',
+    'received',
+    'verified',
+    'disputed',
+    'refunded'
+  );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+  CREATE TYPE promise_status AS ENUM (
+    'draft',
+    'proposed',
+    'accepted',
+    'cancelled'
+  );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+  CREATE TYPE milestone_trigger AS ENUM (
+    'on_award',
+    'on_contract_sign',
+    'materials_ordered',
+    'materials_staged',
+    'materials_on_site',
+    'work_started',
+    'rough_complete',
+    'inspection_passed',
+    'substantial_completion',
+    'final_completion',
+    'warranty_end',
+    'custom'
+  );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+CREATE TABLE IF NOT EXISTS payment_promises (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  opportunity_id UUID NOT NULL REFERENCES opportunities(id),
+  conversation_id UUID REFERENCES conversations(id),
+  
+  payer_party_id UUID NOT NULL REFERENCES parties(id),
+  payee_party_id UUID NOT NULL REFERENCES parties(id),
+  
+  -- Money fields with proper precision
+  total_amount NUMERIC(12,2) NOT NULL,
+  currency CHAR(3) DEFAULT 'CAD',
+  
+  deposit_amount NUMERIC(12,2),
+  deposit_method payment_method,
+  deposit_due_date DATE,
+  
+  -- Barter (small town reality)
+  barter_component TEXT,
+  barter_value_estimate NUMERIC(12,2),
+  
+  -- Status as proper enum
+  status promise_status NOT NULL DEFAULT 'draft',
+  
+  proposed_at TIMESTAMPTZ,
+  accepted_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS payment_promises_opportunity_idx ON payment_promises(opportunity_id);
+CREATE INDEX IF NOT EXISTS payment_promises_conversation_idx ON payment_promises(conversation_id);
+CREATE INDEX IF NOT EXISTS payment_promises_payer_idx ON payment_promises(payer_party_id);
+CREATE INDEX IF NOT EXISTS payment_promises_payee_idx ON payment_promises(payee_party_id);
+
+CREATE TABLE IF NOT EXISTS payment_milestones (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  payment_promise_id UUID NOT NULL REFERENCES payment_promises(id) ON DELETE CASCADE,
+  
+  name TEXT NOT NULL,
+  description TEXT,
+  amount NUMERIC(12,2) NOT NULL,
+  method payment_method NOT NULL,
+  
+  trigger_type milestone_trigger NOT NULL,
+  trigger_description TEXT,
+  sequence_order INTEGER NOT NULL,
+  
+  status payment_status DEFAULT 'pending',
+  paid_at TIMESTAMPTZ,
+  paid_amount NUMERIC(12,2),
+  payment_reference TEXT,
+  payment_notes TEXT,
+  
+  -- Verification
+  verified_by_party_id UUID REFERENCES parties(id),
+  verified_by_individual_id UUID REFERENCES cc_individuals(id),
+  verified_at TIMESTAMPTZ,
+  verification_photos JSONB,
+  
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS milestones_promise_idx ON payment_milestones(payment_promise_id);
+CREATE INDEX IF NOT EXISTS milestones_status_idx ON payment_milestones(status);
+
+-- ============================================================
+-- 4. PRIVATE PREFERENCES (Fixed - allows multiple, has is_active)
+-- ============================================================
+
+DO $$ BEGIN
+  CREATE TYPE preference_type AS ENUM (
+    'hard_exclude',
+    'soft_exclude',
+    'prefer',
+    'require',
+    'conditional_exit'
+  );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+  CREATE TYPE preference_reason AS ENUM (
+    'safety_concern',
+    'quality_concern',
+    'reliability_concern',
+    'personal_relationship',
+    'professional_conflict',
+    'payment_history',
+    'communication_issues',
+    'prior_dispute',
+    'family_connection',
+    'other'
+  );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+CREATE TABLE IF NOT EXISTS private_preferences (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  owner_party_id UUID NOT NULL REFERENCES parties(id),
+  subject_party_id UUID NOT NULL REFERENCES parties(id),
+  subject_type TEXT NOT NULL DEFAULT 'contractor',
+  
+  preference_type preference_type NOT NULL,
+  reason_category preference_reason NOT NULL,
+  private_note TEXT,
+  
+  incident_date DATE,
+  related_opportunity_id UUID REFERENCES opportunities(id),
+  evidence_photos JSONB,
+  
+  -- Active flag (allows history, superseding)
+  is_active BOOLEAN DEFAULT true,
+  supersedes_preference_id UUID REFERENCES private_preferences(id),
+  
+  expires_at TIMESTAMPTZ,
+  times_applied INTEGER DEFAULT 0,
+  
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+  
+  -- NO UNIQUE constraint - multiple preferences allowed, filtered by is_active
+);
+
+CREATE INDEX IF NOT EXISTS preferences_owner_idx ON private_preferences(owner_party_id);
+CREATE INDEX IF NOT EXISTS preferences_subject_idx ON private_preferences(subject_party_id);
+CREATE INDEX IF NOT EXISTS preferences_owner_subject_active_idx 
+  ON private_preferences(owner_party_id, subject_party_id, is_active);
+
+-- Relationship signals (inferred)
+CREATE TABLE IF NOT EXISTS relationship_signals (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  party_a UUID NOT NULL REFERENCES parties(id),
+  party_b UUID NOT NULL REFERENCES parties(id),
+  signal_type TEXT NOT NULL,
+  signal_strength INTEGER NOT NULL CHECK (signal_strength BETWEEN 0 AND 100),
+  confidence INTEGER NOT NULL CHECK (confidence BETWEEN 0 AND 100),
+  inferred_from JSONB,
+  last_updated TIMESTAMPTZ DEFAULT now(),
+  
+  UNIQUE(party_a, party_b, signal_type)
+);
+
+CREATE INDEX IF NOT EXISTS signals_party_a_idx ON relationship_signals(party_a);
+CREATE INDEX IF NOT EXISTS signals_party_b_idx ON relationship_signals(party_b);
+
+-- ============================================================
+-- 5. FAVOR LEDGER (Small town economics)
+-- ============================================================
+
+DO $$ BEGIN
+  CREATE TYPE favor_magnitude AS ENUM (
+    'minor',
+    'moderate',
+    'significant',
+    'major'
+  );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+CREATE TABLE IF NOT EXISTS favor_ledger (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  owner_party_id UUID NOT NULL REFERENCES parties(id),
+  counterparty_id UUID NOT NULL REFERENCES parties(id),
+  
+  direction TEXT NOT NULL CHECK (direction IN ('owed_to_me', 'i_owe')),
+  description TEXT NOT NULL,
+  magnitude favor_magnitude NOT NULL,
+  
+  counterparty_trades TEXT[],
+  date_incurred DATE,
+  date_settled DATE,
+  is_settled BOOLEAN DEFAULT false,
+  settlement_note TEXT,
+  
+  remind_on_relevant_job BOOLEAN DEFAULT true,
+  remind_date DATE,
+  
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS favor_ledger_owner_idx ON favor_ledger(owner_party_id);
+CREATE INDEX IF NOT EXISTS favor_ledger_counterparty_idx ON favor_ledger(counterparty_id);
+CREATE INDEX IF NOT EXISTS favor_ledger_unsettled_idx ON favor_ledger(owner_party_id) WHERE NOT is_settled;
+
+-- ============================================================
+-- 6. COMMUNITY CONSTRAINT PACKS (With safe phrasing)
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS community_constraint_packs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  
+  community_name TEXT NOT NULL UNIQUE,
+  region TEXT,
+  province TEXT DEFAULT 'BC',
+  
+  bounds_polygon JSONB,
+  center_lat NUMERIC,
+  center_lon NUMERIC,
+  
+  access_zones JSONB NOT NULL,
+  connectivity JSONB NOT NULL,
+  transport_options JSONB NOT NULL,
+  staging_points JSONB,
+  
+  tide_sensitive BOOLEAN DEFAULT false,
+  tide_station TEXT,
+  tide_notes TEXT,
+  
+  weather_station TEXT,
+  weather_risk_profile TEXT,
+  work_season_start INTEGER,
+  work_season_end INTEGER,
+  
+  -- Safe phrasing for permit/inspection (community-reported, not advice)
+  permit_enforcement_signal TEXT CHECK (permit_enforcement_signal IN ('low','unknown','moderate','high')),
+  official_permit_info_url TEXT,
+  community_reported_permit_notes TEXT, -- Explicitly "unverified community reports"
+  
+  union_culture TEXT,
+  local_preference_strength TEXT,
+  
+  key_contacts JSONB,
+  
+  last_verified_at TIMESTAMPTZ,
+  verified_by TEXT,
+  confidence_score INTEGER CHECK (confidence_score BETWEEN 0 AND 100),
+  
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS ccp_community_idx ON community_constraint_packs(community_name);
+
+-- ============================================================
+-- 7. SPATIAL CONSTRAINTS (With GeoJSON validation)
+-- ============================================================
+
+DO $$ BEGIN
+  CREATE TYPE spatial_constraint_type AS ENUM (
+    'landing_zone',
+    'access_path',
+    'staging_area',
+    'work_zone',
+    'exclusion_zone',
+    'clearance_corridor',
+    'hazard'
+  );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+CREATE TABLE IF NOT EXISTS spatial_constraints (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  
+  opportunity_id UUID REFERENCES opportunities(id),
+  property_address TEXT,
+  community_id UUID REFERENCES community_constraint_packs(id),
+  
+  constraint_type spatial_constraint_type NOT NULL,
+  name TEXT NOT NULL,
+  geometry JSONB NOT NULL,
+  properties JSONB NOT NULL,
+  
+  confidence TEXT DEFAULT 'user' CHECK (confidence IN ('verified','user','ai_estimated')),
+  created_by_party_id UUID REFERENCES parties(id),
+  created_by_individual_id UUID REFERENCES cc_individuals(id),
+  
+  valid_from DATE,
+  valid_until DATE,
+  
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now(),
+  
+  -- Light GeoJSON validation
+  CONSTRAINT spatial_geometry_is_object CHECK (jsonb_typeof(geometry) = 'object')
+);
+
+CREATE INDEX IF NOT EXISTS spatial_opportunity_idx ON spatial_constraints(opportunity_id);
+CREATE INDEX IF NOT EXISTS spatial_community_idx ON spatial_constraints(community_id);
+
+-- Operator landing zones (Brian's beach zones)
+CREATE TABLE IF NOT EXISTS operator_landing_zones (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  
+  operator_party_id UUID NOT NULL REFERENCES parties(id),
+  operator_individual_id UUID REFERENCES cc_individuals(id),
+  operator_name TEXT NOT NULL,
+  
+  zone_name TEXT NOT NULL,
+  location_name TEXT,
+  
+  geometry JSONB NOT NULL,
+  approach_vector_degrees INTEGER,
+  approach_tolerance_degrees INTEGER DEFAULT 15,
+  
+  min_tide_height_m NUMERIC(4,2),
+  best_tide_window TEXT,
+  
+  max_vehicle_length_ft NUMERIC(5,1),
+  max_vehicle_weight_kg NUMERIC(8,1),
+  max_width_ft NUMERIC(5,1),
+  
+  hazards JSONB,
+  
+  is_active BOOLEAN DEFAULT true,
+  seasonal_availability TEXT,
+  notes TEXT,
+  
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now(),
+  
+  CONSTRAINT landing_geometry_is_object CHECK (jsonb_typeof(geometry) = 'object')
+);
+
+CREATE INDEX IF NOT EXISTS landing_zones_operator_idx ON operator_landing_zones(operator_party_id);
+CREATE INDEX IF NOT EXISTS landing_zones_active_idx ON operator_landing_zones(is_active) WHERE is_active;
+
+-- ============================================================
+-- 8. TRUST SIGNALS (With model support)
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS trust_signals (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  party_id UUID NOT NULL REFERENCES parties(id),
+  party_type TEXT NOT NULL,
+  model TEXT DEFAULT 'default', -- Allows multiple trust models per party
+  
+  -- Contractor signals
+  response_time_avg_hours NUMERIC(6,2),
+  quote_accuracy_percent NUMERIC(5,2),
+  on_time_rate NUMERIC(5,2),
+  completion_rate NUMERIC(5,2),
+  change_order_frequency NUMERIC(5,2),
+  documentation_quality INTEGER,
+  dispute_rate NUMERIC(5,2),
+  
+  -- Owner signals
+  payment_timeliness_days NUMERIC(6,2),
+  deposit_reliability NUMERIC(5,2),
+  scope_stability NUMERIC(5,2),
+  communication_responsiveness_hours NUMERIC(6,2),
+  review_fairness NUMERIC(5,2),
+  
+  -- Operator signals
+  schedule_reliability NUMERIC(5,2),
+  capacity_accuracy NUMERIC(5,2),
+  damage_rate NUMERIC(5,2),
+  
+  -- Composites (0-100)
+  reliability_score INTEGER CHECK (reliability_score BETWEEN 0 AND 100),
+  professionalism_score INTEGER CHECK (professionalism_score BETWEEN 0 AND 100),
+  communication_score INTEGER CHECK (communication_score BETWEEN 0 AND 100),
+  community_standing_score INTEGER CHECK (community_standing_score BETWEEN 0 AND 100),
+  
+  display_attributes TEXT[],
+  
+  data_points INTEGER DEFAULT 0,
+  last_updated TIMESTAMPTZ DEFAULT now(),
+  confidence INTEGER DEFAULT 0 CHECK (confidence BETWEEN 0 AND 100),
+  
+  UNIQUE(party_id, model)
+);
+
+CREATE INDEX IF NOT EXISTS trust_party_idx ON trust_signals(party_id);
+
+-- ============================================================
+-- 9. BUNDLING SYSTEM
+-- ============================================================
+
+DO $$ BEGIN
+  CREATE TYPE bundle_status AS ENUM (
+    'open',
+    'full',
+    'scheduled',
+    'in_progress',
+    'completed',
+    'cancelled'
+  );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+CREATE TABLE IF NOT EXISTS bundle_opportunities (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  
+  community_id UUID REFERENCES community_constraint_packs(id),
+  trade_category TEXT NOT NULL,
+  
+  center_lat NUMERIC,
+  center_lon NUMERIC,
+  radius_km NUMERIC(5,2) DEFAULT 5,
+  
+  window_start DATE,
+  window_end DATE,
+  
+  max_jobs INTEGER DEFAULT 5,
+  current_jobs INTEGER DEFAULT 0,
+  
+  status bundle_status DEFAULT 'open',
+  
+  individual_mobilization_estimate NUMERIC(10,2),
+  bundled_mobilization_estimate NUMERIC(10,2),
+  savings_per_job NUMERIC(10,2),
+  
+  initiated_by_opportunity_id UUID REFERENCES opportunities(id),
+  
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS bundles_community_idx ON bundle_opportunities(community_id);
+CREATE INDEX IF NOT EXISTS bundles_status_idx ON bundle_opportunities(status);
+CREATE INDEX IF NOT EXISTS bundles_open_idx ON bundle_opportunities(status) WHERE status = 'open';
+
+CREATE TABLE IF NOT EXISTS bundle_members (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  bundle_id UUID NOT NULL REFERENCES bundle_opportunities(id) ON DELETE CASCADE,
+  opportunity_id UUID NOT NULL REFERENCES opportunities(id),
+  joined_at TIMESTAMPTZ DEFAULT now(),
+  savings_allocated NUMERIC(10,2),
+  
+  UNIQUE(bundle_id, opportunity_id)
+);
+
+CREATE INDEX IF NOT EXISTS bundle_members_bundle_idx ON bundle_members(bundle_id);
+CREATE INDEX IF NOT EXISTS bundle_members_opportunity_idx ON bundle_members(opportunity_id);
+
+-- ============================================================
+-- 10. NEGOTIATION OFFERS (Fiverr-grade structured negotiation)
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS negotiation_offers (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  conversation_id UUID NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+  
+  created_by_party_id UUID NOT NULL REFERENCES parties(id),
+  created_by_individual_id UUID REFERENCES cc_individuals(id),
+  
+  offer_type TEXT NOT NULL CHECK (offer_type IN ('bid','revision','schedule','scope','payment_plan')),
+  payload JSONB NOT NULL,
+  
+  status TEXT NOT NULL DEFAULT 'proposed' 
+    CHECK (status IN ('proposed','countered','accepted','rejected','expired','withdrawn')),
+  
+  supersedes_offer_id UUID REFERENCES negotiation_offers(id),
+  
+  responded_at TIMESTAMPTZ,
+  responded_by_party_id UUID REFERENCES parties(id),
+  response_notes TEXT,
+  
+  expires_at TIMESTAMPTZ,
+  
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS offers_conversation_idx ON negotiation_offers(conversation_id);
+CREATE INDEX IF NOT EXISTS offers_status_idx ON negotiation_offers(status);
+
+-- ============================================================
+-- 11. VERIFICATION TASKS
+-- ============================================================
+
+DO $$ BEGIN
+  CREATE TYPE verification_type AS ENUM (
+    'measurement',
+    'photo_verification',
+    'materials_staging',
+    'site_access',
+    'equipment_clearance',
+    'tide_window',
+    'weather_check'
+  );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+CREATE TABLE IF NOT EXISTS verification_tasks (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  opportunity_id UUID NOT NULL REFERENCES opportunities(id),
+  
+  verification_type verification_type NOT NULL,
+  description TEXT NOT NULL,
+  
+  assigned_to_party_id UUID REFERENCES parties(id),
+  assigned_to_individual_id UUID REFERENCES cc_individuals(id),
+  assigned_at TIMESTAMPTZ,
+  
+  status TEXT DEFAULT 'pending' CHECK (status IN ('pending','in_progress','completed','failed','cancelled')),
+  completed_at TIMESTAMPTZ,
+  completed_by_party_id UUID REFERENCES parties(id),
+  completed_by_individual_id UUID REFERENCES cc_individuals(id),
+  
+  result_data JSONB,
+  result_photos JSONB,
+  result_notes TEXT,
+  
+  cost NUMERIC(10,2),
+  paid BOOLEAN DEFAULT false,
+  
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS verification_opportunity_idx ON verification_tasks(opportunity_id);
+CREATE INDEX IF NOT EXISTS verification_status_idx ON verification_tasks(status);
+
+-- ============================================================
+-- 12. FINANCING REFERRALS
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS financing_referrals (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  opportunity_id UUID NOT NULL REFERENCES opportunities(id),
+  owner_party_id UUID NOT NULL REFERENCES parties(id),
+  owner_individual_id UUID REFERENCES cc_individuals(id),
+  
+  amount_requested NUMERIC(12,2) NOT NULL,
+  purpose TEXT,
+  
+  referred_to TEXT,
+  referral_url TEXT,
+  
+  status TEXT DEFAULT 'referred' CHECK (status IN ('referred','applied','approved','declined','funded','cancelled')),
+  
+  our_fee_percent NUMERIC(5,2),
+  our_fee_amount NUMERIC(10,2),
+  fee_collected BOOLEAN DEFAULT false,
+  
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS financing_opportunity_idx ON financing_referrals(opportunity_id);
+
+-- ============================================================
+-- SEED: BAMFIELD COMMUNITY CONSTRAINT PACK (Safe phrasing)
+-- ============================================================
+
+INSERT INTO community_constraint_packs (
+  community_name, region, province, center_lat, center_lon,
+  access_zones, connectivity, transport_options, staging_points,
+  tide_sensitive, tide_station, tide_notes,
+  weather_risk_profile, work_season_start, work_season_end,
+  permit_enforcement_signal, community_reported_permit_notes,
+  union_culture, local_preference_strength,
+  key_contacts, confidence_score
+) VALUES (
+  'Bamfield', 'Alberni-Clayoquot', 'BC', 48.8332, -125.1456,
+  '[
+    {"name": "East Bamfield", "access_type": "road", "vehicle_ok": true, "notes": "Drive-in, flatbed/semi OK"},
+    {"name": "West Bamfield", "access_type": "boat", "vehicle_ok": false, "notes": "Water taxi or barge required"},
+    {"name": "Grappler", "access_type": "transfer", "vehicle_ok": true, "notes": "Transfer point East↔Marine"}
+  ]'::jsonb,
+  '{
+    "overall": "intermittent",
+    "blackout_zones": [
+      {"name": "Grappler Launch", "description": "~200m from launch, limited/no service", "duration_minutes": 45},
+      {"name": "Mid-inlet", "description": "Variable during crossing"}
+    ],
+    "preferred_comms": "text",
+    "coverage_returns": "Near Bamfield store/Coast Guard station",
+    "fallback": "VHF Ch 16 (emergency), Ch 6 (local)"
+  }'::jsonb,
+  '[
+    {"name": "Lucky Lander", "type": "barge", "operator_name": "Brian Baird", "contact_method": "text_only", "max_vehicle_length_ft": 24, "max_vehicle_weight_kg": 4500, "booking_lead_days": 14, "schedule": "batch_runs", "coverage_notes": "Limited cell near Grappler"},
+    {"name": "Timber Rose", "type": "heavy_barge", "supports": "heavy_equipment, fuel_trucks", "origin": "Port Alberni OR Grappler transfer"},
+    {"name": "Lady Rose", "type": "ferry", "schedule": "Tue/Thu/Sat from Port Alberni", "departs": "8:00 AM", "arrives": "12:30 PM", "supports": "passengers, palletized_materials", "contact": "250-723-8313"},
+    {"name": "Water Taxi", "type": "water_taxi", "availability": "on_request", "supports": "passengers, light_materials", "cost_estimate": "$80-150/trip"}
+  ]'::jsonb,
+  '[
+    {"name": "East Bamfield Dock", "type": "dock", "covered": false, "max_days": 5, "fees": "minimal"},
+    {"name": "Grappler Launch", "type": "boat_launch", "transfer_point": true}
+  ]'::jsonb,
+  true, 'Bamfield',
+  'Dock loading is tide-sensitive. Beach landings may require 2.5m+ tide. Community members report best loading window is around high tide.',
+  'Winter storms can affect crossings. Summer fog delays possible. Strong winds may affect small boat operations.',
+  5, 9,
+  'low',
+  'Community members report that formal inspections are uncommon in this remote area. Always verify current requirements with Alberni-Clayoquot Regional District: (250) 720-2700',
+  'non_union', 'moderate',
+  '[
+    {"role": "information_hub", "name": "Bamfield General Store"},
+    {"role": "health", "name": "Bamfield Health Clinic", "phone": "250-728-3312"},
+    {"role": "emergency", "name": "Coast Guard", "phone": "250-728-3322", "vhf": "Channel 16"},
+    {"role": "lodging", "name": "Bamfield Lodge", "phone": "250-728-3231"}
+  ]'::jsonb,
+  85
+) ON CONFLICT (community_name) DO UPDATE SET
+  updated_at = now(),
+  permit_enforcement_signal = EXCLUDED.permit_enforcement_signal,
+  community_reported_permit_notes = EXCLUDED.community_reported_permit_notes;
