@@ -32,6 +32,8 @@ import apifyRouter from "./routes/apify";
 import { JobberService, getJobberAuthUrl, exchangeCodeForToken } from "./services/jobber";
 import { CompanyCamService, getPhotoUrl } from "./services/companycam";
 import { createCrewRouter } from "./routes/crew";
+import claimsRouter from "./routes/claims";
+import { publicQuery } from "./db/tenantDb";
 
 // Merge static members with JSON-loaded members for consistent data across the app
 // IMPORTANT: This function is called per-request to ensure fresh data after JSON file updates
@@ -100,6 +102,152 @@ export async function registerRoutes(
 
   // Register crew accommodation search routes
   app.use('/api/crew', createCrewRouter());
+
+  // Register catalog claims routes
+  app.use('/api/v1/catalog/claims', claimsRouter);
+
+  // Public catalog endpoints (no auth required)
+  app.get('/api/v1/catalog/vehicles', async (req, res) => {
+    try {
+      const { q, make, model, year_min, year_max, has_listings, limit = '50', offset = '0' } = req.query;
+      
+      let query = `
+        SELECT 
+          vc.id as catalog_vehicle_id,
+          vc.make,
+          vc.model,
+          vc.year,
+          vc.vehicle_class,
+          COALESCE(
+            (SELECT json_agg(json_build_object('id', cm.id, 'url', cm.url))
+             FROM catalog_media cm 
+             WHERE cm.vehicle_catalog_id = vc.id),
+            '[]'::json
+          ) as media,
+          (SELECT COUNT(*) FROM catalog_listings cl WHERE cl.vehicle_catalog_id = vc.id)::int as listings_count
+        FROM vehicle_catalog vc
+        WHERE 1=1
+      `;
+      const params: any[] = [];
+      let paramCount = 0;
+
+      if (q) {
+        paramCount++;
+        query += ` AND (vc.make ILIKE $${paramCount} OR vc.model ILIKE $${paramCount})`;
+        params.push(`%${q}%`);
+      }
+      if (make) {
+        paramCount++;
+        query += ` AND vc.make ILIKE $${paramCount}`;
+        params.push(`%${make}%`);
+      }
+      if (model) {
+        paramCount++;
+        query += ` AND vc.model ILIKE $${paramCount}`;
+        params.push(`%${model}%`);
+      }
+      if (year_min) {
+        paramCount++;
+        query += ` AND vc.year >= $${paramCount}`;
+        params.push(parseInt(year_min as string));
+      }
+      if (year_max) {
+        paramCount++;
+        query += ` AND vc.year <= $${paramCount}`;
+        params.push(parseInt(year_max as string));
+      }
+      if (has_listings === 'true') {
+        query += ` AND EXISTS (SELECT 1 FROM catalog_listings cl WHERE cl.vehicle_catalog_id = vc.id)`;
+      }
+
+      query += ` ORDER BY vc.make, vc.model, vc.year DESC`;
+      
+      paramCount++;
+      query += ` LIMIT $${paramCount}`;
+      params.push(parseInt(limit as string));
+      
+      paramCount++;
+      query += ` OFFSET $${paramCount}`;
+      params.push(parseInt(offset as string));
+
+      const result = await publicQuery(query, params);
+      res.json({ items: result.rows });
+    } catch (e: any) {
+      console.error('Catalog vehicles error:', e);
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  app.get('/api/v1/catalog/trailers', async (req, res) => {
+    try {
+      const { q, make, model, year_min, year_max, has_listings, limit = '50', offset = '0' } = req.query;
+      
+      let query = `
+        SELECT 
+          tc.id as catalog_trailer_id,
+          tc.make,
+          tc.model,
+          tc.year,
+          tc.trailer_type,
+          COALESCE(
+            (SELECT json_agg(json_build_object('id', cm.id, 'url', cm.url))
+             FROM catalog_media cm 
+             WHERE cm.trailer_catalog_id = tc.id),
+            '[]'::json
+          ) as media,
+          (SELECT COUNT(*) FROM catalog_listings cl WHERE cl.trailer_catalog_id = tc.id)::int as listings_count
+        FROM trailer_catalog tc
+        WHERE 1=1
+      `;
+      const params: any[] = [];
+      let paramCount = 0;
+
+      if (q) {
+        paramCount++;
+        query += ` AND (tc.make ILIKE $${paramCount} OR tc.model ILIKE $${paramCount})`;
+        params.push(`%${q}%`);
+      }
+      if (make) {
+        paramCount++;
+        query += ` AND tc.make ILIKE $${paramCount}`;
+        params.push(`%${make}%`);
+      }
+      if (model) {
+        paramCount++;
+        query += ` AND tc.model ILIKE $${paramCount}`;
+        params.push(`%${model}%`);
+      }
+      if (year_min) {
+        paramCount++;
+        query += ` AND tc.year >= $${paramCount}`;
+        params.push(parseInt(year_min as string));
+      }
+      if (year_max) {
+        paramCount++;
+        query += ` AND tc.year <= $${paramCount}`;
+        params.push(parseInt(year_max as string));
+      }
+      if (has_listings === 'true') {
+        query += ` AND EXISTS (SELECT 1 FROM catalog_listings cl WHERE cl.trailer_catalog_id = tc.id)`;
+      }
+
+      query += ` ORDER BY tc.make, tc.model, tc.year DESC`;
+      
+      paramCount++;
+      query += ` LIMIT $${paramCount}`;
+      params.push(parseInt(limit as string));
+      
+      paramCount++;
+      query += ` OFFSET $${paramCount}`;
+      params.push(parseInt(offset as string));
+
+      const result = await publicQuery(query, params);
+      res.json({ items: result.rows });
+    } catch (e: any) {
+      console.error('Catalog trailers error:', e);
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
 
   // Debug endpoint: Happy-path RLS test with tenant context
   app.get('/api/_debug/rls-happy-path', async (req, res) => {

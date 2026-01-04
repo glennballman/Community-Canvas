@@ -1,0 +1,288 @@
+RBAC + Guards (non-negotiable)
+
+All endpoints: requireAuth (must have individual_id)
+Tenant endpoints: requireTenant (must have tenant_id)
+Admin actions: requireTenantAdminOrService
+Service mode: only server-side serviceQuery/withServiceTransaction
+
+Roles/claims (minimum):
+
+tenant_user (can create/submit claims for their tenant)
+
+tenant_admin (can review/approve/reject within their tenant)
+
+service (platform job/reviewer; can do anything)
+
+Data model assumptions (from your migrations)
+
+catalog_claims: tenant-scoped, lifecycle enforced by trigger
+
+catalog_claim_evidence: evidence items linked to claim
+
+catalog_claim_events: service-only inserts (already enforced)
+
+fn_apply_catalog_claim runs on approval (auto-apply trigger)
+
+API v1 — Endpoints & Contracts
+0) List public catalog (already exists or add)
+
+GET /api/v1/catalog/vehicles
+Query: q, make, model, year_min, year_max, near_lat, near_lng, radius_km, has_listings=true
+Response:
+
+{
+  "items": [
+    {
+      "catalog_vehicle_id": "uuid",
+      "make": "Ford",
+      "model": "F350",
+      "year": 2015,
+      "vehicle_class": "truck",
+      "media": [{ "id": "uuid", "url": "https://..." }],
+      "listings_count": 3
+    }
+  ]
+}
+
+
+(Repeat for trailers: /api/v1/catalog/trailers)
+
+No auth required. No tenant data.
+
+1) Create draft claim
+
+POST /api/v1/catalog/claims
+Guards: requireAuth + requireTenant
+
+Request (exact):
+
+{
+  "target_type": "vehicle",
+  "catalog_vehicle_id": "uuid",
+  "catalog_trailer_id": null,
+  "catalog_listing_id": "uuid",
+  "claim_note": "This is my truck. Here is the VIN photo.",
+  "nickname": "Bamfield Crew Truck"
+}
+
+
+Rules:
+
+target_type ∈ vehicle|trailer
+
+Must provide one of:
+
+catalog_listing_id, OR
+
+catalog_vehicle_id/catalog_trailer_id
+
+If target_type=vehicle then catalog_vehicle_id optional but catalog_trailer_id must be null.
+
+Server sets:
+
+tenant_id = ctx.tenant_id
+
+claimant_type = 'tenant'
+
+claimant_id = ctx.tenant_id (or separate field)
+
+status='draft'
+
+Response:
+
+{
+  "claim_id": "uuid",
+  "status": "draft"
+}
+
+2) Add evidence (URL or uploaded media)
+
+POST /api/v1/catalog/claims/:claimId/evidence
+Guards: requireAuth + requireTenant
+Request:
+
+{
+  "evidence_type": "vin_photo",
+  "catalog_media_id": "uuid",
+  "url": null,
+  "notes": "VIN plate photo"
+}
+
+
+Alternate if you don’t have upload yet:
+
+{
+  "evidence_type": "photo",
+  "catalog_media_id": null,
+  "url": "https://some-cdn/your-upload.jpg",
+  "notes": "front view"
+}
+
+
+Rules:
+
+Evidence row must inherit tenant scope from the claim (enforced by join in route; do not trust body tenant_id).
+
+Require at least 1 of (catalog_media_id, url).
+
+Response:
+
+{ "evidence_id": "uuid" }
+
+3) Submit claim
+
+POST /api/v1/catalog/claims/:claimId/submit
+Guards: requireAuth + requireTenant
+
+Rules (server enforced):
+
+Claim must be draft
+
+Must have ≥ 1 evidence OR require note + VIN provided (if you add VIN later)
+
+Transition: draft -> submitted
+
+Insert event via service mode (or just update; events are optional but preferred)
+
+Response:
+
+{ "claim_id": "uuid", "status": "submitted" }
+
+4) List tenant claims
+
+GET /api/v1/catalog/claims?status=submitted&limit=50&offset=0
+Guards: requireAuth + requireTenant
+
+Response:
+
+{
+  "items": [
+    {
+      "claim_id": "uuid",
+      "target_type": "vehicle",
+      "status": "submitted",
+      "created_at": "2026-01-03T...",
+      "nickname": "Bamfield Crew Truck",
+      "catalog_listing_id": "uuid",
+      "catalog_vehicle_id": "uuid",
+      "applied_at": null
+    }
+  ]
+}
+
+5) Claim detail (includes evidence)
+
+GET /api/v1/catalog/claims/:claimId
+Guards: requireAuth + requireTenant
+
+Response:
+
+{
+  "claim": {
+    "claim_id": "uuid",
+    "status": "under_review",
+    "target_type": "vehicle",
+    "claim_note": "...",
+    "nickname": "Bamfield Crew Truck",
+    "decision": null,
+    "created_at": "...",
+    "applied_at": null,
+    "created_tenant_vehicle_id": null,
+    "created_asset_id": null
+  },
+  "evidence": [
+    { "evidence_id": "uuid", "evidence_type": "vin_photo", "url": "https://...", "created_at": "..." }
+  ]
+}
+
+6) Start review (optional)
+
+POST /api/v1/catalog/claims/:claimId/review/start
+Guards: requireTenantAdminOrService
+
+Transition:
+
+submitted -> under_review
+
+Response:
+
+{ "claim_id": "uuid", "status": "under_review" }
+
+7) Decision (approve/reject)
+
+POST /api/v1/catalog/claims/:claimId/decision
+Guards: requireTenantAdminOrService
+
+Request:
+
+{
+  "decision": "approve",
+  "review_note": "Evidence matches listing, approved."
+}
+
+
+Rules:
+
+Only allowed from under_review (or allow from submitted if you want fast-path)
+
+On approve:
+
+set status='approved'
+
+auto-apply trigger runs → sets status='applied' + creates tenant_vehicle/trailer + assets + asset_capabilities
+
+On reject:
+
+set status='rejected' with reason
+
+Response (must include created IDs if applied):
+
+{
+  "claim_id": "uuid",
+  "status": "applied",
+  "created": {
+    "tenant_vehicle_id": "uuid",
+    "tenant_trailer_id": null,
+    "asset_id": "uuid"
+  }
+}
+
+Minimal UI surfaces (so it actually ships)
+
+Catalog listing page
+
+Button: “Claim this”
+
+If already claimed by tenant: show status badge
+
+Claim modal
+
+nickname, note
+
+upload evidence (or paste URL)
+
+Claims dashboard
+
+tabs: Draft / Submitted / Under review / Applied / Rejected
+
+list view with status
+
+Admin review queue
+
+filter: submitted
+
+approve/reject
+
+QA tests (must be automated or at least curl scripts)
+
+Tenant A cannot list Tenant B claims
+
+Tenant user cannot approve
+
+Approve creates tenant_vehicle + asset_id
+
+Double-approve fails (already applied)
+
+Evidence must belong to claim tenant scope
+
+Catalog endpoints never leak tenant data

@@ -144,6 +144,50 @@ export const optionalAuth: RequestHandler = (req: Request, res: Response, next: 
   next();
 };
 
+// Require tenant admin role OR service mode (for platform reviewers)
+export const requireTenantAdminOrService: RequestHandler = (req: Request, res: Response, next: NextFunction) => {
+  const tenantReq = req as TenantRequest;
+  
+  // Check for service key header (platform operations)
+  const providedKey = req.headers['x-internal-service-key'];
+  const INTERNAL_SERVICE_KEY = process.env.INTERNAL_SERVICE_KEY || 'dev-internal-key-change-in-prod';
+  if (providedKey && providedKey === INTERNAL_SERVICE_KEY) {
+    return next();
+  }
+  
+  // Must have authenticated individual
+  if (!tenantReq.ctx?.individual_id) {
+    return res.status(401).json({ 
+      success: false, 
+      error: 'Authentication required',
+      code: 'AUTH_REQUIRED'
+    });
+  }
+  
+  // Must have tenant context
+  if (!tenantReq.ctx?.tenant_id) {
+    return res.status(401).json({ 
+      success: false, 
+      error: 'Tenant context required',
+      code: 'TENANT_REQUIRED'
+    });
+  }
+  
+  // Must be tenant_admin or admin
+  const userRoles = tenantReq.ctx.roles || [];
+  const hasAdminRole = userRoles.includes('tenant_admin') || userRoles.includes('admin');
+  
+  if (!hasAdminRole) {
+    return res.status(403).json({ 
+      success: false, 
+      error: 'Tenant admin role required',
+      code: 'FORBIDDEN'
+    });
+  }
+  
+  next();
+};
+
 // Require authenticated session but allow missing individual profile
 // Use this for endpoints like /me that need to serve both new and existing users
 // Only trusts VERIFIED authentication signals: Passport session or req.user (set by Passport)
