@@ -11,10 +11,19 @@ async function setSessionVars(client: PoolClient, ctx: TenantContext): Promise<v
   await client.query(`SELECT set_config('app.individual_id', $1, true)`, [ctx.individual_id || '']);
 }
 
+async function clearSessionVars(client: PoolClient): Promise<void> {
+  await client.query(`SELECT set_config('app.tenant_id', '', false)`);
+  await client.query(`SELECT set_config('app.portal_id', '', false)`);
+  await client.query(`SELECT set_config('app.individual_id', '', false)`);
+}
+
 async function setServiceMode(client: PoolClient): Promise<void> {
-  await client.query(`SELECT set_config('app.tenant_id', $1, true)`, [SERVICE_MODE_SENTINEL]);
-  await client.query(`SELECT set_config('app.portal_id', $1, true)`, [SERVICE_MODE_SENTINEL]);
-  await client.query(`SELECT set_config('app.individual_id', $1, true)`, [SERVICE_MODE_SENTINEL]);
+  // Clear any stale session vars from previous tenant context first
+  await clearSessionVars(client);
+  // Now set service mode sentinel with session-scope (false = session-level, not tx-local)
+  await client.query(`SELECT set_config('app.tenant_id', $1, false)`, [SERVICE_MODE_SENTINEL]);
+  await client.query(`SELECT set_config('app.portal_id', $1, false)`, [SERVICE_MODE_SENTINEL]);
+  await client.query(`SELECT set_config('app.individual_id', $1, false)`, [SERVICE_MODE_SENTINEL]);
 }
 
 export async function tenantQuery<T extends QueryResultRow = any>(
@@ -29,6 +38,8 @@ export async function tenantQuery<T extends QueryResultRow = any>(
     await setSessionVars(client, ctx);
     return await client.query<T>(text, values);
   } finally {
+    // Clear session vars before returning connection to pool
+    await clearSessionVars(client).catch(() => {});
     client.release();
   }
 }
@@ -43,6 +54,8 @@ export async function serviceQuery<T extends QueryResultRow = any>(
     await setServiceMode(client);
     return await client.query<T>(text, values);
   } finally {
+    // Clear session vars before returning connection to pool
+    await clearSessionVars(client).catch(() => {});
     client.release();
   }
 }
@@ -61,11 +74,11 @@ export async function publicQuery<T extends QueryResultRow = any>(
   
   try {
     // Clear any session variables - RLS will see empty tenant context
-    await client.query(`SELECT set_config('app.tenant_id', '', true)`);
-    await client.query(`SELECT set_config('app.portal_id', '', true)`);
-    await client.query(`SELECT set_config('app.individual_id', '', true)`);
+    await clearSessionVars(client);
     return await client.query<T>(text, values);
   } finally {
+    // Clear again for safety before returning connection to pool
+    await clearSessionVars(client).catch(() => {});
     client.release();
   }
 }
@@ -87,6 +100,8 @@ export async function withTenantTransaction<T>(
     await client.query('ROLLBACK');
     throw error;
   } finally {
+    // Clear session vars before returning connection to pool
+    await clearSessionVars(client).catch(() => {});
     client.release();
   }
 }
@@ -106,6 +121,8 @@ export async function withServiceTransaction<T>(
     await client.query('ROLLBACK');
     throw error;
   } finally {
+    // Clear session vars before returning connection to pool
+    await clearSessionVars(client).catch(() => {});
     client.release();
   }
 }

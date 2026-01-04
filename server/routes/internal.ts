@@ -475,6 +475,182 @@ router.get(
   }
 );
 
+router.post(
+  '/claims/:id/review/start',
+  requirePlatformRole('platform_reviewer', 'platform_admin'),
+  async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const platformReq = req as PlatformStaffRequest;
+      const staffId = platformReq.platformStaff?.id;
+      const staffName = platformReq.platformStaff?.full_name;
+      
+      const result = await withServiceTransaction(async (client) => {
+        const claimResult = await client.query(
+          `SELECT id, status, tenant_id FROM catalog_claims WHERE id = $1 FOR UPDATE`,
+          [id]
+        );
+        
+        if (claimResult.rows.length === 0) {
+          throw new Error('CLAIM_NOT_FOUND');
+        }
+        
+        const claim = claimResult.rows[0];
+        
+        if (claim.status !== 'submitted') {
+          throw new Error(`INVALID_STATUS:${claim.status}`);
+        }
+        
+        await client.query(
+          `UPDATE catalog_claims 
+           SET status = 'under_review', 
+               reviewed_at = now(),
+               updated_at = now()
+           WHERE id = $1`,
+          [id]
+        );
+        
+        await client.query(
+          `INSERT INTO catalog_claim_events 
+           (claim_id, tenant_id, event_type, actor_type, actor_staff_id, payload, ip, user_agent, endpoint, http_method)
+           VALUES ($1, $2, 'review_started', 'platform', $3, $4, $5, $6, $7, $8)`,
+          [
+            id,
+            claim.tenant_id,
+            staffId,
+            JSON.stringify({
+              reviewer_staff_id: staffId,
+              reviewer_name: staffName,
+              timestamp: new Date().toISOString()
+            }),
+            req.ip || req.socket.remoteAddress || 'unknown',
+            req.headers['user-agent'] || 'unknown',
+            `/api/internal/claims/${id}/review/start`,
+            'POST'
+          ]
+        );
+        
+        const updatedClaim = await client.query(
+          `SELECT * FROM catalog_claims WHERE id = $1`,
+          [id]
+        );
+        
+        return updatedClaim.rows[0];
+      });
+      
+      return res.json({
+        success: true,
+        claim: result,
+        actor: {
+          staff_id: staffId,
+          staff_name: staffName
+        }
+      });
+    } catch (error: any) {
+      console.error('Review start error:', error);
+      
+      if (error.message === 'CLAIM_NOT_FOUND') {
+        return res.status(404).json({
+          success: false,
+          error: 'Claim not found'
+        });
+      }
+      
+      if (error.message?.startsWith('INVALID_STATUS:')) {
+        const currentStatus = error.message.split(':')[1];
+        return res.status(409).json({
+          success: false,
+          error: 'Claim must be in submitted status to start review',
+          code: 'INVALID_STATUS',
+          current_status: currentStatus
+        });
+      }
+      
+      if (error.message?.includes('Invalid catalog_claims status transition')) {
+        return res.status(409).json({
+          success: false,
+          error: 'Invalid status transition',
+          code: 'INVALID_TRANSITION'
+        });
+      }
+      
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to start review'
+      });
+    }
+  }
+);
+
+router.get(
+  '/claims/:id/audit',
+  requirePlatformRole('platform_reviewer', 'platform_admin'),
+  async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const platformReq = req as PlatformStaffRequest;
+      
+      const claimResult = await serviceQuery(
+        `SELECT id, tenant_id, status FROM catalog_claims WHERE id = $1`,
+        [id]
+      );
+      
+      if (claimResult.rows.length === 0) {
+        return res.status(404).json({
+          success: false,
+          error: 'Claim not found'
+        });
+      }
+      
+      const eventsResult = await serviceQuery(
+        `SELECT 
+          e.id,
+          e.claim_id,
+          e.tenant_id,
+          e.event_type,
+          e.actor_type,
+          e.actor_individual_id,
+          e.actor_staff_id,
+          e.payload,
+          e.ip,
+          e.user_agent,
+          e.endpoint,
+          e.http_method,
+          e.created_at,
+          i.full_name as actor_individual_name,
+          i.email as actor_individual_email,
+          s.full_name as actor_staff_name,
+          s.email as actor_staff_email
+         FROM catalog_claim_events e
+         LEFT JOIN cc_individuals i ON i.id = e.actor_individual_id
+         LEFT JOIN cc_platform_staff s ON s.id = e.actor_staff_id
+         WHERE e.claim_id = $1
+         ORDER BY e.created_at ASC`,
+        [id]
+      );
+      
+      return res.json({
+        success: true,
+        claim_id: id,
+        tenant_id: claimResult.rows[0].tenant_id,
+        status: claimResult.rows[0].status,
+        events: eventsResult.rows,
+        total_events: eventsResult.rows.length,
+        actor: {
+          staff_id: platformReq.platformStaff?.id,
+          staff_name: platformReq.platformStaff?.full_name
+        }
+      });
+    } catch (error) {
+      console.error('Audit fetch error:', error);
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to fetch audit log'
+      });
+    }
+  }
+);
+
 const decisionSchema = z.object({
   decision: z.enum(['approve', 'reject']),
   reason: z.string().min(1).max(2000).optional()
@@ -513,7 +689,7 @@ router.post(
         
         const claim = claimResult.rows[0];
         
-        if (!['submitted', 'under_review'].includes(claim.status)) {
+        if (claim.status !== 'under_review') {
           throw new Error(`INVALID_STATUS:${claim.status}`);
         }
         
@@ -533,8 +709,8 @@ router.post(
         
         await client.query(
           `INSERT INTO catalog_claim_events 
-           (claim_id, tenant_id, event_type, actor_type, actor_staff_id, payload)
-           VALUES ($1, $2, $3, 'platform', $4, $5)`,
+           (claim_id, tenant_id, event_type, actor_type, actor_staff_id, payload, ip, user_agent, endpoint, http_method)
+           VALUES ($1, $2, $3, 'platform', $4, $5, $6, $7, $8, $9)`,
           [
             id,
             claim.tenant_id,
@@ -545,20 +721,18 @@ router.post(
               reason: reason || null,
               reviewer_staff_id: staffId,
               reviewer_name: staffName,
-              ip: req.ip || req.socket.remoteAddress || 'unknown',
-              user_agent: req.headers['user-agent'] || 'unknown',
               timestamp: new Date().toISOString()
-            })
+            }),
+            req.ip || req.socket.remoteAddress || 'unknown',
+            req.headers['user-agent'] || 'unknown',
+            `/api/internal/claims/${id}/decision`,
+            'POST'
           ]
         );
         
-        if (decision === 'approve') {
-          try {
-            await client.query(`SELECT fn_apply_catalog_claim($1)`, [id]);
-          } catch (applyError: any) {
-            console.error('Failed to apply claim:', applyError);
-          }
-        }
+        // Note: fn_apply_catalog_claim is automatically called by the 
+        // trg_claim_auto_apply trigger when status changes to 'approved'
+        // No need to call it manually here
         
         const updatedClaim = await client.query(
           `SELECT * FROM catalog_claims WHERE id = $1`,
@@ -590,7 +764,7 @@ router.post(
         const currentStatus = error.message.split(':')[1];
         return res.status(409).json({
           success: false,
-          error: 'Claim not in reviewable state',
+          error: 'Claim must be in under_review status to make decision',
           code: 'INVALID_STATUS',
           current_status: currentStatus
         });
