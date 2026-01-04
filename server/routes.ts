@@ -38,6 +38,7 @@ import opportunitiesRouter from "./routes/opportunities";
 import bidsRouter from "./routes/bids";
 import uploadsRouter from "./routes/uploads";
 import toolsRouter from "./routes/tools";
+import conversationsRouter from "./routes/conversations";
 import { publicQuery } from "./db/tenantDb";
 import express from "express";
 
@@ -134,6 +135,9 @@ export async function registerRoutes(
 
   // Register tenant tools inventory routes
   app.use('/api/tools', toolsRouter);
+
+  // Register conversations/messaging routes
+  app.use('/api', conversationsRouter);
 
   // Public catalog endpoints (no auth required)
   app.get('/api/v1/catalog/vehicles', async (req, res) => {
