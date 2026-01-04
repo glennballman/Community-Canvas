@@ -200,6 +200,24 @@ router.post('/bootstrap/claim', async (req: Request, res: Response) => {
     }
     
     const { token, email, password, full_name } = parsed.data;
+    
+    // P0 SECURITY: Validate email domain if PLATFORM_ADMIN_EMAIL is configured
+    // This ensures platform admins can only use operator-controlled email domains
+    const operatorEmail = process.env.PLATFORM_ADMIN_EMAIL;
+    if (operatorEmail && process.env.NODE_ENV === 'production') {
+      const operatorDomain = operatorEmail.split('@')[1];
+      const claimDomain = email.toLowerCase().split('@')[1];
+      
+      if (claimDomain !== operatorDomain) {
+        console.log(`[SECURITY] Bootstrap claim rejected - domain mismatch: ${claimDomain} vs allowed ${operatorDomain}`);
+        return res.status(403).json({
+          success: false,
+          error: `Email must be from domain: ${operatorDomain}`,
+          code: 'DOMAIN_NOT_ALLOWED'
+        });
+      }
+    }
+    
     const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
     
     const tokenResult = await superuserPool.query(
@@ -293,6 +311,199 @@ router.get('/auth/me', (req: Request, res: Response) => {
     staff: staffSession
   });
 });
+
+// ================================================================================
+// PLATFORM ADMIN PROFILE MANAGEMENT
+// Allows platform admins to update their email and password securely
+// ================================================================================
+
+const profileUpdateSchema = z.object({
+  email: z.string().email().optional(),
+  current_password: z.string().min(1),
+  new_password: z.string().min(12).optional(),
+  full_name: z.string().min(2).max(255).optional()
+}).refine(data => data.email || data.new_password || data.full_name, {
+  message: 'At least one field to update is required'
+});
+
+router.patch(
+  '/admin/profile',
+  requirePlatformRole('platform_admin'),
+  async (req: Request, res: Response) => {
+    try {
+      const platformReq = req as PlatformStaffRequest;
+      const staffId = platformReq.platformStaff!.id;
+      
+      const parsed = profileUpdateSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid request',
+          details: parsed.error.errors
+        });
+      }
+      
+      const { email, current_password, new_password, full_name } = parsed.data;
+      
+      // P0 SECURITY: Validate email domain if PLATFORM_ADMIN_EMAIL is configured
+      // Same validation as bootstrap/claim to maintain recoverability invariant
+      if (email) {
+        const operatorEmail = process.env.PLATFORM_ADMIN_EMAIL;
+        if (operatorEmail) {
+          const operatorDomain = operatorEmail.toLowerCase().split('@')[1];
+          const newDomain = email.toLowerCase().split('@')[1];
+          
+          if (newDomain !== operatorDomain) {
+            console.log(`[SECURITY] Profile email change rejected - domain mismatch: ${newDomain} vs allowed ${operatorDomain}`);
+            return res.status(403).json({
+              success: false,
+              error: `Email must be from domain: ${operatorDomain}`,
+              code: 'DOMAIN_NOT_ALLOWED'
+            });
+          }
+        }
+      }
+      
+      const staffResult = await superuserPool.query(
+        `SELECT id, email, password_hash, full_name FROM cc_platform_staff WHERE id = $1`,
+        [staffId]
+      );
+      
+      if (staffResult.rows.length === 0) {
+        return res.status(404).json({
+          success: false,
+          error: 'Staff account not found',
+          code: 'NOT_FOUND'
+        });
+      }
+      
+      const staff = staffResult.rows[0];
+      const passwordValid = await bcrypt.compare(current_password, staff.password_hash);
+      if (!passwordValid) {
+        return res.status(401).json({
+          success: false,
+          error: 'Current password is incorrect',
+          code: 'INVALID_PASSWORD'
+        });
+      }
+      
+      const updates: string[] = [];
+      const values: any[] = [];
+      let paramIndex = 1;
+      
+      if (email && email !== staff.email) {
+        updates.push(`email = $${paramIndex++}`);
+        values.push(email.toLowerCase());
+      }
+      
+      if (new_password) {
+        const newPasswordHash = await bcrypt.hash(new_password, 12);
+        updates.push(`password_hash = $${paramIndex++}`);
+        values.push(newPasswordHash);
+      }
+      
+      if (full_name && full_name !== staff.full_name) {
+        updates.push(`full_name = $${paramIndex++}`);
+        values.push(full_name);
+      }
+      
+      if (updates.length === 0) {
+        return res.json({
+          success: true,
+          message: 'No changes made',
+          staff: {
+            id: staff.id,
+            email: staff.email,
+            full_name: staff.full_name
+          }
+        });
+      }
+      
+      updates.push(`updated_at = now()`);
+      values.push(staffId);
+      
+      const updateResult = await superuserPool.query(
+        `UPDATE cc_platform_staff 
+         SET ${updates.join(', ')}
+         WHERE id = $${paramIndex}
+         RETURNING id, email, full_name, role`,
+        values
+      );
+      
+      const updatedStaff = updateResult.rows[0];
+      
+      (req as any).session.platformStaff = {
+        ...platformReq.platformStaff,
+        email: updatedStaff.email,
+        full_name: updatedStaff.full_name
+      };
+      
+      console.log(`[SECURITY] Platform admin profile updated: ${updatedStaff.email} (changed: ${updates.slice(0, -1).map(u => u.split(' ')[0]).join(', ')})`);
+      
+      return res.json({
+        success: true,
+        message: 'Profile updated successfully',
+        staff: {
+          id: updatedStaff.id,
+          email: updatedStaff.email,
+          full_name: updatedStaff.full_name,
+          role: updatedStaff.role
+        }
+      });
+    } catch (error: any) {
+      if (error.code === '23505') {
+        return res.status(409).json({
+          success: false,
+          error: 'Email already in use by another account',
+          code: 'EMAIL_EXISTS'
+        });
+      }
+      console.error('Profile update error:', error.message);
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to update profile'
+      });
+    }
+  }
+);
+
+router.get(
+  '/admin/status',
+  requirePlatformRole('platform_admin'),
+  async (req: Request, res: Response) => {
+    try {
+      const result = await superuserPool.query(`
+        SELECT 
+          COUNT(*) as total_admins,
+          COUNT(*) FILTER (WHERE role = 'platform_admin') as platform_admins,
+          COUNT(*) FILTER (WHERE is_active = true) as active_accounts
+        FROM cc_platform_staff
+      `);
+      
+      const configuredEmail = process.env.PLATFORM_ADMIN_EMAIL;
+      const row = result.rows[0];
+      
+      return res.json({
+        success: true,
+        stats: {
+          total_admins: parseInt(row.total_admins),
+          platform_admins: parseInt(row.platform_admins),
+          active_accounts: parseInt(row.active_accounts)
+        },
+        config: {
+          operator_email_configured: !!configuredEmail,
+          operator_email_domain: configuredEmail ? configuredEmail.split('@')[1] : null
+        }
+      });
+    } catch (error: any) {
+      console.error('Admin status error:', error.message);
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to get admin status'
+      });
+    }
+  }
+);
 
 // ================================================================================
 // IMPERSONATION ENDPOINTS
