@@ -135,15 +135,33 @@ export async function registerRoutes(
           insertError = e.message;
         }
         
+        // Test with tenant context - use first available tenant
+        const tenantResult = await client.query('SELECT id FROM cc_tenants LIMIT 1');
+        let countWithContext = null;
+        let tenantId = null;
+        if (tenantResult.rows.length > 0) {
+          tenantId = tenantResult.rows[0].id;
+          await client.query(`SELECT set_config('app.tenant_id', $1, true)`, [tenantId]);
+          const countWithContextResult = await client.query('SELECT COUNT(*) as count FROM tenant_vehicles');
+          countWithContext = parseInt(countWithContextResult.rows[0].count);
+          // Clear context again
+          await client.query(`SELECT set_config('app.tenant_id', '', true)`);
+        }
+        
         res.json({
           current_user: userResult.rows[0].current_user,
           session_user: userResult.rows[0].session_user,
           role_info: roleResult.rows[0],
           rls_test: {
-            context: 'none (cleared)',
-            count_without_context: parseInt(countResult.rows[0].count),
-            insert_blocked: insertError ? true : false,
-            insert_error: insertError
+            without_context: {
+              count: parseInt(countResult.rows[0].count),
+              insert_blocked: insertError ? true : false,
+              insert_error: insertError
+            },
+            with_tenant_context: tenantId ? {
+              tenant_id: tenantId,
+              count: countWithContext
+            } : 'no tenants found'
           }
         });
       } finally {
