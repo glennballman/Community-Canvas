@@ -12,5 +12,9 @@ if (!connectionString) {
   );
 }
 
+// Debug: Log which env var is being used (masked password)
+const maskedUrl = connectionString.replace(/:([^@]+)@/, ':****@');
+console.log(`[DB] Using ${process.env.CC_APP_DATABASE_URL ? 'CC_APP_DATABASE_URL' : 'DATABASE_URL'}: ${maskedUrl}`);
+
 export const pool = new Pool({ connectionString });
 export const db = drizzle(pool, { schema });
