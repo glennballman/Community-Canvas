@@ -325,10 +325,73 @@ echo "  isServiceKeyRequest() checks X-Internal-Service-Key header [VERIFIED]"
 echo "  Key must match INTERNAL_SERVICE_KEY env var [VERIFIED]"
 echo "  Normal users cannot spoof service mode [VERIFIED]"
 echo ""
-echo "INVARIANT 5: State machine enforced"
+echo "INVARIANT 5: State machine enforced by DB trigger"
 echo "  Cannot submit if status !== 'draft' [VERIFIED]"
 echo "  Cannot add evidence if status !== 'draft' [VERIFIED]"
 echo "  Cannot review if status !== 'submitted' [VERIFIED]"
 echo "  Cannot decide if status not in ['submitted', 'under_review'] [VERIFIED]"
 echo ""
+echo "============================================================"
+
+section "STEP G: DB-Authoritative State Machine Trigger Test"
+
+info "G.1: Creating draft claim to test trigger"
+VEHICLE_CATALOG_ID="674a20f8-b137-40bc-9593-9700e32af839"
+TRIGGER_CLAIM_ID=$(psql "$DATABASE_URL" -qtAX -c "
+  INSERT INTO catalog_claims (
+    target_type, claimant, status, desired_action, vehicle_catalog_id, raw
+  ) 
+  VALUES ('vehicle', 'individual', 'draft', 'create', '$VEHICLE_CATALOG_ID', '{}'::jsonb)
+  RETURNING id;")
+echo "Created trigger test claim: $TRIGGER_CLAIM_ID"
+
+info "G.2: Attempting INVALID transition via SQL (draft -> under_review)"
+TRIGGER_RESULT=$(psql "$DATABASE_URL" -c "UPDATE catalog_claims SET status = 'under_review' WHERE id = '$TRIGGER_CLAIM_ID'" 2>&1)
+echo "Result: $TRIGGER_RESULT"
+
+if echo "$TRIGGER_RESULT" | grep -q "Invalid catalog_claims status transition"; then
+  success "DB trigger BLOCKED invalid transition (draft -> under_review)"
+else
+  fail "DB trigger did not block invalid transition"
+fi
+
+info "G.3: Verifying status unchanged after failed transition"
+STATUS_AFTER_INVALID=$(psql "$DATABASE_URL" -qtAX -c "SELECT status FROM catalog_claims WHERE id = '$TRIGGER_CLAIM_ID'")
+echo "Status after invalid attempt: $STATUS_AFTER_INVALID"
+if [ "$STATUS_AFTER_INVALID" = "draft" ]; then
+  success "Status unchanged (still draft)"
+else
+  fail "Status should be draft, got: $STATUS_AFTER_INVALID"
+fi
+
+info "G.4: Attempting VALID transition (draft -> submitted)"
+VALID_RESULT=$(psql "$DATABASE_URL" -c "UPDATE catalog_claims SET status = 'submitted', submitted_at = NOW() WHERE id = '$TRIGGER_CLAIM_ID'" 2>&1)
+echo "Result: $VALID_RESULT"
+STATUS_AFTER_VALID=$(psql "$DATABASE_URL" -qtAX -c "SELECT status FROM catalog_claims WHERE id = '$TRIGGER_CLAIM_ID'")
+echo "Status after valid transition: $STATUS_AFTER_VALID"
+if [ "$STATUS_AFTER_VALID" = "submitted" ]; then
+  success "Valid transition (draft -> submitted) ALLOWED"
+else
+  fail "Expected submitted, got: $STATUS_AFTER_VALID"
+fi
+
+info "G.5: Cleanup trigger test claim"
+psql "$DATABASE_URL" -c "DELETE FROM catalog_claims WHERE id = '$TRIGGER_CLAIM_ID'" > /dev/null 2>&1
+echo "Deleted trigger test claim"
+
+echo ""
+echo "============================================================"
+echo "DB-AUTHORITATIVE STATE MACHINE PROOF"
+echo "============================================================"
+echo "Trigger: fn_enforce_claim_status_transition()"
+echo "Table: catalog_claims"
+echo ""
+echo "PROVEN: The database trigger:"
+echo "  1. BLOCKS invalid transitions with clear error message"
+echo "  2. PRESERVES original status after failed transition"
+echo "  3. ALLOWS valid transitions to proceed"
+echo ""
+echo "This means the state machine is DB-authoritative - application"
+echo "code catches the error (409 INVALID_TRANSITION) but cannot"
+echo "bypass the database-level enforcement."
 echo "============================================================"

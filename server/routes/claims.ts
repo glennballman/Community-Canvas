@@ -10,6 +10,24 @@ import {
 } from '../middleware/guards';
 import { TenantRequest } from '../middleware/tenantContext';
 
+// Helper to detect DB trigger transition errors and return 409
+function isTransitionError(error: any): boolean {
+  return error?.message?.includes('Invalid catalog_claims status transition');
+}
+
+function handleTransitionError(res: Response, error: any, currentStatus?: string): Response {
+  if (isTransitionError(error)) {
+    return res.status(409).json({
+      success: false,
+      error: 'Invalid status transition',
+      code: 'INVALID_TRANSITION',
+      current_status: currentStatus || null
+    });
+  }
+  console.error('Unexpected error:', error);
+  return res.status(500).json({ success: false, error: error.message });
+}
+
 // Log service-key audit event to database
 // For security audit events, claim_id may be NULL if the claim doesn't exist
 // The attempted claim_id is always stored in the payload for forensics
@@ -192,6 +210,7 @@ router.post('/:claimId/evidence', requireAuth, requireTenant, async (req: Reques
 // 3) Submit claim
 // POST /api/v1/catalog/claims/:claimId/submit
 router.post('/:claimId/submit', requireAuth, requireTenant, async (req: Request, res: Response) => {
+  let currentStatus: string | undefined;
   try {
     const tenantReq = req as TenantRequest;
     const { claimId } = req.params;
@@ -209,17 +228,13 @@ router.post('/:claimId/submit', requireAuth, requireTenant, async (req: Request,
     }
 
     const claim = claimCheck.rows[0];
+    currentStatus = claim.status;
+    
     if (claim.tenant_id !== tenantReq.ctx.tenant_id) {
       return res.status(403).json({ success: false, error: 'Claim belongs to another tenant' });
     }
 
-    if (claim.status !== 'draft') {
-      return res.status(400).json({ 
-        success: false, 
-        error: `Cannot submit claim with status: ${claim.status}` 
-      });
-    }
-
+    // User-friendly check: require at least 1 evidence item
     if (parseInt(claim.evidence_count) < 1) {
       return res.status(400).json({ 
         success: false, 
@@ -227,6 +242,7 @@ router.post('/:claimId/submit', requireAuth, requireTenant, async (req: Request,
       });
     }
 
+    // DB trigger enforces valid transitions (draft -> submitted)
     await tenantQuery(req, `
       UPDATE catalog_claims 
       SET status = 'submitted', submitted_at = now(), updated_at = now()
@@ -242,8 +258,8 @@ router.post('/:claimId/submit', requireAuth, requireTenant, async (req: Request,
 
     res.json({ claim_id: claimId, status: 'submitted' });
   } catch (e: any) {
-    console.error('Submit claim error:', e);
-    res.status(500).json({ success: false, error: e.message });
+    // Let DB trigger reject invalid transitions with 409
+    return handleTransitionError(res, e, currentStatus);
   }
 });
 
@@ -350,6 +366,7 @@ router.get('/:claimId', requireAuth, requireTenant, async (req: Request, res: Re
 // 6) Start review
 // POST /api/v1/catalog/claims/:claimId/review/start
 router.post('/:claimId/review/start', requireTenantAdminOrService, async (req: Request, res: Response) => {
+  let currentStatus: string | undefined;
   try {
     const tenantReq = req as TenantRequest;
     const { claimId } = req.params;
@@ -369,18 +386,13 @@ router.post('/:claimId/review/start', requireTenantAdminOrService, async (req: R
     }
 
     const claim = claimCheck.rows[0];
+    currentStatus = claim.status;
     
     if (!isServiceMode && claim.tenant_id !== tenantReq.ctx.tenant_id) {
       return res.status(403).json({ success: false, error: 'Claim belongs to another tenant' });
     }
 
-    if (claim.status !== 'submitted') {
-      return res.status(400).json({ 
-        success: false, 
-        error: `Cannot start review for claim with status: ${claim.status}` 
-      });
-    }
-
+    // DB trigger enforces valid transitions (submitted -> under_review)
     const actorId = tenantReq.ctx?.individual_id || null;
 
     await withServiceTransaction(async (client) => {
@@ -398,14 +410,15 @@ router.post('/:claimId/review/start', requireTenantAdminOrService, async (req: R
 
     res.json({ claim_id: claimId, status: 'under_review' });
   } catch (e: any) {
-    console.error('Start review error:', e);
-    res.status(500).json({ success: false, error: e.message });
+    // Let DB trigger reject invalid transitions with 409
+    return handleTransitionError(res, e, currentStatus);
   }
 });
 
 // 7) Decision (approve/reject)
 // POST /api/v1/catalog/claims/:claimId/decision
 router.post('/:claimId/decision', requireTenantAdminOrService, async (req: Request, res: Response) => {
+  let currentStatus: string | undefined;
   try {
     const tenantReq = req as TenantRequest;
     const { claimId } = req.params;
@@ -433,18 +446,13 @@ router.post('/:claimId/decision', requireTenantAdminOrService, async (req: Reque
     }
 
     const claim = claimCheck.rows[0];
+    currentStatus = claim.status;
     
     if (!isServiceMode && claim.tenant_id !== tenantReq.ctx.tenant_id) {
       return res.status(403).json({ success: false, error: 'Claim belongs to another tenant' });
     }
 
-    if (!['under_review', 'submitted'].includes(claim.status)) {
-      return res.status(400).json({ 
-        success: false, 
-        error: `Cannot decide on claim with status: ${claim.status}` 
-      });
-    }
-
+    // DB trigger enforces valid transitions (under_review/submitted -> approved/rejected)
     const actorId = tenantReq.ctx?.individual_id || null;
 
     if (decision === 'reject') {
@@ -505,8 +513,8 @@ router.post('/:claimId/decision', requireTenantAdminOrService, async (req: Reque
       }
     });
   } catch (e: any) {
-    console.error('Decision error:', e);
-    res.status(500).json({ success: false, error: e.message });
+    // Let DB trigger reject invalid transitions with 409
+    return handleTransitionError(res, e, currentStatus);
   }
 });
 
