@@ -1,8 +1,14 @@
 import express, { Request, Response } from 'express';
 import { pool } from '../db';
-import { tenantQuery, withServiceTransaction } from '../db/tenantDb';
+import { tenantQuery, serviceQuery, withServiceTransaction } from '../db/tenantDb';
 import { requireAuth, requireTenant, requireTenantAdminOrService } from '../middleware/guards';
 import { TenantRequest } from '../middleware/tenantContext';
+
+function isServiceKeyRequest(req: Request): boolean {
+  const providedKey = req.headers['x-internal-service-key'];
+  const INTERNAL_SERVICE_KEY = process.env.INTERNAL_SERVICE_KEY || 'dev-internal-key-change-in-prod';
+  return providedKey === INTERNAL_SERVICE_KEY;
+}
 
 const router = express.Router();
 
@@ -318,17 +324,19 @@ router.post('/:claimId/review/start', requireTenantAdminOrService, async (req: R
   try {
     const tenantReq = req as TenantRequest;
     const { claimId } = req.params;
+    const isServiceMode = isServiceKeyRequest(req);
 
-    const claimCheck = await tenantQuery(req, `
-      SELECT id, tenant_id, status FROM catalog_claims WHERE id = $1
-    `, [claimId]);
+    const claimCheck = isServiceMode 
+      ? await serviceQuery(`SELECT id, tenant_id, status FROM catalog_claims WHERE id = $1`, [claimId])
+      : await tenantQuery(req, `SELECT id, tenant_id, status FROM catalog_claims WHERE id = $1`, [claimId]);
 
     if (claimCheck.rows.length === 0) {
       return res.status(404).json({ success: false, error: 'Claim not found' });
     }
 
     const claim = claimCheck.rows[0];
-    if (claim.tenant_id !== tenantReq.ctx.tenant_id) {
+    
+    if (!isServiceMode && claim.tenant_id !== tenantReq.ctx.tenant_id) {
       return res.status(403).json({ success: false, error: 'Claim belongs to another tenant' });
     }
 
@@ -339,17 +347,19 @@ router.post('/:claimId/review/start', requireTenantAdminOrService, async (req: R
       });
     }
 
-    await tenantQuery(req, `
-      UPDATE catalog_claims 
-      SET status = 'under_review', reviewed_by_individual_id = $2, updated_at = now()
-      WHERE id = $1
-    `, [claimId, tenantReq.ctx.individual_id]);
+    const actorId = tenantReq.ctx?.individual_id || null;
 
     await withServiceTransaction(async (client) => {
       await client.query(`
+        UPDATE catalog_claims 
+        SET status = 'under_review', reviewed_by_individual_id = $2, updated_at = now()
+        WHERE id = $1
+      `, [claimId, actorId]);
+
+      await client.query(`
         INSERT INTO catalog_claim_events (claim_id, event_type, actor_individual_id, payload)
         VALUES ($1, 'review_started', $2, '{}'::jsonb)
-      `, [claimId, tenantReq.ctx.individual_id]);
+      `, [claimId, actorId]);
     });
 
     res.json({ claim_id: claimId, status: 'under_review' });
@@ -366,6 +376,7 @@ router.post('/:claimId/decision', requireTenantAdminOrService, async (req: Reque
     const tenantReq = req as TenantRequest;
     const { claimId } = req.params;
     const { decision, review_note } = req.body;
+    const isServiceMode = isServiceKeyRequest(req);
 
     if (!decision || !['approve', 'reject'].includes(decision)) {
       return res.status(400).json({ 
@@ -374,16 +385,17 @@ router.post('/:claimId/decision', requireTenantAdminOrService, async (req: Reque
       });
     }
 
-    const claimCheck = await tenantQuery(req, `
-      SELECT id, tenant_id, status FROM catalog_claims WHERE id = $1
-    `, [claimId]);
+    const claimCheck = isServiceMode 
+      ? await serviceQuery(`SELECT id, tenant_id, status FROM catalog_claims WHERE id = $1`, [claimId])
+      : await tenantQuery(req, `SELECT id, tenant_id, status FROM catalog_claims WHERE id = $1`, [claimId]);
 
     if (claimCheck.rows.length === 0) {
       return res.status(404).json({ success: false, error: 'Claim not found' });
     }
 
     const claim = claimCheck.rows[0];
-    if (claim.tenant_id !== tenantReq.ctx.tenant_id) {
+    
+    if (!isServiceMode && claim.tenant_id !== tenantReq.ctx.tenant_id) {
       return res.status(403).json({ success: false, error: 'Claim belongs to another tenant' });
     }
 
@@ -394,23 +406,25 @@ router.post('/:claimId/decision', requireTenantAdminOrService, async (req: Reque
       });
     }
 
-    if (decision === 'reject') {
-      await tenantQuery(req, `
-        UPDATE catalog_claims 
-        SET status = 'rejected', 
-            decision = 'rejected',
-            decision_reason = $2,
-            decided_at = now(),
-            reviewed_by_individual_id = COALESCE(reviewed_by_individual_id, $3),
-            updated_at = now()
-        WHERE id = $1
-      `, [claimId, review_note || null, tenantReq.ctx.individual_id]);
+    const actorId = tenantReq.ctx?.individual_id || null;
 
+    if (decision === 'reject') {
       await withServiceTransaction(async (client) => {
+        await client.query(`
+          UPDATE catalog_claims 
+          SET status = 'rejected', 
+              decision = 'rejected',
+              decision_reason = $2,
+              decided_at = now(),
+              reviewed_by_individual_id = COALESCE(reviewed_by_individual_id, $3),
+              updated_at = now()
+          WHERE id = $1
+        `, [claimId, review_note || null, actorId]);
+
         await client.query(`
           INSERT INTO catalog_claim_events (claim_id, event_type, actor_individual_id, payload)
           VALUES ($1, 'rejected', $2, $3::jsonb)
-        `, [claimId, tenantReq.ctx.individual_id, JSON.stringify({ reason: review_note })]);
+        `, [claimId, actorId, JSON.stringify({ reason: review_note })]);
       });
 
       return res.json({ claim_id: claimId, status: 'rejected', created: null });
@@ -426,7 +440,7 @@ router.post('/:claimId/decision', requireTenantAdminOrService, async (req: Reque
             reviewed_by_individual_id = COALESCE(reviewed_by_individual_id, $3),
             updated_at = now()
         WHERE id = $1
-      `, [claimId, review_note || null, tenantReq.ctx.individual_id]);
+      `, [claimId, review_note || null, actorId]);
 
       await client.query(`SELECT fn_apply_catalog_claim($1)`, [claimId]);
 
