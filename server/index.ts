@@ -8,7 +8,11 @@ import { createServer } from "http";
 import { startPipelineScheduler } from "./pipelines";
 import { tenantContext } from "./middleware/tenantContext";
 import { attachTenantDb } from "./db/tenantDb";
-import { blockServiceKeyOnTenantRoutes } from "./middleware/guards";
+import { 
+  blockServiceKeyOnTenantRoutes, 
+  resolveImpersonation, 
+  blockPlatformStaffWithoutImpersonation 
+} from "./middleware/guards";
 
 const app = express();
 const httpServer = createServer(app);
@@ -138,6 +142,26 @@ app.use('/api', (req, res, next) => {
   }
   // Block service-key on all other /api/* routes
   return blockServiceKeyOnTenantRoutes(req, res, next);
+});
+
+// P0 HARDENING: Enforce impersonation for platform staff on tenant routes
+// Platform staff with platform_sid MUST have active impersonation to access tenant endpoints
+// This chain: resolves impersonation -> blocks if platform staff without impersonation
+app.use('/api', (req, res, next) => {
+  // Skip /api/internal (uses its own guards) and /api/jobs (background automation)
+  if (req.path.startsWith('/internal') || req.path.startsWith('/jobs')) {
+    return next();
+  }
+  // Also skip foundation auth routes (login/register/me)
+  if (req.path.startsWith('/foundation/auth')) {
+    return next();
+  }
+  // Resolve any active impersonation session for platform staff
+  resolveImpersonation(req, res, (err?: any) => {
+    if (err) return next(err);
+    // Block platform staff if no impersonation active
+    blockPlatformStaffWithoutImpersonation(req, res, next);
+  });
 });
 
 (async () => {
