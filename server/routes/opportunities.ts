@@ -1,8 +1,17 @@
 import { Router, Request, Response } from 'express';
 import { requireAuth, requireTenant } from '../middleware/guards';
 import { TenantRequest } from '../middleware/tenantContext';
+import { publicQuery } from '../db/tenantDb';
 
 const router = Router();
+
+// Helper to run queries - uses tenantQuery if available, publicQuery otherwise
+async function runQuery(tenantReq: TenantRequest, sql: string, params: any[]) {
+  if (tenantReq.tenantQuery) {
+    return tenantReq.tenantQuery(sql, params);
+  }
+  return publicQuery(sql, params);
+}
 
 const SORT_MAP: Record<string, string> = {
   created_at: 'o.created_at',
@@ -36,7 +45,7 @@ router.get('/stats/summary', async (req: Request, res: Response) => {
 
     const whereClause = `WHERE ${whereClauses.join(' AND ')}`;
 
-    const result = await tenantReq.tenantQuery(
+    const result = await runQuery(tenantReq,
       `
       SELECT
         COUNT(*) FILTER (WHERE status = 'published'::opportunity_status)  as published,
@@ -215,7 +224,7 @@ router.get('/', async (req: Request, res: Response) => {
 
     params.push(parseInt(limit as string), parseInt(offset as string));
 
-    const result = await tenantReq.tenantQuery(query, params);
+    const result = await runQuery(tenantReq, query, params);
 
     const countParams = params.slice(0, -2);
     const countQuery = `
@@ -224,7 +233,7 @@ router.get('/', async (req: Request, res: Response) => {
       LEFT JOIN sr_communities c ON c.id = o.community_id
       ${whereClause}
     `;
-    const countResult = await tenantReq.tenantQuery(countQuery, countParams);
+    const countResult = await runQuery(tenantReq, countQuery, countParams);
 
     res.json({
       opportunities: result.rows,
@@ -266,7 +275,7 @@ router.get('/:id', async (req: Request, res: Response) => {
       paramIndex++;
     }
 
-    const result = await tenantReq.tenantQuery(
+    const result = await runQuery(tenantReq,
       `
       SELECT 
         o.*,
@@ -302,19 +311,19 @@ router.get('/:id', async (req: Request, res: Response) => {
     const opportunity = result.rows[0];
     const isOwner = opportunity.owner_tenant_id === tenantId;
 
-    const media = await tenantReq.tenantQuery(
-      `SELECT id, media_type, url, thumbnail_url, caption, analysis, created_at
+    const media = await runQuery(tenantReq,
+      `SELECT id, media_type, file_name, file_url, file_size, description, is_public, created_at
        FROM opportunity_media WHERE opportunity_id = $1 ORDER BY created_at`,
       [id]
     );
 
-    const measurements = await tenantReq.tenantQuery(
-      `SELECT id, measurement_type, value, unit, method, confidence_score, notes, created_at
+    const measurements = await runQuery(tenantReq,
+      `SELECT id, measurement_type, description, quantity, unit, notes, created_at
        FROM opportunity_measurements WHERE opportunity_id = $1 ORDER BY created_at`,
       [id]
     );
 
-    const bidCountResult = await tenantReq.tenantQuery(
+    const bidCountResult = await runQuery(tenantReq,
       `SELECT COUNT(*) as count FROM bids WHERE opportunity_id = $1`,
       [id]
     );
@@ -322,13 +331,13 @@ router.get('/:id', async (req: Request, res: Response) => {
 
     let userBid = null;
     if (tenantId) {
-      const partyResult = await tenantReq.tenantQuery(
+      const partyResult = await runQuery(tenantReq,
         `SELECT id FROM parties WHERE tenant_id = $1 ORDER BY created_at ASC LIMIT 1`,
         [tenantId]
       );
 
       if (partyResult.rows.length > 0) {
-        const userBidResult = await tenantReq.tenantQuery(
+        const userBidResult = await runQuery(tenantReq,
           `SELECT id, bid_ref, status, bid_amount, proposed_start_date, submitted_at
            FROM bids WHERE opportunity_id = $1 AND party_id = $2 LIMIT 1`,
           [id, partyResult.rows[0].id]
@@ -345,7 +354,7 @@ router.get('/:id', async (req: Request, res: Response) => {
          FROM bid_messages bm LEFT JOIN parties p ON p.id = bm.from_party_id
          WHERE bm.opportunity_id = $1 AND bm.is_public = true ORDER BY bm.created_at`;
 
-    const messages = await tenantReq.tenantQuery(messagesQuery, [id]);
+    const messages = await runQuery(tenantReq, messagesQuery, [id]);
 
     res.json({
       ...opportunity,

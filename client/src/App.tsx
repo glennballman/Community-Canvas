@@ -59,6 +59,7 @@ import RentalBrowser from "@/pages/rentals/RentalBrowser";
 import RentalBookings from "@/pages/rentals/MyBookings";
 import AccommodationSearch from "@/pages/crew/AccommodationSearch";
 import JobBoard from "@/pages/JobBoard";
+import OpportunityDetail from "@/pages/OpportunityDetail";
 
 function AppShellRoutes() {
   return (
@@ -140,6 +141,7 @@ function AppShellRoutes() {
         
         {/* Job board / opportunities */}
         <Route path="/jobs" component={JobBoard} />
+        <Route path="/opportunities/:id" component={OpportunityDetail} />
         
         {/* Public site pages with AdminLayout */}
         <Route path="/public/overview" component={PublicOverview} />
