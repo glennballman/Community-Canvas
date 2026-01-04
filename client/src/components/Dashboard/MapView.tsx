@@ -93,7 +93,8 @@ export function MapView({ regionId }: MapViewProps) {
       
       const response = await fetch(url);
       const data = await response.json();
-      const entityList = data.entities || data || [];
+      const entityList = Array.isArray(data.entities) ? data.entities : 
+                         Array.isArray(data) ? data : [];
       setEntities(entityList);
       setStats({ total: entityList.length, visible: entityList.length });
     } catch (error) {

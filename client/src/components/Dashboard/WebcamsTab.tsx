@@ -240,7 +240,8 @@ export function WebcamsTab({ regionId }: WebcamsTabProps) {
         const url = `/api/v1/entities?type=webcam&limit=1500`;
         const response = await fetch(url);
         const data = await response.json();
-        const webcamList = data.entities || data || [];
+        const webcamList = Array.isArray(data.entities) ? data.entities : 
+                           Array.isArray(data) ? data : [];
         setWebcams(webcamList);
       } catch (error) {
         console.error('Failed to fetch webcams:', error);
@@ -253,7 +254,8 @@ export function WebcamsTab({ regionId }: WebcamsTabProps) {
       const url = `/api/v1/entities?type=webcam&limit=1500`;
       const response = await fetch(url);
       const data = await response.json();
-      const webcamList = data.entities || data || [];
+      const webcamList = Array.isArray(data.entities) ? data.entities : 
+                         Array.isArray(data) ? data : [];
       setWebcams(webcamList);
       setInitialLoadComplete(true);
     } catch (error) {
