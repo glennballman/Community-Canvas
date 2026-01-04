@@ -65,6 +65,124 @@ router.get('/stats/summary', async (req: Request, res: Response) => {
   }
 });
 
+// POST /api/opportunities - Create new opportunity (owner)
+router.post('/', requireAuth, requireTenant, async (req: Request, res: Response) => {
+  const tenantReq = req as TenantRequest;
+  try {
+    const tenantId = tenantReq.ctx!.tenant_id;
+
+    const {
+      title,
+      description,
+      scope_of_work,
+      work_category,
+      site_address,
+      site_latitude,
+      site_longitude,
+      estimated_value_low,
+      estimated_value_high,
+      budget_ceiling,
+      bid_deadline,
+      questions_deadline,
+      expected_start_date,
+      expected_duration_days,
+      required_certifications,
+      visibility_scope = 'public',
+      portal_id = null,
+      status = 'draft',
+      logistics_profile = null,
+      available_tools_snapshot = null,
+      local_resources = null,
+      community_id = null,
+      service_bundle_id = null
+    } = req.body;
+
+    if (!title || !work_category) {
+      return res.status(400).json({ error: 'title and work_category are required' });
+    }
+
+    const refResult = await tenantReq.tenantQuery!(
+      `SELECT 'OP-' || to_char(now(), 'YYMMDD') || '-' || lpad(nextval('opportunity_ref_seq')::text, 4, '0') as ref`
+    );
+    const oppRef = refResult.rows[0].ref;
+
+    const publishedAt = status === 'published' ? new Date() : null;
+
+    const result = await tenantReq.tenantQuery!(
+      `
+      INSERT INTO opportunities (
+        opportunity_ref, owner_tenant_id, title, description, scope_of_work, work_category,
+        site_address, site_latitude, site_longitude,
+        estimated_value_low, estimated_value_high, budget_ceiling,
+        bid_deadline, questions_deadline, expected_start_date, expected_duration_days,
+        required_certifications, status, visibility_scope, portal_id, published_at,
+        logistics_profile, available_tools_snapshot, local_resources,
+        community_id, service_bundle_id
+      ) VALUES (
+        $1, $2::uuid, $3, $4, $5, $6,
+        $7, $8, $9, $10, $11, $12,
+        $13, $14, $15, $16, $17,
+        $18::opportunity_status, $19::publish_visibility, $20::uuid, $21,
+        $22::jsonb, $23::jsonb, $24::jsonb,
+        $25::uuid, $26::uuid
+      )
+      RETURNING id, opportunity_ref, status, created_at
+      `,
+      [
+        oppRef, tenantId, title, description || null, scope_of_work || null, work_category,
+        site_address || null, site_latitude || null, site_longitude || null,
+        estimated_value_low || null, estimated_value_high || null, budget_ceiling || null,
+        bid_deadline || null, questions_deadline || null, expected_start_date || null, expected_duration_days || null,
+        required_certifications || null, status, visibility_scope, portal_id, publishedAt,
+        logistics_profile ? JSON.stringify(logistics_profile) : null,
+        available_tools_snapshot ? JSON.stringify(available_tools_snapshot) : null,
+        local_resources ? JSON.stringify(local_resources) : null,
+        community_id || null, service_bundle_id || null
+      ]
+    );
+
+    res.status(201).json(result.rows[0]);
+  } catch (e: any) {
+    console.error('Error creating opportunity:', e);
+    res.status(500).json({ error: 'Failed to create opportunity', details: e.message });
+  }
+});
+
+// POST /api/opportunities/:id/media - Attach media to opportunity (owner)
+router.post('/:id/media', requireAuth, requireTenant, async (req: Request, res: Response) => {
+  const tenantReq = req as TenantRequest;
+  try {
+    const { id } = req.params;
+    const tenantId = tenantReq.ctx!.tenant_id;
+    const individualId = tenantReq.ctx!.individual_id;
+    const { media_type, file_name, file_url, file_size, description, is_public } = req.body;
+
+    if (!file_url || !media_type) {
+      return res.status(400).json({ error: 'media_type and file_url are required' });
+    }
+
+    const ownerCheck = await tenantReq.tenantQuery!(
+      `SELECT id FROM opportunities WHERE id = $1::uuid AND owner_tenant_id = $2`,
+      [id, tenantId]
+    );
+    if (ownerCheck.rows.length === 0) {
+      return res.status(403).json({ error: 'Not authorized' });
+    }
+
+    const result = await tenantReq.tenantQuery!(
+      `INSERT INTO opportunity_media (opportunity_id, media_type, file_name, file_url, file_size, description, is_public, uploaded_by)
+       VALUES ($1::uuid, $2, $3, $4, $5, $6, $7, $8::uuid)
+       RETURNING *`,
+      [id, media_type, file_name || null, file_url, file_size || null, description || null, is_public !== false, individualId || null]
+    );
+
+    res.status(201).json(result.rows[0]);
+  } catch (e: any) {
+    console.error('Error adding media:', e);
+    res.status(500).json({ error: 'Failed to add media', details: e.message });
+  }
+});
+
 // GET /api/opportunities - List opportunities
 router.get('/', async (req: Request, res: Response) => {
   const tenantReq = req as TenantRequest;

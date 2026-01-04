@@ -1,0 +1,372 @@
+Set up the backend for homeowner opportunity creation with logistics, tools, and media support.
+
+## Step 1: Database Migration
+
+Run this SQL in your database console:
+```sql
+-- Add JSONB columns to opportunities for logistics data
+ALTER TABLE opportunities
+  ADD COLUMN IF NOT EXISTS logistics_profile jsonb,
+  ADD COLUMN IF NOT EXISTS available_tools_snapshot jsonb,
+  ADD COLUMN IF NOT EXISTS local_resources jsonb;
+
+-- Indexes for JSONB queries
+CREATE INDEX IF NOT EXISTS opportunities_logistics_gin ON opportunities USING gin (logistics_profile);
+CREATE INDEX IF NOT EXISTS opportunities_tools_gin ON opportunities USING gin (available_tools_snapshot);
+CREATE INDEX IF NOT EXISTS opportunities_resources_gin ON opportunities USING gin (local_resources);
+
+-- Tenant tool inventory table
+CREATE TABLE IF NOT EXISTS tenant_tools (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id uuid NOT NULL,
+  name text NOT NULL,
+  category text,
+  description text,
+  policy text NOT NULL DEFAULT 'lend', -- lend | rent | rent_with_operator | not_available
+  daily_rate numeric,
+  operator_required boolean DEFAULT false,
+  availability_notes text,
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS tenant_tools_tenant_idx ON tenant_tools(tenant_id);
+
+-- Verify
+SELECT column_name, data_type 
+FROM information_schema.columns 
+WHERE table_name = 'opportunities' 
+AND column_name IN ('logistics_profile', 'available_tools_snapshot', 'local_resources');
+
+SELECT COUNT(*) as tools_table_exists FROM information_schema.tables WHERE table_name = 'tenant_tools';
+```
+
+## Step 2: Install multer for file uploads
+```bash
+npm i multer @types/multer
+```
+
+## Step 3: Create uploads directory and route
+
+### File: server/routes/uploads.ts
+```typescript
+import { Router } from 'express';
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs';
+import { requireAuth, requireTenant } from '../middleware/guards';
+
+const router = Router();
+
+const uploadDir = path.join(process.cwd(), 'uploads');
+if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+
+const storage = multer.diskStorage({
+  destination: (_req, _file, cb) => cb(null, uploadDir),
+  filename: (_req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    const base = path.basename(file.originalname, ext).replace(/[^a-z0-9_-]/gi, '_').slice(0, 40);
+    cb(null, `${Date.now()}_${base}${ext}`);
+  }
+});
+
+const fileFilter: multer.Options['fileFilter'] = (_req, file, cb) => {
+  const ok = [
+    'image/jpeg', 'image/png', 'image/webp', 'image/gif',
+    'video/mp4', 'video/quicktime', 'video/webm'
+  ].includes(file.mimetype);
+  cb(ok ? null : new Error('Unsupported file type'), ok);
+};
+
+const upload = multer({
+  storage,
+  fileFilter,
+  limits: { fileSize: 80 * 1024 * 1024 } // 80MB for videos
+});
+
+router.post('/', requireAuth, requireTenant, upload.single('file'), async (req, res) => {
+  const file = (req as any).file;
+  if (!file) return res.status(400).json({ error: 'No file uploaded' });
+  const url = `/uploads/${file.filename}`;
+  res.json({ url, mimetype: file.mimetype, originalname: file.originalname, size: file.size });
+});
+
+export default router;
+```
+
+## Step 4: Create tools route
+
+### File: server/routes/tools.ts
+```typescript
+import { Router } from 'express';
+import { requireAuth, requireTenant } from '../middleware/guards';
+
+const router = Router();
+
+// List tenant's tools
+router.get('/', requireAuth, requireTenant, async (req, res) => {
+  try {
+    const tenantId = req.ctx!.tenant_id;
+    const result = await req.tenantQuery(
+      `SELECT * FROM tenant_tools WHERE tenant_id = $1 ORDER BY category NULLS LAST, name`,
+      [tenantId]
+    );
+    res.json({ tools: result.rows });
+  } catch (e: any) {
+    console.error('Error fetching tools:', e);
+    res.status(500).json({ error: 'Failed to fetch tools' });
+  }
+});
+
+// Create a tool
+router.post('/', requireAuth, requireTenant, async (req, res) => {
+  try {
+    const tenantId = req.ctx!.tenant_id;
+    const { name, category, description, policy, daily_rate, operator_required, availability_notes } = req.body;
+    
+    if (!name) return res.status(400).json({ error: 'name is required' });
+
+    const result = await req.tenantQuery(
+      `
+      INSERT INTO tenant_tools (
+        tenant_id, name, category, description, policy, daily_rate, operator_required, availability_notes
+      ) VALUES ($1::uuid, $2, $3, $4, $5, $6, $7, $8)
+      RETURNING *
+      `,
+      [
+        tenantId,
+        name,
+        category || null,
+        description || null,
+        policy || 'lend',
+        daily_rate || null,
+        !!operator_required,
+        availability_notes || null
+      ]
+    );
+
+    res.status(201).json(result.rows[0]);
+  } catch (e: any) {
+    console.error('Error creating tool:', e);
+    res.status(500).json({ error: 'Failed to create tool' });
+  }
+});
+
+// Update a tool
+router.patch('/:id', requireAuth, requireTenant, async (req, res) => {
+  try {
+    const tenantId = req.ctx!.tenant_id;
+    const { id } = req.params;
+    const { name, category, description, policy, daily_rate, operator_required, availability_notes } = req.body;
+
+    const result = await req.tenantQuery(
+      `
+      UPDATE tenant_tools SET
+        name = COALESCE($3, name),
+        category = COALESCE($4, category),
+        description = COALESCE($5, description),
+        policy = COALESCE($6, policy),
+        daily_rate = COALESCE($7, daily_rate),
+        operator_required = COALESCE($8, operator_required),
+        availability_notes = COALESCE($9, availability_notes),
+        updated_at = now()
+      WHERE id = $1::uuid AND tenant_id = $2::uuid
+      RETURNING *
+      `,
+      [id, tenantId, name, category, description, policy, daily_rate, operator_required, availability_notes]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Tool not found' });
+    }
+    res.json(result.rows[0]);
+  } catch (e: any) {
+    console.error('Error updating tool:', e);
+    res.status(500).json({ error: 'Failed to update tool' });
+  }
+});
+
+// Delete a tool
+router.delete('/:id', requireAuth, requireTenant, async (req, res) => {
+  try {
+    const tenantId = req.ctx!.tenant_id;
+    const { id } = req.params;
+
+    const result = await req.tenantQuery(
+      `DELETE FROM tenant_tools WHERE id = $1::uuid AND tenant_id = $2::uuid RETURNING id`,
+      [id, tenantId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Tool not found' });
+    }
+    res.json({ deleted: true, id });
+  } catch (e: any) {
+    console.error('Error deleting tool:', e);
+    res.status(500).json({ error: 'Failed to delete tool' });
+  }
+});
+
+export default router;
+```
+
+## Step 5: Add owner endpoints to opportunities.ts
+
+Add these routes to your existing `server/routes/opportunities.ts` file. Place them BEFORE the `/:id` route to avoid route conflicts:
+```typescript
+// Add these imports at the top if not already present
+import { requireAuth, requireTenant } from '../middleware/guards';
+
+// POST /api/opportunities - Create new opportunity (owner)
+router.post('/', requireAuth, requireTenant, async (req, res) => {
+  try {
+    const tenantId = req.ctx!.tenant_id;
+
+    const {
+      title,
+      description,
+      scope_of_work,
+      work_category,
+      site_address,
+      site_latitude,
+      site_longitude,
+      estimated_value_low,
+      estimated_value_high,
+      budget_ceiling,
+      bid_deadline,
+      questions_deadline,
+      expected_start_date,
+      expected_duration_days,
+      required_certifications,
+      visibility_scope = 'public',
+      portal_id = null,
+      status = 'draft',
+      logistics_profile = null,
+      available_tools_snapshot = null,
+      local_resources = null,
+      community_id = null,
+      service_bundle_id = null
+    } = req.body;
+
+    if (!title || !work_category) {
+      return res.status(400).json({ error: 'title and work_category are required' });
+    }
+
+    // Generate opportunity_ref using sequence
+    const refResult = await req.tenantQuery(
+      `SELECT 'OP-' || to_char(now(), 'YYMMDD') || '-' || lpad(nextval('opportunity_ref_seq')::text, 4, '0') as ref`
+    );
+    const oppRef = refResult.rows[0].ref;
+
+    const publishedAt = status === 'published' ? new Date() : null;
+
+    const result = await req.tenantQuery(
+      `
+      INSERT INTO opportunities (
+        opportunity_ref, owner_tenant_id, title, description, scope_of_work, work_category,
+        site_address, site_latitude, site_longitude,
+        estimated_value_low, estimated_value_high, budget_ceiling,
+        bid_deadline, questions_deadline, expected_start_date, expected_duration_days,
+        required_certifications, status, visibility_scope, portal_id, published_at,
+        logistics_profile, available_tools_snapshot, local_resources,
+        community_id, service_bundle_id
+      ) VALUES (
+        $1, $2::uuid, $3, $4, $5, $6,
+        $7, $8, $9, $10, $11, $12,
+        $13, $14, $15, $16, $17,
+        $18::opportunity_status, $19::publish_visibility, $20::uuid, $21,
+        $22::jsonb, $23::jsonb, $24::jsonb,
+        $25::uuid, $26::uuid
+      )
+      RETURNING id, opportunity_ref, status, created_at
+      `,
+      [
+        oppRef, tenantId, title, description || null, scope_of_work || null, work_category,
+        site_address || null, site_latitude || null, site_longitude || null,
+        estimated_value_low || null, estimated_value_high || null, budget_ceiling || null,
+        bid_deadline || null, questions_deadline || null, expected_start_date || null, expected_duration_days || null,
+        required_certifications || null, status, visibility_scope, portal_id, publishedAt,
+        logistics_profile ? JSON.stringify(logistics_profile) : null,
+        available_tools_snapshot ? JSON.stringify(available_tools_snapshot) : null,
+        local_resources ? JSON.stringify(local_resources) : null,
+        community_id || null, service_bundle_id || null
+      ]
+    );
+
+    res.status(201).json(result.rows[0]);
+  } catch (e: any) {
+    console.error('Error creating opportunity:', e);
+    res.status(500).json({ error: 'Failed to create opportunity', details: e.message });
+  }
+});
+
+// POST /api/opportunities/:id/media - Attach media to opportunity (owner)
+router.post('/:id/media', requireAuth, requireTenant, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const tenantId = req.ctx!.tenant_id;
+    const { media_type, url, caption } = req.body;
+
+    if (!url || !media_type) {
+      return res.status(400).json({ error: 'media_type and url are required' });
+    }
+
+    // Verify owner
+    const ownerCheck = await req.tenantQuery(
+      `SELECT id FROM opportunities WHERE id = $1::uuid AND owner_tenant_id = $2`,
+      [id, tenantId]
+    );
+    if (ownerCheck.rows.length === 0) {
+      return res.status(403).json({ error: 'Not authorized' });
+    }
+
+    const result = await req.tenantQuery(
+      `
+      INSERT INTO opportunity_media (opportunity_id, media_type, url, caption)
+      VALUES ($1::uuid, $2, $3, $4)
+      RETURNING *
+      `,
+      [id, media_type, url, caption || null]
+    );
+
+    res.status(201).json(result.rows[0]);
+  } catch (e: any) {
+    console.error('Error adding media:', e);
+    res.status(500).json({ error: 'Failed to add media', details: e.message });
+  }
+});
+```
+
+## Step 6: Register routes in server/index.ts
+
+Add these lines:
+```typescript
+import path from 'path';
+import uploadsRouter from './routes/uploads';
+import toolsRouter from './routes/tools';
+
+// Serve uploaded files
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
+
+// Register routes
+app.use('/api/uploads', uploadsRouter);
+app.use('/api/tools', toolsRouter);
+```
+
+## Verification
+```bash
+# Test tools endpoint (requires auth)
+curl -s http://localhost:5000/api/tools
+
+# Check migration worked
+# Run in DB console:
+SELECT column_name FROM information_schema.columns WHERE table_name = 'opportunities' AND column_name LIKE '%logistics%';
+```
+
+## Output
+
+Tell me:
+1. Did the migration run successfully (3 new columns on opportunities)?
+2. Did tenant_tools table get created?
+3. Is the server running without TypeScript errors?
+4. Does /api/tools respond (even if 401 without auth)?

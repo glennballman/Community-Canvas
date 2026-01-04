@@ -36,7 +36,10 @@ import claimsRouter from "./routes/claims";
 import internalRouter from "./routes/internal";
 import opportunitiesRouter from "./routes/opportunities";
 import bidsRouter from "./routes/bids";
+import uploadsRouter from "./routes/uploads";
+import toolsRouter from "./routes/tools";
 import { publicQuery } from "./db/tenantDb";
+import express from "express";
 
 // Merge static members with JSON-loaded members for consistent data across the app
 // IMPORTANT: This function is called per-request to ensure fresh data after JSON file updates
@@ -124,6 +127,13 @@ export async function registerRoutes(
   // Register procurement opportunities and bids routes
   app.use('/api/opportunities', opportunitiesRouter);
   app.use('/api/bids', bidsRouter);
+
+  // Register file uploads and serve uploaded files
+  app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
+  app.use('/api/uploads', uploadsRouter);
+
+  // Register tenant tools inventory routes
+  app.use('/api/tools', toolsRouter);
 
   // Public catalog endpoints (no auth required)
   app.get('/api/v1/catalog/vehicles', async (req, res) => {
