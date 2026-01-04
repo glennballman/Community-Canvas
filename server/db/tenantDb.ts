@@ -5,16 +5,37 @@ import { pool } from '../db';
 
 const SERVICE_MODE_SENTINEL = '__SERVICE__';
 
+export interface ActorContext {
+  tenant_id: string;
+  portal_id?: string;
+  individual_id?: string;
+  platform_staff_id?: string;
+  impersonation_session_id?: string;
+  actor_type: 'tenant' | 'platform' | 'service';
+}
+
 async function setSessionVars(client: PoolClient, ctx: TenantContext): Promise<void> {
   await client.query(`SELECT set_config('app.tenant_id', $1, true)`, [ctx.tenant_id || '']);
   await client.query(`SELECT set_config('app.portal_id', $1, true)`, [ctx.portal_id || '']);
   await client.query(`SELECT set_config('app.individual_id', $1, true)`, [ctx.individual_id || '']);
+  await client.query(`SELECT set_config('app.platform_staff_id', $1, true)`, ['']);
+  await client.query(`SELECT set_config('app.impersonation_session_id', $1, true)`, ['']);
+}
+
+async function setActorSessionVars(client: PoolClient, actor: ActorContext): Promise<void> {
+  await client.query(`SELECT set_config('app.tenant_id', $1, true)`, [actor.tenant_id || '']);
+  await client.query(`SELECT set_config('app.portal_id', $1, true)`, [actor.portal_id || '']);
+  await client.query(`SELECT set_config('app.individual_id', $1, true)`, [actor.individual_id || '']);
+  await client.query(`SELECT set_config('app.platform_staff_id', $1, true)`, [actor.platform_staff_id || '']);
+  await client.query(`SELECT set_config('app.impersonation_session_id', $1, true)`, [actor.impersonation_session_id || '']);
 }
 
 async function clearSessionVars(client: PoolClient): Promise<void> {
   await client.query(`SELECT set_config('app.tenant_id', '', false)`);
   await client.query(`SELECT set_config('app.portal_id', '', false)`);
   await client.query(`SELECT set_config('app.individual_id', '', false)`);
+  await client.query(`SELECT set_config('app.platform_staff_id', '', false)`);
+  await client.query(`SELECT set_config('app.impersonation_session_id', '', false)`);
 }
 
 async function setServiceMode(client: PoolClient): Promise<void> {
@@ -127,19 +148,67 @@ export async function withServiceTransaction<T>(
   }
 }
 
+export async function actorQuery<T extends QueryResultRow = any>(
+  actor: ActorContext,
+  text: string,
+  values?: any[]
+): Promise<QueryResult<T>> {
+  const client = await pool.connect();
+  
+  try {
+    await clearSessionVars(client);
+    await setActorSessionVars(client, actor);
+    return await client.query<T>(text, values);
+  } finally {
+    await clearSessionVars(client).catch(() => {});
+    client.release();
+  }
+}
+
+export async function withActorTransaction<T>(
+  actor: ActorContext,
+  callback: (client: PoolClient) => Promise<T>
+): Promise<T> {
+  const client = await pool.connect();
+  
+  try {
+    await clearSessionVars(client);
+    await client.query('BEGIN');
+    await setActorSessionVars(client, actor);
+    const result = await callback(client);
+    await client.query('COMMIT');
+    return result;
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    await clearSessionVars(client).catch(() => {});
+    client.release();
+  }
+}
+
 declare global {
   namespace Express {
     interface Request {
       tenantQuery: <T extends QueryResultRow = any>(text: string, values?: any[]) => Promise<QueryResult<T>>;
       tenantTransaction: <T>(callback: (client: PoolClient) => Promise<T>) => Promise<T>;
+      actorContext?: ActorContext;
     }
   }
 }
 
 export function attachTenantDb(req: Request, res: Response, next: NextFunction): void {
-  req.tenantQuery = <T extends QueryResultRow = any>(text: string, values?: any[]) => 
-    tenantQuery<T>(req, text, values);
-  req.tenantTransaction = <T>(callback: (client: PoolClient) => Promise<T>) => 
-    withTenantTransaction<T>(req, callback);
+  req.tenantQuery = <T extends QueryResultRow = any>(text: string, values?: any[]) => {
+    if (req.actorContext) {
+      return actorQuery<T>(req.actorContext, text, values);
+    }
+    return tenantQuery<T>(req, text, values);
+  };
+  req.tenantTransaction = <T>(callback: (client: PoolClient) => Promise<T>) => {
+    if (req.actorContext) {
+      return withActorTransaction<T>(req.actorContext, callback);
+    }
+    return withTenantTransaction<T>(req, callback);
+  };
   next();
 }

@@ -378,13 +378,17 @@ router.post(
       
       const expiresAt = new Date(Date.now() + duration_hours * 60 * 60 * 1000);
       
-      // Create impersonation session
+      // Generate secure random token for impersonation cookie
+      const impersonationToken = crypto.randomBytes(32).toString('hex');
+      const tokenHash = crypto.createHash('sha256').update(impersonationToken).digest('hex');
+      
+      // Create impersonation session with token hash
       const sessionResult = await serviceQuery(
         `INSERT INTO cc_impersonation_sessions 
-         (platform_staff_id, tenant_id, individual_id, reason, expires_at)
-         VALUES ($1, $2, $3, $4, $5)
+         (platform_staff_id, tenant_id, individual_id, reason, expires_at, impersonation_token_hash)
+         VALUES ($1, $2, $3, $4, $5, $6)
          RETURNING id, created_at`,
-        [staffId, tenant_id, individual_id || null, reason, expiresAt]
+        [staffId, tenant_id, individual_id || null, reason, expiresAt, tokenHash]
       );
       
       const newSession = sessionResult.rows[0];
@@ -400,6 +404,16 @@ router.post(
           req.headers['user-agent'] || 'unknown'
         ]
       );
+      
+      // Set impersonation_sid cookie (path=/ so tenant routes can read it)
+      const isProduction = process.env.NODE_ENV === 'production';
+      res.cookie('impersonation_sid', impersonationToken, {
+        path: '/',
+        httpOnly: true,
+        secure: isProduction,
+        sameSite: 'strict',
+        maxAge: duration_hours * 60 * 60 * 1000
+      });
       
       console.log(`[SECURITY] Impersonation started: staff=${platformReq.platformStaff!.email} tenant=${tenantCheck.rows[0].name} reason="${reason}"`);
       
@@ -434,10 +448,10 @@ router.post(
       const platformReq = req as PlatformStaffRequest;
       const staffId = platformReq.platformStaff!.id;
       
-      // Find and revoke active session
+      // Find and revoke active session, clear token hash
       const revokeResult = await serviceQuery(
         `UPDATE cc_impersonation_sessions 
-         SET revoked_at = now()
+         SET revoked_at = now(), impersonation_token_hash = NULL
          WHERE platform_staff_id = $1 
            AND revoked_at IS NULL 
            AND expires_at > now()
@@ -466,6 +480,9 @@ router.post(
           req.headers['user-agent'] || 'unknown'
         ]
       );
+      
+      // Clear impersonation_sid cookie
+      res.clearCookie('impersonation_sid', { path: '/' });
       
       console.log(`[SECURITY] Impersonation stopped: staff=${platformReq.platformStaff!.email} session=${revokedSession.id}`);
       

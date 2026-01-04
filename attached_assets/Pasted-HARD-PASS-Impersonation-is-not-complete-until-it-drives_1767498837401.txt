@@ -1,0 +1,44 @@
+HARD PASS: Impersonation is not complete until it drives Postgres RLS via GUCs.
+
+P0 required changes BEFORE any frontend:
+
+A) Implement GUC propagation for impersonation
+1) Add new GUC setters in db helpers:
+- app.platform_staff_id
+- app.impersonation_session_id
+2) Extend tenantQuery/tenantTransaction to accept an optional “actor context”:
+- if actor_type=platform AND impersonating:
+  set app.tenant_id = impersonated tenant_id
+  set app.individual_id = impersonated individual_id OR ''
+  set app.platform_staff_id = staff_id
+  set app.impersonation_session_id = impersonation_session_id
+3) clearSessionVars() MUST run before+after every pooled query/transaction.
+
+B) Make impersonation actually affect tenant routes
+Because platform_sid cookie is path-scoped to /api/internal, platform sessions never reach /api/*
+So create a secure bridge:
+Option 1 (preferred):
+- On impersonate/start, mint a short-lived “impersonation token” (opaque random) stored hashed in cc_impersonation_sessions
+- Set cookie: impersonation_sid (path=/, HttpOnly, SameSite=Strict, Secure) containing the opaque token
+- Tenant middleware validates token -> loads impersonation session -> sets ctx + GUCs
+Option 2:
+- Create a tenant_sid derived session ONLY while impersonating, with restricted middleware.
+
+C) Add SQL helper functions (optional but recommended)
+- current_platform_staff_id()
+- current_impersonation_session_id()
+
+D) QA script required: scripts/qa-impersonation-rls-e2e.sh
+Must prove:
+1) Staff cannot call tenant endpoints without impersonation cookie (401/403)
+2) Start impersonation -> tenant endpoint succeeds creating tenant_vehicle using tenantQuery
+3) Asset trigger fires and assets.tenant_id == impersonated tenant_id
+4) Cross-tenant read fails
+5) Stop impersonation -> tenant endpoints blocked again
+6) Audit events include platform_staff_id + impersonation_session_id + tenant_id
+7) 50-iteration pool leakage test mixing tenantQuery and serviceQuery passes
+
+Return:
+- code diffs (middleware + db helpers)
+- migration if adding token hash fields
+- QA output
