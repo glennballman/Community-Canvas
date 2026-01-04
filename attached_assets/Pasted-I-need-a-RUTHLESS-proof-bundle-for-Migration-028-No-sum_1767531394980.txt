@@ -1,0 +1,47 @@
+I need a RUTHLESS proof bundle for Migration 028. No summaries. Provide raw SQL + outputs.
+
+Deliverables:
+A) PostGIS zero-proof (hard evidence)
+1) SELECT extname FROM pg_extension WHERE extname ILIKE '%postgis%';
+2) Find PostGIS types:
+   - search for columns with udt_name in ('geometry','geography') across all schemas
+3) Find PostGIS functions/operators:
+   - grep in DB: pg_proc + pg_get_functiondef for 'ST_' and 'geometry'/'geography'
+4) Find PostGIS references in views:
+   - pg_views.definition search for 'ST_'/'geometry'/'geography'
+
+B) Canonical geo correctness proof
+1) Show the exact SQL definitions (pg_get_functiondef) for:
+   - resolve_community()
+   - find_community_by_location()
+   - search_unified_assets()
+   - find_assets_by_capability()
+2) For each, explicitly confirm (by showing the function body) that it uses:
+   - bbox or grid prefilter (lat_cell/lon_cell OR lat/lng bounding box)
+   - haversine (or equivalent spherical) distance
+   - ORDER BY computed distance
+Hard FAIL if any function uses sqrt((lat-lat2)^2 + (lng-lng2)^2) or “degree euclidean”.
+
+C) Index + query plan proof (performance)
+1) List all lat_cell/lon_cell columns created + table names (pg_attribute query).
+2) List indexes that support near-me queries:
+   - show index DDL (pg_indexes) for each spatial table
+3) Provide EXPLAIN (ANALYZE, BUFFERS) for a representative near-me query on:
+   - unified assets / searchable_assets
+   - external_records / entities (whichever supports location search)
+The plan must show index usage (Bitmap/Index Scan) using grid or bbox predicates.
+Hard FAIL if sequential scan occurs on tables > 10k rows for near-me.
+
+D) View dependency + row parity proof
+1) Show view definitions for:
+   - v_unified_accommodations, v_unified_parking, v_unified_towables, v_unified_self_contained, searchable_assets
+2) Confirm counts match expected source tables (provide before/after counts).
+3) Confirm views contain NO geom/geography types or ST_* calls.
+
+E) Migration hygiene
+1) Confirm migrations 018–022 are unchanged from before rollback.
+2) Show the diff summary of 028 only.
+
+Output format:
+- A single “028_PROOF_BUNDLE.md” file containing SQL blocks and their terminal outputs.
+- If ANY check fails, stop and label it FAIL with the first failing query and why.

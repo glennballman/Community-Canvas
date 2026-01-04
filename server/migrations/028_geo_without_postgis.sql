@@ -164,6 +164,15 @@ ALTER TABLE asset_availability ADD COLUMN IF NOT EXISTS location_lon_cell INTEGE
 CREATE INDEX IF NOT EXISTS idx_asset_availability_grid ON asset_availability(location_lat_cell, location_lon_cell) 
   WHERE location_lat_cell IS NOT NULL AND location_lon_cell IS NOT NULL;
 
+-- opportunities site grid columns (already has site_latitude/site_longitude)
+ALTER TABLE opportunities ADD COLUMN IF NOT EXISTS site_lat_cell INTEGER 
+  GENERATED ALWAYS AS (fn_lat_cell(site_latitude::double precision)) STORED;
+ALTER TABLE opportunities ADD COLUMN IF NOT EXISTS site_lon_cell INTEGER 
+  GENERATED ALWAYS AS (fn_lon_cell(site_longitude::double precision)) STORED;
+
+CREATE INDEX IF NOT EXISTS idx_opportunities_site_grid ON opportunities(site_lat_cell, site_lon_cell) 
+  WHERE site_lat_cell IS NOT NULL AND site_lon_cell IS NOT NULL;
+
 -- =====================================================================
 -- PHASE 3: Drop Dependent Views, Triggers, and Columns
 -- =====================================================================
@@ -193,6 +202,7 @@ ALTER TABLE unified_assets DROP COLUMN IF EXISTS geom CASCADE;
 ALTER TABLE assets DROP COLUMN IF EXISTS geom CASCADE;
 ALTER TABLE work_orders DROP COLUMN IF EXISTS site_geom CASCADE;
 ALTER TABLE asset_availability DROP COLUMN IF EXISTS location_geom CASCADE;
+ALTER TABLE opportunities DROP COLUMN IF EXISTS site_geom CASCADE;
 
 -- Drop PostGIS indexes
 DROP INDEX IF EXISTS idx_external_records_geom;
