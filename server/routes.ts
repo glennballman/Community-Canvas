@@ -101,6 +101,187 @@ export async function registerRoutes(
   // Register crew accommodation search routes
   app.use('/api/crew', createCrewRouter());
 
+  // Debug endpoint: Happy-path RLS test with tenant context
+  app.get('/api/_debug/rls-happy-path', async (req, res) => {
+    const results: any = { steps: [] };
+    let tenantId: string | null = null;
+    let individualId: string | null = null;
+    let vehicleId: string | null = null;
+    let assetId: string | null = null;
+    
+    try {
+      const { withServiceTransaction } = await import('./db/tenantDb');
+      
+      // Step 1: Seed test tenant and individual in SERVICE transaction
+      const seedResult = await withServiceTransaction(async (client) => {
+        // Insert test tenant (using actual schema columns)
+        const tenantRes = await client.query(`
+          INSERT INTO cc_tenants (id, name, slug, tenant_type, status)
+          VALUES (gen_random_uuid(), 'RLS Test Tenant', 'rls-test-' || extract(epoch from now())::int, 'business', 'active')
+          RETURNING id
+        `);
+        const tid = tenantRes.rows[0].id;
+        
+        // Insert test individual (using actual schema columns)
+        const indRes = await client.query(`
+          INSERT INTO cc_individuals (id, full_name, email, status)
+          VALUES (gen_random_uuid(), 'RLS Tester', 'rls-test-' || extract(epoch from now())::int || '@test.local', 'active')
+          RETURNING id
+        `);
+        const iid = indRes.rows[0].id;
+        
+        return { tenant_id: tid, individual_id: iid };
+      });
+      
+      tenantId = seedResult.tenant_id;
+      individualId = seedResult.individual_id;
+      results.steps.push({
+        step: 1,
+        description: 'Seed test tenant + individual via withServiceTransaction',
+        tenant_id: tenantId,
+        individual_id: individualId,
+        status: 'SUCCESS'
+      });
+      
+      // Step 2 & 3: Simulate authenticated request with tenant context
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+        
+        // Set tenant context (simulating tenantTransaction with ctx)
+        await client.query(`SELECT set_config('app.tenant_id', $1, true)`, [tenantId]);
+        await client.query(`SELECT set_config('app.individual_id', $1, true)`, [individualId]);
+        
+        results.steps.push({
+          step: 2,
+          description: 'Set tenant context via set_config',
+          context: { tenant_id: tenantId, individual_id: individualId },
+          status: 'SUCCESS'
+        });
+        
+        // Step 3: Insert tenant_vehicle
+        const insertRes = await client.query(`
+          INSERT INTO tenant_vehicles (id, tenant_id, nickname, is_active, status)
+          VALUES (gen_random_uuid(), $1, 'RLS Happy Path Vehicle', true, 'active')
+          RETURNING id, asset_id
+        `, [tenantId]);
+        
+        vehicleId = insertRes.rows[0].id;
+        assetId = insertRes.rows[0].asset_id;
+        
+        results.steps.push({
+          step: 3,
+          description: 'INSERT tenant_vehicle with tenant context',
+          vehicle_id: vehicleId,
+          asset_id: assetId,
+          asset_id_is_not_null: assetId !== null,
+          status: assetId !== null ? 'SUCCESS' : 'FAILED - asset_id is null'
+        });
+        
+        // Step 4: Verify asset record
+        const assetRes = await client.query(`
+          SELECT tenant_id, owner_tenant_id, source_table, source_id 
+          FROM assets WHERE id = $1
+        `, [assetId]);
+        
+        const assetRow = assetRes.rows[0];
+        const assetVerification = {
+          tenant_id_matches: assetRow?.tenant_id === tenantId,
+          owner_tenant_id_matches: assetRow?.owner_tenant_id === tenantId,
+          source_table_correct: assetRow?.source_table === 'tenant_vehicles',
+          source_id_matches: assetRow?.source_id === vehicleId
+        };
+        
+        results.steps.push({
+          step: '4a',
+          description: 'Verify asset record matches expected values',
+          asset_record: assetRow,
+          verification: assetVerification,
+          status: Object.values(assetVerification).every(v => v) ? 'SUCCESS' : 'FAILED'
+        });
+        
+        // Check asset_capabilities (should not error, count can be 0)
+        const capRes = await client.query(`
+          SELECT COUNT(*) as count FROM asset_capabilities WHERE asset_id = $1
+        `, [assetId]);
+        
+        results.steps.push({
+          step: '4b',
+          description: 'Query asset_capabilities (must not error)',
+          capability_count: parseInt(capRes.rows[0].count),
+          status: 'SUCCESS'
+        });
+        
+        await client.query('ROLLBACK'); // Don't persist the vehicle insert from this connection
+      } finally {
+        client.release();
+      }
+      
+      // Step 5: Cleanup in service transaction
+      const cleanupResult = await withServiceTransaction(async (client) => {
+        const deleted: any = {};
+        
+        // Delete vehicle if it was committed (it wasn't, but check anyway)
+        if (vehicleId) {
+          const vRes = await client.query('DELETE FROM tenant_vehicles WHERE id = $1 RETURNING id', [vehicleId]);
+          deleted.vehicle = vRes.rowCount;
+        }
+        
+        // Delete asset if it exists
+        if (assetId) {
+          const aRes = await client.query('DELETE FROM assets WHERE id = $1 RETURNING id', [assetId]);
+          deleted.asset = aRes.rowCount;
+        }
+        
+        // Delete individual
+        if (individualId) {
+          const iRes = await client.query('DELETE FROM cc_individuals WHERE id = $1 RETURNING id', [individualId]);
+          deleted.individual = iRes.rowCount;
+        }
+        
+        // Delete tenant
+        if (tenantId) {
+          const tRes = await client.query('DELETE FROM cc_tenants WHERE id = $1 RETURNING id', [tenantId]);
+          deleted.tenant = tRes.rowCount;
+        }
+        
+        return deleted;
+      });
+      
+      results.steps.push({
+        step: 5,
+        description: 'Cleanup via withServiceTransaction',
+        deleted: cleanupResult,
+        status: 'SUCCESS'
+      });
+      
+      results.overall = 'ALL STEPS PASSED';
+      res.json(results);
+      
+    } catch (e: any) {
+      results.error = e.message;
+      results.stack = e.stack;
+      
+      // Attempt cleanup on error
+      if (tenantId || individualId) {
+        try {
+          const { withServiceTransaction } = await import('./db/tenantDb');
+          await withServiceTransaction(async (client) => {
+            if (vehicleId) await client.query('DELETE FROM tenant_vehicles WHERE id = $1', [vehicleId]);
+            if (assetId) await client.query('DELETE FROM assets WHERE id = $1', [assetId]);
+            if (individualId) await client.query('DELETE FROM cc_individuals WHERE id = $1', [individualId]);
+            if (tenantId) await client.query('DELETE FROM cc_tenants WHERE id = $1', [tenantId]);
+          });
+          results.cleanup = 'attempted';
+        } catch (cleanupErr: any) {
+          results.cleanup_error = cleanupErr.message;
+        }
+      }
+      
+      res.status(500).json(results);
+    }
+  });
+
   // Debug endpoint to prove db connection runs as cc_app with RLS
   app.get('/api/_debug/db-whoami', async (req, res) => {
     try {
