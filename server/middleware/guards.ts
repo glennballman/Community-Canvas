@@ -1,16 +1,60 @@
 import { Request, Response, NextFunction, RequestHandler } from 'express';
+import { timingSafeEqual } from 'crypto';
 import { TenantRequest } from './tenantContext';
 
-// Internal service key for background jobs and ingestion routes
-// These endpoints must NEVER be reachable from public HTTP without this key
-const INTERNAL_SERVICE_KEY = process.env.INTERNAL_SERVICE_KEY || 'dev-internal-key-change-in-prod';
+// HARDENED: No fallback - if INTERNAL_SERVICE_KEY is not set, service mode is disabled
+const INTERNAL_SERVICE_KEY = process.env.INTERNAL_SERVICE_KEY || '';
+
+// Timing-safe comparison to prevent timing attacks
+function safeCompare(a: string, b: string): boolean {
+  if (!a || !b) return false;
+  if (a.length !== b.length) return false;
+  try {
+    return timingSafeEqual(Buffer.from(a, 'utf8'), Buffer.from(b, 'utf8'));
+  } catch {
+    return false;
+  }
+}
+
+// HARDENED: Check if request has valid service key
+// Returns false if INTERNAL_SERVICE_KEY env var is not set (no fallback)
+export function isServiceKeyRequest(req: Request): boolean {
+  if (!INTERNAL_SERVICE_KEY) {
+    // Service mode disabled when env var not set
+    return false;
+  }
+  const providedKey = req.headers['x-internal-service-key'];
+  if (typeof providedKey !== 'string') return false;
+  return safeCompare(providedKey, INTERNAL_SERVICE_KEY);
+}
+
+// Audit event for service-key access (call this in handlers that accept service key)
+export interface ServiceKeyAuditEvent {
+  endpoint: string;
+  method: string;
+  resource_id?: string;
+  action: string;
+  ip: string;
+  user_agent: string;
+  timestamp: string;
+}
+
+export function createServiceKeyAuditEvent(req: Request, action: string, resourceId?: string): ServiceKeyAuditEvent {
+  return {
+    endpoint: req.originalUrl,
+    method: req.method,
+    resource_id: resourceId,
+    action,
+    ip: req.ip || req.socket.remoteAddress || 'unknown',
+    user_agent: req.headers['user-agent'] || 'unknown',
+    timestamp: new Date().toISOString()
+  };
+}
 
 // Guard for internal/service-mode endpoints that should never be exposed publicly
-// Requires X-Internal-Service-Key header to match the configured key
+// HARDENED: Requires INTERNAL_SERVICE_KEY env var to be set
 export const requireServiceKey: RequestHandler = (req: Request, res: Response, next: NextFunction) => {
-  const providedKey = req.headers['x-internal-service-key'];
-  
-  if (!providedKey || providedKey !== INTERNAL_SERVICE_KEY) {
+  if (!isServiceKeyRequest(req)) {
     return res.status(403).json({ 
       success: false, 
       error: 'Internal service access required',
@@ -145,13 +189,14 @@ export const optionalAuth: RequestHandler = (req: Request, res: Response, next: 
 };
 
 // Require tenant admin role OR service mode (for platform reviewers)
+// HARDENED: Uses timing-safe comparison, no fallback key
 export const requireTenantAdminOrService: RequestHandler = (req: Request, res: Response, next: NextFunction) => {
   const tenantReq = req as TenantRequest;
   
-  // Check for service key header (platform operations)
-  const providedKey = req.headers['x-internal-service-key'];
-  const INTERNAL_SERVICE_KEY = process.env.INTERNAL_SERVICE_KEY || 'dev-internal-key-change-in-prod';
-  if (providedKey && providedKey === INTERNAL_SERVICE_KEY) {
+  // Check for valid service key (uses timing-safe compare, no fallback)
+  if (isServiceKeyRequest(req)) {
+    // Mark request as service-mode for downstream handlers
+    (req as any)._isServiceMode = true;
     return next();
   }
   

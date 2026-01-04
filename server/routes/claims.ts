@@ -1,13 +1,42 @@
 import express, { Request, Response } from 'express';
 import { pool } from '../db';
 import { tenantQuery, serviceQuery, withServiceTransaction } from '../db/tenantDb';
-import { requireAuth, requireTenant, requireTenantAdminOrService } from '../middleware/guards';
+import { 
+  requireAuth, 
+  requireTenant, 
+  requireTenantAdminOrService,
+  isServiceKeyRequest,
+  createServiceKeyAuditEvent
+} from '../middleware/guards';
 import { TenantRequest } from '../middleware/tenantContext';
 
-function isServiceKeyRequest(req: Request): boolean {
-  const providedKey = req.headers['x-internal-service-key'];
-  const INTERNAL_SERVICE_KEY = process.env.INTERNAL_SERVICE_KEY || 'dev-internal-key-change-in-prod';
-  return providedKey === INTERNAL_SERVICE_KEY;
+// Log service-key audit event to database
+// For security audit events, claim_id may be NULL if the claim doesn't exist
+// The attempted claim_id is always stored in the payload for forensics
+async function logServiceKeyAudit(
+  claimId: string, 
+  action: string, 
+  req: Request
+): Promise<void> {
+  const auditEvent = createServiceKeyAuditEvent(req, action, claimId);
+  try {
+    await withServiceTransaction(async (client) => {
+      // Check if claim exists for FK constraint
+      const claimExists = await client.query(
+        `SELECT 1 FROM catalog_claims WHERE id = $1`, 
+        [claimId]
+      );
+      const validClaimId = claimExists.rows.length > 0 ? claimId : null;
+      
+      await client.query(`
+        INSERT INTO catalog_claim_events (claim_id, event_type, actor_individual_id, payload)
+        VALUES ($1, $2, NULL, $3::jsonb)
+      `, [validClaimId, `service_key_${action}`, JSON.stringify(auditEvent)]);
+    });
+    console.log(`[AUDIT] Service-key access: ${action} on claim ${claimId} from ${auditEvent.ip}`);
+  } catch (e) {
+    console.error(`[AUDIT ERROR] Failed to log service-key access:`, e);
+  }
 }
 
 const router = express.Router();
@@ -326,6 +355,11 @@ router.post('/:claimId/review/start', requireTenantAdminOrService, async (req: R
     const { claimId } = req.params;
     const isServiceMode = isServiceKeyRequest(req);
 
+    // MANDATORY AUDIT: Log service-key access before any business logic
+    if (isServiceMode) {
+      await logServiceKeyAudit(claimId, 'review_start_attempt', req);
+    }
+
     const claimCheck = isServiceMode 
       ? await serviceQuery(`SELECT id, tenant_id, status FROM catalog_claims WHERE id = $1`, [claimId])
       : await tenantQuery(req, `SELECT id, tenant_id, status FROM catalog_claims WHERE id = $1`, [claimId]);
@@ -358,8 +392,8 @@ router.post('/:claimId/review/start', requireTenantAdminOrService, async (req: R
 
       await client.query(`
         INSERT INTO catalog_claim_events (claim_id, event_type, actor_individual_id, payload)
-        VALUES ($1, 'review_started', $2, '{}'::jsonb)
-      `, [claimId, actorId]);
+        VALUES ($1, 'review_started', $2, $3::jsonb)
+      `, [claimId, actorId, JSON.stringify({ via_service_key: isServiceMode })]);
     });
 
     res.json({ claim_id: claimId, status: 'under_review' });
@@ -377,6 +411,11 @@ router.post('/:claimId/decision', requireTenantAdminOrService, async (req: Reque
     const { claimId } = req.params;
     const { decision, review_note } = req.body;
     const isServiceMode = isServiceKeyRequest(req);
+
+    // MANDATORY AUDIT: Log service-key access before any business logic
+    if (isServiceMode) {
+      await logServiceKeyAudit(claimId, `decision_${decision || 'unknown'}_attempt`, req);
+    }
 
     if (!decision || !['approve', 'reject'].includes(decision)) {
       return res.status(400).json({ 
