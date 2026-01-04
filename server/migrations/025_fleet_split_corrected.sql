@@ -632,23 +632,23 @@ ALTER TABLE tenant_trailer_photos ENABLE ROW LEVEL SECURITY;
 -- tenant_vehicles policies
 DO $$
 BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE polname = 'tenant_vehicles_select') THEN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'tenant_vehicles_select') THEN
     CREATE POLICY tenant_vehicles_select ON tenant_vehicles FOR SELECT
       USING (tenant_id = current_tenant_id() OR is_service_mode());
   END IF;
   
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE polname = 'tenant_vehicles_insert') THEN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'tenant_vehicles_insert') THEN
     CREATE POLICY tenant_vehicles_insert ON tenant_vehicles FOR INSERT
       WITH CHECK (tenant_id = current_tenant_id() OR is_service_mode());
   END IF;
   
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE polname = 'tenant_vehicles_update') THEN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'tenant_vehicles_update') THEN
     CREATE POLICY tenant_vehicles_update ON tenant_vehicles FOR UPDATE
       USING (tenant_id = current_tenant_id() OR is_service_mode())
       WITH CHECK (tenant_id = current_tenant_id() OR is_service_mode());
   END IF;
   
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE polname = 'tenant_vehicles_delete') THEN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'tenant_vehicles_delete') THEN
     CREATE POLICY tenant_vehicles_delete ON tenant_vehicles FOR DELETE
       USING (tenant_id = current_tenant_id() OR is_service_mode());
   END IF;
@@ -657,23 +657,23 @@ END $$;
 -- tenant_trailers policies
 DO $$
 BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE polname = 'tenant_trailers_select') THEN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'tenant_trailers_select') THEN
     CREATE POLICY tenant_trailers_select ON tenant_trailers FOR SELECT
       USING (tenant_id = current_tenant_id() OR is_service_mode());
   END IF;
   
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE polname = 'tenant_trailers_insert') THEN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'tenant_trailers_insert') THEN
     CREATE POLICY tenant_trailers_insert ON tenant_trailers FOR INSERT
       WITH CHECK (tenant_id = current_tenant_id() OR is_service_mode());
   END IF;
   
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE polname = 'tenant_trailers_update') THEN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'tenant_trailers_update') THEN
     CREATE POLICY tenant_trailers_update ON tenant_trailers FOR UPDATE
       USING (tenant_id = current_tenant_id() OR is_service_mode())
       WITH CHECK (tenant_id = current_tenant_id() OR is_service_mode());
   END IF;
   
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE polname = 'tenant_trailers_delete') THEN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'tenant_trailers_delete') THEN
     CREATE POLICY tenant_trailers_delete ON tenant_trailers FOR DELETE
       USING (tenant_id = current_tenant_id() OR is_service_mode());
   END IF;
@@ -682,23 +682,23 @@ END $$;
 -- tenant_vehicle_photos policies
 DO $$
 BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE polname = 'tenant_vehicle_photos_select') THEN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'tenant_vehicle_photos_select') THEN
     CREATE POLICY tenant_vehicle_photos_select ON tenant_vehicle_photos FOR SELECT
       USING (tenant_id = current_tenant_id() OR is_service_mode());
   END IF;
   
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE polname = 'tenant_vehicle_photos_insert') THEN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'tenant_vehicle_photos_insert') THEN
     CREATE POLICY tenant_vehicle_photos_insert ON tenant_vehicle_photos FOR INSERT
       WITH CHECK (tenant_id = current_tenant_id() OR is_service_mode());
   END IF;
   
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE polname = 'tenant_vehicle_photos_update') THEN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'tenant_vehicle_photos_update') THEN
     CREATE POLICY tenant_vehicle_photos_update ON tenant_vehicle_photos FOR UPDATE
       USING (tenant_id = current_tenant_id() OR is_service_mode())
       WITH CHECK (tenant_id = current_tenant_id() OR is_service_mode());
   END IF;
   
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE polname = 'tenant_vehicle_photos_delete') THEN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'tenant_vehicle_photos_delete') THEN
     CREATE POLICY tenant_vehicle_photos_delete ON tenant_vehicle_photos FOR DELETE
       USING (tenant_id = current_tenant_id() OR is_service_mode());
   END IF;
@@ -707,23 +707,23 @@ END $$;
 -- tenant_trailer_photos policies
 DO $$
 BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE polname = 'tenant_trailer_photos_select') THEN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'tenant_trailer_photos_select') THEN
     CREATE POLICY tenant_trailer_photos_select ON tenant_trailer_photos FOR SELECT
       USING (tenant_id = current_tenant_id() OR is_service_mode());
   END IF;
   
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE polname = 'tenant_trailer_photos_insert') THEN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'tenant_trailer_photos_insert') THEN
     CREATE POLICY tenant_trailer_photos_insert ON tenant_trailer_photos FOR INSERT
       WITH CHECK (tenant_id = current_tenant_id() OR is_service_mode());
   END IF;
   
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE polname = 'tenant_trailer_photos_update') THEN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'tenant_trailer_photos_update') THEN
     CREATE POLICY tenant_trailer_photos_update ON tenant_trailer_photos FOR UPDATE
       USING (tenant_id = current_tenant_id() OR is_service_mode())
       WITH CHECK (tenant_id = current_tenant_id() OR is_service_mode());
   END IF;
   
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE polname = 'tenant_trailer_photos_delete') THEN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'tenant_trailer_photos_delete') THEN
     CREATE POLICY tenant_trailer_photos_delete ON tenant_trailer_photos FOR DELETE
       USING (tenant_id = current_tenant_id() OR is_service_mode());
   END IF;
