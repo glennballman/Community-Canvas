@@ -1,0 +1,779 @@
+Replace the opportunities and bids routes with these ChatGPT-approved final versions.
+
+## File 1: server/routes/opportunities.ts
+```typescript
+import { Router } from 'express';
+import { requireAuth, requireTenant } from '../middleware/guards';
+
+const router = Router();
+
+const SORT_MAP: Record<string, string> = {
+  created_at: 'o.created_at',
+  title: 'o.title',
+  bid_deadline: 'o.bid_deadline',
+  expected_start_date: 'o.expected_start_date',
+  estimated_value_high: 'o.estimated_value_high'
+};
+
+// IMPORTANT: /stats/summary MUST come before /:id
+router.get('/stats/summary', async (req, res) => {
+  try {
+    const portalId = req.ctx?.portal_id;
+
+    const whereClauses: string[] = [];
+    const params: any[] = [];
+    let paramIndex = 1;
+
+    // Visibility only (authoritative) - NO status filter here
+    if (portalId) {
+      whereClauses.push(`(
+        o.visibility_scope = 'public'::publish_visibility
+        OR (o.visibility_scope = 'portal_only'::publish_visibility AND o.portal_id = $${paramIndex})
+      )`);
+      params.push(portalId);
+      paramIndex++;
+    } else {
+      whereClauses.push(`o.visibility_scope = 'public'::publish_visibility`);
+    }
+
+    const whereClause = `WHERE ${whereClauses.join(' AND ')}`;
+
+    const result = await req.tenantQuery(
+      `
+      SELECT
+        COUNT(*) FILTER (WHERE status = 'published'::opportunity_status)  as published,
+        COUNT(*) FILTER (WHERE status = 'evaluating'::opportunity_status) as evaluating,
+        COUNT(*) FILTER (WHERE status = 'awarded'::opportunity_status)     as awarded,
+        COUNT(*) as total
+      FROM opportunities o
+      ${whereClause}
+      `,
+      params
+    );
+
+    res.json(result.rows[0] || { published: 0, evaluating: 0, awarded: 0, total: 0 });
+  } catch (error) {
+    console.error('Error fetching opportunity stats:', error);
+    res.status(500).json({ error: 'Failed to fetch stats' });
+  }
+});
+
+// GET /api/opportunities - List opportunities
+router.get('/', async (req, res) => {
+  try {
+    const {
+      community_id,
+      service_bundle_id,
+      work_category,
+      status,
+      certifications,
+      min_value,
+      max_value,
+      expected_start_after,
+      expected_start_before,
+      search,
+      limit = '20',
+      offset = '0',
+      sort = 'created_at',
+      order = 'desc'
+    } = req.query;
+
+    const portalId = req.ctx?.portal_id;
+    const whereClauses: string[] = [];
+    const params: any[] = [];
+    let paramIndex = 1;
+
+    // Visibility only (authoritative)
+    if (portalId) {
+      whereClauses.push(`(
+        o.visibility_scope = 'public'::publish_visibility
+        OR (o.visibility_scope = 'portal_only'::publish_visibility AND o.portal_id = $${paramIndex})
+      )`);
+      params.push(portalId);
+      paramIndex++;
+    } else {
+      whereClauses.push(`o.visibility_scope = 'public'::publish_visibility`);
+    }
+
+    // Default: only published opportunities (open for bidding)
+    if (!status) {
+      whereClauses.push(`o.status = 'published'::opportunity_status`);
+    }
+
+    if (community_id) {
+      whereClauses.push(`o.community_id = $${paramIndex}::uuid`);
+      params.push(community_id);
+      paramIndex++;
+    }
+
+    if (service_bundle_id) {
+      whereClauses.push(`o.service_bundle_id = $${paramIndex}::uuid`);
+      params.push(service_bundle_id);
+      paramIndex++;
+    }
+
+    if (work_category) {
+      whereClauses.push(`o.work_category = $${paramIndex}`);
+      params.push(work_category);
+      paramIndex++;
+    }
+
+    if (status) {
+      whereClauses.push(`o.status = $${paramIndex}::opportunity_status`);
+      params.push(status);
+      paramIndex++;
+    }
+
+    if (certifications) {
+      const certsArray = (certifications as string).split(',');
+      whereClauses.push(`o.required_certifications && $${paramIndex}::text[]`);
+      params.push(certsArray);
+      paramIndex++;
+    }
+
+    if (min_value) {
+      whereClauses.push(`o.estimated_value_high >= $${paramIndex}`);
+      params.push(parseFloat(min_value as string));
+      paramIndex++;
+    }
+
+    if (max_value) {
+      whereClauses.push(`o.estimated_value_low <= $${paramIndex}`);
+      params.push(parseFloat(max_value as string));
+      paramIndex++;
+    }
+
+    if (expected_start_after) {
+      whereClauses.push(`o.expected_start_date >= $${paramIndex}::date`);
+      params.push(expected_start_after);
+      paramIndex++;
+    }
+
+    if (expected_start_before) {
+      whereClauses.push(`o.expected_start_date <= $${paramIndex}::date`);
+      params.push(expected_start_before);
+      paramIndex++;
+    }
+
+    if (search) {
+      whereClauses.push(`(
+        o.title ILIKE $${paramIndex}
+        OR o.description ILIKE $${paramIndex}
+        OR o.work_category ILIKE $${paramIndex}
+        OR c.name ILIKE $${paramIndex}
+      )`);
+      params.push(`%${search}%`);
+      paramIndex++;
+    }
+
+    const whereClause = `WHERE ${whereClauses.join(' AND ')}`;
+
+    const sortColumn = SORT_MAP[sort as string] || SORT_MAP.created_at;
+    const sortOrder = order === 'asc' ? 'ASC' : 'DESC';
+
+    const query = `
+      SELECT 
+        o.id,
+        o.opportunity_ref,
+        o.title,
+        o.description,
+        o.work_category,
+        o.site_address,
+        o.site_latitude,
+        o.site_longitude,
+        o.estimated_value_low,
+        o.estimated_value_high,
+        o.budget_ceiling,
+        o.bid_deadline,
+        o.questions_deadline,
+        o.expected_start_date,
+        o.expected_duration_days,
+        o.required_certifications,
+        o.status,
+        o.visibility_scope,
+        o.published_at,
+        o.created_at,
+        c.name as community_name,
+        c.region as community_region,
+        sb.name as service_bundle_name,
+        owner.trade_name as owner_name,
+        (SELECT COUNT(*) FROM bids b WHERE b.opportunity_id = o.id) as bid_count,
+        (SELECT COUNT(*) FROM opportunity_media om WHERE om.opportunity_id = o.id) as media_count
+      FROM opportunities o
+      LEFT JOIN sr_communities c ON c.id = o.community_id
+      LEFT JOIN sr_bundles sb ON sb.id = o.service_bundle_id
+      LEFT JOIN LATERAL (
+        SELECT p.trade_name
+        FROM parties p
+        WHERE p.tenant_id = o.owner_tenant_id
+        ORDER BY p.created_at ASC
+        LIMIT 1
+      ) owner ON true
+      ${whereClause}
+      ORDER BY ${sortColumn} ${sortOrder}
+      LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
+    `;
+
+    params.push(parseInt(limit as string), parseInt(offset as string));
+
+    const result = await req.tenantQuery(query, params);
+
+    const countParams = params.slice(0, -2);
+    const countQuery = `
+      SELECT COUNT(*) as total
+      FROM opportunities o
+      LEFT JOIN sr_communities c ON c.id = o.community_id
+      ${whereClause}
+    `;
+    const countResult = await req.tenantQuery(countQuery, countParams);
+
+    res.json({
+      opportunities: result.rows,
+      pagination: {
+        total: parseInt(countResult.rows[0]?.total || '0'),
+        limit: parseInt(limit as string),
+        offset: parseInt(offset as string)
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching opportunities:', error);
+    res.status(500).json({ error: 'Failed to fetch opportunities' });
+  }
+});
+
+// GET /api/opportunities/:id - Single opportunity detail
+router.get('/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const portalId = req.ctx?.portal_id;
+    const tenantId = req.ctx?.tenant_id;
+
+    const visibilityClauses: string[] = [
+      `o.visibility_scope = 'public'::publish_visibility`
+    ];
+    const params: any[] = [id];
+    let paramIndex = 2;
+
+    if (portalId) {
+      visibilityClauses.push(`(o.visibility_scope = 'portal_only'::publish_visibility AND o.portal_id = $${paramIndex})`);
+      params.push(portalId);
+      paramIndex++;
+    }
+
+    if (tenantId) {
+      visibilityClauses.push(`o.owner_tenant_id = $${paramIndex}`);
+      params.push(tenantId);
+      paramIndex++;
+    }
+
+    const result = await req.tenantQuery(
+      `
+      SELECT 
+        o.*,
+        c.name as community_name,
+        c.region as community_region,
+        c.latitude as community_latitude,
+        c.longitude as community_longitude,
+        sb.name as service_bundle_name,
+        sb.description as service_bundle_description,
+        owner.trade_name as owner_name,
+        owner.primary_contact_name as owner_contact_name,
+        owner.primary_contact_email as owner_contact_email
+      FROM opportunities o
+      LEFT JOIN sr_communities c ON c.id = o.community_id
+      LEFT JOIN sr_bundles sb ON sb.id = o.service_bundle_id
+      LEFT JOIN LATERAL (
+        SELECT p.trade_name, p.primary_contact_name, p.primary_contact_email
+        FROM parties p
+        WHERE p.tenant_id = o.owner_tenant_id
+        ORDER BY p.created_at ASC
+        LIMIT 1
+      ) owner ON true
+      WHERE o.id = $1::uuid
+        AND (${visibilityClauses.join(' OR ')})
+      `,
+      params
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Opportunity not found' });
+    }
+
+    const opportunity = result.rows[0];
+    const isOwner = opportunity.owner_tenant_id === tenantId;
+
+    const media = await req.tenantQuery(
+      `SELECT id, media_type, url, thumbnail_url, caption, analysis, created_at
+       FROM opportunity_media WHERE opportunity_id = $1 ORDER BY created_at`,
+      [id]
+    );
+
+    const measurements = await req.tenantQuery(
+      `SELECT id, measurement_type, value, unit, method, confidence_score, notes, created_at
+       FROM opportunity_measurements WHERE opportunity_id = $1 ORDER BY created_at`,
+      [id]
+    );
+
+    const bidCountResult = await req.tenantQuery(
+      `SELECT COUNT(*) as count FROM bids WHERE opportunity_id = $1`,
+      [id]
+    );
+    const bidCount = parseInt(bidCountResult.rows[0]?.count || '0');
+
+    let userBid = null;
+    if (tenantId) {
+      const partyResult = await req.tenantQuery(
+        `SELECT id FROM parties WHERE tenant_id = $1 ORDER BY created_at ASC LIMIT 1`,
+        [tenantId]
+      );
+
+      if (partyResult.rows.length > 0) {
+        const userBidResult = await req.tenantQuery(
+          `SELECT id, bid_ref, status, bid_amount, proposed_start_date, submitted_at
+           FROM bids WHERE opportunity_id = $1 AND party_id = $2 LIMIT 1`,
+          [id, partyResult.rows[0].id]
+        );
+        userBid = userBidResult.rows[0] || null;
+      }
+    }
+
+    const messagesQuery = isOwner
+      ? `SELECT bm.*, p.trade_name as from_party_name
+         FROM bid_messages bm LEFT JOIN parties p ON p.id = bm.from_party_id
+         WHERE bm.opportunity_id = $1 ORDER BY bm.created_at`
+      : `SELECT bm.*, p.trade_name as from_party_name
+         FROM bid_messages bm LEFT JOIN parties p ON p.id = bm.from_party_id
+         WHERE bm.opportunity_id = $1 AND bm.is_public = true ORDER BY bm.created_at`;
+
+    const messages = await req.tenantQuery(messagesQuery, [id]);
+
+    res.json({
+      ...opportunity,
+      media: media.rows,
+      measurements: measurements.rows,
+      bid_count: bidCount,
+      user_bid: userBid,
+      messages: messages.rows,
+      is_owner: isOwner
+    });
+  } catch (error) {
+    console.error('Error fetching opportunity:', error);
+    res.status(500).json({ error: 'Failed to fetch opportunity' });
+  }
+});
+
+// GET /api/opportunities/:id/bids - List bids (owner only)
+router.get('/:id/bids', requireAuth, requireTenant, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const tenantId = req.ctx!.tenant_id;
+
+    const ownerCheck = await req.tenantQuery(
+      `SELECT id FROM opportunities WHERE id = $1::uuid AND owner_tenant_id = $2`,
+      [id, tenantId]
+    );
+
+    if (ownerCheck.rows.length === 0) {
+      return res.status(403).json({ error: 'Not authorized to view bids for this opportunity' });
+    }
+
+    const result = await req.tenantQuery(
+      `SELECT b.*, p.trade_name as bidder_name, p.rating as bidder_rating,
+              p.total_contracts as bidder_contracts, p.certifications as bidder_certifications,
+              p.status as bidder_status
+       FROM bids b JOIN parties p ON p.id = b.party_id
+       WHERE b.opportunity_id = $1::uuid
+       ORDER BY b.submitted_at DESC NULLS LAST, b.created_at DESC`,
+      [id]
+    );
+
+    res.json({ bids: result.rows });
+  } catch (error) {
+    console.error('Error fetching bids:', error);
+    res.status(500).json({ error: 'Failed to fetch bids' });
+  }
+});
+
+export default router;
+```
+
+## File 2: server/routes/bids.ts
+```typescript
+import { Router } from 'express';
+import { requireAuth, requireTenant } from '../middleware/guards';
+
+const router = Router();
+
+async function getOrCreatePartyForTenant(req: any): Promise<string | null> {
+  const tenantId = req.ctx?.tenant_id;
+  if (!tenantId) return null;
+
+  const existing = await req.tenantQuery(
+    `SELECT id FROM parties WHERE tenant_id = $1 ORDER BY created_at ASC LIMIT 1`,
+    [tenantId]
+  );
+
+  if (existing.rows[0]?.id) return existing.rows[0].id;
+
+  try {
+    const created = await req.tenantQuery(
+      `INSERT INTO parties (tenant_id, party_type, status, trade_name, primary_contact_email, metadata)
+       VALUES ($1::uuid, 'contractor'::party_type, 'pending'::party_status, $2, $3, $4::jsonb)
+       RETURNING id`,
+      [
+        tenantId,
+        `Contractor ${tenantId.slice(0, 8)}`,
+        null,
+        JSON.stringify({ auto_created: true, created_from: 'api_job_board', created_at: new Date().toISOString() })
+      ]
+    );
+    return created.rows[0]?.id || null;
+  } catch (error) {
+    console.error('Error auto-creating party:', error);
+    return null;
+  }
+}
+
+router.get('/mine', requireAuth, requireTenant, async (req, res) => {
+  try {
+    const { status, limit = '20', offset = '0' } = req.query;
+
+    const partyId = await getOrCreatePartyForTenant(req);
+    if (!partyId) return res.json({ bids: [], message: 'Unable to resolve party profile' });
+
+    let query = `
+      SELECT b.id, b.bid_ref, b.status, b.bid_amount, b.proposed_start_date,
+             b.proposed_duration_days, b.submitted_at, b.score_overall, b.created_at,
+             o.title as opportunity_title, o.opportunity_ref, o.status as opportunity_status,
+             o.bid_deadline, o.expected_start_date as opportunity_start_date,
+             c.name as community_name, c.region as community_region
+      FROM bids b
+      JOIN opportunities o ON o.id = b.opportunity_id
+      LEFT JOIN sr_communities c ON c.id = o.community_id
+      WHERE b.party_id = $1::uuid
+    `;
+
+    const params: any[] = [partyId];
+    let paramIndex = 2;
+
+    if (status) {
+      query += ` AND b.status = $${paramIndex}::bid_status`;
+      params.push(status);
+      paramIndex++;
+    }
+
+    query += ` ORDER BY b.created_at DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
+    params.push(parseInt(limit as string), parseInt(offset as string));
+
+    const result = await req.tenantQuery(query, params);
+    res.json({ bids: result.rows });
+  } catch (error) {
+    console.error('Error fetching bids:', error);
+    res.status(500).json({ error: 'Failed to fetch bids' });
+  }
+});
+
+router.get('/:id', requireAuth, requireTenant, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const partyId = await getOrCreatePartyForTenant(req);
+    if (!partyId) return res.status(403).json({ error: 'Unable to resolve party profile' });
+
+    const result = await req.tenantQuery(
+      `SELECT b.*, o.title as opportunity_title, o.opportunity_ref,
+              o.description as opportunity_description, o.status as opportunity_status,
+              o.bid_deadline, o.expected_start_date, o.expected_duration_days as opportunity_duration,
+              o.owner_tenant_id, c.name as community_name, c.region as community_region,
+              p.trade_name as bidder_name
+       FROM bids b
+       JOIN opportunities o ON o.id = b.opportunity_id
+       LEFT JOIN sr_communities c ON c.id = o.community_id
+       LEFT JOIN parties p ON p.id = b.party_id
+       WHERE b.id = $1::uuid AND (b.party_id = $2 OR o.owner_tenant_id = $3)`,
+      [id, partyId, req.ctx!.tenant_id]
+    );
+
+    if (result.rows.length === 0) return res.status(404).json({ error: 'Bid not found' });
+
+    const lines = await req.tenantQuery(
+      `SELECT id, line_number, category, description, quantity, unit, unit_price, total_price, notes
+       FROM bid_breakdown_lines WHERE bid_id = $1 ORDER BY line_number`,
+      [id]
+    );
+
+    const messages = await req.tenantQuery(
+      `SELECT bm.*, p.trade_name as from_party_name
+       FROM bid_messages bm LEFT JOIN parties p ON p.id = bm.from_party_id
+       WHERE bm.bid_id = $1 ORDER BY bm.created_at`,
+      [id]
+    );
+
+    res.json({ ...result.rows[0], breakdown_lines: lines.rows, messages: messages.rows });
+  } catch (error) {
+    console.error('Error fetching bid:', error);
+    res.status(500).json({ error: 'Failed to fetch bid' });
+  }
+});
+
+router.post('/', requireAuth, requireTenant, async (req, res) => {
+  try {
+    const {
+      opportunity_id, bid_amount, proposed_start_date, proposed_duration_days,
+      technical_proposal, methodology, team_composition, exceptions, clarifications,
+      breakdown_lines = [], submit_immediately = false
+    } = req.body;
+
+    if (!opportunity_id) return res.status(400).json({ error: 'opportunity_id is required' });
+
+    const partyId = await getOrCreatePartyForTenant(req);
+    if (!partyId) return res.status(400).json({ error: 'Unable to create party profile for bidding' });
+
+    const portalId = req.ctx?.portal_id;
+
+    const oppResult = await req.tenantQuery(
+      `SELECT id, status, owner_tenant_id, bid_deadline FROM opportunities
+       WHERE id = $1::uuid AND status = 'published'::opportunity_status
+         AND (visibility_scope = 'public'::publish_visibility
+              OR (visibility_scope = 'portal_only'::publish_visibility AND portal_id = $2))`,
+      [opportunity_id, portalId]
+    );
+
+    if (oppResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Opportunity not found or not open for bidding' });
+    }
+
+    const opp = oppResult.rows[0];
+    if (opp.bid_deadline && new Date(opp.bid_deadline) < new Date()) {
+      return res.status(400).json({ error: 'Bid deadline has passed' });
+    }
+
+    const existingBid = await req.tenantQuery(
+      `SELECT id, bid_ref FROM bids WHERE opportunity_id = $1 AND party_id = $2`,
+      [opportunity_id, partyId]
+    );
+
+    if (existingBid.rows.length > 0) {
+      return res.status(409).json({
+        error: 'You already have a bid on this opportunity',
+        existing_bid_id: existingBid.rows[0].id,
+        existing_bid_ref: existingBid.rows[0].bid_ref
+      });
+    }
+
+    const result = await req.tenantTransaction(async (client: any) => {
+      const refResult = await client.query(
+        `SELECT 'BD-' || to_char(now(), 'YYMMDD') || '-' || lpad(nextval('bid_ref_seq')::text, 3, '0') as ref`
+      );
+      const bidRef = refResult.rows[0].ref;
+
+      const bidResult = await client.query(
+        `INSERT INTO bids (bid_ref, opportunity_id, party_id, status, bid_amount,
+                          proposed_start_date, proposed_duration_days, technical_proposal,
+                          methodology, team_composition, exceptions, clarifications, submitted_at)
+         VALUES ($1, $2::uuid, $3::uuid, $4::bid_status, $5, $6::date, $7, $8, $9, $10::jsonb, $11, $12, $13)
+         RETURNING *`,
+        [
+          bidRef, opportunity_id, partyId,
+          submit_immediately ? 'submitted' : 'draft',
+          bid_amount || 0, proposed_start_date, proposed_duration_days,
+          technical_proposal, methodology,
+          team_composition ? JSON.stringify(team_composition) : null,
+          exceptions, clarifications,
+          submit_immediately ? new Date() : null
+        ]
+      );
+
+      const bid = bidResult.rows[0];
+
+      for (let i = 0; i < breakdown_lines.length; i++) {
+        const line = breakdown_lines[i];
+        await client.query(
+          `INSERT INTO bid_breakdown_lines (bid_id, line_number, category, description, quantity, unit, unit_price, total_price, notes)
+           VALUES ($1::uuid, $2, $3, $4, $5, $6, $7, $8, $9)`,
+          [bid.id, i + 1, line.category || 'General', line.description,
+           line.quantity || 1, line.unit || 'each', line.unit_price || 0, line.total_price || 0, line.notes]
+        );
+      }
+
+      return bid;
+    });
+
+    res.status(201).json(result);
+  } catch (error) {
+    console.error('Error creating bid:', error);
+    res.status(500).json({ error: 'Failed to create bid', details: (error as Error).message });
+  }
+});
+
+router.patch('/:id', requireAuth, requireTenant, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updates = req.body;
+
+    const partyId = await getOrCreatePartyForTenant(req);
+    if (!partyId) return res.status(403).json({ error: 'Unable to resolve party profile' });
+
+    const bidCheck = await req.tenantQuery(
+      `SELECT id, status FROM bids WHERE id = $1::uuid AND party_id = $2`,
+      [id, partyId]
+    );
+
+    if (bidCheck.rows.length === 0) return res.status(404).json({ error: 'Bid not found' });
+    if (bidCheck.rows[0].status !== 'draft') return res.status(400).json({ error: 'Can only update draft bids' });
+
+    const allowedFields = ['bid_amount', 'proposed_start_date', 'proposed_duration_days',
+                          'technical_proposal', 'methodology', 'team_composition', 'exceptions', 'clarifications'];
+
+    const setClauses: string[] = [];
+    const params: any[] = [id];
+    let paramIndex = 2;
+
+    for (const field of allowedFields) {
+      if (updates[field] !== undefined) {
+        if (field === 'team_composition') {
+          setClauses.push(`${field} = $${paramIndex}::jsonb`);
+          params.push(JSON.stringify(updates[field]));
+        } else {
+          setClauses.push(`${field} = $${paramIndex}`);
+          params.push(updates[field]);
+        }
+        paramIndex++;
+      }
+    }
+
+    if (setClauses.length === 0) return res.status(400).json({ error: 'No valid fields to update' });
+    setClauses.push('updated_at = now()');
+
+    const result = await req.tenantQuery(
+      `UPDATE bids SET ${setClauses.join(', ')} WHERE id = $1::uuid RETURNING *`,
+      params
+    );
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error updating bid:', error);
+    res.status(500).json({ error: 'Failed to update bid' });
+  }
+});
+
+router.post('/:id/submit', requireAuth, requireTenant, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const partyId = await getOrCreatePartyForTenant(req);
+    if (!partyId) return res.status(403).json({ error: 'Unable to resolve party profile' });
+
+    const bidCheck = await req.tenantQuery(
+      `SELECT b.id, b.status, o.bid_deadline, o.status as opp_status
+       FROM bids b JOIN opportunities o ON o.id = b.opportunity_id
+       WHERE b.id = $1::uuid AND b.party_id = $2`,
+      [id, partyId]
+    );
+
+    if (bidCheck.rows.length === 0) return res.status(404).json({ error: 'Bid not found' });
+
+    const bid = bidCheck.rows[0];
+    if (bid.status !== 'draft') return res.status(400).json({ error: 'Bid already submitted' });
+    if (bid.bid_deadline && new Date(bid.bid_deadline) < new Date()) return res.status(400).json({ error: 'Bid deadline has passed' });
+    if (bid.opp_status !== 'published') return res.status(400).json({ error: 'Opportunity is no longer accepting bids' });
+
+    const result = await req.tenantQuery(
+      `UPDATE bids SET status = 'submitted'::bid_status, submitted_at = now(), updated_at = now()
+       WHERE id = $1::uuid RETURNING *`,
+      [id]
+    );
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error submitting bid:', error);
+    res.status(500).json({ error: 'Failed to submit bid' });
+  }
+});
+
+router.post('/:id/withdraw', requireAuth, requireTenant, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const partyId = await getOrCreatePartyForTenant(req);
+    if (!partyId) return res.status(403).json({ error: 'Unable to resolve party profile' });
+
+    const result = await req.tenantQuery(
+      `UPDATE bids SET status = 'withdrawn'::bid_status, updated_at = now()
+       WHERE id = $1::uuid AND party_id = $2 AND status = 'submitted'::bid_status
+       RETURNING *`,
+      [id, partyId]
+    );
+
+    if (result.rows.length === 0) return res.status(400).json({ error: 'Bid not found or cannot be withdrawn' });
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error withdrawing bid:', error);
+    res.status(500).json({ error: 'Failed to withdraw bid' });
+  }
+});
+
+router.post('/:id/messages', requireAuth, requireTenant, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { message_type = 'message', subject, body, is_public = true, parent_message_id } = req.body;
+
+    if (!body) return res.status(400).json({ error: 'Message body is required' });
+
+    const partyId = await getOrCreatePartyForTenant(req);
+    const tenantId = req.ctx!.tenant_id;
+
+    const bidCheck = await req.tenantQuery(
+      `SELECT b.id, b.opportunity_id, o.owner_tenant_id FROM bids b
+       JOIN opportunities o ON o.id = b.opportunity_id
+       WHERE b.id = $1::uuid AND (b.party_id = $2 OR o.owner_tenant_id = $3)`,
+      [id, partyId, tenantId]
+    );
+
+    if (bidCheck.rows.length === 0) return res.status(404).json({ error: 'Bid not found' });
+
+    const result = await req.tenantQuery(
+      `INSERT INTO bid_messages (opportunity_id, bid_id, from_party_id, from_tenant_id,
+                                message_type, subject, body, is_public, parent_message_id)
+       VALUES ($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5, $6, $7, $8, $9::uuid)
+       RETURNING *`,
+      [bidCheck.rows[0].opportunity_id, id, partyId, tenantId, message_type, subject, body, is_public, parent_message_id]
+    );
+
+    res.status(201).json(result.rows[0]);
+  } catch (error) {
+    console.error('Error adding message:', error);
+    res.status(500).json({ error: 'Failed to add message' });
+  }
+});
+
+export default router;
+```
+
+## File 3: Register routes in server/index.ts (if not done)
+```typescript
+import opportunitiesRouter from './routes/opportunities';
+import bidsRouter from './routes/bids';
+
+app.use('/api/opportunities', opportunitiesRouter);
+app.use('/api/bids', bidsRouter);
+```
+
+## Verification Commands
+
+After routes are registered, run these and paste the output:
+```bash
+# 1. List opportunities
+curl -s http://localhost:5000/api/opportunities | jq '.pagination,.opportunities[0]'
+
+# 2. Stats summary
+curl -s http://localhost:5000/api/opportunities/stats/summary | jq
+
+# 3. Single opportunity (use an ID from step 1)
+# curl -s http://localhost:5000/api/opportunities/<UUID> | jq '.id,.opportunity_ref,.bid_count'
+```
+
+## Output
+
+Tell me:
+1. Routes registered without errors?
+2. What does stats/summary return?
+3. What does the opportunities list return?
+4. Any 500 errors in console?

@@ -34,6 +34,8 @@ import { CompanyCamService, getPhotoUrl } from "./services/companycam";
 import { createCrewRouter } from "./routes/crew";
 import claimsRouter from "./routes/claims";
 import internalRouter from "./routes/internal";
+import opportunitiesRouter from "./routes/opportunities";
+import bidsRouter from "./routes/bids";
 import { publicQuery } from "./db/tenantDb";
 
 // Merge static members with JSON-loaded members for consistent data across the app
@@ -118,6 +120,10 @@ export async function registerRoutes(
   // SECURITY: CORS disabled, rate-limited, requires platform staff auth
   // These routes are NOT accessible by tenant users or service-key
   app.use('/api/internal', internalRouter);
+
+  // Register procurement opportunities and bids routes
+  app.use('/api/opportunities', opportunitiesRouter);
+  app.use('/api/bids', bidsRouter);
 
   // Public catalog endpoints (no auth required)
   app.get('/api/v1/catalog/vehicles', async (req, res) => {
