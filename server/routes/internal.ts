@@ -429,7 +429,7 @@ router.get(
       
       const [evidenceResult, eventsResult] = await Promise.all([
         serviceQuery(
-          `SELECT id, evidence_type, data, created_at 
+          `SELECT id, evidence_type, url, notes, raw, created_at 
            FROM catalog_claim_evidence 
            WHERE claim_id = $1 
            ORDER BY created_at`,

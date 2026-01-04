@@ -84,14 +84,17 @@ echo "Tenant B: $TENANT_B_NAME ($TENANT_B_ID)"
 
 echo ""
 echo "=== Step 3: Create a claim as Tenant A (via service mode) ==="
+# Get a valid vehicle_catalog_id first
+VEHICLE_CATALOG_ID=$(psql "$DATABASE_URL" -t -c "SELECT id FROM vehicle_catalog LIMIT 1;" | tr -d '[:space:]')
+echo "Using vehicle_catalog_id: $VEHICLE_CATALOG_ID"
+
 # Create claim directly in DB via SQL since we're testing the review flow
-CLAIM_ID=$(psql "$DATABASE_URL" -t -c "
+CLAIM_ID=$(psql "$DATABASE_URL" -tAc "
   INSERT INTO catalog_claims (
-    tenant_id, target_type, claimant, status, nickname, notes
+    tenant_id, target_type, claimant, status, nickname, notes, vehicle_catalog_id, desired_action
   ) VALUES (
-    '$TENANT_A_ID', 'vehicle', 'tenant', 'submitted', 'QA Test Vehicle', 'Created by QA script'
-  ) RETURNING id;
-" | tr -d ' ')
+    '$TENANT_A_ID', 'vehicle', 'tenant', 'submitted', 'QA Test Vehicle', 'Created by QA script', '$VEHICLE_CATALOG_ID', 'create_tenant_asset'
+  ) RETURNING id;" | head -1 | tr -d '[:space:]')
 
 if [ -z "$CLAIM_ID" ] || [ "$CLAIM_ID" = "" ]; then
   echo "FAIL: Could not create test claim"
@@ -108,10 +111,11 @@ psql "$DATABASE_URL" -c "
 echo ""
 echo "=== Step 4: Test Tenant B CANNOT access Tenant A's claim (RLS enforcement) ==="
 # Simulate Tenant B query - should return 0 rows due to RLS
-TENANT_B_VIEW=$(psql "$CC_APP_DATABASE_URL" -t -c "
-  SET app.current_tenant_id = '$TENANT_B_ID';
-  SELECT COUNT(*) FROM catalog_claims WHERE id = '$CLAIM_ID';
-" | tr -d ' ')
+# Note: RLS checks app.tenant_id (not app.current_tenant_id)
+# Use set_config with false (session scope) and wrap in transaction
+TENANT_B_VIEW=$(psql "$CC_APP_DATABASE_URL" -tAc "
+  SELECT set_config('app.tenant_id', '$TENANT_B_ID', false);
+  SELECT COUNT(*) FROM catalog_claims WHERE id = '$CLAIM_ID';" | tail -1 | tr -d '[:space:]')
 
 if [ "$TENANT_B_VIEW" = "0" ]; then
   echo "PASS: RLS blocks Tenant B from seeing Tenant A's claim"
