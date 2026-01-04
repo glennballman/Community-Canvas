@@ -143,117 +143,159 @@ export async function registerRoutes(
         status: 'SUCCESS'
       });
       
-      // Step 2 & 3: Simulate authenticated request with tenant context
-      const client = await pool.connect();
-      try {
-        await client.query('BEGIN');
-        
+      // Step 2 & 3: Simulate authenticated request with tenant context (COMMITTED transaction)
+      const insertResult = await withServiceTransaction(async (client) => {
         // Set tenant context (simulating tenantTransaction with ctx)
         await client.query(`SELECT set_config('app.tenant_id', $1, true)`, [tenantId]);
         await client.query(`SELECT set_config('app.individual_id', $1, true)`, [individualId]);
         
-        results.steps.push({
-          step: 2,
-          description: 'Set tenant context via set_config',
-          context: { tenant_id: tenantId, individual_id: individualId },
-          status: 'SUCCESS'
-        });
-        
-        // Step 3: Insert tenant_vehicle
+        // Insert tenant_vehicle
         const insertRes = await client.query(`
           INSERT INTO tenant_vehicles (id, tenant_id, nickname, is_active, status)
           VALUES (gen_random_uuid(), $1, 'RLS Happy Path Vehicle', true, 'active')
           RETURNING id, asset_id
         `, [tenantId]);
         
-        vehicleId = insertRes.rows[0].id;
-        assetId = insertRes.rows[0].asset_id;
+        const vid = insertRes.rows[0].id;
+        const aid = insertRes.rows[0].asset_id;
         
-        results.steps.push({
-          step: 3,
-          description: 'INSERT tenant_vehicle with tenant context',
-          vehicle_id: vehicleId,
-          asset_id: assetId,
-          asset_id_is_not_null: assetId !== null,
-          status: assetId !== null ? 'SUCCESS' : 'FAILED - asset_id is null'
-        });
-        
-        // Step 4: Verify asset record
+        // Verify asset record in same transaction
         const assetRes = await client.query(`
           SELECT tenant_id, owner_tenant_id, source_table, source_id 
           FROM assets WHERE id = $1
-        `, [assetId]);
+        `, [aid]);
         
-        const assetRow = assetRes.rows[0];
-        const assetVerification = {
-          tenant_id_matches: assetRow?.tenant_id === tenantId,
-          owner_tenant_id_matches: assetRow?.owner_tenant_id === tenantId,
-          source_table_correct: assetRow?.source_table === 'tenant_vehicles',
-          source_id_matches: assetRow?.source_id === vehicleId
-        };
-        
-        results.steps.push({
-          step: '4a',
-          description: 'Verify asset record matches expected values',
-          asset_record: assetRow,
-          verification: assetVerification,
-          status: Object.values(assetVerification).every(v => v) ? 'SUCCESS' : 'FAILED'
-        });
-        
-        // Check asset_capabilities (should not error, count can be 0)
+        // Check asset_capabilities
         const capRes = await client.query(`
           SELECT COUNT(*) as count FROM asset_capabilities WHERE asset_id = $1
-        `, [assetId]);
+        `, [aid]);
         
-        results.steps.push({
-          step: '4b',
-          description: 'Query asset_capabilities (must not error)',
-          capability_count: parseInt(capRes.rows[0].count),
-          status: 'SUCCESS'
-        });
-        
-        await client.query('ROLLBACK'); // Don't persist the vehicle insert from this connection
-      } finally {
-        client.release();
+        return {
+          vehicle_id: vid,
+          asset_id: aid,
+          asset_record: assetRes.rows[0],
+          capability_count: parseInt(capRes.rows[0].count)
+        };
+      });
+      
+      vehicleId = insertResult.vehicle_id;
+      assetId = insertResult.asset_id;
+      
+      results.steps.push({
+        step: 2,
+        description: 'Set tenant context via set_config',
+        context: { tenant_id: tenantId, individual_id: individualId },
+        status: 'SUCCESS'
+      });
+      
+      results.steps.push({
+        step: 3,
+        description: 'INSERT tenant_vehicle with tenant context (COMMITTED)',
+        vehicle_id: vehicleId,
+        asset_id: assetId,
+        asset_id_is_not_null: assetId !== null,
+        status: assetId !== null ? 'SUCCESS' : 'FAILED - asset_id is null'
+      });
+      
+      if (assetId === null) {
+        throw new Error('FAIL: asset_id is null after INSERT');
       }
       
-      // Step 5: Cleanup in service transaction
+      const assetVerification = {
+        tenant_id_matches: insertResult.asset_record?.tenant_id === tenantId,
+        owner_tenant_id_matches: insertResult.asset_record?.owner_tenant_id === tenantId,
+        source_table_correct: insertResult.asset_record?.source_table === 'tenant_vehicles',
+        source_id_matches: insertResult.asset_record?.source_id === vehicleId
+      };
+      
+      results.steps.push({
+        step: '4a',
+        description: 'Verify asset record matches expected values',
+        asset_record: insertResult.asset_record,
+        verification: assetVerification,
+        status: Object.values(assetVerification).every(v => v) ? 'SUCCESS' : 'FAILED'
+      });
+      
+      if (!Object.values(assetVerification).every(v => v)) {
+        throw new Error('FAIL: asset verification failed');
+      }
+      
+      results.steps.push({
+        step: '4b',
+        description: 'Query asset_capabilities (must not error)',
+        capability_count: insertResult.capability_count,
+        status: 'SUCCESS'
+      });
+      
+      // Step 5: Cleanup in service transaction with fail-fast
       const cleanupResult = await withServiceTransaction(async (client) => {
-        const deleted: any = {};
+        const deleted: any = { errors: [] };
         
-        // Delete vehicle if it was committed (it wasn't, but check anyway)
+        // Delete in correct order for FK constraints:
+        // a) Delete tenant_vehicle_photos first
+        if (vehicleId) {
+          const photosRes = await client.query('DELETE FROM tenant_vehicle_photos WHERE tenant_vehicle_id = $1', [vehicleId]);
+          deleted.vehicle_photos = photosRes.rowCount;
+        }
+        
+        // b) Delete tenant_vehicles
         if (vehicleId) {
           const vRes = await client.query('DELETE FROM tenant_vehicles WHERE id = $1 RETURNING id', [vehicleId]);
           deleted.vehicle = vRes.rowCount;
+          if (vRes.rowCount !== 1) {
+            deleted.errors.push(`Expected vehicle delete rowCount=1, got ${vRes.rowCount}`);
+          }
         }
         
-        // Delete asset if it exists
+        // c) Delete asset_capabilities
+        if (assetId) {
+          const capRes = await client.query('DELETE FROM asset_capabilities WHERE asset_id = $1', [assetId]);
+          deleted.asset_capabilities = capRes.rowCount;
+        }
+        
+        // d) Delete assets
         if (assetId) {
           const aRes = await client.query('DELETE FROM assets WHERE id = $1 RETURNING id', [assetId]);
           deleted.asset = aRes.rowCount;
+          if (aRes.rowCount !== 1) {
+            deleted.errors.push(`Expected asset delete rowCount=1, got ${aRes.rowCount}`);
+          }
         }
         
         // Delete individual
         if (individualId) {
           const iRes = await client.query('DELETE FROM cc_individuals WHERE id = $1 RETURNING id', [individualId]);
           deleted.individual = iRes.rowCount;
+          if (iRes.rowCount !== 1) {
+            deleted.errors.push(`Expected individual delete rowCount=1, got ${iRes.rowCount}`);
+          }
         }
         
         // Delete tenant
         if (tenantId) {
           const tRes = await client.query('DELETE FROM cc_tenants WHERE id = $1 RETURNING id', [tenantId]);
           deleted.tenant = tRes.rowCount;
+          if (tRes.rowCount !== 1) {
+            deleted.errors.push(`Expected tenant delete rowCount=1, got ${tRes.rowCount}`);
+          }
         }
         
         return deleted;
       });
       
+      const cleanupSuccess = cleanupResult.errors.length === 0;
       results.steps.push({
         step: 5,
         description: 'Cleanup via withServiceTransaction',
         deleted: cleanupResult,
-        status: 'SUCCESS'
+        status: cleanupSuccess ? 'SUCCESS' : 'FAILED'
       });
+      
+      if (!cleanupSuccess) {
+        results.overall = 'FAILED - cleanup errors';
+        res.status(500).json(results);
+        return;
+      }
       
       results.overall = 'ALL STEPS PASSED';
       res.json(results);
