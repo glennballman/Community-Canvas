@@ -1,0 +1,1261 @@
+Build the complete backend with small-town trust model:
+- NO public negative reviews ever
+- Private feedback system (contractor can delete)
+- Aggregated trust signals only (no narrative complaints)
+- Serious Issue Reports (internal admin only)
+- Fiverr-grade contact gating with deposit verification
+- Hybrid party model with individual tracking
+
+### PART 1: Additional Migration for Private Feedback + Serious Issues
+
+File: server/migrations/035_private_feedback_trust_model.sql
+```sql
+-- ============================================================
+-- COMMUNITY CANVAS v2.5 - PRIVATE FEEDBACK & TRUST MODEL
+-- Migration 035 - Small-Town Trust (No Public Negatives)
+-- ============================================================
+
+-- Philosophy:
+-- - Contractors hold power in small towns (scarcity)
+-- - No public negative reviews EVER
+-- - Private feedback is deletable by contractor
+-- - Public reputation = aggregated signals only, no narrative
+-- - Serious issues go to internal admin channel
+
+-- ============================================================
+-- 1. FEEDBACK ENUMS
+-- ============================================================
+
+DO $$ BEGIN
+  CREATE TYPE feedback_type AS ENUM (
+    'private_note',      -- Internal note, never shared
+    'private_feedback',  -- Owner→Contractor, deletable
+    'appreciation',      -- Positive acknowledgment
+    'system'             -- System-generated
+  );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+  CREATE TYPE issue_category AS ENUM (
+    'fraud',
+    'safety',
+    'harassment',
+    'non_payment',
+    'abandonment',
+    'property_damage',
+    'other'
+  );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+  CREATE TYPE issue_status AS ENUM (
+    'submitted',
+    'triage',
+    'requesting_info',
+    'investigating',
+    'resolved_no_action',
+    'resolved_action_taken',
+    'dismissed'
+  );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+-- ============================================================
+-- 2. PRIVATE FEEDBACK (Owner → Contractor, Deletable)
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS private_feedback (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  
+  -- What job this relates to
+  opportunity_id UUID NOT NULL REFERENCES opportunities(id),
+  conversation_id UUID REFERENCES conversations(id),
+  
+  -- Who sent it
+  from_party_id UUID NOT NULL REFERENCES parties(id),
+  from_individual_id UUID REFERENCES cc_individuals(id),
+  
+  -- Who receives it (contractor)
+  to_party_id UUID NOT NULL REFERENCES parties(id),
+  
+  feedback_type feedback_type NOT NULL DEFAULT 'private_feedback',
+  
+  -- The feedback content
+  content TEXT NOT NULL,
+  
+  -- Rating components (private, never aggregated into public scores if negative)
+  -- These are for contractor's own reference only
+  quality_rating INTEGER CHECK (quality_rating BETWEEN 1 AND 5),
+  communication_rating INTEGER CHECK (communication_rating BETWEEN 1 AND 5),
+  timeliness_rating INTEGER CHECK (timeliness_rating BETWEEN 1 AND 5),
+  
+  -- Contractor controls
+  read_at TIMESTAMPTZ,
+  archived_at TIMESTAMPTZ,
+  
+  -- CRITICAL: Contractor can delete completely
+  deleted_by_contractor BOOLEAN DEFAULT false,
+  deleted_at TIMESTAMPTZ,
+  
+  -- If contractor marks as "not constructive" (internal flag)
+  marked_not_constructive BOOLEAN DEFAULT false,
+  contractor_response TEXT, -- Private response, not public
+  
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS private_feedback_opportunity_idx ON private_feedback(opportunity_id);
+CREATE INDEX IF NOT EXISTS private_feedback_to_party_idx ON private_feedback(to_party_id);
+CREATE INDEX IF NOT EXISTS private_feedback_from_party_idx ON private_feedback(from_party_id);
+-- Don't index deleted feedback
+CREATE INDEX IF NOT EXISTS private_feedback_active_idx ON private_feedback(to_party_id) 
+  WHERE NOT deleted_by_contractor;
+
+-- ============================================================
+-- 3. SERIOUS ISSUE REPORTS (Internal Admin Only)
+-- ============================================================
+
+-- These are NEVER shown publicly
+-- Only accessible by platform admins
+-- Used for: fraud, safety, harassment, non-payment, abandonment
+
+CREATE TABLE IF NOT EXISTS serious_issue_reports (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  
+  -- What this relates to
+  opportunity_id UUID REFERENCES opportunities(id),
+  conversation_id UUID REFERENCES conversations(id),
+  
+  -- Who filed the report
+  reporter_party_id UUID NOT NULL REFERENCES parties(id),
+  reporter_individual_id UUID REFERENCES cc_individuals(id),
+  
+  -- Who the report is about
+  subject_party_id UUID NOT NULL REFERENCES parties(id),
+  subject_type TEXT NOT NULL CHECK (subject_type IN ('contractor', 'owner', 'operator')),
+  
+  -- Category and details
+  category issue_category NOT NULL,
+  description TEXT NOT NULL,
+  
+  -- Evidence
+  evidence JSONB, -- [{type: 'photo', url: '...', description: '...'}, ...]
+  
+  -- Status tracking
+  status issue_status NOT NULL DEFAULT 'submitted',
+  
+  -- Admin handling (NEVER exposed to public)
+  assigned_to TEXT, -- Admin user/team
+  internal_notes TEXT,
+  resolution_summary TEXT,
+  resolution_date TIMESTAMPTZ,
+  
+  -- Action taken (if any)
+  action_taken TEXT, -- 'warning_issued', 'suspension', 'ban', 'none', etc.
+  action_date TIMESTAMPTZ,
+  
+  -- Pattern detection
+  is_pattern_match BOOLEAN DEFAULT false, -- True if similar reports exist
+  related_report_ids UUID[],
+  
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS serious_issues_status_idx ON serious_issue_reports(status);
+CREATE INDEX IF NOT EXISTS serious_issues_subject_idx ON serious_issue_reports(subject_party_id);
+CREATE INDEX IF NOT EXISTS serious_issues_category_idx ON serious_issue_reports(category);
+
+-- ============================================================
+-- 4. PUBLIC APPRECIATION (Positive Only, Opt-In)
+-- ============================================================
+
+-- The ONLY public feedback allowed is positive appreciation
+-- Contractor controls visibility
+
+CREATE TABLE IF NOT EXISTS public_appreciations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  
+  opportunity_id UUID NOT NULL REFERENCES opportunities(id),
+  
+  from_party_id UUID NOT NULL REFERENCES parties(id),
+  from_individual_id UUID REFERENCES cc_individuals(id),
+  from_display_name TEXT, -- "Sarah M." or "Anonymous"
+  
+  to_party_id UUID NOT NULL REFERENCES parties(id),
+  
+  -- Content (positive only - enforced by UI/validation)
+  content TEXT NOT NULL,
+  
+  -- What was good
+  highlights TEXT[], -- ['On time', 'Great communication', 'Clean work site']
+  
+  -- Contractor controls visibility
+  is_public BOOLEAN DEFAULT false, -- Contractor must opt-in to make public
+  made_public_at TIMESTAMPTZ,
+  
+  -- Contractor can hide even positive feedback
+  hidden_by_contractor BOOLEAN DEFAULT false,
+  hidden_at TIMESTAMPTZ,
+  
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS appreciations_to_party_idx ON public_appreciations(to_party_id);
+CREATE INDEX IF NOT EXISTS appreciations_public_idx ON public_appreciations(to_party_id, is_public) 
+  WHERE is_public AND NOT hidden_by_contractor;
+
+-- ============================================================
+-- 5. CONTRACTOR FEEDBACK PREFERENCES
+-- ============================================================
+
+-- Contractors can opt out of receiving feedback entirely
+
+CREATE TABLE IF NOT EXISTS contractor_feedback_settings (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  party_id UUID NOT NULL REFERENCES parties(id) UNIQUE,
+  
+  -- Feedback reception
+  accepts_private_feedback BOOLEAN DEFAULT true,
+  accepts_appreciation_requests BOOLEAN DEFAULT true,
+  
+  -- Auto-actions
+  auto_archive_after_days INTEGER DEFAULT 30,
+  
+  -- Block list (owners they won't receive feedback from)
+  blocked_party_ids UUID[],
+  
+  -- Notification preferences
+  notify_on_feedback BOOLEAN DEFAULT true,
+  notify_on_appreciation BOOLEAN DEFAULT true,
+  
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- ============================================================
+-- 6. UPDATE TRUST SIGNALS - NO NARRATIVE COMPLAINTS
+-- ============================================================
+
+-- Add explicit fields to ensure no complaint storage
+ALTER TABLE trust_signals
+  ADD COLUMN IF NOT EXISTS positive_feedback_count INTEGER DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS public_appreciation_count INTEGER DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS repeat_customer_count INTEGER DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS years_in_community INTEGER;
+
+-- Remove any potential complaint storage (defensive)
+-- Trust signals should NEVER contain narrative negative content
+
+COMMENT ON TABLE trust_signals IS 
+  'Aggregated metrics only. NO narrative complaints. NO negative review text. Public reputation = patterns, not stories.';
+
+-- ============================================================
+-- 7. ADD PAYMENT PREFERENCES TO PARTIES
+-- ============================================================
+
+ALTER TABLE parties
+  ADD COLUMN IF NOT EXISTS payment_preferences JSONB DEFAULT '{
+    "accepts_etransfer": true,
+    "accepts_cheque": true,
+    "accepts_card": true,
+    "card_max_amount": 3000,
+    "card_fee_responsibility": "owner",
+    "accepts_financing": false,
+    "accepts_barter": false,
+    "preferred_method": "etransfer"
+  }'::jsonb;
+
+COMMENT ON COLUMN parties.payment_preferences IS 
+  'Contractor payment preferences. card_max_amount prevents chargeback exposure on large jobs.';
+```
+
+### PART 2: Party Resolver (No Changes from Previous)
+
+File: server/lib/partyResolver.ts
+```typescript
+import { pool } from '../db';
+
+export type PartyRole = 'owner' | 'contractor' | 'operator';
+
+export interface ResolvedActor {
+  individual_id: string;
+  tenant_id: string | null;
+  actor_party_id: string;
+  party_kind: 'individual' | 'organization';
+  display_name: string;
+}
+
+function getIndividualId(req: any): string | null {
+  return req?.ctx?.individual_id || req?.user?.id || null;
+}
+
+export async function resolveActorParty(req: any, role: PartyRole): Promise<ResolvedActor | null> {
+  const individual_id = getIndividualId(req);
+  const tenant_id = req?.ctx?.tenant_id || null;
+
+  if (!individual_id) {
+    console.warn('resolveActorParty: No individual_id found in request');
+    return null;
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    const individualResult = await client.query(
+      `SELECT COALESCE(NULLIF(preferred_name, ''), full_name) AS display_name
+       FROM cc_individuals WHERE id = $1`,
+      [individual_id]
+    );
+    const individualDisplayName = individualResult.rows[0]?.display_name || 'Unknown User';
+
+    if (tenant_id) {
+      const orgPartyResult = await client.query(
+        `SELECT id, trade_name, legal_name FROM parties
+         WHERE tenant_id = $1 AND party_kind = 'organization'
+         ORDER BY created_at ASC LIMIT 1`,
+        [tenant_id]
+      );
+
+      let org_party_id = orgPartyResult.rows[0]?.id as string | undefined;
+      let org_display_name = orgPartyResult.rows[0]?.trade_name || 
+                             orgPartyResult.rows[0]?.legal_name || 'Unknown Organization';
+
+      if (!org_party_id) {
+        const tenantResult = await client.query(
+          `SELECT name, email, phone, business_number,
+                  address_line1, address_line2, city, province, postal_code, country
+           FROM tenants WHERE id = $1`,
+          [tenant_id]
+        );
+
+        const tenant = tenantResult.rows[0];
+        if (!tenant?.name) {
+          await client.query('ROLLBACK');
+          console.error('resolveActorParty: Tenant not found or missing name');
+          return null;
+        }
+
+        const createResult = await client.query(
+          `INSERT INTO parties (
+              tenant_id, party_kind, party_type, status,
+              legal_name, trade_name, tax_id,
+              primary_contact_email, primary_contact_phone,
+              address_line1, address_line2, city, province, postal_code, country
+           ) VALUES ($1, 'organization', $2::party_type, 'active', $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+           RETURNING id, trade_name, legal_name`,
+          [
+            tenant_id, role, tenant.name, tenant.name,
+            tenant.business_number || null,
+            tenant.email || null, tenant.phone || null,
+            tenant.address_line1 || null, tenant.address_line2 || null,
+            tenant.city || null, tenant.province || 'BC',
+            tenant.postal_code || null, tenant.country || 'CA'
+          ]
+        );
+
+        org_party_id = createResult.rows[0].id;
+        org_display_name = createResult.rows[0].trade_name || createResult.rows[0].legal_name;
+      }
+
+      await client.query(
+        `INSERT INTO party_memberships (party_id, individual_id, role, is_active)
+         VALUES ($1, $2, 'admin', true)
+         ON CONFLICT (party_id, individual_id)
+         DO UPDATE SET is_active = true, updated_at = now()`,
+        [org_party_id, individual_id]
+      );
+
+      await client.query('COMMIT');
+
+      return {
+        individual_id,
+        tenant_id,
+        actor_party_id: org_party_id,
+        party_kind: 'organization',
+        display_name: org_display_name
+      };
+    }
+
+    // No tenant - individual party
+    const existingIndParty = await client.query(
+      `SELECT id, trade_name, legal_name FROM parties
+       WHERE party_kind = 'individual' AND metadata->>'individual_id' = $1
+       ORDER BY created_at ASC LIMIT 1`,
+      [individual_id]
+    );
+
+    let ind_party_id = existingIndParty.rows[0]?.id as string | undefined;
+    let ind_display_name = existingIndParty.rows[0]?.trade_name || 
+                           existingIndParty.rows[0]?.legal_name || 
+                           individualDisplayName;
+
+    if (!ind_party_id) {
+      const createResult = await client.query(
+        `INSERT INTO parties (party_kind, party_type, status, legal_name, trade_name, metadata)
+         VALUES ('individual', $1::party_type, 'active', $2, $2, jsonb_build_object('individual_id', $3))
+         RETURNING id, trade_name`,
+        [role, individualDisplayName, individual_id]
+      );
+
+      ind_party_id = createResult.rows[0].id;
+      ind_display_name = createResult.rows[0].trade_name;
+    }
+
+    await client.query('COMMIT');
+
+    return {
+      individual_id,
+      tenant_id: null,
+      actor_party_id: ind_party_id,
+      party_kind: 'individual',
+      display_name: ind_display_name
+    };
+
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('resolveActorParty error:', error);
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
+export async function isPartyMember(party_id: string, individual_id: string): Promise<boolean> {
+  const result = await pool.query(
+    `SELECT 1 FROM party_memberships 
+     WHERE party_id = $1 AND individual_id = $2 AND is_active = true LIMIT 1`,
+    [party_id, individual_id]
+  );
+  return result.rows.length > 0;
+}
+
+export async function canUnlockContact(conversation_id: string): Promise<{
+  canUnlock: boolean;
+  gate: string;
+  reason: string;
+}> {
+  const client = await pool.connect();
+  try {
+    const convResult = await client.query(
+      `SELECT * FROM conversations WHERE id = $1`,
+      [conversation_id]
+    );
+
+    if (convResult.rows.length === 0) {
+      return { canUnlock: false, gate: 'none', reason: 'Conversation not found' };
+    }
+
+    const conv = convResult.rows[0];
+
+    if (conv.contact_unlocked) {
+      return { canUnlock: true, gate: conv.contact_unlock_gate || 'already_unlocked', reason: 'Contact already unlocked' };
+    }
+
+    // Check prior relationship
+    const priorResult = await client.query(
+      `SELECT 1 FROM conversations
+       WHERE contractor_party_id = $1 AND owner_party_id = $2
+         AND state = 'completed' AND id != $3 LIMIT 1`,
+      [conv.contractor_party_id, conv.owner_party_id, conversation_id]
+    );
+
+    if (priorResult.rows.length > 0) {
+      return { canUnlock: true, gate: 'prior_relationship', reason: 'Prior completed work together' };
+    }
+
+    // Check deposit verified
+    const depositResult = await client.query(
+      `SELECT 1 FROM payment_promises pp
+       JOIN payment_milestones pm ON pm.payment_promise_id = pp.id
+       WHERE pp.conversation_id = $1
+         AND pm.trigger_type IN ('on_award', 'on_contract_sign')
+         AND pm.status = 'verified' LIMIT 1`,
+      [conversation_id]
+    );
+
+    if (depositResult.rows.length > 0) {
+      return { canUnlock: true, gate: 'deposit_verified', reason: 'Deposit has been verified' };
+    }
+
+    return { canUnlock: false, gate: 'none', reason: 'Deposit required before contact details can be shared' };
+  } finally {
+    client.release();
+  }
+}
+```
+
+### PART 3: Contact Redaction (Same as Before)
+
+File: server/lib/contactRedaction.ts
+```typescript
+const TIER1_PATTERNS = [
+  { name: 'phone_dashed', regex: /\b\d{3}[-.\s]\d{3}[-.\s]\d{4}\b/g },
+  { name: 'phone_parens', regex: /\(\d{3}\)\s*\d{3}[-.\s]?\d{4}/g },
+  { name: 'phone_intl', regex: /\+1\s*\d{3}[-.\s]?\d{3}[-.\s]?\d{4}/g },
+  { name: 'phone_10digit', regex: /\b\d{10}\b/g },
+  { name: 'email', regex: /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/g },
+  { name: 'email_obfuscated', regex: /\b[A-Za-z0-9._%+-]+\s*(at|@)\s*[A-Za-z0-9.-]+\s*(dot|\.)\s*(com|ca|net|org|io)\b/gi },
+  { name: 'url_http', regex: /https?:\/\/[^\s]+/g },
+  { name: 'url_www', regex: /www\.[^\s]+/g },
+];
+
+const TIER2_PATTERNS = [
+  { name: 'phone_spelled', regex: /\b(two|three|four|five|six|seven|eight|nine)\s*(five|zero|one|two|three|four|five|six|seven|eight|nine)\s*(zero|one|two|three|four|five|six|seven|eight|nine)/gi },
+];
+
+const SOCIAL_KEYWORDS = /\b(instagram|ig|facebook|fb|whatsapp|telegram|signal|messenger|snapchat|tiktok|twitter|x\.com)\b/i;
+const CONTACT_INTENT = /\b(text|call|phone|email|message|reach|contact)\s*(me|us)\b/gi;
+
+export interface RedactionResult {
+  wasRedacted: boolean;
+  cleanContent: string;
+  originalContent: string;
+  detectedItems: Array<{ tier: 1 | 2; type: string; value: string }>;
+  hasContactIntent: boolean;
+}
+
+export function redactContactInfo(content: string): RedactionResult {
+  let cleanContent = content;
+  const detectedItems: RedactionResult['detectedItems'] = [];
+  let tier1Triggered = false;
+
+  const hasSocialKeywords = SOCIAL_KEYWORDS.test(content);
+  const hasContactIntent = CONTACT_INTENT.test(content);
+
+  for (const pattern of TIER1_PATTERNS) {
+    const matches = content.match(pattern.regex);
+    if (matches) {
+      tier1Triggered = true;
+      for (const match of matches) {
+        if (!detectedItems.find(d => d.value === match)) {
+          detectedItems.push({ tier: 1, type: pattern.name, value: match });
+        }
+        cleanContent = cleanContent.replace(new RegExp(escapeRegex(match), 'g'), '[contact info protected]');
+      }
+    }
+  }
+
+  if (tier1Triggered || hasSocialKeywords) {
+    for (const pattern of TIER2_PATTERNS) {
+      const matches = content.match(pattern.regex);
+      if (matches) {
+        for (const match of matches) {
+          if (!detectedItems.find(d => d.value === match)) {
+            detectedItems.push({ tier: 2, type: pattern.name, value: match });
+          }
+          cleanContent = cleanContent.replace(new RegExp(escapeRegex(match), 'g'), '[contact info protected]');
+        }
+      }
+    }
+  }
+
+  return { wasRedacted: detectedItems.length > 0, cleanContent, originalContent: content, detectedItems, hasContactIntent };
+}
+
+function escapeRegex(string: string): string {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+export function shouldBlockMessage(conversation_id: string, recent_redaction_count: number): { blocked: boolean; reason?: string } {
+  if (recent_redaction_count >= 3) {
+    return { blocked: false, reason: 'Multiple contact sharing attempts detected. Please wait for deposit confirmation.' };
+  }
+  return { blocked: false };
+}
+```
+
+### PART 4: Private Feedback Routes
+
+File: server/routes/feedback.ts
+```typescript
+import { Router, Request, Response } from 'express';
+import { pool } from '../db';
+import { resolveActorParty } from '../lib/partyResolver';
+
+const router = Router();
+
+// ============================================================
+// SEND PRIVATE FEEDBACK (Owner → Contractor)
+// ============================================================
+router.post('/opportunities/:id/private-feedback', async (req: Request, res: Response) => {
+  try {
+    const { id: opportunity_id } = req.params;
+    const { 
+      content, 
+      quality_rating, 
+      communication_rating, 
+      timeliness_rating,
+      conversation_id 
+    } = req.body;
+
+    const actor = await resolveActorParty(req, 'owner');
+    if (!actor) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    if (!content || content.trim().length === 0) {
+      return res.status(400).json({ error: 'Feedback content required' });
+    }
+
+    const client = await pool.connect();
+    try {
+      // Get opportunity and find contractor party
+      const oppResult = await client.query(
+        `SELECT o.id, c.contractor_party_id, c.id as conversation_id
+         FROM opportunities o
+         LEFT JOIN conversations c ON c.opportunity_id = o.id
+         WHERE o.id = $1
+         ORDER BY c.created_at DESC LIMIT 1`,
+        [opportunity_id]
+      );
+
+      if (oppResult.rows.length === 0) {
+        return res.status(404).json({ error: 'Opportunity not found' });
+      }
+
+      const opp = oppResult.rows[0];
+      
+      if (!opp.contractor_party_id) {
+        return res.status(400).json({ error: 'No contractor associated with this opportunity' });
+      }
+
+      // Check if contractor accepts feedback
+      const settingsResult = await client.query(
+        `SELECT accepts_private_feedback, blocked_party_ids 
+         FROM contractor_feedback_settings 
+         WHERE party_id = $1`,
+        [opp.contractor_party_id]
+      );
+
+      const settings = settingsResult.rows[0];
+      if (settings?.accepts_private_feedback === false) {
+        return res.status(400).json({ error: 'Contractor is not accepting feedback at this time' });
+      }
+
+      if (settings?.blocked_party_ids?.includes(actor.actor_party_id)) {
+        // Silently accept but don't store - don't tell owner they're blocked
+        return res.status(201).json({ 
+          feedback: { id: 'accepted' }, 
+          message: 'Feedback sent' 
+        });
+      }
+
+      // Create feedback
+      const result = await client.query(
+        `INSERT INTO private_feedback (
+          opportunity_id, conversation_id,
+          from_party_id, from_individual_id,
+          to_party_id,
+          feedback_type, content,
+          quality_rating, communication_rating, timeliness_rating
+        ) VALUES ($1, $2, $3, $4, $5, 'private_feedback', $6, $7, $8, $9)
+        RETURNING *`,
+        [
+          opportunity_id,
+          conversation_id || opp.conversation_id,
+          actor.actor_party_id,
+          actor.individual_id,
+          opp.contractor_party_id,
+          content,
+          quality_rating || null,
+          communication_rating || null,
+          timeliness_rating || null
+        ]
+      );
+
+      res.status(201).json({ 
+        feedback: result.rows[0],
+        message: 'Private feedback sent to contractor'
+      });
+
+    } finally {
+      client.release();
+    }
+  } catch (error) {
+    console.error('Error sending private feedback:', error);
+    res.status(500).json({ error: 'Failed to send feedback' });
+  }
+});
+
+// ============================================================
+// GET MY RECEIVED FEEDBACK (Contractor View)
+// ============================================================
+router.get('/feedback/received', async (req: Request, res: Response) => {
+  try {
+    const actor = await resolveActorParty(req, 'contractor');
+    if (!actor) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const { include_deleted = 'false', include_archived = 'false' } = req.query;
+
+    let query = `
+      SELECT pf.*, 
+             o.title as opportunity_title,
+             o.opportunity_ref,
+             from_p.trade_name as from_party_name
+      FROM private_feedback pf
+      JOIN opportunities o ON pf.opportunity_id = o.id
+      LEFT JOIN parties from_p ON pf.from_party_id = from_p.id
+      WHERE pf.to_party_id = $1
+    `;
+    const params: any[] = [actor.actor_party_id];
+
+    if (include_deleted !== 'true') {
+      query += ` AND NOT pf.deleted_by_contractor`;
+    }
+
+    if (include_archived !== 'true') {
+      query += ` AND pf.archived_at IS NULL`;
+    }
+
+    query += ` ORDER BY pf.created_at DESC`;
+
+    const result = await pool.query(query, params);
+
+    res.json({ 
+      feedback: result.rows,
+      count: result.rows.length
+    });
+  } catch (error) {
+    console.error('Error fetching feedback:', error);
+    res.status(500).json({ error: 'Failed to fetch feedback' });
+  }
+});
+
+// ============================================================
+// DELETE PRIVATE FEEDBACK (Contractor Right)
+// ============================================================
+router.delete('/feedback/:id', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { hard_delete = 'false' } = req.query;
+
+    const actor = await resolveActorParty(req, 'contractor');
+    if (!actor) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const client = await pool.connect();
+    try {
+      // Verify ownership
+      const existing = await client.query(
+        `SELECT * FROM private_feedback WHERE id = $1 AND to_party_id = $2`,
+        [id, actor.actor_party_id]
+      );
+
+      if (existing.rows.length === 0) {
+        return res.status(404).json({ error: 'Feedback not found' });
+      }
+
+      if (hard_delete === 'true') {
+        // Complete removal - contractor's right
+        await client.query(`DELETE FROM private_feedback WHERE id = $1`, [id]);
+        res.json({ deleted: true, type: 'hard_delete' });
+      } else {
+        // Soft delete - keep record but mark as deleted
+        await client.query(
+          `UPDATE private_feedback SET 
+            deleted_by_contractor = true, 
+            deleted_at = now(),
+            content = '[Deleted by contractor]'
+           WHERE id = $1`,
+          [id]
+        );
+        res.json({ deleted: true, type: 'soft_delete' });
+      }
+    } finally {
+      client.release();
+    }
+  } catch (error) {
+    console.error('Error deleting feedback:', error);
+    res.status(500).json({ error: 'Failed to delete feedback' });
+  }
+});
+
+// ============================================================
+// ARCHIVE FEEDBACK (Contractor)
+// ============================================================
+router.post('/feedback/:id/archive', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const actor = await resolveActorParty(req, 'contractor');
+    if (!actor) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const result = await pool.query(
+      `UPDATE private_feedback SET archived_at = now(), updated_at = now()
+       WHERE id = $1 AND to_party_id = $2
+       RETURNING *`,
+      [id, actor.actor_party_id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Feedback not found' });
+    }
+
+    res.json({ feedback: result.rows[0] });
+  } catch (error) {
+    console.error('Error archiving feedback:', error);
+    res.status(500).json({ error: 'Failed to archive feedback' });
+  }
+});
+
+// ============================================================
+// MARK AS READ (Contractor)
+// ============================================================
+router.post('/feedback/:id/read', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const actor = await resolveActorParty(req, 'contractor');
+    if (!actor) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const result = await pool.query(
+      `UPDATE private_feedback SET read_at = now(), updated_at = now()
+       WHERE id = $1 AND to_party_id = $2 AND read_at IS NULL
+       RETURNING *`,
+      [id, actor.actor_party_id]
+    );
+
+    res.json({ feedback: result.rows[0] || null });
+  } catch (error) {
+    console.error('Error marking feedback read:', error);
+    res.status(500).json({ error: 'Failed to mark feedback read' });
+  }
+});
+
+// ============================================================
+// UPDATE FEEDBACK SETTINGS (Contractor)
+// ============================================================
+router.put('/feedback/settings', async (req: Request, res: Response) => {
+  try {
+    const { 
+      accepts_private_feedback,
+      accepts_appreciation_requests,
+      auto_archive_after_days,
+      notify_on_feedback,
+      notify_on_appreciation
+    } = req.body;
+
+    const actor = await resolveActorParty(req, 'contractor');
+    if (!actor) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const result = await pool.query(
+      `INSERT INTO contractor_feedback_settings (
+        party_id, accepts_private_feedback, accepts_appreciation_requests,
+        auto_archive_after_days, notify_on_feedback, notify_on_appreciation
+      ) VALUES ($1, $2, $3, $4, $5, $6)
+      ON CONFLICT (party_id) DO UPDATE SET
+        accepts_private_feedback = COALESCE($2, contractor_feedback_settings.accepts_private_feedback),
+        accepts_appreciation_requests = COALESCE($3, contractor_feedback_settings.accepts_appreciation_requests),
+        auto_archive_after_days = COALESCE($4, contractor_feedback_settings.auto_archive_after_days),
+        notify_on_feedback = COALESCE($5, contractor_feedback_settings.notify_on_feedback),
+        notify_on_appreciation = COALESCE($6, contractor_feedback_settings.notify_on_appreciation),
+        updated_at = now()
+      RETURNING *`,
+      [
+        actor.actor_party_id,
+        accepts_private_feedback,
+        accepts_appreciation_requests,
+        auto_archive_after_days,
+        notify_on_feedback,
+        notify_on_appreciation
+      ]
+    );
+
+    res.json({ settings: result.rows[0] });
+  } catch (error) {
+    console.error('Error updating feedback settings:', error);
+    res.status(500).json({ error: 'Failed to update settings' });
+  }
+});
+
+// ============================================================
+// BLOCK OWNER FROM SENDING FEEDBACK (Contractor)
+// ============================================================
+router.post('/feedback/block/:party_id', async (req: Request, res: Response) => {
+  try {
+    const { party_id: block_party_id } = req.params;
+
+    const actor = await resolveActorParty(req, 'contractor');
+    if (!actor) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const result = await pool.query(
+      `INSERT INTO contractor_feedback_settings (party_id, blocked_party_ids)
+       VALUES ($1, ARRAY[$2]::uuid[])
+       ON CONFLICT (party_id) DO UPDATE SET
+         blocked_party_ids = array_append(
+           COALESCE(contractor_feedback_settings.blocked_party_ids, ARRAY[]::uuid[]),
+           $2::uuid
+         ),
+         updated_at = now()
+       RETURNING *`,
+      [actor.actor_party_id, block_party_id]
+    );
+
+    res.json({ settings: result.rows[0], blocked: block_party_id });
+  } catch (error) {
+    console.error('Error blocking party:', error);
+    res.status(500).json({ error: 'Failed to block party' });
+  }
+});
+
+export default router;
+```
+
+### PART 5: Serious Issue Reports (Admin Only)
+
+File: server/routes/serious-issues.ts
+```typescript
+import { Router, Request, Response } from 'express';
+import { pool } from '../db';
+import { resolveActorParty } from '../lib/partyResolver';
+
+const router = Router();
+
+// Check if user has admin role
+function isAdmin(req: any): boolean {
+  const roles = req?.ctx?.roles || [];
+  return roles.includes('admin') || roles.includes('platform_admin');
+}
+
+// ============================================================
+// FILE SERIOUS ISSUE REPORT (Any User)
+// ============================================================
+router.post('/opportunities/:id/serious-issue', async (req: Request, res: Response) => {
+  try {
+    const { id: opportunity_id } = req.params;
+    const { 
+      subject_party_id,
+      subject_type,
+      category,
+      description,
+      evidence,
+      conversation_id
+    } = req.body;
+
+    const actor = await resolveActorParty(req, 'owner'); // Could be owner or contractor
+    if (!actor) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    if (!subject_party_id || !category || !description) {
+      return res.status(400).json({ error: 'subject_party_id, category, and description required' });
+    }
+
+    const validCategories = ['fraud', 'safety', 'harassment', 'non_payment', 'abandonment', 'property_damage', 'other'];
+    if (!validCategories.includes(category)) {
+      return res.status(400).json({ error: 'Invalid category' });
+    }
+
+    const client = await pool.connect();
+    try {
+      // Check for pattern (similar reports about same party)
+      const patternCheck = await client.query(
+        `SELECT id FROM serious_issue_reports 
+         WHERE subject_party_id = $1 
+         AND category = $2
+         AND created_at > now() - interval '6 months'`,
+        [subject_party_id, category]
+      );
+
+      const isPattern = patternCheck.rows.length > 0;
+      const relatedIds = patternCheck.rows.map(r => r.id);
+
+      const result = await client.query(
+        `INSERT INTO serious_issue_reports (
+          opportunity_id, conversation_id,
+          reporter_party_id, reporter_individual_id,
+          subject_party_id, subject_type,
+          category, description, evidence,
+          is_pattern_match, related_report_ids
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7::issue_category, $8, $9, $10, $11)
+        RETURNING id, created_at`,
+        [
+          opportunity_id,
+          conversation_id || null,
+          actor.actor_party_id,
+          actor.individual_id,
+          subject_party_id,
+          subject_type || 'contractor',
+          category,
+          description,
+          evidence ? JSON.stringify(evidence) : null,
+          isPattern,
+          relatedIds.length > 0 ? relatedIds : null
+        ]
+      );
+
+      // Don't return full report to user - just confirmation
+      res.status(201).json({ 
+        report_id: result.rows[0].id,
+        message: 'Your report has been submitted and will be reviewed by our team. This report is confidential and will not be shared publicly.',
+        is_pattern: isPattern
+      });
+
+    } finally {
+      client.release();
+    }
+  } catch (error) {
+    console.error('Error filing serious issue:', error);
+    res.status(500).json({ error: 'Failed to submit report' });
+  }
+});
+
+// ============================================================
+// ADMIN: GET ALL SERIOUS ISSUES
+// ============================================================
+router.get('/admin/serious-issues', async (req: Request, res: Response) => {
+  try {
+    if (!isAdmin(req)) {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+
+    const { status, category, limit = '50' } = req.query;
+
+    let query = `
+      SELECT sir.*,
+             o.title as opportunity_title,
+             reporter_p.trade_name as reporter_name,
+             subject_p.trade_name as subject_name
+      FROM serious_issue_reports sir
+      LEFT JOIN opportunities o ON sir.opportunity_id = o.id
+      LEFT JOIN parties reporter_p ON sir.reporter_party_id = reporter_p.id
+      LEFT JOIN parties subject_p ON sir.subject_party_id = subject_p.id
+      WHERE 1=1
+    `;
+    const params: any[] = [];
+
+    if (status) {
+      params.push(status);
+      query += ` AND sir.status = $${params.length}::issue_status`;
+    }
+
+    if (category) {
+      params.push(category);
+      query += ` AND sir.category = $${params.length}::issue_category`;
+    }
+
+    params.push(parseInt(limit as string));
+    query += ` ORDER BY sir.is_pattern_match DESC, sir.created_at DESC LIMIT $${params.length}`;
+
+    const result = await pool.query(query, params);
+
+    res.json({ 
+      issues: result.rows,
+      count: result.rows.length
+    });
+  } catch (error) {
+    console.error('Error fetching serious issues:', error);
+    res.status(500).json({ error: 'Failed to fetch issues' });
+  }
+});
+
+// ============================================================
+// ADMIN: UPDATE ISSUE STATUS
+// ============================================================
+router.patch('/admin/serious-issues/:id', async (req: Request, res: Response) => {
+  try {
+    if (!isAdmin(req)) {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+
+    const { id } = req.params;
+    const { 
+      status,
+      assigned_to,
+      internal_notes,
+      resolution_summary,
+      action_taken
+    } = req.body;
+
+    const updates: string[] = [];
+    const params: any[] = [];
+    let paramIndex = 1;
+
+    if (status) {
+      updates.push(`status = $${paramIndex}::issue_status`);
+      params.push(status);
+      paramIndex++;
+      
+      if (['resolved_no_action', 'resolved_action_taken', 'dismissed'].includes(status)) {
+        updates.push(`resolution_date = now()`);
+      }
+    }
+
+    if (assigned_to !== undefined) {
+      updates.push(`assigned_to = $${paramIndex}`);
+      params.push(assigned_to);
+      paramIndex++;
+    }
+
+    if (internal_notes !== undefined) {
+      updates.push(`internal_notes = $${paramIndex}`);
+      params.push(internal_notes);
+      paramIndex++;
+    }
+
+    if (resolution_summary !== undefined) {
+      updates.push(`resolution_summary = $${paramIndex}`);
+      params.push(resolution_summary);
+      paramIndex++;
+    }
+
+    if (action_taken !== undefined) {
+      updates.push(`action_taken = $${paramIndex}`);
+      params.push(action_taken);
+      paramIndex++;
+      updates.push(`action_date = now()`);
+    }
+
+    if (updates.length === 0) {
+      return res.status(400).json({ error: 'No updates provided' });
+    }
+
+    updates.push('updated_at = now()');
+    params.push(id);
+
+    const result = await pool.query(
+      `UPDATE serious_issue_reports SET ${updates.join(', ')} WHERE id = $${paramIndex} RETURNING *`,
+      params
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Issue not found' });
+    }
+
+    res.json({ issue: result.rows[0] });
+  } catch (error) {
+    console.error('Error updating issue:', error);
+    res.status(500).json({ error: 'Failed to update issue' });
+  }
+});
+
+// ============================================================
+// ADMIN: GET PATTERN ANALYSIS FOR PARTY
+// ============================================================
+router.get('/admin/serious-issues/patterns/:party_id', async (req: Request, res: Response) => {
+  try {
+    if (!isAdmin(req)) {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+
+    const { party_id } = req.params;
+
+    const result = await pool.query(
+      `SELECT 
+         category,
+         COUNT(*) as count,
+         array_agg(id) as report_ids,
+         MIN(created_at) as first_report,
+         MAX(created_at) as latest_report
+       FROM serious_issue_reports
+       WHERE subject_party_id = $1
+       GROUP BY category
+       ORDER BY count DESC`,
+      [party_id]
+    );
+
+    const summary = await pool.query(
+      `SELECT COUNT(*) as total_reports,
+              COUNT(DISTINCT reporter_party_id) as unique_reporters,
+              COUNT(*) FILTER (WHERE status NOT IN ('resolved_no_action', 'dismissed')) as active_reports
+       FROM serious_issue_reports
+       WHERE subject_party_id = $1`,
+      [party_id]
+    );
+
+    res.json({
+      party_id,
+      summary: summary.rows[0],
+      by_category: result.rows
+    });
+  } catch (error) {
+    console.error('Error fetching patterns:', error);
+    res.status(500).json({ error: 'Failed to fetch patterns' });
+  }
+});
+
+export default router;
+```
+
+### PART 6: Register All Routes
+
+Update server/index.ts:
+```typescript
+// Add imports
+import conversationsRouter from './routes/conversations';
+import feedbackRouter from './routes/feedback';
+import seriousIssuesRouter from './routes/serious-issues';
+
+// Add route registrations (after other routes)
+app.use('/api', conversationsRouter);
+app.use('/api', feedbackRouter);
+app.use('/api', seriousIssuesRouter);
+```
+
+### PART 7: Create lib directory and files
+```bash
+mkdir -p server/lib
+```
+
+### Verification Steps
+
+1. **Run migration 035**:
+```bash
+psql $DATABASE_URL -f server/migrations/035_private_feedback_trust_model.sql
+```
+
+2. **Verify tables created**:
+```sql
+SELECT table_name FROM information_schema.tables 
+WHERE table_name IN ('private_feedback', 'serious_issue_reports', 
+                     'public_appreciations', 'contractor_feedback_settings');
+```
+
+3. **Test private feedback flow**:
+```bash
+# Owner sends feedback (should work)
+curl -X POST http://localhost:5000/api/opportunities/OPP_ID/private-feedback \
+  -H "Content-Type: application/json" \
+  -d '{"content": "Great work, but arrived 30 mins late", "timeliness_rating": 3}'
+
+# Contractor deletes feedback (their right)
+curl -X DELETE http://localhost:5000/api/feedback/FEEDBACK_ID?hard_delete=true
+```
+
+4. **Test serious issue**:
+```bash
+# File serious issue (goes to admin queue only)
+curl -X POST http://localhost:5000/api/opportunities/OPP_ID/serious-issue \
+  -H "Content-Type: application/json" \
+  -d '{"subject_party_id": "PARTY_ID", "category": "safety", "description": "Worker was impaired on site"}'
+```
+
+### Expected Results
+
+1. **No public negative reviews** - verified by schema design
+2. **Contractor can delete feedback** - DELETE endpoint works
+3. **Serious issues are internal only** - No public endpoint to view
+4. **Trust signals have no narrative** - Only aggregated metrics
+
+Tell me:
+1. Did migration 035 run successfully?
+2. Do all 4 new tables exist?
+3. Can you send private feedback?
+4. Can you delete private feedback as contractor?
+5. Any errors?
