@@ -72,24 +72,8 @@ BEGIN
         END IF;
     END IF;
     
-    -- Fall back to nearest by coordinates using PostGIS
+    -- Fall back to nearest by coordinates using Euclidean distance (no PostGIS)
     IF p_lat IS NOT NULL AND p_lng IS NOT NULL THEN
-        BEGIN
-            SELECT id INTO v_community_id
-            FROM sr_communities
-            WHERE geom IS NOT NULL
-            ORDER BY geom <-> ST_SetSRID(ST_MakePoint(p_lng, p_lat), 4326)::geography
-            LIMIT 1;
-            
-            IF v_community_id IS NOT NULL THEN
-                RETURN v_community_id;
-            END IF;
-        EXCEPTION WHEN OTHERS THEN
-            -- PostGIS geom column might not exist, fall back to lat/lng
-            NULL;
-        END;
-        
-        -- Euclidean fallback using latitude/longitude columns
         SELECT id INTO v_community_id
         FROM sr_communities
         WHERE latitude IS NOT NULL AND longitude IS NOT NULL

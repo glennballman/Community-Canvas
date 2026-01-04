@@ -141,7 +141,7 @@ CREATE TABLE IF NOT EXISTS opportunities (
   site_address TEXT,
   site_latitude NUMERIC(10,7),
   site_longitude NUMERIC(10,7),
-  site_geom GEOGRAPHY(POINT, 4326),
+  -- Note: site_geom column removed for Replit compatibility
   
   estimated_value_low NUMERIC(15,2),
   estimated_value_high NUMERIC(15,2),
@@ -172,7 +172,7 @@ CREATE TABLE IF NOT EXISTS opportunities (
 CREATE INDEX IF NOT EXISTS idx_opportunities_status ON opportunities(status);
 CREATE INDEX IF NOT EXISTS idx_opportunities_owner ON opportunities(owner_tenant_id);
 CREATE INDEX IF NOT EXISTS idx_opportunities_deadline ON opportunities(bid_deadline) WHERE status = 'published';
-CREATE INDEX IF NOT EXISTS idx_opportunities_geom ON opportunities USING gist(site_geom) WHERE site_geom IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_opportunities_lat_lng ON opportunities(site_latitude, site_longitude) WHERE site_latitude IS NOT NULL AND site_longitude IS NOT NULL;
 
 -- Add FK to sr_bundles if it exists
 DO $$

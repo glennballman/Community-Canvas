@@ -32,7 +32,7 @@ CREATE TABLE IF NOT EXISTS unified_assets (
   city VARCHAR(100),
   latitude NUMERIC(10, 7),
   longitude NUMERIC(10, 7),
-  geom GEOGRAPHY(Point, 4326),  -- PostGIS for spatial queries
+  -- Note: geom column removed for Replit compatibility - using lat/lng
   location_description TEXT,
   
   -- === ACCOMMODATION CAPABILITY ===
@@ -162,7 +162,7 @@ CREATE TABLE IF NOT EXISTS unified_assets (
 -- Indexes for common searches
 CREATE INDEX IF NOT EXISTS idx_unified_assets_type ON unified_assets(asset_type);
 CREATE INDEX IF NOT EXISTS idx_unified_assets_accommodation ON unified_assets(is_accommodation) WHERE is_accommodation = true;
-CREATE INDEX IF NOT EXISTS idx_unified_assets_location ON unified_assets USING gist(geom) WHERE geom IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_unified_assets_location ON unified_assets(latitude, longitude) WHERE latitude IS NOT NULL AND longitude IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_unified_assets_sleeps ON unified_assets(sleeps_total) WHERE sleeps_total > 0;
 CREATE INDEX IF NOT EXISTS idx_unified_assets_community ON unified_assets(community_id);
 CREATE INDEX IF NOT EXISTS idx_unified_assets_owner ON unified_assets(owner_type, owner_tenant_id);
@@ -351,7 +351,7 @@ BEGIN
   INSERT INTO unified_assets (
     asset_type, source_table, source_id,
     name, description, slug,
-    community_id, region, city, latitude, longitude, geom,
+    community_id, region, city, latitude, longitude,
     is_accommodation, sleeps_total, bedrooms,
     bathrooms_full,
     is_parkable_spot, spot_length_ft, spot_width_ft,
@@ -368,9 +368,6 @@ BEGIN
     prop.name, prop.description, lower(regexp_replace(prop.name, '[^a-zA-Z0-9]+', '-', 'g')),
     NULL, -- community_id needs lookup
     prop.region, prop.city, prop.latitude, prop.longitude,
-    CASE WHEN prop.latitude IS NOT NULL AND prop.longitude IS NOT NULL 
-         THEN ST_SetSRID(ST_MakePoint(prop.longitude::float, prop.latitude::float), 4326)::geography
-         ELSE NULL END,
     COALESCE(prop.beds > 0 OR prop.bedrooms > 0, false),
     COALESCE(prop.max_guests, prop.beds),
     prop.bedrooms,
@@ -390,7 +387,6 @@ BEGIN
     description = EXCLUDED.description,
     latitude = EXCLUDED.latitude,
     longitude = EXCLUDED.longitude,
-    geom = EXCLUDED.geom,
     sleeps_total = EXCLUDED.sleeps_total,
     crew_score = EXCLUDED.crew_score,
     overall_rating = EXCLUDED.overall_rating,
@@ -426,7 +422,7 @@ BEGIN
   INSERT INTO unified_assets (
     asset_type, source_table, source_id,
     name, description, slug,
-    region, city, latitude, longitude, geom,
+    region, city, latitude, longitude,
     is_parkable_spot,
     spot_length_ft, spot_width_ft,
     max_vehicle_length_ft, max_vehicle_height_ft,
@@ -441,9 +437,6 @@ BEGIN
     sp.notes,
     lower(regexp_replace(COALESCE(sp.spot_name, 'spot-' || spot_id::text), '[^a-zA-Z0-9]+', '-', 'g')),
     sp.region, sp.city, sp.latitude, sp.longitude,
-    CASE WHEN sp.latitude IS NOT NULL AND sp.longitude IS NOT NULL 
-         THEN ST_SetSRID(ST_MakePoint(sp.longitude::float, sp.latitude::float), 4326)::geography
-         ELSE NULL END,
     true,
     COALESCE(sp.length_ft, sp.max_length_ft),
     COALESCE(sp.width_ft, sp.max_width_ft),
@@ -908,9 +901,10 @@ BEGIN
     ua.has_sewer_hookup,
     ua.rate_daily,
     ua.thumbnail_url,
+    -- Approximate distance using Euclidean calculation (no PostGIS)
     CASE 
-      WHEN p_latitude IS NOT NULL AND p_longitude IS NOT NULL AND ua.geom IS NOT NULL
-      THEN ROUND((ST_Distance(ua.geom, ST_SetSRID(ST_MakePoint(p_longitude, p_latitude), 4326)::geography) / 1000)::numeric, 1)
+      WHEN p_latitude IS NOT NULL AND p_longitude IS NOT NULL AND ua.latitude IS NOT NULL AND ua.longitude IS NOT NULL
+      THEN ROUND((SQRT(POWER((ua.latitude - p_latitude) * 111, 2) + POWER((ua.longitude - p_longitude) * 111 * COS(RADIANS(p_latitude)), 2)))::numeric, 1)
       ELSE NULL
     END as distance_km
   FROM unified_assets ua
@@ -923,13 +917,17 @@ BEGIN
     AND (
       p_latitude IS NULL 
       OR p_longitude IS NULL 
-      OR ua.geom IS NULL
-      OR ST_DWithin(ua.geom, ST_SetSRID(ST_MakePoint(p_longitude, p_latitude), 4326)::geography, p_radius_km * 1000)
+      OR ua.latitude IS NULL
+      -- Approximate bounding box filter (no PostGIS)
+      OR (
+        ua.latitude BETWEEN p_latitude - (p_radius_km / 111.0) AND p_latitude + (p_radius_km / 111.0)
+        AND ua.longitude BETWEEN p_longitude - (p_radius_km / (111.0 * COS(RADIANS(p_latitude)))) AND p_longitude + (p_radius_km / (111.0 * COS(RADIANS(p_latitude))))
+      )
     )
   ORDER BY 
     CASE 
-      WHEN p_latitude IS NOT NULL AND p_longitude IS NOT NULL AND ua.geom IS NOT NULL
-      THEN ST_Distance(ua.geom, ST_SetSRID(ST_MakePoint(p_longitude, p_latitude), 4326)::geography)
+      WHEN p_latitude IS NOT NULL AND p_longitude IS NOT NULL AND ua.latitude IS NOT NULL AND ua.longitude IS NOT NULL
+      THEN SQRT(POWER((ua.latitude - p_latitude) * 111, 2) + POWER((ua.longitude - p_longitude) * 111 * COS(RADIANS(p_latitude)), 2))
       ELSE 0
     END,
     ua.crew_score DESC NULLS LAST
@@ -961,7 +959,7 @@ BEGIN
     asset_type, source_table, source_id,
     name, description, slug,
     owner_type,
-    community_id, region, city, latitude, longitude, geom,
+    community_id, region, city, latitude, longitude,
     is_accommodation,
     sleeps_total,
     bedrooms,
@@ -979,9 +977,6 @@ BEGIN
     r.name, r.description, slug_val,
     'platform',
     r.community_id, r.region, r.city, r.latitude, r.longitude,
-    CASE WHEN r.latitude IS NOT NULL AND r.longitude IS NOT NULL 
-         THEN ST_SetSRID(ST_MakePoint(r.longitude, r.latitude), 4326)::geography
-         ELSE NULL END,
     true,
     COALESCE(r.max_occupancy, 1),
     r.bedrooms,

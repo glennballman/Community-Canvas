@@ -45,7 +45,7 @@ CREATE TABLE IF NOT EXISTS assets (
   city TEXT,
   latitude NUMERIC(10,7),
   longitude NUMERIC(10,7),
-  geom GEOGRAPHY(POINT, 4326),  -- PostGIS for spatial queries
+  -- Note: geom column removed for Replit compatibility - using lat/lng
   
   -- Media (denormalized for listings)
   thumbnail_url TEXT,
@@ -72,7 +72,7 @@ CREATE INDEX IF NOT EXISTS idx_assets_type ON assets(asset_type);
 CREATE INDEX IF NOT EXISTS idx_assets_source ON assets(source_table, source_id);
 CREATE INDEX IF NOT EXISTS idx_assets_owner ON assets(owner_type, owner_tenant_id);
 CREATE INDEX IF NOT EXISTS idx_assets_community ON assets(home_community_id);
-CREATE INDEX IF NOT EXISTS idx_assets_geom ON assets USING gist(geom) WHERE geom IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_assets_lat_lng ON assets(latitude, longitude) WHERE latitude IS NOT NULL AND longitude IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_assets_scores ON assets(crew_score DESC, overall_rating DESC);
 
 -- ============================================================================
@@ -176,7 +176,7 @@ CREATE TABLE IF NOT EXISTS asset_availability (
   location_community_id UUID,
   location_latitude NUMERIC(10,7),
   location_longitude NUMERIC(10,7),
-  location_geom GEOGRAPHY(POINT, 4326),
+  -- Note: location_geom column removed for Replit compatibility
   
   -- Weather constraints
   weather_constraints JSONB DEFAULT '{}',
@@ -207,7 +207,7 @@ CREATE TABLE IF NOT EXISTS work_orders (
   site_description TEXT,
   site_latitude NUMERIC(10,7),
   site_longitude NUMERIC(10,7),
-  site_geom GEOGRAPHY(POINT, 4326),
+  -- Note: site_geom column removed for Replit compatibility
   
   -- Job details
   title TEXT NOT NULL,
@@ -487,7 +487,7 @@ SELECT
   a.city,
   a.latitude,
   a.longitude,
-  a.geom,
+  -- a.geom removed for Replit compatibility
   a.thumbnail_url,
   a.crew_score,
   a.family_score,
@@ -578,9 +578,10 @@ BEGIN
     a.name,
     a.asset_type,
     ac.attributes,
+    -- Approximate distance using Euclidean calculation (no PostGIS)
     CASE 
-      WHEN p_latitude IS NOT NULL AND p_longitude IS NOT NULL AND a.geom IS NOT NULL
-      THEN ROUND((ST_Distance(a.geom, ST_SetSRID(ST_MakePoint(p_longitude, p_latitude), 4326)::geography) / 1000)::numeric, 1)
+      WHEN p_latitude IS NOT NULL AND p_longitude IS NOT NULL AND a.latitude IS NOT NULL AND a.longitude IS NOT NULL
+      THEN ROUND((SQRT(POWER((a.latitude - p_latitude) * 111, 2) + POWER((a.longitude - p_longitude) * 111 * COS(RADIANS(p_latitude)), 2)))::numeric, 1)
       ELSE NULL
     END,
     t.rate_daily,
@@ -598,17 +599,20 @@ BEGIN
          (NOT p_min_attributes ? 'max_length_ft' OR (ac.attributes->>'max_length_ft')::int >= (p_min_attributes->>'max_length_ft')::int) AND
          (NOT p_min_attributes ? 'days_autonomy' OR (ac.attributes->>'days_autonomy')::int >= (p_min_attributes->>'days_autonomy')::int)
     ))
-    -- Spatial filter
+    -- Approximate bounding box filter (no PostGIS)
     AND (
       p_latitude IS NULL 
       OR p_longitude IS NULL 
-      OR a.geom IS NULL
-      OR ST_DWithin(a.geom, ST_SetSRID(ST_MakePoint(p_longitude, p_latitude), 4326)::geography, p_radius_km * 1000)
+      OR a.latitude IS NULL
+      OR (
+        a.latitude BETWEEN p_latitude - (p_radius_km / 111.0) AND p_latitude + (p_radius_km / 111.0)
+        AND a.longitude BETWEEN p_longitude - (p_radius_km / (111.0 * COS(RADIANS(p_latitude)))) AND p_longitude + (p_radius_km / (111.0 * COS(RADIANS(p_latitude))))
+      )
     )
   ORDER BY 
     CASE 
-      WHEN p_latitude IS NOT NULL AND p_longitude IS NOT NULL AND a.geom IS NOT NULL
-      THEN ST_Distance(a.geom, ST_SetSRID(ST_MakePoint(p_longitude, p_latitude), 4326)::geography)
+      WHEN p_latitude IS NOT NULL AND p_longitude IS NOT NULL AND a.latitude IS NOT NULL AND a.longitude IS NOT NULL
+      THEN SQRT(POWER((a.latitude - p_latitude) * 111, 2) + POWER((a.longitude - p_longitude) * 111 * COS(RADIANS(p_latitude)), 2))
       ELSE 0
     END,
     t.rate_daily ASC NULLS LAST
@@ -679,7 +683,7 @@ BEGIN
       asset_type, asset_subtype, source_table, source_id,
       owner_type, owner_individual_id, owner_tenant_id,
       canvas_id, name, slug,
-      home_community_id, region, city, latitude, longitude, geom,
+      home_community_id, region, city, latitude, longitude,
       thumbnail_url,
       crew_score, family_score, trucker_score, equestrian_score,
       overall_rating, review_count,
@@ -688,7 +692,7 @@ BEGIN
       ua.asset_type, NULL, ua.source_table, ua.source_id,
       ua.owner_type, ua.owner_individual_id, ua.owner_tenant_id,
       ua.canvas_id, ua.name, ua.slug,
-      ua.community_id, ua.region, ua.city, ua.latitude, ua.longitude, ua.geom,
+      ua.community_id, ua.region, ua.city, ua.latitude, ua.longitude,
       ua.thumbnail_url,
       ua.crew_score, ua.family_score, ua.trucker_score, ua.equestrian_score,
       ua.overall_rating, ua.review_count,
