@@ -3,12 +3,15 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Users, Shield, Building2, Award, Search, UserPlus, Edit, KeyRound, UserX, UserCheck } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/hooks/use-toast';
 
 interface User {
     id: string;
@@ -61,6 +64,7 @@ interface Qualification {
 
 export default function UsersManagement() {
     const { token, loading: authLoading } = useAuth();
+    const { toast } = useToast();
     const [users, setUsers] = useState<User[]>([]);
     const [selectedUser, setSelectedUser] = useState<UserDetail | null>(null);
     const [userTenants, setUserTenants] = useState<Tenant[]>([]);
@@ -71,6 +75,12 @@ export default function UsersManagement() {
     const [search, setSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
     const [total, setTotal] = useState(0);
+
+    const [editDialogOpen, setEditDialogOpen] = useState(false);
+    const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
+    const [editForm, setEditForm] = useState({ email: '', firstName: '', lastName: '' });
+    const [passwordForm, setPasswordForm] = useState({ newPassword: '', confirmPassword: '' });
+    const [saving, setSaving] = useState(false);
 
     const loadUsers = useCallback(async () => {
         if (!token) return;
@@ -148,6 +158,89 @@ export default function UsersManagement() {
             default: return 'outline';
         }
     };
+
+    function openEditDialog() {
+        if (!selectedUser) return;
+        setEditForm({
+            email: selectedUser.email,
+            firstName: selectedUser.first_name,
+            lastName: selectedUser.last_name
+        });
+        setEditDialogOpen(true);
+    }
+
+    function openPasswordDialog() {
+        setPasswordForm({ newPassword: '', confirmPassword: '' });
+        setPasswordDialogOpen(true);
+    }
+
+    async function handleSaveUser() {
+        if (!selectedUser || !token) return;
+        setSaving(true);
+        try {
+            const res = await fetch(`/api/foundation/users/${selectedUser.id}`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    email: editForm.email,
+                    first_name: editForm.firstName,
+                    last_name: editForm.lastName
+                })
+            });
+            const data = await res.json();
+            if (data.success) {
+                toast({ title: 'Success', description: 'User updated successfully' });
+                setEditDialogOpen(false);
+                loadUserDetails(selectedUser.id);
+                loadUsers();
+            } else {
+                toast({ title: 'Error', description: data.error || 'Failed to update user', variant: 'destructive' });
+            }
+        } catch {
+            toast({ title: 'Error', description: 'Failed to update user', variant: 'destructive' });
+        } finally {
+            setSaving(false);
+        }
+    }
+
+    async function handleResetPassword() {
+        if (!selectedUser || !token) return;
+        if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+            toast({ title: 'Error', description: 'Passwords do not match', variant: 'destructive' });
+            return;
+        }
+        if (passwordForm.newPassword.length < 8) {
+            toast({ title: 'Error', description: 'Password must be at least 8 characters', variant: 'destructive' });
+            return;
+        }
+        setSaving(true);
+        try {
+            const res = await fetch(`/api/foundation/users/${selectedUser.id}/password`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    new_password: passwordForm.newPassword
+                })
+            });
+            const data = await res.json();
+            if (data.success) {
+                toast({ title: 'Success', description: 'Password updated successfully' });
+                setPasswordDialogOpen(false);
+            } else {
+                toast({ title: 'Error', description: data.error || 'Failed to reset password', variant: 'destructive' });
+            }
+        } catch {
+            toast({ title: 'Error', description: 'Failed to reset password', variant: 'destructive' });
+        } finally {
+            setSaving(false);
+        }
+    }
 
     return (
         <div className="p-6 space-y-6">
@@ -408,11 +501,11 @@ export default function UsersManagement() {
                                         )}
 
                                         <div className="pt-4 border-t space-y-2">
-                                            <Button className="w-full" size="sm" data-testid="button-edit-user">
+                                            <Button className="w-full" size="sm" data-testid="button-edit-user" onClick={openEditDialog}>
                                                 <Edit className="w-4 h-4 mr-2" />
                                                 Edit User
                                             </Button>
-                                            <Button variant="outline" className="w-full" size="sm" data-testid="button-reset-password">
+                                            <Button variant="outline" className="w-full" size="sm" data-testid="button-reset-password" onClick={openPasswordDialog}>
                                                 <KeyRound className="w-4 h-4 mr-2" />
                                                 Reset Password
                                             </Button>
@@ -442,6 +535,88 @@ export default function UsersManagement() {
                     )}
                 </div>
             </div>
+
+            <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Edit User</DialogTitle>
+                        <DialogDescription>Update user details below.</DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="edit-email">Email</Label>
+                            <Input 
+                                id="edit-email"
+                                data-testid="input-edit-email"
+                                type="email"
+                                value={editForm.email}
+                                onChange={(e) => setEditForm(prev => ({ ...prev, email: e.target.value }))}
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="edit-firstName">First Name</Label>
+                            <Input 
+                                id="edit-firstName"
+                                data-testid="input-edit-firstName"
+                                value={editForm.firstName}
+                                onChange={(e) => setEditForm(prev => ({ ...prev, firstName: e.target.value }))}
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="edit-lastName">Last Name</Label>
+                            <Input 
+                                id="edit-lastName"
+                                data-testid="input-edit-lastName"
+                                value={editForm.lastName}
+                                onChange={(e) => setEditForm(prev => ({ ...prev, lastName: e.target.value }))}
+                            />
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setEditDialogOpen(false)}>Cancel</Button>
+                        <Button onClick={handleSaveUser} disabled={saving} data-testid="button-save-user">
+                            {saving ? 'Saving...' : 'Save Changes'}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={passwordDialogOpen} onOpenChange={setPasswordDialogOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Reset Password</DialogTitle>
+                        <DialogDescription>Enter a new password for {selectedUser?.first_name} {selectedUser?.last_name}.</DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="new-password">New Password</Label>
+                            <Input 
+                                id="new-password"
+                                data-testid="input-new-password"
+                                type="password"
+                                value={passwordForm.newPassword}
+                                onChange={(e) => setPasswordForm(prev => ({ ...prev, newPassword: e.target.value }))}
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="confirm-password">Confirm Password</Label>
+                            <Input 
+                                id="confirm-password"
+                                data-testid="input-confirm-password"
+                                type="password"
+                                value={passwordForm.confirmPassword}
+                                onChange={(e) => setPasswordForm(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                            />
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setPasswordDialogOpen(false)}>Cancel</Button>
+                        <Button onClick={handleResetPassword} disabled={saving} data-testid="button-confirm-password">
+                            {saving ? 'Saving...' : 'Reset Password'}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

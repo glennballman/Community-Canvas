@@ -321,6 +321,96 @@ router.get('/users/:id', authenticateToken, requirePlatformAdmin, async (req: Au
     }
 });
 
+router.patch('/users/:id', authenticateToken, requirePlatformAdmin, async (req: AuthRequest, res: Response) => {
+    try {
+        const { id } = req.params;
+        const { email, first_name, last_name, status } = req.body;
+
+        const userResult = await serviceQuery('SELECT * FROM cc_users WHERE id = $1', [id]);
+        if (userResult.rows.length === 0) {
+            return res.status(404).json({ success: false, error: 'User not found' });
+        }
+
+        const updates: string[] = [];
+        const params: any[] = [];
+        let paramCount = 0;
+
+        if (email) {
+            paramCount++;
+            updates.push(`email = $${paramCount}`);
+            params.push(email);
+        }
+        if (first_name !== undefined) {
+            paramCount++;
+            updates.push(`first_name = $${paramCount}`);
+            params.push(first_name);
+        }
+        if (last_name !== undefined) {
+            paramCount++;
+            updates.push(`last_name = $${paramCount}`);
+            params.push(last_name);
+        }
+        if (status) {
+            paramCount++;
+            updates.push(`status = $${paramCount}`);
+            params.push(status);
+        }
+
+        if (updates.length === 0) {
+            return res.status(400).json({ success: false, error: 'No fields to update' });
+        }
+
+        paramCount++;
+        updates.push(`updated_at = NOW()`);
+        params.push(id);
+
+        await serviceQuery(
+            `UPDATE cc_users SET ${updates.join(', ')} WHERE id = $${paramCount}`,
+            params
+        );
+
+        console.log(`[ADMIN] User ${id} updated by platform admin ${req.user!.userId}`);
+
+        res.json({ success: true, message: 'User updated successfully' });
+
+    } catch (error: any) {
+        console.error('Update user error:', error);
+        res.status(500).json({ success: false, error: 'Failed to update user' });
+    }
+});
+
+router.patch('/users/:id/password', authenticateToken, requirePlatformAdmin, async (req: AuthRequest, res: Response) => {
+    try {
+        const { id } = req.params;
+        const { new_password } = req.body;
+
+        if (!new_password || new_password.length < 8) {
+            return res.status(400).json({ success: false, error: 'Password must be at least 8 characters' });
+        }
+
+        const userResult = await serviceQuery('SELECT * FROM cc_users WHERE id = $1', [id]);
+        if (userResult.rows.length === 0) {
+            return res.status(404).json({ success: false, error: 'User not found' });
+        }
+
+        const bcrypt = await import('bcryptjs');
+        const hashedPassword = await bcrypt.hash(new_password, 12);
+
+        await serviceQuery(
+            'UPDATE cc_users SET password_hash = $1, updated_at = NOW() WHERE id = $2',
+            [hashedPassword, id]
+        );
+
+        console.log(`[ADMIN] Password reset for user ${id} by platform admin ${req.user!.userId}`);
+
+        res.json({ success: true, message: 'Password updated successfully' });
+
+    } catch (error: any) {
+        console.error('Reset password error:', error);
+        res.status(500).json({ success: false, error: 'Failed to reset password' });
+    }
+});
+
 router.get('/tenants', authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
         const { type, status, search } = req.query;
