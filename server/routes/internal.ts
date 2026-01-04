@@ -1,6 +1,7 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import pg from 'pg';
 import bcrypt from 'bcrypt';
+import crypto from 'crypto';
 import { z } from 'zod';
 import {
   blockTenantAccess,
@@ -122,6 +123,160 @@ router.post('/auth/login', async (req: Request, res: Response) => {
 router.post('/auth/logout', (req: Request, res: Response) => {
   delete (req as any).session.platformStaff;
   return res.json({ success: true });
+});
+
+router.post('/bootstrap/init', async (req: Request, res: Response) => {
+  try {
+    const existingStaff = await superuserPool.query(
+      'SELECT COUNT(*) as count FROM cc_platform_staff WHERE is_active = true'
+    );
+    
+    if (parseInt(existingStaff.rows[0].count) > 0) {
+      return res.status(403).json({
+        success: false,
+        error: 'Bootstrap not allowed - active staff already exist',
+        code: 'BOOTSTRAP_DISABLED'
+      });
+    }
+    
+    const unclaimedTokens = await superuserPool.query(
+      `SELECT COUNT(*) as count FROM cc_platform_staff_bootstrap_tokens 
+       WHERE claimed_at IS NULL AND expires_at > now()`
+    );
+    
+    if (parseInt(unclaimedTokens.rows[0].count) > 0) {
+      return res.status(409).json({
+        success: false,
+        error: 'Unclaimed bootstrap token already exists',
+        code: 'TOKEN_EXISTS'
+      });
+    }
+    
+    const token = crypto.randomBytes(32).toString('hex');
+    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+    const clientIp = req.ip || req.socket.remoteAddress || 'unknown';
+    
+    await superuserPool.query(
+      `INSERT INTO cc_platform_staff_bootstrap_tokens (token_hash, created_by_ip, expires_at)
+       VALUES ($1, $2, now() + INTERVAL '1 hour')`,
+      [tokenHash, clientIp]
+    );
+    
+    console.log(`[SECURITY] Bootstrap token generated from IP: ${clientIp}`);
+    
+    return res.json({
+      success: true,
+      token: token,
+      expires_in_seconds: 3600,
+      message: 'Use POST /api/internal/bootstrap/claim with this token to create first admin'
+    });
+  } catch (error: any) {
+    console.error('Bootstrap init error:', error.message);
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to generate bootstrap token'
+    });
+  }
+});
+
+const bootstrapClaimSchema = z.object({
+  token: z.string().min(64).max(64),
+  email: z.string().email(),
+  password: z.string().min(12),
+  full_name: z.string().min(2).max(255)
+});
+
+router.post('/bootstrap/claim', async (req: Request, res: Response) => {
+  try {
+    const parsed = bootstrapClaimSchema.safeParse(req.body);
+    
+    if (!parsed.success) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid request',
+        details: parsed.error.errors
+      });
+    }
+    
+    const { token, email, password, full_name } = parsed.data;
+    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+    
+    const tokenResult = await superuserPool.query(
+      `SELECT id, expires_at, claimed_at FROM cc_platform_staff_bootstrap_tokens
+       WHERE token_hash = $1`,
+      [tokenHash]
+    );
+    
+    if (tokenResult.rows.length === 0) {
+      return res.status(401).json({
+        success: false,
+        error: 'Invalid bootstrap token',
+        code: 'INVALID_TOKEN'
+      });
+    }
+    
+    const tokenRow = tokenResult.rows[0];
+    
+    if (tokenRow.claimed_at) {
+      return res.status(409).json({
+        success: false,
+        error: 'Token already claimed',
+        code: 'TOKEN_CLAIMED'
+      });
+    }
+    
+    if (new Date(tokenRow.expires_at) < new Date()) {
+      return res.status(401).json({
+        success: false,
+        error: 'Token expired',
+        code: 'TOKEN_EXPIRED'
+      });
+    }
+    
+    const passwordHash = await bcrypt.hash(password, 12);
+    
+    const staffResult = await superuserPool.query(
+      `INSERT INTO cc_platform_staff (email, password_hash, full_name, role, is_active)
+       VALUES ($1, $2, $3, 'platform_admin', true)
+       RETURNING id, email, full_name, role`,
+      [email.toLowerCase(), passwordHash, full_name]
+    );
+    
+    const newStaff = staffResult.rows[0];
+    
+    await superuserPool.query(
+      `UPDATE cc_platform_staff_bootstrap_tokens 
+       SET claimed_at = now(), claimed_by_staff_id = $1
+       WHERE id = $2`,
+      [newStaff.id, tokenRow.id]
+    );
+    
+    console.log(`[SECURITY] Bootstrap complete - first admin created: ${newStaff.email}`);
+    
+    return res.json({
+      success: true,
+      staff: {
+        id: newStaff.id,
+        email: newStaff.email,
+        full_name: newStaff.full_name,
+        role: newStaff.role
+      },
+      message: 'First admin created successfully. You can now login.'
+    });
+  } catch (error: any) {
+    if (error.code === '23505') {
+      return res.status(409).json({
+        success: false,
+        error: 'Email already registered',
+        code: 'EMAIL_EXISTS'
+      });
+    }
+    console.error('Bootstrap claim error:', error.message);
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to create admin account'
+    });
+  }
 });
 
 router.get('/auth/me', (req: Request, res: Response) => {

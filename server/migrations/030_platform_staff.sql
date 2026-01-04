@@ -50,14 +50,19 @@ CREATE INDEX IF NOT EXISTS idx_claim_events_staff_actor
   ON catalog_claim_events (actor_staff_id, created_at DESC)
   WHERE actor_staff_id IS NOT NULL;
 
--- 7. Create a test platform reviewer (password: 'reviewer123' - bcrypt hash)
--- In production, create accounts via admin console
-INSERT INTO cc_platform_staff (email, password_hash, full_name, role)
-VALUES (
-  'reviewer@platform.internal',
-  '$2b$10$rQZ8KmPJH.Qm7u7H6YzPPOqC7VzYzLqQYbZxL0eN3GJvHyYcZR7Pu',
-  'Platform Reviewer',
-  'platform_reviewer'
-) ON CONFLICT (email) DO NOTHING;
+-- 7. Create platform_staff_bootstrap_tokens table for one-time setup
+CREATE TABLE IF NOT EXISTS cc_platform_staff_bootstrap_tokens (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  token_hash VARCHAR(255) NOT NULL UNIQUE,
+  created_by_ip VARCHAR(45),
+  claimed_at TIMESTAMPTZ,
+  claimed_by_staff_id UUID REFERENCES cc_platform_staff(id),
+  expires_at TIMESTAMPTZ NOT NULL DEFAULT (now() + INTERVAL '1 hour'),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- NOTE: First platform staff must be created via bootstrap endpoint
+-- Run: POST /api/internal/bootstrap/init to generate one-time token
+-- Then: POST /api/internal/bootstrap/claim with token + credentials
 
 COMMIT;
