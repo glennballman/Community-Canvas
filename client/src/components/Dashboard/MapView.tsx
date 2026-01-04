@@ -106,26 +106,38 @@ export function MapView({ regionId }: MapViewProps) {
   useEffect(() => {
     if (!mapContainer.current || map.current || !mapboxToken) return;
 
-    mapboxgl.accessToken = mapboxToken;
+    try {
+      mapboxgl.accessToken = mapboxToken;
 
-    map.current = new mapboxgl.Map({
-      container: mapContainer.current,
-      style: 'mapbox://styles/mapbox/dark-v11',
-      center: [-123.1207, 49.2827],
-      zoom: 6,
-      minZoom: 4,
-      maxZoom: 18,
-    });
+      map.current = new mapboxgl.Map({
+        container: mapContainer.current,
+        style: 'mapbox://styles/mapbox/dark-v11',
+        center: [-123.1207, 49.2827],
+        zoom: 6,
+        minZoom: 4,
+        maxZoom: 18,
+      });
 
-    map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
-    map.current.addControl(new mapboxgl.FullscreenControl(), 'top-right');
+      map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
+      map.current.addControl(new mapboxgl.FullscreenControl(), 'top-right');
 
-    map.current.on('load', () => {
-      setMapLoaded(true);
-    });
+      map.current.on('load', () => {
+        setMapLoaded(true);
+      });
+
+      map.current.on('error', (e) => {
+        console.error('Mapbox error:', e);
+      });
+    } catch (error) {
+      console.error('Failed to initialize Mapbox:', error);
+    }
 
     return () => {
-      map.current?.remove();
+      try {
+        map.current?.remove();
+      } catch (e) {
+        console.error('Error removing map:', e);
+      }
       map.current = null;
     };
   }, [mapboxToken]);

@@ -26,6 +26,7 @@ import { MapView } from './MapView';
 import { RoadTripsTab } from './RoadTripsTab';
 import { TripPlanningTab } from '../TripPlanning/TripPlanningTab';
 import { FleetDashboard } from '../Fleet/FleetDashboard';
+import { ErrorBoundary } from '../ErrorBoundary';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -146,27 +147,33 @@ export function DashboardLayout({ defaultRegion = 'bc', defaultTab }: DashboardL
       </header>
 
       <main className="max-w-7xl mx-auto px-4 py-6">
-        {activeTab === 'overview' && (
-          <OverviewTab regionId={selectedRegion} />
-        )}
-        {activeTab === 'map' && (
-          <MapView regionId={selectedRegion} />
-        )}
-        {activeTab === 'webcams' && (
-          <WebcamsTab regionId={selectedRegion} />
-        )}
-        {activeTab === 'alerts' && (
-          <AlertsTab regionId={selectedRegion} />
-        )}
-        {activeTab === 'roadtrips' && (
-          <RoadTripsTab regionId={selectedRegion} />
-        )}
-        {activeTab === 'planning' && (
-          <TripPlanningTab />
-        )}
-        {activeTab === 'fleet' && (
-          <FleetDashboard />
-        )}
+        <ErrorBoundary>
+          {activeTab === 'overview' && (
+            <OverviewTab regionId={selectedRegion} />
+          )}
+          {activeTab === 'map' && (
+            <ErrorBoundary>
+              <MapView regionId={selectedRegion} />
+            </ErrorBoundary>
+          )}
+          {activeTab === 'webcams' && (
+            <ErrorBoundary>
+              <WebcamsTab regionId={selectedRegion} />
+            </ErrorBoundary>
+          )}
+          {activeTab === 'alerts' && (
+            <AlertsTab regionId={selectedRegion} />
+          )}
+          {activeTab === 'roadtrips' && (
+            <RoadTripsTab regionId={selectedRegion} />
+          )}
+          {activeTab === 'planning' && (
+            <TripPlanningTab />
+          )}
+          {activeTab === 'fleet' && (
+            <FleetDashboard />
+          )}
+        </ErrorBoundary>
       </main>
       
       <footer className="bg-card border-t py-4 mt-8">

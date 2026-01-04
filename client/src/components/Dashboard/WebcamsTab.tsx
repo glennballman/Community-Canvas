@@ -353,25 +353,37 @@ export function WebcamsTab({ regionId }: WebcamsTabProps) {
     if (!mapContainer || !showMap || !mapboxToken) return;
     if (map.current) return;
 
-    mapboxgl.accessToken = mapboxToken;
-    
-    map.current = new mapboxgl.Map({
-      container: mapContainer,
-      style: 'mapbox://styles/mapbox/dark-v11',
-      center: [-123.1207, 49.2827],
-      zoom: 5,
-    });
+    try {
+      mapboxgl.accessToken = mapboxToken;
+      
+      map.current = new mapboxgl.Map({
+        container: mapContainer,
+        style: 'mapbox://styles/mapbox/dark-v11',
+        center: [-123.1207, 49.2827],
+        zoom: 5,
+      });
 
-    map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
+      map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
 
-    map.current.once('load', () => {
-      updateMarkers();
-    });
+      map.current.on('error', (e) => {
+        console.error('Mapbox error in WebcamsTab:', e);
+      });
+
+      map.current.once('load', () => {
+        updateMarkers();
+      });
+    } catch (error) {
+      console.error('Failed to initialize Mapbox in WebcamsTab:', error);
+    }
 
     return () => {
-      markers.current.forEach(m => m.remove());
-      markers.current = [];
-      map.current?.remove();
+      try {
+        markers.current.forEach(m => m.remove());
+        markers.current = [];
+        map.current?.remove();
+      } catch (e) {
+        console.error('Error cleaning up map:', e);
+      }
       map.current = null;
     };
   }, [mapContainer, showMap, mapboxToken]);
