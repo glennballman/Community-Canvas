@@ -260,3 +260,90 @@ export const requireSession: RequestHandler = (req: Request, res: Response, next
   }
   next();
 };
+
+// ================================================================================
+// PLATFORM STAFF AUTH GUARDS
+// For internal platform review console - completely separate from tenant auth
+// ================================================================================
+
+export interface PlatformStaffRequest extends Request {
+  platformStaff?: {
+    id: string;
+    email: string;
+    full_name: string;
+    role: 'platform_reviewer' | 'platform_admin';
+  };
+}
+
+// Check if request has authenticated platform staff (via separate session store)
+export const requirePlatformStaff: RequestHandler = (req: Request, res: Response, next: NextFunction) => {
+  const platformReq = req as PlatformStaffRequest;
+  
+  // Platform staff session is stored in a separate session key
+  const staffSession = (req as any).session?.platformStaff;
+  
+  if (!staffSession?.id) {
+    return res.status(401).json({
+      success: false,
+      error: 'Platform staff authentication required',
+      code: 'PLATFORM_AUTH_REQUIRED'
+    });
+  }
+  
+  // Attach staff info to request
+  platformReq.platformStaff = staffSession;
+  next();
+};
+
+// Require specific platform role
+export function requirePlatformRole(...requiredRoles: ('platform_reviewer' | 'platform_admin')[]): RequestHandler {
+  return (req: Request, res: Response, next: NextFunction) => {
+    const platformReq = req as PlatformStaffRequest;
+    const staffSession = (req as any).session?.platformStaff;
+    
+    if (!staffSession?.id) {
+      return res.status(401).json({
+        success: false,
+        error: 'Platform staff authentication required',
+        code: 'PLATFORM_AUTH_REQUIRED'
+      });
+    }
+    
+    if (!requiredRoles.includes(staffSession.role)) {
+      return res.status(403).json({
+        success: false,
+        error: `Platform role required: ${requiredRoles.join(' or ')}`,
+        code: 'PLATFORM_ROLE_REQUIRED'
+      });
+    }
+    
+    platformReq.platformStaff = staffSession;
+    next();
+  };
+}
+
+// Block tenant/public users from internal routes
+// This guard ONLY allows platform staff sessions, rejects everything else
+export const blockTenantAccess: RequestHandler = (req: Request, res: Response, next: NextFunction) => {
+  const tenantReq = req as any;
+  
+  // Block if request has tenant context (this is a tenant user)
+  if (tenantReq.ctx?.tenant_id || tenantReq.ctx?.individual_id) {
+    return res.status(403).json({
+      success: false,
+      error: 'Internal endpoint - tenant access blocked',
+      code: 'TENANT_ACCESS_BLOCKED'
+    });
+  }
+  
+  // Block if request has service key (internal routes don't use service key)
+  if (isServiceKeyRequest(req)) {
+    return res.status(403).json({
+      success: false,
+      error: 'Internal endpoint - service key not accepted',
+      code: 'SERVICE_KEY_BLOCKED'
+    });
+  }
+  
+  next();
+};
