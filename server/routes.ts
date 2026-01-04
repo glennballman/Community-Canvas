@@ -33,6 +33,7 @@ import { JobberService, getJobberAuthUrl, exchangeCodeForToken } from "./service
 import { CompanyCamService, getPhotoUrl } from "./services/companycam";
 import { createCrewRouter } from "./routes/crew";
 import claimsRouter from "./routes/claims";
+import internalRouter from "./routes/internal";
 import { publicQuery } from "./db/tenantDb";
 
 // Merge static members with JSON-loaded members for consistent data across the app
@@ -105,6 +106,11 @@ export async function registerRoutes(
 
   // Register catalog claims routes
   app.use('/api/v1/catalog/claims', claimsRouter);
+
+  // Register internal platform review console routes
+  // SECURITY: CORS disabled, rate-limited, requires platform staff auth
+  // These routes are NOT accessible by tenant users or service-key
+  app.use('/api/internal', internalRouter);
 
   // Public catalog endpoints (no auth required)
   app.get('/api/v1/catalog/vehicles', async (req, res) => {
