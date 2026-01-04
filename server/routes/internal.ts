@@ -601,6 +601,7 @@ router.get(
           id,
           name,
           slug,
+          tenant_type as type,
           created_at,
           (SELECT COUNT(*) FROM cc_tenant_users WHERE tenant_id = cc_tenants.id) as member_count
         FROM cc_tenants
@@ -629,6 +630,40 @@ router.get(
       return res.status(500).json({
         success: false,
         error: 'Failed to fetch tenants'
+      });
+    }
+  }
+);
+
+// Get individuals for a specific tenant (for impersonation selection)
+router.get(
+  '/tenants/:tenantId/individuals',
+  requirePlatformRole('platform_reviewer', 'platform_admin'),
+  async (req: Request, res: Response) => {
+    try {
+      const { tenantId } = req.params;
+      
+      const result = await serviceQuery(`
+        SELECT 
+          i.id,
+          i.full_name,
+          i.email
+        FROM cc_individuals i
+        JOIN cc_tenant_users tu ON tu.individual_id = i.id
+        WHERE tu.tenant_id = $1
+        ORDER BY i.full_name ASC
+        LIMIT 100
+      `, [tenantId]);
+      
+      return res.json({
+        success: true,
+        individuals: result.rows
+      });
+    } catch (error: any) {
+      console.error('Tenant individuals list error:', error.message);
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to fetch individuals'
       });
     }
   }

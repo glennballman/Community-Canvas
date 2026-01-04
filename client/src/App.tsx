@@ -4,11 +4,14 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { ImpersonationProvider } from "@/contexts/ImpersonationContext";
+import { ImpersonationBanner } from "@/components/ImpersonationBanner";
 import MobileNav from "@/components/MobileNav";
 import DashboardLayout from "@/components/Dashboard/DashboardLayout";
 import Dashboard from "@/pages/Dashboard";
 import AdminLayout from "@/pages/AdminLayout";
 import AdminHome from "@/pages/AdminHome";
+import ImpersonationConsole from "@/pages/platform/ImpersonationConsole";
 import AdminMatrix from "@/pages/AdminMatrix";
 import AdminGeo from "@/pages/AdminGeo";
 import AdminInfrastructure from "@/pages/AdminInfrastructure";
@@ -123,6 +126,10 @@ function AppShellRoutes() {
         {/* Accommodations */}
         <Route path="/accommodations" component={Accommodations} />
         
+        {/* Platform console */}
+        <Route path="/platform" component={ImpersonationConsole} />
+        <Route path="/platform/impersonate" component={ImpersonationConsole} />
+        
         {/* Rentals */}
         <Route path="/rentals" component={RentalBrowser} />
         <Route path="/rentals/bookings" component={RentalBookings} />
@@ -201,11 +208,14 @@ function App() {
       <TooltipProvider>
         <AuthProvider>
           <HostAuthProvider>
-            <MobileNav />
-            <main className="pb-16 lg:pb-0">
-              <Router />
-            </main>
-            <Toaster />
+            <ImpersonationProvider>
+              <ImpersonationBanner />
+              <MobileNav />
+              <main className="pb-16 lg:pb-0">
+                <Router />
+              </main>
+              <Toaster />
+            </ImpersonationProvider>
           </HostAuthProvider>
         </AuthProvider>
       </TooltipProvider>

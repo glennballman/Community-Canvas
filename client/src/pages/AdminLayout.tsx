@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Link, useLocation } from "wouter";
 import { 
   LayoutDashboard, 
@@ -36,6 +36,7 @@ import {
   ClipboardList
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useImpersonation } from "@/contexts/ImpersonationContext";
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -157,14 +158,26 @@ const navSections: NavSection[] = [
   },
 ];
 
+// Sections that should be hidden during impersonation (platform-only)
+const PLATFORM_ONLY_SECTIONS = ["Platform Admin", "Data Management", "System"];
+
 export default function AdminLayout({ children }: AdminLayoutProps) {
   const [location] = useLocation();
+  const { isActive: isImpersonating, loading: impersonationLoading } = useImpersonation();
   const [openSections, setOpenSections] = useState<Record<string, boolean>>(
     navSections.reduce((acc, section) => {
       acc[section.title] = section.defaultOpen ?? true;
       return acc;
     }, {} as Record<string, boolean>)
   );
+
+  // Filter out platform-only sections when impersonating OR while loading (prevents flash of platform UI)
+  const visibleSections = useMemo(() => {
+    if (isImpersonating || impersonationLoading) {
+      return navSections.filter(section => !PLATFORM_ONLY_SECTIONS.includes(section.title));
+    }
+    return navSections;
+  }, [isImpersonating, impersonationLoading]);
 
   const toggleSection = (title: string) => {
     setOpenSections(prev => ({ ...prev, [title]: !prev[title] }));
@@ -206,7 +219,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         {/* Navigation Sections */}
         <ScrollArea className="flex-1">
           <nav className="p-2">
-            {navSections.map(section => (
+            {visibleSections.map(section => (
               <div key={section.title} className="mb-1">
                 {/* Section Header - Collapsible */}
                 <button
