@@ -8,7 +8,7 @@
 -- -----------------------------
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
--- Note: PostGIS removed for Replit compatibility - using lat/lng columns instead
+CREATE EXTENSION IF NOT EXISTS postgis;
 
 -- -----------------------------
 -- ENUMS
@@ -133,7 +133,7 @@ CREATE TABLE IF NOT EXISTS external_records (
 
   latitude DOUBLE PRECISION,
   longitude DOUBLE PRECISION,
-  -- geom column removed - using lat/lng for distance calculations
+  geom GEOGRAPHY(POINT, 4326),
 
   community_id UUID REFERENCES sr_communities(id),
 
@@ -156,9 +156,22 @@ CREATE TABLE IF NOT EXISTS external_records (
 CREATE INDEX IF NOT EXISTS idx_external_records_source_id ON external_records(source, external_id);
 CREATE INDEX IF NOT EXISTS idx_external_records_type ON external_records(record_type);
 CREATE INDEX IF NOT EXISTS idx_external_records_community ON external_records(community_id);
-CREATE INDEX IF NOT EXISTS idx_external_records_lat_lng ON external_records(latitude, longitude) WHERE latitude IS NOT NULL AND longitude IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_external_records_geom ON external_records USING GIST (geom) WHERE geom IS NOT NULL;
 
--- PostGIS geom trigger removed - using lat/lng columns directly
+CREATE OR REPLACE FUNCTION set_external_record_geom()
+RETURNS trigger AS $$
+BEGIN
+  IF NEW.latitude IS NOT NULL AND NEW.longitude IS NOT NULL THEN
+    NEW.geom := ST_SetSRID(ST_MakePoint(NEW.longitude, NEW.latitude), 4326)::geography;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_external_records_geom ON external_records;
+CREATE TRIGGER trg_external_records_geom
+BEFORE INSERT OR UPDATE OF latitude, longitude ON external_records
+FOR EACH ROW EXECUTE FUNCTION set_external_record_geom();
 
 -- =====================================================================
 -- 3) CONTACT POINTS (with consent + verification)
@@ -196,14 +209,32 @@ CREATE INDEX IF NOT EXISTS idx_external_contact_points_value ON external_contact
 -- Note: The entities table already exists with entity_type_id, name, address_line1, province columns.
 -- We add the columns needed for the V2 architecture without recreating the table.
 
--- Note: geom column removed for Replit compatibility - using lat/lng columns instead
+ALTER TABLE entities ADD COLUMN IF NOT EXISTS geom GEOGRAPHY(POINT, 4326);
 ALTER TABLE entities ADD COLUMN IF NOT EXISTS community_id UUID REFERENCES sr_communities(id);
 ALTER TABLE entities ADD COLUMN IF NOT EXISTS visibility TEXT DEFAULT 'private';
 
-CREATE INDEX IF NOT EXISTS idx_entities_community_v2 ON entities(community_id) WHERE community_id IS NOT NULL;
-CREATE INDEX IF NOT EXISTS idx_entities_lat_lng ON entities(latitude, longitude) WHERE latitude IS NOT NULL AND longitude IS NOT NULL;
+-- Update geom from existing lat/lng
+UPDATE entities 
+SET geom = ST_SetSRID(ST_MakePoint(longitude::float, latitude::float), 4326)::geography
+WHERE latitude IS NOT NULL AND longitude IS NOT NULL AND geom IS NULL;
 
--- PostGIS geom trigger removed - using lat/lng columns directly
+CREATE INDEX IF NOT EXISTS idx_entities_community_v2 ON entities(community_id) WHERE community_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_entities_geom_v2 ON entities USING GIST (geom) WHERE geom IS NOT NULL;
+
+CREATE OR REPLACE FUNCTION set_entity_geom()
+RETURNS trigger AS $$
+BEGIN
+  IF NEW.latitude IS NOT NULL AND NEW.longitude IS NOT NULL THEN
+    NEW.geom := ST_SetSRID(ST_MakePoint(NEW.longitude::float, NEW.latitude::float), 4326)::geography;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_entities_geom ON entities;
+CREATE TRIGGER trg_entities_geom
+BEFORE INSERT OR UPDATE OF latitude, longitude ON entities
+FOR EACH ROW EXECUTE FUNCTION set_entity_geom();
 
 -- =====================================================================
 -- 5) ENTITY LINKS (external_records → entities with confidence)
@@ -373,15 +404,35 @@ CREATE TABLE IF NOT EXISTS unsubscribes (
 );
 
 -- =====================================================================
--- 9) COMMUNITY GEO ENHANCEMENT
+-- 9) COMMUNITY GEO ENHANCEMENT (add geom column if missing)
 -- =====================================================================
--- Note: PostGIS geom column removed for Replit compatibility
--- Using existing lat/lng columns for distance calculations
 
-CREATE INDEX IF NOT EXISTS idx_sr_communities_lat_lng ON sr_communities(latitude, longitude) WHERE latitude IS NOT NULL AND longitude IS NOT NULL;
+ALTER TABLE sr_communities
+  ADD COLUMN IF NOT EXISTS geom GEOGRAPHY(POINT, 4326);
+
+CREATE OR REPLACE FUNCTION set_community_geom()
+RETURNS trigger AS $$
+BEGIN
+  IF NEW.latitude IS NOT NULL AND NEW.longitude IS NOT NULL THEN
+    NEW.geom := ST_SetSRID(ST_MakePoint(NEW.longitude::float, NEW.latitude::float), 4326)::geography;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_sr_communities_geom ON sr_communities;
+CREATE TRIGGER trg_sr_communities_geom
+BEFORE INSERT OR UPDATE OF latitude, longitude ON sr_communities
+FOR EACH ROW EXECUTE FUNCTION set_community_geom();
+
+CREATE INDEX IF NOT EXISTS idx_sr_communities_geom ON sr_communities USING GIST (geom) WHERE geom IS NOT NULL;
+
+UPDATE sr_communities 
+SET geom = ST_SetSRID(ST_MakePoint(longitude::float, latitude::float), 4326)::geography
+WHERE latitude IS NOT NULL AND longitude IS NOT NULL AND geom IS NULL;
 
 -- =====================================================================
--- 10) COMMUNITY RESOLUTION FUNCTION (Euclidean distance fallback)
+-- 10) COMMUNITY RESOLUTION FUNCTION (proper geo distance)
 -- =====================================================================
 
 CREATE OR REPLACE FUNCTION resolve_community(p_lat DOUBLE PRECISION, p_lng DOUBLE PRECISION, p_city TEXT DEFAULT NULL, p_region TEXT DEFAULT NULL)
@@ -397,12 +448,11 @@ BEGIN
     IF v_id IS NOT NULL THEN RETURN v_id; END IF;
   END IF;
 
-  -- Euclidean fallback using latitude/longitude columns (no PostGIS)
   IF p_lat IS NOT NULL AND p_lng IS NOT NULL THEN
     SELECT id INTO v_id
     FROM sr_communities
-    WHERE latitude IS NOT NULL AND longitude IS NOT NULL
-    ORDER BY SQRT(POWER(latitude - p_lat, 2) + POWER(longitude - p_lng, 2))
+    WHERE geom IS NOT NULL
+    ORDER BY geom <-> ST_SetSRID(ST_MakePoint(p_lng, p_lat), 4326)::geography
     LIMIT 1;
   END IF;
 
