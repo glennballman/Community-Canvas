@@ -57,12 +57,26 @@ export default function ImpersonationConsole() {
     }
   }, [selectedTenant]);
 
+  function getAuthHeaders(): HeadersInit {
+    const token = localStorage.getItem('cc_token');
+    const headers: HeadersInit = { 'Content-Type': 'application/json' };
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    return headers;
+  }
+
   async function fetchTenants() {
     try {
-      const res = await fetch('/api/internal/tenants', { credentials: 'include' });
+      const res = await fetch('/api/internal/tenants', { 
+        credentials: 'include',
+        headers: getAuthHeaders()
+      });
       if (res.ok) {
         const data = await res.json();
         setTenants(data.tenants || []);
+      } else {
+        console.error('Failed to fetch tenants:', res.status);
       }
     } catch (err) {
       console.error('Failed to fetch tenants:', err);
@@ -74,7 +88,10 @@ export default function ImpersonationConsole() {
   async function fetchIndividuals(tenantId: string) {
     setIndividualsLoading(true);
     try {
-      const res = await fetch(`/api/internal/tenants/${tenantId}/individuals`, { credentials: 'include' });
+      const res = await fetch(`/api/internal/tenants/${tenantId}/individuals`, { 
+        credentials: 'include',
+        headers: getAuthHeaders()
+      });
       if (res.ok) {
         const data = await res.json();
         setIndividuals(data.individuals || []);

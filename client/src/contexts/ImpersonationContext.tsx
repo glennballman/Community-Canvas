@@ -30,6 +30,15 @@ interface StartParams {
 
 const ImpersonationContext = createContext<ImpersonationContextType | undefined>(undefined);
 
+function getAuthHeaders(): HeadersInit {
+  const token = localStorage.getItem('cc_token');
+  const headers: HeadersInit = { 'Content-Type': 'application/json' };
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  return headers;
+}
+
 export function ImpersonationProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<ImpersonationSession | null>(null);
   const [loading, setLoading] = useState(true);
@@ -38,7 +47,8 @@ export function ImpersonationProvider({ children }: { children: ReactNode }) {
   const refresh = useCallback(async () => {
     try {
       const res = await fetch('/api/internal/impersonate/status', {
-        credentials: 'include'
+        credentials: 'include',
+        headers: getAuthHeaders()
       });
       
       if (res.ok) {
@@ -73,7 +83,7 @@ export function ImpersonationProvider({ children }: { children: ReactNode }) {
     try {
       const res = await fetch('/api/internal/impersonate/start', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         credentials: 'include',
         body: JSON.stringify(params)
       });
@@ -112,6 +122,7 @@ export function ImpersonationProvider({ children }: { children: ReactNode }) {
     try {
       const res = await fetch('/api/internal/impersonate/stop', {
         method: 'POST',
+        headers: getAuthHeaders(),
         credentials: 'include'
       });
       
