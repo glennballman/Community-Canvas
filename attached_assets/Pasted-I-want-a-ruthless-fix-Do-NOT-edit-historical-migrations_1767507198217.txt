@@ -1,0 +1,40 @@
+I want a ruthless fix. Do NOT edit historical migrations further.
+
+Goal: Remove dependency on PostGIS safely WITHOUT degrading geospatial correctness or performance.
+
+Deliverables:
+1) Create a new forward migration: server/migrations/028_geo_without_postgis.sql
+   - Standardize all geo columns:
+     latitude DOUBLE PRECISION, longitude DOUBLE PRECISION
+     (use consistent naming per table: latitude/longitude OR site_latitude/site_longitude — but be consistent)
+   - Add canonical SQL functions (IMMUTABLE where possible):
+     fn_haversine_meters(lat1, lon1, lat2, lon2) returns double precision
+     fn_bbox(lat, lon, radius_meters) returns min_lat, max_lat, min_lon, max_lon
+   - Replace EVERY distance/nearby implementation in functions touched by 018–022:
+     resolve_community()
+     find_community_by_location()
+     search_unified_assets()
+     find_assets_by_capability()
+     any opportunity/site proximity search
+     REQUIRE pattern: bbox prefilter THEN haversine filter THEN ORDER BY haversine.
+   - Add performance columns + indexes:
+     Add generated grid columns:
+       lat_cell INT GENERATED ALWAYS AS (floor(latitude * 100)::int) STORED
+       lon_cell INT GENERATED ALWAYS AS (floor(longitude * 100)::int) STORED
+     Index (lat_cell, lon_cell)
+     Keep or add (latitude) and (longitude) where necessary, but grid index is required for scale.
+
+2) Add a QA script scripts/qa-geo-without-postgis.sh that:
+   - Asserts no ST_* references exist
+   - Runs correctness tests:
+     - nearest community selection for a few known points (seed 3 communities + 3 points)
+     - radius search returns expected rows
+   - Runs a basic EXPLAIN check showing index usage for a “nearby listings/assets” query
+
+3) Provide a list of all functions/views changed by 018–022 that previously depended on PostGIS,
+   and confirm each now uses fn_haversine_meters + bbox prefilter, not raw SQRT(lat-lat2,...).
+
+Hard constraints:
+- No more edits to migrations 018–022.
+- No “degree euclidean” distance anywhere.
+- Use ONE canonical distance function everywhere.
