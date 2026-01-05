@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useImpersonation } from '@/contexts/ImpersonationContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -31,6 +32,7 @@ const DURATION_OPTIONS = [
 ];
 
 export default function ImpersonationConsole() {
+  const navigate = useNavigate();
   const { session, isActive, loading, error, start, stop, refresh } = useImpersonation();
   const { toast } = useToast();
   const { qaMode } = useImpersonationQAMode();
@@ -134,6 +136,7 @@ export default function ImpersonationConsole() {
 
     if (success) {
       toast({ title: 'Impersonation Started', description: `Now impersonating ${selectedTenant.name}` });
+      navigate('/app/dashboard');
     } else {
       toast({ title: 'Failed to Start', description: error || 'Unknown error', variant: 'destructive' });
     }

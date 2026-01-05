@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useAuth } from './AuthContext';
+import { useImpersonation } from './ImpersonationContext';
 import { api } from '@/lib/api';
 
 interface Tenant {
@@ -23,10 +24,24 @@ const TenantContext = createContext<TenantContextType | undefined>(undefined);
 
 export function TenantProvider({ children }: { children: ReactNode }) {
   const { ccTenants, isAuthenticated } = useAuth();
+  const { session: impersonationSession, isActive: isImpersonating } = useImpersonation();
   const [currentTenant, setCurrentTenant] = useState<Tenant | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (isImpersonating && impersonationSession) {
+      const impersonatedTenant: Tenant = {
+        id: impersonationSession.tenant_id,
+        name: impersonationSession.tenant_name,
+        slug: impersonationSession.tenant_id,
+        type: impersonationSession.tenant_type || 'community',
+        role: 'admin',
+      };
+      setCurrentTenant(impersonatedTenant);
+      setLoading(false);
+      return;
+    }
+
     if (isAuthenticated && ccTenants.length > 0) {
       const stored = localStorage.getItem('cc_current_tenant');
       if (stored) {
@@ -46,7 +61,7 @@ export function TenantProvider({ children }: { children: ReactNode }) {
       }
     }
     setLoading(false);
-  }, [isAuthenticated, ccTenants]);
+  }, [isAuthenticated, ccTenants, isImpersonating, impersonationSession]);
 
   async function switchTenant(tenantId: string) {
     const tenant = ccTenants.find(t => t.id === tenantId);

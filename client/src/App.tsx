@@ -49,6 +49,7 @@ import Accommodations from "@/pages/Accommodations";
 import Documentation from "@/pages/Documentation";
 
 import NotFound from "@/pages/not-found";
+import { ImpersonationBanner } from "@/components/ImpersonationBanner";
 
 function ServiceRunDetailPublic() { return <div className="p-6">Service Run Detail (Public)</div>; }
 function CommunityPortalEvents() { return <div className="p-6">Events</div>; }
@@ -84,10 +85,11 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <AuthProvider>
-          <TenantProvider>
-            <HostAuthProvider>
-              <ImpersonationProvider>
+          <ImpersonationProvider>
+            <TenantProvider>
+              <HostAuthProvider>
                 <BrowserRouter>
+                <ImpersonationBanner />
                 <Routes>
                   {/* ============================================ */}
                   {/* PUBLIC PORTAL - /c/:slug/*                   */}
@@ -197,9 +199,9 @@ function App() {
                 </Routes>
               </BrowserRouter>
               <Toaster />
-              </ImpersonationProvider>
-            </HostAuthProvider>
-          </TenantProvider>
+              </HostAuthProvider>
+            </TenantProvider>
+          </ImpersonationProvider>
         </AuthProvider>
       </TooltipProvider>
     </QueryClientProvider>

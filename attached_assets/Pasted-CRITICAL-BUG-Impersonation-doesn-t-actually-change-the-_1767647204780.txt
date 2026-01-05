@@ -1,0 +1,139 @@
+CRITICAL BUG: Impersonation doesn't actually change the user experience
+
+CURRENT BEHAVIOR:
+- I click "Impersonate" on Bamfield Community
+- System shows "Active Impersonation Session" 
+- But I stay on /admin/impersonation with Platform Admin nav
+- Nothing actually changes
+
+EXPECTED BEHAVIOR:
+When impersonation starts:
+1. Show sticky amber banner at TOP of entire app: "⚠️ IMPERSONATING: Bamfield Community [Stop]"
+2. REDIRECT to /app/dashboard
+3. Show the COMMUNITY left nav (Dashboard, Availability, Service Runs, Directory, Content, Settings)
+4. All API calls should use the impersonated tenant context
+
+FIX REQUIRED:
+
+1. IMPERSONATION START - Redirect after starting
+```typescript
+// In the impersonation start handler
+async function startImpersonation(tenantId: string) {
+  await api.post('/api/admin/impersonation/start', { tenant_id: tenantId });
+  // CRITICAL: Redirect to tenant app
+  window.location.href = '/app/dashboard';
+}
+```
+
+2. GLOBAL IMPERSONATION BANNER
+Create a component that appears at the TOP of the entire app (above everything) when impersonating:
+```tsx
+// ImpersonationBanner.tsx
+function ImpersonationBanner() {
+  const [session, setSession] = useState(null);
+  
+  useEffect(() => {
+    checkImpersonationStatus();
+  }, []);
+  
+  async function checkImpersonationStatus() {
+    try {
+      const res = await fetch('/api/admin/impersonation/status', { credentials: 'include' });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.is_impersonating) {
+          setSession(data);
+        }
+      }
+    } catch (e) {}
+  }
+  
+  async function stopImpersonation() {
+    await fetch('/api/admin/impersonation/stop', { method: 'POST', credentials: 'include' });
+    window.location.href = '/admin/impersonation';
+  }
+  
+  if (!session) return null;
+  
+  return (
+    <div className="fixed top-0 left-0 right-0 z-[9999] bg-amber-500 text-amber-950">
+      <div className="max-w-screen-xl mx-auto px-4 py-2 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <span className="w-2 h-2 bg-amber-900 rounded-full animate-pulse" />
+          <span className="font-bold">IMPERSONATING:</span>
+          <span>{session.tenant_name}</span>
+        </div>
+        <div className="flex items-center gap-4">
+          <span className="text-sm opacity-75">
+            Expires: {new Date(session.expires_at).toLocaleTimeString()}
+          </span>
+          <button
+            onClick={stopImpersonation}
+            className="px-3 py-1 bg-amber-900 text-amber-50 rounded text-sm font-medium hover:bg-amber-950"
+          >
+            Stop Impersonation
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+
+3. MOUNT BANNER IN APP ROOT
+The banner must be outside all layouts so it appears everywhere:
+```tsx
+// App.tsx or main layout
+function App() {
+  return (
+    <BrowserRouter>
+      <ImpersonationBanner />  {/* Always rendered, shows only when impersonating */}
+      <Routes>
+        {/* ... routes ... */}
+      </Routes>
+    </BrowserRouter>
+  );
+}
+```
+
+4. ADD BODY PADDING WHEN BANNER VISIBLE
+When impersonating, add top padding so content isn't hidden under banner:
+```tsx
+// In ImpersonationBanner or App
+useEffect(() => {
+  if (isImpersonating) {
+    document.body.style.paddingTop = '48px';
+  } else {
+    document.body.style.paddingTop = '0';
+  }
+}, [isImpersonating]);
+```
+
+5. TENANT APP LAYOUT - Use impersonated context
+The TenantAppLayout should check if there's an active impersonation and use that tenant:
+```typescript
+// In /api/me/context endpoint
+// If user is impersonating, return the impersonated tenant's memberships
+if (session.impersonation?.tenant_id) {
+  // Return context as if user is the impersonated tenant
+  return {
+    user: session.user,
+    is_impersonating: true,
+    impersonated_tenant: session.impersonation.tenant,
+    memberships: [/* impersonated tenant membership */],
+    current_tenant_id: session.impersonation.tenant_id
+  };
+}
+```
+
+6. VERIFICATION FLOW
+After fix, this should happen:
+1. Go to /admin/impersonation
+2. Click "Impersonate" on Bamfield Community
+3. → Redirected to /app/dashboard
+4. → Amber banner appears at top: "IMPERSONATING: Bamfield Community [Stop]"
+5. → Left nav shows: Dashboard, Availability, Service Runs, Directory, Content, Settings
+6. Click "Stop Impersonation"
+7. → Redirected back to /admin/impersonation
+8. → Banner disappears
+9. → Admin nav returns

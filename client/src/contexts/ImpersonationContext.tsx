@@ -4,6 +4,7 @@ interface ImpersonationSession {
   id: string;
   tenant_id: string;
   tenant_name: string;
+  tenant_type: string;
   individual_id: string | null;
   individual_name: string | null;
   reason: string;
@@ -93,8 +94,18 @@ export function ImpersonationProvider({ children }: { children: ReactNode }) {
       
       if (res.ok) {
         const data = await res.json();
-        if (data.success && data.active && data.session) {
-          setSession(data.session);
+        if (data.success && data.active && data.impersonation) {
+          setSession({
+            id: data.impersonation.id,
+            tenant_id: data.impersonation.tenant_id,
+            tenant_name: data.impersonation.tenant_name,
+            tenant_type: data.impersonation.tenant_type || 'community',
+            individual_id: data.impersonation.individual_id,
+            individual_name: data.impersonation.individual_name,
+            reason: data.impersonation.reason,
+            expires_at: data.impersonation.expires_at,
+            created_at: data.impersonation.created_at
+          });
         } else {
           setSession(null);
         }
@@ -109,8 +120,18 @@ export function ImpersonationProvider({ children }: { children: ReactNode }) {
           });
           if (retryRes.ok) {
             const data = await retryRes.json();
-            if (data.success && data.active && data.session) {
-              setSession(data.session);
+            if (data.success && data.active && data.impersonation) {
+              setSession({
+                id: data.impersonation.id,
+                tenant_id: data.impersonation.tenant_id,
+                tenant_name: data.impersonation.tenant_name,
+                tenant_type: data.impersonation.tenant_type || 'community',
+                individual_id: data.impersonation.individual_id,
+                individual_name: data.impersonation.individual_name,
+                reason: data.impersonation.reason,
+                expires_at: data.impersonation.expires_at,
+                created_at: data.impersonation.created_at
+              });
             } else {
               setSession(null);
             }
@@ -156,6 +177,7 @@ export function ImpersonationProvider({ children }: { children: ReactNode }) {
           id: data.impersonation.id,
           tenant_id: data.impersonation.tenant_id,
           tenant_name: data.impersonation.tenant_name,
+          tenant_type: data.impersonation.tenant_type || 'community',
           individual_id: data.impersonation.individual_id,
           individual_name: data.impersonation.individual_name,
           reason: data.impersonation.reason,

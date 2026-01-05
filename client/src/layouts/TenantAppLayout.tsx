@@ -3,7 +3,6 @@ import { Outlet, Link, useLocation, Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useImpersonation } from '@/contexts/ImpersonationContext';
 import { useTenant } from '@/contexts/TenantContext';
-import { ImpersonationBanner } from '@/components/ImpersonationBanner';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
@@ -124,7 +123,6 @@ export default function TenantAppLayout() {
 
   return (
     <div data-testid="tenant-app-layout">
-      <ImpersonationBanner />
       <SidebarProvider style={sidebarStyle as React.CSSProperties}>
         <div className="flex min-h-screen w-full">
           <Sidebar>
