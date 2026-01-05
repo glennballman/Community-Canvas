@@ -216,8 +216,6 @@ export function ImpersonationProvider({ children }: { children: ReactNode }) {
       
       if (data.success) {
         setSession(null);
-        // CRITICAL: Full page redirect back to admin impersonation page
-        window.location.href = '/admin/impersonation';
         return true;
       } else {
         setError(data.error || 'Failed to stop impersonation');

@@ -27,8 +27,11 @@ export function ImpersonationBanner() {
   const remainingMins = Math.max(0, Math.ceil(remainingMs / 60000));
 
   const handleStop = async () => {
-    // stop() now handles the redirect internally via window.location.href
-    await stop();
+    const success = await stop();
+    if (success) {
+      // Full page redirect to refresh session state
+      window.location.href = '/admin/impersonation';
+    }
   };
 
   return (
