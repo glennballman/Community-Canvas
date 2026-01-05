@@ -1,6 +1,7 @@
 import { Outlet, Link, useLocation, Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useImpersonation } from '@/contexts/ImpersonationContext';
+import { useTenant } from '@/contexts/TenantContext';
 import { ImpersonationBanner } from '@/components/ImpersonationBanner';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -21,12 +22,17 @@ import {
   Building2,
   MessageSquare,
   Menu,
+  Phone,
+  Wrench,
+  Building,
+  Palette,
 } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 
 export default function TenantAppLayout() {
   const { user, loading, isAuthenticated } = useAuth();
   const { isActive: isImpersonating } = useImpersonation();
+  const { currentTenant, isCommunityOperator } = useTenant();
   const location = useLocation();
 
   if (loading) {
@@ -41,7 +47,16 @@ export default function TenantAppLayout() {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  const navItems = [
+  const communityNavItems = [
+    { label: 'Dashboard', path: '/app/dashboard', icon: LayoutDashboard },
+    { label: 'Availability', path: '/app/availability', icon: Phone },
+    { label: 'Service Runs', path: '/app/service-runs', icon: Wrench },
+    { label: 'Directory', path: '/app/directory', icon: Building },
+    { label: 'Content', path: '/app/content', icon: Palette },
+    { label: 'Settings', path: '/app/settings', icon: Settings },
+  ];
+
+  const businessNavItems = [
     { label: 'Dashboard', path: '/app/dashboard', icon: LayoutDashboard },
     { label: 'Catalog', path: '/app/catalog', icon: Package },
     { label: 'Bookings', path: '/app/bookings', icon: Calendar },
@@ -49,6 +64,8 @@ export default function TenantAppLayout() {
     { label: 'Conversations', path: '/app/conversations', icon: MessageSquare },
     { label: 'Settings', path: '/app/settings', icon: Settings },
   ];
+
+  const navItems = isCommunityOperator ? communityNavItems : businessNavItems;
 
   const isActive = (path: string) => location.pathname === path || location.pathname.startsWith(path + '/');
 
@@ -82,7 +99,7 @@ export default function TenantAppLayout() {
             data-testid="link-app-home"
           >
             <Building2 className="h-5 w-5" />
-            <span className="hidden sm:inline">My Places</span>
+            <span className="hidden sm:inline">{currentTenant?.name || 'My Places'}</span>
           </Link>
 
           <nav className="hidden lg:flex items-center gap-1 ml-4">

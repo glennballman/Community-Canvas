@@ -1,0 +1,50 @@
+BUG FIX: Role-based navigation not working
+
+PROBLEM:
+When I click "Manage" on Bamfield Community (type = 'community'), I see the BUSINESS nav:
+- Dashboard, Catalog, Bookings, Customers, Conversations, Settings
+
+I should see the COMMUNITY nav:
+- Dashboard, Availability, Service Runs, Directory, Content & Branding, Settings
+
+The TenantAppLayout is not differentiating based on tenant.type.
+
+FIX REQUIRED:
+
+1. In TenantAppLayout (or wherever nav items are defined), check the current tenant's type:
+```typescript
+// Get current tenant type from context
+const tenantType = currentTenant?.type; // 'community', 'business', 'government', 'individual'
+
+// Define nav items based on tenant type
+const navItems = tenantType === 'community' || tenantType === 'government'
+  ? [
+      { icon: 'LayoutDashboard', label: 'Dashboard', href: '/app/dashboard' },
+      { icon: 'Phone', label: 'Availability', href: '/app/availability' },  // THE KEY FEATURE
+      { icon: 'Wrench', label: 'Service Runs', href: '/app/service-runs' },
+      { icon: 'Building', label: 'Directory', href: '/app/directory' },
+      { icon: 'Palette', label: 'Content & Branding', href: '/app/content' },
+      { icon: 'Settings', label: 'Settings', href: '/app/settings' },
+    ]
+  : [
+      { icon: 'LayoutDashboard', label: 'Dashboard', href: '/app/dashboard' },
+      { icon: 'Package', label: 'Catalog', href: '/app/catalog' },
+      { icon: 'Calendar', label: 'Bookings', href: '/app/bookings' },
+      { icon: 'Users', label: 'Customers', href: '/app/customers' },
+      { icon: 'MessageSquare', label: 'Conversations', href: '/app/conversations' },
+      { icon: 'Settings', label: 'Settings', href: '/app/settings' },
+    ];
+```
+
+2. The Dashboard component should also show different content:
+   - Community: Overview stats, pending service runs, recent activity
+   - Business: Revenue, bookings, customers (what's currently showing)
+
+3. Verify tenant type is being passed correctly:
+   - Check /api/me/context returns tenant type in memberships
+   - Check TenantAppLayout stores and uses tenant type
+
+VERIFICATION:
+- Click "Manage" on Bamfield Community → Should show Availability in nav
+- Click "Manage" on Bamfield Kayaks → Should show Catalog in nav
+- The nav should change when switching between tenants
