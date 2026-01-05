@@ -1,5 +1,8 @@
 import { useState, useEffect } from 'react';
 import { api } from '../../lib/api';
+import { Button } from '@/components/ui/button';
+import { UserCircle, AlertCircle } from 'lucide-react';
+import { Link } from 'wouter';
 
 interface Conversation {
   id: string;
@@ -28,6 +31,7 @@ export function ConversationList({ onSelect, selectedId }: ConversationListProps
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<string>('all');
+  const [authError, setAuthError] = useState(false);
 
   useEffect(() => {
     fetchConversations();
@@ -35,6 +39,7 @@ export function ConversationList({ onSelect, selectedId }: ConversationListProps
 
   async function fetchConversations() {
     setLoading(true);
+    setAuthError(false);
     try {
       const params = new URLSearchParams();
       if (filter !== 'all') params.set('state', filter);
@@ -43,8 +48,11 @@ export function ConversationList({ onSelect, selectedId }: ConversationListProps
         `/conversations?${params}`
       );
       setConversations(data.conversations || []);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching conversations:', error);
+      if (error?.message?.includes('401') || error?.message?.includes('Authentication')) {
+        setAuthError(true);
+      }
     } finally {
       setLoading(false);
     }
@@ -106,6 +114,22 @@ export function ConversationList({ onSelect, selectedId }: ConversationListProps
       <div className="flex-1 overflow-y-auto">
         {loading ? (
           <div className="p-4 text-center text-muted-foreground">Loading...</div>
+        ) : authError ? (
+          <div className="p-6 text-center space-y-4">
+            <AlertCircle className="h-10 w-10 mx-auto text-amber-500" />
+            <div>
+              <h3 className="font-medium mb-1">Tenant Context Required</h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                Platform admins need to impersonate a tenant to view conversations.
+              </p>
+              <Link href="/platform">
+                <Button size="sm" variant="outline" data-testid="button-go-impersonate">
+                  <UserCircle className="h-4 w-4 mr-2" />
+                  Open Impersonation Console
+                </Button>
+              </Link>
+            </div>
+          </div>
         ) : conversations.length === 0 ? (
           <div className="p-4 text-center text-muted-foreground">No conversations yet</div>
         ) : (
