@@ -1,0 +1,1384 @@
+Build the conversation system AND contractor financing layer. This enables:
+- Fiverr-grade contact gating
+- Materials/equipment/labor financing for contractors
+- Government/First Nations receivable factoring
+- Finance-grade deal packs
+
+### PART 1: Migration 036 - Contractor Financing
+
+File: server/migrations/036_contractor_financing.sql
+```sql
+-- ============================================================
+-- COMMUNITY CANVAS v2.6 - CONTRACTOR FINANCING LAYER
+-- Migration 036 - Materials, Equipment, Labour Finance
+-- ============================================================
+
+-- Philosophy:
+-- - Finance execution, not speculation
+-- - Financing only when real job + verified counterparty exists
+-- - Contractor-first: they can't float $80K for 90 days
+-- - Government/FN contracts are basically guaranteed money (factoring)
+-- - Platform becomes finance-grade, not gig marketplace
+
+-- ============================================================
+-- 1. FINANCING ENUMS
+-- ============================================================
+
+DO $$ BEGIN
+  CREATE TYPE financing_category AS ENUM (
+    'materials_advance',      -- Lumber, roofing, concrete, fixtures
+    'labour_bridge',          -- Pay crew weekly before milestone
+    'equipment_finance',      -- Excavator, crane, barge mobilization
+    'receivable_factoring',   -- Advance against signed gov/FN contract
+    'mobilization_advance'    -- Travel, accommodation, fuel
+  );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+  CREATE TYPE financing_status AS ENUM (
+    'draft',
+    'submitted',
+    'under_review',
+    'approved',
+    'funded',
+    'partially_repaid',
+    'repaid',
+    'defaulted',
+    'rejected',
+    'cancelled'
+  );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+  CREATE TYPE provider_type AS ENUM (
+    'crown',           -- BDC, EDC
+    'bank',            -- Traditional banks
+    'fn_finance',      -- FNFA, Indigenous finance authorities
+    'credit_union',    -- Regional credit unions
+    'private',         -- Private factoring firms
+    'platform'         -- Community Canvas internal (future)
+  );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+  CREATE TYPE repayment_source AS ENUM (
+    'owner_payment',
+    'government_payment',
+    'first_nation_payment',
+    'milestone_payment',
+    'holdback_release'
+  );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+  CREATE TYPE disbursement_type AS ENUM (
+    'vendor_direct',       -- Pay supplier directly
+    'contractor_direct',   -- Pay contractor
+    'escrow_hold'          -- Hold in escrow until conditions met
+  );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+-- ============================================================
+-- 2. FINANCING PRODUCTS (Available Programs)
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS financing_products (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  
+  -- Provider info
+  provider_name TEXT NOT NULL,
+  provider_type provider_type NOT NULL,
+  provider_contact_email TEXT,
+  provider_contact_phone TEXT,
+  provider_website TEXT,
+  
+  -- Product details
+  product_name TEXT NOT NULL,
+  product_code TEXT UNIQUE,
+  product_category financing_category NOT NULL,
+  product_description TEXT,
+  
+  -- Eligibility
+  min_amount NUMERIC(12,2),
+  max_amount NUMERIC(12,2),
+  eligible_counterparties TEXT[] DEFAULT ARRAY['government', 'first_nation', 'municipal'],
+  eligible_provinces TEXT[] DEFAULT ARRAY['BC', 'AB', 'SK', 'MB', 'ON', 'QC', 'NB', 'NS', 'PE', 'NL', 'YT', 'NT', 'NU'],
+  requires_signed_contract BOOLEAN DEFAULT true,
+  requires_verified_scope BOOLEAN DEFAULT true,
+  min_contractor_trust_score INTEGER DEFAULT 50,
+  
+  -- Terms
+  advance_percent NUMERIC(5,2),          -- e.g., 70.00 = 70%
+  fee_percent NUMERIC(5,2),              -- e.g., 2.50 = 2.5%
+  interest_annual_percent NUMERIC(5,2),  -- e.g., 8.00 = 8% APR
+  typical_term_days INTEGER,
+  max_term_days INTEGER,
+  
+  -- Platform commission
+  platform_referral_fee_percent NUMERIC(5,2) DEFAULT 1.00,
+  
+  -- Status
+  is_active BOOLEAN DEFAULT true,
+  
+  notes TEXT,
+  metadata JSONB,
+  
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS financing_products_category_idx ON financing_products(product_category);
+CREATE INDEX IF NOT EXISTS financing_products_active_idx ON financing_products(is_active) WHERE is_active;
+
+-- ============================================================
+-- 3. CONTRACTOR FINANCING REQUESTS
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS contractor_financing_requests (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  
+  -- Request reference
+  request_ref TEXT UNIQUE DEFAULT 'FIN-' || SUBSTRING(gen_random_uuid()::text, 1, 8),
+  
+  -- Links
+  opportunity_id UUID NOT NULL REFERENCES opportunities(id),
+  conversation_id UUID REFERENCES conversations(id),
+  contractor_party_id UUID NOT NULL REFERENCES parties(id),
+  requested_by_individual_id UUID REFERENCES cc_individuals(id),
+  
+  -- Financing type
+  financing_type financing_category NOT NULL,
+  
+  -- Amount
+  amount_requested NUMERIC(12,2) NOT NULL,
+  amount_approved NUMERIC(12,2),
+  amount_funded NUMERIC(12,2),
+  currency CHAR(3) DEFAULT 'CAD',
+  
+  -- Use of funds (structured)
+  use_of_funds JSONB NOT NULL,
+  -- Example: {
+  --   "items": [
+  --     {"description": "Lumber package", "vendor": "Home Hardware", "amount": 45000},
+  --     {"description": "Roofing materials", "vendor": "ABC Supply", "amount": 25000}
+  --   ],
+  --   "total": 70000,
+  --   "notes": "Materials for Phase 1"
+  -- }
+  
+  -- Bill of Materials link (if exists)
+  bom_id UUID,
+  
+  -- Repayment
+  repayment_source repayment_source NOT NULL,
+  related_milestone_id UUID REFERENCES payment_milestones(id),
+  expected_repayment_date DATE,
+  actual_repayment_date DATE,
+  
+  -- Status
+  status financing_status DEFAULT 'draft',
+  status_changed_at TIMESTAMPTZ,
+  status_history JSONB DEFAULT '[]'::jsonb,
+  
+  -- Provider assignment
+  financing_product_id UUID REFERENCES financing_products(id),
+  provider_name TEXT,
+  provider_reference TEXT,
+  provider_notes TEXT,
+  
+  -- Terms (copied from product or negotiated)
+  approved_advance_percent NUMERIC(5,2),
+  approved_fee_percent NUMERIC(5,2),
+  approved_interest_percent NUMERIC(5,2),
+  approved_term_days INTEGER,
+  
+  -- Platform fees
+  platform_fee_percent NUMERIC(5,2),
+  platform_fee_amount NUMERIC(12,2),
+  
+  -- Eligibility signals (auto-computed)
+  eligibility_signals JSONB,
+  -- Example: {
+  --   "owner_type": "government",
+  --   "contractor_trust_score": 85,
+  --   "has_signed_contract": true,
+  --   "has_verified_scope": true,
+  --   "has_structured_bom": true,
+  --   "has_payment_milestones": true,
+  --   "eligible_products": ["prod_123", "prod_456"]
+  -- }
+  
+  -- Documents
+  supporting_documents JSONB,
+  -- Example: [{"type": "contract", "url": "...", "name": "Signed Contract.pdf"}]
+  
+  -- Finance pack (generated PDF reference)
+  finance_pack_url TEXT,
+  finance_pack_generated_at TIMESTAMPTZ,
+  
+  -- Rejection/cancellation
+  rejection_reason TEXT,
+  cancelled_reason TEXT,
+  cancelled_by_party_id UUID REFERENCES parties(id),
+  
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS financing_requests_opportunity_idx ON contractor_financing_requests(opportunity_id);
+CREATE INDEX IF NOT EXISTS financing_requests_contractor_idx ON contractor_financing_requests(contractor_party_id);
+CREATE INDEX IF NOT EXISTS financing_requests_status_idx ON contractor_financing_requests(status);
+
+-- ============================================================
+-- 4. FINANCING DISBURSEMENTS
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS financing_disbursements (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  
+  financing_request_id UUID NOT NULL REFERENCES contractor_financing_requests(id),
+  
+  -- Disbursement details
+  disbursement_type disbursement_type NOT NULL,
+  
+  amount NUMERIC(12,2) NOT NULL,
+  currency CHAR(3) DEFAULT 'CAD',
+  
+  -- Recipient
+  paid_to_name TEXT NOT NULL,
+  paid_to_party_id UUID REFERENCES parties(id),
+  paid_to_vendor_id UUID,  -- Future: link to vendors table
+  
+  -- Payment details
+  payment_method TEXT,  -- 'wire', 'eft', 'cheque'
+  payment_reference TEXT,
+  
+  -- Timing
+  scheduled_at TIMESTAMPTZ,
+  disbursed_at TIMESTAMPTZ,
+  confirmed_at TIMESTAMPTZ,
+  
+  -- Proof
+  proof JSONB,
+  -- Example: {"type": "bank_confirmation", "reference": "TXN123", "screenshot_url": "..."}
+  
+  -- Status
+  status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'scheduled', 'sent', 'confirmed', 'failed', 'cancelled')),
+  
+  notes TEXT,
+  
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS disbursements_request_idx ON financing_disbursements(financing_request_id);
+
+-- ============================================================
+-- 5. FINANCING REPAYMENTS
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS financing_repayments (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  
+  financing_request_id UUID NOT NULL REFERENCES contractor_financing_requests(id),
+  
+  -- Source
+  source_type repayment_source NOT NULL,
+  source_milestone_id UUID REFERENCES payment_milestones(id),
+  
+  -- Amount
+  principal_amount NUMERIC(12,2) NOT NULL,
+  fee_amount NUMERIC(12,2) DEFAULT 0,
+  interest_amount NUMERIC(12,2) DEFAULT 0,
+  total_amount NUMERIC(12,2) NOT NULL,
+  currency CHAR(3) DEFAULT 'CAD',
+  
+  -- Payment details
+  payment_reference TEXT,
+  
+  -- Timing
+  expected_date DATE,
+  received_at TIMESTAMPTZ,
+  
+  -- Status
+  status TEXT DEFAULT 'expected' CHECK (status IN ('expected', 'received', 'partial', 'late', 'defaulted')),
+  
+  notes TEXT,
+  
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS repayments_request_idx ON financing_repayments(financing_request_id);
+
+-- ============================================================
+-- 6. SEED INITIAL FINANCING PRODUCTS
+-- ============================================================
+
+INSERT INTO financing_products (
+  provider_name, provider_type, product_name, product_code, product_category,
+  product_description, min_amount, max_amount,
+  eligible_counterparties, requires_signed_contract, requires_verified_scope,
+  advance_percent, fee_percent, interest_annual_percent, typical_term_days
+) VALUES 
+  -- BDC Materials Advance
+  (
+    'BDC', 'crown', 'Construction Materials Advance', 'BDC-MAT-001', 'materials_advance',
+    'Advance up to 70% of verified materials costs for government/FN contracts',
+    25000, 500000,
+    ARRAY['government', 'first_nation', 'municipal'],
+    true, true,
+    70.00, 2.50, 8.00, 90
+  ),
+  -- FNFA Materials
+  (
+    'First Nations Finance Authority', 'fn_finance', 'FN Community Materials Program', 'FNFA-MAT-001', 'materials_advance',
+    'Materials financing for First Nations community infrastructure projects',
+    10000, 250000,
+    ARRAY['first_nation'],
+    true, true,
+    75.00, 2.00, 6.50, 120
+  ),
+  -- Labour Bridge
+  (
+    'BDC', 'crown', 'Labour Bridge Facility', 'BDC-LAB-001', 'labour_bridge',
+    'Bridge financing for payroll during government contract execution',
+    15000, 200000,
+    ARRAY['government', 'first_nation', 'municipal'],
+    true, true,
+    80.00, 3.00, 10.00, 60
+  ),
+  -- Receivable Factoring
+  (
+    'Regional Construction Finance', 'private', 'Government Receivable Factoring', 'RCF-FACT-001', 'receivable_factoring',
+    'Advance against signed government/FN contracts with verified payment terms',
+    50000, 2000000,
+    ARRAY['government', 'first_nation'],
+    true, true,
+    85.00, 3.50, 0.00, 90
+  ),
+  -- Equipment/Mobilization
+  (
+    'BDC', 'crown', 'Equipment Mobilization Advance', 'BDC-MOB-001', 'mobilization_advance',
+    'Financing for equipment transport, barge fees, crane rental for remote sites',
+    10000, 150000,
+    ARRAY['government', 'first_nation', 'municipal'],
+    true, true,
+    65.00, 3.00, 9.00, 45
+  )
+ON CONFLICT (product_code) DO NOTHING;
+
+-- ============================================================
+-- 7. ADD OWNER TYPE TO OPPORTUNITIES (if not exists)
+-- ============================================================
+
+DO $$ BEGIN
+  ALTER TABLE opportunities ADD COLUMN IF NOT EXISTS owner_type TEXT 
+    CHECK (owner_type IN ('private', 'commercial', 'government', 'first_nation', 'municipal', 'non_profit'));
+EXCEPTION WHEN duplicate_column THEN NULL;
+END $$;
+
+-- ============================================================
+-- 8. COMMENT ON PHILOSOPHY
+-- ============================================================
+
+COMMENT ON TABLE contractor_financing_requests IS 
+  'Finance execution, not speculation. Only for real jobs with verified counterparties.';
+
+COMMENT ON TABLE financing_products IS 
+  'Available financing programs. Contractor-friendly, not lender-first.';
+```
+
+### PART 2: Party Resolver Library
+
+File: server/lib/partyResolver.ts
+```typescript
+import { pool } from '../db';
+
+export type PartyRole = 'owner' | 'contractor' | 'operator';
+
+export interface ResolvedActor {
+  individual_id: string;
+  tenant_id: string | null;
+  actor_party_id: string;
+  party_kind: 'individual' | 'organization';
+  display_name: string;
+}
+
+function getIndividualId(req: any): string | null {
+  return req?.ctx?.individual_id || req?.user?.id || null;
+}
+
+export async function resolveActorParty(req: any, role: PartyRole): Promise<ResolvedActor | null> {
+  const individual_id = getIndividualId(req);
+  const tenant_id = req?.ctx?.tenant_id || null;
+
+  if (!individual_id) {
+    console.warn('resolveActorParty: No individual_id found in request');
+    return null;
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    const individualResult = await client.query(
+      `SELECT COALESCE(NULLIF(preferred_name, ''), full_name) AS display_name
+       FROM cc_individuals WHERE id = $1`,
+      [individual_id]
+    );
+    const individualDisplayName = individualResult.rows[0]?.display_name || 'Unknown User';
+
+    if (tenant_id) {
+      const orgPartyResult = await client.query(
+        `SELECT id, trade_name, legal_name FROM parties
+         WHERE tenant_id = $1 AND party_kind = 'organization'
+         ORDER BY created_at ASC LIMIT 1`,
+        [tenant_id]
+      );
+
+      let org_party_id = orgPartyResult.rows[0]?.id as string | undefined;
+      let org_display_name = orgPartyResult.rows[0]?.trade_name || 
+                             orgPartyResult.rows[0]?.legal_name || 'Unknown Organization';
+
+      if (!org_party_id) {
+        const tenantResult = await client.query(
+          `SELECT name, email, phone, business_number,
+                  address_line1, address_line2, city, province, postal_code, country
+           FROM tenants WHERE id = $1`,
+          [tenant_id]
+        );
+
+        const tenant = tenantResult.rows[0];
+        if (!tenant?.name) {
+          await client.query('ROLLBACK');
+          return null;
+        }
+
+        const createResult = await client.query(
+          `INSERT INTO parties (
+              tenant_id, party_kind, party_type, status,
+              legal_name, trade_name, tax_id,
+              primary_contact_email, primary_contact_phone,
+              address_line1, address_line2, city, province, postal_code, country
+           ) VALUES ($1, 'organization', $2::party_type, 'active', $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+           RETURNING id, trade_name, legal_name`,
+          [
+            tenant_id, role, tenant.name, tenant.name,
+            tenant.business_number || null,
+            tenant.email || null, tenant.phone || null,
+            tenant.address_line1 || null, tenant.address_line2 || null,
+            tenant.city || null, tenant.province || 'BC',
+            tenant.postal_code || null, tenant.country || 'CA'
+          ]
+        );
+
+        org_party_id = createResult.rows[0].id;
+        org_display_name = createResult.rows[0].trade_name || createResult.rows[0].legal_name;
+      }
+
+      await client.query(
+        `INSERT INTO party_memberships (party_id, individual_id, role, is_active)
+         VALUES ($1, $2, 'admin', true)
+         ON CONFLICT (party_id, individual_id)
+         DO UPDATE SET is_active = true, updated_at = now()`,
+        [org_party_id, individual_id]
+      );
+
+      await client.query('COMMIT');
+
+      return { individual_id, tenant_id, actor_party_id: org_party_id, party_kind: 'organization', display_name: org_display_name };
+    }
+
+    // No tenant - individual party
+    const existingIndParty = await client.query(
+      `SELECT id, trade_name, legal_name FROM parties
+       WHERE party_kind = 'individual' AND metadata->>'individual_id' = $1
+       ORDER BY created_at ASC LIMIT 1`,
+      [individual_id]
+    );
+
+    let ind_party_id = existingIndParty.rows[0]?.id as string | undefined;
+    let ind_display_name = existingIndParty.rows[0]?.trade_name || 
+                           existingIndParty.rows[0]?.legal_name || 
+                           individualDisplayName;
+
+    if (!ind_party_id) {
+      const createResult = await client.query(
+        `INSERT INTO parties (party_kind, party_type, status, legal_name, trade_name, metadata)
+         VALUES ('individual', $1::party_type, 'active', $2, $2, jsonb_build_object('individual_id', $3))
+         RETURNING id, trade_name`,
+        [role, individualDisplayName, individual_id]
+      );
+
+      ind_party_id = createResult.rows[0].id;
+      ind_display_name = createResult.rows[0].trade_name;
+    }
+
+    await client.query('COMMIT');
+
+    return { individual_id, tenant_id: null, actor_party_id: ind_party_id, party_kind: 'individual', display_name: ind_display_name };
+
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('resolveActorParty error:', error);
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
+export async function canUnlockContact(conversation_id: string): Promise<{
+  canUnlock: boolean;
+  gate: string;
+  reason: string;
+}> {
+  const client = await pool.connect();
+  try {
+    const convResult = await client.query(`SELECT * FROM conversations WHERE id = $1`, [conversation_id]);
+
+    if (convResult.rows.length === 0) {
+      return { canUnlock: false, gate: 'none', reason: 'Conversation not found' };
+    }
+
+    const conv = convResult.rows[0];
+
+    if (conv.contact_unlocked) {
+      return { canUnlock: true, gate: conv.contact_unlock_gate || 'already_unlocked', reason: 'Contact already unlocked' };
+    }
+
+    // Prior relationship
+    const priorResult = await client.query(
+      `SELECT 1 FROM conversations WHERE contractor_party_id = $1 AND owner_party_id = $2 AND state = 'completed' AND id != $3 LIMIT 1`,
+      [conv.contractor_party_id, conv.owner_party_id, conversation_id]
+    );
+    if (priorResult.rows.length > 0) {
+      return { canUnlock: true, gate: 'prior_relationship', reason: 'Prior completed work together' };
+    }
+
+    // Deposit verified
+    const depositResult = await client.query(
+      `SELECT 1 FROM payment_promises pp
+       JOIN payment_milestones pm ON pm.payment_promise_id = pp.id
+       WHERE pp.conversation_id = $1 AND pm.trigger_type IN ('on_award', 'on_contract_sign') AND pm.status = 'verified' LIMIT 1`,
+      [conversation_id]
+    );
+    if (depositResult.rows.length > 0) {
+      return { canUnlock: true, gate: 'deposit_verified', reason: 'Deposit has been verified' };
+    }
+
+    return { canUnlock: false, gate: 'none', reason: 'Deposit required before contact details can be shared' };
+  } finally {
+    client.release();
+  }
+}
+```
+
+### PART 3: Contact Redaction Library
+
+File: server/lib/contactRedaction.ts
+```typescript
+const TIER1_PATTERNS = [
+  { name: 'phone_dashed', regex: /\b\d{3}[-.\s]\d{3}[-.\s]\d{4}\b/g },
+  { name: 'phone_parens', regex: /\(\d{3}\)\s*\d{3}[-.\s]?\d{4}/g },
+  { name: 'phone_intl', regex: /\+1\s*\d{3}[-.\s]?\d{3}[-.\s]?\d{4}/g },
+  { name: 'phone_10digit', regex: /\b\d{10}\b/g },
+  { name: 'email', regex: /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/g },
+  { name: 'email_obfuscated', regex: /\b[A-Za-z0-9._%+-]+\s*(at|@)\s*[A-Za-z0-9.-]+\s*(dot|\.)\s*(com|ca|net|org|io)\b/gi },
+  { name: 'url_http', regex: /https?:\/\/[^\s]+/g },
+  { name: 'url_www', regex: /www\.[^\s]+/g },
+];
+
+const TIER2_PATTERNS = [
+  { name: 'phone_spelled', regex: /\b(two|three|four|five|six|seven|eight|nine)\s+(five|zero|one|two|three|four|six|seven|eight|nine)\s+(zero|one|two|three|four|five|six|seven|eight|nine)/gi },
+];
+
+const SOCIAL_KEYWORDS = /\b(instagram|ig|facebook|fb|whatsapp|telegram|signal|messenger|snapchat|tiktok|twitter|x\.com)\b/i;
+
+export interface RedactionResult {
+  wasRedacted: boolean;
+  cleanContent: string;
+  originalContent: string;
+  detectedItems: Array<{ tier: 1 | 2; type: string; value: string }>;
+  hasContactIntent: boolean;
+}
+
+export function redactContactInfo(content: string): RedactionResult {
+  let cleanContent = content;
+  const detectedItems: RedactionResult['detectedItems'] = [];
+  let tier1Triggered = false;
+
+  const hasSocialKeywords = SOCIAL_KEYWORDS.test(content);
+  const hasContactIntent = /\b(text|call|phone|email|message|reach|contact)\s*(me|us)\b/gi.test(content);
+
+  for (const pattern of TIER1_PATTERNS) {
+    const matches = content.match(pattern.regex);
+    if (matches) {
+      tier1Triggered = true;
+      for (const match of matches) {
+        if (!detectedItems.find(d => d.value === match)) {
+          detectedItems.push({ tier: 1, type: pattern.name, value: match });
+        }
+        cleanContent = cleanContent.replace(new RegExp(match.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), '[contact info protected]');
+      }
+    }
+  }
+
+  if (tier1Triggered || hasSocialKeywords) {
+    for (const pattern of TIER2_PATTERNS) {
+      const matches = content.match(pattern.regex);
+      if (matches) {
+        for (const match of matches) {
+          if (!detectedItems.find(d => d.value === match)) {
+            detectedItems.push({ tier: 2, type: pattern.name, value: match });
+          }
+          cleanContent = cleanContent.replace(new RegExp(match.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), '[contact info protected]');
+        }
+      }
+    }
+  }
+
+  return { wasRedacted: detectedItems.length > 0, cleanContent, originalContent: content, detectedItems, hasContactIntent };
+}
+
+export function shouldBlockMessage(conversation_id: string, recent_redaction_count: number): { blocked: boolean; reason?: string } {
+  if (recent_redaction_count >= 3) {
+    return { blocked: false, reason: 'Multiple contact sharing attempts detected. Please wait for deposit confirmation.' };
+  }
+  return { blocked: false };
+}
+```
+
+### PART 4: Financing Eligibility Library
+
+File: server/lib/financingEligibility.ts
+```typescript
+import { pool } from '../db';
+
+export interface EligibilitySignals {
+  owner_type: string | null;
+  contractor_trust_score: number;
+  has_signed_contract: boolean;
+  has_verified_scope: boolean;
+  has_structured_bom: boolean;
+  has_payment_milestones: boolean;
+  materials_total: number;
+  eligible_products: string[];
+  can_request_financing: boolean;
+  reasons: string[];
+}
+
+/**
+ * Compute financing eligibility based on opportunity, contractor, and job data
+ * No extra paperwork - use what we already have
+ */
+export async function computeFinancingEligibility(
+  opportunity_id: string,
+  contractor_party_id: string
+): Promise<EligibilitySignals> {
+  const client = await pool.connect();
+  try {
+    // Get opportunity details
+    const oppResult = await client.query(
+      `SELECT o.*, 
+              t.name as owner_name,
+              t.business_type
+       FROM opportunities o
+       LEFT JOIN tenants t ON o.owner_tenant_id = t.id
+       WHERE o.id = $1`,
+      [opportunity_id]
+    );
+
+    if (oppResult.rows.length === 0) {
+      return {
+        owner_type: null,
+        contractor_trust_score: 0,
+        has_signed_contract: false,
+        has_verified_scope: false,
+        has_structured_bom: false,
+        has_payment_milestones: false,
+        materials_total: 0,
+        eligible_products: [],
+        can_request_financing: false,
+        reasons: ['Opportunity not found']
+      };
+    }
+
+    const opp = oppResult.rows[0];
+
+    // Get contractor trust signals
+    const trustResult = await client.query(
+      `SELECT * FROM trust_signals WHERE party_id = $1 ORDER BY created_at DESC LIMIT 1`,
+      [contractor_party_id]
+    );
+    const trustScore = trustResult.rows[0]?.overall_score || 50; // Default 50
+
+    // Check for signed contract (conversation in 'contracted' or later state)
+    const contractResult = await client.query(
+      `SELECT 1 FROM conversations 
+       WHERE opportunity_id = $1 AND contractor_party_id = $2 
+       AND state IN ('contracted', 'in_progress', 'completed') LIMIT 1`,
+      [opportunity_id, contractor_party_id]
+    );
+    const hasSignedContract = contractResult.rows.length > 0;
+
+    // Check for payment milestones
+    const milestoneResult = await client.query(
+      `SELECT COUNT(*) as count, SUM(amount) as total
+       FROM payment_milestones pm
+       JOIN payment_promises pp ON pm.payment_promise_id = pp.id
+       JOIN conversations c ON pp.conversation_id = c.id
+       WHERE c.opportunity_id = $1 AND c.contractor_party_id = $2`,
+      [opportunity_id, contractor_party_id]
+    );
+    const hasMilestones = parseInt(milestoneResult.rows[0]?.count || '0') > 0;
+    const milestonesTotal = parseFloat(milestoneResult.rows[0]?.total || '0');
+
+    // Determine owner type (use opportunity.owner_type if set, else infer)
+    let ownerType = opp.owner_type;
+    if (!ownerType) {
+      // Simple inference - can be enhanced
+      const ownerName = (opp.owner_name || '').toLowerCase();
+      if (ownerName.includes('first nation') || ownerName.includes('band') || ownerName.includes('indigenous')) {
+        ownerType = 'first_nation';
+      } else if (ownerName.includes('government') || ownerName.includes('ministry') || ownerName.includes('canada')) {
+        ownerType = 'government';
+      } else if (ownerName.includes('city of') || ownerName.includes('district') || ownerName.includes('municipality')) {
+        ownerType = 'municipal';
+      }
+    }
+
+    // Check verified scope (has description > 100 chars and budget)
+    const hasVerifiedScope = (opp.description?.length > 100) && (opp.budget_amount > 0 || milestonesTotal > 0);
+
+    // For now, assume BOM is structured if we have milestones with amounts
+    const hasStructuredBom = hasMilestones && milestonesTotal > 25000;
+
+    // Find eligible products
+    const productsResult = await client.query(
+      `SELECT id, product_code, product_name, product_category, advance_percent, fee_percent, min_amount, max_amount
+       FROM financing_products
+       WHERE is_active = true
+         AND ($1::text IS NULL OR $1 = ANY(eligible_counterparties))
+         AND min_contractor_trust_score <= $2
+         AND (min_amount IS NULL OR min_amount <= $3)
+         AND (max_amount IS NULL OR max_amount >= $3)`,
+      [ownerType, trustScore, milestonesTotal]
+    );
+
+    const eligibleProducts = productsResult.rows.map(p => p.id);
+
+    // Determine overall eligibility
+    const reasons: string[] = [];
+    let canRequest = true;
+
+    if (!ownerType || !['government', 'first_nation', 'municipal'].includes(ownerType)) {
+      reasons.push('Financing currently available for government, First Nations, and municipal projects');
+      canRequest = false;
+    }
+
+    if (trustScore < 50) {
+      reasons.push('Contractor trust score below minimum threshold');
+      canRequest = false;
+    }
+
+    if (!hasSignedContract) {
+      reasons.push('Signed contract or awarded status required');
+      canRequest = false;
+    }
+
+    if (!hasVerifiedScope) {
+      reasons.push('Verified scope and budget required');
+      canRequest = false;
+    }
+
+    if (eligibleProducts.length === 0) {
+      reasons.push('No financing products currently available for this configuration');
+      canRequest = false;
+    }
+
+    if (canRequest) {
+      reasons.push('Eligible for financing');
+    }
+
+    return {
+      owner_type: ownerType,
+      contractor_trust_score: trustScore,
+      has_signed_contract: hasSignedContract,
+      has_verified_scope: hasVerifiedScope,
+      has_structured_bom: hasStructuredBom,
+      has_payment_milestones: hasMilestones,
+      materials_total: milestonesTotal,
+      eligible_products: eligibleProducts,
+      can_request_financing: canRequest,
+      reasons
+    };
+
+  } finally {
+    client.release();
+  }
+}
+
+/**
+ * Format financing suggestion for UI display
+ */
+export function formatFinancingSuggestion(eligibility: EligibilitySignals): {
+  show_financing: boolean;
+  headline: string;
+  details: string;
+  advance_estimate: number;
+  fee_estimate: number;
+} | null {
+  if (!eligibility.can_request_financing || eligibility.eligible_products.length === 0) {
+    return null;
+  }
+
+  // Calculate estimates (using 70% advance, 2.5% fee as defaults)
+  const advancePercent = 70;
+  const feePercent = 2.5;
+  const advanceEstimate = eligibility.materials_total * (advancePercent / 100);
+  const feeEstimate = advanceEstimate * (feePercent / 100);
+
+  return {
+    show_financing: true,
+    headline: `💰 Materials Financing Available`,
+    details: `Advance up to ${advancePercent}% ($${advanceEstimate.toLocaleString()}) of materials cost. Estimated fee: $${feeEstimate.toLocaleString()}`,
+    advance_estimate: advanceEstimate,
+    fee_estimate: feeEstimate
+  };
+}
+```
+
+### PART 5: Financing Routes
+
+File: server/routes/financing.ts
+```typescript
+import { Router, Request, Response } from 'express';
+import { pool } from '../db';
+import { resolveActorParty } from '../lib/partyResolver';
+import { computeFinancingEligibility, formatFinancingSuggestion } from '../lib/financingEligibility';
+
+const router = Router();
+
+// ============================================================
+// GET FINANCING ELIGIBILITY FOR OPPORTUNITY
+// ============================================================
+router.get('/opportunities/:id/financing-eligibility', async (req: Request, res: Response) => {
+  try {
+    const { id: opportunity_id } = req.params;
+
+    const actor = await resolveActorParty(req, 'contractor');
+    if (!actor) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const eligibility = await computeFinancingEligibility(opportunity_id, actor.actor_party_id);
+    const suggestion = formatFinancingSuggestion(eligibility);
+
+    res.json({
+      eligibility,
+      suggestion,
+      actor: { party_id: actor.actor_party_id, display_name: actor.display_name }
+    });
+  } catch (error) {
+    console.error('Error checking financing eligibility:', error);
+    res.status(500).json({ error: 'Failed to check eligibility' });
+  }
+});
+
+// ============================================================
+// GET AVAILABLE FINANCING PRODUCTS
+// ============================================================
+router.get('/financing/products', async (req: Request, res: Response) => {
+  try {
+    const { category, owner_type } = req.query;
+
+    let query = `
+      SELECT * FROM financing_products WHERE is_active = true
+    `;
+    const params: any[] = [];
+
+    if (category) {
+      params.push(category);
+      query += ` AND product_category = $${params.length}::financing_category`;
+    }
+
+    if (owner_type) {
+      params.push(owner_type);
+      query += ` AND $${params.length} = ANY(eligible_counterparties)`;
+    }
+
+    query += ` ORDER BY provider_name, product_name`;
+
+    const result = await pool.query(query, params);
+
+    res.json({ products: result.rows });
+  } catch (error) {
+    console.error('Error fetching financing products:', error);
+    res.status(500).json({ error: 'Failed to fetch products' });
+  }
+});
+
+// ============================================================
+// CREATE FINANCING REQUEST (DRAFT)
+// ============================================================
+router.post('/opportunities/:id/financing-request', async (req: Request, res: Response) => {
+  try {
+    const { id: opportunity_id } = req.params;
+    const {
+      financing_type,
+      amount_requested,
+      use_of_funds,
+      repayment_source,
+      related_milestone_id,
+      conversation_id,
+      financing_product_id,
+      supporting_documents
+    } = req.body;
+
+    const actor = await resolveActorParty(req, 'contractor');
+    if (!actor) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    // Validate required fields
+    if (!financing_type || !amount_requested || !use_of_funds || !repayment_source) {
+      return res.status(400).json({ error: 'financing_type, amount_requested, use_of_funds, and repayment_source required' });
+    }
+
+    const validTypes = ['materials', 'labour', 'equipment', 'receivable'];
+    const typeMap: Record<string, string> = {
+      'materials': 'materials_advance',
+      'labour': 'labour_bridge',
+      'equipment': 'equipment_finance',
+      'receivable': 'receivable_factoring'
+    };
+
+    if (!validTypes.includes(financing_type)) {
+      return res.status(400).json({ error: 'Invalid financing_type' });
+    }
+
+    // Check eligibility
+    const eligibility = await computeFinancingEligibility(opportunity_id, actor.actor_party_id);
+
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      // Create the request
+      const result = await client.query(
+        `INSERT INTO contractor_financing_requests (
+          opportunity_id, conversation_id, contractor_party_id, requested_by_individual_id,
+          financing_type, amount_requested, use_of_funds,
+          repayment_source, related_milestone_id,
+          financing_product_id, supporting_documents,
+          eligibility_signals, status
+        ) VALUES ($1, $2, $3, $4, $5::financing_category, $6, $7, $8::repayment_source, $9, $10, $11, $12, 'draft')
+        RETURNING *`,
+        [
+          opportunity_id,
+          conversation_id || null,
+          actor.actor_party_id,
+          actor.individual_id,
+          typeMap[financing_type],
+          amount_requested,
+          JSON.stringify(use_of_funds),
+          repayment_source,
+          related_milestone_id || null,
+          financing_product_id || null,
+          supporting_documents ? JSON.stringify(supporting_documents) : null,
+          JSON.stringify(eligibility)
+        ]
+      );
+
+      await client.query('COMMIT');
+
+      res.status(201).json({
+        financing_request: result.rows[0],
+        eligibility,
+        message: 'Financing request created as draft. Submit when ready.'
+      });
+
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+  } catch (error) {
+    console.error('Error creating financing request:', error);
+    res.status(500).json({ error: 'Failed to create financing request' });
+  }
+});
+
+// ============================================================
+// GET MY FINANCING REQUESTS
+// ============================================================
+router.get('/contractors/me/financing', async (req: Request, res: Response) => {
+  try {
+    const actor = await resolveActorParty(req, 'contractor');
+    if (!actor) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const { status } = req.query;
+
+    let query = `
+      SELECT cfr.*, o.title as opportunity_title, o.opportunity_ref,
+             fp.product_name, fp.provider_name
+      FROM contractor_financing_requests cfr
+      JOIN opportunities o ON cfr.opportunity_id = o.id
+      LEFT JOIN financing_products fp ON cfr.financing_product_id = fp.id
+      WHERE cfr.contractor_party_id = $1
+    `;
+    const params: any[] = [actor.actor_party_id];
+
+    if (status) {
+      params.push(status);
+      query += ` AND cfr.status = $${params.length}::financing_status`;
+    }
+
+    query += ` ORDER BY cfr.created_at DESC`;
+
+    const result = await pool.query(query, params);
+
+    res.json({
+      financing_requests: result.rows,
+      count: result.rows.length,
+      actor: { party_id: actor.actor_party_id, display_name: actor.display_name }
+    });
+  } catch (error) {
+    console.error('Error fetching financing requests:', error);
+    res.status(500).json({ error: 'Failed to fetch financing requests' });
+  }
+});
+
+// ============================================================
+// GET SINGLE FINANCING REQUEST
+// ============================================================
+router.get('/financing/:id', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const actor = await resolveActorParty(req, 'contractor');
+    if (!actor) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const result = await pool.query(
+      `SELECT cfr.*, o.title as opportunity_title, o.opportunity_ref, o.owner_type,
+              fp.product_name, fp.provider_name, fp.advance_percent, fp.fee_percent
+       FROM contractor_financing_requests cfr
+       JOIN opportunities o ON cfr.opportunity_id = o.id
+       LEFT JOIN financing_products fp ON cfr.financing_product_id = fp.id
+       WHERE cfr.id = $1 AND cfr.contractor_party_id = $2`,
+      [id, actor.actor_party_id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Financing request not found' });
+    }
+
+    // Get disbursements
+    const disbursements = await pool.query(
+      `SELECT * FROM financing_disbursements WHERE financing_request_id = $1 ORDER BY created_at`,
+      [id]
+    );
+
+    // Get repayments
+    const repayments = await pool.query(
+      `SELECT * FROM financing_repayments WHERE financing_request_id = $1 ORDER BY expected_date`,
+      [id]
+    );
+
+    res.json({
+      financing_request: result.rows[0],
+      disbursements: disbursements.rows,
+      repayments: repayments.rows
+    });
+  } catch (error) {
+    console.error('Error fetching financing request:', error);
+    res.status(500).json({ error: 'Failed to fetch financing request' });
+  }
+});
+
+// ============================================================
+// UPDATE FINANCING REQUEST (DRAFT ONLY)
+// ============================================================
+router.patch('/financing/:id', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { amount_requested, use_of_funds, repayment_source, financing_product_id, supporting_documents } = req.body;
+
+    const actor = await resolveActorParty(req, 'contractor');
+    if (!actor) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    // Verify ownership and draft status
+    const existing = await pool.query(
+      `SELECT * FROM contractor_financing_requests WHERE id = $1 AND contractor_party_id = $2`,
+      [id, actor.actor_party_id]
+    );
+
+    if (existing.rows.length === 0) {
+      return res.status(404).json({ error: 'Financing request not found' });
+    }
+
+    if (existing.rows[0].status !== 'draft') {
+      return res.status(400).json({ error: 'Can only update draft requests' });
+    }
+
+    const updates: string[] = [];
+    const params: any[] = [];
+    let paramIndex = 1;
+
+    if (amount_requested !== undefined) {
+      updates.push(`amount_requested = $${paramIndex}`);
+      params.push(amount_requested);
+      paramIndex++;
+    }
+    if (use_of_funds !== undefined) {
+      updates.push(`use_of_funds = $${paramIndex}`);
+      params.push(JSON.stringify(use_of_funds));
+      paramIndex++;
+    }
+    if (repayment_source !== undefined) {
+      updates.push(`repayment_source = $${paramIndex}::repayment_source`);
+      params.push(repayment_source);
+      paramIndex++;
+    }
+    if (financing_product_id !== undefined) {
+      updates.push(`financing_product_id = $${paramIndex}`);
+      params.push(financing_product_id);
+      paramIndex++;
+    }
+    if (supporting_documents !== undefined) {
+      updates.push(`supporting_documents = $${paramIndex}`);
+      params.push(JSON.stringify(supporting_documents));
+      paramIndex++;
+    }
+
+    if (updates.length === 0) {
+      return res.status(400).json({ error: 'No updates provided' });
+    }
+
+    updates.push('updated_at = now()');
+    params.push(id);
+
+    const result = await pool.query(
+      `UPDATE contractor_financing_requests SET ${updates.join(', ')} WHERE id = $${paramIndex} RETURNING *`,
+      params
+    );
+
+    res.json({ financing_request: result.rows[0] });
+  } catch (error) {
+    console.error('Error updating financing request:', error);
+    res.status(500).json({ error: 'Failed to update financing request' });
+  }
+});
+
+// ============================================================
+// SUBMIT FINANCING REQUEST
+// ============================================================
+router.post('/financing/:id/submit', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const actor = await resolveActorParty(req, 'contractor');
+    if (!actor) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      // Get and verify request
+      const existing = await client.query(
+        `SELECT cfr.*, o.id as opp_id FROM contractor_financing_requests cfr
+         JOIN opportunities o ON cfr.opportunity_id = o.id
+         WHERE cfr.id = $1 AND cfr.contractor_party_id = $2`,
+        [id, actor.actor_party_id]
+      );
+
+      if (existing.rows.length === 0) {
+        await client.query('ROLLBACK');
+        return res.status(404).json({ error: 'Financing request not found' });
+      }
+
+      const request = existing.rows[0];
+
+      if (request.status !== 'draft') {
+        await client.query('ROLLBACK');
+        return res.status(400).json({ error: 'Can only submit draft requests' });
+      }
+
+      // Re-check eligibility
+      const eligibility = await computeFinancingEligibility(request.opportunity_id, actor.actor_party_id);
+
+      if (!eligibility.can_request_financing) {
+        await client.query('ROLLBACK');
+        return res.status(400).json({ 
+          error: 'Not eligible for financing', 
+          reasons: eligibility.reasons 
+        });
+      }
+
+      // Update status
+      const result = await client.query(
+        `UPDATE contractor_financing_requests SET
+          status = 'submitted',
+          status_changed_at = now(),
+          status_history = status_history || $1::jsonb,
+          eligibility_signals = $2,
+          updated_at = now()
+         WHERE id = $3 RETURNING *`,
+        [
+          JSON.stringify({ status: 'submitted', at: new Date().toISOString(), by: actor.individual_id }),
+          JSON.stringify(eligibility),
+          id
+        ]
+      );
+
+      await client.query('COMMIT');
+
+      res.json({
+        financing_request: result.rows[0],
+        message: 'Financing request submitted for review. You will be notified when a decision is made.'
+      });
+
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+  } catch (error) {
+    console.error('Error submitting financing request:', error);
+    res.status(500).json({ error: 'Failed to submit financing request' });
+  }
+});
+
+// ============================================================
+// CANCEL FINANCING REQUEST
+// ============================================================
+router.post('/financing/:id/cancel', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { reason } = req.body;
+
+    const actor = await resolveActorParty(req, 'contractor');
+    if (!actor) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const result = await pool.query(
+      `UPDATE contractor_financing_requests SET
+        status = 'cancelled',
+        status_changed_at = now(),
+        status_history = status_history || $1::jsonb,
+        cancelled_reason = $2,
+        cancelled_by_party_id = $3,
+        updated_at = now()
+       WHERE id = $4 AND contractor_party_id = $5
+         AND status IN ('draft', 'submitted', 'under_review')
+       RETURNING *`,
+      [
+        JSON.stringify({ status: 'cancelled', at: new Date().toISOString(), by: actor.individual_id }),
+        reason || 'Cancelled by contractor',
+        actor.actor_party_id,
+        id,
+        actor.actor_party_id
+      ]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Financing request not found or cannot be cancelled' });
+    }
+
+    res.json({ financing_request: result.rows[0], cancelled: true });
+  } catch (error) {
+    console.error('Error cancelling financing request:', error);
+    res.status(500).json({ error: 'Failed to cancel financing request' });
+  }
+});
+
+export default router;
+```
+
+### PART 6: Register All Routes
+
+Update server/index.ts:
+```typescript
+// Add imports
+import conversationsRouter from './routes/conversations';
+import financingRouter from './routes/financing';
+
+// Add route registrations
+app.use('/api', conversationsRouter);
+app.use('/api', financingRouter);
+```
+
+### PART 7: Create directories
+```bash
+mkdir -p server/lib
+```
+
+### Verification
+
+1. Run migration:
+```bash
+psql $DATABASE_URL -f server/migrations/036_contractor_financing.sql
+```
+
+2. Verify tables:
+```sql
+SELECT table_name FROM information_schema.tables 
+WHERE table_name IN ('financing_products', 'contractor_financing_requests', 
+                     'financing_disbursements', 'financing_repayments');
+```
+
+3. Verify seed products:
+```sql
+SELECT product_code, provider_name, product_category, advance_percent 
+FROM financing_products WHERE is_active;
+```
+
+4. Test endpoints:
+```bash
+# Check eligibility
+curl http://localhost:5000/api/opportunities/OPP_UUID/financing-eligibility \
+  -H "Cookie: YOUR_SESSION"
+
+# Get products
+curl http://localhost:5000/api/financing/products
+
+# Create request
+curl -X POST http://localhost:5000/api/opportunities/OPP_UUID/financing-request \
+  -H "Content-Type: application/json" \
+  -H "Cookie: YOUR_SESSION" \
+  -d '{
+    "financing_type": "materials",
+    "amount_requested": 75000,
+    "use_of_funds": {"items": [{"description": "Lumber", "amount": 45000}], "total": 75000},
+    "repayment_source": "milestone_payment"
+  }'
+```
+
+### Expected Results
+
+1. **5 seed financing products** from BDC, FNFA, RCF
+2. **Eligibility check** returns signals + eligible products
+3. **Financing request** creates in draft status
+4. **Submit** moves to submitted (if eligible)
+
+Tell me:
+1. Did migration 036 run successfully?
+2. Are 5 financing products seeded?
+3. Does eligibility check work?
+4. Can you create a financing request?
+5. Any errors?
