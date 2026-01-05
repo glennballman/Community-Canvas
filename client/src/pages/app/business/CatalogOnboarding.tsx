@@ -452,7 +452,7 @@ function ReviewStep({
       </div>
 
       <div className="flex justify-between gap-4 flex-wrap">
-        <Button variant="ghost" className="text-muted-foreground">
+        <Button variant="ghost" className="text-muted-foreground" data-testid="button-save-later">
           Save and finish later
         </Button>
         <Button onClick={onContinue} data-testid="button-continue-review">
