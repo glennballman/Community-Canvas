@@ -1,0 +1,680 @@
+/**
+ * AVAILABILITY CONSOLE - Sheryl's Superpower
+ * 
+ * The killer feature that makes Community Canvas valuable.
+ * One screen to search all opted-in availability across tenants.
+ * Built for answering phone calls.
+ * 
+ * Tabs: Stay | Parking | Moorage | Rentals | Services | Alerts
+ */
+
+import React, { useState, useEffect, useCallback } from 'react';
+import { api } from '../../../lib/api';
+import { useTenant } from '../../../layouts/TenantAppLayout';
+import { debounce } from 'lodash';
+
+// Types
+interface AvailabilityResult {
+  item_id: string;
+  business_tenant_id: string;
+  business_name: string;
+  item_name: string;
+  short_description: string;
+  item_type: string;
+  category: string;
+  photos: any[];
+  price_amount: number | null;
+  price_unit: string | null;
+  price_visible: boolean;
+  capacity_max: number | null;
+  pickup_location: string;
+  can_request_hold: boolean;
+  sharing_status: 'full' | 'availability_only' | 'limited';
+}
+
+interface SearchFilters {
+  query: string;
+  date_start: string;
+  date_end: string;
+  party_size: string;
+  item_type: string;
+}
+
+const TABS = [
+  { id: 'stay', label: 'Stay', icon: '🏠', type: 'accommodation' },
+  { id: 'parking', label: 'Parking', icon: '🚗', type: 'parking' },
+  { id: 'moorage', label: 'Moorage', icon: '⚓', type: 'moorage' },
+  { id: 'rentals', label: 'Rentals', icon: '🚲', type: 'rental' },
+  { id: 'services', label: 'Services', icon: '🔧', type: 'service' },
+  { id: 'alerts', label: 'Alerts', icon: '⚠️', type: null },
+];
+
+export function AvailabilityConsole() {
+  const { currentTenant } = useTenant();
+  const [activeTab, setActiveTab] = useState('stay');
+  const [results, setResults] = useState<AvailabilityResult[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<AvailabilityResult | null>(null);
+  const [showPhoneScript, setShowPhoneScript] = useState(true);
+  
+  const [filters, setFilters] = useState<SearchFilters>({
+    query: '',
+    date_start: '',
+    date_end: '',
+    party_size: '',
+    item_type: 'accommodation',
+  });
+
+  // Debounced search
+  const debouncedSearch = useCallback(
+    debounce((f: SearchFilters) => {
+      performSearch(f);
+    }, 300),
+    []
+  );
+
+  useEffect(() => {
+    const tab = TABS.find(t => t.id === activeTab);
+    if (tab?.type) {
+      setFilters(prev => ({ ...prev, item_type: tab.type! }));
+    }
+  }, [activeTab]);
+
+  useEffect(() => {
+    if (filters.item_type) {
+      debouncedSearch(filters);
+    }
+  }, [filters]);
+
+  async function performSearch(f: SearchFilters) {
+    if (!currentTenant) return;
+    
+    setLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (f.item_type) params.set('item_type', f.item_type);
+      if (f.query) params.set('search', f.query);
+      if (f.date_start) params.set('date_start', f.date_start);
+      if (f.date_end) params.set('date_end', f.date_end);
+      if (f.party_size) params.set('capacity', f.party_size);
+      
+      const data = await api.get(`/api/operator/availability?${params}`);
+      setResults(data.results || []);
+    } catch (error) {
+      console.error('Search failed:', error);
+      setResults([]);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function handleUpdateFilter(key: keyof SearchFilters, value: string) {
+    setFilters(prev => ({ ...prev, [key]: value }));
+  }
+
+  return (
+    <div className="flex h-full">
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Header */}
+        <div className="p-6 border-b border-white/10">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h1 className="text-2xl font-bold">Availability</h1>
+              <p className="text-gray-400 text-sm">
+                Opted-in availability across the community — built for answering calls
+              </p>
+            </div>
+            <button
+              onClick={() => setShowPhoneScript(!showPhoneScript)}
+              className={`px-4 py-2 rounded-lg text-sm transition ${
+                showPhoneScript 
+                  ? 'bg-amber-500 text-amber-950' 
+                  : 'bg-white/10 text-white'
+              }`}
+            >
+              📞 Phone Script
+            </button>
+          </div>
+
+          {/* Tabs */}
+          <div className="flex gap-1 border-b border-white/10 -mb-px">
+            {TABS.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`px-4 py-2 text-sm font-medium border-b-2 transition ${
+                  activeTab === tab.id
+                    ? 'border-blue-500 text-blue-400'
+                    : 'border-transparent text-gray-400 hover:text-white'
+                }`}
+              >
+                <span className="mr-2">{tab.icon}</span>
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Search Bar */}
+        <div className="p-4 bg-white/5 border-b border-white/10">
+          <p className="text-xs text-gray-500 mb-2">
+            Search once — see results from every opted-in tenant.
+          </p>
+          <div className="flex gap-3">
+            <input
+              type="text"
+              value={filters.query}
+              onChange={(e) => handleUpdateFilter('query', e.target.value)}
+              placeholder='What are they looking for? (e.g., "2 nights", "truck + trailer", "25ft boat")'
+              className="flex-1 bg-white/10 border border-white/20 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
+            />
+            <input
+              type="date"
+              value={filters.date_start}
+              onChange={(e) => handleUpdateFilter('date_start', e.target.value)}
+              className="bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white"
+              placeholder="Start date"
+            />
+            <input
+              type="date"
+              value={filters.date_end}
+              onChange={(e) => handleUpdateFilter('date_end', e.target.value)}
+              className="bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white"
+              placeholder="End date"
+            />
+            <input
+              type="number"
+              value={filters.party_size}
+              onChange={(e) => handleUpdateFilter('party_size', e.target.value)}
+              placeholder="Party size"
+              className="w-24 bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white placeholder-gray-500"
+            />
+          </div>
+        </div>
+
+        {/* Results */}
+        <div className="flex-1 overflow-auto p-4">
+          {loading ? (
+            <div className="flex items-center justify-center h-full">
+              <div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full"></div>
+            </div>
+          ) : results.length === 0 ? (
+            <EmptyResults filters={filters} />
+          ) : (
+            <div className="space-y-3">
+              {results.map((item) => (
+                <ResultCard
+                  key={item.item_id}
+                  item={item}
+                  selected={selectedItem?.item_id === item.item_id}
+                  onSelect={() => setSelectedItem(item)}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Phone Script Panel */}
+      {showPhoneScript && (
+        <PhoneScriptPanel
+          filters={filters}
+          results={results}
+          selectedItem={selectedItem}
+          onClose={() => setShowPhoneScript(false)}
+        />
+      )}
+
+      {/* Detail Drawer */}
+      {selectedItem && !showPhoneScript && (
+        <DetailDrawer
+          item={selectedItem}
+          onClose={() => setSelectedItem(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+// ============================================================
+// RESULT CARD
+// ============================================================
+
+function ResultCard({
+  item,
+  selected,
+  onSelect
+}: {
+  item: AvailabilityResult;
+  selected: boolean;
+  onSelect: () => void;
+}) {
+  return (
+    <div
+      onClick={onSelect}
+      className={`p-4 rounded-lg border cursor-pointer transition ${
+        selected
+          ? 'bg-blue-600/20 border-blue-500'
+          : 'bg-white/5 border-white/10 hover:border-white/30'
+      }`}
+    >
+      <div className="flex gap-4">
+        {/* Photo */}
+        <div className="w-20 h-20 bg-white/10 rounded-lg overflow-hidden flex-shrink-0">
+          {item.photos?.[0]?.url ? (
+            <img 
+              src={item.photos[0].url} 
+              alt={item.item_name}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-2xl">
+              📷
+            </div>
+          )}
+        </div>
+
+        {/* Info */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start justify-between">
+            <div>
+              <h3 className="font-medium">{item.item_name}</h3>
+              <p className="text-sm text-gray-400">{item.business_name}</p>
+            </div>
+            
+            {/* Sharing Badge */}
+            <span className={`text-xs px-2 py-0.5 rounded ${
+              item.sharing_status === 'full' 
+                ? 'bg-green-500/20 text-green-400'
+                : item.sharing_status === 'availability_only'
+                ? 'bg-blue-500/20 text-blue-400'
+                : 'bg-gray-500/20 text-gray-400'
+            }`}>
+              {item.sharing_status === 'full' ? 'Opted-in' : 
+               item.sharing_status === 'availability_only' ? 'Availability only' : 'Limited'}
+            </span>
+          </div>
+
+          <p className="text-sm text-gray-500 mt-1 line-clamp-1">
+            {item.short_description}
+          </p>
+
+          <div className="flex items-center gap-4 mt-2 text-sm">
+            {item.price_visible && item.price_amount && (
+              <span className="font-medium">
+                ${item.price_amount}
+                <span className="text-gray-500 font-normal">/{item.price_unit}</span>
+              </span>
+            )}
+            {item.capacity_max && (
+              <span className="text-gray-400">
+                Up to {item.capacity_max}
+              </span>
+            )}
+            {item.pickup_location && (
+              <span className="text-gray-400">
+                📍 {item.pickup_location}
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Quick Actions */}
+        <div className="flex flex-col gap-2">
+          <button className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded hover:bg-blue-700">
+            📞 Script
+          </button>
+          {item.can_request_hold && (
+            <button className="px-3 py-1.5 bg-white/10 text-sm rounded hover:bg-white/20">
+              Hold
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// PHONE SCRIPT PANEL
+// ============================================================
+
+function PhoneScriptPanel({
+  filters,
+  results,
+  selectedItem,
+  onClose
+}: {
+  filters: SearchFilters;
+  results: AvailabilityResult[];
+  selectedItem: AvailabilityResult | null;
+  onClose: () => void;
+}) {
+  const [copiedBlock, setCopiedBlock] = useState<string | null>(null);
+
+  function copyToClipboard(text: string, blockId: string) {
+    navigator.clipboard.writeText(text);
+    setCopiedBlock(blockId);
+    setTimeout(() => setCopiedBlock(null), 2000);
+  }
+
+  // Generate context summary
+  const contextSummary = [
+    filters.query && `Looking for: ${filters.query}`,
+    filters.date_start && `Dates: ${filters.date_start}${filters.date_end ? ` to ${filters.date_end}` : ''}`,
+    filters.party_size && `Party size: ${filters.party_size}`,
+  ].filter(Boolean).join(' • ');
+
+  const hasMatches = results.length > 0;
+  const topMatches = results.slice(0, 3);
+
+  return (
+    <div className="w-96 border-l border-white/10 bg-[#0a1628] flex flex-col">
+      {/* Header */}
+      <div className="p-4 border-b border-white/10 flex items-center justify-between">
+        <div>
+          <h2 className="font-semibold">📞 Phone Script</h2>
+          <p className="text-xs text-gray-500">Copy-ready responses • Updates as you search</p>
+        </div>
+        <button onClick={onClose} className="text-gray-400 hover:text-white">
+          ✕
+        </button>
+      </div>
+
+      {/* Context */}
+      {contextSummary && (
+        <div className="p-3 bg-blue-600/10 border-b border-white/10">
+          <div className="text-xs text-blue-400 font-medium mb-1">CALLER NEEDS</div>
+          <div className="text-sm">{contextSummary}</div>
+        </div>
+      )}
+
+      {/* Script Blocks */}
+      <div className="flex-1 overflow-auto p-4 space-y-4">
+        {/* Opener */}
+        <ScriptBlock
+          id="opener"
+          label="Opener"
+          copied={copiedBlock === 'opener'}
+          onCopy={() => copyToClipboard(
+            contextSummary 
+              ? "Perfect — I'm going to check what's available right now across our opted-in operators."
+              : "Thanks for calling — I can help with that. Just so I'm precise: what dates and what size group are we planning for?",
+            'opener'
+          )}
+        >
+          {contextSummary 
+            ? "Perfect — I'm going to check what's available right now across our opted-in operators."
+            : "Thanks for calling — I can help with that. Just so I'm precise: what dates and what size group are we planning for?"
+          }
+        </ScriptBlock>
+
+        {/* Results Script */}
+        {hasMatches ? (
+          <ScriptBlock
+            id="matches"
+            label="We have options"
+            copied={copiedBlock === 'matches'}
+            onCopy={() => copyToClipboard(generateMatchesScript(topMatches), 'matches')}
+          >
+            <div className="space-y-2">
+              <p>Good news — I have {results.length} options that fit. The best matches are:</p>
+              <ul className="space-y-2 mt-2">
+                {topMatches.map((item, i) => (
+                  <li key={item.item_id} className="text-sm">
+                    <strong>{item.item_name}</strong> via {item.business_name}
+                    {item.price_visible && item.price_amount && (
+                      <> — approx ${item.price_amount}/{item.price_unit}</>
+                    )}
+                    {item.pickup_location && <> — {item.pickup_location}</>}
+                  </li>
+                ))}
+              </ul>
+              <p className="text-sm mt-2 text-gray-400">
+                "Would you like me to message the operator to confirm and hold one of these for you?"
+              </p>
+            </div>
+          </ScriptBlock>
+        ) : (
+          <ScriptBlock
+            id="no-matches"
+            label="No matches"
+            copied={copiedBlock === 'no-matches'}
+            onCopy={() => copyToClipboard(
+              "Right now I'm not seeing an exact match for those requirements. The fastest fix is usually one of these: shifting dates by 1–2 days, choosing a nearby area, or slightly reducing size requirements. If you want, I can also send an availability request to operators in the network and see what comes back.",
+              'no-matches'
+            )}
+          >
+            <p>Right now I'm not seeing an exact match for those requirements.</p>
+            <p className="mt-2">The fastest fix is usually one of these:</p>
+            <ul className="list-disc list-inside text-sm mt-1 space-y-1">
+              <li>shifting dates by 1–2 days</li>
+              <li>choosing a nearby area</li>
+              <li>slightly reducing size requirements</li>
+            </ul>
+            <p className="mt-2 text-sm text-gray-400">
+              "If you want, I can also send an availability request to operators in the network and see what comes back."
+            </p>
+          </ScriptBlock>
+        )}
+
+        {/* Limited Visibility Script */}
+        {results.some(r => r.sharing_status === 'limited') && (
+          <ScriptBlock
+            id="limited"
+            label="Limited visibility"
+            copied={copiedBlock === 'limited'}
+            onCopy={() => copyToClipboard(
+              "I can see that they participate, but they keep some details private. I can message them immediately with your dates and requirements and ask them to confirm availability. What's the best callback number or email for you?",
+              'limited'
+            )}
+          >
+            <p>I can see that they participate, but they keep some details private.</p>
+            <p className="mt-2">
+              "I can message them immediately with your dates and requirements and ask them to confirm availability."
+            </p>
+            <p className="mt-2 text-amber-400 text-sm">
+              "What's the best callback number or email for you?"
+            </p>
+          </ScriptBlock>
+        )}
+
+        {/* Next Steps */}
+        <ScriptBlock
+          id="next-steps"
+          label="Next steps"
+          copied={copiedBlock === 'next-steps'}
+          onCopy={() => copyToClipboard(
+            "Okay — I'm sending this now. You should hear back soon. If you don't, I'll follow up and call you back.",
+            'next-steps'
+          )}
+        >
+          <p>
+            "Okay — I'm sending this now. You should hear back soon. If you don't, I'll follow up and call you back."
+          </p>
+        </ScriptBlock>
+
+        {/* Internal Note */}
+        <div className="p-3 bg-gray-800/50 rounded-lg border border-gray-700">
+          <div className="text-xs text-gray-500 font-medium mb-1">OPERATOR NOTE (internal)</div>
+          <p className="text-sm text-gray-400">
+            Ask about: arrival time, vehicle/boat length, power needs, pets, and any accessibility needs.
+          </p>
+        </div>
+      </div>
+
+      {/* Actions */}
+      <div className="p-4 border-t border-white/10 space-y-2">
+        <button className="w-full py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+          📋 Copy Entire Script
+        </button>
+        <div className="flex gap-2">
+          <button className="flex-1 py-2 bg-white/10 rounded-lg hover:bg-white/20">
+            📝 Log Call
+          </button>
+          <button className="flex-1 py-2 bg-white/10 rounded-lg hover:bg-white/20">
+            ✉️ Send Message
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ScriptBlock({
+  id,
+  label,
+  children,
+  copied,
+  onCopy
+}: {
+  id: string;
+  label: string;
+  children: React.ReactNode;
+  copied: boolean;
+  onCopy: () => void;
+}) {
+  return (
+    <div className="p-3 bg-white/5 rounded-lg border border-white/10">
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-xs text-gray-500 font-medium uppercase">{label}</span>
+        <button
+          onClick={onCopy}
+          className={`text-xs px-2 py-1 rounded transition ${
+            copied 
+              ? 'bg-green-500/20 text-green-400'
+              : 'bg-white/10 text-gray-400 hover:text-white'
+          }`}
+        >
+          {copied ? '✓ Copied' : 'Copy'}
+        </button>
+      </div>
+      <div className="text-sm leading-relaxed">{children}</div>
+    </div>
+  );
+}
+
+function generateMatchesScript(items: AvailabilityResult[]): string {
+  const lines = items.map((item, i) => {
+    let line = `${i + 1}. ${item.item_name} via ${item.business_name}`;
+    if (item.price_visible && item.price_amount) {
+      line += ` — approx $${item.price_amount}/${item.price_unit}`;
+    }
+    if (item.pickup_location) {
+      line += ` — ${item.pickup_location}`;
+    }
+    return line;
+  });
+
+  return `Good news — I have options that fit. The best matches are:\n\n${lines.join('\n')}\n\nWould you like me to message the operator to confirm and hold one of these for you?`;
+}
+
+// ============================================================
+// EMPTY RESULTS
+// ============================================================
+
+function EmptyResults({ filters }: { filters: SearchFilters }) {
+  const hasFilters = filters.query || filters.date_start || filters.party_size;
+
+  return (
+    <div className="flex flex-col items-center justify-center h-full text-center">
+      <div className="text-6xl mb-4">🔍</div>
+      <h3 className="text-xl font-semibold mb-2">
+        {hasFilters ? 'No matches right now' : 'Start searching'}
+      </h3>
+      <p className="text-gray-400 max-w-md">
+        {hasFilters 
+          ? "Try changing dates, reducing requirements, or switching areas."
+          : "Type what the caller needs — like '2 nights, 2 adults' or '25ft boat' — and we'll find matches across all opted-in tenants."
+        }
+      </p>
+      {hasFilters && (
+        <button
+          onClick={() => {/* Clear filters */}}
+          className="mt-4 px-4 py-2 bg-white/10 rounded-lg hover:bg-white/20"
+        >
+          Clear Filters
+        </button>
+      )}
+    </div>
+  );
+}
+
+// ============================================================
+// DETAIL DRAWER
+// ============================================================
+
+function DetailDrawer({
+  item,
+  onClose
+}: {
+  item: AvailabilityResult;
+  onClose: () => void;
+}) {
+  return (
+    <div className="w-96 border-l border-white/10 bg-[#0a1628] flex flex-col">
+      <div className="p-4 border-b border-white/10 flex items-center justify-between">
+        <h2 className="font-semibold">Details</h2>
+        <button onClick={onClose} className="text-gray-400 hover:text-white">
+          ✕
+        </button>
+      </div>
+      
+      <div className="flex-1 overflow-auto p-4">
+        {/* Photo */}
+        {item.photos?.[0]?.url && (
+          <img 
+            src={item.photos[0].url}
+            alt={item.item_name}
+            className="w-full h-48 object-cover rounded-lg mb-4"
+          />
+        )}
+
+        <h3 className="text-xl font-semibold mb-1">{item.item_name}</h3>
+        <p className="text-gray-400 mb-4">{item.business_name}</p>
+
+        {item.short_description && (
+          <p className="text-sm mb-4">{item.short_description}</p>
+        )}
+
+        <div className="space-y-3">
+          {item.price_visible && item.price_amount && (
+            <div className="flex justify-between">
+              <span className="text-gray-400">Price</span>
+              <span className="font-medium">${item.price_amount}/{item.price_unit}</span>
+            </div>
+          )}
+          {item.capacity_max && (
+            <div className="flex justify-between">
+              <span className="text-gray-400">Capacity</span>
+              <span>Up to {item.capacity_max}</span>
+            </div>
+          )}
+          {item.pickup_location && (
+            <div className="flex justify-between">
+              <span className="text-gray-400">Location</span>
+              <span>{item.pickup_location}</span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="p-4 border-t border-white/10 space-y-2">
+        {item.can_request_hold && (
+          <button className="w-full py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+            Request Hold
+          </button>
+        )}
+        <button className="w-full py-2 bg-white/10 rounded-lg hover:bg-white/20">
+          Message Tenant
+        </button>
+        <button className="w-full py-2 bg-white/10 rounded-lg hover:bg-white/20">
+          View Full Details
+        </button>
+      </div>
+    </div>
+  );
+}
+
+export default AvailabilityConsole;
