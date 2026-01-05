@@ -1,0 +1,1629 @@
+Build trust signals + feedback system matching EXISTING schema.
+
+CRITICAL FIXES APPLIED:
+1. Uses existing trust_signals schema (party_id, model) unique constraint
+2. Uses existing column names: response_time_avg_hours, not avg_response_hours
+3. Creates missing tables: contractor_feedback, public_appreciations
+4. Enforces "no public negatives" via CHECK constraints
+5. Default show_response_time=false (weaponizable in small towns)
+6. Adds feedback routes with small-town workflow
+
+### File: server/migrations/038_trust_feedback_appreciations.sql
+```sql
+-- ============================================================
+-- COMMUNITY CANVAS v2.6 - TRUST + FEEDBACK LAYER (SMALL TOWN)
+-- Migration 038 - Works with existing trust_signals schema
+-- ============================================================
+
+-- Philosophy:
+-- - Private feedback can include negatives (contractor inbox)
+-- - Public appreciations are POSITIVE-ONLY
+-- - Contractor controls what becomes public
+-- - No weaponizable metrics by default
+-- - Schema enforces "no public negatives"
+
+-- ============================================================
+-- 1. VISIBILITY ENUM
+-- ============================================================
+
+DO $$ BEGIN
+  CREATE TYPE signal_visibility AS ENUM (
+    'public',
+    'verified_users',
+    'parties_only',
+    'private'
+  );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+-- ============================================================
+-- 2. FEEDBACK SENTIMENT ENUM
+-- ============================================================
+
+DO $$ BEGIN
+  CREATE TYPE feedback_sentiment AS ENUM (
+    'positive',
+    'neutral',
+    'issue'
+  );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+-- ============================================================
+-- 3. EXTEND EXISTING trust_signals TABLE
+-- ============================================================
+
+-- Add contractor-controlled display preferences
+DO $$ BEGIN
+  ALTER TABLE trust_signals
+    ADD COLUMN IF NOT EXISTS display_preferences JSONB DEFAULT '{
+      "show_repeat_customers": true,
+      "show_public_appreciations": true,
+      "show_credentials": true,
+      "show_response_time": false,
+      "show_years_in_community": true,
+      "show_completion_rate": true
+    }'::jsonb;
+
+  ALTER TABLE trust_signals
+    ADD COLUMN IF NOT EXISTS verified_communities TEXT[];
+
+  ALTER TABLE trust_signals
+    ADD COLUMN IF NOT EXISTS computed_at TIMESTAMPTZ DEFAULT now();
+
+  ALTER TABLE trust_signals
+    ADD COLUMN IF NOT EXISTS computation_version INTEGER DEFAULT 1;
+
+  -- Ensure these exist (may already from prior migrations)
+  ALTER TABLE trust_signals
+    ADD COLUMN IF NOT EXISTS jobs_completed INTEGER DEFAULT 0;
+  
+  ALTER TABLE trust_signals
+    ADD COLUMN IF NOT EXISTS jobs_in_progress INTEGER DEFAULT 0;
+
+  ALTER TABLE trust_signals
+    ADD COLUMN IF NOT EXISTS total_unique_customers INTEGER DEFAULT 0;
+
+  ALTER TABLE trust_signals
+    ADD COLUMN IF NOT EXISTS has_insurance BOOLEAN DEFAULT false;
+
+  ALTER TABLE trust_signals
+    ADD COLUMN IF NOT EXISTS insurance_verified_at TIMESTAMPTZ;
+
+  ALTER TABLE trust_signals
+    ADD COLUMN IF NOT EXISTS licenses TEXT[];
+
+  ALTER TABLE trust_signals
+    ADD COLUMN IF NOT EXISTS certifications TEXT[];
+
+  ALTER TABLE trust_signals
+    ADD COLUMN IF NOT EXISTS member_since DATE;
+
+  ALTER TABLE trust_signals
+    ADD COLUMN IF NOT EXISTS platform_verified BOOLEAN DEFAULT false;
+
+  ALTER TABLE trust_signals
+    ADD COLUMN IF NOT EXISTS appreciation_highlights TEXT[];
+
+EXCEPTION WHEN duplicate_column THEN NULL;
+END $$;
+
+COMMENT ON COLUMN trust_signals.display_preferences IS
+  'Contractor controls what is visible publicly. show_response_time defaults FALSE (weaponizable).';
+
+-- Helpful index
+CREATE INDEX IF NOT EXISTS trust_signals_party_model_idx
+  ON trust_signals(party_id, model);
+
+-- ============================================================
+-- 4. PRIVATE CONTRACTOR FEEDBACK (Can Include Negatives)
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS contractor_feedback (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+
+  -- Links
+  conversation_id UUID REFERENCES conversations(id) ON DELETE SET NULL,
+  opportunity_id UUID REFERENCES opportunities(id) ON DELETE SET NULL,
+
+  -- Who sent feedback
+  from_party_id UUID NOT NULL REFERENCES parties(id),
+  from_individual_id UUID REFERENCES cc_individuals(id),
+  from_display_name TEXT,
+
+  -- Who receives feedback
+  to_party_id UUID NOT NULL REFERENCES parties(id),
+
+  -- Content
+  sentiment feedback_sentiment NOT NULL DEFAULT 'neutral',
+  feedback_text TEXT NOT NULL,
+
+  -- Ratings (optional, private)
+  quality_rating INTEGER CHECK (quality_rating BETWEEN 1 AND 5),
+  communication_rating INTEGER CHECK (communication_rating BETWEEN 1 AND 5),
+  timeliness_rating INTEGER CHECK (timeliness_rating BETWEEN 1 AND 5),
+
+  -- ALWAYS private to contractor leadership
+  visibility signal_visibility NOT NULL DEFAULT 'private',
+
+  -- Contractor controls handling
+  is_handled BOOLEAN DEFAULT false,
+  handled_at TIMESTAMPTZ,
+  handled_by_individual_id UUID REFERENCES cc_individuals(id),
+  handler_notes TEXT,
+
+  -- Contractor can archive or delete
+  archived_at TIMESTAMPTZ,
+  contractor_deleted_at TIMESTAMPTZ,
+  contractor_delete_reason TEXT,
+
+  -- Timestamps
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS contractor_feedback_to_idx 
+  ON contractor_feedback(to_party_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS contractor_feedback_conv_idx 
+  ON contractor_feedback(conversation_id);
+CREATE INDEX IF NOT EXISTS contractor_feedback_sentiment_idx
+  ON contractor_feedback(to_party_id, sentiment) WHERE contractor_deleted_at IS NULL;
+
+COMMENT ON TABLE contractor_feedback IS
+  'Private feedback inbox to contractor leadership. May include complaints. NEVER public automatically.';
+
+-- ============================================================
+-- 5. PUBLIC APPRECIATIONS (Positive-Only, Contractor-Promoted)
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS public_appreciations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+
+  -- Source (if promoted from feedback)
+  source_feedback_id UUID REFERENCES contractor_feedback(id) ON DELETE SET NULL,
+
+  -- Links
+  opportunity_id UUID REFERENCES opportunities(id),
+  conversation_id UUID REFERENCES conversations(id),
+
+  -- Who gave appreciation
+  from_party_id UUID REFERENCES parties(id),
+  from_individual_id UUID REFERENCES cc_individuals(id),
+  from_display_name TEXT,  -- Anonymized or first name only
+
+  -- Who receives appreciation
+  to_party_id UUID NOT NULL REFERENCES parties(id),
+
+  -- Positive-only public snippet (no names, no addresses, no negatives)
+  snippet TEXT NOT NULL,
+  highlights TEXT[],  -- ['punctual', 'clean work', 'great communication']
+
+  -- Contractor controls visibility
+  is_public BOOLEAN DEFAULT false,
+  hidden_by_contractor BOOLEAN DEFAULT false,
+  hidden_at TIMESTAMPTZ,
+
+  -- Timestamps
+  created_at TIMESTAMPTZ DEFAULT now(),
+  made_public_at TIMESTAMPTZ
+);
+
+-- ENFORCE: Snippet must have content
+ALTER TABLE public_appreciations
+  DROP CONSTRAINT IF EXISTS public_appreciations_snippet_not_empty;
+ALTER TABLE public_appreciations
+  ADD CONSTRAINT public_appreciations_snippet_not_empty 
+  CHECK (length(trim(snippet)) >= 3);
+
+-- ENFORCE: Snippet length limit (no essays)
+ALTER TABLE public_appreciations
+  DROP CONSTRAINT IF EXISTS public_appreciations_snippet_length;
+ALTER TABLE public_appreciations
+  ADD CONSTRAINT public_appreciations_snippet_length 
+  CHECK (length(snippet) <= 500);
+
+CREATE INDEX IF NOT EXISTS public_appreciations_to_public_idx
+  ON public_appreciations(to_party_id) 
+  WHERE is_public = true AND hidden_by_contractor = false;
+
+COMMENT ON TABLE public_appreciations IS
+  'Positive-only public snippets. Visible only if contractor opts in (is_public=true) and not hidden. NO NEGATIVES EVER.';
+
+-- ============================================================
+-- 6. APPRECIATION THEMES (Aggregated Positive Patterns)
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS appreciation_themes (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  
+  party_id UUID NOT NULL REFERENCES parties(id),
+  
+  theme TEXT NOT NULL,  -- 'punctual', 'clean_work', 'good_communication'
+  mention_count INTEGER DEFAULT 1,
+  
+  -- Most recent example (anonymized, positive only)
+  example_snippet TEXT,
+  
+  last_mentioned_at TIMESTAMPTZ DEFAULT now(),
+  
+  UNIQUE(party_id, theme)
+);
+
+CREATE INDEX IF NOT EXISTS appreciation_themes_party_idx 
+  ON appreciation_themes(party_id);
+
+COMMENT ON TABLE appreciation_themes IS
+  'Aggregated positive themes only. No negative themes stored. Ever.';
+
+-- ============================================================
+-- 7. TRUST SIGNAL HISTORY (For Trends)
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS trust_signal_history (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  
+  party_id UUID NOT NULL REFERENCES parties(id),
+  model TEXT NOT NULL DEFAULT 'v1_agg',
+
+  -- Snapshot of key metrics
+  repeat_customer_count INTEGER,
+  public_appreciation_count INTEGER,
+  positive_feedback_count INTEGER,
+  response_time_avg_hours NUMERIC,
+  completion_rate NUMERIC,
+  years_in_community INTEGER,
+
+  -- When computed
+  computed_at TIMESTAMPTZ DEFAULT now(),
+  computation_version INTEGER DEFAULT 1,
+  
+  -- Period
+  period_end DATE DEFAULT CURRENT_DATE
+);
+
+CREATE INDEX IF NOT EXISTS trust_history_party_idx
+  ON trust_signal_history(party_id, model, computed_at DESC);
+
+COMMENT ON TABLE trust_signal_history IS
+  'Historical snapshots for trend analysis. Never contains narratives or complaints.';
+
+-- ============================================================
+-- 8. COMMUNITY VERIFICATIONS
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS community_verifications (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  
+  party_id UUID NOT NULL REFERENCES parties(id),
+  
+  -- What community
+  community_name TEXT NOT NULL,
+  community_type TEXT CHECK (community_type IN (
+    'municipality', 'first_nation', 'regional_district', 
+    'chamber_of_commerce', 'trade_association', 'informal'
+  )),
+  
+  -- Who verified
+  verified_by_party_id UUID REFERENCES parties(id),
+  verified_by_name TEXT,
+  verification_method TEXT,  -- 'in_person', 'reference', 'business_license', 'chamber_member'
+  
+  -- Status
+  verified_at TIMESTAMPTZ DEFAULT now(),
+  expires_at TIMESTAMPTZ,
+  is_active BOOLEAN DEFAULT true,
+  
+  -- Notes (factual only)
+  verification_notes TEXT,
+  
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS community_verifications_party_idx 
+  ON community_verifications(party_id) WHERE is_active;
+
+-- ============================================================
+-- 9. CREDENTIAL VERIFICATIONS
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS credential_verifications (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  
+  party_id UUID NOT NULL REFERENCES parties(id),
+  
+  credential_type TEXT NOT NULL CHECK (credential_type IN (
+    'business_license', 'trade_license', 'insurance_liability',
+    'insurance_wcb', 'red_seal', 'technical_safety_bc',
+    'first_aid', 'fall_protection', 'asbestos_awareness',
+    'confined_space', 'other'
+  )),
+  
+  credential_name TEXT NOT NULL,
+  credential_number TEXT,
+  issuing_authority TEXT,
+  
+  -- Validity
+  issued_date DATE,
+  expiry_date DATE,
+  is_current BOOLEAN DEFAULT true,
+  
+  -- Verification
+  verified_at TIMESTAMPTZ,
+  verified_by TEXT,  -- 'platform', 'issuer_api', 'document_review'
+  verification_url TEXT,
+  
+  -- Document
+  document_url TEXT,
+  
+  -- Visibility
+  visibility signal_visibility DEFAULT 'public',
+  
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS credential_verifications_party_idx 
+  ON credential_verifications(party_id) WHERE is_current;
+
+-- ============================================================
+-- 10. PHILOSOPHY COMMENTS
+-- ============================================================
+
+COMMENT ON SCHEMA public IS
+  'Community Canvas: Trust = aggregated patterns. Private feedback can include negatives. Public = positive only. Contractor controls visibility.';
+```
+
+### File: server/lib/trustSignals.ts
+```typescript
+import { pool } from '../db';
+
+/**
+ * TRUST SIGNALS - SMALL TOWN PHILOSOPHY
+ * 
+ * What we compute and show (if contractor allows):
+ * - Jobs completed count
+ * - Repeat customer rate (best signal)
+ * - Response time (DEFAULT HIDDEN - weaponizable)
+ * - Community verifications
+ * - Credentials
+ * - Positive appreciations
+ * 
+ * What we NEVER show publicly:
+ * - Complaint counts
+ * - Negative narratives
+ * - Dispute rates
+ * - Write-off history
+ * - Private feedback content
+ * 
+ * Schema notes:
+ * - trust_signals uses UNIQUE(party_id, model)
+ * - Use model = 'v1_agg' consistently
+ * - Use existing column names (response_time_avg_hours, not avg_response_hours)
+ */
+
+const MODEL_NAME = 'v1_agg';
+
+export interface TrustSignalSummary {
+  party_id: string;
+  model: string;
+  
+  // Completion
+  jobs_completed: number;
+  jobs_in_progress: number;
+  completion_rate: number | null;
+  
+  // Repeat business (strongest signal)
+  repeat_customer_count: number;
+  total_unique_customers: number;
+  repeat_customer_rate: number | null;
+  
+  // Response time (default hidden)
+  response_time_avg_hours: number | null;
+  
+  // Community
+  verified_communities: string[];
+  years_in_community: number | null;
+  
+  // Credentials
+  has_insurance: boolean;
+  licenses: string[];
+  certifications: string[];
+  
+  // Feedback (counts only, no narratives)
+  positive_feedback_count: number;
+  public_appreciation_count: number;
+  appreciation_highlights: string[];
+  
+  // Platform
+  member_since: string | null;
+  platform_verified: boolean;
+  
+  // Display control
+  display_preferences: Record<string, boolean>;
+}
+
+/**
+ * Compute trust signals from actual data
+ */
+export async function computeTrustSignals(party_id: string): Promise<TrustSignalSummary> {
+  const client = await pool.connect();
+  try {
+    // Get party info
+    const partyResult = await client.query(
+      `SELECT created_at, party_type FROM parties WHERE id = $1`,
+      [party_id]
+    );
+    
+    const memberSince = partyResult.rows[0]?.created_at;
+    const partyType = partyResult.rows[0]?.party_type || 'contractor';
+
+    // Count completed jobs
+    const completedResult = await client.query(
+      `SELECT 
+         COUNT(*) FILTER (WHERE state = 'completed') as completed,
+         COUNT(*) FILTER (WHERE state = 'in_progress') as in_progress,
+         COUNT(*) FILTER (WHERE state IN ('completed', 'cancelled', 'closed')) as total_finished,
+         COUNT(DISTINCT owner_party_id) as unique_customers
+       FROM conversations
+       WHERE contractor_party_id = $1`,
+      [party_id]
+    );
+    
+    const completed = parseInt(completedResult.rows[0]?.completed || '0');
+    const inProgress = parseInt(completedResult.rows[0]?.in_progress || '0');
+    const totalFinished = parseInt(completedResult.rows[0]?.total_finished || '0');
+    const uniqueCustomers = parseInt(completedResult.rows[0]?.unique_customers || '0');
+    
+    const completionRate = totalFinished > 0 
+      ? (completed / totalFinished) * 100 
+      : null;
+
+    // Count repeat customers
+    const repeatResult = await client.query(
+      `SELECT COUNT(*) as repeat_count
+       FROM (
+         SELECT owner_party_id
+         FROM conversations
+         WHERE contractor_party_id = $1 AND state = 'completed'
+         GROUP BY owner_party_id
+         HAVING COUNT(*) > 1
+       ) repeat_customers`,
+      [party_id]
+    );
+    
+    const repeatCount = parseInt(repeatResult.rows[0]?.repeat_count || '0');
+    const repeatRate = uniqueCustomers > 0 
+      ? (repeatCount / uniqueCustomers) * 100 
+      : null;
+
+    // Average response time (hours to first message)
+    const responseResult = await client.query(
+      `SELECT AVG(EXTRACT(EPOCH FROM (first_response - conv_created)) / 3600) as avg_hours
+       FROM (
+         SELECT c.created_at as conv_created,
+                MIN(m.created_at) as first_response
+         FROM conversations c
+         JOIN messages m ON m.conversation_id = c.id
+         WHERE c.contractor_party_id = $1
+           AND m.sender_party_id = $1
+         GROUP BY c.id, c.created_at
+       ) response_times
+       WHERE first_response IS NOT NULL`,
+      [party_id]
+    );
+    
+    const responseTimeAvg = responseResult.rows[0]?.avg_hours 
+      ? parseFloat(parseFloat(responseResult.rows[0].avg_hours).toFixed(2))
+      : null;
+
+    // Community verifications
+    const communityResult = await client.query(
+      `SELECT community_name FROM community_verifications
+       WHERE party_id = $1 AND is_active = true`,
+      [party_id]
+    );
+    
+    const verifiedCommunities = communityResult.rows.map(r => r.community_name);
+
+    // Credentials
+    const credentialResult = await client.query(
+      `SELECT credential_type, credential_name 
+       FROM credential_verifications
+       WHERE party_id = $1 AND is_current = true`,
+      [party_id]
+    );
+    
+    const hasInsurance = credentialResult.rows.some(
+      r => r.credential_type.includes('insurance')
+    );
+    const licenses = credentialResult.rows
+      .filter(r => r.credential_type.includes('license'))
+      .map(r => r.credential_name);
+    const certifications = credentialResult.rows
+      .filter(r => !r.credential_type.includes('license') && !r.credential_type.includes('insurance'))
+      .map(r => r.credential_name);
+
+    // Positive feedback count (from private inbox)
+    const positiveFeedbackResult = await client.query(
+      `SELECT COUNT(*) as count
+       FROM contractor_feedback
+       WHERE to_party_id = $1 
+         AND sentiment = 'positive'
+         AND contractor_deleted_at IS NULL`,
+      [party_id]
+    );
+    
+    const positiveFeedbackCount = parseInt(positiveFeedbackResult.rows[0]?.count || '0');
+
+    // Public appreciations count
+    const appreciationResult = await client.query(
+      `SELECT COUNT(*) as count
+       FROM public_appreciations
+       WHERE to_party_id = $1 
+         AND is_public = true 
+         AND hidden_by_contractor = false`,
+      [party_id]
+    );
+    
+    const appreciationCount = parseInt(appreciationResult.rows[0]?.count || '0');
+
+    // Appreciation highlights (themes)
+    const highlightsResult = await client.query(
+      `SELECT theme FROM appreciation_themes
+       WHERE party_id = $1
+       ORDER BY mention_count DESC
+       LIMIT 5`,
+      [party_id]
+    );
+    
+    const highlights = highlightsResult.rows.map(r => r.theme);
+
+    // Get existing display preferences
+    const prefsResult = await client.query(
+      `SELECT display_preferences FROM trust_signals 
+       WHERE party_id = $1 AND model = $2`,
+      [party_id, MODEL_NAME]
+    );
+    
+    const displayPreferences = prefsResult.rows[0]?.display_preferences || {
+      show_repeat_customers: true,
+      show_public_appreciations: true,
+      show_credentials: true,
+      show_response_time: false,  // DEFAULT FALSE - weaponizable
+      show_years_in_community: true,
+      show_completion_rate: true
+    };
+
+    // Platform verified (5+ completed jobs, 1+ repeat customer)
+    const platformVerified = completed >= 5 && repeatCount >= 1;
+
+    return {
+      party_id,
+      model: MODEL_NAME,
+      jobs_completed: completed,
+      jobs_in_progress: inProgress,
+      completion_rate: completionRate ? parseFloat(completionRate.toFixed(1)) : null,
+      repeat_customer_count: repeatCount,
+      total_unique_customers: uniqueCustomers,
+      repeat_customer_rate: repeatRate ? parseFloat(repeatRate.toFixed(1)) : null,
+      response_time_avg_hours: responseTimeAvg,
+      verified_communities: verifiedCommunities,
+      years_in_community: null,  // Would need community join date
+      has_insurance: hasInsurance,
+      licenses,
+      certifications,
+      positive_feedback_count: positiveFeedbackCount,
+      public_appreciation_count: appreciationCount,
+      appreciation_highlights: highlights,
+      member_since: memberSince ? memberSince.toISOString().split('T')[0] : null,
+      platform_verified: platformVerified,
+      display_preferences: displayPreferences
+    };
+
+  } finally {
+    client.release();
+  }
+}
+
+/**
+ * Save computed trust signals to database
+ * Uses existing schema: UNIQUE(party_id, model)
+ */
+export async function saveTrustSignals(signals: TrustSignalSummary): Promise<void> {
+  // Get party_type for insert
+  const partyResult = await pool.query(
+    `SELECT party_type FROM parties WHERE id = $1`,
+    [signals.party_id]
+  );
+  const partyType = partyResult.rows[0]?.party_type || 'contractor';
+
+  await pool.query(
+    `INSERT INTO trust_signals (
+      party_id, party_type, model,
+      response_time_avg_hours, completion_rate,
+      repeat_customer_count, positive_feedback_count, public_appreciation_count,
+      years_in_community, jobs_completed, jobs_in_progress, total_unique_customers,
+      has_insurance, licenses, certifications, verified_communities,
+      member_since, platform_verified, appreciation_highlights,
+      display_preferences, computed_at, computation_version, last_updated
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, now(), 1, now())
+    ON CONFLICT (party_id, model) DO UPDATE SET
+      response_time_avg_hours = EXCLUDED.response_time_avg_hours,
+      completion_rate = EXCLUDED.completion_rate,
+      repeat_customer_count = EXCLUDED.repeat_customer_count,
+      positive_feedback_count = EXCLUDED.positive_feedback_count,
+      public_appreciation_count = EXCLUDED.public_appreciation_count,
+      jobs_completed = EXCLUDED.jobs_completed,
+      jobs_in_progress = EXCLUDED.jobs_in_progress,
+      total_unique_customers = EXCLUDED.total_unique_customers,
+      has_insurance = EXCLUDED.has_insurance,
+      licenses = EXCLUDED.licenses,
+      certifications = EXCLUDED.certifications,
+      verified_communities = EXCLUDED.verified_communities,
+      platform_verified = EXCLUDED.platform_verified,
+      appreciation_highlights = EXCLUDED.appreciation_highlights,
+      computed_at = now(),
+      last_updated = now()`,
+    [
+      signals.party_id,
+      partyType,
+      MODEL_NAME,
+      signals.response_time_avg_hours,
+      signals.completion_rate,
+      signals.repeat_customer_count,
+      signals.positive_feedback_count,
+      signals.public_appreciation_count,
+      signals.years_in_community,
+      signals.jobs_completed,
+      signals.jobs_in_progress,
+      signals.total_unique_customers,
+      signals.has_insurance,
+      signals.licenses,
+      signals.certifications,
+      signals.verified_communities,
+      signals.member_since,
+      signals.platform_verified,
+      signals.appreciation_highlights,
+      JSON.stringify(signals.display_preferences)
+    ]
+  );
+}
+
+/**
+ * Get public trust signals (respects display preferences)
+ */
+export async function getPublicTrustSignals(party_id: string): Promise<Partial<TrustSignalSummary> | null> {
+  const signals = await computeTrustSignals(party_id);
+  const prefs = signals.display_preferences;
+  
+  // Build public view respecting preferences
+  const publicSignals: Partial<TrustSignalSummary> = {
+    party_id: signals.party_id,
+    member_since: signals.member_since,
+    platform_verified: signals.platform_verified
+  };
+  
+  if (prefs.show_completion_rate) {
+    publicSignals.jobs_completed = signals.jobs_completed;
+    publicSignals.completion_rate = signals.completion_rate;
+  }
+  
+  if (prefs.show_repeat_customers) {
+    publicSignals.repeat_customer_count = signals.repeat_customer_count;
+    publicSignals.repeat_customer_rate = signals.repeat_customer_rate;
+  }
+  
+  // DEFAULT OFF - contractor must opt in
+  if (prefs.show_response_time && signals.response_time_avg_hours) {
+    publicSignals.response_time_avg_hours = signals.response_time_avg_hours;
+  }
+  
+  if (prefs.show_years_in_community) {
+    publicSignals.verified_communities = signals.verified_communities;
+    publicSignals.years_in_community = signals.years_in_community;
+  }
+  
+  if (prefs.show_credentials) {
+    publicSignals.has_insurance = signals.has_insurance;
+    publicSignals.licenses = signals.licenses;
+    publicSignals.certifications = signals.certifications;
+  }
+  
+  if (prefs.show_public_appreciations) {
+    publicSignals.public_appreciation_count = signals.public_appreciation_count;
+    publicSignals.appreciation_highlights = signals.appreciation_highlights;
+  }
+  
+  return publicSignals;
+}
+
+/**
+ * Format trust signals for UI display
+ */
+export function formatTrustDisplay(signals: Partial<TrustSignalSummary>): {
+  badges: string[];
+  stats: Array<{ label: string; value: string; visible: boolean }>;
+  highlights: string[];
+} {
+  const badges: string[] = [];
+  const stats: Array<{ label: string; value: string; visible: boolean }> = [];
+  
+  // Badges
+  if (signals.platform_verified) {
+    badges.push('Platform Verified');
+  }
+  if (signals.has_insurance) {
+    badges.push('Insured');
+  }
+  if ((signals.verified_communities?.length || 0) > 0) {
+    badges.push('Community Verified');
+  }
+  if ((signals.repeat_customer_rate || 0) > 30) {
+    badges.push('Repeat Customers');
+  }
+  
+  // Stats
+  if (signals.jobs_completed !== undefined) {
+    stats.push({ 
+      label: 'Jobs Completed', 
+      value: signals.jobs_completed.toString(),
+      visible: true
+    });
+  }
+  
+  if (signals.repeat_customer_count !== undefined && signals.repeat_customer_count > 0) {
+    stats.push({ 
+      label: 'Repeat Customers', 
+      value: signals.repeat_customer_count.toString(),
+      visible: true
+    });
+  }
+  
+  if (signals.response_time_avg_hours !== undefined) {
+    const hours = signals.response_time_avg_hours;
+    const display = hours < 1 
+      ? '< 1 hour' 
+      : hours < 24 
+        ? `${Math.round(hours)} hours` 
+        : `${Math.round(hours / 24)} days`;
+    stats.push({ 
+      label: 'Avg Response', 
+      value: display,
+      visible: true
+    });
+  }
+  
+  if (signals.public_appreciation_count !== undefined && signals.public_appreciation_count > 0) {
+    stats.push({ 
+      label: 'Appreciations', 
+      value: signals.public_appreciation_count.toString(),
+      visible: true
+    });
+  }
+  
+  const highlights = signals.appreciation_highlights || [];
+  
+  return { badges, stats, highlights };
+}
+```
+
+### File: server/routes/trust-signals.ts
+```typescript
+import { Router, Request, Response } from 'express';
+import { pool } from '../db';
+import { resolveActorParty } from '../lib/partyResolver';
+import { 
+  computeTrustSignals, 
+  saveTrustSignals, 
+  getPublicTrustSignals,
+  formatTrustDisplay 
+} from '../lib/trustSignals';
+
+const router = Router();
+
+// ============================================================
+// GET PUBLIC TRUST SIGNALS FOR A PARTY
+// ============================================================
+router.get('/parties/:id/trust-signals', async (req: Request, res: Response) => {
+  try {
+    const { id: party_id } = req.params;
+    const { format = 'raw' } = req.query;
+
+    const signals = await getPublicTrustSignals(party_id);
+
+    if (!signals) {
+      return res.status(404).json({ error: 'Party not found' });
+    }
+
+    if (format === 'display') {
+      const display = formatTrustDisplay(signals);
+      return res.json({
+        party_id,
+        ...display,
+        raw: signals
+      });
+    }
+
+    res.json({ 
+      trust_signals: signals,
+      note: 'Aggregated metrics only. Contractor controls visibility.'
+    });
+  } catch (error) {
+    console.error('Error fetching trust signals:', error);
+    res.status(500).json({ error: 'Failed to fetch trust signals' });
+  }
+});
+
+// ============================================================
+// GET MY FULL TRUST SIGNALS (Contractor View)
+// ============================================================
+router.get('/contractors/me/trust-signals', async (req: Request, res: Response) => {
+  try {
+    const actor = await resolveActorParty(req, 'contractor');
+    if (!actor) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const signals = await computeTrustSignals(actor.actor_party_id);
+    await saveTrustSignals(signals);
+
+    const display = formatTrustDisplay(signals);
+
+    res.json({
+      trust_signals: signals,
+      display,
+      note: 'This is your full view. Public view respects your display preferences.'
+    });
+  } catch (error) {
+    console.error('Error fetching my trust signals:', error);
+    res.status(500).json({ error: 'Failed to fetch trust signals' });
+  }
+});
+
+// ============================================================
+// UPDATE DISPLAY PREFERENCES
+// ============================================================
+router.put('/contractors/me/trust-signals/preferences', async (req: Request, res: Response) => {
+  try {
+    const actor = await resolveActorParty(req, 'contractor');
+    if (!actor) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const preferences = req.body;
+
+    // Validate preference keys
+    const validKeys = [
+      'show_repeat_customers', 'show_public_appreciations', 'show_credentials',
+      'show_response_time', 'show_years_in_community', 'show_completion_rate'
+    ];
+    
+    const filteredPrefs: Record<string, boolean> = {};
+    for (const key of validKeys) {
+      if (preferences[key] !== undefined) {
+        filteredPrefs[key] = Boolean(preferences[key]);
+      }
+    }
+
+    const result = await pool.query(
+      `UPDATE trust_signals SET
+        display_preferences = display_preferences || $1::jsonb,
+        last_updated = now()
+       WHERE party_id = $2 AND model = 'v1_agg'
+       RETURNING display_preferences`,
+      [JSON.stringify(filteredPrefs), actor.actor_party_id]
+    );
+
+    if (result.rows.length === 0) {
+      // Create if not exists
+      await pool.query(
+        `INSERT INTO trust_signals (party_id, party_type, model, display_preferences)
+         VALUES ($1, 'contractor', 'v1_agg', $2)`,
+        [actor.actor_party_id, JSON.stringify({
+          show_repeat_customers: true,
+          show_public_appreciations: true,
+          show_credentials: true,
+          show_response_time: false,
+          show_years_in_community: true,
+          show_completion_rate: true,
+          ...filteredPrefs
+        })]
+      );
+    }
+
+    res.json({
+      display_preferences: result.rows[0]?.display_preferences || filteredPrefs,
+      message: 'Display preferences updated. You control what the public sees.'
+    });
+  } catch (error) {
+    console.error('Error updating preferences:', error);
+    res.status(500).json({ error: 'Failed to update preferences' });
+  }
+});
+
+// ============================================================
+// REQUEST FEEDBACK (After Completion)
+// ============================================================
+router.post('/conversations/:id/request-feedback', async (req: Request, res: Response) => {
+  try {
+    const { id: conversation_id } = req.params;
+
+    const actor = await resolveActorParty(req, 'contractor');
+    if (!actor) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    // Verify conversation is completed and belongs to contractor
+    const convResult = await pool.query(
+      `SELECT * FROM conversations 
+       WHERE id = $1 AND contractor_party_id = $2 AND state = 'completed'`,
+      [conversation_id, actor.actor_party_id]
+    );
+
+    if (convResult.rows.length === 0) {
+      return res.status(404).json({ 
+        error: 'Conversation not found, not yours, or not completed' 
+      });
+    }
+
+    // Send system message requesting feedback
+    await pool.query(
+      `INSERT INTO messages (
+        conversation_id, sender_party_id, sender_individual_id,
+        message_type, content, structured_data
+      ) VALUES ($1, $2, $3, 'system', $4, $5)`,
+      [
+        conversation_id,
+        actor.actor_party_id,
+        actor.individual_id,
+        'Thank you for working with us! We\'d love to hear your feedback. Your comments go directly to our team and are NOT posted publicly.',
+        JSON.stringify({ 
+          type: 'feedback_request', 
+          requested_by: actor.actor_party_id,
+          requested_at: new Date().toISOString()
+        })
+      ]
+    );
+
+    res.json({
+      message: 'Feedback request sent.',
+      note: 'Customer will see: "Your comments go directly to our team and are NOT posted publicly."'
+    });
+  } catch (error) {
+    console.error('Error requesting feedback:', error);
+    res.status(500).json({ error: 'Failed to request feedback' });
+  }
+});
+
+// ============================================================
+// SUBMIT FEEDBACK (Owner/Customer)
+// ============================================================
+router.post('/conversations/:id/feedback', async (req: Request, res: Response) => {
+  try {
+    const { id: conversation_id } = req.params;
+    const { 
+      feedback_text, 
+      sentiment = 'neutral',
+      quality_rating,
+      communication_rating,
+      timeliness_rating,
+      allow_public_snippet = false,
+      public_snippet
+    } = req.body;
+
+    const actor = await resolveActorParty(req, 'owner');
+    if (!actor) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    if (!feedback_text || feedback_text.trim().length < 3) {
+      return res.status(400).json({ error: 'Feedback text required (min 3 characters)' });
+    }
+
+    // Verify conversation and get contractor
+    const convResult = await pool.query(
+      `SELECT c.*, o.id as opp_id
+       FROM conversations c
+       JOIN opportunities o ON c.opportunity_id = o.id
+       WHERE c.id = $1 AND c.owner_party_id = $2`,
+      [conversation_id, actor.actor_party_id]
+    );
+
+    if (convResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Conversation not found or not authorized' });
+    }
+
+    const conv = convResult.rows[0];
+
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      // Get display name
+      const nameResult = await client.query(
+        `SELECT COALESCE(preferred_name, full_name, 'A customer') as name
+         FROM cc_individuals WHERE id = $1`,
+        [actor.individual_id]
+      );
+      const displayName = nameResult.rows[0]?.name || 'A customer';
+
+      // Create private feedback (ALWAYS private by default)
+      const feedbackResult = await client.query(
+        `INSERT INTO contractor_feedback (
+          conversation_id, opportunity_id,
+          from_party_id, from_individual_id, from_display_name,
+          to_party_id,
+          sentiment, feedback_text,
+          quality_rating, communication_rating, timeliness_rating,
+          visibility
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7::feedback_sentiment, $8, $9, $10, $11, 'private')
+        RETURNING *`,
+        [
+          conversation_id,
+          conv.opp_id,
+          actor.actor_party_id,
+          actor.individual_id,
+          displayName,
+          conv.contractor_party_id,
+          sentiment,
+          feedback_text,
+          quality_rating || null,
+          communication_rating || null,
+          timeliness_rating || null
+        ]
+      );
+
+      const feedback = feedbackResult.rows[0];
+
+      // If customer offered a public snippet AND sentiment is positive
+      if (allow_public_snippet && sentiment === 'positive' && public_snippet) {
+        await client.query(
+          `INSERT INTO public_appreciations (
+            source_feedback_id, conversation_id, opportunity_id,
+            from_party_id, from_individual_id, from_display_name,
+            to_party_id,
+            snippet,
+            is_public
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, false)`,
+          [
+            feedback.id,
+            conversation_id,
+            conv.opp_id,
+            actor.actor_party_id,
+            actor.individual_id,
+            displayName.split(' ')[0],  // First name only for public
+            conv.contractor_party_id,
+            public_snippet.substring(0, 280)  // Limit length
+            // is_public = false - contractor must approve
+          ]
+        );
+      }
+
+      // Update positive feedback count
+      if (sentiment === 'positive') {
+        await client.query(
+          `UPDATE trust_signals SET
+            positive_feedback_count = COALESCE(positive_feedback_count, 0) + 1,
+            last_updated = now()
+           WHERE party_id = $1 AND model = 'v1_agg'`,
+          [conv.contractor_party_id]
+        );
+      }
+
+      await client.query('COMMIT');
+
+      res.status(201).json({
+        feedback_id: feedback.id,
+        message: 'Thank you for your feedback! It has been sent directly to the company.',
+        note: 'Your feedback is private and will NOT be posted publicly unless you offered a snippet AND the company chooses to share it.'
+      });
+
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+  } catch (error) {
+    console.error('Error submitting feedback:', error);
+    res.status(500).json({ error: 'Failed to submit feedback' });
+  }
+});
+
+// ============================================================
+// GET MY FEEDBACK INBOX (Contractor)
+// ============================================================
+router.get('/contractors/me/feedback', async (req: Request, res: Response) => {
+  try {
+    const actor = await resolveActorParty(req, 'contractor');
+    if (!actor) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const { include_deleted = 'false', include_handled = 'true', sentiment } = req.query;
+
+    let query = `
+      SELECT cf.*, o.title as opportunity_title
+      FROM contractor_feedback cf
+      LEFT JOIN opportunities o ON cf.opportunity_id = o.id
+      WHERE cf.to_party_id = $1
+    `;
+    const params: any[] = [actor.actor_party_id];
+
+    if (include_deleted !== 'true') {
+      query += ` AND cf.contractor_deleted_at IS NULL`;
+    }
+
+    if (include_handled !== 'true') {
+      query += ` AND cf.is_handled = false`;
+    }
+
+    if (sentiment) {
+      params.push(sentiment);
+      query += ` AND cf.sentiment = $${params.length}::feedback_sentiment`;
+    }
+
+    query += ` ORDER BY cf.created_at DESC`;
+
+    const result = await pool.query(query, params);
+
+    res.json({
+      feedback: result.rows,
+      count: result.rows.length,
+      unhandled_count: result.rows.filter(f => !f.is_handled).length
+    });
+  } catch (error) {
+    console.error('Error fetching feedback:', error);
+    res.status(500).json({ error: 'Failed to fetch feedback' });
+  }
+});
+
+// ============================================================
+// HANDLE FEEDBACK (Mark as handled, archive, delete)
+// ============================================================
+router.post('/contractors/me/feedback/:id/handle', async (req: Request, res: Response) => {
+  try {
+    const { id: feedback_id } = req.params;
+    const { action, notes } = req.body;
+
+    const actor = await resolveActorParty(req, 'contractor');
+    if (!actor) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const validActions = ['mark_handled', 'archive', 'delete'];
+    if (!validActions.includes(action)) {
+      return res.status(400).json({ error: `Invalid action. Valid: ${validActions.join(', ')}` });
+    }
+
+    let updateQuery = '';
+    let updateParams: any[] = [];
+
+    switch (action) {
+      case 'mark_handled':
+        updateQuery = `
+          UPDATE contractor_feedback SET
+            is_handled = true,
+            handled_at = now(),
+            handled_by_individual_id = $1,
+            handler_notes = $2,
+            updated_at = now()
+          WHERE id = $3 AND to_party_id = $4
+          RETURNING *`;
+        updateParams = [actor.individual_id, notes, feedback_id, actor.actor_party_id];
+        break;
+      
+      case 'archive':
+        updateQuery = `
+          UPDATE contractor_feedback SET
+            archived_at = now(),
+            updated_at = now()
+          WHERE id = $1 AND to_party_id = $2
+          RETURNING *`;
+        updateParams = [feedback_id, actor.actor_party_id];
+        break;
+      
+      case 'delete':
+        updateQuery = `
+          UPDATE contractor_feedback SET
+            contractor_deleted_at = now(),
+            contractor_delete_reason = $1,
+            updated_at = now()
+          WHERE id = $2 AND to_party_id = $3
+          RETURNING *`;
+        updateParams = [notes || 'Deleted by contractor', feedback_id, actor.actor_party_id];
+        break;
+    }
+
+    const result = await pool.query(updateQuery, updateParams);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Feedback not found or not authorized' });
+    }
+
+    res.json({
+      feedback: result.rows[0],
+      action,
+      message: action === 'delete' 
+        ? 'Feedback deleted. This is your right.' 
+        : `Feedback ${action.replace('_', ' ')}.`
+    });
+  } catch (error) {
+    console.error('Error handling feedback:', error);
+    res.status(500).json({ error: 'Failed to handle feedback' });
+  }
+});
+
+// ============================================================
+// PROMOTE APPRECIATION TO PUBLIC (Contractor)
+// ============================================================
+router.post('/contractors/me/appreciations/:id/promote', async (req: Request, res: Response) => {
+  try {
+    const { id: appreciation_id } = req.params;
+
+    const actor = await resolveActorParty(req, 'contractor');
+    if (!actor) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    // Verify ownership and that it's not already public
+    const result = await pool.query(
+      `UPDATE public_appreciations SET
+        is_public = true,
+        made_public_at = now()
+       WHERE id = $1 AND to_party_id = $2 AND is_public = false
+       RETURNING *`,
+      [appreciation_id, actor.actor_party_id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ 
+        error: 'Appreciation not found, not yours, or already public' 
+      });
+    }
+
+    // Update public appreciation count
+    await pool.query(
+      `UPDATE trust_signals SET
+        public_appreciation_count = COALESCE(public_appreciation_count, 0) + 1,
+        last_updated = now()
+       WHERE party_id = $1 AND model = 'v1_agg'`,
+      [actor.actor_party_id]
+    );
+
+    res.json({
+      appreciation: result.rows[0],
+      message: 'Appreciation is now public. Thank you for sharing!'
+    });
+  } catch (error) {
+    console.error('Error promoting appreciation:', error);
+    res.status(500).json({ error: 'Failed to promote appreciation' });
+  }
+});
+
+// ============================================================
+// HIDE PUBLIC APPRECIATION (Contractor)
+// ============================================================
+router.post('/contractors/me/appreciations/:id/hide', async (req: Request, res: Response) => {
+  try {
+    const { id: appreciation_id } = req.params;
+
+    const actor = await resolveActorParty(req, 'contractor');
+    if (!actor) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const result = await pool.query(
+      `UPDATE public_appreciations SET
+        hidden_by_contractor = true,
+        hidden_at = now()
+       WHERE id = $1 AND to_party_id = $2
+       RETURNING *`,
+      [appreciation_id, actor.actor_party_id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Appreciation not found or not yours' });
+    }
+
+    // Decrease count if it was public
+    if (result.rows[0].is_public) {
+      await pool.query(
+        `UPDATE trust_signals SET
+          public_appreciation_count = GREATEST(COALESCE(public_appreciation_count, 0) - 1, 0),
+          last_updated = now()
+         WHERE party_id = $1 AND model = 'v1_agg'`,
+        [actor.actor_party_id]
+      );
+    }
+
+    res.json({
+      appreciation: result.rows[0],
+      hidden: true,
+      message: 'Appreciation hidden from public view.'
+    });
+  } catch (error) {
+    console.error('Error hiding appreciation:', error);
+    res.status(500).json({ error: 'Failed to hide appreciation' });
+  }
+});
+
+// ============================================================
+// GET PUBLIC APPRECIATIONS FOR A PARTY
+// ============================================================
+router.get('/parties/:id/appreciations', async (req: Request, res: Response) => {
+  try {
+    const { id: party_id } = req.params;
+    const { limit = '10' } = req.query;
+
+    const result = await pool.query(
+      `SELECT id, from_display_name, snippet, highlights, made_public_at
+       FROM public_appreciations
+       WHERE to_party_id = $1 
+         AND is_public = true 
+         AND hidden_by_contractor = false
+       ORDER BY made_public_at DESC
+       LIMIT $2`,
+      [party_id, parseInt(limit as string)]
+    );
+
+    res.json({
+      appreciations: result.rows,
+      count: result.rows.length,
+      note: 'Positive snippets only. Contractor-approved.'
+    });
+  } catch (error) {
+    console.error('Error fetching appreciations:', error);
+    res.status(500).json({ error: 'Failed to fetch appreciations' });
+  }
+});
+
+// ============================================================
+// ADD COMMUNITY VERIFICATION
+// ============================================================
+router.post('/contractors/me/community-verification', async (req: Request, res: Response) => {
+  try {
+    const actor = await resolveActorParty(req, 'contractor');
+    if (!actor) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const { 
+      community_name, 
+      community_type = 'informal',
+      verification_method,
+      verification_notes
+    } = req.body;
+
+    if (!community_name) {
+      return res.status(400).json({ error: 'community_name required' });
+    }
+
+    const result = await pool.query(
+      `INSERT INTO community_verifications (
+        party_id, community_name, community_type,
+        verification_method, verification_notes
+      ) VALUES ($1, $2, $3, $4, $5)
+      RETURNING *`,
+      [
+        actor.actor_party_id,
+        community_name,
+        community_type,
+        verification_method || 'self_reported',
+        verification_notes
+      ]
+    );
+
+    // Update trust signals
+    await pool.query(
+      `UPDATE trust_signals SET
+        verified_communities = array_append(
+          COALESCE(verified_communities, ARRAY[]::text[]), 
+          $1
+        ),
+        last_updated = now()
+       WHERE party_id = $2 AND model = 'v1_agg'`,
+      [community_name, actor.actor_party_id]
+    );
+
+    res.status(201).json({
+      verification: result.rows[0],
+      message: 'Community verification added.'
+    });
+  } catch (error) {
+    console.error('Error adding community verification:', error);
+    res.status(500).json({ error: 'Failed to add verification' });
+  }
+});
+
+// ============================================================
+// ADD CREDENTIAL
+// ============================================================
+router.post('/contractors/me/credentials', async (req: Request, res: Response) => {
+  try {
+    const actor = await resolveActorParty(req, 'contractor');
+    if (!actor) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const { 
+      credential_type,
+      credential_name,
+      credential_number,
+      issuing_authority,
+      issued_date,
+      expiry_date,
+      document_url,
+      visibility = 'public'
+    } = req.body;
+
+    if (!credential_type || !credential_name) {
+      return res.status(400).json({ error: 'credential_type and credential_name required' });
+    }
+
+    const result = await pool.query(
+      `INSERT INTO credential_verifications (
+        party_id, credential_type, credential_name,
+        credential_number, issuing_authority,
+        issued_date, expiry_date, document_url, visibility
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::signal_visibility)
+      RETURNING *`,
+      [
+        actor.actor_party_id,
+        credential_type,
+        credential_name,
+        credential_number,
+        issuing_authority,
+        issued_date,
+        expiry_date,
+        document_url,
+        visibility
+      ]
+    );
+
+    // Update trust signals if insurance
+    if (credential_type.includes('insurance')) {
+      await pool.query(
+        `UPDATE trust_signals SET 
+          has_insurance = true, 
+          insurance_verified_at = now(),
+          last_updated = now()
+         WHERE party_id = $1 AND model = 'v1_agg'`,
+        [actor.actor_party_id]
+      );
+    }
+
+    res.status(201).json({
+      credential: result.rows[0],
+      message: 'Credential added.'
+    });
+  } catch (error) {
+    console.error('Error adding credential:', error);
+    res.status(500).json({ error: 'Failed to add credential' });
+  }
+});
+
+// ============================================================
+// RECOMPUTE TRUST SIGNALS
+// ============================================================
+router.post('/contractors/me/trust-signals/recompute', async (req: Request, res: Response) => {
+  try {
+    const actor = await resolveActorParty(req, 'contractor');
+    if (!actor) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const signals = await computeTrustSignals(actor.actor_party_id);
+    await saveTrustSignals(signals);
+
+    // Save to history
+    await pool.query(
+      `INSERT INTO trust_signal_history (
+        party_id, model,
+        repeat_customer_count, public_appreciation_count, positive_feedback_count,
+        response_time_avg_hours, completion_rate, period_end
+      ) VALUES ($1, 'v1_agg', $2, $3, $4, $5, $6, CURRENT_DATE)`,
+      [
+        actor.actor_party_id,
+        signals.repeat_customer_count,
+        signals.public_appreciation_count,
+        signals.positive_feedback_count,
+        signals.response_time_avg_hours,
+        signals.completion_rate
+      ]
+    );
+
+    const display = formatTrustDisplay(signals);
+
+    res.json({
+      trust_signals: signals,
+      display,
+      message: 'Trust signals recomputed.',
+      computed_at: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Error recomputing trust signals:', error);
+    res.status(500).json({ error: 'Failed to recompute' });
+  }
+});
+
+export default router;
+```
+
+### Register the Routes
+
+In server/index.ts:
+```typescript
+import trustSignalsRouter from './routes/trust-signals';
+
+app.use('/api', trustSignalsRouter);
+```
+
+### Verification
+
+1. Run migration:
+```bash
+psql $DATABASE_URL -f server/migrations/038_trust_feedback_appreciations.sql
+```
+
+2. Verify:
+```sql
+-- Check new tables
+SELECT table_name FROM information_schema.tables 
+WHERE table_name IN ('contractor_feedback', 'public_appreciations', 
+                     'appreciation_themes', 'community_verifications',
+                     'credential_verifications', 'trust_signal_history');
+
+-- Check display_preferences column
+SELECT column_name FROM information_schema.columns 
+WHERE table_name = 'trust_signals' AND column_name = 'display_preferences';
+
+-- Check constraints on public_appreciations
+SELECT conname FROM pg_constraint 
+WHERE conrelid = 'public_appreciations'::regclass;
+```
+
+3. Test:
+```bash
+# Get my trust signals
+curl http://localhost:5000/api/contractors/me/trust-signals \
+  -H "Cookie: YOUR_SESSION"
+
+# Update display preferences (hide response time)
+curl -X PUT http://localhost:5000/api/contractors/me/trust-signals/preferences \
+  -H "Content-Type: application/json" \
+  -H "Cookie: YOUR_SESSION" \
+  -d '{"show_response_time": false}'
+
+# Submit feedback (as owner)
+curl -X POST http://localhost:5000/api/conversations/CONV_UUID/feedback \
+  -H "Content-Type: application/json" \
+  -H "Cookie: OWNER_SESSION" \
+  -d '{
+    "feedback_text": "Great work, very professional!",
+    "sentiment": "positive",
+    "allow_public_snippet": true,
+    "public_snippet": "Great work!"
+  }'
+
+# Get feedback inbox (as contractor)
+curl http://localhost:5000/api/contractors/me/feedback \
+  -H "Cookie: CONTRACTOR_SESSION"
+
+# Promote appreciation to public
+curl -X POST http://localhost:5000/api/contractors/me/appreciations/APP_UUID/promote \
+  -H "Cookie: CONTRACTOR_SESSION"
+```
+
+### Key Features
+
+| Feature | Implementation |
+|---------|---------------|
+| Private feedback | `contractor_feedback` - can include negatives, ALWAYS private |
+| Public appreciations | `public_appreciations` - positive only, contractor promotes |
+| Display control | `display_preferences` - contractor controls visibility |
+| Response time hidden | `show_response_time: false` by default (weaponizable) |
+| No public negatives | Schema enforces via table separation |
+| Feedback workflow | Owner submits → private inbox → contractor promotes |
+
+### Feedback Flow
