@@ -1,0 +1,209 @@
+/**
+ * COMMUNITY CANVAS - Main Application Routes
+ * 
+ * Three route trees:
+ * 1. /c/:slug/* - Public community portals (no auth)
+ * 2. /app/* - Tenant application (auth required)
+ * 3. /admin/* - Platform administration (admin only)
+ */
+
+import React from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+
+// Layouts
+import PublicPortalLayout from './layouts/PublicPortalLayout';
+import TenantAppLayout from './layouts/TenantAppLayout';
+import PlatformAdminLayout from './layouts/PlatformAdminLayout';
+
+// Public Portal Pages
+import CommunityPortalOverview from './pages/portal/CommunityPortalOverview';
+import CommunityPortalBusinesses from './pages/portal/CommunityPortalBusinesses';
+import CommunityPortalServices from './pages/portal/CommunityPortalServices';
+import CommunityPortalStay from './pages/portal/CommunityPortalStay';
+
+// Tenant App Pages - Shared
+import TenantPicker from './pages/app/TenantPicker';
+import TenantDashboard from './pages/app/TenantDashboard';
+import ProfilePage from './pages/app/ProfilePage';
+import SettingsPage from './pages/app/SettingsPage';
+
+// Tenant App Pages - Community
+import AvailabilityConsole from './pages/app/community/AvailabilityConsole';
+import ServiceRunsPage from './pages/app/community/ServiceRunsPage';
+import DirectoryPage from './pages/app/community/DirectoryPage';
+import ContentBrandingPage from './pages/app/community/ContentBrandingPage';
+
+// Tenant App Pages - Business
+import CatalogPage from './pages/app/business/CatalogPage';
+import CatalogOnboarding from './pages/app/business/CatalogOnboarding';
+import AvailabilityPricingPage from './pages/app/business/AvailabilityPricingPage';
+import BookingsPage from './pages/app/business/BookingsPage';
+import CustomersPage from './pages/app/business/CustomersPage';
+
+// Platform Admin Pages
+import AdminDashboard from './pages/admin/AdminDashboard';
+import TenantsPage from './pages/admin/TenantsPage';
+import UsersPage from './pages/admin/UsersPage';
+import ImpersonationConsole from './pages/admin/ImpersonationConsole';
+import InfrastructurePage from './pages/admin/InfrastructurePage';
+import ChambersPage from './pages/admin/ChambersPage';
+import ModerationQueuePage from './pages/admin/ModerationQueuePage';
+
+// Auth
+import LoginPage from './pages/auth/LoginPage';
+
+function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        {/* ============================================ */}
+        {/* PUBLIC PORTAL - /c/:slug/*                   */}
+        {/* No authentication required                   */}
+        {/* ============================================ */}
+        <Route path="/c/:slug" element={<PublicPortalLayout />}>
+          <Route index element={<CommunityPortalOverview />} />
+          <Route path="businesses" element={<CommunityPortalBusinesses />} />
+          <Route path="services" element={<CommunityPortalServices />} />
+          <Route path="services/:runId" element={<ServiceRunDetailPublic />} />
+          <Route path="stay" element={<CommunityPortalStay />} />
+          <Route path="events" element={<CommunityPortalEvents />} />
+          <Route path="about" element={<CommunityPortalAbout />} />
+        </Route>
+
+        {/* ============================================ */}
+        {/* TENANT APP - /app/*                          */}
+        {/* Authentication required                      */}
+        {/* ============================================ */}
+        <Route path="/app" element={<TenantAppLayout />}>
+          {/* Tenant Picker - the real home screen */}
+          <Route index element={<TenantPicker />} />
+          
+          {/* Tenant-specific routes (requires tenant context) */}
+          <Route path="dashboard" element={<TenantDashboard />} />
+          
+          {/* Community Admin Routes */}
+          <Route path="availability" element={<AvailabilityConsole />} />
+          <Route path="service-runs" element={<ServiceRunsPage />} />
+          <Route path="service-runs/pending" element={<ServiceRunsPendingPage />} />
+          <Route path="service-runs/new" element={<CreateServiceRunPage />} />
+          <Route path="directory" element={<DirectoryPage />} />
+          <Route path="directory/businesses" element={<DirectoryBusinessesPage />} />
+          <Route path="accommodations" element={<AccommodationsPage />} />
+          <Route path="parking-moorage" element={<ParkingMooragePage />} />
+          <Route path="content" element={<ContentBrandingPage />} />
+          <Route path="admins" element={<AdminsPermissionsPage />} />
+          
+          {/* Business Routes */}
+          <Route path="catalog" element={<CatalogPage />} />
+          <Route path="catalog/onboarding" element={<CatalogOnboarding />} />
+          <Route path="catalog/import" element={<CatalogImportPage />} />
+          <Route path="pricing" element={<AvailabilityPricingPage />} />
+          <Route path="bookings" element={<BookingsPage />} />
+          <Route path="customers" element={<CustomersPage />} />
+          <Route path="operations" element={<OperationsPage />} />
+          <Route path="payments" element={<PaymentsPage />} />
+          
+          {/* Shared Routes */}
+          <Route path="conversations" element={<ConversationsPage />} />
+          <Route path="conversations/:id" element={<ConversationDetailPage />} />
+          <Route path="profile" element={<ProfilePage />} />
+          <Route path="settings" element={<SettingsPage />} />
+        </Route>
+
+        {/* ============================================ */}
+        {/* PLATFORM ADMIN - /admin/*                    */}
+        {/* Platform admin required                      */}
+        {/* ============================================ */}
+        <Route path="/admin" element={<PlatformAdminLayout />}>
+          <Route index element={<AdminDashboard />} />
+          
+          {/* Tenants & Users */}
+          <Route path="tenants" element={<TenantsPage />} />
+          <Route path="tenants/:id" element={<TenantDetailPage />} />
+          <Route path="users" element={<UsersPage />} />
+          <Route path="impersonation" element={<ImpersonationConsole />} />
+          
+          {/* Data Management */}
+          <Route path="data/infrastructure" element={<InfrastructurePage />} />
+          <Route path="data/chambers" element={<ChambersPage />} />
+          <Route path="data/naics" element={<NAICSPage />} />
+          <Route path="data/accommodations" element={<AccommodationsDataPage />} />
+          <Route path="data/import-export" element={<ImportExportPage />} />
+          
+          {/* Communities */}
+          <Route path="communities" element={<CommunitiesPage />} />
+          <Route path="communities/seed" element={<SeedCommunitiesPage />} />
+          <Route path="communities/portals" element={<PortalConfigPage />} />
+          
+          {/* Moderation */}
+          <Route path="moderation/ai-queue" element={<ModerationQueuePage />} />
+          <Route path="moderation/flagged" element={<FlaggedContentPage />} />
+          
+          {/* System */}
+          <Route path="settings" element={<AdminSettingsPage />} />
+          <Route path="logs" element={<SystemLogsPage />} />
+        </Route>
+
+        {/* ============================================ */}
+        {/* AUTH & REDIRECTS                             */}
+        {/* ============================================ */}
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/logout" element={<LogoutPage />} />
+        
+        {/* Root redirects to app */}
+        <Route path="/" element={<Navigate to="/app" replace />} />
+        
+        {/* Legacy route redirects */}
+        <Route path="/conversations" element={<Navigate to="/app/conversations" replace />} />
+        <Route path="/service-runs" element={<Navigate to="/app/service-runs" replace />} />
+        <Route path="/admin/tenants" element={<Navigate to="/admin/tenants" replace />} />
+        
+        {/* 404 */}
+        <Route path="*" element={<NotFoundPage />} />
+      </Routes>
+    </BrowserRouter>
+  );
+}
+
+// Placeholder components for routes not yet implemented
+function ServiceRunDetailPublic() { return <div>Service Run Detail (Public)</div>; }
+function CommunityPortalEvents() { return <div>Events</div>; }
+function CommunityPortalAbout() { return <div>About</div>; }
+function ServiceRunsPendingPage() { return <div>Pending Service Runs</div>; }
+function CreateServiceRunPage() { return <div>Create Service Run</div>; }
+function DirectoryBusinessesPage() { return <div>Directory Businesses</div>; }
+function AccommodationsPage() { return <div>Accommodations</div>; }
+function ParkingMooragePage() { return <div>Parking & Moorage</div>; }
+function AdminsPermissionsPage() { return <div>Admins & Permissions</div>; }
+function CatalogImportPage() { return <div>Catalog Import</div>; }
+function OperationsPage() { return <div>Operations</div>; }
+function PaymentsPage() { return <div>Payments</div>; }
+function ConversationsPage() { return <div>Conversations</div>; }
+function ConversationDetailPage() { return <div>Conversation Detail</div>; }
+function TenantDetailPage() { return <div>Tenant Detail</div>; }
+function NAICSPage() { return <div>NAICS</div>; }
+function AccommodationsDataPage() { return <div>Accommodations Data</div>; }
+function ImportExportPage() { return <div>Import/Export</div>; }
+function CommunitiesPage() { return <div>Communities</div>; }
+function SeedCommunitiesPage() { return <div>Seed Communities</div>; }
+function PortalConfigPage() { return <div>Portal Config</div>; }
+function FlaggedContentPage() { return <div>Flagged Content</div>; }
+function AdminSettingsPage() { return <div>Admin Settings</div>; }
+function SystemLogsPage() { return <div>System Logs</div>; }
+function LogoutPage() { window.location.href = '/api/auth/logout'; return null; }
+function NotFoundPage() {
+  return (
+    <div className="min-h-screen bg-[#060b15] text-white flex items-center justify-center">
+      <div className="text-center">
+        <div className="text-6xl mb-4">404</div>
+        <h1 className="text-2xl font-bold mb-2">Page Not Found</h1>
+        <p className="text-gray-400 mb-6">The page you're looking for doesn't exist.</p>
+        <a href="/app" className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700">
+          Go to Your Places
+        </a>
+      </div>
+    </div>
+  );
+}
+
+export default App;
