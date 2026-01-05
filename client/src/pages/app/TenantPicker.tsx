@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTenant } from '@/contexts/TenantContext';
 import { api } from '@/lib/api';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -46,13 +47,14 @@ interface TenantMembership {
 
 export default function TenantPicker() {
   const { user, ccTenants, logout, isPlatformAdmin, loading } = useAuth();
+  const { switchTenant } = useTenant();
   const [switching, setSwitching] = useState<string | null>(null);
   const navigate = useNavigate();
 
   async function handleSelectTenant(tenant: TenantMembership) {
     setSwitching(tenant.id);
     try {
-      await api.post('/api/foundation/me/switch-tenant', { tenant_id: tenant.id });
+      await switchTenant(tenant.id);
       navigate('/app/dashboard');
     } catch (error) {
       console.error('Failed to switch tenant:', error);
