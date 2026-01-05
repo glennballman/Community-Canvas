@@ -1,225 +1,81 @@
-import { Switch, Route, useLocation } from "wouter";
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ImpersonationProvider } from "@/contexts/ImpersonationContext";
-import { ImpersonationBanner } from "@/components/ImpersonationBanner";
-import MobileNav from "@/components/MobileNav";
-import DashboardLayout from "@/components/Dashboard/DashboardLayout";
-import Dashboard from "@/pages/Dashboard";
-import AdminLayout from "@/pages/AdminLayout";
+import { HostAuthProvider } from "@/contexts/HostAuthContext";
+
+import PublicPortalLayout from "@/layouts/PublicPortalLayout";
+import TenantAppLayout from "@/layouts/TenantAppLayout";
+import PlatformAdminLayout from "@/layouts/PlatformAdminLayout";
+
+import CommunityPortalOverview from "@/pages/portal/CommunityPortalOverview";
+import CommunityPortalBusinesses from "@/pages/portal/CommunityPortalBusinesses";
+import CommunityPortalServices from "@/pages/portal/CommunityPortalServices";
+import CommunityPortalStay from "@/pages/portal/CommunityPortalStay";
+
+import TenantPicker from "@/pages/app/TenantPicker";
+import TenantDashboard from "@/pages/app/TenantDashboard";
+import ProfilePage from "@/pages/app/ProfilePage";
+import SettingsPage from "@/pages/app/SettingsPage";
+
+import AvailabilityConsole from "@/pages/app/community/AvailabilityConsole";
+import ServiceRunsPage from "@/pages/app/community/ServiceRunsPage";
+import DirectoryPage from "@/pages/app/community/DirectoryPage";
+import ContentBrandingPage from "@/pages/app/community/ContentBrandingPage";
+
+import CatalogPage from "@/pages/app/business/CatalogPage";
+import CatalogOnboarding from "@/pages/app/business/CatalogOnboarding";
+import AvailabilityPricingPage from "@/pages/app/business/AvailabilityPricingPage";
+import BookingsPage from "@/pages/app/business/BookingsPage";
+import CustomersPage from "@/pages/app/business/CustomersPage";
+
+import LoginPage from "@/pages/auth/LoginPage";
+
 import AdminHome from "@/pages/AdminHome";
+import TenantsManagement from "@/pages/admin/TenantsManagement";
+import UsersManagement from "@/pages/admin/UsersManagement";
 import ImpersonationConsole from "@/pages/platform/ImpersonationConsole";
-import AdminMatrix from "@/pages/AdminMatrix";
-import AdminGeo from "@/pages/AdminGeo";
 import AdminInfrastructure from "@/pages/AdminInfrastructure";
 import AdminChambers from "@/pages/AdminChambers";
 import AdminNAICS from "@/pages/AdminNAICS";
-import AdminSources from "@/pages/AdminSources";
-import AdminLogs from "@/pages/AdminLogs";
 import AdminSettings from "@/pages/AdminSettings";
+import AdminLogs from "@/pages/AdminLogs";
 import DataImport from "@/pages/admin/DataImport";
-import CivOSDashboard from "@/pages/admin/CivOSDashboard";
-import UsersManagement from "@/pages/admin/UsersManagement";
-import TenantsManagement from "@/pages/admin/TenantsManagement";
-import Documentation from "@/pages/Documentation";
-import TripTimelineDemo from "@/pages/TripTimelineDemo";
 import Accommodations from "@/pages/Accommodations";
+import Documentation from "@/pages/Documentation";
+
 import NotFound from "@/pages/not-found";
-import { HostAuthProvider } from "@/contexts/HostAuthContext";
-import HostLogin from "@/pages/host/Login";
-import HostSignup from "@/pages/host/Signup";
-import ForgotPassword from "@/pages/host/ForgotPassword";
-import PropertyManage from "@/pages/host/PropertyManage";
-import HostDashboard from "@/pages/host/Dashboard";
-import HostProperties from "@/pages/host/Properties";
-import HostBookings from "@/pages/host/Bookings";
-import HostSettings from "@/pages/host/Settings";
-import HostPayouts from "@/pages/host/Payouts";
-import AddProperty from "@/pages/host/AddProperty";
-import HostCalendar from "@/pages/host/HostCalendar";
-import StagingSearch from "@/pages/staging/Search";
-import StagingPropertyDetail from "@/pages/staging/PropertyDetail";
-import StagingBook from "@/pages/staging/BookingFlow";
-import MyBookings from "@/pages/staging/MyBookings";
-import ChamberDashboard from "@/pages/staging/ChamberDashboard";
-import MapSearch from "@/pages/staging/MapSearch";
-import NavigationHub from "@/pages/NavigationHub";
-import FleetPage from "@/pages/FleetPage";
-import MyProfile from "@/pages/MyProfile";
-import ServiceCatalog from "@/pages/services/ServiceCatalog";
-import BundlesBrowser from "@/pages/services/BundlesBrowser";
-import ServiceRuns from "@/pages/services/ServiceRuns";
-import ServiceRunDetail from "@/pages/services/ServiceRunDetail";
-import CreateServiceRun from "@/pages/services/CreateServiceRun";
-import IndividualProfile from "@/pages/profile/IndividualProfile";
-import RentalBrowser from "@/pages/rentals/RentalBrowser";
-import RentalBookings from "@/pages/rentals/MyBookings";
-import AccommodationSearch from "@/pages/crew/AccommodationSearch";
-import JobBoard from "@/pages/JobBoard";
-import OpportunityDetail from "@/pages/OpportunityDetail";
-import CreateOpportunityWizard from "@/pages/CreateOpportunityWizard";
-import ConversationsPage from "@/pages/ConversationsPage";
 
-function AppShellRoutes() {
-  return (
-    <AdminLayout>
-      <Switch>
-        {/* Admin routes */}
-        <Route path="/admin" component={AdminHome} />
-        <Route path="/admin/matrix" component={AdminMatrix} />
-        <Route path="/admin/geo" component={AdminGeo} />
-        <Route path="/admin/infrastructure" component={AdminInfrastructure} />
-        <Route path="/admin/chambers" component={AdminChambers} />
-        <Route path="/admin/naics" component={AdminNAICS} />
-        <Route path="/admin/sources" component={AdminSources} />
-        <Route path="/admin/logs" component={AdminLogs} />
-        <Route path="/admin/settings" component={AdminSettings} />
-        <Route path="/admin/import" component={DataImport} />
-        <Route path="/admin/civos" component={CivOSDashboard} />
-        <Route path="/admin/docs" component={Documentation} />
-        <Route path="/admin/accommodations" component={Accommodations} />
-        <Route path="/admin/users" component={UsersManagement} />
-        <Route path="/admin/tenants" component={TenantsManagement} />
-        <Route path="/profile" component={IndividualProfile} />
-        <Route path="/profile/legacy" component={MyProfile} />
-        
-        {/* Service catalog */}
-        <Route path="/services" component={ServiceCatalog} />
-        <Route path="/services/catalog" component={ServiceCatalog} />
-        <Route path="/services/bundles" component={BundlesBrowser} />
-        <Route path="/services/runs" component={ServiceRuns} />
-        <Route path="/services/runs/new" component={CreateServiceRun} />
-        <Route path="/services/runs/:slug" component={ServiceRunDetail} />
-        
-        {/* Navigation hub */}
-        <Route path="/hub" component={NavigationHub} />
-        
-        {/* Command center */}
-        <Route path="/command-center" component={Dashboard} />
-        <Route path="/legacy" component={Dashboard} />
-        
-        {/* Fleet management */}
-        <Route path="/fleet" component={FleetPage} />
-        
-        {/* Staging routes */}
-        <Route path="/staging" component={StagingSearch} />
-        <Route path="/find-staging" component={StagingSearch} />
-        <Route path="/staging/map" component={MapSearch} />
-        <Route path="/staging/chamber" component={ChamberDashboard} />
-        <Route path="/staging/bookings" component={MyBookings} />
-        <Route path="/staging/:id/book" component={StagingBook} />
-        <Route path="/staging/:id" component={StagingPropertyDetail} />
-        
-        {/* Host routes (dashboard, properties, bookings - NOT login/signup) */}
-        <Route path="/host/dashboard" component={HostDashboard} />
-        <Route path="/host/properties/add" component={AddProperty} />
-        <Route path="/host/properties/:id/calendar" component={HostCalendar} />
-        <Route path="/host/properties/:id/bookings" component={PropertyManage} />
-        <Route path="/host/properties/:id" component={PropertyManage} />
-        <Route path="/host/properties" component={HostProperties} />
-        <Route path="/host/bookings" component={HostBookings} />
-        <Route path="/host/settings" component={HostSettings} />
-        <Route path="/host/payouts" component={HostPayouts} />
-        
-        {/* Trip timeline demo */}
-        <Route path="/trip-timeline-demo" component={TripTimelineDemo} />
-        
-        {/* Accommodations */}
-        <Route path="/accommodations" component={Accommodations} />
-        
-        {/* Platform console */}
-        <Route path="/platform" component={ImpersonationConsole} />
-        <Route path="/platform/impersonate" component={ImpersonationConsole} />
-        
-        {/* Rentals */}
-        <Route path="/rentals" component={RentalBrowser} />
-        <Route path="/rentals/bookings" component={RentalBookings} />
-        
-        {/* Crew accommodation search */}
-        <Route path="/crew/accommodation-search" component={AccommodationSearch} />
-        
-        {/* Job board / opportunities */}
-        <Route path="/jobs" component={JobBoard} />
-        <Route path="/host/opportunities/new" component={CreateOpportunityWizard} />
-        <Route path="/opportunities/:id" component={OpportunityDetail} />
-        
-        {/* Conversations */}
-        <Route path="/conversations" component={ConversationsPage} />
-        
-        {/* Public site pages with AdminLayout */}
-        <Route path="/public/overview" component={PublicOverview} />
-        <Route path="/public/map" component={PublicMap} />
-        <Route path="/public/webcams" component={PublicWebcams} />
-        <Route path="/public/alerts" component={PublicAlerts} />
-        <Route path="/public/roadtrips" component={PublicRoadTrips} />
-        <Route path="/public/planning" component={PublicTripPlanning} />
-        <Route path="/public/fleet" component={PublicFleet} />
-        
-        <Route component={NotFound} />
-      </Switch>
-    </AdminLayout>
-  );
-}
+function ServiceRunDetailPublic() { return <div className="p-6">Service Run Detail (Public)</div>; }
+function CommunityPortalEvents() { return <div className="p-6">Events</div>; }
+function CommunityPortalAbout() { return <div className="p-6">About</div>; }
+function ServiceRunsPendingPage() { return <div className="p-6">Pending Service Runs</div>; }
+function CreateServiceRunPage() { return <div className="p-6">Create Service Run</div>; }
+function DirectoryBusinessesPage() { return <div className="p-6">Directory Businesses</div>; }
+function AccommodationsPage() { return <div className="p-6">Accommodations</div>; }
+function ParkingMooragePage() { return <div className="p-6">Parking & Moorage</div>; }
+function AdminsPermissionsPage() { return <div className="p-6">Admins & Permissions</div>; }
+function CatalogImportPage() { return <div className="p-6">Catalog Import</div>; }
+function OperationsPage() { return <div className="p-6">Operations</div>; }
+function PaymentsPage() { return <div className="p-6">Payments</div>; }
+function ConversationsPage() { return <div className="p-6">Conversations</div>; }
+function ConversationDetailPage() { return <div className="p-6">Conversation Detail</div>; }
+function TenantDetailPage() { return <div className="p-6">Tenant Detail</div>; }
+function AccommodationsDataPage() { return <div className="p-6">Accommodations Data</div>; }
+function ImportExportPage() { return <div className="p-6">Import/Export</div>; }
+function CommunitiesPage() { return <div className="p-6">Communities</div>; }
+function SeedCommunitiesPage() { return <div className="p-6">Seed Communities</div>; }
+function PortalConfigPage() { return <div className="p-6">Portal Config</div>; }
+function ModerationQueuePage() { return <div className="p-6">Moderation Queue</div>; }
+function FlaggedContentPage() { return <div className="p-6">Flagged Content</div>; }
+function SystemLogsPage() { return <div className="p-6">System Logs</div>; }
 
-function PublicDashboard() {
-  return <DashboardLayout />;
-}
-
-// Wrapper components for public site tabs within AdminLayout
-function PublicOverview() {
-  return <DashboardLayout defaultTab="overview" />;
-}
-function PublicMap() {
-  return <DashboardLayout defaultTab="map" />;
-}
-function PublicWebcams() {
-  return <DashboardLayout defaultTab="webcams" />;
-}
-function PublicAlerts() {
-  return <DashboardLayout defaultTab="alerts" />;
-}
-function PublicRoadTrips() {
-  return <DashboardLayout defaultTab="roadtrips" />;
-}
-function PublicTripPlanning() {
-  return <DashboardLayout defaultTab="planning" />;
-}
-function PublicFleet() {
-  return <DashboardLayout defaultTab="fleet" />;
-}
-
-function Router() {
-  const [location] = useLocation();
-  
-  const isPublicRoute = 
-    location === "/" ||
-    location.startsWith("/public/") ||
-    location === "/host/login" ||
-    location === "/host/signup" ||
-    location === "/host/forgot-password";
-  
-  if (isPublicRoute) {
-    return (
-      <Switch>
-        <Route path="/" component={PublicDashboard} />
-        <Route path="/public/overview" component={PublicOverview} />
-        <Route path="/public/map" component={PublicMap} />
-        <Route path="/public/webcams" component={PublicWebcams} />
-        <Route path="/public/alerts" component={PublicAlerts} />
-        <Route path="/public/roadtrips" component={PublicRoadTrips} />
-        <Route path="/public/planning" component={PublicTripPlanning} />
-        <Route path="/public/fleet" component={PublicFleet} />
-        <Route path="/host/login" component={HostLogin} />
-        <Route path="/host/signup" component={HostSignup} />
-        <Route path="/host/forgot-password" component={ForgotPassword} />
-      </Switch>
-    );
-  }
-  
-  return <AppShellRoutes />;
+function LogoutPage() {
+  window.location.href = '/api/auth/logout';
+  return null;
 }
 
 function App() {
@@ -229,11 +85,115 @@ function App() {
         <AuthProvider>
           <HostAuthProvider>
             <ImpersonationProvider>
-              <ImpersonationBanner />
-              <MobileNav />
-              <main className="pb-16 lg:pb-0">
-                <Router />
-              </main>
+              <BrowserRouter>
+                <Routes>
+                  {/* ============================================ */}
+                  {/* PUBLIC PORTAL - /c/:slug/*                   */}
+                  {/* No authentication required                   */}
+                  {/* ============================================ */}
+                  <Route path="/c/:slug" element={<PublicPortalLayout />}>
+                    <Route index element={<CommunityPortalOverview />} />
+                    <Route path="businesses" element={<CommunityPortalBusinesses />} />
+                    <Route path="services" element={<CommunityPortalServices />} />
+                    <Route path="services/:runId" element={<ServiceRunDetailPublic />} />
+                    <Route path="stay" element={<CommunityPortalStay />} />
+                    <Route path="events" element={<CommunityPortalEvents />} />
+                    <Route path="about" element={<CommunityPortalAbout />} />
+                  </Route>
+
+                  {/* ============================================ */}
+                  {/* TENANT APP - /app/*                          */}
+                  {/* Authentication required                      */}
+                  {/* ============================================ */}
+                  <Route path="/app" element={<TenantAppLayout />}>
+                    <Route index element={<TenantPicker />} />
+                    <Route path="dashboard" element={<TenantDashboard />} />
+                    
+                    {/* Community Admin Routes */}
+                    <Route path="availability" element={<AvailabilityConsole />} />
+                    <Route path="service-runs" element={<ServiceRunsPage />} />
+                    <Route path="service-runs/pending" element={<ServiceRunsPendingPage />} />
+                    <Route path="service-runs/new" element={<CreateServiceRunPage />} />
+                    <Route path="directory" element={<DirectoryPage />} />
+                    <Route path="directory/businesses" element={<DirectoryBusinessesPage />} />
+                    <Route path="accommodations" element={<AccommodationsPage />} />
+                    <Route path="parking-moorage" element={<ParkingMooragePage />} />
+                    <Route path="content" element={<ContentBrandingPage />} />
+                    <Route path="admins" element={<AdminsPermissionsPage />} />
+                    
+                    {/* Business Routes */}
+                    <Route path="catalog" element={<CatalogPage />} />
+                    <Route path="catalog/onboarding" element={<CatalogOnboarding />} />
+                    <Route path="catalog/import" element={<CatalogImportPage />} />
+                    <Route path="pricing" element={<AvailabilityPricingPage />} />
+                    <Route path="bookings" element={<BookingsPage />} />
+                    <Route path="customers" element={<CustomersPage />} />
+                    <Route path="operations" element={<OperationsPage />} />
+                    <Route path="payments" element={<PaymentsPage />} />
+                    
+                    {/* Shared Routes */}
+                    <Route path="conversations" element={<ConversationsPage />} />
+                    <Route path="conversations/:id" element={<ConversationDetailPage />} />
+                    <Route path="profile" element={<ProfilePage />} />
+                    <Route path="settings" element={<SettingsPage />} />
+                  </Route>
+
+                  {/* ============================================ */}
+                  {/* PLATFORM ADMIN - /admin/*                    */}
+                  {/* Platform admin required                      */}
+                  {/* ============================================ */}
+                  <Route path="/admin" element={<PlatformAdminLayout />}>
+                    <Route index element={<AdminHome />} />
+                    
+                    {/* Tenants & Users */}
+                    <Route path="tenants" element={<TenantsManagement />} />
+                    <Route path="tenants/:id" element={<TenantDetailPage />} />
+                    <Route path="users" element={<UsersManagement />} />
+                    <Route path="impersonation" element={<ImpersonationConsole />} />
+                    
+                    {/* Data Management */}
+                    <Route path="data/infrastructure" element={<AdminInfrastructure />} />
+                    <Route path="data/chambers" element={<AdminChambers />} />
+                    <Route path="data/naics" element={<AdminNAICS />} />
+                    <Route path="data/accommodations" element={<AccommodationsDataPage />} />
+                    <Route path="data/import-export" element={<ImportExportPage />} />
+                    
+                    {/* Communities */}
+                    <Route path="communities" element={<CommunitiesPage />} />
+                    <Route path="communities/seed" element={<SeedCommunitiesPage />} />
+                    <Route path="communities/portals" element={<PortalConfigPage />} />
+                    
+                    {/* Moderation */}
+                    <Route path="moderation/ai-queue" element={<ModerationQueuePage />} />
+                    <Route path="moderation/flagged" element={<FlaggedContentPage />} />
+                    
+                    {/* System */}
+                    <Route path="settings" element={<AdminSettings />} />
+                    <Route path="logs" element={<AdminLogs />} />
+                    <Route path="docs" element={<Documentation />} />
+                    <Route path="import" element={<DataImport />} />
+                    <Route path="accommodations" element={<Accommodations />} />
+                  </Route>
+
+                  {/* ============================================ */}
+                  {/* AUTH & REDIRECTS                             */}
+                  {/* ============================================ */}
+                  <Route path="/login" element={<LoginPage />} />
+                  <Route path="/logout" element={<LogoutPage />} />
+                  
+                  {/* Root redirects to app */}
+                  <Route path="/" element={<Navigate to="/app" replace />} />
+                  
+                  {/* Legacy route redirects */}
+                  <Route path="/conversations" element={<Navigate to="/app/conversations" replace />} />
+                  <Route path="/service-runs" element={<Navigate to="/app/service-runs" replace />} />
+                  <Route path="/platform" element={<Navigate to="/admin/impersonation" replace />} />
+                  <Route path="/platform/impersonate" element={<Navigate to="/admin/impersonation" replace />} />
+                  
+                  {/* 404 */}
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </BrowserRouter>
               <Toaster />
             </ImpersonationProvider>
           </HostAuthProvider>
