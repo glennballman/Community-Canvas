@@ -42,6 +42,7 @@ import conversationsRouter from "./routes/conversations";
 import feedbackRouter from "./routes/feedback";
 import seriousIssuesRouter from "./routes/serious-issues";
 import appreciationsRouter from "./routes/appreciations";
+import financingRouter from "./routes/financing";
 import { publicQuery } from "./db/tenantDb";
 import express from "express";
 
@@ -150,6 +151,9 @@ export async function registerRoutes(
 
   // Register serious issues routes (admin-only internal reporting)
   app.use('/api', seriousIssuesRouter);
+
+  // Register contractor financing routes
+  app.use('/api', financingRouter);
 
   // Public catalog endpoints (no auth required)
   app.get('/api/v1/catalog/vehicles', async (req, res) => {
