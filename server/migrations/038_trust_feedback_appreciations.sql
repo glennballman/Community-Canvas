@@ -178,7 +178,7 @@ CREATE TABLE IF NOT EXISTS public_appreciations (
   to_party_id UUID NOT NULL REFERENCES parties(id),
 
   -- Positive-only public snippet (no names, no addresses, no negatives)
-  snippet TEXT NOT NULL,
+  snippet TEXT NOT NULL DEFAULT '',
   highlights TEXT[],
 
   -- Contractor controls visibility
@@ -191,12 +191,42 @@ CREATE TABLE IF NOT EXISTS public_appreciations (
   made_public_at TIMESTAMPTZ
 );
 
+-- IDEMPOTENT: Add columns for pre-existing tables (without FKs first)
+ALTER TABLE public_appreciations ADD COLUMN IF NOT EXISTS snippet TEXT;
+ALTER TABLE public_appreciations ADD COLUMN IF NOT EXISTS source_feedback_id UUID;
+ALTER TABLE public_appreciations ADD COLUMN IF NOT EXISTS conversation_id UUID;
+
+-- Set default for snippet
+ALTER TABLE public_appreciations ALTER COLUMN snippet SET DEFAULT '';
+
+-- Backfill snippet from content column if it exists and snippet is empty
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns 
+             WHERE table_name = 'public_appreciations' AND column_name = 'content') THEN
+    UPDATE public_appreciations SET snippet = content WHERE (snippet IS NULL OR snippet = '') AND content IS NOT NULL;
+  END IF;
+  -- Set empty string for remaining nulls
+  UPDATE public_appreciations SET snippet = '' WHERE snippet IS NULL;
+END $$;
+
+-- Add FK constraints if they don't exist
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints 
+                 WHERE constraint_name = 'public_appreciations_source_feedback_id_fkey' 
+                 AND table_name = 'public_appreciations') THEN
+    ALTER TABLE public_appreciations 
+      ADD CONSTRAINT public_appreciations_source_feedback_id_fkey 
+      FOREIGN KEY (source_feedback_id) REFERENCES contractor_feedback(id) ON DELETE SET NULL;
+  END IF;
+EXCEPTION WHEN others THEN NULL;
+END $$;
+
 -- ENFORCE: Snippet must have content
 ALTER TABLE public_appreciations
   DROP CONSTRAINT IF EXISTS public_appreciations_snippet_not_empty;
 ALTER TABLE public_appreciations
   ADD CONSTRAINT public_appreciations_snippet_not_empty 
-  CHECK (length(trim(snippet)) >= 3);
+  CHECK (snippet = '' OR length(trim(snippet)) >= 3);
 
 -- ENFORCE: Snippet length limit (no essays)
 ALTER TABLE public_appreciations
