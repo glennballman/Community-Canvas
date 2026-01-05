@@ -612,7 +612,7 @@ router.get(
 
 const impersonateStartSchema = z.object({
   tenant_id: z.string().uuid(),
-  individual_id: z.string().uuid().optional(),
+  individual_id: z.string().uuid().nullable().optional(),
   reason: z.string().min(10).max(500),
   duration_hours: z.number().min(0.5).max(8).default(2)
 });
@@ -673,7 +673,8 @@ router.post(
       if (individual_id) {
         const individualCheck = await serviceQuery(
           `SELECT i.id, i.full_name FROM cc_individuals i
-           JOIN cc_tenant_users tu ON tu.individual_id = i.id
+           JOIN cc_users u ON u.email = i.email
+           JOIN cc_tenant_users tu ON tu.user_id = u.id
            WHERE i.id = $1 AND tu.tenant_id = $2`,
           [individual_id, tenant_id]
         );
@@ -960,7 +961,8 @@ router.get(
           i.full_name,
           i.email
         FROM cc_individuals i
-        JOIN cc_tenant_users tu ON tu.individual_id = i.id
+        JOIN cc_users u ON u.email = i.email
+        JOIN cc_tenant_users tu ON tu.user_id = u.id
         WHERE tu.tenant_id = $1
         ORDER BY i.full_name ASC
         LIMIT 100
