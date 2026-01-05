@@ -58,6 +58,17 @@ router.post('/opportunities/:id/appreciation', async (req: Request, res: Respons
         return res.status(400).json({ error: 'Contractor is not accepting appreciations at this time' });
       }
 
+      let derivedDisplayName = display_name;
+      if (!derivedDisplayName && actor.display_name) {
+        const nameParts = actor.display_name.split(' ');
+        const firstName = nameParts[0] || 'Anonymous';
+        const lastInitial = nameParts[1]?.[0] ? nameParts[1][0] + '.' : '';
+        derivedDisplayName = `${firstName} ${lastInitial}`.trim();
+      }
+      if (!derivedDisplayName) {
+        derivedDisplayName = 'Anonymous';
+      }
+
       const result = await client.query(
         `INSERT INTO public_appreciations (
           opportunity_id,
@@ -70,7 +81,7 @@ router.post('/opportunities/:id/appreciation', async (req: Request, res: Respons
           opportunity_id,
           actor.actor_party_id,
           actor.individual_id,
-          display_name || actor.display_name?.split(' ')[0] + ' ' + (actor.display_name?.split(' ')[1]?.[0] || '') + '.',
+          derivedDisplayName,
           opp.contractor_party_id,
           content,
           highlights || null

@@ -10,7 +10,7 @@ function isAdmin(req: any): boolean {
 }
 
 // ============================================================
-// FILE SERIOUS ISSUE REPORT (Any User)
+// FILE SERIOUS ISSUE REPORT (Any User - Owner, Contractor, or Operator)
 // ============================================================
 router.post('/opportunities/:id/serious-issue', async (req: Request, res: Response) => {
   try {
@@ -21,10 +21,14 @@ router.post('/opportunities/:id/serious-issue', async (req: Request, res: Respon
       category,
       description,
       evidence,
-      conversation_id
+      conversation_id,
+      reporter_role = 'owner'
     } = req.body;
 
-    const actor = await resolveActorParty(req, 'owner');
+    const validRoles = ['owner', 'contractor', 'operator'];
+    const role = validRoles.includes(reporter_role) ? reporter_role : 'owner';
+
+    const actor = await resolveActorParty(req, role as any);
     if (!actor) {
       return res.status(401).json({ error: 'Authentication required' });
     }
