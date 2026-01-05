@@ -285,6 +285,7 @@ export function PaymentPromise({ conversationId, myRole }: PaymentPromiseProps) 
                       size="sm"
                       variant="outline"
                       onClick={() => confirmReceived(milestone.id, true)}
+                      data-testid={`button-partial-payment-${milestone.id}`}
                     >
                       Partial Payment
                     </Button>
