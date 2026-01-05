@@ -184,6 +184,8 @@ export function ImpersonationProvider({ children }: { children: ReactNode }) {
           expires_at: data.impersonation.expires_at,
           created_at: data.impersonation.created_at
         });
+        // CRITICAL: Full page redirect to pick up new session cookie
+        window.location.href = '/app/dashboard';
         return true;
       } else {
         setError(data.error || 'Failed to start impersonation');
@@ -214,6 +216,8 @@ export function ImpersonationProvider({ children }: { children: ReactNode }) {
       
       if (data.success) {
         setSession(null);
+        // CRITICAL: Full page redirect back to admin impersonation page
+        window.location.href = '/admin/impersonation';
         return true;
       } else {
         setError(data.error || 'Failed to stop impersonation');

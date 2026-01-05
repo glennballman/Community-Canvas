@@ -1,11 +1,9 @@
 import { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useImpersonation } from '@/contexts/ImpersonationContext';
 import { Button } from '@/components/ui/button';
 import { Shield, Clock, X } from 'lucide-react';
 
 export function ImpersonationBanner() {
-  const navigate = useNavigate();
   const { session, isActive, loading, stop } = useImpersonation();
 
   useEffect(() => {
@@ -29,8 +27,8 @@ export function ImpersonationBanner() {
   const remainingMins = Math.max(0, Math.ceil(remainingMs / 60000));
 
   const handleStop = async () => {
+    // stop() now handles the redirect internally via window.location.href
     await stop();
-    navigate('/admin/impersonation');
   };
 
   return (

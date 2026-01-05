@@ -77,6 +77,16 @@ export default function TenantAppLayout() {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
+  // CRITICAL: At /app (tenant picker) with no tenant selected, render without sidebar
+  const isAtTenantPicker = location.pathname === '/app';
+  if (isAtTenantPicker && !currentTenant) {
+    return (
+      <div className="min-h-screen bg-background" data-testid="tenant-picker-layout">
+        <Outlet />
+      </div>
+    );
+  }
+
   const communityNavItems = [
     { label: 'Dashboard', path: '/app/dashboard', icon: LayoutDashboard },
     { label: 'Availability', path: '/app/availability', icon: Phone },
