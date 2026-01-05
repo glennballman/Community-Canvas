@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ImpersonationProvider } from "@/contexts/ImpersonationContext";
 import { HostAuthProvider } from "@/contexts/HostAuthContext";
+import { TenantProvider } from "@/contexts/TenantContext";
 
 import PublicPortalLayout from "@/layouts/PublicPortalLayout";
 import TenantAppLayout from "@/layouts/TenantAppLayout";
@@ -83,9 +84,10 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <AuthProvider>
-          <HostAuthProvider>
-            <ImpersonationProvider>
-              <BrowserRouter>
+          <TenantProvider>
+            <HostAuthProvider>
+              <ImpersonationProvider>
+                <BrowserRouter>
                 <Routes>
                   {/* ============================================ */}
                   {/* PUBLIC PORTAL - /c/:slug/*                   */}
@@ -195,8 +197,9 @@ function App() {
                 </Routes>
               </BrowserRouter>
               <Toaster />
-            </ImpersonationProvider>
-          </HostAuthProvider>
+              </ImpersonationProvider>
+            </HostAuthProvider>
+          </TenantProvider>
         </AuthProvider>
       </TooltipProvider>
     </QueryClientProvider>

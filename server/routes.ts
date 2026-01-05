@@ -46,6 +46,7 @@ import financingRouter from "./routes/financing";
 import paymentsRouter from "./routes/payments";
 import trustSignalsRouter from "./routes/trust-signals";
 import coopRunsRouter from "./routes/coop-runs";
+import operatorRouter from "./routes/operator";
 import { publicQuery } from "./db/tenantDb";
 import express from "express";
 
@@ -166,6 +167,9 @@ export async function registerRoutes(
 
   // Register Cooperative Service Runs routes (bundling, NOT bidding)
   app.use('/api/coop-runs', coopRunsRouter);
+
+  // Register operator routes (for community operators)
+  app.use('/api/operator', operatorRouter);
 
   // Public catalog endpoints (no auth required)
   app.get('/api/v1/catalog/vehicles', async (req, res) => {
