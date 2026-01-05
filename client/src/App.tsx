@@ -61,6 +61,7 @@ import AccommodationSearch from "@/pages/crew/AccommodationSearch";
 import JobBoard from "@/pages/JobBoard";
 import OpportunityDetail from "@/pages/OpportunityDetail";
 import CreateOpportunityWizard from "@/pages/CreateOpportunityWizard";
+import ConversationsPage from "@/pages/ConversationsPage";
 
 function AppShellRoutes() {
   return (
@@ -144,6 +145,9 @@ function AppShellRoutes() {
         <Route path="/jobs" component={JobBoard} />
         <Route path="/host/opportunities/new" component={CreateOpportunityWizard} />
         <Route path="/opportunities/:id" component={OpportunityDetail} />
+        
+        {/* Conversations */}
+        <Route path="/conversations" component={ConversationsPage} />
         
         {/* Public site pages with AdminLayout */}
         <Route path="/public/overview" component={PublicOverview} />

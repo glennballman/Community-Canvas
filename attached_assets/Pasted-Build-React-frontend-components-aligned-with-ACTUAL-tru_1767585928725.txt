@@ -1,0 +1,2460 @@
+Build React frontend components aligned with:
+- ACTUAL trust_signals schema (not assumed columns)
+- Small-town philosophy (no public negatives, contractor power)
+- Multiple intake modes (bid/run/direct_award)
+- Optional AI assist (Mat/Logan) - non-Clippy
+- Honor system payments (no hard gates)
+
+### File: client/src/lib/api.ts
+```typescript
+/**
+ * Centralized API helper with proper credentials
+ */
+
+const API_BASE = '/api';
+
+export async function apiFetch<T>(
+  endpoint: string,
+  options: RequestInit = {}
+): Promise<T> {
+  const res = await fetch(`${API_BASE}${endpoint}`, {
+    ...options,
+    credentials: 'include',
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({ error: 'Request failed' }));
+    throw new Error(error.error || `HTTP ${res.status}`);
+  }
+
+  return res.json();
+}
+
+export const api = {
+  get: <T>(endpoint: string) => apiFetch<T>(endpoint),
+  post: <T>(endpoint: string, body?: any) => 
+    apiFetch<T>(endpoint, { method: 'POST', body: body ? JSON.stringify(body) : undefined }),
+  put: <T>(endpoint: string, body?: any) => 
+    apiFetch<T>(endpoint, { method: 'PUT', body: body ? JSON.stringify(body) : undefined }),
+  patch: <T>(endpoint: string, body?: any) => 
+    apiFetch<T>(endpoint, { method: 'PATCH', body: body ? JSON.stringify(body) : undefined }),
+  delete: <T>(endpoint: string) => apiFetch<T>(endpoint, { method: 'DELETE' }),
+};
+```
+
+### File: client/src/components/conversations/ConversationList.tsx
+```tsx
+import React, { useState, useEffect } from 'react';
+import { api } from '../../lib/api';
+
+interface Conversation {
+  id: string;
+  opportunity_id: string;
+  opportunity_title: string;
+  opportunity_ref: string;
+  owner_name: string;
+  contractor_name: string;
+  state: string;
+  contact_unlocked: boolean;
+  last_message_preview: string;
+  last_message_at: string;
+  my_role: 'owner' | 'contractor';
+  unread_count: number;
+  // New: intake mode awareness
+  intake_mode?: 'bid' | 'run' | 'direct_award';
+  service_run_id?: string;
+  run_member_count?: number;
+}
+
+interface ConversationListProps {
+  onSelect: (conversation: Conversation) => void;
+  selectedId?: string;
+}
+
+export function ConversationList({ onSelect, selectedId }: ConversationListProps) {
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState<string>('all');
+
+  useEffect(() => {
+    fetchConversations();
+  }, [filter]);
+
+  async function fetchConversations() {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (filter !== 'all') params.set('state', filter);
+      
+      const data = await api.get<{ conversations: Conversation[] }>(
+        `/conversations?${params}`
+      );
+      setConversations(data.conversations || []);
+    } catch (error) {
+      console.error('Error fetching conversations:', error);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function getStateColor(state: string): string {
+    const colors: Record<string, string> = {
+      interest: 'bg-blue-100 text-blue-800',
+      pre_bid: 'bg-yellow-100 text-yellow-800',
+      negotiation: 'bg-orange-100 text-orange-800',
+      awarded_pending: 'bg-purple-100 text-purple-800',
+      contracted: 'bg-green-100 text-green-800',
+      in_progress: 'bg-green-200 text-green-900',
+      completed: 'bg-gray-100 text-gray-800',
+      cancelled: 'bg-red-100 text-red-800'
+    };
+    return colors[state] || 'bg-gray-100 text-gray-800';
+  }
+
+  function getIntakeModeLabel(mode?: string): { label: string; color: string } | null {
+    if (!mode || mode === 'bid') return null; // Default, no badge needed
+    if (mode === 'run') return { label: 'Service Run', color: 'bg-indigo-100 text-indigo-800' };
+    if (mode === 'direct_award') return { label: 'Direct', color: 'bg-teal-100 text-teal-800' };
+    return null;
+  }
+
+  function formatTime(dateStr: string): string {
+    if (!dateStr) return '';
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diff = now.getTime() - date.getTime();
+    
+    if (diff < 60000) return 'Just now';
+    if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
+    if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`;
+    if (diff < 604800000) return `${Math.floor(diff / 86400000)}d ago`;
+    return date.toLocaleDateString();
+  }
+
+  return (
+    <div className="flex flex-col h-full bg-white border-r">
+      {/* Header */}
+      <div className="p-4 border-b">
+        <h2 className="text-lg font-semibold mb-3">Conversations</h2>
+        <select
+          value={filter}
+          onChange={(e) => setFilter(e.target.value)}
+          className="w-full p-2 border rounded text-sm"
+        >
+          <option value="all">All Conversations</option>
+          <option value="interest">Interest</option>
+          <option value="negotiation">Negotiation</option>
+          <option value="contracted">Contracted</option>
+          <option value="in_progress">In Progress</option>
+          <option value="completed">Completed</option>
+        </select>
+      </div>
+
+      {/* List */}
+      <div className="flex-1 overflow-y-auto">
+        {loading ? (
+          <div className="p-4 text-center text-gray-500">Loading...</div>
+        ) : conversations.length === 0 ? (
+          <div className="p-4 text-center text-gray-500">No conversations yet</div>
+        ) : (
+          conversations.map((conv) => {
+            const intakeMode = getIntakeModeLabel(conv.intake_mode);
+            
+            return (
+              <div
+                key={conv.id}
+                onClick={() => onSelect(conv)}
+                className={`p-4 border-b cursor-pointer hover:bg-gray-50 transition ${
+                  selectedId === conv.id ? 'bg-blue-50 border-l-4 border-l-blue-500' : ''
+                }`}
+              >
+                <div className="flex justify-between items-start mb-1">
+                  <span className="font-medium text-sm truncate flex-1">
+                    {conv.opportunity_title}
+                  </span>
+                  {conv.unread_count > 0 && (
+                    <span className="bg-blue-500 text-white text-xs rounded-full px-2 py-0.5 ml-2">
+                      {conv.unread_count}
+                    </span>
+                  )}
+                </div>
+                
+                <div className="flex items-center gap-2 mb-2 flex-wrap">
+                  <span className={`text-xs px-2 py-0.5 rounded ${getStateColor(conv.state)}`}>
+                    {conv.state.replace(/_/g, ' ')}
+                  </span>
+                  
+                  {/* Intake mode badge */}
+                  {intakeMode && (
+                    <span className={`text-xs px-2 py-0.5 rounded ${intakeMode.color}`}>
+                      {intakeMode.label}
+                    </span>
+                  )}
+                  
+                  {/* Service run member count */}
+                  {conv.intake_mode === 'run' && conv.run_member_count && (
+                    <span className="text-xs text-indigo-600">
+                      {conv.run_member_count} homes
+                    </span>
+                  )}
+                  
+                  <span className="text-xs text-gray-500">
+                    {conv.my_role === 'owner' ? `→ ${conv.contractor_name}` : `← ${conv.owner_name}`}
+                  </span>
+                </div>
+                
+                <div className="flex justify-between items-end">
+                  <p className="text-xs text-gray-600 truncate flex-1">
+                    {conv.last_message_preview || 'No messages yet'}
+                  </p>
+                  <span className="text-xs text-gray-400 ml-2">
+                    {formatTime(conv.last_message_at)}
+                  </span>
+                </div>
+                
+                {!conv.contact_unlocked && (
+                  <div className="mt-2 text-xs text-amber-600 flex items-center gap-1">
+                    <span>🔒</span> Contact protected
+                  </div>
+                )}
+              </div>
+            );
+          })
+        )}
+      </div>
+    </div>
+  );
+}
+```
+
+### File: client/src/components/conversations/ConversationView.tsx
+```tsx
+import React, { useState, useEffect, useRef } from 'react';
+import { api } from '../../lib/api';
+
+interface Message {
+  id: string;
+  content: string;
+  message_type: string;
+  sender_display_name: string;
+  sender_role: 'me' | 'them' | 'system';
+  was_redacted: boolean;
+  created_at: string;
+}
+
+interface ConversationViewProps {
+  conversationId: string;
+  myRole: 'owner' | 'contractor';
+  intakeMode?: 'bid' | 'run' | 'direct_award';
+}
+
+export function ConversationView({ conversationId, myRole, intakeMode }: ConversationViewProps) {
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [newMessage, setNewMessage] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [sending, setSending] = useState(false);
+  const [contactUnlocked, setContactUnlocked] = useState(false);
+  const [contactStatus, setContactStatus] = useState<any>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (conversationId) {
+      fetchMessages();
+      fetchContactStatus();
+    }
+  }, [conversationId]);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  async function fetchMessages() {
+    setLoading(true);
+    try {
+      const data = await api.get<{ messages: Message[]; contact_unlocked: boolean }>(
+        `/conversations/${conversationId}/messages`
+      );
+      setMessages(data.messages || []);
+      setContactUnlocked(data.contact_unlocked);
+    } catch (error) {
+      console.error('Error fetching messages:', error);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function fetchContactStatus() {
+    try {
+      const data = await api.get<any>(`/conversations/${conversationId}/contact-status`);
+      setContactStatus(data);
+    } catch (error) {
+      console.error('Error fetching contact status:', error);
+    }
+  }
+
+  async function sendMessage(e: React.FormEvent) {
+    e.preventDefault();
+    if (!newMessage.trim() || sending) return;
+
+    setSending(true);
+    try {
+      const data = await api.post<{ wasRedacted: boolean }>(
+        `/conversations/${conversationId}/messages`,
+        { content: newMessage }
+      );
+      
+      if (data.wasRedacted) {
+        // UPDATED: Softer, accurate language
+        alert('Note: Contact information was protected. Contact sharing is controlled by the owner and may unlock automatically in some cases.');
+      }
+      
+      setNewMessage('');
+      fetchMessages();
+    } catch (error) {
+      console.error('Error sending message:', error);
+    } finally {
+      setSending(false);
+    }
+  }
+
+  async function shareContact() {
+    // UPDATED: Different language for owner vs contractor
+    const confirmMsg = myRole === 'owner'
+      ? 'Share your contact information with this contractor?'
+      : 'Request contact information from the owner?';
+    
+    if (!confirm(confirmMsg)) return;
+    
+    try {
+      const endpoint = myRole === 'owner' 
+        ? `/conversations/${conversationId}/unlock-contact`
+        : `/conversations/${conversationId}/contractor-unlock-contact`;
+      
+      const data = await api.post<{ contact_unlocked: boolean }>(endpoint);
+      
+      if (data.contact_unlocked) {
+        setContactUnlocked(true);
+        fetchMessages();
+        alert('Contact information is now shared.');
+      }
+    } catch (error) {
+      console.error('Error sharing contact:', error);
+    }
+  }
+
+  function formatTime(dateStr: string): string {
+    const date = new Date(dateStr);
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }
+
+  function formatDate(dateStr: string): string {
+    const date = new Date(dateStr);
+    const today = new Date();
+    if (date.toDateString() === today.toDateString()) return 'Today';
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    if (date.toDateString() === yesterday.toDateString()) return 'Yesterday';
+    return date.toLocaleDateString();
+  }
+
+  function groupMessagesByDate(msgs: Message[]) {
+    const groups: { date: string; messages: Message[] }[] = [];
+    let currentDate = '';
+    
+    msgs.forEach(msg => {
+      const msgDate = formatDate(msg.created_at);
+      if (msgDate !== currentDate) {
+        currentDate = msgDate;
+        groups.push({ date: msgDate, messages: [] });
+      }
+      groups[groups.length - 1].messages.push(msg);
+    });
+    
+    return groups;
+  }
+
+  if (loading) {
+    return <div className="flex-1 flex items-center justify-center">Loading...</div>;
+  }
+
+  return (
+    <div className="flex flex-col h-full">
+      {/* Contact Status Banner - UPDATED LANGUAGE */}
+      {!contactUnlocked && (
+        <div className="bg-amber-50 border-b border-amber-200 p-3 flex justify-between items-center">
+          <div className="flex items-center gap-2 text-sm text-amber-800">
+            <span>🔒</span>
+            <span>Contact details are protected by default. Owners can share anytime.</span>
+          </div>
+          <button
+            onClick={shareContact}
+            className="text-sm bg-amber-600 text-white px-3 py-1 rounded hover:bg-amber-700"
+          >
+            {myRole === 'owner' ? 'Share Contact Details' : 'Request Contact'}
+          </button>
+        </div>
+      )}
+
+      {contactUnlocked && (
+        <div className="bg-green-50 border-b border-green-200 p-2 text-sm text-green-800 flex items-center gap-2">
+          <span>✓</span>
+          <span>Contact information is shared</span>
+        </div>
+      )}
+
+      {/* Small-town respect note */}
+      <div className="bg-gray-50 border-b px-4 py-2 text-xs text-gray-600">
+        In remote communities, trades are scarce. This platform helps coordinate work respectfully.
+      </div>
+
+      {/* Messages */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        {groupMessagesByDate(messages).map((group, groupIndex) => (
+          <div key={groupIndex}>
+            <div className="text-center text-xs text-gray-500 my-4">
+              {group.date}
+            </div>
+            {group.messages.map((msg) => (
+              <div
+                key={msg.id}
+                className={`flex mb-3 ${
+                  msg.sender_role === 'me' ? 'justify-end' : 
+                  msg.sender_role === 'system' ? 'justify-center' : 'justify-start'
+                }`}
+              >
+                {msg.sender_role === 'system' ? (
+                  <div className="bg-gray-100 text-gray-600 text-xs px-3 py-2 rounded-full">
+                    {msg.content}
+                  </div>
+                ) : (
+                  <div
+                    className={`max-w-[70%] ${
+                      msg.sender_role === 'me'
+                        ? 'bg-blue-500 text-white rounded-l-lg rounded-tr-lg'
+                        : 'bg-gray-100 text-gray-900 rounded-r-lg rounded-tl-lg'
+                    } px-4 py-2`}
+                  >
+                    {msg.sender_role === 'them' && (
+                      <div className="text-xs font-medium mb-1 opacity-75">
+                        {msg.sender_display_name}
+                      </div>
+                    )}
+                    <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                    <div className={`text-xs mt-1 ${
+                      msg.sender_role === 'me' ? 'text-blue-100' : 'text-gray-500'
+                    } flex items-center gap-2`}>
+                      {formatTime(msg.created_at)}
+                      {msg.was_redacted && (
+                        <span className="text-amber-300">🔒 protected</span>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        ))}
+        <div ref={messagesEndRef} />
+      </div>
+
+      {/* Input */}
+      <form onSubmit={sendMessage} className="border-t p-4">
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={newMessage}
+            onChange={(e) => setNewMessage(e.target.value)}
+            placeholder="Type a message..."
+            className="flex-1 border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            disabled={sending}
+          />
+          <button
+            type="submit"
+            disabled={!newMessage.trim() || sending}
+            className="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {sending ? '...' : 'Send'}
+          </button>
+        </div>
+        {!contactUnlocked && (
+          <p className="text-xs text-gray-500 mt-2">
+            💡 Contact info (phone, email) is protected. Owners control sharing, and it may unlock automatically in some cases.
+          </p>
+        )}
+      </form>
+    </div>
+  );
+}
+```
+
+### File: client/src/components/payments/PaymentPromise.tsx
+```tsx
+import React, { useState, useEffect } from 'react';
+import { api } from '../../lib/api';
+
+interface Milestone {
+  id: string;
+  name: string;
+  description: string;
+  amount: number;
+  status: string;  // pending, submitted, in_transit, partial, verified
+  communication_status: string;
+  trigger_type: string;
+  due_date: string;
+  paid_at: string;
+  partial_amount: number;
+  remaining_amount: number;
+  extended_to: string;
+  owner_message: string;
+  contractor_response: string;
+}
+
+interface PaymentPromiseData {
+  id: string;
+  total_amount: number;
+  currency: string;
+  status: string;
+  communication_status: string;
+  affected_by_community_event: boolean;
+  community_event_description: string;
+  honor_system_note: string;
+}
+
+interface PaymentPromiseProps {
+  conversationId: string;
+  myRole: 'owner' | 'contractor';
+}
+
+export function PaymentPromise({ conversationId, myRole }: PaymentPromiseProps) {
+  const [promise, setPromise] = useState<PaymentPromiseData | null>(null);
+  const [milestones, setMilestones] = useState<Milestone[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showCreate, setShowCreate] = useState(false);
+
+  useEffect(() => {
+    fetchPaymentPromise();
+  }, [conversationId]);
+
+  async function fetchPaymentPromise() {
+    setLoading(true);
+    try {
+      const data = await api.get<{ payment_promise: PaymentPromiseData; milestones: Milestone[] }>(
+        `/conversations/${conversationId}/payment-promise`
+      );
+      setPromise(data.payment_promise);
+      setMilestones(data.milestones || []);
+    } catch (error) {
+      console.error('Error fetching payment promise:', error);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function markAsSent(milestoneId: string) {
+    const reference = prompt('Payment reference (optional):');
+    
+    try {
+      await api.post(`/payment-milestones/${milestoneId}/sent`, { 
+        reference, 
+        message: 'Payment sent' 
+      });
+      fetchPaymentPromise();
+    } catch (error) {
+      console.error('Error marking as sent:', error);
+    }
+  }
+
+  async function confirmReceived(milestoneId: string, partial: boolean = false) {
+    const message = prompt('Any notes? (optional):');
+    let amount = null;
+    
+    if (partial) {
+      const amountStr = prompt('Amount received:');
+      if (!amountStr) return;
+      amount = parseFloat(amountStr);
+    }
+    
+    try {
+      await api.post(`/payment-milestones/${milestoneId}/received`, { 
+        message, amount, partial 
+      });
+      fetchPaymentPromise();
+      alert('Payment confirmed. Thank you!');
+    } catch (error) {
+      console.error('Error confirming receipt:', error);
+    }
+  }
+
+  async function requestExtension(milestoneId: string) {
+    const reason = prompt('Reason for extension request:');
+    if (!reason) return;
+    
+    const newDate = prompt('Requested new date (YYYY-MM-DD):');
+    
+    try {
+      await api.post(`/payment-milestones/${milestoneId}/request-extension`, { 
+        reason, new_date: newDate 
+      });
+      fetchPaymentPromise();
+      alert('Extension request sent. Contractor will see your message.');
+    } catch (error) {
+      console.error('Error requesting extension:', error);
+    }
+  }
+
+  async function grantExtension(milestoneId: string) {
+    const newDate = prompt('New due date (YYYY-MM-DD):');
+    const message = prompt('Message (optional):');
+    
+    try {
+      await api.post(`/payment-milestones/${milestoneId}/grant-extension`, { 
+        new_date: newDate, message 
+      });
+      fetchPaymentPromise();
+      alert('Extension granted. Thank you for working together.');
+    } catch (error) {
+      console.error('Error granting extension:', error);
+    }
+  }
+
+  async function noteCommunityEvent() {
+    const description = prompt('Describe the community event (fire, flood, etc.):');
+    if (!description) return;
+    
+    try {
+      await api.post(`/payment-promises/${promise?.id}/community-event`, {
+        event_description: description,
+        message: 'Community event noted'
+      });
+      fetchPaymentPromise();
+      alert('Community event noted. Everyone understands.');
+    } catch (error) {
+      console.error('Error noting community event:', error);
+    }
+  }
+
+  // FIXED: Map to actual backend statuses
+  function getStatusColor(status: string): string {
+    const colors: Record<string, string> = {
+      pending: 'bg-gray-100 text-gray-800',
+      submitted: 'bg-blue-100 text-blue-800',      // Owner marked sent
+      in_transit: 'bg-blue-100 text-blue-800',     // In transit
+      partial: 'bg-yellow-100 text-yellow-800',    // Partial payment
+      received: 'bg-green-100 text-green-800',     // Received
+      verified: 'bg-green-200 text-green-900'      // Verified
+    };
+    return colors[status] || 'bg-gray-100 text-gray-800';
+  }
+
+  function getStatusLabel(status: string): string {
+    const labels: Record<string, string> = {
+      pending: 'Pending',
+      submitted: 'Sent',
+      in_transit: 'In Transit',
+      partial: 'Partial',
+      received: 'Received',
+      verified: 'Confirmed'
+    };
+    return labels[status] || status;
+  }
+
+  function getCommunicationIcon(status: string): string {
+    const icons: Record<string, string> = {
+      on_track: '✓',
+      gentle_reminder: '💬',
+      behind_schedule: '⏰',
+      hardship_noted: '❤️',
+      community_event: '🌲',
+      worked_out: '🤝',
+      written_off: '📝'
+    };
+    return icons[status] || '';
+  }
+
+  if (loading) {
+    return <div className="p-4">Loading payment details...</div>;
+  }
+
+  if (!promise) {
+    return (
+      <div className="p-4">
+        {myRole === 'owner' ? (
+          <div className="text-center">
+            <p className="text-gray-600 mb-4">No payment promise yet</p>
+            <button
+              onClick={() => setShowCreate(true)}
+              className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+            >
+              Create Payment Promise
+            </button>
+            {showCreate && (
+              <CreatePaymentPromise 
+                conversationId={conversationId} 
+                onCreated={() => {
+                  setShowCreate(false);
+                  fetchPaymentPromise();
+                }}
+                onCancel={() => setShowCreate(false)}
+              />
+            )}
+          </div>
+        ) : (
+          <p className="text-gray-600 text-center">
+            Owner has not created a payment promise yet
+          </p>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-4 space-y-4">
+      {/* Header */}
+      <div className="bg-white border rounded-lg p-4">
+        <div className="flex justify-between items-start mb-2">
+          <h3 className="font-semibold text-lg">Payment Promise</h3>
+          <span className={`text-xs px-2 py-1 rounded ${getStatusColor(promise.status)}`}>
+            {getStatusLabel(promise.status)}
+          </span>
+        </div>
+        
+        <div className="text-2xl font-bold text-green-600 mb-2">
+          ${promise.total_amount?.toLocaleString()} {promise.currency}
+        </div>
+        
+        {promise.honor_system_note && (
+          <p className="text-sm text-gray-600 italic">
+            "{promise.honor_system_note}"
+          </p>
+        )}
+        
+        {/* Community Event Banner */}
+        {promise.affected_by_community_event && (
+          <div className="mt-3 bg-amber-50 border border-amber-200 rounded p-3">
+            <div className="flex items-center gap-2 text-amber-800">
+              <span>🌲</span>
+              <span className="font-medium">Community Event Noted</span>
+            </div>
+            <p className="text-sm text-amber-700 mt-1">
+              {promise.community_event_description}
+            </p>
+          </div>
+        )}
+
+        {/* Note Community Event Button */}
+        {!promise.affected_by_community_event && (
+          <button
+            onClick={noteCommunityEvent}
+            className="mt-3 text-sm text-gray-600 underline hover:text-gray-800"
+          >
+            Note a community event (fire, flood, etc.)
+          </button>
+        )}
+      </div>
+
+      {/* Milestones */}
+      <div className="space-y-3">
+        <h4 className="font-medium text-gray-700">Payment Schedule</h4>
+        
+        {milestones.map((milestone) => (
+          <div key={milestone.id} className="bg-white border rounded-lg p-4">
+            <div className="flex justify-between items-start mb-2">
+              <div>
+                <span className="font-medium">{milestone.name}</span>
+                {milestone.description && (
+                  <p className="text-sm text-gray-600">{milestone.description}</p>
+                )}
+              </div>
+              <div className="text-right">
+                <div className="font-semibold">${milestone.amount?.toLocaleString()}</div>
+                <span className={`text-xs px-2 py-0.5 rounded ${getStatusColor(milestone.status)}`}>
+                  {getStatusLabel(milestone.status)}
+                </span>
+              </div>
+            </div>
+            
+            {milestone.due_date && (
+              <div className="text-sm text-gray-600 mb-2">
+                Due: {new Date(milestone.due_date).toLocaleDateString()}
+                {milestone.extended_to && (
+                  <span className="text-amber-600 ml-2">
+                    → Extended to {new Date(milestone.extended_to).toLocaleDateString()}
+                  </span>
+                )}
+              </div>
+            )}
+            
+            {milestone.partial_amount > 0 && (
+              <div className="text-sm text-green-600 mb-2">
+                Received: ${milestone.partial_amount?.toLocaleString()}
+                {milestone.remaining_amount > 0 && (
+                  <span className="text-gray-600 ml-2">
+                    (${milestone.remaining_amount?.toLocaleString()} remaining)
+                  </span>
+                )}
+              </div>
+            )}
+            
+            {milestone.owner_message && (
+              <div className="bg-blue-50 rounded p-2 text-sm mb-2">
+                <span className="text-blue-800">Owner:</span> {milestone.owner_message}
+              </div>
+            )}
+            
+            {milestone.contractor_response && (
+              <div className="bg-green-50 rounded p-2 text-sm mb-2">
+                <span className="text-green-800">Contractor:</span> {milestone.contractor_response}
+              </div>
+            )}
+            
+            {/* Communication status */}
+            {milestone.communication_status && milestone.communication_status !== 'on_track' && (
+              <div className="text-sm text-gray-600 mb-2">
+                {getCommunicationIcon(milestone.communication_status)} {milestone.communication_status.replace(/_/g, ' ')}
+              </div>
+            )}
+            
+            {/* Actions */}
+            <div className="flex gap-2 mt-3 flex-wrap">
+              {myRole === 'owner' && milestone.status === 'pending' && (
+                <>
+                  <button
+                    onClick={() => markAsSent(milestone.id)}
+                    className="text-sm bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600"
+                  >
+                    Mark as Sent
+                  </button>
+                  <button
+                    onClick={() => requestExtension(milestone.id)}
+                    className="text-sm bg-gray-100 text-gray-700 px-3 py-1 rounded hover:bg-gray-200"
+                  >
+                    Request Extension
+                  </button>
+                </>
+              )}
+              
+              {myRole === 'contractor' && (milestone.status === 'submitted' || milestone.status === 'in_transit') && (
+                <>
+                  <button
+                    onClick={() => confirmReceived(milestone.id, false)}
+                    className="text-sm bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600"
+                  >
+                    Confirm Received
+                  </button>
+                  <button
+                    onClick={() => confirmReceived(milestone.id, true)}
+                    className="text-sm bg-yellow-500 text-white px-3 py-1 rounded hover:bg-yellow-600"
+                  >
+                    Partial Payment
+                  </button>
+                </>
+              )}
+              
+              {myRole === 'contractor' && milestone.communication_status === 'behind_schedule' && (
+                <button
+                  onClick={() => grantExtension(milestone.id)}
+                  className="text-sm bg-purple-500 text-white px-3 py-1 rounded hover:bg-purple-600"
+                >
+                  Grant Extension
+                </button>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Honor System Note - UPDATED */}
+      <div className="bg-gray-50 rounded-lg p-4 text-sm text-gray-600">
+        <p className="font-medium mb-1">💡 Honor System</p>
+        <p>
+          Payments are tracked for communication, not enforcement. 
+          Work continues regardless of payment status. 
+          Life happens - we work it out together. 
+          Extensions and community events are expected realities.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// Create Payment Promise Form - UPDATED with honor system option
+function CreatePaymentPromise({ 
+  conversationId, 
+  onCreated, 
+  onCancel 
+}: { 
+  conversationId: string; 
+  onCreated: () => void; 
+  onCancel: () => void;
+}) {
+  const [totalAmount, setTotalAmount] = useState('');
+  const [depositAmount, setDepositAmount] = useState('');
+  const [depositMethod, setDepositMethod] = useState('etransfer');
+  const [saving, setSaving] = useState(false);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!totalAmount) return;
+    
+    setSaving(true);
+    try {
+      await api.post(`/conversations/${conversationId}/payment-promise`, {
+        total_amount: parseFloat(totalAmount),
+        deposit_amount: depositAmount ? parseFloat(depositAmount) : 0,
+        deposit_method: depositMethod,
+        honor_system_note: 'Payment on the honor system. We work it out together.'
+      });
+      onCreated();
+    } catch (error: any) {
+      alert(error.message || 'Failed to create payment promise');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-lg p-6 max-w-md w-full">
+        <h3 className="text-lg font-semibold mb-4">Create Payment Promise</h3>
+        
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium mb-1">Total Amount ($)</label>
+            <input
+              type="number"
+              value={totalAmount}
+              onChange={(e) => setTotalAmount(e.target.value)}
+              className="w-full border rounded p-2"
+              placeholder="15000"
+              required
+            />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium mb-1">Deposit Amount ($)</label>
+            <input
+              type="number"
+              value={depositAmount}
+              onChange={(e) => setDepositAmount(e.target.value)}
+              className="w-full border rounded p-2"
+              placeholder="3000"
+            />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium mb-1">Payment Method</label>
+            <select
+              value={depositMethod}
+              onChange={(e) => setDepositMethod(e.target.value)}
+              className="w-full border rounded p-2"
+            >
+              <option value="etransfer">e-Transfer</option>
+              <option value="cheque">Cheque</option>
+              <option value="cash">Cash</option>
+              <option value="card">Credit Card</option>
+              <option value="arranged">Arranged / Honor System</option>
+            </select>
+          </div>
+          
+          <div className="bg-gray-50 rounded p-3 text-sm text-gray-600">
+            💡 This creates a payment tracking record. Work continues regardless of payment status. 
+            This is communication, not enforcement.
+          </div>
+          
+          <div className="flex gap-2">
+            <button
+              type="submit"
+              disabled={saving}
+              className="flex-1 bg-blue-500 text-white py-2 rounded hover:bg-blue-600 disabled:opacity-50"
+            >
+              {saving ? 'Creating...' : 'Create Promise'}
+            </button>
+            <button
+              type="button"
+              onClick={onCancel}
+              className="px-4 py-2 border rounded hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+```
+
+### File: client/src/components/trust/TrustSignals.tsx
+```tsx
+import React, { useState, useEffect } from 'react';
+import { api } from '../../lib/api';
+
+/**
+ * TRUST SIGNALS - Maps to ACTUAL DB schema
+ * 
+ * Actual columns in trust_signals:
+ * - reliability_score, professionalism_score, communication_score, community_standing_score
+ * - response_time_avg_hours, communication_responsiveness_hours
+ * - repeat_customer_count, positive_feedback_count, public_appreciation_count
+ * - years_in_community, confidence, data_points
+ * - display_attributes (text[])
+ * 
+ * NEVER display publicly: dispute_rate, payment_timeliness_days (weaponizable)
+ */
+
+interface TrustSignalsRaw {
+  party_id: string;
+  reliability_score?: number;
+  professionalism_score?: number;
+  communication_score?: number;
+  community_standing_score?: number;
+  response_time_avg_hours?: number;
+  repeat_customer_count?: number;
+  positive_feedback_count?: number;
+  public_appreciation_count?: number;
+  years_in_community?: number;
+  confidence?: number;
+  data_points?: number;
+  display_attributes?: string[];
+  // These exist but should NOT be shown publicly
+  // dispute_rate?: number;
+  // payment_timeliness_days?: number;
+}
+
+interface TrustDisplayData {
+  badges: string[];
+  stats: Array<{ label: string; value: string }>;
+  highlights: string[];
+  raw: TrustSignalsRaw;
+}
+
+interface TrustSignalsProps {
+  partyId: string;
+  compact?: boolean;
+}
+
+export function TrustSignals({ partyId, compact = false }: TrustSignalsProps) {
+  const [display, setDisplay] = useState<TrustDisplayData | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchTrustSignals();
+  }, [partyId]);
+
+  async function fetchTrustSignals() {
+    setLoading(true);
+    try {
+      const data = await api.get<any>(`/parties/${partyId}/trust-signals?format=display`);
+      
+      // Map API response to display format using ACTUAL columns
+      const raw = data.trust_signals || data.raw || {};
+      
+      // Build badges from actual data
+      const badges: string[] = [];
+      if (raw.reliability_score && raw.reliability_score >= 80) {
+        badges.push('Reliable');
+      }
+      if (raw.professionalism_score && raw.professionalism_score >= 80) {
+        badges.push('Professional');
+      }
+      if (raw.community_standing_score && raw.community_standing_score >= 80) {
+        badges.push('Community Verified');
+      }
+      if (raw.repeat_customer_count && raw.repeat_customer_count >= 3) {
+        badges.push('Repeat Customers');
+      }
+      if (raw.years_in_community && raw.years_in_community >= 5) {
+        badges.push('Established');
+      }
+      
+      // Build stats from actual data
+      const stats: Array<{ label: string; value: string }> = [];
+      
+      if (raw.repeat_customer_count && raw.repeat_customer_count > 0) {
+        stats.push({ label: 'Repeat Customers', value: raw.repeat_customer_count.toString() });
+      }
+      
+      if (raw.public_appreciation_count && raw.public_appreciation_count > 0) {
+        stats.push({ label: 'Appreciations', value: raw.public_appreciation_count.toString() });
+      }
+      
+      if (raw.years_in_community) {
+        stats.push({ label: 'Years in Community', value: raw.years_in_community.toString() });
+      }
+      
+      // Only show response time if contractor opted in (check display_attributes)
+      // By default, do NOT show (weaponizable in small towns)
+      if (raw.display_attributes?.includes('response_time') && raw.response_time_avg_hours) {
+        const hours = raw.response_time_avg_hours;
+        const display = hours < 1 
+          ? '< 1 hour' 
+          : hours < 24 
+            ? `${Math.round(hours)} hours` 
+            : `${Math.round(hours / 24)} days`;
+        stats.push({ label: 'Avg Response', value: display });
+      }
+      
+      // Confidence indicator
+      if (raw.confidence && raw.confidence >= 70) {
+        stats.push({ label: 'Data Confidence', value: `${raw.confidence}%` });
+      }
+      
+      // Highlights from display_attributes
+      const highlights = (raw.display_attributes || []).filter(
+        (attr: string) => !['response_time'].includes(attr)
+      );
+      
+      setDisplay({
+        badges: data.badges || badges,
+        stats: data.stats || stats,
+        highlights: data.highlights || highlights,
+        raw
+      });
+    } catch (error) {
+      console.error('Error fetching trust signals:', error);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  if (loading) {
+    return <div className="animate-pulse bg-gray-100 rounded h-20"></div>;
+  }
+
+  if (!display) {
+    return <div className="text-gray-500 text-sm">No trust data available yet</div>;
+  }
+
+  if (compact) {
+    return (
+      <div className="flex flex-wrap gap-2">
+        {display.badges.map((badge, i) => (
+          <span key={i} className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">
+            {badge}
+          </span>
+        ))}
+        {display.stats.slice(0, 2).map((stat, i) => (
+          <span key={`stat-${i}`} className="text-xs text-gray-600">
+            {stat.value} {stat.label.toLowerCase()}
+          </span>
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white border rounded-lg p-4">
+      <h3 className="font-semibold mb-3">Trust Signals</h3>
+      
+      {/* Badges */}
+      {display.badges.length > 0 && (
+        <div className="flex flex-wrap gap-2 mb-4">
+          {display.badges.map((badge, i) => (
+            <span 
+              key={i} 
+              className="bg-green-100 text-green-800 text-sm px-3 py-1 rounded-full flex items-center gap-1"
+            >
+              {badge === 'Reliable' && '✓'}
+              {badge === 'Professional' && '⭐'}
+              {badge === 'Community Verified' && '🏘️'}
+              {badge === 'Repeat Customers' && '🔄'}
+              {badge === 'Established' && '🌲'}
+              {badge}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {/* Stats Grid */}
+      {display.stats.length > 0 && (
+        <div className="grid grid-cols-2 gap-4 mb-4">
+          {display.stats.map((stat, i) => (
+            <div key={i} className="text-center p-3 bg-gray-50 rounded">
+              <div className="text-2xl font-bold text-gray-900">{stat.value}</div>
+              <div className="text-sm text-gray-600">{stat.label}</div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Highlights */}
+      {display.highlights.length > 0 && (
+        <div className="mb-4">
+          <div className="text-sm font-medium text-gray-700 mb-2">Highlights</div>
+          <div className="flex flex-wrap gap-2">
+            {display.highlights.map((highlight, i) => (
+              <span key={i} className="bg-yellow-50 text-yellow-800 text-sm px-2 py-1 rounded">
+                ⭐ {highlight}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Score bars (if available and contractor allows) */}
+      {display.raw.reliability_score !== undefined && (
+        <div className="space-y-2 mt-4">
+          <ScoreBar label="Reliability" score={display.raw.reliability_score} />
+          {display.raw.professionalism_score !== undefined && (
+            <ScoreBar label="Professionalism" score={display.raw.professionalism_score} />
+          )}
+          {display.raw.communication_score !== undefined && (
+            <ScoreBar label="Communication" score={display.raw.communication_score} />
+          )}
+          {display.raw.community_standing_score !== undefined && (
+            <ScoreBar label="Community Standing" score={display.raw.community_standing_score} />
+          )}
+        </div>
+      )}
+
+      {/* Privacy note */}
+      <div className="mt-4 text-xs text-gray-500">
+        Trust signals are aggregated patterns. Individual feedback is private.
+      </div>
+    </div>
+  );
+}
+
+function ScoreBar({ label, score }: { label: string; score: number }) {
+  const color = score >= 80 ? 'bg-green-500' : score >= 60 ? 'bg-yellow-500' : 'bg-gray-400';
+  
+  return (
+    <div>
+      <div className="flex justify-between text-xs text-gray-600 mb-1">
+        <span>{label}</span>
+        <span>{score}</span>
+      </div>
+      <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+        <div 
+          className={`h-full ${color} rounded-full transition-all`} 
+          style={{ width: `${score}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+```
+
+### File: client/src/components/feedback/FeedbackForm.tsx
+```tsx
+import React, { useState } from 'react';
+import { api } from '../../lib/api';
+
+interface FeedbackFormProps {
+  conversationId: string;
+  onSubmitted?: () => void;
+}
+
+/**
+ * FEEDBACK FORM - Small Town Philosophy
+ * 
+ * - Always private by default
+ * - No star ratings (weaponizable) - use 3-option scale instead
+ * - Optional "platform-only private review" (feature-flagged, default OFF)
+ * - Positive snippet requires explicit opt-in AND contractor promotion
+ */
+
+export function FeedbackForm({ conversationId, onSubmitted }: FeedbackFormProps) {
+  const [feedbackText, setFeedbackText] = useState('');
+  const [sentiment, setSentiment] = useState<'positive' | 'neutral' | 'issue'>('positive');
+  
+  // CHANGED: 3-option scale instead of stars (less weaponizable)
+  const [qualityLevel, setQualityLevel] = useState<'exceeded' | 'met' | 'needs_attention' | null>(null);
+  const [communicationLevel, setCommunicationLevel] = useState<'exceeded' | 'met' | 'needs_attention' | null>(null);
+  const [timelinessLevel, setTimelinessLevel] = useState<'exceeded' | 'met' | 'needs_attention' | null>(null);
+  
+  const [allowPublic, setAllowPublic] = useState(false);
+  const [publicSnippet, setPublicSnippet] = useState('');
+  
+  // Optional: platform-only private review (feature-flagged)
+  const [sharePlatformPrivate, setSharePlatformPrivate] = useState(false);
+  const PLATFORM_PRIVATE_ENABLED = false; // Feature flag - OFF by default
+  
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+
+  // Convert 3-option scale to numeric for backend (if needed)
+  function levelToRating(level: string | null): number | null {
+    if (!level) return null;
+    switch (level) {
+      case 'exceeded': return 5;
+      case 'met': return 3;
+      case 'needs_attention': return 2;
+      default: return null;
+    }
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!feedbackText.trim()) return;
+
+    setSubmitting(true);
+    try {
+      await api.post(`/conversations/${conversationId}/feedback`, {
+        feedback_text: feedbackText,
+        sentiment,
+        quality_rating: levelToRating(qualityLevel),
+        communication_rating: levelToRating(communicationLevel),
+        timeliness_rating: levelToRating(timelinessLevel),
+        allow_public_snippet: allowPublic && sentiment === 'positive',
+        public_snippet: publicSnippet || feedbackText.substring(0, 100),
+        platform_private: sharePlatformPrivate && sentiment === 'issue'
+      });
+      
+      setSubmitted(true);
+      onSubmitted?.();
+    } catch (error: any) {
+      alert(error.message || 'Failed to submit feedback');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  if (submitted) {
+    return (
+      <div className="bg-green-50 border border-green-200 rounded-lg p-6 text-center">
+        <div className="text-4xl mb-2">✓</div>
+        <h3 className="font-semibold text-green-800 mb-2">Thank You!</h3>
+        <p className="text-green-700 text-sm">
+          Your feedback has been sent directly to the company's private inbox.
+          It will NOT be posted publicly.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="bg-white border rounded-lg p-6 space-y-4">
+      <div>
+        <h3 className="font-semibold mb-1">Share Your Feedback</h3>
+        <p className="text-sm text-gray-600">
+          Your comments go directly to the company's leadership. 
+          They are <strong>NOT posted publicly</strong>.
+        </p>
+      </div>
+
+      {/* Sentiment */}
+      <div>
+        <label className="block text-sm font-medium mb-2">How was your experience?</label>
+        <div className="flex gap-2">
+          {(['positive', 'neutral', 'issue'] as const).map((s) => (
+            <button
+              key={s}
+              type="button"
+              onClick={() => setSentiment(s)}
+              className={`flex-1 py-2 px-3 rounded border transition ${
+                sentiment === s
+                  ? s === 'positive' ? 'bg-green-100 border-green-500 text-green-800' :
+                    s === 'neutral' ? 'bg-gray-100 border-gray-500 text-gray-800' :
+                    'bg-amber-100 border-amber-500 text-amber-800'
+                  : 'bg-white hover:bg-gray-50'
+              }`}
+            >
+              {s === 'positive' && '😊 Great'}
+              {s === 'neutral' && '😐 Okay'}
+              {s === 'issue' && '😕 Issue'}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* CHANGED: 3-option scale instead of stars */}
+      <div className="grid grid-cols-3 gap-4">
+        <LevelInput 
+          label="Quality" 
+          value={qualityLevel} 
+          onChange={setQualityLevel} 
+        />
+        <LevelInput 
+          label="Communication" 
+          value={communicationLevel} 
+          onChange={setCommunicationLevel} 
+        />
+        <LevelInput 
+          label="Timeliness" 
+          value={timelinessLevel} 
+          onChange={setTimelinessLevel} 
+        />
+      </div>
+
+      {/* Feedback Text */}
+      <div>
+        <label className="block text-sm font-medium mb-1">Your Feedback</label>
+        <textarea
+          value={feedbackText}
+          onChange={(e) => setFeedbackText(e.target.value)}
+          className="w-full border rounded p-3 h-32 resize-none"
+          placeholder="Share your experience..."
+          required
+        />
+      </div>
+
+      {/* Public Snippet Option (only for positive) */}
+      {sentiment === 'positive' && (
+        <div className="bg-blue-50 border border-blue-200 rounded p-4">
+          <label className="flex items-start gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={allowPublic}
+              onChange={(e) => setAllowPublic(e.target.checked)}
+              className="mt-1"
+            />
+            <div>
+              <span className="text-sm font-medium text-blue-800">
+                Allow company to share a short positive snippet publicly
+              </span>
+              <p className="text-xs text-blue-600 mt-1">
+                Only the company can choose to share this. Your full feedback stays private.
+              </p>
+            </div>
+          </label>
+          
+          {allowPublic && (
+            <div className="mt-3">
+              <label className="block text-xs font-medium text-blue-800 mb-1">
+                Public snippet (optional)
+              </label>
+              <input
+                type="text"
+                value={publicSnippet}
+                onChange={(e) => setPublicSnippet(e.target.value)}
+                className="w-full border rounded p-2 text-sm"
+                placeholder="Great work!"
+                maxLength={280}
+              />
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Platform-only private review (for issues) - feature-flagged */}
+      {PLATFORM_PRIVATE_ENABLED && sentiment === 'issue' && (
+        <div className="bg-gray-50 border border-gray-200 rounded p-4">
+          <label className="flex items-start gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={sharePlatformPrivate}
+              onChange={(e) => setSharePlatformPrivate(e.target.checked)}
+              className="mt-1"
+            />
+            <div>
+              <span className="text-sm font-medium text-gray-800">
+                Also share privately with the platform (to help resolve disputes)
+              </span>
+              <p className="text-xs text-gray-600 mt-1">
+                This will NOT be shared with the contractor. Platform use only.
+              </p>
+            </div>
+          </label>
+        </div>
+      )}
+
+      {/* Privacy Note */}
+      <div className="bg-gray-50 rounded p-3 text-xs text-gray-600">
+        🔒 <strong>Privacy:</strong> Your feedback goes directly to the company's private inbox. 
+        It is NOT posted publicly. The company can delete feedback at any time - it's their right.
+        {sentiment === 'positive' && allowPublic && (
+          <> Only if you checked the box above AND the company chooses to share it, 
+          will a short positive snippet appear publicly.</>
+        )}
+      </div>
+
+      <button
+        type="submit"
+        disabled={!feedbackText.trim() || submitting}
+        className="w-full bg-blue-500 text-white py-3 rounded-lg font-medium hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        {submitting ? 'Sending...' : 'Send Feedback'}
+      </button>
+    </form>
+  );
+}
+
+// CHANGED: 3-option scale component instead of stars
+function LevelInput({ 
+  label, 
+  value, 
+  onChange 
+}: { 
+  label: string; 
+  value: 'exceeded' | 'met' | 'needs_attention' | null; 
+  onChange: (v: 'exceeded' | 'met' | 'needs_attention' | null) => void;
+}) {
+  const options: Array<{ value: 'exceeded' | 'met' | 'needs_attention'; label: string; color: string }> = [
+    { value: 'exceeded', label: '👍', color: 'bg-green-100 border-green-500 text-green-800' },
+    { value: 'met', label: '👌', color: 'bg-gray-100 border-gray-500 text-gray-800' },
+    { value: 'needs_attention', label: '👎', color: 'bg-amber-100 border-amber-500 text-amber-800' },
+  ];
+
+  return (
+    <div>
+      <label className="block text-xs font-medium text-gray-700 mb-1 text-center">{label}</label>
+      <div className="flex justify-center gap-1">
+        {options.map((opt) => (
+          <button
+            key={opt.value}
+            type="button"
+            onClick={() => onChange(value === opt.value ? null : opt.value)}
+            className={`w-10 h-10 rounded border text-lg transition ${
+              value === opt.value ? opt.color : 'bg-white hover:bg-gray-50'
+            }`}
+            title={opt.value.replace('_', ' ')}
+          >
+            {opt.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+```
+
+### File: client/src/components/feedback/FeedbackInbox.tsx
+```tsx
+import React, { useState, useEffect } from 'react';
+import { api } from '../../lib/api';
+
+interface Feedback {
+  id: string;
+  from_display_name: string;
+  feedback_text: string;
+  sentiment: 'positive' | 'neutral' | 'issue';
+  quality_rating: number;
+  communication_rating: number;
+  timeliness_rating: number;
+  is_handled: boolean;
+  created_at: string;
+  opportunity_title: string;
+}
+
+interface PendingAppreciation {
+  id: string;
+  snippet: string;
+  from_display_name: string;
+  is_public: boolean;
+}
+
+export function FeedbackInbox() {
+  const [feedback, setFeedback] = useState<Feedback[]>([]);
+  const [appreciations, setAppreciations] = useState<PendingAppreciation[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState<string>('unhandled');
+  const [activeTab, setActiveTab] = useState<'feedback' | 'appreciations'>('feedback');
+
+  useEffect(() => {
+    fetchFeedback();
+    fetchAppreciations();
+  }, [filter]);
+
+  async function fetchFeedback() {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (filter === 'unhandled') params.set('include_handled', 'false');
+      if (filter === 'positive') params.set('sentiment', 'positive');
+      if (filter === 'issue') params.set('sentiment', 'issue');
+      
+      const data = await api.get<{ feedback: Feedback[] }>(`/contractors/me/feedback?${params}`);
+      setFeedback(data.feedback || []);
+    } catch (error) {
+      console.error('Error fetching feedback:', error);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function fetchAppreciations() {
+    try {
+      // Get appreciations that could be promoted
+      const data = await api.get<{ appreciations: PendingAppreciation[] }>(
+        `/contractors/me/appreciations?pending=true`
+      );
+      setAppreciations(data.appreciations || []);
+    } catch (error) {
+      // Endpoint might not exist yet
+      console.log('Appreciations endpoint not available');
+    }
+  }
+
+  async function handleFeedback(id: string, action: 'mark_handled' | 'archive' | 'delete') {
+    const notes = action === 'delete' ? prompt('Reason for deleting (optional):') : undefined;
+    
+    try {
+      await api.post(`/contractors/me/feedback/${id}/handle`, { action, notes });
+      fetchFeedback();
+    } catch (error) {
+      console.error('Error handling feedback:', error);
+    }
+  }
+
+  async function promoteAppreciation(id: string) {
+    if (!confirm('Make this appreciation public? It will appear on your profile.')) return;
+    
+    try {
+      await api.post(`/contractors/me/appreciations/${id}/promote`);
+      fetchAppreciations();
+      alert('Appreciation is now public!');
+    } catch (error) {
+      console.error('Error promoting appreciation:', error);
+    }
+  }
+
+  function getSentimentColor(sentiment: string): string {
+    switch (sentiment) {
+      case 'positive': return 'bg-green-100 text-green-800';
+      case 'neutral': return 'bg-gray-100 text-gray-800';
+      case 'issue': return 'bg-amber-100 text-amber-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  }
+
+  function getSentimentIcon(sentiment: string): string {
+    switch (sentiment) {
+      case 'positive': return '😊';
+      case 'neutral': return '😐';
+      case 'issue': return '😕';
+      default: return '📝';
+    }
+  }
+
+  // Convert numeric rating to level label
+  function ratingToLevel(rating: number | null): string {
+    if (!rating) return '-';
+    if (rating >= 4) return '👍';
+    if (rating >= 3) return '👌';
+    return '👎';
+  }
+
+  return (
+    <div className="bg-white rounded-lg border">
+      <div className="p-4 border-b">
+        <h2 className="text-lg font-semibold mb-3">Feedback Inbox</h2>
+        
+        {/* Tabs */}
+        <div className="flex gap-2 mb-3">
+          <button
+            onClick={() => setActiveTab('feedback')}
+            className={`px-3 py-1 rounded text-sm ${
+              activeTab === 'feedback' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100'
+            }`}
+          >
+            Feedback
+          </button>
+          <button
+            onClick={() => setActiveTab('appreciations')}
+            className={`px-3 py-1 rounded text-sm ${
+              activeTab === 'appreciations' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100'
+            }`}
+          >
+            Appreciations to Promote
+          </button>
+        </div>
+        
+        {activeTab === 'feedback' && (
+          <select
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+            className="w-full border rounded p-2 text-sm"
+          >
+            <option value="unhandled">Unhandled</option>
+            <option value="all">All</option>
+            <option value="positive">Positive</option>
+            <option value="issue">Issues</option>
+          </select>
+        )}
+      </div>
+
+      {activeTab === 'feedback' && (
+        <div className="divide-y">
+          {loading ? (
+            <div className="p-8 text-center text-gray-500">Loading...</div>
+          ) : feedback.length === 0 ? (
+            <div className="p-8 text-center text-gray-500">
+              No feedback yet. Keep up the good work!
+            </div>
+          ) : (
+            feedback.map((fb) => (
+              <div key={fb.id} className="p-4">
+                <div className="flex justify-between items-start mb-2">
+                  <div className="flex items-center gap-2">
+                    <span className={`text-xs px-2 py-1 rounded ${getSentimentColor(fb.sentiment)}`}>
+                      {getSentimentIcon(fb.sentiment)} {fb.sentiment}
+                    </span>
+                    <span className="text-sm text-gray-600">
+                      from {fb.from_display_name}
+                    </span>
+                    {fb.is_handled && (
+                      <span className="text-xs text-green-600">✓ Handled</span>
+                    )}
+                  </div>
+                  <span className="text-xs text-gray-500">
+                    {new Date(fb.created_at).toLocaleDateString()}
+                  </span>
+                </div>
+
+                {fb.opportunity_title && (
+                  <div className="text-xs text-gray-500 mb-2">
+                    Re: {fb.opportunity_title}
+                  </div>
+                )}
+
+                <p className="text-gray-800 mb-3">{fb.feedback_text}</p>
+
+                {/* Ratings - using emoji levels */}
+                {(fb.quality_rating || fb.communication_rating || fb.timeliness_rating) && (
+                  <div className="flex gap-4 text-sm text-gray-600 mb-3">
+                    {fb.quality_rating && (
+                      <span>Quality: {ratingToLevel(fb.quality_rating)}</span>
+                    )}
+                    {fb.communication_rating && (
+                      <span>Comm: {ratingToLevel(fb.communication_rating)}</span>
+                    )}
+                    {fb.timeliness_rating && (
+                      <span>Time: {ratingToLevel(fb.timeliness_rating)}</span>
+                    )}
+                  </div>
+                )}
+
+                {/* Actions */}
+                {!fb.is_handled && (
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => handleFeedback(fb.id, 'mark_handled')}
+                      className="text-sm bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600"
+                    >
+                      Mark Handled
+                    </button>
+                    <button
+                      onClick={() => handleFeedback(fb.id, 'archive')}
+                      className="text-sm bg-gray-100 text-gray-700 px-3 py-1 rounded hover:bg-gray-200"
+                    >
+                      Archive
+                    </button>
+                    <button
+                      onClick={() => handleFeedback(fb.id, 'delete')}
+                      className="text-sm text-red-600 px-3 py-1 rounded hover:bg-red-50"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                )}
+              </div>
+            ))
+          )}
+        </div>
+      )}
+
+      {activeTab === 'appreciations' && (
+        <div className="divide-y">
+          {appreciations.length === 0 ? (
+            <div className="p-8 text-center text-gray-500">
+              No pending appreciations. When customers offer positive snippets, they'll appear here.
+            </div>
+          ) : (
+            appreciations.map((app) => (
+              <div key={app.id} className="p-4">
+                <div className="flex justify-between items-start mb-2">
+                  <span className="text-sm text-gray-600">from {app.from_display_name}</span>
+                  {app.is_public && (
+                    <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
+                      Public
+                    </span>
+                  )}
+                </div>
+                <p className="text-gray-800 mb-3">"{app.snippet}"</p>
+                {!app.is_public && (
+                  <button
+                    onClick={() => promoteAppreciation(app.id)}
+                    className="text-sm bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600"
+                  >
+                    Make Public
+                  </button>
+                )}
+              </div>
+            ))
+          )}
+        </div>
+      )}
+
+      <div className="p-4 bg-gray-50 text-xs text-gray-600 border-t">
+        🔒 This inbox is private. Feedback is never posted publicly without your action. 
+        You can delete any feedback - it's your right. 
+        Deleted feedback is removed from your view and never public.
+      </div>
+    </div>
+  );
+}
+```
+
+### File: client/src/components/aiAssist/AIAssistPanel.tsx
+```tsx
+import React, { useState, useEffect } from 'react';
+import { api } from '../../lib/api';
+
+/**
+ * AI ASSIST PANEL - Mat (Materials) + Logan (Logistics)
+ * 
+ * NON-CLIPPY RULES:
+ * - Only appears when user opts in
+ * - Suggests next best step, not chatter
+ * - Every message includes one-tap action
+ * - Never blocks posting/bidding/booking
+ */
+
+interface AIAssistPanelProps {
+  opportunityId: string;
+  onClose: () => void;
+}
+
+interface AIMessage {
+  id: string;
+  role: 'system' | 'user';
+  mode: 'mat' | 'logan';
+  content: string;
+  action?: {
+    type: string;
+    label: string;
+    data?: any;
+  };
+  created_at: string;
+}
+
+interface Recommendation {
+  type: string;
+  priority: 'high' | 'medium' | 'low';
+  title: string;
+  description: string;
+  action_label: string;
+  action_type: string;
+}
+
+export function AIAssistPanel({ opportunityId, onClose }: AIAssistPanelProps) {
+  const [mode, setMode] = useState<'mat' | 'logan'>('mat');
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [messages, setMessages] = useState<AIMessage[]>([]);
+  const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
+  const [userInput, setUserInput] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [starting, setStarting] = useState(false);
+
+  async function startSession() {
+    setStarting(true);
+    try {
+      const data = await api.post<{ session_id: string; initial_recommendations: Recommendation[] }>(
+        `/opportunities/${opportunityId}/ai-assist/start`,
+        { mode }
+      );
+      setSessionId(data.session_id);
+      setRecommendations(data.initial_recommendations || []);
+      
+      // Add welcome message
+      setMessages([{
+        id: 'welcome',
+        role: 'system',
+        mode,
+        content: mode === 'mat' 
+          ? "Hi! I'm Mat. I can help refine your estimate, check dimensions, and suggest materials. What would you like to work on?"
+          : "Hi! I'm Logan. I can help with access planning, delivery logistics, and cost-saving suggestions. What's on your mind?",
+        created_at: new Date().toISOString()
+      }]);
+    } catch (error) {
+      console.error('Error starting AI session:', error);
+      // Show fallback message
+      setMessages([{
+        id: 'fallback',
+        role: 'system',
+        mode,
+        content: mode === 'mat'
+          ? "Materials assistant is getting set up. Try adding measurements or uploading photos in the meantime."
+          : "Logistics assistant is getting set up. Try adding access constraints in the meantime.",
+        created_at: new Date().toISOString()
+      }]);
+    } finally {
+      setStarting(false);
+    }
+  }
+
+  async function sendMessage() {
+    if (!userInput.trim()) return;
+    
+    const userMessage: AIMessage = {
+      id: `user-${Date.now()}`,
+      role: 'user',
+      mode,
+      content: userInput,
+      created_at: new Date().toISOString()
+    };
+    
+    setMessages(prev => [...prev, userMessage]);
+    setUserInput('');
+    setLoading(true);
+    
+    try {
+      if (sessionId) {
+        const data = await api.post<{ message: AIMessage; recommendations?: Recommendation[] }>(
+          `/ai-assist/${sessionId}/message`,
+          { content: userInput }
+        );
+        
+        setMessages(prev => [...prev, data.message]);
+        if (data.recommendations) {
+          setRecommendations(data.recommendations);
+        }
+      }
+    } catch (error) {
+      console.error('Error sending message:', error);
+      // Add error message
+      setMessages(prev => [...prev, {
+        id: `error-${Date.now()}`,
+        role: 'system',
+        mode,
+        content: "I couldn't process that. Try a specific question about your project.",
+        created_at: new Date().toISOString()
+      }]);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleAction(action: { type: string; label: string; data?: any }) {
+    // Handle different action types
+    switch (action.type) {
+      case 'add_measurements':
+        // Could open a measurements modal
+        alert('Measurements feature coming soon. For now, add dimensions in the description.');
+        break;
+      case 'upload_photos':
+        // Could open file upload
+        alert('Photo upload feature coming soon.');
+        break;
+      case 'add_access_constraints':
+        // Could open access form
+        alert('Access constraints feature coming soon.');
+        break;
+      case 'convert_to_tasks':
+        // Could convert recommendations to tasks
+        alert('Task conversion feature coming soon.');
+        break;
+      default:
+        console.log('Unknown action:', action);
+    }
+  }
+
+  // Start session when mode changes
+  useEffect(() => {
+    startSession();
+  }, [mode]);
+
+  return (
+    <div className="fixed right-0 top-0 h-full w-96 bg-white border-l shadow-lg flex flex-col z-50">
+      {/* Header */}
+      <div className="p-4 border-b flex justify-between items-center">
+        <div>
+          <h3 className="font-semibold">
+            {mode === 'mat' ? '🧰 Mat (Materials)' : '🚛 Logan (Logistics)'}
+          </h3>
+          <p className="text-xs text-gray-500">Optional refinement assistant</p>
+        </div>
+        <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+          ✕
+        </button>
+      </div>
+
+      {/* Mode Tabs */}
+      <div className="flex border-b">
+        <button
+          onClick={() => setMode('mat')}
+          className={`flex-1 py-2 text-sm font-medium ${
+            mode === 'mat' 
+              ? 'bg-blue-50 text-blue-700 border-b-2 border-blue-500' 
+              : 'text-gray-600 hover:bg-gray-50'
+          }`}
+        >
+          🧰 Materials
+        </button>
+        <button
+          onClick={() => setMode('logan')}
+          className={`flex-1 py-2 text-sm font-medium ${
+            mode === 'logan' 
+              ? 'bg-green-50 text-green-700 border-b-2 border-green-500' 
+              : 'text-gray-600 hover:bg-gray-50'
+          }`}
+        >
+          🚛 Logistics
+        </button>
+      </div>
+
+      {/* Recommendations (Action-first, not chatty) */}
+      {recommendations.length > 0 && (
+        <div className="p-3 border-b bg-gray-50">
+          <div className="text-xs font-medium text-gray-500 mb-2">Suggestions</div>
+          <div className="space-y-2">
+            {recommendations.slice(0, 3).map((rec, i) => (
+              <div 
+                key={i} 
+                className={`p-2 rounded border ${
+                  rec.priority === 'high' ? 'border-amber-300 bg-amber-50' : 'border-gray-200 bg-white'
+                }`}
+              >
+                <div className="text-sm font-medium">{rec.title}</div>
+                <div className="text-xs text-gray-600">{rec.description}</div>
+                <button
+                  onClick={() => handleAction({ type: rec.action_type, label: rec.action_label })}
+                  className="mt-1 text-xs text-blue-600 hover:underline"
+                >
+                  {rec.action_label} →
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Messages */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-3">
+        {starting ? (
+          <div className="text-center text-gray-500 text-sm">Starting assistant...</div>
+        ) : (
+          messages.map((msg) => (
+            <div
+              key={msg.id}
+              className={`${
+                msg.role === 'user' ? 'text-right' : ''
+              }`}
+            >
+              <div
+                className={`inline-block max-w-[85%] p-3 rounded-lg text-sm ${
+                  msg.role === 'user'
+                    ? 'bg-blue-500 text-white'
+                    : 'bg-gray-100 text-gray-800'
+                }`}
+              >
+                {msg.content}
+                
+                {/* Action button if present */}
+                {msg.action && (
+                  <button
+                    onClick={() => handleAction(msg.action!)}
+                    className={`block mt-2 text-xs font-medium ${
+                      msg.role === 'user' ? 'text-blue-100 hover:text-white' : 'text-blue-600 hover:underline'
+                    }`}
+                  >
+                    {msg.action.label} →
+                  </button>
+                )}
+              </div>
+            </div>
+          ))
+        )}
+        
+        {loading && (
+          <div className="text-gray-500 text-sm">Thinking...</div>
+        )}
+      </div>
+
+      {/* Input */}
+      <div className="p-4 border-t">
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={userInput}
+            onChange={(e) => setUserInput(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
+            placeholder={
+              mode === 'mat' 
+                ? "Ask about materials, dimensions..." 
+                : "Ask about access, delivery..."
+            }
+            className="flex-1 border rounded px-3 py-2 text-sm"
+            disabled={loading}
+          />
+          <button
+            onClick={sendMessage}
+            disabled={!userInput.trim() || loading}
+            className="bg-blue-500 text-white px-4 py-2 rounded text-sm hover:bg-blue-600 disabled:opacity-50"
+          >
+            Send
+          </button>
+        </div>
+        <p className="text-xs text-gray-500 mt-2">
+          This is optional. You can post your job anytime without using this.
+        </p>
+      </div>
+    </div>
+  );
+}
+```
+
+### File: client/src/components/financing/FinancingEligibility.tsx
+```tsx
+import React, { useState, useEffect } from 'react';
+import { api } from '../../lib/api';
+
+/**
+ * FINANCING ELIGIBILITY - Government/First Nations focus
+ * 
+ * Language emphasizes:
+ * - Materials & mobilization financing
+ * - Government / First Nation / institutional work
+ * - Factoring-like structure
+ * - Does NOT display "contractor_trust_score" as ranking
+ */
+
+interface EligibilityData {
+  owner_type: string | null;
+  has_signed_contract: boolean;
+  has_verified_scope: boolean;
+  has_structured_bom: boolean;
+  has_payment_milestones: boolean;
+  materials_total: number;
+  eligible_products: string[];
+  can_request_financing: boolean;
+  reasons: string[];
+}
+
+interface FinancingSuggestion {
+  show_financing: boolean;
+  headline: string;
+  details: string;
+  advance_estimate: number;
+  fee_estimate: number;
+}
+
+interface FinancingEligibilityProps {
+  opportunityId: string;
+}
+
+export function FinancingEligibility({ opportunityId }: FinancingEligibilityProps) {
+  const [eligibility, setEligibility] = useState<EligibilityData | null>(null);
+  const [suggestion, setSuggestion] = useState<FinancingSuggestion | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [showDetails, setShowDetails] = useState(false);
+
+  useEffect(() => {
+    fetchEligibility();
+  }, [opportunityId]);
+
+  async function fetchEligibility() {
+    setLoading(true);
+    try {
+      const data = await api.get<{ eligibility: EligibilityData; suggestion: FinancingSuggestion }>(
+        `/opportunities/${opportunityId}/financing-eligibility`
+      );
+      setEligibility(data.eligibility);
+      setSuggestion(data.suggestion);
+    } catch (error) {
+      console.error('Error fetching financing eligibility:', error);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  if (loading) {
+    return <div className="animate-pulse bg-gray-100 rounded h-20"></div>;
+  }
+
+  if (!eligibility || !suggestion?.show_financing) {
+    return null;
+  }
+
+  return (
+    <div className="bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 rounded-lg p-4">
+      <div className="flex items-start gap-3">
+        <span className="text-2xl">💰</span>
+        <div className="flex-1">
+          {/* UPDATED: Government/FN focused language */}
+          <h3 className="font-semibold text-green-800">
+            Materials & Mobilization Financing May Be Available
+          </h3>
+          <p className="text-sm text-green-700 mt-1">
+            For verified scope + structured BOM, financing partners may advance materials or invoices, 
+            especially for government, First Nation, or institutional work.
+          </p>
+          
+          <button
+            onClick={() => setShowDetails(!showDetails)}
+            className="text-sm text-green-600 underline mt-2"
+          >
+            {showDetails ? 'Hide details' : 'View eligibility indicators'}
+          </button>
+          
+          {showDetails && (
+            <div className="mt-3 bg-white rounded p-3 text-sm">
+              {/* UPDATED: Don't show trust score as ranking */}
+              <div className="text-xs font-medium text-gray-500 mb-2">Eligibility Indicators</div>
+              <div className="grid grid-cols-2 gap-2">
+                <div className={eligibility.owner_type ? 'text-green-600' : 'text-gray-400'}>
+                  {eligibility.owner_type ? '✓' : '○'} Owner type: {eligibility.owner_type || 'Not set'}
+                </div>
+                <div className={eligibility.has_signed_contract ? 'text-green-600' : 'text-gray-400'}>
+                  {eligibility.has_signed_contract ? '✓' : '○'} Signed contract
+                </div>
+                <div className={eligibility.has_verified_scope ? 'text-green-600' : 'text-gray-400'}>
+                  {eligibility.has_verified_scope ? '✓' : '○'} Verified scope
+                </div>
+                <div className={eligibility.has_structured_bom ? 'text-green-600' : 'text-gray-400'}>
+                  {eligibility.has_structured_bom ? '✓' : '○'} Structured BOM
+                </div>
+                <div className={eligibility.has_payment_milestones ? 'text-green-600' : 'text-gray-400'}>
+                  {eligibility.has_payment_milestones ? '✓' : '○'} Payment milestones
+                </div>
+                <div className="text-gray-600">
+                  ○ Contractor reliability (private)
+                </div>
+              </div>
+              
+              {eligibility.materials_total > 0 && (
+                <div className="mt-2 pt-2 border-t">
+                  <span className="text-gray-600">Materials total: </span>
+                  <span className="font-medium">${eligibility.materials_total.toLocaleString()}</span>
+                </div>
+              )}
+              
+              <div className="mt-2 pt-2 border-t text-xs text-gray-500">
+                {eligibility.eligible_products.length} financing product(s) may be available
+              </div>
+            </div>
+          )}
+          
+          <button className="mt-3 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 text-sm font-medium">
+            Request Materials Financing
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+
+### File: client/src/pages/ConversationsPage.tsx
+```tsx
+import React, { useState } from 'react';
+import { ConversationList } from '../components/conversations/ConversationList';
+import { ConversationView } from '../components/conversations/ConversationView';
+import { PaymentPromise } from '../components/payments/PaymentPromise';
+import { TrustSignals } from '../components/trust/TrustSignals';
+import { FeedbackForm } from '../components/feedback/FeedbackForm';
+import { AIAssistPanel } from '../components/aiAssist/AIAssistPanel';
+
+interface SelectedConversation {
+  id: string;
+  opportunity_id: string;
+  opportunity_title: string;
+  owner_party_id: string;
+  contractor_party_id: string;
+  owner_name: string;
+  contractor_name: string;
+  state: string;
+  my_role: 'owner' | 'contractor';
+  intake_mode?: 'bid' | 'run' | 'direct_award';
+  run_member_count?: number;
+}
+
+export function ConversationsPage() {
+  const [selected, setSelected] = useState<SelectedConversation | null>(null);
+  const [activeTab, setActiveTab] = useState<'messages' | 'payment' | 'trust' | 'feedback'>('messages');
+  const [showAIAssist, setShowAIAssist] = useState(false);
+
+  const otherPartyId = selected 
+    ? (selected.my_role === 'owner' ? selected.contractor_party_id : selected.owner_party_id)
+    : null;
+
+  function getIntakeModeLabel(mode?: string): string {
+    switch (mode) {
+      case 'run': return 'Service Run';
+      case 'direct_award': return 'Direct Award';
+      default: return 'Get Bids';
+    }
+  }
+
+  return (
+    <div className="h-screen flex">
+      {/* Conversation List */}
+      <div className="w-80 flex-shrink-0">
+        <ConversationList 
+          onSelect={(conv) => setSelected(conv as SelectedConversation)}
+          selectedId={selected?.id}
+        />
+      </div>
+
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col bg-gray-50">
+        {selected ? (
+          <>
+            {/* Header - UPDATED with intake mode */}
+            <div className="bg-white border-b p-4">
+              <div className="flex justify-between items-start">
+                <div>
+                  <h2 className="font-semibold">{selected.opportunity_title}</h2>
+                  <p className="text-sm text-gray-600">
+                    {selected.my_role === 'owner' 
+                      ? `Contractor: ${selected.contractor_name}`
+                      : `Owner: ${selected.owner_name}`
+                    }
+                    <span className="mx-2">•</span>
+                    <span className="capitalize">{selected.state.replace(/_/g, ' ')}</span>
+                  </p>
+                </div>
+                
+                {/* Intake Mode Badge */}
+                <div className="flex items-center gap-2">
+                  <span className={`text-xs px-2 py-1 rounded ${
+                    selected.intake_mode === 'run' 
+                      ? 'bg-indigo-100 text-indigo-800' 
+                      : selected.intake_mode === 'direct_award'
+                        ? 'bg-teal-100 text-teal-800'
+                        : 'bg-gray-100 text-gray-600'
+                  }`}>
+                    Mode: {getIntakeModeLabel(selected.intake_mode)}
+                  </span>
+                  
+                  {selected.intake_mode === 'run' && selected.run_member_count && (
+                    <span className="text-xs text-indigo-600">
+                      {selected.run_member_count} homes in run
+                    </span>
+                  )}
+                </div>
+              </div>
+              
+              {/* AI Assist Button (optional) */}
+              {selected.my_role === 'owner' && (
+                <button
+                  onClick={() => setShowAIAssist(true)}
+                  className="mt-2 text-sm text-blue-600 hover:text-blue-800"
+                >
+                  🧰 Refine estimate (optional)
+                </button>
+              )}
+            </div>
+
+            {/* Tabs */}
+            <div className="bg-white border-b px-4">
+              <div className="flex gap-4">
+                {(['messages', 'payment', 'trust', 'feedback'] as const).map((tab) => (
+                  <button
+                    key={tab}
+                    onClick={() => setActiveTab(tab)}
+                    className={`py-3 px-2 border-b-2 text-sm font-medium transition ${
+                      activeTab === tab
+                        ? 'border-blue-500 text-blue-600'
+                        : 'border-transparent text-gray-500 hover:text-gray-700'
+                    }`}
+                  >
+                    {tab === 'messages' && '💬 Messages'}
+                    {tab === 'payment' && '💰 Payment'}
+                    {tab === 'trust' && '⭐ Trust'}
+                    {tab === 'feedback' && '📝 Feedback'}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Tab Content */}
+            <div className="flex-1 overflow-hidden">
+              {activeTab === 'messages' && (
+                <ConversationView 
+                  conversationId={selected.id}
+                  myRole={selected.my_role}
+                  intakeMode={selected.intake_mode}
+                />
+              )}
+              
+              {activeTab === 'payment' && (
+                <div className="h-full overflow-y-auto">
+                  <PaymentPromise 
+                    conversationId={selected.id}
+                    myRole={selected.my_role}
+                  />
+                </div>
+              )}
+              
+              {activeTab === 'trust' && otherPartyId && (
+                <div className="h-full overflow-y-auto p-4">
+                  <TrustSignals partyId={otherPartyId} />
+                </div>
+              )}
+              
+              {activeTab === 'feedback' && selected.state === 'completed' && selected.my_role === 'owner' && (
+                <div className="h-full overflow-y-auto p-4">
+                  <FeedbackForm conversationId={selected.id} />
+                </div>
+              )}
+              
+              {activeTab === 'feedback' && selected.state !== 'completed' && (
+                <div className="h-full flex items-center justify-center text-gray-500">
+                  Feedback available after job completion
+                </div>
+              )}
+              
+              {activeTab === 'feedback' && selected.state === 'completed' && selected.my_role === 'contractor' && (
+                <div className="h-full flex items-center justify-center text-gray-500">
+                  Go to your Feedback Inbox to view received feedback
+                </div>
+              )}
+            </div>
+          </>
+        ) : (
+          <div className="flex-1 flex items-center justify-center text-gray-500">
+            Select a conversation to get started
+          </div>
+        )}
+      </div>
+
+      {/* AI Assist Panel */}
+      {showAIAssist && selected && (
+        <AIAssistPanel 
+          opportunityId={selected.opportunity_id}
+          onClose={() => setShowAIAssist(false)}
+        />
+      )}
+    </div>
+  );
+}
+```
+
+### Verification
+
+1. Create necessary directories:
+```bash
+mkdir -p client/src/lib
+mkdir -p client/src/components/conversations
+mkdir -p client/src/components/payments
+mkdir -p client/src/components/trust
+mkdir -p client/src/components/feedback
+mkdir -p client/src/components/aiAssist
+mkdir -p client/src/components/financing
+mkdir -p client/src/pages
+```
+
+2. Verify files created:
+```bash
+ls -la client/src/lib/
+ls -la client/src/components/
+ls -la client/src/pages/
+```
+
+3. Test in browser - navigate to /conversations
+
+### Key Fixes Applied
+
+| Issue | Fix |
+|-------|-----|
+| Trust signals schema | Maps to ACTUAL columns (reliability_score, etc.) |
+| Payment status mismatch | Uses backend statuses (pending, submitted, partial, verified) |
+| Contact gating language | "Owners control sharing" not "deposit required" |
+| Star ratings | Replaced with 3-option scale (exceeded/met/needs_attention) |
+| Intake mode awareness | Shows bid/run/direct_award in header |
+| AI Assist | Non-Clippy panel with Mat/Logan tabs |
+| Financing language | Emphasizes gov/FN factoring, no trust ranking |
+| Small-town respect | Added contextual messaging throughout |
+
+Tell me:
+1. Did all files create successfully?
+2. Does the page render?
+3. Are trust signals showing from actual schema?
+4. Is the feedback form using 3-option scale?
+5. Any errors?
