@@ -1,5 +1,5 @@
 import express, { Request, Response } from 'express';
-import { publicQuery } from '../db/tenantDb';
+import { serviceQuery } from '../db/tenantDb';
 
 const router = express.Router();
 
@@ -25,7 +25,7 @@ router.get('/portals/:slug', async (req: Request, res: Response) => {
   try {
     const { slug } = req.params;
 
-    const result = await publicQuery(`
+    const result = await serviceQuery(`
       SELECT 
         p.id,
         p.name,
@@ -76,7 +76,7 @@ router.get('/portals/:slug/service-runs', async (req: Request, res: Response) =>
     const { slug } = req.params;
     const { status, limit = '20' } = req.query;
 
-    const portalResult = await publicQuery(`
+    const portalResult = await serviceQuery(`
       SELECT p.id, p.owning_tenant_id 
       FROM portals p 
       WHERE p.slug = $1 AND p.status = 'active'
@@ -122,7 +122,7 @@ router.get('/portals/:slug/service-runs', async (req: Request, res: Response) =>
     query += ` ORDER BY csr.scheduled_date ASC LIMIT $${paramIndex}`;
     params.push(parseInt(limit as string));
 
-    const result = await publicQuery(query, params);
+    const result = await serviceQuery(query, params);
 
     res.json({
       success: true,
@@ -144,8 +144,8 @@ router.get('/portals/:slug/businesses', async (req: Request, res: Response) => {
     const { slug } = req.params;
     const { category, search, limit = '50' } = req.query;
 
-    const portalResult = await publicQuery(`
-      SELECT p.id, p.owning_tenant_id 
+    const portalResult = await serviceQuery(`
+      SELECT p.id, p.owning_tenant_id, p.settings 
       FROM portals p 
       WHERE p.slug = $1 AND p.status = 'active'
     `, [slug]);
@@ -157,28 +157,40 @@ router.get('/portals/:slug/businesses', async (req: Request, res: Response) => {
       });
     }
 
-    const tenantId = portalResult.rows[0].owning_tenant_id;
+    const settings = portalResult.rows[0].settings || {};
+    const portalCity = settings.city;
+
+    if (!portalCity) {
+      return res.json({
+        success: true,
+        businesses: [],
+        count: 0,
+        message: 'Portal geographic settings not configured'
+      });
+    }
 
     let query = `
       SELECT 
-        pm.id,
-        pm.tenant_id,
+        t.id,
         t.name as business_name,
-        pm.role,
-        pm.status,
-        pm.joined_at,
-        pm.profile_data
-      FROM portal_memberships pm
-      JOIN cc_tenants t ON t.id = pm.tenant_id
-      WHERE pm.portal_id = (SELECT id FROM portals WHERE slug = $1)
-        AND pm.status = 'active'
-        AND pm.visibility = 'public'
+        t.slug,
+        t.business_type,
+        t.website,
+        t.phone,
+        t.city,
+        t.province
+      FROM cc_tenants t
+      JOIN tenant_sharing_settings tss ON tss.tenant_id = t.id
+      WHERE t.tenant_type = 'business'
+        AND t.status = 'active'
+        AND t.city ILIKE $1
+        AND tss.share_availability = true
     `;
-    const params: any[] = [slug];
+    const params: any[] = [portalCity];
     let paramIndex = 2;
 
     if (category) {
-      query += ` AND pm.profile_data->>'category' = $${paramIndex}`;
+      query += ` AND t.business_type = $${paramIndex}`;
       params.push(category);
       paramIndex++;
     }
@@ -192,7 +204,7 @@ router.get('/portals/:slug/businesses', async (req: Request, res: Response) => {
     query += ` ORDER BY t.name ASC LIMIT $${paramIndex}`;
     params.push(parseInt(limit as string));
 
-    const result = await publicQuery(query, params);
+    const result = await serviceQuery(query, params);
 
     res.json({
       success: true,
@@ -214,7 +226,7 @@ router.get('/portals/:slug/accommodations', async (req: Request, res: Response) 
     const { slug } = req.params;
     const { property_type, limit = '50' } = req.query;
 
-    const portalResult = await publicQuery(`
+    const portalResult = await serviceQuery(`
       SELECT p.id, p.owning_tenant_id, p.settings
       FROM portals p 
       WHERE p.slug = $1 AND p.status = 'active'
@@ -283,7 +295,7 @@ router.get('/portals/:slug/accommodations', async (req: Request, res: Response) 
     query += ` ORDER BY a.name ASC LIMIT $${paramIndex}`;
     params.push(parseInt(limit as string));
 
-    const result = await publicQuery(query, params);
+    const result = await serviceQuery(query, params);
 
     res.json({
       success: true,
@@ -305,7 +317,7 @@ router.get('/portals/:slug/infrastructure', async (req: Request, res: Response) 
     const { slug } = req.params;
     const { type, limit = '100' } = req.query;
 
-    const portalResult = await publicQuery(`
+    const portalResult = await serviceQuery(`
       SELECT p.id, p.owning_tenant_id, p.settings
       FROM portals p 
       WHERE p.slug = $1 AND p.status = 'active'
@@ -372,7 +384,7 @@ router.get('/portals/:slug/infrastructure', async (req: Request, res: Response) 
     query += ` ORDER BY n.name ASC LIMIT $${paramIndex}`;
     params.push(parseInt(limit as string));
 
-    const result = await publicQuery(query, params);
+    const result = await serviceQuery(query, params);
 
     res.json({
       success: true,
@@ -393,7 +405,7 @@ router.get('/portals/:slug/alerts', async (req: Request, res: Response) => {
   try {
     const { slug } = req.params;
 
-    const portalResult = await publicQuery(`
+    const portalResult = await serviceQuery(`
       SELECT p.id, p.owning_tenant_id, p.settings
       FROM portals p 
       WHERE p.slug = $1 AND p.status = 'active'
@@ -422,23 +434,24 @@ router.get('/portals/:slug/alerts', async (req: Request, res: Response) => {
       SELECT 
         a.id,
         a.title,
-        a.description,
+        a.summary,
+        a.message,
         a.severity,
         a.alert_type,
         a.affected_area,
-        a.start_time,
-        a.end_time,
-        a.source,
+        a.effective_from,
+        a.effective_until,
+        a.source_url,
         a.created_at
-      FROM emergency_alerts a
-      WHERE a.status = 'active'
-        AND (a.end_time IS NULL OR a.end_time > now())
-        AND (a.affected_area ILIKE $1 OR a.affected_area = 'province-wide')
+      FROM alerts a
+      WHERE a.is_active = true
+        AND (a.effective_until IS NULL OR a.effective_until > now())
+        AND (a.region_id ILIKE $1)
       ORDER BY a.severity DESC, a.created_at DESC 
       LIMIT 20
     `;
 
-    const result = await publicQuery(query, [`%${region}%`]);
+    const result = await serviceQuery(query, [`%${region}%`]);
 
     res.json({
       success: true,
@@ -459,7 +472,7 @@ router.get('/portals/:slug/weather', async (req: Request, res: Response) => {
   try {
     const { slug } = req.params;
 
-    const portalResult = await publicQuery(`
+    const portalResult = await serviceQuery(`
       SELECT p.id, p.owning_tenant_id, p.settings
       FROM portals p 
       WHERE p.slug = $1 AND p.status = 'active'
@@ -484,31 +497,11 @@ router.get('/portals/:slug/weather', async (req: Request, res: Response) => {
       });
     }
 
-    const query = `
-      SELECT 
-        w.id,
-        w.station_name,
-        w.location,
-        w.temperature_c,
-        w.humidity_percent,
-        w.wind_speed_kmh,
-        w.wind_direction,
-        w.conditions,
-        w.observed_at,
-        w.forecast
-      FROM weather_observations w
-      WHERE w.observed_at > now() - interval '2 hours'
-        AND w.location ILIKE $1
-      ORDER BY w.observed_at DESC 
-      LIMIT 10
-    `;
-
-    const result = await publicQuery(query, [`%${region}%`]);
-
     res.json({
       success: true,
-      weather: result.rows,
-      count: result.rows.length
+      weather: [],
+      count: 0,
+      message: 'Weather data not available'
     });
 
   } catch (error: any) {
@@ -524,7 +517,7 @@ router.get('/portals/:slug/ferries', async (req: Request, res: Response) => {
   try {
     const { slug } = req.params;
 
-    const portalResult = await publicQuery(`
+    const portalResult = await serviceQuery(`
       SELECT p.id, p.owning_tenant_id, p.settings
       FROM portals p 
       WHERE p.slug = $1 AND p.status = 'active'
@@ -549,33 +542,11 @@ router.get('/portals/:slug/ferries', async (req: Request, res: Response) => {
       });
     }
 
-    const query = `
-      SELECT 
-        f.id,
-        f.route_name,
-        f.departure_terminal,
-        f.arrival_terminal,
-        f.scheduled_departure,
-        f.scheduled_arrival,
-        f.status,
-        f.vessel_name,
-        f.sailing_status,
-        f.percent_full,
-        f.updated_at
-      FROM bc_ferries_sailings f
-      WHERE f.scheduled_departure > now() - interval '1 hour'
-        AND f.scheduled_departure < now() + interval '24 hours'
-        AND f.route_name = ANY($1)
-      ORDER BY f.scheduled_departure ASC 
-      LIMIT 50
-    `;
-
-    const result = await publicQuery(query, [ferryRoutes]);
-
     res.json({
       success: true,
-      ferries: result.rows,
-      count: result.rows.length
+      ferries: [],
+      count: 0,
+      message: 'Ferry schedule data not available'
     });
 
   } catch (error: any) {
@@ -592,7 +563,7 @@ router.get('/portals/:slug/good-news', async (req: Request, res: Response) => {
     const { slug } = req.params;
     const { limit = '20' } = req.query;
 
-    const portalResult = await publicQuery(`
+    const portalResult = await serviceQuery(`
       SELECT p.id, p.owning_tenant_id
       FROM portals p 
       WHERE p.slug = $1 AND p.status = 'active'
@@ -607,7 +578,7 @@ router.get('/portals/:slug/good-news', async (req: Request, res: Response) => {
 
     const tenantId = portalResult.rows[0].owning_tenant_id;
 
-    const result = await publicQuery(`
+    const result = await serviceQuery(`
       SELECT 
         a.id,
         a.message,

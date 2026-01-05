@@ -1,0 +1,171 @@
+Create and seed Bamfield as a fully functional public portal for testing.
+
+1. FIND OR CREATE BAMFIELD TENANT
+
+First check if a Bamfield-related tenant exists:
+```sql
+SELECT id, name, slug, type FROM tenants 
+WHERE name ILIKE '%bamfield%' OR slug ILIKE '%bamfield%';
+```
+
+If not found, create one:
+```sql
+INSERT INTO tenants (name, slug, type, status)
+VALUES ('Bamfield Community', 'bamfield', 'community', 'active')
+RETURNING id;
+```
+
+2. SET UP PORTAL CONFIGURATION
+
+Update the tenant with portal settings (use the tenant ID from above):
+```sql
+UPDATE tenants SET
+  is_public_portal = true,
+  portal_slug = 'bamfield',
+  theme = '{
+    "primary_color": "#1e3a5f",
+    "secondary_color": "#2d5a87",
+    "accent_color": "#f59e0b",
+    "background_color": "#0c1829",
+    "text_color": "#f8fafc",
+    "logo_url": null,
+    "hero_image_url": null,
+    "tagline": "Gateway to the Pacific Rim"
+  }'::jsonb,
+  portal_config = '{
+    "show_service_runs": true,
+    "show_businesses": true,
+    "show_accommodations": true,
+    "show_infrastructure": true,
+    "show_webcams": true,
+    "show_alerts": true,
+    "show_weather": true,
+    "show_ferries": true,
+    "show_good_news": true
+  }'::jsonb,
+  seo_title = 'Bamfield Community - Gateway to the Pacific Rim',
+  seo_description = 'Bamfield is a remote fishing village on the west coast of Vancouver Island, known for marine research, kayaking, and the West Coast Trail.'
+WHERE slug = 'bamfield';
+```
+
+3. LINK TO PORTAL TABLE (if using separate portals table)
+
+If your public-portal routes query a separate `portals` table:
+```sql
+-- Check portals table structure
+SELECT column_name FROM information_schema.columns WHERE table_name = 'portals';
+
+-- Update or insert portal record
+UPDATE portals SET
+  owning_tenant_id = (SELECT id FROM tenants WHERE slug = 'bamfield'),
+  region = 'Vancouver Island',
+  city = 'Bamfield'
+WHERE slug = 'bamfield';
+
+-- Or if no Bamfield portal exists:
+INSERT INTO portals (slug, owning_tenant_id, region, city, status)
+SELECT 'bamfield', id, 'Vancouver Island', 'Bamfield', 'active'
+FROM tenants WHERE slug = 'bamfield';
+```
+
+4. ADD SAMPLE CATALOG ITEMS (for Availability Console testing)
+
+Create a test business tenant with catalog items:
+```sql
+-- Create a sample business
+INSERT INTO tenants (name, slug, type, status)
+VALUES ('Bamfield Kayaks', 'bamfield-kayaks', 'business', 'active')
+RETURNING id;
+
+-- Enable sharing for this business (use ID from above)
+INSERT INTO tenant_sharing_settings (tenant_id, share_availability, share_pricing, allow_hold_requests)
+SELECT id, true, true, true FROM tenants WHERE slug = 'bamfield-kayaks';
+
+-- Add catalog items
+INSERT INTO catalog_items (tenant_id, name, short_description, item_type, status, category, price_amount, price_unit, capacity_max, pickup_location)
+SELECT 
+  id,
+  'Single Kayak',
+  'Perfect for solo paddlers exploring Barkley Sound',
+  'rental',
+  'active',
+  'Kayaks',
+  45.00,
+  'day',
+  1,
+  'Government Dock'
+FROM tenants WHERE slug = 'bamfield-kayaks';
+
+INSERT INTO catalog_items (tenant_id, name, short_description, item_type, status, category, price_amount, price_unit, capacity_max, pickup_location)
+SELECT 
+  id,
+  'Double Kayak',
+  'Tandem kayak for two paddlers',
+  'rental',
+  'active',
+  'Kayaks',
+  65.00,
+  'day',
+  2,
+  'Government Dock'
+FROM tenants WHERE slug = 'bamfield-kayaks';
+
+-- Add a parking business
+INSERT INTO tenants (name, slug, type, status)
+VALUES ('Save Paradise Parking', 'save-paradise-parking', 'business', 'active')
+RETURNING id;
+
+INSERT INTO tenant_sharing_settings (tenant_id, share_availability, share_pricing, allow_hold_requests)
+SELECT id, true, true, true FROM tenants WHERE slug = 'save-paradise-parking';
+
+INSERT INTO catalog_items (tenant_id, name, short_description, item_type, status, category, price_amount, price_unit, capacity_max)
+SELECT 
+  id,
+  'Vehicle Parking - Standard',
+  'Secure parking near the dock',
+  'parking',
+  'active',
+  'Parking',
+  15.00,
+  'day',
+  1
+FROM tenants WHERE slug = 'save-paradise-parking';
+
+INSERT INTO catalog_items (tenant_id, name, short_description, item_type, status, category, price_amount, price_unit, capacity_max)
+SELECT 
+  id,
+  'Vehicle + Trailer Parking',
+  'Extended spot for vehicle with boat trailer',
+  'parking',
+  'active',
+  'Parking',
+  25.00,
+  'day',
+  1
+FROM tenants WHERE slug = 'save-paradise-parking';
+```
+
+5. ADD TEST USER MEMBERSHIP
+
+So you can test the Tenant App with these tenants:
+```sql
+-- Find your user ID
+SELECT id, email FROM cc_users WHERE email ILIKE '%glenn%' OR is_platform_admin = true LIMIT 1;
+
+-- Add memberships (replace USER_ID)
+INSERT INTO tenant_memberships (user_id, tenant_id, role, is_primary)
+SELECT 
+  'USER_ID'::uuid,
+  id,
+  'admin',
+  false
+FROM tenants WHERE slug IN ('bamfield', 'bamfield-kayaks', 'save-paradise-parking');
+```
+
+6. VERIFICATION
+
+After seeding, test:
+- GET /api/public/portals/bamfield should return portal data
+- /c/bamfield should render the public portal
+- /app should show Bamfield, Bamfield Kayaks, Save Paradise Parking in Tenant Picker
+- /app/availability (as Bamfield community) should find kayaks and parking in search
