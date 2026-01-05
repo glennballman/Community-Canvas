@@ -120,4 +120,214 @@ router.get('/availability', authenticateToken, async (req: AuthRequest, res: Res
   }
 });
 
+router.post('/hold-request', authenticateToken, async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) {
+      return res.status(401).json({ 
+        success: false, 
+        error: 'Authentication required' 
+      });
+    }
+
+    const {
+      tenant_id,
+      catalog_item_id,
+      date_start,
+      date_end,
+      party_size,
+      caller_name,
+      caller_phone,
+      caller_email,
+      caller_notes
+    } = req.body;
+
+    if (!tenant_id) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'tenant_id is required' 
+      });
+    }
+
+    if (!catalog_item_id || !date_start || !date_end) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'catalog_item_id, date_start, and date_end are required' 
+      });
+    }
+
+    const tenantResult = await serviceQuery(`
+      SELECT t.id, t.tenant_type, tu.role
+      FROM cc_tenants t
+      JOIN cc_tenant_users tu ON tu.tenant_id = t.id
+      WHERE t.id = $1 AND tu.user_id = $2 AND tu.status = 'active'
+    `, [tenant_id, userId]);
+
+    if (tenantResult.rows.length === 0) {
+      return res.status(403).json({ 
+        success: false, 
+        error: 'Access denied to this tenant' 
+      });
+    }
+
+    const tenantType = tenantResult.rows[0].tenant_type;
+    if (tenantType !== 'community' && tenantType !== 'government') {
+      return res.status(403).json({ 
+        success: false, 
+        error: 'Only community and government operators can request holds' 
+      });
+    }
+
+    const itemResult = await serviceQuery(`
+      SELECT ci.id, ci.tenant_id, ci.name,
+             tss.allow_hold_requests
+      FROM catalog_items ci
+      LEFT JOIN tenant_sharing_settings tss ON ci.tenant_id = tss.tenant_id
+      WHERE ci.id = $1 AND ci.status = 'active'
+    `, [catalog_item_id]);
+
+    if (itemResult.rows.length === 0) {
+      return res.status(404).json({ 
+        success: false, 
+        error: 'Item not found' 
+      });
+    }
+
+    const item = itemResult.rows[0];
+
+    if (!item.allow_hold_requests) {
+      return res.status(403).json({ 
+        success: false, 
+        error: 'This business does not accept hold requests' 
+      });
+    }
+
+    const holdResult = await serviceQuery(`
+      INSERT INTO hold_requests (
+        catalog_item_id, business_tenant_id, requesting_tenant_id, requesting_user_id,
+        date_start, date_end, party_size,
+        caller_name, caller_phone, caller_email, caller_notes,
+        expires_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, now() + interval '4 hours')
+      RETURNING *
+    `, [
+      catalog_item_id,
+      item.tenant_id,
+      tenant_id,
+      userId,
+      date_start,
+      date_end,
+      party_size || null,
+      caller_name || null,
+      caller_phone || null,
+      caller_email || null,
+      caller_notes || null
+    ]);
+
+    res.json({
+      success: true,
+      hold_request: holdResult.rows[0]
+    });
+
+  } catch (error: any) {
+    console.error('Hold request error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Failed to create hold request' 
+    });
+  }
+});
+
+router.post('/call-log', authenticateToken, async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) {
+      return res.status(401).json({ 
+        success: false, 
+        error: 'Authentication required' 
+      });
+    }
+
+    const {
+      tenant_id,
+      caller_name,
+      caller_phone,
+      caller_email,
+      need_type,
+      need_summary,
+      date_start,
+      date_end,
+      party_size,
+      special_requirements,
+      outcome,
+      outcome_notes
+    } = req.body;
+
+    if (!tenant_id) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'tenant_id is required' 
+      });
+    }
+
+    const tenantResult = await serviceQuery(`
+      SELECT t.id, t.tenant_type, tu.role
+      FROM cc_tenants t
+      JOIN cc_tenant_users tu ON tu.tenant_id = t.id
+      WHERE t.id = $1 AND tu.user_id = $2 AND tu.status = 'active'
+    `, [tenant_id, userId]);
+
+    if (tenantResult.rows.length === 0) {
+      return res.status(403).json({ 
+        success: false, 
+        error: 'Access denied to this tenant' 
+      });
+    }
+
+    const tenantType = tenantResult.rows[0].tenant_type;
+    if (tenantType !== 'community' && tenantType !== 'government') {
+      return res.status(403).json({ 
+        success: false, 
+        error: 'Only community and government operators can log calls' 
+      });
+    }
+
+    const result = await serviceQuery(`
+      INSERT INTO operator_call_logs (
+        operator_tenant_id, operator_user_id,
+        caller_name, caller_phone, caller_email,
+        need_type, need_summary, date_start, date_end, party_size, special_requirements,
+        outcome, outcome_notes
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+      RETURNING *
+    `, [
+      tenant_id,
+      userId,
+      caller_name || null,
+      caller_phone || null,
+      caller_email || null,
+      need_type || null,
+      need_summary || null,
+      date_start || null,
+      date_end || null,
+      party_size || null,
+      special_requirements || null,
+      outcome || null,
+      outcome_notes || null
+    ]);
+
+    res.json({
+      success: true,
+      call_log: result.rows[0]
+    });
+
+  } catch (error: any) {
+    console.error('Call log error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Failed to log call' 
+    });
+  }
+});
+
 export default router;
