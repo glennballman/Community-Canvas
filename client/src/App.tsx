@@ -9,7 +9,6 @@
  * DO NOT MODIFY THIS STRUCTURE.
  */
 
-import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 
 // Context
@@ -28,82 +27,62 @@ import { PublicPortalLayout } from './layouts/PublicPortalLayout';
 import { TenantPicker } from './pages/app/TenantPicker';
 import { Dashboard } from './pages/app/Dashboard';
 
+// Pages - App Community
+import AvailabilityConsole from './pages/app/community/AvailabilityConsole';
+import ServiceRunsPage from './pages/app/community/ServiceRunsPage';
+import DirectoryPage from './pages/app/community/DirectoryPage';
+import ContentBrandingPage from './pages/app/community/ContentBrandingPage';
+
+// Pages - App Business
+import CatalogPage from './pages/app/business/CatalogPage';
+import BookingsPage from './pages/app/business/BookingsPage';
+import CustomersPage from './pages/app/business/CustomersPage';
+
+// Pages - App Shared
+import ConversationsPage from './pages/ConversationsPage';
+import SettingsPage from './pages/app/SettingsPage';
+
 // Pages - Admin
 import { ImpersonationConsole } from './pages/admin/ImpersonationConsole';
+import CivOSDashboard from './pages/admin/CivOSDashboard';
+import TenantsManagement from './pages/admin/TenantsManagement';
+import UsersManagement from './pages/admin/UsersManagement';
+import AdminInfrastructure from './pages/AdminInfrastructure';
+import AdminChambers from './pages/AdminChambers';
+import AdminNAICS from './pages/AdminNAICS';
+import Accommodations from './pages/Accommodations';
+import DataImport from './pages/admin/DataImport';
+import AdminSettings from './pages/AdminSettings';
+import AdminLogs from './pages/AdminLogs';
 
-// Placeholder pages - replace with real implementations later
-function AvailabilityConsole() {
-  return <div style={{ padding: '32px' }}><h1>Availability Console</h1><p>Coming soon...</p></div>;
-}
-function ServiceRunsPage() {
-  return <div style={{ padding: '32px' }}><h1>Service Runs</h1><p>Coming soon...</p></div>;
-}
-function DirectoryPage() {
-  return <div style={{ padding: '32px' }}><h1>Directory</h1><p>Coming soon...</p></div>;
-}
-function ContentPage() {
-  return <div style={{ padding: '32px' }}><h1>Content</h1><p>Coming soon...</p></div>;
-}
-function CatalogPage() {
-  return <div style={{ padding: '32px' }}><h1>Catalog</h1><p>Coming soon...</p></div>;
-}
-function BookingsPage() {
-  return <div style={{ padding: '32px' }}><h1>Bookings</h1><p>Coming soon...</p></div>;
-}
-function CustomersPage() {
-  return <div style={{ padding: '32px' }}><h1>Customers</h1><p>Coming soon...</p></div>;
-}
-function ConversationsPage() {
-  return <div style={{ padding: '32px' }}><h1>Conversations</h1><p>Coming soon...</p></div>;
-}
-function SettingsPage() {
-  return <div style={{ padding: '32px' }}><h1>Settings</h1><p>Coming soon...</p></div>;
-}
-function AdminDashboard() {
-  return <div style={{ padding: '32px' }}><h1>Admin Dashboard</h1><p>Coming soon...</p></div>;
-}
-function TenantsPage() {
-  return <div style={{ padding: '32px' }}><h1>Tenants</h1><p>Coming soon...</p></div>;
-}
-function UsersPage() {
-  return <div style={{ padding: '32px' }}><h1>Users</h1><p>Coming soon...</p></div>;
-}
+// Pages - Auth
+import LoginPage from './pages/auth/LoginPage';
+
+// Placeholder pages - for routes without existing components
 function PortalOverview() {
   return <div style={{ padding: '32px' }}><h1>Welcome to this community!</h1></div>;
 }
-function LoginPage() {
-  // This should redirect to your actual auth flow
-  return (
-    <div style={{ 
-      minHeight: '100vh', 
-      backgroundColor: '#060b15', 
-      color: 'white',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-    }}>
-      <div style={{ textAlign: 'center' }}>
-        <h1 style={{ fontSize: '32px', marginBottom: '16px' }}>Sign In</h1>
-        <p style={{ color: '#9ca3af', marginBottom: '24px' }}>
-          Authentication page placeholder
-        </p>
-        <a 
-          href="/api/auth/login" 
-          style={{
-            display: 'inline-block',
-            padding: '12px 24px',
-            backgroundColor: '#3b82f6',
-            color: 'white',
-            borderRadius: '8px',
-            textDecoration: 'none',
-          }}
-        >
-          Sign In with Google
-        </a>
-      </div>
-    </div>
-  );
+
+function CommunitiesPage() {
+  return <div style={{ padding: '32px' }}><h1>All Communities</h1><p>Coming soon...</p></div>;
 }
+
+function SeedCommunitiesPage() {
+  return <div style={{ padding: '32px' }}><h1>Seed Communities</h1><p>Coming soon...</p></div>;
+}
+
+function PortalConfigPage() {
+  return <div style={{ padding: '32px' }}><h1>Portal Configuration</h1><p>Coming soon...</p></div>;
+}
+
+function AIQueuePage() {
+  return <div style={{ padding: '32px' }}><h1>AI Queue</h1><p>Coming soon...</p></div>;
+}
+
+function FlaggedContentPage() {
+  return <div style={{ padding: '32px' }}><h1>Flagged Content</h1><p>Coming soon...</p></div>;
+}
+
 function NotFoundPage() {
   return (
     <div style={{
@@ -154,7 +133,7 @@ export default function App() {
             <Route path="availability" element={<AvailabilityConsole />} />
             <Route path="service-runs" element={<ServiceRunsPage />} />
             <Route path="directory" element={<DirectoryPage />} />
-            <Route path="content" element={<ContentPage />} />
+            <Route path="content" element={<ContentBrandingPage />} />
             
             {/* Business tenant routes */}
             <Route path="catalog" element={<CatalogPage />} />
@@ -170,11 +149,33 @@ export default function App() {
           {/* PLATFORM ADMIN - /admin/*                 */}
           {/* ========================================== */}
           <Route path="/admin" element={<PlatformAdminLayout />}>
-            <Route index element={<AdminDashboard />} />
-            <Route path="tenants" element={<TenantsPage />} />
-            <Route path="users" element={<UsersPage />} />
+            {/* Overview */}
+            <Route index element={<CivOSDashboard />} />
+            
+            {/* Tenants & Users */}
+            <Route path="tenants" element={<TenantsManagement />} />
+            <Route path="users" element={<UsersManagement />} />
             <Route path="impersonation" element={<ImpersonationConsole />} />
-            {/* Add more admin routes as needed */}
+            
+            {/* Data Management */}
+            <Route path="data/infrastructure" element={<AdminInfrastructure />} />
+            <Route path="data/chambers" element={<AdminChambers />} />
+            <Route path="data/naics" element={<AdminNAICS />} />
+            <Route path="data/accommodations" element={<Accommodations />} />
+            <Route path="data/import-export" element={<DataImport />} />
+            
+            {/* Communities */}
+            <Route path="communities" element={<CommunitiesPage />} />
+            <Route path="communities/seed" element={<SeedCommunitiesPage />} />
+            <Route path="communities/portals" element={<PortalConfigPage />} />
+            
+            {/* Moderation */}
+            <Route path="moderation/ai-queue" element={<AIQueuePage />} />
+            <Route path="moderation/flagged" element={<FlaggedContentPage />} />
+            
+            {/* System */}
+            <Route path="settings" element={<AdminSettings />} />
+            <Route path="logs" element={<AdminLogs />} />
           </Route>
 
           {/* ========================================== */}
