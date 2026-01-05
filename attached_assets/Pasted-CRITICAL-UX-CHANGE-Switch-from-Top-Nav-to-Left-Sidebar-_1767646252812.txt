@@ -1,0 +1,227 @@
+CRITICAL UX CHANGE: Switch from Top Nav to Left Sidebar Navigation
+
+The current top navigation will not scale as we add more features. We need a left sidebar navigation as originally specified.
+
+REQUIREMENTS:
+
+1. LEFT SIDEBAR NAVIGATION STRUCTURE
+┌─────────────────────────────────────────────────────────────┐
+│ [Logo] Community Canvas          [User Menu]                │
+├──────────────┬──────────────────────────────────────────────┤
+│              │                                              │
+│  SIDEBAR     │         MAIN CONTENT AREA                    │
+│  (fixed)     │                                              │
+│              │                                              │
+│  ┌────────┐  │                                              │
+│  │Bamfield│  │                                              │
+│  │Commun..▼│  │                                              │
+│  └────────┘  │                                              │
+│              │                                              │
+│  Dashboard   │                                              │
+│  Availability│                                              │
+│  Service Runs│                                              │
+│  Directory   │                                              │
+│  Content     │                                              │
+│  Settings    │                                              │
+│              │                                              │
+│  ──────────  │                                              │
+│  ← My Places │                                              │
+│              │                                              │
+└──────────────┴──────────────────────────────────────────────┘
+
+2. IMPLEMENTATION
+
+Create/update TenantAppLayout.tsx:
+```tsx
+export function TenantAppLayout() {
+  const { currentTenant, memberships, switchTenant } = useTenant();
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  
+  // Determine nav items based on tenant type
+  const isCommunity = currentTenant?.type === 'community' || currentTenant?.type === 'government';
+  
+  const navItems = isCommunity 
+    ? [
+        { icon: LayoutDashboard, label: 'Dashboard', href: '/app/dashboard' },
+        { icon: Phone, label: 'Availability', href: '/app/availability' },
+        { icon: Wrench, label: 'Service Runs', href: '/app/service-runs' },
+        { icon: Building2, label: 'Directory', href: '/app/directory' },
+        { icon: Palette, label: 'Content', href: '/app/content' },
+        { icon: Settings, label: 'Settings', href: '/app/settings' },
+      ]
+    : [
+        { icon: LayoutDashboard, label: 'Dashboard', href: '/app/dashboard' },
+        { icon: Package, label: 'Catalog', href: '/app/catalog' },
+        { icon: Calendar, label: 'Bookings', href: '/app/bookings' },
+        { icon: Users, label: 'Customers', href: '/app/customers' },
+        { icon: MessageSquare, label: 'Conversations', href: '/app/conversations' },
+        { icon: Settings, label: 'Settings', href: '/app/settings' },
+      ];
+
+  return (
+    <div className="min-h-screen bg-[#060b15] text-white flex">
+      {/* LEFT SIDEBAR */}
+      <aside className={`${sidebarCollapsed ? 'w-16' : 'w-64'} border-r border-white/10 flex flex-col transition-all`}>
+        
+        {/* Logo */}
+        <div className="p-4 border-b border-white/10">
+          <Link to="/app" className="flex items-center gap-2">
+            <span className="text-xl">🌐</span>
+            {!sidebarCollapsed && <span className="font-semibold">Community Canvas</span>}
+          </Link>
+        </div>
+
+        {/* Tenant Switcher */}
+        <div className="p-4 border-b border-white/10">
+          <TenantSwitcher 
+            current={currentTenant}
+            memberships={memberships}
+            onSwitch={switchTenant}
+            collapsed={sidebarCollapsed}
+          />
+        </div>
+
+        {/* Navigation */}
+        <nav className="flex-1 p-2 space-y-1">
+          {navItems.map((item) => (
+            <NavLink
+              key={item.href}
+              to={item.href}
+              className={({ isActive }) =>
+                `flex items-center gap-3 px-3 py-2 rounded-lg transition ${
+                  isActive
+                    ? 'bg-blue-600/20 text-blue-400'
+                    : 'text-gray-400 hover:bg-white/5 hover:text-white'
+                }`
+              }
+            >
+              <item.icon className="w-5 h-5" />
+              {!sidebarCollapsed && <span>{item.label}</span>}
+            </NavLink>
+          ))}
+        </nav>
+
+        {/* Back to My Places */}
+        <div className="p-4 border-t border-white/10">
+          <Link 
+            to="/app" 
+            className="flex items-center gap-2 text-sm text-gray-400 hover:text-white"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            {!sidebarCollapsed && <span>My Places</span>}
+          </Link>
+        </div>
+
+        {/* Collapse Toggle */}
+        <button
+          onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+          className="p-4 border-t border-white/10 text-gray-400 hover:text-white"
+        >
+          {sidebarCollapsed ? <ChevronRight /> : <ChevronLeft />}
+        </button>
+      </aside>
+
+      {/* MAIN CONTENT */}
+      <main className="flex-1 overflow-auto">
+        <Outlet />
+      </main>
+    </div>
+  );
+}
+```
+
+3. TENANT SWITCHER COMPONENT
+
+The tenant switcher dropdown in the sidebar should show:
+- Current tenant name and type
+- Dropdown to switch between user's tenants
+- Visual indicator of tenant type (community vs business)
+```tsx
+function TenantSwitcher({ current, memberships, onSwitch, collapsed }) {
+  const [open, setOpen] = useState(false);
+  
+  if (!current) return null;
+  
+  const typeIcons = {
+    community: '🏔️',
+    government: '🏛️', 
+    business: '🏢',
+    individual: '👤'
+  };
+
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setOpen(!open)}
+        className="w-full p-2 bg-white/5 rounded-lg text-left hover:bg-white/10"
+      >
+        <div className="flex items-center gap-2">
+          <span>{typeIcons[current.type] || '📁'}</span>
+          {!collapsed && (
+            <>
+              <div className="flex-1 min-w-0">
+                <div className="font-medium truncate">{current.name}</div>
+                <div className="text-xs text-gray-500 capitalize">{current.type}</div>
+              </div>
+              <ChevronDown className="w-4 h-4 text-gray-400" />
+            </>
+          )}
+        </div>
+      </button>
+      
+      {open && !collapsed && (
+        <div className="absolute top-full left-0 right-0 mt-1 bg-[#1a2744] border border-white/10 rounded-lg shadow-xl z-50">
+          {memberships.map((m) => (
+            <button
+              key={m.tenant_id}
+              onClick={() => { onSwitch(m.tenant_id); setOpen(false); }}
+              className="w-full p-3 text-left hover:bg-white/10 first:rounded-t-lg last:rounded-b-lg"
+            >
+              <div className="flex items-center gap-2">
+                <span>{typeIcons[m.tenant_type]}</span>
+                <span className="truncate">{m.tenant_name}</span>
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+```
+
+4. FIX DASHBOARD CONTENT FOR COMMUNITY TENANTS
+
+The Dashboard should show different content based on tenant type:
+
+Community Dashboard:
+- Pending Service Runs
+- Active Service Runs  
+- Opted-in Businesses
+- Recent Activity
+
+Business Dashboard (current):
+- Total Revenue
+- Active Bookings
+- Customers
+- Conversion Rate
+
+5. REMOVE TOP NAVIGATION
+
+The top nav bar (Dashboard | Catalog | Bookings...) should be removed entirely. All navigation goes in the left sidebar.
+
+6. HEADER BAR (optional, minimal)
+
+If needed, a minimal header above the main content:
+- Page title
+- User avatar/menu on far right
+- No navigation items
+
+VERIFICATION:
+After implementing, test:
+1. Click "Manage" on Bamfield Community → Left nav shows: Dashboard, Availability, Service Runs, Directory, Content, Settings
+2. Click "Manage" on Bamfield Kayaks → Left nav shows: Dashboard, Catalog, Bookings, Customers, Conversations, Settings
+3. Tenant switcher dropdown works to switch between tenants
+4. "My Places" link returns to tenant picker
+5. Sidebar can collapse/expand
+6. Community dashboard shows community-relevant stats (not revenue)

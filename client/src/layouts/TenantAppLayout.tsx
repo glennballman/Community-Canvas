@@ -1,3 +1,4 @@
+import { useState, useEffect, useRef } from 'react';
 import { Outlet, Link, useLocation, Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useImpersonation } from '@/contexts/ImpersonationContext';
@@ -21,19 +22,49 @@ import {
   LogOut,
   Building2,
   MessageSquare,
-  Menu,
   Phone,
   Wrench,
   Building,
   Palette,
+  ChevronDown,
+  ArrowLeft,
+  Mountain,
+  User,
+  Landmark,
 } from 'lucide-react';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarProvider,
+  SidebarTrigger,
+} from '@/components/ui/sidebar';
 
 export default function TenantAppLayout() {
-  const { user, loading, isAuthenticated } = useAuth();
+  const { user, loading, isAuthenticated, logout } = useAuth();
   const { isActive: isImpersonating } = useImpersonation();
-  const { currentTenant, isCommunityOperator } = useTenant();
+  const { currentTenant, tenants, switchTenant, isCommunityOperator } = useTenant();
   const location = useLocation();
+  const [tenantDropdownOpen, setTenantDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setTenantDropdownOpen(false);
+      }
+    }
+    if (tenantDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [tenantDropdownOpen]);
 
   if (loading) {
     return (
@@ -69,96 +100,172 @@ export default function TenantAppLayout() {
 
   const isActive = (path: string) => location.pathname === path || location.pathname.startsWith(path + '/');
 
-  const NavLinks = () => (
-    <>
-      {navItems.map((item) => (
-        <Link key={item.path} to={item.path}>
-          <Button
-            variant={isActive(item.path) ? 'secondary' : 'ghost'}
-            size="sm"
-            className="gap-2 justify-start w-full lg:w-auto"
-            data-testid={`link-nav-${item.label.toLowerCase()}`}
-          >
-            <item.icon className="h-4 w-4" />
-            <span>{item.label}</span>
-          </Button>
-        </Link>
-      ))}
-    </>
-  );
+  const getTenantIcon = (type: string) => {
+    switch (type) {
+      case 'community': return Mountain;
+      case 'government': return Landmark;
+      case 'business': return Building2;
+      case 'individual': return User;
+      default: return Building2;
+    }
+  };
+
+  const TenantIcon = currentTenant ? getTenantIcon(currentTenant.type) : Building2;
+
+  const sidebarStyle = {
+    "--sidebar-width": "16rem",
+    "--sidebar-width-icon": "3rem",
+  };
+
+  async function handleTenantSwitch(tenantId: string) {
+    await switchTenant(tenantId);
+    setTenantDropdownOpen(false);
+  }
 
   return (
-    <div className="min-h-screen bg-background" data-testid="tenant-app-layout">
+    <div data-testid="tenant-app-layout">
       <ImpersonationBanner />
-      
-      <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container flex h-14 items-center gap-4">
-          <Link 
-            to="/app" 
-            className="font-semibold text-lg flex items-center gap-2"
-            data-testid="link-app-home"
-          >
-            <Building2 className="h-5 w-5" />
-            <span className="hidden sm:inline">{currentTenant?.name || 'My Places'}</span>
-          </Link>
+      <SidebarProvider style={sidebarStyle as React.CSSProperties}>
+        <div className="flex min-h-screen w-full">
+          <Sidebar>
+            <SidebarHeader className="border-b">
+              <div className="p-4">
+                <Link to="/app" className="flex items-center gap-2" data-testid="link-app-home">
+                  <Mountain className="h-5 w-5 text-primary" />
+                  <span className="font-semibold group-data-[collapsible=icon]:hidden">Community Canvas</span>
+                </Link>
+              </div>
+            </SidebarHeader>
 
-          <nav className="hidden lg:flex items-center gap-1 ml-4">
-            <NavLinks />
-          </nav>
+            <SidebarContent>
+              <SidebarGroup>
+                <SidebarGroupContent className="p-2">
+                  <div className="relative" ref={dropdownRef}>
+                    <button
+                      onClick={() => setTenantDropdownOpen(!tenantDropdownOpen)}
+                      className="w-full p-3 rounded-md bg-sidebar-accent/50 hover:bg-sidebar-accent text-left flex items-center gap-2"
+                      data-testid="button-tenant-switcher"
+                    >
+                      <TenantIcon className="h-5 w-5 text-primary shrink-0" />
+                      <div className="flex-1 min-w-0 group-data-[collapsible=icon]:hidden">
+                        <div className="font-medium truncate text-sm">{currentTenant?.name || 'Select Tenant'}</div>
+                        <div className="text-xs text-muted-foreground capitalize">{currentTenant?.type}</div>
+                      </div>
+                      <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0 group-data-[collapsible=icon]:hidden" />
+                    </button>
 
-          <div className="ml-auto flex items-center gap-2">
-            <Sheet>
-              <SheetTrigger asChild className="lg:hidden">
-                <Button variant="ghost" size="icon" data-testid="button-mobile-menu">
-                  <Menu className="h-5 w-5" />
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="left" className="w-64">
-                <nav className="flex flex-col gap-2 mt-6">
-                  <NavLinks />
-                </nav>
-              </SheetContent>
-            </Sheet>
+                    {tenantDropdownOpen && (
+                      <div className="absolute top-full left-0 right-0 mt-1 bg-popover border rounded-md shadow-lg z-50 max-h-64 overflow-auto">
+                        {tenants.map((tenant) => {
+                          const Icon = getTenantIcon(tenant.type);
+                          const isSelected = tenant.id === currentTenant?.id;
+                          return (
+                            <button
+                              key={tenant.id}
+                              onClick={() => handleTenantSwitch(tenant.id)}
+                              className={`w-full p-3 text-left hover:bg-accent flex items-center gap-2 first:rounded-t-md last:rounded-b-md ${
+                                isSelected ? 'bg-accent' : ''
+                              }`}
+                              data-testid={`button-switch-tenant-${tenant.id}`}
+                            >
+                              <Icon className="h-4 w-4 text-muted-foreground" />
+                              <div className="flex-1 min-w-0">
+                                <div className="text-sm truncate">{tenant.name}</div>
+                                <div className="text-xs text-muted-foreground capitalize">{tenant.type}</div>
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </SidebarGroupContent>
+              </SidebarGroup>
 
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="rounded-full" data-testid="button-user-menu">
-                  <Avatar className="h-8 w-8">
-                    <AvatarFallback>
-                      {user?.email?.charAt(0).toUpperCase() || 'U'}
-                    </AvatarFallback>
-                  </Avatar>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <div className="px-2 py-1.5 text-sm font-medium">{user?.email}</div>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem asChild>
-                  <Link to="/app/profile" className="cursor-pointer" data-testid="link-profile">
-                    Profile
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link to="/app/settings" className="cursor-pointer" data-testid="link-settings">
-                    Settings
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem asChild>
-                  <Link to="/logout" className="cursor-pointer text-destructive" data-testid="link-logout">
+              <SidebarGroup>
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    {navItems.map((item) => (
+                      <SidebarMenuItem key={item.path}>
+                        <SidebarMenuButton
+                          asChild
+                          isActive={isActive(item.path)}
+                          tooltip={item.label}
+                        >
+                          <Link to={item.path} data-testid={`link-nav-${item.label.toLowerCase().replace(/\s+/g, '-')}`}>
+                            <item.icon className="h-4 w-4" />
+                            <span>{item.label}</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    ))}
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </SidebarGroup>
+            </SidebarContent>
+
+            <SidebarFooter className="border-t">
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild tooltip="My Places">
+                    <Link to="/app" data-testid="link-my-places">
+                      <ArrowLeft className="h-4 w-4" />
+                      <span>My Places</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarFooter>
+          </Sidebar>
+
+          <div className="flex flex-col flex-1 overflow-hidden">
+            <header className="h-14 border-b bg-background flex items-center justify-between px-4 gap-4 shrink-0">
+              <div className="flex items-center gap-2">
+                <SidebarTrigger data-testid="button-sidebar-toggle" />
+              </div>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="rounded-full" data-testid="button-user-menu">
+                    <Avatar className="h-8 w-8">
+                      <AvatarFallback>
+                        {user?.email?.charAt(0).toUpperCase() || 'U'}
+                      </AvatarFallback>
+                    </Avatar>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <div className="px-2 py-1.5 text-sm font-medium">{user?.email}</div>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <Link to="/app/profile" className="cursor-pointer" data-testid="link-profile">
+                      Profile
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/app/settings" className="cursor-pointer" data-testid="link-settings">
+                      Settings
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem 
+                    onClick={logout}
+                    className="cursor-pointer text-destructive"
+                    data-testid="button-logout"
+                  >
                     <LogOut className="h-4 w-4 mr-2" />
                     Sign Out
-                  </Link>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </header>
+
+            <main className="flex-1 overflow-auto p-6">
+              <Outlet />
+            </main>
           </div>
         </div>
-      </header>
-
-      <main className="container py-6">
-        <Outlet />
-      </main>
+      </SidebarProvider>
     </div>
   );
 }
