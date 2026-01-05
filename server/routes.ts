@@ -49,6 +49,8 @@ import coopRunsRouter from "./routes/coop-runs";
 import operatorRouter from "./routes/operator";
 import publicPortalRouter from "./routes/public-portal";
 import userContextRouter from "./routes/user-context";
+import adminImpersonationRouter from "./routes/admin-impersonation";
+import adminTenantsRouter from "./routes/admin-tenants";
 import { publicQuery } from "./db/tenantDb";
 import express from "express";
 
@@ -178,6 +180,12 @@ export async function registerRoutes(
 
   // Register user context routes (auth required)
   app.use('/api', userContextRouter);
+
+  // Register admin impersonation routes (platform admin only)
+  app.use('/api/admin/impersonation', adminImpersonationRouter);
+
+  // Register admin tenants routes (platform admin only)
+  app.use('/api/admin/tenants', adminTenantsRouter);
 
   // Public catalog endpoints (no auth required)
   app.get('/api/v1/catalog/vehicles', async (req, res) => {
