@@ -1,0 +1,199 @@
+STRUCTURED QA VERIFICATION - Run each section in order and report findings
+
+═══════════════════════════════════════════════════════════════════
+SECTION 1: DATABASE VERIFICATION
+═══════════════════════════════════════════════════════════════════
+
+1.1 Check that migration 041 tables exist:
+
+Run this SQL and confirm all 6 tables exist:
+```sql
+SELECT table_name FROM information_schema.tables 
+WHERE table_schema = 'public' 
+AND table_name IN (
+  'tenant_sharing_settings', 
+  'catalog_items', 
+  'catalog_availability',
+  'hold_requests',
+  'operator_call_logs',
+  'catalog_import_jobs'
+);
+```
+
+Expected: 6 rows returned
+
+1.2 Check catalog_items has correct columns:
+```sql
+SELECT column_name, data_type 
+FROM information_schema.columns 
+WHERE table_name = 'catalog_items'
+ORDER BY ordinal_position;
+```
+
+Expected columns include: id, tenant_id, name, short_description, item_type, status, category, photos, price_amount, price_unit
+
+1.3 Check tenant_sharing_settings columns:
+```sql
+SELECT column_name, data_type 
+FROM information_schema.columns 
+WHERE table_name = 'tenant_sharing_settings';
+```
+
+Expected columns include: share_availability, share_pricing, allow_reservation_requests, allow_hold_requests
+
+1.4 Verify the search_operator_availability function exists:
+```sql
+SELECT routine_name FROM information_schema.routines 
+WHERE routine_name = 'search_operator_availability';
+```
+
+Expected: 1 row
+
+═══════════════════════════════════════════════════════════════════
+SECTION 2: API ROUTE VERIFICATION
+═══════════════════════════════════════════════════════════════════
+
+2.1 Test public-portal routes (no auth required):
+
+GET /api/public/portals/bamfield
+- Expected: 200 with tenant object OR 404 if bamfield not seeded
+- Should NOT return 401/403
+
+GET /api/public/portals/bamfield/alerts
+- Expected: 200 with { alerts: [] } or array
+
+GET /api/public/portals/bamfield/weather  
+- Expected: 200 with weather object
+
+2.2 Test user-context routes (auth required):
+
+GET /api/me/context (without auth)
+- Expected: 401 Unauthorized
+
+GET /api/me/context (with valid session)
+- Expected: 200 with { user, memberships, current_tenant_id }
+
+POST /api/me/switch-tenant (with valid session + body { tenant_id: "..." })
+- Expected: 200 with { success: true }
+
+2.3 Test operator routes (auth required):
+
+GET /api/operator/availability (without auth)
+- Expected: 401
+
+GET /api/operator/availability?item_type=accommodation (with auth + tenant context)
+- Expected: 200 with { results: [] } (may be empty if no catalog items)
+
+═══════════════════════════════════════════════════════════════════
+SECTION 3: FRONTEND ROUTE VERIFICATION
+═══════════════════════════════════════════════════════════════════
+
+3.1 Public Portal routes:
+- Navigate to /c/bamfield
+- Expected: PublicPortalLayout renders (or 404 page if not seeded)
+- Should show: header with community name, navigation tabs, no left sidebar
+
+3.2 Tenant App routes:
+- Navigate to /app (authenticated)
+- Expected: TenantPicker page OR TenantAppLayout with dashboard
+- Should show: "Your Places" heading or tenant-specific dashboard
+
+- Navigate to /app/availability (as community tenant)
+- Expected: AvailabilityConsole component with tabs (Stay, Parking, Moorage, etc.)
+
+- Navigate to /app/catalog/onboarding (as business tenant)
+- Expected: CatalogOnboarding wizard step 1 (source selection)
+
+3.3 Platform Admin routes:
+- Navigate to /admin (as platform admin)
+- Expected: PlatformAdminLayout with admin navigation
+- Should show: Dashboard, Tenants, Users, Data, Moderation sections in nav
+
+3.4 Route redirects:
+- Navigate to / 
+- Expected: Redirects to /app
+
+- Navigate to /conversations
+- Expected: Redirects to /app/conversations
+
+═══════════════════════════════════════════════════════════════════
+SECTION 4: COMPONENT RENDERING VERIFICATION
+═══════════════════════════════════════════════════════════════════
+
+4.1 TenantPicker (/app when no tenant selected):
+- Should render "Your Places" header
+- Should show grouped sections: "Communities you manage", "Businesses you manage"
+- Each tenant card should have "Manage" button
+- Empty state should show if user has no memberships
+
+4.2 TenantAppLayout (after selecting tenant):
+- Left nav should appear with role-specific items
+- Community tenant nav should include: Dashboard, Availability, Service Runs, Directory
+- Business tenant nav should include: Dashboard, Catalog, Availability & Pricing, Bookings
+- Tenant switcher should appear in header/sidebar
+
+4.3 AvailabilityConsole:
+- Should show 6 tabs: Stay, Parking, Moorage, Rentals, Services, Alerts
+- Search bar should be present with placeholder text
+- Phone Script toggle button should be visible
+- Results area should show empty state or loading state
+
+4.4 CatalogOnboarding:
+- Step 1 should show 3 options: Import from website, Upload file, Start from scratch
+- Progress indicator should show "Step 1 of 5"
+- Website URL input should appear when "Import from website" selected
+
+═══════════════════════════════════════════════════════════════════
+SECTION 5: ERROR HANDLING VERIFICATION  
+═══════════════════════════════════════════════════════════════════
+
+5.1 Auth errors should be user-friendly:
+- Trigger a 401 error (access protected route without auth)
+- Should NOT show raw JSON error
+- Should show friendly message like "Please sign in" with login button
+
+5.2 API errors should be handled gracefully:
+- If /api/me/context fails, app should show login redirect or error state
+- If /api/operator/availability fails, should show "Search failed" not crash
+
+5.3 Missing tenant context:
+- If user has no current_tenant_id, should show TenantPicker
+- Should NOT show blank page or JS error
+
+═══════════════════════════════════════════════════════════════════
+SECTION 6: REPORT FINDINGS
+═══════════════════════════════════════════════════════════════════
+
+For each section, report:
+- ✅ PASS: Working as expected
+- ⚠️ PARTIAL: Works but with issues (describe)
+- ❌ FAIL: Not working (describe error)
+- 🔧 NEEDS IMPLEMENTATION: Component/route not yet created
+
+Create a summary table:
+
+| Check | Status | Notes |
+|-------|--------|-------|
+| 1.1 Migration tables | | |
+| 1.2 catalog_items columns | | |
+| 1.3 sharing_settings columns | | |
+| 1.4 search function | | |
+| 2.1 public-portal routes | | |
+| 2.2 user-context routes | | |
+| 2.3 operator routes | | |
+| 3.1 Public Portal UI | | |
+| 3.2 Tenant App UI | | |
+| 3.3 Platform Admin UI | | |
+| 3.4 Route redirects | | |
+| 4.1 TenantPicker | | |
+| 4.2 TenantAppLayout | | |
+| 4.3 AvailabilityConsole | | |
+| 4.4 CatalogOnboarding | | |
+| 5.1 Auth error UX | | |
+| 5.2 API error handling | | |
+| 5.3 Missing tenant context | | |
+
+After completing all checks, summarize:
+- Total checks passed
+- Critical issues found
+- Recommended next steps
