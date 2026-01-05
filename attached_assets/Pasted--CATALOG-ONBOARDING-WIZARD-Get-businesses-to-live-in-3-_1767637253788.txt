@@ -1,0 +1,784 @@
+/**
+ * CATALOG ONBOARDING WIZARD
+ * 
+ * Get businesses to "live in 3 minutes" with AI-powered catalog import.
+ * Steps: Source → Review → Availability → Sharing → Live
+ */
+
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { api } from '../../../lib/api';
+import { useTenant } from '../../../layouts/TenantAppLayout';
+
+type Step = 'source' | 'scanning' | 'review' | 'availability' | 'sharing' | 'complete';
+
+interface ImportedItem {
+  id: string;
+  name: string;
+  description: string;
+  category: string;
+  price: string;
+  photos: string[];
+  confidence: number;
+  needs_review: boolean;
+  status: 'ready' | 'needs_review' | 'missing_price' | 'hidden';
+}
+
+export function CatalogOnboarding() {
+  const navigate = useNavigate();
+  const { currentTenant } = useTenant();
+  
+  const [step, setStep] = useState<Step>('source');
+  const [sourceType, setSourceType] = useState<'website' | 'file' | 'manual' | null>(null);
+  const [websiteUrl, setWebsiteUrl] = useState('');
+  const [importedItems, setImportedItems] = useState<ImportedItem[]>([]);
+  const [scanProgress, setScanProgress] = useState(0);
+  const [scanMessage, setScanMessage] = useState('');
+  
+  // Settings
+  const [availabilityType, setAvailabilityType] = useState('always');
+  const [priceVisibility, setPriceVisibility] = useState('show');
+  const [shareAvailability, setShareAvailability] = useState(false);
+  const [sharePricing, setSharePricing] = useState(false);
+  const [allowHolds, setAllowHolds] = useState(false);
+  const [showPublic, setShowPublic] = useState(true);
+
+  async function startWebsiteScan() {
+    if (!websiteUrl) return;
+    
+    setStep('scanning');
+    setScanProgress(0);
+    
+    // Simulate scan progress
+    const messages = [
+      'Finding items and services...',
+      'Extracting descriptions and photos...',
+      'Detecting categories and pricing...',
+      'Organizing everything for review...'
+    ];
+    
+    for (let i = 0; i < messages.length; i++) {
+      await new Promise(r => setTimeout(r, 1500));
+      setScanMessage(messages[i]);
+      setScanProgress((i + 1) * 25);
+    }
+    
+    // TODO: Call actual API
+    // const result = await api.post('/api/catalog/import', { source_type: 'website', source_url: websiteUrl });
+    
+    // Mock results
+    setImportedItems([
+      {
+        id: '1',
+        name: 'Single Kayak Rental',
+        description: 'Perfect for solo paddlers exploring the inlet',
+        category: 'Rentals',
+        price: '$45/day',
+        photos: [],
+        confidence: 0.95,
+        needs_review: false,
+        status: 'ready'
+      },
+      {
+        id: '2',
+        name: 'Double Kayak Rental',
+        description: 'Tandem kayak for two paddlers',
+        category: 'Rentals',
+        price: '$65/day',
+        photos: [],
+        confidence: 0.92,
+        needs_review: false,
+        status: 'ready'
+      },
+      {
+        id: '3',
+        name: 'Guided Tour - 3 Hours',
+        description: 'Explore the coastline with an experienced guide',
+        category: 'Experiences',
+        price: '',
+        photos: [],
+        confidence: 0.7,
+        needs_review: true,
+        status: 'missing_price'
+      },
+    ]);
+    
+    setStep('review');
+  }
+
+  function handleContinueFromReview() {
+    setStep('availability');
+  }
+
+  function handleContinueFromAvailability() {
+    setStep('sharing');
+  }
+
+  async function handleFinish() {
+    // TODO: Save settings to API
+    // await api.post('/api/tenant/settings/sharing', { ... });
+    // await api.post('/api/catalog/publish', { item_ids: importedItems.map(i => i.id) });
+    
+    setStep('complete');
+  }
+
+  return (
+    <div className="min-h-screen bg-[#060b15] text-white">
+      {/* Progress */}
+      <div className="border-b border-white/10">
+        <div className="max-w-3xl mx-auto px-6 py-4">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm text-gray-400">Add your catalog</span>
+            <span className="text-sm text-gray-500">
+              Step {getStepNumber(step)} of 5
+            </span>
+          </div>
+          <div className="flex gap-1">
+            {['source', 'review', 'availability', 'sharing', 'complete'].map((s, i) => (
+              <div
+                key={s}
+                className={`h-1 flex-1 rounded ${
+                  getStepNumber(step) > i ? 'bg-blue-500' : 'bg-white/10'
+                }`}
+              />
+            ))}
+          </div>
+          <p className="text-xs text-gray-500 mt-2">
+            You can change anything later. Nothing goes public without your approval.
+          </p>
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="max-w-3xl mx-auto px-6 py-8">
+        {step === 'source' && (
+          <SourceStep
+            sourceType={sourceType}
+            setSourceType={setSourceType}
+            websiteUrl={websiteUrl}
+            setWebsiteUrl={setWebsiteUrl}
+            onScan={startWebsiteScan}
+            onManual={() => navigate('/app/catalog')}
+          />
+        )}
+
+        {step === 'scanning' && (
+          <ScanningStep progress={scanProgress} message={scanMessage} />
+        )}
+
+        {step === 'review' && (
+          <ReviewStep
+            items={importedItems}
+            setItems={setImportedItems}
+            onContinue={handleContinueFromReview}
+          />
+        )}
+
+        {step === 'availability' && (
+          <AvailabilityStep
+            availabilityType={availabilityType}
+            setAvailabilityType={setAvailabilityType}
+            priceVisibility={priceVisibility}
+            setPriceVisibility={setPriceVisibility}
+            onContinue={handleContinueFromAvailability}
+          />
+        )}
+
+        {step === 'sharing' && (
+          <SharingStep
+            shareAvailability={shareAvailability}
+            setShareAvailability={setShareAvailability}
+            sharePricing={sharePricing}
+            setSharePricing={setSharePricing}
+            allowHolds={allowHolds}
+            setAllowHolds={setAllowHolds}
+            showPublic={showPublic}
+            setShowPublic={setShowPublic}
+            onFinish={handleFinish}
+          />
+        )}
+
+        {step === 'complete' && (
+          <CompleteStep
+            itemCount={importedItems.length}
+            tenantName={currentTenant?.tenant_name || 'Your business'}
+          />
+        )}
+      </div>
+    </div>
+  );
+}
+
+function getStepNumber(step: Step): number {
+  const steps: Step[] = ['source', 'scanning', 'review', 'availability', 'sharing', 'complete'];
+  const index = steps.indexOf(step);
+  if (step === 'scanning') return 1;
+  if (index <= 1) return 1;
+  return index;
+}
+
+// ============================================================
+// STEP 1: SOURCE
+// ============================================================
+
+function SourceStep({
+  sourceType,
+  setSourceType,
+  websiteUrl,
+  setWebsiteUrl,
+  onScan,
+  onManual
+}: {
+  sourceType: 'website' | 'file' | 'manual' | null;
+  setSourceType: (t: 'website' | 'file' | 'manual' | null) => void;
+  websiteUrl: string;
+  setWebsiteUrl: (url: string) => void;
+  onScan: () => void;
+  onManual: () => void;
+}) {
+  return (
+    <div>
+      <h1 className="text-2xl font-bold mb-2">How would you like to add your catalog?</h1>
+      <p className="text-gray-400 mb-8">Most people let us import it automatically.</p>
+
+      <div className="grid md:grid-cols-3 gap-4 mb-8">
+        {/* Website Import */}
+        <button
+          onClick={() => setSourceType('website')}
+          className={`p-6 rounded-lg border text-left transition ${
+            sourceType === 'website'
+              ? 'bg-blue-600/20 border-blue-500'
+              : 'bg-white/5 border-white/10 hover:border-white/30'
+          }`}
+        >
+          <div className="text-3xl mb-3">🌐</div>
+          <h3 className="font-semibold mb-2">Import from your website</h3>
+          <p className="text-sm text-gray-400">
+            We'll scan your site and build your catalog for you — items, descriptions, and photos.
+          </p>
+        </button>
+
+        {/* File Upload */}
+        <button
+          onClick={() => setSourceType('file')}
+          className={`p-6 rounded-lg border text-left transition ${
+            sourceType === 'file'
+              ? 'bg-blue-600/20 border-blue-500'
+              : 'bg-white/5 border-white/10 hover:border-white/30'
+          }`}
+        >
+          <div className="text-3xl mb-3">📄</div>
+          <h3 className="font-semibold mb-2">Upload a file</h3>
+          <p className="text-sm text-gray-400">
+            Upload a spreadsheet or PDF and we'll convert it into a structured catalog.
+          </p>
+          <p className="text-xs text-gray-500 mt-2">CSV, Excel, PDF</p>
+        </button>
+
+        {/* Manual */}
+        <button
+          onClick={() => {
+            setSourceType('manual');
+            onManual();
+          }}
+          className="p-6 rounded-lg border bg-white/5 border-white/10 hover:border-white/30 text-left transition"
+        >
+          <div className="text-3xl mb-3">✏️</div>
+          <h3 className="font-semibold mb-2">Start from scratch</h3>
+          <p className="text-sm text-gray-400">
+            Add items manually if you don't have a website or file.
+          </p>
+        </button>
+      </div>
+
+      {/* Website URL Input */}
+      {sourceType === 'website' && (
+        <div className="bg-white/5 border border-white/10 rounded-lg p-6">
+          <label className="block text-sm font-medium mb-2">Your website URL</label>
+          <input
+            type="url"
+            value={websiteUrl}
+            onChange={(e) => setWebsiteUrl(e.target.value)}
+            placeholder="https://yourwebsite.com"
+            className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 mb-2"
+          />
+          <p className="text-xs text-gray-500 mb-4">
+            Works with most business websites, even simple ones.
+          </p>
+          <button
+            onClick={onScan}
+            disabled={!websiteUrl}
+            className="w-full py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Scan my website
+          </button>
+          <p className="text-xs text-gray-500 text-center mt-2">
+            Takes about 30–60 seconds
+          </p>
+        </div>
+      )}
+
+      {/* File Upload UI */}
+      {sourceType === 'file' && (
+        <div className="bg-white/5 border border-white/10 rounded-lg p-6 text-center">
+          <div className="border-2 border-dashed border-white/20 rounded-lg p-8">
+            <div className="text-4xl mb-3">📁</div>
+            <p className="mb-4">Drag and drop your file here, or</p>
+            <button className="px-6 py-2 bg-blue-600 rounded-lg hover:bg-blue-700">
+              Choose File
+            </button>
+          </div>
+        </div>
+      )}
+
+      <p className="text-sm text-gray-500 mt-6 text-center">
+        You can combine methods later — import now, edit manually anytime.
+      </p>
+    </div>
+  );
+}
+
+// ============================================================
+// SCANNING STEP
+// ============================================================
+
+function ScanningStep({ progress, message }: { progress: number; message: string }) {
+  return (
+    <div className="text-center py-16">
+      <div className="w-24 h-24 mx-auto mb-6 relative">
+        <div className="absolute inset-0 border-4 border-white/10 rounded-full"></div>
+        <div
+          className="absolute inset-0 border-4 border-blue-500 rounded-full transition-all duration-500"
+          style={{
+            clipPath: `polygon(50% 50%, 50% 0%, ${50 + 50 * Math.sin(progress * Math.PI / 50)}% ${50 - 50 * Math.cos(progress * Math.PI / 50)}%, 50% 50%)`
+          }}
+        ></div>
+        <div className="absolute inset-0 flex items-center justify-center text-2xl">
+          🔍
+        </div>
+      </div>
+      
+      <h2 className="text-2xl font-bold mb-2">Scanning your catalog...</h2>
+      <p className="text-gray-400 mb-4">{message}</p>
+      <div className="max-w-xs mx-auto bg-white/10 rounded-full h-2">
+        <div
+          className="bg-blue-500 h-2 rounded-full transition-all duration-500"
+          style={{ width: `${progress}%` }}
+        />
+      </div>
+      <p className="text-sm text-gray-500 mt-6">
+        You don't need to watch this — we'll let you know when it's ready.
+      </p>
+    </div>
+  );
+}
+
+// ============================================================
+// REVIEW STEP
+// ============================================================
+
+function ReviewStep({
+  items,
+  setItems,
+  onContinue
+}: {
+  items: ImportedItem[];
+  setItems: (items: ImportedItem[]) => void;
+  onContinue: () => void;
+}) {
+  const readyCount = items.filter(i => i.status === 'ready').length;
+  const reviewCount = items.filter(i => i.needs_review).length;
+
+  return (
+    <div>
+      <h1 className="text-2xl font-bold mb-2">We found {items.length} items</h1>
+      <p className="text-gray-400 mb-6">Review what we found. You're always in control.</p>
+
+      {/* Summary Banner */}
+      <div className="bg-green-600/20 border border-green-500/30 rounded-lg p-4 mb-6 flex items-center gap-3">
+        <span className="text-2xl">✅</span>
+        <div>
+          <p className="font-medium text-green-400">Import complete — nothing is live yet</p>
+          <p className="text-sm text-green-300/70">Review items below. You can edit, hide, or delete anything.</p>
+        </div>
+      </div>
+
+      {/* Stats */}
+      <div className="flex gap-4 mb-6">
+        <div className="px-3 py-1 bg-green-500/20 text-green-400 rounded-full text-sm">
+          {readyCount} ready
+        </div>
+        {reviewCount > 0 && (
+          <div className="px-3 py-1 bg-amber-500/20 text-amber-400 rounded-full text-sm">
+            {reviewCount} need review
+          </div>
+        )}
+      </div>
+
+      {/* Items */}
+      <div className="space-y-3 mb-8">
+        {items.map((item) => (
+          <div
+            key={item.id}
+            className="bg-white/5 border border-white/10 rounded-lg p-4 flex items-start gap-4"
+          >
+            {/* Photo Placeholder */}
+            <div className="w-16 h-16 bg-white/10 rounded-lg flex items-center justify-center text-2xl flex-shrink-0">
+              📷
+            </div>
+
+            {/* Info */}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-1">
+                <h3 className="font-medium">{item.name}</h3>
+                <span className={`text-xs px-2 py-0.5 rounded ${
+                  item.status === 'ready' ? 'bg-green-500/20 text-green-400' :
+                  item.status === 'needs_review' ? 'bg-amber-500/20 text-amber-400' :
+                  item.status === 'missing_price' ? 'bg-red-500/20 text-red-400' :
+                  'bg-gray-500/20 text-gray-400'
+                }`}>
+                  {item.status === 'ready' ? 'Ready' :
+                   item.status === 'needs_review' ? 'Needs review' :
+                   item.status === 'missing_price' ? 'Missing price' :
+                   'Hidden'}
+                </span>
+              </div>
+              <p className="text-sm text-gray-400 mb-2">{item.description}</p>
+              <div className="flex gap-4 text-sm">
+                <span className="text-gray-500">{item.category}</span>
+                {item.price && <span className="font-medium">{item.price}</span>}
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-2">
+              <button className="px-3 py-1 bg-white/10 rounded text-sm hover:bg-white/20">
+                Edit
+              </button>
+              <button className="px-3 py-1 bg-white/10 rounded text-sm hover:bg-white/20">
+                Hide
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="flex justify-between">
+        <button className="px-4 py-2 text-gray-400 hover:text-white">
+          Save and finish later
+        </button>
+        <button
+          onClick={onContinue}
+          className="px-8 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700"
+        >
+          Looks good — continue
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// AVAILABILITY STEP
+// ============================================================
+
+function AvailabilityStep({
+  availabilityType,
+  setAvailabilityType,
+  priceVisibility,
+  setPriceVisibility,
+  onContinue
+}: {
+  availabilityType: string;
+  setAvailabilityType: (t: string) => void;
+  priceVisibility: string;
+  setPriceVisibility: (v: string) => void;
+  onContinue: () => void;
+}) {
+  return (
+    <div>
+      <h1 className="text-2xl font-bold mb-2">Availability & pricing</h1>
+      <p className="text-gray-400 mb-8">Set the basics. You can fine-tune later.</p>
+
+      {/* Availability */}
+      <div className="mb-8">
+        <label className="block text-sm font-medium mb-3">
+          When are these items generally available?
+        </label>
+        <div className="space-y-2">
+          {[
+            { value: 'always', label: 'Always available' },
+            { value: 'seasonal', label: 'Seasonal' },
+            { value: 'by_request', label: 'By request' },
+          ].map((opt) => (
+            <label
+              key={opt.value}
+              className={`flex items-center gap-3 p-4 rounded-lg border cursor-pointer transition ${
+                availabilityType === opt.value
+                  ? 'bg-blue-600/20 border-blue-500'
+                  : 'bg-white/5 border-white/10 hover:border-white/30'
+              }`}
+            >
+              <input
+                type="radio"
+                name="availability"
+                value={opt.value}
+                checked={availabilityType === opt.value}
+                onChange={(e) => setAvailabilityType(e.target.value)}
+                className="sr-only"
+              />
+              <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                availabilityType === opt.value ? 'border-blue-500' : 'border-white/30'
+              }`}>
+                {availabilityType === opt.value && (
+                  <div className="w-2.5 h-2.5 bg-blue-500 rounded-full" />
+                )}
+              </div>
+              <span>{opt.label}</span>
+            </label>
+          ))}
+        </div>
+        <p className="text-xs text-gray-500 mt-2">
+          You can set exact dates and blackout periods later.
+        </p>
+      </div>
+
+      {/* Pricing */}
+      <div className="mb-8">
+        <label className="block text-sm font-medium mb-3">
+          How should pricing be shown?
+        </label>
+        <div className="space-y-2">
+          {[
+            { value: 'show', label: 'Show approximate prices', desc: 'Helps callers decide faster' },
+            { value: 'hide', label: 'Hide prices', desc: 'Operators can still contact you' },
+            { value: 'varies', label: 'Price varies', desc: "We'll label prices as estimates" },
+          ].map((opt) => (
+            <label
+              key={opt.value}
+              className={`flex items-start gap-3 p-4 rounded-lg border cursor-pointer transition ${
+                priceVisibility === opt.value
+                  ? 'bg-blue-600/20 border-blue-500'
+                  : 'bg-white/5 border-white/10 hover:border-white/30'
+              }`}
+            >
+              <input
+                type="radio"
+                name="pricing"
+                value={opt.value}
+                checked={priceVisibility === opt.value}
+                onChange={(e) => setPriceVisibility(e.target.value)}
+                className="sr-only"
+              />
+              <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center mt-0.5 ${
+                priceVisibility === opt.value ? 'border-blue-500' : 'border-white/30'
+              }`}>
+                {priceVisibility === opt.value && (
+                  <div className="w-2.5 h-2.5 bg-blue-500 rounded-full" />
+                )}
+              </div>
+              <div>
+                <div>{opt.label}</div>
+                <div className="text-sm text-gray-500">{opt.desc}</div>
+              </div>
+            </label>
+          ))}
+        </div>
+      </div>
+
+      <button
+        onClick={onContinue}
+        className="w-full py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700"
+      >
+        Continue
+      </button>
+    </div>
+  );
+}
+
+// ============================================================
+// SHARING STEP
+// ============================================================
+
+function SharingStep({
+  shareAvailability,
+  setShareAvailability,
+  sharePricing,
+  setSharePricing,
+  allowHolds,
+  setAllowHolds,
+  showPublic,
+  setShowPublic,
+  onFinish
+}: {
+  shareAvailability: boolean;
+  setShareAvailability: (v: boolean) => void;
+  sharePricing: boolean;
+  setSharePricing: (v: boolean) => void;
+  allowHolds: boolean;
+  setAllowHolds: (v: boolean) => void;
+  showPublic: boolean;
+  setShowPublic: (v: boolean) => void;
+  onFinish: () => void;
+}) {
+  return (
+    <div>
+      <h1 className="text-2xl font-bold mb-2">Who can see your availability?</h1>
+      <p className="text-gray-400 mb-8">You control what's shared and with whom.</p>
+
+      {/* Community Operators */}
+      <div className="bg-white/5 border border-white/10 rounded-lg p-6 mb-6">
+        <h3 className="font-semibold mb-1">Community operators</h3>
+        <p className="text-sm text-gray-400 mb-4">
+          Community admins (like the Chamber or Visitor Centre) can answer calls on your behalf if you opt in.
+        </p>
+
+        <div className="space-y-3">
+          <Toggle
+            checked={shareAvailability}
+            onChange={setShareAvailability}
+            label="Share availability"
+            description="Operators can see if you're available"
+          />
+          <Toggle
+            checked={sharePricing}
+            onChange={setSharePricing}
+            label="Share pricing"
+            description="Operators can quote approximate prices"
+          />
+          <Toggle
+            checked={allowHolds}
+            onChange={setAllowHolds}
+            label="Allow hold requests"
+            description="Operators can request a temporary hold"
+          />
+        </div>
+
+        <p className="text-xs text-gray-500 mt-4">
+          Operators never confirm bookings without you.
+        </p>
+      </div>
+
+      {/* Public Visibility */}
+      <div className="bg-white/5 border border-white/10 rounded-lg p-6 mb-8">
+        <h3 className="font-semibold mb-4">Public visibility</h3>
+        <Toggle
+          checked={showPublic}
+          onChange={setShowPublic}
+          label="Show items on public community pages"
+          description="You can appear on community pages without taking direct bookings."
+        />
+      </div>
+
+      <button
+        onClick={onFinish}
+        className="w-full py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700"
+      >
+        Finish setup
+      </button>
+    </div>
+  );
+}
+
+function Toggle({
+  checked,
+  onChange,
+  label,
+  description
+}: {
+  checked: boolean;
+  onChange: (v: boolean) => void;
+  label: string;
+  description: string;
+}) {
+  return (
+    <label className="flex items-start gap-3 cursor-pointer">
+      <div
+        onClick={() => onChange(!checked)}
+        className={`w-10 h-6 rounded-full relative transition ${
+          checked ? 'bg-blue-600' : 'bg-white/20'
+        }`}
+      >
+        <div
+          className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${
+            checked ? 'left-5' : 'left-1'
+          }`}
+        />
+      </div>
+      <div className="flex-1">
+        <div className="font-medium">{label}</div>
+        <div className="text-sm text-gray-500">{description}</div>
+      </div>
+    </label>
+  );
+}
+
+// ============================================================
+// COMPLETE STEP
+// ============================================================
+
+function CompleteStep({ itemCount, tenantName }: { itemCount: number; tenantName: string }) {
+  return (
+    <div className="text-center py-8">
+      <div className="text-6xl mb-4">🎉</div>
+      <h1 className="text-3xl font-bold mb-2">You're all set!</h1>
+      <p className="text-gray-400 mb-8">Your catalog is ready and under your control.</p>
+
+      {/* Summary */}
+      <div className="bg-white/5 border border-white/10 rounded-lg p-6 max-w-md mx-auto mb-8 text-left">
+        <div className="space-y-2">
+          <div className="flex justify-between">
+            <span className="text-gray-400">Items added</span>
+            <span className="font-medium">{itemCount}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-gray-400">Status</span>
+            <span className="text-green-400">Ready</span>
+          </div>
+        </div>
+      </div>
+
+      {/* What's Next */}
+      <div className="max-w-md mx-auto text-left mb-8">
+        <h3 className="font-medium mb-3">What happens next:</h3>
+        <ul className="space-y-2 text-sm text-gray-400">
+          <li className="flex items-start gap-2">
+            <span className="text-green-400">✓</span>
+            Community operators can now answer calls using your availability
+          </li>
+          <li className="flex items-start gap-2">
+            <span className="text-green-400">✓</span>
+            You'll receive messages if someone requests a hold or booking
+          </li>
+          <li className="flex items-start gap-2">
+            <span className="text-green-400">✓</span>
+            You can update anything anytime
+          </li>
+        </ul>
+      </div>
+
+      {/* CTAs */}
+      <div className="flex justify-center gap-4">
+        <a
+          href="/app/catalog"
+          className="px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700"
+        >
+          View my catalog
+        </a>
+        <a
+          href="/app/pricing"
+          className="px-6 py-3 bg-white/10 rounded-lg hover:bg-white/20"
+        >
+          Set detailed availability
+        </a>
+      </div>
+
+      <p className="text-xs text-gray-500 mt-8">
+        Nothing is charged. Nothing is public without your approval.<br />
+        Built for small teams and real communities.
+      </p>
+    </div>
+  );
+}
+
+export default CatalogOnboarding;
