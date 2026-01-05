@@ -1,0 +1,420 @@
+/**
+ * TENANT PICKER - "Your Places"
+ * 
+ * The primary landing page when a user logs into /app
+ * Shows all tenants they have access to, grouped by type
+ * 
+ * UX Goal: Answer "What does Sheryl see when she logs in?"
+ */
+
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { api } from '../../lib/api';
+
+interface TenantMembership {
+  tenant_id: string;
+  tenant_name: string;
+  tenant_slug: string;
+  tenant_type: string;
+  portal_slug?: string;
+  role: string;
+  is_primary: boolean;
+  // Stats
+  stats?: {
+    bookings_today?: number;
+    items_listed?: number;
+    pending_requests?: number;
+    active_runs?: number;
+    needs_setup?: boolean;
+  };
+}
+
+interface User {
+  id: string;
+  email: string;
+  full_name?: string;
+  is_platform_admin: boolean;
+}
+
+export function TenantPicker() {
+  const [user, setUser] = useState<User | null>(null);
+  const [memberships, setMemberships] = useState<TenantMembership[]>([]);
+  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    loadContext();
+  }, []);
+
+  async function loadContext() {
+    try {
+      const data = await api.get('/api/me/context');
+      setUser(data.user);
+      setMemberships(data.memberships || []);
+      
+      // If user has exactly one tenant, go directly to it
+      if (data.memberships?.length === 1) {
+        handleSelectTenant(data.memberships[0]);
+      }
+    } catch (error: any) {
+      if (error.status === 401) {
+        navigate('/login');
+      }
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleSelectTenant(tenant: TenantMembership) {
+    try {
+      await api.post('/api/me/switch-tenant', { tenant_id: tenant.tenant_id });
+      navigate('/app/dashboard');
+    } catch (error) {
+      console.error('Failed to switch tenant:', error);
+    }
+  }
+
+  // Group memberships by type
+  const communities = memberships.filter(m => 
+    m.tenant_type === 'community' || m.tenant_type === 'government'
+  );
+  const businesses = memberships.filter(m => m.tenant_type === 'business');
+  const personal = memberships.filter(m => m.tenant_type === 'individual');
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#060b15] flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full mx-auto"></div>
+          <p className="mt-4 text-gray-400">Loading your places...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-[#060b15] text-white">
+      {/* Header */}
+      <header className="border-b border-white/10">
+        <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">🌐</span>
+            <span className="font-semibold">Community Canvas</span>
+          </div>
+          <div className="flex items-center gap-4">
+            {user?.is_platform_admin && (
+              <Link 
+                to="/admin" 
+                className="text-sm text-purple-400 hover:text-purple-300"
+              >
+                Platform Admin
+              </Link>
+            )}
+            <UserDropdown user={user} />
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="max-w-6xl mx-auto px-6 py-8">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold mb-2">Your Places</h1>
+          <p className="text-gray-400">Choose what you want to manage</p>
+        </div>
+
+        {/* No Tenants State */}
+        {memberships.length === 0 && (
+          <EmptyState user={user} />
+        )}
+
+        {/* Communities Section */}
+        {communities.length > 0 && (
+          <TenantSection
+            icon="🏔️"
+            title="Communities you manage"
+            description="Answer the phone, coordinate services, and view opted-in availability"
+            tenants={communities}
+            onSelect={handleSelectTenant}
+          />
+        )}
+
+        {/* Businesses Section */}
+        {businesses.length > 0 && (
+          <TenantSection
+            icon="🏢"
+            title="Businesses you manage"
+            description="Publish your catalog, manage availability, and handle bookings"
+            tenants={businesses}
+            onSelect={handleSelectTenant}
+          />
+        )}
+
+        {/* Personal Section */}
+        {personal.length > 0 && (
+          <TenantSection
+            icon="👤"
+            title="Personal"
+            description="Your personal profile and activity"
+            tenants={personal}
+            onSelect={handleSelectTenant}
+          />
+        )}
+
+        {/* Quick Actions */}
+        {memberships.length > 0 && (
+          <div className="mt-12 pt-8 border-t border-white/10">
+            <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wider mb-4">
+              Quick Actions
+            </h3>
+            <div className="flex flex-wrap gap-3">
+              <Link
+                to="/app/catalog/onboarding"
+                className="px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-sm hover:bg-white/10 transition"
+              >
+                + Add a Business
+              </Link>
+              <Link
+                to="/explore"
+                className="px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-sm hover:bg-white/10 transition"
+              >
+                Join a Community
+              </Link>
+            </div>
+          </div>
+        )}
+      </main>
+    </div>
+  );
+}
+
+// ============================================================
+// TENANT SECTION
+// ============================================================
+
+function TenantSection({
+  icon,
+  title,
+  description,
+  tenants,
+  onSelect
+}: {
+  icon: string;
+  title: string;
+  description: string;
+  tenants: TenantMembership[];
+  onSelect: (tenant: TenantMembership) => void;
+}) {
+  return (
+    <section className="mb-10">
+      <div className="flex items-center gap-3 mb-2">
+        <span className="text-2xl">{icon}</span>
+        <h2 className="text-xl font-semibold">{title}</h2>
+      </div>
+      <p className="text-gray-400 text-sm mb-4 ml-10">{description}</p>
+      
+      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 ml-10">
+        {tenants.map((tenant) => (
+          <TenantCard 
+            key={tenant.tenant_id} 
+            tenant={tenant} 
+            onSelect={() => onSelect(tenant)}
+          />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+// ============================================================
+// TENANT CARD
+// ============================================================
+
+function TenantCard({ 
+  tenant, 
+  onSelect 
+}: { 
+  tenant: TenantMembership;
+  onSelect: () => void;
+}) {
+  const isCommunity = tenant.tenant_type === 'community' || tenant.tenant_type === 'government';
+  const stats = tenant.stats || {};
+
+  return (
+    <div className="bg-white/5 border border-white/10 rounded-lg p-4 hover:border-blue-500/50 transition group">
+      <div className="flex justify-between items-start mb-3">
+        <div>
+          <h3 className="font-medium group-hover:text-blue-400 transition">
+            {tenant.tenant_name}
+          </h3>
+          <p className="text-sm text-gray-500 capitalize">{tenant.role}</p>
+        </div>
+        {tenant.is_primary && (
+          <span className="text-xs bg-blue-600/20 text-blue-400 px-2 py-0.5 rounded">
+            Primary
+          </span>
+        )}
+      </div>
+
+      {/* Stats Row */}
+      <div className="flex gap-4 mb-4 text-sm">
+        {isCommunity ? (
+          <>
+            {stats.active_runs !== undefined && (
+              <div>
+                <span className="text-gray-400">Active runs: </span>
+                <span className="font-medium">{stats.active_runs}</span>
+              </div>
+            )}
+            {stats.pending_requests !== undefined && (
+              <div>
+                <span className="text-gray-400">Pending: </span>
+                <span className="font-medium text-amber-400">{stats.pending_requests}</span>
+              </div>
+            )}
+          </>
+        ) : (
+          <>
+            {stats.bookings_today !== undefined && (
+              <div>
+                <span className="text-gray-400">Today: </span>
+                <span className="font-medium">{stats.bookings_today}</span>
+              </div>
+            )}
+            {stats.items_listed !== undefined && (
+              <div>
+                <span className="text-gray-400">Items: </span>
+                <span className="font-medium">{stats.items_listed}</span>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+
+      {/* Setup Badge */}
+      {stats.needs_setup && (
+        <div className="mb-3">
+          <span className="text-xs bg-amber-500/20 text-amber-400 px-2 py-1 rounded">
+            Needs setup
+          </span>
+        </div>
+      )}
+
+      {/* Actions */}
+      <div className="flex gap-2">
+        <button
+          onClick={onSelect}
+          className="flex-1 bg-blue-600 text-white text-sm py-2 px-4 rounded-lg hover:bg-blue-700 transition"
+        >
+          Manage
+        </button>
+        {tenant.portal_slug && (
+          <Link
+            to={`/c/${tenant.portal_slug}`}
+            target="_blank"
+            className="px-3 py-2 bg-white/10 text-sm rounded-lg hover:bg-white/20 transition"
+            title={isCommunity ? "View public portal" : "View listing"}
+          >
+            👁️
+          </Link>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// EMPTY STATE
+// ============================================================
+
+function EmptyState({ user }: { user: User | null }) {
+  return (
+    <div className="text-center py-16">
+      <div className="text-6xl mb-4">🏔️</div>
+      <h2 className="text-2xl font-bold mb-2">You don't have anything to manage yet</h2>
+      <p className="text-gray-400 mb-8 max-w-md mx-auto">
+        Join a community, create a business listing, or ask an admin to invite you.
+      </p>
+      
+      <div className="flex justify-center gap-4">
+        <Link
+          to="/explore"
+          className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+        >
+          Explore Communities
+        </Link>
+        <Link
+          to="/app/catalog/onboarding"
+          className="px-6 py-3 bg-white/10 rounded-lg hover:bg-white/20 transition"
+        >
+          Create a Business
+        </Link>
+      </div>
+      
+      {user?.is_platform_admin && (
+        <div className="mt-8 p-4 bg-purple-600/20 border border-purple-500/30 rounded-lg inline-block">
+          <p className="text-purple-300 text-sm">
+            As a platform admin, you can{' '}
+            <Link to="/admin" className="underline">access the admin panel</Link>
+            {' '}to create tenants.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================================
+// USER DROPDOWN
+// ============================================================
+
+function UserDropdown({ user }: { user: User | null }) {
+  const [open, setOpen] = useState(false);
+
+  if (!user) return null;
+
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setOpen(!open)}
+        className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white/10 transition"
+      >
+        <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-sm font-medium">
+          {(user.full_name || user.email)[0].toUpperCase()}
+        </div>
+        <span className="text-sm hidden md:block">{user.full_name || user.email}</span>
+        <span className="text-gray-400">▾</span>
+      </button>
+
+      {open && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+          <div className="absolute right-0 mt-2 w-48 bg-[#1a2744] border border-white/10 rounded-lg shadow-xl z-50">
+            <Link
+              to="/app/profile"
+              className="block px-4 py-2 text-sm hover:bg-white/10 rounded-t-lg"
+              onClick={() => setOpen(false)}
+            >
+              My Profile
+            </Link>
+            <Link
+              to="/app/settings"
+              className="block px-4 py-2 text-sm hover:bg-white/10"
+              onClick={() => setOpen(false)}
+            >
+              Settings
+            </Link>
+            <hr className="border-white/10" />
+            <a
+              href="/logout"
+              className="block px-4 py-2 text-sm text-red-400 hover:bg-white/10 rounded-b-lg"
+            >
+              Sign Out
+            </a>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+export default TenantPicker;

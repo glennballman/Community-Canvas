@@ -559,5 +559,125 @@ router.get('/stats', authenticateToken, requirePlatformAdmin, async (req: AuthRe
     }
 });
 
+router.post('/me/switch-tenant', authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+        const { tenant_id } = req.body;
+        const userId = req.user?.userId;
+
+        if (!tenant_id) {
+            return res.status(400).json({ success: false, error: 'tenant_id is required' });
+        }
+
+        const membershipResult = await serviceQuery(`
+            SELECT 
+                t.id as tenant_id,
+                t.name as tenant_name,
+                t.slug,
+                t.tenant_type,
+                tu.role,
+                tu.is_primary
+            FROM cc_tenant_users tu
+            JOIN cc_tenants t ON t.id = tu.tenant_id
+            WHERE tu.user_id = $1 AND tu.tenant_id = $2 AND tu.status = 'active' AND t.status = 'active'
+        `, [userId, tenant_id]);
+
+        if (membershipResult.rows.length === 0) {
+            if (req.user?.isPlatformAdmin) {
+                const tenantResult = await serviceQuery(
+                    'SELECT id, name, slug, tenant_type FROM cc_tenants WHERE id = $1 AND status = $2',
+                    [tenant_id, 'active']
+                );
+                if (tenantResult.rows.length === 0) {
+                    return res.status(404).json({ success: false, error: 'Tenant not found' });
+                }
+                return res.json({
+                    success: true,
+                    tenant: {
+                        id: tenantResult.rows[0].id,
+                        name: tenantResult.rows[0].name,
+                        slug: tenantResult.rows[0].slug,
+                        type: tenantResult.rows[0].tenant_type,
+                        role: 'platform_admin'
+                    }
+                });
+            }
+            return res.status(403).json({ success: false, error: 'Access denied to this tenant' });
+        }
+
+        const tenant = membershipResult.rows[0];
+
+        res.json({
+            success: true,
+            tenant: {
+                id: tenant.tenant_id,
+                name: tenant.tenant_name,
+                slug: tenant.slug,
+                type: tenant.tenant_type,
+                role: tenant.role
+            }
+        });
+
+    } catch (error: any) {
+        console.error('Switch tenant error:', error);
+        res.status(500).json({ success: false, error: 'Failed to switch tenant' });
+    }
+});
+
+router.get('/me/context', authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+        const userId = req.user?.userId;
+
+        const userResult = await serviceQuery(
+            'SELECT id, email, first_name, last_name, display_name, is_platform_admin FROM cc_users WHERE id = $1',
+            [userId]
+        );
+
+        if (userResult.rows.length === 0) {
+            return res.status(404).json({ success: false, error: 'User not found' });
+        }
+
+        const user = userResult.rows[0];
+
+        const membershipsResult = await serviceQuery(`
+            SELECT 
+                t.id as tenant_id,
+                t.name as tenant_name,
+                t.slug as tenant_slug,
+                t.tenant_type,
+                p.slug as portal_slug,
+                tu.role,
+                tu.is_primary
+            FROM cc_tenant_users tu
+            JOIN cc_tenants t ON t.id = tu.tenant_id
+            LEFT JOIN cc_portals p ON p.tenant_id = t.id
+            WHERE tu.user_id = $1 AND tu.status = 'active' AND t.status = 'active'
+            ORDER BY tu.is_primary DESC, t.tenant_type, t.name
+        `, [userId]);
+
+        res.json({
+            success: true,
+            user: {
+                id: user.id,
+                email: user.email,
+                full_name: user.display_name || `${user.first_name} ${user.last_name}`,
+                is_platform_admin: user.is_platform_admin
+            },
+            memberships: membershipsResult.rows.map(m => ({
+                tenant_id: m.tenant_id,
+                tenant_name: m.tenant_name,
+                tenant_slug: m.tenant_slug,
+                tenant_type: m.tenant_type,
+                portal_slug: m.portal_slug,
+                role: m.role,
+                is_primary: m.is_primary
+            }))
+        });
+
+    } catch (error: any) {
+        console.error('Get context error:', error);
+        res.status(500).json({ success: false, error: 'Failed to get user context' });
+    }
+});
+
 export default router;
 export { AuthRequest };
