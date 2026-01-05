@@ -429,7 +429,7 @@ export default function AccommodationSearch() {
                         </SelectItem>
                       ))}
                       {(!workOrders || workOrders.length === 0) && (
-                        <SelectItem value="" disabled>No active work orders</SelectItem>
+                        <SelectItem value="__EMPTY__" disabled>No active work orders</SelectItem>
                       )}
                     </SelectContent>
                   </Select>

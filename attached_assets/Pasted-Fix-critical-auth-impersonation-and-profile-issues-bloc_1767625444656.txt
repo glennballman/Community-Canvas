@@ -1,0 +1,1314 @@
+Fix critical auth, impersonation, and profile issues blocking QA:
+
+1. All fetch() calls missing credentials: 'include' → 401 errors everywhere
+2. Select.Item crash from empty string values
+3. Impersonation doesn't actually work (no status indicator, no way to know if impersonating)
+4. Profile page fails for platform admins
+5. No "Impersonate" buttons in Users/Tenants pages
+
+### File: client/src/lib/api.ts (REPLACE ENTIRE FILE)
+```typescript
+/**
+ * Centralized API helper - ALWAYS includes credentials
+ * This fixes all 401 errors from missing cookies
+ */
+
+const API_BASE = '/api';
+
+interface APIError extends Error {
+  status?: number;
+  code?: string;
+}
+
+export async function apiFetch<T = any>(
+  endpoint: string,
+  options: RequestInit = {}
+): Promise<T> {
+  const url = endpoint.startsWith('http') ? endpoint : `${API_BASE}${endpoint}`;
+  
+  const res = await fetch(url, {
+    ...options,
+    credentials: 'include',  // CRITICAL - sends cookies
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+  // Handle auth errors
+  if (res.status === 401) {
+    const error: APIError = new Error('Authentication required');
+    error.status = 401;
+    error.code = 'UNAUTHENTICATED';
+    throw error;
+  }
+
+  if (res.status === 403) {
+    const error: APIError = new Error('Access denied');
+    error.status = 403;
+    error.code = 'FORBIDDEN';
+    throw error;
+  }
+
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    const error: APIError = new Error(data.error || `Request failed: ${res.status}`);
+    error.status = res.status;
+    throw error;
+  }
+
+  // Handle empty responses
+  const text = await res.text();
+  if (!text) return {} as T;
+  
+  try {
+    return JSON.parse(text);
+  } catch {
+    return text as unknown as T;
+  }
+}
+
+// Convenience methods
+export const api = {
+  get: <T = any>(endpoint: string) => apiFetch<T>(endpoint),
+  
+  post: <T = any>(endpoint: string, body?: any) => 
+    apiFetch<T>(endpoint, { 
+      method: 'POST', 
+      body: body ? JSON.stringify(body) : undefined 
+    }),
+  
+  put: <T = any>(endpoint: string, body?: any) => 
+    apiFetch<T>(endpoint, { 
+      method: 'PUT', 
+      body: body ? JSON.stringify(body) : undefined 
+    }),
+  
+  patch: <T = any>(endpoint: string, body?: any) => 
+    apiFetch<T>(endpoint, { 
+      method: 'PATCH', 
+      body: body ? JSON.stringify(body) : undefined 
+    }),
+  
+  delete: <T = any>(endpoint: string) => 
+    apiFetch<T>(endpoint, { method: 'DELETE' }),
+};
+
+// Auth state helper
+export async function checkAuth(): Promise<{
+  authenticated: boolean;
+  user?: any;
+  impersonating?: boolean;
+  impersonation?: any;
+}> {
+  try {
+    const data = await api.get('/auth/status');
+    return {
+      authenticated: true,
+      ...data
+    };
+  } catch (error: any) {
+    if (error.status === 401) {
+      return { authenticated: false };
+    }
+    throw error;
+  }
+}
+
+// Impersonation helpers
+export async function getImpersonationStatus(): Promise<{
+  is_impersonating: boolean;
+  tenant_id?: string;
+  tenant_name?: string;
+  actor_party_id?: string;
+  actor_display_name?: string;
+  started_at?: string;
+  expires_at?: string;
+} | null> {
+  try {
+    return await api.get('/platform/impersonation/status');
+  } catch {
+    return null;
+  }
+}
+
+export async function startImpersonation(params: {
+  tenant_id: string;
+  actor_party_id?: string;
+  reason: string;
+  duration_minutes: number;
+}): Promise<{ success: boolean; session_id?: string; error?: string }> {
+  return api.post('/platform/impersonation/start', params);
+}
+
+export async function stopImpersonation(): Promise<{ success: boolean }> {
+  return api.post('/platform/impersonation/stop');
+}
+```
+
+### File: client/src/components/ImpersonationBanner.tsx
+```tsx
+import React, { useState, useEffect } from 'react';
+import { getImpersonationStatus, stopImpersonation } from '../lib/api';
+
+/**
+ * Persistent banner showing current impersonation status
+ * Shows at top of page when impersonating
+ */
+
+interface ImpersonationStatus {
+  is_impersonating: boolean;
+  tenant_id?: string;
+  tenant_name?: string;
+  actor_party_id?: string;
+  actor_display_name?: string;
+  started_at?: string;
+  expires_at?: string;
+}
+
+export function ImpersonationBanner() {
+  const [status, setStatus] = useState<ImpersonationStatus | null>(null);
+  const [stopping, setStopping] = useState(false);
+
+  useEffect(() => {
+    checkStatus();
+    // Re-check every 30 seconds
+    const interval = setInterval(checkStatus, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  async function checkStatus() {
+    const result = await getImpersonationStatus();
+    setStatus(result);
+  }
+
+  async function handleStop() {
+    setStopping(true);
+    try {
+      await stopImpersonation();
+      setStatus(null);
+      // Reload to clear impersonation context
+      window.location.href = '/admin/platform';
+    } catch (error) {
+      console.error('Failed to stop impersonation:', error);
+    } finally {
+      setStopping(false);
+    }
+  }
+
+  if (!status?.is_impersonating) {
+    return null;
+  }
+
+  return (
+    <div className="fixed top-0 left-0 right-0 z-[100] bg-amber-500 text-amber-950 px-4 py-2 flex items-center justify-between shadow-lg">
+      <div className="flex items-center gap-3">
+        <span className="text-lg">👤</span>
+        <div>
+          <span className="font-semibold">Impersonating: </span>
+          <span>{status.tenant_name || 'Unknown Tenant'}</span>
+          {status.actor_display_name && (
+            <span className="ml-2 text-amber-800">
+              as {status.actor_display_name}
+            </span>
+          )}
+        </div>
+      </div>
+      
+      <div className="flex items-center gap-4">
+        {status.expires_at && (
+          <span className="text-sm text-amber-800">
+            Expires: {new Date(status.expires_at).toLocaleTimeString()}
+          </span>
+        )}
+        
+        <a 
+          href="/admin/platform/impersonation"
+          className="text-sm underline hover:no-underline"
+        >
+          Switch
+        </a>
+        
+        <button
+          onClick={handleStop}
+          disabled={stopping}
+          className="bg-amber-700 text-white px-3 py-1 rounded text-sm font-medium hover:bg-amber-800 disabled:opacity-50"
+        >
+          {stopping ? 'Stopping...' : 'Stop Impersonation'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Hook to check if currently impersonating
+ */
+export function useImpersonation() {
+  const [status, setStatus] = useState<ImpersonationStatus | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function check() {
+      const result = await getImpersonationStatus();
+      setStatus(result);
+      setLoading(false);
+    }
+    check();
+  }, []);
+
+  return {
+    isImpersonating: status?.is_impersonating || false,
+    tenantId: status?.tenant_id,
+    tenantName: status?.tenant_name,
+    actorName: status?.actor_display_name,
+    loading
+  };
+}
+```
+
+### File: client/src/components/admin/ImpersonationConsole.tsx (REPLACE - fixes Select crash)
+```tsx
+import React, { useState, useEffect } from 'react';
+import { api, startImpersonation } from '../../lib/api';
+
+/**
+ * Impersonation Console - Platform admins can impersonate tenants
+ * FIXED: No empty string values in Select components
+ */
+
+interface Tenant {
+  id: string;
+  name: string;
+  slug: string;
+  type: string;
+}
+
+interface User {
+  id: string;
+  email: string;
+  full_name: string;
+  party_id?: string;
+}
+
+export function ImpersonationConsole() {
+  const [tenants, setTenants] = useState<Tenant[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
+  const [selectedTenant, setSelectedTenant] = useState<string | null>(null);
+  const [selectedUser, setSelectedUser] = useState<string | null>(null);
+  const [reason, setReason] = useState('');
+  const [duration, setDuration] = useState('60');
+  const [loading, setLoading] = useState(true);
+  const [starting, setStarting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+
+  useEffect(() => {
+    fetchTenants();
+  }, []);
+
+  useEffect(() => {
+    if (selectedTenant) {
+      fetchTenantUsers(selectedTenant);
+    } else {
+      setUsers([]);
+      setSelectedUser(null);
+    }
+  }, [selectedTenant]);
+
+  async function fetchTenants() {
+    setLoading(true);
+    try {
+      const data = await api.get<{ tenants: Tenant[] }>('/platform/tenants');
+      setTenants(data.tenants || []);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function fetchTenantUsers(tenantId: string) {
+    try {
+      const data = await api.get<{ users: User[] }>(`/platform/tenants/${tenantId}/users`);
+      setUsers(data.users || []);
+    } catch (err) {
+      console.error('Failed to fetch users:', err);
+      setUsers([]);
+    }
+  }
+
+  async function handleStart() {
+    if (!selectedTenant) {
+      setError('Please select a tenant');
+      return;
+    }
+    if (reason.length < 20) {
+      setError('Please provide a reason (min 20 characters)');
+      return;
+    }
+
+    setStarting(true);
+    setError(null);
+    
+    try {
+      const result = await startImpersonation({
+        tenant_id: selectedTenant,
+        actor_party_id: selectedUser || undefined,
+        reason,
+        duration_minutes: parseInt(duration)
+      });
+
+      if (result.success) {
+        // Redirect to tenant app
+        window.location.href = '/';
+      } else {
+        setError(result.error || 'Failed to start impersonation');
+      }
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setStarting(false);
+    }
+  }
+
+  const filteredTenants = tenants.filter(t => 
+    t.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    t.slug.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  if (loading) {
+    return (
+      <div className="p-8 text-center">
+        <div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full mx-auto"></div>
+        <p className="mt-4 text-gray-500">Loading tenants...</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-2xl mx-auto p-6">
+      <div className="flex items-center gap-3 mb-6">
+        <span className="text-3xl">👤</span>
+        <div>
+          <h1 className="text-2xl font-bold">Platform Impersonation Console</h1>
+          <p className="text-gray-600">Temporarily access tenant accounts for support and debugging</p>
+        </div>
+      </div>
+
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded mb-6">
+          {error}
+        </div>
+      )}
+
+      <div className="bg-white border rounded-lg p-6 space-y-6">
+        <div>
+          <h2 className="text-lg font-semibold mb-4">Start New Impersonation</h2>
+          <p className="text-sm text-gray-600 mb-4">
+            Select a tenant and optionally an individual to impersonate. You must provide a reason.
+          </p>
+        </div>
+
+        {/* Tenant Search */}
+        <div>
+          <label className="block text-sm font-medium mb-2">Search Tenants</label>
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Search by name or slug..."
+            className="w-full border rounded px-3 py-2"
+          />
+        </div>
+
+        {/* Tenant Selection - NO EMPTY VALUES */}
+        <div>
+          <label className="block text-sm font-medium mb-2">Select Tenant</label>
+          <div className="space-y-2 max-h-60 overflow-y-auto border rounded p-2">
+            {filteredTenants.length === 0 ? (
+              <p className="text-gray-500 text-sm p-2">No tenants found</p>
+            ) : (
+              filteredTenants.map((tenant) => (
+                <button
+                  key={tenant.id}
+                  onClick={() => setSelectedTenant(tenant.id)}
+                  className={`w-full text-left p-3 rounded flex justify-between items-center transition ${
+                    selectedTenant === tenant.id
+                      ? 'bg-blue-100 border-blue-500 border'
+                      : 'bg-gray-50 hover:bg-gray-100 border border-transparent'
+                  }`}
+                >
+                  <div>
+                    <div className="font-medium">{tenant.name}</div>
+                    <div className="text-sm text-gray-500">{tenant.slug}</div>
+                  </div>
+                  <span className={`text-xs px-2 py-1 rounded ${
+                    tenant.type === 'business' ? 'bg-blue-100 text-blue-800' :
+                    tenant.type === 'government' ? 'bg-purple-100 text-purple-800' :
+                    'bg-gray-100 text-gray-800'
+                  }`}>
+                    {tenant.type}
+                  </span>
+                </button>
+              ))
+            )}
+          </div>
+        </div>
+
+        {/* User Selection (optional) */}
+        {selectedTenant && users.length > 0 && (
+          <div>
+            <label className="block text-sm font-medium mb-2">
+              Select User (optional)
+            </label>
+            <div className="space-y-2 max-h-40 overflow-y-auto border rounded p-2">
+              <button
+                onClick={() => setSelectedUser(null)}
+                className={`w-full text-left p-2 rounded text-sm ${
+                  !selectedUser ? 'bg-gray-200' : 'bg-gray-50 hover:bg-gray-100'
+                }`}
+              >
+                Default tenant context (no specific user)
+              </button>
+              {users.map((user) => (
+                <button
+                  key={user.id}
+                  onClick={() => setSelectedUser(user.party_id || user.id)}
+                  className={`w-full text-left p-2 rounded text-sm ${
+                    selectedUser === (user.party_id || user.id)
+                      ? 'bg-blue-100'
+                      : 'bg-gray-50 hover:bg-gray-100'
+                  }`}
+                >
+                  <div className="font-medium">{user.full_name || user.email}</div>
+                  <div className="text-xs text-gray-500">{user.email}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Reason */}
+        <div>
+          <label className="block text-sm font-medium mb-2">
+            Reason <span className="text-gray-500">(min 20 characters)</span>
+          </label>
+          <textarea
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            placeholder="Explain why you need to access this tenant account..."
+            className="w-full border rounded px-3 py-2 h-24 resize-none"
+          />
+          <div className="text-xs text-gray-500 mt-1">
+            {reason.length}/20 characters
+          </div>
+        </div>
+
+        {/* Duration - FIXED: No empty string values */}
+        <div>
+          <label className="block text-sm font-medium mb-2">Session Duration</label>
+          <select
+            value={duration}
+            onChange={(e) => setDuration(e.target.value)}
+            className="w-full border rounded px-3 py-2"
+          >
+            <option value="15">15 minutes</option>
+            <option value="30">30 minutes</option>
+            <option value="60">1 hour</option>
+            <option value="120">2 hours</option>
+            <option value="240">4 hours</option>
+          </select>
+        </div>
+
+        {/* Start Button */}
+        <button
+          onClick={handleStart}
+          disabled={!selectedTenant || reason.length < 20 || starting}
+          className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+        >
+          {starting ? (
+            <>
+              <span className="animate-spin">⏳</span>
+              Starting...
+            </>
+          ) : (
+            <>
+              <span>👤</span>
+              Start Impersonation
+            </>
+          )}
+        </button>
+      </div>
+
+      {/* Security Notice */}
+      <div className="mt-6 bg-gray-50 border rounded-lg p-4">
+        <h3 className="font-semibold mb-2">Security Notice</h3>
+        <p className="text-sm text-gray-600 mb-2">
+          All impersonation sessions are logged with full audit trail including:
+        </p>
+        <ul className="text-sm text-gray-600 list-disc list-inside space-y-1">
+          <li>Your identity and IP address</li>
+          <li>Target tenant and individual</li>
+          <li>Session start/stop times</li>
+          <li>All actions performed during impersonation</li>
+        </ul>
+      </div>
+    </div>
+  );
+}
+```
+
+### File: client/src/components/admin/UserManagement.tsx (Add Impersonate button)
+```tsx
+import React, { useState, useEffect } from 'react';
+import { api, startImpersonation } from '../../lib/api';
+
+interface User {
+  id: string;
+  email: string;
+  full_name: string;
+  status: string;
+  last_login: string;
+  is_platform_admin: boolean;
+  tenants: Array<{
+    tenant_id: string;
+    tenant_name: string;
+    role: string;
+  }>;
+}
+
+export function UserManagement() {
+  const [users, setUsers] = useState<User[]>([]);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  
+  // Impersonation modal state
+  const [showImpersonateModal, setShowImpersonateModal] = useState(false);
+  const [impersonateUser, setImpersonateUser] = useState<User | null>(null);
+  const [impersonateTenant, setImpersonateTenant] = useState<string>('');
+  const [impersonateReason, setImpersonateReason] = useState('');
+  const [impersonating, setImpersonating] = useState(false);
+
+  useEffect(() => {
+    fetchUsers();
+  }, [statusFilter]);
+
+  async function fetchUsers() {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (statusFilter !== 'all') params.set('status', statusFilter);
+      
+      const data = await api.get<{ users: User[] }>(`/platform/users?${params}`);
+      setUsers(data.users || []);
+    } catch (error) {
+      console.error('Failed to fetch users:', error);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function openImpersonateModal(user: User) {
+    setImpersonateUser(user);
+    setImpersonateTenant(user.tenants[0]?.tenant_id || '');
+    setImpersonateReason('');
+    setShowImpersonateModal(true);
+  }
+
+  async function handleImpersonate() {
+    if (!impersonateUser || !impersonateTenant || impersonateReason.length < 20) {
+      return;
+    }
+
+    setImpersonating(true);
+    try {
+      const result = await startImpersonation({
+        tenant_id: impersonateTenant,
+        actor_party_id: impersonateUser.id,
+        reason: impersonateReason,
+        duration_minutes: 60
+      });
+
+      if (result.success) {
+        window.location.href = '/';
+      }
+    } catch (error) {
+      console.error('Failed to impersonate:', error);
+    } finally {
+      setImpersonating(false);
+    }
+  }
+
+  const filteredUsers = users.filter(u =>
+    u.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (u.full_name || '').toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  return (
+    <div className="p-6">
+      <div className="flex justify-between items-center mb-6">
+        <div>
+          <h1 className="text-2xl font-bold">User Management</h1>
+          <p className="text-gray-600">Manage platform users and their access</p>
+        </div>
+        <button className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2">
+          <span>+</span> Invite User
+        </button>
+      </div>
+
+      {/* Search and Filter */}
+      <div className="flex gap-4 mb-6">
+        <div className="flex-1">
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Search by name or email..."
+            className="w-full border rounded px-4 py-2"
+          />
+        </div>
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+          className="border rounded px-4 py-2"
+        >
+          <option value="all">All Statuses</option>
+          <option value="active">Active</option>
+          <option value="inactive">Inactive</option>
+          <option value="pending">Pending</option>
+        </select>
+      </div>
+
+      {/* Users Table */}
+      <div className="bg-white border rounded-lg overflow-hidden">
+        <table className="w-full">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="text-left px-4 py-3 text-sm font-medium">User</th>
+              <th className="text-left px-4 py-3 text-sm font-medium">Status</th>
+              <th className="text-left px-4 py-3 text-sm font-medium">Tenants</th>
+              <th className="text-left px-4 py-3 text-sm font-medium">Last Login</th>
+              <th className="text-left px-4 py-3 text-sm font-medium">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y">
+            {loading ? (
+              <tr>
+                <td colSpan={5} className="text-center py-8 text-gray-500">
+                  Loading...
+                </td>
+              </tr>
+            ) : filteredUsers.length === 0 ? (
+              <tr>
+                <td colSpan={5} className="text-center py-8 text-gray-500">
+                  No users found
+                </td>
+              </tr>
+            ) : (
+              filteredUsers.map((user) => (
+                <tr 
+                  key={user.id} 
+                  className={`hover:bg-gray-50 cursor-pointer ${
+                    selectedUser?.id === user.id ? 'bg-blue-50' : ''
+                  }`}
+                  onClick={() => setSelectedUser(user)}
+                >
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-blue-500 text-white rounded-full flex items-center justify-center font-medium">
+                        {(user.full_name || user.email)[0].toUpperCase()}
+                      </div>
+                      <div>
+                        <div className="font-medium flex items-center gap-2">
+                          {user.full_name || 'No name'}
+                          {user.is_platform_admin && (
+                            <span className="text-xs bg-purple-100 text-purple-800 px-2 py-0.5 rounded">
+                              ADMIN
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-sm text-gray-500">{user.email}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className={`text-xs px-2 py-1 rounded ${
+                      user.status === 'active' ? 'bg-green-100 text-green-800' :
+                      user.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                      'bg-gray-100 text-gray-800'
+                    }`}>
+                      {user.status}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-sm">
+                    {user.tenants.length}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-500">
+                    {user.last_login 
+                      ? new Date(user.last_login).toLocaleDateString() 
+                      : 'Never'}
+                  </td>
+                  <td className="px-4 py-3">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openImpersonateModal(user);
+                      }}
+                      disabled={user.tenants.length === 0}
+                      className="text-sm bg-amber-100 text-amber-800 px-3 py-1 rounded hover:bg-amber-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      👤 Impersonate
+                    </button>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* User Detail Panel */}
+      {selectedUser && (
+        <div className="fixed right-0 top-0 h-full w-96 bg-white border-l shadow-lg p-6 overflow-y-auto">
+          <div className="flex justify-between items-start mb-6">
+            <h2 className="text-lg font-semibold">User Details</h2>
+            <button 
+              onClick={() => setSelectedUser(null)}
+              className="text-gray-400 hover:text-gray-600"
+            >
+              ✕
+            </button>
+          </div>
+          
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm text-gray-500">Name</label>
+              <div className="font-medium">{selectedUser.full_name || 'Not set'}</div>
+            </div>
+            <div>
+              <label className="text-sm text-gray-500">Email</label>
+              <div>{selectedUser.email}</div>
+            </div>
+            <div>
+              <label className="text-sm text-gray-500">Status</label>
+              <div>{selectedUser.status}</div>
+            </div>
+            <div>
+              <label className="text-sm text-gray-500">Tenants</label>
+              <div className="space-y-2 mt-1">
+                {selectedUser.tenants.map((t, i) => (
+                  <div key={i} className="bg-gray-50 rounded p-2 text-sm">
+                    <div className="font-medium">{t.tenant_name}</div>
+                    <div className="text-gray-500">{t.role}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            
+            <div className="pt-4 border-t">
+              <button
+                onClick={() => openImpersonateModal(selectedUser)}
+                disabled={selectedUser.tenants.length === 0}
+                className="w-full bg-amber-500 text-white py-2 rounded font-medium hover:bg-amber-600 disabled:opacity-50"
+              >
+                👤 Impersonate This User
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Impersonate Modal */}
+      {showImpersonateModal && impersonateUser && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <h3 className="text-lg font-semibold mb-4">
+              Impersonate {impersonateUser.full_name || impersonateUser.email}
+            </h3>
+            
+            {impersonateUser.tenants.length > 1 && (
+              <div className="mb-4">
+                <label className="block text-sm font-medium mb-2">Select Tenant</label>
+                <select
+                  value={impersonateTenant}
+                  onChange={(e) => setImpersonateTenant(e.target.value)}
+                  className="w-full border rounded px-3 py-2"
+                >
+                  {impersonateUser.tenants.map((t) => (
+                    <option key={t.tenant_id} value={t.tenant_id}>
+                      {t.tenant_name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+            
+            <div className="mb-4">
+              <label className="block text-sm font-medium mb-2">
+                Reason (min 20 characters)
+              </label>
+              <textarea
+                value={impersonateReason}
+                onChange={(e) => setImpersonateReason(e.target.value)}
+                placeholder="Why do you need to impersonate this user?"
+                className="w-full border rounded px-3 py-2 h-24"
+              />
+            </div>
+            
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowImpersonateModal(false)}
+                className="flex-1 border rounded py-2"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleImpersonate}
+                disabled={impersonateReason.length < 20 || impersonating}
+                className="flex-1 bg-amber-500 text-white rounded py-2 disabled:opacity-50"
+              >
+                {impersonating ? 'Starting...' : 'Start Impersonation'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+```
+
+### File: client/src/pages/ProfilePage.tsx (Handle platform admin + impersonation)
+```tsx
+import React, { useState, useEffect } from 'react';
+import { api, getImpersonationStatus } from '../lib/api';
+
+interface ProfileData {
+  // Auth user
+  user_id?: string;
+  email?: string;
+  full_name?: string;
+  is_platform_admin?: boolean;
+  
+  // Tenant/party context
+  party_id?: string;
+  party_name?: string;
+  party_type?: string;
+  tenant_id?: string;
+  tenant_name?: string;
+  
+  // Individual
+  individual_id?: string;
+  preferred_name?: string;
+  phone?: string;
+  
+  // Meta
+  last_login?: string;
+  created_at?: string;
+}
+
+export function ProfilePage() {
+  const [profile, setProfile] = useState<ProfileData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isImpersonating, setIsImpersonating] = useState(false);
+  const [impersonationInfo, setImpersonationInfo] = useState<any>(null);
+
+  useEffect(() => {
+    loadProfile();
+  }, []);
+
+  async function loadProfile() {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      // First check impersonation status
+      const impStatus = await getImpersonationStatus();
+      setIsImpersonating(impStatus?.is_impersonating || false);
+      setImpersonationInfo(impStatus);
+
+      // Load appropriate profile based on context
+      let profileData: ProfileData;
+      
+      if (impStatus?.is_impersonating) {
+        // Load impersonated context profile
+        profileData = await api.get('/me');
+      } else {
+        // Try tenant profile first, fall back to platform profile
+        try {
+          profileData = await api.get('/me');
+        } catch (e: any) {
+          if (e.status === 401 || e.status === 403) {
+            // Try platform admin profile
+            profileData = await api.get('/platform/me');
+          } else {
+            throw e;
+          }
+        }
+      }
+      
+      setProfile(profileData);
+    } catch (err: any) {
+      console.error('Failed to load profile:', err);
+      setError(err.message || 'Failed to load profile data');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="p-8 text-center">
+        <div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full mx-auto"></div>
+        <p className="mt-4 text-gray-500">Loading profile...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-8">
+        <div className="max-w-md mx-auto bg-red-50 border border-red-200 rounded-lg p-6 text-center">
+          <div className="text-red-500 text-4xl mb-4">⚠️</div>
+          <h2 className="text-lg font-semibold text-red-800 mb-2">Failed to load profile data</h2>
+          <p className="text-red-600 text-sm mb-4">{error}</p>
+          <button
+            onClick={loadProfile}
+            className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
+          >
+            Retry
+          </button>
+          
+          {/* Helpful message for platform admins */}
+          <div className="mt-4 pt-4 border-t border-red-200 text-sm text-red-700">
+            <p>If you're a platform admin, you may need to impersonate a tenant to view a profile.</p>
+            <a href="/admin/platform/impersonation" className="underline">
+              Go to Impersonation Console →
+            </a>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-6 max-w-2xl mx-auto">
+      {/* Impersonation Notice */}
+      {isImpersonating && impersonationInfo && (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6">
+          <div className="flex items-center gap-2 text-amber-800">
+            <span>👤</span>
+            <span className="font-medium">
+              Viewing as: {impersonationInfo.tenant_name}
+              {impersonationInfo.actor_display_name && ` / ${impersonationInfo.actor_display_name}`}
+            </span>
+          </div>
+        </div>
+      )}
+
+      <h1 className="text-2xl font-bold mb-6">My Profile</h1>
+
+      {profile && (
+        <div className="bg-white border rounded-lg divide-y">
+          {/* Identity Section */}
+          <div className="p-6">
+            <h2 className="text-lg font-semibold mb-4">Identity</h2>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm text-gray-500">Name</label>
+                <div className="font-medium">
+                  {profile.full_name || profile.preferred_name || 'Not set'}
+                </div>
+              </div>
+              <div>
+                <label className="text-sm text-gray-500">Email</label>
+                <div>{profile.email || 'Not set'}</div>
+              </div>
+              {profile.phone && (
+                <div>
+                  <label className="text-sm text-gray-500">Phone</label>
+                  <div>{profile.phone}</div>
+                </div>
+              )}
+              {profile.is_platform_admin && (
+                <div>
+                  <label className="text-sm text-gray-500">Role</label>
+                  <div>
+                    <span className="bg-purple-100 text-purple-800 px-2 py-1 rounded text-sm">
+                      Platform Admin
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Context Section */}
+          {(profile.tenant_name || profile.party_name) && (
+            <div className="p-6">
+              <h2 className="text-lg font-semibold mb-4">Current Context</h2>
+              <div className="grid grid-cols-2 gap-4">
+                {profile.tenant_name && (
+                  <div>
+                    <label className="text-sm text-gray-500">Tenant</label>
+                    <div className="font-medium">{profile.tenant_name}</div>
+                  </div>
+                )}
+                {profile.party_name && (
+                  <div>
+                    <label className="text-sm text-gray-500">Party</label>
+                    <div>{profile.party_name}</div>
+                  </div>
+                )}
+                {profile.party_type && (
+                  <div>
+                    <label className="text-sm text-gray-500">Party Type</label>
+                    <div className="capitalize">{profile.party_type}</div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Timestamps */}
+          <div className="p-6">
+            <h2 className="text-lg font-semibold mb-4">Account</h2>
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              {profile.last_login && (
+                <div>
+                  <label className="text-gray-500">Last Login</label>
+                  <div>{new Date(profile.last_login).toLocaleString()}</div>
+                </div>
+              )}
+              {profile.created_at && (
+                <div>
+                  <label className="text-gray-500">Member Since</label>
+                  <div>{new Date(profile.created_at).toLocaleDateString()}</div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Platform Admin Links */}
+      {profile?.is_platform_admin && !isImpersonating && (
+        <div className="mt-6 bg-gray-50 border rounded-lg p-4">
+          <h3 className="font-medium mb-2">Platform Admin</h3>
+          <p className="text-sm text-gray-600 mb-3">
+            As a platform admin, you can impersonate tenants to troubleshoot issues.
+          </p>
+          <a 
+            href="/admin/platform/impersonation"
+            className="inline-flex items-center gap-2 bg-amber-500 text-white px-4 py-2 rounded hover:bg-amber-600"
+          >
+            <span>👤</span>
+            Impersonation Console
+          </a>
+        </div>
+      )}
+    </div>
+  );
+}
+```
+
+### File: server/routes/platform.ts (Add impersonation endpoints)
+
+Make sure these endpoints exist or add them:
+```typescript
+import { Router } from 'express';
+import { pool } from '../db';
+
+const router = Router();
+
+// GET /api/platform/impersonation/status
+router.get('/impersonation/status', async (req, res) => {
+  // Check session for impersonation data
+  const session = req.session as any;
+  
+  if (!session?.impersonation) {
+    return res.json({ is_impersonating: false });
+  }
+  
+  res.json({
+    is_impersonating: true,
+    tenant_id: session.impersonation.tenant_id,
+    tenant_name: session.impersonation.tenant_name,
+    actor_party_id: session.impersonation.actor_party_id,
+    actor_display_name: session.impersonation.actor_display_name,
+    started_at: session.impersonation.started_at,
+    expires_at: session.impersonation.expires_at
+  });
+});
+
+// POST /api/platform/impersonation/start
+router.post('/impersonation/start', async (req, res) => {
+  const session = req.session as any;
+  
+  // Must be platform admin
+  if (!session?.user?.is_platform_admin) {
+    return res.status(403).json({ error: 'Platform admin required' });
+  }
+  
+  const { tenant_id, actor_party_id, reason, duration_minutes } = req.body;
+  
+  if (!tenant_id || !reason || reason.length < 20) {
+    return res.status(400).json({ error: 'tenant_id and reason (min 20 chars) required' });
+  }
+  
+  try {
+    // Get tenant info
+    const tenantResult = await pool.query(
+      `SELECT id, name, slug FROM tenants WHERE id = $1`,
+      [tenant_id]
+    );
+    
+    if (tenantResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Tenant not found' });
+    }
+    
+    const tenant = tenantResult.rows[0];
+    
+    // Get actor info if specified
+    let actorName = null;
+    if (actor_party_id) {
+      const actorResult = await pool.query(
+        `SELECT p.name, i.full_name, i.preferred_name
+         FROM parties p
+         LEFT JOIN cc_individuals i ON i.party_id = p.id
+         WHERE p.id = $1`,
+        [actor_party_id]
+      );
+      if (actorResult.rows.length > 0) {
+        const actor = actorResult.rows[0];
+        actorName = actor.preferred_name || actor.full_name || actor.name;
+      }
+    }
+    
+    const expiresAt = new Date(Date.now() + (duration_minutes || 60) * 60 * 1000);
+    
+    // Log the impersonation
+    await pool.query(
+      `INSERT INTO audit_logs (
+        user_id, action, entity_type, entity_id, 
+        details, ip_address, created_at
+      ) VALUES ($1, 'impersonation_start', 'tenant', $2, $3, $4, now())`,
+      [
+        session.user.id,
+        tenant_id,
+        JSON.stringify({ reason, actor_party_id, duration_minutes }),
+        req.ip
+      ]
+    );
+    
+    // Set session
+    session.impersonation = {
+      tenant_id,
+      tenant_name: tenant.name,
+      tenant_slug: tenant.slug,
+      actor_party_id,
+      actor_display_name: actorName,
+      started_at: new Date().toISOString(),
+      expires_at: expiresAt.toISOString(),
+      reason
+    };
+    
+    res.json({
+      success: true,
+      session_id: session.id,
+      expires_at: expiresAt.toISOString()
+    });
+    
+  } catch (error) {
+    console.error('Impersonation start error:', error);
+    res.status(500).json({ error: 'Failed to start impersonation' });
+  }
+});
+
+// POST /api/platform/impersonation/stop
+router.post('/impersonation/stop', async (req, res) => {
+  const session = req.session as any;
+  
+  if (session?.impersonation) {
+    // Log the stop
+    await pool.query(
+      `INSERT INTO audit_logs (
+        user_id, action, entity_type, entity_id, 
+        details, ip_address, created_at
+      ) VALUES ($1, 'impersonation_stop', 'tenant', $2, $3, $4, now())`,
+      [
+        session.user?.id,
+        session.impersonation.tenant_id,
+        JSON.stringify({ duration_seconds: Math.floor((Date.now() - new Date(session.impersonation.started_at).getTime()) / 1000) }),
+        req.ip
+      ]
+    );
+    
+    delete session.impersonation;
+  }
+  
+  res.json({ success: true });
+});
+
+// GET /api/platform/me (Platform admin profile without tenant context)
+router.get('/me', async (req, res) => {
+  const session = req.session as any;
+  
+  if (!session?.user) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+  
+  res.json({
+    user_id: session.user.id,
+    email: session.user.email,
+    full_name: session.user.full_name,
+    is_platform_admin: session.user.is_platform_admin,
+    last_login: session.user.last_login,
+    created_at: session.user.created_at
+  });
+});
+
+export default router;
+```
+
+### Add ImpersonationBanner to your App layout
+
+In your main App.tsx or layout component:
+```tsx
+import { ImpersonationBanner } from './components/ImpersonationBanner';
+
+function App() {
+  return (
+    <>
+      <ImpersonationBanner />
+      {/* Add padding-top when banner is shown */}
+      <div className="impersonation-banner-spacer" />
+      {/* Rest of your app */}
+    </>
+  );
+}
+```
+
+### Verification
+
+1. Check api.ts is using credentials: 'include'
+2. Check ImpersonationConsole has no empty SelectItem values
+3. Test impersonation flow:
+   - Go to Platform Admin → Impersonation Console
+   - Select tenant
+   - Enter reason (20+ chars)
+   - Click Start
+   - Should see amber banner at top
+   - Profile page should work
+4. Test Users page has Impersonate button
+
+Tell me:
+1. Did the Select crash go away?
+2. Can you start impersonation?
+3. Does the banner appear?
+4. Does Profile load when impersonating?
+5. Any remaining 401 errors?

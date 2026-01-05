@@ -257,12 +257,12 @@ export default function ImpersonationConsole() {
             {selectedTenant && (
               <div className="space-y-2">
                 <Label htmlFor="individual-select">As Individual (Optional)</Label>
-                <Select value={selectedIndividual} onValueChange={setSelectedIndividual}>
+                <Select value={selectedIndividual || "__NONE__"} onValueChange={(val) => setSelectedIndividual(val === "__NONE__" ? "" : val)}>
                   <SelectTrigger data-testid="select-individual">
                     <SelectValue placeholder={individualsLoading ? "Loading..." : "Select individual (optional)"} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">No specific individual</SelectItem>
+                    <SelectItem value="__NONE__">No specific individual</SelectItem>
                     {individuals.map(ind => (
                       <SelectItem key={ind.id} value={ind.id}>
                         <div className="flex items-center gap-2">
