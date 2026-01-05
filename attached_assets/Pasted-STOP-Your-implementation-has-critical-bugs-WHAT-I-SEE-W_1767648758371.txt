@@ -1,0 +1,85 @@
+STOP. Your implementation has critical bugs.
+
+WHAT I SEE (WRONG):
+1. I'm impersonating Bamfield Community
+2. Left sidebar shows community nav ✓
+3. BUT main content shows "Your Places" tenant picker 
+4. There's a duplicate header inside the main content
+5. Borders and lines don't align
+
+WHAT SHOULD HAPPEN:
+When impersonating Bamfield Community:
+1. Redirect to /app/dashboard (NOT /app)
+2. Show the COMMUNITY DASHBOARD content (Pending Service Runs, Active Service Runs, Opted-in Businesses)
+3. NO duplicate headers - the sidebar already has the branding
+4. NO tenant picker visible - a tenant IS selected (the impersonated one)
+
+THE BUGS:
+
+BUG 1: Wrong redirect destination
+After impersonation starts, you're redirecting to /app instead of /app/dashboard.
+Fix: window.location.href = '/app/dashboard';
+
+BUG 2: TenantPicker rendering when it shouldn't
+TenantPicker should ONLY render when:
+- Route is exactly /app AND
+- No currentTenant is set AND  
+- Not impersonating
+
+When impersonating, currentTenant SHOULD be set to the impersonated tenant.
+
+BUG 3: Duplicate header in main content
+The TenantPicker has its own header with "Community Canvas" logo. This creates duplicate UI when rendered inside TenantAppLayout which already has the logo in the sidebar.
+
+FIX:
+The TenantPicker should be a STANDALONE page that renders WITHOUT the sidebar layout.
+The Dashboard should render INSIDE the sidebar layout.
+
+CORRECT ROUTING LOGIC:
+```tsx
+// In App.tsx or route config
+<Route path="/app" element={<TenantAppLayout />}>
+  {/* TenantPicker is the INDEX route - shows when no tenant selected */}
+  <Route index element={<TenantPickerGuard />} />
+  
+  {/* All other routes require a tenant to be selected */}
+  <Route path="dashboard" element={<Dashboard />} />
+  {/* ... other routes ... */}
+</Route>
+
+// TenantPickerGuard component
+function TenantPickerGuard() {
+  const { currentTenant } = useTenant();
+  
+  // If tenant is selected (including via impersonation), redirect to dashboard
+  if (currentTenant) {
+    return <Navigate to="/app/dashboard" replace />;
+  }
+  
+  // Only show picker if no tenant selected
+  return <TenantPicker />;
+}
+```
+
+BUG 4: TenantPicker has its own header
+Remove the header from TenantPicker. It should NOT have:
+- Logo
+- "Platform Admin" link  
+- User menu
+
+Those belong in the sidebar ONLY.
+
+TenantPicker should be JUST the content:
+- "Your Places" heading
+- Grouped tenant cards
+- Quick actions
+
+The parent layout handles all navigation/branding.
+
+VERIFICATION AFTER FIX:
+1. Start impersonation on Bamfield Community
+2. Should redirect to /app/dashboard
+3. Should see Community Dashboard content (service runs stats, NOT revenue)
+4. Should see ONE header/logo in sidebar
+5. Should NOT see "Your Places" anywhere
+6. Borders and elements should align cleanly

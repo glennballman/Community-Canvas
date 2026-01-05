@@ -77,14 +77,28 @@ export default function TenantAppLayout() {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  // CRITICAL: At /app (tenant picker) with no tenant selected, render without sidebar
+  // CRITICAL: At /app (tenant picker) with no tenant selected and NOT impersonating, render without sidebar
   const isAtTenantPicker = location.pathname === '/app';
-  if (isAtTenantPicker && !currentTenant) {
+  if (isAtTenantPicker && !currentTenant && !isImpersonating) {
     return (
       <div className="min-h-screen bg-background" data-testid="tenant-picker-layout">
         <Outlet />
       </div>
     );
+  }
+
+  // If no tenant selected but impersonating, something is still loading - show loading state
+  if (!currentTenant && isImpersonating) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-pulse text-muted-foreground">Loading impersonation session...</div>
+      </div>
+    );
+  }
+
+  // If at /app but tenant IS selected, redirect to dashboard
+  if (isAtTenantPicker && currentTenant) {
+    return <Navigate to="/app/dashboard" replace />;
   }
 
   const communityNavItems = [

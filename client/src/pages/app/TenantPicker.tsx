@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTenant } from '@/contexts/TenantContext';
@@ -47,9 +47,21 @@ interface TenantMembership {
 
 export default function TenantPicker() {
   const { user, ccTenants, logout, isPlatformAdmin, loading } = useAuth();
-  const { switchTenant } = useTenant();
+  const { currentTenant, switchTenant, loading: tenantLoading } = useTenant();
   const [switching, setSwitching] = useState<string | null>(null);
   const navigate = useNavigate();
+
+  // GUARD: If tenant is already selected (including via impersonation), redirect to dashboard
+  useEffect(() => {
+    if (!tenantLoading && currentTenant) {
+      navigate('/app/dashboard', { replace: true });
+    }
+  }, [currentTenant, tenantLoading, navigate]);
+
+  // Show nothing while redirecting
+  if (currentTenant) {
+    return null;
+  }
 
   async function handleSelectTenant(tenant: TenantMembership) {
     setSwitching(tenant.id);
@@ -83,8 +95,8 @@ export default function TenantPicker() {
 
   return (
     <div className="min-h-screen bg-background text-foreground" data-testid="tenant-picker">
-      <header className="border-b">
-        <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between gap-4">
+      <header className="border-b bg-background sticky top-0 z-50">
+        <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <Mountain className="h-6 w-6 text-primary" />
             <span className="font-semibold">Community Canvas</span>

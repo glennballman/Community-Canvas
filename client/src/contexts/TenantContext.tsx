@@ -23,13 +23,22 @@ interface TenantContextType {
 const TenantContext = createContext<TenantContextType | undefined>(undefined);
 
 export function TenantProvider({ children }: { children: ReactNode }) {
-  const { ccTenants, isAuthenticated } = useAuth();
-  const { session: impersonationSession, isActive: isImpersonating } = useImpersonation();
+  const { ccTenants, isAuthenticated, loading: authLoading } = useAuth();
+  const { session: impersonationSession, isActive: isImpersonating, loading: impersonationLoading } = useImpersonation();
   const [currentTenant, setCurrentTenant] = useState<Tenant | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Wait for both auth and impersonation to finish loading
+    if (authLoading || impersonationLoading) {
+      return;
+    }
+
+    // PRIORITY 1: Impersonation session takes precedence - clears localStorage to prevent conflicts
     if (isImpersonating && impersonationSession) {
+      // Clear any stored tenant to prevent it from overriding impersonation after stop
+      localStorage.removeItem('cc_current_tenant');
+      
       const impersonatedTenant: Tenant = {
         id: impersonationSession.tenant_id,
         name: impersonationSession.tenant_name,
@@ -42,6 +51,7 @@ export function TenantProvider({ children }: { children: ReactNode }) {
       return;
     }
 
+    // PRIORITY 2: Regular tenant selection from user's memberships
     if (isAuthenticated && ccTenants.length > 0) {
       const stored = localStorage.getItem('cc_current_tenant');
       if (stored) {
@@ -57,11 +67,14 @@ export function TenantProvider({ children }: { children: ReactNode }) {
           setCurrentTenant(ccTenants[0]);
         }
       } else {
-        setCurrentTenant(ccTenants[0]);
+        // No stored tenant - leave currentTenant null so TenantPicker shows
+        setCurrentTenant(null);
       }
+    } else {
+      setCurrentTenant(null);
     }
     setLoading(false);
-  }, [isAuthenticated, ccTenants, isImpersonating, impersonationSession]);
+  }, [isAuthenticated, ccTenants, isImpersonating, impersonationSession, authLoading, impersonationLoading]);
 
   async function switchTenant(tenantId: string) {
     const tenant = ccTenants.find(t => t.id === tenantId);
