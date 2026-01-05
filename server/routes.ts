@@ -44,6 +44,7 @@ import seriousIssuesRouter from "./routes/serious-issues";
 import appreciationsRouter from "./routes/appreciations";
 import financingRouter from "./routes/financing";
 import paymentsRouter from "./routes/payments";
+import trustSignalsRouter from "./routes/trust-signals";
 import { publicQuery } from "./db/tenantDb";
 import express from "express";
 
@@ -158,6 +159,9 @@ export async function registerRoutes(
 
   // Register payment promises routes (honor system)
   app.use('/api', paymentsRouter);
+
+  // Register trust signals + feedback routes (small-town trust model)
+  app.use('/api', trustSignalsRouter);
 
   // Public catalog endpoints (no auth required)
   app.get('/api/v1/catalog/vehicles', async (req, res) => {
