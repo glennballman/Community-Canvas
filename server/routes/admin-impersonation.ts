@@ -36,7 +36,7 @@ router.post('/start', async (req: AuthRequest, res: Response) => {
     
     // Get tenant info
     const tenantResult = await serviceQuery(`
-      SELECT id, name, tenant_type, slug, portal_slug
+      SELECT id, name, tenant_type, slug
       FROM cc_tenants
       WHERE id = $1
     `, [tenant_id]);
