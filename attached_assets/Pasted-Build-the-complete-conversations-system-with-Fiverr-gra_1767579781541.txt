@@ -1,3 +1,8 @@
+Build the complete conversations system with Fiverr-grade contact gating.
+Assumes server/lib/partyResolver.ts and server/lib/contactRedaction.ts already exist from Prompt 3.
+
+### File: server/routes/conversations.ts
+```typescript
 import { Router, Request, Response } from 'express';
 import { pool } from '../db';
 import { resolveActorParty, canUnlockContact } from '../lib/partyResolver';
@@ -5,6 +10,9 @@ import { redactContactInfo, shouldBlockMessage } from '../lib/contactRedaction';
 
 const router = Router();
 
+// ============================================================
+// CREATE OR GET CONVERSATION
+// ============================================================
 router.post('/conversations', async (req: Request, res: Response) => {
   try {
     const { opportunity_id } = req.body;
@@ -22,10 +30,10 @@ router.post('/conversations', async (req: Request, res: Response) => {
     try {
       await client.query('BEGIN');
 
+      // Get opportunity
       const oppResult = await client.query(
-        `SELECT o.id, o.owner_tenant_id, o.title
-         FROM opportunities o
-         WHERE o.id = $1`,
+        `SELECT o.id, o.owner_tenant_id, o.title, o.owner_type
+         FROM opportunities o WHERE o.id = $1`,
         [opportunity_id]
       );
 
@@ -41,9 +49,10 @@ router.post('/conversations', async (req: Request, res: Response) => {
         return res.status(400).json({ error: 'Opportunity has no owner' });
       }
 
+      // Find or create owner party
       let ownerPartyResult = await client.query(
-        `SELECT id FROM parties
-         WHERE tenant_id = $1 AND party_kind = 'organization'
+        `SELECT id FROM parties 
+         WHERE tenant_id = $1 AND party_kind = 'organization' 
          ORDER BY created_at ASC LIMIT 1`,
         [opp.owner_tenant_id]
       );
@@ -52,7 +61,9 @@ router.post('/conversations', async (req: Request, res: Response) => {
 
       if (!ownerPartyId) {
         const ownerTenantResult = await client.query(
-          `SELECT name, email, phone FROM tenants WHERE id = $1`,
+          `SELECT name, email, phone, business_number,
+                  address_line1, city, province, postal_code
+           FROM tenants WHERE id = $1`,
           [opp.owner_tenant_id]
         );
         const ownerTenant = ownerTenantResult.rows[0];
@@ -63,21 +74,32 @@ router.post('/conversations', async (req: Request, res: Response) => {
         }
 
         const createOwnerResult = await client.query(
-          `INSERT INTO parties (tenant_id, party_kind, party_type, status, legal_name, trade_name, primary_contact_email, primary_contact_phone)
-           VALUES ($1, 'organization', 'owner', 'active', $2, $2, $3, $4)
-           RETURNING id`,
-          [opp.owner_tenant_id, ownerTenant.name, ownerTenant.email, ownerTenant.phone]
+          `INSERT INTO parties (
+            tenant_id, party_kind, party_type, status, 
+            legal_name, trade_name, 
+            primary_contact_email, primary_contact_phone,
+            address_line1, city, province, postal_code
+          ) VALUES ($1, 'organization', 'owner', 'active', $2, $2, $3, $4, $5, $6, $7, $8)
+          RETURNING id`,
+          [
+            opp.owner_tenant_id, ownerTenant.name,
+            ownerTenant.email, ownerTenant.phone,
+            ownerTenant.address_line1, ownerTenant.city,
+            ownerTenant.province || 'BC', ownerTenant.postal_code
+          ]
         );
         ownerPartyId = createOwnerResult.rows[0].id;
       }
 
+      // Can't start conversation with yourself
       if (contractor.actor_party_id === ownerPartyId) {
         await client.query('ROLLBACK');
         return res.status(400).json({ error: 'Cannot start conversation with yourself' });
       }
 
+      // Check existing conversation
       const existingResult = await client.query(
-        `SELECT * FROM conversations
+        `SELECT * FROM conversations 
          WHERE opportunity_id = $1 AND contractor_party_id = $2`,
         [opportunity_id, contractor.actor_party_id]
       );
@@ -95,22 +117,21 @@ router.post('/conversations', async (req: Request, res: Response) => {
         });
       }
 
+      // Check for prior relationship (auto-unlock)
       const priorResult = await client.query(
-        `SELECT 1 FROM conversations
-         WHERE contractor_party_id = $1 AND owner_party_id = $2
-           AND state = 'completed'
-         LIMIT 1`,
+        `SELECT 1 FROM conversations 
+         WHERE contractor_party_id = $1 AND owner_party_id = $2 
+         AND state = 'completed' LIMIT 1`,
         [contractor.actor_party_id, ownerPartyId]
       );
       const hasPriorRelationship = priorResult.rows.length > 0;
 
+      // Create conversation
       const createResult = await client.query(
         `INSERT INTO conversations (
-          opportunity_id,
-          contractor_party_id, owner_party_id,
+          opportunity_id, contractor_party_id, owner_party_id,
           contractor_actor_party_id, owner_actor_party_id,
-          state,
-          contact_unlocked, contact_unlock_gate, contact_unlock_reason
+          state, contact_unlocked, contact_unlock_gate, contact_unlock_reason
         ) VALUES ($1, $2, $3, $4, $5, 'interest', $6, $7, $8)
         RETURNING *`,
         [
@@ -127,6 +148,7 @@ router.post('/conversations', async (req: Request, res: Response) => {
 
       const conversation = createResult.rows[0];
 
+      // System message
       await client.query(
         `INSERT INTO messages (
           conversation_id, sender_party_id, sender_individual_id,
@@ -164,6 +186,9 @@ router.post('/conversations', async (req: Request, res: Response) => {
   }
 });
 
+// ============================================================
+// GET MY CONVERSATIONS
+// ============================================================
 router.get('/conversations', async (req: Request, res: Response) => {
   try {
     const actor = await resolveActorParty(req, 'contractor');
@@ -181,7 +206,9 @@ router.get('/conversations', async (req: Request, res: Response) => {
              o.owner_type,
              owner_p.trade_name as owner_name,
              contractor_p.trade_name as contractor_name,
-             (SELECT content FROM messages WHERE conversation_id = c.id ORDER BY created_at DESC LIMIT 1) as last_message_preview
+             (SELECT content FROM messages 
+              WHERE conversation_id = c.id 
+              ORDER BY created_at DESC LIMIT 1) as last_message_preview
       FROM conversations c
       JOIN opportunities o ON c.opportunity_id = o.id
       LEFT JOIN parties owner_p ON c.owner_party_id = owner_p.id
@@ -201,7 +228,7 @@ router.get('/conversations', async (req: Request, res: Response) => {
     }
 
     query += ` ORDER BY COALESCE(c.last_message_at, c.created_at) DESC`;
-
+    
     params.push(parseInt(limit as string));
     query += ` LIMIT $${params.length}`;
 
@@ -210,7 +237,9 @@ router.get('/conversations', async (req: Request, res: Response) => {
     const conversations = result.rows.map(c => ({
       ...c,
       my_role: c.owner_party_id === actor.actor_party_id ? 'owner' : 'contractor',
-      unread_count: c.owner_party_id === actor.actor_party_id ? c.unread_owner : c.unread_contractor
+      unread_count: c.owner_party_id === actor.actor_party_id 
+        ? c.unread_owner 
+        : c.unread_contractor
     }));
 
     res.json({ 
@@ -228,6 +257,9 @@ router.get('/conversations', async (req: Request, res: Response) => {
   }
 });
 
+// ============================================================
+// GET SINGLE CONVERSATION
+// ============================================================
 router.get('/conversations/:id', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
@@ -244,7 +276,7 @@ router.get('/conversations/:id', async (req: Request, res: Response) => {
               o.work_category,
               o.site_address,
               o.owner_type,
-              o.budget_ceiling,
+              o.budget_amount,
               owner_p.trade_name as owner_name,
               owner_p.primary_contact_email as owner_email,
               owner_p.primary_contact_phone as owner_phone,
@@ -267,12 +299,14 @@ router.get('/conversations/:id', async (req: Request, res: Response) => {
     const conv = result.rows[0];
     const isOwner = conv.owner_party_id === actor.actor_party_id;
 
+    // Build response
     const response: any = {
       ...conv,
       my_role: isOwner ? 'owner' : 'contractor',
       unread_count: isOwner ? conv.unread_owner : conv.unread_contractor
     };
 
+    // CONTACT GATING: Redact contact info if not unlocked
     if (!conv.contact_unlocked) {
       if (isOwner) {
         delete response.contractor_email;
@@ -297,6 +331,9 @@ router.get('/conversations/:id', async (req: Request, res: Response) => {
   }
 });
 
+// ============================================================
+// GET CONTACT UNLOCK STATUS
+// ============================================================
 router.get('/conversations/:id/contact-status', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
@@ -306,6 +343,7 @@ router.get('/conversations/:id/contact-status', async (req: Request, res: Respon
       return res.status(401).json({ error: 'Authentication required' });
     }
 
+    // Verify access
     const convResult = await pool.query(
       `SELECT * FROM conversations WHERE id = $1
        AND (owner_party_id = $2 OR contractor_party_id = $2)`,
@@ -316,12 +354,13 @@ router.get('/conversations/:id/contact-status', async (req: Request, res: Respon
       return res.status(404).json({ error: 'Conversation not found' });
     }
 
+    const conv = convResult.rows[0];
     const unlockStatus = await canUnlockContact(id);
 
     res.json({
-      contact_unlocked: convResult.rows[0].contact_unlocked,
-      contact_unlock_gate: convResult.rows[0].contact_unlock_gate,
-      contact_unlocked_at: convResult.rows[0].contact_unlocked_at,
+      contact_unlocked: conv.contact_unlocked,
+      contact_unlock_gate: conv.contact_unlock_gate,
+      contact_unlocked_at: conv.contact_unlocked_at,
       can_unlock: unlockStatus.canUnlock,
       unlock_gate: unlockStatus.gate,
       reason: unlockStatus.reason
@@ -332,6 +371,9 @@ router.get('/conversations/:id/contact-status', async (req: Request, res: Respon
   }
 });
 
+// ============================================================
+// SEND MESSAGE (WITH TIERED REDACTION)
+// ============================================================
 router.post('/conversations/:id/messages', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
@@ -346,10 +388,15 @@ router.post('/conversations/:id/messages', async (req: Request, res: Response) =
       return res.status(400).json({ error: 'Message content required' });
     }
 
+    if (content.length > 10000) {
+      return res.status(400).json({ error: 'Message too long (max 10000 characters)' });
+    }
+
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
 
+      // Verify conversation exists
       const convResult = await client.query(
         `SELECT * FROM conversations WHERE id = $1`,
         [id]
@@ -362,6 +409,7 @@ router.post('/conversations/:id/messages', async (req: Request, res: Response) =
 
       const conversation = convResult.rows[0];
 
+      // Verify sender is part of conversation
       if (conversation.owner_party_id !== actor.actor_party_id &&
           conversation.contractor_party_id !== actor.actor_party_id) {
         await client.query('ROLLBACK');
@@ -370,6 +418,7 @@ router.post('/conversations/:id/messages', async (req: Request, res: Response) =
 
       const isOwner = conversation.owner_party_id === actor.actor_party_id;
 
+      // CONTACT REDACTION if not unlocked
       let finalContent = content;
       let wasRedacted = false;
       let redactedContent: string | null = null;
@@ -377,6 +426,7 @@ router.post('/conversations/:id/messages', async (req: Request, res: Response) =
       let detectedItems: any[] = [];
 
       if (!conversation.contact_unlocked) {
+        // Check recent redaction count (rate limiting)
         const recentRedactions = await client.query(
           `SELECT COUNT(*) as count FROM message_redactions
            WHERE conversation_id = $1 
@@ -385,7 +435,8 @@ router.post('/conversations/:id/messages', async (req: Request, res: Response) =
           [id, actor.actor_party_id]
         );
 
-        const blockCheck = shouldBlockMessage(id, parseInt(recentRedactions.rows[0].count));
+        const recentCount = parseInt(recentRedactions.rows[0].count);
+        const blockCheck = shouldBlockMessage(id, recentCount);
 
         const redaction = redactContactInfo(content);
         
@@ -396,6 +447,7 @@ router.post('/conversations/:id/messages', async (req: Request, res: Response) =
           detectedItems = redaction.detectedItems;
           redactionReason = blockCheck.reason || 'Contact details are shared after deposit is confirmed';
 
+          // Log redaction attempt
           await client.query(
             `INSERT INTO message_redactions (
               message_id, conversation_id, 
@@ -413,6 +465,7 @@ router.post('/conversations/:id/messages', async (req: Request, res: Response) =
         }
       }
 
+      // Insert message
       const msgResult = await client.query(
         `INSERT INTO messages (
           conversation_id, 
@@ -438,6 +491,7 @@ router.post('/conversations/:id/messages', async (req: Request, res: Response) =
 
       const message = msgResult.rows[0];
 
+      // Update redaction log with message_id
       if (wasRedacted) {
         await client.query(
           `UPDATE message_redactions SET message_id = $1
@@ -447,6 +501,7 @@ router.post('/conversations/:id/messages', async (req: Request, res: Response) =
         );
       }
 
+      // Update conversation metadata
       await client.query(
         `UPDATE conversations SET
           last_message_at = now(),
@@ -464,7 +519,8 @@ router.post('/conversations/:id/messages', async (req: Request, res: Response) =
       res.status(201).json({
         message: {
           ...message,
-          sender_role: isOwner ? 'owner' : 'contractor'
+          sender_role: isOwner ? 'owner' : 'contractor',
+          sender_display_name: actor.display_name
         },
         wasRedacted,
         redactionNotice: wasRedacted
@@ -485,6 +541,9 @@ router.post('/conversations/:id/messages', async (req: Request, res: Response) =
   }
 });
 
+// ============================================================
+// GET MESSAGES
+// ============================================================
 router.get('/conversations/:id/messages', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
@@ -497,6 +556,7 @@ router.get('/conversations/:id/messages', async (req: Request, res: Response) =>
 
     const client = await pool.connect();
     try {
+      // Verify access
       const convResult = await client.query(
         `SELECT * FROM conversations WHERE id = $1
          AND (owner_party_id = $2 OR contractor_party_id = $2)`,
@@ -510,6 +570,7 @@ router.get('/conversations/:id/messages', async (req: Request, res: Response) =>
       const conversation = convResult.rows[0];
       const isOwner = conversation.owner_party_id === actor.actor_party_id;
 
+      // Build query
       let query = `
         SELECT m.*,
                ind.full_name as sender_name,
@@ -544,12 +605,14 @@ router.get('/conversations/:id/messages', async (req: Request, res: Response) =>
 
       const result = await client.query(query, params);
 
+      // Mark conversation as read for this party
       const unreadField = isOwner ? 'unread_owner' : 'unread_contractor';
       await client.query(
         `UPDATE conversations SET ${unreadField} = 0, updated_at = now() WHERE id = $1`,
         [id]
       );
 
+      // Mark messages as read
       await client.query(
         `UPDATE messages SET read_at = now()
          WHERE conversation_id = $1
@@ -558,6 +621,7 @@ router.get('/conversations/:id/messages', async (req: Request, res: Response) =>
         [id, actor.actor_party_id]
       );
 
+      // Format messages (reverse to chronological order)
       const messages = result.rows.reverse().map(m => ({
         ...m,
         sender_display_name: m.sender_preferred_name || m.sender_name || m.sender_party_name || 'System'
@@ -579,6 +643,9 @@ router.get('/conversations/:id/messages', async (req: Request, res: Response) =>
   }
 });
 
+// ============================================================
+// UPDATE CONVERSATION STATE
+// ============================================================
 router.patch('/conversations/:id/state', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
@@ -595,7 +662,7 @@ router.patch('/conversations/:id/state', async (req: Request, res: Response) => 
     ];
 
     if (!validStates.includes(state)) {
-      return res.status(400).json({ error: 'Invalid state' });
+      return res.status(400).json({ error: `Invalid state. Valid: ${validStates.join(', ')}` });
     }
 
     const client = await pool.connect();
@@ -614,52 +681,62 @@ router.patch('/conversations/:id/state', async (req: Request, res: Response) => 
 
       const conversation = convResult.rows[0];
       const isOwner = conversation.owner_party_id === actor.actor_party_id;
+      const isContractor = conversation.contractor_party_id === actor.actor_party_id;
 
+      if (!isOwner && !isContractor) {
+        await client.query('ROLLBACK');
+        return res.status(403).json({ error: 'Not authorized' });
+      }
+
+      // State transition rules
       if (state === 'awarded_pending' && !isOwner) {
         await client.query('ROLLBACK');
         return res.status(403).json({ error: 'Only owner can award' });
       }
 
+      if (state === 'contracted' && !isContractor) {
+        await client.query('ROLLBACK');
+        return res.status(403).json({ error: 'Only contractor can confirm contract' });
+      }
+
+      // Check if contact should unlock (deposit-based, NOT state-based)
       const unlockStatus = await canUnlockContact(id);
+      const shouldUnlock = unlockStatus.canUnlock && !conversation.contact_unlocked;
 
       const result = await client.query(
         `UPDATE conversations SET
           state = $1::conversation_state,
           state_changed_at = now(),
           contact_unlocked = CASE WHEN $2 THEN true ELSE contact_unlocked END,
-          contact_unlocked_at = CASE WHEN $2 AND NOT contact_unlocked THEN now() ELSE contact_unlocked_at END,
-          contact_unlock_gate = CASE WHEN $2 AND NOT contact_unlocked THEN $3::contact_unlock_gate ELSE contact_unlock_gate END,
-          contact_unlock_reason = CASE WHEN $2 AND NOT contact_unlocked THEN $4 ELSE contact_unlock_reason END,
+          contact_unlocked_at = CASE WHEN $2 THEN now() ELSE contact_unlocked_at END,
+          contact_unlock_gate = CASE WHEN $2 THEN $3::contact_unlock_gate ELSE contact_unlock_gate END,
+          contact_unlock_reason = CASE WHEN $2 THEN $4 ELSE contact_unlock_reason END,
           updated_at = now()
          WHERE id = $5
          RETURNING *`,
-        [
-          state,
-          unlockStatus.canUnlock && !conversation.contact_unlocked,
-          unlockStatus.gate,
-          unlockStatus.reason,
-          id
-        ]
+        [state, shouldUnlock, unlockStatus.gate, unlockStatus.reason, id]
       );
+
+      // System message
+      let stateMessage = `Status updated to: ${state.replace(/_/g, ' ')}`;
+      if (shouldUnlock) {
+        stateMessage += '. Contact information is now available.';
+      }
 
       await client.query(
         `INSERT INTO messages (
           conversation_id, sender_party_id, sender_individual_id,
           message_type, content
         ) VALUES ($1, $2, $3, 'system', $4)`,
-        [
-          id,
-          actor.actor_party_id,
-          actor.individual_id,
-          `Status updated: ${state.replace(/_/g, ' ')}`
-        ]
+        [id, actor.actor_party_id, actor.individual_id, stateMessage]
       );
 
       await client.query('COMMIT');
 
       res.json({ 
         conversation: result.rows[0],
-        contact_unlocked: result.rows[0].contact_unlocked
+        contact_unlocked: result.rows[0].contact_unlocked,
+        state_changed: true
       });
 
     } catch (error) {
@@ -674,10 +751,13 @@ router.patch('/conversations/:id/state', async (req: Request, res: Response) => 
   }
 });
 
+// ============================================================
+// MANUAL CONTACT UNLOCK (Owner Only)
+// ============================================================
 router.post('/conversations/:id/unlock-contact', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { reason, gate = 'owner_override' } = req.body;
+    const { reason } = req.body;
 
     const actor = await resolveActorParty(req, 'owner');
     if (!actor) {
@@ -686,6 +766,7 @@ router.post('/conversations/:id/unlock-contact', async (req: Request, res: Respo
 
     const client = await pool.connect();
     try {
+      // Only owner can manually unlock
       const convResult = await client.query(
         `SELECT * FROM conversations WHERE id = $1 AND owner_party_id = $2`,
         [id, actor.actor_party_id]
@@ -695,18 +776,27 @@ router.post('/conversations/:id/unlock-contact', async (req: Request, res: Respo
         return res.status(404).json({ error: 'Conversation not found or not authorized' });
       }
 
+      if (convResult.rows[0].contact_unlocked) {
+        return res.json({ 
+          conversation: convResult.rows[0], 
+          contact_unlocked: true,
+          message: 'Contact already unlocked'
+        });
+      }
+
       const result = await client.query(
         `UPDATE conversations SET
           contact_unlocked = true,
           contact_unlocked_at = now(),
-          contact_unlock_gate = $1::contact_unlock_gate,
-          contact_unlock_reason = $2,
+          contact_unlock_gate = 'owner_override'::contact_unlock_gate,
+          contact_unlock_reason = $1,
           updated_at = now()
-         WHERE id = $3
+         WHERE id = $2
          RETURNING *`,
-        [gate, reason || 'Owner approved contact sharing', id]
+        [reason || 'Owner approved contact sharing', id]
       );
 
+      // System message
       await client.query(
         `INSERT INTO messages (
           conversation_id, sender_party_id, sender_individual_id,
@@ -729,36 +819,9 @@ router.post('/conversations/:id/unlock-contact', async (req: Request, res: Respo
   }
 });
 
-router.get('/conversations/unread/count', async (req: Request, res: Response) => {
-  try {
-    const actor = await resolveActorParty(req, 'contractor');
-    if (!actor) {
-      return res.status(401).json({ error: 'Authentication required' });
-    }
-
-    const result = await pool.query(
-      `SELECT 
-         COUNT(*) FILTER (WHERE owner_party_id = $1 AND unread_owner > 0) as unread_as_owner,
-         COUNT(*) FILTER (WHERE contractor_party_id = $1 AND unread_contractor > 0) as unread_as_contractor,
-         SUM(CASE WHEN owner_party_id = $1 THEN unread_owner ELSE 0 END) as total_unread_owner,
-         SUM(CASE WHEN contractor_party_id = $1 THEN unread_contractor ELSE 0 END) as total_unread_contractor
-       FROM conversations
-       WHERE owner_party_id = $1 OR contractor_party_id = $1`,
-      [actor.actor_party_id]
-    );
-
-    const counts = result.rows[0];
-
-    res.json({
-      conversations_with_unread: parseInt(counts.unread_as_owner || 0) + parseInt(counts.unread_as_contractor || 0),
-      total_unread_messages: parseInt(counts.total_unread_owner || 0) + parseInt(counts.total_unread_contractor || 0)
-    });
-  } catch (error) {
-    console.error('Error fetching unread count:', error);
-    res.status(500).json({ error: 'Failed to fetch unread count' });
-  }
-});
-
+// ============================================================
+// VERIFY DEPOSIT (Contractor Confirms Receipt → Triggers Unlock)
+// ============================================================
 router.post('/conversations/:id/deposit-verified', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
@@ -773,6 +836,7 @@ router.post('/conversations/:id/deposit-verified', async (req: Request, res: Res
     try {
       await client.query('BEGIN');
 
+      // Get conversation
       const convResult = await client.query(
         `SELECT * FROM conversations WHERE id = $1`,
         [id]
@@ -785,11 +849,13 @@ router.post('/conversations/:id/deposit-verified', async (req: Request, res: Res
 
       const conversation = convResult.rows[0];
 
+      // Only contractor can verify deposit receipt
       if (conversation.contractor_party_id !== actor.actor_party_id) {
         await client.query('ROLLBACK');
         return res.status(403).json({ error: 'Only contractor can verify deposit receipt' });
       }
 
+      // Find and update deposit milestone
       const milestoneResult = await client.query(
         `UPDATE payment_milestones pm SET
           status = 'verified',
@@ -808,6 +874,7 @@ router.post('/conversations/:id/deposit-verified', async (req: Request, res: Res
         [payment_reference, notes, actor.actor_party_id, actor.individual_id, id]
       );
 
+      // Unlock contact
       const updateResult = await client.query(
         `UPDATE conversations SET
           contact_unlocked = true,
@@ -820,12 +887,18 @@ router.post('/conversations/:id/deposit-verified', async (req: Request, res: Res
         [id]
       );
 
+      // System message
       await client.query(
         `INSERT INTO messages (
           conversation_id, sender_party_id, sender_individual_id,
           message_type, content
-        ) VALUES ($1, $2, $3, 'system', 'Deposit verified. Contact information is now shared.')`,
-        [id, actor.actor_party_id, actor.individual_id]
+        ) VALUES ($1, $2, $3, 'system', $4)`,
+        [
+          id,
+          actor.actor_party_id,
+          actor.individual_id,
+          'Deposit verified. Contact information is now shared between parties.'
+        ]
       );
 
       await client.query('COMMIT');
@@ -848,4 +921,114 @@ router.post('/conversations/:id/deposit-verified', async (req: Request, res: Res
   }
 });
 
+// ============================================================
+// GET UNREAD COUNT (For notifications/badges)
+// ============================================================
+router.get('/conversations/unread/count', async (req: Request, res: Response) => {
+  try {
+    const actor = await resolveActorParty(req, 'contractor');
+    if (!actor) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const result = await pool.query(
+      `SELECT 
+         COUNT(*) FILTER (WHERE owner_party_id = $1 AND unread_owner > 0) as unread_as_owner,
+         COUNT(*) FILTER (WHERE contractor_party_id = $1 AND unread_contractor > 0) as unread_as_contractor,
+         SUM(CASE WHEN owner_party_id = $1 THEN unread_owner ELSE 0 END) as total_unread_owner,
+         SUM(CASE WHEN contractor_party_id = $1 THEN unread_contractor ELSE 0 END) as total_unread_contractor
+       FROM conversations
+       WHERE owner_party_id = $1 OR contractor_party_id = $1`,
+      [actor.actor_party_id]
+    );
+
+    const counts = result.rows[0];
+
+    res.json({
+      conversations_with_unread: parseInt(counts.unread_as_owner) + parseInt(counts.unread_as_contractor),
+      total_unread_messages: parseInt(counts.total_unread_owner || 0) + parseInt(counts.total_unread_contractor || 0)
+    });
+  } catch (error) {
+    console.error('Error fetching unread count:', error);
+    res.status(500).json({ error: 'Failed to fetch unread count' });
+  }
+});
+
 export default router;
+```
+
+### Register the Routes
+
+In server/index.ts, add with other imports:
+```typescript
+import conversationsRouter from './routes/conversations';
+```
+
+Add with other route registrations:
+```typescript
+app.use('/api', conversationsRouter);
+```
+
+### Verification
+
+Test these endpoints:
+```bash
+# 1. Create conversation (as contractor)
+curl -X POST http://localhost:5000/api/conversations \
+  -H "Content-Type: application/json" \
+  -H "Cookie: YOUR_SESSION" \
+  -d '{"opportunity_id": "OPPORTUNITY_UUID"}'
+
+# 2. Get my conversations
+curl http://localhost:5000/api/conversations \
+  -H "Cookie: YOUR_SESSION"
+
+# 3. Send message with contact info (should be redacted)
+curl -X POST http://localhost:5000/api/conversations/CONV_UUID/messages \
+  -H "Content-Type: application/json" \
+  -H "Cookie: YOUR_SESSION" \
+  -d '{"content": "Hi! Email me at test@example.com or call 250-555-1234"}'
+
+# 4. Check contact status
+curl http://localhost:5000/api/conversations/CONV_UUID/contact-status \
+  -H "Cookie: YOUR_SESSION"
+
+# 5. Get messages
+curl http://localhost:5000/api/conversations/CONV_UUID/messages \
+  -H "Cookie: YOUR_SESSION"
+
+# 6. Get unread count
+curl http://localhost:5000/api/conversations/unread/count \
+  -H "Cookie: YOUR_SESSION"
+```
+
+### Expected Results
+
+1. **Create conversation**: Returns conversation with `created: true`, actor info, system message added
+2. **List conversations**: Shows `my_role`, `unread_count`, `last_message_preview`
+3. **Send message with contact**: 
+   - Content shows `[contact info protected]` 
+   - Response has `wasRedacted: true`
+   - `detectedItems: ['email', 'phone_dashed']`
+4. **Contact status**: `contact_unlocked: false`, `reason: 'Deposit required...'`
+5. **Messages**: Each has `sender_display_name`, `sender_role` (me/them/system)
+6. **Unread count**: Shows total unread for notification badges
+
+### Key Features Implemented
+
+| Feature | Implementation |
+|---------|---------------|
+| Contact gating | Emails/phones hidden until deposit verified |
+| Tiered redaction | Tier 1 (always) + Tier 2 (conditional) |
+| Prior relationship unlock | Auto-unlock if completed job together before |
+| Deposit verification | Contractor confirms → contact unlocks |
+| Owner manual override | Owner can unlock anytime |
+| Unread tracking | Separate counters for owner/contractor |
+| State machine | interest → pre_bid → negotiation → awarded → contracted → in_progress → completed |
+
+Tell me:
+1. Does conversation creation work?
+2. Are messages being redacted correctly?
+3. Does contact-status endpoint work?
+4. Does unread count work?
+5. Any errors?
