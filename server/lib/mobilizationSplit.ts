@@ -38,13 +38,13 @@ export async function computeMobilizationSplit(run_id: string): Promise<Mobiliza
       r.min_mobilization_threshold,
       r.estimated_total_value,
       r.pricing_model
-    FROM service_runs r
+    FROM coop_service_runs r
     WHERE r.id = $1`,
     [run_id]
   );
   
   if (result.rows.length === 0) {
-    throw new Error('Service run not found');
+    throw new Error('Coop service run not found');
   }
   
   const run = result.rows[0];
@@ -101,20 +101,19 @@ export async function computeContractorMargins(run_id: string): Promise<{
       r.estimated_total_value,
       r.pricing_model,
       SUM(m.unit_count) as total_units
-    FROM service_runs r
-    LEFT JOIN service_run_members m ON m.run_id = r.id AND m.status IN ('interested', 'joined', 'scheduled')
+    FROM coop_service_runs r
+    LEFT JOIN coop_run_members m ON m.run_id = r.id AND m.status IN ('interested', 'joined', 'scheduled')
     WHERE r.id = $1
     GROUP BY r.id`,
     [run_id]
   );
   
   if (result.rows.length === 0) {
-    throw new Error('Service run not found');
+    throw new Error('Coop service run not found');
   }
   
   const run = result.rows[0];
   const mobFee = parseFloat(run.mobilization_fee_total) || 0;
-  const memberCount = run.current_member_count || 1;
   const totalUnits = parseInt(run.total_units) || 1;
   const unitPrice = parseFloat(run.pricing_model?.unit_price) || 0;
   

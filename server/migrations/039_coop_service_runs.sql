@@ -1,6 +1,6 @@
 -- ============================================================
--- COMMUNITY CANVAS v2.7 - SERVICE RUNS (PILE-ON)
--- Migration 039 - Cooperative Bundling, Not Competitive Bidding
+-- COMMUNITY CANVAS v2.7 - COOPERATIVE SERVICE RUNS
+-- Migration 039 - Cooperative Bundling (Separate from Legacy Service Runs)
 -- ============================================================
 
 -- Philosophy:
@@ -8,7 +8,7 @@
 -- - Neighbors join to split mobilization costs
 -- - Contractor controls pricing and schedule
 -- - More members = better margins for contractor
--- - Contractor triggers virality by inviting past customers
+-- - This is SEPARATE from legacy service_runs table
 
 -- ============================================================
 -- 1. EXTEND OPPORTUNITIES WITH INTAKE MODE
@@ -16,9 +16,9 @@
 
 DO $$ BEGIN
   CREATE TYPE intake_mode AS ENUM (
-    'bid',           -- Traditional: post job, get bids
-    'run',           -- Service run: booked contractor, neighbors pile on
-    'direct_award'   -- Direct: owner awards to specific contractor
+    'bid',
+    'run',
+    'direct_award'
   );
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
@@ -27,46 +27,46 @@ ALTER TABLE opportunities
   ADD COLUMN IF NOT EXISTS intake_mode intake_mode DEFAULT 'bid';
 
 ALTER TABLE opportunities 
-  ADD COLUMN IF NOT EXISTS service_run_id UUID;
+  ADD COLUMN IF NOT EXISTS coop_run_id UUID;
 
 CREATE INDEX IF NOT EXISTS opportunities_intake_mode_idx 
   ON opportunities(intake_mode);
 
-CREATE INDEX IF NOT EXISTS opportunities_service_run_idx 
-  ON opportunities(service_run_id) WHERE service_run_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS opportunities_coop_run_idx 
+  ON opportunities(coop_run_id) WHERE coop_run_id IS NOT NULL;
 
 -- ============================================================
--- 2. SERVICE RUNS
+-- 2. COOPERATIVE SERVICE RUNS (New table, distinct from legacy)
 -- ============================================================
 
 DO $$ BEGIN
-  CREATE TYPE run_status AS ENUM (
-    'forming',       -- Accepting members
-    'contractor_invited',  -- Waiting for contractor to claim
-    'contractor_claimed',  -- Contractor has claimed
-    'scheduled',     -- Date set
-    'in_progress',   -- Work happening
-    'completed',     -- All done
+  CREATE TYPE coop_run_status AS ENUM (
+    'forming',
+    'contractor_invited',
+    'contractor_claimed',
+    'scheduled',
+    'in_progress',
+    'completed',
     'cancelled'
   );
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
 DO $$ BEGIN
-  CREATE TYPE split_method AS ENUM (
-    'flat',          -- Equal split among all members
-    'pro_rata_units', -- Split by units (e.g., # of chimneys)
-    'custom'         -- Contractor-defined formula
+  CREATE TYPE coop_split_method AS ENUM (
+    'flat',
+    'pro_rata_units',
+    'custom'
   );
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
-CREATE TABLE IF NOT EXISTS service_runs (
+CREATE TABLE IF NOT EXISTS coop_service_runs (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   
-  -- Context
-  tenant_id UUID NOT NULL REFERENCES tenants(id),
-  community_id UUID REFERENCES communities(id),
+  -- Context (using correct table names)
+  tenant_id UUID NOT NULL REFERENCES cc_tenants(id),
+  community_id UUID,
   
   -- What kind of work
   trade_category TEXT NOT NULL,
@@ -79,7 +79,7 @@ CREATE TABLE IF NOT EXISTS service_runs (
   contractor_contact_email TEXT,
   
   -- Run status
-  status run_status DEFAULT 'forming',
+  status coop_run_status DEFAULT 'forming',
   
   -- Service window
   window_start DATE,
@@ -96,7 +96,7 @@ CREATE TABLE IF NOT EXISTS service_runs (
   -- Mobilization
   mobilization_fee_total NUMERIC(10,2),
   min_mobilization_threshold NUMERIC(10,2),
-  split_method split_method DEFAULT 'flat',
+  split_method coop_split_method DEFAULT 'flat',
   
   -- Computed estimates
   estimated_total_value NUMERIC(12,2),
@@ -118,27 +118,21 @@ CREATE TABLE IF NOT EXISTS service_runs (
   completed_at TIMESTAMPTZ
 );
 
-CREATE INDEX IF NOT EXISTS service_runs_tenant_idx ON service_runs(tenant_id);
-CREATE INDEX IF NOT EXISTS service_runs_community_idx ON service_runs(community_id);
-CREATE INDEX IF NOT EXISTS service_runs_contractor_idx ON service_runs(contractor_party_id);
-CREATE INDEX IF NOT EXISTS service_runs_status_idx ON service_runs(status) WHERE status IN ('forming', 'scheduled');
-CREATE INDEX IF NOT EXISTS service_runs_trade_idx ON service_runs(trade_category);
+CREATE INDEX IF NOT EXISTS coop_runs_tenant_idx ON coop_service_runs(tenant_id);
+CREATE INDEX IF NOT EXISTS coop_runs_community_idx ON coop_service_runs(community_id);
+CREATE INDEX IF NOT EXISTS coop_runs_contractor_idx ON coop_service_runs(contractor_party_id);
+CREATE INDEX IF NOT EXISTS coop_runs_status_idx ON coop_service_runs(status) WHERE status IN ('forming', 'scheduled');
+CREATE INDEX IF NOT EXISTS coop_runs_trade_idx ON coop_service_runs(trade_category);
 
-COMMENT ON TABLE service_runs IS 
+COMMENT ON TABLE coop_service_runs IS 
   'Cooperative service bundling. NOT bidding. Neighbors join to split mobilization.';
 
-COMMENT ON COLUMN service_runs.mobilization_fee_total IS 
-  'Total contractor mobilization cost. Split among members.';
-
-COMMENT ON COLUMN service_runs.min_mobilization_threshold IS 
-  'Minimum value to make trip worthwhile for contractor.';
-
 -- ============================================================
--- 3. SERVICE RUN MEMBERS
+-- 3. COOPERATIVE RUN MEMBERS
 -- ============================================================
 
 DO $$ BEGIN
-  CREATE TYPE member_status AS ENUM (
+  CREATE TYPE coop_member_status AS ENUM (
     'interested',
     'joined',
     'scheduled',
@@ -148,10 +142,10 @@ DO $$ BEGIN
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
-CREATE TABLE IF NOT EXISTS service_run_members (
+CREATE TABLE IF NOT EXISTS coop_run_members (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   
-  run_id UUID NOT NULL REFERENCES service_runs(id) ON DELETE CASCADE,
+  run_id UUID NOT NULL REFERENCES coop_service_runs(id) ON DELETE CASCADE,
   opportunity_id UUID REFERENCES opportunities(id),
   
   -- Member
@@ -163,7 +157,7 @@ CREATE TABLE IF NOT EXISTS service_run_members (
   unit_count INTEGER DEFAULT 1,
   
   -- Status
-  status member_status DEFAULT 'interested',
+  status coop_member_status DEFAULT 'interested',
   
   -- Location
   property_address TEXT,
@@ -189,19 +183,19 @@ CREATE TABLE IF NOT EXISTS service_run_members (
   withdrawn_at TIMESTAMPTZ
 );
 
-CREATE INDEX IF NOT EXISTS run_members_run_idx ON service_run_members(run_id);
-CREATE INDEX IF NOT EXISTS run_members_owner_idx ON service_run_members(owner_party_id);
-CREATE INDEX IF NOT EXISTS run_members_status_idx ON service_run_members(run_id, status);
+CREATE INDEX IF NOT EXISTS coop_members_run_idx ON coop_run_members(run_id);
+CREATE INDEX IF NOT EXISTS coop_members_owner_idx ON coop_run_members(owner_party_id);
+CREATE INDEX IF NOT EXISTS coop_members_status_idx ON coop_run_members(run_id, status);
 
-COMMENT ON TABLE service_run_members IS 
-  'Customers who joined a service run. Each brings their property + unit count.';
+COMMENT ON TABLE coop_run_members IS 
+  'Customers who joined a coop run. Each brings their property + unit count.';
 
 -- ============================================================
--- 4. CONTRACTOR INVITES
+-- 4. COOP CONTRACTOR INVITES
 -- ============================================================
 
 DO $$ BEGIN
-  CREATE TYPE invite_status AS ENUM (
+  CREATE TYPE coop_invite_status AS ENUM (
     'pending',
     'sent',
     'delivered',
@@ -213,11 +207,11 @@ DO $$ BEGIN
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
-CREATE TABLE IF NOT EXISTS contractor_invites (
+CREATE TABLE IF NOT EXISTS coop_contractor_invites (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   
   -- What run
-  service_run_id UUID REFERENCES service_runs(id),
+  coop_run_id UUID REFERENCES coop_service_runs(id),
   
   -- Who we're inviting
   contractor_name TEXT NOT NULL,
@@ -234,7 +228,7 @@ CREATE TABLE IF NOT EXISTS contractor_invites (
   invite_token TEXT UNIQUE,
   
   -- Status
-  status invite_status DEFAULT 'pending',
+  status coop_invite_status DEFAULT 'pending',
   
   -- If claimed
   claimed_party_id UUID REFERENCES parties(id),
@@ -251,21 +245,21 @@ CREATE TABLE IF NOT EXISTS contractor_invites (
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
-CREATE INDEX IF NOT EXISTS contractor_invites_run_idx ON contractor_invites(service_run_id);
-CREATE INDEX IF NOT EXISTS contractor_invites_token_idx ON contractor_invites(invite_token) WHERE invite_token IS NOT NULL;
-CREATE INDEX IF NOT EXISTS contractor_invites_status_idx ON contractor_invites(status);
+CREATE INDEX IF NOT EXISTS coop_invites_run_idx ON coop_contractor_invites(coop_run_id);
+CREATE INDEX IF NOT EXISTS coop_invites_token_idx ON coop_contractor_invites(invite_token) WHERE invite_token IS NOT NULL;
+CREATE INDEX IF NOT EXISTS coop_invites_status_idx ON coop_contractor_invites(status);
 
-COMMENT ON TABLE contractor_invites IS 
-  'Invitations to contractors to claim/join service runs.';
+COMMENT ON TABLE coop_contractor_invites IS 
+  'Invitations to contractors to claim/join coop runs.';
 
 -- ============================================================
--- 5. CONTRACTOR OUTREACH CAMPAIGNS (Virality)
+-- 5. COOP OUTREACH CAMPAIGNS (Virality)
 -- ============================================================
 
-CREATE TABLE IF NOT EXISTS run_outreach_campaigns (
+CREATE TABLE IF NOT EXISTS coop_outreach_campaigns (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   
-  run_id UUID NOT NULL REFERENCES service_runs(id),
+  run_id UUID NOT NULL REFERENCES coop_service_runs(id),
   contractor_party_id UUID NOT NULL REFERENCES parties(id),
   
   -- Campaign details
@@ -288,10 +282,10 @@ CREATE TABLE IF NOT EXISTS run_outreach_campaigns (
   sent_at TIMESTAMPTZ
 );
 
-CREATE TABLE IF NOT EXISTS run_outreach_messages (
+CREATE TABLE IF NOT EXISTS coop_outreach_messages (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   
-  campaign_id UUID NOT NULL REFERENCES run_outreach_campaigns(id),
+  campaign_id UUID NOT NULL REFERENCES coop_outreach_campaigns(id),
   
   -- Recipient
   recipient_email TEXT,
@@ -307,20 +301,20 @@ CREATE TABLE IF NOT EXISTS run_outreach_messages (
   clicked_at TIMESTAMPTZ,
   
   -- Result
-  resulted_in_member_id UUID REFERENCES service_run_members(id)
+  resulted_in_member_id UUID REFERENCES coop_run_members(id)
 );
 
-CREATE INDEX IF NOT EXISTS outreach_campaigns_run_idx ON run_outreach_campaigns(run_id);
-CREATE INDEX IF NOT EXISTS outreach_messages_campaign_idx ON run_outreach_messages(campaign_id);
+CREATE INDEX IF NOT EXISTS coop_campaigns_run_idx ON coop_outreach_campaigns(run_id);
+CREATE INDEX IF NOT EXISTS coop_messages_campaign_idx ON coop_outreach_messages(campaign_id);
 
-COMMENT ON TABLE run_outreach_campaigns IS 
+COMMENT ON TABLE coop_outreach_campaigns IS 
   'Contractor-initiated outreach to past customers. Triggers virality.';
 
 -- ============================================================
 -- 6. MOBILIZATION SPLIT ESTIMATES VIEW
 -- ============================================================
 
-CREATE OR REPLACE VIEW run_mobilization_estimates AS
+CREATE OR REPLACE VIEW coop_mobilization_estimates AS
 SELECT 
   r.id as run_id,
   r.mobilization_fee_total,
@@ -337,16 +331,16 @@ SELECT
     WHEN r.estimated_total_value > r.min_mobilization_threshold THEN true
     ELSE false
   END as threshold_met
-FROM service_runs r;
+FROM coop_service_runs r;
 
-COMMENT ON VIEW run_mobilization_estimates IS 
+COMMENT ON VIEW coop_mobilization_estimates IS 
   'Computed mobilization splits. Updates as members join/leave.';
 
 -- ============================================================
--- 7. FUNCTION: Recompute run estimates
+-- 7. FUNCTION: Recompute coop run estimates
 -- ============================================================
 
-CREATE OR REPLACE FUNCTION recompute_run_estimates(run_uuid UUID)
+CREATE OR REPLACE FUNCTION recompute_coop_run_estimates(run_uuid UUID)
 RETURNS void AS $$
 DECLARE
   member_count INTEGER;
@@ -358,27 +352,27 @@ BEGIN
   -- Count active members
   SELECT COUNT(*), COALESCE(SUM(unit_count), 0)
   INTO member_count, total_units
-  FROM service_run_members
+  FROM coop_run_members
   WHERE run_id = run_uuid AND status IN ('interested', 'joined', 'scheduled');
   
   -- Get run details
   SELECT mobilization_fee_total, (pricing_model->>'unit_price')::numeric
   INTO mob_fee, unit_price
-  FROM service_runs
+  FROM coop_service_runs
   WHERE id = run_uuid;
   
   -- Compute total value
   total_value := COALESCE(total_units * unit_price, 0) + COALESCE(mob_fee, 0);
   
   -- Update run
-  UPDATE service_runs SET
+  UPDATE coop_service_runs SET
     current_member_count = member_count,
     estimated_total_value = total_value,
     updated_at = now()
   WHERE id = run_uuid;
   
   -- Update member estimates
-  UPDATE service_run_members SET
+  UPDATE coop_run_members SET
     estimated_mobilization_share = CASE 
       WHEN member_count > 0 THEN mob_fee / member_count
       ELSE mob_fee
@@ -397,21 +391,21 @@ $$ LANGUAGE plpgsql;
 -- 8. TRIGGER: Auto-recompute on member changes
 -- ============================================================
 
-CREATE OR REPLACE FUNCTION trigger_recompute_run()
+CREATE OR REPLACE FUNCTION trigger_recompute_coop_run()
 RETURNS TRIGGER AS $$
 BEGIN
   IF TG_OP = 'DELETE' THEN
-    PERFORM recompute_run_estimates(OLD.run_id);
+    PERFORM recompute_coop_run_estimates(OLD.run_id);
     RETURN OLD;
   ELSE
-    PERFORM recompute_run_estimates(NEW.run_id);
+    PERFORM recompute_coop_run_estimates(NEW.run_id);
     RETURN NEW;
   END IF;
 END;
 $$ LANGUAGE plpgsql;
 
-DROP TRIGGER IF EXISTS run_member_recompute ON service_run_members;
-CREATE TRIGGER run_member_recompute
-  AFTER INSERT OR UPDATE OR DELETE ON service_run_members
+DROP TRIGGER IF EXISTS coop_member_recompute ON coop_run_members;
+CREATE TRIGGER coop_member_recompute
+  AFTER INSERT OR UPDATE OR DELETE ON coop_run_members
   FOR EACH ROW
-  EXECUTE FUNCTION trigger_recompute_run();
+  EXECUTE FUNCTION trigger_recompute_coop_run();

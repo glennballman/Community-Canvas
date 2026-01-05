@@ -7,13 +7,15 @@ import { randomBytes } from 'crypto';
 const router = Router();
 
 /**
- * SERVICE RUNS ROUTES
+ * COOPERATIVE SERVICE RUNS ROUTES
  * 
  * Philosophy:
  * - Cooperative bundling, NOT competitive bidding
  * - Contractor controls pricing
  * - Customers coordinate demand
  * - More members = better for everyone
+ * 
+ * Prefix: /api/coop-runs
  */
 
 async function resolveTenant(req: any): Promise<{ id: string }> {
@@ -21,7 +23,7 @@ async function resolveTenant(req: any): Promise<{ id: string }> {
   if (tenant_id) return { id: tenant_id };
   
   const result = await pool.query(
-    `SELECT id FROM tenants WHERE slug = 'bamfield' LIMIT 1`
+    `SELECT id FROM cc_tenants WHERE slug = 'bamfield' LIMIT 1`
   );
   if (result.rows.length > 0) return { id: result.rows[0].id };
   
@@ -29,9 +31,9 @@ async function resolveTenant(req: any): Promise<{ id: string }> {
 }
 
 // ============================================================
-// CREATE SERVICE RUN (Customer who booked a contractor)
+// CREATE COOP RUN (Customer who booked a contractor)
 // ============================================================
-router.post('/service-runs', async (req: Request, res: Response) => {
+router.post('/', async (req: Request, res: Response) => {
   try {
     const tenant = await resolveTenant(req);
     const actor = await resolveActorParty(req, 'owner');
@@ -71,7 +73,7 @@ router.post('/service-runs', async (req: Request, res: Response) => {
       await client.query('BEGIN');
 
       const runResult = await client.query(
-        `INSERT INTO service_runs (
+        `INSERT INTO coop_service_runs (
           tenant_id, trade_category, service_description,
           contractor_name, contractor_contact_email, contractor_website,
           window_start, window_end, preferred_months,
@@ -107,7 +109,7 @@ router.post('/service-runs', async (req: Request, res: Response) => {
       const oppResult = await client.query(
         `INSERT INTO opportunities (
           tenant_id, owner_party_id, owner_individual_id,
-          title, description, intake_mode, service_run_id,
+          title, description, intake_mode, coop_run_id,
           property_address, postal_code,
           state
         ) VALUES ($1, $2, $3, $4, $5, 'run', $6, $7, $8, 'intake')
@@ -116,7 +118,7 @@ router.post('/service-runs', async (req: Request, res: Response) => {
           tenant.id,
           actor.actor_party_id,
           actor.individual_id,
-          `${trade_category} - ${property_community || 'Service Run'}`,
+          `${trade_category} - ${property_community || 'Coop Run'}`,
           service_description,
           run.id,
           property_address,
@@ -127,7 +129,7 @@ router.post('/service-runs', async (req: Request, res: Response) => {
       const opportunity = oppResult.rows[0];
 
       await client.query(
-        `INSERT INTO service_run_members (
+        `INSERT INTO coop_run_members (
           run_id, opportunity_id, owner_party_id, owner_individual_id,
           property_address, property_postal_code, property_community,
           unit_count, units, access_notes, status
@@ -150,8 +152,8 @@ router.post('/service-runs', async (req: Request, res: Response) => {
         const inviteToken = randomBytes(32).toString('hex');
         
         await client.query(
-          `INSERT INTO contractor_invites (
-            service_run_id, contractor_name, contractor_email,
+          `INSERT INTO coop_contractor_invites (
+            coop_run_id, contractor_name, contractor_email,
             contractor_phone, contractor_website,
             source, invite_token, status,
             invited_by_party_id, invited_by_individual_id
@@ -169,22 +171,22 @@ router.post('/service-runs', async (req: Request, res: Response) => {
         );
 
         await client.query(
-          `UPDATE service_runs SET status = 'contractor_invited' WHERE id = $1`,
+          `UPDATE coop_service_runs SET status = 'contractor_invited' WHERE id = $1`,
           [run.id]
         );
       }
 
-      await client.query(`SELECT recompute_run_estimates($1)`, [run.id]);
+      await client.query(`SELECT recompute_coop_run_estimates($1)`, [run.id]);
 
       await client.query('COMMIT');
 
       const estimate = await computeMobilizationSplit(run.id);
 
       res.status(201).json({
-        service_run: run,
+        coop_run: run,
         opportunity: opportunity,
         mobilization_estimate: estimate,
-        message: 'Service run created! Neighbors can now join to split mobilization costs.'
+        message: 'Coop run created! Neighbors can now join to split mobilization costs.'
       });
 
     } catch (error) {
@@ -194,15 +196,15 @@ router.post('/service-runs', async (req: Request, res: Response) => {
       client.release();
     }
   } catch (error) {
-    console.error('Error creating service run:', error);
-    res.status(500).json({ error: 'Failed to create service run' });
+    console.error('Error creating coop run:', error);
+    res.status(500).json({ error: 'Failed to create coop run' });
   }
 });
 
 // ============================================================
-// GET SERVICE RUN (Public summary)
+// GET COOP RUN (Public summary)
 // ============================================================
-router.get('/service-runs/:id', async (req: Request, res: Response) => {
+router.get('/:id', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
 
@@ -211,15 +213,15 @@ router.get('/service-runs/:id', async (req: Request, res: Response) => {
         r.*,
         COUNT(m.id) FILTER (WHERE m.status IN ('interested', 'joined', 'scheduled')) as member_count,
         SUM(m.unit_count) FILTER (WHERE m.status IN ('interested', 'joined', 'scheduled')) as total_units
-       FROM service_runs r
-       LEFT JOIN service_run_members m ON m.run_id = r.id
+       FROM coop_service_runs r
+       LEFT JOIN coop_run_members m ON m.run_id = r.id
        WHERE r.id = $1
        GROUP BY r.id`,
       [id]
     );
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Service run not found' });
+      return res.status(404).json({ error: 'Coop run not found' });
     }
 
     const run = result.rows[0];
@@ -227,7 +229,7 @@ router.get('/service-runs/:id', async (req: Request, res: Response) => {
     const display = formatCustomerEstimate(estimate);
 
     res.json({
-      service_run: {
+      coop_run: {
         id: run.id,
         trade_category: run.trade_category,
         service_description: run.service_description,
@@ -245,21 +247,21 @@ router.get('/service-runs/:id', async (req: Request, res: Response) => {
       },
       copy: {
         headline: display.headline,
-        call_to_action: 'Join this service run to share mobilization costs with your neighbors',
+        call_to_action: 'Join this coop run to share mobilization costs with your neighbors',
         not_bidding: 'This is not a bidding war. You are joining a coordinated service run.',
         efficiency: 'The more neighbors who join, the more efficient the trip becomes.'
       }
     });
   } catch (error) {
-    console.error('Error fetching service run:', error);
-    res.status(500).json({ error: 'Failed to fetch service run' });
+    console.error('Error fetching coop run:', error);
+    res.status(500).json({ error: 'Failed to fetch coop run' });
   }
 });
 
 // ============================================================
-// JOIN SERVICE RUN
+// JOIN COOP RUN
 // ============================================================
-router.post('/service-runs/:id/join', async (req: Request, res: Response) => {
+router.post('/:id/join', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const actor = await resolveActorParty(req, 'owner');
@@ -280,18 +282,18 @@ router.post('/service-runs/:id/join', async (req: Request, res: Response) => {
     } = req.body;
 
     const runResult = await pool.query(
-      `SELECT * FROM service_runs WHERE id = $1 AND status IN ('forming', 'contractor_invited', 'contractor_claimed')`,
+      `SELECT * FROM coop_service_runs WHERE id = $1 AND status IN ('forming', 'contractor_invited', 'contractor_claimed')`,
       [id]
     );
 
     if (runResult.rows.length === 0) {
-      return res.status(404).json({ error: 'Service run not found or not accepting members' });
+      return res.status(404).json({ error: 'Coop run not found or not accepting members' });
     }
 
     const run = runResult.rows[0];
 
     const existingResult = await pool.query(
-      `SELECT id FROM service_run_members 
+      `SELECT id FROM coop_run_members 
        WHERE run_id = $1 AND owner_party_id = $2 AND status != 'withdrawn'`,
       [id, actor.actor_party_id]
     );
@@ -307,7 +309,7 @@ router.post('/service-runs/:id/join', async (req: Request, res: Response) => {
       const oppResult = await client.query(
         `INSERT INTO opportunities (
           tenant_id, owner_party_id, owner_individual_id,
-          title, description, intake_mode, service_run_id,
+          title, description, intake_mode, coop_run_id,
           property_address, postal_code,
           state
         ) VALUES ($1, $2, $3, $4, $5, 'run', $6, $7, $8, 'intake')
@@ -327,7 +329,7 @@ router.post('/service-runs/:id/join', async (req: Request, res: Response) => {
       const opportunity = oppResult.rows[0];
 
       const memberResult = await client.query(
-        `INSERT INTO service_run_members (
+        `INSERT INTO coop_run_members (
           run_id, opportunity_id, owner_party_id, owner_individual_id,
           property_address, property_postal_code, property_community,
           unit_count, units, access_notes, special_requirements, status
@@ -360,7 +362,7 @@ router.post('/service-runs/:id/join', async (req: Request, res: Response) => {
           ...estimate,
           display
         },
-        message: `You've joined the service run! Current mobilization share: $${estimate.share_per_member}`
+        message: `You've joined the coop run! Current mobilization share: $${estimate.share_per_member}`
       });
 
     } catch (error) {
@@ -370,15 +372,15 @@ router.post('/service-runs/:id/join', async (req: Request, res: Response) => {
       client.release();
     }
   } catch (error) {
-    console.error('Error joining service run:', error);
-    res.status(500).json({ error: 'Failed to join service run' });
+    console.error('Error joining coop run:', error);
+    res.status(500).json({ error: 'Failed to join coop run' });
   }
 });
 
 // ============================================================
 // CONTRACTOR CLAIM RUN
 // ============================================================
-router.post('/service-runs/:id/claim', async (req: Request, res: Response) => {
+router.post('/:id/claim', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const actor = await resolveActorParty(req, 'contractor');
@@ -387,12 +389,12 @@ router.post('/service-runs/:id/claim', async (req: Request, res: Response) => {
       return res.status(401).json({ error: 'Authentication required' });
     }
 
-    const { invite_token, confirm_pricing = false } = req.body;
+    const { invite_token } = req.body;
 
     if (invite_token) {
       const inviteResult = await pool.query(
-        `SELECT * FROM contractor_invites 
-         WHERE service_run_id = $1 AND invite_token = $2 AND status != 'claimed'`,
+        `SELECT * FROM coop_contractor_invites 
+         WHERE coop_run_id = $1 AND invite_token = $2 AND status != 'claimed'`,
         [id, invite_token]
       );
 
@@ -402,13 +404,13 @@ router.post('/service-runs/:id/claim', async (req: Request, res: Response) => {
     }
 
     const runResult = await pool.query(
-      `SELECT * FROM service_runs 
+      `SELECT * FROM coop_service_runs 
        WHERE id = $1 AND status IN ('forming', 'contractor_invited') AND contractor_party_id IS NULL`,
       [id]
     );
 
     if (runResult.rows.length === 0) {
-      return res.status(404).json({ error: 'Service run not found or already claimed' });
+      return res.status(404).json({ error: 'Coop run not found or already claimed' });
     }
 
     const client = await pool.connect();
@@ -416,7 +418,7 @@ router.post('/service-runs/:id/claim', async (req: Request, res: Response) => {
       await client.query('BEGIN');
 
       await client.query(
-        `UPDATE service_runs SET
+        `UPDATE coop_service_runs SET
           contractor_party_id = $1,
           status = 'contractor_claimed',
           updated_at = now()
@@ -426,17 +428,17 @@ router.post('/service-runs/:id/claim', async (req: Request, res: Response) => {
 
       if (invite_token) {
         await client.query(
-          `UPDATE contractor_invites SET
+          `UPDATE coop_contractor_invites SET
             status = 'claimed',
             claimed_party_id = $1,
             claimed_at = now()
-           WHERE service_run_id = $2 AND invite_token = $3`,
+           WHERE coop_run_id = $2 AND invite_token = $3`,
           [actor.actor_party_id, id, invite_token]
         );
       }
 
       const membersResult = await client.query(
-        `SELECT m.*, o.id as opp_id FROM service_run_members m
+        `SELECT m.*, o.id as opp_id FROM coop_run_members m
          JOIN opportunities o ON m.opportunity_id = o.id
          WHERE m.run_id = $1 AND m.status IN ('interested', 'joined')`,
         [id]
@@ -457,8 +459,8 @@ router.post('/service-runs/:id/claim', async (req: Request, res: Response) => {
       const margins = await computeContractorMargins(id);
 
       res.json({
-        message: 'Service run claimed! You can now set your schedule and communicate with members.',
-        service_run_id: id,
+        message: 'Coop run claimed! You can now set your schedule and communicate with members.',
+        coop_run_id: id,
         member_count: membersResult.rows.length,
         contractor_margins: margins,
         next_steps: [
@@ -476,15 +478,15 @@ router.post('/service-runs/:id/claim', async (req: Request, res: Response) => {
       client.release();
     }
   } catch (error) {
-    console.error('Error claiming service run:', error);
-    res.status(500).json({ error: 'Failed to claim service run' });
+    console.error('Error claiming coop run:', error);
+    res.status(500).json({ error: 'Failed to claim coop run' });
   }
 });
 
 // ============================================================
-// LIST SERVICE RUNS (Public discovery)
+// LIST COOP RUNS (Public discovery)
 // ============================================================
-router.get('/service-runs', async (req: Request, res: Response) => {
+router.get('/', async (req: Request, res: Response) => {
   try {
     const tenant = await resolveTenant(req);
     const { community, trade_category, status = 'forming' } = req.query;
@@ -496,7 +498,7 @@ router.get('/service-runs', async (req: Request, res: Response) => {
         r.current_member_count, r.mobilization_fee_total,
         r.pricing_model,
         c.name as community_name
-      FROM service_runs r
+      FROM coop_service_runs r
       LEFT JOIN communities c ON r.community_id = c.id
       WHERE r.tenant_id = $1
     `;
@@ -541,23 +543,23 @@ router.get('/service-runs', async (req: Request, res: Response) => {
     );
 
     res.json({
-      service_runs: runs,
+      coop_runs: runs,
       count: runs.length,
       copy: {
-        explainer: 'Service runs let neighbors bundle together and split mobilization costs.',
+        explainer: 'Coop runs let neighbors bundle together and split mobilization costs.',
         not_bidding: 'This is cooperative coordination, not competitive bidding.'
       }
     });
   } catch (error) {
-    console.error('Error listing service runs:', error);
-    res.status(500).json({ error: 'Failed to list service runs' });
+    console.error('Error listing coop runs:', error);
+    res.status(500).json({ error: 'Failed to list coop runs' });
   }
 });
 
 // ============================================================
 // CONTRACTOR: Create outreach campaign (virality trigger)
 // ============================================================
-router.post('/service-runs/:id/outreach-campaign', async (req: Request, res: Response) => {
+router.post('/:id/outreach-campaign', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const actor = await resolveActorParty(req, 'contractor');
@@ -569,7 +571,7 @@ router.post('/service-runs/:id/outreach-campaign', async (req: Request, res: Res
     const { campaign_name, message_template, target_emails = [], target_phones = [] } = req.body;
 
     const runResult = await pool.query(
-      `SELECT * FROM service_runs WHERE id = $1 AND contractor_party_id = $2`,
+      `SELECT * FROM coop_service_runs WHERE id = $1 AND contractor_party_id = $2`,
       [id, actor.actor_party_id]
     );
 
@@ -578,7 +580,7 @@ router.post('/service-runs/:id/outreach-campaign', async (req: Request, res: Res
     }
 
     const result = await pool.query(
-      `INSERT INTO run_outreach_campaigns (
+      `INSERT INTO coop_outreach_campaigns (
         run_id, contractor_party_id, campaign_name, message_template,
         target_emails, target_phones
       ) VALUES ($1, $2, $3, $4, $5, $6)
@@ -589,7 +591,7 @@ router.post('/service-runs/:id/outreach-campaign', async (req: Request, res: Res
     res.status(201).json({
       campaign: result.rows[0],
       message: 'Outreach campaign created! Ready to invite your past customers.',
-      next_step: 'POST /service-runs/:id/outreach-campaign/:campaignId/send to send invites'
+      next_step: 'POST /coop-runs/:id/outreach-campaign/:campaignId/send to send invites'
     });
   } catch (error) {
     console.error('Error creating outreach campaign:', error);
@@ -600,7 +602,7 @@ router.post('/service-runs/:id/outreach-campaign', async (req: Request, res: Res
 // ============================================================
 // GET CONTRACTOR MARGIN DASHBOARD (Private)
 // ============================================================
-router.get('/service-runs/:id/contractor-margins', async (req: Request, res: Response) => {
+router.get('/:id/contractor-margins', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const actor = await resolveActorParty(req, 'contractor');
@@ -610,7 +612,7 @@ router.get('/service-runs/:id/contractor-margins', async (req: Request, res: Res
     }
 
     const runResult = await pool.query(
-      `SELECT * FROM service_runs WHERE id = $1 AND contractor_party_id = $2`,
+      `SELECT * FROM coop_service_runs WHERE id = $1 AND contractor_party_id = $2`,
       [id, actor.actor_party_id]
     );
 
