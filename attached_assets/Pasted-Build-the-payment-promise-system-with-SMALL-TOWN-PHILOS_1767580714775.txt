@@ -1,0 +1,1332 @@
+Build the payment promise system with SMALL-TOWN PHILOSOPHY.
+This version addresses schema alignment with Migration 034.
+
+CRITICAL FIXES APPLIED:
+1. Uses payer_party_id/payee_party_id (not owner/contractor) OR adds columns explicitly
+2. payment_milestones uses `name` (not milestone_name)
+3. Extends enums: milestone_trigger adds 'manual', payment_status adds 'partial'
+4. Adds missing columns: due_date, verified_by_party_id, verified_by_individual_id
+5. Contact unlock is INDEPENDENT from payment - both parties can always override
+6. Multiple promises per conversation with is_active flag
+7. Write-offs are contractor-private, don't affect public reputation
+
+### File: server/migrations/037_payment_promises_honor_system.sql
+```sql
+-- ============================================================
+-- COMMUNITY CANVAS v2.6 - PAYMENT PROMISES (HONOR SYSTEM)
+-- Migration 037 - Schema Alignment + Soft Tracking
+-- ============================================================
+
+-- Philosophy:
+-- - Track payments, don't enforce them
+-- - Honor system like early eBay
+-- - Work continues regardless of payment status
+-- - NO HARD GATES anywhere
+-- - Both parties can always unlock contact (owner OR contractor)
+
+-- ============================================================
+-- 1. EXTEND EXISTING ENUMS (Align with actual workflow)
+-- ============================================================
+
+-- Extend milestone_trigger to include 'manual'
+DO $$ BEGIN
+  ALTER TYPE milestone_trigger ADD VALUE IF NOT EXISTS 'manual';
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+-- Extend payment_status to include workflow states
+DO $$ BEGIN
+  ALTER TYPE payment_status ADD VALUE IF NOT EXISTS 'partial' AFTER 'received';
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+  ALTER TYPE payment_status ADD VALUE IF NOT EXISTS 'submitted' AFTER 'pending';
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+-- ============================================================
+-- 2. PAYMENT COMMUNICATION STATUS (Soft Signals)
+-- ============================================================
+
+DO $$ BEGIN
+  CREATE TYPE payment_communication AS ENUM (
+    'on_track',           -- Everything normal
+    'gentle_reminder',    -- Friendly nudge
+    'behind_schedule',    -- Payment delayed
+    'hardship_noted',     -- Owner communicated difficulty
+    'community_event',    -- Fire/flood/earthquake affecting area
+    'worked_out',         -- Parties resolved it themselves
+    'written_off'         -- Contractor decided to absorb loss
+  );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+-- ============================================================
+-- 3. ADD MISSING COLUMNS TO payment_promises
+-- ============================================================
+
+-- Add owner/contractor semantic aliases (payer=owner, payee=contractor)
+-- We keep payer_party_id/payee_party_id as canonical but add views
+DO $$ BEGIN
+  -- Communication status
+  ALTER TABLE payment_promises 
+    ADD COLUMN IF NOT EXISTS communication_status payment_communication DEFAULT 'on_track';
+  
+  -- Notes between parties
+  ALTER TABLE payment_promises 
+    ADD COLUMN IF NOT EXISTS owner_notes TEXT;
+  ALTER TABLE payment_promises 
+    ADD COLUMN IF NOT EXISTS contractor_notes TEXT;
+  
+  -- Flexibility flags
+  ALTER TABLE payment_promises 
+    ADD COLUMN IF NOT EXISTS flexibility_requested BOOLEAN DEFAULT false;
+  ALTER TABLE payment_promises 
+    ADD COLUMN IF NOT EXISTS flexibility_granted BOOLEAN DEFAULT false;
+  ALTER TABLE payment_promises 
+    ADD COLUMN IF NOT EXISTS flexibility_reason TEXT;
+  
+  -- Community event tracking
+  ALTER TABLE payment_promises 
+    ADD COLUMN IF NOT EXISTS affected_by_community_event BOOLEAN DEFAULT false;
+  ALTER TABLE payment_promises 
+    ADD COLUMN IF NOT EXISTS community_event_description TEXT;
+  
+  -- Revised schedule
+  ALTER TABLE payment_promises 
+    ADD COLUMN IF NOT EXISTS revised_schedule JSONB;
+  ALTER TABLE payment_promises 
+    ADD COLUMN IF NOT EXISTS revision_reason TEXT;
+  
+  -- Honor system
+  ALTER TABLE payment_promises 
+    ADD COLUMN IF NOT EXISTS honor_system_note TEXT;
+  
+  -- Materials separate flag
+  ALTER TABLE payment_promises 
+    ADD COLUMN IF NOT EXISTS materials_separate BOOLEAN DEFAULT false;
+  
+  -- Multiple promises support (only one active at a time)
+  ALTER TABLE payment_promises 
+    ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true;
+  ALTER TABLE payment_promises 
+    ADD COLUMN IF NOT EXISTS archived_at TIMESTAMPTZ;
+  ALTER TABLE payment_promises 
+    ADD COLUMN IF NOT EXISTS archived_reason TEXT;
+
+EXCEPTION WHEN duplicate_column THEN NULL;
+END $$;
+
+COMMENT ON TABLE payment_promises IS 
+  'Payment tracking and communication. DOES NOT gate work. Honor system. payer=owner, payee=contractor.';
+
+-- ============================================================
+-- 4. ADD MISSING COLUMNS TO payment_milestones
+-- ============================================================
+
+DO $$ BEGIN
+  -- Due date
+  ALTER TABLE payment_milestones 
+    ADD COLUMN IF NOT EXISTS due_date DATE;
+  
+  -- Communication status
+  ALTER TABLE payment_milestones 
+    ADD COLUMN IF NOT EXISTS communication_status payment_communication DEFAULT 'on_track';
+  
+  -- Owner communication
+  ALTER TABLE payment_milestones 
+    ADD COLUMN IF NOT EXISTS owner_message TEXT;
+  ALTER TABLE payment_milestones 
+    ADD COLUMN IF NOT EXISTS owner_message_at TIMESTAMPTZ;
+  
+  -- Contractor acknowledgment
+  ALTER TABLE payment_milestones 
+    ADD COLUMN IF NOT EXISTS contractor_acknowledged BOOLEAN DEFAULT false;
+  ALTER TABLE payment_milestones 
+    ADD COLUMN IF NOT EXISTS contractor_response TEXT;
+  
+  -- Verification tracking (who confirmed)
+  ALTER TABLE payment_milestones 
+    ADD COLUMN IF NOT EXISTS verified_by_party_id UUID REFERENCES parties(id);
+  ALTER TABLE payment_milestones 
+    ADD COLUMN IF NOT EXISTS verified_by_individual_id UUID REFERENCES cc_individuals(id);
+  ALTER TABLE payment_milestones 
+    ADD COLUMN IF NOT EXISTS verified_at TIMESTAMPTZ;
+  
+  -- Extension support
+  ALTER TABLE payment_milestones 
+    ADD COLUMN IF NOT EXISTS extended_to DATE;
+  ALTER TABLE payment_milestones 
+    ADD COLUMN IF NOT EXISTS extension_reason TEXT;
+  
+  -- Partial payment tracking
+  ALTER TABLE payment_milestones 
+    ADD COLUMN IF NOT EXISTS partial_amount NUMERIC(12,2);
+  ALTER TABLE payment_milestones 
+    ADD COLUMN IF NOT EXISTS partial_date TIMESTAMPTZ;
+  ALTER TABLE payment_milestones 
+    ADD COLUMN IF NOT EXISTS remaining_amount NUMERIC(12,2);
+  
+  -- Write-off (PRIVATE to contractor - not shown to owner)
+  ALTER TABLE payment_milestones 
+    ADD COLUMN IF NOT EXISTS written_off BOOLEAN DEFAULT false;
+  ALTER TABLE payment_milestones 
+    ADD COLUMN IF NOT EXISTS written_off_amount NUMERIC(12,2);
+  ALTER TABLE payment_milestones 
+    ADD COLUMN IF NOT EXISTS written_off_reason TEXT;
+  ALTER TABLE payment_milestones 
+    ADD COLUMN IF NOT EXISTS written_off_at TIMESTAMPTZ;
+  
+  -- Payment notes
+  ALTER TABLE payment_milestones 
+    ADD COLUMN IF NOT EXISTS payment_notes TEXT;
+  ALTER TABLE payment_milestones 
+    ADD COLUMN IF NOT EXISTS payment_reference TEXT;
+  ALTER TABLE payment_milestones 
+    ADD COLUMN IF NOT EXISTS paid_at TIMESTAMPTZ;
+
+EXCEPTION WHEN duplicate_column THEN NULL;
+END $$;
+
+COMMENT ON TABLE payment_milestones IS 
+  'Individual payment tracking. Status is INFORMATIONAL. Work continues regardless. Write-offs are contractor-private.';
+
+COMMENT ON COLUMN payment_milestones.written_off IS 
+  'PRIVATE to contractor. Does not affect owner view or public reputation. For contractor records/taxes only.';
+
+-- ============================================================
+-- 5. PAYMENT EVENTS LOG (Communication History)
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS payment_events (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  
+  payment_promise_id UUID NOT NULL REFERENCES payment_promises(id),
+  milestone_id UUID REFERENCES payment_milestones(id),
+  
+  -- Who did what
+  actor_party_id UUID REFERENCES parties(id),
+  actor_individual_id UUID REFERENCES cc_individuals(id),
+  actor_role TEXT CHECK (actor_role IN ('owner', 'contractor', 'system')),
+  
+  -- Event type (all soft/informational)
+  event_type TEXT NOT NULL CHECK (event_type IN (
+    'promise_created',
+    'promise_archived',
+    'milestone_added',
+    'payment_sent',           -- Owner says they sent it
+    'payment_received',       -- Contractor confirms receipt
+    'payment_partial',        -- Partial payment made
+    'reminder_sent',          -- Gentle reminder
+    'extension_requested',    -- Owner asks for more time
+    'extension_granted',      -- Contractor agrees
+    'hardship_communicated',  -- Owner explains difficulty
+    'community_event_noted',  -- Fire/flood/earthquake
+    'schedule_revised',       -- New timeline agreed
+    'written_off',            -- Contractor absorbs (private)
+    'resolved',               -- Parties worked it out
+    'note_added'              -- General communication
+  )),
+  
+  -- Details
+  amount NUMERIC(12,2),
+  currency CHAR(3) DEFAULT 'CAD',
+  message TEXT,
+  metadata JSONB,
+  
+  -- Proof (optional - honor system means not always needed)
+  proof_type TEXT,  -- 'screenshot', 'reference', 'verbal', 'none'
+  proof_reference TEXT,
+  proof_url TEXT,
+  
+  -- Privacy flag (for write-offs)
+  is_private BOOLEAN DEFAULT false,
+  
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS payment_events_promise_idx ON payment_events(payment_promise_id);
+CREATE INDEX IF NOT EXISTS payment_events_milestone_idx ON payment_events(milestone_id);
+CREATE INDEX IF NOT EXISTS payment_events_type_idx ON payment_events(event_type);
+
+COMMENT ON TABLE payment_events IS 
+  'Communication log for payments. Tracks what happened without enforcing anything.';
+
+-- ============================================================
+-- 6. ENSURE contact_unlock_gate EXISTS ON conversations
+-- ============================================================
+
+-- Check and add if missing (may already exist from migration 034)
+DO $$ BEGIN
+  ALTER TABLE conversations 
+    ADD COLUMN IF NOT EXISTS contact_unlock_gate contact_unlock_gate DEFAULT 'none';
+EXCEPTION WHEN undefined_object THEN 
+  -- If enum doesn't exist, the column probably exists, skip
+  NULL;
+END $$;
+
+-- ============================================================
+-- 7. COMMUNITY EVENTS (Fires, Floods, Earthquakes)
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS community_events (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  
+  event_name TEXT NOT NULL,
+  event_type TEXT CHECK (event_type IN (
+    'wildfire', 'flood', 'earthquake', 'storm', 'pandemic',
+    'economic', 'infrastructure', 'other'
+  )),
+  
+  -- Affected area
+  affected_regions TEXT[],
+  affected_postal_prefixes TEXT[],
+  
+  -- Timeline
+  start_date DATE NOT NULL,
+  end_date DATE,
+  ongoing BOOLEAN DEFAULT true,
+  
+  -- Impact
+  description TEXT,
+  payment_impact_note TEXT,
+  
+  -- Official reference
+  official_reference TEXT,
+  official_url TEXT,
+  
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS community_events_ongoing_idx ON community_events(ongoing) WHERE ongoing;
+CREATE INDEX IF NOT EXISTS community_events_regions_idx ON community_events USING gin(affected_regions);
+
+-- ============================================================
+-- 8. SEED EXAMPLE COMMUNITY EVENT
+-- ============================================================
+
+INSERT INTO community_events (
+  event_name, event_type, affected_regions, affected_postal_prefixes,
+  start_date, ongoing, description, payment_impact_note
+) VALUES (
+  '2024 BC Wildfire Season',
+  'wildfire',
+  ARRAY['West Kelowna', 'Kamloops', 'Vernon'],
+  ARRAY['V1Z', 'V1T', 'V2C'],
+  '2024-07-15',
+  false,
+  'Multiple wildfires across BC interior',
+  'Residents may experience payment delays. Flexibility expected.'
+) ON CONFLICT DO NOTHING;
+
+-- ============================================================
+-- 9. PHILOSOPHY COMMENTS
+-- ============================================================
+
+COMMENT ON COLUMN payment_promises.is_active IS 
+  'Only one promise active per conversation. Creating new one archives previous. Jobs change.';
+
+COMMENT ON COLUMN conversations.contact_unlocked IS 
+  'Contact sharing status. BOTH owner AND contractor can unlock anytime. No payment gate required.';
+```
+
+### File: server/routes/payments.ts
+```typescript
+import { Router, Request, Response } from 'express';
+import { pool } from '../db';
+import { resolveActorParty } from '../lib/partyResolver';
+
+const router = Router();
+
+/**
+ * PAYMENT SYSTEM PHILOSOPHY
+ * 
+ * - Tracking and communication, NOT enforcement
+ * - Work never stops because of payment status
+ * - Honor system by default
+ * - Both parties can always unlock contact
+ * - Write-offs are contractor-private
+ * - Multiple promises per conversation (one active)
+ * 
+ * Schema note: payer_party_id = owner, payee_party_id = contractor
+ */
+
+// Helper: Get owner/contractor from payer/payee
+function mapPayerPayee(promise: any, actorPartyId: string) {
+  return {
+    ...promise,
+    owner_party_id: promise.payer_party_id,
+    contractor_party_id: promise.payee_party_id,
+    my_role: promise.payer_party_id === actorPartyId ? 'owner' : 'contractor'
+  };
+}
+
+// ============================================================
+// CREATE PAYMENT PROMISE
+// ============================================================
+router.post('/conversations/:id/payment-promise', async (req: Request, res: Response) => {
+  try {
+    const { id: conversation_id } = req.params;
+    const {
+      total_amount,
+      currency = 'CAD',
+      deposit_amount,
+      deposit_method,
+      milestones,
+      materials_separate,
+      owner_notes,
+      honor_system_note
+    } = req.body;
+
+    const actor = await resolveActorParty(req, 'owner');
+    if (!actor) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    if (!total_amount || total_amount <= 0) {
+      return res.status(400).json({ error: 'total_amount required and must be positive' });
+    }
+
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      // Verify conversation and get parties
+      const convResult = await client.query(
+        `SELECT * FROM conversations WHERE id = $1 AND owner_party_id = $2`,
+        [conversation_id, actor.actor_party_id]
+      );
+
+      if (convResult.rows.length === 0) {
+        await client.query('ROLLBACK');
+        return res.status(404).json({ error: 'Conversation not found or not authorized' });
+      }
+
+      const conv = convResult.rows[0];
+
+      // Archive any existing active promises (support multiple, one active)
+      await client.query(
+        `UPDATE payment_promises SET 
+          is_active = false, 
+          archived_at = now(), 
+          archived_reason = 'Superseded by new promise'
+         WHERE conversation_id = $1 AND is_active = true`,
+        [conversation_id]
+      );
+
+      // Create payment promise using canonical column names
+      // payer = owner, payee = contractor
+      const promiseResult = await client.query(
+        `INSERT INTO payment_promises (
+          conversation_id, 
+          payer_party_id, payee_party_id,
+          total_amount, currency,
+          deposit_amount, deposit_method,
+          materials_separate,
+          owner_notes, honor_system_note,
+          status, communication_status, is_active
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7::payment_method, $8, $9, $10, 'pending', 'on_track', true)
+        RETURNING *`,
+        [
+          conversation_id,
+          actor.actor_party_id,           // payer = owner
+          conv.contractor_party_id,        // payee = contractor
+          total_amount,
+          currency,
+          deposit_amount || 0,
+          deposit_method || 'etransfer',
+          materials_separate || false,
+          owner_notes,
+          honor_system_note || 'Payment on the honor system. We work it out together.'
+        ]
+      );
+
+      const promise = promiseResult.rows[0];
+
+      // Create milestones using correct column name: `name` (not milestone_name)
+      if (milestones && Array.isArray(milestones) && milestones.length > 0) {
+        for (let i = 0; i < milestones.length; i++) {
+          const ms = milestones[i];
+          await client.query(
+            `INSERT INTO payment_milestones (
+              payment_promise_id,
+              name, description,
+              amount, method,
+              trigger_type, trigger_description,
+              due_date, sequence_order,
+              status, communication_status
+            ) VALUES ($1, $2, $3, $4, $5::payment_method, $6::milestone_trigger, $7, $8, $9, 'pending', 'on_track')`,
+            [
+              promise.id,
+              ms.name || `Payment ${i + 1}`,
+              ms.description || null,
+              ms.amount,
+              ms.method || deposit_method || 'etransfer',
+              ms.trigger_type || 'manual',
+              ms.trigger_description || null,
+              ms.due_date || null,
+              ms.sequence_order || i + 1
+            ]
+          );
+        }
+      } else if (deposit_amount > 0) {
+        // Create default deposit milestone
+        await client.query(
+          `INSERT INTO payment_milestones (
+            payment_promise_id,
+            name, amount, method,
+            trigger_type, sequence_order,
+            status, communication_status
+          ) VALUES ($1, 'Deposit', $2, $3::payment_method, 'on_award', 1, 'pending', 'on_track')`,
+          [promise.id, deposit_amount, deposit_method || 'etransfer']
+        );
+
+        // Create final payment milestone if there's a remainder
+        if (total_amount > deposit_amount) {
+          await client.query(
+            `INSERT INTO payment_milestones (
+              payment_promise_id,
+              name, amount, method,
+              trigger_type, sequence_order,
+              status, communication_status
+            ) VALUES ($1, 'Final Payment', $2, $3::payment_method, 'on_completion', 2, 'pending', 'on_track')`,
+            [promise.id, total_amount - deposit_amount, deposit_method || 'etransfer']
+          );
+        }
+      } else {
+        // Single payment milestone for full amount
+        await client.query(
+          `INSERT INTO payment_milestones (
+            payment_promise_id,
+            name, amount, method,
+            trigger_type, sequence_order,
+            status, communication_status
+          ) VALUES ($1, 'Full Payment', $2, $3::payment_method, 'on_completion', 1, 'pending', 'on_track')`,
+          [promise.id, total_amount, deposit_method || 'etransfer']
+        );
+      }
+
+      // Log event
+      await client.query(
+        `INSERT INTO payment_events (
+          payment_promise_id, actor_party_id, actor_individual_id, actor_role,
+          event_type, amount, message
+        ) VALUES ($1, $2, $3, 'owner', 'promise_created', $4, $5)`,
+        [
+          promise.id, actor.actor_party_id, actor.individual_id, 
+          total_amount,
+          'Payment promise created. Honor system - we work it out together.'
+        ]
+      );
+
+      // System message in conversation
+      await client.query(
+        `INSERT INTO messages (
+          conversation_id, sender_party_id, sender_individual_id,
+          message_type, content, structured_data
+        ) VALUES ($1, $2, $3, 'payment', $4, $5)`,
+        [
+          conversation_id,
+          actor.actor_party_id,
+          actor.individual_id,
+          `Payment promise: $${parseFloat(total_amount).toLocaleString()} ${currency}`,
+          JSON.stringify({ type: 'payment_promise', promise_id: promise.id, amount: total_amount })
+        ]
+      );
+
+      await client.query('COMMIT');
+
+      // Get milestones
+      const milestonesResult = await pool.query(
+        `SELECT * FROM payment_milestones WHERE payment_promise_id = $1 ORDER BY sequence_order, created_at`,
+        [promise.id]
+      );
+
+      res.status(201).json({
+        payment_promise: mapPayerPayee(promise, actor.actor_party_id),
+        milestones: milestonesResult.rows,
+        message: 'Payment promise created. Honor system - no hard gates, just tracking.'
+      });
+
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+  } catch (error) {
+    console.error('Error creating payment promise:', error);
+    res.status(500).json({ error: 'Failed to create payment promise' });
+  }
+});
+
+// ============================================================
+// GET PAYMENT PROMISE FOR CONVERSATION
+// ============================================================
+router.get('/conversations/:id/payment-promise', async (req: Request, res: Response) => {
+  try {
+    const { id: conversation_id } = req.params;
+    const { include_archived = 'false' } = req.query;
+
+    const actor = await resolveActorParty(req, 'contractor');
+    if (!actor) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    // Verify access
+    const convResult = await pool.query(
+      `SELECT * FROM conversations WHERE id = $1
+       AND (owner_party_id = $2 OR contractor_party_id = $2)`,
+      [conversation_id, actor.actor_party_id]
+    );
+
+    if (convResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Conversation not found' });
+    }
+
+    const conv = convResult.rows[0];
+    const isOwner = conv.owner_party_id === actor.actor_party_id;
+
+    // Get active promise (or all if include_archived)
+    let promiseQuery = `
+      SELECT pp.*, 
+             payer_p.trade_name as owner_name,
+             payee_p.trade_name as contractor_name
+       FROM payment_promises pp
+       LEFT JOIN parties payer_p ON pp.payer_party_id = payer_p.id
+       LEFT JOIN parties payee_p ON pp.payee_party_id = payee_p.id
+       WHERE pp.conversation_id = $1
+    `;
+    
+    if (include_archived !== 'true') {
+      promiseQuery += ` AND pp.is_active = true`;
+    }
+    
+    promiseQuery += ` ORDER BY pp.created_at DESC`;
+
+    const promiseResult = await pool.query(promiseQuery, [conversation_id]);
+
+    if (promiseResult.rows.length === 0) {
+      return res.json({ payment_promise: null, milestones: [], recent_events: [] });
+    }
+
+    const promise = promiseResult.rows[0];
+
+    // Get milestones (hide write-off details from owner)
+    let milestonesQuery = `
+      SELECT id, payment_promise_id, name, description, amount, method,
+             trigger_type, trigger_description, due_date, sequence_order,
+             status, communication_status, 
+             owner_message, owner_message_at,
+             contractor_acknowledged, contractor_response,
+             extended_to, extension_reason,
+             partial_amount, partial_date, remaining_amount,
+             payment_reference, paid_at, verified_at,
+             created_at, updated_at
+    `;
+    
+    // Only show write-off info to contractor (private)
+    if (!isOwner) {
+      milestonesQuery += `, written_off, written_off_amount, written_off_reason, written_off_at`;
+    }
+    
+    milestonesQuery += `
+      FROM payment_milestones 
+      WHERE payment_promise_id = $1 
+      ORDER BY sequence_order, created_at
+    `;
+
+    const milestonesResult = await pool.query(milestonesQuery, [promise.id]);
+
+    // Get recent events (exclude private events from owner)
+    const eventsResult = await pool.query(
+      `SELECT pe.*, 
+              p.trade_name as actor_name
+       FROM payment_events pe
+       LEFT JOIN parties p ON pe.actor_party_id = p.id
+       WHERE pe.payment_promise_id = $1
+         AND (pe.is_private = false OR $2 = false)
+       ORDER BY pe.created_at DESC
+       LIMIT 10`,
+      [promise.id, isOwner]
+    );
+
+    res.json({
+      payment_promise: {
+        ...promise,
+        owner_party_id: promise.payer_party_id,
+        contractor_party_id: promise.payee_party_id
+      },
+      milestones: milestonesResult.rows,
+      recent_events: eventsResult.rows,
+      my_role: isOwner ? 'owner' : 'contractor'
+    });
+  } catch (error) {
+    console.error('Error fetching payment promise:', error);
+    res.status(500).json({ error: 'Failed to fetch payment promise' });
+  }
+});
+
+// ============================================================
+// RECORD PAYMENT SENT (Owner Says They Sent It)
+// ============================================================
+router.post('/payment-milestones/:id/sent', async (req: Request, res: Response) => {
+  try {
+    const { id: milestone_id } = req.params;
+    const { amount, method, reference, message, proof_url } = req.body;
+
+    const actor = await resolveActorParty(req, 'owner');
+    if (!actor) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const client = await pool.connect();
+    try {
+      // Verify ownership (payer = owner)
+      const msResult = await client.query(
+        `SELECT pm.*, pp.payer_party_id, pp.id as promise_id
+         FROM payment_milestones pm
+         JOIN payment_promises pp ON pm.payment_promise_id = pp.id
+         WHERE pm.id = $1 AND pp.payer_party_id = $2`,
+        [milestone_id, actor.actor_party_id]
+      );
+
+      if (msResult.rows.length === 0) {
+        return res.status(404).json({ error: 'Milestone not found or not authorized' });
+      }
+
+      const milestone = msResult.rows[0];
+      const sentAmount = amount || milestone.amount;
+
+      // Update milestone - status = 'in_transit' (existing enum value)
+      await client.query(
+        `UPDATE payment_milestones SET
+          status = 'in_transit',
+          communication_status = 'on_track',
+          owner_message = $1,
+          owner_message_at = now(),
+          payment_reference = $2,
+          updated_at = now()
+         WHERE id = $3`,
+        [message || 'Payment sent', reference, milestone_id]
+      );
+
+      // Log event
+      await client.query(
+        `INSERT INTO payment_events (
+          payment_promise_id, milestone_id,
+          actor_party_id, actor_individual_id, actor_role,
+          event_type, amount, message,
+          proof_type, proof_reference, proof_url
+        ) VALUES ($1, $2, $3, $4, 'owner', 'payment_sent', $5, $6, $7, $8, $9)`,
+        [
+          milestone.promise_id, milestone_id,
+          actor.actor_party_id, actor.individual_id,
+          sentAmount,
+          message || 'Payment sent via ' + (method || 'eTransfer'),
+          proof_url ? 'screenshot' : 'verbal',
+          reference,
+          proof_url
+        ]
+      );
+
+      res.json({
+        milestone_id,
+        status: 'in_transit',
+        message: 'Payment recorded as sent. Contractor will confirm receipt.',
+        note: 'This is communication, not enforcement.'
+      });
+
+    } finally {
+      client.release();
+    }
+  } catch (error) {
+    console.error('Error recording payment sent:', error);
+    res.status(500).json({ error: 'Failed to record payment' });
+  }
+});
+
+// ============================================================
+// CONFIRM PAYMENT RECEIVED (Contractor Confirms)
+// ============================================================
+router.post('/payment-milestones/:id/received', async (req: Request, res: Response) => {
+  try {
+    const { id: milestone_id } = req.params;
+    const { amount, message, partial = false } = req.body;
+
+    const actor = await resolveActorParty(req, 'contractor');
+    if (!actor) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      // Verify ownership (payee = contractor)
+      const msResult = await client.query(
+        `SELECT pm.*, pp.payee_party_id, pp.id as promise_id, pp.conversation_id
+         FROM payment_milestones pm
+         JOIN payment_promises pp ON pm.payment_promise_id = pp.id
+         WHERE pm.id = $1 AND pp.payee_party_id = $2`,
+        [milestone_id, actor.actor_party_id]
+      );
+
+      if (msResult.rows.length === 0) {
+        await client.query('ROLLBACK');
+        return res.status(404).json({ error: 'Milestone not found or not authorized' });
+      }
+
+      const milestone = msResult.rows[0];
+      const receivedAmount = amount || milestone.amount;
+      const isPartial = partial || (amount && amount < milestone.amount);
+
+      // Update milestone
+      if (isPartial) {
+        await client.query(
+          `UPDATE payment_milestones SET
+            status = 'partial',
+            partial_amount = COALESCE(partial_amount, 0) + $1,
+            partial_date = now(),
+            remaining_amount = amount - COALESCE(partial_amount, 0) - $1,
+            contractor_acknowledged = true,
+            contractor_response = $2,
+            communication_status = 'on_track',
+            updated_at = now()
+           WHERE id = $3`,
+          [receivedAmount, message || 'Partial payment received', milestone_id]
+        );
+      } else {
+        await client.query(
+          `UPDATE payment_milestones SET
+            status = 'verified',
+            paid_at = now(),
+            verified_at = now(),
+            verified_by_party_id = $1,
+            verified_by_individual_id = $2,
+            contractor_acknowledged = true,
+            contractor_response = $3,
+            communication_status = 'on_track',
+            remaining_amount = 0,
+            updated_at = now()
+           WHERE id = $4`,
+          [actor.actor_party_id, actor.individual_id, message || 'Payment received', milestone_id]
+        );
+      }
+
+      // Log event
+      await client.query(
+        `INSERT INTO payment_events (
+          payment_promise_id, milestone_id,
+          actor_party_id, actor_individual_id, actor_role,
+          event_type, amount, message
+        ) VALUES ($1, $2, $3, $4, 'contractor', $5, $6, $7)`,
+        [
+          milestone.promise_id, milestone_id,
+          actor.actor_party_id, actor.individual_id,
+          isPartial ? 'payment_partial' : 'payment_received',
+          receivedAmount,
+          message || (isPartial ? 'Partial payment received' : 'Full payment received')
+        ]
+      );
+
+      // SOFT BENEFIT: If deposit verified, unlock contact as a convenience
+      // But this is NOT a gate - both parties can always unlock manually
+      if (!isPartial && (milestone.trigger_type === 'on_award' || milestone.trigger_type === 'on_contract_sign')) {
+        await client.query(
+          `UPDATE conversations SET
+            contact_unlocked = true,
+            contact_unlocked_at = CASE WHEN contact_unlocked THEN contact_unlocked_at ELSE now() END,
+            contact_unlock_gate = CASE WHEN contact_unlocked THEN contact_unlock_gate ELSE 'deposit_verified' END,
+            contact_unlock_reason = CASE WHEN contact_unlocked THEN contact_unlock_reason ELSE 'Deposit confirmed' END
+           WHERE id = $1`,
+          [milestone.conversation_id]
+        );
+      }
+
+      await client.query('COMMIT');
+
+      res.json({
+        milestone_id,
+        status: isPartial ? 'partial' : 'verified',
+        received_amount: receivedAmount,
+        message: isPartial ? 'Partial payment recorded.' : 'Payment confirmed!',
+        note: 'Work continues regardless. This is tracking, not gatekeeping.'
+      });
+
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+  } catch (error) {
+    console.error('Error confirming payment:', error);
+    res.status(500).json({ error: 'Failed to confirm payment' });
+  }
+});
+
+// ============================================================
+// REQUEST EXTENSION (Owner Asks for More Time)
+// ============================================================
+router.post('/payment-milestones/:id/request-extension', async (req: Request, res: Response) => {
+  try {
+    const { id: milestone_id } = req.params;
+    const { new_date, reason, message } = req.body;
+
+    const actor = await resolveActorParty(req, 'owner');
+    if (!actor) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const client = await pool.connect();
+    try {
+      const msResult = await client.query(
+        `SELECT pm.*, pp.payer_party_id, pp.id as promise_id
+         FROM payment_milestones pm
+         JOIN payment_promises pp ON pm.payment_promise_id = pp.id
+         WHERE pm.id = $1 AND pp.payer_party_id = $2`,
+        [milestone_id, actor.actor_party_id]
+      );
+
+      if (msResult.rows.length === 0) {
+        return res.status(404).json({ error: 'Milestone not found or not authorized' });
+      }
+
+      const milestone = msResult.rows[0];
+
+      await client.query(
+        `UPDATE payment_milestones SET
+          communication_status = 'behind_schedule',
+          owner_message = $1,
+          owner_message_at = now(),
+          updated_at = now()
+         WHERE id = $2`,
+        [message || reason || 'Requesting extension', milestone_id]
+      );
+
+      await client.query(
+        `INSERT INTO payment_events (
+          payment_promise_id, milestone_id,
+          actor_party_id, actor_individual_id, actor_role,
+          event_type, message, metadata
+        ) VALUES ($1, $2, $3, $4, 'owner', 'extension_requested', $5, $6)`,
+        [
+          milestone.promise_id, milestone_id,
+          actor.actor_party_id, actor.individual_id,
+          message || 'Extension requested: ' + reason,
+          JSON.stringify({ requested_date: new_date, reason })
+        ]
+      );
+
+      res.json({
+        milestone_id,
+        message: 'Extension request recorded. Contractor will see your message.',
+        note: 'Work continues. This is communication.'
+      });
+
+    } finally {
+      client.release();
+    }
+  } catch (error) {
+    console.error('Error requesting extension:', error);
+    res.status(500).json({ error: 'Failed to request extension' });
+  }
+});
+
+// ============================================================
+// GRANT EXTENSION (Contractor Agrees)
+// ============================================================
+router.post('/payment-milestones/:id/grant-extension', async (req: Request, res: Response) => {
+  try {
+    const { id: milestone_id } = req.params;
+    const { new_date, message } = req.body;
+
+    const actor = await resolveActorParty(req, 'contractor');
+    if (!actor) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const client = await pool.connect();
+    try {
+      const msResult = await client.query(
+        `SELECT pm.*, pp.payee_party_id, pp.id as promise_id
+         FROM payment_milestones pm
+         JOIN payment_promises pp ON pm.payment_promise_id = pp.id
+         WHERE pm.id = $1 AND pp.payee_party_id = $2`,
+        [milestone_id, actor.actor_party_id]
+      );
+
+      if (msResult.rows.length === 0) {
+        return res.status(404).json({ error: 'Milestone not found or not authorized' });
+      }
+
+      const milestone = msResult.rows[0];
+
+      await client.query(
+        `UPDATE payment_milestones SET
+          extended_to = $1,
+          extension_reason = $2,
+          due_date = COALESCE($1, due_date),
+          communication_status = 'worked_out',
+          contractor_acknowledged = true,
+          contractor_response = $3,
+          updated_at = now()
+         WHERE id = $4`,
+        [new_date, message, message || 'Extension granted', milestone_id]
+      );
+
+      await client.query(
+        `INSERT INTO payment_events (
+          payment_promise_id, milestone_id,
+          actor_party_id, actor_individual_id, actor_role,
+          event_type, message, metadata
+        ) VALUES ($1, $2, $3, $4, 'contractor', 'extension_granted', $5, $6)`,
+        [
+          milestone.promise_id, milestone_id,
+          actor.actor_party_id, actor.individual_id,
+          message || 'Extension granted',
+          JSON.stringify({ new_date })
+        ]
+      );
+
+      res.json({
+        milestone_id,
+        new_date,
+        message: 'Extension granted.',
+        note: 'Relationships matter. Thank you for working together.'
+      });
+
+    } finally {
+      client.release();
+    }
+  } catch (error) {
+    console.error('Error granting extension:', error);
+    res.status(500).json({ error: 'Failed to grant extension' });
+  }
+});
+
+// ============================================================
+// NOTE COMMUNITY EVENT
+// ============================================================
+router.post('/payment-promises/:id/community-event', async (req: Request, res: Response) => {
+  try {
+    const { id: promise_id } = req.params;
+    const { event_description, message } = req.body;
+
+    const actor = await resolveActorParty(req, 'owner');
+    if (!actor) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const client = await pool.connect();
+    try {
+      const promiseResult = await client.query(
+        `SELECT * FROM payment_promises 
+         WHERE id = $1 AND (payer_party_id = $2 OR payee_party_id = $2)`,
+        [promise_id, actor.actor_party_id]
+      );
+
+      if (promiseResult.rows.length === 0) {
+        return res.status(404).json({ error: 'Payment promise not found' });
+      }
+
+      const promise = promiseResult.rows[0];
+      const actorRole = promise.payer_party_id === actor.actor_party_id ? 'owner' : 'contractor';
+
+      await client.query(
+        `UPDATE payment_promises SET
+          affected_by_community_event = true,
+          community_event_description = $1,
+          communication_status = 'community_event',
+          updated_at = now()
+         WHERE id = $2`,
+        [event_description, promise_id]
+      );
+
+      await client.query(
+        `INSERT INTO payment_events (
+          payment_promise_id,
+          actor_party_id, actor_individual_id, actor_role,
+          event_type, message
+        ) VALUES ($1, $2, $3, $4, 'community_event_noted', $5)`,
+        [
+          promise_id,
+          actor.actor_party_id, actor.individual_id, actorRole,
+          message || 'Community event: ' + event_description
+        ]
+      );
+
+      res.json({
+        promise_id,
+        message: 'Community event noted. Everyone understands.',
+        note: 'Communities support each other.'
+      });
+
+    } finally {
+      client.release();
+    }
+  } catch (error) {
+    console.error('Error noting community event:', error);
+    res.status(500).json({ error: 'Failed to note community event' });
+  }
+});
+
+// ============================================================
+// WRITE OFF (Contractor Absorbs - PRIVATE)
+// ============================================================
+router.post('/payment-milestones/:id/write-off', async (req: Request, res: Response) => {
+  try {
+    const { id: milestone_id } = req.params;
+    const { amount, reason } = req.body;
+
+    const actor = await resolveActorParty(req, 'contractor');
+    if (!actor) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const client = await pool.connect();
+    try {
+      const msResult = await client.query(
+        `SELECT pm.*, pp.payee_party_id, pp.id as promise_id
+         FROM payment_milestones pm
+         JOIN payment_promises pp ON pm.payment_promise_id = pp.id
+         WHERE pm.id = $1 AND pp.payee_party_id = $2`,
+        [milestone_id, actor.actor_party_id]
+      );
+
+      if (msResult.rows.length === 0) {
+        return res.status(404).json({ error: 'Milestone not found or not authorized' });
+      }
+
+      const milestone = msResult.rows[0];
+      const writeOffAmount = amount || milestone.remaining_amount || milestone.amount;
+
+      // Update milestone (write-off fields are private to contractor)
+      await client.query(
+        `UPDATE payment_milestones SET
+          written_off = true,
+          written_off_amount = $1,
+          written_off_reason = $2,
+          written_off_at = now(),
+          status = 'verified',
+          communication_status = 'written_off',
+          remaining_amount = 0,
+          updated_at = now()
+         WHERE id = $3`,
+        [writeOffAmount, reason || 'Written off', milestone_id]
+      );
+
+      // Log event (PRIVATE - not visible to owner)
+      await client.query(
+        `INSERT INTO payment_events (
+          payment_promise_id, milestone_id,
+          actor_party_id, actor_individual_id, actor_role,
+          event_type, amount, message, is_private
+        ) VALUES ($1, $2, $3, $4, 'contractor', 'written_off', $5, $6, true)`,
+        [
+          milestone.promise_id, milestone_id,
+          actor.actor_party_id, actor.individual_id,
+          writeOffAmount,
+          reason || 'Contractor absorbed this amount'
+        ]
+      );
+
+      res.json({
+        milestone_id,
+        written_off_amount: writeOffAmount,
+        message: 'Amount written off. For your records only.',
+        note: 'This is private. Does not affect owner view or public reputation.'
+      });
+
+    } finally {
+      client.release();
+    }
+  } catch (error) {
+    console.error('Error writing off:', error);
+    res.status(500).json({ error: 'Failed to write off' });
+  }
+});
+
+// ============================================================
+// CONTRACTOR UNLOCK CONTACT (No Payment Required)
+// ============================================================
+router.post('/conversations/:id/contractor-unlock-contact', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { reason } = req.body;
+
+    const actor = await resolveActorParty(req, 'contractor');
+    if (!actor) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const client = await pool.connect();
+    try {
+      // Contractor can always unlock - no payment required
+      const convResult = await client.query(
+        `SELECT * FROM conversations WHERE id = $1 AND contractor_party_id = $2`,
+        [id, actor.actor_party_id]
+      );
+
+      if (convResult.rows.length === 0) {
+        return res.status(404).json({ error: 'Conversation not found or not authorized' });
+      }
+
+      if (convResult.rows[0].contact_unlocked) {
+        return res.json({ 
+          conversation: convResult.rows[0], 
+          contact_unlocked: true,
+          message: 'Contact already unlocked'
+        });
+      }
+
+      const result = await client.query(
+        `UPDATE conversations SET
+          contact_unlocked = true,
+          contact_unlocked_at = now(),
+          contact_unlock_gate = 'contractor_override',
+          contact_unlock_reason = $1,
+          updated_at = now()
+         WHERE id = $2
+         RETURNING *`,
+        [reason || 'Contractor approved contact sharing', id]
+      );
+
+      await client.query(
+        `INSERT INTO messages (
+          conversation_id, sender_party_id, sender_individual_id,
+          message_type, content, visibility
+        ) VALUES ($1, $2, $3, 'system', 'Contact information is now shared.', 'normal')`,
+        [id, actor.actor_party_id, actor.individual_id]
+      );
+
+      res.json({ 
+        conversation: result.rows[0],
+        contact_unlocked: true,
+        note: 'Both parties can always unlock. No payment gate.'
+      });
+
+    } finally {
+      client.release();
+    }
+  } catch (error) {
+    console.error('Error unlocking contact:', error);
+    res.status(500).json({ error: 'Failed to unlock contact' });
+  }
+});
+
+// ============================================================
+// GET ACTIVE COMMUNITY EVENTS
+// ============================================================
+router.get('/community-events/active', async (req: Request, res: Response) => {
+  try {
+    const { region, postal_prefix } = req.query;
+
+    let query = `SELECT * FROM community_events WHERE ongoing = true`;
+    const params: any[] = [];
+
+    if (region) {
+      params.push(region);
+      query += ` AND $${params.length} = ANY(affected_regions)`;
+    }
+
+    if (postal_prefix) {
+      params.push(postal_prefix);
+      query += ` AND $${params.length} = ANY(affected_postal_prefixes)`;
+    }
+
+    query += ` ORDER BY start_date DESC`;
+
+    const result = await pool.query(query, params);
+
+    res.json({
+      community_events: result.rows,
+      message: result.rows.length > 0 
+        ? 'Active events may affect timelines. Flexibility expected.'
+        : 'No active community events.'
+    });
+  } catch (error) {
+    console.error('Error fetching community events:', error);
+    res.status(500).json({ error: 'Failed to fetch community events' });
+  }
+});
+
+export default router;
+```
+
+### Update contact_unlock_gate enum (if needed)
+
+In case the enum needs contractor_override:
+```sql
+-- Run manually if needed
+DO $$ BEGIN
+  ALTER TYPE contact_unlock_gate ADD VALUE IF NOT EXISTS 'contractor_override';
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+```
+
+### Register the Routes
+
+In server/index.ts:
+```typescript
+import paymentsRouter from './routes/payments';
+
+app.use('/api', paymentsRouter);
+```
+
+### Verification
+
+1. Run migration:
+```bash
+psql $DATABASE_URL -f server/migrations/037_payment_promises_honor_system.sql
+```
+
+2. Verify:
+```sql
+-- Check enum extensions
+SELECT enumlabel FROM pg_enum WHERE enumtypid = 'milestone_trigger'::regtype;
+SELECT enumlabel FROM pg_enum WHERE enumtypid = 'payment_status'::regtype;
+
+-- Check new columns
+SELECT column_name FROM information_schema.columns 
+WHERE table_name = 'payment_milestones' 
+AND column_name IN ('due_date', 'written_off', 'verified_by_party_id');
+
+-- Check payment_events table
+SELECT * FROM information_schema.tables WHERE table_name = 'payment_events';
+```
+
+3. Test:
+```bash
+# Create payment promise
+curl -X POST http://localhost:5000/api/conversations/CONV_UUID/payment-promise \
+  -H "Content-Type: application/json" \
+  -H "Cookie: YOUR_SESSION" \
+  -d '{"total_amount": 15000, "deposit_amount": 3000}'
+
+# Contractor unlocks contact (NO payment required)
+curl -X POST http://localhost:5000/api/conversations/CONV_UUID/contractor-unlock-contact \
+  -H "Cookie: YOUR_SESSION"
+```
+
+### Key Fixes Applied
+
+| Issue | Fix |
+|-------|-----|
+| Wrong column names | Uses `payer_party_id`/`payee_party_id` + helper mapping |
+| milestone `name` vs `milestone_name` | Uses correct `name` column |
+| Missing enums | Extends `milestone_trigger` + `payment_status` |
+| Missing columns | Adds `due_date`, `verified_by_*`, write-off fields |
+| Hard payment gate | Both parties can ALWAYS unlock contact |
+| Single promise limit | Multiple promises, one `is_active` |
+| Write-off visibility | Private to contractor, `is_private` flag on events |
+
+Tell me:
+1. Did migration 037 run successfully?
+2. Are enum extensions working?
+3. Can contractor unlock contact without payment?
+4. Are write-offs hidden from owner?
+5. Any errors?
