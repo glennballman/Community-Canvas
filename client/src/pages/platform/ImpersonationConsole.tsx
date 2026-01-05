@@ -8,7 +8,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Shield, Search, Users, Building2, Clock, AlertTriangle } from 'lucide-react';
+import { Shield, Search, Users, Building2, Clock, AlertTriangle, Zap } from 'lucide-react';
+import { useImpersonationQAMode } from '@/pages/AdminSettings';
 
 interface Tenant {
   id: string;
@@ -32,6 +33,7 @@ const DURATION_OPTIONS = [
 export default function ImpersonationConsole() {
   const { session, isActive, loading, error, start, stop, refresh } = useImpersonation();
   const { toast } = useToast();
+  const { qaMode } = useImpersonationQAMode();
 
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [individuals, setIndividuals] = useState<Individual[]>([]);
@@ -113,7 +115,12 @@ export default function ImpersonationConsole() {
       toast({ title: 'Error', description: 'Please select a tenant', variant: 'destructive' });
       return;
     }
-    if (reason.length < 20) {
+    
+    const effectiveReason = qaMode && reason.length < 20
+      ? '[QA Mode - Reason not required]'
+      : reason;
+    
+    if (effectiveReason.length < 20) {
       toast({ title: 'Error', description: 'Reason must be at least 20 characters', variant: 'destructive' });
       return;
     }
@@ -121,7 +128,7 @@ export default function ImpersonationConsole() {
     const success = await start({
       tenant_id: selectedTenant.id,
       individual_id: selectedIndividual || null,
-      reason,
+      reason: effectiveReason,
       duration_hours: parseFloat(duration)
     });
 
@@ -279,19 +286,24 @@ export default function ImpersonationConsole() {
 
             <div className="space-y-2">
               <Label htmlFor="reason">
-                Reason <span className="text-muted-foreground">(min 20 characters)</span>
+                Reason {qaMode 
+                  ? <Badge variant="secondary" className="ml-2 text-[10px]"><Zap className="w-3 h-3 mr-1" />QA Mode - Optional</Badge>
+                  : <span className="text-muted-foreground">(min 20 characters)</span>
+                }
               </Label>
               <Textarea
                 id="reason"
-                placeholder="Explain why you need to access this tenant account..."
+                placeholder={qaMode ? "Optional in QA mode..." : "Explain why you need to access this tenant account..."}
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
                 className="min-h-20"
                 data-testid="input-reason"
               />
-              <p className="text-xs text-muted-foreground">
-                {reason.length}/20 characters {reason.length >= 20 && '✓'}
-              </p>
+              {!qaMode && (
+                <p className="text-xs text-muted-foreground">
+                  {reason.length}/20 characters {reason.length >= 20 && '- OK'}
+                </p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -315,7 +327,7 @@ export default function ImpersonationConsole() {
 
             <Button
               onClick={handleStart}
-              disabled={loading || !selectedTenant || reason.length < 20}
+              disabled={loading || !selectedTenant || (!qaMode && reason.length < 20)}
               className="w-full"
               data-testid="button-start-impersonation"
             >

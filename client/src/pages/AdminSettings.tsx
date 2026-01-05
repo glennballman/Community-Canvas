@@ -1,11 +1,41 @@
-import { Settings, Save, Clock, Database, Zap } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Settings, Save, Clock, Database, Zap, UserCog } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { useToast } from "@/hooks/use-toast";
+
+const IMPERSONATION_QA_MODE_KEY = 'impersonation_qa_mode';
+
+export function useImpersonationQAMode() {
+  const [qaMode, setQAMode] = useState(() => {
+    return localStorage.getItem(IMPERSONATION_QA_MODE_KEY) === 'true';
+  });
+
+  const toggleQAMode = (enabled: boolean) => {
+    localStorage.setItem(IMPERSONATION_QA_MODE_KEY, enabled ? 'true' : 'false');
+    setQAMode(enabled);
+  };
+
+  return { qaMode, toggleQAMode };
+}
 
 export default function AdminSettings() {
+  const { toast } = useToast();
+  const { qaMode, toggleQAMode } = useImpersonationQAMode();
+
+  const handleQAModeToggle = (checked: boolean) => {
+    toggleQAMode(checked);
+    toast({
+      title: checked ? "QA Mode Enabled" : "QA Mode Disabled",
+      description: checked 
+        ? "Reason field is now optional for impersonation" 
+        : "Reason field is now required for impersonation"
+    });
+  };
+
   return (
     <div className="h-full flex flex-col font-mono">
       <header className="flex items-center justify-between gap-4 px-4 py-3 border-b border-border/50 bg-card/30 shrink-0">
@@ -98,6 +128,33 @@ export default function AdminSettings() {
             <Button variant="destructive" size="sm" className="text-xs" data-testid="button-clear-cache">
               Clear Cache
             </Button>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-card/50">
+          <CardHeader>
+            <CardTitle className="text-sm flex items-center gap-2">
+              <UserCog className="w-4 h-4" />
+              Impersonation Settings
+            </CardTitle>
+            <CardDescription className="text-xs">
+              Configure platform impersonation behavior
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <Label className="text-xs">QA Mode (Skip Reason)</Label>
+                <p className="text-[10px] text-muted-foreground">
+                  When enabled, you can impersonate without typing a reason
+                </p>
+              </div>
+              <Switch 
+                checked={qaMode} 
+                onCheckedChange={handleQAModeToggle}
+                data-testid="switch-impersonation-qa-mode" 
+              />
+            </div>
           </CardContent>
         </Card>
       </div>
