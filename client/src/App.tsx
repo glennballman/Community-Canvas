@@ -10,6 +10,8 @@
  */
 
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { queryClient } from './lib/queryClient';
 
 // Context
 import { AuthProvider } from './contexts/AuthContext';
@@ -104,89 +106,86 @@ function NotFoundPage() {
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <AuthProvider>
-        <TenantProvider>
-          {/* GLOBAL: Impersonation banner - appears on all pages when active */}
-          <ImpersonationBanner />
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter>
+        <AuthProvider>
+          <TenantProvider>
+            {/* GLOBAL: Impersonation banner - appears on all pages when active */}
+            <ImpersonationBanner />
 
-        <Routes>
-          {/* ========================================== */}
-          {/* PUBLIC PORTAL - /c/:slug/*                */}
-          {/* ========================================== */}
-          <Route path="/c/:slug" element={<PublicPortalLayout />}>
-            <Route index element={<PortalOverview />} />
-            {/* Add more portal routes as needed */}
-          </Route>
+            <Routes>
+              {/* ========================================== */}
+              {/* PUBLIC PORTAL - /c/:slug/*                */}
+              {/* ========================================== */}
+              <Route path="/c/:slug" element={<PublicPortalLayout />}>
+                <Route index element={<PortalOverview />} />
+              </Route>
 
-          {/* ========================================== */}
-          {/* TENANT APP - /app/*                       */}
-          {/* ========================================== */}
-          <Route path="/app" element={<TenantAppLayout />}>
-            {/* Index = Tenant Picker (shows when no tenant selected) */}
-            <Route index element={<TenantPicker />} />
-            
-            {/* Dashboard (content varies by tenant type) */}
-            <Route path="dashboard" element={<Dashboard />} />
-            
-            {/* Community tenant routes */}
-            <Route path="availability" element={<AvailabilityConsole />} />
-            <Route path="service-runs" element={<ServiceRunsPage />} />
-            <Route path="directory" element={<DirectoryPage />} />
-            <Route path="content" element={<ContentBrandingPage />} />
-            
-            {/* Business tenant routes */}
-            <Route path="catalog" element={<CatalogPage />} />
-            <Route path="bookings" element={<BookingsPage />} />
-            <Route path="customers" element={<CustomersPage />} />
-            
-            {/* Shared routes */}
-            <Route path="conversations" element={<ConversationsPage />} />
-            <Route path="settings" element={<SettingsPage />} />
-          </Route>
+              {/* ========================================== */}
+              {/* TENANT APP - /app/*                       */}
+              {/* ========================================== */}
+              <Route path="/app" element={<TenantAppLayout />}>
+                <Route index element={<TenantPicker />} />
+                <Route path="dashboard" element={<Dashboard />} />
+                
+                {/* Community tenant routes */}
+                <Route path="availability" element={<AvailabilityConsole />} />
+                <Route path="service-runs" element={<ServiceRunsPage />} />
+                <Route path="directory" element={<DirectoryPage />} />
+                <Route path="content" element={<ContentBrandingPage />} />
+                
+                {/* Business tenant routes */}
+                <Route path="catalog" element={<CatalogPage />} />
+                <Route path="bookings" element={<BookingsPage />} />
+                <Route path="customers" element={<CustomersPage />} />
+                
+                {/* Shared routes */}
+                <Route path="conversations" element={<ConversationsPage />} />
+                <Route path="settings" element={<SettingsPage />} />
+              </Route>
 
-          {/* ========================================== */}
-          {/* PLATFORM ADMIN - /admin/*                 */}
-          {/* ========================================== */}
-          <Route path="/admin" element={<PlatformAdminLayout />}>
-            {/* Overview */}
-            <Route index element={<CivOSDashboard />} />
-            
-            {/* Tenants & Users */}
-            <Route path="tenants" element={<TenantsManagement />} />
-            <Route path="users" element={<UsersManagement />} />
-            <Route path="impersonation" element={<ImpersonationConsole />} />
-            
-            {/* Data Management */}
-            <Route path="data/infrastructure" element={<AdminInfrastructure />} />
-            <Route path="data/chambers" element={<AdminChambers />} />
-            <Route path="data/naics" element={<AdminNAICS />} />
-            <Route path="data/accommodations" element={<Accommodations />} />
-            <Route path="data/import-export" element={<DataImport />} />
-            
-            {/* Communities */}
-            <Route path="communities" element={<CommunitiesPage />} />
-            <Route path="communities/seed" element={<SeedCommunitiesPage />} />
-            <Route path="communities/portals" element={<PortalConfigPage />} />
-            
-            {/* Moderation */}
-            <Route path="moderation/ai-queue" element={<AIQueuePage />} />
-            <Route path="moderation/flagged" element={<FlaggedContentPage />} />
-            
-            {/* System */}
-            <Route path="settings" element={<AdminSettings />} />
-            <Route path="logs" element={<AdminLogs />} />
-          </Route>
+              {/* ========================================== */}
+              {/* PLATFORM ADMIN - /admin/*                 */}
+              {/* ========================================== */}
+              <Route path="/admin" element={<PlatformAdminLayout />}>
+                <Route index element={<CivOSDashboard />} />
+                
+                {/* Tenants & Users */}
+                <Route path="tenants" element={<TenantsManagement />} />
+                <Route path="users" element={<UsersManagement />} />
+                <Route path="impersonation" element={<ImpersonationConsole />} />
+                
+                {/* Data Management */}
+                <Route path="data/infrastructure" element={<AdminInfrastructure />} />
+                <Route path="data/chambers" element={<AdminChambers />} />
+                <Route path="data/naics" element={<AdminNAICS />} />
+                <Route path="data/accommodations" element={<Accommodations />} />
+                <Route path="data/import-export" element={<DataImport />} />
+                
+                {/* Communities */}
+                <Route path="communities" element={<CommunitiesPage />} />
+                <Route path="communities/seed" element={<SeedCommunitiesPage />} />
+                <Route path="communities/portals" element={<PortalConfigPage />} />
+                
+                {/* Moderation */}
+                <Route path="moderation/ai-queue" element={<AIQueuePage />} />
+                <Route path="moderation/flagged" element={<FlaggedContentPage />} />
+                
+                {/* System */}
+                <Route path="settings" element={<AdminSettings />} />
+                <Route path="logs" element={<AdminLogs />} />
+              </Route>
 
-          {/* ========================================== */}
-          {/* AUTH & REDIRECTS                          */}
-          {/* ========================================== */}
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/" element={<Navigate to="/app" replace />} />
-          <Route path="*" element={<NotFoundPage />} />
-        </Routes>
-        </TenantProvider>
-      </AuthProvider>
-    </BrowserRouter>
+              {/* ========================================== */}
+              {/* AUTH & REDIRECTS                          */}
+              {/* ========================================== */}
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/" element={<Navigate to="/app" replace />} />
+              <Route path="*" element={<NotFoundPage />} />
+            </Routes>
+          </TenantProvider>
+        </AuthProvider>
+      </BrowserRouter>
+    </QueryClientProvider>
   );
 }
