@@ -13,6 +13,7 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 
 // Context
+import { AuthProvider } from './contexts/AuthContext';
 import { TenantProvider } from './contexts/TenantContext';
 
 // Global Components
@@ -125,9 +126,10 @@ function NotFoundPage() {
 export default function App() {
   return (
     <BrowserRouter>
-      <TenantProvider>
-        {/* GLOBAL: Impersonation banner - appears on all pages when active */}
-        <ImpersonationBanner />
+      <AuthProvider>
+        <TenantProvider>
+          {/* GLOBAL: Impersonation banner - appears on all pages when active */}
+          <ImpersonationBanner />
 
         <Routes>
           {/* ========================================== */}
@@ -182,7 +184,8 @@ export default function App() {
           <Route path="/" element={<Navigate to="/app" replace />} />
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
-      </TenantProvider>
+        </TenantProvider>
+      </AuthProvider>
     </BrowserRouter>
   );
 }

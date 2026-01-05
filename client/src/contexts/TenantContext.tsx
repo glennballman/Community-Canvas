@@ -35,7 +35,6 @@ export interface TenantMembership {
   tenant_name: string;
   tenant_slug: string;
   tenant_type: 'community' | 'business' | 'government' | 'individual';
-  portal_slug?: string;
   role: string;
   is_primary: boolean;
 }
@@ -109,8 +108,22 @@ export function TenantProvider({ children }: TenantProviderProps) {
   
   const fetchContext = useCallback(async () => {
     try {
+      const token = localStorage.getItem('cc_token');
+      if (!token) {
+        setUser(null);
+        setMemberships([]);
+        setCurrentTenantId(null);
+        setImpersonation({ is_impersonating: false });
+        setLoading(false);
+        setInitialized(true);
+        return;
+      }
+      
       const response = await fetch('/api/me/context', { 
-        credentials: 'include' 
+        credentials: 'include',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
       });
       
       if (!response.ok) {
@@ -155,7 +168,26 @@ export function TenantProvider({ children }: TenantProviderProps) {
 
   useEffect(() => {
     fetchContext();
-  }, [fetchContext]);
+    
+    // Re-fetch when token changes (after auth completes)
+    const checkToken = () => {
+      const token = localStorage.getItem('cc_token');
+      if (token && !user) {
+        fetchContext();
+      }
+    };
+    
+    // Poll for token every 500ms until we have a user
+    const interval = setInterval(checkToken, 500);
+    
+    // Also listen for storage events (token changes from other tabs)
+    window.addEventListener('storage', checkToken);
+    
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('storage', checkToken);
+    };
+  }, [fetchContext, user]);
 
   // --------------------------------------------------------------------------
   // Actions
@@ -163,9 +195,13 @@ export function TenantProvider({ children }: TenantProviderProps) {
 
   const switchTenant = useCallback(async (tenantId: string) => {
     try {
+      const token = localStorage.getItem('cc_token');
       const response = await fetch('/api/me/switch-tenant', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         credentials: 'include',
         body: JSON.stringify({ tenant_id: tenantId }),
       });
@@ -192,9 +228,13 @@ export function TenantProvider({ children }: TenantProviderProps) {
 
   const startImpersonation = useCallback(async (tenantId: string, reason?: string) => {
     try {
+      const token = localStorage.getItem('cc_token');
       const response = await fetch('/api/admin/impersonation/start', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         credentials: 'include',
         body: JSON.stringify({ tenant_id: tenantId, reason: reason || 'Admin access' }),
       });
@@ -216,8 +256,12 @@ export function TenantProvider({ children }: TenantProviderProps) {
 
   const stopImpersonation = useCallback(async () => {
     try {
+      const token = localStorage.getItem('cc_token');
       await fetch('/api/admin/impersonation/stop', {
         method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
         credentials: 'include',
       });
       

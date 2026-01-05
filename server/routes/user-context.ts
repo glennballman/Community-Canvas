@@ -42,15 +42,13 @@ router.get('/me/context', authenticateToken, async (req: AuthRequest, res: Respo
         t.name as tenant_name,
         t.slug as tenant_slug,
         t.tenant_type,
-        t.portal_slug,
-        tu.role,
-        tu.is_primary
+        tu.role
       FROM cc_tenant_users tu
       JOIN cc_tenants t ON t.id = tu.tenant_id
       WHERE tu.user_id = $1
         AND t.status = 'active'
         AND tu.status = 'active'
-      ORDER BY tu.is_primary DESC NULLS LAST, t.name ASC
+      ORDER BY t.tenant_type, t.name ASC
     `, [userId]);
     
     const memberships = membershipsResult.rows;
@@ -65,7 +63,7 @@ router.get('/me/context', authenticateToken, async (req: AuthRequest, res: Respo
       if (new Date(impersonation.expires_at) > new Date()) {
         // Get impersonated tenant info
         const tenantResult = await serviceQuery(`
-          SELECT id, name, tenant_type, slug, portal_slug
+          SELECT id, name, tenant_type, slug
           FROM cc_tenants
           WHERE id = $1
         `, [impersonation.tenant_id]);
@@ -92,9 +90,8 @@ router.get('/me/context', authenticateToken, async (req: AuthRequest, res: Respo
         tenant_name: m.tenant_name,
         tenant_slug: m.tenant_slug,
         tenant_type: m.tenant_type,
-        portal_slug: m.portal_slug,
         role: m.role,
-        is_primary: m.is_primary || false,
+        is_primary: false,
       })),
       current_tenant_id: currentTenantId,
       is_impersonating: !!impersonatedTenant,
