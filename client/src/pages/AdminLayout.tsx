@@ -33,7 +33,8 @@ import {
   Play,
   ListChecks,
   Sailboat,
-  ClipboardList
+  ClipboardList,
+  UserCog
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useImpersonation } from "@/contexts/ImpersonationContext";
@@ -133,6 +134,7 @@ const navSections: NavSection[] = [
     items: [
       { path: "/admin/users", label: "Users", icon: User },
       { path: "/admin/tenants", label: "Tenants", icon: Building2 },
+      { path: "/platform", label: "Impersonation Console", icon: UserCog },
       { path: "/profile", label: "My Profile", icon: User },
     ]
   },
