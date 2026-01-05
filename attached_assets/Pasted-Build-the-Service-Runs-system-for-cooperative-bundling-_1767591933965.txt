@@ -1,0 +1,1333 @@
+Build the Service Runs system for cooperative bundling (NOT competitive bidding).
+
+This is the 2nd intake mode: customer already booked a contractor, neighbors join to split mobilization.
+
+KEY PHILOSOPHY:
+- "This is not a bidding war"
+- "You are joining a service run"  
+- "The more neighbors join, the more efficient the trip becomes"
+- Contractor sets pricing, customers coordinate demand
+- Contractor virality: they invite their own past customers
+
+### File: server/migrations/039_service_runs.sql
+```sql
+-- ============================================================
+-- COMMUNITY CANVAS v2.7 - SERVICE RUNS (PILE-ON)
+-- Migration 039 - Cooperative Bundling, Not Competitive Bidding
+-- ============================================================
+
+-- Philosophy:
+-- - Customer already has a contractor
+-- - Neighbors join to split mobilization costs
+-- - Contractor controls pricing and schedule
+-- - More members = better margins for contractor
+-- - Contractor triggers virality by inviting past customers
+
+-- ============================================================
+-- 1. EXTEND OPPORTUNITIES WITH INTAKE MODE
+-- ============================================================
+
+DO $$ BEGIN
+  CREATE TYPE intake_mode AS ENUM (
+    'bid',           -- Traditional: post job, get bids
+    'run',           -- Service run: booked contractor, neighbors pile on
+    'direct_award'   -- Direct: owner awards to specific contractor
+  );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+ALTER TABLE opportunities 
+  ADD COLUMN IF NOT EXISTS intake_mode intake_mode DEFAULT 'bid';
+
+ALTER TABLE opportunities 
+  ADD COLUMN IF NOT EXISTS service_run_id UUID;
+
+CREATE INDEX IF NOT EXISTS opportunities_intake_mode_idx 
+  ON opportunities(intake_mode);
+
+CREATE INDEX IF NOT EXISTS opportunities_service_run_idx 
+  ON opportunities(service_run_id) WHERE service_run_id IS NOT NULL;
+
+-- ============================================================
+-- 2. SERVICE RUNS
+-- ============================================================
+
+DO $$ BEGIN
+  CREATE TYPE run_status AS ENUM (
+    'forming',       -- Accepting members
+    'contractor_invited',  -- Waiting for contractor to claim
+    'contractor_claimed',  -- Contractor has claimed
+    'scheduled',     -- Date set
+    'in_progress',   -- Work happening
+    'completed',     -- All done
+    'cancelled'
+  );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+  CREATE TYPE split_method AS ENUM (
+    'flat',          -- Equal split among all members
+    'pro_rata_units', -- Split by units (e.g., # of chimneys)
+    'custom'         -- Contractor-defined formula
+  );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+CREATE TABLE IF NOT EXISTS service_runs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  
+  -- Context
+  tenant_id UUID NOT NULL REFERENCES tenants(id),
+  community_id UUID REFERENCES communities(id),
+  
+  -- What kind of work
+  trade_category TEXT NOT NULL,  -- 'chimney_sweep', 'septic_pump', 'electrician'
+  service_description TEXT,
+  
+  -- Contractor (nullable until claimed)
+  contractor_party_id UUID REFERENCES parties(id),
+  contractor_name TEXT,  -- Name before they claim
+  contractor_website TEXT,
+  contractor_contact_email TEXT,
+  
+  -- Run status
+  status run_status DEFAULT 'forming',
+  
+  -- Service window
+  window_start DATE,
+  window_end DATE,
+  preferred_months TEXT[],  -- ['May', 'June', 'September']
+  
+  -- Capacity
+  max_jobs INTEGER DEFAULT 20,
+  min_members INTEGER DEFAULT 3,
+  
+  -- Pricing model (contractor sets)
+  pricing_model JSONB DEFAULT '{}'::jsonb,
+  -- Example: {"unit_name": "chimney", "unit_price": 150, "extras": {"cap_replacement": 75}}
+  
+  -- Mobilization
+  mobilization_fee_total NUMERIC(10,2),  -- Total contractor mobilization cost
+  min_mobilization_threshold NUMERIC(10,2),  -- Minimum to make trip worthwhile
+  split_method split_method DEFAULT 'flat',
+  
+  -- Computed estimates
+  estimated_total_value NUMERIC(12,2),
+  current_member_count INTEGER DEFAULT 0,
+  
+  -- Travel/logistics
+  travel_origin TEXT,  -- Where contractor comes from
+  travel_distance_km INTEGER,
+  travel_notes TEXT,
+  
+  -- Creator
+  created_by_party_id UUID NOT NULL REFERENCES parties(id),
+  created_by_individual_id UUID REFERENCES cc_individuals(id),
+  
+  -- Timestamps
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now(),
+  scheduled_at TIMESTAMPTZ,
+  completed_at TIMESTAMPTZ
+);
+
+CREATE INDEX IF NOT EXISTS service_runs_tenant_idx ON service_runs(tenant_id);
+CREATE INDEX IF NOT EXISTS service_runs_community_idx ON service_runs(community_id);
+CREATE INDEX IF NOT EXISTS service_runs_contractor_idx ON service_runs(contractor_party_id);
+CREATE INDEX IF NOT EXISTS service_runs_status_idx ON service_runs(status) WHERE status IN ('forming', 'scheduled');
+CREATE INDEX IF NOT EXISTS service_runs_trade_idx ON service_runs(trade_category);
+
+COMMENT ON TABLE service_runs IS 
+  'Cooperative service bundling. NOT bidding. Neighbors join to split mobilization.';
+
+COMMENT ON COLUMN service_runs.mobilization_fee_total IS 
+  'Total contractor mobilization cost. Split among members.';
+
+COMMENT ON COLUMN service_runs.min_mobilization_threshold IS 
+  'Minimum value to make trip worthwhile for contractor.';
+
+-- ============================================================
+-- 3. SERVICE RUN MEMBERS
+-- ============================================================
+
+DO $$ BEGIN
+  CREATE TYPE member_status AS ENUM (
+    'interested',    -- Expressed interest
+    'joined',        -- Confirmed join
+    'scheduled',     -- On the schedule
+    'completed',     -- Work done
+    'withdrawn'      -- Left the run
+  );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+CREATE TABLE IF NOT EXISTS service_run_members (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  
+  run_id UUID NOT NULL REFERENCES service_runs(id) ON DELETE CASCADE,
+  opportunity_id UUID REFERENCES opportunities(id),
+  
+  -- Member
+  owner_party_id UUID NOT NULL REFERENCES parties(id),
+  owner_individual_id UUID REFERENCES cc_individuals(id),
+  
+  -- What they need
+  units JSONB DEFAULT '{}'::jsonb,  
+  -- Example: {"chimneys": 2, "extras": ["cap_replacement"]}
+  unit_count INTEGER DEFAULT 1,
+  
+  -- Status
+  status member_status DEFAULT 'interested',
+  
+  -- Location
+  property_address TEXT,
+  property_postal_code TEXT,
+  property_community TEXT,
+  
+  -- Estimates
+  estimated_unit_cost NUMERIC(10,2),
+  estimated_mobilization_share NUMERIC(10,2),
+  estimated_total NUMERIC(10,2),
+  
+  -- Final (after completion)
+  final_cost NUMERIC(10,2),
+  
+  -- Notes
+  access_notes TEXT,
+  special_requirements TEXT,
+  
+  -- Timestamps
+  joined_at TIMESTAMPTZ DEFAULT now(),
+  scheduled_for TIMESTAMPTZ,
+  completed_at TIMESTAMPTZ,
+  withdrawn_at TIMESTAMPTZ
+);
+
+CREATE INDEX IF NOT EXISTS run_members_run_idx ON service_run_members(run_id);
+CREATE INDEX IF NOT EXISTS run_members_owner_idx ON service_run_members(owner_party_id);
+CREATE INDEX IF NOT EXISTS run_members_status_idx ON service_run_members(run_id, status);
+
+COMMENT ON TABLE service_run_members IS 
+  'Customers who joined a service run. Each brings their property + unit count.';
+
+-- ============================================================
+-- 4. CONTRACTOR INVITES
+-- ============================================================
+
+DO $$ BEGIN
+  CREATE TYPE invite_status AS ENUM (
+    'pending',       -- Invite created
+    'sent',          -- Email/message sent
+    'delivered',     -- Confirmed delivered
+    'opened',        -- Link clicked
+    'claimed',       -- Contractor joined platform
+    'declined',      -- Contractor declined
+    'bounced'        -- Email bounced
+  );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+CREATE TABLE IF NOT EXISTS contractor_invites (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  
+  -- What run
+  service_run_id UUID REFERENCES service_runs(id),
+  
+  -- Who we're inviting
+  contractor_name TEXT NOT NULL,
+  contractor_email TEXT,
+  contractor_phone TEXT,
+  contractor_website TEXT,
+  
+  -- How we found them
+  source TEXT,  -- 'customer_provided', 'web_search', 'referral'
+  source_notes TEXT,
+  
+  -- Invite details
+  invite_method TEXT,  -- 'email', 'sms', 'manual'
+  invite_token TEXT UNIQUE,  -- For claim link
+  
+  -- Status
+  status invite_status DEFAULT 'pending',
+  
+  -- If claimed
+  claimed_party_id UUID REFERENCES parties(id),
+  claimed_at TIMESTAMPTZ,
+  
+  -- Tracking
+  sent_at TIMESTAMPTZ,
+  opened_at TIMESTAMPTZ,
+  
+  -- Who invited
+  invited_by_party_id UUID REFERENCES parties(id),
+  invited_by_individual_id UUID REFERENCES cc_individuals(id),
+  
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS contractor_invites_run_idx ON contractor_invites(service_run_id);
+CREATE INDEX IF NOT EXISTS contractor_invites_token_idx ON contractor_invites(invite_token) WHERE invite_token IS NOT NULL;
+CREATE INDEX IF NOT EXISTS contractor_invites_status_idx ON contractor_invites(status);
+
+COMMENT ON TABLE contractor_invites IS 
+  'Invitations to contractors to claim/join service runs.';
+
+-- ============================================================
+-- 5. CONTRACTOR OUTREACH CAMPAIGNS (Virality)
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS run_outreach_campaigns (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  
+  run_id UUID NOT NULL REFERENCES service_runs(id),
+  contractor_party_id UUID NOT NULL REFERENCES parties(id),
+  
+  -- Campaign details
+  campaign_name TEXT,
+  message_template TEXT,
+  
+  -- Targets
+  target_emails TEXT[],
+  target_phones TEXT[],
+  
+  -- Stats
+  total_sent INTEGER DEFAULT 0,
+  total_opened INTEGER DEFAULT 0,
+  total_joined INTEGER DEFAULT 0,
+  
+  -- Status
+  status TEXT DEFAULT 'draft',  -- 'draft', 'active', 'completed', 'paused'
+  
+  created_at TIMESTAMPTZ DEFAULT now(),
+  sent_at TIMESTAMPTZ
+);
+
+CREATE TABLE IF NOT EXISTS run_outreach_messages (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  
+  campaign_id UUID NOT NULL REFERENCES run_outreach_campaigns(id),
+  
+  -- Recipient
+  recipient_email TEXT,
+  recipient_phone TEXT,
+  recipient_name TEXT,
+  
+  -- Status
+  status TEXT DEFAULT 'pending',  -- 'pending', 'sent', 'delivered', 'opened', 'clicked', 'joined', 'bounced'
+  
+  -- Tracking
+  sent_at TIMESTAMPTZ,
+  opened_at TIMESTAMPTZ,
+  clicked_at TIMESTAMPTZ,
+  
+  -- Result
+  resulted_in_member_id UUID REFERENCES service_run_members(id)
+);
+
+CREATE INDEX IF NOT EXISTS outreach_campaigns_run_idx ON run_outreach_campaigns(run_id);
+CREATE INDEX IF NOT EXISTS outreach_messages_campaign_idx ON run_outreach_messages(campaign_id);
+
+COMMENT ON TABLE run_outreach_campaigns IS 
+  'Contractor-initiated outreach to past customers. Triggers virality.';
+
+-- ============================================================
+-- 6. MOBILIZATION SPLIT ESTIMATES VIEW
+-- ============================================================
+
+CREATE OR REPLACE VIEW run_mobilization_estimates AS
+SELECT 
+  r.id as run_id,
+  r.mobilization_fee_total,
+  r.split_method,
+  r.current_member_count,
+  CASE 
+    WHEN r.split_method = 'flat' AND r.current_member_count > 0 THEN
+      r.mobilization_fee_total / r.current_member_count
+    ELSE NULL
+  END as flat_share_per_member,
+  r.min_mobilization_threshold,
+  r.estimated_total_value,
+  CASE 
+    WHEN r.estimated_total_value > r.min_mobilization_threshold THEN true
+    ELSE false
+  END as threshold_met
+FROM service_runs r;
+
+COMMENT ON VIEW run_mobilization_estimates IS 
+  'Computed mobilization splits. Updates as members join/leave.';
+
+-- ============================================================
+-- 7. FUNCTION: Recompute run estimates
+-- ============================================================
+
+CREATE OR REPLACE FUNCTION recompute_run_estimates(run_uuid UUID)
+RETURNS void AS $$
+DECLARE
+  member_count INTEGER;
+  total_units INTEGER;
+  total_value NUMERIC;
+  mob_fee NUMERIC;
+  unit_price NUMERIC;
+BEGIN
+  -- Count active members
+  SELECT COUNT(*), COALESCE(SUM(unit_count), 0)
+  INTO member_count, total_units
+  FROM service_run_members
+  WHERE run_id = run_uuid AND status IN ('interested', 'joined', 'scheduled');
+  
+  -- Get run details
+  SELECT mobilization_fee_total, (pricing_model->>'unit_price')::numeric
+  INTO mob_fee, unit_price
+  FROM service_runs
+  WHERE id = run_uuid;
+  
+  -- Compute total value
+  total_value := COALESCE(total_units * unit_price, 0) + COALESCE(mob_fee, 0);
+  
+  -- Update run
+  UPDATE service_runs SET
+    current_member_count = member_count,
+    estimated_total_value = total_value,
+    updated_at = now()
+  WHERE id = run_uuid;
+  
+  -- Update member estimates
+  UPDATE service_run_members SET
+    estimated_mobilization_share = CASE 
+      WHEN member_count > 0 THEN mob_fee / member_count
+      ELSE mob_fee
+    END,
+    estimated_unit_cost = unit_count * unit_price,
+    estimated_total = (unit_count * unit_price) + CASE 
+      WHEN member_count > 0 THEN mob_fee / member_count
+      ELSE mob_fee
+    END
+  WHERE run_id = run_uuid AND status IN ('interested', 'joined', 'scheduled');
+  
+END;
+$$ LANGUAGE plpgsql;
+
+-- ============================================================
+-- 8. TRIGGER: Auto-recompute on member changes
+-- ============================================================
+
+CREATE OR REPLACE FUNCTION trigger_recompute_run()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF TG_OP = 'DELETE' THEN
+    PERFORM recompute_run_estimates(OLD.run_id);
+    RETURN OLD;
+  ELSE
+    PERFORM recompute_run_estimates(NEW.run_id);
+    RETURN NEW;
+  END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS run_member_recompute ON service_run_members;
+CREATE TRIGGER run_member_recompute
+  AFTER INSERT OR UPDATE OR DELETE ON service_run_members
+  FOR EACH ROW
+  EXECUTE FUNCTION trigger_recompute_run();
+```
+
+### File: server/lib/mobilizationSplit.ts
+```typescript
+/**
+ * MOBILIZATION SPLIT CALCULATOR
+ * 
+ * Philosophy:
+ * - Customers coordinate demand, NOT bid down labor rates
+ * - More members = contractor makes MORE money (not less)
+ * - Split is for mobilization only, not labor rates
+ * - Contractor sets all pricing
+ */
+
+import { pool } from '../db';
+
+export interface MobilizationEstimate {
+  run_id: string;
+  mobilization_fee_total: number;
+  split_method: 'flat' | 'pro_rata_units' | 'custom';
+  current_member_count: number;
+  share_per_member: number;
+  threshold_met: boolean;
+  min_threshold: number;
+  estimated_total_value: number;
+  
+  // Projections
+  if_one_more_joins: number;
+  if_five_more_join: number;
+  
+  // Contractor view only
+  contractor_margin_improvement?: number;
+}
+
+export async function computeMobilizationSplit(run_id: string): Promise<MobilizationEstimate> {
+  const result = await pool.query(
+    `SELECT 
+      r.id as run_id,
+      r.mobilization_fee_total,
+      r.split_method,
+      r.current_member_count,
+      r.min_mobilization_threshold,
+      r.estimated_total_value,
+      r.pricing_model
+    FROM service_runs r
+    WHERE r.id = $1`,
+    [run_id]
+  );
+  
+  if (result.rows.length === 0) {
+    throw new Error('Service run not found');
+  }
+  
+  const run = result.rows[0];
+  const mobFee = parseFloat(run.mobilization_fee_total) || 0;
+  const memberCount = run.current_member_count || 1;
+  const minThreshold = parseFloat(run.min_mobilization_threshold) || 0;
+  const totalValue = parseFloat(run.estimated_total_value) || 0;
+  
+  // Compute current share
+  let sharePerMember = 0;
+  switch (run.split_method) {
+    case 'flat':
+      sharePerMember = memberCount > 0 ? mobFee / memberCount : mobFee;
+      break;
+    case 'pro_rata_units':
+      // Would need to compute based on units - for now use flat
+      sharePerMember = memberCount > 0 ? mobFee / memberCount : mobFee;
+      break;
+    default:
+      sharePerMember = memberCount > 0 ? mobFee / memberCount : mobFee;
+  }
+  
+  // Compute projections
+  const ifOneMore = memberCount > 0 ? mobFee / (memberCount + 1) : mobFee;
+  const ifFiveMore = memberCount > 0 ? mobFee / (memberCount + 5) : mobFee / 5;
+  
+  return {
+    run_id,
+    mobilization_fee_total: mobFee,
+    split_method: run.split_method || 'flat',
+    current_member_count: memberCount,
+    share_per_member: Math.round(sharePerMember * 100) / 100,
+    threshold_met: totalValue >= minThreshold,
+    min_threshold: minThreshold,
+    estimated_total_value: totalValue,
+    if_one_more_joins: Math.round(ifOneMore * 100) / 100,
+    if_five_more_join: Math.round(ifFiveMore * 100) / 100
+  };
+}
+
+/**
+ * Compute contractor's margin improvement (private to contractor)
+ * More members = more revenue with same mobilization cost
+ */
+export async function computeContractorMargins(run_id: string): Promise<{
+  base_margin: number;
+  current_margin: number;
+  margin_improvement_percent: number;
+  effective_hourly_rate: number;
+}> {
+  const result = await pool.query(
+    `SELECT 
+      r.mobilization_fee_total,
+      r.current_member_count,
+      r.estimated_total_value,
+      r.pricing_model,
+      SUM(m.unit_count) as total_units
+    FROM service_runs r
+    LEFT JOIN service_run_members m ON m.run_id = r.id AND m.status IN ('interested', 'joined', 'scheduled')
+    WHERE r.id = $1
+    GROUP BY r.id`,
+    [run_id]
+  );
+  
+  if (result.rows.length === 0) {
+    throw new Error('Service run not found');
+  }
+  
+  const run = result.rows[0];
+  const mobFee = parseFloat(run.mobilization_fee_total) || 0;
+  const memberCount = run.current_member_count || 1;
+  const totalUnits = parseInt(run.total_units) || 1;
+  const unitPrice = parseFloat(run.pricing_model?.unit_price) || 0;
+  
+  // Revenue calculations
+  const laborRevenue = totalUnits * unitPrice;
+  const totalRevenue = laborRevenue + mobFee;  // Contractor keeps full mobilization
+  
+  // Assume ~30% labor cost, ~20% materials
+  const estimatedCosts = laborRevenue * 0.5;
+  const currentMargin = totalRevenue - estimatedCosts;
+  
+  // Base margin (single customer scenario)
+  const baseRevenue = unitPrice + mobFee;
+  const baseCosts = unitPrice * 0.5;
+  const baseMargin = baseRevenue - baseCosts;
+  
+  // Improvement
+  const improvement = baseMargin > 0 
+    ? ((currentMargin - baseMargin) / baseMargin) * 100 
+    : 0;
+  
+  // Effective hourly (assume 1 hour per unit)
+  const effectiveHourly = totalUnits > 0 ? currentMargin / totalUnits : 0;
+  
+  return {
+    base_margin: Math.round(baseMargin * 100) / 100,
+    current_margin: Math.round(currentMargin * 100) / 100,
+    margin_improvement_percent: Math.round(improvement * 10) / 10,
+    effective_hourly_rate: Math.round(effectiveHourly * 100) / 100
+  };
+}
+
+/**
+ * Format for customer display
+ */
+export function formatCustomerEstimate(estimate: MobilizationEstimate): {
+  headline: string;
+  your_share: string;
+  savings_note: string;
+  threshold_status: string;
+} {
+  return {
+    headline: `Current run size: ${estimate.current_member_count} home${estimate.current_member_count !== 1 ? 's' : ''}`,
+    your_share: `Estimated mobilization share: $${estimate.share_per_member}`,
+    savings_note: estimate.current_member_count >= 3
+      ? `If 1 more neighbor joins, your share drops to ~$${estimate.if_one_more_joins}`
+      : 'More neighbors = lower mobilization cost per home',
+    threshold_status: estimate.threshold_met
+      ? '✓ Minimum reached - contractor will schedule'
+      : `Need ${Math.ceil((estimate.min_threshold - estimate.estimated_total_value) / 150)} more homes to reach minimum`
+  };
+}
+```
+
+### File: server/routes/service-runs.ts
+```typescript
+import { Router, Request, Response } from 'express';
+import { pool } from '../db';
+import { resolveActorParty, resolveTenant } from '../lib/partyResolver';
+import { computeMobilizationSplit, computeContractorMargins, formatCustomerEstimate } from '../lib/mobilizationSplit';
+import { randomBytes } from 'crypto';
+
+const router = Router();
+
+/**
+ * SERVICE RUNS ROUTES
+ * 
+ * Philosophy:
+ * - Cooperative bundling, NOT competitive bidding
+ * - Contractor controls pricing
+ * - Customers coordinate demand
+ * - More members = better for everyone
+ */
+
+// ============================================================
+// CREATE SERVICE RUN (Customer who booked a contractor)
+// ============================================================
+router.post('/service-runs', async (req: Request, res: Response) => {
+  try {
+    const tenant = await resolveTenant(req);
+    const actor = await resolveActorParty(req, 'owner');
+    
+    if (!actor) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const {
+      trade_category,
+      service_description,
+      contractor_name,
+      contractor_email,
+      contractor_website,
+      contractor_phone,
+      window_start,
+      window_end,
+      preferred_months,
+      unit_price,
+      unit_name,
+      mobilization_fee,
+      min_threshold,
+      // First member's details
+      property_address,
+      property_postal_code,
+      property_community,
+      unit_count = 1,
+      units,
+      access_notes
+    } = req.body;
+
+    if (!trade_category) {
+      return res.status(400).json({ error: 'trade_category required' });
+    }
+
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      // Create the service run
+      const runResult = await client.query(
+        `INSERT INTO service_runs (
+          tenant_id, trade_category, service_description,
+          contractor_name, contractor_contact_email, contractor_website,
+          window_start, window_end, preferred_months,
+          mobilization_fee_total, min_mobilization_threshold,
+          pricing_model,
+          created_by_party_id, created_by_individual_id,
+          status
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, 'forming')
+        RETURNING *`,
+        [
+          tenant.id,
+          trade_category,
+          service_description,
+          contractor_name,
+          contractor_email,
+          contractor_website,
+          window_start,
+          window_end,
+          preferred_months || [],
+          mobilization_fee || 500,  // Default
+          min_threshold || 1500,    // Default
+          JSON.stringify({ 
+            unit_name: unit_name || 'unit', 
+            unit_price: unit_price || 0 
+          }),
+          actor.actor_party_id,
+          actor.individual_id
+        ]
+      );
+
+      const run = runResult.rows[0];
+
+      // Create opportunity for the creator
+      const oppResult = await client.query(
+        `INSERT INTO opportunities (
+          tenant_id, owner_party_id, owner_individual_id,
+          title, description, intake_mode, service_run_id,
+          property_address, postal_code,
+          state
+        ) VALUES ($1, $2, $3, $4, $5, 'run', $6, $7, $8, 'intake')
+        RETURNING *`,
+        [
+          tenant.id,
+          actor.actor_party_id,
+          actor.individual_id,
+          `${trade_category} - ${property_community || 'Service Run'}`,
+          service_description,
+          run.id,
+          property_address,
+          property_postal_code
+        ]
+      );
+
+      const opportunity = oppResult.rows[0];
+
+      // Add creator as first member
+      await client.query(
+        `INSERT INTO service_run_members (
+          run_id, opportunity_id, owner_party_id, owner_individual_id,
+          property_address, property_postal_code, property_community,
+          unit_count, units, access_notes, status
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'joined')`,
+        [
+          run.id,
+          opportunity.id,
+          actor.actor_party_id,
+          actor.individual_id,
+          property_address,
+          property_postal_code,
+          property_community,
+          unit_count,
+          JSON.stringify(units || {}),
+          access_notes
+        ]
+      );
+
+      // Create contractor invite if email provided
+      if (contractor_email) {
+        const inviteToken = randomBytes(32).toString('hex');
+        
+        await client.query(
+          `INSERT INTO contractor_invites (
+            service_run_id, contractor_name, contractor_email,
+            contractor_phone, contractor_website,
+            source, invite_token, status,
+            invited_by_party_id, invited_by_individual_id
+          ) VALUES ($1, $2, $3, $4, $5, 'customer_provided', $6, 'pending', $7, $8)`,
+          [
+            run.id,
+            contractor_name,
+            contractor_email,
+            contractor_phone,
+            contractor_website,
+            inviteToken,
+            actor.actor_party_id,
+            actor.individual_id
+          ]
+        );
+
+        // Update run status
+        await client.query(
+          `UPDATE service_runs SET status = 'contractor_invited' WHERE id = $1`,
+          [run.id]
+        );
+      }
+
+      // Recompute estimates
+      await client.query(`SELECT recompute_run_estimates($1)`, [run.id]);
+
+      await client.query('COMMIT');
+
+      // Get updated run with estimates
+      const estimate = await computeMobilizationSplit(run.id);
+
+      res.status(201).json({
+        service_run: run,
+        opportunity: opportunity,
+        mobilization_estimate: estimate,
+        message: 'Service run created! Neighbors can now join to split mobilization costs.'
+      });
+
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+  } catch (error) {
+    console.error('Error creating service run:', error);
+    res.status(500).json({ error: 'Failed to create service run' });
+  }
+});
+
+// ============================================================
+// GET SERVICE RUN (Public summary)
+// ============================================================
+router.get('/service-runs/:id', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const result = await pool.query(
+      `SELECT 
+        r.*,
+        COUNT(m.id) FILTER (WHERE m.status IN ('interested', 'joined', 'scheduled')) as member_count,
+        SUM(m.unit_count) FILTER (WHERE m.status IN ('interested', 'joined', 'scheduled')) as total_units
+       FROM service_runs r
+       LEFT JOIN service_run_members m ON m.run_id = r.id
+       WHERE r.id = $1
+       GROUP BY r.id`,
+      [id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Service run not found' });
+    }
+
+    const run = result.rows[0];
+    const estimate = await computeMobilizationSplit(id);
+    const display = formatCustomerEstimate(estimate);
+
+    res.json({
+      service_run: {
+        id: run.id,
+        trade_category: run.trade_category,
+        service_description: run.service_description,
+        contractor_name: run.contractor_name,
+        status: run.status,
+        window_start: run.window_start,
+        window_end: run.window_end,
+        pricing_model: run.pricing_model,
+        member_count: parseInt(run.member_count) || 0,
+        total_units: parseInt(run.total_units) || 0
+      },
+      mobilization: {
+        ...estimate,
+        display
+      },
+      copy: {
+        headline: display.headline,
+        call_to_action: 'Join this service run to share mobilization costs with your neighbors',
+        not_bidding: 'This is not a bidding war. You are joining a coordinated service run.',
+        efficiency: 'The more neighbors who join, the more efficient the trip becomes.'
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching service run:', error);
+    res.status(500).json({ error: 'Failed to fetch service run' });
+  }
+});
+
+// ============================================================
+// JOIN SERVICE RUN
+// ============================================================
+router.post('/service-runs/:id/join', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const actor = await resolveActorParty(req, 'owner');
+    const tenant = await resolveTenant(req);
+    
+    if (!actor) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const {
+      property_address,
+      property_postal_code,
+      property_community,
+      unit_count = 1,
+      units,
+      access_notes,
+      special_requirements
+    } = req.body;
+
+    // Check run exists and is open
+    const runResult = await pool.query(
+      `SELECT * FROM service_runs WHERE id = $1 AND status IN ('forming', 'contractor_invited', 'contractor_claimed')`,
+      [id]
+    );
+
+    if (runResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Service run not found or not accepting members' });
+    }
+
+    const run = runResult.rows[0];
+
+    // Check not already a member
+    const existingResult = await pool.query(
+      `SELECT id FROM service_run_members 
+       WHERE run_id = $1 AND owner_party_id = $2 AND status != 'withdrawn'`,
+      [id, actor.actor_party_id]
+    );
+
+    if (existingResult.rows.length > 0) {
+      return res.status(400).json({ error: 'You have already joined this run' });
+    }
+
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      // Create opportunity
+      const oppResult = await client.query(
+        `INSERT INTO opportunities (
+          tenant_id, owner_party_id, owner_individual_id,
+          title, description, intake_mode, service_run_id,
+          property_address, postal_code,
+          state
+        ) VALUES ($1, $2, $3, $4, $5, 'run', $6, $7, $8, 'intake')
+        RETURNING *`,
+        [
+          tenant.id,
+          actor.actor_party_id,
+          actor.individual_id,
+          `${run.trade_category} - Join Run`,
+          run.service_description,
+          run.id,
+          property_address,
+          property_postal_code
+        ]
+      );
+
+      const opportunity = oppResult.rows[0];
+
+      // Add as member
+      const memberResult = await client.query(
+        `INSERT INTO service_run_members (
+          run_id, opportunity_id, owner_party_id, owner_individual_id,
+          property_address, property_postal_code, property_community,
+          unit_count, units, access_notes, special_requirements, status
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'joined')
+        RETURNING *`,
+        [
+          id,
+          opportunity.id,
+          actor.actor_party_id,
+          actor.individual_id,
+          property_address,
+          property_postal_code,
+          property_community,
+          unit_count,
+          JSON.stringify(units || {}),
+          access_notes,
+          special_requirements
+        ]
+      );
+
+      await client.query('COMMIT');
+
+      // Get updated estimates
+      const estimate = await computeMobilizationSplit(id);
+      const display = formatCustomerEstimate(estimate);
+
+      res.status(201).json({
+        member: memberResult.rows[0],
+        opportunity: opportunity,
+        mobilization: {
+          ...estimate,
+          display
+        },
+        message: `You've joined the service run! Current mobilization share: $${estimate.share_per_member}`
+      });
+
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+  } catch (error) {
+    console.error('Error joining service run:', error);
+    res.status(500).json({ error: 'Failed to join service run' });
+  }
+});
+
+// ============================================================
+// CONTRACTOR CLAIM RUN
+// ============================================================
+router.post('/service-runs/:id/claim', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const actor = await resolveActorParty(req, 'contractor');
+    
+    if (!actor) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const { invite_token, confirm_pricing = false } = req.body;
+
+    // Verify invite token if provided
+    if (invite_token) {
+      const inviteResult = await pool.query(
+        `SELECT * FROM contractor_invites 
+         WHERE service_run_id = $1 AND invite_token = $2 AND status != 'claimed'`,
+        [id, invite_token]
+      );
+
+      if (inviteResult.rows.length === 0) {
+        return res.status(400).json({ error: 'Invalid or already used invite token' });
+      }
+    }
+
+    // Check run exists and is claimable
+    const runResult = await pool.query(
+      `SELECT * FROM service_runs 
+       WHERE id = $1 AND status IN ('forming', 'contractor_invited') AND contractor_party_id IS NULL`,
+      [id]
+    );
+
+    if (runResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Service run not found or already claimed' });
+    }
+
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      // Update run with contractor
+      await client.query(
+        `UPDATE service_runs SET
+          contractor_party_id = $1,
+          status = 'contractor_claimed',
+          updated_at = now()
+         WHERE id = $2`,
+        [actor.actor_party_id, id]
+      );
+
+      // Update invite if used
+      if (invite_token) {
+        await client.query(
+          `UPDATE contractor_invites SET
+            status = 'claimed',
+            claimed_party_id = $1,
+            claimed_at = now()
+           WHERE service_run_id = $2 AND invite_token = $3`,
+          [actor.actor_party_id, id, invite_token]
+        );
+      }
+
+      // Create conversations with all members
+      const membersResult = await client.query(
+        `SELECT m.*, o.id as opp_id FROM service_run_members m
+         JOIN opportunities o ON m.opportunity_id = o.id
+         WHERE m.run_id = $1 AND m.status IN ('interested', 'joined')`,
+        [id]
+      );
+
+      for (const member of membersResult.rows) {
+        await client.query(
+          `INSERT INTO conversations (
+            opportunity_id, owner_party_id, contractor_party_id, state
+          ) VALUES ($1, $2, $3, 'interest')
+          ON CONFLICT (opportunity_id, contractor_party_id) DO NOTHING`,
+          [member.opp_id, member.owner_party_id, actor.actor_party_id]
+        );
+      }
+
+      await client.query('COMMIT');
+
+      // Get margin data (contractor view)
+      const margins = await computeContractorMargins(id);
+
+      res.json({
+        message: 'Service run claimed! You can now set your schedule and communicate with members.',
+        service_run_id: id,
+        member_count: membersResult.rows.length,
+        contractor_margins: margins,  // Private to contractor
+        next_steps: [
+          'Review member details and locations',
+          'Confirm or adjust pricing',
+          'Set your service window',
+          'Optionally invite more of your past customers'
+        ]
+      });
+
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+  } catch (error) {
+    console.error('Error claiming service run:', error);
+    res.status(500).json({ error: 'Failed to claim service run' });
+  }
+});
+
+// ============================================================
+// LIST SERVICE RUNS (Public discovery)
+// ============================================================
+router.get('/service-runs', async (req: Request, res: Response) => {
+  try {
+    const tenant = await resolveTenant(req);
+    const { community, trade_category, status = 'forming' } = req.query;
+
+    let query = `
+      SELECT 
+        r.id, r.trade_category, r.service_description, r.contractor_name,
+        r.status, r.window_start, r.window_end,
+        r.current_member_count, r.mobilization_fee_total,
+        r.pricing_model,
+        c.name as community_name
+      FROM service_runs r
+      LEFT JOIN communities c ON r.community_id = c.id
+      WHERE r.tenant_id = $1
+    `;
+    const params: any[] = [tenant.id];
+
+    if (community) {
+      params.push(community);
+      query += ` AND r.community_id = $${params.length}`;
+    }
+
+    if (trade_category) {
+      params.push(trade_category);
+      query += ` AND r.trade_category = $${params.length}`;
+    }
+
+    if (status) {
+      params.push(status);
+      query += ` AND r.status = $${params.length}`;
+    }
+
+    query += ` ORDER BY r.created_at DESC LIMIT 50`;
+
+    const result = await pool.query(query, params);
+
+    // Add estimates
+    const runs = await Promise.all(
+      result.rows.map(async (run) => {
+        const estimate = await computeMobilizationSplit(run.id);
+        return {
+          ...run,
+          mobilization_share: estimate.share_per_member,
+          threshold_met: estimate.threshold_met
+        };
+      })
+    );
+
+    res.json({
+      service_runs: runs,
+      count: runs.length,
+      copy: {
+        explainer: 'Service runs let neighbors bundle together and split mobilization costs.',
+        not_bidding: 'This is cooperative coordination, not competitive bidding.'
+      }
+    });
+  } catch (error) {
+    console.error('Error listing service runs:', error);
+    res.status(500).json({ error: 'Failed to list service runs' });
+  }
+});
+
+// ============================================================
+// CONTRACTOR: Create outreach campaign (virality trigger)
+// ============================================================
+router.post('/service-runs/:id/outreach-campaign', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const actor = await resolveActorParty(req, 'contractor');
+    
+    if (!actor) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const { campaign_name, message_template, target_emails = [], target_phones = [] } = req.body;
+
+    // Verify contractor owns this run
+    const runResult = await pool.query(
+      `SELECT * FROM service_runs WHERE id = $1 AND contractor_party_id = $2`,
+      [id, actor.actor_party_id]
+    );
+
+    if (runResult.rows.length === 0) {
+      return res.status(403).json({ error: 'Not authorized - must be the run contractor' });
+    }
+
+    const result = await pool.query(
+      `INSERT INTO run_outreach_campaigns (
+        run_id, contractor_party_id, campaign_name, message_template,
+        target_emails, target_phones
+      ) VALUES ($1, $2, $3, $4, $5, $6)
+      RETURNING *`,
+      [id, actor.actor_party_id, campaign_name, message_template, target_emails, target_phones]
+    );
+
+    res.status(201).json({
+      campaign: result.rows[0],
+      message: 'Outreach campaign created! Ready to invite your past customers.',
+      next_step: 'POST /service-runs/:id/outreach-campaign/:campaignId/send to send invites'
+    });
+  } catch (error) {
+    console.error('Error creating outreach campaign:', error);
+    res.status(500).json({ error: 'Failed to create campaign' });
+  }
+});
+
+// ============================================================
+// GET CONTRACTOR MARGIN DASHBOARD (Private)
+// ============================================================
+router.get('/service-runs/:id/contractor-margins', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const actor = await resolveActorParty(req, 'contractor');
+    
+    if (!actor) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    // Verify contractor owns this run
+    const runResult = await pool.query(
+      `SELECT * FROM service_runs WHERE id = $1 AND contractor_party_id = $2`,
+      [id, actor.actor_party_id]
+    );
+
+    if (runResult.rows.length === 0) {
+      return res.status(403).json({ error: 'Not authorized' });
+    }
+
+    const margins = await computeContractorMargins(id);
+
+    res.json({
+      margins,
+      insight: margins.margin_improvement_percent > 0
+        ? `Your margins have improved ${margins.margin_improvement_percent}% with bundled customers!`
+        : 'Add more customers to improve your margins on this trip.',
+      tip: 'Invite your past customers in this area to join and maximize your efficiency.'
+    });
+  } catch (error) {
+    console.error('Error fetching contractor margins:', error);
+    res.status(500).json({ error: 'Failed to fetch margins' });
+  }
+});
+
+export default router;
+```
+
+### Register the Routes
+
+In server/index.ts:
+```typescript
+import serviceRunsRouter from './routes/service-runs';
+
+app.use('/api', serviceRunsRouter);
+```
+
+### Verification
+
+1. Run migration:
+```bash
+psql $DATABASE_URL -f server/migrations/039_service_runs.sql
+```
+
+2. Verify:
+```sql
+-- Check new tables
+SELECT table_name FROM information_schema.tables 
+WHERE table_name IN ('service_runs', 'service_run_members', 'contractor_invites', 
+                     'run_outreach_campaigns', 'run_outreach_messages');
+
+-- Check intake_mode on opportunities
+SELECT column_name FROM information_schema.columns 
+WHERE table_name = 'opportunities' AND column_name = 'intake_mode';
+
+-- Check trigger
+SELECT tgname FROM pg_trigger WHERE tgname = 'run_member_recompute';
+```
+
+3. Test:
+```bash
+# Create a service run
+curl -X POST http://localhost:5000/api/service-runs \
+  -H "Content-Type: application/json" \
+  -H "Cookie: YOUR_SESSION" \
+  -d '{
+    "trade_category": "chimney_sweep",
+    "service_description": "Annual chimney cleaning",
+    "contractor_name": "BC Chimney Services",
+    "contractor_email": "info@bcchimney.ca",
+    "unit_price": 150,
+    "unit_name": "chimney",
+    "mobilization_fee": 500,
+    "min_threshold": 1500,
+    "property_address": "123 Main St",
+    "property_postal_code": "V0R 1A0",
+    "property_community": "Bamfield",
+    "unit_count": 2
+  }'
+
+# Get service run with estimates
+curl http://localhost:5000/api/service-runs/RUN_UUID
+
+# Join a service run
+curl -X POST http://localhost:5000/api/service-runs/RUN_UUID/join \
+  -H "Content-Type: application/json" \
+  -H "Cookie: ANOTHER_USER_SESSION" \
+  -d '{
+    "property_address": "456 Harbor Rd",
+    "property_community": "Bamfield",
+    "unit_count": 1
+  }'
+```
+
+### Key Features
+
+| Feature | Implementation |
+|---------|---------------|
+| Two intake modes | `bid` vs `run` on opportunities |
+| Mobilization splitting | Auto-recomputes as members join |
+| Contractor invite | Token-based claim system |
+| Virality trigger | Contractors invite past customers |
+| Margin dashboard | Private to contractor |
+| Not a bidding war | Language emphasizes cooperation |
+
+Tell me:
+1. Did migration 039 run?
+2. Are all tables created?
+3. Can you create a service run?
+4. Does joining update estimates?
+5. Any errors?
