@@ -47,6 +47,8 @@ import paymentsRouter from "./routes/payments";
 import trustSignalsRouter from "./routes/trust-signals";
 import coopRunsRouter from "./routes/coop-runs";
 import operatorRouter from "./routes/operator";
+import publicPortalRouter from "./routes/public-portal";
+import userContextRouter from "./routes/user-context";
 import { publicQuery } from "./db/tenantDb";
 import express from "express";
 
@@ -170,6 +172,12 @@ export async function registerRoutes(
 
   // Register operator routes (for community operators)
   app.use('/api/operator', operatorRouter);
+
+  // Register public portal routes (no auth required)
+  app.use('/api/public', publicPortalRouter);
+
+  // Register user context routes (auth required)
+  app.use('/api', userContextRouter);
 
   // Public catalog endpoints (no auth required)
   app.get('/api/v1/catalog/vehicles', async (req, res) => {
