@@ -61,18 +61,23 @@ export function ImpersonationConsole(): React.ReactElement {
 
   async function fetchTenants() {
     try {
-      const token = localStorage.getItem('auth_token');
+      const token = localStorage.getItem('cc_token');
       const headers: Record<string, string> = {};
       if (token) {
         headers['Authorization'] = `Bearer ${token}`;
       }
+      console.log('[ImpersonationConsole] Fetching tenants with token:', token ? 'present' : 'missing');
       const response = await fetch('/api/admin/tenants', { 
         credentials: 'include',
         headers,
       });
+      console.log('[ImpersonationConsole] Response status:', response.status);
+      const data = await response.json();
+      console.log('[ImpersonationConsole] Response data:', data);
       if (response.ok) {
-        const data = await response.json();
         setTenants(data.tenants || []);
+      } else {
+        console.error('[ImpersonationConsole] API error:', data);
       }
     } catch (error) {
       console.error('Failed to fetch tenants:', error);
