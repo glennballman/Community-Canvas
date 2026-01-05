@@ -34,7 +34,6 @@ router.get('/', async (req: AuthRequest, res: Response) => {
         slug,
         tenant_type as type,
         status,
-        portal_slug,
         created_at
       FROM cc_tenants
       WHERE 1=1
@@ -72,7 +71,6 @@ router.get('/', async (req: AuthRequest, res: Response) => {
         slug: t.slug,
         type: t.type,
         status: t.status || 'active',
-        portal_slug: t.portal_slug,
         created_at: t.created_at,
       })),
     });
