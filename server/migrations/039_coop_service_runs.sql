@@ -409,3 +409,73 @@ CREATE TRIGGER coop_member_recompute
   AFTER INSERT OR UPDATE OR DELETE ON coop_run_members
   FOR EACH ROW
   EXECUTE FUNCTION trigger_recompute_coop_run();
+
+-- ============================================================
+-- 9. ROLE GRANTS (for cc_app role used by application)
+-- ============================================================
+
+GRANT ALL PRIVILEGES ON TABLE coop_service_runs TO cc_app;
+GRANT ALL PRIVILEGES ON TABLE coop_run_members TO cc_app;
+GRANT ALL PRIVILEGES ON TABLE coop_contractor_invites TO cc_app;
+GRANT ALL PRIVILEGES ON TABLE coop_outreach_campaigns TO cc_app;
+GRANT ALL PRIVILEGES ON TABLE coop_outreach_messages TO cc_app;
+
+-- ============================================================
+-- 10. ROW LEVEL SECURITY
+-- ============================================================
+
+-- Enable RLS on coop tables
+ALTER TABLE coop_service_runs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE coop_run_members ENABLE ROW LEVEL SECURITY;
+ALTER TABLE coop_contractor_invites ENABLE ROW LEVEL SECURITY;
+ALTER TABLE coop_outreach_campaigns ENABLE ROW LEVEL SECURITY;
+ALTER TABLE coop_outreach_messages ENABLE ROW LEVEL SECURITY;
+
+-- Tenant-scoped access policies with service mode bypass using CASE
+-- The CASE expression handles the __SERVICE__ sentinel without attempting UUID cast
+CREATE POLICY coop_runs_tenant ON coop_service_runs
+  FOR ALL USING (
+    CASE 
+      WHEN current_setting('app.tenant_id', true) = '__SERVICE__' THEN true
+      WHEN current_setting('app.tenant_id', true) IS NULL THEN false
+      ELSE tenant_id = current_setting('app.tenant_id', true)::uuid
+    END
+  );
+
+CREATE POLICY coop_members_tenant ON coop_run_members
+  FOR ALL USING (
+    CASE 
+      WHEN current_setting('app.tenant_id', true) = '__SERVICE__' THEN true
+      WHEN current_setting('app.tenant_id', true) IS NULL THEN false
+      ELSE run_id IN (SELECT id FROM coop_service_runs WHERE tenant_id = current_setting('app.tenant_id', true)::uuid)
+    END
+  );
+
+CREATE POLICY coop_invites_tenant ON coop_contractor_invites
+  FOR ALL USING (
+    CASE 
+      WHEN current_setting('app.tenant_id', true) = '__SERVICE__' THEN true
+      WHEN current_setting('app.tenant_id', true) IS NULL THEN false
+      ELSE coop_run_id IN (SELECT id FROM coop_service_runs WHERE tenant_id = current_setting('app.tenant_id', true)::uuid)
+    END
+  );
+
+CREATE POLICY coop_campaigns_tenant ON coop_outreach_campaigns
+  FOR ALL USING (
+    CASE 
+      WHEN current_setting('app.tenant_id', true) = '__SERVICE__' THEN true
+      WHEN current_setting('app.tenant_id', true) IS NULL THEN false
+      ELSE run_id IN (SELECT id FROM coop_service_runs WHERE tenant_id = current_setting('app.tenant_id', true)::uuid)
+    END
+  );
+
+CREATE POLICY coop_messages_tenant ON coop_outreach_messages
+  FOR ALL USING (
+    CASE 
+      WHEN current_setting('app.tenant_id', true) = '__SERVICE__' THEN true
+      WHEN current_setting('app.tenant_id', true) IS NULL THEN false
+      ELSE campaign_id IN (SELECT id FROM coop_outreach_campaigns WHERE 
+        run_id IN (SELECT id FROM coop_service_runs WHERE tenant_id = current_setting('app.tenant_id', true)::uuid)
+      )
+    END
+  );

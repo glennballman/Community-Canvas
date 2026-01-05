@@ -8,7 +8,7 @@
  * - Contractor sets all pricing
  */
 
-import { pool } from '../db';
+import { serviceQuery } from '../db/tenantDb';
 
 export interface MobilizationEstimate {
   run_id: string;
@@ -29,7 +29,7 @@ export interface MobilizationEstimate {
 }
 
 export async function computeMobilizationSplit(run_id: string): Promise<MobilizationEstimate> {
-  const result = await pool.query(
+  const result = await serviceQuery(
     `SELECT 
       r.id as run_id,
       r.mobilization_fee_total,
@@ -94,7 +94,7 @@ export async function computeContractorMargins(run_id: string): Promise<{
   margin_improvement_percent: number;
   effective_hourly_rate: number;
 }> {
-  const result = await pool.query(
+  const result = await serviceQuery(
     `SELECT 
       r.mobilization_fee_total,
       r.current_member_count,

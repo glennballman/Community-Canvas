@@ -58,6 +58,7 @@ The application uses a modern web stack: React 18 with TypeScript and Vite for t
 - **Work Order System**: For job authority, capability matching, material logistics, and mobilization plans.
 - **Bonds System**: Unified deposits for individual, tenant, or employer-backed scenarios, with claim management and asset inspections.
 - **Documentation System**: Bloomberg-terminal styled documentation available at `/admin/docs`, rendering markdown files.
+- **Cooperative Service Runs**: Neighbor bundling system (NOT competitive bidding) where customers with a contractor invite neighbors to join and split mobilization costs. API prefix: `/api/coop-runs`. Uses CASE-based RLS policies with `__SERVICE__` sentinel handling for proper tenant isolation.
 
 ## External Dependencies
 

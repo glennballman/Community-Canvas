@@ -1,8 +1,8 @@
 import { Router, Request, Response } from 'express';
-import { pool } from '../db';
 import { resolveActorParty } from '../lib/partyResolver';
 import { computeMobilizationSplit, computeContractorMargins, formatCustomerEstimate } from '../lib/mobilizationSplit';
 import { randomBytes } from 'crypto';
+import { serviceQuery, tenantQuery, withTenantTransaction } from '../db/tenantDb';
 
 const router = Router();
 
@@ -22,12 +22,34 @@ async function resolveTenant(req: any): Promise<{ id: string }> {
   const tenant_id = req?.ctx?.tenant_id;
   if (tenant_id) return { id: tenant_id };
   
-  const result = await pool.query(
-    `SELECT id FROM cc_tenants WHERE slug = 'bamfield' LIMIT 1`
-  );
-  if (result.rows.length > 0) return { id: result.rows[0].id };
+  const tenantSlug = req.headers['x-tenant-slug'];
+  if (!tenantSlug) {
+    throw new Error('Tenant context required. Provide X-Tenant-Slug header or authenticate.');
+  }
   
-  throw new Error('Tenant not found');
+  const result = await serviceQuery(
+    `SELECT id FROM cc_tenants WHERE slug = $1 LIMIT 1`,
+    [tenantSlug]
+  );
+  if (result.rows.length === 0) {
+    throw new Error(`Tenant not found: ${tenantSlug}`);
+  }
+  
+  const tenantId = result.rows[0].id;
+  
+  if (!req.ctx) {
+    req.ctx = {
+      domain: null,
+      portal_id: null,
+      tenant_id: null,
+      individual_id: null,
+      roles: [],
+      scopes: [],
+    };
+  }
+  req.ctx.tenant_id = tenantId;
+  
+  return { id: tenantId };
 }
 
 // ============================================================
@@ -68,10 +90,7 @@ router.post('/', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'trade_category required' });
     }
 
-    const client = await pool.connect();
-    try {
-      await client.query('BEGIN');
-
+    const { run, opportunity } = await withTenantTransaction(req, async (client) => {
       const runResult = await client.query(
         `INSERT INTO coop_service_runs (
           tenant_id, trade_category, service_description,
@@ -178,23 +197,18 @@ router.post('/', async (req: Request, res: Response) => {
 
       await client.query(`SELECT recompute_coop_run_estimates($1)`, [run.id]);
 
-      await client.query('COMMIT');
+      return { run, opportunity };
+    });
 
-      const estimate = await computeMobilizationSplit(run.id);
+    const estimate = await computeMobilizationSplit(run.id);
 
-      res.status(201).json({
-        coop_run: run,
-        opportunity: opportunity,
-        mobilization_estimate: estimate,
-        message: 'Coop run created! Neighbors can now join to split mobilization costs.'
-      });
+    res.status(201).json({
+      coop_run: run,
+      opportunity: opportunity,
+      mobilization_estimate: estimate,
+      message: 'Coop run created! Neighbors can now join to split mobilization costs.'
+    });
 
-    } catch (error) {
-      await client.query('ROLLBACK');
-      throw error;
-    } finally {
-      client.release();
-    }
   } catch (error) {
     console.error('Error creating coop run:', error);
     res.status(500).json({ error: 'Failed to create coop run' });
@@ -207,8 +221,10 @@ router.post('/', async (req: Request, res: Response) => {
 router.get('/:id', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    await resolveTenant(req);
 
-    const result = await pool.query(
+    const result = await tenantQuery(
+      req,
       `SELECT 
         r.*,
         COUNT(m.id) FILTER (WHERE m.status IN ('interested', 'joined', 'scheduled')) as member_count,
@@ -281,7 +297,8 @@ router.post('/:id/join', async (req: Request, res: Response) => {
       special_requirements
     } = req.body;
 
-    const runResult = await pool.query(
+    const runResult = await tenantQuery(
+      req,
       `SELECT * FROM coop_service_runs WHERE id = $1 AND status IN ('forming', 'contractor_invited', 'contractor_claimed')`,
       [id]
     );
@@ -292,7 +309,8 @@ router.post('/:id/join', async (req: Request, res: Response) => {
 
     const run = runResult.rows[0];
 
-    const existingResult = await pool.query(
+    const existingResult = await tenantQuery(
+      req,
       `SELECT id FROM coop_run_members 
        WHERE run_id = $1 AND owner_party_id = $2 AND status != 'withdrawn'`,
       [id, actor.actor_party_id]
@@ -302,10 +320,7 @@ router.post('/:id/join', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'You have already joined this run' });
     }
 
-    const client = await pool.connect();
-    try {
-      await client.query('BEGIN');
-
+    const { member, opportunity } = await withTenantTransaction(req, async (client) => {
       const oppResult = await client.query(
         `INSERT INTO opportunities (
           tenant_id, owner_party_id, owner_individual_id,
@@ -350,27 +365,22 @@ router.post('/:id/join', async (req: Request, res: Response) => {
         ]
       );
 
-      await client.query('COMMIT');
+      return { member: memberResult.rows[0], opportunity };
+    });
 
-      const estimate = await computeMobilizationSplit(id);
-      const display = formatCustomerEstimate(estimate);
+    const estimate = await computeMobilizationSplit(id);
+    const display = formatCustomerEstimate(estimate);
 
-      res.status(201).json({
-        member: memberResult.rows[0],
-        opportunity: opportunity,
-        mobilization: {
-          ...estimate,
-          display
-        },
-        message: `You've joined the coop run! Current mobilization share: $${estimate.share_per_member}`
-      });
+    res.status(201).json({
+      member,
+      opportunity,
+      mobilization: {
+        ...estimate,
+        display
+      },
+      message: `You've joined the coop run! Current mobilization share: $${estimate.share_per_member}`
+    });
 
-    } catch (error) {
-      await client.query('ROLLBACK');
-      throw error;
-    } finally {
-      client.release();
-    }
   } catch (error) {
     console.error('Error joining coop run:', error);
     res.status(500).json({ error: 'Failed to join coop run' });
@@ -384,6 +394,7 @@ router.post('/:id/claim', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const actor = await resolveActorParty(req, 'contractor');
+    await resolveTenant(req);
     
     if (!actor) {
       return res.status(401).json({ error: 'Authentication required' });
@@ -392,7 +403,8 @@ router.post('/:id/claim', async (req: Request, res: Response) => {
     const { invite_token } = req.body;
 
     if (invite_token) {
-      const inviteResult = await pool.query(
+      const inviteResult = await tenantQuery(
+        req,
         `SELECT * FROM coop_contractor_invites 
          WHERE coop_run_id = $1 AND invite_token = $2 AND status != 'claimed'`,
         [id, invite_token]
@@ -403,7 +415,8 @@ router.post('/:id/claim', async (req: Request, res: Response) => {
       }
     }
 
-    const runResult = await pool.query(
+    const runResult = await tenantQuery(
+      req,
       `SELECT * FROM coop_service_runs 
        WHERE id = $1 AND status IN ('forming', 'contractor_invited') AND contractor_party_id IS NULL`,
       [id]
@@ -413,10 +426,7 @@ router.post('/:id/claim', async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Coop run not found or already claimed' });
     }
 
-    const client = await pool.connect();
-    try {
-      await client.query('BEGIN');
-
+    const membersResult = await withTenantTransaction(req, async (client) => {
       await client.query(
         `UPDATE coop_service_runs SET
           contractor_party_id = $1,
@@ -454,29 +464,24 @@ router.post('/:id/claim', async (req: Request, res: Response) => {
         );
       }
 
-      await client.query('COMMIT');
+      return membersResult;
+    });
 
-      const margins = await computeContractorMargins(id);
+    const margins = await computeContractorMargins(id);
 
-      res.json({
-        message: 'Coop run claimed! You can now set your schedule and communicate with members.',
-        coop_run_id: id,
-        member_count: membersResult.rows.length,
-        contractor_margins: margins,
-        next_steps: [
-          'Review member details and locations',
-          'Confirm or adjust pricing',
-          'Set your service window',
-          'Optionally invite more of your past customers'
-        ]
-      });
+    res.json({
+      message: 'Coop run claimed! You can now set your schedule and communicate with members.',
+      coop_run_id: id,
+      member_count: membersResult.rows.length,
+      contractor_margins: margins,
+      next_steps: [
+        'Review member details and locations',
+        'Confirm or adjust pricing',
+        'Set your service window',
+        'Optionally invite more of your past customers'
+      ]
+    });
 
-    } catch (error) {
-      await client.query('ROLLBACK');
-      throw error;
-    } finally {
-      client.release();
-    }
   } catch (error) {
     console.error('Error claiming coop run:', error);
     res.status(500).json({ error: 'Failed to claim coop run' });
@@ -496,10 +501,8 @@ router.get('/', async (req: Request, res: Response) => {
         r.id, r.trade_category, r.service_description, r.contractor_name,
         r.status, r.window_start, r.window_end,
         r.current_member_count, r.mobilization_fee_total,
-        r.pricing_model,
-        c.name as community_name
+        r.pricing_model
       FROM coop_service_runs r
-      LEFT JOIN communities c ON r.community_id = c.id
       WHERE r.tenant_id = $1
     `;
     const params: any[] = [tenant.id];
@@ -521,7 +524,7 @@ router.get('/', async (req: Request, res: Response) => {
 
     query += ` ORDER BY r.created_at DESC LIMIT 50`;
 
-    const result = await pool.query(query, params);
+    const result = await tenantQuery(req, query, params);
 
     const runs = await Promise.all(
       result.rows.map(async (run) => {
@@ -563,6 +566,7 @@ router.post('/:id/outreach-campaign', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const actor = await resolveActorParty(req, 'contractor');
+    await resolveTenant(req);
     
     if (!actor) {
       return res.status(401).json({ error: 'Authentication required' });
@@ -570,7 +574,8 @@ router.post('/:id/outreach-campaign', async (req: Request, res: Response) => {
 
     const { campaign_name, message_template, target_emails = [], target_phones = [] } = req.body;
 
-    const runResult = await pool.query(
+    const runResult = await tenantQuery(
+      req,
       `SELECT * FROM coop_service_runs WHERE id = $1 AND contractor_party_id = $2`,
       [id, actor.actor_party_id]
     );
@@ -579,7 +584,8 @@ router.post('/:id/outreach-campaign', async (req: Request, res: Response) => {
       return res.status(403).json({ error: 'Not authorized - must be the run contractor' });
     }
 
-    const result = await pool.query(
+    const result = await tenantQuery(
+      req,
       `INSERT INTO coop_outreach_campaigns (
         run_id, contractor_party_id, campaign_name, message_template,
         target_emails, target_phones
@@ -606,12 +612,14 @@ router.get('/:id/contractor-margins', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const actor = await resolveActorParty(req, 'contractor');
+    await resolveTenant(req);
     
     if (!actor) {
       return res.status(401).json({ error: 'Authentication required' });
     }
 
-    const runResult = await pool.query(
+    const runResult = await tenantQuery(
+      req,
       `SELECT * FROM coop_service_runs WHERE id = $1 AND contractor_party_id = $2`,
       [id, actor.actor_party_id]
     );
