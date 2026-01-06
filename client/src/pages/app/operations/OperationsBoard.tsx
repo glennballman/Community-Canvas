@@ -226,9 +226,10 @@ export default function OperationsBoard() {
       return data;
     },
     enabled: !!currentTenant?.tenant_id,
-    staleTime: 30000,
+    staleTime: 0,
     gcTime: 0,
     retry: 1,
+    refetchOnMount: 'always',
   });
 
   const scheduleUrl = `/api/schedule?from=${from.toISOString()}&to=${to.toISOString()}`;
@@ -248,9 +249,10 @@ export default function OperationsBoard() {
       return data;
     },
     enabled: !!currentTenant?.tenant_id,
-    staleTime: 30000,
+    staleTime: 0,
     gcTime: 0,
     retry: 1,
+    refetchOnMount: 'always',
   });
 
   const createEventMutation = useMutation({
