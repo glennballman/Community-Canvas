@@ -56,6 +56,7 @@ import adminTenantsRouter from "./routes/admin-tenants";
 import adminCommunitiesRouter from "./routes/admin-communities";
 import adminModerationRouter from "./routes/admin-moderation";
 import crmRouter from "./routes/crm";
+import scheduleRouter from "./routes/schedule";
 import { publicQuery } from "./db/tenantDb";
 import express from "express";
 
@@ -187,6 +188,9 @@ export async function registerRoutes(
 
   // Register CRM routes (Places, People, Organizations)
   app.use('/api/crm', crmRouter);
+
+  // Register schedule/operations board routes (15-minute precision)
+  app.use('/api/schedule', scheduleRouter);
 
   // Register operator routes (for community operators)
   app.use('/api/operator', operatorRouter);

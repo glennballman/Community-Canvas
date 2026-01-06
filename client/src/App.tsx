@@ -34,6 +34,9 @@ import AvailabilityConsole from './pages/app/community/AvailabilityConsole';
 import DirectoryPage from './pages/app/community/DirectoryPage';
 import ContentBrandingPage from './pages/app/community/ContentBrandingPage';
 
+// Pages - App Operations
+import OperationsBoard from './pages/app/operations/OperationsBoard';
+
 // Pages - CRM
 import PlacesList from './pages/crm/PlacesList';
 import PlaceDetail from './pages/crm/PlaceDetail';
@@ -160,6 +163,7 @@ export default function App() {
                 
                 {/* Community tenant routes */}
                 <Route path="availability" element={<AvailabilityConsole />} />
+                <Route path="operations" element={<OperationsBoard />} />
                 <Route path="service-runs" element={<ServiceRuns />} />
                 <Route path="service-runs/new" element={<CreateServiceRun />} />
                 <Route path="service-runs/:slug" element={<ServiceRunDetail />} />

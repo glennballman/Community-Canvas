@@ -1,0 +1,160 @@
+# PROMPT C — OPERATIONS BOARD FOUNDATION (AUDIT FIRST, THEN MINIMUM BUILD)
+
+We have completed:
+- “Catalog” → “Inventory” rename (UI + API + schema + routes)
+- Work Requests statuses updated (Booked / Completed / Dropped)
+- PostGIS removed / replaced (lat/lng + haversine functions)
+
+Now we are building the HEARTBEAT: a unified 15-minute grid schedule for inventory/resources.
+
+NON-NEGOTIABLE:
+- 15-minute increments are core. Do NOT argue. Do NOT replace with day-block calendars.
+- DO NOT invent new terminology.
+- DO NOT create parallel systems if one already exists.
+- Audit first. Show evidence (file paths + key snippets) before coding.
+
+---
+
+## STEP 0 — AUDIT (REQUIRED BEFORE ANY CODE)
+Find what already exists for:
+A) Inventory resources
+B) Booking/reservation tables
+C) Availability blocks / maintenance / buffers
+D) Any calendar UI components or existing schedule grid/timeline
+E) Existing concepts of “capabilities + constraints”
+
+Deliver an "EVIDENCE MAP" with:
+- File path
+- What it does
+- Whether we should REUSE / EXTEND / IGNORE
+
+Minimum audit targets (search/grep):
+- `availability`, `availability_blocks`, `schedule`, `scheduler`, `calendar`, `timeline`, `gantt`
+- `booking`, `bookings`, `reservation`
+- `inventory`, `resource`, `asset`
+- `maintenance`, `buffer`, `cleaning`
+- `capability`, `constraint`
+
+Also identify what’s already in the UI:
+- Is there any existing grid view, timeline, or calendar view we can reuse?
+- What library is already used (if any)?
+
+STOP after STEP 0 and wait for approval ONLY IF you discover:
+- a complete scheduling/availability system already exists that can be wired directly.
+Otherwise proceed immediately to STEP 1.
+
+---
+
+## STEP 1 — DEFINE THE CANONICAL SCHEDULING MODEL (MINIMUM)
+We store time as RANGE EVENTS, not per-slot rows.
+All scheduling snaps to 15-minute increments at the UI layer.
+
+Create/confirm a single scheduling schema that can represent:
+- bookings
+- holds
+- maintenance blocks
+- buffers (cleaning/repair/travel)
+- availability windows (optional)
+
+### Canonical table (new only if nothing equivalent exists)
+`resource_schedule_events`
+- id (uuid)
+- tenant_id (uuid)
+- resource_id (uuid)  -- references inventory item / asset / resource table
+- event_type (enum): booked | hold | maintenance | buffer
+- starts_at (timestamptz)
+- ends_at (timestamptz)
+- status (enum): active | cancelled (or reuse existing)
+- title (text, nullable) -- short label like “Booked” or “Cleaning”
+- notes (text, nullable)
+- created_by_actor_id (uuid, nullable)
+- related_entity_type (text, nullable) -- booking/project/service_run
+- related_entity_id (uuid, nullable)
+
+Indexes:
+- (tenant_id, resource_id, starts_at)
+- (tenant_id, starts_at)
+
+NO PostGIS. Lat/lng stays separate where needed.
+
+If an equivalent table exists already, DO NOT create this—map to the existing system and standardize naming via code.
+
+---
+
+## STEP 2 — API (READ + WRITE)
+Add endpoints (or adapt existing ones):
+
+GET `/api/schedule?resourceIds=...&from=...&to=...`
+- Returns all schedule events for those resources in the time window.
+
+POST `/api/schedule/events`
+- Create hold / maintenance / buffer block
+- Must snap to 15 minutes server-side too (validation).
+
+PATCH `/api/schedule/events/:id`
+- Update event type/status/times/notes (with validation).
+
+No feature creep:
+- No payments
+- No fancy conflict resolution
+- Just CRUD + time-window querying
+
+---
+
+## STEP 3 — OPERATIONS BOARD UI (FOUNDATION VERSION)
+Create page:
+`/app/operations`  (or `/app/operations-board` if route conventions require)
+
+Add to both navs (COMMUNITY_NAV + BUSINESS_NAV):
+Label: **Operations Board**
+Icon: Calendar (or similar existing icon)
+
+UI requirements:
+- Left: resources list (inventory) with simple grouping:
+  - Place → Unit Group → Unit (if available)
+  - Otherwise: flat inventory list for MVP
+- Top: time axis
+- Body: grid with 15-minute increments
+- Zoom controls: 15m / 30m / 1h / Day / Night / Week
+  - For MVP, implement 15m + 1h + Day
+- Interactions:
+  - Click+drag to create HOLD block
+  - Context menu (or modal) to set: Hold / Maintenance / Buffer
+  - Display existing Booked blocks (from bookings table if it exists, otherwise from resource_schedule_events)
+- Must be fast: virtualized list if inventory list is large (only if needed)
+
+Copy (exact):
+Title: **Operations Board**
+Subtitle: **Everything with a calendar — rooms, parking, equipment, crews. 15-minute precision when you need it.**
+
+Empty state:
+**No schedule events in this window.** Create a hold or switch the date range.
+
+---
+
+## STEP 4 — INTEGRATION RULES (CRITICAL)
+Booked = the thing is not available for others.
+- If bookings already exist (lodging/parking/equipment), display them as `event_type=booked` in the board.
+- Do NOT rewrite booking logic.
+- Just READ bookings and render blocks.
+
+Maintenance blocks must override availability visually.
+Buffer blocks must be visually distinct from booked blocks.
+(Use existing badge/colors patterns; do not introduce global CSS.)
+
+---
+
+## STEP 5 — VERIFICATION (REQUIRED REPORT)
+Replit must return a verification report with:
+1) Evidence Map (from Step 0)
+2) Schema changes (migration file name + tables/enums)
+3) API endpoints tested (example requests + responses)
+4) UI smoke test:
+   - create Hold
+   - create Maintenance
+   - zoom to 15m and confirm snapping
+   - confirm booked events show up (if bookings exist)
+5) Grep proof:
+   - no “catalog” anywhere outside historical migrations
+
+BEGIN NOW.
