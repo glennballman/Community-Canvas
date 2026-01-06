@@ -1,7 +1,11 @@
-import { Router } from 'express';
-import { pool } from '../db';
+import express, { Response } from 'express';
+import { serviceQuery } from '../db/tenantDb';
+import { authenticateToken, requirePlatformAdmin, AuthRequest } from './foundation';
 
-const router = Router();
+const router = express.Router();
+
+// All routes require platform admin
+router.use(authenticateToken, requirePlatformAdmin);
 
 // GET /api/admin/communities - List all communities (government/community type tenants)
 router.get('/', async (req, res) => {
@@ -13,13 +17,13 @@ router.get('/', async (req, res) => {
         t.id,
         t.name,
         t.slug,
-        t.type,
+        t.tenant_type as type,
         t.slug as portal_slug,
         t.created_at,
         COUNT(DISTINCT tm.user_id) as member_count
       FROM cc_tenants t
-      LEFT JOIN cc_tenant_memberships tm ON t.id = tm.tenant_id
-      WHERE t.type IN ('government', 'community')
+      LEFT JOIN cc_tenant_users tm ON t.id = tm.tenant_id
+      WHERE t.tenant_type IN ('government', 'community')
     `;
     
     const params: any[] = [];
@@ -32,18 +36,18 @@ router.get('/', async (req, res) => {
     }
     
     if (filter === 'government') {
-      query += ` AND t.type = 'government'`;
+      query += ` AND t.tenant_type = 'government'`;
     } else if (filter === 'community') {
-      query += ` AND t.type = 'community'`;
+      query += ` AND t.tenant_type = 'community'`;
     } else if (filter === 'has_portal') {
       query += ` AND t.slug IS NOT NULL AND t.slug != ''`;
     } else if (filter === 'no_portal') {
       query += ` AND (t.slug IS NULL OR t.slug = '')`;
     }
     
-    query += ` GROUP BY t.id, t.name, t.slug, t.type, t.created_at ORDER BY t.name ASC`;
+    query += ` GROUP BY t.id, t.name, t.slug, t.tenant_type, t.created_at ORDER BY t.name ASC`;
     
-    const result = await pool.query(query, params);
+    const result = await serviceQuery(query, params);
     
     res.json({ 
       communities: result.rows.map(row => ({
@@ -67,7 +71,7 @@ router.post('/', async (req, res) => {
     }
     
     // Check if slug already exists
-    const existingCheck = await pool.query(
+    const existingCheck = await serviceQuery(
       'SELECT id FROM cc_tenants WHERE slug = $1',
       [slug]
     );
@@ -77,10 +81,10 @@ router.post('/', async (req, res) => {
     }
     
     // Create the tenant
-    const result = await pool.query(`
-      INSERT INTO cc_tenants (name, slug, type, status, created_at)
+    const result = await serviceQuery(`
+      INSERT INTO cc_tenants (name, slug, tenant_type, status, created_at)
       VALUES ($1, $2, $3, 'active', NOW())
-      RETURNING id, name, slug, type
+      RETURNING id, name, slug, tenant_type as type
     `, [name, slug, type || 'community']);
     
     const community = result.rows[0];
@@ -104,19 +108,19 @@ router.get('/:id', async (req, res) => {
   try {
     const { id } = req.params;
     
-    const result = await pool.query(`
+    const result = await serviceQuery(`
       SELECT 
         t.id,
         t.name,
         t.slug,
-        t.type,
+        t.tenant_type as type,
         t.slug as portal_slug,
         t.created_at,
         COUNT(DISTINCT tm.user_id) as member_count
       FROM cc_tenants t
-      LEFT JOIN cc_tenant_memberships tm ON t.id = tm.tenant_id
+      LEFT JOIN cc_tenant_users tm ON t.id = tm.tenant_id
       WHERE t.id = $1
-      GROUP BY t.id, t.name, t.slug, t.type, t.created_at
+      GROUP BY t.id, t.name, t.slug, t.tenant_type, t.created_at
     `, [id]);
     
     if (result.rows.length === 0) {
