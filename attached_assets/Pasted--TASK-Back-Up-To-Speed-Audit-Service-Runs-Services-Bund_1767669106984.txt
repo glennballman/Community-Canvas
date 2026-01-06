@@ -1,0 +1,204 @@
+# TASK: Back-Up-To-Speed Audit — Service Runs / Services / Bundles (Post-Nuclear Rebuild)
+
+You are working inside the Community Canvas repo after the nuclear UI rebuild.  
+We need to restore/upgrade the core primitive: **Service Runs** (calendar + gantt + two run types), and ensure Services + Bundles are properly surfaced in nav and pages.
+
+## OUTPUT FORMAT (MANDATORY)
+Return a report with these exact sections:
+
+1) **Repo Map (Evidence)**
+2) **Routes & Pages (Evidence + Answer)**
+3) **Data Model & Tables (Evidence + Answer)**
+4) **Service Runs: Run Types & Workflow (Answer + Gaps)**
+5) **Calendar & Gantt (What exists / What was removed / What is missing)**
+6) **AI Quote-Quality Workflow (What exists / Where it hooks / What’s missing)**
+7) **Navigation Regression (Why services/bundles not showing)**
+8) **Proposed Fix Plan (Ordered PR-style checklist)**
+9) **QA Checklist (Route-by-route smoke test)**
+
+Each section must include:
+- file paths
+- key snippets (short, not whole files)
+- and a “VERDICT” line.
+
+If anything is missing, say “MISSING” and propose the minimal implementation that matches prior intent.
+
+---
+
+## STEP 0 — READ THIS CONTEXT (DON’T SKIP)
+We previously had:
+- Services (catalog) and Bundles
+- Service Runs surfaced + managed
+- Two Service Run types:
+  A) Proposed / Pre-scheduled / contractor unknown (to be bid)
+  B) Contractor known (anchor contractor coming) + invite locals to join to amortize mobilization costs (5–25 jobs)
+- AI assist after initial posting to improve bid quality: Bill of Materials + logistics review.
+
+After nuclear rebuild:
+- Left-nav exists, but **services/bundles/service runs surfacing regressed**
+- Some pages exist (e.g., Service Catalog, Bundles, Service Runs) but may not be wired/visible.
+- We must identify the current truth in code + DB.
+
+---
+
+## STEP 1 — REPO MAP (EVIDENCE REQUIRED)
+Find and list (with paths):
+- all page components in `client/src/pages/` related to:
+  - services
+  - bundles/packages
+  - service runs
+  - jobs/opportunities (the current screen)
+- all layouts / nav components that control left nav for:
+  - admin
+  - community tenant app
+  - business tenant app
+
+Include `grep` results for key terms:
+- "ServiceRun"
+- "service run"
+- "bundle"
+- "package"
+- "catalog"
+- "availability"
+- "gantt"
+- "timeline"
+- "calendar"
+- "boq"
+- "bill of materials"
+- "estimate"
+
+---
+
+## STEP 2 — ROUTES & PAGES (ANSWER + EVIDENCE)
+Answer the following and show route definitions + the page components they map to:
+1) What are the current routes for:
+   - Service Catalog
+   - Bundles & Packages
+   - Service Runs list
+   - Create Service Run
+   - Service Run detail page
+2) Are these routes wired in `App.tsx` (or wherever routes live) post-rebuild?
+3) Are they visible in left nav? If not, why?
+
+Include the exact nav config source file(s) and how items are conditionally shown.
+
+---
+
+## STEP 3 — DATA MODEL (ANSWER + EVIDENCE)
+Identify the data model names used in code + DB (Supabase if present):
+- service
+- bundle/package
+- service_run
+- run participant / job inside run
+- bids / offers / contractor assignment
+- calendar/availability entities
+
+Provide:
+- table names (SQL schema if available)
+- TypeScript types/interfaces
+- API endpoints or Supabase queries used
+
+If you don’t find these, say MISSING and propose the minimal set of tables/types we need.
+
+---
+
+## STEP 4 — SERVICE RUN TYPES (ANSWER + CONFIRM)
+We need definitive truth in code (or declare MISSING):
+A) **Contractor Unknown / Bid Run**
+- Is run date fixed or range?
+- Do contractors bid per-run or per-job?
+- What statuses exist? (draft/proposed/bidding/awarded/scheduled/etc.)
+
+B) **Contractor Known / Anchor Run**
+- Is there always an anchor job?
+- Do joiners auto-accept until capacity, or require approval?
+- How is mobilization cost represented and shared?
+
+Show any enums/constants used.
+
+---
+
+## STEP 5 — CALENDAR & GANTT (WHAT EXISTS)
+Locate any implementation for:
+- calendar views
+- gantt/timeline views
+- scheduling granularity (15-minute increments vs service-dependent)
+- buffers (cleaning/repair/travel)
+
+If removed in nuclear rebuild, identify the previous components still in repo or deleted, and what replaced them.
+
+Provide a verdict:
+- EXISTS / PARTIAL / MISSING
+
+---
+
+## STEP 6 — AI QUOTE-QUALITY WORKFLOW (WHAT EXISTS)
+Find any code referencing:
+- bill of materials generation
+- estimate improvement assistant
+- logistics review assistant
+- photo/measurement checklist
+- “AI Assist” panels
+
+Identify where it hooks:
+- during posting
+- post-post editing
+- run planning
+
+Verdict: EXISTS / PARTIAL / MISSING
+
+---
+
+## STEP 7 — NAVIGATION REGRESSION (ROOT CAUSE)
+Explain precisely why:
+- services aren’t showing in left nav
+- bundles aren’t showing
+- service runs may not be showing or are not primary
+
+Possible causes to check:
+- tenant type gating
+- feature flags
+- nav config mismatch
+- missing routes
+- page import failures
+
+Provide the root cause with exact file references.
+
+---
+
+## STEP 8 — PROPOSED FIX PLAN (ORDERED CHECKLIST)
+Produce an ordered implementation plan that:
+1) Restores Services + Bundles + Service Runs in nav for the correct tenant types
+2) Makes “Service Runs” the primary surface (not just “jobs board”), OR explains what’s needed to do so
+3) Restores the two run types with correct flows
+4) Adds/Restores calendar + gantt surfaces
+5) Reintroduces AI assist in the right workflow step
+
+Each checklist item must include:
+- files to edit
+- new components to create
+- routes to add
+- mock data plan if backend missing
+- acceptance criteria
+
+---
+
+## STEP 9 — QA CHECKLIST (MUST INCLUDE)
+Provide a route-by-route smoke test checklist for:
+- Service Catalog
+- Bundles
+- Service Runs list
+- Create Service Run (both modes)
+- Service Run detail (calendar + plan)
+- Jobs board page (if kept)
+Include what to click to verify.
+
+---
+
+## IMPORTANT CONSTRAINTS
+- Do NOT redesign the layout.
+- Do NOT change the brand voice unless asked.
+- Prioritize clarity + evidence over speculation.
+- If you cannot access Supabase schema, inspect any SQL migrations, types, or API client calls in repo.
+
+BEGIN NOW. Produce the report in the required format.
