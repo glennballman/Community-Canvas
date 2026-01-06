@@ -49,8 +49,8 @@ interface WorkRequest {
   estimated_value: number | null;
   quoted_amount: number | null;
   closed_reason: string | null;
-  booked_to_project_id: string | null;
-  booked_at: string | null;
+  converted_to_project_id: string | null;
+  converted_at: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -399,7 +399,7 @@ export default function WorkRequestDetail() {
               </div>
             </div>
 
-            {request.booked_to_project_id && (
+            {request.converted_to_project_id && (
               <div className="p-3 rounded-md bg-green-500/10 border border-green-500/20">
                 <p className="text-sm text-green-400 flex items-center gap-2">
                   <Check className="w-4 h-4" />
@@ -408,7 +408,7 @@ export default function WorkRequestDetail() {
                 <Button 
                   variant="ghost" 
                   className="p-0 h-auto text-green-400" 
-                  onClick={() => navigate(`/app/projects/${request.booked_to_project_id}`)}
+                  onClick={() => navigate(`/app/projects/${request.converted_to_project_id}`)}
                   data-testid="link-project"
                 >
                   View Project
