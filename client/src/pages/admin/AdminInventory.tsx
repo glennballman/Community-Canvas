@@ -87,7 +87,23 @@ export default function AdminInventory() {
   };
 
   const { data, isLoading, error } = useQuery<InventoryAuditData>({
-    queryKey: [buildQueryUrl()],
+    queryKey: ["/api/admin/inventory", search, tenantFilter, typeFilter, statusFilter],
+    queryFn: async () => {
+      const url = buildQueryUrl();
+      const token = localStorage.getItem('cc_token');
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      const res = await fetch(url, { 
+        credentials: 'include',
+        headers,
+      });
+      if (!res.ok) {
+        throw new Error('Failed to fetch inventory audit data');
+      }
+      return res.json();
+    },
   });
 
   const clearFilters = () => {
