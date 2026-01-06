@@ -50,6 +50,15 @@ import ServiceCatalog from './pages/services/ServiceCatalog';
 import BundlesBrowser from './pages/services/BundlesBrowser';
 import WorkRequestDetail from './pages/WorkRequestDetail';
 
+// Pages - Intake (Work Requests inbox)
+import WorkRequestsList from './pages/intake/WorkRequestsList';
+import IntakeWorkRequestDetail from './pages/intake/WorkRequestDetail';
+
+// Pages - Projects
+import ProjectsList from './pages/projects/ProjectsList';
+import CreateProject from './pages/projects/CreateProject';
+import ProjectDetail from './pages/projects/ProjectDetail';
+
 // Pages - App Business
 import CatalogPage from './pages/app/business/CatalogPage';
 import BookingsPage from './pages/app/business/BookingsPage';
@@ -167,6 +176,15 @@ export default function App() {
                 <Route path="crm/people/:id" element={<PersonDetail />} />
                 <Route path="crm/orgs" element={<OrgsList />} />
                 <Route path="crm/orgs/:id" element={<OrgDetail />} />
+                
+                {/* Intake - Work Requests (quick capture inbox) */}
+                <Route path="intake/work-requests" element={<WorkRequestsList />} />
+                <Route path="intake/work-requests/:id" element={<IntakeWorkRequestDetail />} />
+                
+                {/* Projects - Job tracking from lead to paid */}
+                <Route path="projects" element={<ProjectsList />} />
+                <Route path="projects/new" element={<CreateProject />} />
+                <Route path="projects/:id" element={<ProjectDetail />} />
                 
                 {/* Business tenant routes */}
                 <Route path="catalog" element={<CatalogPage />} />
