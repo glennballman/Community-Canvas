@@ -53,6 +53,7 @@ import adminImpersonationRouter from "./routes/admin-impersonation";
 import adminTenantsRouter from "./routes/admin-tenants";
 import adminCommunitiesRouter from "./routes/admin-communities";
 import adminModerationRouter from "./routes/admin-moderation";
+import crmRouter from "./routes/crm";
 import { publicQuery } from "./db/tenantDb";
 import express from "express";
 
@@ -175,6 +176,9 @@ export async function registerRoutes(
 
   // Register Shared Service Runs routes (bundling, NOT bidding)
   app.use('/api/shared-runs', sharedRunsRouter);
+
+  // Register CRM routes (Places, People, Organizations)
+  app.use('/api/crm', crmRouter);
 
   // Register operator routes (for community operators)
   app.use('/api/operator', operatorRouter);

@@ -41,6 +41,8 @@ import {
   Shield,
   Layers,
   Briefcase,
+  MapPin,
+  Contact,
 } from 'lucide-react';
 import { useTenant, TenantMembership } from '../contexts/TenantContext';
 
@@ -61,6 +63,9 @@ const COMMUNITY_NAV: NavItem[] = [
   { icon: Briefcase, label: 'Services', href: '/app/services' },
   { icon: Layers, label: 'Bundles', href: '/app/bundles' },
   { icon: Building2, label: 'Directory', href: '/app/directory' },
+  { icon: MapPin, label: 'Places', href: '/app/crm/places' },
+  { icon: Contact, label: 'People', href: '/app/crm/people' },
+  { icon: Building2, label: 'Organizations', href: '/app/crm/orgs' },
   { icon: Palette, label: 'Content', href: '/app/content' },
   { icon: Settings, label: 'Settings', href: '/app/settings' },
 ];
@@ -70,6 +75,9 @@ const BUSINESS_NAV: NavItem[] = [
   { icon: Package, label: 'Catalog', href: '/app/catalog' },
   { icon: Calendar, label: 'Bookings', href: '/app/bookings' },
   { icon: Users, label: 'Customers', href: '/app/customers' },
+  { icon: MapPin, label: 'Places', href: '/app/crm/places' },
+  { icon: Contact, label: 'People', href: '/app/crm/people' },
+  { icon: Building2, label: 'Organizations', href: '/app/crm/orgs' },
   { icon: MessageSquare, label: 'Conversations', href: '/app/conversations' },
   { icon: Settings, label: 'Settings', href: '/app/settings' },
 ];
