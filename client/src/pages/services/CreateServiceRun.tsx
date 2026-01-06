@@ -83,6 +83,7 @@ export default function CreateServiceRun() {
   useEffect(() => {
     async function loadData() {
       setLoading(true);
+      setError(null);
       try {
         const headers: HeadersInit = {};
         if (token) headers['Authorization'] = `Bearer ${token}`;
@@ -94,17 +95,17 @@ export default function CreateServiceRun() {
         ]);
         
         const [commData, bundleData, runTypeData] = await Promise.all([
-          commRes.json(),
-          bundleRes.json(),
-          runTypeRes.json()
+          commRes.json().catch(() => ({})),
+          bundleRes.json().catch(() => ({})),
+          runTypeRes.json().catch(() => ({}))
         ]);
         
-        if (commData.success) setCommunities(commData.communities);
-        if (bundleData.success) setBundles(bundleData.bundles);
-        if (runTypeData.success) setRunTypes(runTypeData.runTypes);
+        setCommunities(Array.isArray(commData?.communities) ? commData.communities : []);
+        setBundles(Array.isArray(bundleData?.bundles) ? bundleData.bundles : []);
+        setRunTypes(Array.isArray(runTypeData?.runTypes) ? runTypeData.runTypes : []);
       } catch (err) {
         console.error('Failed to load form data:', err);
-        setError('Failed to load form data');
+        setError('Unable to load form options. Please try again.');
       } finally {
         setLoading(false);
       }
@@ -251,8 +252,16 @@ export default function CreateServiceRun() {
 
   if (loading) {
     return (
-      <div className="p-6 text-center text-muted-foreground">
-        Loading form...
+      <div className="p-6 max-w-4xl mx-auto">
+        <div className="animate-pulse space-y-4">
+          <div className="flex items-center gap-4">
+            <div className="h-6 w-16 bg-muted rounded" />
+            <div className="h-8 w-48 bg-muted rounded" />
+          </div>
+          <div className="h-32 bg-muted rounded-lg" />
+          <div className="h-48 bg-muted rounded-lg" />
+          <div className="h-48 bg-muted rounded-lg" />
+        </div>
       </div>
     );
   }

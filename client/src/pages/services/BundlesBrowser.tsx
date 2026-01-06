@@ -81,40 +81,44 @@ export default function BundlesBrowser() {
   const [selectedCommunity, setSelectedCommunity] = useState<string>('');
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [viewTab, setViewTab] = useState<'bundles' | 'calendar'>('bundles');
 
-  useEffect(() => {
-    async function loadData() {
-      setLoading(true);
-      try {
-        const headers: HeadersInit = {};
-        if (token) headers['Authorization'] = `Bearer ${token}`;
-        
-        const [statsRes, bundlesRes, communitiesRes, runTypesRes] = await Promise.all([
-          fetch('/api/service-runs/stats', { headers }),
-          fetch('/api/service-runs/bundles', { headers }),
-          fetch('/api/service-runs/communities', { headers }),
-          fetch('/api/service-runs/run-types', { headers })
-        ]);
-        
-        const [statsData, bundlesData, communitiesData, runTypesData] = await Promise.all([
-          statsRes.json(),
-          bundlesRes.json(),
-          communitiesRes.json(),
-          runTypesRes.json()
-        ]);
-        
-        if (statsData.success) setStats(statsData.stats);
-        if (bundlesData.success) setBundles(bundlesData.bundles);
-        if (communitiesData.success) setCommunities(communitiesData.communities);
-        if (runTypesData.success) setRunTypes(runTypesData.runTypes);
-      } catch (err) {
-        console.error('Failed to load bundles:', err);
-      } finally {
-        setLoading(false);
-      }
+  async function loadData() {
+    setLoading(true);
+    setError(null);
+    try {
+      const headers: HeadersInit = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      
+      const [statsRes, bundlesRes, communitiesRes, runTypesRes] = await Promise.all([
+        fetch('/api/service-runs/stats', { headers }),
+        fetch('/api/service-runs/bundles', { headers }),
+        fetch('/api/service-runs/communities', { headers }),
+        fetch('/api/service-runs/run-types', { headers })
+      ]);
+      
+      const [statsData, bundlesData, communitiesData, runTypesData] = await Promise.all([
+        statsRes.json().catch(() => ({})),
+        bundlesRes.json().catch(() => ({})),
+        communitiesRes.json().catch(() => ({})),
+        runTypesRes.json().catch(() => ({}))
+      ]);
+      
+      setStats(statsData?.stats || null);
+      setBundles(Array.isArray(bundlesData?.bundles) ? bundlesData.bundles : []);
+      setCommunities(Array.isArray(communitiesData?.communities) ? communitiesData.communities : []);
+      setRunTypes(Array.isArray(runTypesData?.runTypes) ? runTypesData.runTypes : []);
+    } catch (err) {
+      console.error('Failed to load bundles:', err);
+      setError('Unable to load bundles. Please try again.');
+    } finally {
+      setLoading(false);
     }
+  }
+
+  useEffect(() => {
     loadData();
   }, [token]);
 
@@ -186,8 +190,33 @@ export default function BundlesBrowser() {
 
   if (loading) {
     return (
-      <div className="p-6 text-center text-muted-foreground">
-        Loading bundles...
+      <div className="p-6">
+        <div className="animate-pulse space-y-4">
+          <div className="h-8 w-48 bg-muted rounded" />
+          <div className="grid grid-cols-4 gap-4">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="h-20 bg-muted rounded-lg" />
+            ))}
+          </div>
+          <div className="h-64 bg-muted rounded-lg" />
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-6">
+        <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-6 text-center">
+          <p className="text-destructive mb-4">{error}</p>
+          <button
+            onClick={loadData}
+            className="bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-lg"
+            data-testid="button-retry"
+          >
+            Try Again
+          </button>
+        </div>
       </div>
     );
   }
@@ -271,7 +300,11 @@ export default function BundlesBrowser() {
               </span>
             </div>
 
-            {bundles.map(bundle => (
+            {bundles.length === 0 ? (
+              <div className="bg-card rounded-lg p-12 text-center border">
+                <p className="text-muted-foreground">No service bundles available.</p>
+              </div>
+            ) : bundles.map(bundle => (
               <div
                 key={bundle.id}
                 onClick={() => loadBundleDetail(bundle.slug)}

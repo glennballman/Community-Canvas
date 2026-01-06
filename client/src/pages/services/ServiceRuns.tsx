@@ -78,6 +78,7 @@ export default function ServiceRuns() {
   const [runs, setRuns] = useState<ServiceRun[]>([]);
   const [coopRuns, setCoopRuns] = useState<CoopRun[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [activeTab, setActiveTab] = useState<'coop' | 'bidding'>('coop');
 
@@ -87,6 +88,7 @@ export default function ServiceRuns() {
 
   async function loadAllRuns() {
     setLoading(true);
+    setError(null);
     try {
       const headers: HeadersInit = {};
       if (token) headers['Authorization'] = `Bearer ${token}`;
@@ -96,17 +98,16 @@ export default function ServiceRuns() {
         fetch('/api/coop-runs', { headers })
       ]);
       
-      const biddingData = await biddingRes.json();
-      const coopData = await coopRes.json();
+      const biddingData = await biddingRes.json().catch(() => ({}));
+      const coopData = await coopRes.json().catch(() => ({}));
       
-      if (biddingData.success) {
-        setRuns(biddingData.runs);
-      }
-      if (coopData.coop_runs) {
-        setCoopRuns(coopData.coop_runs);
-      }
+      setRuns(Array.isArray(biddingData?.runs) ? biddingData.runs : []);
+      setCoopRuns(Array.isArray(coopData?.coop_runs) ? coopData.coop_runs : []);
     } catch (err) {
       console.error('Failed to load runs:', err);
+      setError('Unable to load service runs. Please try again.');
+      setRuns([]);
+      setCoopRuns([]);
     } finally {
       setLoading(false);
     }
@@ -159,8 +160,33 @@ export default function ServiceRuns() {
 
   if (loading) {
     return (
-      <div className="p-6 text-center text-muted-foreground">
-        Loading service runs...
+      <div className="p-6">
+        <div className="animate-pulse space-y-4">
+          <div className="h-8 w-48 bg-muted rounded" />
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="h-20 bg-muted rounded-lg" />
+            ))}
+          </div>
+          <div className="h-64 bg-muted rounded-lg" />
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-6">
+        <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-6 text-center">
+          <p className="text-destructive mb-4">{error}</p>
+          <button
+            onClick={loadAllRuns}
+            className="bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-lg"
+            data-testid="button-retry"
+          >
+            Try Again
+          </button>
+        </div>
       </div>
     );
   }

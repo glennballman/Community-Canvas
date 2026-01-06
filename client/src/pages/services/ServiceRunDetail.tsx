@@ -128,6 +128,7 @@ export default function ServiceRunDetail() {
   const [bids, setBids] = useState<Bid[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'slots' | 'bids' | 'schedule'>('slots');
   const [selectedSlot, setSelectedSlot] = useState<Slot | null>(null);
   
@@ -144,19 +145,23 @@ export default function ServiceRunDetail() {
 
   async function loadCoopRunDetail() {
     setLoading(true);
+    setError(null);
     try {
       const headers: HeadersInit = {};
       if (token) headers['Authorization'] = `Bearer ${token}`;
       
       const res = await fetch(`/api/coop-runs/${coopRunId}`, { headers });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       
-      if (data.coop_run) {
+      if (data?.coop_run) {
         setCoopRun(data.coop_run);
-        setCoopMobilization(data.mobilization);
+        setCoopMobilization(data.mobilization || null);
+      } else {
+        setError('Cooperative run not found.');
       }
     } catch (err) {
       console.error('Failed to load coop run:', err);
+      setError('Unable to load run details. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -164,21 +169,25 @@ export default function ServiceRunDetail() {
 
   async function loadRunDetail() {
     setLoading(true);
+    setError(null);
     try {
       const headers: HeadersInit = {};
       if (token) headers['Authorization'] = `Bearer ${token}`;
       
       const res = await fetch(`/api/service-runs/runs/${slug}`, { headers });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       
-      if (data.success) {
+      if (data?.run) {
         setRun(data.run);
-        setSlots(data.slots);
-        setBids(data.bids);
-        setStats(data.stats);
+        setSlots(Array.isArray(data.slots) ? data.slots : []);
+        setBids(Array.isArray(data.bids) ? data.bids : []);
+        setStats(data.stats || null);
+      } else {
+        setError('Service run not found.');
       }
     } catch (err) {
       console.error('Failed to load run:', err);
+      setError('Unable to load run details. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -195,8 +204,36 @@ export default function ServiceRunDetail() {
 
   if (loading) {
     return (
-      <div className="p-6 text-center text-muted-foreground">
-        Loading run details...
+      <div className="p-6">
+        <div className="animate-pulse space-y-4">
+          <div className="flex items-center gap-4">
+            <div className="h-6 w-16 bg-muted rounded" />
+            <div className="h-8 w-64 bg-muted rounded" />
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="h-24 bg-muted rounded-lg" />
+            ))}
+          </div>
+          <div className="h-64 bg-muted rounded-lg" />
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-6">
+        <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-6 text-center">
+          <p className="text-destructive mb-4">{error}</p>
+          <button
+            onClick={() => navigate('/app/service-runs')}
+            className="bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-lg"
+            data-testid="link-back-to-runs"
+          >
+            Back to Runs
+          </button>
+        </div>
       </div>
     );
   }

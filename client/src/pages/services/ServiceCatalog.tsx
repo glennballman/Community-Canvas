@@ -108,29 +108,33 @@ export default function ServiceCatalog() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
-  useEffect(() => {
-    async function loadData() {
-      setLoading(true);
-      try {
-        const [statsRes, categoriesRes] = await Promise.all([
-          fetch('/api/service-runs/stats'),
-          fetch('/api/service-runs/categories')
-        ]);
-        
-        const statsData = await statsRes.json();
-        const categoriesData = await categoriesRes.json();
-        
-        if (statsData.success) setStats(statsData.stats);
-        if (categoriesData.success) setCategories(categoriesData.categories);
-      } catch (err) {
-        console.error('Failed to load catalog:', err);
-      } finally {
-        setLoading(false);
-      }
+  async function loadData() {
+    setLoading(true);
+    setError(null);
+    try {
+      const [statsRes, categoriesRes] = await Promise.all([
+        fetch('/api/service-runs/stats'),
+        fetch('/api/service-runs/categories')
+      ]);
+      
+      const statsData = await statsRes.json().catch(() => ({}));
+      const categoriesData = await categoriesRes.json().catch(() => ({}));
+      
+      setStats(statsData?.stats || null);
+      setCategories(Array.isArray(categoriesData?.categories) ? categoriesData.categories : []);
+    } catch (err) {
+      console.error('Failed to load catalog:', err);
+      setError('Unable to load service catalog. Please try again.');
+    } finally {
+      setLoading(false);
     }
+  }
+
+  useEffect(() => {
     loadData();
   }, []);
 
@@ -141,13 +145,12 @@ export default function ServiceCatalog() {
       if (search) url += `search=${encodeURIComponent(search)}`;
       
       const res = await fetch(url);
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       
-      if (data.success) {
-        setServices(data.services);
-      }
+      setServices(Array.isArray(data?.services) ? data.services : []);
     } catch (err) {
       console.error('Failed to load services:', err);
+      setServices([]);
     }
   }, [selectedCategory, search]);
 
@@ -188,8 +191,33 @@ export default function ServiceCatalog() {
 
   if (loading) {
     return (
-      <div className="p-6 text-center text-muted-foreground">
-        Loading service catalog...
+      <div className="p-6">
+        <div className="animate-pulse space-y-4">
+          <div className="h-8 w-48 bg-muted rounded" />
+          <div className="grid grid-cols-5 gap-4">
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="h-20 bg-muted rounded-lg" />
+            ))}
+          </div>
+          <div className="h-64 bg-muted rounded-lg" />
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-6">
+        <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-6 text-center">
+          <p className="text-destructive mb-4">{error}</p>
+          <button
+            onClick={loadData}
+            className="bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-lg"
+            data-testid="button-retry"
+          >
+            Try Again
+          </button>
+        </div>
       </div>
     );
   }
@@ -199,7 +227,7 @@ export default function ServiceCatalog() {
       <div className="flex items-center justify-between gap-4 mb-6 flex-wrap">
         <div>
           <h1 className="text-2xl font-bold" data-testid="text-page-title">Service Catalog</h1>
-          <p className="text-muted-foreground">Browse {stats?.services} services across {stats?.categories} categories</p>
+          <p className="text-muted-foreground">Browse {stats?.services || 0} services across {stats?.categories || 0} categories</p>
         </div>
         <div className="flex items-center gap-4">
           <div className="bg-card rounded-lg px-4 py-2 text-center border">
@@ -320,7 +348,11 @@ export default function ServiceCatalog() {
               </div>
             </div>
 
-            {viewMode === 'grid' ? (
+            {services.length === 0 ? (
+              <div className="bg-card rounded-lg p-12 text-center border">
+                <p className="text-muted-foreground">No services found matching your criteria.</p>
+              </div>
+            ) : viewMode === 'grid' ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {services.map(service => (
                   <div
