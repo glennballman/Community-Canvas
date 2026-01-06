@@ -390,7 +390,7 @@ router.post('/:id/book', requireAuth, async (req: Request, res: Response) => {
     const result = await req.tenantTransaction(async (client) => {
       // Check item exists (service mode for inventory data)
       const itemCheck = await client.query(
-        `SELECT id, buffer_minutes FROM cc_rental_items WHERE id = $1`,
+        `SELECT id, turnover_buffer_minutes FROM cc_rental_items WHERE id = $1`,
         [itemId]
       );
       
@@ -398,7 +398,7 @@ router.post('/:id/book', requireAuth, async (req: Request, res: Response) => {
         return { error: 'Item not found', status: 404 };
       }
       
-      const bufferMinutes = itemCheck.rows[0].buffer_minutes || 15;
+      const bufferMinutes = itemCheck.rows[0].turnover_buffer_minutes ?? 0;
       
       // Check for maintenance blocks on unified_asset (if linked)
       const assetLookup = await client.query(

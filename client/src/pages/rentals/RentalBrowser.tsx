@@ -93,8 +93,13 @@ const BOOKING_MODE_LABELS: Record<BookingMode, { start: string; end: string }> =
 
 const DURATION_PRESETS: Record<string, { label: string; hours: number }> = {
   half_day_4h: { label: 'Half day (4 hrs)', hours: 4 },
+  half_day_5h: { label: 'Half day (5 hrs)', hours: 5 },
   full_day_8h: { label: 'Full day (8 hrs)', hours: 8 },
+  full_day_10h: { label: 'Full day (10 hrs)', hours: 10 },
   overnight_24h: { label: 'Overnight (24 hrs)', hours: 24 },
+  flex: { label: 'Flexible', hours: 4 },
+  nights: { label: 'By night', hours: 24 },
+  custom: { label: 'Custom', hours: 0 },
 };
 
 interface CheckoutEligibility {
@@ -182,20 +187,67 @@ export default function RentalBrowser() {
     loadRentals();
   }, [loadRentals]);
 
+  function snapTo15Min(date: Date): Date {
+    const mins = date.getMinutes();
+    const snapped = Math.ceil(mins / 15) * 15;
+    date.setMinutes(snapped, 0, 0);
+    return date;
+  }
+
   async function selectItem(item: RentalItem) {
     setSelectedItem(item);
     setPriceQuote(null);
     setEligibility(null);
     
-    const now = new Date();
-    now.setMinutes(0, 0, 0);
-    now.setHours(now.getHours() + 1);
-    setBookingStart(now.toISOString().slice(0, 16));
+    const today = new Date();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
     
-    const end = new Date(now);
-    end.setHours(end.getHours() + 2);
-    setBookingEnd(end.toISOString().slice(0, 16));
-    setBookingDuration(2);
+    let startDate: Date;
+    let endDate: Date;
+    let duration: number;
+    
+    if (item.bookingMode === 'check_in_out') {
+      const [checkInH, checkInM] = (item.defaultStartTimeLocal || '16:00').split(':').map(Number);
+      const [checkOutH, checkOutM] = (item.defaultEndTimeLocal || '11:00').split(':').map(Number);
+      
+      startDate = new Date(tomorrow);
+      startDate.setHours(checkInH, checkInM, 0, 0);
+      
+      endDate = new Date(startDate);
+      endDate.setDate(endDate.getDate() + 1);
+      endDate.setHours(checkOutH, checkOutM, 0, 0);
+      
+      duration = 24;
+    } else {
+      const [defaultStartH, defaultStartM] = (item.defaultStartTimeLocal || '09:00').split(':').map(Number);
+      const [defaultEndH, defaultEndM] = (item.defaultEndTimeLocal || '17:00').split(':').map(Number);
+      
+      const preset = item.defaultDurationPreset || 'full_day_8h';
+      const presetConfig = DURATION_PRESETS[preset];
+      duration = presetConfig?.hours && presetConfig.hours > 0 
+        ? presetConfig.hours 
+        : 8;
+      
+      startDate = snapTo15Min(new Date());
+      const currentMinutes = startDate.getHours() * 60 + startDate.getMinutes();
+      const defaultStartMinutes = defaultStartH * 60 + defaultStartM;
+      const defaultEndMinutes = defaultEndH * 60 + defaultEndM;
+      
+      if (currentMinutes < defaultStartMinutes) {
+        startDate.setHours(defaultStartH, defaultStartM, 0, 0);
+      } else if (currentMinutes >= defaultEndMinutes) {
+        startDate = new Date(tomorrow);
+        startDate.setHours(defaultStartH, defaultStartM, 0, 0);
+      }
+      
+      endDate = new Date(startDate);
+      endDate.setTime(endDate.getTime() + duration * 60 * 60 * 1000);
+    }
+    
+    setBookingStart(startDate.toISOString().slice(0, 16));
+    setBookingEnd(endDate.toISOString().slice(0, 16));
+    setBookingDuration(duration);
     
     if (token) {
       try {
@@ -244,11 +296,22 @@ export default function RentalBrowser() {
 
   function setDurationHours(hours: number) {
     setBookingDuration(hours);
-    if (bookingStart) {
+    if (bookingStart && selectedItem) {
       const start = new Date(bookingStart);
-      const end = new Date(start);
-      end.setHours(end.getHours() + hours);
-      setBookingEnd(end.toISOString().slice(0, 16));
+      
+      if (selectedItem.bookingMode === 'check_in_out') {
+        const nights = Math.round(hours / 24) || 1;
+        const [checkOutH, checkOutM] = (selectedItem.defaultEndTimeLocal || '11:00').split(':').map(Number);
+        
+        const end = new Date(start);
+        end.setDate(end.getDate() + nights);
+        end.setHours(checkOutH, checkOutM, 0, 0);
+        setBookingEnd(end.toISOString().slice(0, 16));
+      } else {
+        const end = new Date(start);
+        end.setTime(end.getTime() + hours * 60 * 60 * 1000);
+        setBookingEnd(end.toISOString().slice(0, 16));
+      }
     }
   }
 
