@@ -191,18 +191,24 @@ export default function OperationsBoard() {
     return params.toString();
   }, [searchQuery, typeFilter, includeInactive]);
 
+  const resourcesUrl = resourceQueryParams 
+    ? `/api/schedule/resources?${resourceQueryParams}` 
+    : '/api/schedule/resources';
+  
   const { data: resourcesData, isLoading: loadingResources } = useQuery<{ 
     success: boolean; 
     resources: Resource[]; 
     grouped: Record<string, Resource[]>;
     asset_types: string[];
   }>({
-    queryKey: ['/api/schedule/resources', resourceQueryParams ? `?${resourceQueryParams}` : ''],
+    queryKey: [resourcesUrl],
     enabled: !!currentTenant?.tenant_id,
   });
 
+  const scheduleUrl = `/api/schedule?from=${from.toISOString()}&to=${to.toISOString()}`;
+  
   const { data: scheduleData, isLoading: loadingSchedule } = useQuery<{ success: boolean; events: ScheduleEvent[] }>({
-    queryKey: ['/api/schedule', `?from=${from.toISOString()}&to=${to.toISOString()}`],
+    queryKey: [scheduleUrl],
     enabled: !!currentTenant?.tenant_id,
   });
 
@@ -211,8 +217,12 @@ export default function OperationsBoard() {
       return apiRequest('POST', '/api/schedule/events', data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/schedule'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/schedule/resources'] });
+      queryClient.invalidateQueries({ 
+        predicate: (query) => {
+          const key = query.queryKey[0];
+          return typeof key === 'string' && key.startsWith('/api/schedule');
+        }
+      });
       setShowEventDialog(false);
       setConflictError(null);
       setLastUsedResource(eventForm.resource_id);
