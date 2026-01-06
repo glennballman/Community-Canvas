@@ -1,0 +1,63 @@
+# TASK B (ADJUSTED): NAV + TERMINOLOGY CLEANUP (NO RE-ARCHITECTURE)
+
+Do NOT add new features. This is terminology + navigation alignment only.
+
+## B1) ADD MISSING NAV ITEMS (routes already exist)
+Add sidebar links for:
+- Work Requests -> /app/intake/work-requests
+- Projects -> /app/projects
+
+Add them to BOTH:
+- COMMUNITY_NAV
+- BUSINESS_NAV
+in client/src/layouts/TenantAppLayout.tsx
+
+Place them near CRM links.
+
+## B2) TERMINOLOGY (UI LABELS ONLY — DO NOT RENAME ROUTES IN THIS PASS)
+
+Decisions:
+- Keep "Places" as the UI word (do NOT rename to Properties)
+- Rename "Catalog" to "Inventory" (UI word)
+- Use "Contacts" instead of Customers/People where possible
+
+Change nav labels and page headers to:
+- "Catalog" -> "Inventory" (label only)
+- "Customers" -> "Contacts" (label only)
+- "People" -> "Contacts" (label only)
+- Keep "Places" as "Places"
+- "Organizations" stays "Organizations"
+
+IMPORTANT:
+- Keep routes as-is for now:
+  /app/catalog stays (but displays "Inventory")
+  /app/customers stays (but displays "Contacts")
+  /app/crm/people stays (but displays "Contacts")
+  /app/crm/places stays (still displays "Places")
+  /app/crm/orgs stays
+
+## B3) REMOVE DUPLICATE CONTACTS SURFACES (LINK, DON'T DELETE)
+Business nav has /app/customers and CRM has /app/crm/people.
+We want ONE obvious place users click: Contacts.
+
+Implement:
+- Keep /app/crm/people as the canonical Contacts list
+- In /app/customers page, replace the body with either:
+  (a) redirect to /app/crm/people, OR
+  (b) a simple "Contacts moved" card with button to /app/crm/people
+Do NOT delete /app/customers route in this pass.
+
+## B4) VERIFICATION REQUIRED
+- Sidebar shows Work Requests + Projects for both tenant types
+- No nav item says "Catalog" anymore (it says Inventory)
+- /app/customers no longer acts like a separate CRM list
+- All routes load with no console errors
+
+## RULES
+- Do not rename DB tables.
+- Do not rename routes in App.tsx.
+- Do not restructure CRM.
+Return a completion report with files changed and grep counts for:
+- "Catalog" occurrences (should be 0 in nav labels)
+- "Customers" occurrences in nav labels (should be 0)
+- "People" occurrences in nav labels (should be 0)
