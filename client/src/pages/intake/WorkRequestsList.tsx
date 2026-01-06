@@ -57,7 +57,7 @@ const STATUS_CONFIG = {
   spam: { label: 'Spam', color: 'bg-red-500/20 text-red-400' },
 } as const;
 
-const URGENCY_CONFIG = {
+const PRIORITY_CONFIG = {
   routine: { label: 'Routine', color: 'bg-muted text-muted-foreground' },
   soon: { label: 'Soon', color: 'bg-blue-500/20 text-blue-400' },
   urgent: { label: 'Urgent', color: 'bg-orange-500/20 text-orange-400' },
@@ -105,9 +105,9 @@ export default function WorkRequestsList() {
   const [newRequest, setNewRequest] = useState({
     contact_channel_value: '',
     contact_channel_type: 'phone' as const,
-    contact_name: '',
-    description: '',
-    urgency: '' as string,
+    contact_first_name: '',
+    summary: '',
+    priority: '' as string,
   });
 
   const { data, isLoading } = useQuery<{ workRequests: WorkRequest[], counts: Record<string, number> }>({
@@ -125,13 +125,13 @@ export default function WorkRequestsList() {
   const stats = data?.counts;
 
   const createMutation = useMutation({
-    mutationFn: async (data: typeof newRequest) => {
+    mutationFn: async (formData: typeof newRequest) => {
       const res = await apiRequest('POST', '/api/work-requests', {
-        contact_channel_value: data.contact_channel_value,
-        contact_channel_type: data.contact_channel_type,
-        contact_name: data.contact_name || undefined,
-        description: data.description || undefined,
-        urgency: data.urgency || undefined,
+        contact_channel_value: formData.contact_channel_value,
+        contact_channel_type: formData.contact_channel_type,
+        contact_first_name: formData.contact_first_name || undefined,
+        summary: formData.summary || undefined,
+        priority: formData.priority || undefined,
       });
       return res.json();
     },
@@ -141,9 +141,9 @@ export default function WorkRequestsList() {
       setNewRequest({
         contact_channel_value: '',
         contact_channel_type: 'phone',
-        contact_name: '',
-        description: '',
-        urgency: '',
+        contact_first_name: '',
+        summary: '',
+        priority: '',
       });
       toast({ title: 'Request created', description: 'New work request added to inbox' });
     },
@@ -214,35 +214,35 @@ export default function WorkRequestsList() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="contact_name">Name (optional)</Label>
+                <Label htmlFor="contact_first_name">Name (optional)</Label>
                 <Input
-                  id="contact_name"
+                  id="contact_first_name"
                   placeholder="Customer name"
-                  value={newRequest.contact_name}
-                  onChange={(e) => setNewRequest(prev => ({ ...prev, contact_name: e.target.value }))}
+                  value={newRequest.contact_first_name}
+                  onChange={(e) => setNewRequest(prev => ({ ...prev, contact_first_name: e.target.value }))}
                   data-testid="input-contact-name"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="description">Notes (optional)</Label>
+                <Label htmlFor="summary">Notes (optional)</Label>
                 <Textarea
-                  id="description"
+                  id="summary"
                   placeholder="What do they need?"
-                  value={newRequest.description}
-                  onChange={(e) => setNewRequest(prev => ({ ...prev, description: e.target.value }))}
+                  value={newRequest.summary}
+                  onChange={(e) => setNewRequest(prev => ({ ...prev, summary: e.target.value }))}
                   rows={2}
-                  data-testid="textarea-description"
+                  data-testid="textarea-summary"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="urgency">Urgency (optional)</Label>
+                <Label htmlFor="priority">Priority (optional)</Label>
                 <Select 
-                  value={newRequest.urgency} 
-                  onValueChange={(v) => setNewRequest(prev => ({ ...prev, urgency: v }))}
+                  value={newRequest.priority} 
+                  onValueChange={(v) => setNewRequest(prev => ({ ...prev, priority: v }))}
                 >
-                  <SelectTrigger data-testid="select-urgency">
+                  <SelectTrigger data-testid="select-priority">
                     <SelectValue placeholder="Not specified" />
                   </SelectTrigger>
                   <SelectContent>
@@ -319,7 +319,7 @@ export default function WorkRequestsList() {
                 const channelType = request.contact_channel_type as keyof typeof CHANNEL_ICONS;
                 const ChannelIcon = CHANNEL_ICONS[channelType] || MessageCircle;
                 const statusConfig = STATUS_CONFIG[request.status];
-                const priorityConfig = request.priority ? URGENCY_CONFIG[request.priority] : null;
+                const priorityConfig = request.priority ? PRIORITY_CONFIG[request.priority] : null;
                 const contactName = request.contact_first_name 
                   ? `${request.contact_first_name} ${request.contact_last_name || ''}`.trim() 
                   : null;

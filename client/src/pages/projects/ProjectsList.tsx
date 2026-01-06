@@ -19,21 +19,26 @@ import {
 
 interface Project {
   id: string;
-  project_ref: string;
   title: string;
   description: string | null;
   status: string;
   contact_id: string | null;
-  contact_name: string | null;
+  contact_first_name: string | null;
+  contact_last_name: string | null;
+  organization_id: string | null;
+  organization_name: string | null;
   property_id: string | null;
+  property_name: string | null;
   property_address: string | null;
   quoted_amount: number | null;
-  approved_amount: number | null;
-  invoiced_amount: number | null;
-  paid_amount: number | null;
+  final_amount: number | null;
+  deposit_required: number | null;
+  deposit_received: number | null;
   scheduled_start: string | null;
   scheduled_end: string | null;
   completed_at: string | null;
+  photos_count: number;
+  notes_count: number;
   created_at: string;
 }
 
@@ -66,17 +71,10 @@ export default function ProjectsList() {
   const [activeTab, setActiveTab] = useState<string>('active');
   const [search, setSearch] = useState('');
 
-  const statusFilter = activeTab === 'active' 
-    ? 'lead,quote,approved,scheduled,in_progress' 
-    : activeTab === 'completed'
-    ? 'completed,invoiced,paid'
-    : '';
-
   const { data, isLoading } = useQuery<{ projects: Project[] }>({
     queryKey: ['/api/projects', activeTab, search],
     queryFn: async () => {
       const params = new URLSearchParams();
-      if (statusFilter) params.append('status', statusFilter);
       if (search) params.append('search', search);
       const res = await fetch(`/api/projects?${params}`);
       if (!res.ok) throw new Error('Failed to fetch');
@@ -84,7 +82,17 @@ export default function ProjectsList() {
     }
   });
 
-  const projects = data?.projects || [];
+  const activeStatuses = ['lead', 'quote', 'approved', 'scheduled', 'in_progress'];
+  const completedStatuses = ['completed', 'invoiced', 'paid'];
+
+  const allProjects = data?.projects || [];
+  const projects = activeTab === 'all' 
+    ? allProjects
+    : activeTab === 'active' 
+    ? allProjects.filter(p => activeStatuses.includes(p.status))
+    : activeTab === 'completed'
+    ? allProjects.filter(p => completedStatuses.includes(p.status))
+    : allProjects;
 
   return (
     <div className="flex-1 p-4 space-y-4" data-testid="page-projects-list">
@@ -159,7 +167,10 @@ export default function ProjectsList() {
             <div className="space-y-2">
               {projects.map((project) => {
                 const statusConfig = STATUS_CONFIG[project.status] || { label: project.status, color: 'bg-muted text-muted-foreground' };
-                const displayAmount = project.approved_amount || project.quoted_amount;
+                const displayAmount = project.final_amount || project.quoted_amount;
+                const contactName = project.contact_first_name 
+                  ? `${project.contact_first_name} ${project.contact_last_name || ''}`.trim()
+                  : project.organization_name || null;
                 
                 return (
                   <Link key={project.id} to={`/app/projects/${project.id}`}>
@@ -169,7 +180,7 @@ export default function ProjectsList() {
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-2 flex-wrap">
                               <span className="font-mono text-xs text-muted-foreground" data-testid={`text-ref-${project.id}`}>
-                                {project.project_ref}
+                                PRJ-{project.id.slice(0, 8).toUpperCase()}
                               </span>
                               <Badge className={statusConfig.color} data-testid={`badge-status-${project.id}`}>
                                 {statusConfig.label}
@@ -179,16 +190,16 @@ export default function ProjectsList() {
                               {project.title}
                             </p>
                             <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground flex-wrap">
-                              {project.contact_name && (
+                              {contactName && (
                                 <span className="flex items-center gap-1" data-testid={`text-contact-${project.id}`}>
                                   <User className="w-3 h-3" />
-                                  {project.contact_name}
+                                  {contactName}
                                 </span>
                               )}
-                              {project.property_address && (
+                              {(project.property_address || project.property_name) && (
                                 <span className="flex items-center gap-1 truncate" data-testid={`text-address-${project.id}`}>
                                   <MapPin className="w-3 h-3" />
-                                  {project.property_address}
+                                  {project.property_address || project.property_name}
                                 </span>
                               )}
                             </div>
@@ -199,15 +210,6 @@ export default function ProjectsList() {
                                 <p className="text-sm font-medium" data-testid={`text-amount-${project.id}`}>
                                   {formatCurrency(displayAmount)}
                                 </p>
-                                {project.paid_amount ? (
-                                  <p className="text-xs text-green-400" data-testid={`text-paid-${project.id}`}>
-                                    Paid: {formatCurrency(project.paid_amount)}
-                                  </p>
-                                ) : project.invoiced_amount ? (
-                                  <p className="text-xs text-orange-400" data-testid={`text-invoiced-${project.id}`}>
-                                    Invoiced: {formatCurrency(project.invoiced_amount)}
-                                  </p>
-                                ) : null}
                               </div>
                             )}
                             {project.scheduled_start && (
