@@ -248,33 +248,32 @@ router.get('/:id/portal-config', async (req, res) => {
   try {
     const { id } = req.params;
     
-    // For now, return default config since portal_config table may not exist
-    // In production, this would query a portal_configs table
-    const defaultConfig = {
-      theme: {
-        primary_color: '#3b82f6',
-        accent_color: '#f59e0b',
-        background_color: '#0c1829',
-        logo_url: '',
-        tagline: '',
-      },
-      sections: [
-        { key: 'hero', label: 'Hero', visible: true },
-        { key: 'businesses', label: 'Businesses', visible: true },
-        { key: 'services', label: 'Services', visible: true },
-        { key: 'events', label: 'Events', visible: true },
-        { key: 'good_news', label: 'Good News', visible: true },
-        { key: 'about', label: 'About', visible: true },
-      ],
-      area_groups: [],
-      seo: {
-        meta_title: '',
-        meta_description: '',
-        social_image_url: '',
-      },
-    };
+    let result = await serviceQuery(`
+      SELECT * FROM cc_portal_configs WHERE tenant_id = $1
+    `, [id]);
     
-    res.json({ config: defaultConfig });
+    if (result.rows.length === 0) {
+      const insertResult = await serviceQuery(`
+        INSERT INTO cc_portal_configs (tenant_id)
+        VALUES ($1)
+        RETURNING *
+      `, [id]);
+      result = insertResult;
+    }
+    
+    const row = result.rows[0];
+    res.json({ 
+      config: {
+        id: row.id,
+        tenant_id: row.tenant_id,
+        theme: row.theme,
+        sections: row.sections,
+        area_groups: row.area_groups,
+        seo: row.seo,
+        created_at: row.created_at,
+        updated_at: row.updated_at,
+      }
+    });
   } catch (error) {
     console.error('Error fetching portal config:', error);
     res.status(500).json({ error: 'Failed to fetch portal config' });
@@ -285,13 +284,35 @@ router.get('/:id/portal-config', async (req, res) => {
 router.put('/:id/portal-config', async (req, res) => {
   try {
     const { id } = req.params;
-    const config = req.body;
+    const { theme, sections, area_groups, seo } = req.body;
     
-    // For now, just return success since portal_config table may not exist
-    // In production, this would upsert into a portal_configs table
-    console.log(`Saving portal config for community ${id}:`, config);
+    const result = await serviceQuery(`
+      INSERT INTO cc_portal_configs (tenant_id, theme, sections, area_groups, seo)
+      VALUES ($1, $2, $3, $4, $5)
+      ON CONFLICT (tenant_id)
+      DO UPDATE SET
+        theme = COALESCE($2, cc_portal_configs.theme),
+        sections = COALESCE($3, cc_portal_configs.sections),
+        area_groups = COALESCE($4, cc_portal_configs.area_groups),
+        seo = COALESCE($5, cc_portal_configs.seo),
+        updated_at = NOW()
+      RETURNING *
+    `, [id, JSON.stringify(theme), JSON.stringify(sections), JSON.stringify(area_groups), JSON.stringify(seo)]);
     
-    res.json({ success: true, config });
+    const row = result.rows[0];
+    res.json({ 
+      success: true, 
+      config: {
+        id: row.id,
+        tenant_id: row.tenant_id,
+        theme: row.theme,
+        sections: row.sections,
+        area_groups: row.area_groups,
+        seo: row.seo,
+        created_at: row.created_at,
+        updated_at: row.updated_at,
+      }
+    });
   } catch (error) {
     console.error('Error saving portal config:', error);
     res.status(500).json({ error: 'Failed to save portal config' });
