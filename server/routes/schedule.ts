@@ -2,8 +2,14 @@ import { Router, Request, Response } from 'express';
 import { z } from 'zod';
 import { pool } from '../db';
 import { requireAuth } from '../middleware/guards';
+import { TenantRequest } from '../middleware/tenantContext';
 
 const router = Router();
+
+function getTenantId(req: Request): string | null {
+  const tenantReq = req as TenantRequest;
+  return tenantReq.ctx?.tenant_id || null;
+}
 
 const scheduleQuerySchema = z.object({
   resourceIds: z.string().optional(),
@@ -146,7 +152,7 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
     }
 
     const { resourceIds, from, to } = parsed.data;
-    const tenantId = (req as any).tenantId;
+    const tenantId = getTenantId(req);
     
     if (!tenantId) {
       return res.status(400).json({ success: false, error: 'Tenant context required' });
@@ -255,8 +261,9 @@ router.post('/events', requireAuth, async (req: Request, res: Response) => {
       });
     }
 
-    const tenantId = (req as any).tenantId;
-    const individualId = (req as any).user?.individual_id;
+    const tenantId = getTenantId(req);
+    const tenantReq = req as TenantRequest;
+    const individualId = tenantReq.ctx?.individual_id;
     
     if (!tenantId) {
       return res.status(400).json({ success: false, error: 'Tenant context required' });
@@ -335,7 +342,7 @@ router.patch('/events/:id', requireAuth, async (req: Request, res: Response) => 
       });
     }
 
-    const tenantId = (req as any).tenantId;
+    const tenantId = getTenantId(req);
     
     if (!tenantId) {
       return res.status(400).json({ success: false, error: 'Tenant context required' });
@@ -439,7 +446,7 @@ router.patch('/events/:id', requireAuth, async (req: Request, res: Response) => 
 router.delete('/events/:id', requireAuth, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const tenantId = (req as any).tenantId;
+    const tenantId = getTenantId(req);
     
     if (!tenantId) {
       return res.status(400).json({ success: false, error: 'Tenant context required' });
@@ -469,7 +476,7 @@ router.delete('/events/:id', requireAuth, async (req: Request, res: Response) =>
 
 router.get('/resources', requireAuth, async (req: Request, res: Response) => {
   try {
-    const tenantId = (req as any).tenantId;
+    const tenantId = getTenantId(req);
     const { type, includeInactive, search, includeCapabilities } = req.query;
     
     if (!tenantId) {

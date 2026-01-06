@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { Link } from 'wouter';
 import { useTenant } from '@/contexts/TenantContext';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { queryClient, apiRequest } from '@/lib/queryClient';
@@ -485,9 +486,17 @@ export default function OperationsBoard() {
             <CardContent className="pt-6 text-center">
               <AlertCircle className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
               <h2 className="text-xl font-semibold mb-2" data-testid="text-empty-state">No resources found</h2>
-              <p className="text-muted-foreground">
-                Add inventory items to see them here.
+              <p className="text-muted-foreground mb-4">
+                {currentTenant?.tenant_name 
+                  ? `No inventory found for ${currentTenant.tenant_name} yet.`
+                  : 'No inventory found for this business yet.'}
               </p>
+              <Link href="/app/inventory">
+                <Button variant="outline" data-testid="link-add-inventory">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Inventory
+                </Button>
+              </Link>
             </CardContent>
           </Card>
         </div>
