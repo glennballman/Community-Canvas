@@ -310,9 +310,9 @@ router.post('/conversations/:id/feedback', async (req: Request, res: Response) =
     }
 
     const convResult = await pool.query(
-      `SELECT c.*, o.id as opp_id
+      `SELECT c.*, wr.id as wr_id
        FROM conversations c
-       LEFT JOIN opportunities o ON c.opportunity_id = o.id
+       LEFT JOIN work_requests wr ON c.work_request_id = wr.id
        WHERE c.id = $1 AND c.owner_party_id = $2`,
       [conversation_id, actor.actor_party_id]
     );
@@ -336,7 +336,7 @@ router.post('/conversations/:id/feedback', async (req: Request, res: Response) =
 
       const feedbackResult = await client.query(
         `INSERT INTO contractor_feedback (
-          conversation_id, opportunity_id,
+          conversation_id, work_request_id,
           from_party_id, from_individual_id, from_display_name,
           to_party_id,
           sentiment, feedback_text,
@@ -346,7 +346,7 @@ router.post('/conversations/:id/feedback', async (req: Request, res: Response) =
         RETURNING *`,
         [
           conversation_id,
-          conv.opp_id,
+          conv.wr_id,
           actor.actor_party_id,
           actor.individual_id,
           displayName,
@@ -364,7 +364,7 @@ router.post('/conversations/:id/feedback', async (req: Request, res: Response) =
       if (allow_public_snippet && sentiment === 'positive' && public_snippet) {
         await client.query(
           `INSERT INTO public_appreciations (
-            source_feedback_id, conversation_id, opportunity_id,
+            source_feedback_id, conversation_id, work_request_id,
             from_party_id, from_individual_id, from_display_name,
             to_party_id,
             snippet,
@@ -373,7 +373,7 @@ router.post('/conversations/:id/feedback', async (req: Request, res: Response) =
           [
             feedback.id,
             conversation_id,
-            conv.opp_id,
+            conv.wr_id,
             actor.actor_party_id,
             actor.individual_id,
             displayName.split(' ')[0],
@@ -426,9 +426,9 @@ router.get('/contractors/me/feedback', async (req: Request, res: Response) => {
     const { include_deleted = 'false', include_handled = 'true', sentiment } = req.query;
 
     let query = `
-      SELECT cf.*, o.title as opportunity_title
+      SELECT cf.*, wr.title as work_request_title
       FROM contractor_feedback cf
-      LEFT JOIN opportunities o ON cf.opportunity_id = o.id
+      LEFT JOIN work_requests wr ON cf.work_request_id = wr.id
       WHERE cf.to_party_id = $1
     `;
     const params: any[] = [actor.actor_party_id];
@@ -548,9 +548,9 @@ router.get('/contractors/me/appreciations/pending', async (req: Request, res: Re
     }
 
     const result = await pool.query(
-      `SELECT pa.*, o.title as opportunity_title
+      `SELECT pa.*, wr.title as work_request_title
        FROM public_appreciations pa
-       LEFT JOIN opportunities o ON pa.opportunity_id = o.id
+       LEFT JOIN work_requests wr ON pa.work_request_id = wr.id
        WHERE pa.to_party_id = $1 
          AND pa.is_public = false 
          AND pa.hidden_by_contractor = false
@@ -661,62 +661,30 @@ router.post('/contractors/me/appreciations/:id/hide', async (req: Request, res: 
 });
 
 // ============================================================
-// GET PUBLIC APPRECIATIONS FOR A PARTY
-// ============================================================
-router.get('/parties/:id/appreciations', async (req: Request, res: Response) => {
-  try {
-    const { id: party_id } = req.params;
-    const { limit = '10' } = req.query;
-
-    const result = await pool.query(
-      `SELECT id, from_display_name, snippet, highlights, made_public_at
-       FROM public_appreciations
-       WHERE to_party_id = $1 
-         AND is_public = true 
-         AND hidden_by_contractor = false
-       ORDER BY made_public_at DESC
-       LIMIT $2`,
-      [party_id, parseInt(limit as string)]
-    );
-
-    res.json({
-      appreciations: result.rows,
-      count: result.rows.length,
-      note: 'Positive snippets only. Contractor-approved.'
-    });
-  } catch (error) {
-    console.error('Error fetching appreciations:', error);
-    res.status(500).json({ error: 'Failed to fetch appreciations' });
-  }
-});
-
-// ============================================================
-// ADD COMMUNITY VERIFICATION
+// ADD COMMUNITY VERIFICATION (Contractor)
 // ============================================================
 router.post('/contractors/me/community-verification', async (req: Request, res: Response) => {
   try {
+    const { community_name, community_type, verification_method, verification_notes } = req.body;
+
     const actor = await resolveActorParty(req, 'contractor');
     if (!actor) {
       return res.status(401).json({ error: 'Authentication required' });
     }
 
-    const { 
-      community_name, 
-      community_type = 'informal',
-      verification_method,
-      verification_notes
-    } = req.body;
-
     if (!community_name) {
       return res.status(400).json({ error: 'community_name required' });
     }
 
-    const result = await pool.query(
+    await pool.query(
       `INSERT INTO community_verifications (
         party_id, community_name, community_type,
         verification_method, verification_notes
       ) VALUES ($1, $2, $3, $4, $5)
-      RETURNING *`,
+      ON CONFLICT (party_id, community_name) DO UPDATE SET
+        verification_method = EXCLUDED.verification_method,
+        verification_notes = EXCLUDED.verification_notes,
+        verified_at = now()`,
       [
         actor.actor_party_id,
         community_name,
@@ -728,18 +696,19 @@ router.post('/contractors/me/community-verification', async (req: Request, res: 
 
     await pool.query(
       `UPDATE trust_signals SET
-        verified_communities = array_append(
-          COALESCE(verified_communities, ARRAY[]::text[]), 
-          $1
+        verified_communities = (
+          SELECT array_agg(DISTINCT community_name)
+          FROM community_verifications
+          WHERE party_id = $1
         ),
         last_updated = now()
-       WHERE party_id = $2 AND model = 'v1_agg'`,
-      [community_name, actor.actor_party_id]
+       WHERE party_id = $1 AND model = 'v1_agg'`,
+      [actor.actor_party_id]
     );
 
-    res.status(201).json({
-      verification: result.rows[0],
-      message: 'Community verification added.'
+    res.json({
+      message: 'Community verification added.',
+      community: community_name
     });
   } catch (error) {
     console.error('Error adding community verification:', error);
@@ -748,73 +717,7 @@ router.post('/contractors/me/community-verification', async (req: Request, res: 
 });
 
 // ============================================================
-// ADD CREDENTIAL
-// ============================================================
-router.post('/contractors/me/credentials', async (req: Request, res: Response) => {
-  try {
-    const actor = await resolveActorParty(req, 'contractor');
-    if (!actor) {
-      return res.status(401).json({ error: 'Authentication required' });
-    }
-
-    const { 
-      credential_type,
-      credential_name,
-      credential_number,
-      issuing_authority,
-      issued_date,
-      expiry_date,
-      document_url,
-      visibility = 'public'
-    } = req.body;
-
-    if (!credential_type || !credential_name) {
-      return res.status(400).json({ error: 'credential_type and credential_name required' });
-    }
-
-    const result = await pool.query(
-      `INSERT INTO credential_verifications (
-        party_id, credential_type, credential_name,
-        credential_number, issuing_authority,
-        issued_date, expiry_date, document_url, visibility
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::signal_visibility)
-      RETURNING *`,
-      [
-        actor.actor_party_id,
-        credential_type,
-        credential_name,
-        credential_number,
-        issuing_authority,
-        issued_date,
-        expiry_date,
-        document_url,
-        visibility
-      ]
-    );
-
-    if (credential_type.includes('insurance')) {
-      await pool.query(
-        `UPDATE trust_signals SET 
-          has_insurance = true, 
-          insurance_verified_at = now(),
-          last_updated = now()
-         WHERE party_id = $1 AND model = 'v1_agg'`,
-        [actor.actor_party_id]
-      );
-    }
-
-    res.status(201).json({
-      credential: result.rows[0],
-      message: 'Credential added.'
-    });
-  } catch (error) {
-    console.error('Error adding credential:', error);
-    res.status(500).json({ error: 'Failed to add credential' });
-  }
-});
-
-// ============================================================
-// RECOMPUTE TRUST SIGNALS
+// RECOMPUTE TRUST SIGNALS (Contractor)
 // ============================================================
 router.post('/contractors/me/trust-signals/recompute', async (req: Request, res: Response) => {
   try {
@@ -825,34 +728,17 @@ router.post('/contractors/me/trust-signals/recompute', async (req: Request, res:
 
     const signals = await computeTrustSignals(actor.actor_party_id);
     await saveTrustSignals(signals);
-
-    await pool.query(
-      `INSERT INTO trust_signal_history (
-        party_id, model,
-        repeat_customer_count, public_appreciation_count, positive_feedback_count,
-        response_time_avg_hours, completion_rate, period_end
-      ) VALUES ($1, 'v1_agg', $2, $3, $4, $5, $6, CURRENT_DATE)`,
-      [
-        actor.actor_party_id,
-        signals.repeat_customer_count,
-        signals.public_appreciation_count,
-        signals.positive_feedback_count,
-        signals.response_time_avg_hours,
-        signals.completion_rate
-      ]
-    );
-
     const display = formatTrustDisplay(signals);
 
     res.json({
       trust_signals: signals,
       display,
-      message: 'Trust signals recomputed.',
+      message: 'Trust signals recomputed successfully.',
       computed_at: new Date().toISOString()
     });
   } catch (error) {
     console.error('Error recomputing trust signals:', error);
-    res.status(500).json({ error: 'Failed to recompute' });
+    res.status(500).json({ error: 'Failed to recompute trust signals' });
   }
 });
 

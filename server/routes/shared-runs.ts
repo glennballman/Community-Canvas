@@ -91,7 +91,7 @@ router.post('/', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'trade_category required' });
     }
 
-    const { run, opportunity } = await withTenantTransaction(req, async (client) => {
+    const { run, workRequest } = await withTenantTransaction(req, async (client) => {
       const runResult = await client.query(
         `INSERT INTO shared_service_runs (
           tenant_id, trade_category, service_description,
@@ -126,8 +126,8 @@ router.post('/', async (req: Request, res: Response) => {
 
       const run = runResult.rows[0];
 
-      const oppResult = await client.query(
-        `INSERT INTO opportunities (
+      const wrResult = await client.query(
+        `INSERT INTO work_requests (
           tenant_id, owner_party_id, owner_individual_id,
           title, description, intake_mode, shared_run_id,
           property_address, postal_code,
@@ -146,17 +146,17 @@ router.post('/', async (req: Request, res: Response) => {
         ]
       );
 
-      const opportunity = oppResult.rows[0];
+      const workRequest = wrResult.rows[0];
 
       await client.query(
         `INSERT INTO shared_run_members (
-          run_id, opportunity_id, owner_party_id, owner_individual_id,
+          run_id, work_request_id, owner_party_id, owner_individual_id,
           property_address, property_postal_code, property_community,
           unit_count, units, access_notes, status
         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'joined')`,
         [
           run.id,
-          opportunity.id,
+          workRequest.id,
           actor.actor_party_id,
           actor.individual_id,
           property_address,
@@ -198,14 +198,14 @@ router.post('/', async (req: Request, res: Response) => {
 
       await client.query(`SELECT recompute_shared_run_estimates($1)`, [run.id]);
 
-      return { run, opportunity };
+      return { run, workRequest };
     });
 
     const estimate = await computeMobilizationSplit(run.id);
 
     res.status(201).json({
       shared_run: run,
-      opportunity: opportunity,
+      work_request: workRequest,
       mobilization_estimate: estimate,
       message: 'Shared run created! Neighbors can now join to share mobilization costs.'
     });
@@ -321,9 +321,9 @@ router.post('/:id/join', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'You have already joined this run' });
     }
 
-    const { member, opportunity } = await withTenantTransaction(req, async (client) => {
-      const oppResult = await client.query(
-        `INSERT INTO opportunities (
+    const { member, workRequest } = await withTenantTransaction(req, async (client) => {
+      const wrResult = await client.query(
+        `INSERT INTO work_requests (
           tenant_id, owner_party_id, owner_individual_id,
           title, description, intake_mode, shared_run_id,
           property_address, postal_code,
@@ -342,18 +342,18 @@ router.post('/:id/join', async (req: Request, res: Response) => {
         ]
       );
 
-      const opportunity = oppResult.rows[0];
+      const workRequest = wrResult.rows[0];
 
       const memberResult = await client.query(
         `INSERT INTO shared_run_members (
-          run_id, opportunity_id, owner_party_id, owner_individual_id,
+          run_id, work_request_id, owner_party_id, owner_individual_id,
           property_address, property_postal_code, property_community,
           unit_count, units, access_notes, special_requirements, status
         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'joined')
         RETURNING *`,
         [
           id,
-          opportunity.id,
+          workRequest.id,
           actor.actor_party_id,
           actor.individual_id,
           property_address,
@@ -366,7 +366,7 @@ router.post('/:id/join', async (req: Request, res: Response) => {
         ]
       );
 
-      return { member: memberResult.rows[0], opportunity };
+      return { member: memberResult.rows[0], workRequest };
     });
 
     const estimate = await computeMobilizationSplit(id);
@@ -374,7 +374,7 @@ router.post('/:id/join', async (req: Request, res: Response) => {
 
     res.status(201).json({
       member,
-      opportunity,
+      work_request: workRequest,
       mobilization: {
         ...estimate,
         display
@@ -449,8 +449,8 @@ router.post('/:id/claim', async (req: Request, res: Response) => {
       }
 
       const membersResult = await client.query(
-        `SELECT m.*, o.id as opp_id FROM shared_run_members m
-         JOIN opportunities o ON m.opportunity_id = o.id
+        `SELECT m.*, wr.id as wr_id FROM shared_run_members m
+         JOIN work_requests wr ON m.work_request_id = wr.id
          WHERE m.run_id = $1 AND m.status IN ('interested', 'joined')`,
         [id]
       );
@@ -458,10 +458,10 @@ router.post('/:id/claim', async (req: Request, res: Response) => {
       for (const member of membersResult.rows) {
         await client.query(
           `INSERT INTO conversations (
-            opportunity_id, owner_party_id, contractor_party_id, state
+            work_request_id, owner_party_id, contractor_party_id, state
           ) VALUES ($1, $2, $3, 'interest')
-          ON CONFLICT (opportunity_id, contractor_party_id) DO NOTHING`,
-          [member.opp_id, member.owner_party_id, actor.actor_party_id]
+          ON CONFLICT (work_request_id, contractor_party_id) DO NOTHING`,
+          [member.wr_id, member.owner_party_id, actor.actor_party_id]
         );
       }
 

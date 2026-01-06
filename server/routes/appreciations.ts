@@ -7,9 +7,9 @@ const router = Router();
 // ============================================================
 // SEND APPRECIATION (Owner → Contractor, Positive Only)
 // ============================================================
-router.post('/opportunities/:id/appreciation', async (req: Request, res: Response) => {
+router.post('/work-requests/:id/appreciation', async (req: Request, res: Response) => {
   try {
-    const { id: opportunity_id } = req.params;
+    const { id: work_request_id } = req.params;
     const { 
       content, 
       highlights,
@@ -28,30 +28,30 @@ router.post('/opportunities/:id/appreciation', async (req: Request, res: Respons
 
     const client = await pool.connect();
     try {
-      const oppResult = await client.query(
-        `SELECT o.id, c.contractor_party_id
-         FROM opportunities o
-         LEFT JOIN conversations c ON c.opportunity_id = o.id
-         WHERE o.id = $1
+      const wrResult = await client.query(
+        `SELECT wr.id, c.contractor_party_id
+         FROM work_requests wr
+         LEFT JOIN conversations c ON c.work_request_id = wr.id
+         WHERE wr.id = $1
          ORDER BY c.created_at DESC LIMIT 1`,
-        [opportunity_id]
+        [work_request_id]
       );
 
-      if (oppResult.rows.length === 0) {
-        return res.status(404).json({ error: 'Opportunity not found' });
+      if (wrResult.rows.length === 0) {
+        return res.status(404).json({ error: 'Work request not found' });
       }
 
-      const opp = oppResult.rows[0];
+      const wr = wrResult.rows[0];
       
-      if (!opp.contractor_party_id) {
-        return res.status(400).json({ error: 'No contractor associated with this opportunity' });
+      if (!wr.contractor_party_id) {
+        return res.status(400).json({ error: 'No contractor associated with this work request' });
       }
 
       const settingsResult = await client.query(
         `SELECT accepts_appreciation_requests 
          FROM contractor_feedback_settings 
          WHERE party_id = $1`,
-        [opp.contractor_party_id]
+        [wr.contractor_party_id]
       );
 
       if (settingsResult.rows[0]?.accepts_appreciation_requests === false) {
@@ -71,18 +71,18 @@ router.post('/opportunities/:id/appreciation', async (req: Request, res: Respons
 
       const result = await client.query(
         `INSERT INTO public_appreciations (
-          opportunity_id,
+          work_request_id,
           from_party_id, from_individual_id, from_display_name,
           to_party_id,
           content, highlights
         ) VALUES ($1, $2, $3, $4, $5, $6, $7)
         RETURNING *`,
         [
-          opportunity_id,
+          work_request_id,
           actor.actor_party_id,
           actor.individual_id,
           derivedDisplayName,
-          opp.contractor_party_id,
+          wr.contractor_party_id,
           content,
           highlights || null
         ]
@@ -116,10 +116,10 @@ router.get('/appreciations/received', async (req: Request, res: Response) => {
 
     let query = `
       SELECT pa.*, 
-             o.title as opportunity_title,
-             o.opportunity_ref
+             wr.title as work_request_title,
+             wr.work_request_ref
       FROM public_appreciations pa
-      JOIN opportunities o ON pa.opportunity_id = o.id
+      JOIN work_requests wr ON pa.work_request_id = wr.id
       WHERE pa.to_party_id = $1
     `;
 
@@ -150,9 +150,9 @@ router.get('/parties/:party_id/appreciations', async (req: Request, res: Respons
 
     const result = await pool.query(
       `SELECT pa.id, pa.from_display_name, pa.content, pa.highlights, pa.created_at,
-              o.title as opportunity_title
+              wr.title as work_request_title
        FROM public_appreciations pa
-       JOIN opportunities o ON pa.opportunity_id = o.id
+       JOIN work_requests wr ON pa.work_request_id = wr.id
        WHERE pa.to_party_id = $1 
          AND pa.is_public = true 
          AND NOT pa.hidden_by_contractor
@@ -332,9 +332,9 @@ router.get('/parties/:party_id/trust-summary', async (req: Request, res: Respons
       );
 
       const completedJobs = await client.query(
-        `SELECT COUNT(DISTINCT o.id) 
-         FROM opportunities o
-         JOIN conversations c ON c.opportunity_id = o.id
+        `SELECT COUNT(DISTINCT wr.id) 
+         FROM work_requests wr
+         JOIN conversations c ON c.work_request_id = wr.id
          WHERE c.contractor_party_id = $1 AND c.state = 'completed'`,
         [party_id]
       );

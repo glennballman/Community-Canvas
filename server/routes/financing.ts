@@ -5,16 +5,16 @@ import { computeFinancingEligibility, formatFinancingSuggestion } from '../lib/f
 
 const router = Router();
 
-router.get('/opportunities/:id/financing-eligibility', async (req: Request, res: Response) => {
+router.get('/work-requests/:id/financing-eligibility', async (req: Request, res: Response) => {
   try {
-    const { id: opportunity_id } = req.params;
+    const { id: work_request_id } = req.params;
 
     const actor = await resolveActorParty(req, 'contractor');
     if (!actor) {
       return res.status(401).json({ error: 'Authentication required' });
     }
 
-    const eligibility = await computeFinancingEligibility(opportunity_id, actor.actor_party_id);
+    const eligibility = await computeFinancingEligibility(work_request_id, actor.actor_party_id);
     const suggestion = formatFinancingSuggestion(eligibility);
 
     res.json({
@@ -56,9 +56,9 @@ router.get('/financing/products', async (req: Request, res: Response) => {
   }
 });
 
-router.post('/opportunities/:id/financing-request', async (req: Request, res: Response) => {
+router.post('/work-requests/:id/financing-request', async (req: Request, res: Response) => {
   try {
-    const { id: opportunity_id } = req.params;
+    const { id: work_request_id } = req.params;
     const {
       financing_type,
       amount_requested,
@@ -89,7 +89,7 @@ router.post('/opportunities/:id/financing-request', async (req: Request, res: Re
 
     const mappedType = typeMap[financing_type] || financing_type;
 
-    const eligibility = await computeFinancingEligibility(opportunity_id, actor.actor_party_id);
+    const eligibility = await computeFinancingEligibility(work_request_id, actor.actor_party_id);
 
     const client = await pool.connect();
     try {
@@ -97,7 +97,7 @@ router.post('/opportunities/:id/financing-request', async (req: Request, res: Re
 
       const result = await client.query(
         `INSERT INTO contractor_financing_requests (
-          opportunity_id, conversation_id, contractor_party_id, requested_by_individual_id,
+          work_request_id, conversation_id, contractor_party_id, requested_by_individual_id,
           financing_type, amount_requested, use_of_funds,
           repayment_source, related_milestone_id,
           financing_product_id, supporting_documents,
@@ -105,7 +105,7 @@ router.post('/opportunities/:id/financing-request', async (req: Request, res: Re
         ) VALUES ($1, $2, $3, $4, $5::financing_category, $6, $7, $8::repayment_source, $9, $10, $11, $12, 'draft')
         RETURNING *`,
         [
-          opportunity_id,
+          work_request_id,
           conversation_id || null,
           actor.actor_party_id,
           actor.individual_id,
@@ -150,10 +150,10 @@ router.get('/financing', async (req: Request, res: Response) => {
     }
 
     let query = `
-      SELECT cfr.*, o.title as opportunity_title, o.opportunity_ref,
+      SELECT cfr.*, wr.title as work_request_title, wr.work_request_ref,
              fp.product_name, fp.provider_name
       FROM contractor_financing_requests cfr
-      JOIN opportunities o ON cfr.opportunity_id = o.id
+      JOIN work_requests wr ON cfr.work_request_id = wr.id
       LEFT JOIN financing_products fp ON cfr.financing_product_id = fp.id
       WHERE cfr.contractor_party_id = $1
     `;
@@ -200,10 +200,10 @@ router.get('/financing/:id', async (req: Request, res: Response) => {
     }
 
     const result = await pool.query(
-      `SELECT cfr.*, o.title as opportunity_title, o.opportunity_ref, o.site_address,
+      `SELECT cfr.*, wr.title as work_request_title, wr.work_request_ref, wr.site_address,
               fp.product_name, fp.provider_name, fp.advance_percent, fp.fee_percent
        FROM contractor_financing_requests cfr
-       JOIN opportunities o ON cfr.opportunity_id = o.id
+       JOIN work_requests wr ON cfr.work_request_id = wr.id
        LEFT JOIN financing_products fp ON cfr.financing_product_id = fp.id
        WHERE cfr.id = $1 AND cfr.contractor_party_id = $2`,
       [id, actor.actor_party_id]
@@ -320,8 +320,8 @@ router.post('/financing/:id/submit', async (req: Request, res: Response) => {
       await client.query('BEGIN');
 
       const existing = await client.query(
-        `SELECT cfr.*, o.id as opp_id FROM contractor_financing_requests cfr
-         JOIN opportunities o ON cfr.opportunity_id = o.id
+        `SELECT cfr.*, wr.id as wr_id FROM contractor_financing_requests cfr
+         JOIN work_requests wr ON cfr.work_request_id = wr.id
          WHERE cfr.id = $1 AND cfr.contractor_party_id = $2`,
         [id, actor.actor_party_id]
       );
@@ -338,7 +338,7 @@ router.post('/financing/:id/submit', async (req: Request, res: Response) => {
         return res.status(400).json({ error: 'Can only submit draft requests' });
       }
 
-      const eligibility = await computeFinancingEligibility(request.opportunity_id, actor.actor_party_id);
+      const eligibility = await computeFinancingEligibility(request.work_request_id, actor.actor_party_id);
 
       if (!eligibility.can_request_financing) {
         await client.query('ROLLBACK');

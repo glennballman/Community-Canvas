@@ -7,10 +7,10 @@ const router = Router();
 
 router.post('/conversations', async (req: Request, res: Response) => {
   try {
-    const { opportunity_id } = req.body;
+    const work_request_id = req.body.work_request_id || req.body.opportunity_id;
 
-    if (!opportunity_id) {
-      return res.status(400).json({ error: 'opportunity_id required' });
+    if (!work_request_id) {
+      return res.status(400).json({ error: 'work_request_id required' });
     }
 
     const contractor = await resolveActorParty(req, 'contractor');
@@ -22,30 +22,30 @@ router.post('/conversations', async (req: Request, res: Response) => {
     try {
       await client.query('BEGIN');
 
-      const oppResult = await client.query(
-        `SELECT o.id, o.owner_tenant_id, o.title
-         FROM opportunities o
-         WHERE o.id = $1`,
-        [opportunity_id]
+      const wrResult = await client.query(
+        `SELECT wr.id, wr.owner_tenant_id, wr.title
+         FROM work_requests wr
+         WHERE wr.id = $1`,
+        [work_request_id]
       );
 
-      if (oppResult.rows.length === 0) {
+      if (wrResult.rows.length === 0) {
         await client.query('ROLLBACK');
-        return res.status(404).json({ error: 'Opportunity not found' });
+        return res.status(404).json({ error: 'Work request not found' });
       }
 
-      const opp = oppResult.rows[0];
+      const wr = wrResult.rows[0];
 
-      if (!opp.owner_tenant_id) {
+      if (!wr.owner_tenant_id) {
         await client.query('ROLLBACK');
-        return res.status(400).json({ error: 'Opportunity has no owner' });
+        return res.status(400).json({ error: 'Work request has no owner' });
       }
 
       let ownerPartyResult = await client.query(
         `SELECT id FROM parties
          WHERE tenant_id = $1 AND party_kind = 'organization'
          ORDER BY created_at ASC LIMIT 1`,
-        [opp.owner_tenant_id]
+        [wr.owner_tenant_id]
       );
 
       let ownerPartyId = ownerPartyResult.rows[0]?.id;
@@ -53,7 +53,7 @@ router.post('/conversations', async (req: Request, res: Response) => {
       if (!ownerPartyId) {
         const ownerTenantResult = await client.query(
           `SELECT name, email, phone FROM tenants WHERE id = $1`,
-          [opp.owner_tenant_id]
+          [wr.owner_tenant_id]
         );
         const ownerTenant = ownerTenantResult.rows[0];
 
@@ -66,7 +66,7 @@ router.post('/conversations', async (req: Request, res: Response) => {
           `INSERT INTO parties (tenant_id, party_kind, party_type, status, legal_name, trade_name, primary_contact_email, primary_contact_phone)
            VALUES ($1, 'organization', 'owner', 'active', $2, $2, $3, $4)
            RETURNING id`,
-          [opp.owner_tenant_id, ownerTenant.name, ownerTenant.email, ownerTenant.phone]
+          [wr.owner_tenant_id, ownerTenant.name, ownerTenant.email, ownerTenant.phone]
         );
         ownerPartyId = createOwnerResult.rows[0].id;
       }
@@ -78,8 +78,8 @@ router.post('/conversations', async (req: Request, res: Response) => {
 
       const existingResult = await client.query(
         `SELECT * FROM conversations
-         WHERE opportunity_id = $1 AND contractor_party_id = $2`,
-        [opportunity_id, contractor.actor_party_id]
+         WHERE work_request_id = $1 AND contractor_party_id = $2`,
+        [work_request_id, contractor.actor_party_id]
       );
 
       if (existingResult.rows.length > 0) {
@@ -106,7 +106,7 @@ router.post('/conversations', async (req: Request, res: Response) => {
 
       const createResult = await client.query(
         `INSERT INTO conversations (
-          opportunity_id,
+          work_request_id,
           contractor_party_id, owner_party_id,
           contractor_actor_party_id, owner_actor_party_id,
           state,
@@ -114,7 +114,7 @@ router.post('/conversations', async (req: Request, res: Response) => {
         ) VALUES ($1, $2, $3, $4, $5, 'interest', $6, $7, $8)
         RETURNING *`,
         [
-          opportunity_id,
+          work_request_id,
           contractor.actor_party_id,
           ownerPartyId,
           contractor.actor_party_id,
@@ -171,28 +171,29 @@ router.get('/conversations', async (req: Request, res: Response) => {
       return res.status(401).json({ error: 'Authentication required' });
     }
 
-    const { opportunity_id, state, limit = '50' } = req.query;
+    const work_request_id = req.query.work_request_id || req.query.opportunity_id;
+    const { state, limit = '50' } = req.query;
 
     let query = `
       SELECT c.*,
-             o.title as opportunity_title,
-             o.opportunity_ref,
-             o.work_category,
-             o.owner_type,
+             wr.title as work_request_title,
+             wr.work_request_ref,
+             wr.work_category,
+             wr.owner_type,
              owner_p.trade_name as owner_name,
              contractor_p.trade_name as contractor_name,
              (SELECT content FROM messages WHERE conversation_id = c.id ORDER BY created_at DESC LIMIT 1) as last_message_preview
       FROM conversations c
-      JOIN opportunities o ON c.opportunity_id = o.id
+      JOIN work_requests wr ON c.work_request_id = wr.id
       LEFT JOIN parties owner_p ON c.owner_party_id = owner_p.id
       LEFT JOIN parties contractor_p ON c.contractor_party_id = contractor_p.id
       WHERE (c.owner_party_id = $1 OR c.contractor_party_id = $1)
     `;
     const params: any[] = [actor.actor_party_id];
 
-    if (opportunity_id) {
-      params.push(opportunity_id);
-      query += ` AND c.opportunity_id = $${params.length}`;
+    if (work_request_id) {
+      params.push(work_request_id);
+      query += ` AND c.work_request_id = $${params.length}`;
     }
 
     if (state) {
@@ -239,12 +240,12 @@ router.get('/conversations/:id', async (req: Request, res: Response) => {
 
     const result = await pool.query(
       `SELECT c.*,
-              o.title as opportunity_title,
-              o.opportunity_ref,
-              o.work_category,
-              o.site_address,
-              o.owner_type,
-              o.budget_ceiling,
+              wr.title as work_request_title,
+              wr.work_request_ref,
+              wr.work_category,
+              wr.site_address,
+              wr.owner_type,
+              wr.budget_ceiling,
               owner_p.trade_name as owner_name,
               owner_p.primary_contact_email as owner_email,
               owner_p.primary_contact_phone as owner_phone,
@@ -252,7 +253,7 @@ router.get('/conversations/:id', async (req: Request, res: Response) => {
               contractor_p.primary_contact_email as contractor_email,
               contractor_p.primary_contact_phone as contractor_phone
        FROM conversations c
-       JOIN opportunities o ON c.opportunity_id = o.id
+       JOIN work_requests wr ON c.work_request_id = wr.id
        LEFT JOIN parties owner_p ON c.owner_party_id = owner_p.id
        LEFT JOIN parties contractor_p ON c.contractor_party_id = contractor_p.id
        WHERE c.id = $1
@@ -686,13 +687,26 @@ router.post('/conversations/:id/unlock-contact', async (req: Request, res: Respo
 
     const client = await pool.connect();
     try {
+      await client.query('BEGIN');
+
       const convResult = await client.query(
         `SELECT * FROM conversations WHERE id = $1 AND owner_party_id = $2`,
         [id, actor.actor_party_id]
       );
 
       if (convResult.rows.length === 0) {
+        await client.query('ROLLBACK');
         return res.status(404).json({ error: 'Conversation not found or not authorized' });
+      }
+
+      const conversation = convResult.rows[0];
+
+      if (conversation.contact_unlocked) {
+        await client.query('ROLLBACK');
+        return res.json({ 
+          already_unlocked: true, 
+          contact_unlocked_at: conversation.contact_unlocked_at 
+        });
       }
 
       const result = await client.query(
@@ -704,136 +718,23 @@ router.post('/conversations/:id/unlock-contact', async (req: Request, res: Respo
           updated_at = now()
          WHERE id = $3
          RETURNING *`,
-        [gate, reason || 'Owner approved contact sharing', id]
+        [gate, reason || 'Owner manually unlocked contact', id]
       );
 
       await client.query(
         `INSERT INTO messages (
           conversation_id, sender_party_id, sender_individual_id,
           message_type, content, visibility
-        ) VALUES ($1, $2, $3, 'system', 'Contact information is now shared between parties.', 'normal')`,
-        [id, actor.actor_party_id, actor.individual_id]
-      );
-
-      res.json({ 
-        conversation: result.rows[0],
-        contact_unlocked: true
-      });
-
-    } finally {
-      client.release();
-    }
-  } catch (error) {
-    console.error('Error unlocking contact:', error);
-    res.status(500).json({ error: 'Failed to unlock contact' });
-  }
-});
-
-router.get('/conversations/unread/count', async (req: Request, res: Response) => {
-  try {
-    const actor = await resolveActorParty(req, 'contractor');
-    if (!actor) {
-      return res.status(401).json({ error: 'Authentication required' });
-    }
-
-    const result = await pool.query(
-      `SELECT 
-         COUNT(*) FILTER (WHERE owner_party_id = $1 AND unread_owner > 0) as unread_as_owner,
-         COUNT(*) FILTER (WHERE contractor_party_id = $1 AND unread_contractor > 0) as unread_as_contractor,
-         SUM(CASE WHEN owner_party_id = $1 THEN unread_owner ELSE 0 END) as total_unread_owner,
-         SUM(CASE WHEN contractor_party_id = $1 THEN unread_contractor ELSE 0 END) as total_unread_contractor
-       FROM conversations
-       WHERE owner_party_id = $1 OR contractor_party_id = $1`,
-      [actor.actor_party_id]
-    );
-
-    const counts = result.rows[0];
-
-    res.json({
-      conversations_with_unread: parseInt(counts.unread_as_owner || 0) + parseInt(counts.unread_as_contractor || 0),
-      total_unread_messages: parseInt(counts.total_unread_owner || 0) + parseInt(counts.total_unread_contractor || 0)
-    });
-  } catch (error) {
-    console.error('Error fetching unread count:', error);
-    res.status(500).json({ error: 'Failed to fetch unread count' });
-  }
-});
-
-router.post('/conversations/:id/deposit-verified', async (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
-    const { payment_reference, notes } = req.body;
-
-    const actor = await resolveActorParty(req, 'contractor');
-    if (!actor) {
-      return res.status(401).json({ error: 'Authentication required' });
-    }
-
-    const client = await pool.connect();
-    try {
-      await client.query('BEGIN');
-
-      const convResult = await client.query(
-        `SELECT * FROM conversations WHERE id = $1`,
+        ) VALUES ($1, NULL, NULL, 'system', 'Contact details are now available.', 'normal')`,
         [id]
-      );
-
-      if (convResult.rows.length === 0) {
-        await client.query('ROLLBACK');
-        return res.status(404).json({ error: 'Conversation not found' });
-      }
-
-      const conversation = convResult.rows[0];
-
-      if (conversation.contractor_party_id !== actor.actor_party_id) {
-        await client.query('ROLLBACK');
-        return res.status(403).json({ error: 'Only contractor can verify deposit receipt' });
-      }
-
-      const milestoneResult = await client.query(
-        `UPDATE payment_milestones pm SET
-          status = 'verified',
-          paid_at = now(),
-          payment_reference = $1,
-          payment_notes = $2,
-          verified_by_party_id = $3,
-          verified_by_individual_id = $4,
-          verified_at = now()
-         FROM payment_promises pp
-         WHERE pm.payment_promise_id = pp.id
-           AND pp.conversation_id = $5
-           AND pm.trigger_type IN ('on_award', 'on_contract_sign')
-           AND pm.status != 'verified'
-         RETURNING pm.*`,
-        [payment_reference, notes, actor.actor_party_id, actor.individual_id, id]
-      );
-
-      const updateResult = await client.query(
-        `UPDATE conversations SET
-          contact_unlocked = true,
-          contact_unlocked_at = now(),
-          contact_unlock_gate = 'deposit_verified',
-          contact_unlock_reason = 'Deposit verified by contractor',
-          updated_at = now()
-         WHERE id = $1
-         RETURNING *`,
-        [id]
-      );
-
-      await client.query(
-        `INSERT INTO messages (
-          conversation_id, sender_party_id, sender_individual_id,
-          message_type, content
-        ) VALUES ($1, $2, $3, 'system', 'Deposit verified. Contact information is now shared.')`,
-        [id, actor.actor_party_id, actor.individual_id]
       );
 
       await client.query('COMMIT');
 
       res.json({
-        conversation: updateResult.rows[0],
-        milestone: milestoneResult.rows[0] || null,
-        contact_unlocked: true
+        conversation: result.rows[0],
+        contact_unlocked: true,
+        message: 'Contact details are now available to both parties.'
       });
 
     } catch (error) {
@@ -843,8 +744,8 @@ router.post('/conversations/:id/deposit-verified', async (req: Request, res: Res
       client.release();
     }
   } catch (error) {
-    console.error('Error verifying deposit:', error);
-    res.status(500).json({ error: 'Failed to verify deposit' });
+    console.error('Error unlocking contact:', error);
+    res.status(500).json({ error: 'Failed to unlock contact' });
   }
 });
 

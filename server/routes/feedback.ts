@@ -7,9 +7,9 @@ const router = Router();
 // ============================================================
 // SEND PRIVATE FEEDBACK (Owner → Contractor)
 // ============================================================
-router.post('/opportunities/:id/private-feedback', async (req: Request, res: Response) => {
+router.post('/work-requests/:id/private-feedback', async (req: Request, res: Response) => {
   try {
-    const { id: opportunity_id } = req.params;
+    const { id: work_request_id } = req.params;
     const { 
       content, 
       quality_rating, 
@@ -29,30 +29,30 @@ router.post('/opportunities/:id/private-feedback', async (req: Request, res: Res
 
     const client = await pool.connect();
     try {
-      const oppResult = await client.query(
-        `SELECT o.id, c.contractor_party_id, c.id as conversation_id
-         FROM opportunities o
-         LEFT JOIN conversations c ON c.opportunity_id = o.id
-         WHERE o.id = $1
+      const wrResult = await client.query(
+        `SELECT wr.id, c.contractor_party_id, c.id as conversation_id
+         FROM work_requests wr
+         LEFT JOIN conversations c ON c.work_request_id = wr.id
+         WHERE wr.id = $1
          ORDER BY c.created_at DESC LIMIT 1`,
-        [opportunity_id]
+        [work_request_id]
       );
 
-      if (oppResult.rows.length === 0) {
-        return res.status(404).json({ error: 'Opportunity not found' });
+      if (wrResult.rows.length === 0) {
+        return res.status(404).json({ error: 'Work request not found' });
       }
 
-      const opp = oppResult.rows[0];
+      const wr = wrResult.rows[0];
       
-      if (!opp.contractor_party_id) {
-        return res.status(400).json({ error: 'No contractor associated with this opportunity' });
+      if (!wr.contractor_party_id) {
+        return res.status(400).json({ error: 'No contractor associated with this work request' });
       }
 
       const settingsResult = await client.query(
         `SELECT accepts_private_feedback, blocked_party_ids 
          FROM contractor_feedback_settings 
          WHERE party_id = $1`,
-        [opp.contractor_party_id]
+        [wr.contractor_party_id]
       );
 
       const settings = settingsResult.rows[0];
@@ -69,7 +69,7 @@ router.post('/opportunities/:id/private-feedback', async (req: Request, res: Res
 
       const result = await client.query(
         `INSERT INTO private_feedback (
-          opportunity_id, conversation_id,
+          work_request_id, conversation_id,
           from_party_id, from_individual_id,
           to_party_id,
           feedback_type, content,
@@ -77,11 +77,11 @@ router.post('/opportunities/:id/private-feedback', async (req: Request, res: Res
         ) VALUES ($1, $2, $3, $4, $5, 'private_feedback', $6, $7, $8, $9)
         RETURNING *`,
         [
-          opportunity_id,
-          conversation_id || opp.conversation_id,
+          work_request_id,
+          conversation_id || wr.conversation_id,
           actor.actor_party_id,
           actor.individual_id,
-          opp.contractor_party_id,
+          wr.contractor_party_id,
           content,
           quality_rating || null,
           communication_rating || null,
@@ -117,11 +117,11 @@ router.get('/feedback/received', async (req: Request, res: Response) => {
 
     let query = `
       SELECT pf.*, 
-             o.title as opportunity_title,
-             o.opportunity_ref,
+             wr.title as work_request_title,
+             wr.work_request_ref,
              from_p.trade_name as from_party_name
       FROM private_feedback pf
-      JOIN opportunities o ON pf.opportunity_id = o.id
+      JOIN work_requests wr ON pf.work_request_id = wr.id
       LEFT JOIN parties from_p ON pf.from_party_id = from_p.id
       WHERE pf.to_party_id = $1
     `;

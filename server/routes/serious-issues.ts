@@ -12,9 +12,9 @@ function isAdmin(req: any): boolean {
 // ============================================================
 // FILE SERIOUS ISSUE REPORT (Any User - Owner, Contractor, or Operator)
 // ============================================================
-router.post('/opportunities/:id/serious-issue', async (req: Request, res: Response) => {
+router.post('/work-requests/:id/serious-issue', async (req: Request, res: Response) => {
   try {
-    const { id: opportunity_id } = req.params;
+    const { id: work_request_id } = req.params;
     const { 
       subject_party_id,
       subject_type,
@@ -57,7 +57,7 @@ router.post('/opportunities/:id/serious-issue', async (req: Request, res: Respon
 
       const result = await client.query(
         `INSERT INTO serious_issue_reports (
-          opportunity_id, conversation_id,
+          work_request_id, conversation_id,
           reporter_party_id, reporter_individual_id,
           subject_party_id, subject_type,
           category, description, evidence,
@@ -65,7 +65,7 @@ router.post('/opportunities/:id/serious-issue', async (req: Request, res: Respon
         ) VALUES ($1, $2, $3, $4, $5, $6, $7::issue_category, $8, $9, $10, $11)
         RETURNING id, created_at`,
         [
-          opportunity_id,
+          work_request_id,
           conversation_id || null,
           actor.actor_party_id,
           actor.individual_id,
@@ -109,12 +109,12 @@ router.get('/admin/serious-issues', async (req: Request, res: Response) => {
       SELECT sir.*,
              reporter.trade_name as reporter_name,
              subject.trade_name as subject_name,
-             o.title as opportunity_title,
-             o.opportunity_ref
+             wr.title as work_request_title,
+             wr.work_request_ref
       FROM serious_issue_reports sir
       LEFT JOIN parties reporter ON sir.reporter_party_id = reporter.id
       LEFT JOIN parties subject ON sir.subject_party_id = subject.id
-      LEFT JOIN opportunities o ON sir.opportunity_id = o.id
+      LEFT JOIN work_requests wr ON sir.work_request_id = wr.id
       WHERE 1=1
     `;
     const params: any[] = [];
@@ -177,12 +177,12 @@ router.get('/admin/serious-issues/:id', async (req: Request, res: Response) => {
               reporter.primary_contact_email as reporter_email,
               subject.trade_name as subject_name,
               subject.primary_contact_email as subject_email,
-              o.title as opportunity_title,
-              o.opportunity_ref
+              wr.title as work_request_title,
+              wr.work_request_ref
        FROM serious_issue_reports sir
        LEFT JOIN parties reporter ON sir.reporter_party_id = reporter.id
        LEFT JOIN parties subject ON sir.subject_party_id = subject.id
-       LEFT JOIN opportunities o ON sir.opportunity_id = o.id
+       LEFT JOIN work_requests wr ON sir.work_request_id = wr.id
        WHERE sir.id = $1`,
       [id]
     );
