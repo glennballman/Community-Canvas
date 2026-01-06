@@ -40,6 +40,7 @@ import CreateServiceRun from './pages/services/CreateServiceRun';
 import ServiceRunDetail from './pages/services/ServiceRunDetail';
 import ServiceCatalog from './pages/services/ServiceCatalog';
 import BundlesBrowser from './pages/services/BundlesBrowser';
+import WorkRequestDetail from './pages/WorkRequestDetail';
 
 // Pages - App Business
 import CatalogPage from './pages/app/business/CatalogPage';
@@ -145,6 +146,7 @@ export default function App() {
                 <Route path="service-runs" element={<ServiceRuns />} />
                 <Route path="service-runs/new" element={<CreateServiceRun />} />
                 <Route path="service-runs/:slug" element={<ServiceRunDetail />} />
+                <Route path="work-requests/:id" element={<WorkRequestDetail />} />
                 <Route path="services" element={<ServiceCatalog />} />
                 <Route path="bundles" element={<BundlesBrowser />} />
                 <Route path="directory" element={<DirectoryPage />} />

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useParams, Link } from 'wouter';
+import { useParams, Link } from 'react-router-dom';
 import { 
   ArrowLeft, MapPin, Calendar, Clock, Building2, Award, 
   Send, CheckCircle, AlertCircle, FileText, DollarSign, LogIn

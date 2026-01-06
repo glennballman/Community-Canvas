@@ -354,7 +354,7 @@ export default function ServiceRuns() {
               {workRequests.map(wr => (
                 <div
                   key={wr.id}
-                  onClick={() => navigate(`/work-requests/${wr.id}`)}
+                  onClick={() => navigate(`/app/work-requests/${wr.id}`)}
                   className="bg-card rounded-lg p-4 cursor-pointer hover-elevate transition-colors border"
                   data-testid={`card-work-request-${wr.id}`}
                 >
