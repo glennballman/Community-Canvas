@@ -57,6 +57,11 @@ interface Resource {
   is_parkable_spot?: boolean;
   is_equipment?: boolean;
   is_under_maintenance?: boolean;
+  is_capability_unit?: boolean;
+  parent_asset_id?: string;
+  capability_type?: string;
+  capability_status?: 'operational' | 'inoperable' | 'maintenance';
+  indent_level?: number;
 }
 
 interface ConflictBlock {
@@ -181,6 +186,7 @@ export default function OperationsBoard() {
     if (searchQuery) params.append('search', searchQuery);
     if (typeFilter.length > 0) params.append('type', typeFilter.join(','));
     if (includeInactive) params.append('includeInactive', 'true');
+    params.append('includeCapabilities', 'true');
     return params.toString();
   }, [searchQuery, typeFilter, includeInactive]);
 
@@ -230,8 +236,29 @@ export default function OperationsBoard() {
   });
 
   const resources: Resource[] = resourcesData?.resources || [];
-  const groupedResources = resourcesData?.grouped || {};
+  const rawGrouped = resourcesData?.grouped || {};
   const assetTypes = resourcesData?.asset_types || [];
+  
+  const groupedResources = useMemo(() => {
+    const flattened: Record<string, Resource[]> = {};
+    for (const [assetType, groupResources] of Object.entries(rawGrouped)) {
+      const flatList: Resource[] = [];
+      for (const resource of groupResources as any[]) {
+        flatList.push(resource);
+        if (resource.capability_units && resource.capability_units.length > 0) {
+          for (const cap of resource.capability_units) {
+            flatList.push({
+              ...cap,
+              is_capability_unit: true,
+              indent_level: 1,
+            });
+          }
+        }
+      }
+      flattened[assetType] = flatList;
+    }
+    return flattened;
+  }, [rawGrouped]);
   const events: ScheduleEvent[] = scheduleData?.events || [];
 
   function resetEventForm() {
@@ -517,20 +544,29 @@ export default function OperationsBoard() {
                     {ASSET_TYPE_LABELS[assetType] || assetType}
                   </div>
                   {groupResources.map((resource) => {
-                    const Icon = getResourceIcon(resource.asset_type);
+                    const Icon = resource.is_capability_unit ? Wrench : getResourceIcon(resource.asset_type);
+                    const isCapability = resource.is_capability_unit;
+                    const statusBadge = isCapability && resource.capability_status !== 'operational' 
+                      ? resource.capability_status 
+                      : (resource.is_under_maintenance ? 'maint' : null);
                     return (
                       <div
                         key={resource.id}
-                        className="h-12 flex items-center gap-2 px-3 border-b"
+                        className={`h-12 flex items-center gap-2 border-b ${isCapability ? 'pl-8 bg-muted/20' : 'px-3'}`}
                         data-testid={`resource-row-${resource.id}`}
                       >
-                        <Icon className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                        <Icon className={`h-4 w-4 flex-shrink-0 ${isCapability ? 'text-muted-foreground/60' : 'text-muted-foreground'}`} />
                         <div className="flex-1 min-w-0">
-                          <span className="text-sm truncate block">{resource.name}</span>
+                          <span className={`text-sm truncate block ${isCapability ? 'text-muted-foreground' : ''}`}>
+                            {isCapability ? `- ${resource.name}` : resource.name}
+                          </span>
+                          {isCapability && resource.capability_type && (
+                            <span className="text-xs text-muted-foreground/60">{resource.capability_type}</span>
+                          )}
                         </div>
-                        {resource.is_under_maintenance && (
+                        {statusBadge && (
                           <Badge variant="destructive" className="text-xs px-1">
-                            Maint
+                            {statusBadge === 'maint' ? 'Maint' : statusBadge}
                           </Badge>
                         )}
                       </div>

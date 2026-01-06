@@ -420,6 +420,47 @@ router.post('/:id/book', requireAuth, async (req: Request, res: Response) => {
             code: 'MAINTENANCE_CONFLICT'
           };
         }
+        
+        // Check blocking constraints on the asset (asset-level and capability-level)
+        const constraintCheck = await client.query(`
+          SELECT ac.constraint_type, ac.details, acu.name as capability_name
+          FROM asset_constraints ac
+          LEFT JOIN asset_capability_units acu ON ac.capability_unit_id = acu.id
+          WHERE ac.asset_id = $1
+            AND ac.severity = 'blocking'
+            AND ac.active = true
+            AND (ac.starts_at IS NULL OR ac.starts_at <= $3::timestamptz)
+            AND (ac.ends_at IS NULL OR ac.ends_at >= $2::timestamptz)
+          LIMIT 1
+        `, [assetId, startTs, endTs]);
+        
+        if (constraintCheck.rows.length > 0) {
+          const constraint = constraintCheck.rows[0];
+          const capInfo = constraint.capability_name ? ` (${constraint.capability_name})` : '';
+          return {
+            error: `Not bookable: ${constraint.constraint_type.replace(/_/g, ' ')}${capInfo}${constraint.details ? ` - ${constraint.details}` : ''}`,
+            status: 409,
+            code: 'BLOCKING_CONSTRAINT'
+          };
+        }
+        
+        // Check if any capability units are inoperable (blocking condition)
+        const capabilityCheck = await client.query(`
+          SELECT name, status
+          FROM asset_capability_units
+          WHERE asset_id = $1
+            AND status = 'inoperable'
+          LIMIT 1
+        `, [assetId]);
+        
+        if (capabilityCheck.rows.length > 0) {
+          const cap = capabilityCheck.rows[0];
+          return {
+            error: `Not bookable: ${cap.name} is ${cap.status}`,
+            status: 409,
+            code: 'CAPABILITY_INOPERABLE'
+          };
+        }
       }
       
       // Check conflicts

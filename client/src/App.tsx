@@ -64,6 +64,7 @@ import ProjectDetail from './pages/projects/ProjectDetail';
 
 // Pages - App Business
 import InventoryPage from './pages/app/business/InventoryPage';
+import InventoryItemDetail from './pages/app/business/InventoryItemDetail';
 import BookingsPage from './pages/app/business/BookingsPage';
 import CustomersPage from './pages/app/business/CustomersPage';
 
@@ -192,6 +193,7 @@ export default function App() {
                 
                 {/* Business tenant routes */}
                 <Route path="inventory" element={<InventoryPage />} />
+                <Route path="inventory/:id" element={<InventoryItemDetail />} />
                 <Route path="bookings" element={<BookingsPage />} />
                 <Route path="customers" element={<CustomersPage />} />
                 

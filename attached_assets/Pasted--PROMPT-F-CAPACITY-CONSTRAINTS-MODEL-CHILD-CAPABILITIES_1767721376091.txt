@@ -1,0 +1,131 @@
+# PROMPT F — CAPACITY + CONSTRAINTS MODEL + CHILD CAPABILITIES (NO AI YET)
+
+Goal:
+Every inventory resource is modeled as Capacity + Constraints.
+Support child capabilities (e.g., Lucky Lander has a crane capability that can be inoperable).
+This must affect booking + the Operations Board.
+
+DO NOT:
+- Add PostGIS
+- Build AI photo recognition yet
+- Build complex solver/optimizer
+- Break existing Inventory/Bookings/Operations
+
+---
+
+## F1) DATA MODEL (MINIMAL EXTENSIONS)
+
+A) Add a generic capability table tied to unified_assets:
+
+Table: asset_capability_units
+- id UUID PK
+- tenant_id UUID
+- asset_id UUID FK -> unified_assets(id)
+- name TEXT (e.g., "Crane", "Lift Gate", "Room 2", "Slip A-03")
+- capability_type TEXT (e.g., "crane", "liftgate", "room", "slip", "deck_space")
+- status ENUM: "operational" | "inoperable" | "maintenance"
+- notes TEXT nullable
+- created_at / updated_at
+
+B) Add capacity + constraints tables:
+
+Table: asset_capacities
+- id UUID PK
+- tenant_id UUID
+- asset_id UUID FK
+- capability_unit_id UUID nullable FK -> asset_capability_units(id)
+- key TEXT (e.g., "max_weight_lbs", "max_length_ft", "max_people", "max_pallets")
+- value_num NUMERIC nullable
+- value_text TEXT nullable
+- unit TEXT nullable ("lbs","ft","m","people","pallets")
+- applies_to TEXT nullable (e.g., "vehicle","rv","cargo")
+- notes TEXT nullable
+
+Table: asset_constraints
+- id UUID PK
+- tenant_id UUID
+- asset_id UUID FK
+- capability_unit_id UUID nullable FK
+- constraint_type TEXT (e.g., "requires_manual_loading", "no_ferry_after", "no_saltwater", "winter_only", "broken")
+- severity ENUM: "info" | "warning" | "blocking"
+- details TEXT
+- active BOOLEAN default true
+- starts_at TIMESTAMPTZ nullable
+- ends_at TIMESTAMPTZ nullable
+
+Rule:
+If a capability_unit status != operational OR a blocking constraint is active in a time window,
+the asset/capability is not bookable in that window.
+
+---
+
+## F2) UI: INVENTORY DETAIL “CAPACITY + CONSTRAINTS”
+On Inventory item detail page:
+Add sections:
+
+1) Capability Units
+- list child capabilities (Crane, Liftgate, Rooms, Slips)
+- status toggle (Operational / Inoperable / Maintenance)
+- when set to Maintenance → create a maintenance block on Operations Board for that capability or parent asset (use resource_schedule_events)
+
+2) Capacities
+- simple key/value editor (add, edit, delete)
+- quick templates per asset type (optional minimal)
+
+3) Constraints
+- add constraint form:
+  - type (select or free text)
+  - severity
+  - details
+  - optional time window (starts/ends)
+  - if blocking + has time window → automatically create a “block” schedule event for that window
+
+---
+
+## F3) OPERATIONS BOARD INTEGRATION
+Resources list (/api/schedule/resources):
+Return unified_assets PLUS their capability units as child rows, indented.
+Example:
+Lucky Lander
+  - Crane
+  - Deck Space
+F550 Truck
+  - Liftgate
+
+Operations grid:
+- Allow scheduling blocks on either parent asset or a capability unit
+- If capability unit is blocked, it should visually show blocked even if parent is free
+
+---
+
+## F4) BOOKING GUARDRAILS (LIGHTWEIGHT)
+When creating a booking:
+- if resource has an inoperable capability that is required by the user selection (not implemented yet), skip
+For now implement only:
+- if selected resource row (asset or capability unit) is not operational or has blocking constraint active → prevent booking and show message:
+  "Not bookable: [reason]"
+
+No solver, no dependency picking yet.
+
+---
+
+## F5) SEED EXAMPLES (FOR DEMO)
+Create seed data examples (if project uses seeds):
+- Lucky Lander asset
+  - Crane capability unit (inoperable)
+  - Capacity: max_weight_lbs = 12000
+  - Capacity: max_rv_length_ft = 28
+  - Constraint: requires_manual_loading (warning)
+- F550 asset
+  - Capacity: max_pallets = 3
+  - Constraint: winter_tires_required (info)
+
+---
+
+## F6) VERIFY
+Show screenshots:
+- Inventory detail with capability units/capacities/constraints
+- Operations board showing child rows
+- Attempt booking a blocked capability unit and see guardrail message
+
+BEGIN.

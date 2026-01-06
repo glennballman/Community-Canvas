@@ -57,6 +57,7 @@ import adminCommunitiesRouter from "./routes/admin-communities";
 import adminModerationRouter from "./routes/admin-moderation";
 import crmRouter from "./routes/crm";
 import scheduleRouter from "./routes/schedule";
+import capacityConstraintsRouter from "./routes/capacityConstraints";
 import { publicQuery } from "./db/tenantDb";
 import express from "express";
 
@@ -191,6 +192,9 @@ export async function registerRoutes(
 
   // Register schedule/operations board routes (15-minute precision)
   app.use('/api/schedule', scheduleRouter);
+  
+  // Register capacity/constraints management routes
+  app.use('/api/capacity', capacityConstraintsRouter);
 
   // Register operator routes (for community operators)
   app.use('/api/operator', operatorRouter);

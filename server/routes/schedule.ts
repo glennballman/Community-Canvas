@@ -470,7 +470,7 @@ router.delete('/events/:id', requireAuth, async (req: Request, res: Response) =>
 router.get('/resources', requireAuth, async (req: Request, res: Response) => {
   try {
     const tenantId = (req as any).tenantId;
-    const { type, includeInactive, search } = req.query;
+    const { type, includeInactive, search, includeCapabilities } = req.query;
     
     if (!tenantId) {
       return res.status(400).json({ success: false, error: 'Tenant context required' });
@@ -487,6 +487,10 @@ router.get('/resources', requireAuth, async (req: Request, res: Response) => {
         a.is_parkable_spot,
         a.is_equipment,
         a.source_table,
+        NULL as parent_asset_id,
+        NULL as capability_type,
+        NULL as capability_status,
+        false as is_capability_unit,
         CASE WHEN EXISTS (
           SELECT 1 FROM resource_schedule_events e
           WHERE e.resource_id = a.id
@@ -523,17 +527,81 @@ router.get('/resources', requireAuth, async (req: Request, res: Response) => {
     query += ` ORDER BY a.asset_type, a.name`;
 
     const result = await pool.query(query, params);
+    
+    let capabilityUnitsMap: Record<string, any[]> = {};
+    if (includeCapabilities === 'true') {
+      const assetIds = result.rows.map(r => r.id);
+      if (assetIds.length > 0) {
+        const capQuery = await pool.query(`
+          SELECT 
+            cu.id,
+            cu.name,
+            cu.capability_type,
+            cu.status as capability_status,
+            cu.asset_id as parent_asset_id,
+            cu.notes,
+            true as is_capability_unit,
+            'capability' as asset_type,
+            NULL as source_table,
+            NULL as thumbnail_url,
+            false as is_accommodation,
+            false as is_parkable_spot,
+            false as is_equipment,
+            CASE 
+              WHEN cu.status != 'operational' THEN true
+              WHEN EXISTS (
+                SELECT 1 FROM asset_constraints c
+                WHERE c.capability_unit_id = cu.id
+                  AND c.severity = 'blocking'
+                  AND c.active = true
+                  AND (c.starts_at IS NULL OR c.starts_at <= now())
+                  AND (c.ends_at IS NULL OR c.ends_at >= now())
+              ) THEN true
+              ELSE false 
+            END as is_under_maintenance
+          FROM asset_capability_units cu
+          WHERE cu.asset_id = ANY($1::uuid[])
+          ORDER BY cu.name
+        `, [assetIds]);
+        
+        for (const cap of capQuery.rows) {
+          if (!capabilityUnitsMap[cap.parent_asset_id]) {
+            capabilityUnitsMap[cap.parent_asset_id] = [];
+          }
+          capabilityUnitsMap[cap.parent_asset_id].push(cap);
+        }
+      }
+    }
+
+    const resourcesWithChildren = result.rows.map(asset => ({
+      ...asset,
+      capability_units: capabilityUnitsMap[asset.id] || [],
+    }));
+
+    const flatResources: any[] = [];
+    for (const asset of resourcesWithChildren) {
+      flatResources.push(asset);
+      for (const cap of asset.capability_units) {
+        flatResources.push({
+          ...cap,
+          indent_level: 1,
+        });
+      }
+    }
 
     const grouped: Record<string, typeof result.rows> = {};
     for (const row of result.rows) {
       const type = row.asset_type || 'other';
       if (!grouped[type]) grouped[type] = [];
-      grouped[type].push(row);
+      grouped[type].push({
+        ...row,
+        capability_units: capabilityUnitsMap[row.id] || [],
+      });
     }
 
     return res.json({
       success: true,
-      resources: result.rows,
+      resources: flatResources,
       grouped,
       asset_types: Object.keys(grouped).sort(),
     });
