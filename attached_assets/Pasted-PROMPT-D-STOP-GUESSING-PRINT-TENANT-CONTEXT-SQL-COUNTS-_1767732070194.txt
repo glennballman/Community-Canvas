@@ -1,0 +1,59 @@
+PROMPT D — STOP GUESSING. PRINT TENANT CONTEXT + SQL + COUNTS FOR /api/schedule/resources
+
+We have a reproducible bug:
+- /admin/inventory shows Ballman Enterprises has unified_assets (F550 Truck, Lucky Lander).
+- While impersonating Ballman Enterprises, /app/operations shows “No resources found”.
+
+This must be resolved by hard evidence, not assumptions.
+
+TASK 1 — Add temporary debug output to BOTH endpoints
+A) In server/routes/admin-inventory.ts (the endpoint used by /admin/inventory):
+- Add a debug log (dev-only) that prints:
+  - route name
+  - resolved tenant id used for filtering/joining
+  - count of unified_assets returned for that tenant
+  - first 3 asset ids + names + owner_tenant_id
+
+B) In server/routes/schedule.ts (GET /api/schedule/resources):
+- Add the same debug log fields:
+  - route name
+  - resolved tenant id
+  - EXACT where clause being used (owner_tenant_id vs tenant_id)
+  - count returned
+  - first 3 asset ids + names + owner_tenant_id
+
+Guard logs so they only run in dev:
+- if (process.env.NODE_ENV !== 'production') { console.log(...) }
+
+TASK 2 — Ensure schedule resources query matches canonical ownership rules
+The schedule resources query MUST be:
+SELECT ... FROM unified_assets
+WHERE owner_tenant_id = <resolvedTenantId>
+AND (status is not filtering out all rows)
+ORDER BY updated_at DESC
+LIMIT <reasonable>
+
+Do NOT filter by tenant_id unless that column truly exists and is correct.
+Do NOT require operational_status unless you coalesce it:
+- treat NULL as 'active' for now.
+
+TASK 3 — Confirm impersonation tenant context is being applied
+- Compare how admin-inventory obtains tenant id vs schedule route.
+- Both must use the SAME helper / middleware to resolve the current tenant under impersonation.
+- If admin-inventory uses something like req.context.tenantId but schedule uses req.user.tenant_id (or vice versa), fix schedule to use the canonical tenant resolver.
+
+TASK 4 — UI request verification (one-time)
+In the client, in OperationsBoard resource fetch:
+- Log (dev only) the HTTP status code and response body length for /api/schedule/resources.
+- If 401/403 occurs, show a visible banner “Auth error loading resources” (for debugging only).
+- Ensure it uses the same fetch helper as other authenticated pages.
+
+Acceptance criteria:
+1) While impersonating Ballman Enterprises, calling GET /api/schedule/resources returns >= 2 resources (F550 + Lucky Lander).
+2) Operations Board renders those rows.
+3) Debug logs show the SAME tenant id on admin-inventory and schedule/resources.
+
+After implementing, reply with:
+- The debug output from both routes (tenant id + counts)
+- The exact root cause found (tenant mismatch, wrong column, auth header, over-filtering)
+- The exact file + line changes
