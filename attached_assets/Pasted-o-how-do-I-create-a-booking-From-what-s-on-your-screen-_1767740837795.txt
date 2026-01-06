@@ -1,0 +1,164 @@
+o how do I create a booking?
+
+From what’s on your screen, booking creation is almost certainly done from the Calendar, not from the list view you’re currently on.
+
+Create a booking (the intended flow)
+
+Go to Bookings (left nav)
+
+Click Calendar View (top-right button)
+
+In the calendar:
+
+Click + drag to select a time window (or click a day/time slot)
+
+A “New Booking” drawer/modal should open. Fill:
+
+Customer (pick existing or “Add new”)
+
+What is being booked (Cabin / Parking Spot / F550 Truck / Lucky Lander, etc.)
+
+Start / End (or the preset like half-day)
+
+Status (Pending / Confirmed)
+
+Click Create / Save / Confirm.
+
+If Calendar View doesn’t let you click-to-create
+
+Try these two places (common wiring patterns):
+
+Inventory → click an item (e.g., F550 Truck) → “Book” / “Create booking”
+
+Operations Board → click empty grid → “Add booking” / “New reservation” (sometimes hidden behind Add Block)
+
+Quick reality check
+
+If you click Calendar View and there’s no obvious “Create booking” on click/drag, tell me what you see (even 1 sentence like “calendar opens but clicking does nothing” / “it only shows existing bookings”). Then I’ll give you the exact prompt to make Replit wire the creation action in the right place (without adding new features).
+
+Clicking Calendar view does nothing
+
+Got it — that means the Bookings “Calendar View” button is either not wired, or it routes to a path that doesn’t exist / fails silently.
+
+Here’s what to do right now (fast) and then the exact Replit prompt to prevent this class of “dead UI” going forward.
+
+60-second check (so Replit has evidence)
+
+Do these while on /app/bookings:
+
+Right-click → Inspect → Console
+
+Click Calendar View
+
+See if any error shows (even a tiny one)
+
+Look at the URL bar
+
+Click Calendar View
+
+Does the URL change at all? (e.g. adds ?view=calendar or goes to /app/bookings/calendar)
+
+Network tab
+
+Click Calendar View
+
+Any navigation request? any JS error? any API call?
+
+Even if you don’t report back, the prompt below forces Replit to instrument + fix properly.
+
+Paste this into Replit (PROMPT: “NO MORE DEAD UI – Bookings Calendar + Create Booking”)
+
+PROMPT
+You are fixing a production-quality app. The user reports: Clicking “Calendar View” on /app/bookings does nothing (no visible response).
+
+Rules
+
+Do not add new features.
+
+Do not redesign UI.
+
+Do not rename routes.
+
+Only: wire missing behavior, fix broken routing, add guardrails, and prove it with evidence.
+
+Goal
+
+The Calendar View button must always do something deterministic:
+
+Either toggles the bookings page into calendar mode, OR navigates to an existing calendar route.
+
+In calendar mode, the user must be able to create a booking by clicking or click-dragging a time range.
+
+If booking creation isn’t implemented yet, add a minimal “Create Booking” modal/drawer that calls the existing booking create endpoint (no new endpoints).
+
+Step A — Ground truth and instrumentation (required)
+
+Locate the “Calendar View” button component on /app/bookings.
+
+Add temporary dev logging (console.debug) that prints:
+
+“BookingsCalendarView clicked”
+
+current pathname + querystring
+
+the branch taken (toggle vs navigate)
+
+Confirm the click handler actually fires.
+
+Step B — Fix the Calendar View behavior (choose ONE canonical approach)
+
+Option 1 (preferred): Toggle state in the same page:
+
+Use a view state ("list" | "calendar") derived from a query param ?view=calendar so refresh is stable.
+
+Clicking Calendar View sets view=calendar.
+
+Add a “List View” control (can be subtle) to go back.
+
+Option 2: Navigate to a route:
+
+If a route exists (e.g. /app/bookings/calendar), ensure it is registered in the router and renders.
+
+If it does not exist, create it as a thin wrapper around the same Bookings page with calendar mode enabled.
+
+Step C — Calendar grid + booking creation
+
+Render bookings on a simple calendar grid (day/week is fine; no new design).
+
+Implement create booking interaction:
+
+Click empty slot OR click-drag time range → opens “New Booking” modal
+
+Fields: asset/resource, customer, starts_at, ends_at, status
+
+Use existing data sources already shown in list view (assets/resources + customers)
+
+Submit calls the existing booking create API used elsewhere in the app.
+
+On success: close modal and refetch bookings.
+
+Step D — Guardrails (no more “dead click”)
+
+If calendar mode cannot render (missing data), show a clear inline error with a trace id (use existing error handling pattern).
+
+Add an automated UI smoke check (dev only is fine):
+
+loads /app/bookings
+
+clicks “Calendar View”
+
+asserts URL or view state changes
+
+asserts calendar root element exists
+
+Step E — Evidence (required output)
+
+List the exact files changed.
+
+Show console logs proving click handler fires and state/route changes.
+
+Show a screenshot or log showing the calendar view rendered.
+
+Show a successful booking create call (HTTP 200) and that it appears in list and operations board.
+
+BEGIN.

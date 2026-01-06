@@ -629,4 +629,225 @@ router.get('/resources', requireAuth, async (req: Request, res: Response) => {
   }
 });
 
+// ============================================================================
+// BOOKINGS ENDPOINTS
+// ============================================================================
+
+const createBookingSchema = z.object({
+  asset_id: z.string().uuid(),
+  primary_guest_name: z.string().min(1, 'Guest name is required'),
+  primary_guest_email: z.string().email().optional(),
+  primary_guest_phone: z.string().optional(),
+  starts_at: z.string().refine(val => !isNaN(Date.parse(val)), 'Invalid starts_at'),
+  ends_at: z.string().refine(val => !isNaN(Date.parse(val)), 'Invalid ends_at'),
+  num_guests: z.number().int().positive().optional(),
+  special_requests: z.string().optional(),
+  status: z.enum(['pending', 'confirmed']).optional(),
+});
+
+// GET /api/schedule/bookings - Get tenant bookings
+router.get('/bookings', requireAuth, async (req: Request, res: Response) => {
+  try {
+    const tenantId = getTenantId(req);
+    if (!tenantId) {
+      return res.status(400).json({ success: false, error: 'Tenant context required' });
+    }
+
+    const { from, to, status, assetId } = req.query;
+
+    let query = `
+      SELECT 
+        b.id,
+        b.booking_ref,
+        b.asset_id,
+        a.name as asset_name,
+        a.asset_type,
+        b.primary_guest_name,
+        b.primary_guest_email,
+        b.primary_guest_phone,
+        b.num_guests,
+        b.starts_at,
+        b.ends_at,
+        b.status,
+        b.payment_status,
+        b.total,
+        b.special_requests,
+        b.created_at
+      FROM unified_bookings b
+      JOIN unified_assets a ON a.id = b.asset_id
+      WHERE a.tenant_id = $1
+    `;
+    const params: any[] = [tenantId];
+    let paramIdx = 1;
+
+    if (from) {
+      paramIdx++;
+      query += ` AND b.starts_at >= $${paramIdx}`;
+      params.push(from);
+    }
+    if (to) {
+      paramIdx++;
+      query += ` AND b.ends_at <= $${paramIdx}`;
+      params.push(to);
+    }
+    if (status) {
+      paramIdx++;
+      query += ` AND b.status = $${paramIdx}`;
+      params.push(status);
+    }
+    if (assetId) {
+      paramIdx++;
+      query += ` AND b.asset_id = $${paramIdx}`;
+      params.push(assetId);
+    }
+
+    query += ' ORDER BY b.starts_at DESC';
+
+    const result = await pool.query(query, params);
+
+    return res.json({
+      success: true,
+      bookings: result.rows,
+    });
+  } catch (error) {
+    console.error('Bookings fetch error:', error);
+    return res.status(500).json({ success: false, error: 'Failed to fetch bookings' });
+  }
+});
+
+// POST /api/schedule/bookings - Create booking
+router.post('/bookings', requireAuth, async (req: Request, res: Response) => {
+  try {
+    const tenantId = getTenantId(req);
+    if (!tenantId) {
+      return res.status(400).json({ success: false, error: 'Tenant context required' });
+    }
+
+    const parsed = createBookingSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Invalid booking data',
+        details: parsed.error.errors 
+      });
+    }
+
+    const data = parsed.data;
+    const startsAt = new Date(data.starts_at);
+    const endsAt = new Date(data.ends_at);
+
+    if (endsAt <= startsAt) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'End time must be after start time' 
+      });
+    }
+
+    // Verify asset belongs to tenant
+    const assetCheck = await pool.query(
+      'SELECT id, name FROM unified_assets WHERE id = $1 AND tenant_id = $2',
+      [data.asset_id, tenantId]
+    );
+    if (assetCheck.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Asset not found' });
+    }
+
+    // Check for conflicts
+    const conflicts = await checkTimeConflicts(data.asset_id, startsAt, endsAt);
+    if (conflicts.length > 0) {
+      return res.status(409).json({ 
+        success: false, 
+        error: 'Time conflict with existing booking or event',
+        conflicts 
+      });
+    }
+
+    // Create booking
+    const result = await pool.query(`
+      INSERT INTO unified_bookings (
+        asset_id,
+        primary_guest_name,
+        primary_guest_email,
+        primary_guest_phone,
+        starts_at,
+        ends_at,
+        num_guests,
+        special_requests,
+        status,
+        booking_context
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'direct')
+      RETURNING *
+    `, [
+      data.asset_id,
+      data.primary_guest_name,
+      data.primary_guest_email || null,
+      data.primary_guest_phone || null,
+      startsAt,
+      endsAt,
+      data.num_guests || 1,
+      data.special_requests || null,
+      data.status || 'pending'
+    ]);
+
+    return res.status(201).json({
+      success: true,
+      booking: result.rows[0],
+    });
+  } catch (error) {
+    console.error('Booking create error:', error);
+    return res.status(500).json({ success: false, error: 'Failed to create booking' });
+  }
+});
+
+// PUT /api/schedule/bookings/:id/status - Update booking status
+router.put('/bookings/:id/status', requireAuth, async (req: Request, res: Response) => {
+  try {
+    const tenantId = getTenantId(req);
+    if (!tenantId) {
+      return res.status(400).json({ success: false, error: 'Tenant context required' });
+    }
+
+    const { id } = req.params;
+    const { status } = req.body;
+
+    const validStatuses = ['pending', 'confirmed', 'cancelled', 'completed', 'no_show'];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({ success: false, error: 'Invalid status' });
+    }
+
+    // Verify booking belongs to tenant's asset
+    const booking = await pool.query(`
+      SELECT b.id FROM unified_bookings b
+      JOIN unified_assets a ON a.id = b.asset_id
+      WHERE b.id = $1 AND a.tenant_id = $2
+    `, [id, tenantId]);
+
+    if (booking.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Booking not found' });
+    }
+
+    const updateFields: string[] = ['status = $2'];
+    const params: any[] = [id, status];
+
+    if (status === 'cancelled') {
+      updateFields.push('cancelled_at = now()');
+    }
+
+    const result = await pool.query(`
+      UPDATE unified_bookings 
+      SET ${updateFields.join(', ')}, updated_at = now()
+      WHERE id = $1
+      RETURNING *
+    `, params);
+
+    return res.json({
+      success: true,
+      booking: result.rows[0],
+    });
+  } catch (error) {
+    console.error('Booking status update error:', error);
+    return res.status(500).json({ success: false, error: 'Failed to update booking' });
+  }
+});
+
 export default router;
