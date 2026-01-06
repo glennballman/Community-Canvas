@@ -129,7 +129,7 @@ export default function AvailabilityConsole() {
             <AlertTriangle className="h-12 w-12 mx-auto text-amber-500 mb-4" />
             <h2 className="text-xl font-semibold mb-2">Community Operators Only</h2>
             <p className="text-muted-foreground">
-              The Availability Console is available to community and government operators who can search opted-in business catalogs.
+              The Availability Console is available to community and government operators who can search opted-in business inventories.
             </p>
           </CardContent>
         </Card>

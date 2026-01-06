@@ -138,11 +138,11 @@ export default function CatalogOnboarding() {
   const progressPercent = (getStepNumber() / 5) * 100;
 
   return (
-    <div className="min-h-screen bg-background text-foreground" data-testid="catalog-onboarding">
+    <div className="min-h-screen bg-background text-foreground" data-testid="inventory-onboarding">
       <div className="border-b">
         <div className="max-w-3xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between gap-4 mb-2">
-            <span className="text-sm text-muted-foreground">Add your catalog</span>
+            <span className="text-sm text-muted-foreground">Add your inventory</span>
             <span className="text-sm text-muted-foreground">
               Step {getStepNumber()} of 5
             </span>
