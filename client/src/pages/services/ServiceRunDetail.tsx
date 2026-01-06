@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { useParams, useLocation } from 'wouter';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { Badge } from '@/components/ui/badge';
 
 interface Slot {
   id: string;
@@ -94,7 +95,7 @@ const ACCESS_ICONS: Record<string, string> = {
 
 export default function ServiceRunDetail() {
   const { slug } = useParams<{ slug: string }>();
-  const [, navigate] = useLocation();
+  const navigate = useNavigate();
   const { token } = useAuth();
   const [run, setRun] = useState<RunDetail | null>(null);
   const [slots, setSlots] = useState<Slot[]>([]);
@@ -152,7 +153,7 @@ export default function ServiceRunDetail() {
       <div className="p-6 text-center">
         <h3 className="text-lg font-medium mb-2">Run Not Found</h3>
         <button
-          onClick={() => navigate('/services/runs')}
+          onClick={() => navigate('/app/service-runs')}
           className="text-primary hover:underline"
           data-testid="link-back-to-runs"
         >
@@ -166,7 +167,7 @@ export default function ServiceRunDetail() {
     <div className="p-6">
       <div className="flex items-center gap-4 mb-6 flex-wrap">
         <button
-          onClick={() => navigate('/services/runs')}
+          onClick={() => navigate('/app/service-runs')}
           className="text-muted-foreground hover:text-foreground"
           data-testid="button-back"
         >

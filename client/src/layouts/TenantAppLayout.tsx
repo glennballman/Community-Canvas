@@ -39,6 +39,8 @@ import {
   LogOut,
   User,
   Shield,
+  Layers,
+  Briefcase,
 } from 'lucide-react';
 import { useTenant, TenantMembership } from '../contexts/TenantContext';
 
@@ -56,6 +58,8 @@ const COMMUNITY_NAV: NavItem[] = [
   { icon: LayoutDashboard, label: 'Dashboard', href: '/app/dashboard' },
   { icon: Phone, label: 'Availability', href: '/app/availability' },
   { icon: Wrench, label: 'Service Runs', href: '/app/service-runs' },
+  { icon: Briefcase, label: 'Services', href: '/app/services' },
+  { icon: Layers, label: 'Bundles', href: '/app/bundles' },
   { icon: Building2, label: 'Directory', href: '/app/directory' },
   { icon: Palette, label: 'Content', href: '/app/content' },
   { icon: Settings, label: 'Settings', href: '/app/settings' },

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useLocation } from 'wouter';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface Community {
@@ -36,7 +36,7 @@ interface RunType {
 }
 
 export default function CreateServiceRun() {
-  const [, navigate] = useLocation();
+  const navigate = useNavigate();
   const { token } = useAuth();
   
   const [communities, setCommunities] = useState<Community[]>([]);
@@ -183,7 +183,7 @@ export default function CreateServiceRun() {
       const data = await res.json();
       
       if (data.success) {
-        navigate(`/services/runs/${data.run.slug}`);
+        navigate(`/app/service-runs/${data.run.slug}`);
       } else {
         setError(data.error || 'Failed to create run');
       }
@@ -210,7 +210,7 @@ export default function CreateServiceRun() {
     <div className="p-6 max-w-4xl mx-auto">
       <div className="flex items-center gap-4 mb-6 flex-wrap">
         <button
-          onClick={() => navigate('/services/runs')}
+          onClick={() => navigate('/app/service-runs')}
           className="text-muted-foreground hover:text-foreground"
           data-testid="button-back"
         >
@@ -535,7 +535,7 @@ export default function CreateServiceRun() {
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <button
             type="button"
-            onClick={() => navigate('/services/runs')}
+            onClick={() => navigate('/app/service-runs')}
             className="px-6 py-2 bg-muted hover-elevate rounded-lg"
             data-testid="button-cancel"
           >

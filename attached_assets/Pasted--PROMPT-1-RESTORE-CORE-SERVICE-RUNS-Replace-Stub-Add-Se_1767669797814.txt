@@ -1,0 +1,122 @@
+# PROMPT 1 — RESTORE CORE SERVICE RUNS (Replace Stub) + Add Services/Bundles Nav + Single Detail Page + Coop Runs MVP
+
+You have a confirmed audit: rich Service Runs / Services / Bundles pages exist in `client/src/pages/services/*` but were orphaned by the nuclear UI rebuild. The community left-nav points to a stub page with mock data. Fix this without redesigning layout.
+
+## ACCEPTED DECISIONS (LOCKED)
+- Coop runs use a **single detail page** (reuse `ServiceRunDetail` with a `runKind` switch).
+- Services + Bundles must appear in **community left nav immediately**.
+- The “Find Your Next Project” surface will become **runs-first later** (do NOT do that in this prompt).
+
+## GOALS (DO IN ORDER)
+1) Replace `/app/service-runs` route binding from the stub to the real `client/src/pages/services/ServiceRuns.tsx`.
+2) Wire missing routes:
+   - `/app/services` → `ServiceCatalog.tsx`
+   - `/app/bundles` → `BundlesBrowser.tsx`
+   - `/app/service-runs/new` → `CreateServiceRun.tsx`
+   - `/app/service-runs/:slug` → `ServiceRunDetail.tsx` (single detail page)
+3) Add “Services” + “Bundles” to community left nav in `TenantAppLayout.tsx` and keep “Service Runs” prominent.
+4) Convert the 5 service pages from **wouter** to **react-router-dom** (no wouter in these pages after this).
+5) Implement Coop Runs MVP:
+   - Create coop runs from CreateServiceRun via toggle
+   - List coop runs alongside legacy runs in ServiceRuns list with a type badge
+   - Open coop run in the same ServiceRunDetail page via runKind param (or by resolving slug pattern)
+
+## HARD CONSTRAINTS
+- Do NOT redesign navigation or layout.
+- Do NOT break admin routes or business tenant routes.
+- Must render with ZERO runtime errors.
+- Prefer existing API endpoints:
+  - Legacy: `/api/service-runs/*`
+  - Coop: `/api/coop-runs/*`
+- If any endpoint is missing (e.g., list coop runs), add it server-side minimally.
+
+---
+
+# IMPLEMENTATION STEPS (EXACT ORDER)
+
+## Step 0 — Router conversion (surgical)
+Files to update (remove wouter usage):
+- client/src/pages/services/ServiceRuns.tsx
+- client/src/pages/services/CreateServiceRun.tsx
+- client/src/pages/services/ServiceRunDetail.tsx
+- client/src/pages/services/ServiceCatalog.tsx
+- client/src/pages/services/BundlesBrowser.tsx
+
+Replace:
+- `useLocation()` from wouter → `useNavigate()` / `useParams()` from react-router-dom
+- any `Link` from wouter → `Link` from react-router-dom
+- any navigation string building → `generatePath()` where helpful
+
+Do NOT change UI structure unless required for routing.
+
+## Step 1 — Wire routes in client/src/App.tsx
+- Import the real service pages from `client/src/pages/services/*`
+- Under the `/app` route (TenantAppLayout), add:
+  - `services` → ServiceCatalog
+  - `bundles` → BundlesBrowser
+  - `service-runs` → ServiceRuns  (REPLACE the current stub binding)
+  - `service-runs/new` → CreateServiceRun
+  - `service-runs/:slug` → ServiceRunDetail
+
+## Step 2 — Add nav items for community tenants
+In client/src/layouts/TenantAppLayout.tsx:
+- Update COMMUNITY_NAV to include:
+  - Services → `/app/services`
+  - Bundles → `/app/bundles`
+- Keep “Service Runs” near top (after Dashboard/Availability).
+- Do NOT add these to BUSINESS_NAV.
+
+## Step 3 — Retire stub
+- Ensure `client/src/pages/app/community/ServiceRunsPage.tsx` is no longer referenced in routes.
+- You may keep the file, but it must not be used.
+
+## Step 4 — Coop Runs MVP
+### 4.1 Add toggle to CreateServiceRun
+In CreateServiceRun.tsx:
+- Add top-level toggle:
+  - Contractor unknown (Bidding run)
+  - Contractor known (Co-op run)
+- For bidding run:
+  - POST to `/api/service-runs/runs`
+- For co-op run:
+  - POST to `/api/coop-runs/`
+- Use the simplest payload required by the server route.
+
+### 4.2 List both run types in ServiceRuns
+In ServiceRuns.tsx:
+- Fetch legacy runs: GET `/api/service-runs/runs`
+- Fetch coop runs: GET `/api/coop-runs` (if missing, add server endpoint)
+- Merge into one list sorted by next date.
+- Add a small badge/label: “Bidding run” vs “Co-op run”
+- Clicking a run opens detail page:
+  - Use `/app/service-runs/:slug`
+  - If coop run does not have `slug`, use a stable id strategy:
+     - e.g., prefix the slug: `coop_<id>` and decode in detail page, OR
+     - add `slug` column server-side if already present.
+  - Keep it minimal and robust.
+
+### 4.3 Single ServiceRunDetail page supports both
+In ServiceRunDetail.tsx:
+- Detect whether `slug` indicates coop run or legacy run
+- Fetch correct details from correct endpoint
+- Render the same layout, with small “Run type” indicator and status mapping.
+
+---
+
+# VERIFICATION REPORT (MANDATORY)
+When finished, provide this report:
+
+## A) Files changed (list all)
+## B) Routes smoke-tested (PASS/FAIL)
+- /app/service-runs (real page, real API call)
+- /app/service-runs/new (toggle works, submit hits endpoint)
+- /app/service-runs/:slug (legacy run opens)
+- /app/service-runs/:slug (coop run opens)
+- /app/services
+- /app/bundles
+## C) Nav verified (PASS/FAIL)
+- Community left nav shows Services + Bundles + Service Runs
+## D) Console status
+- No runtime errors on these pages
+
+BEGIN NOW.

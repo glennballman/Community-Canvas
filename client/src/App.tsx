@@ -31,9 +31,15 @@ import { Dashboard } from './pages/app/Dashboard';
 
 // Pages - App Community
 import AvailabilityConsole from './pages/app/community/AvailabilityConsole';
-import ServiceRunsPage from './pages/app/community/ServiceRunsPage';
 import DirectoryPage from './pages/app/community/DirectoryPage';
 import ContentBrandingPage from './pages/app/community/ContentBrandingPage';
+
+// Pages - Services (restored from legacy - real implementations)
+import ServiceRuns from './pages/services/ServiceRuns';
+import CreateServiceRun from './pages/services/CreateServiceRun';
+import ServiceRunDetail from './pages/services/ServiceRunDetail';
+import ServiceCatalog from './pages/services/ServiceCatalog';
+import BundlesBrowser from './pages/services/BundlesBrowser';
 
 // Pages - App Business
 import CatalogPage from './pages/app/business/CatalogPage';
@@ -136,7 +142,11 @@ export default function App() {
                 
                 {/* Community tenant routes */}
                 <Route path="availability" element={<AvailabilityConsole />} />
-                <Route path="service-runs" element={<ServiceRunsPage />} />
+                <Route path="service-runs" element={<ServiceRuns />} />
+                <Route path="service-runs/new" element={<CreateServiceRun />} />
+                <Route path="service-runs/:slug" element={<ServiceRunDetail />} />
+                <Route path="services" element={<ServiceCatalog />} />
+                <Route path="bundles" element={<BundlesBrowser />} />
                 <Route path="directory" element={<DirectoryPage />} />
                 <Route path="content" element={<ContentBrandingPage />} />
                 
