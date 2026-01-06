@@ -1,0 +1,122 @@
+YOU ARE IN “STOP THE BLEEDING” MODE — HARDEN + QA ONLY (NO NEW FEATURES)
+
+Goal:
+Make the app reliably testable end-to-end in dev without getting stuck in loops:
+- Bookings must exist in left nav and route must load.
+- Inventory must load for Ballman Enterprises and Bamfield Community (even if empty), and “Add Item” must work.
+- Operations Board must load resources/events without manual cache voodoo.
+- Impersonation must not break auth/tenant context.
+- No more “it should work” without proof.
+
+Rules (non-negotiable):
+1) Do NOT add new pages or new product features.
+2) Do NOT rename routes.
+3) Only fix: missing wiring, auth/tenant context, query behavior, permissions/RLS, and nav visibility.
+4) Every claim must be backed by evidence: file paths + diffs + logs/screenshots.
+5) Never run in circles: if you can’t reproduce in ≤ 10 minutes, STOP and ask for the missing artifact (exact error text / console log / endpoint response).
+6) Prefer smallest possible change that fixes the issue.
+7) When done, output: (a) what was broken, (b) root cause, (c) exact fix, (d) exact steps to verify.
+
+PHASE 0 — Establish Ground Truth (5 minutes)
+A) Confirm current routes/pages exist:
+- /app/bookings (or whatever the bookings route is supposed to be)
+- /app/inventory
+- /app/operations
+If any route is missing: locate the file that defines it and the nav item that links to it.
+
+B) Confirm left nav rendering logic:
+- Find the sidebar component (path) and list the nav items with their visibility conditions.
+- Identify why “Bookings” disappeared (feature flag? capability gate? role gate? typo? removed route?).
+
+C) Confirm auth + tenant context contract:
+- Identify the single canonical “API client” helper (fetch wrapper) used by working pages.
+- Document in 3 bullets what the server expects for auth: cookie, bearer token, or both.
+- Ensure schedule/inventory/bookings all use the same client and include credentials consistently.
+
+PHASE 1 — Fix Bookings Missing From Nav (must complete)
+1) Restore the Bookings nav item:
+- Ensure it is present for both “Business” and “Government” tenants unless explicitly restricted.
+- If it’s capability-gated, ensure the capability exists by default OR the gate is removed for dev.
+
+2) Ensure Bookings route resolves:
+- Visiting /app/bookings must render a page (even if empty state).
+- If it 404s: fix the router registration, not a workaround.
+
+Evidence required:
+- Screenshot of left nav showing “Bookings”
+- Screenshot of /app/bookings loading
+- File paths + diff where nav/route was fixed
+
+PHASE 2 — Make Inventory Testable (must complete)
+Problem statement:
+User reports “no inventory showing” in Ballman Enterprises and Bamfield Community and can’t test.
+
+What to do:
+1) Confirm inventory list endpoint is called and returns:
+- 200 with [] for empty tenant (acceptable)
+- OR 200 with seeded items
+2) If 401/400 occurs: fix auth/tenant context, not the UI.
+3) If permissions/RLS/grants issue occurs: fix grants/policies in a migration (dev-safe).
+4) Ensure “Add Item” creates an item and list refreshes.
+
+Evidence required:
+- Network log screenshot showing inventory GET 200
+- Creating an inventory item returns 200 and item appears
+- File paths + diff for changes
+
+PHASE 3 — Stop TanStack Query “Ghost State” Failures (must complete)
+We had symptoms: enabled=true but no request, cached error persisted, staleTime Infinity, retry false, refetch not happening.
+
+Hardening requirements:
+1) QueryClient defaults must NOT make errors sticky forever:
+- Global staleTime must be finite (e.g., 30s–2m), and gcTime must be sane.
+- retry must be true for transient network/auth (at least 1–2) OR explicitly handled per-query.
+2) For critical screens (Operations/Inventory/Bookings), enforce:
+- refetchOnMount: "always"
+- refetchOnWindowFocus: false (optional)
+- clear error state on tenant change / impersonation change (invalidateQueries on tenantId key)
+
+Evidence required:
+- Show QueryClient config diff (path + before/after)
+- Console evidence that a failed request refetches after fix (or after tenant change)
+
+PHASE 4 — Operations Board Data Path Sanity (must complete)
+1) Confirm /api/schedule/resources and /api/schedule/events are called when Operations loads.
+2) If “Tenant context required” occurs:
+- Fix tenantContext middleware so BOTH normal tenant sessions and admin impersonation populate ctx.tenant_id consistently.
+3) Ensure auth headers/cookies are consistent with Phase 0.
+4) Ensure the UI shows resources list (F550 Truck, Lucky Lander) and schedule blocks.
+
+Evidence required:
+- Screenshot of Operations Board with resource list visible
+- Network log showing schedule endpoints return 200
+- Any grants/RLS fixes captured in a migration file
+
+PHASE 5 — Dev Seed + One-Click QA Script (required so we don’t do this again)
+Create a dev-only seed + QA runner that:
+- Seeds minimal assets + (optional) one booking
+- Runs a quick check that endpoints return 200 for current tenant
+- Prints a short PASS/FAIL summary in console
+
+Constraints:
+- Must be dev-only (guarded by NODE_ENV or internal flag)
+- Must not change production behavior
+
+Deliverable output (MANDATORY):
+At the end, print:
+
+1) What was broken (Bookings missing, Inventory not testable, query ghost-state, etc.)
+2) Root cause for each (nav gate, missing route, auth mismatch, staleTime Infinity, RLS grant missing, etc.)
+3) Exact files changed (full paths)
+4) Exact migrations added (name + what it changes)
+5) Exact manual verification steps (3–6 steps max)
+6) Screenshots OR console logs that prove:
+   - Bookings appears + route loads
+   - Inventory list loads + Add Item works
+   - Operations loads resources + schedule endpoints 200
+
+If you hit any blocker:
+STOP immediately and ask for ONE specific artifact (exact error response body OR screenshot of Network tab for the failed request).
+Do NOT continue guessing.
+
+BEGIN NOW.

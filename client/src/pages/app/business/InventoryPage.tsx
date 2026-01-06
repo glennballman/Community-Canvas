@@ -13,17 +13,34 @@ interface InventoryItem {
   asset_type: string;
   description: string | null;
   is_available: boolean;
+  status?: string;
+  is_capability_unit?: boolean;
   capability_count?: number;
   capacity_count?: number;
   constraint_count?: number;
 }
 
+interface ResourcesResponse {
+  success: boolean;
+  resources: InventoryItem[];
+  grouped?: Record<string, InventoryItem[]>;
+  asset_types?: string[];
+}
+
 export default function InventoryPage() {
   const [searchTerm, setSearchTerm] = useState('');
   
-  const { data: items = [], isLoading } = useQuery<InventoryItem[]>({
-    queryKey: ['/api/rentals/items'],
+  const { data, isLoading, isError, error } = useQuery<ResourcesResponse>({
+    queryKey: ['/api/schedule/resources'],
+    refetchOnMount: 'always',
   });
+  
+  const items = (data?.resources ?? [])
+    .filter(r => !r.is_capability_unit)
+    .map(r => ({
+      ...r,
+      is_available: r.status === 'active',
+    }));
   
   const filteredItems = items.filter(item =>
     item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -82,6 +99,16 @@ export default function InventoryPage() {
         <div className="flex items-center justify-center h-64">
           <Loader2 className="h-8 w-8 animate-spin" />
         </div>
+      ) : isError ? (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+            <Package className="h-12 w-12 text-destructive mb-4" />
+            <h3 className="font-medium text-destructive">Failed to Load Inventory</h3>
+            <p className="text-sm text-muted-foreground mt-1">
+              {(error as any)?.message || 'Please try again or contact support.'}
+            </p>
+          </CardContent>
+        </Card>
       ) : filteredItems.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12 text-center">
