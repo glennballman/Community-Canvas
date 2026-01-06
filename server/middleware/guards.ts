@@ -75,16 +75,25 @@ export const requireServiceKey: RequestHandler = (req: Request, res: Response, n
 };
 
 // Cast to RequestHandler for Express Router compatibility
+// UPDATED: Also accepts valid impersonation sessions (platform staff impersonating tenant)
 export const requireAuth: RequestHandler = (req: Request, res: Response, next: NextFunction) => {
   const tenantReq = req as TenantRequest;
-  if (!tenantReq.ctx?.individual_id) {
-    return res.status(401).json({ 
-      success: false, 
-      error: 'Authentication required',
-      code: 'AUTH_REQUIRED'
-    });
+  
+  // Accept if user has individual_id (normal auth)
+  if (tenantReq.ctx?.individual_id) {
+    return next();
   }
-  next();
+  
+  // Also accept if impersonating with valid tenant context
+  if (tenantReq.impersonation?.tenant_id && tenantReq.ctx?.tenant_id) {
+    return next();
+  }
+  
+  return res.status(401).json({ 
+    success: false, 
+    error: 'Authentication required',
+    code: 'AUTH_REQUIRED'
+  });
 };
 
 export const requireTenant: RequestHandler = (req: Request, res: Response, next: NextFunction) => {

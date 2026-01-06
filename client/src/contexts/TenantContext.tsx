@@ -279,9 +279,29 @@ export function TenantProvider({ children }: TenantProviderProps) {
   // Derived state
   // --------------------------------------------------------------------------
 
-  const currentTenant = currentTenantId
-    ? memberships.find(m => m.tenant_id === currentTenantId) || null
-    : null;
+  // When impersonating, the tenant may not be in the user's memberships.
+  // Synthesize a tenant object from impersonation data so queries are enabled.
+  const currentTenant: TenantMembership | null = (() => {
+    if (!currentTenantId) return null;
+    
+    // First try to find in memberships
+    const found = memberships.find(m => m.tenant_id === currentTenantId);
+    if (found) return found;
+    
+    // If impersonating and not found in memberships, synthesize from impersonation data
+    if (impersonation.is_impersonating && impersonation.tenant_id === currentTenantId) {
+      return {
+        tenant_id: impersonation.tenant_id,
+        tenant_name: impersonation.tenant_name || 'Unknown Tenant',
+        tenant_slug: '', // Not critical for queries
+        tenant_type: (impersonation.tenant_type as TenantMembership['tenant_type']) || 'business',
+        role: 'admin', // Impersonation grants admin-level access
+        is_primary: false,
+      };
+    }
+    
+    return null;
+  })();
 
   // --------------------------------------------------------------------------
   // Value
