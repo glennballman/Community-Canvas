@@ -1,0 +1,68 @@
+You are working in Community Canvas (Replit dev). Do NOT redesign anything. Do NOT add new features. This is wiring + refactor only.
+
+GOAL:
+Bookings “Calendar View” must use the exact same scheduling surface as the Operations Board: resources down the left and time across the top. The current Bookings calendar grid (time down the left, dates across the top) must be removed completely.
+
+TASKS:
+
+1) DELETE THE NEW BOOKINGS CALENDAR
+- Find the Bookings calendar implementation (likely in client/src/pages/app/business/BookingsPage.tsx or similar).
+- Remove the weekly grid that shows times down the left and dates across the top.
+- The Bookings “Calendar View” should no longer render any bespoke calendar layout.
+
+2) EXTRACT/REUSE OPERATIONS BOARD SCHEDULER AS CANONICAL
+- Identify the component(s) Operations Board uses to render:
+  - the resources list (Vehicles/Watercraft)
+  - the timeline grid
+  - blocks on the grid
+  - the zoom controls (15 min / 1 hour / Day)
+- Extract these into a shared component:
+  - src/components/schedule/ScheduleBoard.tsx (or similar)
+- Operations Board should use this shared component after extraction (no behavior change).
+- Bookings Calendar View should use this same shared component.
+
+3) EXPAND ZOOM LEVELS
+- The zoom control must include: 15 min, 1 hour, Day, Week, Month, Season, Year.
+- Implement zoom as a single enum/string union used by ScheduleBoard.
+- For each zoom level, define:
+  - visible date range (start/end)
+  - time resolution (cell size)
+Suggested mapping:
+  - 15 min: 24h day view with 15-min columns
+  - 1 hour: 24h day view with hourly columns
+  - Day: single day view (could match 1 hour or a coarser scale, but keep existing semantics)
+  - Week: 7-day view with day columns (like Ops “Day/Week toggle” style)
+  - Month: month range with day columns
+  - Season: 3-month range with week columns (or day columns if already easy)
+  - Year: 12-month range with month columns
+Keep it deterministic and stable; accuracy > fancy UI.
+
+4) BOOKINGS RENDER AS BLOCKS ON THE SCHEDULE BOARD
+- In Bookings calendar mode:
+  - resources = inventory assets (same grouping as Ops)
+  - blocks = bookings mapped into ScheduleBoard’s block type:
+    - resource_id = booking.asset_id (or equivalent)
+    - start/end = booking start/end timestamps
+    - label = customer or booking title
+    - status controls block style (confirmed/pending/completed)
+- Reuse existing bookings query; do not create new endpoints.
+
+5) KEEP BOOKING CREATION WIRED AS-IS
+- Do not redesign booking creation.
+- If there is a “New Booking” button (top right), it stays.
+- The calendar surface should not introduce new UX beyond clicking to select time (only if already implemented).
+Focus is: view consistency + showing bookings on the canonical scheduler.
+
+6) PROOF REQUIREMENT
+- After implementation provide:
+  - list of files changed
+  - what you deleted
+  - screenshots:
+    - Bookings Calendar View showing resources on left + time across top
+    - Operations Board still working
+  - confirm zoom buttons show: 15 min, 1 hour, Day, Week, Month, Season, Year
+
+IMPORTANT:
+- No route renames.
+- No UI redesign.
+- Prefer extracting Ops components rather than rewriting them.

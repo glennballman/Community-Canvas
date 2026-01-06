@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Calendar, Clock, CheckCircle, XCircle, List, Plus, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Calendar, Clock, CheckCircle, XCircle, List, Plus, Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
@@ -11,9 +11,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { queryClient, apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useLocation, useSearch } from 'wouter';
-import { format, startOfWeek, endOfWeek, addDays, addWeeks, subWeeks, isSameDay, parseISO, startOfDay, endOfDay, isWithinInterval } from 'date-fns';
+import { format, parseISO } from 'date-fns';
+import ScheduleBoard, { Resource, ScheduleEvent, ZoomLevel, ZOOM_CONFIGS } from '@/components/schedule/ScheduleBoard';
 
 interface Booking {
   id: string;
@@ -34,13 +35,6 @@ interface Booking {
   created_at: string;
 }
 
-interface Asset {
-  id: string;
-  name: string;
-  asset_type: string;
-  status: string;
-}
-
 interface BookingsResponse {
   success: boolean;
   bookings: Booking[];
@@ -48,19 +42,23 @@ interface BookingsResponse {
 
 interface ResourcesResponse {
   success: boolean;
-  resources: Asset[];
+  resources: Resource[];
+  grouped: Record<string, Resource[]>;
+  asset_types: string[];
 }
 
 export default function BookingsPage() {
   const search = useSearch();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  
+
   const params = new URLSearchParams(search);
   const viewMode = params.get('view') === 'calendar' ? 'calendar' : 'list';
-  const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }));
   const [createModalOpen, setCreateModalOpen] = useState(false);
-  const [selectedSlot, setSelectedSlot] = useState<{ date: Date; hour: number } | null>(null);
+  const [dateRange, setDateRange] = useState(() => {
+    const config = ZOOM_CONFIGS['week'];
+    return config.getRange(new Date());
+  });
 
   const [formData, setFormData] = useState({
     asset_id: '',
@@ -75,10 +73,6 @@ export default function BookingsPage() {
   });
 
   const setView = (view: 'list' | 'calendar') => {
-    console.debug('BookingsCalendarView clicked', { 
-      currentPath: window.location.pathname + window.location.search,
-      targetView: view 
-    });
     if (view === 'list') {
       setLocation('/app/bookings');
     } else {
@@ -86,21 +80,61 @@ export default function BookingsPage() {
     }
   };
 
+  const bookingsUrl = viewMode === 'calendar' 
+    ? `/api/schedule/bookings?from=${dateRange.from.toISOString()}&to=${dateRange.to.toISOString()}`
+    : '/api/schedule/bookings';
+
   const { data: bookingsData, isLoading: bookingsLoading, isError: bookingsError } = useQuery<BookingsResponse>({
-    queryKey: ['/api/schedule/bookings'],
+    queryKey: viewMode === 'calendar' 
+      ? ['/api/schedule/bookings', dateRange.from.toISOString(), dateRange.to.toISOString()]
+      : ['/api/schedule/bookings'],
+    queryFn: async () => {
+      const token = localStorage.getItem('cc_token');
+      const headers: Record<string, string> = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      const response = await fetch(bookingsUrl, { credentials: 'include', headers });
+      if (!response.ok) throw new Error('Failed to fetch bookings');
+      return response.json();
+    },
     refetchOnMount: 'always',
   });
 
-  const { data: resourcesData } = useQuery<ResourcesResponse>({
+  const { data: resourcesData, isLoading: resourcesLoading } = useQuery<ResourcesResponse>({
     queryKey: ['/api/schedule/resources'],
+    refetchOnMount: 'always',
   });
 
-  const assets = useMemo(() => 
+  const resources = useMemo(() =>
     (resourcesData?.resources ?? []).filter(r => !('is_capability_unit' in r && r.is_capability_unit)),
     [resourcesData]
   );
 
+  const groupedResources = useMemo(() => {
+    const grouped: Record<string, Resource[]> = {};
+    for (const resource of resources) {
+      const type = resource.asset_type || 'other';
+      if (!grouped[type]) grouped[type] = [];
+      grouped[type].push(resource);
+    }
+    return grouped;
+  }, [resources]);
+
+  const assetTypes = useMemo(() => Object.keys(groupedResources), [groupedResources]);
+
   const bookings = bookingsData?.bookings ?? [];
+
+  const bookingsAsEvents: ScheduleEvent[] = useMemo(() => {
+    return bookings.map(b => ({
+      id: b.id,
+      resource_id: b.asset_id,
+      event_type: 'booking' as const,
+      starts_at: b.starts_at,
+      ends_at: b.ends_at,
+      status: b.status,
+      title: b.primary_guest_name,
+      is_booking: true,
+    }));
+  }, [bookings]);
 
   const createMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
@@ -113,10 +147,10 @@ export default function BookingsPage() {
       toast({ title: 'Booking created successfully' });
     },
     onError: (error: any) => {
-      toast({ 
-        title: 'Failed to create booking', 
+      toast({
+        title: 'Failed to create booking',
         description: error?.message || 'Please try again',
-        variant: 'destructive' 
+        variant: 'destructive'
       });
     },
   });
@@ -133,22 +167,19 @@ export default function BookingsPage() {
       special_requests: '',
       status: 'pending',
     });
-    setSelectedSlot(null);
   };
 
-  const openCreateModal = (slot?: { date: Date; hour: number }) => {
-    if (slot) {
-      const startDate = new Date(slot.date);
-      startDate.setHours(slot.hour, 0, 0, 0);
-      const endDate = new Date(startDate);
-      endDate.setHours(slot.hour + 1, 0, 0, 0);
-      
+  const openCreateModal = (resourceId?: string, slotStart?: Date) => {
+    if (resourceId && slotStart) {
+      const endDate = new Date(slotStart);
+      endDate.setHours(endDate.getHours() + 1);
+
       setFormData(prev => ({
         ...prev,
-        starts_at: format(startDate, "yyyy-MM-dd'T'HH:mm"),
+        asset_id: resourceId,
+        starts_at: format(slotStart, "yyyy-MM-dd'T'HH:mm"),
         ends_at: format(endDate, "yyyy-MM-dd'T'HH:mm"),
       }));
-      setSelectedSlot(slot);
     }
     setCreateModalOpen(true);
   };
@@ -177,25 +208,163 @@ export default function BookingsPage() {
     }
   };
 
-  const weekDays = useMemo(() => {
-    const days = [];
-    for (let i = 0; i < 7; i++) {
-      days.push(addDays(weekStart, i));
-    }
-    return days;
-  }, [weekStart]);
-
-  const getBookingsForDay = (day: Date) => {
-    return bookings.filter(booking => {
-      const start = parseISO(booking.starts_at);
-      const end = parseISO(booking.ends_at);
-      const dayStart = startOfDay(day);
-      const dayEnd = endOfDay(day);
-      return (start <= dayEnd && end >= dayStart);
-    });
+  const handleSlotClick = (resourceId: string, slotStart: Date) => {
+    openCreateModal(resourceId, slotStart);
   };
 
-  const hours = Array.from({ length: 12 }, (_, i) => i + 8);
+  const handleRangeChange = useCallback((from: Date, to: Date, zoom: ZoomLevel) => {
+    setDateRange({ from, to });
+  }, []);
+
+  if (viewMode === 'calendar') {
+    return (
+      <div className="h-full flex flex-col" data-testid="bookings-page">
+        <ScheduleBoard
+          resources={resources}
+          groupedResources={groupedResources}
+          assetTypes={assetTypes}
+          events={bookingsAsEvents}
+          isLoading={bookingsLoading || resourcesLoading}
+          error={bookingsError ? new Error('Failed to load bookings') : null}
+          onSlotClick={handleSlotClick}
+          onRangeChange={handleRangeChange}
+          title="Bookings"
+          subtitle="Manage your reservations"
+          headerActions={
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setView('list')}
+                data-testid="button-view-toggle"
+              >
+                <List className="h-4 w-4 mr-2" />
+                List View
+              </Button>
+              <Button onClick={() => openCreateModal()} data-testid="button-create-booking">
+                <Plus className="h-4 w-4 mr-2" />
+                New Booking
+              </Button>
+            </div>
+          }
+          showSearch={false}
+          showTypeFilter={false}
+          showInactiveToggle={false}
+          initialZoom="week"
+          allowedZoomLevels={['15m', '1h', 'day', 'week', 'month', 'season', 'year']}
+          emptyStateMessage="No inventory available for booking"
+        />
+
+        <Dialog open={createModalOpen} onOpenChange={(open) => { setCreateModalOpen(open); if (!open) resetForm(); }}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Create Booking</DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleCreateSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="asset">What to book *</Label>
+                <Select
+                  value={formData.asset_id}
+                  onValueChange={(v) => setFormData(prev => ({ ...prev, asset_id: v }))}
+                >
+                  <SelectTrigger data-testid="select-asset">
+                    <SelectValue placeholder="Select an item" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {resources.map(asset => (
+                      <SelectItem key={asset.id} value={asset.id}>{asset.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="guest_name">Guest Name *</Label>
+                <Input
+                  id="guest_name"
+                  value={formData.primary_guest_name}
+                  onChange={(e) => setFormData(prev => ({ ...prev, primary_guest_name: e.target.value }))}
+                  placeholder="John Smith"
+                  data-testid="input-guest-name"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="starts_at">Start *</Label>
+                  <Input
+                    id="starts_at"
+                    type="datetime-local"
+                    value={formData.starts_at}
+                    onChange={(e) => setFormData(prev => ({ ...prev, starts_at: e.target.value }))}
+                    data-testid="input-starts-at"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="ends_at">End *</Label>
+                  <Input
+                    id="ends_at"
+                    type="datetime-local"
+                    value={formData.ends_at}
+                    onChange={(e) => setFormData(prev => ({ ...prev, ends_at: e.target.value }))}
+                    data-testid="input-ends-at"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="guest_email">Guest Email</Label>
+                <Input
+                  id="guest_email"
+                  type="email"
+                  value={formData.primary_guest_email}
+                  onChange={(e) => setFormData(prev => ({ ...prev, primary_guest_email: e.target.value }))}
+                  placeholder="john@example.com"
+                  data-testid="input-guest-email"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="status">Status</Label>
+                <Select
+                  value={formData.status}
+                  onValueChange={(v: 'pending' | 'confirmed') => setFormData(prev => ({ ...prev, status: v }))}
+                >
+                  <SelectTrigger data-testid="select-status">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="confirmed">Confirmed</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="special_requests">Special Requests</Label>
+                <Textarea
+                  id="special_requests"
+                  value={formData.special_requests}
+                  onChange={(e) => setFormData(prev => ({ ...prev, special_requests: e.target.value }))}
+                  placeholder="Any special requirements..."
+                  data-testid="input-special-requests"
+                />
+              </div>
+
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setCreateModalOpen(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={createMutation.isPending} data-testid="button-submit-booking">
+                  {createMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                  Create Booking
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6" data-testid="bookings-page">
@@ -207,22 +376,13 @@ export default function BookingsPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button 
-            variant="outline" 
-            onClick={() => setView(viewMode === 'calendar' ? 'list' : 'calendar')}
+          <Button
+            variant="outline"
+            onClick={() => setView('calendar')}
             data-testid="button-view-toggle"
           >
-            {viewMode === 'calendar' ? (
-              <>
-                <List className="h-4 w-4 mr-2" />
-                List View
-              </>
-            ) : (
-              <>
-                <Calendar className="h-4 w-4 mr-2" />
-                Calendar View
-              </>
-            )}
+            <Calendar className="h-4 w-4 mr-2" />
+            Calendar View
           </Button>
           <Button onClick={() => openCreateModal()} data-testid="button-create-booking">
             <Plus className="h-4 w-4 mr-2" />
@@ -243,69 +403,6 @@ export default function BookingsPage() {
             <p className="text-sm text-muted-foreground mt-1">Please try again or contact support.</p>
           </CardContent>
         </Card>
-      ) : viewMode === 'calendar' ? (
-        <div className="space-y-4" data-testid="calendar-view">
-          <div className="flex items-center justify-between gap-4">
-            <Button variant="outline" size="icon" onClick={() => setWeekStart(subWeeks(weekStart, 1))} data-testid="button-prev-week">
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <h2 className="text-lg font-medium">
-              {format(weekStart, 'MMM d')} - {format(addDays(weekStart, 6), 'MMM d, yyyy')}
-            </h2>
-            <Button variant="outline" size="icon" onClick={() => setWeekStart(addWeeks(weekStart, 1))} data-testid="button-next-week">
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
-
-          <div className="border rounded-md overflow-auto">
-            <div className="grid grid-cols-8 min-w-[800px]">
-              <div className="border-b border-r p-2 bg-muted/50 text-xs font-medium text-muted-foreground">
-                Time
-              </div>
-              {weekDays.map(day => (
-                <div key={day.toISOString()} className="border-b border-r p-2 bg-muted/50 text-center">
-                  <div className="text-xs font-medium text-muted-foreground">{format(day, 'EEE')}</div>
-                  <div className={`text-sm font-medium ${isSameDay(day, new Date()) ? 'text-primary' : ''}`}>
-                    {format(day, 'd')}
-                  </div>
-                </div>
-              ))}
-
-              {hours.map(hour => (
-                <>
-                  <div key={`hour-${hour}`} className="border-b border-r p-2 text-xs text-muted-foreground bg-muted/30">
-                    {format(new Date().setHours(hour, 0), 'h a')}
-                  </div>
-                  {weekDays.map(day => {
-                    const dayBookings = getBookingsForDay(day).filter(b => {
-                      const start = parseISO(b.starts_at);
-                      return start.getHours() <= hour && parseISO(b.ends_at).getHours() > hour;
-                    });
-                    return (
-                      <div 
-                        key={`${day.toISOString()}-${hour}`}
-                        className="border-b border-r p-1 min-h-[48px] hover-elevate cursor-pointer relative"
-                        onClick={() => openCreateModal({ date: day, hour })}
-                        data-testid={`calendar-slot-${format(day, 'yyyy-MM-dd')}-${hour}`}
-                      >
-                        {dayBookings.slice(0, 1).map(booking => (
-                          <div 
-                            key={booking.id}
-                            className="text-xs p-1 rounded bg-primary/10 text-primary truncate"
-                            title={`${booking.primary_guest_name} - ${booking.asset_name}`}
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            {booking.primary_guest_name}
-                          </div>
-                        ))}
-                      </div>
-                    );
-                  })}
-                </>
-              ))}
-            </div>
-          </div>
-        </div>
       ) : (
         <Tabs defaultValue="all">
           <TabsList>
@@ -357,15 +454,15 @@ export default function BookingsPage() {
           <form onSubmit={handleCreateSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="asset">What to book *</Label>
-              <Select 
-                value={formData.asset_id} 
+              <Select
+                value={formData.asset_id}
                 onValueChange={(v) => setFormData(prev => ({ ...prev, asset_id: v }))}
               >
                 <SelectTrigger data-testid="select-asset">
                   <SelectValue placeholder="Select an item" />
                 </SelectTrigger>
                 <SelectContent>
-                  {assets.map(asset => (
+                  {resources.map(asset => (
                     <SelectItem key={asset.id} value={asset.id}>{asset.name}</SelectItem>
                   ))}
                 </SelectContent>
@@ -374,7 +471,7 @@ export default function BookingsPage() {
 
             <div className="space-y-2">
               <Label htmlFor="guest_name">Guest Name *</Label>
-              <Input 
+              <Input
                 id="guest_name"
                 value={formData.primary_guest_name}
                 onChange={(e) => setFormData(prev => ({ ...prev, primary_guest_name: e.target.value }))}
@@ -386,7 +483,7 @@ export default function BookingsPage() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="starts_at">Start *</Label>
-                <Input 
+                <Input
                   id="starts_at"
                   type="datetime-local"
                   value={formData.starts_at}
@@ -396,7 +493,7 @@ export default function BookingsPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="ends_at">End *</Label>
-                <Input 
+                <Input
                   id="ends_at"
                   type="datetime-local"
                   value={formData.ends_at}
@@ -408,7 +505,7 @@ export default function BookingsPage() {
 
             <div className="space-y-2">
               <Label htmlFor="guest_email">Guest Email</Label>
-              <Input 
+              <Input
                 id="guest_email"
                 type="email"
                 value={formData.primary_guest_email}
@@ -420,8 +517,8 @@ export default function BookingsPage() {
 
             <div className="space-y-2">
               <Label htmlFor="status">Status</Label>
-              <Select 
-                value={formData.status} 
+              <Select
+                value={formData.status}
                 onValueChange={(v: 'pending' | 'confirmed') => setFormData(prev => ({ ...prev, status: v }))}
               >
                 <SelectTrigger data-testid="select-status">
@@ -436,7 +533,7 @@ export default function BookingsPage() {
 
             <div className="space-y-2">
               <Label htmlFor="special_requests">Special Requests</Label>
-              <Textarea 
+              <Textarea
                 id="special_requests"
                 value={formData.special_requests}
                 onChange={(e) => setFormData(prev => ({ ...prev, special_requests: e.target.value }))}
