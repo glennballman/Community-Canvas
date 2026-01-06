@@ -74,7 +74,7 @@ const COMMUNITY_NAV: NavItem[] = [
 
 const BUSINESS_NAV: NavItem[] = [
   { icon: LayoutDashboard, label: 'Dashboard', href: '/app/dashboard' },
-  { icon: Package, label: 'Inventory', href: '/app/catalog' },
+  { icon: Package, label: 'Inventory', href: '/app/inventory' },
   { icon: Calendar, label: 'Bookings', href: '/app/bookings' },
   { icon: MessageSquare, label: 'Work Requests', href: '/app/intake/work-requests' },
   { icon: Briefcase, label: 'Projects', href: '/app/projects' },

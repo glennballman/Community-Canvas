@@ -5,8 +5,8 @@ import { Input } from '@/components/ui/input';
 import { Plus, Search, Package, Home, Car, Anchor, Wrench } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
-export default function CatalogPage() {
-  const catalogItems = [
+export default function InventoryPage() {
+  const inventoryItems = [
     { id: '1', name: 'Excavator', type: 'rental', status: 'available' },
     { id: '2', name: 'Cabin A', type: 'accommodation', status: 'booked' },
     { id: '3', name: 'Parking Spot 1', type: 'parking', status: 'available' },
@@ -33,7 +33,7 @@ export default function CatalogPage() {
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <Link to="/app/catalog/import">
+          <Link to="/app/inventory/import">
             <Button variant="outline" data-testid="button-import-inventory" title="Import inventory items from a file">
               Import
             </Button>
@@ -55,7 +55,7 @@ export default function CatalogPage() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {catalogItems.map((item) => {
+        {inventoryItems.map((item) => {
           const Icon = getTypeIcon(item.type);
           return (
             <Card key={item.id} className="hover-elevate" data-testid={`card-inventory-item-${item.id}`}>

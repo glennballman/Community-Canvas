@@ -39,7 +39,7 @@ interface ImportedItem {
   status: 'ready' | 'needs_review' | 'missing_price' | 'hidden';
 }
 
-export default function CatalogOnboarding() {
+export default function InventoryOnboarding() {
   const [, navigate] = useLocation();
   const { currentTenant } = useTenant();
   
@@ -162,7 +162,7 @@ export default function CatalogOnboarding() {
             websiteUrl={websiteUrl}
             setWebsiteUrl={setWebsiteUrl}
             onScan={startWebsiteScan}
-            onManual={() => navigate('/app/catalog')}
+            onManual={() => navigate('/app/inventory')}
           />
         )}
 
@@ -206,7 +206,7 @@ export default function CatalogOnboarding() {
           <CompleteStep
             itemCount={importedItems.length}
             tenantName={currentTenant?.name || 'Your business'}
-            onViewInventory={() => navigate('/app/catalog')}
+            onViewInventory={() => navigate('/app/inventory')}
           />
         )}
       </div>
@@ -645,15 +645,15 @@ function SharingStep({
           <div>
             <h3 className="font-semibold mb-1">Public visibility</h3>
             <p className="text-sm text-muted-foreground">
-              Control whether your inventory appears on community portals.
+              Choose whether your inventory appears in public search results.
             </p>
           </div>
         </div>
 
         <div className="flex items-center justify-between gap-4">
           <div>
-            <Label htmlFor="show-public" className="font-medium">Show on community portal</Label>
-            <p className="text-sm text-muted-foreground">Visitors can browse your offerings</p>
+            <Label htmlFor="show-public" className="font-medium">Show in public listings</Label>
+            <p className="text-sm text-muted-foreground">Anyone can find your offerings</p>
           </div>
           <Switch
             id="show-public"
@@ -664,7 +664,7 @@ function SharingStep({
         </div>
       </Card>
 
-      <Button onClick={onFinish} className="w-full" size="lg" data-testid="button-finish-onboarding">
+      <Button onClick={onFinish} className="w-full" data-testid="button-finish">
         <Rocket className="w-4 h-4 mr-2" />
         Finish setup
       </Button>
@@ -683,24 +683,19 @@ function CompleteStep({
 }) {
   return (
     <div className="text-center py-16">
-      <div className="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
+      <div className="w-20 h-20 mx-auto mb-6 bg-green-500/20 rounded-full flex items-center justify-center">
         <Check className="w-10 h-10 text-green-500" />
       </div>
-      
-      <h1 className="text-3xl font-bold mb-2">You're all set!</h1>
-      <p className="text-muted-foreground mb-8 max-w-md mx-auto">
-        {tenantName} now has {itemCount} items in your inventory. Community operators can now help callers find your offerings.
+
+      <h1 className="text-2xl font-bold mb-2">You're all set!</h1>
+      <p className="text-muted-foreground mb-8">
+        {itemCount} items have been added to {tenantName}'s inventory.
       </p>
 
-      <div className="space-y-3">
-        <Button onClick={onViewInventory} size="lg" data-testid="button-view-inventory">
-          View your inventory
-          <ArrowRight className="w-4 h-4 ml-2" />
-        </Button>
-        <p className="text-sm text-muted-foreground">
-          You can edit items and settings anytime.
-        </p>
-      </div>
+      <Button onClick={onViewInventory} data-testid="button-view-inventory">
+        View your inventory
+        <ArrowRight className="w-4 h-4 ml-2" />
+      </Button>
     </div>
   );
 }

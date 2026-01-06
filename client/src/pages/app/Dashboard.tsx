@@ -279,7 +279,7 @@ function BusinessDashboard({ tenant }: DashboardProps): React.ReactElement {
             icon={<Package size={24} />}
             title="Manage Inventory"
             description="Add or update your offerings"
-            to="/app/catalog"
+            to="/app/inventory"
           />
           <QuickAction
             icon={<Calendar size={24} />}

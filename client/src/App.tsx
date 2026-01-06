@@ -46,7 +46,7 @@ import OrgDetail from './pages/crm/OrgDetail';
 import ServiceRuns from './pages/services/ServiceRuns';
 import CreateServiceRun from './pages/services/CreateServiceRun';
 import ServiceRunDetail from './pages/services/ServiceRunDetail';
-import ServiceCatalog from './pages/services/ServiceCatalog';
+import ServiceDirectory from './pages/services/ServiceDirectory';
 import BundlesBrowser from './pages/services/BundlesBrowser';
 import WorkRequestDetail from './pages/WorkRequestDetail';
 
@@ -60,7 +60,7 @@ import CreateProject from './pages/projects/CreateProject';
 import ProjectDetail from './pages/projects/ProjectDetail';
 
 // Pages - App Business
-import CatalogPage from './pages/app/business/CatalogPage';
+import InventoryPage from './pages/app/business/InventoryPage';
 import BookingsPage from './pages/app/business/BookingsPage';
 import CustomersPage from './pages/app/business/CustomersPage';
 
@@ -164,7 +164,7 @@ export default function App() {
                 <Route path="service-runs/new" element={<CreateServiceRun />} />
                 <Route path="service-runs/:slug" element={<ServiceRunDetail />} />
                 <Route path="work-requests/:id" element={<WorkRequestDetail />} />
-                <Route path="services" element={<ServiceCatalog />} />
+                <Route path="services" element={<ServiceDirectory />} />
                 <Route path="bundles" element={<BundlesBrowser />} />
                 <Route path="directory" element={<DirectoryPage />} />
                 <Route path="content" element={<ContentBrandingPage />} />
@@ -187,7 +187,7 @@ export default function App() {
                 <Route path="projects/:id" element={<ProjectDetail />} />
                 
                 {/* Business tenant routes */}
-                <Route path="catalog" element={<CatalogPage />} />
+                <Route path="inventory" element={<InventoryPage />} />
                 <Route path="bookings" element={<BookingsPage />} />
                 <Route path="customers" element={<CustomersPage />} />
                 

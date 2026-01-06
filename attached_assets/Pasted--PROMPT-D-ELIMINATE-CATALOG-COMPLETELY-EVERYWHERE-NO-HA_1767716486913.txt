@@ -1,0 +1,69 @@
+# PROMPT D — ELIMINATE "CATALOG" COMPLETELY (EVERYWHERE). NO HALF MEASURES.
+
+We are removing the concept/word "Catalog" from the entire codebase.
+Replace it with **Inventory** in:
+- routes
+- API endpoints
+- database tables/types/enums
+- filenames
+- component names
+- UI copy
+- any internal identifiers that users/devs see
+
+There is no production data yet. Do the rename cleanly.
+
+## HARD RULES
+1) After this change, `grep -Rin "catalog" .` must return **ZERO** matches (case-insensitive).
+2) Do NOT invent new features. This is a rename/refactor only.
+3) Keep behavior identical.
+
+## SCOPE
+
+### 1) Frontend Routes
+- `/app/catalog` -> `/app/inventory`
+Update:
+- `client/src/App.tsx` routes
+- navigation config in `client/src/layouts/TenantAppLayout.tsx`
+- any links/buttons pointing to catalog
+
+### 2) Frontend Pages / Components / Files
+Rename files and components:
+- `CatalogPage.tsx` -> `InventoryPage.tsx`
+- Any components named `*Catalog*` -> `*Inventory*`
+
+Update titles/subtitles to Inventory.
+
+### 3) Backend API
+Rename endpoints:
+- `/api/catalog/*` -> `/api/inventory/*` (or whatever current pattern is)
+Update server routes + client API callers.
+
+### 4) Database: tables/types
+If any tables/types contain `catalog` in their name, rename them:
+- Use `ALTER TABLE ... RENAME TO ...`
+- Use `ALTER TYPE ... RENAME TO ...` if needed
+- Rename sequences/indexes if they contain catalog
+
+If the system currently uses generic table names like `items`, keep them. Only remove `catalog` where it appears.
+
+### 5) Migration strategy
+Create a new migration file: `0XX_rename_catalog_to_inventory.sql` that:
+- Renames tables/types if they exist (safe guards)
+- Updates views/functions referencing old names
+- Leaves the DB consistent
+
+### 6) Verification (mandatory)
+Provide in your reply:
+A) The output of:
+- `grep -Rin "catalog" client server | head -n 200` (should output nothing)
+- `grep -Rin "Catalog" client server | head -n 200` (should output nothing)
+B) The list of files renamed
+C) Confirmation that app boots and inventory page loads at `/app/inventory`
+D) Confirmation that old `/app/catalog` does NOT exist (or optionally redirects to inventory — choose ONE and state it)
+
+## DO NOT
+- add new inventory capabilities
+- change the booking behavior
+- change data models beyond renaming catalog references
+
+Proceed now.

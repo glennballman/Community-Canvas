@@ -99,7 +99,7 @@ function formatCrew(count: number): string {
   return count === 1 ? '1 Crew Member' : `${count} Crew Members`;
 }
 
-export default function ServiceCatalog() {
+export default function ServiceDirectory() {
   const { token } = useAuth();
   const [categories, setCategories] = useState<Category[]>([]);
   const [services, setServices] = useState<Service[]>([]);
@@ -127,8 +127,8 @@ export default function ServiceCatalog() {
       setStats(statsData?.stats || null);
       setCategories(Array.isArray(categoriesData?.categories) ? categoriesData.categories : []);
     } catch (err) {
-      console.error('Failed to load catalog:', err);
-      setError('Unable to load service catalog. Please try again.');
+      console.error('Failed to load directory:', err);
+      setError('Unable to load service directory. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -226,7 +226,7 @@ export default function ServiceCatalog() {
     <div className="p-6">
       <div className="flex items-center justify-between gap-4 mb-6 flex-wrap">
         <div>
-          <h1 className="text-2xl font-bold" data-testid="text-page-title">Service Catalog</h1>
+          <h1 className="text-2xl font-bold" data-testid="text-page-title">Service Directory</h1>
           <p className="text-muted-foreground">Browse {stats?.services || 0} services across {stats?.categories || 0} categories</p>
         </div>
         <div className="flex items-center gap-4">
@@ -570,49 +570,12 @@ export default function ServiceCatalog() {
                         </div>
                       </div>
                     )}
-
-                    <div className="mb-4">
-                      <h4 className="text-sm font-medium text-muted-foreground mb-2">Operations</h4>
-                      <div className="grid grid-cols-2 gap-2 text-xs">
-                        <div className="bg-muted rounded p-2">
-                          <span className="text-muted-foreground">Noise: </span>
-                          <span className="capitalize">{selectedService.noise}</span>
-                        </div>
-                        <div className="bg-muted rounded p-2">
-                          <span className="text-muted-foreground">Disruption: </span>
-                          <span className="capitalize">{selectedService.disruption}</span>
-                        </div>
-                        <div className="bg-muted rounded p-2">
-                          <span className="text-muted-foreground">Owner Present: </span>
-                          <span>{selectedService.requiresOwnerPresent ? 'Yes' : 'No'}</span>
-                        </div>
-                        <div className="bg-muted rounded p-2">
-                          <span className="text-muted-foreground">Vacant OK: </span>
-                          <span>{selectedService.canBeDoneVacant ? 'Yes' : 'No'}</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="pt-4 border-t space-y-2">
-                      <button 
-                        className="w-full bg-primary hover:bg-primary/90 text-primary-foreground py-2 rounded text-sm"
-                        data-testid="button-add-to-run"
-                      >
-                        Add to Service Run
-                      </button>
-                      <button 
-                        className="w-full bg-muted hover:bg-muted/80 py-2 rounded text-sm"
-                        data-testid="button-find-compatible"
-                      >
-                        Find Compatible Services
-                      </button>
-                    </div>
                   </>
                 )}
               </div>
             ) : (
-              <div className="bg-card rounded-lg p-8 text-center text-muted-foreground sticky top-4 border">
-                <div className="text-4xl mb-3">Select a service to view details</div>
+              <div className="bg-card rounded-lg p-8 text-center border">
+                <p className="text-muted-foreground">Select a service to see details</p>
               </div>
             )}
           </div>
