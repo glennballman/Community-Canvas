@@ -146,6 +146,47 @@ export async function tenantContext(req: TenantRequest, res: Response, next: Nex
     }
   }
 
+  // FALLBACK: Check session.impersonation if cookie-based impersonation not found
+  // This unifies the two impersonation approaches (session vs cookie)
+  if (!req.impersonation) {
+    const session = (req as any).session;
+    const sessionImpersonation = session?.impersonation;
+    
+    if (sessionImpersonation?.tenant_id && sessionImpersonation?.expires_at) {
+      // Check if session impersonation is still valid
+      if (new Date(sessionImpersonation.expires_at) > new Date()) {
+        // Synthesize req.impersonation from session data
+        req.impersonation = {
+          id: 'session-impersonation', // Virtual ID for session-based impersonation
+          platform_staff_id: sessionImpersonation.admin_user_id || session?.userId || '',
+          tenant_id: sessionImpersonation.tenant_id,
+          individual_id: null,
+          reason: sessionImpersonation.reason || 'Admin access',
+          expires_at: new Date(sessionImpersonation.expires_at),
+          created_at: new Date(sessionImpersonation.started_at || Date.now()),
+        };
+        
+        // Override tenant context with impersonated tenant
+        req.ctx.tenant_id = sessionImpersonation.tenant_id;
+        req.ctx.roles = ['impersonator'];
+        
+        // Set actor context for GUC propagation
+        req.actorContext = {
+          tenant_id: sessionImpersonation.tenant_id,
+          portal_id: req.ctx.portal_id || undefined,
+          individual_id: undefined,
+          platform_staff_id: sessionImpersonation.admin_user_id || session?.userId,
+          impersonation_session_id: 'session-impersonation',
+          actor_type: 'platform'
+        };
+        
+        if (process.env.NODE_ENV !== 'production' && req.url?.includes('/schedule')) {
+          console.log('[tenantContext] Session-based impersonation active:', sessionImpersonation.tenant_id);
+        }
+      }
+    }
+  }
+  
   // Only set user context if NOT impersonating (impersonation takes precedence)
   if (!req.impersonation) {
     if (req.user?.id) {

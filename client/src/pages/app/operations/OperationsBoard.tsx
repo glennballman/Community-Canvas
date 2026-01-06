@@ -144,8 +144,19 @@ function isToday(date: Date): boolean {
 }
 
 export default function OperationsBoard() {
-  const { currentTenant } = useTenant();
+  const { currentTenant, impersonation, loading: tenantLoading } = useTenant();
   const { toast } = useToast();
+  
+  // DEBUG: Log tenant state on every render
+  console.log('[OPS] Tenant state', { 
+    tenantLoading,
+    currentTenant: currentTenant?.tenant_id, 
+    tenantName: currentTenant?.tenant_name,
+    isImpersonating: impersonation?.is_impersonating,
+    impersonatedTenantId: impersonation?.tenant_id,
+    queryEnabled: !!currentTenant?.tenant_id,
+  });
+  
   const [currentDate, setCurrentDate] = useState(() => {
     const now = new Date();
     now.setHours(0, 0, 0, 0);
@@ -195,25 +206,51 @@ export default function OperationsBoard() {
     ? `/api/schedule/resources?${resourceQueryParams}` 
     : '/api/schedule/resources';
   
-  const { data: resourcesData, isLoading: loadingResources } = useQuery<{ 
+  const { data: resourcesData, isLoading: loadingResources, error: resourcesError } = useQuery<{ 
     success: boolean; 
     resources: Resource[]; 
     grouped: Record<string, Resource[]>;
     asset_types: string[];
   }>({
     queryKey: [resourcesUrl],
-    enabled: !!currentTenant?.tenant_id,
+    queryFn: async () => {
+      console.log('[OPS] Fetching resources...', { url: resourcesUrl, ts: new Date().toISOString() });
+      const response = await fetch(resourcesUrl, { credentials: 'include' });
+      if (!response.ok) {
+        const text = await response.text();
+        console.error('[OPS] Resources fetch failed', { status: response.status, text });
+        throw new Error(`Failed to fetch resources: ${response.status} - ${text}`);
+      }
+      const data = await response.json();
+      console.log('[OPS] Resources loaded', { count: data.resources?.length || 0, sample: data.resources?.slice(0, 3) });
+      return data;
+    },
+    enabled: true, // Force enabled for debugging - was: !!currentTenant?.tenant_id
     staleTime: 0,
     refetchOnMount: 'always',
+    retry: false,
   });
 
   const scheduleUrl = `/api/schedule?from=${from.toISOString()}&to=${to.toISOString()}`;
   
-  const { data: scheduleData, isLoading: loadingSchedule } = useQuery<{ success: boolean; events: ScheduleEvent[] }>({
+  const { data: scheduleData, isLoading: loadingSchedule, error: scheduleError } = useQuery<{ success: boolean; events: ScheduleEvent[] }>({
     queryKey: [scheduleUrl],
-    enabled: !!currentTenant?.tenant_id,
+    queryFn: async () => {
+      console.log('[OPS] Fetching schedule...', { url: scheduleUrl, ts: new Date().toISOString() });
+      const response = await fetch(scheduleUrl, { credentials: 'include' });
+      if (!response.ok) {
+        const text = await response.text();
+        console.error('[OPS] Schedule fetch failed', { status: response.status, text });
+        throw new Error(`Failed to fetch schedule: ${response.status} - ${text}`);
+      }
+      const data = await response.json();
+      console.log('[OPS] Schedule loaded', { count: data.events?.length || 0 });
+      return data;
+    },
+    enabled: true, // Force enabled for debugging - was: !!currentTenant?.tenant_id
     staleTime: 0,
     refetchOnMount: 'always',
+    retry: false,
   });
 
   const createEventMutation = useMutation({

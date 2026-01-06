@@ -1,0 +1,72 @@
+PROMPT F — OPERATIONS BOARD “NO RESOURCES” DEBUG: PROVE THE REQUEST PATH + EXECUTION
+
+We have a contradiction:
+- UI is on /app/operations but server logs claim /api/schedule/resources is never called.
+Therefore we must instrument BOTH sides and align paths.
+
+GOAL:
+When impersonating Ballman Enterprises, /app/operations MUST request schedule resources and show F550 Truck + Lucky Lander.
+
+PART 1 — Confirm the client is actually trying to fetch
+1) Open client/src/pages/OperationsBoard.tsx (or wherever the Operations Board page lives).
+2) Find the React Query useQuery for resources (queryKey includes /api/schedule/resources).
+3) Inside the queryFn, add a top-of-function console log (dev-only):
+   console.log("[OPS] fetching resources...", { url, ts: new Date().toISOString() });
+
+4) Add explicit error surfacing:
+   - If response not ok, throw an Error that includes status + response text.
+   - On the UI, show a visible banner with the last error message (do NOT silently show “No resources” on error).
+   - Log the final parsed response count to console:
+     console.log("[OPS] resources loaded", { count, sample: data?.slice(0,3) });
+
+5) Ensure the query is not disabled:
+   - Search for `enabled:` in the resources query.
+   - If present and depends on tenant/context, temporarily set enabled: true so it always fires.
+   - Also set retry: false for now to avoid masking failures.
+
+PART 2 — Verify the URL path matches what the server exposes
+1) Search the client codebase for:
+   "/api/schedule/resources"
+   "/api/v1/schedule/resources"
+   and list the exact one being called.
+2) Search server route registration for schedule router mount:
+   - Find where schedule routes are registered (server/routes/schedule.ts and the main router file).
+   - Confirm the server is mounted at /api/schedule (NOT /api/v1/schedule).
+3) If there is a mismatch, fix it in the most robust way:
+   - Support BOTH paths by mounting the same router at:
+     /api/schedule
+     /api/v1/schedule
+   so we never regress.
+
+PART 3 — Add server request-entry logs (dev-only) to prove whether requests arrive
+1) In the schedule router file (server/routes/schedule.ts or similar), add:
+   console.log("[SCHEDULE] HIT", { method: req.method, path: req.path, tenant: req.ctx?.tenant_id, impersonating: !!req.impersonation });
+
+2) Also add a global middleware (dev-only) near app init:
+   if (req.path.startsWith("/api/schedule") || req.path.startsWith("/api/v1/schedule")) console.log("[API] schedule request", req.method, req.path);
+
+PART 4 — Fix tenant context source of truth (stop splitting session.impersonation vs cookie impersonation)
+Right now:
+- /api/me/context reads session.impersonation
+- schedule routes use req.impersonation from impersonation_sid cookie
+Unify:
+- tenantContext middleware must set req.ctx.tenant_id from either source consistently:
+  effectiveTenantId = req.impersonation?.tenant_id ?? req.session?.impersonation?.tenant_id ?? req.ctx?.tenant_id
+- Then schedule handlers should ONLY use req.ctx.tenant_id (single source of truth).
+
+PART 5 — Acceptance test (must be performed)
+1) Impersonate Ballman Enterprises.
+2) Open DevTools Console and Network tab.
+3) Visit /app/operations and hard refresh.
+4) Confirm:
+   A) Browser console shows “[OPS] fetching resources…”
+   B) Network shows request to /api/schedule/resources OR /api/v1/schedule/resources
+   C) Server console shows “[SCHEDULE] HIT …”
+   D) Response contains at least 2 assets and grid shows them.
+
+In your response, return:
+- Which URL the client was calling
+- Which mount path existed on the server
+- Whether the query was disabled via enabled:
+- One sample of the client console logs and server logs proving the request is flowing
+- The minimal patch you made to fix the mismatch
