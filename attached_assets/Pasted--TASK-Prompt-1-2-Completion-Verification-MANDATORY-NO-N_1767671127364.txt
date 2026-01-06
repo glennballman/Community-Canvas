@@ -1,0 +1,99 @@
+# TASK: Prompt 1 + 2 Completion Verification (MANDATORY) — NO NEW FEATURES
+
+Do NOT implement Prompt 3. Do NOT add improvements.  
+Your only job is to TEST and produce the verification report exactly as specified.
+
+## 0) Confirm scope
+- Confirm whether Prompt 1 and Prompt 2 are fully complete.
+- If any item is incomplete, list it as FAIL with a fix plan (but do not implement fixes yet).
+
+## 1) Files changed (EXPLICIT LIST)
+Provide a complete list of every file you created/edited for Prompt 1 + 2, grouped by:
+- client/pages
+- client/layouts
+- client/components
+- server/routes (if any)
+- migrations (if any)
+
+For each file: 1 sentence on what changed.
+
+## 2) Route-by-route smoke test (PASS/FAIL)
+For each route below, perform the test in the running app and report PASS/FAIL with notes + console status.
+
+### Required routes
+- /app/service-runs
+- /app/service-runs/new
+- /app/service-runs/:slug  (legacy run)
+- /app/service-runs/:slug  (coop run; slug starts with coop-)
+- /app/services
+- /app/bundles
+
+### Also verify these do NOT break
+- /admin
+- /admin/data/accommodations
+- /app/dashboard
+- /app/availability
+
+For each route include:
+- What you clicked (1-3 bullets)
+- What loaded (1-2 bullets)
+- Any console errors (must be “none”)
+
+## 3) Interaction checklist (must all PASS)
+### Service Runs list (/app/service-runs)
+- Page loads without crashing
+- Uses real API data (or shows correct empty state after a successful API call)
+- Filters/search (if present) do not crash
+- Clicking a legacy run navigates to detail
+- Clicking a coop run navigates to detail
+
+### Create Service Run (/app/service-runs/new)
+- Toggle between Bidding vs Co-op works without losing state unexpectedly
+- Submitting Bidding Run hits /api/service-runs/runs and returns success or a clear validation error (no crash)
+- Submitting Co-op Run hits /api/coop-runs/ and returns success or clear validation error (no crash)
+
+### Service Run Detail (/app/service-runs/:slug)
+- Legacy detail loads
+- Coop detail loads
+- Status displayed, key fields render
+- No runtime errors
+
+### Services (/app/services)
+- Loads categories/services list
+- Search/filter doesn’t crash
+- Empty state renders if no services
+
+### Bundles (/app/bundles)
+- Loads bundles list
+- Seasonal calendar tab renders
+- Empty state renders if no bundles
+
+## 4) Navigation verified (PASS/FAIL)
+- Community left nav includes: Services, Bundles, Service Runs
+- Clicking each nav item routes correctly
+- Business nav unchanged
+- No duplicate/ghost items
+
+## 5) Prompt 2 hardening proof
+For each of the 5 service pages, confirm it has:
+- loading state
+- empty state
+- error state
+Describe exactly how you tested each state (mocking network error is acceptable).
+
+## 6) Style compliance check (IMPORTANT)
+We required “no redesign.” You mentioned:
+- “dedicated coop run view”
+- “blue theming”
+
+Answer explicitly:
+- Did you change layout or global styles? (Yes/No)
+- If yes: list exactly what changed and why it was necessary.
+- If it’s only a badge/indicator: confirm it’s limited to a small, local component style.
+
+## 7) FINAL VERDICT
+- Prompt 1: COMPLETE or INCOMPLETE
+- Prompt 2: COMPLETE or INCOMPLETE
+- If complete: state “READY FOR PROMPT 3” (do not start Prompt 3 yet)
+
+BEGIN TESTING NOW AND RETURN THE REPORT.
