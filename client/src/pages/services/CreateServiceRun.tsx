@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { Users, Gavel } from 'lucide-react';
+
+type RunMode = 'coop' | 'bidding';
 
 interface Community {
   id: string;
@@ -39,12 +42,23 @@ export default function CreateServiceRun() {
   const navigate = useNavigate();
   const { token } = useAuth();
   
+  const [runMode, setRunMode] = useState<RunMode>('coop');
   const [communities, setCommunities] = useState<Community[]>([]);
   const [bundles, setBundles] = useState<Bundle[]>([]);
   const [runTypes, setRunTypes] = useState<RunType[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  const [tradeCategory, setTradeCategory] = useState('');
+  const [serviceDescription, setServiceDescription] = useState('');
+  const [contractorName, setContractorName] = useState('');
+  const [contractorEmail, setContractorEmail] = useState('');
+  const [contractorPhone, setContractorPhone] = useState('');
+  const [propertyAddress, setPropertyAddress] = useState('');
+  const [propertyPostalCode, setPropertyPostalCode] = useState('');
+  const [propertyCommunity, setPropertyCommunity] = useState('');
+  const [unitCount, setUnitCount] = useState(1);
   
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -143,49 +157,86 @@ export default function CreateServiceRun() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    
-    if (!title || !communityId || !targetStartDate || !targetEndDate) {
-      setError('Please fill in all required fields');
-      return;
-    }
-    
     setSaving(true);
     setError(null);
     
     try {
-      const res = await fetch('/api/service-runs/runs', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          title,
-          description,
-          communityId,
-          bundleId: bundleId || null,
-          runTypeId: runTypeId || null,
-          serviceAreaDescription,
-          targetStartDate,
-          targetEndDate,
-          minSlots,
-          maxSlots,
-          biddingOpensAt: biddingOpensAt || null,
-          biddingClosesAt: biddingClosesAt || null,
-          estimatedMobilizationCost: estimatedMobilizationCost ? parseFloat(estimatedMobilizationCost) : null,
-          requirePhotos,
-          requireDeposit,
-          depositAmount: depositAmount ? parseFloat(depositAmount) : null,
-          cancellationPolicy
-        })
-      });
-      
-      const data = await res.json();
-      
-      if (data.success) {
-        navigate(`/app/service-runs/${data.run.slug}`);
+      if (runMode === 'coop') {
+        if (!tradeCategory || !serviceDescription || !propertyAddress) {
+          setError('Please fill in all required fields');
+          setSaving(false);
+          return;
+        }
+        
+        const res = await fetch('/api/coop-runs', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            trade_category: tradeCategory,
+            service_description: serviceDescription,
+            property_address: propertyAddress,
+            property_postal_code: propertyPostalCode,
+            property_community: propertyCommunity,
+            unit_count: unitCount,
+            contractor_name: contractorName || null,
+            contractor_email: contractorEmail || null,
+            contractor_phone: contractorPhone || null,
+            window_start: targetStartDate || null,
+            window_end: targetEndDate || null
+          })
+        });
+        
+        const data = await res.json();
+        
+        if (data.coop_run) {
+          navigate(`/app/service-runs/coop-${data.coop_run.id}`);
+        } else {
+          setError(data.error || 'Failed to create coop run');
+        }
       } else {
-        setError(data.error || 'Failed to create run');
+        if (!title || !communityId || !targetStartDate || !targetEndDate) {
+          setError('Please fill in all required fields');
+          setSaving(false);
+          return;
+        }
+        
+        const res = await fetch('/api/service-runs/runs', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            title,
+            description,
+            communityId,
+            bundleId: bundleId || null,
+            runTypeId: runTypeId || null,
+            serviceAreaDescription,
+            targetStartDate,
+            targetEndDate,
+            minSlots,
+            maxSlots,
+            biddingOpensAt: biddingOpensAt || null,
+            biddingClosesAt: biddingClosesAt || null,
+            estimatedMobilizationCost: estimatedMobilizationCost ? parseFloat(estimatedMobilizationCost) : null,
+            requirePhotos,
+            requireDeposit,
+            depositAmount: depositAmount ? parseFloat(depositAmount) : null,
+            cancellationPolicy
+          })
+        });
+        
+        const data = await res.json();
+        
+        if (data.success) {
+          navigate(`/app/service-runs/${data.run.slug}`);
+        } else {
+          setError(data.error || 'Failed to create run');
+        }
       }
     } catch (err) {
       console.error('Failed to create run:', err);
@@ -228,36 +279,266 @@ export default function CreateServiceRun() {
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="bg-card rounded-lg p-6 border">
-          <h2 className="text-lg font-semibold mb-4">Location & Service Package</h2>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-muted-foreground mb-2">
-                Community *
-              </label>
-              <select
-                value={communityId}
-                onChange={(e) => setCommunityId(e.target.value)}
-                className="w-full bg-muted border border-border rounded-lg px-4 py-2"
-                required
-                data-testid="select-community"
-              >
-                <option value="">Select a community...</option>
-                {communities.map(c => (
-                  <option key={c.id} value={c.id}>
-                    {c.name} ({c.region}) - {c.remoteMultiplier}x
-                  </option>
-                ))}
-              </select>
-              {selectedCommunity && (
-                <div className="mt-2 text-sm text-muted-foreground">
-                  Climate: {selectedCommunity.climateRegionName} | 
-                  Remote multiplier: {selectedCommunity.remoteMultiplier}x
-                </div>
-              )}
+      <div className="bg-card rounded-lg p-6 border mb-6">
+        <h2 className="text-lg font-semibold mb-4">Run Type</h2>
+        <div className="grid grid-cols-2 gap-4">
+          <button
+            type="button"
+            onClick={() => setRunMode('coop')}
+            className={`p-4 rounded-lg border-2 text-left transition-colors ${
+              runMode === 'coop' 
+                ? 'border-blue-500 bg-blue-500/10' 
+                : 'border-border hover:border-muted-foreground'
+            }`}
+            data-testid="button-mode-coop"
+          >
+            <div className="flex items-center gap-2 mb-2">
+              <Users className="w-5 h-5 text-blue-400" />
+              <span className="font-semibold">Cooperative Run</span>
             </div>
+            <p className="text-sm text-muted-foreground">
+              Bundle with neighbors to share mobilization costs. You already have a contractor in mind.
+            </p>
+          </button>
+          <button
+            type="button"
+            onClick={() => setRunMode('bidding')}
+            className={`p-4 rounded-lg border-2 text-left transition-colors ${
+              runMode === 'bidding' 
+                ? 'border-purple-500 bg-purple-500/10' 
+                : 'border-border hover:border-muted-foreground'
+            }`}
+            data-testid="button-mode-bidding"
+          >
+            <div className="flex items-center gap-2 mb-2">
+              <Gavel className="w-5 h-5 text-purple-400" />
+              <span className="font-semibold">Bidding Run</span>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Collect signups first, then open for contractor bids. Best for finding new contractors.
+            </p>
+          </button>
+        </div>
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {runMode === 'coop' ? (
+          <>
+            <div className="bg-card rounded-lg p-6 border">
+              <h2 className="text-lg font-semibold mb-4">Service Details</h2>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-muted-foreground mb-2">
+                    Trade Category *
+                  </label>
+                  <select
+                    value={tradeCategory}
+                    onChange={(e) => setTradeCategory(e.target.value)}
+                    className="w-full bg-muted border border-border rounded-lg px-4 py-2"
+                    required
+                    data-testid="select-trade-category"
+                  >
+                    <option value="">Select a trade...</option>
+                    <option value="Roofing">Roofing</option>
+                    <option value="Septic">Septic</option>
+                    <option value="Plumbing">Plumbing</option>
+                    <option value="Electrical">Electrical</option>
+                    <option value="HVAC">HVAC</option>
+                    <option value="Tree Service">Tree Service</option>
+                    <option value="Landscaping">Landscaping</option>
+                    <option value="Painting">Painting</option>
+                    <option value="Pressure Washing">Pressure Washing</option>
+                    <option value="Gutter Cleaning">Gutter Cleaning</option>
+                    <option value="Window Cleaning">Window Cleaning</option>
+                    <option value="Chimney">Chimney</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-muted-foreground mb-2">
+                    Service Description *
+                  </label>
+                  <textarea
+                    value={serviceDescription}
+                    onChange={(e) => setServiceDescription(e.target.value)}
+                    rows={3}
+                    className="w-full bg-muted border border-border rounded-lg px-4 py-2"
+                    placeholder="Describe what work needs to be done..."
+                    required
+                    data-testid="textarea-service-description"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-card rounded-lg p-6 border">
+              <h2 className="text-lg font-semibold mb-4">Your Property</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-muted-foreground mb-2">
+                    Property Address *
+                  </label>
+                  <input
+                    type="text"
+                    value={propertyAddress}
+                    onChange={(e) => setPropertyAddress(e.target.value)}
+                    className="w-full bg-muted border border-border rounded-lg px-4 py-2"
+                    placeholder="123 Main St"
+                    required
+                    data-testid="input-property-address"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-muted-foreground mb-2">
+                    Postal Code
+                  </label>
+                  <input
+                    type="text"
+                    value={propertyPostalCode}
+                    onChange={(e) => setPropertyPostalCode(e.target.value)}
+                    className="w-full bg-muted border border-border rounded-lg px-4 py-2"
+                    placeholder="V0R 1X0"
+                    data-testid="input-postal-code"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-muted-foreground mb-2">
+                    Community
+                  </label>
+                  <input
+                    type="text"
+                    value={propertyCommunity}
+                    onChange={(e) => setPropertyCommunity(e.target.value)}
+                    className="w-full bg-muted border border-border rounded-lg px-4 py-2"
+                    placeholder="Tofino"
+                    data-testid="input-community"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-muted-foreground mb-2">
+                    Number of Units
+                  </label>
+                  <input
+                    type="number"
+                    value={unitCount}
+                    onChange={(e) => setUnitCount(parseInt(e.target.value) || 1)}
+                    min={1}
+                    className="w-full bg-muted border border-border rounded-lg px-4 py-2"
+                    data-testid="input-unit-count"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-card rounded-lg p-6 border">
+              <h2 className="text-lg font-semibold mb-4">Contractor (Optional)</h2>
+              <p className="text-sm text-muted-foreground mb-4">
+                If you have a contractor in mind, add their details. They will be invited to claim this run.
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-muted-foreground mb-2">
+                    Contractor Name
+                  </label>
+                  <input
+                    type="text"
+                    value={contractorName}
+                    onChange={(e) => setContractorName(e.target.value)}
+                    className="w-full bg-muted border border-border rounded-lg px-4 py-2"
+                    placeholder="ABC Roofing"
+                    data-testid="input-contractor-name"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-muted-foreground mb-2">
+                    Contractor Email
+                  </label>
+                  <input
+                    type="email"
+                    value={contractorEmail}
+                    onChange={(e) => setContractorEmail(e.target.value)}
+                    className="w-full bg-muted border border-border rounded-lg px-4 py-2"
+                    placeholder="contractor@example.com"
+                    data-testid="input-contractor-email"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-muted-foreground mb-2">
+                    Contractor Phone
+                  </label>
+                  <input
+                    type="tel"
+                    value={contractorPhone}
+                    onChange={(e) => setContractorPhone(e.target.value)}
+                    className="w-full bg-muted border border-border rounded-lg px-4 py-2"
+                    placeholder="250-555-1234"
+                    data-testid="input-contractor-phone"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-card rounded-lg p-6 border">
+              <h2 className="text-lg font-semibold mb-4">Service Window (Optional)</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-muted-foreground mb-2">
+                    Preferred Start Date
+                  </label>
+                  <input
+                    type="date"
+                    value={targetStartDate}
+                    onChange={(e) => setTargetStartDate(e.target.value)}
+                    className="w-full bg-muted border border-border rounded-lg px-4 py-2"
+                    data-testid="input-start-date"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-muted-foreground mb-2">
+                    Preferred End Date
+                  </label>
+                  <input
+                    type="date"
+                    value={targetEndDate}
+                    onChange={(e) => setTargetEndDate(e.target.value)}
+                    className="w-full bg-muted border border-border rounded-lg px-4 py-2"
+                    data-testid="input-end-date"
+                  />
+                </div>
+              </div>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="bg-card rounded-lg p-6 border">
+              <h2 className="text-lg font-semibold mb-4">Location & Service Package</h2>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-muted-foreground mb-2">
+                    Community *
+                  </label>
+                  <select
+                    value={communityId}
+                    onChange={(e) => setCommunityId(e.target.value)}
+                    className="w-full bg-muted border border-border rounded-lg px-4 py-2"
+                    required
+                    data-testid="select-community"
+                  >
+                    <option value="">Select a community...</option>
+                    {communities.map(c => (
+                      <option key={c.id} value={c.id}>
+                        {c.name} ({c.region}) - {c.remoteMultiplier}x
+                      </option>
+                    ))}
+                  </select>
+                  {selectedCommunity && (
+                    <div className="mt-2 text-sm text-muted-foreground">
+                      Climate: {selectedCommunity.climateRegionName} | 
+                      Remote multiplier: {selectedCommunity.remoteMultiplier}x
+                    </div>
+                  )}
+                </div>
             
             <div>
               <label className="block text-sm font-medium text-muted-foreground mb-2">
@@ -472,6 +753,8 @@ export default function CreateServiceRun() {
             </div>
           </div>
         </div>
+          </>
+        )}
 
         <div className="bg-card rounded-lg p-6 border">
           <h2 className="text-lg font-semibold mb-4">Requirements</h2>
