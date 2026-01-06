@@ -2,6 +2,7 @@
  * MOBILIZATION SPLIT CALCULATOR
  * 
  * Philosophy:
+ * - Neighbors join to share mobilization costs
  * - Customers coordinate demand, NOT bid down labor rates
  * - More members = contractor makes MORE money (not less)
  * - Split is for mobilization only, not labor rates
@@ -38,13 +39,13 @@ export async function computeMobilizationSplit(run_id: string): Promise<Mobiliza
       r.min_mobilization_threshold,
       r.estimated_total_value,
       r.pricing_model
-    FROM coop_service_runs r
+    FROM shared_service_runs r
     WHERE r.id = $1`,
     [run_id]
   );
   
   if (result.rows.length === 0) {
-    throw new Error('Coop service run not found');
+    throw new Error('Shared service run not found');
   }
   
   const run = result.rows[0];
@@ -101,15 +102,15 @@ export async function computeContractorMargins(run_id: string): Promise<{
       r.estimated_total_value,
       r.pricing_model,
       SUM(m.unit_count) as total_units
-    FROM coop_service_runs r
-    LEFT JOIN coop_run_members m ON m.run_id = r.id AND m.status IN ('interested', 'joined', 'scheduled')
+    FROM shared_service_runs r
+    LEFT JOIN shared_run_members m ON m.run_id = r.id AND m.status IN ('interested', 'joined', 'scheduled')
     WHERE r.id = $1
     GROUP BY r.id`,
     [run_id]
   );
   
   if (result.rows.length === 0) {
-    throw new Error('Coop service run not found');
+    throw new Error('Shared service run not found');
   }
   
   const run = result.rows[0];

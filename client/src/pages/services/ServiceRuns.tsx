@@ -27,7 +27,7 @@ interface ServiceRun {
   createdAt: string;
 }
 
-interface CoopRun {
+interface SharedRun {
   id: string;
   trade_category: string;
   service_description: string;
@@ -76,11 +76,11 @@ export default function ServiceRuns() {
   const navigate = useNavigate();
   const { token } = useAuth();
   const [runs, setRuns] = useState<ServiceRun[]>([]);
-  const [coopRuns, setCoopRuns] = useState<CoopRun[]>([]);
+  const [sharedRuns, setSharedRuns] = useState<SharedRun[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>('');
-  const [activeTab, setActiveTab] = useState<'coop' | 'bidding'>('coop');
+  const [activeTab, setActiveTab] = useState<'shared' | 'bidding'>('shared');
 
   useEffect(() => {
     loadAllRuns();
@@ -93,21 +93,21 @@ export default function ServiceRuns() {
       const headers: HeadersInit = {};
       if (token) headers['Authorization'] = `Bearer ${token}`;
       
-      const [biddingRes, coopRes] = await Promise.all([
+      const [biddingRes, sharedRes] = await Promise.all([
         fetch('/api/service-runs/runs' + (statusFilter ? `?status=${statusFilter}` : ''), { headers }),
-        fetch('/api/coop-runs', { headers })
+        fetch('/api/shared-runs', { headers })
       ]);
       
       const biddingData = await biddingRes.json().catch(() => ({}));
-      const coopData = await coopRes.json().catch(() => ({}));
+      const sharedData = await sharedRes.json().catch(() => ({}));
       
       setRuns(Array.isArray(biddingData?.runs) ? biddingData.runs : []);
-      setCoopRuns(Array.isArray(coopData?.coop_runs) ? coopData.coop_runs : []);
+      setSharedRuns(Array.isArray(sharedData?.shared_runs) ? sharedData.shared_runs : []);
     } catch (err) {
       console.error('Failed to load runs:', err);
       setError('Unable to load service runs. Please try again.');
       setRuns([]);
-      setCoopRuns([]);
+      setSharedRuns([]);
     } finally {
       setLoading(false);
     }
@@ -149,13 +149,13 @@ export default function ServiceRuns() {
   }
 
   const stats = {
-    total: runs.length + coopRuns.length,
-    coopForming: coopRuns.filter(r => r.status === 'forming').length,
+    total: runs.length + sharedRuns.length,
+    sharedForming: sharedRuns.filter(r => r.status === 'forming').length,
     collecting: runs.filter(r => r.status === 'collecting').length,
     bidding: runs.filter(r => r.status === 'bidding' || r.status === 'bid_review').length,
     active: runs.filter(r => ['confirmed', 'scheduled', 'in_progress'].includes(r.status)).length,
     totalRevenue: runs.reduce((sum, r) => sum + r.totalEstimatedRevenue, 0),
-    totalSlots: runs.reduce((sum, r) => sum + r.currentSlots, 0) + coopRuns.reduce((sum, r) => sum + (r.current_member_count || 0), 0)
+    totalSlots: runs.reduce((sum, r) => sum + r.currentSlots, 0) + sharedRuns.reduce((sum, r) => sum + (r.current_member_count || 0), 0)
   };
 
   if (loading) {
@@ -213,8 +213,8 @@ export default function ServiceRuns() {
           <div className="text-sm text-muted-foreground">Total Runs</div>
         </div>
         <div className="bg-card rounded-lg p-4 text-center border">
-          <div className="text-2xl font-bold text-blue-400">{coopRuns.length}</div>
-          <div className="text-sm text-muted-foreground">Coop Runs</div>
+          <div className="text-2xl font-bold text-blue-400">{sharedRuns.length}</div>
+          <div className="text-sm text-muted-foreground">Shared Runs</div>
         </div>
         <div className="bg-card rounded-lg p-4 text-center border">
           <div className="text-2xl font-bold text-purple-400">{runs.length}</div>
@@ -236,11 +236,11 @@ export default function ServiceRuns() {
         </div>
       </div>
 
-      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'coop' | 'bidding')} className="space-y-4">
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'shared' | 'bidding')} className="space-y-4">
         <TabsList className="grid w-full max-w-md grid-cols-2">
-          <TabsTrigger value="coop" className="flex items-center gap-2" data-testid="tab-coop-runs">
+          <TabsTrigger value="shared" className="flex items-center gap-2" data-testid="tab-shared-runs">
             <Users className="w-4 h-4" />
-            Cooperative ({coopRuns.length})
+            Shared Runs ({sharedRuns.length})
           </TabsTrigger>
           <TabsTrigger value="bidding" className="flex items-center gap-2" data-testid="tab-bidding-runs">
             <Gavel className="w-4 h-4" />
@@ -248,32 +248,32 @@ export default function ServiceRuns() {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="coop" className="space-y-4">
+        <TabsContent value="shared" className="space-y-4">
           <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4 mb-4">
             <p className="text-sm text-blue-400">
-              Cooperative runs let neighbors bundle together and split mobilization costs. This is NOT competitive bidding - it&apos;s coordinated service sharing.
+              Shared runs let neighbors bundle together and share mobilization costs. This is NOT competitive bidding - it&apos;s coordinated service sharing.
             </p>
           </div>
           
-          {coopRuns.length === 0 ? (
+          {sharedRuns.length === 0 ? (
             <div className="bg-card rounded-lg p-12 text-center border">
-              <h3 className="text-lg font-medium mb-2">No Cooperative Runs</h3>
-              <p className="text-muted-foreground mb-4">Start a coop run to coordinate services with your neighbors.</p>
+              <h3 className="text-lg font-medium mb-2">No Shared Runs</h3>
+              <p className="text-muted-foreground mb-4">Start a shared run to coordinate services with your neighbors.</p>
               <button
                 onClick={() => navigate('/app/service-runs/new')}
                 className="bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-lg"
               >
-                Start Coop Run
+                Start Shared Run
               </button>
             </div>
           ) : (
             <div className="space-y-4">
-              {coopRuns.map(run => (
+              {sharedRuns.map(run => (
                 <div
                   key={run.id}
-                  onClick={() => navigate(`/app/service-runs/coop-${run.id}`)}
+                  onClick={() => navigate(`/app/service-runs/shared-${run.id}`)}
                   className="bg-card rounded-lg p-4 cursor-pointer hover-elevate transition-colors border"
-                  data-testid={`card-coop-run-${run.id}`}
+                  data-testid={`card-shared-run-${run.id}`}
                 >
                   <div className="flex items-start justify-between gap-4 mb-3 flex-wrap">
                     <div className="flex-1 min-w-0">

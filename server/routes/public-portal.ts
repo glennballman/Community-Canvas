@@ -104,7 +104,7 @@ router.get('/portals/:slug/service-runs', async (req: Request, res: Response) =>
         csr.participants_confirmed,
         csr.estimated_savings_per_participant,
         csr.created_at
-      FROM coop_service_runs csr
+      FROM shared_service_runs csr
       WHERE csr.community_tenant_id = $1
         AND csr.visibility = 'public'
     `;

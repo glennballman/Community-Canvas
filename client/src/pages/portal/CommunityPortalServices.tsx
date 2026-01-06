@@ -31,7 +31,7 @@ export default function CommunityPortalServices() {
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground">
-            Cooperative service runs allow neighbors to bundle together and share mobilization costs.
+            Shared service runs allow neighbors to bundle together and share mobilization costs.
           </p>
         </CardContent>
       </Card>

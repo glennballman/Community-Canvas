@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Badge } from '@/components/ui/badge';
 import { Users } from 'lucide-react';
 
-interface CoopRunDetail {
+interface SharedRunDetail {
   id: string;
   trade_category: string;
   service_description: string;
@@ -17,7 +17,7 @@ interface CoopRunDetail {
   total_units: number;
 }
 
-interface CoopMobilization {
+interface SharedMobilization {
   total_fee: number;
   share_per_member: number;
   member_count: number;
@@ -122,8 +122,8 @@ export default function ServiceRunDetail() {
   const navigate = useNavigate();
   const { token } = useAuth();
   const [run, setRun] = useState<RunDetail | null>(null);
-  const [coopRun, setCoopRun] = useState<CoopRunDetail | null>(null);
-  const [coopMobilization, setCoopMobilization] = useState<CoopMobilization | null>(null);
+  const [sharedRun, setSharedRun] = useState<SharedRunDetail | null>(null);
+  const [sharedMobilization, setSharedMobilization] = useState<SharedMobilization | null>(null);
   const [slots, setSlots] = useState<Slot[]>([]);
   const [bids, setBids] = useState<Bid[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
@@ -132,35 +132,35 @@ export default function ServiceRunDetail() {
   const [activeTab, setActiveTab] = useState<'slots' | 'bids' | 'schedule'>('slots');
   const [selectedSlot, setSelectedSlot] = useState<Slot | null>(null);
   
-  const isCoopRun = slug?.startsWith('coop-');
-  const coopRunId = isCoopRun ? slug.replace('coop-', '') : null;
+  const isSharedRun = slug?.startsWith('shared-');
+  const sharedRunId = isSharedRun ? slug.replace('shared-', '') : null;
 
   useEffect(() => {
-    if (isCoopRun && coopRunId) {
-      loadCoopRunDetail();
+    if (isSharedRun && sharedRunId) {
+      loadSharedRunDetail();
     } else {
       loadRunDetail();
     }
   }, [slug, token]);
 
-  async function loadCoopRunDetail() {
+  async function loadSharedRunDetail() {
     setLoading(true);
     setError(null);
     try {
       const headers: HeadersInit = {};
       if (token) headers['Authorization'] = `Bearer ${token}`;
       
-      const res = await fetch(`/api/coop-runs/${coopRunId}`, { headers });
+      const res = await fetch(`/api/shared-runs/${sharedRunId}`, { headers });
       const data = await res.json().catch(() => ({}));
       
-      if (data?.coop_run) {
-        setCoopRun(data.coop_run);
-        setCoopMobilization(data.mobilization || null);
+      if (data?.shared_run) {
+        setSharedRun(data.shared_run);
+        setSharedMobilization(data.mobilization || null);
       } else {
-        setError('Cooperative run not found.');
+        setError('Shared run not found.');
       }
     } catch (err) {
-      console.error('Failed to load coop run:', err);
+      console.error('Failed to load shared run:', err);
       setError('Unable to load run details. Please try again.');
     } finally {
       setLoading(false);
@@ -238,7 +238,7 @@ export default function ServiceRunDetail() {
     );
   }
 
-  if (!run && !coopRun) {
+  if (!run && !sharedRun) {
     return (
       <div className="p-6 text-center">
         <h3 className="text-lg font-medium mb-2">Run Not Found</h3>
@@ -253,7 +253,7 @@ export default function ServiceRunDetail() {
     );
   }
 
-  if (isCoopRun && coopRun) {
+  if (isSharedRun && sharedRun) {
     return (
       <div className="p-6">
         <div className="flex items-center gap-4 mb-6 flex-wrap">
@@ -268,47 +268,47 @@ export default function ServiceRunDetail() {
             <div className="flex items-center gap-3 flex-wrap">
               <Badge variant="outline" className="bg-blue-500/20 text-blue-400 border-blue-500/50">
                 <Users className="w-3 h-3 mr-1" />
-                Coop Run
+                Shared Run
               </Badge>
-              <h1 className="text-2xl font-bold" data-testid="text-run-title">{coopRun.trade_category}</h1>
-              <Badge variant="outline" className={STATUS_COLORS[coopRun.status]}>
-                {coopRun.status.replace('_', ' ').toUpperCase()}
+              <h1 className="text-2xl font-bold" data-testid="text-run-title">{sharedRun.trade_category}</h1>
+              <Badge variant="outline" className={STATUS_COLORS[sharedRun.status]}>
+                {sharedRun.status.replace('_', ' ').toUpperCase()}
               </Badge>
             </div>
-            <p className="text-muted-foreground mt-1">{coopRun.service_description}</p>
+            <p className="text-muted-foreground mt-1">{sharedRun.service_description}</p>
           </div>
         </div>
 
         <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4 mb-6">
           <p className="text-sm text-blue-400">
-            This is a cooperative run - neighbors bundling together to share mobilization costs. This is NOT competitive bidding.
+            This is a shared run - neighbors bundling together to share mobilization costs. This is NOT competitive bidding.
           </p>
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
           <div className="bg-card rounded-lg p-4 text-center border">
-            <div className="text-2xl font-bold text-blue-400">{coopRun.member_count || 0}</div>
+            <div className="text-2xl font-bold text-blue-400">{sharedRun.member_count || 0}</div>
             <div className="text-sm text-muted-foreground">Members</div>
           </div>
           <div className="bg-card rounded-lg p-4 text-center border">
-            <div className="text-2xl font-bold">{coopRun.total_units || 0}</div>
+            <div className="text-2xl font-bold">{sharedRun.total_units || 0}</div>
             <div className="text-sm text-muted-foreground">Total Units</div>
           </div>
           <div className="bg-card rounded-lg p-4 text-center border">
             <div className="text-2xl font-bold text-green-400">
-              ${coopMobilization?.share_per_member?.toFixed(0) || '?'}
+              ${sharedMobilization?.share_per_member?.toFixed(0) || '?'}
             </div>
             <div className="text-sm text-muted-foreground">Your Share</div>
           </div>
           <div className="bg-card rounded-lg p-4 text-center border">
             <div className="text-2xl font-bold">
-              ${coopMobilization?.total_fee?.toFixed(0) || '?'}
+              ${sharedMobilization?.total_fee?.toFixed(0) || '?'}
             </div>
             <div className="text-sm text-muted-foreground">Total Mobilization</div>
           </div>
         </div>
 
-        {coopMobilization?.threshold_met && (
+        {sharedMobilization?.threshold_met && (
           <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4 mb-6">
             <p className="text-sm text-green-400 font-medium">
               Threshold met - this run has enough members to proceed.
@@ -321,30 +321,30 @@ export default function ServiceRunDetail() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
             <div>
               <div className="text-sm text-muted-foreground mb-1">Contractor</div>
-              <div className="font-medium">{coopRun.contractor_name || 'Pending'}</div>
+              <div className="font-medium">{sharedRun.contractor_name || 'Pending'}</div>
             </div>
             <div>
               <div className="text-sm text-muted-foreground mb-1">Service Window</div>
               <div className="font-medium">
-                {coopRun.window_start ? formatDate(coopRun.window_start) : 'TBD'}
-                {coopRun.window_end ? ` - ${formatDate(coopRun.window_end)}` : ''}
+                {sharedRun.window_start ? formatDate(sharedRun.window_start) : 'TBD'}
+                {sharedRun.window_end ? ` - ${formatDate(sharedRun.window_end)}` : ''}
               </div>
             </div>
             <div>
               <div className="text-sm text-muted-foreground mb-1">Pricing Model</div>
-              <div className="font-medium capitalize">{coopRun.pricing_model || 'Per unit'}</div>
+              <div className="font-medium capitalize">{sharedRun.pricing_model || 'Per unit'}</div>
             </div>
             <div>
               <div className="text-sm text-muted-foreground mb-1">Status</div>
-              <div className="font-medium capitalize">{coopRun.status.replace('_', ' ')}</div>
+              <div className="font-medium capitalize">{sharedRun.status.replace('_', ' ')}</div>
             </div>
           </div>
         </div>
 
-        {coopMobilization?.display?.headline && (
+        {sharedMobilization?.display?.headline && (
           <div className="bg-card rounded-lg p-6 border">
             <h2 className="text-lg font-semibold mb-2">Cost Breakdown</h2>
-            <p className="text-muted-foreground">{coopMobilization.display.headline}</p>
+            <p className="text-muted-foreground">{sharedMobilization.display.headline}</p>
           </div>
         )}
       </div>
@@ -604,7 +604,7 @@ export default function ServiceRunDetail() {
                   </div>
                   <div className="text-right">
                     <div className="text-lg font-bold text-green-400">
-                      ${bid.mobilizationCost}
+                      ${bid.mobilizationCost.toLocaleString()}
                     </div>
                     <div className="text-xs text-muted-foreground">mobilization</div>
                   </div>
@@ -612,22 +612,24 @@ export default function ServiceRunDetail() {
                 
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                   <div>
-                    <div className="text-muted-foreground">Per Slot</div>
+                    <div className="text-xs text-muted-foreground mb-1">Per Slot Cost</div>
                     <div>
-                      ${bid.perSlotCostLow} - ${bid.perSlotCostHigh}
+                      {bid.perSlotCostLow && bid.perSlotCostHigh
+                        ? `$${bid.perSlotCostLow} - $${bid.perSlotCostHigh}`
+                        : '-'}
                     </div>
                   </div>
                   <div>
-                    <div className="text-muted-foreground">Crew Size</div>
-                    <div>{bid.crewSize}</div>
+                    <div className="text-xs text-muted-foreground mb-1">Crew Size</div>
+                    <div>{bid.crewSize} {bid.crewNeedsAccommodation ? '(needs accom)' : ''}</div>
                   </div>
                   <div>
-                    <div className="text-muted-foreground">Days On Site</div>
+                    <div className="text-xs text-muted-foreground mb-1">Proposed Start</div>
+                    <div>{bid.proposedStartDate ? formatDate(bid.proposedStartDate) : '-'}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-muted-foreground mb-1">Days On Site</div>
                     <div>{bid.estimatedDaysOnSite}</div>
-                  </div>
-                  <div>
-                    <div className="text-muted-foreground">Accommodation</div>
-                    <div>{bid.crewNeedsAccommodation ? 'Needed' : 'No'}</div>
                   </div>
                 </div>
                 
@@ -646,44 +648,10 @@ export default function ServiceRunDetail() {
         <div className="bg-card rounded-lg p-8 text-center border">
           <h3 className="text-lg font-medium mb-2">Schedule Coming Soon</h3>
           <p className="text-muted-foreground">
-            Once a bid is accepted, the schedule builder will help optimize the route and timing.
+            Once a contractor is selected, the service schedule will appear here.
           </p>
         </div>
       )}
-
-      <div className="mt-6 bg-card rounded-lg p-4 border">
-        <h3 className="font-semibold mb-4">Run Details</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm">
-          <div>
-            <div className="text-muted-foreground mb-1">Service Area</div>
-            <div>{run.serviceAreaDescription || '-'}</div>
-          </div>
-          <div>
-            <div className="text-muted-foreground mb-1">Target Window</div>
-            <div>{formatDate(run.targetStartDate)} - {formatDate(run.targetEndDate)}</div>
-          </div>
-          <div>
-            <div className="text-muted-foreground mb-1">Bidding Period</div>
-            <div>
-              {run.biddingOpensAt 
-                ? `${formatDate(run.biddingOpensAt)} - ${formatDate(run.biddingClosesAt!)}`
-                : 'Not set'}
-            </div>
-          </div>
-          <div>
-            <div className="text-muted-foreground mb-1">Mobilization Est.</div>
-            <div>${run.estimatedMobilizationCost || '-'}</div>
-          </div>
-          <div>
-            <div className="text-muted-foreground mb-1">Bundle</div>
-            <div>{run.bundleName || '-'}</div>
-          </div>
-          <div>
-            <div className="text-muted-foreground mb-1">Cancellation Policy</div>
-            <div className="text-xs">{run.cancellationPolicy}</div>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }

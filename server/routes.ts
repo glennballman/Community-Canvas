@@ -45,7 +45,7 @@ import appreciationsRouter from "./routes/appreciations";
 import financingRouter from "./routes/financing";
 import paymentsRouter from "./routes/payments";
 import trustSignalsRouter from "./routes/trust-signals";
-import coopRunsRouter from "./routes/coop-runs";
+import sharedRunsRouter from "./routes/shared-runs";
 import operatorRouter from "./routes/operator";
 import publicPortalRouter from "./routes/public-portal";
 import userContextRouter from "./routes/user-context";
@@ -171,8 +171,8 @@ export async function registerRoutes(
   // Register trust signals + feedback routes (small-town trust model)
   app.use('/api', trustSignalsRouter);
 
-  // Register Cooperative Service Runs routes (bundling, NOT bidding)
-  app.use('/api/coop-runs', coopRunsRouter);
+  // Register Shared Service Runs routes (bundling, NOT bidding)
+  app.use('/api/shared-runs', sharedRunsRouter);
 
   // Register operator routes (for community operators)
   app.use('/api/operator', operatorRouter);

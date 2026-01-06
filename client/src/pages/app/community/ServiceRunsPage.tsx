@@ -30,7 +30,7 @@ export default function ServiceRunsPage() {
         <div>
           <h1 className="text-2xl font-bold">Service Runs</h1>
           <p className="text-muted-foreground">
-            Cooperative service runs for your community
+            Shared service runs for your community
           </p>
         </div>
         <Link to="/app/service-runs/new">

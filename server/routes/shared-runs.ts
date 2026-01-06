@@ -7,15 +7,16 @@ import { serviceQuery, tenantQuery, withTenantTransaction } from '../db/tenantDb
 const router = Router();
 
 /**
- * COOPERATIVE SERVICE RUNS ROUTES
+ * SHARED SERVICE RUNS ROUTES
  * 
  * Philosophy:
- * - Cooperative bundling, NOT competitive bidding
+ * - Neighbors join to share mobilization costs
  * - Contractor controls pricing
  * - Customers coordinate demand
  * - More members = better for everyone
+ * - This is NOT competitive bidding
  * 
- * Prefix: /api/coop-runs
+ * Prefix: /api/shared-runs
  */
 
 async function resolveTenant(req: any): Promise<{ id: string }> {
@@ -53,7 +54,7 @@ async function resolveTenant(req: any): Promise<{ id: string }> {
 }
 
 // ============================================================
-// CREATE COOP RUN (Customer who booked a contractor)
+// CREATE SHARED RUN (Customer who booked a contractor)
 // ============================================================
 router.post('/', async (req: Request, res: Response) => {
   try {
@@ -92,7 +93,7 @@ router.post('/', async (req: Request, res: Response) => {
 
     const { run, opportunity } = await withTenantTransaction(req, async (client) => {
       const runResult = await client.query(
-        `INSERT INTO coop_service_runs (
+        `INSERT INTO shared_service_runs (
           tenant_id, trade_category, service_description,
           contractor_name, contractor_contact_email, contractor_website,
           window_start, window_end, preferred_months,
@@ -128,7 +129,7 @@ router.post('/', async (req: Request, res: Response) => {
       const oppResult = await client.query(
         `INSERT INTO opportunities (
           tenant_id, owner_party_id, owner_individual_id,
-          title, description, intake_mode, coop_run_id,
+          title, description, intake_mode, shared_run_id,
           property_address, postal_code,
           state
         ) VALUES ($1, $2, $3, $4, $5, 'run', $6, $7, $8, 'intake')
@@ -137,7 +138,7 @@ router.post('/', async (req: Request, res: Response) => {
           tenant.id,
           actor.actor_party_id,
           actor.individual_id,
-          `${trade_category} - ${property_community || 'Coop Run'}`,
+          `${trade_category} - ${property_community || 'Shared Run'}`,
           service_description,
           run.id,
           property_address,
@@ -148,7 +149,7 @@ router.post('/', async (req: Request, res: Response) => {
       const opportunity = oppResult.rows[0];
 
       await client.query(
-        `INSERT INTO coop_run_members (
+        `INSERT INTO shared_run_members (
           run_id, opportunity_id, owner_party_id, owner_individual_id,
           property_address, property_postal_code, property_community,
           unit_count, units, access_notes, status
@@ -171,8 +172,8 @@ router.post('/', async (req: Request, res: Response) => {
         const inviteToken = randomBytes(32).toString('hex');
         
         await client.query(
-          `INSERT INTO coop_contractor_invites (
-            coop_run_id, contractor_name, contractor_email,
+          `INSERT INTO shared_run_invites (
+            shared_run_id, contractor_name, contractor_email,
             contractor_phone, contractor_website,
             source, invite_token, status,
             invited_by_party_id, invited_by_individual_id
@@ -190,12 +191,12 @@ router.post('/', async (req: Request, res: Response) => {
         );
 
         await client.query(
-          `UPDATE coop_service_runs SET status = 'contractor_invited' WHERE id = $1`,
+          `UPDATE shared_service_runs SET status = 'contractor_invited' WHERE id = $1`,
           [run.id]
         );
       }
 
-      await client.query(`SELECT recompute_coop_run_estimates($1)`, [run.id]);
+      await client.query(`SELECT recompute_shared_run_estimates($1)`, [run.id]);
 
       return { run, opportunity };
     });
@@ -203,20 +204,20 @@ router.post('/', async (req: Request, res: Response) => {
     const estimate = await computeMobilizationSplit(run.id);
 
     res.status(201).json({
-      coop_run: run,
+      shared_run: run,
       opportunity: opportunity,
       mobilization_estimate: estimate,
-      message: 'Coop run created! Neighbors can now join to split mobilization costs.'
+      message: 'Shared run created! Neighbors can now join to share mobilization costs.'
     });
 
   } catch (error) {
-    console.error('Error creating coop run:', error);
-    res.status(500).json({ error: 'Failed to create coop run' });
+    console.error('Error creating shared run:', error);
+    res.status(500).json({ error: 'Failed to create shared run' });
   }
 });
 
 // ============================================================
-// GET COOP RUN (Public summary)
+// GET SHARED RUN (Public summary)
 // ============================================================
 router.get('/:id', async (req: Request, res: Response) => {
   try {
@@ -229,15 +230,15 @@ router.get('/:id', async (req: Request, res: Response) => {
         r.*,
         COUNT(m.id) FILTER (WHERE m.status IN ('interested', 'joined', 'scheduled')) as member_count,
         SUM(m.unit_count) FILTER (WHERE m.status IN ('interested', 'joined', 'scheduled')) as total_units
-       FROM coop_service_runs r
-       LEFT JOIN coop_run_members m ON m.run_id = r.id
+       FROM shared_service_runs r
+       LEFT JOIN shared_run_members m ON m.run_id = r.id
        WHERE r.id = $1
        GROUP BY r.id`,
       [id]
     );
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Coop run not found' });
+      return res.status(404).json({ error: 'Shared run not found' });
     }
 
     const run = result.rows[0];
@@ -245,7 +246,7 @@ router.get('/:id', async (req: Request, res: Response) => {
     const display = formatCustomerEstimate(estimate);
 
     res.json({
-      coop_run: {
+      shared_run: {
         id: run.id,
         trade_category: run.trade_category,
         service_description: run.service_description,
@@ -263,19 +264,19 @@ router.get('/:id', async (req: Request, res: Response) => {
       },
       copy: {
         headline: display.headline,
-        call_to_action: 'Join this coop run to share mobilization costs with your neighbors',
+        call_to_action: 'Join this shared run to share mobilization costs with your neighbors',
         not_bidding: 'This is not a bidding war. You are joining a coordinated service run.',
         efficiency: 'The more neighbors who join, the more efficient the trip becomes.'
       }
     });
   } catch (error) {
-    console.error('Error fetching coop run:', error);
-    res.status(500).json({ error: 'Failed to fetch coop run' });
+    console.error('Error fetching shared run:', error);
+    res.status(500).json({ error: 'Failed to fetch shared run' });
   }
 });
 
 // ============================================================
-// JOIN COOP RUN
+// JOIN SHARED RUN
 // ============================================================
 router.post('/:id/join', async (req: Request, res: Response) => {
   try {
@@ -299,19 +300,19 @@ router.post('/:id/join', async (req: Request, res: Response) => {
 
     const runResult = await tenantQuery(
       req,
-      `SELECT * FROM coop_service_runs WHERE id = $1 AND status IN ('forming', 'contractor_invited', 'contractor_claimed')`,
+      `SELECT * FROM shared_service_runs WHERE id = $1 AND status IN ('forming', 'contractor_invited', 'contractor_claimed')`,
       [id]
     );
 
     if (runResult.rows.length === 0) {
-      return res.status(404).json({ error: 'Coop run not found or not accepting members' });
+      return res.status(404).json({ error: 'Shared run not found or not accepting members' });
     }
 
     const run = runResult.rows[0];
 
     const existingResult = await tenantQuery(
       req,
-      `SELECT id FROM coop_run_members 
+      `SELECT id FROM shared_run_members 
        WHERE run_id = $1 AND owner_party_id = $2 AND status != 'withdrawn'`,
       [id, actor.actor_party_id]
     );
@@ -324,7 +325,7 @@ router.post('/:id/join', async (req: Request, res: Response) => {
       const oppResult = await client.query(
         `INSERT INTO opportunities (
           tenant_id, owner_party_id, owner_individual_id,
-          title, description, intake_mode, coop_run_id,
+          title, description, intake_mode, shared_run_id,
           property_address, postal_code,
           state
         ) VALUES ($1, $2, $3, $4, $5, 'run', $6, $7, $8, 'intake')
@@ -344,7 +345,7 @@ router.post('/:id/join', async (req: Request, res: Response) => {
       const opportunity = oppResult.rows[0];
 
       const memberResult = await client.query(
-        `INSERT INTO coop_run_members (
+        `INSERT INTO shared_run_members (
           run_id, opportunity_id, owner_party_id, owner_individual_id,
           property_address, property_postal_code, property_community,
           unit_count, units, access_notes, special_requirements, status
@@ -378,12 +379,12 @@ router.post('/:id/join', async (req: Request, res: Response) => {
         ...estimate,
         display
       },
-      message: `You've joined the coop run! Current mobilization share: $${estimate.share_per_member}`
+      message: `You've joined the shared run! Current mobilization share: $${estimate.share_per_member}`
     });
 
   } catch (error) {
-    console.error('Error joining coop run:', error);
-    res.status(500).json({ error: 'Failed to join coop run' });
+    console.error('Error joining shared run:', error);
+    res.status(500).json({ error: 'Failed to join shared run' });
   }
 });
 
@@ -405,8 +406,8 @@ router.post('/:id/claim', async (req: Request, res: Response) => {
     if (invite_token) {
       const inviteResult = await tenantQuery(
         req,
-        `SELECT * FROM coop_contractor_invites 
-         WHERE coop_run_id = $1 AND invite_token = $2 AND status != 'claimed'`,
+        `SELECT * FROM shared_run_invites 
+         WHERE shared_run_id = $1 AND invite_token = $2 AND status != 'claimed'`,
         [id, invite_token]
       );
 
@@ -417,18 +418,18 @@ router.post('/:id/claim', async (req: Request, res: Response) => {
 
     const runResult = await tenantQuery(
       req,
-      `SELECT * FROM coop_service_runs 
+      `SELECT * FROM shared_service_runs 
        WHERE id = $1 AND status IN ('forming', 'contractor_invited') AND contractor_party_id IS NULL`,
       [id]
     );
 
     if (runResult.rows.length === 0) {
-      return res.status(404).json({ error: 'Coop run not found or already claimed' });
+      return res.status(404).json({ error: 'Shared run not found or already claimed' });
     }
 
     const membersResult = await withTenantTransaction(req, async (client) => {
       await client.query(
-        `UPDATE coop_service_runs SET
+        `UPDATE shared_service_runs SET
           contractor_party_id = $1,
           status = 'contractor_claimed',
           updated_at = now()
@@ -438,17 +439,17 @@ router.post('/:id/claim', async (req: Request, res: Response) => {
 
       if (invite_token) {
         await client.query(
-          `UPDATE coop_contractor_invites SET
+          `UPDATE shared_run_invites SET
             status = 'claimed',
             claimed_party_id = $1,
             claimed_at = now()
-           WHERE coop_run_id = $2 AND invite_token = $3`,
+           WHERE shared_run_id = $2 AND invite_token = $3`,
           [actor.actor_party_id, id, invite_token]
         );
       }
 
       const membersResult = await client.query(
-        `SELECT m.*, o.id as opp_id FROM coop_run_members m
+        `SELECT m.*, o.id as opp_id FROM shared_run_members m
          JOIN opportunities o ON m.opportunity_id = o.id
          WHERE m.run_id = $1 AND m.status IN ('interested', 'joined')`,
         [id]
@@ -470,8 +471,8 @@ router.post('/:id/claim', async (req: Request, res: Response) => {
     const margins = await computeContractorMargins(id);
 
     res.json({
-      message: 'Coop run claimed! You can now set your schedule and communicate with members.',
-      coop_run_id: id,
+      message: 'Shared run claimed! You can now set your schedule and communicate with members.',
+      shared_run_id: id,
       member_count: membersResult.rows.length,
       contractor_margins: margins,
       next_steps: [
@@ -483,13 +484,13 @@ router.post('/:id/claim', async (req: Request, res: Response) => {
     });
 
   } catch (error) {
-    console.error('Error claiming coop run:', error);
-    res.status(500).json({ error: 'Failed to claim coop run' });
+    console.error('Error claiming shared run:', error);
+    res.status(500).json({ error: 'Failed to claim shared run' });
   }
 });
 
 // ============================================================
-// LIST COOP RUNS (Public discovery)
+// LIST SHARED RUNS (Public discovery)
 // ============================================================
 router.get('/', async (req: Request, res: Response) => {
   try {
@@ -502,7 +503,7 @@ router.get('/', async (req: Request, res: Response) => {
         r.status, r.window_start, r.window_end,
         r.current_member_count, r.mobilization_fee_total,
         r.pricing_model
-      FROM coop_service_runs r
+      FROM shared_service_runs r
       WHERE r.tenant_id = $1
     `;
     const params: any[] = [tenant.id];
@@ -546,16 +547,16 @@ router.get('/', async (req: Request, res: Response) => {
     );
 
     res.json({
-      coop_runs: runs,
+      shared_runs: runs,
       count: runs.length,
       copy: {
-        explainer: 'Coop runs let neighbors bundle together and split mobilization costs.',
-        not_bidding: 'This is cooperative coordination, not competitive bidding.'
+        explainer: 'Shared runs let neighbors bundle together and share mobilization costs.',
+        not_bidding: 'This is coordinated service sharing, not competitive bidding.'
       }
     });
   } catch (error) {
-    console.error('Error listing coop runs:', error);
-    res.status(500).json({ error: 'Failed to list coop runs' });
+    console.error('Error listing shared runs:', error);
+    res.status(500).json({ error: 'Failed to list shared runs' });
   }
 });
 
@@ -576,7 +577,7 @@ router.post('/:id/outreach-campaign', async (req: Request, res: Response) => {
 
     const runResult = await tenantQuery(
       req,
-      `SELECT * FROM coop_service_runs WHERE id = $1 AND contractor_party_id = $2`,
+      `SELECT * FROM shared_service_runs WHERE id = $1 AND contractor_party_id = $2`,
       [id, actor.actor_party_id]
     );
 
@@ -586,7 +587,7 @@ router.post('/:id/outreach-campaign', async (req: Request, res: Response) => {
 
     const result = await tenantQuery(
       req,
-      `INSERT INTO coop_outreach_campaigns (
+      `INSERT INTO shared_outreach_campaigns (
         run_id, contractor_party_id, campaign_name, message_template,
         target_emails, target_phones
       ) VALUES ($1, $2, $3, $4, $5, $6)
@@ -597,7 +598,7 @@ router.post('/:id/outreach-campaign', async (req: Request, res: Response) => {
     res.status(201).json({
       campaign: result.rows[0],
       message: 'Outreach campaign created! Ready to invite your past customers.',
-      next_step: 'POST /coop-runs/:id/outreach-campaign/:campaignId/send to send invites'
+      next_step: 'POST /shared-runs/:id/outreach-campaign/:campaignId/send to send invites'
     });
   } catch (error) {
     console.error('Error creating outreach campaign:', error);
@@ -620,7 +621,7 @@ router.get('/:id/contractor-margins', async (req: Request, res: Response) => {
 
     const runResult = await tenantQuery(
       req,
-      `SELECT * FROM coop_service_runs WHERE id = $1 AND contractor_party_id = $2`,
+      `SELECT * FROM shared_service_runs WHERE id = $1 AND contractor_party_id = $2`,
       [id, actor.actor_party_id]
     );
 

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Users, Gavel } from 'lucide-react';
 
-type RunMode = 'coop' | 'bidding';
+type RunMode = 'shared' | 'bidding';
 
 interface Community {
   id: string;
@@ -42,7 +42,7 @@ export default function CreateServiceRun() {
   const navigate = useNavigate();
   const { token } = useAuth();
   
-  const [runMode, setRunMode] = useState<RunMode>('coop');
+  const [runMode, setRunMode] = useState<RunMode>('shared');
   const [communities, setCommunities] = useState<Community[]>([]);
   const [bundles, setBundles] = useState<Bundle[]>([]);
   const [runTypes, setRunTypes] = useState<RunType[]>([]);
@@ -162,14 +162,14 @@ export default function CreateServiceRun() {
     setError(null);
     
     try {
-      if (runMode === 'coop') {
+      if (runMode === 'shared') {
         if (!tradeCategory || !serviceDescription || !propertyAddress) {
           setError('Please fill in all required fields');
           setSaving(false);
           return;
         }
         
-        const res = await fetch('/api/coop-runs', {
+        const res = await fetch('/api/shared-runs', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -192,10 +192,10 @@ export default function CreateServiceRun() {
         
         const data = await res.json();
         
-        if (data.coop_run) {
-          navigate(`/app/service-runs/coop-${data.coop_run.id}`);
+        if (data.shared_run) {
+          navigate(`/app/service-runs/shared-${data.shared_run.id}`);
         } else {
-          setError(data.error || 'Failed to create coop run');
+          setError(data.error || 'Failed to create shared run');
         }
       } else {
         if (!title || !communityId || !targetStartDate || !targetEndDate) {
@@ -293,17 +293,17 @@ export default function CreateServiceRun() {
         <div className="grid grid-cols-2 gap-4">
           <button
             type="button"
-            onClick={() => setRunMode('coop')}
+            onClick={() => setRunMode('shared')}
             className={`p-4 rounded-lg border-2 text-left transition-colors ${
-              runMode === 'coop' 
+              runMode === 'shared' 
                 ? 'border-blue-500 bg-blue-500/10' 
                 : 'border-border hover:border-muted-foreground'
             }`}
-            data-testid="button-mode-coop"
+            data-testid="button-mode-shared"
           >
             <div className="flex items-center gap-2 mb-2">
               <Users className="w-5 h-5 text-blue-400" />
-              <span className="font-semibold">Cooperative Run</span>
+              <span className="font-semibold">Shared Run</span>
             </div>
             <p className="text-sm text-muted-foreground">
               Bundle with neighbors to share mobilization costs. You already have a contractor in mind.
@@ -331,7 +331,7 @@ export default function CreateServiceRun() {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        {runMode === 'coop' ? (
+        {runMode === 'shared' ? (
           <>
             <div className="bg-card rounded-lg p-6 border">
               <h2 className="text-lg font-semibold mb-4">Service Details</h2>
@@ -576,271 +576,208 @@ export default function CreateServiceRun() {
                 </div>
               )}
             </div>
-          </div>
-
-          <div className="mt-4">
-            <label className="block text-sm font-medium text-muted-foreground mb-2">
-              Or select a Run Type (seasonal template)
-            </label>
-            <select
-              value={runTypeId}
-              onChange={(e) => {
-                setRunTypeId(e.target.value);
-                if (e.target.value) setBundleId('');
-              }}
-              className="w-full bg-muted border border-border rounded-lg px-4 py-2"
-              data-testid="select-run-type"
-            >
-              <option value="">Select a run type...</option>
-              {runTypes.map(rt => (
-                <option key={rt.id} value={rt.id}>
-                  {rt.name} (Weeks {rt.earliestWeek}-{rt.latestWeek}, {rt.serviceCount} services)
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        <div className="bg-card rounded-lg p-6 border">
-          <h2 className="text-lg font-semibold mb-4">Run Details</h2>
-          
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-muted-foreground mb-2">
-                Run Title *
-              </label>
-              <input
-                type="text"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="e.g., Bamfield Fall Shutdown 2025"
-                className="w-full bg-muted border border-border rounded-lg px-4 py-2"
-                required
-                data-testid="input-title"
-              />
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-muted-foreground mb-2">
-                Description
-              </label>
-              <textarea
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Describe the service run, what's included, and any special notes..."
-                rows={3}
-                className="w-full bg-muted border border-border rounded-lg px-4 py-2"
-                data-testid="input-description"
-              />
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-muted-foreground mb-2">
-                Service Area
-              </label>
-              <input
-                type="text"
-                value={serviceAreaDescription}
-                onChange={(e) => setServiceAreaDescription(e.target.value)}
-                placeholder="e.g., All of Bamfield including water-access properties"
-                className="w-full bg-muted border border-border rounded-lg px-4 py-2"
-                data-testid="input-service-area"
-              />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-card rounded-lg p-6 border">
-          <h2 className="text-lg font-semibold mb-4">Dates</h2>
-          
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-muted-foreground mb-2">
-                Target Start Date *
-              </label>
-              <input
-                type="date"
-                value={targetStartDate}
-                onChange={(e) => setTargetStartDate(e.target.value)}
-                className="w-full bg-muted border border-border rounded-lg px-4 py-2"
-                required
-                data-testid="input-start-date"
-              />
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-muted-foreground mb-2">
-                Target End Date *
-              </label>
-              <input
-                type="date"
-                value={targetEndDate}
-                onChange={(e) => setTargetEndDate(e.target.value)}
-                className="w-full bg-muted border border-border rounded-lg px-4 py-2"
-                required
-                data-testid="input-end-date"
-              />
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-muted-foreground mb-2">
-                Bidding Opens
-              </label>
-              <input
-                type="date"
-                value={biddingOpensAt}
-                onChange={(e) => setBiddingOpensAt(e.target.value)}
-                className="w-full bg-muted border border-border rounded-lg px-4 py-2"
-                data-testid="input-bidding-opens"
-              />
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-muted-foreground mb-2">
-                Bidding Closes
-              </label>
-              <input
-                type="date"
-                value={biddingClosesAt}
-                onChange={(e) => setBiddingClosesAt(e.target.value)}
-                className="w-full bg-muted border border-border rounded-lg px-4 py-2"
-                data-testid="input-bidding-closes"
-              />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-card rounded-lg p-6 border">
-          <h2 className="text-lg font-semibold mb-4">Capacity & Pricing</h2>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-muted-foreground mb-2">
-                Minimum Slots
-              </label>
-              <input
-                type="number"
-                value={minSlots}
-                onChange={(e) => setMinSlots(parseInt(e.target.value) || 0)}
-                min={1}
-                className="w-full bg-muted border border-border rounded-lg px-4 py-2"
-                data-testid="input-min-slots"
-              />
-              <div className="text-xs text-muted-foreground mt-1">Run needs this many to proceed</div>
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-muted-foreground mb-2">
-                Maximum Slots
-              </label>
-              <input
-                type="number"
-                value={maxSlots}
-                onChange={(e) => setMaxSlots(parseInt(e.target.value) || 0)}
-                min={1}
-                className="w-full bg-muted border border-border rounded-lg px-4 py-2"
-                data-testid="input-max-slots"
-              />
-              <div className="text-xs text-muted-foreground mt-1">Run closes at this capacity</div>
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-muted-foreground mb-2">
-                Est. Mobilization Cost
-              </label>
-              <div className="relative">
-                <span className="absolute left-3 top-2 text-muted-foreground">$</span>
-                <input
-                  type="number"
-                  value={estimatedMobilizationCost}
-                  onChange={(e) => setEstimatedMobilizationCost(e.target.value)}
-                  className="w-full bg-muted border border-border rounded-lg pl-8 pr-4 py-2"
-                  data-testid="input-mobilization"
-                />
               </div>
-              <div className="text-xs text-muted-foreground mt-1">Split across all slots</div>
             </div>
-          </div>
-        </div>
+
+            <div className="bg-card rounded-lg p-6 border">
+              <h2 className="text-lg font-semibold mb-4">Run Details</h2>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-muted-foreground mb-2">
+                    Run Title *
+                  </label>
+                  <input
+                    type="text"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    className="w-full bg-muted border border-border rounded-lg px-4 py-2"
+                    placeholder="Bamfield Fall 2025 Shutdown"
+                    required
+                    data-testid="input-title"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-muted-foreground mb-2">
+                    Description
+                  </label>
+                  <textarea
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    rows={3}
+                    className="w-full bg-muted border border-border rounded-lg px-4 py-2"
+                    placeholder="Describe the service run..."
+                    data-testid="textarea-description"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-muted-foreground mb-2">
+                      Target Start Date *
+                    </label>
+                    <input
+                      type="date"
+                      value={targetStartDate}
+                      onChange={(e) => setTargetStartDate(e.target.value)}
+                      className="w-full bg-muted border border-border rounded-lg px-4 py-2"
+                      required
+                      data-testid="input-target-start"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-muted-foreground mb-2">
+                      Target End Date *
+                    </label>
+                    <input
+                      type="date"
+                      value={targetEndDate}
+                      onChange={(e) => setTargetEndDate(e.target.value)}
+                      className="w-full bg-muted border border-border rounded-lg px-4 py-2"
+                      required
+                      data-testid="input-target-end"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-muted-foreground mb-2">
+                      Min Slots
+                    </label>
+                    <input
+                      type="number"
+                      value={minSlots}
+                      onChange={(e) => setMinSlots(parseInt(e.target.value) || 5)}
+                      min={1}
+                      className="w-full bg-muted border border-border rounded-lg px-4 py-2"
+                      data-testid="input-min-slots"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-muted-foreground mb-2">
+                      Max Slots
+                    </label>
+                    <input
+                      type="number"
+                      value={maxSlots}
+                      onChange={(e) => setMaxSlots(parseInt(e.target.value) || 25)}
+                      min={1}
+                      className="w-full bg-muted border border-border rounded-lg px-4 py-2"
+                      data-testid="input-max-slots"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-muted-foreground mb-2">
+                      Est. Mobilization Cost
+                    </label>
+                    <input
+                      type="number"
+                      value={estimatedMobilizationCost}
+                      onChange={(e) => setEstimatedMobilizationCost(e.target.value)}
+                      className="w-full bg-muted border border-border rounded-lg px-4 py-2"
+                      placeholder="500"
+                      data-testid="input-mobilization-cost"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-card rounded-lg p-6 border">
+              <h2 className="text-lg font-semibold mb-4">Bidding Window</h2>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-muted-foreground mb-2">
+                    Bidding Opens
+                  </label>
+                  <input
+                    type="datetime-local"
+                    value={biddingOpensAt}
+                    onChange={(e) => setBiddingOpensAt(e.target.value)}
+                    className="w-full bg-muted border border-border rounded-lg px-4 py-2"
+                    data-testid="input-bidding-opens"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-muted-foreground mb-2">
+                    Bidding Closes
+                  </label>
+                  <input
+                    type="datetime-local"
+                    value={biddingClosesAt}
+                    onChange={(e) => setBiddingClosesAt(e.target.value)}
+                    className="w-full bg-muted border border-border rounded-lg px-4 py-2"
+                    data-testid="input-bidding-closes"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-card rounded-lg p-6 border">
+              <h2 className="text-lg font-semibold mb-4">Requirements</h2>
+              
+              <div className="space-y-4">
+                <label className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    checked={requirePhotos}
+                    onChange={(e) => setRequirePhotos(e.target.checked)}
+                    className="w-4 h-4"
+                    data-testid="checkbox-require-photos"
+                  />
+                  <span>Require photos with signups</span>
+                </label>
+                
+                <label className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    checked={requireDeposit}
+                    onChange={(e) => setRequireDeposit(e.target.checked)}
+                    className="w-4 h-4"
+                    data-testid="checkbox-require-deposit"
+                  />
+                  <span>Require deposit</span>
+                </label>
+                
+                {requireDeposit && (
+                  <div className="ml-7">
+                    <label className="block text-sm font-medium text-muted-foreground mb-2">
+                      Deposit Amount
+                    </label>
+                    <input
+                      type="number"
+                      value={depositAmount}
+                      onChange={(e) => setDepositAmount(e.target.value)}
+                      className="w-full max-w-xs bg-muted border border-border rounded-lg px-4 py-2"
+                      placeholder="100"
+                      data-testid="input-deposit-amount"
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
           </>
         )}
 
-        <div className="bg-card rounded-lg p-6 border">
-          <h2 className="text-lg font-semibold mb-4">Requirements</h2>
-          
-          <div className="space-y-4">
-            <div className="flex items-center gap-4 flex-wrap">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={requirePhotos}
-                  onChange={(e) => setRequirePhotos(e.target.checked)}
-                  className="w-5 h-5 rounded bg-muted border-border"
-                  data-testid="checkbox-photos"
-                />
-                <span>Require property photos from residents</span>
-              </label>
-            </div>
-            
-            <div className="flex items-center gap-4 flex-wrap">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={requireDeposit}
-                  onChange={(e) => setRequireDeposit(e.target.checked)}
-                  className="w-5 h-5 rounded bg-muted border-border"
-                  data-testid="checkbox-deposit"
-                />
-                <span>Require deposit to reserve slot</span>
-              </label>
-              
-              {requireDeposit && (
-                <div className="relative">
-                  <span className="absolute left-3 top-2 text-muted-foreground">$</span>
-                  <input
-                    type="number"
-                    value={depositAmount}
-                    onChange={(e) => setDepositAmount(e.target.value)}
-                    placeholder="100"
-                    className="bg-muted border border-border rounded-lg pl-8 pr-4 py-2 w-32"
-                    data-testid="input-deposit-amount"
-                  />
-                </div>
-              )}
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-muted-foreground mb-2">
-                Cancellation Policy
-              </label>
-              <textarea
-                value={cancellationPolicy}
-                onChange={(e) => setCancellationPolicy(e.target.value)}
-                rows={2}
-                className="w-full bg-muted border border-border rounded-lg px-4 py-2 text-sm"
-                data-testid="input-cancellation-policy"
-              />
-            </div>
-          </div>
-        </div>
-
-        <div className="flex items-center justify-between gap-4 flex-wrap">
+        <div className="flex gap-4 justify-end flex-wrap">
           <button
             type="button"
             onClick={() => navigate('/app/service-runs')}
-            className="px-6 py-2 bg-muted hover-elevate rounded-lg"
+            className="px-6 py-2 rounded-lg border border-border hover:bg-muted transition-colors"
             data-testid="button-cancel"
           >
             Cancel
           </button>
-          
           <button
             type="submit"
             disabled={saving}
-            className="px-6 py-2 bg-primary text-primary-foreground hover:bg-primary/90 rounded-lg disabled:opacity-50"
+            className="bg-primary hover:bg-primary/90 text-primary-foreground px-6 py-2 rounded-lg disabled:opacity-50"
             data-testid="button-submit"
           >
-            {saving ? 'Creating...' : 'Create Run & Start Collecting'}
+            {saving ? 'Creating...' : `Create ${runMode === 'shared' ? 'Shared' : 'Bidding'} Run`}
           </button>
         </div>
       </form>
