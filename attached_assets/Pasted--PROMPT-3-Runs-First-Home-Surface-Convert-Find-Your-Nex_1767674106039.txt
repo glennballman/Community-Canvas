@@ -1,0 +1,73 @@
+# PROMPT 3: Runs-First Home Surface — Convert “Find Your Next Project” to “Upcoming Service Runs”
+# (Use Shared Runs terminology; Work Requests/Work Orders reserved; No redesign)
+
+Do NOT change global layout, navigation structure, or styling system. This is a **surface conversion**: copy + data wiring + labeling.
+Keep the same shell, spacing, components, and card layout as much as possible.
+
+## 0) Identify target page (MANDATORY)
+Find the component that renders the screen titled “Find Your Next Project” (Glenn screenshot).
+In your response, confirm:
+- Route path (URL)
+- Component file path
+
+Only then proceed.
+
+## 1) Header copy (exact)
+Replace:
+- Title: “Find Your Next Project”
+- Subtitle: “Browse open opportunities across British Columbia's remote communities”
+With:
+- Title: “Upcoming Service Runs”
+- Subtitle: “Shared mobilizations that bring contractors, equipment, and essential services into remote communities.”
+
+## 2) Primary feed becomes Service Runs (default)
+The main list/cards must show **Service Runs** (both Bidding Runs and Shared Runs).
+- Default view = Service Runs
+- Add a secondary tab for “Work Requests” (if the old page was powered by work requests)
+
+Tabs:
+- “Service Runs” (default)
+- “Work Requests” (secondary)
+
+## 3) Data sources (no mock data)
+Service Runs tab:
+- Fetch bidding runs from the existing service runs endpoint
+- Fetch shared runs from /api/shared-runs
+- Merge and sort by soonest date (start date)
+- Each card must include:
+  - Run title
+  - Community (or region)
+  - Date window
+  - Status
+  - Type badge:
+    - “Bidding Run” or “Shared Run”
+  - Capacity/fill:
+    - bidding: signups / max slots (or bids count if that exists)
+    - shared: members/jobs count
+  - CTA button: “View run” → /app/service-runs/:slug
+- Remove budget fields if they don’t map cleanly.
+
+Work Requests tab:
+- Keep existing list logic (formerly “opportunities”), but rename visible labels to “Work Requests”
+- CTA: “View request”
+
+## 4) Search/filter controls
+Keep existing search bar and dropdown controls (no redesign), but update labels.
+If filters don’t apply to Service Runs, disable them gracefully with helper text:
+- “Filters apply to Work Requests.”
+
+## 5) Empty states (exact tone)
+If no service runs:
+- Headline: “Nothing scheduled yet.”
+- Body: “When the next run is posted, it’ll show up here. Check back soon.”
+
+## 6) Verification report (MANDATORY)
+Provide:
+- Files edited (list)
+- Confirm route + component
+- Confirm Service Runs tab is default
+- Confirm click path:
+  - card → /app/service-runs/:slug → detail loads
+- Confirm no console errors
+
+BEGIN.

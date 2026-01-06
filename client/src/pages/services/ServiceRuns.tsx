@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Users, Gavel } from 'lucide-react';
+import { Users, Gavel, FileText, MapPin, Calendar, Truck } from 'lucide-react';
 
 interface ServiceRun {
   id: string;
@@ -42,6 +42,36 @@ interface SharedRun {
   threshold_met: boolean;
 }
 
+interface WorkRequest {
+  id: string;
+  work_request_ref: string;
+  title: string;
+  description: string;
+  work_category: string;
+  site_address: string;
+  community_name: string | null;
+  estimated_value_low: number;
+  estimated_value_high: number;
+  bid_deadline: string | null;
+  expected_start_date: string | null;
+  status: string;
+  bid_count: number;
+}
+
+type MergedRun = {
+  id: string;
+  type: 'bidding' | 'shared';
+  title: string;
+  description: string;
+  community: string;
+  status: string;
+  startDate: string | null;
+  endDate: string | null;
+  capacity: string;
+  slug: string;
+  rawData: ServiceRun | SharedRun;
+};
+
 const STATUS_COLORS: Record<string, string> = {
   draft: 'bg-muted text-muted-foreground',
   collecting: 'bg-blue-500/20 text-blue-400 border-blue-500/50',
@@ -77,44 +107,48 @@ export default function ServiceRuns() {
   const { token } = useAuth();
   const [runs, setRuns] = useState<ServiceRun[]>([]);
   const [sharedRuns, setSharedRuns] = useState<SharedRun[]>([]);
+  const [workRequests, setWorkRequests] = useState<WorkRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [statusFilter, setStatusFilter] = useState<string>('');
-  const [activeTab, setActiveTab] = useState<'shared' | 'bidding'>('shared');
+  const [activeTab, setActiveTab] = useState<'service-runs' | 'work-requests'>('service-runs');
 
   useEffect(() => {
-    loadAllRuns();
-  }, [statusFilter, token]);
+    loadAllData();
+  }, [token]);
 
-  async function loadAllRuns() {
+  async function loadAllData() {
     setLoading(true);
     setError(null);
     try {
       const headers: HeadersInit = {};
       if (token) headers['Authorization'] = `Bearer ${token}`;
       
-      const [biddingRes, sharedRes] = await Promise.all([
-        fetch('/api/service-runs/runs' + (statusFilter ? `?status=${statusFilter}` : ''), { headers }),
-        fetch('/api/shared-runs', { headers })
+      const [biddingRes, sharedRes, workRequestsRes] = await Promise.all([
+        fetch('/api/service-runs/runs', { headers }),
+        fetch('/api/shared-runs', { headers }),
+        fetch('/api/work-requests?limit=20', { headers })
       ]);
       
       const biddingData = await biddingRes.json().catch(() => ({}));
       const sharedData = await sharedRes.json().catch(() => ({}));
+      const workRequestsData = await workRequestsRes.json().catch(() => ({}));
       
       setRuns(Array.isArray(biddingData?.runs) ? biddingData.runs : []);
       setSharedRuns(Array.isArray(sharedData?.shared_runs) ? sharedData.shared_runs : []);
+      setWorkRequests(Array.isArray(workRequestsData?.workRequests) ? workRequestsData.workRequests : []);
     } catch (err) {
-      console.error('Failed to load runs:', err);
+      console.error('Failed to load data:', err);
       setError('Unable to load service runs. Please try again.');
       setRuns([]);
       setSharedRuns([]);
+      setWorkRequests([]);
     } finally {
       setLoading(false);
     }
   }
 
-  function formatDate(dateStr: string): string {
-    if (!dateStr) return '-';
+  function formatDate(dateStr: string | null): string {
+    if (!dateStr) return 'TBD';
     return new Date(dateStr).toLocaleDateString('en-CA', {
       year: 'numeric',
       month: 'short',
@@ -122,49 +156,54 @@ export default function ServiceRuns() {
     });
   }
 
-  function getSlotProgress(current: number, min: number, max: number) {
-    const percentage = (current / max) * 100;
-    const atMinimum = current >= min;
-    
-    return (
-      <div className="w-full relative">
-        <div className="flex justify-between text-xs mb-1">
-          <span className={atMinimum ? 'text-green-400' : 'text-yellow-400'}>
-            {current} / {max} slots
-          </span>
-          <span className="text-muted-foreground">min: {min}</span>
-        </div>
-        <div className="h-2 bg-muted rounded-full overflow-hidden relative">
-          <div 
-            className={`h-full rounded-full transition-all ${atMinimum ? 'bg-green-500' : 'bg-yellow-500'}`}
-            style={{ width: `${Math.min(percentage, 100)}%` }}
-          />
-          <div 
-            className="h-full w-0.5 bg-white/50 absolute top-0"
-            style={{ left: `${(min / max) * 100}%` }}
-          />
-        </div>
-      </div>
-    );
-  }
+  const mergedRuns: MergedRun[] = [
+    ...runs.map((run): MergedRun => ({
+      id: run.id,
+      type: 'bidding',
+      title: run.title,
+      description: run.description,
+      community: run.communityName || 'TBD',
+      status: run.status,
+      startDate: run.targetStartDate,
+      endDate: run.targetEndDate,
+      capacity: `${run.currentSlots}/${run.maxSlots} slots`,
+      slug: run.slug,
+      rawData: run
+    })),
+    ...sharedRuns.map((run): MergedRun => ({
+      id: run.id,
+      type: 'shared',
+      title: run.trade_category,
+      description: run.service_description,
+      community: 'TBD',
+      status: run.status,
+      startDate: run.window_start,
+      endDate: run.window_end,
+      capacity: `${run.current_member_count || 0} members`,
+      slug: `shared-${run.id}`,
+      rawData: run
+    }))
+  ].sort((a, b) => {
+    const dateA = a.startDate ? new Date(a.startDate).getTime() : Infinity;
+    const dateB = b.startDate ? new Date(b.startDate).getTime() : Infinity;
+    return dateA - dateB;
+  });
 
   const stats = {
-    total: runs.length + sharedRuns.length,
-    sharedForming: sharedRuns.filter(r => r.status === 'forming').length,
-    collecting: runs.filter(r => r.status === 'collecting').length,
-    bidding: runs.filter(r => r.status === 'bidding' || r.status === 'bid_review').length,
-    active: runs.filter(r => ['confirmed', 'scheduled', 'in_progress'].includes(r.status)).length,
-    totalRevenue: runs.reduce((sum, r) => sum + r.totalEstimatedRevenue, 0),
-    totalSlots: runs.reduce((sum, r) => sum + r.currentSlots, 0) + sharedRuns.reduce((sum, r) => sum + (r.current_member_count || 0), 0)
+    totalRuns: mergedRuns.length,
+    sharedRuns: sharedRuns.length,
+    biddingRuns: runs.length,
+    workRequests: workRequests.length
   };
 
   if (loading) {
     return (
       <div className="p-6">
         <div className="animate-pulse space-y-4">
-          <div className="h-8 w-48 bg-muted rounded" />
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            {[...Array(6)].map((_, i) => (
+          <div className="h-8 w-64 bg-muted rounded" />
+          <div className="h-4 w-96 bg-muted rounded" />
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
+            {[...Array(4)].map((_, i) => (
               <div key={i} className="h-20 bg-muted rounded-lg" />
             ))}
           </div>
@@ -180,7 +219,7 @@ export default function ServiceRuns() {
         <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-6 text-center">
           <p className="text-destructive mb-4">{error}</p>
           <button
-            onClick={loadAllRuns}
+            onClick={loadAllData}
             className="bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-lg"
             data-testid="button-retry"
           >
@@ -195,8 +234,8 @@ export default function ServiceRuns() {
     <div className="p-6">
       <div className="flex items-center justify-between gap-4 mb-6 flex-wrap">
         <div>
-          <h1 className="text-2xl font-bold" data-testid="text-page-title">Service Runs</h1>
-          <p className="text-muted-foreground">Coordinate service runs with neighbors or contractors</p>
+          <h1 className="text-2xl font-bold" data-testid="text-page-title">Upcoming Service Runs</h1>
+          <p className="text-muted-foreground">Shared mobilizations that bring contractors, equipment, and essential services into remote communities.</p>
         </div>
         <button
           onClick={() => navigate('/app/service-runs/new')}
@@ -207,121 +246,89 @@ export default function ServiceRuns() {
         </button>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         <div className="bg-card rounded-lg p-4 text-center border">
-          <div className="text-2xl font-bold" data-testid="text-total-runs">{stats.total}</div>
+          <div className="text-2xl font-bold" data-testid="text-total-runs">{stats.totalRuns}</div>
           <div className="text-sm text-muted-foreground">Total Runs</div>
         </div>
         <div className="bg-card rounded-lg p-4 text-center border">
-          <div className="text-2xl font-bold text-blue-400">{sharedRuns.length}</div>
+          <div className="text-2xl font-bold text-blue-400">{stats.sharedRuns}</div>
           <div className="text-sm text-muted-foreground">Shared Runs</div>
         </div>
         <div className="bg-card rounded-lg p-4 text-center border">
-          <div className="text-2xl font-bold text-purple-400">{runs.length}</div>
+          <div className="text-2xl font-bold text-purple-400">{stats.biddingRuns}</div>
           <div className="text-sm text-muted-foreground">Bidding Runs</div>
         </div>
         <div className="bg-card rounded-lg p-4 text-center border">
-          <div className="text-2xl font-bold text-green-400">{stats.active}</div>
-          <div className="text-sm text-muted-foreground">Active</div>
-        </div>
-        <div className="bg-card rounded-lg p-4 text-center border">
-          <div className="text-2xl font-bold">{stats.totalSlots}</div>
-          <div className="text-sm text-muted-foreground">Total Participants</div>
-        </div>
-        <div className="bg-card rounded-lg p-4 text-center border">
-          <div className="text-2xl font-bold text-green-400">
-            ${stats.totalRevenue.toLocaleString()}
-          </div>
-          <div className="text-sm text-muted-foreground">Est. Revenue</div>
+          <div className="text-2xl font-bold text-amber-400">{stats.workRequests}</div>
+          <div className="text-sm text-muted-foreground">Work Requests</div>
         </div>
       </div>
 
-      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'shared' | 'bidding')} className="space-y-4">
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'service-runs' | 'work-requests')} className="space-y-4">
         <TabsList className="grid w-full max-w-md grid-cols-2">
-          <TabsTrigger value="shared" className="flex items-center gap-2" data-testid="tab-shared-runs">
-            <Users className="w-4 h-4" />
-            Shared Runs ({sharedRuns.length})
+          <TabsTrigger value="service-runs" className="flex items-center gap-2" data-testid="tab-service-runs">
+            <Truck className="w-4 h-4" />
+            Service Runs ({stats.totalRuns})
           </TabsTrigger>
-          <TabsTrigger value="bidding" className="flex items-center gap-2" data-testid="tab-bidding-runs">
-            <Gavel className="w-4 h-4" />
-            Bidding ({runs.length})
+          <TabsTrigger value="work-requests" className="flex items-center gap-2" data-testid="tab-work-requests">
+            <FileText className="w-4 h-4" />
+            Work Requests ({stats.workRequests})
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="shared" className="space-y-4">
-          <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4 mb-4">
-            <p className="text-sm text-blue-400">
-              Shared runs let neighbors bundle together and share mobilization costs. This is NOT competitive bidding - it&apos;s coordinated service sharing.
-            </p>
-          </div>
-          
-          {sharedRuns.length === 0 ? (
+        <TabsContent value="service-runs" className="space-y-4">
+          {mergedRuns.length === 0 ? (
             <div className="bg-card rounded-lg p-12 text-center border">
-              <h3 className="text-lg font-medium mb-2">No Shared Runs</h3>
-              <p className="text-muted-foreground mb-4">Start a shared run to coordinate services with your neighbors.</p>
+              <Truck className="w-12 h-12 text-muted-foreground/50 mx-auto mb-4" />
+              <h3 className="text-lg font-medium mb-2">Nothing scheduled yet.</h3>
+              <p className="text-muted-foreground mb-4">When the next run is posted, it'll show up here. Check back soon.</p>
               <button
                 onClick={() => navigate('/app/service-runs/new')}
                 className="bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-lg"
               >
-                Start Shared Run
+                Create Run
               </button>
             </div>
           ) : (
             <div className="space-y-4">
-              {sharedRuns.map(run => (
+              {mergedRuns.map(run => (
                 <div
-                  key={run.id}
-                  onClick={() => navigate(`/app/service-runs/shared-${run.id}`)}
+                  key={`${run.type}-${run.id}`}
+                  onClick={() => navigate(`/app/service-runs/${run.slug}`)}
                   className="bg-card rounded-lg p-4 cursor-pointer hover-elevate transition-colors border"
-                  data-testid={`card-shared-run-${run.id}`}
+                  data-testid={`card-run-${run.type}-${run.id}`}
                 >
                   <div className="flex items-start justify-between gap-4 mb-3 flex-wrap">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-3 flex-wrap mb-1">
-                        <h3 className="font-semibold text-lg">{run.trade_category}</h3>
+                        <h3 className="font-semibold text-lg">{run.title}</h3>
+                        <Badge variant="outline" className={run.type === 'shared' ? 'bg-blue-500/20 text-blue-400 border-blue-500/50' : 'bg-purple-500/20 text-purple-400 border-purple-500/50'}>
+                          {run.type === 'shared' ? 'Shared Run' : 'Bidding Run'}
+                        </Badge>
                         <Badge variant="outline" className={STATUS_COLORS[run.status]}>
                           {STATUS_LABELS[run.status] || run.status}
                         </Badge>
-                        {run.threshold_met && (
-                          <Badge variant="outline" className="bg-green-500/20 text-green-400 border-green-500/50">
-                            Threshold Met
-                          </Badge>
-                        )}
                       </div>
-                      <p className="text-sm text-muted-foreground line-clamp-2">{run.service_description}</p>
+                      <p className="text-sm text-muted-foreground line-clamp-2">{run.description}</p>
                     </div>
                     <div className="text-right">
-                      <div className="text-lg font-bold text-blue-400">
-                        {run.current_member_count || 0} members
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        ~${run.mobilization_share?.toFixed(0) || '?'} each
+                      <div className="text-lg font-bold text-foreground">
+                        {run.capacity}
                       </div>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div>
-                      <div className="text-xs text-muted-foreground mb-1">Contractor</div>
-                      <div className="text-sm">{run.contractor_name || 'Pending'}</div>
-                    </div>
-                    <div>
-                      <div className="text-xs text-muted-foreground mb-1">Window</div>
-                      <div className="text-sm">
-                        {run.window_start ? formatDate(run.window_start) : 'TBD'}
-                        {run.window_end ? ` - ${formatDate(run.window_end)}` : ''}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-xs text-muted-foreground mb-1">Pricing</div>
-                      <div className="text-sm capitalize">{run.pricing_model || 'Per unit'}</div>
-                    </div>
-                    <div>
-                      <div className="text-xs text-muted-foreground mb-1">Total Mobilization</div>
-                      <div className="text-sm">
-                        {run.mobilization_fee_total ? `$${run.mobilization_fee_total}` : 'TBD'}
-                      </div>
-                    </div>
+                  <div className="flex items-center gap-6 text-sm text-muted-foreground flex-wrap">
+                    <span className="flex items-center gap-1">
+                      <MapPin className="w-4 h-4" />
+                      {run.community}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <Calendar className="w-4 h-4" />
+                      {formatDate(run.startDate)}
+                      {run.endDate && run.endDate !== run.startDate ? ` - ${formatDate(run.endDate)}` : ''}
+                    </span>
                   </div>
                 </div>
               ))}
@@ -329,99 +336,58 @@ export default function ServiceRuns() {
           )}
         </TabsContent>
 
-        <TabsContent value="bidding" className="space-y-4">
-          <div className="bg-card rounded-lg p-4 mb-4 border">
-            <div className="flex items-center gap-4 flex-wrap">
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="bg-muted border border-border rounded-lg px-4 py-2"
-                data-testid="select-status-filter"
-              >
-                <option value="">All Statuses</option>
-                <option value="collecting">Collecting Signups</option>
-                <option value="bidding">Open for Bidding</option>
-                <option value="bid_review">Reviewing Bids</option>
-                <option value="confirmed">Confirmed</option>
-                <option value="scheduled">Scheduled</option>
-                <option value="in_progress">In Progress</option>
-                <option value="completed">Completed</option>
-                <option value="cancelled">Cancelled</option>
-              </select>
-              <span className="text-muted-foreground text-sm">
-                Showing {runs.length} run{runs.length !== 1 ? 's' : ''}
-              </span>
-            </div>
+        <TabsContent value="work-requests" className="space-y-4">
+          <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4 mb-4">
+            <p className="text-sm text-amber-400">
+              Work Requests are individual procurement requests from property owners. Filters apply to Work Requests.
+            </p>
           </div>
 
-          {runs.length === 0 ? (
+          {workRequests.length === 0 ? (
             <div className="bg-card rounded-lg p-12 text-center border">
-              <h3 className="text-lg font-medium mb-2">No Bidding Runs</h3>
-              <p className="text-muted-foreground mb-4">Create a bidding run to collect signups and receive contractor bids.</p>
-              <button
-                onClick={() => navigate('/app/service-runs/new')}
-                className="bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-lg"
-              >
-                Create Bidding Run
-              </button>
+              <FileText className="w-12 h-12 text-muted-foreground/50 mx-auto mb-4" />
+              <h3 className="text-lg font-medium mb-2">No Work Requests</h3>
+              <p className="text-muted-foreground">No open work requests at this time.</p>
             </div>
           ) : (
             <div className="space-y-4">
-              {runs.map(run => (
+              {workRequests.map(wr => (
                 <div
-                  key={run.id}
-                  onClick={() => navigate(`/app/service-runs/${run.slug}`)}
+                  key={wr.id}
+                  onClick={() => navigate(`/work-requests/${wr.id}`)}
                   className="bg-card rounded-lg p-4 cursor-pointer hover-elevate transition-colors border"
-                  data-testid={`card-run-${run.slug}`}
+                  data-testid={`card-work-request-${wr.id}`}
                 >
                   <div className="flex items-start justify-between gap-4 mb-3 flex-wrap">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-3 flex-wrap mb-1">
-                        <h3 className="font-semibold text-lg">{run.title}</h3>
-                        <span className={`text-xs px-2 py-0.5 rounded border ${STATUS_COLORS[run.status]}`}>
-                          {STATUS_LABELS[run.status]}
-                        </span>
+                        <span className="text-xs font-mono text-muted-foreground">{wr.work_request_ref}</span>
+                        <Badge variant="outline" className="bg-amber-500/20 text-amber-400 border-amber-500/50">
+                          {wr.work_category}
+                        </Badge>
                       </div>
-                      <p className="text-sm text-muted-foreground line-clamp-1">{run.description?.substring(0, 150)}...</p>
+                      <h3 className="font-semibold text-lg">{wr.title}</h3>
+                      <p className="text-sm text-muted-foreground line-clamp-2">{wr.description}</p>
                     </div>
                     <div className="text-right">
-                      <div className="text-lg font-bold text-green-400">
-                        ${run.totalEstimatedRevenue.toLocaleString()}
-                      </div>
-                      <div className="text-xs text-muted-foreground">est. revenue</div>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-3">
-                    <div>
-                      <div className="text-xs text-muted-foreground mb-1">Community</div>
-                      <div className="text-sm">{run.communityName || '-'}</div>
-                    </div>
-                    <div>
-                      <div className="text-xs text-muted-foreground mb-1">Bundle</div>
-                      <div className="text-sm truncate">{run.bundleName || run.runTypeName || '-'}</div>
-                    </div>
-                    <div>
-                      <div className="text-xs text-muted-foreground mb-1">Target Dates</div>
-                      <div className="text-sm">
-                        {formatDate(run.targetStartDate)} - {formatDate(run.targetEndDate)}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-xs text-muted-foreground mb-1">Mobilization</div>
-                      <div className="text-sm">
-                        {run.estimatedMobilizationCost ? `$${run.estimatedMobilizationCost}` : '-'}
+                      <div className="text-sm font-medium text-muted-foreground">
+                        {wr.bid_count} bids
                       </div>
                     </div>
                   </div>
 
-                  {getSlotProgress(run.currentSlots, run.minSlots, run.maxSlots)}
-
-                  {run.status === 'collecting' && run.biddingOpensAt && (
-                    <div className="mt-3 text-xs text-muted-foreground">
-                      Bidding opens: {formatDate(run.biddingOpensAt)}
-                    </div>
-                  )}
+                  <div className="flex items-center gap-6 text-sm text-muted-foreground flex-wrap">
+                    <span className="flex items-center gap-1">
+                      <MapPin className="w-4 h-4" />
+                      {wr.site_address || wr.community_name || 'Location TBD'}
+                    </span>
+                    {wr.expected_start_date && (
+                      <span className="flex items-center gap-1">
+                        <Calendar className="w-4 h-4" />
+                        Start: {formatDate(wr.expected_start_date)}
+                      </span>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
