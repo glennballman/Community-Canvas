@@ -309,7 +309,7 @@ export default function PlaceDetail() {
                       value={editData.place_type || 'property'}
                       onValueChange={(v) => setEditData({ ...editData, place_type: v })}
                     >
-                      <SelectTrigger>
+                      <SelectTrigger data-testid="select-edit-place-type">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -327,6 +327,7 @@ export default function PlaceDetail() {
                       value={editData.address_line1 || ''}
                       onChange={(e) => setEditData({ ...editData, address_line1: e.target.value })}
                       placeholder="Street address"
+                      data-testid="input-edit-address"
                     />
                   </div>
                   <div className="grid grid-cols-2 gap-4">
@@ -335,6 +336,7 @@ export default function PlaceDetail() {
                       <Input
                         value={editData.city || ''}
                         onChange={(e) => setEditData({ ...editData, city: e.target.value })}
+                        data-testid="input-edit-city"
                       />
                     </div>
                     <div className="space-y-2">
@@ -342,6 +344,7 @@ export default function PlaceDetail() {
                       <Input
                         value={editData.postal_code || ''}
                         onChange={(e) => setEditData({ ...editData, postal_code: e.target.value })}
+                        data-testid="input-edit-postal"
                       />
                     </div>
                   </div>
@@ -374,6 +377,7 @@ export default function PlaceDetail() {
                   onChange={(e) => setEditData({ ...editData, notes: e.target.value })}
                   placeholder="Add notes about this place..."
                   rows={4}
+                  data-testid="textarea-edit-notes"
                 />
               ) : (
                 <p className="text-sm whitespace-pre-wrap">

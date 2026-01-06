@@ -219,6 +219,7 @@ export default function OrgDetail() {
                       value={editData.legal_name || ''}
                       onChange={(e) => setEditData({ ...editData, legal_name: e.target.value })}
                       placeholder="Full legal name (optional)"
+                      data-testid="input-edit-legal-name"
                     />
                   </div>
                   <div className="grid grid-cols-2 gap-4">
@@ -228,6 +229,7 @@ export default function OrgDetail() {
                         value={editData.phone || ''}
                         onChange={(e) => setEditData({ ...editData, phone: e.target.value })}
                         placeholder="(250) 555-0123"
+                        data-testid="input-edit-phone"
                       />
                     </div>
                     <div className="space-y-2">
@@ -236,6 +238,7 @@ export default function OrgDetail() {
                         value={editData.email || ''}
                         onChange={(e) => setEditData({ ...editData, email: e.target.value })}
                         placeholder="contact@example.com"
+                        data-testid="input-edit-email"
                       />
                     </div>
                   </div>
@@ -245,6 +248,7 @@ export default function OrgDetail() {
                       value={editData.website || ''}
                       onChange={(e) => setEditData({ ...editData, website: e.target.value })}
                       placeholder="https://example.com"
+                      data-testid="input-edit-website"
                     />
                   </div>
                   <div className="space-y-2">
@@ -253,6 +257,7 @@ export default function OrgDetail() {
                       value={editData.address_line1 || ''}
                       onChange={(e) => setEditData({ ...editData, address_line1: e.target.value })}
                       placeholder="Street address"
+                      data-testid="input-edit-address"
                     />
                   </div>
                   <div className="grid grid-cols-2 gap-4">
@@ -261,6 +266,7 @@ export default function OrgDetail() {
                       <Input
                         value={editData.city || ''}
                         onChange={(e) => setEditData({ ...editData, city: e.target.value })}
+                        data-testid="input-edit-city"
                       />
                     </div>
                     <div className="space-y-2">
@@ -268,6 +274,7 @@ export default function OrgDetail() {
                       <Input
                         value={editData.postal_code || ''}
                         onChange={(e) => setEditData({ ...editData, postal_code: e.target.value })}
+                        data-testid="input-edit-postal"
                       />
                     </div>
                   </div>
@@ -323,6 +330,7 @@ export default function OrgDetail() {
                   onChange={(e) => setEditData({ ...editData, notes: e.target.value })}
                   placeholder="Add notes about this organization..."
                   rows={4}
+                  data-testid="textarea-edit-notes"
                 />
               ) : (
                 <p className="text-sm whitespace-pre-wrap">

@@ -162,12 +162,14 @@ export default function PersonDetail() {
                 onChange={(e) => setEditData({ ...editData, first_name: e.target.value })}
                 placeholder="First name"
                 className="text-xl font-semibold h-auto py-1 max-w-[150px]"
+                data-testid="input-edit-first-name"
               />
               <Input
                 value={editData.last_name || ''}
                 onChange={(e) => setEditData({ ...editData, last_name: e.target.value })}
                 placeholder="Last name"
                 className="text-xl font-semibold h-auto py-1 max-w-[150px]"
+                data-testid="input-edit-last-name"
               />
             </div>
           ) : (
@@ -223,6 +225,7 @@ export default function PersonDetail() {
                         value={editData.phone || ''}
                         onChange={(e) => setEditData({ ...editData, phone: e.target.value })}
                         placeholder="(250) 555-0123"
+                        data-testid="input-edit-phone"
                       />
                     </div>
                     <div className="space-y-2">
@@ -231,6 +234,7 @@ export default function PersonDetail() {
                         value={editData.email || ''}
                         onChange={(e) => setEditData({ ...editData, email: e.target.value })}
                         placeholder="email@example.com"
+                        data-testid="input-edit-email"
                       />
                     </div>
                   </div>
@@ -240,6 +244,7 @@ export default function PersonDetail() {
                       value={editData.role_title || ''}
                       onChange={(e) => setEditData({ ...editData, role_title: e.target.value })}
                       placeholder="e.g., Property Manager"
+                      data-testid="input-edit-role"
                     />
                   </div>
                   <div className="space-y-2">
@@ -248,6 +253,7 @@ export default function PersonDetail() {
                       value={editData.address_line1 || ''}
                       onChange={(e) => setEditData({ ...editData, address_line1: e.target.value })}
                       placeholder="Street address"
+                      data-testid="input-edit-address"
                     />
                   </div>
                   <div className="grid grid-cols-2 gap-4">
@@ -256,6 +262,7 @@ export default function PersonDetail() {
                       <Input
                         value={editData.city || ''}
                         onChange={(e) => setEditData({ ...editData, city: e.target.value })}
+                        data-testid="input-edit-city"
                       />
                     </div>
                     <div className="space-y-2">
@@ -263,6 +270,7 @@ export default function PersonDetail() {
                       <Input
                         value={editData.postal_code || ''}
                         onChange={(e) => setEditData({ ...editData, postal_code: e.target.value })}
+                        data-testid="input-edit-postal"
                       />
                     </div>
                   </div>
@@ -316,6 +324,7 @@ export default function PersonDetail() {
                   onChange={(e) => setEditData({ ...editData, notes: e.target.value })}
                   placeholder="Add notes about this contact..."
                   rows={4}
+                  data-testid="textarea-edit-notes"
                 />
               ) : (
                 <p className="text-sm whitespace-pre-wrap">
