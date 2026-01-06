@@ -35,6 +35,8 @@ import { createCrewRouter } from "./routes/crew";
 import claimsRouter from "./routes/claims";
 import internalRouter from "./routes/internal";
 import workRequestsRouter from "./routes/work-requests";
+import procurementRequestsRouter from "./routes/procurement-requests";
+import projectsRouter from "./routes/projects";
 import bidsRouter from "./routes/bids";
 import uploadsRouter from "./routes/uploads";
 import toolsRouter from "./routes/tools";
@@ -140,11 +142,17 @@ export async function registerRoutes(
   // These routes are NOT accessible by tenant users or service-key
   app.use('/api/internal', internalRouter);
 
-  // Register work requests and bids routes
+  // Register intake work requests (new system - quick capture inbox)
   app.use('/api/work-requests', workRequestsRouter);
+  
+  // Register procurement requests (former "opportunities" - RFP/bidding system)
+  app.use('/api/procurement-requests', procurementRequestsRouter);
   // TODO: Remove /api/opportunities alias after launch stabilization
-  app.use('/api/opportunities', workRequestsRouter);
+  app.use('/api/opportunities', procurementRequestsRouter);
   app.use('/api/bids', bidsRouter);
+
+  // Register projects routes (job tracking from lead to paid)
+  app.use('/api/projects', projectsRouter);
 
   // Register file uploads and serve uploaded files
   app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
