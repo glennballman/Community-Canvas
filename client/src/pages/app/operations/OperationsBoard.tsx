@@ -215,7 +215,10 @@ export default function OperationsBoard() {
     queryKey: ['schedule-resources', resourceQueryParams],
     queryFn: async () => {
       console.log('[OPS] Fetching resources...', { url: resourcesUrl, ts: new Date().toISOString() });
-      const response = await fetch(resourcesUrl, { credentials: 'include' });
+      const token = localStorage.getItem('cc_token');
+      const headers: Record<string, string> = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      const response = await fetch(resourcesUrl, { credentials: 'include', headers });
       if (!response.ok) {
         const text = await response.text();
         console.error('[OPS] Resources fetch failed', { status: response.status, text });
@@ -238,7 +241,10 @@ export default function OperationsBoard() {
     queryKey: ['schedule-events', from.toISOString(), to.toISOString()],
     queryFn: async () => {
       console.log('[OPS] Fetching schedule...', { url: scheduleUrl, ts: new Date().toISOString() });
-      const response = await fetch(scheduleUrl, { credentials: 'include' });
+      const token = localStorage.getItem('cc_token');
+      const headers: Record<string, string> = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      const response = await fetch(scheduleUrl, { credentials: 'include', headers });
       if (!response.ok) {
         const text = await response.text();
         console.error('[OPS] Schedule fetch failed', { status: response.status, text });
