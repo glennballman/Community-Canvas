@@ -1,0 +1,112 @@
+# PROMPT E — TIME SEMANTICS LAYER (ARRIVE/DEPART, PICKUP/RETURN, CHECKIN/OUT) → 15-MIN TRUTH
+
+We already have:
+- 15-min Operations Board (/app/operations)
+- unified_assets (resources)
+- unified_bookings (TIMESTAMPTZ starts_at / ends_at)
+- schedule blocks (resource_schedule_events) for hold/maintenance/buffer
+
+Now we must fix the HUMAN TIME SEMANTICS so bookings do not behave like “days”.
+Humans use: nights, half-day, full-day, overnight, arrive/depart, check-in/out.
+System must store: starts_at, ends_at snapped to 15 minutes.
+
+RULES:
+- DO NOT remove 15-min grid.
+- DO NOT introduce PostGIS.
+- DO NOT invent a new booking engine.
+- ONLY add a thin semantics layer + UI labels + correct defaults.
+
+---
+
+## E1) ADD BOOKING SEMANTICS TO INVENTORY ITEMS (MINIMAL)
+Add fields to the inventory item / asset record (use whichever table actually represents inventory items in the current system; if inventory is unified_assets, attach there or via a small metadata table):
+
+Required fields:
+- booking_mode ENUM: "check_in_out" | "arrive_depart" | "pickup_return"
+- default_duration_preset ENUM (nullable): "half_day_4h" | "full_day_8h" | "overnight_24h" | "nights" | "custom"
+- default_start_time_local (nullable): e.g. "16:00" for check-in, "09:00" for pickup
+- default_end_time_local (nullable): e.g. "11:00" for check-out
+- time_increment_minutes = 15 (constant, do not change)
+
+Also add optional:
+- turnover_buffer_minutes (default 0)  (cleaning time)
+- travel_buffer_minutes (default 0)    (for delivery / ferry constraints)
+
+No heavy architecture. Just enough to generate correct starts_at/ends_at.
+
+---
+
+## E2) BOOKING CREATE UI MUST USE THE RIGHT WORDS
+Wherever a booking is created (Bookings page + any “Create booking” modal):
+Render labels based on booking_mode:
+
+- check_in_out → labels: "Checking in" and "Checking out"
+- arrive_depart → labels: "Arriving" and "Departing"
+- pickup_return → labels: "Pickup" and "Return"
+
+Do not show “Start/End” to users unless no mode is set.
+
+---
+
+## E3) DURATION PRESETS THAT TRANSLATE CLEANLY
+In booking create UI, allow a quick duration selector *only when appropriate*:
+
+For equipment/kayaks (pickup_return):
+- Half day (4 hours)
+- Full day (8 hours)
+- Overnight (24 hours)
+- Custom
+
+For rooms (check_in_out):
+- Nights: [number stepper] default 1
+- Check-in date (date picker)
+- Auto sets ends_at based on check-out time and nights count
+
+For parking/moorage (arrive_depart):
+- Days (24h) [optional]
+- Custom
+
+Implementation details:
+- User selects a date + time OR date only (depending on mode).
+- System converts to exact starts_at/ends_at with 15-min snapping.
+- For rooms: selecting “July 8 for 5 nights” becomes:
+  starts_at = July 8 @ default_checkin_time
+  ends_at   = July 13 @ default_checkout_time
+- For half-day/full-day: ends_at = starts_at + preset duration.
+
+---
+
+## E4) OPERATIONS BOARD DISPLAY MUST BE PRECISE (NO “DAY BLOCKING”)
+On /app/operations:
+- Booked blocks from unified_bookings must render from starts_at to ends_at exactly.
+- Do not render “Tuesday blocked” for a room if check-in is Tuesday afternoon.
+- The day zoom can still compress, but the block edges must reflect times.
+
+---
+
+## E5) BUFFER AUTOMATION (OPTIONAL BUT SMALL)
+If turnover_buffer_minutes > 0:
+- When a booking is created, auto-create a BUFFER schedule event immediately after ends_at
+  (resource_schedule_events event_type=buffer, starts_at=ends_at, ends_at=ends_at+buffer)
+This buffer must prevent another booking starting during it (conflict rules already exist from Prompt D).
+
+---
+
+## E6) VERIFY WITH THREE REAL SCENARIOS (REPORT)
+1) Room (check_in_out):
+   - Check-in Tue 16:00, 5 nights, check-out Sun 11:00
+   - Operations board must show Tue 16:00 → Sun 11:00 (NOT full-day Tue block)
+
+2) Kayak (pickup_return):
+   - Pickup 09:00, Half-day (4h)
+   - Must create 09:00 → 13:00 booking
+
+3) Parking (arrive_depart):
+   - Arrive 10:15, Depart 18:45
+   - Must preserve 15-min snapping and show exact times
+
+Provide:
+- file paths changed
+- screenshots of each scenario on Operations Board
+
+BEGIN.

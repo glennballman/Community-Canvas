@@ -49,6 +49,9 @@ interface RentalCategory {
   itemCount: number;
 }
 
+type BookingMode = 'check_in_out' | 'arrive_depart' | 'pickup_return';
+type DurationPreset = 'half_day_4h' | 'full_day_8h' | 'overnight_24h' | 'nights' | 'custom' | null;
+
 interface RentalItem {
   id: string;
   name: string;
@@ -75,7 +78,24 @@ interface RentalItem {
   minimumAge: number;
   isAvailable: boolean;
   ownerName: string;
+  bookingMode: BookingMode;
+  defaultDurationPreset: DurationPreset;
+  defaultStartTimeLocal: string;
+  defaultEndTimeLocal: string;
+  turnoverBufferMinutes: number;
 }
+
+const BOOKING_MODE_LABELS: Record<BookingMode, { start: string; end: string }> = {
+  check_in_out: { start: 'Checking in', end: 'Checking out' },
+  arrive_depart: { start: 'Arriving', end: 'Departing' },
+  pickup_return: { start: 'Pickup', end: 'Return' },
+};
+
+const DURATION_PRESETS: Record<string, { label: string; hours: number }> = {
+  half_day_4h: { label: 'Half day (4 hrs)', hours: 4 },
+  full_day_8h: { label: 'Full day (8 hrs)', hours: 8 },
+  overnight_24h: { label: 'Overnight (24 hrs)', hours: 24 },
+};
 
 interface CheckoutEligibility {
   ready: boolean;
@@ -436,40 +456,68 @@ export default function RentalBrowser() {
                 )}
                 
                 <div className="space-y-2">
-                  <Label>Quick Duration</Label>
+                  <Label>Duration</Label>
                   <div className="flex flex-wrap gap-2">
-                    {[2, 4, 8, 24].map(hrs => (
-                      <Button
-                        key={hrs}
-                        size="sm"
-                        variant={bookingDuration === hrs ? 'default' : 'outline'}
-                        onClick={() => setDurationHours(hrs)}
-                        data-testid={`button-duration-${hrs}`}
-                      >
-                        {hrs < 24 ? `${hrs} hrs` : '1 day'}
-                      </Button>
-                    ))}
+                    {selectedItem.bookingMode === 'check_in_out' ? (
+                      [1, 2, 3, 5, 7].map(nights => (
+                        <Button
+                          key={nights}
+                          size="sm"
+                          variant={bookingDuration === nights * 24 ? 'default' : 'outline'}
+                          onClick={() => setDurationHours(nights * 24)}
+                          data-testid={`button-nights-${nights}`}
+                        >
+                          {nights} {nights === 1 ? 'night' : 'nights'}
+                        </Button>
+                      ))
+                    ) : (
+                      Object.entries(DURATION_PRESETS).map(([key, { label, hours }]) => (
+                        <Button
+                          key={key}
+                          size="sm"
+                          variant={bookingDuration === hours ? 'default' : 'outline'}
+                          onClick={() => setDurationHours(hours)}
+                          data-testid={`button-duration-${key}`}
+                        >
+                          {label}
+                        </Button>
+                      ))
+                    )}
+                    <Button
+                      size="sm"
+                      variant={![4, 8, 24, 48, 72, 120, 168].includes(bookingDuration) ? 'default' : 'outline'}
+                      onClick={() => {}}
+                      data-testid="button-duration-custom"
+                    >
+                      Custom
+                    </Button>
                   </div>
                 </div>
                 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="start-time">Start</Label>
+                    <Label htmlFor="start-time">
+                      {BOOKING_MODE_LABELS[selectedItem.bookingMode]?.start || 'Start'}
+                    </Label>
                     <Input
                       id="start-time"
                       type="datetime-local"
                       value={bookingStart}
                       onChange={(e) => setBookingStart(e.target.value)}
+                      step={900}
                       data-testid="input-start-time"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="end-time">End</Label>
+                    <Label htmlFor="end-time">
+                      {BOOKING_MODE_LABELS[selectedItem.bookingMode]?.end || 'End'}
+                    </Label>
                     <Input
                       id="end-time"
                       type="datetime-local"
                       value={bookingEnd}
                       onChange={(e) => setBookingEnd(e.target.value)}
+                      step={900}
                       data-testid="input-end-time"
                     />
                   </div>

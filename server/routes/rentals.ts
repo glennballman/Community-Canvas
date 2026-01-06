@@ -50,6 +50,11 @@ interface RentalItem {
   minimumAge: number;
   isAvailable: boolean;
   ownerName: string;
+  bookingMode: 'check_in_out' | 'arrive_depart' | 'pickup_return';
+  defaultDurationPreset: string | null;
+  defaultStartTimeLocal: string;
+  defaultEndTimeLocal: string;
+  turnoverBufferMinutes: number;
 }
 
 const browseQuerySchema = z.object({
@@ -116,7 +121,12 @@ router.get('/browse', async (req: Request, res: Response) => {
         rc.required_document_type,
         rc.minimum_age,
         ri.is_available,
-        ri.owner_name
+        ri.owner_name,
+        ri.booking_mode,
+        ri.default_duration_preset,
+        ri.default_start_time_local,
+        ri.default_end_time_local,
+        ri.turnover_buffer_minutes
       FROM cc_rental_items ri
       JOIN cc_rental_categories rc ON rc.id = ri.category_id
       LEFT JOIN sr_communities c ON c.id = ri.home_community_id
@@ -180,7 +190,12 @@ router.get('/browse', async (req: Request, res: Response) => {
       requiredDocumentType: row.required_document_type,
       minimumAge: row.minimum_age || 18,
       isAvailable: row.is_available,
-      ownerName: row.owner_name || 'Owner'
+      ownerName: row.owner_name || 'Owner',
+      bookingMode: row.booking_mode || 'pickup_return',
+      defaultDurationPreset: row.default_duration_preset || null,
+      defaultStartTimeLocal: row.default_start_time_local || '09:00',
+      defaultEndTimeLocal: row.default_end_time_local || '17:00',
+      turnoverBufferMinutes: row.turnover_buffer_minutes || 0
     }));
     
     res.json({ success: true, categories, items });
@@ -474,7 +489,27 @@ router.post('/:id/book', requireAuth, async (req: Request, res: Response) => {
         RETURNING id
       `, [itemId, individualId, startTs, endTs, subtotal, tax, damageDeposit, total]);
       
-      return { bookingId: bookingResult.rows[0].id, total };
+      const bookingId = bookingResult.rows[0].id;
+      
+      // E5: Auto-create turnover buffer event if turnover_buffer_minutes > 0
+      const itemMeta = await client.query(
+        `SELECT turnover_buffer_minutes FROM cc_rental_items WHERE id = $1`,
+        [itemId]
+      );
+      const turnoverMinutes = itemMeta.rows[0]?.turnover_buffer_minutes || 0;
+      
+      if (turnoverMinutes > 0 && assetLookup.rows.length > 0) {
+        const bufferStart = new Date(endTs);
+        const bufferEnd = new Date(bufferStart.getTime() + turnoverMinutes * 60 * 1000);
+        
+        await client.query(`
+          INSERT INTO resource_schedule_events 
+            (resource_id, event_type, starts_at, ends_at, title, notes, related_entity_type, related_entity_id)
+          VALUES ($1, 'buffer', $2, $3, 'Turnover', 'Auto-generated cleanup buffer', 'booking', $4)
+        `, [assetLookup.rows[0].id, bufferStart, bufferEnd, bookingId]);
+      }
+      
+      return { bookingId, total };
     });
     
     if (result.error) {
