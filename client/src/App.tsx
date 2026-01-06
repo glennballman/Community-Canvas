@@ -34,6 +34,14 @@ import AvailabilityConsole from './pages/app/community/AvailabilityConsole';
 import DirectoryPage from './pages/app/community/DirectoryPage';
 import ContentBrandingPage from './pages/app/community/ContentBrandingPage';
 
+// Pages - CRM
+import PlacesList from './pages/crm/PlacesList';
+import PlaceDetail from './pages/crm/PlaceDetail';
+import PeopleList from './pages/crm/PeopleList';
+import PersonDetail from './pages/crm/PersonDetail';
+import OrgsList from './pages/crm/OrgsList';
+import OrgDetail from './pages/crm/OrgDetail';
+
 // Pages - Services (restored from legacy - real implementations)
 import ServiceRuns from './pages/services/ServiceRuns';
 import CreateServiceRun from './pages/services/CreateServiceRun';
@@ -151,6 +159,14 @@ export default function App() {
                 <Route path="bundles" element={<BundlesBrowser />} />
                 <Route path="directory" element={<DirectoryPage />} />
                 <Route path="content" element={<ContentBrandingPage />} />
+                
+                {/* CRM routes (shared between community and business) */}
+                <Route path="crm/places" element={<PlacesList />} />
+                <Route path="crm/places/:id" element={<PlaceDetail />} />
+                <Route path="crm/people" element={<PeopleList />} />
+                <Route path="crm/people/:id" element={<PersonDetail />} />
+                <Route path="crm/orgs" element={<OrgsList />} />
+                <Route path="crm/orgs/:id" element={<OrgDetail />} />
                 
                 {/* Business tenant routes */}
                 <Route path="catalog" element={<CatalogPage />} />
