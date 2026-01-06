@@ -1,0 +1,46 @@
+PROMPT II — STOP THRASH. 500 ONLY. GET THE STACK TRACE.
+
+We are at /app/operations under impersonation. UI shows:
+“Failed to fetch resources: 500 { success:false, error:'Failed to fetch resources' }”
+This means /api/schedule/resources is hitting server and throwing.
+
+RULES:
+- No TanStack Query changes.
+- No more impersonation refactors.
+- We will fix the server 500 by finding the exact thrown error and correcting it.
+- Output must include the exact stack trace and the exact code line fixed.
+
+STEP 1 — REPRO + CAPTURE REAL ERROR (MANDATORY)
+A) Locate the route handler for GET /api/schedule/resources
+   (likely server/routes/schedule.ts or server/routes/schedule/index.ts).
+B) In that handler, TEMPORARILY:
+   - Log ctx tenant fields and auth fields (tenant_id, actor, etc)
+   - Wrap the handler with try/catch that returns:
+     status 500 with { success:false, error, code, detail } where “detail” includes err.message
+     and logs err.stack to server console.
+C) Restart server and hit /api/schedule/resources once (from browser or curl).
+D) Paste the server log output: the error message + stack trace.
+
+STEP 2 — FIX THE ROOT CAUSE (ONLY AFTER STEP 1)
+Common root causes to check IN ORDER:
+1) DB permission/RLS failure on resource_schedule_events
+2) Tenant context missing (tenant_id null) for schedule routes when impersonating
+3) Query references wrong table/column after recent migrations
+4) Using tenantQuery/serviceQuery incorrectly (wrong db client)
+
+Fix exactly what the stack trace indicates. Do not guess.
+
+STEP 3 — DATABASE PERMISSIONS/RLS (ONLY IF ERROR INDICATES PERMISSION DENIED)
+If the error is “permission denied for table resource_schedule_events” OR RLS violation:
+- Compare grants + policies on resource_schedule_events with unified_assets and unified_bookings.
+- Add a migration that:
+  a) Grants SELECT/INSERT/UPDATE/DELETE to the same role used elsewhere (whatever role unified_assets works with).
+  b) Ensures RLS policy allows tenant-scoped access (tenant_id = ctx.tenant_id pattern).
+- Re-test /api/schedule/resources and /api/schedule (events merge) returning 200.
+
+STEP 4 — PROOF
+Return:
+- Before/after HTTP status for /api/schedule/resources (500 → 200)
+- The exact error + stack trace (before fix)
+- The file(s) changed + what changed (after fix)
+- Confirmation that Operations Board shows F550 Truck + Lucky Lander (or if it shows empty, show the DB query result proving zero rows for that tenant).
