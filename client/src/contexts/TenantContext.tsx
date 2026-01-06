@@ -16,6 +16,7 @@ import React, {
   useState, 
   useEffect, 
   useCallback,
+  useRef,
   ReactNode 
 } from 'react';
 
@@ -166,13 +167,19 @@ export function TenantProvider({ children }: TenantProviderProps) {
     }
   }, []);
 
+  // Use a ref to track user state for the interval check without triggering re-renders
+  const userRef = useRef(user);
+  useEffect(() => {
+    userRef.current = user;
+  }, [user]);
+
   useEffect(() => {
     fetchContext();
     
     // Re-fetch when token changes (after auth completes)
     const checkToken = () => {
       const token = localStorage.getItem('cc_token');
-      if (token && !user) {
+      if (token && !userRef.current) {
         fetchContext();
       }
     };
@@ -187,7 +194,7 @@ export function TenantProvider({ children }: TenantProviderProps) {
       clearInterval(interval);
       window.removeEventListener('storage', checkToken);
     };
-  }, [fetchContext, user]);
+  }, [fetchContext]);
 
   // --------------------------------------------------------------------------
   // Actions
