@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { serviceQuery } from '../db/tenantDb';
 import { requireAuth } from '../middleware/guards';
 import { z } from 'zod';
+import { checkMaintenanceConflict } from './schedule';
 
 const router = Router();
 
@@ -383,6 +384,28 @@ router.post('/:id/book', requireAuth, async (req: Request, res: Response) => {
       }
       
       const bufferMinutes = itemCheck.rows[0].buffer_minutes || 15;
+      
+      // Check for maintenance blocks on unified_asset (if linked)
+      const assetLookup = await client.query(
+        `SELECT id FROM unified_assets WHERE source_table = 'cc_rental_items' AND source_id = $1`,
+        [itemId]
+      );
+      
+      if (assetLookup.rows.length > 0) {
+        const assetId = assetLookup.rows[0].id;
+        const maintenance = await checkMaintenanceConflict(
+          assetId,
+          new Date(startTs),
+          new Date(endTs)
+        );
+        if (maintenance.hasConflict) {
+          return { 
+            error: 'This item is under maintenance during the requested time', 
+            status: 409,
+            code: 'MAINTENANCE_CONFLICT'
+          };
+        }
+      }
       
       // Check conflicts
       const conflictResult = await client.query(`
