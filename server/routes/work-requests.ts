@@ -5,7 +5,6 @@ import { publicQuery } from '../db/tenantDb';
 
 const router = Router();
 
-// Helper to run queries - uses tenantQuery if available, publicQuery otherwise
 async function runQuery(tenantReq: TenantRequest, sql: string, params: any[]) {
   if (tenantReq.tenantQuery) {
     return tenantReq.tenantQuery(sql, params);
@@ -14,14 +13,13 @@ async function runQuery(tenantReq: TenantRequest, sql: string, params: any[]) {
 }
 
 const SORT_MAP: Record<string, string> = {
-  created_at: 'o.created_at',
-  title: 'o.title',
-  bid_deadline: 'o.bid_deadline',
-  expected_start_date: 'o.expected_start_date',
-  estimated_value_high: 'o.estimated_value_high'
+  created_at: 'wr.created_at',
+  title: 'wr.title',
+  bid_deadline: 'wr.bid_deadline',
+  expected_start_date: 'wr.expected_start_date',
+  estimated_value_high: 'wr.estimated_value_high'
 };
 
-// IMPORTANT: /stats/summary MUST come before /:id
 router.get('/stats/summary', async (req: Request, res: Response) => {
   try {
     const tenantReq = req as TenantRequest;
@@ -31,16 +29,15 @@ router.get('/stats/summary', async (req: Request, res: Response) => {
     const params: any[] = [];
     let paramIndex = 1;
 
-    // Visibility only (authoritative) - NO status filter here
     if (portalId) {
       whereClauses.push(`(
-        o.visibility_scope = 'public'::publish_visibility
-        OR (o.visibility_scope = 'portal_only'::publish_visibility AND o.portal_id = $${paramIndex})
+        wr.visibility_scope = 'public'::publish_visibility
+        OR (wr.visibility_scope = 'portal_only'::publish_visibility AND wr.portal_id = $${paramIndex})
       )`);
       params.push(portalId);
       paramIndex++;
     } else {
-      whereClauses.push(`o.visibility_scope = 'public'::publish_visibility`);
+      whereClauses.push(`wr.visibility_scope = 'public'::publish_visibility`);
     }
 
     const whereClause = `WHERE ${whereClauses.join(' AND ')}`;
@@ -48,11 +45,11 @@ router.get('/stats/summary', async (req: Request, res: Response) => {
     const result = await runQuery(tenantReq,
       `
       SELECT
-        COUNT(*) FILTER (WHERE status = 'published'::opportunity_status)  as published,
-        COUNT(*) FILTER (WHERE status = 'evaluating'::opportunity_status) as evaluating,
-        COUNT(*) FILTER (WHERE status = 'awarded'::opportunity_status)     as awarded,
+        COUNT(*) FILTER (WHERE status = 'published'::work_request_status)  as published,
+        COUNT(*) FILTER (WHERE status = 'evaluating'::work_request_status) as evaluating,
+        COUNT(*) FILTER (WHERE status = 'awarded'::work_request_status)     as awarded,
         COUNT(*) as total
-      FROM opportunities o
+      FROM work_requests wr
       ${whereClause}
       `,
       params
@@ -60,12 +57,11 @@ router.get('/stats/summary', async (req: Request, res: Response) => {
 
     res.json(result.rows[0] || { published: 0, evaluating: 0, awarded: 0, total: 0 });
   } catch (error) {
-    console.error('Error fetching opportunity stats:', error);
+    console.error('Error fetching work request stats:', error);
     res.status(500).json({ error: 'Failed to fetch stats' });
   }
 });
 
-// POST /api/opportunities - Create new opportunity (owner)
 router.post('/', requireAuth, requireTenant, async (req: Request, res: Response) => {
   const tenantReq = req as TenantRequest;
   try {
@@ -102,16 +98,16 @@ router.post('/', requireAuth, requireTenant, async (req: Request, res: Response)
     }
 
     const refResult = await tenantReq.tenantQuery!(
-      `SELECT 'OP-' || to_char(now(), 'YYMMDD') || '-' || lpad(nextval('opportunity_ref_seq')::text, 4, '0') as ref`
+      `SELECT 'WR-' || to_char(now(), 'YYMMDD') || '-' || lpad(nextval('work_request_ref_seq')::text, 4, '0') as ref`
     );
-    const oppRef = refResult.rows[0].ref;
+    const wrRef = refResult.rows[0].ref;
 
     const publishedAt = status === 'published' ? new Date() : null;
 
     const result = await tenantReq.tenantQuery!(
       `
-      INSERT INTO opportunities (
-        opportunity_ref, owner_tenant_id, title, description, scope_of_work, work_category,
+      INSERT INTO work_requests (
+        work_request_ref, owner_tenant_id, title, description, scope_of_work, work_category,
         site_address, site_latitude, site_longitude,
         estimated_value_low, estimated_value_high, budget_ceiling,
         bid_deadline, questions_deadline, expected_start_date, expected_duration_days,
@@ -122,14 +118,14 @@ router.post('/', requireAuth, requireTenant, async (req: Request, res: Response)
         $1, $2::uuid, $3, $4, $5, $6,
         $7, $8, $9, $10, $11, $12,
         $13, $14, $15, $16, $17,
-        $18::opportunity_status, $19::publish_visibility, $20::uuid, $21,
+        $18::work_request_status, $19::publish_visibility, $20::uuid, $21,
         $22::jsonb, $23::jsonb, $24::jsonb,
         $25::uuid, $26::uuid
       )
-      RETURNING id, opportunity_ref, status, created_at
+      RETURNING id, work_request_ref, status, created_at
       `,
       [
-        oppRef, tenantId, title, description || null, scope_of_work || null, work_category,
+        wrRef, tenantId, title, description || null, scope_of_work || null, work_category,
         site_address || null, site_latitude || null, site_longitude || null,
         estimated_value_low || null, estimated_value_high || null, budget_ceiling || null,
         bid_deadline || null, questions_deadline || null, expected_start_date || null, expected_duration_days || null,
@@ -143,12 +139,11 @@ router.post('/', requireAuth, requireTenant, async (req: Request, res: Response)
 
     res.status(201).json(result.rows[0]);
   } catch (e: any) {
-    console.error('Error creating opportunity:', e);
-    res.status(500).json({ error: 'Failed to create opportunity', details: e.message });
+    console.error('Error creating work request:', e);
+    res.status(500).json({ error: 'Failed to create work request', details: e.message });
   }
 });
 
-// POST /api/opportunities/:id/media - Attach media to opportunity (owner)
 router.post('/:id/media', requireAuth, requireTenant, async (req: Request, res: Response) => {
   const tenantReq = req as TenantRequest;
   try {
@@ -162,7 +157,7 @@ router.post('/:id/media', requireAuth, requireTenant, async (req: Request, res: 
     }
 
     const ownerCheck = await tenantReq.tenantQuery!(
-      `SELECT id FROM opportunities WHERE id = $1::uuid AND owner_tenant_id = $2`,
+      `SELECT id FROM work_requests WHERE id = $1::uuid AND owner_tenant_id = $2`,
       [id, tenantId]
     );
     if (ownerCheck.rows.length === 0) {
@@ -170,7 +165,7 @@ router.post('/:id/media', requireAuth, requireTenant, async (req: Request, res: 
     }
 
     const result = await tenantReq.tenantQuery!(
-      `INSERT INTO opportunity_media (opportunity_id, media_type, file_name, file_url, file_size, description, is_public, uploaded_by)
+      `INSERT INTO work_request_media (work_request_id, media_type, file_name, file_url, file_size, description, is_public, uploaded_by)
        VALUES ($1::uuid, $2, $3, $4, $5, $6, $7, $8::uuid)
        RETURNING *`,
       [id, media_type, file_name || null, file_url, file_size || null, description || null, is_public !== false, individualId || null]
@@ -183,7 +178,6 @@ router.post('/:id/media', requireAuth, requireTenant, async (req: Request, res: 
   }
 });
 
-// GET /api/opportunities - List opportunities
 router.get('/', async (req: Request, res: Response) => {
   const tenantReq = req as TenantRequest;
   try {
@@ -209,83 +203,81 @@ router.get('/', async (req: Request, res: Response) => {
     const params: any[] = [];
     let paramIndex = 1;
 
-    // Visibility only (authoritative)
     if (portalId) {
       whereClauses.push(`(
-        o.visibility_scope = 'public'::publish_visibility
-        OR (o.visibility_scope = 'portal_only'::publish_visibility AND o.portal_id = $${paramIndex})
+        wr.visibility_scope = 'public'::publish_visibility
+        OR (wr.visibility_scope = 'portal_only'::publish_visibility AND wr.portal_id = $${paramIndex})
       )`);
       params.push(portalId);
       paramIndex++;
     } else {
-      whereClauses.push(`o.visibility_scope = 'public'::publish_visibility`);
+      whereClauses.push(`wr.visibility_scope = 'public'::publish_visibility`);
     }
 
-    // Default: only published opportunities (open for bidding)
     if (!status) {
-      whereClauses.push(`o.status = 'published'::opportunity_status`);
+      whereClauses.push(`wr.status = 'published'::work_request_status`);
     }
 
     if (community_id) {
-      whereClauses.push(`o.community_id = $${paramIndex}::uuid`);
+      whereClauses.push(`wr.community_id = $${paramIndex}::uuid`);
       params.push(community_id);
       paramIndex++;
     }
 
     if (service_bundle_id) {
-      whereClauses.push(`o.service_bundle_id = $${paramIndex}::uuid`);
+      whereClauses.push(`wr.service_bundle_id = $${paramIndex}::uuid`);
       params.push(service_bundle_id);
       paramIndex++;
     }
 
     if (work_category) {
-      whereClauses.push(`o.work_category = $${paramIndex}`);
+      whereClauses.push(`wr.work_category = $${paramIndex}`);
       params.push(work_category);
       paramIndex++;
     }
 
     if (status) {
-      whereClauses.push(`o.status = $${paramIndex}::opportunity_status`);
+      whereClauses.push(`wr.status = $${paramIndex}::work_request_status`);
       params.push(status);
       paramIndex++;
     }
 
     if (certifications) {
       const certsArray = (certifications as string).split(',');
-      whereClauses.push(`o.required_certifications && $${paramIndex}::text[]`);
+      whereClauses.push(`wr.required_certifications && $${paramIndex}::text[]`);
       params.push(certsArray);
       paramIndex++;
     }
 
     if (min_value) {
-      whereClauses.push(`o.estimated_value_high >= $${paramIndex}`);
+      whereClauses.push(`wr.estimated_value_high >= $${paramIndex}`);
       params.push(parseFloat(min_value as string));
       paramIndex++;
     }
 
     if (max_value) {
-      whereClauses.push(`o.estimated_value_low <= $${paramIndex}`);
+      whereClauses.push(`wr.estimated_value_low <= $${paramIndex}`);
       params.push(parseFloat(max_value as string));
       paramIndex++;
     }
 
     if (expected_start_after) {
-      whereClauses.push(`o.expected_start_date >= $${paramIndex}::date`);
+      whereClauses.push(`wr.expected_start_date >= $${paramIndex}::date`);
       params.push(expected_start_after);
       paramIndex++;
     }
 
     if (expected_start_before) {
-      whereClauses.push(`o.expected_start_date <= $${paramIndex}::date`);
+      whereClauses.push(`wr.expected_start_date <= $${paramIndex}::date`);
       params.push(expected_start_before);
       paramIndex++;
     }
 
     if (search) {
       whereClauses.push(`(
-        o.title ILIKE $${paramIndex}
-        OR o.description ILIKE $${paramIndex}
-        OR o.work_category ILIKE $${paramIndex}
+        wr.title ILIKE $${paramIndex}
+        OR wr.description ILIKE $${paramIndex}
+        OR wr.work_category ILIKE $${paramIndex}
         OR c.name ILIKE $${paramIndex}
       )`);
       params.push(`%${search}%`);
@@ -299,39 +291,39 @@ router.get('/', async (req: Request, res: Response) => {
 
     const query = `
       SELECT 
-        o.id,
-        o.opportunity_ref,
-        o.title,
-        o.description,
-        o.work_category,
-        o.site_address,
-        o.site_latitude,
-        o.site_longitude,
-        o.estimated_value_low,
-        o.estimated_value_high,
-        o.budget_ceiling,
-        o.bid_deadline,
-        o.questions_deadline,
-        o.expected_start_date,
-        o.expected_duration_days,
-        o.required_certifications,
-        o.status,
-        o.visibility_scope,
-        o.published_at,
-        o.created_at,
+        wr.id,
+        wr.work_request_ref,
+        wr.title,
+        wr.description,
+        wr.work_category,
+        wr.site_address,
+        wr.site_latitude,
+        wr.site_longitude,
+        wr.estimated_value_low,
+        wr.estimated_value_high,
+        wr.budget_ceiling,
+        wr.bid_deadline,
+        wr.questions_deadline,
+        wr.expected_start_date,
+        wr.expected_duration_days,
+        wr.required_certifications,
+        wr.status,
+        wr.visibility_scope,
+        wr.published_at,
+        wr.created_at,
         c.name as community_name,
         c.region as community_region,
         sb.name as service_bundle_name,
         owner.trade_name as owner_name,
-        (SELECT COUNT(*) FROM bids b WHERE b.opportunity_id = o.id) as bid_count,
-        (SELECT COUNT(*) FROM opportunity_media om WHERE om.opportunity_id = o.id) as media_count
-      FROM opportunities o
-      LEFT JOIN sr_communities c ON c.id = o.community_id
-      LEFT JOIN sr_bundles sb ON sb.id = o.service_bundle_id
+        (SELECT COUNT(*) FROM bids b WHERE b.work_request_id = wr.id) as bid_count,
+        (SELECT COUNT(*) FROM work_request_media wrm WHERE wrm.work_request_id = wr.id) as media_count
+      FROM work_requests wr
+      LEFT JOIN sr_communities c ON c.id = wr.community_id
+      LEFT JOIN sr_bundles sb ON sb.id = wr.service_bundle_id
       LEFT JOIN LATERAL (
         SELECT p.trade_name
         FROM parties p
-        WHERE p.tenant_id = o.owner_tenant_id
+        WHERE p.tenant_id = wr.owner_tenant_id
         ORDER BY p.created_at ASC
         LIMIT 1
       ) owner ON true
@@ -347,14 +339,14 @@ router.get('/', async (req: Request, res: Response) => {
     const countParams = params.slice(0, -2);
     const countQuery = `
       SELECT COUNT(*) as total
-      FROM opportunities o
-      LEFT JOIN sr_communities c ON c.id = o.community_id
+      FROM work_requests wr
+      LEFT JOIN sr_communities c ON c.id = wr.community_id
       ${whereClause}
     `;
     const countResult = await runQuery(tenantReq, countQuery, countParams);
 
     res.json({
-      opportunities: result.rows,
+      workRequests: result.rows,
       pagination: {
         total: parseInt(countResult.rows[0]?.total || '0'),
         limit: parseInt(limit as string),
@@ -362,12 +354,11 @@ router.get('/', async (req: Request, res: Response) => {
       }
     });
   } catch (error) {
-    console.error('Error fetching opportunities:', error);
-    res.status(500).json({ error: 'Failed to fetch opportunities' });
+    console.error('Error fetching work requests:', error);
+    res.status(500).json({ error: 'Failed to fetch work requests' });
   }
 });
 
-// GET /api/opportunities/:id - Single opportunity detail
 router.get('/:id', async (req: Request, res: Response) => {
   const tenantReq = req as TenantRequest;
   try {
@@ -376,19 +367,19 @@ router.get('/:id', async (req: Request, res: Response) => {
     const tenantId = tenantReq.ctx?.tenant_id;
 
     const visibilityClauses: string[] = [
-      `o.visibility_scope = 'public'::publish_visibility`
+      `wr.visibility_scope = 'public'::publish_visibility`
     ];
     const params: any[] = [id];
     let paramIndex = 2;
 
     if (portalId) {
-      visibilityClauses.push(`(o.visibility_scope = 'portal_only'::publish_visibility AND o.portal_id = $${paramIndex})`);
+      visibilityClauses.push(`(wr.visibility_scope = 'portal_only'::publish_visibility AND wr.portal_id = $${paramIndex})`);
       params.push(portalId);
       paramIndex++;
     }
 
     if (tenantId) {
-      visibilityClauses.push(`o.owner_tenant_id = $${paramIndex}`);
+      visibilityClauses.push(`wr.owner_tenant_id = $${paramIndex}`);
       params.push(tenantId);
       paramIndex++;
     }
@@ -396,7 +387,7 @@ router.get('/:id', async (req: Request, res: Response) => {
     const result = await runQuery(tenantReq,
       `
       SELECT 
-        o.*,
+        wr.*,
         c.name as community_name,
         c.region as community_region,
         c.latitude as community_latitude,
@@ -406,43 +397,43 @@ router.get('/:id', async (req: Request, res: Response) => {
         owner.trade_name as owner_name,
         owner.primary_contact_name as owner_contact_name,
         owner.primary_contact_email as owner_contact_email
-      FROM opportunities o
-      LEFT JOIN sr_communities c ON c.id = o.community_id
-      LEFT JOIN sr_bundles sb ON sb.id = o.service_bundle_id
+      FROM work_requests wr
+      LEFT JOIN sr_communities c ON c.id = wr.community_id
+      LEFT JOIN sr_bundles sb ON sb.id = wr.service_bundle_id
       LEFT JOIN LATERAL (
         SELECT p.trade_name, p.primary_contact_name, p.primary_contact_email
         FROM parties p
-        WHERE p.tenant_id = o.owner_tenant_id
+        WHERE p.tenant_id = wr.owner_tenant_id
         ORDER BY p.created_at ASC
         LIMIT 1
       ) owner ON true
-      WHERE o.id = $1::uuid
+      WHERE wr.id = $1::uuid
         AND (${visibilityClauses.join(' OR ')})
       `,
       params
     );
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Opportunity not found' });
+      return res.status(404).json({ error: 'Work request not found' });
     }
 
-    const opportunity = result.rows[0];
-    const isOwner = opportunity.owner_tenant_id === tenantId;
+    const workRequest = result.rows[0];
+    const isOwner = workRequest.owner_tenant_id === tenantId;
 
     const media = await runQuery(tenantReq,
       `SELECT id, media_type, file_name, file_url, file_size, description, is_public, created_at
-       FROM opportunity_media WHERE opportunity_id = $1 ORDER BY created_at`,
+       FROM work_request_media WHERE work_request_id = $1 ORDER BY created_at`,
       [id]
     );
 
     const measurements = await runQuery(tenantReq,
       `SELECT id, measurement_type, description, quantity, unit, notes, created_at
-       FROM opportunity_measurements WHERE opportunity_id = $1 ORDER BY created_at`,
+       FROM work_request_measurements WHERE work_request_id = $1 ORDER BY created_at`,
       [id]
     );
 
     const bidCountResult = await runQuery(tenantReq,
-      `SELECT COUNT(*) as count FROM bids WHERE opportunity_id = $1`,
+      `SELECT COUNT(*) as count FROM bids WHERE work_request_id = $1`,
       [id]
     );
     const bidCount = parseInt(bidCountResult.rows[0]?.count || '0');
@@ -457,7 +448,7 @@ router.get('/:id', async (req: Request, res: Response) => {
       if (partyResult.rows.length > 0) {
         const userBidResult = await runQuery(tenantReq,
           `SELECT id, bid_ref, status, bid_amount, proposed_start_date, submitted_at
-           FROM bids WHERE opportunity_id = $1 AND party_id = $2 LIMIT 1`,
+           FROM bids WHERE work_request_id = $1 AND party_id = $2 LIMIT 1`,
           [id, partyResult.rows[0].id]
         );
         userBid = userBidResult.rows[0] || null;
@@ -467,15 +458,15 @@ router.get('/:id', async (req: Request, res: Response) => {
     const messagesQuery = isOwner
       ? `SELECT bm.*, p.trade_name as from_party_name
          FROM bid_messages bm LEFT JOIN parties p ON p.id = bm.from_party_id
-         WHERE bm.opportunity_id = $1 ORDER BY bm.created_at`
+         WHERE bm.work_request_id = $1 ORDER BY bm.created_at`
       : `SELECT bm.*, p.trade_name as from_party_name
          FROM bid_messages bm LEFT JOIN parties p ON p.id = bm.from_party_id
-         WHERE bm.opportunity_id = $1 AND bm.is_public = true ORDER BY bm.created_at`;
+         WHERE bm.work_request_id = $1 AND bm.is_public = true ORDER BY bm.created_at`;
 
     const messages = await runQuery(tenantReq, messagesQuery, [id]);
 
     res.json({
-      ...opportunity,
+      ...workRequest,
       media: media.rows,
       measurements: measurements.rows,
       bid_count: bidCount,
@@ -484,12 +475,11 @@ router.get('/:id', async (req: Request, res: Response) => {
       is_owner: isOwner
     });
   } catch (error) {
-    console.error('Error fetching opportunity:', error);
-    res.status(500).json({ error: 'Failed to fetch opportunity' });
+    console.error('Error fetching work request:', error);
+    res.status(500).json({ error: 'Failed to fetch work request' });
   }
 });
 
-// GET /api/opportunities/:id/bids - List bids (owner only)
 router.get('/:id/bids', requireAuth, requireTenant, async (req: Request, res: Response) => {
   const tenantReq = req as TenantRequest;
   try {
@@ -497,12 +487,12 @@ router.get('/:id/bids', requireAuth, requireTenant, async (req: Request, res: Re
     const tenantId = tenantReq.ctx!.tenant_id;
 
     const ownerCheck = await tenantReq.tenantQuery(
-      `SELECT id FROM opportunities WHERE id = $1::uuid AND owner_tenant_id = $2`,
+      `SELECT id FROM work_requests WHERE id = $1::uuid AND owner_tenant_id = $2`,
       [id, tenantId]
     );
 
     if (ownerCheck.rows.length === 0) {
-      return res.status(403).json({ error: 'Not authorized to view bids for this opportunity' });
+      return res.status(403).json({ error: 'Not authorized to view bids for this work request' });
     }
 
     const result = await tenantReq.tenantQuery(
@@ -510,7 +500,7 @@ router.get('/:id/bids', requireAuth, requireTenant, async (req: Request, res: Re
               p.total_contracts as bidder_contracts, p.certifications as bidder_certifications,
               p.status as bidder_status
        FROM bids b JOIN parties p ON p.id = b.party_id
-       WHERE b.opportunity_id = $1::uuid
+       WHERE b.work_request_id = $1::uuid
        ORDER BY b.submitted_at DESC NULLS LAST, b.created_at DESC`,
       [id]
     );

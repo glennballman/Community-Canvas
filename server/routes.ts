@@ -34,7 +34,7 @@ import { CompanyCamService, getPhotoUrl } from "./services/companycam";
 import { createCrewRouter } from "./routes/crew";
 import claimsRouter from "./routes/claims";
 import internalRouter from "./routes/internal";
-import opportunitiesRouter from "./routes/opportunities";
+import workRequestsRouter from "./routes/work-requests";
 import bidsRouter from "./routes/bids";
 import uploadsRouter from "./routes/uploads";
 import toolsRouter from "./routes/tools";
@@ -139,8 +139,10 @@ export async function registerRoutes(
   // These routes are NOT accessible by tenant users or service-key
   app.use('/api/internal', internalRouter);
 
-  // Register procurement opportunities and bids routes
-  app.use('/api/opportunities', opportunitiesRouter);
+  // Register work requests and bids routes
+  app.use('/api/work-requests', workRequestsRouter);
+  // TODO: Remove /api/opportunities alias after launch stabilization
+  app.use('/api/opportunities', workRequestsRouter);
   app.use('/api/bids', bidsRouter);
 
   // Register file uploads and serve uploaded files

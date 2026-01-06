@@ -59,6 +59,7 @@ The application uses a modern web stack: React 18 with TypeScript and Vite for t
 - **Bonds System**: Unified deposits for individual, tenant, or employer-backed scenarios, with claim management and asset inspections.
 - **Documentation System**: Bloomberg-terminal styled documentation available at `/admin/docs`, rendering markdown files.
 - **Shared Service Runs**: Neighbor bundling system (NOT competitive bidding) where customers with a contractor invite neighbors to join and split mobilization costs. API prefix: `/api/shared-runs`. Uses CASE-based RLS policies with `__SERVICE__` sentinel handling for proper tenant isolation. (Renamed from "Coop Runs" due to negative brand associations in Canada.)
+- **Work Requests System**: Procurement coordination for remote community work. API prefix: `/api/work-requests`. Replaces the former "Opportunities" terminology to clarify purpose (work coordination, NOT employment opportunities) and avoid confusion with future "Job Posting" features. Table: `work_requests`, column: `work_request_id` in bids.
 
 ## External Dependencies
 

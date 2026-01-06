@@ -44,12 +44,12 @@ router.get('/mine', requireAuth, requireTenant, async (req, res) => {
     let query = `
       SELECT b.id, b.bid_ref, b.status, b.bid_amount, b.proposed_start_date,
              b.proposed_duration_days, b.submitted_at, b.score_overall, b.created_at,
-             o.title as opportunity_title, o.opportunity_ref, o.status as opportunity_status,
-             o.bid_deadline, o.expected_start_date as opportunity_start_date,
+             wr.title as work_request_title, wr.work_request_ref, wr.status as work_request_status,
+             wr.bid_deadline, wr.expected_start_date as work_request_start_date,
              c.name as community_name, c.region as community_region
       FROM bids b
-      JOIN opportunities o ON o.id = b.opportunity_id
-      LEFT JOIN sr_communities c ON c.id = o.community_id
+      JOIN work_requests wr ON wr.id = b.work_request_id
+      LEFT JOIN sr_communities c ON c.id = wr.community_id
       WHERE b.party_id = $1::uuid
     `;
 
@@ -81,16 +81,16 @@ router.get('/:id', requireAuth, requireTenant, async (req: Request, res: Respons
     if (!partyId) return res.status(403).json({ error: 'Unable to resolve party profile' });
 
     const result = await tenantReq.tenantQuery(
-      `SELECT b.*, o.title as opportunity_title, o.opportunity_ref,
-              o.description as opportunity_description, o.status as opportunity_status,
-              o.bid_deadline, o.expected_start_date, o.expected_duration_days as opportunity_duration,
-              o.owner_tenant_id, c.name as community_name, c.region as community_region,
+      `SELECT b.*, wr.title as work_request_title, wr.work_request_ref,
+              wr.description as work_request_description, wr.status as work_request_status,
+              wr.bid_deadline, wr.expected_start_date, wr.expected_duration_days as work_request_duration,
+              wr.owner_tenant_id, c.name as community_name, c.region as community_region,
               p.trade_name as bidder_name
        FROM bids b
-       JOIN opportunities o ON o.id = b.opportunity_id
-       LEFT JOIN sr_communities c ON c.id = o.community_id
+       JOIN work_requests wr ON wr.id = b.work_request_id
+       LEFT JOIN sr_communities c ON c.id = wr.community_id
        LEFT JOIN parties p ON p.id = b.party_id
-       WHERE b.id = $1::uuid AND (b.party_id = $2 OR o.owner_tenant_id = $3)`,
+       WHERE b.id = $1::uuid AND (b.party_id = $2 OR wr.owner_tenant_id = $3)`,
       [id, partyId, tenantReq.ctx!.tenant_id]
     );
 
@@ -120,43 +120,44 @@ router.post('/', requireAuth, requireTenant, async (req: Request, res: Response)
   const tenantReq = req as TenantRequest;
   try {
     const {
-      opportunity_id, bid_amount, proposed_start_date, proposed_duration_days,
+      work_request_id, opportunity_id, bid_amount, proposed_start_date, proposed_duration_days,
       technical_proposal, methodology, team_composition, exceptions, clarifications,
       breakdown_lines = [], submit_immediately = false
     } = req.body;
 
-    if (!opportunity_id) return res.status(400).json({ error: 'opportunity_id is required' });
+    const wrId = work_request_id || opportunity_id;
+    if (!wrId) return res.status(400).json({ error: 'work_request_id is required' });
 
     const partyId = await getOrCreatePartyForTenant(tenantReq);
     if (!partyId) return res.status(400).json({ error: 'Unable to create party profile for bidding' });
 
     const portalId = tenantReq.ctx?.portal_id;
 
-    const oppResult = await tenantReq.tenantQuery(
-      `SELECT id, status, owner_tenant_id, bid_deadline FROM opportunities
-       WHERE id = $1::uuid AND status = 'published'::opportunity_status
+    const wrResult = await tenantReq.tenantQuery(
+      `SELECT id, status, owner_tenant_id, bid_deadline FROM work_requests
+       WHERE id = $1::uuid AND status = 'published'::work_request_status
          AND (visibility_scope = 'public'::publish_visibility
               OR (visibility_scope = 'portal_only'::publish_visibility AND portal_id = $2))`,
-      [opportunity_id, portalId]
+      [wrId, portalId]
     );
 
-    if (oppResult.rows.length === 0) {
-      return res.status(404).json({ error: 'Opportunity not found or not open for bidding' });
+    if (wrResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Work request not found or not open for bidding' });
     }
 
-    const opp = oppResult.rows[0];
-    if (opp.bid_deadline && new Date(opp.bid_deadline) < new Date()) {
+    const wr = wrResult.rows[0];
+    if (wr.bid_deadline && new Date(wr.bid_deadline) < new Date()) {
       return res.status(400).json({ error: 'Bid deadline has passed' });
     }
 
     const existingBid = await tenantReq.tenantQuery(
-      `SELECT id, bid_ref FROM bids WHERE opportunity_id = $1 AND party_id = $2`,
-      [opportunity_id, partyId]
+      `SELECT id, bid_ref FROM bids WHERE work_request_id = $1 AND party_id = $2`,
+      [wrId, partyId]
     );
 
     if (existingBid.rows.length > 0) {
       return res.status(409).json({
-        error: 'You already have a bid on this opportunity',
+        error: 'You already have a bid on this work request',
         existing_bid_id: existingBid.rows[0].id,
         existing_bid_ref: existingBid.rows[0].bid_ref
       });
@@ -169,13 +170,13 @@ router.post('/', requireAuth, requireTenant, async (req: Request, res: Response)
       const bidRef = refResult.rows[0].ref;
 
       const bidResult = await client.query(
-        `INSERT INTO bids (bid_ref, opportunity_id, party_id, status, bid_amount,
+        `INSERT INTO bids (bid_ref, work_request_id, party_id, status, bid_amount,
                           proposed_start_date, proposed_duration_days, technical_proposal,
                           methodology, team_composition, exceptions, clarifications, submitted_at)
          VALUES ($1, $2::uuid, $3::uuid, $4::bid_status, $5, $6::date, $7, $8, $9, $10::jsonb, $11, $12, $13)
          RETURNING *`,
         [
-          bidRef, opportunity_id, partyId,
+          bidRef, wrId, partyId,
           submit_immediately ? 'submitted' : 'draft',
           bid_amount || 0, proposed_start_date, proposed_duration_days,
           technical_proposal, methodology,
@@ -265,8 +266,8 @@ router.post('/:id/submit', requireAuth, requireTenant, async (req, res) => {
     if (!partyId) return res.status(403).json({ error: 'Unable to resolve party profile' });
 
     const bidCheck = await req.tenantQuery(
-      `SELECT b.id, b.status, o.bid_deadline, o.status as opp_status
-       FROM bids b JOIN opportunities o ON o.id = b.opportunity_id
+      `SELECT b.id, b.status, wr.bid_deadline, wr.status as wr_status
+       FROM bids b JOIN work_requests wr ON wr.id = b.work_request_id
        WHERE b.id = $1::uuid AND b.party_id = $2`,
       [id, partyId]
     );
@@ -276,7 +277,7 @@ router.post('/:id/submit', requireAuth, requireTenant, async (req, res) => {
     const bid = bidCheck.rows[0];
     if (bid.status !== 'draft') return res.status(400).json({ error: 'Bid already submitted' });
     if (bid.bid_deadline && new Date(bid.bid_deadline) < new Date()) return res.status(400).json({ error: 'Bid deadline has passed' });
-    if (bid.opp_status !== 'published') return res.status(400).json({ error: 'Opportunity is no longer accepting bids' });
+    if (bid.wr_status !== 'published') return res.status(400).json({ error: 'Work request is no longer accepting bids' });
 
     const result = await req.tenantQuery(
       `UPDATE bids SET status = 'submitted'::bid_status, submitted_at = now(), updated_at = now()
@@ -324,20 +325,20 @@ router.post('/:id/messages', requireAuth, requireTenant, async (req: Request, re
     const tenantId = tenantReq.ctx!.tenant_id;
 
     const bidCheck = await tenantReq.tenantQuery(
-      `SELECT b.id, b.opportunity_id, o.owner_tenant_id FROM bids b
-       JOIN opportunities o ON o.id = b.opportunity_id
-       WHERE b.id = $1::uuid AND (b.party_id = $2 OR o.owner_tenant_id = $3)`,
+      `SELECT b.id, b.work_request_id, wr.owner_tenant_id FROM bids b
+       JOIN work_requests wr ON wr.id = b.work_request_id
+       WHERE b.id = $1::uuid AND (b.party_id = $2 OR wr.owner_tenant_id = $3)`,
       [id, partyId, tenantId]
     );
 
     if (bidCheck.rows.length === 0) return res.status(404).json({ error: 'Bid not found' });
 
     const result = await tenantReq.tenantQuery(
-      `INSERT INTO bid_messages (opportunity_id, bid_id, from_party_id, from_tenant_id,
+      `INSERT INTO bid_messages (work_request_id, bid_id, from_party_id, from_tenant_id,
                                 message_type, subject, body, is_public, parent_message_id)
        VALUES ($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5, $6, $7, $8, $9::uuid)
        RETURNING *`,
-      [bidCheck.rows[0].opportunity_id, id, partyId, tenantId, message_type, subject, body, is_public, parent_message_id]
+      [bidCheck.rows[0].work_request_id, id, partyId, tenantId, message_type, subject, body, is_public, parent_message_id]
     );
 
     res.status(201).json(result.rows[0]);

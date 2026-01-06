@@ -1,0 +1,112 @@
+# TASK: GLOBAL SEMANTIC RENAME (Tables Empty) — Jobs/Opportunities → Work Requests / Work Orders (+ Optional Projects)
+
+All non-infrastructure tables are basically empty. This is our best window to rename terminology and schema safely.
+We must eliminate the word “job” for service contracts because we will also support overseas “job postings” for hiring.
+
+## Decisions (LOCKED)
+- Replace “Opportunity/Opportunities” with **Work Request/Work Requests**
+- Replace “Job/Jobs” (service delivery unit) with **Work Order/Work Orders**
+- Replace “Co-op/Cooperative” with **Shared Run/Shared Runs** (if not already completed)
+- Preserve “Service Run” as the umbrella term
+
+## Optional (DO IF EASY AND CLEAN)
+- Introduce “Project” as a container for a property/customer/site where multiple Work Requests live.
+- If the repo already has “projects” anywhere, report conflicts first.
+
+---
+
+# Step 1 — Discovery (must output evidence)
+Run repo-wide search and list hits (paths + counts) for:
+- "opportunity", "opportunities"
+- "job", "jobs"
+- "gig", "gigs"
+- "project", "projects"
+- "coop", "co-op", "cooperative" (if not fully done)
+Also search DB/migrations for:
+- opportunities table
+- job_* tables or columns
+- enums containing job/opportunity terminology
+
+Deliver: a short “Rename Surface Map” listing:
+- UI strings
+- TS types
+- API routes
+- DB table/column names
+- enums
+
+---
+
+# Step 2 — UI + Copy rename (no behavior changes)
+Replace all user-facing copy:
+- “Opportunities” → “Work Requests”
+- “Opportunity” → “Work Request”
+- “Jobs” → “Work Orders”
+- “Job” → “Work Order”
+Rules:
+- Do not rename “job posting” if it exists for recruiting (flag it separately).
+- Do not change layout. Only text + labels.
+
+---
+
+# Step 3 — Code rename (types + variables)
+Replace internal identifiers where safe:
+- opportunity → workRequest
+- opportunities → workRequests
+- job → workOrder (ONLY for service delivery objects; do not touch employment contexts)
+- jobs → workOrders
+
+Update:
+- TS interfaces/types
+- component names
+- filenames if appropriate (optional; only if it reduces confusion)
+- route components that display lists/details
+
+---
+
+# Step 4 — API route rename (keep backward compatibility temporarily)
+If server routes exist like:
+- /api/opportunities
+Rename to:
+- /api/work-requests
+
+BUT: To avoid breaking any older calls during transition:
+- Keep the old endpoint as an alias that calls the new handler.
+- Add a TODO comment “remove alias after launch stabilization”.
+
+Same for /api/jobs if it exists:
+- Rename to /api/work-orders
+- Keep alias temporarily.
+
+---
+
+# Step 5 — DB schema rename (tables empty, do clean rename)
+If tables exist:
+- opportunities → work_requests
+- job_* (service delivery) → work_orders_* where appropriate
+
+If columns exist:
+- opportunity_id → work_request_id
+- job_id → work_order_id
+
+If enums exist:
+- opportunity_status → work_request_status
+- job_status → work_order_status
+
+Implement as proper SQL migrations.
+Since tables are empty, it’s acceptable to:
+- rename tables/columns/enums directly rather than copy/backfill.
+
+---
+
+# Step 6 — Verification (MANDATORY)
+Provide:
+1) Full list of files changed
+2) Grep proof: no remaining UI copy showing “Opportunities” or “Jobs” for service delivery
+3) Route smoke test PASS/FAIL for:
+   - the main Work Requests list page (formerly opportunities)
+   - the Work Request detail page
+   - any Work Orders surface (if exists)
+   - Service Runs pages still working
+4) Confirm no console errors
+
+BEGIN.
