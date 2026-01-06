@@ -8,6 +8,7 @@ interface SessionData extends Session {
   userId?: string;
   roles?: string[];
   tenant_id?: string;
+  current_tenant_id?: string; // Set by switch-tenant endpoint
 }
 
 export interface TenantContext {
@@ -204,14 +205,22 @@ export async function tenantContext(req: TenantRequest, res: Response, next: Nex
     }
 
     const session = (req as any).session as SessionData | undefined;
+    
     if (session?.userId) {
       req.ctx.individual_id = String(session.userId);
       if (session.roles) {
         req.ctx.roles = session.roles;
       }
-      if (session.tenant_id) {
-        req.ctx.tenant_id = session.tenant_id;
+      // Check both current_tenant_id (from switch-tenant) and legacy tenant_id
+      const sessionTenantId = session.current_tenant_id || session.tenant_id;
+      if (sessionTenantId) {
+        req.ctx.tenant_id = sessionTenantId;
       }
+    }
+    
+    // Also check for current_tenant_id even if userId not in session (JWT auth case)
+    if (!req.ctx.tenant_id && session?.current_tenant_id) {
+      req.ctx.tenant_id = session.current_tenant_id;
     }
   }
 

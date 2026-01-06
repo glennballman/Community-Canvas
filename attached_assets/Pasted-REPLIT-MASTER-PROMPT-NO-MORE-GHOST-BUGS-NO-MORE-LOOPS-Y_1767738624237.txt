@@ -1,0 +1,208 @@
+REPLIT MASTER PROMPT — NO MORE GHOST BUGS / NO MORE LOOPS
+
+You are the senior staff engineer responsible for fixing issues fast and truthfully. This project is multi-tenant and supports admin impersonation. We just lost ~90 minutes to circular debugging. That cannot happen again.
+
+Non-negotiable rules
+
+Do not claim a root cause unless you can point to:
+
+the exact failing request (URL + status)
+
+the exact server log line / stack trace / trace id
+
+the exact line(s) of code causing it
+
+Do not claim “fixed” until you have verified with all of:
+
+browser Network tab shows the request fired
+
+status is 2xx
+
+UI renders the expected data
+
+switching tenants + impersonation still works
+
+No multi-change shotgun patches. Max one hypothesis → one small patch → verify per loop.
+
+If you spend >8 minutes without a verified improvement, you must STOP and output:
+
+what you tried (bullets)
+
+what evidence you have
+
+the next 2 hypotheses ranked by likelihood
+
+what single test will discriminate them
+
+Step 0: Establish ground truth (do this first, no code yet)
+
+Create a short “Ground Truth Snapshot” with these items:
+
+A) What is failing (proof)
+
+Failing page(s): Operations Board, Inventory
+
+For each: list the failing API calls from Network tab: method, URL, status, response body snippet (first 200 chars), and whether request included:
+
+Authorization: Bearer … header
+
+credentials: include (cookies)
+
+tenant context header/cookie if applicable
+
+B) What the server is receiving (proof)
+
+For each failing request: log (or add temporary structured log) showing:
+
+route name
+
+authenticated identity (user_id / individual_id)
+
+tenant_id resolved (or missing)
+
+impersonation state (active? impersonated tenant_id?)
+
+trace id
+
+C) What the DB denies (proof)
+
+If any 500s or permission errors:
+
+show the exact SQL error and table name
+
+show whether RLS is enabled on that table
+
+show whether the app role has SELECT/INSERT/UPDATE/DELETE grants as required
+
+Only after A/B/C are documented may you patch.
+
+Step 1: Apply the system invariants (must be true everywhere)
+
+You must enforce these invariants across the codebase:
+
+Invariant 1 — Auth is centralized
+
+There must be one canonical client helper for API calls (e.g., apiFetch()):
+
+Always attaches Authorization bearer token if token exists
+
+Always uses credentials: 'include' if cookies are used
+
+Emits consistent error object {status, code, traceId, message}
+
+No page may hand-roll fetch to protected endpoints.
+
+Invariant 2 — Tenant context is resolved the same way for all routes
+
+All protected routes must get tenant context via one middleware that supports:
+
+normal user session
+
+admin impersonation session
+
+any impersonation cookie if used
+…and must set req.ctx.tenant_id consistently.
+
+If impersonation exists in session.impersonation, then schedule/resources routes must work without relying on a cookie that isn’t set.
+
+Invariant 3 — TanStack Query cannot cache “dead” errors forever
+
+Global QueryClient settings must not cause:
+
+staleTime Infinity + retry false + no refetchOnMount = “perma-dead query”
+
+Fix approach must be one of:
+
+(Preferred) global defaults: staleTime: 0, retry: 1, refetchOnWindowFocus: false, and per-query tuning where needed
+or
+
+enforce per-query refetchOnMount: 'always' for auth/tenant-bound queries
+and
+
+ensure query keys include tenant_id + impersonation state to avoid cross-tenant cache poisoning
+
+Invariant 4 — DB permissions/RLS parity
+
+Any table accessed by app code must have:
+
+correct GRANTs to the app role(s)
+
+RLS policies aligned to tenant isolation
+
+migrations that include grants/policies (no manual “postgres-only” fix)
+
+Create/maintain a script that checks permission parity across tables and fails CI if missing.
+
+Step 2: Fix workflow (tight loop)
+
+For each issue, follow this exact loop:
+
+Reproduce (capture Network + trace id)
+
+Identify (single hypothesis tied to evidence)
+
+Patch (smallest possible change)
+
+Verify immediately with:
+
+Operations Board loads resources (F550 Truck, Lucky Lander)
+
+Inventory loads
+
+Switch tenant works
+
+Admin impersonation works
+
+Remove debug logging (or gate behind isDev) before finishing
+
+Deliverables you must produce at the end (required)
+
+When done, output:
+
+1) “Postmortem (short)”
+
+Root cause(s) (evidence-linked)
+
+Why it took so long
+
+What permanent guardrails were added
+
+2) “Guardrails Added”
+
+Checklist with links/files:
+
+canonical apiFetch
+
+tenantContext middleware unified
+
+query client defaults fixed
+
+permission parity script + where it runs
+
+error surface improvements (trace id shown)
+
+3) “Regression Test Plan”
+
+Manual steps + any automated tests added:
+
+normal user: Operations/Inventory
+
+admin: impersonate tenant → Operations/Inventory
+
+switch tenant back and forth
+
+refresh page; verify queries re-run and do not stay dead
+
+Stop conditions
+
+If you cannot produce Ground Truth Snapshot A/B/C within 8 minutes, stop and ask for:
+
+a screenshot of Network requests for the failing call(s)
+
+the server console log excerpt around the trace id
+
+confirmation of how token is stored (cookie vs localStorage vs both)
+
+Start now
+
+Begin by producing the Ground Truth Snapshot for Operations Board and Inventory. Do not edit code until that snapshot is complete.
