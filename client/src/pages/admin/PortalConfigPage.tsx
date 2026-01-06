@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useLocation } from 'wouter';
 
 type TabType = 'theme' | 'sections' | 'areas' | 'seo';
 
@@ -52,16 +53,26 @@ const DEFAULT_CONFIG: PortalConfig = {
 
 export default function PortalConfigPage() {
   const queryClient = useQueryClient();
+  const [location] = useLocation();
   const [selectedCommunityId, setSelectedCommunityId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<TabType>('theme');
   const [config, setConfig] = useState<PortalConfig>(DEFAULT_CONFIG);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
 
+  // Read community ID from URL query param on mount
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const idFromUrl = urlParams.get('id');
+    if (idFromUrl && !selectedCommunityId) {
+      setSelectedCommunityId(idFromUrl);
+    }
+  }, [location]);
+
   const { data: communitiesData } = useQuery<{ communities: Community[] }>({
     queryKey: ['admin-communities-list'],
     queryFn: async () => {
       const token = localStorage.getItem('cc_token');
-      const res = await fetch('/api/admin/communities?filter=has_portal', { 
+      const res = await fetch('/api/admin/communities', { 
         credentials: 'include',
         headers: token ? { 'Authorization': `Bearer ${token}` } : {},
       });

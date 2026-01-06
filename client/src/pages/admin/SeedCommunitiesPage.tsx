@@ -459,7 +459,7 @@ export default function SeedCommunitiesPage() {
                 View Community
               </a>
               <button
-                onClick={() => navigate(`/admin/communities/${createdCommunity.id}`)}
+                onClick={() => navigate(`/admin/communities/portals?id=${createdCommunity.id}`)}
                 data-testid="button-configure-portal"
                 style={{
                   padding: '10px 20px',
