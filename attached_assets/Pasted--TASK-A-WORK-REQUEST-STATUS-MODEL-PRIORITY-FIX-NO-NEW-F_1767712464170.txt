@@ -1,0 +1,59 @@
+# TASK A: WORK REQUEST STATUS MODEL + PRIORITY FIX (NO NEW FEATURES)
+
+You will ONLY implement what is listed below. Do NOT add pages, features, tables, or new concepts.
+
+## A1) WORK REQUEST STATUS FINAL SET
+Replace the current work_request_status enum values:
+CURRENT: ('new','contacted','quoted','converted','closed','spam')
+TARGET:  ('new','contacted','quoted','booked','completed','dropped','spam')
+
+Mappings for existing data:
+- converted -> booked
+- closed -> completed
+- spam stays spam
+
+## A2) RENAME "Converted" -> "Booked" EVERYWHERE
+This includes:
+- UI tabs
+- UI labels/buttons ("Convert" becomes "Book" / "Mark Booked")
+- API validation / mappings
+- Any status config maps
+- Any filters or queries
+- Any tests/docs if present
+
+## A3) END-OF-LIFE STATUSES
+Replace "Closed" usage in Work Requests with:
+- "Completed" (work done)
+- "Dropped" (won’t do)
+
+## A4) PRIORITY VS URGENCY (BUG FIX)
+The DB uses `priority`. UI currently shows "Urgency" and reads `request.urgency`.
+Fix this:
+- Remove `urgency` from WorkRequest types/interfaces and API payloads.
+- UI label must be "Priority"
+- UI must read/write `request.priority`
+- Ensure the WorkRequestDetail page and any forms persist `priority`
+
+Search targets:
+client/src/pages/intake/WorkRequestDetail.tsx
+client/src/pages/intake/WorkRequestsList.tsx
+server/routes work-requests endpoints
+shared types if any
+
+## A5) VERIFICATION REQUIRED (must report)
+1) Grep proof (excluding historical migrations):
+- "converted" status usage only appears in migration history, not active code
+- "Urgency" label removed from Work Requests UI (0 matches in intake pages)
+2) API smoke tests:
+- GET /api/work-requests?status=new|contacted|quoted|booked|completed|dropped|spam works
+- PUT /api/work-requests/:id can set status to each allowed value
+- priority is present in responses and updates correctly
+3) UI smoke:
+- Tabs render: New / Contacted / Quoted / Booked / Completed / Dropped / All
+- Empty states still work
+- No console errors
+
+## RULES
+- Do not rename other sections (Inventory/Catalog etc.) in this prompt.
+- Do not change Projects statuses.
+Return a completion report with files changed + grep counts + endpoints tested.

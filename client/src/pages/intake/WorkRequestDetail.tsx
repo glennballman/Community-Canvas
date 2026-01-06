@@ -32,7 +32,7 @@ import { useToast } from '@/hooks/use-toast';
 
 interface WorkRequest {
   id: string;
-  status: 'new' | 'contacted' | 'quoted' | 'converted' | 'closed' | 'spam';
+  status: 'new' | 'contacted' | 'quoted' | 'booked' | 'completed' | 'dropped' | 'spam';
   contact_channel_type: string;
   contact_channel_value: string;
   contact_id: string | null;
@@ -45,13 +45,12 @@ interface WorkRequest {
   description: string | null;
   category: string | null;
   priority: string | null;
-  urgency: string | null;
   location_text: string | null;
   estimated_value: number | null;
   quoted_amount: number | null;
   closed_reason: string | null;
-  converted_to_project_id: string | null;
-  converted_at: string | null;
+  booked_to_project_id: string | null;
+  booked_at: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -67,8 +66,9 @@ const STATUS_CONFIG = {
   new: { label: 'New', color: 'bg-blue-500/20 text-blue-400' },
   contacted: { label: 'Contacted', color: 'bg-yellow-500/20 text-yellow-400' },
   quoted: { label: 'Quoted', color: 'bg-purple-500/20 text-purple-400' },
-  converted: { label: 'Converted', color: 'bg-green-500/20 text-green-400' },
-  closed: { label: 'Closed', color: 'bg-muted text-muted-foreground' },
+  booked: { label: 'Booked', color: 'bg-green-500/20 text-green-400' },
+  completed: { label: 'Completed', color: 'bg-emerald-500/20 text-emerald-400' },
+  dropped: { label: 'Dropped', color: 'bg-muted text-muted-foreground' },
   spam: { label: 'Spam', color: 'bg-red-500/20 text-red-400' },
 } as const;
 
@@ -101,10 +101,10 @@ export default function WorkRequestDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [convertDialogOpen, setConvertDialogOpen] = useState(false);
-  const [closeDialogOpen, setCloseDialogOpen] = useState(false);
+  const [bookDialogOpen, setBookDialogOpen] = useState(false);
+  const [dropDialogOpen, setDropDialogOpen] = useState(false);
   const [noteDialogOpen, setNoteDialogOpen] = useState(false);
-  const [closeReason, setCloseReason] = useState('');
+  const [dropReason, setDropReason] = useState('');
   const [noteContent, setNoteContent] = useState('');
   const [projectTitle, setProjectTitle] = useState('');
 
@@ -142,40 +142,56 @@ export default function WorkRequestDetail() {
     }
   });
 
-  const convertMutation = useMutation({
+  const bookMutation = useMutation({
     mutationFn: async () => {
-      const res = await apiRequest('POST', `/api/work-requests/${id}/convert`, {
+      const res = await apiRequest('POST', `/api/work-requests/${id}/book`, {
         project_title: projectTitle || undefined,
       });
       return res.json();
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['/api/work-requests'] });
-      toast({ title: 'Converted', description: 'Work request converted to project' });
-      setConvertDialogOpen(false);
+      toast({ title: 'Booked', description: 'Work request booked as project' });
+      setBookDialogOpen(false);
       if (data.project_id) {
-        navigate(`/projects/${data.project_id}`);
+        navigate(`/app/projects/${data.project_id}`);
       }
     },
     onError: () => {
-      toast({ title: 'Error', description: 'Failed to convert', variant: 'destructive' });
+      toast({ title: 'Error', description: 'Failed to book', variant: 'destructive' });
     }
   });
 
-  const closeMutation = useMutation({
+  const dropMutation = useMutation({
     mutationFn: async () => {
-      const res = await apiRequest('POST', `/api/work-requests/${id}/close`, {
-        reason: closeReason || 'closed',
+      const res = await apiRequest('POST', `/api/work-requests/${id}/drop`, {
+        reason: dropReason || 'dropped',
       });
       return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/work-requests'] });
-      toast({ title: 'Closed', description: 'Work request closed' });
-      setCloseDialogOpen(false);
+      toast({ title: 'Dropped', description: 'Work request marked as dropped' });
+      setDropDialogOpen(false);
     },
     onError: () => {
-      toast({ title: 'Error', description: 'Failed to close', variant: 'destructive' });
+      toast({ title: 'Error', description: 'Failed to drop', variant: 'destructive' });
+    }
+  });
+
+  const completeMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest('PATCH', `/api/work-requests/${id}`, {
+        status: 'completed',
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/work-requests'] });
+      toast({ title: 'Completed', description: 'Work request marked as completed' });
+    },
+    onError: () => {
+      toast({ title: 'Error', description: 'Failed to complete', variant: 'destructive' });
     }
   });
 
@@ -210,8 +226,9 @@ export default function WorkRequestDetail() {
   const statusConfig = STATUS_CONFIG[request.status];
   const notes = notesData?.notes || [];
 
-  const canConvert = ['new', 'contacted', 'quoted'].includes(request.status);
-  const canClose = ['new', 'contacted', 'quoted'].includes(request.status);
+  const canBook = ['new', 'contacted', 'quoted'].includes(request.status);
+  const canDrop = ['new', 'contacted', 'quoted'].includes(request.status);
+  const canComplete = ['new', 'contacted', 'quoted', 'booked'].includes(request.status);
 
   return (
     <div className="flex-1 p-4 space-y-6" data-testid="page-work-request-detail">
@@ -233,21 +250,21 @@ export default function WorkRequestDetail() {
           </h1>
         </div>
         <div className="flex items-center gap-2">
-          {canConvert && (
-            <Dialog open={convertDialogOpen} onOpenChange={setConvertDialogOpen}>
+          {canBook && (
+            <Dialog open={bookDialogOpen} onOpenChange={setBookDialogOpen}>
               <DialogTrigger asChild>
-                <Button variant="default" data-testid="button-convert">
+                <Button variant="default" data-testid="button-book">
                   <Briefcase className="w-4 h-4 mr-2" />
-                  Convert to Project
+                  Book Project
                 </Button>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Convert to Project</DialogTitle>
+                  <DialogTitle>Book as Project</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-4">
                   <p className="text-sm text-muted-foreground">
-                    This will create a new project from this work request and mark it as converted.
+                    This will create a new project from this work request and mark it as booked.
                   </p>
                   <div className="space-y-2">
                     <Label htmlFor="project_title">Project Title (optional)</Label>
@@ -260,34 +277,34 @@ export default function WorkRequestDetail() {
                     />
                   </div>
                   <div className="flex justify-end gap-2">
-                    <Button variant="outline" onClick={() => setConvertDialogOpen(false)} data-testid="button-convert-cancel">
+                    <Button variant="outline" onClick={() => setBookDialogOpen(false)} data-testid="button-book-cancel">
                       Cancel
                     </Button>
-                    <Button onClick={() => convertMutation.mutate()} disabled={convertMutation.isPending} data-testid="button-convert-confirm">
-                      {convertMutation.isPending ? 'Converting...' : 'Convert'}
+                    <Button onClick={() => bookMutation.mutate()} disabled={bookMutation.isPending} data-testid="button-book-confirm">
+                      {bookMutation.isPending ? 'Booking...' : 'Book'}
                     </Button>
                   </div>
                 </div>
               </DialogContent>
             </Dialog>
           )}
-          {canClose && (
-            <Dialog open={closeDialogOpen} onOpenChange={setCloseDialogOpen}>
+          {canDrop && (
+            <Dialog open={dropDialogOpen} onOpenChange={setDropDialogOpen}>
               <DialogTrigger asChild>
-                <Button variant="outline" data-testid="button-close-request">
+                <Button variant="outline" data-testid="button-drop-request">
                   <X className="w-4 h-4 mr-2" />
-                  Close
+                  Drop
                 </Button>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Close Work Request</DialogTitle>
+                  <DialogTitle>Drop Work Request</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="close_reason">Reason</Label>
-                    <Select value={closeReason} onValueChange={setCloseReason}>
-                      <SelectTrigger data-testid="select-close-reason">
+                    <Label htmlFor="drop_reason">Reason</Label>
+                    <Select value={dropReason} onValueChange={setDropReason}>
+                      <SelectTrigger data-testid="select-drop-reason">
                         <SelectValue placeholder="Select reason" />
                       </SelectTrigger>
                       <SelectContent>
@@ -301,11 +318,11 @@ export default function WorkRequestDetail() {
                     </Select>
                   </div>
                   <div className="flex justify-end gap-2">
-                    <Button variant="outline" onClick={() => setCloseDialogOpen(false)} data-testid="button-close-cancel">
+                    <Button variant="outline" onClick={() => setDropDialogOpen(false)} data-testid="button-drop-cancel">
                       Cancel
                     </Button>
-                    <Button variant="destructive" onClick={() => closeMutation.mutate()} disabled={closeMutation.isPending} data-testid="button-close-confirm">
-                      {closeMutation.isPending ? 'Closing...' : 'Close Request'}
+                    <Button variant="destructive" onClick={() => dropMutation.mutate()} disabled={dropMutation.isPending} data-testid="button-drop-confirm">
+                      {dropMutation.isPending ? 'Dropping...' : 'Drop Request'}
                     </Button>
                   </div>
                 </div>
@@ -356,8 +373,8 @@ export default function WorkRequestDetail() {
 
             <div className="grid grid-cols-3 gap-4">
               <div>
-                <p className="text-sm text-muted-foreground">Urgency</p>
-                <p className="mt-1 capitalize" data-testid="text-urgency">{request.urgency || '--'}</p>
+                <p className="text-sm text-muted-foreground">Priority</p>
+                <p className="mt-1 capitalize" data-testid="text-priority">{request.priority || '--'}</p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Estimated Value</p>
@@ -382,16 +399,16 @@ export default function WorkRequestDetail() {
               </div>
             </div>
 
-            {request.converted_to_project_id && (
+            {request.booked_to_project_id && (
               <div className="p-3 rounded-md bg-green-500/10 border border-green-500/20">
                 <p className="text-sm text-green-400 flex items-center gap-2">
                   <Check className="w-4 h-4" />
-                  Converted to project
+                  Booked as project
                 </p>
                 <Button 
                   variant="ghost" 
                   className="p-0 h-auto text-green-400" 
-                  onClick={() => navigate(`/app/projects/${request.converted_to_project_id}`)}
+                  onClick={() => navigate(`/app/projects/${request.booked_to_project_id}`)}
                   data-testid="link-project"
                 >
                   View Project
@@ -402,7 +419,7 @@ export default function WorkRequestDetail() {
             {request.closed_reason && (
               <div className="p-3 rounded-md bg-muted">
                 <p className="text-sm text-muted-foreground">
-                  Closed: {request.closed_reason}
+                  Dropped: {request.closed_reason}
                 </p>
               </div>
             )}

@@ -31,7 +31,7 @@ import { useToast } from '@/hooks/use-toast';
 
 interface WorkRequest {
   id: string;
-  status: 'new' | 'contacted' | 'quoted' | 'converted' | 'closed' | 'spam';
+  status: 'new' | 'contacted' | 'quoted' | 'booked' | 'completed' | 'dropped' | 'spam';
   contact_channel_type: string;
   contact_channel_value: string;
   contact_id: string | null;
@@ -52,8 +52,9 @@ const STATUS_CONFIG = {
   new: { label: 'New', color: 'bg-blue-500/20 text-blue-400' },
   contacted: { label: 'Contacted', color: 'bg-yellow-500/20 text-yellow-400' },
   quoted: { label: 'Quoted', color: 'bg-purple-500/20 text-purple-400' },
-  converted: { label: 'Converted', color: 'bg-green-500/20 text-green-400' },
-  closed: { label: 'Closed', color: 'bg-muted text-muted-foreground' },
+  booked: { label: 'Booked', color: 'bg-green-500/20 text-green-400' },
+  completed: { label: 'Completed', color: 'bg-emerald-500/20 text-emerald-400' },
+  dropped: { label: 'Dropped', color: 'bg-muted text-muted-foreground' },
   spam: { label: 'Spam', color: 'bg-red-500/20 text-red-400' },
 } as const;
 
@@ -291,11 +292,14 @@ export default function WorkRequestsList() {
           <TabsTrigger value="quoted" data-testid="tab-quoted">
             Quoted {stats?.quoted ? `(${stats.quoted})` : ''}
           </TabsTrigger>
-          <TabsTrigger value="converted" data-testid="tab-converted">
-            Converted {stats?.converted ? `(${stats.converted})` : ''}
+          <TabsTrigger value="booked" data-testid="tab-booked">
+            Booked {stats?.booked ? `(${stats.booked})` : ''}
           </TabsTrigger>
-          <TabsTrigger value="closed" data-testid="tab-closed">
-            Closed {stats?.closed ? `(${stats.closed})` : ''}
+          <TabsTrigger value="completed" data-testid="tab-completed">
+            Completed {stats?.completed ? `(${stats.completed})` : ''}
+          </TabsTrigger>
+          <TabsTrigger value="dropped" data-testid="tab-dropped">
+            Dropped {stats?.dropped ? `(${stats.dropped})` : ''}
           </TabsTrigger>
           <TabsTrigger value="all" data-testid="tab-all">
             All

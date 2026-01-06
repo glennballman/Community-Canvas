@@ -74,8 +74,9 @@ router.get('/', requireAuth, requireTenant, async (req: Request, res: Response) 
         COUNT(*) FILTER (WHERE status = 'new') as count_new,
         COUNT(*) FILTER (WHERE status = 'contacted') as count_contacted,
         COUNT(*) FILTER (WHERE status = 'quoted') as count_quoted,
-        COUNT(*) FILTER (WHERE status = 'converted') as count_converted,
-        COUNT(*) FILTER (WHERE status = 'closed') as count_closed,
+        COUNT(*) FILTER (WHERE status = 'booked') as count_booked,
+        COUNT(*) FILTER (WHERE status = 'completed') as count_completed,
+        COUNT(*) FILTER (WHERE status = 'dropped') as count_dropped,
         COUNT(*) FILTER (WHERE status = 'spam') as count_spam
       FROM work_requests wr
       LEFT JOIN crm_contacts c ON wr.contact_id = c.id`,
@@ -89,8 +90,9 @@ router.get('/', requireAuth, requireTenant, async (req: Request, res: Response) 
         new: parseInt(countResult.rows[0].count_new, 10),
         contacted: parseInt(countResult.rows[0].count_contacted, 10),
         quoted: parseInt(countResult.rows[0].count_quoted, 10),
-        converted: parseInt(countResult.rows[0].count_converted, 10),
-        closed: parseInt(countResult.rows[0].count_closed, 10),
+        booked: parseInt(countResult.rows[0].count_booked, 10),
+        completed: parseInt(countResult.rows[0].count_completed, 10),
+        dropped: parseInt(countResult.rows[0].count_dropped, 10),
         spam: parseInt(countResult.rows[0].count_spam, 10)
       }
     });
@@ -253,8 +255,8 @@ router.put('/:id', requireAuth, requireTenant, async (req: Request, res: Respons
   }
 });
 
-// Convert work request to project
-router.post('/:id/convert', requireAuth, requireTenant, async (req: Request, res: Response) => {
+// Book work request as project
+router.post('/:id/book', requireAuth, requireTenant, async (req: Request, res: Response) => {
   const tenantReq = req as TenantRequest;
   try {
     const { id } = req.params;
@@ -281,8 +283,8 @@ router.post('/:id/convert', requireAuth, requireTenant, async (req: Request, res
 
     const wr = wrResult.rows[0];
 
-    if (wr.status === 'converted') {
-      return res.status(400).json({ error: 'Work request already converted' });
+    if (wr.status === 'booked') {
+      return res.status(400).json({ error: 'Work request already booked' });
     }
 
     // Create the project
@@ -312,10 +314,10 @@ router.post('/:id/convert', requireAuth, requireTenant, async (req: Request, res
 
     const project = projectResult.rows[0];
 
-    // Update work request status to converted
+    // Update work request status to booked
     await tenantReq.tenantQuery!(
       `UPDATE work_requests SET 
-        status = 'converted',
+        status = 'booked',
         converted_to_project_id = $2,
         converted_at = NOW(),
         converted_by_actor_id = $3
@@ -325,30 +327,29 @@ router.post('/:id/convert', requireAuth, requireTenant, async (req: Request, res
 
     res.status(201).json({ 
       project,
-      message: 'Work request converted to project'
+      project_id: project.id,
+      message: 'Work request booked as project'
     });
   } catch (error) {
-    console.error('Error converting work request:', error);
-    res.status(500).json({ error: 'Failed to convert work request' });
+    console.error('Error booking work request:', error);
+    res.status(500).json({ error: 'Failed to book work request' });
   }
 });
 
-// Close work request
-router.post('/:id/close', requireAuth, requireTenant, async (req: Request, res: Response) => {
+// Drop work request (won't proceed)
+router.post('/:id/drop', requireAuth, requireTenant, async (req: Request, res: Response) => {
   const tenantReq = req as TenantRequest;
   try {
     const { id } = req.params;
-    const { reason, mark_as_spam = false } = req.body;
-
-    const status = mark_as_spam ? 'spam' : 'closed';
+    const { reason } = req.body;
 
     const result = await tenantReq.tenantQuery!(
       `UPDATE work_requests SET 
-        status = $2::work_request_status,
-        closed_reason = $3
+        status = 'dropped'::work_request_status,
+        closed_reason = $2
       WHERE id = $1
       RETURNING *`,
-      [id, status, reason || null]
+      [id, reason || null]
     );
 
     if (result.rows.length === 0) {
@@ -357,8 +358,8 @@ router.post('/:id/close', requireAuth, requireTenant, async (req: Request, res: 
 
     res.json({ workRequest: result.rows[0] });
   } catch (error) {
-    console.error('Error closing work request:', error);
-    res.status(500).json({ error: 'Failed to close work request' });
+    console.error('Error dropping work request:', error);
+    res.status(500).json({ error: 'Failed to drop work request' });
   }
 });
 
