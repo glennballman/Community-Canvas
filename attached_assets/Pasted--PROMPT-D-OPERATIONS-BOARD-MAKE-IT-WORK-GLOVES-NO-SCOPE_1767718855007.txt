@@ -1,0 +1,134 @@
+# PROMPT D — OPERATIONS BOARD: MAKE IT WORK GLOVES (NO SCOPE CREEP)
+
+You delivered /app/operations + resource_schedule_events + /api/schedule.
+Good. Now we harden it into something contractors will actually use at 6am.
+
+RULES:
+- DO NOT add new modules or “future architecture”.
+- DO NOT introduce new terminology.
+- DO NOT build a second calendar.
+- ONLY improve Operations Board + scheduling rules + minor inventory linkage.
+- Everything stays 15-minute capable. Keep zooms.
+
+---
+
+## D1) CLEAN UP EVENT TYPES (STOP THE WEIRD ONES)
+Right now you have event types including: hold, maintenance, buffer, block, available.
+
+We only want:
+- booked (comes from unified_bookings, read-only in this board for now)
+- hold
+- maintenance
+- buffer
+
+Remove/disable event types:
+- block
+- available
+
+Actions:
+1) Update DB enum / constraints / API validation to only allow hold|maintenance|buffer in resource_schedule_events.
+2) Ensure the merged booking blocks are labeled event_type = "booked" in the API response, but NOT stored in resource_schedule_events.
+3) Update UI legend accordingly: Booked / Hold / Maintenance / Buffer.
+
+---
+
+## D2) NO DOUBLE BOOKING (REAL ENFORCEMENT)
+Contractor reality: if it’s booked, it’s booked out.
+
+Add hard conflict checks:
+- A resource cannot have overlapping time ranges where:
+  - unified_bookings overlap with another unified_booking (if not already enforced)
+  - resource_schedule_events overlap with:
+    - unified_bookings (booked)
+    - other resource_schedule_events (hold/maintenance/buffer)
+
+Implementation:
+1) Server-side validation in POST/PATCH /api/schedule/events:
+   - Reject overlaps with a clear error payload:
+     { code: "RESOURCE_TIME_CONFLICT", conflict_with: [...blocks...] }
+2) UI:
+   - If conflict: show message “That time is already booked out.” and highlight conflicting blocks.
+
+Do NOT silently “allow but warn”. This must be hard.
+
+---
+
+## D3) “ADD BLOCK” MUST BE 10-SECOND FAST
+Top-right button exists (“Add Block”). Make it fast and obvious:
+
+Modal fields (exact order):
+1) Resource (searchable dropdown, defaults to last used)
+2) Type: Hold | Maintenance | Buffer (default Hold)
+3) Start (defaults to now rounded up to next 15-min)
+4) End (defaults Start + 1 hour, rounded)
+5) Notes (optional)
+Buttons: Cancel | Save Block
+
+Quality:
+- All time inputs snap to 15 minutes.
+- If user types weird minutes, snap it.
+
+---
+
+## D4) THE GRID MUST LOOK LIKE A CONTRACTOR GRID
+Right now it’s too empty/floaty. Make the time grid obvious:
+
+Required UI:
+- Vertical grid lines at 15-min (faint), heavier at hour marks.
+- Hour labels across the top.
+- “Now” line when viewing Today (thin line).
+- Sticky left column for resource names.
+- Sticky top row for time axis.
+
+Zoom buttons stay: 15 min / 1 hour / Day
+Add “Back to Now” button beside Today when in Today view.
+
+---
+
+## D5) RESOURCE LIST MUST FEEL LIKE INVENTORY
+Resources are coming from unified_assets. Good.
+But the rows must be grouped so Sheryl can run it like a switchboard.
+
+Add left-side filters (simple, no new pages):
+- Search (already probably exists; if not add it)
+- Type filter (multi-select): Rooms, Parking, Equipment, Vehicles, Watercraft, Crew (whatever asset_type values exist)
+- Status filter: Active only / Include inactive
+
+Grouping:
+- Group rows by asset_type first.
+- Inside group sort by name.
+- If you can detect “place/property” relation from unified_assets, show a small sublabel (e.g., “Woods End → Cabin A”) but do not invent new joins if not already present.
+
+---
+
+## D6) MAINTENANCE MUST “BLOCK OUT” THE THING EVERYWHERE
+When a Maintenance block exists “right now”:
+- The resource should show a small “Maintenance” badge in the row label.
+- Bookings UI (existing /app/bookings) must respect it IF it uses unified_bookings creation.
+
+We are NOT rewriting bookings.
+Minimum:
+- In the booking creation flow (wherever unified_bookings are created), add a conflict check against resource_schedule_events where event_type=maintenance and time overlaps.
+- Result: booking creation is prevented with “That item is under maintenance.”
+
+If the booking creation code is not easy to locate, report:
+- the endpoint + file path that creates unified_bookings
+- what you changed
+
+---
+
+## D7) VERIFY WITH A REAL SCENARIO (MUST REPORT)
+After changes, you must run this test and report results:
+
+Scenario:
+1) Create Hold for “Excavator” today 10:15–11:45
+2) Create Maintenance for “Lucky Lander” today 10:15–12:00 with note “crane broken — load by hand”
+3) Attempt to create a booking overlapping Lucky Lander maintenance → MUST FAIL
+4) Attempt to create a second Hold overlapping excavator hold → MUST FAIL
+5) Switch zoom 15 min and confirm grid lines + snapping
+
+Provide:
+- screenshot proof of the grid with blocks visible
+- a short list of the exact files changed
+
+BEGIN.

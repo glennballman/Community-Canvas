@@ -38,6 +38,102 @@ function snapTo15Min(date: Date): Date {
   return snapped;
 }
 
+interface ConflictBlock {
+  id: string;
+  type: 'booking' | 'schedule_event';
+  event_type: string;
+  title: string;
+  starts_at: string;
+  ends_at: string;
+}
+
+async function checkTimeConflicts(
+  resourceId: string,
+  startsAt: Date,
+  endsAt: Date,
+  excludeEventId?: string
+): Promise<ConflictBlock[]> {
+  const conflicts: ConflictBlock[] = [];
+
+  let scheduleQuery = `
+    SELECT id, event_type, title, starts_at, ends_at
+    FROM resource_schedule_events
+    WHERE resource_id = $1
+      AND status = 'active'
+      AND starts_at < $3
+      AND ends_at > $2
+  `;
+  const scheduleParams: any[] = [resourceId, startsAt, endsAt];
+  
+  if (excludeEventId) {
+    scheduleQuery += ` AND id != $4`;
+    scheduleParams.push(excludeEventId);
+  }
+
+  const scheduleResult = await pool.query(scheduleQuery, scheduleParams);
+  for (const row of scheduleResult.rows) {
+    conflicts.push({
+      id: row.id,
+      type: 'schedule_event',
+      event_type: row.event_type,
+      title: row.title || row.event_type,
+      starts_at: row.starts_at,
+      ends_at: row.ends_at,
+    });
+  }
+
+  const bookingsResult = await pool.query(`
+    SELECT b.id, 'booked' as event_type, 
+           COALESCE(b.primary_guest_name, 'Booking') as title,
+           b.starts_at, b.ends_at
+    FROM unified_bookings b
+    WHERE b.asset_id = $1
+      AND b.status NOT IN ('cancelled', 'no_show')
+      AND b.starts_at < $3
+      AND b.ends_at > $2
+  `, [resourceId, startsAt, endsAt]);
+
+  for (const row of bookingsResult.rows) {
+    conflicts.push({
+      id: row.id,
+      type: 'booking',
+      event_type: row.event_type,
+      title: row.title,
+      starts_at: row.starts_at,
+      ends_at: row.ends_at,
+    });
+  }
+
+  return conflicts;
+}
+
+export async function checkMaintenanceConflict(
+  assetId: string,
+  startsAt: Date,
+  endsAt: Date
+): Promise<{ hasConflict: boolean; conflicts: ConflictBlock[] }> {
+  const result = await pool.query(`
+    SELECT id, event_type, title, starts_at, ends_at
+    FROM resource_schedule_events
+    WHERE resource_id = $1
+      AND event_type = 'maintenance'
+      AND status = 'active'
+      AND starts_at < $3
+      AND ends_at > $2
+  `, [assetId, startsAt, endsAt]);
+
+  const conflicts: ConflictBlock[] = result.rows.map(row => ({
+    id: row.id,
+    type: 'schedule_event' as const,
+    event_type: row.event_type,
+    title: row.title || 'Maintenance',
+    starts_at: row.starts_at,
+    ends_at: row.ends_at,
+  }));
+
+  return { hasConflict: conflicts.length > 0, conflicts };
+}
+
 router.get('/', requireAuth, async (req: Request, res: Response) => {
   try {
     const parsed = scheduleQuerySchema.safeParse(req.query);
@@ -190,6 +286,16 @@ router.post('/events', requireAuth, async (req: Request, res: Response) => {
       });
     }
 
+    const conflicts = await checkTimeConflicts(resource_id, snappedStart, snappedEnd);
+    if (conflicts.length > 0) {
+      return res.status(409).json({
+        success: false,
+        error: 'That time is already booked out.',
+        code: 'RESOURCE_TIME_CONFLICT',
+        conflict_with: conflicts,
+      });
+    }
+
     const result = await pool.query(
       `INSERT INTO resource_schedule_events 
         (tenant_id, resource_id, event_type, starts_at, ends_at, title, notes, created_by_actor_id, related_entity_type, related_entity_id)
@@ -286,6 +392,20 @@ router.patch('/events/:id', requireAuth, async (req: Request, res: Response) => 
       return res.status(400).json({ success: false, error: 'No fields to update' });
     }
 
+    const existingEvent = eventCheck.rows[0];
+    const checkStart = data.starts_at ? snapTo15Min(new Date(data.starts_at)) : new Date(existingEvent.starts_at);
+    const checkEnd = data.ends_at ? snapTo15Min(new Date(data.ends_at)) : new Date(existingEvent.ends_at);
+    
+    const conflicts = await checkTimeConflicts(existingEvent.resource_id, checkStart, checkEnd, id);
+    if (conflicts.length > 0) {
+      return res.status(409).json({
+        success: false,
+        error: 'That time is already booked out.',
+        code: 'RESOURCE_TIME_CONFLICT',
+        conflict_with: conflicts,
+      });
+    }
+
     updates.push(`updated_at = now()`);
 
     values.push(id, tenantId);
@@ -350,31 +470,72 @@ router.delete('/events/:id', requireAuth, async (req: Request, res: Response) =>
 router.get('/resources', requireAuth, async (req: Request, res: Response) => {
   try {
     const tenantId = (req as any).tenantId;
+    const { type, includeInactive, search } = req.query;
     
     if (!tenantId) {
       return res.status(400).json({ success: false, error: 'Tenant context required' });
     }
 
-    const result = await pool.query(
-      `SELECT 
-        id,
-        name,
-        asset_type,
-        status,
-        thumbnail_url,
-        is_accommodation,
-        is_parkable_spot,
-        is_equipment
-       FROM unified_assets 
-       WHERE owner_tenant_id = $1 
-         AND status = 'active'
-       ORDER BY asset_type, name`,
-      [tenantId]
-    );
+    let query = `
+      SELECT 
+        a.id,
+        a.name,
+        a.asset_type,
+        a.status,
+        a.thumbnail_url,
+        a.is_accommodation,
+        a.is_parkable_spot,
+        a.is_equipment,
+        a.source_table,
+        CASE WHEN EXISTS (
+          SELECT 1 FROM resource_schedule_events e
+          WHERE e.resource_id = a.id
+            AND e.event_type = 'maintenance'
+            AND e.status = 'active'
+            AND e.starts_at <= now()
+            AND e.ends_at > now()
+        ) THEN true ELSE false END as is_under_maintenance
+       FROM unified_assets a
+       WHERE a.owner_tenant_id = $1
+    `;
+    const params: any[] = [tenantId];
+    let paramIdx = 2;
+
+    if (includeInactive !== 'true') {
+      query += ` AND a.status = 'active'`;
+    }
+
+    if (type) {
+      const types = (type as string).split(',').map(t => t.trim()).filter(Boolean);
+      if (types.length > 0) {
+        query += ` AND a.asset_type = ANY($${paramIdx}::text[])`;
+        params.push(types);
+        paramIdx++;
+      }
+    }
+
+    if (search) {
+      query += ` AND a.name ILIKE $${paramIdx}`;
+      params.push(`%${search}%`);
+      paramIdx++;
+    }
+
+    query += ` ORDER BY a.asset_type, a.name`;
+
+    const result = await pool.query(query, params);
+
+    const grouped: Record<string, typeof result.rows> = {};
+    for (const row of result.rows) {
+      const type = row.asset_type || 'other';
+      if (!grouped[type]) grouped[type] = [];
+      grouped[type].push(row);
+    }
 
     return res.json({
       success: true,
-      resources: result.rows
+      resources: result.rows,
+      grouped,
+      asset_types: Object.keys(grouped).sort(),
     });
   } catch (error) {
     console.error('Resources fetch error:', error);
