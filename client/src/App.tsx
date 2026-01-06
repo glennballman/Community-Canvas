@@ -70,6 +70,22 @@ function PortalOverview() {
   return <div style={{ padding: '32px' }}><h1>Welcome to this community!</h1></div>;
 }
 
+function PortalSection({ section }: { section: string }) {
+  const titles: Record<string, string> = {
+    businesses: 'Local Businesses',
+    services: 'Community Services',
+    stay: 'Places to Stay',
+    events: 'Upcoming Events',
+    about: 'About This Community',
+  };
+  return (
+    <div style={{ padding: '32px' }}>
+      <h1 style={{ fontSize: '24px', fontWeight: 600, marginBottom: '16px' }}>{titles[section] || section}</h1>
+      <p style={{ opacity: 0.7 }}>Content for {section} coming soon...</p>
+    </div>
+  );
+}
+
 function NotFoundPage() {
   return (
     <div style={{
@@ -104,6 +120,11 @@ export default function App() {
               {/* ========================================== */}
               <Route path="/c/:slug" element={<PublicPortalLayout />}>
                 <Route index element={<PortalOverview />} />
+                <Route path="businesses" element={<PortalSection section="businesses" />} />
+                <Route path="services" element={<PortalSection section="services" />} />
+                <Route path="stay" element={<PortalSection section="stay" />} />
+                <Route path="events" element={<PortalSection section="events" />} />
+                <Route path="about" element={<PortalSection section="about" />} />
               </Route>
 
               {/* ========================================== */}
