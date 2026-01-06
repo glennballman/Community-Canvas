@@ -19,6 +19,7 @@ router.get('/', async (req, res) => {
         t.slug,
         t.tenant_type as type,
         t.slug as portal_slug,
+        t.status,
         t.created_at,
         COUNT(DISTINCT tm.user_id) as member_count
       FROM cc_tenants t
@@ -35,27 +36,48 @@ router.get('/', async (req, res) => {
       paramIndex++;
     }
     
-    if (filter === 'government') {
-      query += ` AND t.tenant_type = 'government'`;
-    } else if (filter === 'community') {
-      query += ` AND t.tenant_type = 'community'`;
-    } else if (filter === 'has_portal') {
-      query += ` AND t.slug IS NOT NULL AND t.slug != ''`;
-    } else if (filter === 'no_portal') {
+    // Updated filters for new UI
+    if (filter === 'live') {
+      query += ` AND t.status = 'active'`;
+    } else if (filter === 'draft') {
+      query += ` AND t.status = 'draft'`;
+    } else if (filter === 'hidden') {
+      query += ` AND t.status = 'hidden'`;
+    } else if (filter === 'needs_review') {
       query += ` AND (t.slug IS NULL OR t.slug = '')`;
     }
     
-    query += ` GROUP BY t.id, t.name, t.slug, t.tenant_type, t.created_at ORDER BY t.name ASC`;
+    query += ` GROUP BY t.id, t.name, t.slug, t.tenant_type, t.status, t.created_at ORDER BY t.name ASC`;
     
     const result = await serviceQuery(query, params);
+    
+    // Calculate stats
+    const statsResult = await serviceQuery(`
+      SELECT 
+        COUNT(*) FILTER (WHERE tenant_type IN ('government', 'community')) as total,
+        COUNT(*) FILTER (WHERE tenant_type IN ('government', 'community') AND status = 'active') as live,
+        COUNT(*) FILTER (WHERE tenant_type IN ('government', 'community') AND status = 'draft') as draft,
+        COUNT(*) FILTER (WHERE tenant_type IN ('government', 'community') AND (slug IS NULL OR slug = '')) as needs_review
+      FROM cc_tenants
+    `);
+    
+    const stats = statsResult.rows[0] || { total: 0, live: 0, draft: 0, needs_review: 0 };
     
     console.log('[admin-communities] GET / - Found communities:', result.rows.length);
     
     res.json({ 
       communities: result.rows.map(row => ({
         ...row,
-        member_count: parseInt(row.member_count) || 0
-      }))
+        status: row.status === 'active' ? 'live' : (row.status || 'draft'),
+        member_count: parseInt(row.member_count) || 0,
+        needs_review: !row.slug || row.slug === ''
+      })),
+      stats: {
+        total: parseInt(stats.total) || 0,
+        live: parseInt(stats.live) || 0,
+        draft: parseInt(stats.draft) || 0,
+        needs_review: parseInt(stats.needs_review) || 0,
+      }
     });
   } catch (error) {
     console.error('Error fetching communities:', error);

@@ -19,12 +19,20 @@ router.get('/submissions', async (req, res) => {
       suggested_recipient_text: string | null;
       status: string;
       created_at: string;
+      severity?: 'low' | 'medium' | 'high';
+      ai_reasons?: Array<{ type: string; description: string }>;
+      ai_confidence?: 'low' | 'medium' | 'high';
     }> = [];
     
-    // Return mock data for demonstration
-    // In production, remove this and query the actual database
+    // Return stats (would be calculated from database in production)
+    const stats = {
+      waiting: 0,
+      reviewed_today: 0,
+      high_priority: 0,
+      escalated: 0,
+    };
     
-    res.json({ submissions });
+    res.json({ submissions, stats });
   } catch (error) {
     console.error('Error fetching submissions:', error);
     res.status(500).json({ error: 'Failed to fetch submissions' });
@@ -50,15 +58,60 @@ router.post('/submissions/:id/approve', async (req, res) => {
 router.post('/submissions/:id/decline', async (req, res) => {
   try {
     const { id } = req.params;
-    const { reason } = req.body;
+    const { note } = req.body;
     
     // In production, this would update the submission status in the database
-    console.log(`Declining submission ${id} with reason: ${reason}`);
+    console.log(`Declining submission ${id} with note: ${note}`);
     
     res.json({ success: true, id });
   } catch (error) {
     console.error('Error declining submission:', error);
     res.status(500).json({ error: 'Failed to decline submission' });
+  }
+});
+
+// POST /api/admin/moderation/submissions/:id/approve_hide - Approve but hide
+router.post('/submissions/:id/approve_hide', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { note } = req.body;
+    
+    console.log(`Approving and hiding submission ${id} with note: ${note}`);
+    
+    res.json({ success: true, id });
+  } catch (error) {
+    console.error('Error approving submission:', error);
+    res.status(500).json({ error: 'Failed to approve submission' });
+  }
+});
+
+// POST /api/admin/moderation/submissions/:id/request_edit - Request edit
+router.post('/submissions/:id/request_edit', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { note } = req.body;
+    
+    console.log(`Requesting edit for submission ${id} with note: ${note}`);
+    
+    res.json({ success: true, id });
+  } catch (error) {
+    console.error('Error requesting edit:', error);
+    res.status(500).json({ error: 'Failed to request edit' });
+  }
+});
+
+// POST /api/admin/moderation/submissions/:id/escalate - Escalate to platform admin
+router.post('/submissions/:id/escalate', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { note } = req.body;
+    
+    console.log(`Escalating submission ${id} with note: ${note}`);
+    
+    res.json({ success: true, id });
+  } catch (error) {
+    console.error('Error escalating submission:', error);
+    res.status(500).json({ error: 'Failed to escalate submission' });
   }
 });
 
@@ -107,15 +160,55 @@ router.post('/flagged/:id/resolve', async (req, res) => {
 router.post('/flagged/:id/dismiss', async (req, res) => {
   try {
     const { id } = req.params;
-    const { reason } = req.body;
     
-    // In production, this would update the flagged item status
-    console.log(`Dismissing flagged item ${id} with reason: ${reason}`);
+    console.log(`Dismissing flagged item ${id}`);
     
     res.json({ success: true, id });
   } catch (error) {
     console.error('Error dismissing flagged item:', error);
     res.status(500).json({ error: 'Failed to dismiss flagged item' });
+  }
+});
+
+// POST /api/admin/moderation/flagged/:id/hide - Hide flagged content
+router.post('/flagged/:id/hide', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    console.log(`Hiding flagged item ${id}`);
+    
+    res.json({ success: true, id });
+  } catch (error) {
+    console.error('Error hiding flagged item:', error);
+    res.status(500).json({ error: 'Failed to hide flagged item' });
+  }
+});
+
+// POST /api/admin/moderation/flagged/:id/edit_privacy - Edit for privacy
+router.post('/flagged/:id/edit_privacy', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    console.log(`Editing flagged item ${id} for privacy`);
+    
+    res.json({ success: true, id });
+  } catch (error) {
+    console.error('Error editing flagged item:', error);
+    res.status(500).json({ error: 'Failed to edit flagged item' });
+  }
+});
+
+// POST /api/admin/moderation/flagged/:id/escalate - Escalate to safety review
+router.post('/flagged/:id/escalate', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    console.log(`Escalating flagged item ${id}`);
+    
+    res.json({ success: true, id });
+  } catch (error) {
+    console.error('Error escalating flagged item:', error);
+    res.status(500).json({ error: 'Failed to escalate flagged item' });
   }
 });
 
