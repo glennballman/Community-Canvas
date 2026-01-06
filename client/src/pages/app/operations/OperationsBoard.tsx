@@ -206,13 +206,13 @@ export default function OperationsBoard() {
     ? `/api/schedule/resources?${resourceQueryParams}` 
     : '/api/schedule/resources';
   
-  const { data: resourcesData, isLoading: loadingResources, error: resourcesError } = useQuery<{ 
+  const { data: resourcesData, isLoading: loadingResources, error: resourcesError, refetch: refetchResources } = useQuery<{ 
     success: boolean; 
     resources: Resource[]; 
     grouped: Record<string, Resource[]>;
     asset_types: string[];
   }>({
-    queryKey: [resourcesUrl],
+    queryKey: ['schedule-resources', resourceQueryParams],
     queryFn: async () => {
       console.log('[OPS] Fetching resources...', { url: resourcesUrl, ts: new Date().toISOString() });
       const response = await fetch(resourcesUrl, { credentials: 'include' });
@@ -225,16 +225,16 @@ export default function OperationsBoard() {
       console.log('[OPS] Resources loaded', { count: data.resources?.length || 0, sample: data.resources?.slice(0, 3) });
       return data;
     },
-    enabled: true, // Force enabled for debugging - was: !!currentTenant?.tenant_id
-    staleTime: 0,
-    refetchOnMount: 'always',
-    retry: false,
+    enabled: !!currentTenant?.tenant_id,
+    staleTime: 30000,
+    gcTime: 0,
+    retry: 1,
   });
 
   const scheduleUrl = `/api/schedule?from=${from.toISOString()}&to=${to.toISOString()}`;
   
-  const { data: scheduleData, isLoading: loadingSchedule, error: scheduleError } = useQuery<{ success: boolean; events: ScheduleEvent[] }>({
-    queryKey: [scheduleUrl],
+  const { data: scheduleData, isLoading: loadingSchedule, error: scheduleError, refetch: refetchSchedule } = useQuery<{ success: boolean; events: ScheduleEvent[] }>({
+    queryKey: ['schedule-events', from.toISOString(), to.toISOString()],
     queryFn: async () => {
       console.log('[OPS] Fetching schedule...', { url: scheduleUrl, ts: new Date().toISOString() });
       const response = await fetch(scheduleUrl, { credentials: 'include' });
@@ -247,10 +247,10 @@ export default function OperationsBoard() {
       console.log('[OPS] Schedule loaded', { count: data.events?.length || 0 });
       return data;
     },
-    enabled: true, // Force enabled for debugging - was: !!currentTenant?.tenant_id
-    staleTime: 0,
-    refetchOnMount: 'always',
-    retry: false,
+    enabled: !!currentTenant?.tenant_id,
+    staleTime: 30000,
+    gcTime: 0,
+    retry: 1,
   });
 
   const createEventMutation = useMutation({
@@ -261,7 +261,7 @@ export default function OperationsBoard() {
       queryClient.invalidateQueries({ 
         predicate: (query) => {
           const key = query.queryKey[0];
-          return typeof key === 'string' && key.startsWith('/api/schedule');
+          return typeof key === 'string' && (key.startsWith('schedule-') || key.startsWith('/api/schedule'));
         }
       });
       setShowEventDialog(false);
