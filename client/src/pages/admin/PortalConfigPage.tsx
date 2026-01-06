@@ -60,7 +60,11 @@ export default function PortalConfigPage() {
   const { data: communitiesData } = useQuery<{ communities: Community[] }>({
     queryKey: ['admin-communities-list'],
     queryFn: async () => {
-      const res = await fetch('/api/admin/communities?filter=has_portal', { credentials: 'include' });
+      const token = localStorage.getItem('cc_token');
+      const res = await fetch('/api/admin/communities?filter=has_portal', { 
+        credentials: 'include',
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+      });
       if (!res.ok) throw new Error('Failed to fetch');
       return res.json();
     },
@@ -71,7 +75,11 @@ export default function PortalConfigPage() {
   const { data: configData, isLoading: loadingConfig } = useQuery<{ config: PortalConfig }>({
     queryKey: ['portal-config', selectedCommunityId],
     queryFn: async () => {
-      const res = await fetch(`/api/admin/communities/${selectedCommunityId}/portal-config`, { credentials: 'include' });
+      const token = localStorage.getItem('cc_token');
+      const res = await fetch(`/api/admin/communities/${selectedCommunityId}/portal-config`, { 
+        credentials: 'include',
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+      });
       if (!res.ok) throw new Error('Failed to fetch config');
       return res.json();
     },
@@ -86,9 +94,13 @@ export default function PortalConfigPage() {
 
   const saveMutation = useMutation({
     mutationFn: async () => {
+      const token = localStorage.getItem('cc_token');
       const res = await fetch(`/api/admin/communities/${selectedCommunityId}/portal-config`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        },
         credentials: 'include',
         body: JSON.stringify(config),
       });

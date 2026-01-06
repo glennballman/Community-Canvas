@@ -44,7 +44,11 @@ export default function SeedCommunitiesPage() {
   const { data: countsData } = useQuery<{ counts: SourceCounts }>({
     queryKey: ['seed-source-counts'],
     queryFn: async () => {
-      const res = await fetch('/api/admin/communities/seed/counts', { credentials: 'include' });
+      const token = localStorage.getItem('cc_token');
+      const res = await fetch('/api/admin/communities/seed/counts', { 
+        credentials: 'include',
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+      });
       if (!res.ok) throw new Error('Failed to fetch counts');
       return res.json();
     },
@@ -56,9 +60,13 @@ export default function SeedCommunitiesPage() {
     queryKey: ['seed-options', sourceType, searchTerm],
     queryFn: async () => {
       if (!sourceType || sourceType === 'manual') return { options: [] };
+      const token = localStorage.getItem('cc_token');
       const params = new URLSearchParams();
       if (searchTerm) params.set('search', searchTerm);
-      const res = await fetch(`/api/admin/communities/seed/${sourceType}?${params}`, { credentials: 'include' });
+      const res = await fetch(`/api/admin/communities/seed/${sourceType}?${params}`, { 
+        credentials: 'include',
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+      });
       if (!res.ok) throw new Error('Failed to fetch options');
       return res.json();
     },
@@ -69,9 +77,13 @@ export default function SeedCommunitiesPage() {
 
   const createMutation = useMutation({
     mutationFn: async () => {
+      const token = localStorage.getItem('cc_token');
       const res = await fetch('/api/admin/communities', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        },
         credentials: 'include',
         body: JSON.stringify({
           name: formData.name,

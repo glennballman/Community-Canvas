@@ -24,11 +24,15 @@ export default function FlaggedContentPage() {
   const { data, isLoading } = useQuery<{ items: FlaggedItem[] }>({
     queryKey: ['flagged-content', search, contentType, status],
     queryFn: async () => {
+      const token = localStorage.getItem('cc_token');
       const params = new URLSearchParams();
       if (search) params.set('search', search);
       if (contentType !== 'all') params.set('type', contentType);
       params.set('status', status);
-      const res = await fetch(`/api/admin/moderation/flagged?${params}`, { credentials: 'include' });
+      const res = await fetch(`/api/admin/moderation/flagged?${params}`, { 
+        credentials: 'include',
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+      });
       if (!res.ok) throw new Error('Failed to fetch');
       return res.json();
     },

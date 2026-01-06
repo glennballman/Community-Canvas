@@ -22,10 +22,14 @@ export default function CommunitiesPage() {
   const { data, isLoading, error } = useQuery<{ communities: Community[] }>({
     queryKey: ['admin-communities', search, filter],
     queryFn: async () => {
+      const token = localStorage.getItem('cc_token');
       const params = new URLSearchParams();
       if (search) params.set('search', search);
       if (filter !== 'all') params.set('filter', filter);
-      const res = await fetch(`/api/admin/communities?${params}`, { credentials: 'include' });
+      const res = await fetch(`/api/admin/communities?${params}`, { 
+        credentials: 'include',
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+      });
       if (!res.ok) throw new Error('Failed to fetch communities');
       return res.json();
     },

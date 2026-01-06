@@ -26,11 +26,15 @@ export default function AIQueuePage() {
   const { data, isLoading } = useQuery<{ submissions: Submission[] }>({
     queryKey: ['ai-queue', search, statusFilter, showVisitorOnly],
     queryFn: async () => {
+      const token = localStorage.getItem('cc_token');
       const params = new URLSearchParams();
       if (search) params.set('search', search);
       params.set('status', statusFilter);
       if (showVisitorOnly) params.set('visitor_only', 'true');
-      const res = await fetch(`/api/admin/moderation/submissions?${params}`, { credentials: 'include' });
+      const res = await fetch(`/api/admin/moderation/submissions?${params}`, { 
+        credentials: 'include',
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+      });
       if (!res.ok) throw new Error('Failed to fetch');
       return res.json();
     },
@@ -40,9 +44,11 @@ export default function AIQueuePage() {
 
   const approveMutation = useMutation({
     mutationFn: async (id: string) => {
+      const token = localStorage.getItem('cc_token');
       const res = await fetch(`/api/admin/moderation/submissions/${id}/approve`, {
         method: 'POST',
         credentials: 'include',
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
       });
       if (!res.ok) throw new Error('Failed to approve');
       return res.json();
@@ -54,9 +60,13 @@ export default function AIQueuePage() {
 
   const declineMutation = useMutation({
     mutationFn: async ({ id, reason }: { id: string; reason: string }) => {
+      const token = localStorage.getItem('cc_token');
       const res = await fetch(`/api/admin/moderation/submissions/${id}/decline`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        },
         credentials: 'include',
         body: JSON.stringify({ reason }),
       });
