@@ -675,7 +675,7 @@ router.get('/bookings', requireAuth, async (req: Request, res: Response) => {
         b.created_at
       FROM unified_bookings b
       JOIN unified_assets a ON a.id = b.asset_id
-      WHERE a.tenant_id = $1
+      WHERE a.owner_tenant_id = $1
     `;
     const params: any[] = [tenantId];
     let paramIdx = 1;
@@ -745,7 +745,7 @@ router.post('/bookings', requireAuth, async (req: Request, res: Response) => {
 
     // Verify asset belongs to tenant
     const assetCheck = await pool.query(
-      'SELECT id, name FROM unified_assets WHERE id = $1 AND tenant_id = $2',
+      'SELECT id, name FROM unified_assets WHERE id = $1 AND owner_tenant_id = $2',
       [data.asset_id, tenantId]
     );
     if (assetCheck.rows.length === 0) {
@@ -819,7 +819,7 @@ router.put('/bookings/:id/status', requireAuth, async (req: Request, res: Respon
     const booking = await pool.query(`
       SELECT b.id FROM unified_bookings b
       JOIN unified_assets a ON a.id = b.asset_id
-      WHERE b.id = $1 AND a.tenant_id = $2
+      WHERE b.id = $1 AND a.owner_tenant_id = $2
     `, [id, tenantId]);
 
     if (booking.rows.length === 0) {

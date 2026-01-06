@@ -104,10 +104,7 @@ export default function BookingsPage() {
 
   const createMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
-      return apiRequest('/api/schedule/bookings', {
-        method: 'POST',
-        body: JSON.stringify(data),
-      });
+      return apiRequest('POST', '/api/schedule/bookings', data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/schedule/bookings'] });
@@ -148,8 +145,8 @@ export default function BookingsPage() {
       
       setFormData(prev => ({
         ...prev,
-        starts_at: startDate.toISOString().slice(0, 16),
-        ends_at: endDate.toISOString().slice(0, 16),
+        starts_at: format(startDate, "yyyy-MM-dd'T'HH:mm"),
+        ends_at: format(endDate, "yyyy-MM-dd'T'HH:mm"),
       }));
       setSelectedSlot(slot);
     }
