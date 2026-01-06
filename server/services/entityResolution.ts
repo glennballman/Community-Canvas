@@ -15,7 +15,7 @@ function jaccardTokens(a: string, b: string): number {
 
 export async function proposeLinksForExternalRecord(externalRecordId: string): Promise<number> {
   const r = await pool.query(
-    `SELECT id, name, geom, community_id, source::text, record_type::text FROM external_records WHERE id = $1`,
+    `SELECT id, name, latitude, longitude, community_id, source::text, record_type::text FROM external_records WHERE id = $1`,
     [externalRecordId]
   );
   if (r.rows.length === 0) return 0;
@@ -24,16 +24,24 @@ export async function proposeLinksForExternalRecord(externalRecordId: string): P
   const name = String(rec.name || "");
   let linksCreated = 0;
 
+  // Use haversine-based distance calculation instead of PostGIS ST_DWithin
+  // 5000 meters = 5km radius, using fn_haversine_meters from migration 028
   const candidates = await pool.query(
     `
-    SELECT id, name, geom, community_id
+    SELECT id, name, latitude, longitude, community_id
     FROM entities
     WHERE
       ( $1::uuid IS NOT NULL AND community_id = $1 )
-      OR ( $2::geography IS NOT NULL AND geom IS NOT NULL AND ST_DWithin(geom, $2::geography, 5000) )
+      OR ( 
+        $2::double precision IS NOT NULL 
+        AND $3::double precision IS NOT NULL 
+        AND latitude IS NOT NULL 
+        AND longitude IS NOT NULL 
+        AND fn_haversine_meters($2, $3, latitude::double precision, longitude::double precision) <= 5000
+      )
     LIMIT 200
     `,
-    [rec.community_id, rec.geom]
+    [rec.community_id, rec.latitude, rec.longitude]
   );
 
   for (const e of candidates.rows) {
@@ -44,7 +52,7 @@ export async function proposeLinksForExternalRecord(externalRecordId: string): P
 
     const reasons = {
       name_jaccard: Math.round(sim * 100) / 100,
-      geo_hint: rec.geom ? 0.7 : 0.2,
+      geo_hint: (rec.latitude && rec.longitude) ? 0.7 : 0.2,
       rule: "v1_geo_name"
     };
 

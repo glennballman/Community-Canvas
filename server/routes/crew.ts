@@ -235,22 +235,23 @@ export function createCrewRouter() {
       let distanceOrder = '';
       
       if (locationLat && locationLng) {
+        // Use haversine function instead of PostGIS ST_Distance
         distanceSelect = `, 
           CASE WHEN a.latitude IS NOT NULL AND a.longitude IS NOT NULL 
-          THEN ST_Distance(
-            ST_MakePoint(a.longitude, a.latitude)::geography,
-            ST_MakePoint($${paramIndex}, $${paramIndex + 1})::geography
+          THEN fn_haversine_meters(
+            a.latitude::double precision, a.longitude::double precision,
+            $${paramIndex}::double precision, $${paramIndex + 1}::double precision
           ) / 1000.0
           ELSE NULL END as distance_km`;
-        params.push(locationLng, locationLat);
+        params.push(locationLat, locationLng);
         
+        // Use haversine for radius filter instead of ST_DWithin
         conditions.push(`(
           a.latitude IS NULL OR a.longitude IS NULL OR
-          ST_DWithin(
-            ST_MakePoint(a.longitude, a.latitude)::geography,
-            ST_MakePoint($${paramIndex}, $${paramIndex + 1})::geography,
-            $${paramIndex + 2} * 1000
-          )
+          fn_haversine_meters(
+            a.latitude::double precision, a.longitude::double precision,
+            $${paramIndex}::double precision, $${paramIndex + 1}::double precision
+          ) <= $${paramIndex + 2} * 1000
         )`);
         params.push(filters.radiusKm);
         paramIndex += 3;

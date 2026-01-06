@@ -45,7 +45,7 @@ CREATE TABLE IF NOT EXISTS assets (
   city TEXT,
   latitude NUMERIC(10,7),
   longitude NUMERIC(10,7),
-  geom GEOGRAPHY(POINT, 4326),  -- PostGIS for spatial queries
+  -- geom column removed: using lat/lng with haversine functions (see migration 028)
   
   -- Media (denormalized for listings)
   thumbnail_url TEXT,
@@ -72,7 +72,8 @@ CREATE INDEX IF NOT EXISTS idx_assets_type ON assets(asset_type);
 CREATE INDEX IF NOT EXISTS idx_assets_source ON assets(source_table, source_id);
 CREATE INDEX IF NOT EXISTS idx_assets_owner ON assets(owner_type, owner_tenant_id);
 CREATE INDEX IF NOT EXISTS idx_assets_community ON assets(home_community_id);
-CREATE INDEX IF NOT EXISTS idx_assets_geom ON assets USING gist(geom) WHERE geom IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_assets_lat ON assets(latitude) WHERE latitude IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_assets_lng ON assets(longitude) WHERE longitude IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_assets_scores ON assets(crew_score DESC, overall_rating DESC);
 
 -- ============================================================================
@@ -176,7 +177,7 @@ CREATE TABLE IF NOT EXISTS asset_availability (
   location_community_id UUID,
   location_latitude NUMERIC(10,7),
   location_longitude NUMERIC(10,7),
-  location_geom GEOGRAPHY(POINT, 4326),
+  -- location_geom removed: using lat/lng with haversine functions (see migration 028)
   
   -- Weather constraints
   weather_constraints JSONB DEFAULT '{}',
@@ -207,7 +208,7 @@ CREATE TABLE IF NOT EXISTS work_orders (
   site_description TEXT,
   site_latitude NUMERIC(10,7),
   site_longitude NUMERIC(10,7),
-  site_geom GEOGRAPHY(POINT, 4326),
+  -- site_geom removed: using lat/lng with haversine functions (see migration 028)
   
   -- Job details
   title TEXT NOT NULL,
@@ -572,6 +573,8 @@ RETURNS TABLE (
   thumbnail_url TEXT
 ) AS $$
 BEGIN
+  -- Note: This placeholder function uses Euclidean approximation.
+  -- Migration 028 replaces this with proper haversine-based geo functions.
   RETURN QUERY
   SELECT 
     a.id,
@@ -579,8 +582,8 @@ BEGIN
     a.asset_type,
     ac.attributes,
     CASE 
-      WHEN p_latitude IS NOT NULL AND p_longitude IS NOT NULL AND a.geom IS NOT NULL
-      THEN ROUND((ST_Distance(a.geom, ST_SetSRID(ST_MakePoint(p_longitude, p_latitude), 4326)::geography) / 1000)::numeric, 1)
+      WHEN p_latitude IS NOT NULL AND p_longitude IS NOT NULL AND a.latitude IS NOT NULL AND a.longitude IS NOT NULL
+      THEN ROUND((111.32 * sqrt(power(a.latitude - p_latitude, 2) + power((a.longitude - p_longitude) * cos(radians(p_latitude::double precision)), 2)))::numeric, 1)
       ELSE NULL
     END,
     t.rate_daily,
@@ -598,18 +601,18 @@ BEGIN
          (NOT p_min_attributes ? 'max_length_ft' OR (ac.attributes->>'max_length_ft')::int >= (p_min_attributes->>'max_length_ft')::int) AND
          (NOT p_min_attributes ? 'days_autonomy' OR (ac.attributes->>'days_autonomy')::int >= (p_min_attributes->>'days_autonomy')::int)
     ))
-    -- Spatial filter
+    -- Spatial filter (Euclidean approximation - replaced by haversine in migration 028)
     AND (
       p_latitude IS NULL 
       OR p_longitude IS NULL 
-      OR a.geom IS NULL
-      OR ST_DWithin(a.geom, ST_SetSRID(ST_MakePoint(p_longitude, p_latitude), 4326)::geography, p_radius_km * 1000)
+      OR a.latitude IS NULL
+      OR (111.32 * sqrt(power(a.latitude - p_latitude, 2) + power((a.longitude - p_longitude) * cos(radians(p_latitude::double precision)), 2))) <= p_radius_km
     )
   ORDER BY 
     CASE 
-      WHEN p_latitude IS NOT NULL AND p_longitude IS NOT NULL AND a.geom IS NOT NULL
-      THEN ST_Distance(a.geom, ST_SetSRID(ST_MakePoint(p_longitude, p_latitude), 4326)::geography)
-      ELSE 0
+      WHEN p_latitude IS NOT NULL AND p_longitude IS NOT NULL AND a.latitude IS NOT NULL AND a.longitude IS NOT NULL
+      THEN (111.32 * sqrt(power(a.latitude - p_latitude, 2) + power((a.longitude - p_longitude) * cos(radians(p_latitude::double precision)), 2)))
+      ELSE 999999
     END,
     t.rate_daily ASC NULLS LAST
   LIMIT p_limit;
