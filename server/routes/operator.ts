@@ -73,7 +73,7 @@ router.get('/availability', authenticateToken, async (req: AuthRequest, res: Res
           WHEN ci.share_availability = true THEN 'availability_only'
           ELSE 'limited'
         END as sharing_status
-      FROM catalog_items ci
+      FROM inventory_items ci
       JOIN cc_tenants t ON t.id = ci.tenant_id
       WHERE ci.status = 'active'
         AND ci.share_availability = true
@@ -132,7 +132,7 @@ router.post('/hold-request', authenticateToken, async (req: AuthRequest, res: Re
 
     const {
       tenant_id,
-      catalog_item_id,
+      inventory_item_id,
       date_start,
       date_end,
       party_size,
@@ -149,10 +149,10 @@ router.post('/hold-request', authenticateToken, async (req: AuthRequest, res: Re
       });
     }
 
-    if (!catalog_item_id || !date_start || !date_end) {
+    if (!inventory_item_id || !date_start || !date_end) {
       return res.status(400).json({ 
         success: false, 
-        error: 'catalog_item_id, date_start, and date_end are required' 
+        error: 'inventory_item_id, date_start, and date_end are required' 
       });
     }
 
@@ -181,10 +181,10 @@ router.post('/hold-request', authenticateToken, async (req: AuthRequest, res: Re
     const itemResult = await serviceQuery(`
       SELECT ci.id, ci.tenant_id, ci.name,
              tss.allow_hold_requests
-      FROM catalog_items ci
+      FROM inventory_items ci
       LEFT JOIN tenant_sharing_settings tss ON ci.tenant_id = tss.tenant_id
       WHERE ci.id = $1 AND ci.status = 'active'
-    `, [catalog_item_id]);
+    `, [inventory_item_id]);
 
     if (itemResult.rows.length === 0) {
       return res.status(404).json({ 
@@ -204,14 +204,14 @@ router.post('/hold-request', authenticateToken, async (req: AuthRequest, res: Re
 
     const holdResult = await serviceQuery(`
       INSERT INTO hold_requests (
-        catalog_item_id, business_tenant_id, requesting_tenant_id, requesting_user_id,
+        inventory_item_id, business_tenant_id, requesting_tenant_id, requesting_user_id,
         date_start, date_end, party_size,
         caller_name, caller_phone, caller_email, caller_notes,
         expires_at
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, now() + interval '4 hours')
       RETURNING *
     `, [
-      catalog_item_id,
+      inventory_item_id,
       item.tenant_id,
       tenant_id,
       userId,

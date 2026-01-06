@@ -1024,8 +1024,8 @@ router.get(
           c.submitted_at,
           c.created_at,
           c.updated_at,
-          (SELECT COUNT(*) FROM catalog_claim_evidence WHERE claim_id = c.id) as evidence_count
-        FROM catalog_claims c
+          (SELECT COUNT(*) FROM inventory_claim_evidence WHERE claim_id = c.id) as evidence_count
+        FROM inventory_claims c
         LEFT JOIN cc_tenants t ON t.id = c.tenant_id
         LEFT JOIN cc_individuals i ON i.id = c.individual_id
         WHERE 1=1
@@ -1056,7 +1056,7 @@ router.get(
       
       const countQuery = `
         SELECT COUNT(*) as total
-        FROM catalog_claims c
+        FROM inventory_claims c
         WHERE 1=1
         ${status ? `AND c.status = '${status}'` : ''}
         ${tenant_id ? `AND c.tenant_id = '${tenant_id}'` : ''}
@@ -1104,7 +1104,7 @@ router.get(
           t.name as tenant_name,
           i.full_name as individual_name,
           i.email as individual_email
-        FROM catalog_claims c
+        FROM inventory_claims c
         LEFT JOIN cc_tenants t ON t.id = c.tenant_id
         LEFT JOIN cc_individuals i ON i.id = c.individual_id
         WHERE c.id = $1`,
@@ -1121,7 +1121,7 @@ router.get(
       const [evidenceResult, eventsResult] = await Promise.all([
         serviceQuery(
           `SELECT id, evidence_type, url, notes, raw, created_at 
-           FROM catalog_claim_evidence 
+           FROM inventory_claim_evidence 
            WHERE claim_id = $1 
            ORDER BY created_at`,
           [id]
@@ -1137,7 +1137,7 @@ router.get(
             e.created_at,
             i.full_name as actor_individual_name,
             s.full_name as actor_staff_name
-           FROM catalog_claim_events e
+           FROM inventory_claim_events e
            LEFT JOIN cc_individuals i ON i.id = e.actor_individual_id
            LEFT JOIN cc_platform_staff s ON s.id = e.actor_staff_id
            WHERE e.claim_id = $1
@@ -1178,7 +1178,7 @@ router.post(
       
       const result = await withServiceTransaction(async (client) => {
         const claimResult = await client.query(
-          `SELECT id, status, tenant_id FROM catalog_claims WHERE id = $1 FOR UPDATE`,
+          `SELECT id, status, tenant_id FROM inventory_claims WHERE id = $1 FOR UPDATE`,
           [id]
         );
         
@@ -1193,7 +1193,7 @@ router.post(
         }
         
         await client.query(
-          `UPDATE catalog_claims 
+          `UPDATE inventory_claims 
            SET status = 'under_review', 
                reviewed_at = now(),
                updated_at = now()
@@ -1202,7 +1202,7 @@ router.post(
         );
         
         await client.query(
-          `INSERT INTO catalog_claim_events 
+          `INSERT INTO inventory_claim_events 
            (claim_id, tenant_id, event_type, actor_type, actor_staff_id, payload, ip, user_agent, endpoint, http_method)
            VALUES ($1, $2, 'review_started', 'platform', $3, $4, $5, $6, $7, $8)`,
           [
@@ -1222,7 +1222,7 @@ router.post(
         );
         
         const updatedClaim = await client.query(
-          `SELECT * FROM catalog_claims WHERE id = $1`,
+          `SELECT * FROM inventory_claims WHERE id = $1`,
           [id]
         );
         
@@ -1257,7 +1257,7 @@ router.post(
         });
       }
       
-      if (error.message?.includes('Invalid catalog_claims status transition')) {
+      if (error.message?.includes('Invalid inventory_claims status transition')) {
         return res.status(409).json({
           success: false,
           error: 'Invalid status transition',
@@ -1282,7 +1282,7 @@ router.get(
       const platformReq = req as PlatformStaffRequest;
       
       const claimResult = await serviceQuery(
-        `SELECT id, tenant_id, status FROM catalog_claims WHERE id = $1`,
+        `SELECT id, tenant_id, status FROM inventory_claims WHERE id = $1`,
         [id]
       );
       
@@ -1312,7 +1312,7 @@ router.get(
           i.email as actor_individual_email,
           s.full_name as actor_staff_name,
           s.email as actor_staff_email
-         FROM catalog_claim_events e
+         FROM inventory_claim_events e
          LEFT JOIN cc_individuals i ON i.id = e.actor_individual_id
          LEFT JOIN cc_platform_staff s ON s.id = e.actor_staff_id
          WHERE e.claim_id = $1
@@ -1370,7 +1370,7 @@ router.post(
       
       const result = await withServiceTransaction(async (client) => {
         const claimResult = await client.query(
-          `SELECT id, status, tenant_id, target_type FROM catalog_claims WHERE id = $1 FOR UPDATE`,
+          `SELECT id, status, tenant_id, target_type FROM inventory_claims WHERE id = $1 FOR UPDATE`,
           [id]
         );
         
@@ -1387,7 +1387,7 @@ router.post(
         const newStatus = decision === 'approve' ? 'approved' : 'rejected';
         
         await client.query(
-          `UPDATE catalog_claims 
+          `UPDATE inventory_claims 
            SET status = $1, 
                decision = $2,
                decision_reason = $3,
@@ -1399,7 +1399,7 @@ router.post(
         );
         
         await client.query(
-          `INSERT INTO catalog_claim_events 
+          `INSERT INTO inventory_claim_events 
            (claim_id, tenant_id, event_type, actor_type, actor_staff_id, payload, ip, user_agent, endpoint, http_method)
            VALUES ($1, $2, $3, 'platform', $4, $5, $6, $7, $8, $9)`,
           [
@@ -1421,12 +1421,12 @@ router.post(
           ]
         );
         
-        // Note: fn_apply_catalog_claim is automatically called by the 
+        // Note: fn_apply_inventory_claim is automatically called by the 
         // trg_claim_auto_apply trigger when status changes to 'approved'
         // No need to call it manually here
         
         const updatedClaim = await client.query(
-          `SELECT * FROM catalog_claims WHERE id = $1`,
+          `SELECT * FROM inventory_claims WHERE id = $1`,
           [id]
         );
         
@@ -1461,7 +1461,7 @@ router.post(
         });
       }
       
-      if (error.message?.includes('Invalid catalog_claims status transition')) {
+      if (error.message?.includes('Invalid inventory_claims status transition')) {
         return res.status(409).json({
           success: false,
           error: 'Invalid status transition',

@@ -65,7 +65,7 @@ const quoteBodySchema = z.object({
 const uuidSchema = z.string().uuid();
 
 // GET /api/rentals/browse - Browse rental items (PUBLIC)
-// SERVICE MODE: Rental catalog is public inventory
+// SERVICE MODE: Rental inventory is public inventory
 router.get('/browse', async (req: Request, res: Response) => {
   try {
     const parsed = browseQuerySchema.safeParse(req.query);
@@ -205,7 +205,7 @@ router.get('/:id/eligibility', requireAuth, async (req: Request, res: Response) 
       return res.status(401).json({ success: false, error: 'Individual profile required' });
     }
     
-    // SERVICE MODE: Item details are public catalog data
+    // SERVICE MODE: Item details are public inventory data
     const itemResult = await serviceQuery(`
       SELECT 
         ri.id,
@@ -372,7 +372,7 @@ router.post('/:id/book', requireAuth, async (req: Request, res: Response) => {
     
     // Use tenantTransaction for booking creation - user can only book for themselves
     const result = await req.tenantTransaction(async (client) => {
-      // Check item exists (service mode for catalog data)
+      // Check item exists (service mode for inventory data)
       const itemCheck = await client.query(
         `SELECT id, buffer_minutes FROM cc_rental_items WHERE id = $1`,
         [itemId]

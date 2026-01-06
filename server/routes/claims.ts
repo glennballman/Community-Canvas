@@ -12,7 +12,7 @@ import { TenantRequest } from '../middleware/tenantContext';
 
 // Helper to detect DB trigger transition errors and return 409
 function isTransitionError(error: any): boolean {
-  return error?.message?.includes('Invalid catalog_claims status transition');
+  return error?.message?.includes('Invalid inventory_claims status transition');
 }
 
 function handleTransitionError(res: Response, error: any, currentStatus?: string): Response {
@@ -41,13 +41,13 @@ async function logServiceKeyAudit(
     await withServiceTransaction(async (client) => {
       // Check if claim exists for FK constraint
       const claimExists = await client.query(
-        `SELECT 1 FROM catalog_claims WHERE id = $1`, 
+        `SELECT 1 FROM inventory_claims WHERE id = $1`, 
         [claimId]
       );
       const validClaimId = claimExists.rows.length > 0 ? claimId : null;
       
       await client.query(`
-        INSERT INTO catalog_claim_events (claim_id, event_type, actor_individual_id, payload)
+        INSERT INTO inventory_claim_events (claim_id, event_type, actor_individual_id, payload)
         VALUES ($1, $2, NULL, $3::jsonb)
       `, [validClaimId, `service_key_${action}`, JSON.stringify(auditEvent)]);
     });
@@ -60,15 +60,15 @@ async function logServiceKeyAudit(
 const router = express.Router();
 
 // 1) Create draft claim
-// POST /api/v1/catalog/claims
+// POST /api/v1/inventory/claims
 router.post('/', requireAuth, requireTenant, async (req: Request, res: Response) => {
   try {
     const tenantReq = req as TenantRequest;
     const { 
       target_type, 
-      catalog_vehicle_id, 
-      catalog_trailer_id, 
-      catalog_listing_id, 
+      inventory_vehicle_id, 
+      inventory_trailer_id, 
+      inventory_listing_id, 
       claim_note, 
       nickname 
     } = req.body;
@@ -80,36 +80,36 @@ router.post('/', requireAuth, requireTenant, async (req: Request, res: Response)
       });
     }
 
-    if (target_type === 'vehicle' && catalog_trailer_id) {
+    if (target_type === 'vehicle' && inventory_trailer_id) {
       return res.status(400).json({ 
         success: false, 
-        error: 'catalog_trailer_id must be null when target_type is vehicle' 
+        error: 'inventory_trailer_id must be null when target_type is vehicle' 
       });
     }
 
-    if (target_type === 'trailer' && catalog_vehicle_id) {
+    if (target_type === 'trailer' && inventory_vehicle_id) {
       return res.status(400).json({ 
         success: false, 
-        error: 'catalog_vehicle_id must be null when target_type is trailer' 
+        error: 'inventory_vehicle_id must be null when target_type is trailer' 
       });
     }
 
-    if (!catalog_listing_id && !catalog_vehicle_id && !catalog_trailer_id) {
+    if (!inventory_listing_id && !inventory_vehicle_id && !inventory_trailer_id) {
       return res.status(400).json({ 
         success: false, 
-        error: 'Must provide catalog_listing_id or catalog_vehicle_id/catalog_trailer_id' 
+        error: 'Must provide inventory_listing_id or inventory_vehicle_id/inventory_trailer_id' 
       });
     }
 
     const result = await tenantQuery(req, `
-      INSERT INTO catalog_claims (
+      INSERT INTO inventory_claims (
         target_type, 
         claimant, 
         tenant_id, 
         individual_id,
-        catalog_listing_id, 
-        vehicle_catalog_id, 
-        trailer_catalog_id,
+        inventory_listing_id, 
+        vehicle_inventory_id, 
+        trailer_inventory_id,
         nickname, 
         notes, 
         status
@@ -120,9 +120,9 @@ router.post('/', requireAuth, requireTenant, async (req: Request, res: Response)
       target_type,
       tenantReq.ctx.tenant_id,
       tenantReq.ctx.individual_id,
-      catalog_listing_id || null,
-      catalog_vehicle_id || null,
-      catalog_trailer_id || null,
+      inventory_listing_id || null,
+      inventory_vehicle_id || null,
+      inventory_trailer_id || null,
       nickname || null,
       claim_note || null
     ]);
@@ -138,12 +138,12 @@ router.post('/', requireAuth, requireTenant, async (req: Request, res: Response)
 });
 
 // 2) Add evidence
-// POST /api/v1/catalog/claims/:claimId/evidence
+// POST /api/v1/inventory/claims/:claimId/evidence
 router.post('/:claimId/evidence', requireAuth, requireTenant, async (req: Request, res: Response) => {
   try {
     const tenantReq = req as TenantRequest;
     const { claimId } = req.params;
-    const { evidence_type, catalog_media_id, url, notes } = req.body;
+    const { evidence_type, inventory_media_id, url, notes } = req.body;
 
     if (!evidence_type) {
       return res.status(400).json({ 
@@ -152,15 +152,15 @@ router.post('/:claimId/evidence', requireAuth, requireTenant, async (req: Reques
       });
     }
 
-    if (!catalog_media_id && !url) {
+    if (!inventory_media_id && !url) {
       return res.status(400).json({ 
         success: false, 
-        error: 'Must provide catalog_media_id or url' 
+        error: 'Must provide inventory_media_id or url' 
       });
     }
 
     const claimCheck = await tenantQuery(req, `
-      SELECT id, tenant_id, status FROM catalog_claims WHERE id = $1
+      SELECT id, tenant_id, status FROM inventory_claims WHERE id = $1
     `, [claimId]);
 
     if (claimCheck.rows.length === 0) {
@@ -180,10 +180,10 @@ router.post('/:claimId/evidence', requireAuth, requireTenant, async (req: Reques
     }
 
     const result = await tenantQuery(req, `
-      INSERT INTO catalog_claim_evidence (
+      INSERT INTO inventory_claim_evidence (
         claim_id, 
         evidence_type, 
-        catalog_media_id, 
+        inventory_media_id, 
         url, 
         notes,
         created_by_individual_id,
@@ -194,7 +194,7 @@ router.post('/:claimId/evidence', requireAuth, requireTenant, async (req: Reques
     `, [
       claimId,
       evidence_type,
-      catalog_media_id || null,
+      inventory_media_id || null,
       url || null,
       notes || null,
       tenantReq.ctx.individual_id
@@ -208,7 +208,7 @@ router.post('/:claimId/evidence', requireAuth, requireTenant, async (req: Reques
 });
 
 // 3) Submit claim
-// POST /api/v1/catalog/claims/:claimId/submit
+// POST /api/v1/inventory/claims/:claimId/submit
 router.post('/:claimId/submit', requireAuth, requireTenant, async (req: Request, res: Response) => {
   let currentStatus: string | undefined;
   try {
@@ -217,8 +217,8 @@ router.post('/:claimId/submit', requireAuth, requireTenant, async (req: Request,
 
     const claimCheck = await tenantQuery(req, `
       SELECT c.id, c.tenant_id, c.status, COUNT(e.id) as evidence_count
-      FROM catalog_claims c
-      LEFT JOIN catalog_claim_evidence e ON e.claim_id = c.id
+      FROM inventory_claims c
+      LEFT JOIN inventory_claim_evidence e ON e.claim_id = c.id
       WHERE c.id = $1
       GROUP BY c.id
     `, [claimId]);
@@ -244,14 +244,14 @@ router.post('/:claimId/submit', requireAuth, requireTenant, async (req: Request,
 
     // DB trigger enforces valid transitions (draft -> submitted)
     await tenantQuery(req, `
-      UPDATE catalog_claims 
+      UPDATE inventory_claims 
       SET status = 'submitted', submitted_at = now(), updated_at = now()
       WHERE id = $1
     `, [claimId]);
 
     await withServiceTransaction(async (client) => {
       await client.query(`
-        INSERT INTO catalog_claim_events (claim_id, event_type, actor_individual_id, payload)
+        INSERT INTO inventory_claim_events (claim_id, event_type, actor_individual_id, payload)
         VALUES ($1, 'submitted', $2, '{}'::jsonb)
       `, [claimId, tenantReq.ctx.individual_id]);
     });
@@ -264,7 +264,7 @@ router.post('/:claimId/submit', requireAuth, requireTenant, async (req: Request,
 });
 
 // 4) List tenant claims
-// GET /api/v1/catalog/claims
+// GET /api/v1/inventory/claims
 router.get('/', requireAuth, requireTenant, async (req: Request, res: Response) => {
   try {
     const { status, limit = '50', offset = '0' } = req.query;
@@ -276,11 +276,11 @@ router.get('/', requireAuth, requireTenant, async (req: Request, res: Response) 
         status,
         created_at,
         nickname,
-        catalog_listing_id,
-        vehicle_catalog_id as catalog_vehicle_id,
-        trailer_catalog_id as catalog_trailer_id,
+        inventory_listing_id,
+        vehicle_inventory_id as inventory_vehicle_id,
+        trailer_inventory_id as inventory_trailer_id,
         applied_at
-      FROM catalog_claims
+      FROM inventory_claims
       WHERE 1=1
     `;
     const params: any[] = [];
@@ -311,7 +311,7 @@ router.get('/', requireAuth, requireTenant, async (req: Request, res: Response) 
 });
 
 // 5) Claim detail
-// GET /api/v1/catalog/claims/:claimId
+// GET /api/v1/inventory/claims/:claimId
 router.get('/:claimId', requireAuth, requireTenant, async (req: Request, res: Response) => {
   try {
     const tenantReq = req as TenantRequest;
@@ -331,7 +331,7 @@ router.get('/:claimId', requireAuth, requireTenant, async (req: Request, res: Re
         created_tenant_trailer_id,
         created_asset_id,
         tenant_id
-      FROM catalog_claims
+      FROM inventory_claims
       WHERE id = $1
     `, [claimId]);
 
@@ -348,9 +348,9 @@ router.get('/:claimId', requireAuth, requireTenant, async (req: Request, res: Re
       SELECT 
         id as evidence_id,
         evidence_type,
-        COALESCE(url, (SELECT url FROM catalog_media WHERE id = catalog_media_id)) as url,
+        COALESCE(url, (SELECT url FROM inventory_media WHERE id = inventory_media_id)) as url,
         created_at
-      FROM catalog_claim_evidence
+      FROM inventory_claim_evidence
       WHERE claim_id = $1
       ORDER BY created_at
     `, [claimId]);
@@ -364,7 +364,7 @@ router.get('/:claimId', requireAuth, requireTenant, async (req: Request, res: Re
 });
 
 // 6) Start review
-// POST /api/v1/catalog/claims/:claimId/review/start
+// POST /api/v1/inventory/claims/:claimId/review/start
 router.post('/:claimId/review/start', requireTenantAdminOrService, async (req: Request, res: Response) => {
   let currentStatus: string | undefined;
   try {
@@ -378,8 +378,8 @@ router.post('/:claimId/review/start', requireTenantAdminOrService, async (req: R
     }
 
     const claimCheck = isServiceMode 
-      ? await serviceQuery(`SELECT id, tenant_id, status FROM catalog_claims WHERE id = $1`, [claimId])
-      : await tenantQuery(req, `SELECT id, tenant_id, status FROM catalog_claims WHERE id = $1`, [claimId]);
+      ? await serviceQuery(`SELECT id, tenant_id, status FROM inventory_claims WHERE id = $1`, [claimId])
+      : await tenantQuery(req, `SELECT id, tenant_id, status FROM inventory_claims WHERE id = $1`, [claimId]);
 
     if (claimCheck.rows.length === 0) {
       return res.status(404).json({ success: false, error: 'Claim not found' });
@@ -397,13 +397,13 @@ router.post('/:claimId/review/start', requireTenantAdminOrService, async (req: R
 
     await withServiceTransaction(async (client) => {
       await client.query(`
-        UPDATE catalog_claims 
+        UPDATE inventory_claims 
         SET status = 'under_review', reviewed_by_individual_id = $2, updated_at = now()
         WHERE id = $1
       `, [claimId, actorId]);
 
       await client.query(`
-        INSERT INTO catalog_claim_events (claim_id, event_type, actor_individual_id, payload)
+        INSERT INTO inventory_claim_events (claim_id, event_type, actor_individual_id, payload)
         VALUES ($1, 'review_started', $2, $3::jsonb)
       `, [claimId, actorId, JSON.stringify({ via_service_key: isServiceMode })]);
     });
@@ -416,7 +416,7 @@ router.post('/:claimId/review/start', requireTenantAdminOrService, async (req: R
 });
 
 // 7) Decision (approve/reject)
-// POST /api/v1/catalog/claims/:claimId/decision
+// POST /api/v1/inventory/claims/:claimId/decision
 router.post('/:claimId/decision', requireTenantAdminOrService, async (req: Request, res: Response) => {
   let currentStatus: string | undefined;
   try {
@@ -438,8 +438,8 @@ router.post('/:claimId/decision', requireTenantAdminOrService, async (req: Reque
     }
 
     const claimCheck = isServiceMode 
-      ? await serviceQuery(`SELECT id, tenant_id, status FROM catalog_claims WHERE id = $1`, [claimId])
-      : await tenantQuery(req, `SELECT id, tenant_id, status FROM catalog_claims WHERE id = $1`, [claimId]);
+      ? await serviceQuery(`SELECT id, tenant_id, status FROM inventory_claims WHERE id = $1`, [claimId])
+      : await tenantQuery(req, `SELECT id, tenant_id, status FROM inventory_claims WHERE id = $1`, [claimId]);
 
     if (claimCheck.rows.length === 0) {
       return res.status(404).json({ success: false, error: 'Claim not found' });
@@ -458,7 +458,7 @@ router.post('/:claimId/decision', requireTenantAdminOrService, async (req: Reque
     if (decision === 'reject') {
       await withServiceTransaction(async (client) => {
         await client.query(`
-          UPDATE catalog_claims 
+          UPDATE inventory_claims 
           SET status = 'rejected', 
               decision = 'rejected',
               decision_reason = $2,
@@ -469,7 +469,7 @@ router.post('/:claimId/decision', requireTenantAdminOrService, async (req: Reque
         `, [claimId, review_note || null, actorId]);
 
         await client.query(`
-          INSERT INTO catalog_claim_events (claim_id, event_type, actor_individual_id, payload)
+          INSERT INTO inventory_claim_events (claim_id, event_type, actor_individual_id, payload)
           VALUES ($1, 'rejected', $2, $3::jsonb)
         `, [claimId, actorId, JSON.stringify({ reason: review_note })]);
       });
@@ -479,7 +479,7 @@ router.post('/:claimId/decision', requireTenantAdminOrService, async (req: Reque
 
     const result = await withServiceTransaction(async (client) => {
       await client.query(`
-        UPDATE catalog_claims 
+        UPDATE inventory_claims 
         SET status = 'approved',
             decision = 'approved',
             decision_reason = $2,
@@ -489,7 +489,7 @@ router.post('/:claimId/decision', requireTenantAdminOrService, async (req: Reque
         WHERE id = $1
       `, [claimId, review_note || null, actorId]);
 
-      await client.query(`SELECT fn_apply_catalog_claim($1)`, [claimId]);
+      await client.query(`SELECT fn_apply_inventory_claim($1)`, [claimId]);
 
       const appliedClaim = await client.query(`
         SELECT 
@@ -497,7 +497,7 @@ router.post('/:claimId/decision', requireTenantAdminOrService, async (req: Reque
           created_tenant_vehicle_id,
           created_tenant_trailer_id,
           created_asset_id
-        FROM catalog_claims WHERE id = $1
+        FROM inventory_claims WHERE id = $1
       `, [claimId]);
 
       return appliedClaim.rows[0];

@@ -85,7 +85,7 @@ export async function serviceQuery<T extends QueryResultRow = any>(
  * Execute a query with no tenant context (public/anonymous access).
  * RLS policies evaluate with empty context, so only rows where
  * tenant_id IS NULL (shared assets) will be visible via RLS SELECT policy.
- * Use this for public catalog reads where tenant-owned data must be hidden.
+ * Use this for public inventory reads where tenant-owned data must be hidden.
  */
 export async function publicQuery<T extends QueryResultRow = any>(
   text: string,

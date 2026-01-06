@@ -30,7 +30,7 @@ const router = Router();
 
 // =====================================================================
 // HELPER: Load service with all details
-// SERVICE MODE: Reads platform-global service catalog reference data
+// SERVICE MODE: Reads platform-global service directory reference data
 // =====================================================================
 
 async function loadServiceWithDetails(serviceId: string): Promise<ServiceWithDetails | null> {
@@ -208,7 +208,7 @@ router.get('/categories', async (req: Request, res: Response) => {
 
 // =====================================================================
 // SERVICES
-// SERVICE MODE: Platform-global service catalog reference data
+// SERVICE MODE: Platform-global service directory reference data
 // =====================================================================
 
 // GET /api/service-runs/services - List services with filtering
@@ -659,7 +659,7 @@ router.get('/run-types', async (req: Request, res: Response) => {
 
 // =====================================================================
 // BUNDLING SUGGESTIONS
-// SERVICE MODE: Reads service catalog to generate bundle suggestions
+// SERVICE MODE: Reads service directory to generate bundle suggestions
 // =====================================================================
 
 // POST /api/service-runs/suggest-bundles - Get bundle suggestions for selected services

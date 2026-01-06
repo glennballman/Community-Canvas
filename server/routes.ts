@@ -134,8 +134,8 @@ export async function registerRoutes(
   // Register crew accommodation search routes
   app.use('/api/crew', createCrewRouter());
 
-  // Register catalog claims routes
-  app.use('/api/v1/catalog/claims', claimsRouter);
+  // Register inventory claims routes
+  app.use('/api/v1/inventory/claims', claimsRouter);
 
   // Register internal platform review console routes
   // SECURITY: CORS disabled, rate-limited, requires platform staff auth
@@ -209,26 +209,26 @@ export async function registerRoutes(
   // Register admin moderation routes (platform admin only)
   app.use('/api/admin/moderation', adminModerationRouter);
 
-  // Public catalog endpoints (no auth required)
-  app.get('/api/v1/catalog/vehicles', async (req, res) => {
+  // Public inventory endpoints (no auth required)
+  app.get('/api/v1/inventory/vehicles', async (req, res) => {
     try {
       const { q, make, model, year_min, year_max, has_listings, limit = '50', offset = '0' } = req.query;
       
       let query = `
         SELECT 
-          vc.id as catalog_vehicle_id,
+          vc.id as vehicle_inventory_id,
           vc.make,
           vc.model,
           vc.year,
           vc.vehicle_class,
           COALESCE(
             (SELECT json_agg(json_build_object('id', cm.id, 'url', cm.url))
-             FROM catalog_media cm 
-             WHERE cm.vehicle_catalog_id = vc.id),
+             FROM inventory_media cm 
+             WHERE cm.vehicle_inventory_id = vc.id),
             '[]'::json
           ) as media,
-          (SELECT COUNT(*) FROM catalog_listings cl WHERE cl.vehicle_catalog_id = vc.id)::int as listings_count
-        FROM vehicle_catalog vc
+          (SELECT COUNT(*) FROM inventory_listings cl WHERE cl.vehicle_inventory_id = vc.id)::int as listings_count
+        FROM vehicle_inventory vc
         WHERE 1=1
       `;
       const params: any[] = [];
@@ -260,7 +260,7 @@ export async function registerRoutes(
         params.push(parseInt(year_max as string));
       }
       if (has_listings === 'true') {
-        query += ` AND EXISTS (SELECT 1 FROM catalog_listings cl WHERE cl.vehicle_catalog_id = vc.id)`;
+        query += ` AND EXISTS (SELECT 1 FROM inventory_listings cl WHERE cl.vehicle_inventory_id = vc.id)`;
       }
 
       query += ` ORDER BY vc.make, vc.model, vc.year DESC`;
@@ -276,30 +276,30 @@ export async function registerRoutes(
       const result = await publicQuery(query, params);
       res.json({ items: result.rows });
     } catch (e: any) {
-      console.error('Catalog vehicles error:', e);
+      console.error('Inventory vehicles error:', e);
       res.status(500).json({ success: false, error: e.message });
     }
   });
 
-  app.get('/api/v1/catalog/trailers', async (req, res) => {
+  app.get('/api/v1/inventory/trailers', async (req, res) => {
     try {
       const { q, make, model, year_min, year_max, has_listings, limit = '50', offset = '0' } = req.query;
       
       let query = `
         SELECT 
-          tc.id as catalog_trailer_id,
+          tc.id as trailer_inventory_id,
           tc.make,
           tc.model,
           tc.year,
           tc.trailer_type,
           COALESCE(
             (SELECT json_agg(json_build_object('id', cm.id, 'url', cm.url))
-             FROM catalog_media cm 
-             WHERE cm.trailer_catalog_id = tc.id),
+             FROM inventory_media cm 
+             WHERE cm.trailer_inventory_id = tc.id),
             '[]'::json
           ) as media,
-          (SELECT COUNT(*) FROM catalog_listings cl WHERE cl.trailer_catalog_id = tc.id)::int as listings_count
-        FROM trailer_catalog tc
+          (SELECT COUNT(*) FROM inventory_listings cl WHERE cl.trailer_inventory_id = tc.id)::int as listings_count
+        FROM trailer_inventory tc
         WHERE 1=1
       `;
       const params: any[] = [];
@@ -331,7 +331,7 @@ export async function registerRoutes(
         params.push(parseInt(year_max as string));
       }
       if (has_listings === 'true') {
-        query += ` AND EXISTS (SELECT 1 FROM catalog_listings cl WHERE cl.trailer_catalog_id = tc.id)`;
+        query += ` AND EXISTS (SELECT 1 FROM inventory_listings cl WHERE cl.trailer_inventory_id = tc.id)`;
       }
 
       query += ` ORDER BY tc.make, tc.model, tc.year DESC`;
@@ -347,7 +347,7 @@ export async function registerRoutes(
       const result = await publicQuery(query, params);
       res.json({ items: result.rows });
     } catch (e: any) {
-      console.error('Catalog trailers error:', e);
+      console.error('Inventory trailers error:', e);
       res.status(500).json({ success: false, error: e.message });
     }
   });
