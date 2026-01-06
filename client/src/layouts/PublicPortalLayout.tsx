@@ -43,14 +43,15 @@ interface AreaGroup {
 }
 
 interface PortalData {
-  tenant: {
-    id: string;
-    name: string;
-    portal_slug: string;
-    theme: PortalTheme;
-    portal_config: PortalConfig;
-  };
-  area_groups: AreaGroup[];
+  id: string;
+  name: string;
+  slug: string;
+  tagline?: string;
+  description?: string;
+  theme: PortalTheme | null;
+  settings?: any;
+  tenant_id: string;
+  tenant_name: string;
 }
 
 // Export context type for child routes
@@ -95,11 +96,11 @@ export function PublicPortalLayout(): React.ReactElement {
       }
       
       const data = await response.json();
-      setPortal(data);
+      setPortal(data.portal);
       
       // Update page title
-      if (data.tenant?.name) {
-        document.title = `${data.tenant.name} | Community Canvas`;
+      if (data.portal?.name) {
+        document.title = `${data.portal.name} | Community Canvas`;
       }
     } catch (err) {
       console.error('Failed to fetch portal:', err);
@@ -179,8 +180,8 @@ export function PublicPortalLayout(): React.ReactElement {
   // Extract theme
   // --------------------------------------------------------------------------
 
-  const theme = portal.tenant.theme || {};
-  const config = portal.tenant.portal_config || {};
+  const theme: PortalTheme = portal.theme || { primary_color: '#3b82f6' };
+  const config = portal.settings || {};
   
   const backgroundColor = theme.background_color || '#0c1829';
   const textColor = theme.text_color || '#f8fafc';
@@ -219,7 +220,7 @@ export function PublicPortalLayout(): React.ReactElement {
               {theme.logo_url ? (
                 <img 
                   src={theme.logo_url} 
-                  alt={portal.tenant.name} 
+                  alt={portal.name} 
                   style={{ height: '40px' }}
                 />
               ) : (
@@ -231,15 +232,15 @@ export function PublicPortalLayout(): React.ReactElement {
                   fontWeight: 700,
                   margin: 0,
                 }}>
-                  {portal.tenant.name}
+                  {portal.name}
                 </h1>
-                {theme.tagline && (
+                {(theme.tagline || portal.tagline) && (
                   <p style={{ 
                     fontSize: '14px', 
                     opacity: 0.75,
                     margin: 0,
                   }}>
-                    {theme.tagline}
+                    {theme.tagline || portal.tagline}
                   </p>
                 )}
               </div>
@@ -247,32 +248,6 @@ export function PublicPortalLayout(): React.ReactElement {
 
             {/* Right side */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-              {/* Area switcher */}
-              {portal.area_groups && portal.area_groups.length > 0 && (
-                <select 
-                  style={{
-                    backgroundColor: 'rgba(255,255,255,0.1)',
-                    border: '1px solid rgba(255,255,255,0.2)',
-                    borderRadius: '6px',
-                    padding: '8px 12px',
-                    color: textColor,
-                    fontSize: '14px',
-                  }}
-                  onChange={(e) => {
-                    if (e.target.value) {
-                      window.location.href = `/c/${e.target.value}`;
-                    }
-                  }}
-                >
-                  <option value="">Switch area...</option>
-                  {portal.area_groups.map((area) => (
-                    <option key={area.tenant_id} value={area.portal_slug}>
-                      {area.name}
-                    </option>
-                  ))}
-                </select>
-              )}
-
               {/* Sign In */}
               <Link
                 to="/app"
