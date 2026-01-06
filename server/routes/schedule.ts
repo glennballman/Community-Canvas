@@ -3,8 +3,13 @@ import { z } from 'zod';
 import { pool } from '../db';
 import { requireAuth } from '../middleware/guards';
 import { TenantRequest } from '../middleware/tenantContext';
+import { authenticateToken } from './foundation';
 
 const router = Router();
+
+// Apply JWT authentication to all schedule routes
+// This sets req.user which tenantContext then uses to set req.ctx.individual_id
+router.use(authenticateToken);
 
 router.use((req, res, next) => {
   const tenantReq = req as TenantRequest;

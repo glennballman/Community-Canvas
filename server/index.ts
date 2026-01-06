@@ -8,6 +8,7 @@ import { createServer } from "http";
 import { startPipelineScheduler } from "./pipelines";
 import { tenantContext } from "./middleware/tenantContext";
 import { attachTenantDb } from "./db/tenantDb";
+import { optionalAuth } from "./middleware/auth";
 import { 
   blockServiceKeyOnTenantRoutes, 
   resolveImpersonation, 
@@ -128,6 +129,10 @@ app.use((req, res, next) => {
 
   next();
 });
+
+// Parse JWT from Authorization header (if present) BEFORE tenantContext runs
+// This ensures req.user is available for tenantContext to populate req.ctx.individual_id
+app.use(optionalAuth as any);
 
 app.use(tenantContext as any);
 app.use(attachTenantDb);
