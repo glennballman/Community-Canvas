@@ -56,6 +56,11 @@ import Accommodations from './pages/Accommodations';
 import DataImport from './pages/admin/DataImport';
 import AdminSettings from './pages/AdminSettings';
 import AdminLogs from './pages/AdminLogs';
+import CommunitiesPage from './pages/admin/CommunitiesPage';
+import SeedCommunitiesPage from './pages/admin/SeedCommunitiesPage';
+import PortalConfigPage from './pages/admin/PortalConfigPage';
+import AIQueuePage from './pages/admin/AIQueuePage';
+import FlaggedContentPage from './pages/admin/FlaggedContentPage';
 
 // Pages - Auth
 import LoginPage from './pages/auth/LoginPage';
@@ -63,26 +68,6 @@ import LoginPage from './pages/auth/LoginPage';
 // Placeholder pages - for routes without existing components
 function PortalOverview() {
   return <div style={{ padding: '32px' }}><h1>Welcome to this community!</h1></div>;
-}
-
-function CommunitiesPage() {
-  return <div style={{ padding: '32px' }}><h1>All Communities</h1><p>Coming soon...</p></div>;
-}
-
-function SeedCommunitiesPage() {
-  return <div style={{ padding: '32px' }}><h1>Seed Communities</h1><p>Coming soon...</p></div>;
-}
-
-function PortalConfigPage() {
-  return <div style={{ padding: '32px' }}><h1>Portal Configuration</h1><p>Coming soon...</p></div>;
-}
-
-function AIQueuePage() {
-  return <div style={{ padding: '32px' }}><h1>AI Queue</h1><p>Coming soon...</p></div>;
-}
-
-function FlaggedContentPage() {
-  return <div style={{ padding: '32px' }}><h1>Flagged Content</h1><p>Coming soon...</p></div>;
 }
 
 function NotFoundPage() {

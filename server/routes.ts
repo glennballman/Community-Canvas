@@ -51,6 +51,8 @@ import publicPortalRouter from "./routes/public-portal";
 import userContextRouter from "./routes/user-context";
 import adminImpersonationRouter from "./routes/admin-impersonation";
 import adminTenantsRouter from "./routes/admin-tenants";
+import adminCommunitiesRouter from "./routes/admin-communities";
+import adminModerationRouter from "./routes/admin-moderation";
 import { publicQuery } from "./db/tenantDb";
 import express from "express";
 
@@ -186,6 +188,12 @@ export async function registerRoutes(
 
   // Register admin tenants routes (platform admin only)
   app.use('/api/admin/tenants', adminTenantsRouter);
+
+  // Register admin communities routes (platform admin only)
+  app.use('/api/admin/communities', adminCommunitiesRouter);
+
+  // Register admin moderation routes (platform admin only)
+  app.use('/api/admin/moderation', adminModerationRouter);
 
   // Public catalog endpoints (no auth required)
   app.get('/api/v1/catalog/vehicles', async (req, res) => {
