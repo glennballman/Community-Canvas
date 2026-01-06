@@ -55,6 +55,7 @@ import adminImpersonationRouter from "./routes/admin-impersonation";
 import adminTenantsRouter from "./routes/admin-tenants";
 import adminCommunitiesRouter from "./routes/admin-communities";
 import adminModerationRouter from "./routes/admin-moderation";
+import adminInventoryRouter from "./routes/admin-inventory";
 import crmRouter from "./routes/crm";
 import scheduleRouter from "./routes/schedule";
 import capacityConstraintsRouter from "./routes/capacityConstraints";
@@ -216,6 +217,9 @@ export async function registerRoutes(
 
   // Register admin moderation routes (platform admin only)
   app.use('/api/admin/moderation', adminModerationRouter);
+
+  // Register admin inventory routes (platform admin only)
+  app.use('/api/admin/inventory', adminInventoryRouter);
 
   // Public inventory endpoints (no auth required)
   app.get('/api/v1/inventory/vehicles', async (req, res) => {

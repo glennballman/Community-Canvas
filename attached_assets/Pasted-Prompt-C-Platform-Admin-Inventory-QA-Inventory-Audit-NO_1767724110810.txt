@@ -1,0 +1,167 @@
+Prompt C — Platform Admin Inventory QA + Inventory Audit (NO FEATURE EXPANSION)
+
+ROLE: You are Replit implementing a targeted admin navigation + QA surface.
+RULE: Do not add new product features. Do not redesign tenant app. Do not invent new data models.
+SCOPE: Platform Admin only (/admin/*) + read-only queries.
+
+0) Non-Negotiables
+
+DO NOT DEVIATE from this prompt.
+
+READ-ONLY admin view. No mutations required (no create/edit/delete).
+
+Reuse existing tables; minimal migrations only if absolutely necessary (prefer none).
+
+Keep tenant app navigation unchanged (left nav inside /app/* is not part of this task).
+
+Task C1 — Platform Admin Left Navigation Cleanup (Data Management)
+Goal
+
+Under Platform Admin → Data Management, add a new nav item:
+
+Inventory (Audit) → /admin/inventory
+
+This must be accessible alongside the existing Accommodations admin area.
+
+Acceptance Criteria
+
+Platform Admin left nav shows Inventory (Audit) under Data Management.
+
+Clicking it loads /admin/inventory with no console errors.
+
+Task C2 — Create /admin/inventory (System-Wide Inventory QA View)
+Purpose
+
+A platform-wide “truth table” view so Glenn can QA inventory across all tenants before we start capabilities/constraints.
+
+Data Source Rules (IMPORTANT)
+
+Inventory in this platform currently exists in multiple places. The admin page MUST:
+
+Use unified_assets as the primary “resource registry” source (rooms, parking, equipment, vehicles, trailers, watercraft, etc.)
+
+ALSO surface any “inventory_*” renamed tables that exist from the Inventory rename (e.g., inventory_listings, inventory_claims, etc.) but do not mix their semantics. They can be secondary tabs/sections.
+
+Page Layout (simple, fast)
+Header
+
+Title: Inventory (Audit)
+Subtitle: “System-wide inventory registry for QA and debugging.”
+
+Filters (top row)
+
+Search (name contains)
+
+Tenant filter (dropdown or typeahead)
+
+Asset Type filter (dropdown populated from the DB distinct values; fallback to static list if needed)
+
+Status filter (available/blocked/maintenance/etc if present)
+
+Table (main)
+
+Columns (minimum):
+
+Asset Name
+
+Asset Type
+
+Tenant (name + slug)
+
+Status
+
+Place/Location (if available; otherwise blank)
+
+Created / Updated (if available)
+
+Row click opens a read-only detail drawer (or separate route /admin/inventory/:id) showing:
+
+Full JSON-ish detail of the asset record
+
+Links to related objects (bookings/events if discoverable)
+
+Secondary Sections/Tabs (below or tabs)
+
+Unified Assets (default)
+
+Inventory Listings (if table exists)
+
+Inventory Claims (if table exists)
+
+Any other inventory_* tables discovered (read-only table view)
+
+If some tables don’t exist in the current DB, the UI should gracefully show “Not present in this environment.”
+
+Security / RLS
+
+Platform Admin should be able to view across tenants.
+
+Use existing admin auth patterns already used for /admin/accommodations pages.
+
+Do NOT weaken tenant RLS. Implement admin route queries using the established admin server pattern (service role / admin guard) that the platform admin uses elsewhere.
+
+Task C3 — Inventory Audit Report (Evidence)
+
+Before coding the admin page (or while doing it), produce a written audit in your response with:
+
+1) Inventory Table Map
+
+List every table that is inventory-related, including:
+
+unified_assets
+
+unified_bookings
+
+resource_schedule_events
+
+all inventory_* tables from the rename
+
+any remaining legacy catalog_* tables if they still exist in historical migrations (DB may not have them)
+
+For each table:
+
+what it represents (1 line)
+
+primary keys
+
+tenant scoping column (if any)
+
+how it relates to unified_assets (FK? by id? not related?)
+
+2) Admin Query Plan
+
+Which exact queries power /admin/inventory:
+
+primary query for unified_assets with joins to tenants table
+
+how filters are applied
+
+how you handle missing tables
+
+3) Screenshot / Proof
+
+Show the /admin/inventory page rendering with at least one dataset (seeded is fine).
+
+Constraints / Don’ts
+
+Do NOT change the meaning of “Bookings” or “Operations Board”.
+
+Do NOT add capability/constraint modeling yet.
+
+Do NOT add GIS/PostGIS.
+
+Do NOT rename routes in /app/*.
+
+Keep the UI consistent with the existing dark theme.
+
+Definition of Done
+
+Platform Admin nav includes Inventory (Audit).
+
+/admin/inventory works and shows system-wide assets across tenants.
+
+You provide the audit report + table map + query plan + proof.
+
+No console errors.
+
+BEGIN.

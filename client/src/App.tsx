@@ -89,6 +89,7 @@ import SeedCommunitiesPage from './pages/admin/SeedCommunitiesPage';
 import PortalConfigPage from './pages/admin/PortalConfigPage';
 import AIQueuePage from './pages/admin/AIQueuePage';
 import FlaggedContentPage from './pages/admin/FlaggedContentPage';
+import AdminInventory from './pages/admin/AdminInventory';
 
 // Pages - Auth
 import LoginPage from './pages/auth/LoginPage';
@@ -218,6 +219,7 @@ export default function App() {
                 <Route path="data/chambers" element={<AdminChambers />} />
                 <Route path="data/naics" element={<AdminNAICS />} />
                 <Route path="data/accommodations" element={<Accommodations />} />
+                <Route path="inventory" element={<AdminInventory />} />
                 <Route path="data/import-export" element={<DataImport />} />
                 
                 {/* Communities */}
