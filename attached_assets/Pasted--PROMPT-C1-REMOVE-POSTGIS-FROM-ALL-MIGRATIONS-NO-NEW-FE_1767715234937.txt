@@ -1,0 +1,62 @@
+# PROMPT C1 — REMOVE POSTGIS FROM ALL MIGRATIONS (NO NEW FEATURES)
+
+We are NOT using PostGIS in production. Do NOT propose external DBs. Do NOT add new libraries. Do NOT change product behavior. Just make migrations and code work on plain PostgreSQL.
+
+## HARD RULE
+- There must be **zero** usage of: `postgis`, `geography`, `geometry`, `ST_`, `GIST` indexes on geo types.
+- Keep lat/lng as numeric columns and use the existing Haversine approach.
+
+## TASKS
+
+### 1) Migrations: eliminate PostGIS requirements
+Search in `server/migrations/*.sql` for:
+- `CREATE EXTENSION IF NOT EXISTS postgis`
+- `GEOGRAPHY(`
+- `GEOMETRY(`
+- `ST_`
+- `GIST` indexes that reference geo columns
+
+Fix migrations **018, 020, 021, 022** so they no longer require PostGIS:
+- Replace any single `location GEOGRAPHY(POINT, 4326)` style column with:
+  - `latitude DECIMAL(10,7)`
+  - `longitude DECIMAL(10,7)`
+- Replace any computed columns using ST_* with either:
+  - remove them if not required for MVP, OR
+  - use the Haversine helper functions already introduced in `028_geo_without_postgis.sql`
+- Replace spatial indexes with normal indexes on `(latitude, longitude)` as needed.
+
+**Important:** the production DB does not have PostGIS. Any statement that references PostGIS must be removed or rewritten.
+
+### 2) Ensure `028_geo_without_postgis.sql` is authoritative
+- Confirm 028 includes:
+  - haversine distance function(s)
+  - any helper function for bounding box / within-distance approximation if used
+- Confirm earlier migrations do not fail without PostGIS before 028 runs.
+
+If needed, create a new migration `0XX_remove_postgis_everywhere.sql` (new higher number) that:
+- Drops any leftover geo columns if they exist (guarded with IF EXISTS)
+- Adds latitude/longitude columns where missing (guarded with IF NOT EXISTS pattern)
+- Updates any views/functions that referenced ST_* to haversine-based equivalents
+BUT do not introduce new product features.
+
+### 3) Backend code: remove ST_* queries
+Search server for `ST_` usage:
+- `server/**/*.ts`
+
+Replace:
+- `ST_DWithin`, `ST_Distance`, etc. with haversine function calls (SQL function) or app-side calculation.
+Keep the behavior similar: “within radius” works as approximation.
+
+### 4) Verification Checklist (must provide results)
+After changes, you must provide:
+- grep results showing **no matches** for: `postgis|geography|geometry|ST_`
+- a successful migration run on a fresh plain Postgres database (no PostGIS)
+- app boots, no runtime errors
+
+## DO NOT
+- rename routes
+- change UI labels in this task
+- add mapping features
+- add new tables unrelated to replacing geo types
+
+Proceed now.
