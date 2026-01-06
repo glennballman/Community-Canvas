@@ -17,6 +17,7 @@ export interface TenantContext {
   individual_id: string | null;
   roles: string[];
   scopes: string[];
+  is_impersonating: boolean;
 }
 
 export interface ImpersonationSession {
@@ -54,6 +55,7 @@ export async function tenantContext(req: TenantRequest, res: Response, next: Nex
     individual_id: null,
     roles: [],
     scopes: [],
+    is_impersonating: false,
   };
 
   try {
@@ -126,6 +128,7 @@ export async function tenantContext(req: TenantRequest, res: Response, next: Nex
             req.ctx.tenant_id = session.tenant_id;
             req.ctx.individual_id = session.individual_id || null;
             req.ctx.roles = ['impersonator'];
+            req.ctx.is_impersonating = true;
             
             // Set actor context for GUC propagation
             req.actorContext = {
@@ -169,6 +172,7 @@ export async function tenantContext(req: TenantRequest, res: Response, next: Nex
         // Override tenant context with impersonated tenant
         req.ctx.tenant_id = sessionImpersonation.tenant_id;
         req.ctx.roles = ['impersonator'];
+        req.ctx.is_impersonating = true;
         
         // Set actor context for GUC propagation
         req.actorContext = {
@@ -222,5 +226,6 @@ export function getTenantContext(req: Request): TenantContext {
     individual_id: null,
     roles: [],
     scopes: [],
+    is_impersonating: false,
   };
 }

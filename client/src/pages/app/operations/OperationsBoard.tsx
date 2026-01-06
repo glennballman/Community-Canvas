@@ -477,6 +477,17 @@ export default function OperationsBoard() {
 
   return (
     <div className="flex flex-col h-full" data-testid="operations-board">
+      {(resourcesError || scheduleError) && (
+        <div className="bg-destructive/10 border border-destructive/30 text-destructive p-3 mx-4 mt-4 rounded-md flex items-start gap-2" data-testid="error-banner">
+          <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5" />
+          <div className="text-sm">
+            <p className="font-medium">Failed to load data</p>
+            <p className="text-destructive/80">
+              {resourcesError?.message || scheduleError?.message || 'Unknown error'}
+            </p>
+          </div>
+        </div>
+      )}
       <div className="p-4 border-b flex-shrink-0">
         <div className="flex items-center justify-between gap-4 mb-3 flex-wrap">
           <div>

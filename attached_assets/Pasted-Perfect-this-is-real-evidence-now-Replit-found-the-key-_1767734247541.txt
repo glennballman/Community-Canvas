@@ -1,0 +1,95 @@
+Perfect — this is real evidence now. Replit found the key fact:
+
+Impersonation is stored in session.impersonation
+
+But schedule routes were relying on cookies.impersonation_sid
+
+So the tenant context never resolves for /api/schedule/* and you get “No resources found.”
+
+However: it still isn’t working because we still haven’t proven the browser is calling /api/schedule/resources at all, and the UI is still rendering the empty-state.
+
+Do this next (2-step):
+Step 1 — You (fast manual proof, 20 seconds)
+
+While on /app/operations, open DevTools → Network and hard refresh.
+
+In the filter box type: schedule
+
+Tell Replit what you see:
+
+Do you see requests to /api/schedule/resources or /api/v1/schedule/resources?
+
+Status code? (200/401/403/404)
+
+Response body count?
+
+If you don’t want to do that, we can force Replit to instrument it so you don’t have to interpret.
+
+Step 2 — Paste this into Replit (forces hard proof + fixes the real mismatch)
+PROMPT G — FIX IMPERSONATION CONTEXT FOR SCHEDULE + STOP SILENT EMPTY STATE
+
+We now know:
+- /api/admin/impersonation/start sets session.impersonation
+- impersonation_sid cookie is never set
+- schedule routes relied on cookies.impersonation_sid, so they don’t see impersonation.
+
+GOAL:
+When impersonating Ballman Enterprises, /app/operations MUST load resources (F550 Truck, Lucky Lander).
+
+1) Unify tenant resolution in ONE place (server/middleware/tenantContext.ts or equivalent):
+Set effectiveTenantId using this priority:
+  effectiveTenantId =
+    req.session?.impersonation?.tenant_id
+    ?? req.impersonation?.tenant_id
+    ?? req.ctx?.tenant_id
+Also set a flag:
+  req.ctx.is_impersonating = !!(req.session?.impersonation || req.impersonation)
+
+2) Ensure requireAuth accepts impersonation:
+If req.ctx.tenant_id exists AND (user session valid OR is_impersonating true), allow.
+
+3) Make schedule routes use ONLY req.ctx.tenant_id (no direct cookie/session reads).
+
+4) HARD PROOF INSTRUMENTATION (dev-only):
+A) In schedule router, log every hit:
+   console.log("[SCHEDULE] HIT", { path: req.path, tenant: req.ctx?.tenant_id, isImp: req.ctx?.is_impersonating })
+B) In OperationsBoard client queryFn for resources:
+   console.log("[OPS] fetch resources", url)
+   If response !ok, throw Error with status + body text.
+C) In OperationsBoard UI:
+   If query.error exists, show an on-screen error banner with the message.
+   Only show “No resources found” if request succeeded (200) AND returned 0.
+
+5) PATH MISMATCH SAFETY:
+Mount the same schedule router at BOTH:
+  /api/schedule
+  /api/v1/schedule
+So whichever the client uses will work.
+
+6) Acceptance Test (you must perform it and report results):
+- Impersonate Ballman Enterprises
+- Load /app/operations with a hard refresh
+- Confirm in browser console: “[OPS] fetch resources”
+- Confirm in server logs: “[SCHEDULE] HIT”
+- Confirm UI shows at least 2 resources.
+If not, output:
+- exact client URL called
+- exact HTTP status
+- first 200 chars of response body
+- server log lines for schedule hits (or state none)
+
+Do not ask the user to “refresh and see.” Perform the instrumentation + run the acceptance test yourself and report the evidence.
+
+Why this is the correct next move
+
+Right now you’re stuck in a loop where the UI says “No resources found” even when the real issue is “request didn’t run / failed / wrong path / no tenant.” Prompt G forces:
+
+unified tenant resolution (session OR cookie)
+
+schedule routes mounted on both /api/schedule and /api/v1/schedule
+
+UI shows real errors instead of lying with an empty-state
+
+proof via logs on both sides
+
+Paste Prompt G. Then paste Replit’s output (especially the “Acceptance Test evidence” section) and we’ll either be done or have a single precise remaining fix.

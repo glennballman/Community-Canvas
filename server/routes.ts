@@ -193,7 +193,9 @@ export async function registerRoutes(
   app.use('/api/crm', crmRouter);
 
   // Register schedule/operations board routes (15-minute precision)
+  // Mount at both paths for client compatibility
   app.use('/api/schedule', scheduleRouter);
+  app.use('/api/v1/schedule', scheduleRouter);
   
   // Register capacity/constraints management routes
   app.use('/api/capacity', capacityConstraintsRouter);

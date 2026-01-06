@@ -6,6 +6,19 @@ import { TenantRequest } from '../middleware/tenantContext';
 
 const router = Router();
 
+router.use((req, res, next) => {
+  const tenantReq = req as TenantRequest;
+  console.log('[SCHEDULE] HIT', { 
+    path: req.path, 
+    method: req.method,
+    tenant: tenantReq.ctx?.tenant_id, 
+    isImp: tenantReq.ctx?.is_impersonating,
+    hasSession: !!(req as any).session?.impersonation,
+    userId: (req as any).session?.userId,
+  });
+  next();
+});
+
 function getTenantId(req: Request): string | null {
   const tenantReq = req as TenantRequest;
   return tenantReq.ctx?.tenant_id || null;
