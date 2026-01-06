@@ -1,7 +1,11 @@
 import { Router } from 'express';
 import { serviceQuery } from '../db/tenantDb';
+import { authenticateToken, requirePlatformAdmin } from './foundation';
 
 const router = Router();
+
+// Require authentication and platform admin for all moderation routes
+router.use(authenticateToken, requirePlatformAdmin);
 
 // GET /api/admin/moderation/submissions - Get Good News submissions for review
 router.get('/submissions', async (req, res) => {
@@ -218,19 +222,19 @@ router.get('/flagged', async (req, res) => {
     let paramIndex = 1;
     
     if (status && status !== 'all') {
-      query += ` AND f.status = $${paramIndex}::cc_flag_status`;
+      query += ` AND f.status = $${paramIndex}`;
       params.push(status);
       paramIndex++;
     }
     
     if (type && type !== 'all') {
-      query += ` AND f.content_type = $${paramIndex}::cc_flagged_content_type`;
+      query += ` AND f.content_type = $${paramIndex}`;
       params.push(type);
       paramIndex++;
     }
     
     if (reason && reason !== 'all') {
-      query += ` AND f.reason = $${paramIndex}::cc_flag_reason`;
+      query += ` AND f.reason = $${paramIndex}`;
       params.push(reason);
       paramIndex++;
     }
