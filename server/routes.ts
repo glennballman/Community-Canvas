@@ -59,6 +59,7 @@ import adminInventoryRouter from "./routes/admin-inventory";
 import crmRouter from "./routes/crm";
 import scheduleRouter from "./routes/schedule";
 import capacityConstraintsRouter from "./routes/capacityConstraints";
+import qaSeedRouter from "./routes/qa-seed";
 import { publicQuery } from "./db/tenantDb";
 import express from "express";
 
@@ -196,6 +197,11 @@ export async function registerRoutes(
   
   // Register capacity/constraints management routes
   app.use('/api/capacity', capacityConstraintsRouter);
+
+  // Register QA seed/test routes (dev only)
+  if (process.env.NODE_ENV === 'development') {
+    app.use('/api', qaSeedRouter);
+  }
 
   // Register operator routes (for community operators)
   app.use('/api/operator', operatorRouter);
