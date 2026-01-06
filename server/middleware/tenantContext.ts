@@ -78,6 +78,17 @@ export async function tenantContext(req: TenantRequest, res: Response, next: Nex
 
   // Check for impersonation_sid cookie (platform staff impersonating tenant)
   const impersonationToken = (req as any).cookies?.impersonation_sid;
+  
+  // DEBUG: Log cookie detection for schedule routes
+  if (process.env.NODE_ENV !== 'production' && req.url?.includes('/schedule')) {
+    console.log('TENANT_CONTEXT_DEBUG', JSON.stringify({
+      url: req.url,
+      hasCookie: !!impersonationToken,
+      cookieLength: impersonationToken?.length || 0,
+      pepperAvailable: isPepperAvailable(),
+    }));
+  }
+  
   if (impersonationToken && typeof impersonationToken === 'string' && impersonationToken.length === 64) {
     // Fail closed: if pepper is not available, skip impersonation validation entirely
     if (!isPepperAvailable()) {

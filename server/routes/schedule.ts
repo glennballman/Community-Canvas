@@ -476,8 +476,22 @@ router.delete('/events/:id', requireAuth, async (req: Request, res: Response) =>
 
 router.get('/resources', requireAuth, async (req: Request, res: Response) => {
   try {
+    const tenantReq = req as TenantRequest;
     const tenantId = getTenantId(req);
     const { type, includeInactive, search, includeCapabilities } = req.query;
+    
+    // DEBUG: Log auth/tenant context in development
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('SCHEDULE_RESOURCES_DEBUG', JSON.stringify({
+        isImpersonating: !!tenantReq.impersonation?.tenant_id,
+        effectiveTenantId: tenantId,
+        auth: {
+          individual_id: tenantReq.ctx?.individual_id || null,
+          impersonation_id: tenantReq.impersonation?.id || null,
+        },
+        where: `owner_tenant_id = ${tenantId}`,
+      }));
+    }
     
     if (!tenantId) {
       return res.status(400).json({ success: false, error: 'Tenant context required' });
@@ -534,6 +548,20 @@ router.get('/resources', requireAuth, async (req: Request, res: Response) => {
     query += ` ORDER BY a.asset_type, a.name`;
 
     const result = await pool.query(query, params);
+    
+    // DEBUG: Log query results in development
+    if (process.env.NODE_ENV !== 'production') {
+      const sample = result.rows.slice(0, 3).map(r => ({
+        id: r.id,
+        name: r.name,
+        asset_type: r.asset_type,
+        status: r.status,
+      }));
+      console.log('SCHEDULE_RESOURCES_DEBUG_RESULT', JSON.stringify({
+        count: result.rows.length,
+        sample,
+      }));
+    }
     
     let capabilityUnitsMap: Record<string, any[]> = {};
     if (includeCapabilities === 'true') {

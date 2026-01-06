@@ -203,6 +203,8 @@ export default function OperationsBoard() {
   }>({
     queryKey: [resourcesUrl],
     enabled: !!currentTenant?.tenant_id,
+    staleTime: 0,
+    refetchOnMount: 'always',
   });
 
   const scheduleUrl = `/api/schedule?from=${from.toISOString()}&to=${to.toISOString()}`;
@@ -210,6 +212,8 @@ export default function OperationsBoard() {
   const { data: scheduleData, isLoading: loadingSchedule } = useQuery<{ success: boolean; events: ScheduleEvent[] }>({
     queryKey: [scheduleUrl],
     enabled: !!currentTenant?.tenant_id,
+    staleTime: 0,
+    refetchOnMount: 'always',
   });
 
   const createEventMutation = useMutation({

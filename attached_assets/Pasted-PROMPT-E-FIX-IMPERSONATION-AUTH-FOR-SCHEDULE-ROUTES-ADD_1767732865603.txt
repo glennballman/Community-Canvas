@@ -1,0 +1,58 @@
+PROMPT E — FIX IMPERSONATION AUTH FOR SCHEDULE ROUTES + ADD HARD DEBUG OUTPUT
+
+We have confirmed:
+- Impersonation sessions can have individual_id = NULL.
+- requireAuth currently checks ctx.individual_id and fails under impersonation.
+
+Goal:
+While impersonating Ballman Enterprises, /api/schedule/resources MUST return F550 Truck + Lucky Lander and Operations Board must show them.
+
+PART 1 — Fix requireAuth to accept impersonation sessions safely
+1) Locate server/middleware/guards.ts (or where requireAuth lives).
+2) Update requireAuth so it passes when EITHER:
+   A) ctx.individual_id is present (normal user session), OR
+   B) ctx.impersonation (or equivalent) is present AND it has a valid target tenant_id / target_business_id.
+3) Ensure it still enforces tenant isolation:
+   - The resolved effective tenant id must come from:
+     - impersonation target tenant when impersonating
+     - otherwise current user’s tenant
+4) DO NOT weaken auth globally. This should only allow impersonated sessions that are valid and unexpired.
+
+PART 2 — Make schedule routes use the SAME tenant resolver as other working business routes
+1) Identify the canonical helper for “effective tenant id” (something like getEffectiveTenantId(req) / tenantContext middleware).
+2) Ensure /api/schedule/resources and /api/schedule (GET /) use that helper.
+3) Ensure the resource query filters by:
+   unified_assets.owner_tenant_id = effectiveTenantId
+   (NOT tenant_id unless that’s a real column and correct)
+
+PART 3 — Add temporary debug logs (dev-only) to prove the fix
+Add logs ONLY when NODE_ENV !== 'production'.
+
+A) In /api/schedule/resources handler:
+Log an object like:
+SCHEDULE_RESOURCES_DEBUG {
+  isImpersonating: boolean,
+  effectiveTenantId: "...",
+  auth: { individual_id: ..., impersonation_id: ... },
+  where: "owner_tenant_id = <id>",
+  count: <n>,
+  sample: [ {id,name,asset_type,owner_tenant_id} ... up to 3 ]
+}
+
+B) In the Operations Board frontend fetch:
+If response is not OK, show a visible banner:
+“Error loading resources (status ###)”
+and console.log the status + response text (dev only).
+Do NOT treat non-200 as empty list.
+
+PART 4 — Acceptance Test Checklist (must be executed by you / or automated smoke)
+1) Impersonate Ballman Enterprises.
+2) Open /app/operations.
+3) Confirm rows appear for F550 Truck and Lucky Lander.
+4) Confirm logs show count >= 2 and effectiveTenantId matches Ballman Enterprises tenant id.
+5) Remove or gate the debug banner/logs if you want (but keep the backend fix).
+
+Return in your response:
+- Exact code locations changed (file + key lines)
+- The debug output from SCHEDULE_RESOURCES_DEBUG (one example)
+- The specific reason it previously showed empty (401/403 swallowed vs wrong tenant vs wrong filter)
