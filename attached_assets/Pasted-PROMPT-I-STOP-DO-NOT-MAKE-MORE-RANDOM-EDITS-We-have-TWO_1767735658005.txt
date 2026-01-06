@@ -1,0 +1,49 @@
+PROMPT I — STOP. DO NOT MAKE MORE RANDOM EDITS.
+
+We have TWO separate issues that must be resolved in order, with evidence:
+
+(1) /api/schedule/* returns 401 AUTH_REQUIRED in browser.
+(2) After auth works, we may still hit DB/RLS “permission denied for resource_schedule_events”.
+
+RULES:
+- Make NO further changes until you produce an evidence report.
+- Fix (1) first. Then test. Then fix (2) if it still exists.
+
+STEP A — EVIDENCE REPORT (NO CODE CHANGES)
+1) In DevTools Network, when loading /app/operations, confirm whether requests to:
+   - /api/schedule/resources
+   - /api/schedule
+   include:
+   - Cookie header (session cookies) and/or
+   - Authorization: Bearer <token>
+2) In codebase, locate the shared fetch helper used by other authenticated pages that succeed (Inventory, etc).
+   Identify the canonical auth mechanism:
+   - Is it cookie session (credentials: include) OR Bearer token (cc_token) OR both?
+3) In server middleware requireAuth, confirm which it accepts:
+   - cookie session?
+   - Authorization Bearer?
+   - both?
+
+STEP B — IMPLEMENT THE MINIMAL AUTH FIX FOR SCHEDULE ROUTES
+Goal: make /api/schedule/resources and /api/schedule authenticate the same way as the rest of the app.
+
+Implementation constraints:
+- Do NOT invent a new auth scheme.
+- Use the existing shared API client/helper. If OperationsBoard uses raw fetch, refactor it to use the same helper.
+- Ensure fetch includes BOTH:
+   credentials: 'include'
+   AND Authorization header if the rest of the app uses Bearer tokens.
+
+After changes:
+- Hard refresh /app/operations
+- Confirm /api/schedule/resources returns 200
+- Confirm /api/schedule returns 200
+
+STEP C — ONLY IF YOU SEE “permission denied for table resource_schedule_events” AFTER AUTH IS FIXED:
+Create a migration to grant + RLS policy exactly matching unified_assets patterns.
+
+OUTPUT REQUIRED (PASTE IN CHAT):
+- A table showing each endpoint, status code before/after (401→200)
+- The exact code change location(s) (file paths + functions)
+- Screenshot/log proof that schedule endpoints are called and return 200
+- If DB/RLS error remains, show the exact error and the RLS policy/grant diff you applied.
