@@ -76,19 +76,18 @@ export default function AdminInventory() {
   const [selectedAsset, setSelectedAsset] = useState<UnifiedAsset | null>(null);
   const [activeTab, setActiveTab] = useState("unified_assets");
 
+  const buildQueryUrl = () => {
+    const params = new URLSearchParams();
+    if (search) params.set("search", search);
+    if (tenantFilter && tenantFilter !== "all") params.set("tenant_id", tenantFilter);
+    if (typeFilter && typeFilter !== "all") params.set("asset_type", typeFilter);
+    if (statusFilter && statusFilter !== "all") params.set("status", statusFilter);
+    const qs = params.toString();
+    return `/api/admin/inventory${qs ? `?${qs}` : ""}`;
+  };
+
   const { data, isLoading, error } = useQuery<InventoryAuditData>({
-    queryKey: ["/api/admin/inventory", search, tenantFilter, typeFilter, statusFilter],
-    queryFn: async () => {
-      const params = new URLSearchParams();
-      if (search) params.set("search", search);
-      if (tenantFilter && tenantFilter !== "all") params.set("tenant_id", tenantFilter);
-      if (typeFilter && typeFilter !== "all") params.set("asset_type", typeFilter);
-      if (statusFilter && statusFilter !== "all") params.set("status", statusFilter);
-      const qs = params.toString();
-      const res = await fetch(`/api/admin/inventory${qs ? `?${qs}` : ""}`, { credentials: "include" });
-      if (!res.ok) throw new Error("Failed to fetch inventory audit data");
-      return res.json();
-    },
+    queryKey: [buildQueryUrl()],
   });
 
   const clearFilters = () => {
