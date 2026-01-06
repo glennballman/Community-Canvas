@@ -121,6 +121,13 @@ export function TenantAppLayout(): React.ReactElement {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
 
   // --------------------------------------------------------------------------
+  // Computed values (before any hooks to avoid conditional hook calls)
+  // --------------------------------------------------------------------------
+  
+  const isAtRoot = location.pathname === '/app' || location.pathname === '/app/';
+  const needsRedirectToRoot = !isAtRoot && !currentTenant && initialized && !loading;
+
+  // --------------------------------------------------------------------------
   // Auth redirect
   // --------------------------------------------------------------------------
   
@@ -129,6 +136,16 @@ export function TenantAppLayout(): React.ReactElement {
       navigate('/login', { state: { from: location.pathname } });
     }
   }, [initialized, user, navigate, location.pathname]);
+
+  // --------------------------------------------------------------------------
+  // Tenant redirect (when not at root and no tenant selected)
+  // --------------------------------------------------------------------------
+  
+  useEffect(() => {
+    if (needsRedirectToRoot) {
+      navigate('/app');
+    }
+  }, [needsRedirectToRoot, navigate]);
 
   // --------------------------------------------------------------------------
   // Loading state
@@ -173,8 +190,6 @@ export function TenantAppLayout(): React.ReactElement {
   // --------------------------------------------------------------------------
   // Route handling
   // --------------------------------------------------------------------------
-
-  const isAtRoot = location.pathname === '/app' || location.pathname === '/app/';
   
   // If at /app and no tenant selected, render Outlet WITHOUT sidebar
   // The Outlet will render TenantPicker
@@ -190,9 +205,8 @@ export function TenantAppLayout(): React.ReactElement {
     );
   }
 
-  // If not at root and no tenant, redirect to root
+  // If not at root and no tenant, show loading while redirect happens via useEffect
   if (!isAtRoot && !currentTenant) {
-    navigate('/app');
     return <></>;
   }
 
