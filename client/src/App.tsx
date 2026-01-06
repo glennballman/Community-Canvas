@@ -19,6 +19,7 @@ import { TenantProvider } from './contexts/TenantContext';
 
 // Global Components
 import { ImpersonationBanner } from './components/ImpersonationBanner';
+import { DebugPanel } from './components/dev/DebugPanel';
 
 // Layouts
 import { TenantAppLayout } from './layouts/TenantAppLayout';
@@ -142,6 +143,9 @@ export default function App() {
           <TenantProvider>
             {/* GLOBAL: Impersonation banner - appears on all pages when active */}
             <ImpersonationBanner />
+            
+            {/* DEV ONLY: Debug panel for API monitoring */}
+            <DebugPanel />
 
             <Routes>
               {/* ========================================== */}

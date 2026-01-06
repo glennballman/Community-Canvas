@@ -1,10 +1,36 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
+import { ApiError, getAuthHeaders } from "./api";
 
-async function throwIfResNotOk(res: Response) {
-  if (!res.ok) {
-    const text = (await res.text()) || res.statusText;
-    throw new Error(`${res.status}: ${text}`);
+const isDev = typeof window !== 'undefined' && import.meta.env?.DEV;
+
+async function parseErrorResponse(res: Response, endpoint: string): Promise<ApiError> {
+  let errorData: any = {
+    error: res.statusText,
+    code: res.status === 401 ? 'AUTH_REQUIRED' : 'UNKNOWN',
+    traceId: 'unknown',
+  };
+
+  try {
+    const json = await res.json();
+    errorData = { ...errorData, ...json };
+  } catch {
+    try {
+      const text = await res.text();
+      errorData.detail = text;
+    } catch {
+    }
   }
+
+  return new ApiError({
+    success: false,
+    error: errorData.error || res.statusText,
+    code: errorData.code || 'UNKNOWN',
+    traceId: errorData.traceId || 'unknown',
+    detail: errorData.detail,
+    stack: errorData.stack,
+    status: res.status,
+    endpoint,
+  });
 }
 
 export async function apiRequest(
@@ -14,12 +40,17 @@ export async function apiRequest(
 ): Promise<Response> {
   const res = await fetch(url, {
     method,
-    headers: data ? { "Content-Type": "application/json" } : {},
+    headers: {
+      ...(data ? { "Content-Type": "application/json" } : {}),
+      ...getAuthHeaders(),
+    },
     body: data ? JSON.stringify(data) : undefined,
     credentials: "include",
   });
 
-  await throwIfResNotOk(res);
+  if (!res.ok) {
+    throw await parseErrorResponse(res, url);
+  }
   return res;
 }
 
@@ -29,15 +60,30 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
-    const res = await fetch(queryKey.join("/") as string, {
+    const endpoint = queryKey[0] as string;
+    const res = await fetch(endpoint, {
       credentials: "include",
+      headers: getAuthHeaders(),
     });
 
     if (unauthorizedBehavior === "returnNull" && res.status === 401) {
       return null;
     }
 
-    await throwIfResNotOk(res);
+    if (!res.ok) {
+      const apiError = await parseErrorResponse(res, endpoint);
+      
+      if (isDev) {
+        console.error(`[QUERY ERROR] ${queryKey.join('/')}`, {
+          status: res.status,
+          code: apiError.code,
+          traceId: apiError.traceId,
+        });
+      }
+      
+      throw apiError;
+    }
+    
     return await res.json();
   };
 
@@ -46,12 +92,13 @@ export const queryClient = new QueryClient({
     queries: {
       queryFn: getQueryFn({ on401: "throw" }),
       refetchInterval: false,
-      refetchOnWindowFocus: false,
-      staleTime: Infinity,
-      retry: false,
+      refetchOnWindowFocus: true,
+      staleTime: 30 * 1000,
+      gcTime: 5 * 60 * 1000,
+      retry: 1,
     },
     mutations: {
-      retry: false,
+      retry: 1,
     },
   },
 });

@@ -1,0 +1,111 @@
+SYSTEM HARDENING — “NO MORE GHOST BUGS” (EVIDENCE-FIRST)
+
+Goal:
+Prevent another 90-minute loop where UI shows empty states, queries don’t fire, errors are masked, or new tables lack grants/RLS. Implement guardrails so the next time something breaks we immediately see:
+1) which endpoint failed,
+2) the status code,
+3) the DB error/policy denial,
+4) and the exact missing grant/policy.
+
+NON-NEGOTIABLE RULES:
+- Stop doing speculative debugging.
+- Every claim must be backed by: endpoint + status + server log line/stack + (if DB) SQL error message.
+- If it’s a 500 in dev, the UI must show a “View details” expandable panel with traceId + message.
+- If a new table is introduced, permissions must be automatically validated for cc_app role.
+
+Deliverables (implement all):
+
+A) DEV-ONLY ERROR TRANSPARENCY (API + UI)
+1) Add a global Express error handler (or equivalent) that:
+   - Generates a traceId (uuid)
+   - Logs: traceId + req.method + req.path + err.message + err.stack
+   - Returns JSON:
+     {
+       success:false,
+       error:"<short human message>",
+       code:"INTERNAL",
+       traceId:"<uuid>",
+       detail:"<err.message>",
+       stack:"<err.stack>"   // DEV ONLY
+     }
+   - IMPORTANT: stack/detail must only be returned when NODE_ENV !== 'production'
+   - In production, return only: success:false, error, code, traceId
+
+2) Update the standard client fetch wrapper (or create one if missing) so that:
+   - On non-2xx, it reads the JSON and throws a rich error object including traceId/detail/code/status
+   - All pages using fetch() (esp. /api/schedule/* and /api/admin/*) must route through this wrapper
+
+3) Add a reusable UI component: <ApiErrorBanner error={err} />
+   - Shows: “Failed to load data”
+   - Shows: status + code
+   - Has “View details” dropdown revealing traceId + detail (DEV ONLY)
+   - Includes a “Copy debug payload” button (traceId + endpoint + status + detail)
+
+B) TANSTACK QUERY “DON’T CACHE FAILURE FOREVER” POLICY
+1) Update QueryClient defaults:
+   - retry: 1 (or 2) for transient issues
+   - staleTime: 30s (NOT Infinity)
+   - gcTime: 5m (reasonable)
+2) For “schedule/ops” queries specifically:
+   - refetchOnWindowFocus: true
+   - refetchOnMount: 'always' (only for these core ops queries)
+3) Add a small dev-only console log when any query errors:
+   - queryKey + status + traceId (if available)
+
+C) AUTH CONSISTENCY GUARD
+1) Create a single helper: getAuthHeaders() that:
+   - reads cc_token from localStorage (if used)
+   - returns Authorization: Bearer <token>
+2) Ensure *every* authenticated request includes:
+   - credentials: 'include'
+   - Authorization header from getAuthHeaders()
+3) Add a dev assertion:
+   - if endpoint is /api/schedule/* or /api/admin/* and Authorization missing, console.warn
+
+D) DB PERMISSION / RLS “PARITY CHECK” (CI/DEV)
+We just had permission denied for tables like asset_capability_units / resource_schedule_events.
+Implement automated detection.
+
+1) Add a SQL script (or node script executed on startup in dev and in CI) that finds tables missing grants for role cc_app.
+   - Define the expected baseline: any table in public schema with prefix:
+     unified_%
+     resource_%
+     asset_%
+     cc_%
+     OR tables referenced by server/routes/schedule*.ts and admin-inventory.ts
+   - For each table, verify:
+     GRANT SELECT, INSERT, UPDATE, DELETE to cc_app (or at minimum SELECT for read-only tables)
+   - Output list of missing grants and FAIL the check if any exist.
+
+2) Add migrations rule:
+   - Any migration that CREATE TABLE must also include GRANT statements for cc_app
+   - Add a simple lint step (regex) in CI: “CREATE TABLE” must be accompanied by “GRANT … TO cc_app” in same migration, else fail.
+
+3) Add optional (but recommended) RLS check:
+   - For tables with RLS enabled, verify there is at least one policy for cc_app access patterns OR confirm that tenantQuery uses a DB role allowed by policies.
+   - If RLS enabled and no policy exists, fail with a clear message.
+
+E) “EVIDENCE MODE” DEBUG PANEL (DEV ONLY)
+Add a hidden debug page or modal accessible from Platform Admin:
+- Shows last 20 API calls:
+  endpoint, status, ms, traceId, short error
+- Shows the current tenant context:
+  tenant_id, impersonation state, user id
+- Shows auth state:
+  token present? cookie present?
+This is to avoid “are the requests even firing?” debates.
+
+Acceptance Tests (must pass):
+1) Break DB grants on a known table in dev → UI shows banner with traceId/detail and server logs contain stack.
+2) Force a 401 on /api/schedule/resources → UI shows banner with status=401 and code=AUTH_REQUIRED.
+3) Create a new table via migration without GRANT → parity check fails loudly and prevents merge/deploy.
+4) Operations Board loads resources when impersonating, without requiring hard-refresh loops.
+
+Deliver output:
+- List of files changed
+- Any new scripts added and how they run (dev startup + CI)
+- Screenshots or brief confirmation of error banner behavior in dev
+- The exact SQL used for parity checks
+
+IMPORTANT:
+Do not change production behavior except safer error bodies (no stacks) and improved reliability. All deep details are DEV ONLY.

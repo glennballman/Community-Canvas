@@ -172,12 +172,32 @@ app.use('/api', (req, res, next) => {
 (async () => {
   await registerRoutes(httpServer, app);
 
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+  app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
+    const traceId = crypto.randomUUID();
     const status = err.status || err.statusCode || 500;
+    const code = err.code || (status === 401 ? 'AUTH_REQUIRED' : status === 403 ? 'FORBIDDEN' : 'INTERNAL');
     const message = err.message || "Internal Server Error";
+    const isDev = process.env.NODE_ENV !== 'production';
 
-    res.status(status).json({ message });
-    throw err;
+    log(`[ERROR] traceId=${traceId} ${req.method} ${req.path} status=${status} code=${code} message=${message}`, 'error');
+    
+    if (isDev && err.stack) {
+      console.error(`[ERROR STACK] traceId=${traceId}\n${err.stack}`);
+    }
+
+    const response: Record<string, any> = {
+      success: false,
+      error: message,
+      code,
+      traceId,
+    };
+
+    if (isDev) {
+      response.detail = err.detail || message;
+      response.stack = err.stack;
+    }
+
+    res.status(status).json(response);
   });
 
   // importantly only setup vite in development and after
