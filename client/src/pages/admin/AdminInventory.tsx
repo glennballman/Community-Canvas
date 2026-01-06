@@ -153,11 +153,11 @@ export default function AdminInventory() {
           <TabsTrigger value="unified_assets" data-testid="tab-unified-assets">
             Unified Assets ({data?.total ?? 0})
           </TabsTrigger>
-          <TabsTrigger value="catalog_items" data-testid="tab-catalog-items">
-            Catalog Items ({data?.tableCounts?.catalog_items ?? "N/A"})
+          <TabsTrigger value="catalog_items" data-testid="tab-legacy-listings">
+            Legacy Listings ({data?.tableCounts?.catalog_items ?? "N/A"})
           </TabsTrigger>
-          <TabsTrigger value="cc_rental_items" data-testid="tab-rental-items">
-            Rental Items ({data?.tableCounts?.cc_rental_items ?? "N/A"})
+          <TabsTrigger value="cc_rental_items" data-testid="tab-legacy-rental">
+            Legacy Rental Rows ({data?.tableCounts?.cc_rental_items ?? "N/A"})
           </TabsTrigger>
         </TabsList>
 
@@ -292,16 +292,15 @@ export default function AdminInventory() {
         <TabsContent value="catalog_items" className="mt-4">
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Catalog Items</CardTitle>
+              <CardTitle className="text-lg">Legacy Listings</CardTitle>
+              <p className="text-sm text-muted-foreground">Imported/legacy inventory rows that have been synced into Unified Assets.</p>
             </CardHeader>
             <CardContent>
               {data?.tableCounts?.catalog_items === null ? (
                 <p className="text-muted-foreground">Not present in this environment.</p>
               ) : (
                 <p className="text-muted-foreground">
-                  {data?.tableCounts?.catalog_items ?? 0} catalog items found. 
-                  <br />
-                  <span className="text-sm">View details from the Unified Assets tab where catalog items are synchronized.</span>
+                  {data?.tableCounts?.catalog_items ?? 0} legacy listing rows found.
                 </p>
               )}
             </CardContent>
@@ -311,16 +310,15 @@ export default function AdminInventory() {
         <TabsContent value="cc_rental_items" className="mt-4">
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Rental Items (cc_rental_items)</CardTitle>
+              <CardTitle className="text-lg">Legacy Rental Rows</CardTitle>
+              <p className="text-sm text-muted-foreground">Older rental rows synced into Unified Assets.</p>
             </CardHeader>
             <CardContent>
               {data?.tableCounts?.cc_rental_items === null ? (
                 <p className="text-muted-foreground">Not present in this environment.</p>
               ) : (
                 <p className="text-muted-foreground">
-                  {data?.tableCounts?.cc_rental_items ?? 0} rental items found.
-                  <br />
-                  <span className="text-sm">View details from the Unified Assets tab where rental items are synchronized.</span>
+                  {data?.tableCounts?.cc_rental_items ?? 0} legacy rental rows found.
                 </p>
               )}
             </CardContent>

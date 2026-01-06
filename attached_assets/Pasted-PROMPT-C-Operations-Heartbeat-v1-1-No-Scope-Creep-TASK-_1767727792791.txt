@@ -1,0 +1,280 @@
+PROMPT C — Operations Heartbeat v1.1 (No Scope Creep)
+TASK: Finish the “15-minute operations heartbeat” and eliminate remaining “Catalog” user-facing language
+
+DO NOT DEVIATE. DO NOT ADD NEW PAGES UNLESS EXPLICITLY LISTED.
+Priority order: (0) Audit Evidence → (1) “Catalog” purge in UI copy → (2) Booking semantics (Arrive/Depart etc.) → (3) Capability + child capability scaffolding.
+
+0) STEP-0 AUDIT (MANDATORY — SHOW EVIDENCE BEFORE CHANGES)
+
+Before touching code, produce an Evidence Map (like you did earlier) answering these exact questions with file paths + key lines:
+
+A. Inventory → Unified Assets
+
+What table is the canonical internal resource registry? (expect unified_assets)
+
+Where does tenant “Inventory” UI read/write?
+
+List the route handlers and the UI page(s).
+
+B. Bookings
+
+What table backs /app/bookings? (expect unified_bookings or another)
+
+Confirm starts_at / ends_at are TIMESTAMPTZ and already support 15-minute precision.
+
+C. Operations Board
+
+Confirm /app/operations currently loads resource rows from tenant-owned unified_assets.
+
+Confirm the schedule overlay merges:
+
+resource_schedule_events (holds/maintenance/buffer/block)
+
+unified_bookings as type="booked" blocks
+
+D. Remaining “Catalog” words
+Run grep for user-facing “catalog” strings across:
+
+client/src/**
+
+server/**
+
+shared/**
+
+Important constraint: historical migration filenames or old migration contents may contain “catalog”. That is allowed.
+But NO user-facing UI copy should say “catalog”.
+
+✅ When the audit is complete, proceed to Step 1–3 exactly.
+
+1) ELIMINATE REMAINING USER-FACING “CATALOG” WORDING (NO DB CHANGES)
+
+We already renamed “Catalog” → “Inventory” in many places, but I’m still seeing “Catalog” in UI surfaces (example: Platform Admin Inventory tabs show “Catalog Items”).
+
+Do this:
+
+Replace remaining user-facing “Catalog” text with “Inventory” or “Inventory Items” depending on context.
+
+Do not rename routes unless they are still /app/catalog somewhere (should already be /app/inventory).
+
+Do not rename historical migrations.
+
+Specific UI copy updates required:
+
+Platform Admin → Inventory (Audit) page
+
+Rename tab label “Catalog Items” → “Legacy Listings”
+
+Subtitle: “Imported/legacy inventory rows that have been synced into Unified Assets.”
+
+Rename tab label “Rental Items” → “Legacy Rental Rows”
+
+Subtitle: “Older rental rows synced into Unified Assets.”
+
+Keep first tab label as “Unified Assets”.
+
+Tenant Picker page (“Your Places”)
+
+If any text says “Publish your catalog…”, change to:
+
+“Publish your inventory, manage availability, and handle bookings.”
+
+Anywhere else
+
+If “Service Catalog” exists in UI copy, use “Service Directory” (you already started this).
+
+✅ After Step 1: there should be no user-facing “catalog” visible anywhere in the running app.
+
+2) BOOKING SEMANTICS LAYER (ARRIVE/DEPART / PICKUP/RETURN) → STORES 15-MIN TIMES
+
+Goal: Humans think in Arriving/Departing (or Check-in/Check-out, Pickup/Return).
+The system must store starts_at/ends_at in 15-minute increments.
+
+2.1 Add an “Inventory Booking Profile” per asset (minimal v1)
+
+Add nullable columns (or a JSONB column) to unified_assets to support booking semantics defaults:
+
+Minimum fields:
+
+booking_mode ENUM or TEXT:
+
+check_in_out (rooms/cabins)
+
+arrive_depart (parking/moorage)
+
+pickup_return (equipment/kayaks)
+
+start_end (generic)
+
+default_start_time_local (e.g., "15:00")
+
+default_end_time_local (e.g., "11:00")
+
+default_duration_preset (optional: "4h" | "8h" | "24h" | "5n" etc.)
+
+time_granularity_minutes default 15 (lock this to 15 for now)
+
+You may implement as:
+
+a JSONB booking_profile on unified_assets (preferred for speed), OR
+
+discrete columns (acceptable)
+
+2.2 Update “Create Booking” UI to use semantic labels
+
+Wherever a booking is created/edited (Bookings pages / any booking modal):
+
+Replace “Start / End” labels with semantic labels based on booking_mode:
+
+check_in_out → Checking in / Checking out
+
+arrive_depart → Arriving / Departing
+
+pickup_return → Pickup / Return
+
+start_end → Start / End
+
+2.3 Presets → translate into timestamps
+
+Add preset buttons when appropriate:
+
+For equipment/kayaks: Half-day (4h), Full day (8h), Overnight (24h)
+
+For rooms: default to “nights” selection UX, but still compute exact timestamps:
+
+default check-in/out times come from the asset booking profile
+
+Hard rule: whatever the user chooses, compute:
+
+starts_at and ends_at as TIMESTAMPTZ
+
+rounded to 15-minute increments
+
+and ensure ends_at > starts_at
+
+2.4 Operations Board integration (no new UI yet)
+
+Ensure bookings created through Bookings UI appear on Operations Board as:
+
+type="booked"
+
+with exact starts/ends aligned to 15 minutes
+
+✅ Step 2 done when:
+
+Booking UI shows correct semantic labels
+
+Presets work
+
+Operations Board shows those bookings accurately
+
+3) CAPACITY + CONSTRAINTS (V1) + CHILD CAPABILITY STATUS (NON-BLOCKING)
+
+We are NOT implementing full optimization now. We are laying the foundation:
+
+3.1 Attach capabilities/constraints to assets
+
+Use the existing capability architecture if present (asset_capabilities), but add a minimal “constraints payload”:
+
+Option A (fast): add JSONB column to unified_assets:
+
+constraints JSONB (examples: max_weight_lbs, max_length_ft, pallet_capacity, liftgate_capacity_lbs)
+
+capabilities JSONB (freeform tags for now)
+
+Option B (more structured): new tables
+
+asset_constraints (asset_id, key, value, unit)
+
+Pick Option A unless Option B already exists.
+
+3.2 Child capability linkage + status (crane example)
+
+Add a table:
+
+asset_children:
+
+parent_asset_id
+
+child_asset_id
+
+relationship_type (e.g., mounted_tool, subsystem, trailer, crane)
+
+is_required boolean default false
+
+Add to unified_assets a status field (if not already):
+
+operational_status:
+
+operational
+
+degraded
+
+out_of_service
+
+Behavior rule (critical):
+
+Child out-of-service must NOT automatically disable the parent.
+
+It should mark the parent as degraded only if is_required=true OR if user explicitly chooses “this disables the parent”.
+
+No big UI build required now—just ensure the data model supports it and show a small warning banner in the asset detail view if a child is out.
+
+4) TONE + MICROCOPY FOR PHOTO ONBOARDING (COPY ONLY FOR NOW)
+
+We will later build photo-based extraction. For now, add rotating “yard handshake” copy in the Inventory add/edit flow when an image is uploaded.
+
+Rules:
+
+Polite, grounded, not over-the-top.
+
+Rotate phrases.
+
+Use “sweet” only if model_year >= current_year - 3.
+
+Use “killer” only if model_year >= current_year - 1 OR explicitly marked “like new”.
+
+Examples to rotate (use 8–12 variants):
+
+“Nice rig. Want me to help fill in the specs from this photo?”
+
+“Good looking truck. Is that a Kenworth?”
+
+“Clean setup. Is the lift gate rated for 2,000 lbs?”
+
+“Nice boat. Does the crane still run smooth?”
+
+“Solid machine. Any issues we should mark as maintenance?”
+
+Implement as a small helper that returns a phrase based on asset_type + optional model_year.
+
+(No AI calls yet. Just copy + rotation logic.)
+
+5) VERIFICATION CHECKLIST (MUST PASS)
+
+ No user-facing “catalog” remains anywhere (excluding historical migrations)
+
+ Platform Admin Inventory tabs renamed (Unified Assets / Legacy Listings / Legacy Rental Rows)
+
+ Booking create/edit uses semantic labels (Checking in/out, Arriving/Departing, Pickup/Return)
+
+ Booking presets work and store 15-minute timestamps
+
+ Operations Board shows bookings accurately
+
+ Child capability schema exists and doesn’t hard-disable parents
+
+ App boots, no console errors
+
+DO NOT:
+
+Add new modules beyond what’s described
+
+Replace the DB provider
+
+Reintroduce PostGIS
+
+Rebuild navigation structure
+
+Change the 15-minute grid
+
+BEGIN WITH STEP-0 AUDIT AND SHOW YOUR EVIDENCE MAP FIRST.
