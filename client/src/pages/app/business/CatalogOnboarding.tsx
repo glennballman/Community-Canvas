@@ -206,7 +206,7 @@ export default function CatalogOnboarding() {
           <CompleteStep
             itemCount={importedItems.length}
             tenantName={currentTenant?.name || 'Your business'}
-            onViewCatalog={() => navigate('/app/catalog')}
+            onViewInventory={() => navigate('/app/catalog')}
           />
         )}
       </div>
@@ -231,7 +231,7 @@ function SourceStep({
 }) {
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-2">How would you like to add your catalog?</h1>
+      <h1 className="text-2xl font-bold mb-2">How would you like to add your inventory?</h1>
       <p className="text-muted-foreground mb-8">Most people let us import it automatically.</p>
 
       <div className="grid md:grid-cols-3 gap-4 mb-8">
@@ -247,7 +247,7 @@ function SourceStep({
           <Globe className="w-8 h-8 mb-3 text-primary" />
           <h3 className="font-semibold mb-2">Import from your website</h3>
           <p className="text-sm text-muted-foreground">
-            We'll scan your site and build your catalog for you - items, descriptions, and photos.
+            We'll scan your site and build your inventory for you - items, descriptions, and photos.
           </p>
         </button>
 
@@ -263,7 +263,7 @@ function SourceStep({
           <FileText className="w-8 h-8 mb-3 text-primary" />
           <h3 className="font-semibold mb-2">Upload a file</h3>
           <p className="text-sm text-muted-foreground">
-            Upload a spreadsheet or PDF and we'll convert it into a structured catalog.
+            Upload a spreadsheet or PDF and we'll convert it into structured inventory.
           </p>
           <p className="text-xs text-muted-foreground mt-2">CSV, Excel, PDF</p>
         </button>
@@ -355,7 +355,7 @@ function ScanningStep({ progress, message }: { progress: number; message: string
         <Search className="w-10 h-10 text-primary" />
       </div>
       
-      <h2 className="text-2xl font-bold mb-2">Scanning your catalog...</h2>
+      <h2 className="text-2xl font-bold mb-2">Scanning your inventory...</h2>
       <p className="text-muted-foreground mb-4">{message}</p>
       <div className="max-w-xs mx-auto">
         <Progress value={progress} className="h-2" />
@@ -645,7 +645,7 @@ function SharingStep({
           <div>
             <h3 className="font-semibold mb-1">Public visibility</h3>
             <p className="text-sm text-muted-foreground">
-              Control whether your catalog appears on community portals.
+              Control whether your inventory appears on community portals.
             </p>
           </div>
         </div>
@@ -675,11 +675,11 @@ function SharingStep({
 function CompleteStep({
   itemCount,
   tenantName,
-  onViewCatalog
+  onViewInventory
 }: {
   itemCount: number;
   tenantName: string;
-  onViewCatalog: () => void;
+  onViewInventory: () => void;
 }) {
   return (
     <div className="text-center py-16">
@@ -689,12 +689,12 @@ function CompleteStep({
       
       <h1 className="text-3xl font-bold mb-2">You're all set!</h1>
       <p className="text-muted-foreground mb-8 max-w-md mx-auto">
-        {tenantName} now has {itemCount} items in your catalog. Community operators can now help callers find your offerings.
+        {tenantName} now has {itemCount} items in your inventory. Community operators can now help callers find your offerings.
       </p>
 
       <div className="space-y-3">
-        <Button onClick={onViewCatalog} size="lg" data-testid="button-view-catalog">
-          View your catalog
+        <Button onClick={onViewInventory} size="lg" data-testid="button-view-inventory">
+          View your inventory
           <ArrowRight className="w-4 h-4 ml-2" />
         </Button>
         <p className="text-sm text-muted-foreground">

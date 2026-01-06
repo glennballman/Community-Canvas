@@ -24,17 +24,17 @@ export default function CatalogPage() {
   };
 
   return (
-    <div className="space-y-6" data-testid="catalog-page">
+    <div className="space-y-6" data-testid="inventory-page">
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl font-bold">Catalog</h1>
+          <h1 className="text-2xl font-bold">Inventory</h1>
           <p className="text-muted-foreground">
-            Manage your inventory and offerings
+            Things you can book out — rooms, parking spots, equipment, tools.
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <Link to="/app/catalog/import">
-            <Button variant="outline" data-testid="button-import-catalog">
+            <Button variant="outline" data-testid="button-import-inventory" title="Import inventory items from a file">
               Import
             </Button>
           </Link>
@@ -48,9 +48,9 @@ export default function CatalogPage() {
       <div className="relative max-w-md">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
-          placeholder="Search catalog..."
+          placeholder="Search inventory..."
           className="pl-9"
-          data-testid="input-search-catalog"
+          data-testid="input-search-inventory"
         />
       </div>
 
@@ -58,7 +58,7 @@ export default function CatalogPage() {
         {catalogItems.map((item) => {
           const Icon = getTypeIcon(item.type);
           return (
-            <Card key={item.id} className="hover-elevate" data-testid={`card-catalog-item-${item.id}`}>
+            <Card key={item.id} className="hover-elevate" data-testid={`card-inventory-item-${item.id}`}>
               <CardHeader className="flex flex-row items-start gap-4">
                 <div className="p-2 bg-muted rounded-md">
                   <Icon className="h-6 w-6" />

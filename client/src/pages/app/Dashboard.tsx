@@ -277,7 +277,7 @@ function BusinessDashboard({ tenant }: DashboardProps): React.ReactElement {
         }}>
           <QuickAction
             icon={<Package size={24} />}
-            title="Manage Catalog"
+            title="Manage Inventory"
             description="Add or update your offerings"
             to="/app/catalog"
           />
