@@ -1,0 +1,53 @@
+-- E2/F2/G IMPLEMENTATION AUDIT
+
+-- Check E2: Multi-Portal Foundation
+SELECT 'E2: portal_type column' as check,
+  EXISTS(SELECT 1 FROM information_schema.columns 
+         WHERE table_name = 'portals' AND column_name = 'portal_type') as exists;
+
+SELECT 'E2: legal_dba_name column' as check,
+  EXISTS(SELECT 1 FROM information_schema.columns 
+         WHERE table_name = 'portals' AND column_name = 'legal_dba_name') as exists;
+
+SELECT 'E2: portal_products table' as check,
+  EXISTS(SELECT 1 FROM information_schema.tables WHERE table_name = 'portal_products') as exists;
+
+SELECT 'E2: portal_id on people' as check,
+  EXISTS(SELECT 1 FROM information_schema.columns 
+         WHERE table_name = 'people' AND column_name = 'portal_id') as exists;
+
+SELECT 'E2: portal_id on projects' as check,
+  EXISTS(SELECT 1 FROM information_schema.columns 
+         WHERE table_name = 'projects' AND column_name = 'portal_id') as exists;
+
+-- Check F2: Portal Resolution
+SELECT 'F2: portal_domains data' as check, COUNT(*) as count FROM portal_domains;
+
+-- Check G: Entity Presentations
+SELECT 'G: entity_presentations (now articles)' as check,
+  EXISTS(SELECT 1 FROM information_schema.tables WHERE table_name = 'articles') as exists;
+
+SELECT 'G: presentation_blocks table' as check,
+  EXISTS(SELECT 1 FROM information_schema.tables WHERE table_name = 'presentation_blocks') as exists;
+
+SELECT 'G: voice_profiles table' as check,
+  EXISTS(SELECT 1 FROM information_schema.tables WHERE table_name = 'voice_profiles') as exists;
+
+SELECT 'G: ai_runs table' as check,
+  EXISTS(SELECT 1 FROM information_schema.tables WHERE table_name = 'ai_runs') as exists;
+
+-- Check seeded portals
+SELECT 'E2: 1252093 BC LTD portals' as check, 
+  slug, portal_type, legal_dba_name 
+FROM portals 
+WHERE slug IN ('enviropaving', 'remote-serve', 'enviro-bright');
+
+-- Summary
+SELECT table_name FROM information_schema.tables 
+WHERE table_schema = 'public' 
+AND table_name IN (
+  'portal_products', 'portal_materials', 'portal_pricing_rules',
+  'articles', 'presentation_blocks', 'presentation_versions',
+  'presentation_sources', 'voice_profiles', 'presentation_entity_links', 'ai_runs'
+)
+ORDER BY table_name;
