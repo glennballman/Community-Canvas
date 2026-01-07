@@ -60,7 +60,7 @@ import crmRouter from "./routes/crm";
 import scheduleRouter from "./routes/schedule";
 import capacityConstraintsRouter from "./routes/capacityConstraints";
 import qaSeedRouter from "./routes/qa-seed";
-import { publicQuery } from "./db/tenantDb";
+import { publicQuery, serviceQuery } from "./db/tenantDb";
 import express from "express";
 
 // Merge static members with JSON-loaded members for consistent data across the app
@@ -231,6 +231,90 @@ export async function registerRoutes(
 
   // Register admin inventory routes (platform admin only)
   app.use('/api/admin/inventory', adminInventoryRouter);
+
+  // Admin presentations endpoint (platform admin only)
+  app.get('/api/admin/presentations', async (req, res) => {
+    try {
+      // First get presentations with portal info
+      const presentationsResult = await serviceQuery(`
+        SELECT 
+          ep.id,
+          ep.slug,
+          ep.title,
+          ep.subtitle,
+          ep.entity_type,
+          ep.presentation_type,
+          ep.status,
+          ep.visibility,
+          ep.tags,
+          ep.created_at,
+          p.id as portal_id,
+          p.slug as portal_slug,
+          p.name as portal_name
+        FROM entity_presentations ep
+        JOIN portals p ON p.id = ep.portal_id
+        ORDER BY p.name, ep.created_at DESC
+      `);
+      
+      // Get blocks for each presentation
+      const blocksResult = await serviceQuery(`
+        SELECT 
+          pb.presentation_id,
+          pb.block_type,
+          pb.block_order
+        FROM presentation_blocks pb
+        ORDER BY pb.presentation_id, pb.block_order
+      `);
+      
+      // Group blocks by presentation
+      const blocksByPresentation = new Map<string, { block_type: string }[]>();
+      for (const block of blocksResult.rows) {
+        if (!blocksByPresentation.has(block.presentation_id)) {
+          blocksByPresentation.set(block.presentation_id, []);
+        }
+        blocksByPresentation.get(block.presentation_id)!.push({ block_type: block.block_type });
+      }
+      
+      // Group presentations by portal
+      const portalMap = new Map<string, {
+        portal_slug: string;
+        portal_name: string;
+        presentations: any[];
+      }>();
+      
+      for (const row of presentationsResult.rows) {
+        if (!portalMap.has(row.portal_slug)) {
+          portalMap.set(row.portal_slug, {
+            portal_slug: row.portal_slug,
+            portal_name: row.portal_name,
+            presentations: []
+          });
+        }
+        portalMap.get(row.portal_slug)!.presentations.push({
+          id: row.id,
+          slug: row.slug,
+          title: row.title,
+          subtitle: row.subtitle,
+          entity_type: row.entity_type,
+          presentation_type: row.presentation_type,
+          status: row.status,
+          visibility: row.visibility,
+          tags: row.tags,
+          created_at: row.created_at,
+          blocks: blocksByPresentation.get(row.id) || [],
+          portal: { id: row.portal_id, name: row.portal_name, slug: row.portal_slug }
+        });
+      }
+      
+      res.json({ 
+        success: true, 
+        data: Array.from(portalMap.values())
+      });
+    } catch (error) {
+      console.error('Admin presentations error:', error);
+      res.status(500).json({ success: false, error: 'Failed to fetch presentations' });
+    }
+  });
 
   // Public inventory endpoints (no auth required)
   app.get('/api/v1/inventory/vehicles', async (req, res) => {

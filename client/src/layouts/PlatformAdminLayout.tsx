@@ -39,6 +39,7 @@ import {
   FileSearch,
   ArrowLeft,
   Package,
+  Presentation,
 } from 'lucide-react';
 import { useTenant } from '../contexts/TenantContext';
 
@@ -78,6 +79,7 @@ const ADMIN_NAV: NavSection[] = [
       { icon: FileText, label: 'NAICS', href: '/admin/data/naics' },
       { icon: Home, label: 'Accommodations', href: '/admin/data/accommodations' },
       { icon: Package, label: 'Inventory (Audit)', href: '/admin/inventory' },
+      { icon: Presentation, label: 'Presentations', href: '/admin/presentations' },
       { icon: FileBox, label: 'Import/Export', href: '/admin/data/import-export' },
     ],
   },

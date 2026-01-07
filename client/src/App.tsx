@@ -92,6 +92,10 @@ import PortalConfigPage from './pages/admin/PortalConfigPage';
 import AIQueuePage from './pages/admin/AIQueuePage';
 import FlaggedContentPage from './pages/admin/FlaggedContentPage';
 import AdminInventory from './pages/admin/AdminInventory';
+import PresentationsPage from './pages/admin/PresentationsPage';
+
+// Pages - Public
+import PresentationViewer from './pages/public/PresentationViewer';
 
 // Pages - Auth
 import LoginPage from './pages/auth/LoginPage';
@@ -226,6 +230,7 @@ export default function App() {
                 <Route path="data/naics" element={<AdminNAICS />} />
                 <Route path="data/accommodations" element={<Accommodations />} />
                 <Route path="inventory" element={<AdminInventory />} />
+                <Route path="presentations" element={<PresentationsPage />} />
                 <Route path="data/import-export" element={<DataImport />} />
                 
                 {/* Communities */}
@@ -241,6 +246,11 @@ export default function App() {
                 <Route path="settings" element={<AdminSettings />} />
                 <Route path="logs" element={<AdminLogs />} />
               </Route>
+
+              {/* ========================================== */}
+              {/* PUBLIC PRESENTATION VIEWER                */}
+              {/* ========================================== */}
+              <Route path="/portal/:portalSlug/p/:presentationSlug" element={<PresentationViewer />} />
 
               {/* ========================================== */}
               {/* AUTH & REDIRECTS                          */}
