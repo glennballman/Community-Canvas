@@ -255,7 +255,7 @@ export async function registerRoutes(
           p.id as portal_id,
           p.slug as portal_slug,
           p.name as portal_name
-        FROM entity_presentations ep
+        FROM articles ep
         JOIN portals p ON p.id = ep.portal_id
         ORDER BY p.name, ep.created_at DESC
       `);

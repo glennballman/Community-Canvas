@@ -101,7 +101,7 @@ async function checkTimeConflicts(
     SELECT b.id, 'booked' as event_type, 
            COALESCE(b.primary_guest_name, 'Booking') as title,
            b.starts_at, b.ends_at
-    FROM unified_bookings b
+    FROM reservations b
     WHERE b.asset_id = $1
       AND b.status NOT IN ('cancelled', 'no_show')
       AND b.starts_at < $3
@@ -188,7 +188,7 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
         a.name as resource_name,
         a.asset_type as resource_type
       FROM resource_schedule_events e
-      JOIN unified_assets a ON a.id = e.resource_id
+      JOIN assets a ON a.id = e.resource_id
       WHERE e.tenant_id = $1
         AND e.status = 'active'
         AND e.starts_at < $3
@@ -221,8 +221,8 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
         b.created_at,
         a.name as resource_name,
         a.asset_type as resource_type
-      FROM unified_bookings b
-      JOIN unified_assets a ON a.id = b.asset_id
+      FROM reservations b
+      JOIN assets a ON a.id = b.asset_id
       WHERE (a.owner_tenant_id = $1 OR b.booker_tenant_id = $1)
         AND b.status NOT IN ('cancelled', 'no_show')
         AND b.starts_at < $3
@@ -291,7 +291,7 @@ router.post('/events', requireAuth, async (req: Request, res: Response) => {
     }
 
     const assetCheck = await pool.query(
-      `SELECT id FROM unified_assets WHERE id = $1 AND (owner_tenant_id = $2 OR owner_tenant_id IS NULL)`,
+      `SELECT id FROM assets WHERE id = $1 AND (owner_tenant_id = $2 OR owner_tenant_id IS NULL)`,
       [resource_id, tenantId]
     );
 
@@ -517,7 +517,7 @@ router.get('/resources', requireAuth, async (req: Request, res: Response) => {
             AND e.starts_at <= now()
             AND e.ends_at > now()
         ) THEN true ELSE false END as is_under_maintenance
-       FROM unified_assets a
+       FROM assets a
        WHERE a.owner_tenant_id = $1
     `;
     const params: any[] = [tenantId];
@@ -673,8 +673,8 @@ router.get('/bookings', requireAuth, async (req: Request, res: Response) => {
         b.total,
         b.special_requests,
         b.created_at
-      FROM unified_bookings b
-      JOIN unified_assets a ON a.id = b.asset_id
+      FROM reservations b
+      JOIN assets a ON a.id = b.asset_id
       WHERE a.owner_tenant_id = $1
     `;
     const params: any[] = [tenantId];
@@ -745,7 +745,7 @@ router.post('/bookings', requireAuth, async (req: Request, res: Response) => {
 
     // Verify asset belongs to tenant
     const assetCheck = await pool.query(
-      'SELECT id, name FROM unified_assets WHERE id = $1 AND owner_tenant_id = $2',
+      'SELECT id, name FROM assets WHERE id = $1 AND owner_tenant_id = $2',
       [data.asset_id, tenantId]
     );
     if (assetCheck.rows.length === 0) {
@@ -764,7 +764,7 @@ router.post('/bookings', requireAuth, async (req: Request, res: Response) => {
 
     // Create booking
     const result = await pool.query(`
-      INSERT INTO unified_bookings (
+      INSERT INTO reservations (
         asset_id,
         primary_guest_name,
         primary_guest_email,
@@ -817,8 +817,8 @@ router.put('/bookings/:id/status', requireAuth, async (req: Request, res: Respon
 
     // Verify booking belongs to tenant's asset
     const booking = await pool.query(`
-      SELECT b.id FROM unified_bookings b
-      JOIN unified_assets a ON a.id = b.asset_id
+      SELECT b.id FROM reservations b
+      JOIN assets a ON a.id = b.asset_id
       WHERE b.id = $1 AND a.owner_tenant_id = $2
     `, [id, tenantId]);
 
@@ -834,7 +834,7 @@ router.put('/bookings/:id/status', requireAuth, async (req: Request, res: Respon
     }
 
     const result = await pool.query(`
-      UPDATE unified_bookings 
+      UPDATE reservations 
       SET ${updateFields.join(', ')}, updated_at = now()
       WHERE id = $1
       RETURNING *

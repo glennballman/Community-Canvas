@@ -74,7 +74,7 @@ export default function AdminInventory() {
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [selectedAsset, setSelectedAsset] = useState<UnifiedAsset | null>(null);
-  const [activeTab, setActiveTab] = useState("unified_assets");
+  const [activeTab, setActiveTab] = useState("assets");
 
   const buildQueryUrl = () => {
     const params = new URLSearchParams();
@@ -150,7 +150,7 @@ export default function AdminInventory() {
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
-          <TabsTrigger value="unified_assets" data-testid="tab-unified-assets">
+          <TabsTrigger value="assets" data-testid="tab-unified-assets">
             Unified Assets ({data?.total ?? 0})
           </TabsTrigger>
           <TabsTrigger value="catalog_items" data-testid="tab-legacy-listings">
@@ -161,7 +161,7 @@ export default function AdminInventory() {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="unified_assets" className="space-y-4 mt-4">
+        <TabsContent value="assets" className="space-y-4 mt-4">
           <Card>
             <CardHeader className="pb-3">
               <div className="flex flex-wrap items-center gap-3">

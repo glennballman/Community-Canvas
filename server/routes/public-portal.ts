@@ -753,7 +753,7 @@ router.get('/portals/:slug/presentations', async (req: Request, res: Response) =
           jsonb_build_object('block_type', pb.block_type, 'block_data', pb.block_data)
           ORDER BY pb.block_order
         ) FROM presentation_blocks pb WHERE pb.presentation_id = ep.id) as blocks
-      FROM entity_presentations ep
+      FROM articles ep
       WHERE ep.portal_id = $1
         AND ep.status = 'published'
         AND ep.visibility IN ('public', 'unlisted')
@@ -858,7 +858,7 @@ router.get('/portals/:slug/presentations/:presentationSlug', async (req: Request
           )
           ORDER BY pel.sort_order
         ) FROM presentation_entity_links pel WHERE pel.presentation_id = ep.id) as entity_links
-      FROM entity_presentations ep
+      FROM articles ep
       LEFT JOIN voice_profiles vp ON vp.id = ep.voice_profile_id
       WHERE ep.portal_id = $1
         AND ep.slug = $2

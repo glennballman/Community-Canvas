@@ -116,7 +116,7 @@ interface VerifyResult {
 
 export default function SystemExplorerPage() {
   const { currentTenant, impersonation, user } = useTenant();
-  const [selectedTable, setSelectedTable] = useState<string>('unified_assets');
+  const [selectedTable, setSelectedTable] = useState<string>('assets');
   const [tablePage, setTablePage] = useState(1);
   const [activeTab, setActiveTab] = useState('overview');
   

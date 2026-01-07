@@ -60,7 +60,7 @@ router.get('/', requireAuth, requireTenant, async (req: Request, res: Response) 
         p.id as property_id, p.name as property_name, p.address_line1 as property_address,
         (SELECT COUNT(*) FROM work_request_notes wn WHERE wn.work_request_id = wr.id) as notes_count
       FROM work_requests wr
-      LEFT JOIN crm_contacts c ON wr.contact_id = c.id
+      LEFT JOIN people c ON wr.contact_id = c.id
       LEFT JOIN crm_properties p ON wr.property_id = p.id
       ${whereClause}
       ORDER BY wr.created_at DESC
@@ -79,7 +79,7 @@ router.get('/', requireAuth, requireTenant, async (req: Request, res: Response) 
         COUNT(*) FILTER (WHERE status = 'dropped') as count_dropped,
         COUNT(*) FILTER (WHERE status = 'spam') as count_spam
       FROM work_requests wr
-      LEFT JOIN crm_contacts c ON wr.contact_id = c.id`,
+      LEFT JOIN people c ON wr.contact_id = c.id`,
       []
     );
 
@@ -116,8 +116,8 @@ router.get('/:id', requireAuth, requireTenant, async (req: Request, res: Respons
         o.name as organization_name,
         p.name as property_name, p.address_line1 as property_address, p.city as property_city
       FROM work_requests wr
-      LEFT JOIN crm_contacts c ON wr.contact_id = c.id
-      LEFT JOIN crm_organizations o ON wr.organization_id = o.id
+      LEFT JOIN people c ON wr.contact_id = c.id
+      LEFT JOIN organizations o ON wr.organization_id = o.id
       LEFT JOIN crm_properties p ON wr.property_id = p.id
       WHERE wr.id = $1`,
       [id]

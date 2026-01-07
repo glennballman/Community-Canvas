@@ -41,17 +41,17 @@ const KEY_ROUTES = [
 
 // Allowed tables for data browser with tenant column names
 // Different tables use different column names for tenant scoping
+// Updated to schema.org-aligned names: assets, reservations, people, organizations, articles
 export const ALLOWED_TABLES = [
-  { name: 'unified_assets', label: 'Assets', tenantScoped: true, tenantColumn: 'owner_tenant_id' },
-  { name: 'unified_bookings', label: 'Bookings', tenantScoped: true, tenantColumn: 'booker_tenant_id' },
+  { name: 'assets', label: 'Assets', tenantScoped: true, tenantColumn: 'owner_tenant_id' },
+  { name: 'reservations', label: 'Reservations', tenantScoped: true, tenantColumn: 'booker_tenant_id' },
   { name: 'work_requests', label: 'Work Requests', tenantScoped: true, tenantColumn: 'tenant_id' },
   { name: 'projects', label: 'Projects', tenantScoped: true, tenantColumn: 'tenant_id' },
-  { name: 'crm_contacts', label: 'Contacts', tenantScoped: true, tenantColumn: 'tenant_id' },
-  { name: 'crm_organizations', label: 'Organizations', tenantScoped: true, tenantColumn: 'tenant_id' },
-  { name: 'crm_places', label: 'Places', tenantScoped: true, tenantColumn: 'tenant_id' },
+  { name: 'people', label: 'People', tenantScoped: true, tenantColumn: 'tenant_id' },
+  { name: 'organizations', label: 'Organizations', tenantScoped: true, tenantColumn: 'tenant_id' },
   { name: 'portals', label: 'Portals', tenantScoped: true, tenantColumn: 'owning_tenant_id' },
   { name: 'portal_domains', label: 'Portal Domains', tenantScoped: false },
-  { name: 'entity_presentations', label: 'Presentations', tenantScoped: true, tenantColumn: 'canonical_tenant_id' },
+  { name: 'articles', label: 'Articles', tenantScoped: true, tenantColumn: 'canonical_tenant_id' },
   { name: 'presentation_blocks', label: 'Presentation Blocks', tenantScoped: false },
   { name: 'service_runs', label: 'Service Runs', tenantScoped: true, tenantColumn: 'tenant_id' },
   { name: 'crews', label: 'Crews', tenantScoped: true, tenantColumn: 'tenant_id' },
@@ -96,7 +96,7 @@ router.get('/overview', async (req, res) => {
       try {
         // Count records that have data for this specific JSON path
         const pathParts = (p as any).jsonPath.split('.');
-        const jsonQuery = pathParts.map(part => `'${part}'`).join('->');
+        const jsonQuery = pathParts.map((part: string) => `'${part}'`).join('->');
         const result = await serviceQuery(`
           SELECT 
             COUNT(*) FILTER (WHERE data->${jsonQuery} IS NOT NULL AND jsonb_array_length(data->${jsonQuery}) > 0) as count,

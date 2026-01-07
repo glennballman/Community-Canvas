@@ -19,7 +19,7 @@ router.use(authenticateToken, requirePlatformAdmin);
 /**
  * GET /api/admin/inventory
  * 
- * Returns unified_assets across all tenants with filters.
+ * Returns assets across all tenants with filters.
  * Also returns counts from related inventory tables.
  */
 router.get('/', async (req: AuthRequest, res: Response) => {
@@ -44,7 +44,7 @@ router.get('/', async (req: AuthRequest, res: Response) => {
         ua.updated_at,
         ua.source_table,
         ua.source_id
-      FROM unified_assets ua
+      FROM assets ua
       LEFT JOIN cc_tenants t ON ua.owner_tenant_id = t.id
       WHERE 1=1
     `;
@@ -87,14 +87,14 @@ router.get('/', async (req: AuthRequest, res: Response) => {
     
     const typesResult = await serviceQuery(`
       SELECT DISTINCT asset_type 
-      FROM unified_assets 
+      FROM assets 
       WHERE asset_type IS NOT NULL
       ORDER BY asset_type
     `);
     
     const tableCounts: Record<string, number | null> = {};
     
-    const countTables = ['catalog_items', 'cc_rental_items', 'unified_bookings'];
+    const countTables = ['catalog_items', 'cc_rental_items', 'reservations'];
     for (const tableName of countTables) {
       try {
         const countResult = await serviceQuery(`SELECT COUNT(*)::int as count FROM ${tableName}`);
@@ -104,7 +104,7 @@ router.get('/', async (req: AuthRequest, res: Response) => {
       }
     }
     
-    const totalResult = await serviceQuery('SELECT COUNT(*)::int as count FROM unified_assets');
+    const totalResult = await serviceQuery('SELECT COUNT(*)::int as count FROM assets');
     
     res.json({
       assets: assetsResult.rows,

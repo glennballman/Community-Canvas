@@ -48,8 +48,8 @@ router.get('/properties', requireAuth, requireTenant, async (req: Request, res: 
         org.name as owner_org_name,
         (SELECT COUNT(*) FROM crm_property_photos ph WHERE ph.property_id = p.id) as photo_count
       FROM crm_properties p
-      LEFT JOIN crm_contacts c ON p.owner_contact_id = c.id
-      LEFT JOIN crm_organizations org ON p.owner_organization_id = org.id
+      LEFT JOIN people c ON p.owner_contact_id = c.id
+      LEFT JOIN organizations org ON p.owner_organization_id = org.id
       ${whereClause}
       ORDER BY p.updated_at DESC
       LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
@@ -82,8 +82,8 @@ router.get('/properties/:id', requireAuth, requireTenant, async (req: Request, r
         c.id as owner_contact_id, c.first_name as owner_first_name, c.last_name as owner_last_name, c.phone as owner_phone, c.email as owner_email,
         org.id as owner_organization_id, org.name as owner_org_name
       FROM crm_properties p
-      LEFT JOIN crm_contacts c ON p.owner_contact_id = c.id
-      LEFT JOIN crm_organizations org ON p.owner_organization_id = org.id
+      LEFT JOIN people c ON p.owner_contact_id = c.id
+      LEFT JOIN organizations org ON p.owner_organization_id = org.id
       WHERE p.id = $1`,
       [id]
     );
@@ -235,8 +235,8 @@ router.get('/places', requireAuth, requireTenant, async (req: Request, res: Resp
         org.name as owner_org_name,
         (SELECT COUNT(*) FROM crm_property_photos ph WHERE ph.property_id = p.id) as photo_count
       FROM crm_properties p
-      LEFT JOIN crm_contacts c ON p.owner_contact_id = c.id
-      LEFT JOIN crm_organizations org ON p.owner_organization_id = org.id
+      LEFT JOIN people c ON p.owner_contact_id = c.id
+      LEFT JOIN organizations org ON p.owner_organization_id = org.id
       ${whereClause}
       ORDER BY p.updated_at DESC
       LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
@@ -281,8 +281,8 @@ router.get('/contacts', requireAuth, requireTenant, async (req: Request, res: Re
         c.id, c.first_name, c.last_name, c.display_name, c.phone, c.email, c.role_title,
         c.city, c.province, c.notes, c.created_at, c.updated_at,
         o.name as org_name
-      FROM crm_contacts c
-      LEFT JOIN crm_organizations o ON c.organization_id = o.id
+      FROM people c
+      LEFT JOIN organizations o ON c.organization_id = o.id
       ${whereClause}
       ORDER BY c.last_name ASC, c.first_name ASC
       LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
@@ -290,7 +290,7 @@ router.get('/contacts', requireAuth, requireTenant, async (req: Request, res: Re
     );
 
     const countResult = await tenantReq.tenantQuery!(
-      `SELECT COUNT(*) as total FROM crm_contacts c ${whereClause}`,
+      `SELECT COUNT(*) as total FROM people c ${whereClause}`,
       params
     );
 
@@ -311,8 +311,8 @@ router.get('/contacts/:id', requireAuth, requireTenant, async (req: Request, res
 
     const result = await tenantReq.tenantQuery!(
       `SELECT c.*, o.name as org_name
-       FROM crm_contacts c
-       LEFT JOIN crm_organizations o ON c.organization_id = o.id
+       FROM people c
+       LEFT JOIN organizations o ON c.organization_id = o.id
        WHERE c.id = $1`,
       [id]
     );
@@ -347,7 +347,7 @@ router.post('/contacts', requireAuth, requireTenant, async (req: Request, res: R
     }
 
     const result = await tenantReq.tenantQuery!(
-      `INSERT INTO crm_contacts (tenant_id, first_name, last_name, display_name, phone, email, role_title, organization_id, address_line1, address_line2, city, province, postal_code, country, notes)
+      `INSERT INTO people (tenant_id, first_name, last_name, display_name, phone, email, role_title, organization_id, address_line1, address_line2, city, province, postal_code, country, notes)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
        RETURNING *`,
       [tenantId, first_name, last_name || null, display_name || null, phone || null, email || null, role_title || null, organization_id || null, address_line1 || null, address_line2 || null, city || null, province || 'BC', postal_code || null, country || 'Canada', notes || null]
@@ -367,7 +367,7 @@ router.put('/contacts/:id', requireAuth, requireTenant, async (req: Request, res
     const { first_name, last_name, display_name, phone, email, role_title, organization_id, address_line1, address_line2, city, province, postal_code, country, notes } = req.body;
 
     const result = await tenantReq.tenantQuery!(
-      `UPDATE crm_contacts SET
+      `UPDATE people SET
         first_name = COALESCE($2, first_name),
         last_name = $3,
         display_name = $4,
@@ -402,7 +402,7 @@ router.delete('/contacts/:id', requireAuth, requireTenant, async (req: Request, 
   const tenantReq = req as TenantRequest;
   try {
     const { id } = req.params;
-    const result = await tenantReq.tenantQuery!(`DELETE FROM crm_contacts WHERE id = $1 RETURNING id`, [id]);
+    const result = await tenantReq.tenantQuery!(`DELETE FROM people WHERE id = $1 RETURNING id`, [id]);
     
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Contact not found' });
@@ -434,8 +434,8 @@ router.get('/people', requireAuth, requireTenant, async (req: Request, res: Resp
         c.id, c.first_name, c.last_name, c.display_name, c.phone, c.email, c.role_title,
         c.city, c.province, c.notes, c.created_at, c.updated_at,
         o.name as org_name
-      FROM crm_contacts c
-      LEFT JOIN crm_organizations o ON c.organization_id = o.id
+      FROM people c
+      LEFT JOIN organizations o ON c.organization_id = o.id
       ${whereClause}
       ORDER BY c.last_name ASC, c.first_name ASC
       LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
@@ -443,7 +443,7 @@ router.get('/people', requireAuth, requireTenant, async (req: Request, res: Resp
     );
 
     const countResult = await tenantReq.tenantQuery!(
-      `SELECT COUNT(*) as total FROM crm_contacts c ${whereClause}`,
+      `SELECT COUNT(*) as total FROM people c ${whereClause}`,
       params
     );
 
@@ -479,8 +479,8 @@ router.get('/organizations', requireAuth, requireTenant, async (req: Request, re
       `SELECT 
         o.id, o.name, o.legal_name, o.phone, o.email, o.website, o.city, o.province,
         o.notes, o.created_at, o.updated_at,
-        (SELECT COUNT(*) FROM crm_contacts c WHERE c.organization_id = o.id) as contacts_count
-      FROM crm_organizations o
+        (SELECT COUNT(*) FROM people c WHERE c.organization_id = o.id) as contacts_count
+      FROM organizations o
       ${whereClause}
       ORDER BY o.name ASC
       LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
@@ -488,7 +488,7 @@ router.get('/organizations', requireAuth, requireTenant, async (req: Request, re
     );
 
     const countResult = await tenantReq.tenantQuery!(
-      `SELECT COUNT(*) as total FROM crm_organizations o ${whereClause}`,
+      `SELECT COUNT(*) as total FROM organizations o ${whereClause}`,
       params
     );
 
@@ -508,7 +508,7 @@ router.get('/organizations/:id', requireAuth, requireTenant, async (req: Request
     const { id } = req.params;
 
     const result = await tenantReq.tenantQuery!(
-      `SELECT * FROM crm_organizations WHERE id = $1`,
+      `SELECT * FROM organizations WHERE id = $1`,
       [id]
     );
 
@@ -517,7 +517,7 @@ router.get('/organizations/:id', requireAuth, requireTenant, async (req: Request
     }
 
     const contactsResult = await tenantReq.tenantQuery!(
-      `SELECT id, first_name, last_name, role_title, phone, email FROM crm_contacts WHERE organization_id = $1 ORDER BY last_name, first_name`,
+      `SELECT id, first_name, last_name, role_title, phone, email FROM people WHERE organization_id = $1 ORDER BY last_name, first_name`,
       [id]
     );
 
@@ -548,7 +548,7 @@ router.post('/organizations', requireAuth, requireTenant, async (req: Request, r
     }
 
     const result = await tenantReq.tenantQuery!(
-      `INSERT INTO crm_organizations (tenant_id, name, legal_name, phone, email, website, address_line1, address_line2, city, province, postal_code, country, notes)
+      `INSERT INTO organizations (tenant_id, name, legal_name, phone, email, website, address_line1, address_line2, city, province, postal_code, country, notes)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
        RETURNING *`,
       [tenantId, name, legal_name || null, phone || null, email || null, website || null, address_line1 || null, address_line2 || null, city || null, province || 'BC', postal_code || null, country || 'Canada', notes || null]
@@ -568,7 +568,7 @@ router.put('/organizations/:id', requireAuth, requireTenant, async (req: Request
     const { name, legal_name, phone, email, website, address_line1, address_line2, city, province, postal_code, country, notes } = req.body;
 
     const result = await tenantReq.tenantQuery!(
-      `UPDATE crm_organizations SET
+      `UPDATE organizations SET
         name = COALESCE($2, name),
         legal_name = $3,
         phone = $4,
@@ -601,7 +601,7 @@ router.delete('/organizations/:id', requireAuth, requireTenant, async (req: Requ
   const tenantReq = req as TenantRequest;
   try {
     const { id } = req.params;
-    const result = await tenantReq.tenantQuery!(`DELETE FROM crm_organizations WHERE id = $1 RETURNING id`, [id]);
+    const result = await tenantReq.tenantQuery!(`DELETE FROM organizations WHERE id = $1 RETURNING id`, [id]);
     
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Organization not found' });
@@ -632,8 +632,8 @@ router.get('/orgs', requireAuth, requireTenant, async (req: Request, res: Respon
       `SELECT 
         o.id, o.name, o.legal_name, o.phone, o.email, o.website, o.city, o.province,
         o.notes, o.created_at, o.updated_at,
-        (SELECT COUNT(*) FROM crm_contacts c WHERE c.organization_id = o.id) as contacts_count
-      FROM crm_organizations o
+        (SELECT COUNT(*) FROM people c WHERE c.organization_id = o.id) as contacts_count
+      FROM organizations o
       ${whereClause}
       ORDER BY o.name ASC
       LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
@@ -641,7 +641,7 @@ router.get('/orgs', requireAuth, requireTenant, async (req: Request, res: Respon
     );
 
     const countResult = await tenantReq.tenantQuery!(
-      `SELECT COUNT(*) as total FROM crm_organizations o ${whereClause}`,
+      `SELECT COUNT(*) as total FROM organizations o ${whereClause}`,
       params
     );
 
@@ -663,7 +663,7 @@ router.get('/lookup/contacts', requireAuth, requireTenant, async (req: Request, 
   const tenantReq = req as TenantRequest;
   try {
     const result = await tenantReq.tenantQuery!(
-      `SELECT id, first_name, last_name, phone, email FROM crm_contacts ORDER BY last_name, first_name LIMIT 100`
+      `SELECT id, first_name, last_name, phone, email FROM people ORDER BY last_name, first_name LIMIT 100`
     );
     res.json({ contacts: result.rows });
   } catch (error) {
@@ -677,7 +677,7 @@ router.get('/lookup/people', requireAuth, requireTenant, async (req: Request, re
   const tenantReq = req as TenantRequest;
   try {
     const result = await tenantReq.tenantQuery!(
-      `SELECT id, first_name, last_name, phone, email FROM crm_contacts ORDER BY last_name, first_name LIMIT 100`
+      `SELECT id, first_name, last_name, phone, email FROM people ORDER BY last_name, first_name LIMIT 100`
     );
     res.json({ people: result.rows });
   } catch (error) {
@@ -690,7 +690,7 @@ router.get('/lookup/organizations', requireAuth, requireTenant, async (req: Requ
   const tenantReq = req as TenantRequest;
   try {
     const result = await tenantReq.tenantQuery!(
-      `SELECT id, name FROM crm_organizations ORDER BY name LIMIT 100`
+      `SELECT id, name FROM organizations ORDER BY name LIMIT 100`
     );
     res.json({ organizations: result.rows });
   } catch (error) {
@@ -704,7 +704,7 @@ router.get('/lookup/orgs', requireAuth, requireTenant, async (req: Request, res:
   const tenantReq = req as TenantRequest;
   try {
     const result = await tenantReq.tenantQuery!(
-      `SELECT id, name FROM crm_organizations ORDER BY name LIMIT 100`
+      `SELECT id, name FROM organizations ORDER BY name LIMIT 100`
     );
     res.json({ orgs: result.rows });
   } catch (error) {

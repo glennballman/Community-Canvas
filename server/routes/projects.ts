@@ -79,8 +79,8 @@ router.get('/', requireAuth, requireTenant, async (req: Request, res: Response) 
         (SELECT COUNT(*) FROM project_photos pp WHERE pp.project_id = p.id) as photos_count,
         (SELECT COUNT(*) FROM project_notes pn WHERE pn.project_id = p.id) as notes_count
       FROM projects p
-      LEFT JOIN crm_contacts c ON p.contact_id = c.id
-      LEFT JOIN crm_organizations o ON p.organization_id = o.id
+      LEFT JOIN people c ON p.contact_id = c.id
+      LEFT JOIN organizations o ON p.organization_id = o.id
       LEFT JOIN crm_properties prop ON p.property_id = prop.id
       ${whereClause}
       ORDER BY 
@@ -146,8 +146,8 @@ router.get('/:id', requireAuth, requireTenant, async (req: Request, res: Respons
         o.name as organization_name,
         prop.name as property_name, prop.address_line1 as property_address, prop.city as property_city
       FROM projects p
-      LEFT JOIN crm_contacts c ON p.contact_id = c.id
-      LEFT JOIN crm_organizations o ON p.organization_id = o.id
+      LEFT JOIN people c ON p.contact_id = c.id
+      LEFT JOIN organizations o ON p.organization_id = o.id
       LEFT JOIN crm_properties prop ON p.property_id = prop.id
       WHERE p.id = $1`,
       [id]
