@@ -18,9 +18,12 @@ import {
   RefreshCw,
   Loader2,
   Shield,
-  Clock
+  Clock,
+  ShieldAlert,
+  Globe
 } from 'lucide-react';
 import { useTenant } from '@/contexts/TenantContext';
+import { Link } from 'react-router-dom';
 
 interface OverviewData {
   tenantId: string | null;
@@ -111,10 +114,40 @@ interface VerifyResult {
 }
 
 export default function SystemExplorerPage() {
-  const { currentTenant, impersonation } = useTenant();
+  const { currentTenant, impersonation, user } = useTenant();
   const [selectedTable, setSelectedTable] = useState<string>('unified_assets');
   const [tablePage, setTablePage] = useState(1);
   const [activeTab, setActiveTab] = useState('overview');
+  
+  // SECURITY: Block access while impersonating
+  if (impersonation?.is_impersonating) {
+    return (
+      <div className="p-6 min-h-screen flex items-center justify-center bg-background" data-testid="page-system-explorer-blocked">
+        <Card className="max-w-md">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-destructive">
+              <ShieldAlert className="h-5 w-5" />
+              Access Blocked
+            </CardTitle>
+            <CardDescription>
+              System Explorer cannot be accessed while impersonating a tenant.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Exit impersonation to use System Explorer. This protects against accidental cross-tenant data exposure.
+            </p>
+            <Link to="/admin/impersonation">
+              <Button variant="default" data-testid="button-exit-impersonation">
+                <Shield className="h-4 w-4 mr-2" />
+                Exit Impersonation
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
   
   const { data: overview, isLoading: overviewLoading, refetch: refetchOverview } = useQuery<{ success: boolean; data: OverviewData }>({
     queryKey: ['/api/admin/system-explorer/overview'],
@@ -153,23 +186,22 @@ export default function SystemExplorerPage() {
   return (
     <div className="p-6 space-y-6 bg-background min-h-screen" data-testid="page-system-explorer">
       <div className="flex items-center justify-between gap-4 flex-wrap">
-        <div>
+        <div className="space-y-1">
           <h1 className="text-2xl font-bold" data-testid="text-page-title">System Explorer</h1>
           <p className="text-muted-foreground text-sm">
             Discovery surface for debugging and testing. Read-only.
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          {currentTenant && (
-            <Badge variant="outline" data-testid="badge-current-tenant">
-              {currentTenant.tenant_name}
-            </Badge>
-          )}
-          {impersonation?.is_impersonating && (
-            <Badge variant="destructive" data-testid="badge-impersonating">
-              Impersonating
-            </Badge>
-          )}
+          {/* Platform Admin Context Badge */}
+          <Badge variant="outline" className="border-purple-500 text-purple-500" data-testid="badge-context-mode">
+            <Shield className="h-3 w-3 mr-1" />
+            Mode: Platform Admin
+          </Badge>
+          <Badge variant="outline" data-testid="badge-context-scope">
+            <Globe className="h-3 w-3 mr-1" />
+            Scope: All Tenants
+          </Badge>
           <Button 
             variant="outline" 
             size="sm" 

@@ -211,7 +211,6 @@ export default function App() {
                 
                 {/* Shared routes */}
                 <Route path="conversations" element={<ConversationsPage />} />
-                <Route path="system-explorer" element={<SystemExplorerPage />} />
                 <Route path="settings" element={<SettingsPage />} />
               </Route>
 

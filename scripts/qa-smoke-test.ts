@@ -197,6 +197,132 @@ async function verifyNavItemsExist(): Promise<TestResult> {
   }
 }
 
+// SECURITY GATE 1: System Explorer must NOT appear in tenant navs
+async function verifySystemExplorerNotInTenantNav(): Promise<TestResult> {
+  try {
+    const fs = await import('fs');
+    const path = await import('path');
+    
+    // Check TenantAppLayout (tenant nav) - should NOT have System Explorer
+    const tenantLayoutPath = path.join(process.cwd(), 'client/src/layouts/TenantAppLayout.tsx');
+    const tenantContent = fs.readFileSync(tenantLayoutPath, 'utf-8');
+    
+    // Check if System Explorer appears anywhere in tenant nav configs
+    const systemExplorerInTenant = /System\s*Explorer/i.test(tenantContent) && 
+                                    /system-explorer/i.test(tenantContent);
+    
+    if (systemExplorerInTenant) {
+      return {
+        name: 'SECURITY: System Explorer NOT in Tenant Nav',
+        status: 'FAIL',
+        details: 'System Explorer found in TenantAppLayout - SECURITY VIOLATION',
+      };
+    }
+    
+    // Check App.tsx for /app/system-explorer route - should NOT exist
+    // Extract just the TenantAppLayout section (between path="/app" and path="/admin")
+    const appPath = path.join(process.cwd(), 'client/src/App.tsx');
+    const appContent = fs.readFileSync(appPath, 'utf-8');
+    
+    // Find the tenant section between TenantAppLayout and PlatformAdminLayout
+    const tenantSectionMatch = appContent.match(/element=\{<TenantAppLayout\s*\/>\}>([\s\S]*?)<Route\s+path="\/admin"/);
+    
+    if (tenantSectionMatch) {
+      const tenantSection = tenantSectionMatch[1];
+      // Check if system-explorer route exists in tenant section
+      if (/path=["']system-explorer["']/.test(tenantSection)) {
+        return {
+          name: 'SECURITY: System Explorer NOT in Tenant Nav',
+          status: 'FAIL',
+          details: 'Route /app/system-explorer exists in App.tsx - SECURITY VIOLATION',
+        };
+      }
+    }
+    
+    // Check PlatformAdminLayout HAS System Explorer (should be there)
+    const adminLayoutPath = path.join(process.cwd(), 'client/src/layouts/PlatformAdminLayout.tsx');
+    const adminContent = fs.readFileSync(adminLayoutPath, 'utf-8');
+    
+    const systemExplorerInAdmin = /System\s*Explorer/i.test(adminContent) && 
+                                   /system-explorer/i.test(adminContent);
+    
+    if (!systemExplorerInAdmin) {
+      return {
+        name: 'SECURITY: System Explorer NOT in Tenant Nav',
+        status: 'FAIL',
+        details: 'System Explorer missing from PlatformAdminLayout - should be there',
+      };
+    }
+    
+    return {
+      name: 'SECURITY: System Explorer NOT in Tenant Nav',
+      status: 'PASS',
+      details: 'System Explorer only in Platform Admin nav (correct)',
+    };
+  } catch (error: any) {
+    return {
+      name: 'SECURITY: System Explorer NOT in Tenant Nav',
+      status: 'FAIL',
+      details: `Failed to verify: ${error.message}`,
+    };
+  }
+}
+
+// SECURITY GATE 2: Data Browser actually renders rows (inspect works)
+async function verifyDataBrowserInspectWorks(token: string): Promise<TestResult> {
+  try {
+    // Test that we can fetch table data from Data Browser API
+    // Route is: /api/admin/system-explorer/table/:tableName?page=1
+    const res = await fetch(`${BASE_URL}/api/admin/system-explorer/table/snapshots?page=1`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+    
+    if (!res.ok) {
+      return {
+        name: 'SECURITY: Data Browser Inspect Works',
+        status: 'FAIL',
+        details: `API returned ${res.status}`,
+      };
+    }
+    
+    const data = await res.json();
+    
+    // Check response structure
+    if (!data?.data?.pagination) {
+      return {
+        name: 'SECURITY: Data Browser Inspect Works',
+        status: 'FAIL',
+        details: 'Invalid response structure (no pagination)',
+      };
+    }
+    
+    // Check that rows is an array (can be empty, but must be array)
+    if (!Array.isArray(data.data.rows)) {
+      return {
+        name: 'SECURITY: Data Browser Inspect Works',
+        status: 'FAIL',
+        details: 'rows is not an array',
+      };
+    }
+    
+    return {
+      name: 'SECURITY: Data Browser Inspect Works',
+      status: 'PASS',
+      details: `Table query returned ${data.data.rows.length} rows, total ${data.data.pagination.total}`,
+    };
+  } catch (error: any) {
+    return {
+      name: 'SECURITY: Data Browser Inspect Works',
+      status: 'FAIL',
+      details: error.message,
+    };
+  }
+}
+
 async function runTests() {
   console.log('\n========================================');
   console.log('QA SMOKE TEST - Community Status Dashboard');
@@ -283,6 +409,14 @@ async function runTests() {
   // This is a static assertion that key nav items haven't been removed
   const navLockResult = await verifyNavItemsExist();
   results.push(navLockResult);
+  
+  // Test 13: SECURITY GATE 1 - System Explorer NOT in tenant nav
+  const securityGate1 = await verifySystemExplorerNotInTenantNav();
+  results.push(securityGate1);
+  
+  // Test 14: SECURITY GATE 2 - Data Browser inspect works
+  const securityGate2 = await verifyDataBrowserInspectWorks(token);
+  results.push(securityGate2);
   
   // Print Results
   console.log('Results:');
