@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { serviceQuery } from '../db/tenantDb';
+import { verifyAllEvidence, getAllEvidence, getEvidenceSummary } from '../services/evidenceVerification';
 
 const router = Router();
 
@@ -211,6 +212,84 @@ router.get('/table/:tableName', async (req, res) => {
       return res.status(404).json({ success: false, error: 'Table does not exist' });
     }
     res.status(500).json({ success: false, error: 'Failed to fetch table data' });
+  }
+});
+
+// ============================================================================
+// EVIDENCE ENDPOINTS
+// ============================================================================
+
+// GET /api/admin/system-explorer/evidence/status
+// Returns all evidence items and their current status (without running verification)
+router.get('/evidence/status', async (req, res) => {
+  try {
+    const evidence = await getAllEvidence();
+    
+    // Calculate stale items (not checked in 24 hours)
+    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const enhancedEvidence = evidence.map(item => ({
+      ...item,
+      is_stale: item.last_verified_at ? new Date(item.last_verified_at) < oneDayAgo : true,
+    }));
+    
+    const summary = {
+      total: evidence.length,
+      verified: evidence.filter(e => e.verification_status === 'verified').length,
+      missing: evidence.filter(e => e.verification_status === 'missing').length,
+      stale: enhancedEvidence.filter(e => e.is_stale).length,
+      unknown: evidence.filter(e => e.verification_status === 'unknown').length,
+    };
+    
+    res.json({
+      success: true,
+      data: {
+        evidence: enhancedEvidence,
+        summary,
+      },
+    });
+  } catch (error: any) {
+    console.error('Evidence status error:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch evidence status' });
+  }
+});
+
+// POST /api/admin/system-explorer/evidence/verify
+// Run verification on all evidence items
+router.post('/evidence/verify', async (req, res) => {
+  try {
+    console.log('[EVIDENCE] Starting verification...');
+    const results = await verifyAllEvidence();
+    const summary = getEvidenceSummary(results);
+    
+    // Log failures loudly
+    const failures = results.filter(r => r.status !== 'verified');
+    if (failures.length > 0) {
+      console.error('[EVIDENCE] Verification failures:', failures.map(f => ({
+        artifact: `${f.artifact_type}:${f.artifact_name}`,
+        status: f.status,
+        details: f.details,
+      })));
+    }
+    
+    console.log(`[EVIDENCE] Verification complete: ${summary.verified}/${summary.total} verified`);
+    
+    res.json({
+      success: true,
+      data: {
+        results,
+        summary: {
+          total: summary.total,
+          verified: summary.verified,
+          missing: summary.missing,
+          errors: summary.errors,
+          stale: summary.stale,
+          allRequiredPassing: summary.allRequiredPassing,
+        },
+      },
+    });
+  } catch (error: any) {
+    console.error('Evidence verification error:', error);
+    res.status(500).json({ success: false, error: 'Failed to run verification' });
   }
 });
 

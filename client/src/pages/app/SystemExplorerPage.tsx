@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import { queryClient, apiRequest } from '@/lib/queryClient';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -16,7 +17,9 @@ import {
   AlertCircle,
   ExternalLink,
   RefreshCw,
-  Loader2
+  Loader2,
+  Shield,
+  Clock
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useTenant } from '@/contexts/TenantContext';
@@ -63,6 +66,51 @@ interface TableData {
   };
 }
 
+interface EvidenceItem {
+  id: string;
+  artifact_type: string;
+  artifact_name: string;
+  evidence_type: string;
+  reference: string;
+  owner_type: string | null;
+  is_required: boolean;
+  verification_status: string;
+  last_verified_at: string | null;
+  description: string | null;
+  is_stale: boolean;
+}
+
+interface EvidenceData {
+  evidence: EvidenceItem[];
+  summary: {
+    total: number;
+    verified: number;
+    missing: number;
+    stale: number;
+    unknown: number;
+  };
+}
+
+interface VerifyResult {
+  results: Array<{
+    id: string;
+    artifact_name: string;
+    artifact_type: string;
+    status: string;
+    details?: string;
+    checked_at: string;
+    is_required: boolean;
+  }>;
+  summary: {
+    total: number;
+    verified: number;
+    missing: number;
+    errors: number;
+    stale: number;
+    allRequiredPassing: boolean;
+  };
+}
+
 export default function SystemExplorerPage() {
   const { currentTenant, impersonation } = useTenant();
   const [selectedTable, setSelectedTable] = useState<string>('unified_assets');
@@ -77,8 +125,23 @@ export default function SystemExplorerPage() {
     enabled: !!selectedTable,
   });
   
+  const { data: evidenceData, isLoading: evidenceLoading, refetch: refetchEvidence } = useQuery<{ success: boolean; data: EvidenceData }>({
+    queryKey: ['/api/admin/system-explorer/evidence/status'],
+  });
+  
+  const verifyMutation = useMutation<{ success: boolean; data: VerifyResult }>({
+    mutationFn: async () => {
+      const res = await apiRequest('POST', '/api/admin/system-explorer/evidence/verify');
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/system-explorer/evidence/status'] });
+    },
+  });
+  
   const overviewData = overview?.data;
   const tableResult = tableData?.data;
+  const evidence = evidenceData?.data;
 
   // Route to page mapping for "View" links
   const routePageMap: Record<string, string> = {
@@ -126,10 +189,14 @@ export default function SystemExplorerPage() {
       </div>
       
       <Tabs defaultValue="overview" className="w-full">
-        <TabsList className="grid w-full grid-cols-5 max-w-2xl">
+        <TabsList className="grid w-full grid-cols-6 max-w-3xl">
           <TabsTrigger value="overview" data-testid="tab-overview">
             <Database className="h-4 w-4 mr-2" />
             Overview
+          </TabsTrigger>
+          <TabsTrigger value="evidence" data-testid="tab-evidence">
+            <Shield className="h-4 w-4 mr-2" />
+            Evidence
           </TabsTrigger>
           <TabsTrigger value="integrations" data-testid="tab-integrations">
             <Plug className="h-4 w-4 mr-2" />
@@ -208,7 +275,109 @@ export default function SystemExplorerPage() {
           )}
         </TabsContent>
         
-        {/* Tab B: Integrations */}
+        {/* Tab B: Evidence Status */}
+        <TabsContent value="evidence" className="mt-6">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between gap-4 flex-wrap">
+              <div>
+                <CardTitle className="text-base">Evidence Ledger</CardTitle>
+                <CardDescription>
+                  Track what should exist and verify it's accessible.
+                </CardDescription>
+              </div>
+              <div className="flex items-center gap-2 flex-wrap">
+                {evidence?.summary && (
+                  <>
+                    <Badge className="bg-green-500/20 text-green-400 border-green-500/30">
+                      {evidence.summary.verified} verified
+                    </Badge>
+                    {evidence.summary.missing > 0 && (
+                      <Badge variant="destructive">
+                        {evidence.summary.missing} missing
+                      </Badge>
+                    )}
+                    {evidence.summary.stale > 0 && (
+                      <Badge variant="outline" className="text-yellow-500 border-yellow-500/30">
+                        {evidence.summary.stale} stale
+                      </Badge>
+                    )}
+                  </>
+                )}
+                <Button 
+                  variant="default" 
+                  size="sm"
+                  onClick={() => verifyMutation.mutate()}
+                  disabled={verifyMutation.isPending}
+                  data-testid="button-verify-all"
+                >
+                  {verifyMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  ) : (
+                    <Shield className="h-4 w-4 mr-2" />
+                  )}
+                  Verify All
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {evidenceLoading ? (
+                <div className="flex items-center justify-center p-12">
+                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {evidence?.evidence.map((item) => {
+                    const statusColor = 
+                      item.verification_status === 'verified' ? 'bg-green-500/20 text-green-400 border-green-500/30' :
+                      item.verification_status === 'missing' ? 'bg-red-500/20 text-red-400 border-red-500/30' :
+                      item.is_stale ? 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30' :
+                      'bg-gray-500/20 text-gray-400 border-gray-500/30';
+                    
+                    const statusIcon = 
+                      item.verification_status === 'verified' ? <Check className="h-3 w-3 mr-1" /> :
+                      item.verification_status === 'missing' ? <X className="h-3 w-3 mr-1" /> :
+                      item.is_stale ? <Clock className="h-3 w-3 mr-1" /> :
+                      <AlertCircle className="h-3 w-3 mr-1" />;
+                    
+                    return (
+                      <div 
+                        key={item.id}
+                        className="flex items-center justify-between gap-4 p-2 rounded-md hover:bg-muted/30"
+                        data-testid={`evidence-${item.artifact_type}-${item.artifact_name}`}
+                      >
+                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                          <Badge variant="outline" className="text-xs shrink-0">
+                            {item.artifact_type}
+                          </Badge>
+                          <span className="font-medium truncate">{item.artifact_name}</span>
+                          <span className="text-xs text-muted-foreground font-mono truncate hidden md:inline">
+                            {item.reference}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          {item.is_required && (
+                            <Badge variant="outline" className="text-xs">required</Badge>
+                          )}
+                          <Badge className={statusColor}>
+                            {statusIcon}
+                            {item.is_stale && item.verification_status !== 'missing' ? 'stale' : item.verification_status}
+                          </Badge>
+                          {item.last_verified_at && (
+                            <span className="text-xs text-muted-foreground hidden lg:inline">
+                              {new Date(item.last_verified_at).toLocaleString()}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        {/* Tab C: Integrations */}
         <TabsContent value="integrations" className="mt-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {overviewData?.integrations.map((int) => (

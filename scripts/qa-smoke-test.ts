@@ -86,6 +86,65 @@ async function switchTenant(token: string, tenantId: string): Promise<boolean> {
   }
 }
 
+// EVIDENCE VERIFICATION - Check all required evidence passes
+async function runEvidenceVerification(token: string): Promise<TestResult> {
+  try {
+    const res = await fetch(`${BASE_URL}/api/admin/system-explorer/evidence/verify`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+    
+    if (!res.ok) {
+      return {
+        name: 'Evidence Verification',
+        status: 'FAIL',
+        details: `API returned ${res.status}`,
+      };
+    }
+    
+    const data = await res.json();
+    const summary = data?.data?.summary;
+    
+    if (!summary) {
+      return {
+        name: 'Evidence Verification',
+        status: 'FAIL',
+        details: 'No summary in response',
+      };
+    }
+    
+    // Check if all required items pass
+    if (summary.allRequiredPassing) {
+      return {
+        name: 'Evidence Verification',
+        status: 'PASS',
+        details: `${summary.verified}/${summary.total} verified`,
+      };
+    }
+    
+    // Get details of failures
+    const failures = data?.data?.results
+      ?.filter((r: any) => r.is_required && r.status !== 'verified')
+      ?.map((r: any) => `${r.artifact_type}:${r.artifact_name}`)
+      ?.join(', ');
+    
+    return {
+      name: 'Evidence Verification',
+      status: 'FAIL',
+      details: `Required failures: ${failures || 'unknown'}`,
+    };
+  } catch (error: any) {
+    return {
+      name: 'Evidence Verification',
+      status: 'FAIL',
+      details: error.message,
+    };
+  }
+}
+
 // NAV REGRESSION LOCK - Required nav items that must exist in TENANT nav
 // Note: System Explorer is Platform Admin only (in PlatformAdminLayout)
 const REQUIRED_NAV_ITEMS = [
@@ -213,7 +272,14 @@ async function runTests() {
   // Test 9: System Explorer API (infrastructure)
   results.push(await testEndpoint('System Explorer Overview', '/api/admin/system-explorer/overview', 200, token));
   
-  // Test 10: NAV REGRESSION LOCK - Verify required nav items exist in code
+  // Test 10: Evidence Status API
+  results.push(await testEndpoint('Evidence Status API', '/api/admin/system-explorer/evidence/status', 200, token));
+  
+  // Test 11: Evidence Verification - Run verification and check required items pass
+  const evidenceResult = await runEvidenceVerification(token);
+  results.push(evidenceResult);
+  
+  // Test 12: NAV REGRESSION LOCK - Verify required nav items exist in code
   // This is a static assertion that key nav items haven't been removed
   const navLockResult = await verifyNavItemsExist();
   results.push(navLockResult);
