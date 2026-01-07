@@ -48,10 +48,12 @@ export interface TenantRequest extends Request {
 }
 
 export async function tenantContext(req: TenantRequest, res: Response, next: NextFunction) {
-  // PRESERVE: If ctx already exists with portal_id (e.g., from /b/:slug path rewrite), don't reinitialize
-  if (req.ctx?.portal_id) {
+  // PRESERVE: If full context already hydrated (marked by internal flag), skip to avoid re-runs
+  // Note: We use a private flag instead of checking portal_id to ensure impersonation/session always runs
+  if ((req as any).__tenantContextHydrated) {
     return next();
   }
+  (req as any).__tenantContextHydrated = true;
   
   const forwardedHost = req.headers['x-forwarded-host'];
   const hostHeader = req.headers.host || '';
