@@ -74,10 +74,10 @@ export default function PersonDetail() {
       queryClient.invalidateQueries({ queryKey: ['/api/crm/people', id] });
       queryClient.invalidateQueries({ queryKey: ['/api/crm/people'] });
       setEditing(false);
-      toast({ title: 'Contact updated' });
+      toast({ title: 'Person updated' });
     },
     onError: () => {
-      toast({ title: 'Error', description: 'Failed to update contact', variant: 'destructive' });
+      toast({ title: 'Error', description: 'Failed to update person', variant: 'destructive' });
     },
   });
 
@@ -88,11 +88,11 @@ export default function PersonDetail() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/crm/people'] });
-      toast({ title: 'Contact deleted' });
+      toast({ title: 'Person deleted' });
       navigate('/app/crm/people');
     },
     onError: () => {
-      toast({ title: 'Error', description: 'Failed to delete contact', variant: 'destructive' });
+      toast({ title: 'Error', description: 'Failed to delete person', variant: 'destructive' });
     },
   });
 
@@ -136,7 +136,7 @@ export default function PersonDetail() {
   if (!data?.person) {
     return (
       <div className="p-6 text-center">
-        <h2 className="text-xl font-medium">Contact not found</h2>
+        <h2 className="text-xl font-medium">Person not found</h2>
         <Button variant="outline" onClick={() => navigate('/app/crm/people')} className="mt-4">
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back to People
@@ -212,7 +212,7 @@ export default function PersonDetail() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <User className="w-5 h-5" />
-                Contact Information
+                Person Information
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">

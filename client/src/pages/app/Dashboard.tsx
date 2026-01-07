@@ -247,7 +247,7 @@ function BusinessDashboard({ tenant }: DashboardProps): React.ReactElement {
           />
           <StatCard
             icon="📅"
-            label="Active Bookings"
+            label="Active Reservations"
             value="24"
             sublabel="+3 from last month"
             color="#3b82f6"
@@ -277,21 +277,21 @@ function BusinessDashboard({ tenant }: DashboardProps): React.ReactElement {
         }}>
           <QuickAction
             icon={<Package size={24} />}
-            title="Manage Inventory"
+            title="Manage Assets"
             description="Add or update your offerings"
-            to="/app/inventory"
+            to="/app/assets"
           />
           <QuickAction
             icon={<Calendar size={24} />}
-            title="View Bookings"
-            description="5 bookings this week"
-            to="/app/bookings"
+            title="View Reservations"
+            description="5 reservations this week"
+            to="/app/reservations"
           />
           <QuickAction
             icon={<MessageSquare size={24} />}
-            title="Conversations"
+            title="Messages"
             description="2 unread messages"
-            to="/app/conversations"
+            to="/app/messages"
             badge={2}
           />
         </div>
@@ -309,7 +309,7 @@ function BusinessDashboard({ tenant }: DashboardProps): React.ReactElement {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             <ActivityItem
               icon="📅"
-              text="New booking: John Smith - Single Kayak"
+              text="New reservation: John Smith - Single Kayak"
               time="1 hour ago"
             />
             <ActivityItem
@@ -319,7 +319,7 @@ function BusinessDashboard({ tenant }: DashboardProps): React.ReactElement {
             />
             <ActivityItem
               icon="✅"
-              text="Booking completed: Bob Wilson"
+              text="Reservation completed: Bob Wilson"
               time="Yesterday"
             />
             <ActivityItem

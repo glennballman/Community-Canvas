@@ -66,23 +66,23 @@ export default function InventoryPage() {
   };
 
   return (
-    <div className="space-y-6" data-testid="inventory-page">
+    <div className="space-y-6" data-testid="assets-page">
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl font-bold">Inventory</h1>
+          <h1 className="text-2xl font-bold">Assets</h1>
           <p className="text-muted-foreground">
             Things you can book out — rooms, parking spots, equipment, tools.
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <Link to="/app/inventory/import">
-            <Button variant="outline" data-testid="button-import-inventory" title="Import inventory items from a file">
+          <Link to="/app/assets/import">
+            <Button variant="outline" data-testid="button-import-assets" title="Import assets from a file">
               Import
             </Button>
           </Link>
-          <Button data-testid="button-add-item">
+          <Button data-testid="button-add-asset">
             <Plus className="h-4 w-4 mr-2" />
-            Add Item
+            Add Asset
           </Button>
         </div>
       </div>
@@ -90,11 +90,11 @@ export default function InventoryPage() {
       <div className="relative max-w-md">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
-          placeholder="Search inventory..."
+          placeholder="Search assets..."
           className="pl-9"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          data-testid="input-search-inventory"
+          data-testid="input-search-assets"
         />
       </div>
 
@@ -106,7 +106,7 @@ export default function InventoryPage() {
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12 text-center">
             <Package className="h-12 w-12 text-destructive mb-4" />
-            <h3 className="font-medium text-destructive">Failed to Load Inventory</h3>
+            <h3 className="font-medium text-destructive">Failed to Load Assets</h3>
             <p className="text-sm text-muted-foreground mt-1">
               {(error as any)?.message || 'Please try again or contact support.'}
             </p>
@@ -116,9 +116,9 @@ export default function InventoryPage() {
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12 text-center">
             <Package className="h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="font-medium">No Inventory Items</h3>
+            <h3 className="font-medium">No Assets</h3>
             <p className="text-sm text-muted-foreground mt-1">
-              {searchTerm ? 'No items match your search.' : 'Add your first inventory item to get started.'}
+              {searchTerm ? 'No assets match your search.' : 'Add your first asset to get started.'}
             </p>
           </CardContent>
         </Card>
@@ -127,8 +127,8 @@ export default function InventoryPage() {
           {filteredItems.map((item) => {
             const Icon = getTypeIcon(item.asset_type);
             return (
-              <Link key={item.id} to={`/app/inventory/${item.id}`}>
-                <Card className="hover-elevate cursor-pointer" data-testid={`card-inventory-item-${item.id}`}>
+              <Link key={item.id} to={`/app/assets/${item.id}`}>
+                <Card className="hover-elevate cursor-pointer" data-testid={`card-asset-${item.id}`}>
                   <CardHeader className="flex flex-row items-start gap-4">
                     <div className="p-2 bg-muted rounded-md">
                       <Icon className="h-6 w-6" />

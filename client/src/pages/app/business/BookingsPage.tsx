@@ -76,9 +76,9 @@ export default function BookingsPage() {
 
   const setView = (view: 'list' | 'calendar') => {
     if (view === 'list') {
-      setLocation('/app/bookings');
+      setLocation('/app/reservations');
     } else {
-      setLocation('/app/bookings?view=calendar');
+      setLocation('/app/reservations?view=calendar');
     }
   };
 
@@ -148,11 +148,11 @@ export default function BookingsPage() {
       queryClient.invalidateQueries({ queryKey: ['/api/schedule/bookings'] });
       setCreateModalOpen(false);
       resetForm();
-      toast({ title: 'Booking created successfully' });
+      toast({ title: 'Reservation created successfully' });
     },
     onError: (error: any) => {
       toast({
-        title: 'Failed to create booking',
+        title: 'Failed to create reservation',
         description: error?.message || 'Please try again',
         variant: 'destructive'
       });
@@ -232,7 +232,7 @@ export default function BookingsPage() {
           error={bookingsError ? new Error('Failed to load bookings') : null}
           onSlotClick={handleSlotClick}
           onRangeChange={handleRangeChange}
-          title="Bookings"
+          title="Reservations"
           subtitle="Manage your reservations"
           headerActions={
             <div className="flex items-center gap-2">
@@ -244,9 +244,9 @@ export default function BookingsPage() {
                 <List className="h-4 w-4 mr-2" />
                 List View
               </Button>
-              <Button onClick={() => openCreateModal()} data-testid="button-create-booking">
+              <Button onClick={() => openCreateModal()} data-testid="button-create-reservation">
                 <Plus className="h-4 w-4 mr-2" />
-                New Booking
+                New Reservation
               </Button>
             </div>
           }
@@ -255,13 +255,13 @@ export default function BookingsPage() {
           showInactiveToggle={false}
           initialZoom="week"
           allowedZoomLevels={['15m', '1h', 'day', 'week', 'month', 'season', 'year']}
-          emptyStateMessage="No inventory available for booking"
+          emptyStateMessage="No assets available for reservation"
         />
 
         <Dialog open={createModalOpen} onOpenChange={(open) => { setCreateModalOpen(open); if (!open) resetForm(); }}>
           <DialogContent className="max-w-md">
             <DialogHeader>
-              <DialogTitle>Create Booking</DialogTitle>
+              <DialogTitle>Create Reservation</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleCreateSubmit} className="space-y-4">
               <div className="space-y-2">
@@ -358,9 +358,9 @@ export default function BookingsPage() {
                 <Button type="button" variant="outline" onClick={() => setCreateModalOpen(false)}>
                   Cancel
                 </Button>
-                <Button type="submit" disabled={createMutation.isPending} data-testid="button-submit-booking">
+                <Button type="submit" disabled={createMutation.isPending} data-testid="button-submit-reservation">
                   {createMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                  Create Booking
+                  Create Reservation
                 </Button>
               </DialogFooter>
             </form>
@@ -371,10 +371,10 @@ export default function BookingsPage() {
   }
 
   return (
-    <div className="space-y-6" data-testid="bookings-page">
+    <div className="space-y-6" data-testid="reservations-page">
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl font-bold">Bookings</h1>
+          <h1 className="text-2xl font-bold">Reservations</h1>
           <p className="text-muted-foreground">
             Manage your reservations
           </p>
@@ -388,9 +388,9 @@ export default function BookingsPage() {
             <Calendar className="h-4 w-4 mr-2" />
             Calendar View
           </Button>
-          <Button onClick={() => openCreateModal()} data-testid="button-create-booking">
+          <Button onClick={() => openCreateModal()} data-testid="button-create-reservation">
             <Plus className="h-4 w-4 mr-2" />
-            New Booking
+            New Reservation
           </Button>
         </div>
       </div>
@@ -403,17 +403,17 @@ export default function BookingsPage() {
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12 text-center">
             <Calendar className="h-12 w-12 text-destructive mb-4" />
-            <h3 className="font-medium text-destructive">Failed to Load Bookings</h3>
+            <h3 className="font-medium text-destructive">Failed to Load Reservations</h3>
             <p className="text-sm text-muted-foreground mt-1">Please try again or contact support.</p>
           </CardContent>
         </Card>
       ) : (
         <Tabs defaultValue="all">
           <TabsList>
-            <TabsTrigger value="all" data-testid="tab-all-bookings">All</TabsTrigger>
-            <TabsTrigger value="pending" data-testid="tab-pending-bookings">Pending</TabsTrigger>
-            <TabsTrigger value="confirmed" data-testid="tab-confirmed-bookings">Confirmed</TabsTrigger>
-            <TabsTrigger value="completed" data-testid="tab-completed-bookings">Completed</TabsTrigger>
+            <TabsTrigger value="all" data-testid="tab-all-reservations">All</TabsTrigger>
+            <TabsTrigger value="pending" data-testid="tab-pending-reservations">Pending</TabsTrigger>
+            <TabsTrigger value="confirmed" data-testid="tab-confirmed-reservations">Confirmed</TabsTrigger>
+            <TabsTrigger value="completed" data-testid="tab-completed-reservations">Completed</TabsTrigger>
           </TabsList>
 
           {['all', 'pending', 'confirmed', 'completed'].map(tab => (
@@ -423,15 +423,15 @@ export default function BookingsPage() {
                   <Card>
                     <CardContent className="flex flex-col items-center justify-center py-12 text-center">
                       <Calendar className="h-12 w-12 text-muted-foreground mb-4" />
-                      <h3 className="font-medium">No Bookings</h3>
+                      <h3 className="font-medium">No Reservations</h3>
                       <p className="text-sm text-muted-foreground mt-1">
-                        {tab === 'all' ? 'Create your first booking to get started.' : `No ${tab} bookings found.`}
+                        {tab === 'all' ? 'Create your first reservation to get started.' : `No ${tab} reservations found.`}
                       </p>
                     </CardContent>
                   </Card>
                 ) : (
                   (tab === 'all' ? bookings : bookings.filter(b => b.status === tab)).map((booking) => (
-                    <Card key={booking.id} className="hover-elevate" data-testid={`card-booking-${booking.id}`}>
+                    <Card key={booking.id} className="hover-elevate" data-testid={`card-reservation-${booking.id}`}>
                       <CardHeader className="flex flex-row items-center justify-between gap-4">
                         <div>
                           <CardTitle className="text-lg">{booking.primary_guest_name}</CardTitle>

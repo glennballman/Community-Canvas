@@ -68,7 +68,7 @@ const COMMUNITY_NAV: NavItem[] = [
   { icon: MessageSquare, label: 'Work Requests', href: '/app/intake/work-requests' },
   { icon: Briefcase, label: 'Projects', href: '/app/projects' },
   { icon: MapPin, label: 'Places', href: '/app/crm/places' },
-  { icon: Contact, label: 'Contacts', href: '/app/crm/people' },
+  { icon: Contact, label: 'People', href: '/app/crm/people' },
   { icon: Building2, label: 'Organizations', href: '/app/crm/orgs' },
   { icon: Palette, label: 'Content', href: '/app/content' },
   { icon: Settings, label: 'Settings', href: '/app/settings' },
@@ -76,21 +76,21 @@ const COMMUNITY_NAV: NavItem[] = [
 
 const BUSINESS_NAV: NavItem[] = [
   { icon: LayoutDashboard, label: 'Dashboard', href: '/app/dashboard' },
-  { icon: Package, label: 'Inventory', href: '/app/inventory' },
-  { icon: Calendar, label: 'Bookings', href: '/app/bookings' },
+  { icon: Package, label: 'Assets', href: '/app/assets' },
+  { icon: Calendar, label: 'Reservations', href: '/app/reservations' },
   { icon: Calendar, label: 'Operations', href: '/app/operations' },
   { icon: MessageSquare, label: 'Work Requests', href: '/app/intake/work-requests' },
   { icon: Briefcase, label: 'Projects', href: '/app/projects' },
   { icon: MapPin, label: 'Places', href: '/app/crm/places' },
-  { icon: Contact, label: 'Contacts', href: '/app/crm/people' },
+  { icon: Contact, label: 'People', href: '/app/crm/people' },
   { icon: Building2, label: 'Organizations', href: '/app/crm/orgs' },
-  { icon: MessageSquare, label: 'Conversations', href: '/app/conversations' },
+  { icon: MessageSquare, label: 'Messages', href: '/app/messages' },
   { icon: Settings, label: 'Settings', href: '/app/settings' },
 ];
 
 const INDIVIDUAL_NAV: NavItem[] = [
   { icon: LayoutDashboard, label: 'Dashboard', href: '/app/dashboard' },
-  { icon: MessageSquare, label: 'Conversations', href: '/app/conversations' },
+  { icon: MessageSquare, label: 'Messages', href: '/app/messages' },
   { icon: Settings, label: 'Settings', href: '/app/settings' },
 ];
 

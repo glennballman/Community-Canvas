@@ -327,13 +327,13 @@ export default function OperationsBoard() {
         initialZoom="1h"
         allowedZoomLevels={['15m', '1h', 'day', 'week', 'month', 'season', 'year']}
         emptyStateMessage={currentTenant?.tenant_name
-          ? `No inventory found for ${currentTenant.tenant_name} yet.`
-          : 'No inventory found for this business yet.'}
+          ? `No assets found for ${currentTenant.tenant_name} yet.`
+          : 'No assets found for this business yet.'}
         emptyStateAction={
-          <Link href="/app/inventory">
-            <Button variant="outline" data-testid="link-add-inventory">
+          <Link href="/app/assets">
+            <Button variant="outline" data-testid="link-add-assets">
               <Plus className="h-4 w-4 mr-2" />
-              Add Inventory
+              Add Assets
             </Button>
           </Link>
         }

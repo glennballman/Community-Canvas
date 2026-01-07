@@ -63,11 +63,11 @@ export default function PeopleList() {
       queryClient.invalidateQueries({ queryKey: ['/api/crm/people'] });
       setShowCreate(false);
       setNewPerson({ first_name: '', last_name: '', phone: '', email: '', notes: '' });
-      toast({ title: 'Contact created', description: `${result.person.first_name} has been added.` });
+      toast({ title: 'Person created', description: `${result.person.first_name} has been added.` });
       navigate(`/app/crm/people/${result.person.id}`);
     },
     onError: () => {
-      toast({ title: 'Error', description: 'Failed to create contact', variant: 'destructive' });
+      toast({ title: 'Error', description: 'Failed to create person', variant: 'destructive' });
     },
   });
 
@@ -92,12 +92,12 @@ export default function PeopleList() {
         <div>
           <h1 className="text-2xl font-semibold" data-testid="text-page-title">People</h1>
           <p className="text-muted-foreground text-sm">
-            Manage contacts and property owners
+            Manage people and property owners
           </p>
         </div>
         <Button onClick={() => setShowCreate(true)} data-testid="button-create-person">
           <Plus className="w-4 h-4 mr-2" />
-          Add Contact
+          Add Person
         </Button>
       </div>
 
@@ -136,7 +136,7 @@ export default function PeopleList() {
             </p>
             <Button onClick={() => setShowCreate(true)} data-testid="button-create-person-empty">
               <Plus className="w-4 h-4 mr-2" />
-              Add Contact
+              Add Person
             </Button>
           </CardContent>
         </Card>
@@ -190,7 +190,7 @@ export default function PeopleList() {
       <Dialog open={showCreate} onOpenChange={setShowCreate}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Add New Contact</DialogTitle>
+            <DialogTitle>Add New Person</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="grid grid-cols-2 gap-4">
@@ -257,7 +257,7 @@ export default function PeopleList() {
               disabled={createMutation.isPending}
               data-testid="button-save-person"
             >
-              {createMutation.isPending ? 'Creating...' : 'Create Contact'}
+              {createMutation.isPending ? 'Creating...' : 'Create Person'}
             </Button>
           </DialogFooter>
         </DialogContent>

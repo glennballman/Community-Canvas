@@ -323,21 +323,21 @@ export default function InventoryItemDetail() {
   }
   
   return (
-    <div className="space-y-6" data-testid="inventory-item-detail">
+    <div className="space-y-6" data-testid="asset-detail">
       <div className="flex items-center gap-4 flex-wrap">
-        <Link to="/app/inventory">
+        <Link to="/app/assets">
           <Button variant="ghost" size="icon" data-testid="button-back">
             <ArrowLeft className="h-4 w-4" />
           </Button>
         </Link>
         <div>
-          <h1 className="text-2xl font-bold">{asset?.name || 'Inventory Item'}</h1>
-          <p className="text-muted-foreground capitalize">{asset?.asset_type || 'Item'}</p>
+          <h1 className="text-2xl font-bold">{asset?.name || 'Asset'}</h1>
+          <p className="text-muted-foreground capitalize">{asset?.asset_type || 'Asset'}</p>
         </div>
       </div>
       
       <Tabs defaultValue="capabilities" className="w-full">
-        <TabsList data-testid="tabs-inventory-detail">
+        <TabsList data-testid="tabs-asset-detail">
           <TabsTrigger value="capabilities" data-testid="tab-capabilities">
             Capability Units ({capabilityUnits.length})
           </TabsTrigger>

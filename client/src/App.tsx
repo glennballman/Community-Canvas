@@ -9,7 +9,7 @@
  * DO NOT MODIFY THIS STRUCTURE.
  */
 
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-dom';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from './lib/queryClient';
 
@@ -141,6 +141,11 @@ function NotFoundPage() {
   );
 }
 
+function InventoryRedirect() {
+  const { id } = useParams<{ id: string }>();
+  return <Navigate to={`/app/assets/${id}`} replace />;
+}
+
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
@@ -203,14 +208,20 @@ export default function App() {
                 <Route path="projects/new" element={<CreateProject />} />
                 <Route path="projects/:id" element={<ProjectDetail />} />
                 
-                {/* Business tenant routes */}
-                <Route path="inventory" element={<InventoryPage />} />
-                <Route path="inventory/:id" element={<InventoryItemDetail />} />
-                <Route path="bookings" element={<BookingsPage />} />
+                {/* Business tenant routes - new schema-aligned paths */}
+                <Route path="assets" element={<InventoryPage />} />
+                <Route path="assets/:id" element={<InventoryItemDetail />} />
+                <Route path="reservations" element={<BookingsPage />} />
                 <Route path="customers" element={<CustomersPage />} />
                 
+                {/* Redirects from old paths */}
+                <Route path="inventory" element={<Navigate to="/app/assets" replace />} />
+                <Route path="inventory/:id" element={<InventoryRedirect />} />
+                <Route path="bookings" element={<Navigate to="/app/reservations" replace />} />
+                <Route path="conversations" element={<Navigate to="/app/messages" replace />} />
+                
                 {/* Shared routes */}
-                <Route path="conversations" element={<ConversationsPage />} />
+                <Route path="messages" element={<ConversationsPage />} />
                 <Route path="settings" element={<SettingsPage />} />
               </Route>
 

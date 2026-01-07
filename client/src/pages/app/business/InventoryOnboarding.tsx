@@ -138,11 +138,11 @@ export default function InventoryOnboarding() {
   const progressPercent = (getStepNumber() / 5) * 100;
 
   return (
-    <div className="min-h-screen bg-background text-foreground" data-testid="inventory-onboarding">
+    <div className="min-h-screen bg-background text-foreground" data-testid="assets-onboarding">
       <div className="border-b">
         <div className="max-w-3xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between gap-4 mb-2">
-            <span className="text-sm text-muted-foreground">Add your inventory</span>
+            <span className="text-sm text-muted-foreground">Add your assets</span>
             <span className="text-sm text-muted-foreground">
               Step {getStepNumber()} of 5
             </span>
@@ -162,7 +162,7 @@ export default function InventoryOnboarding() {
             websiteUrl={websiteUrl}
             setWebsiteUrl={setWebsiteUrl}
             onScan={startWebsiteScan}
-            onManual={() => navigate('/app/inventory')}
+            onManual={() => navigate('/app/assets')}
           />
         )}
 
@@ -205,8 +205,8 @@ export default function InventoryOnboarding() {
         {step === 'complete' && (
           <CompleteStep
             itemCount={importedItems.length}
-            tenantName={currentTenant?.name || 'Your business'}
-            onViewInventory={() => navigate('/app/inventory')}
+            tenantName={currentTenant?.tenant_name || 'Your business'}
+            onViewAssets={() => navigate('/app/assets')}
           />
         )}
       </div>
@@ -231,8 +231,8 @@ function SourceStep({
 }) {
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-2">How would you like to add your inventory?</h1>
-      <p className="text-muted-foreground mb-8">Most people let us import it automatically.</p>
+      <h1 className="text-2xl font-bold mb-2">How would you like to add your assets?</h1>
+      <p className="text-muted-foreground mb-8">Most people let us import them automatically.</p>
 
       <div className="grid md:grid-cols-3 gap-4 mb-8">
         <button
@@ -645,7 +645,7 @@ function SharingStep({
           <div>
             <h3 className="font-semibold mb-1">Public visibility</h3>
             <p className="text-sm text-muted-foreground">
-              Choose whether your inventory appears in public search results.
+              Choose whether your assets appear in public search results.
             </p>
           </div>
         </div>
@@ -675,11 +675,11 @@ function SharingStep({
 function CompleteStep({
   itemCount,
   tenantName,
-  onViewInventory
+  onViewAssets
 }: {
   itemCount: number;
   tenantName: string;
-  onViewInventory: () => void;
+  onViewAssets: () => void;
 }) {
   return (
     <div className="text-center py-16">
@@ -689,11 +689,11 @@ function CompleteStep({
 
       <h1 className="text-2xl font-bold mb-2">You're all set!</h1>
       <p className="text-muted-foreground mb-8">
-        {itemCount} items have been added to {tenantName}'s inventory.
+        {itemCount} items have been added to {tenantName}'s assets.
       </p>
 
-      <Button onClick={onViewInventory} data-testid="button-view-inventory">
-        View your inventory
+      <Button onClick={onViewAssets} data-testid="button-view-assets">
+        View your assets
         <ArrowRight className="w-4 h-4 ml-2" />
       </Button>
     </div>
