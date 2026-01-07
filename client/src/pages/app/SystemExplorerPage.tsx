@@ -412,81 +412,98 @@ export default function SystemExplorerPage() {
         
         {/* Tab C: Integrations */}
         <TabsContent value="integrations" className="mt-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {overviewData?.integrations.map((int) => (
-              <Card key={int.name} data-testid={`card-integration-${int.name.toLowerCase()}`}>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-base flex items-center justify-between gap-2">
-                    {int.name}
-                    {int.configured ? (
-                      <Badge className="bg-green-500/20 text-green-400 border-green-500/30">
-                        <Check className="h-3 w-3 mr-1" />
-                        Configured
-                      </Badge>
-                    ) : (
-                      <Badge variant="outline" className="text-muted-foreground">
-                        <X className="h-3 w-3 mr-1" />
-                        Not Set
-                      </Badge>
-                    )}
-                  </CardTitle>
-                  <CardDescription className="text-xs">
-                    Category: {int.category}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-xs text-muted-foreground font-mono">
-                    Env: {int.envKey}
-                  </p>
-                </CardContent>
-              </Card>
-            ))}
+          <div className="border rounded-md overflow-hidden">
+            <table className="w-full text-sm" data-testid="table-integrations">
+              <thead className="bg-muted/50">
+                <tr>
+                  <th className="px-4 py-2 text-left font-medium text-muted-foreground">Integration</th>
+                  <th className="px-4 py-2 text-left font-medium text-muted-foreground">Category</th>
+                  <th className="px-4 py-2 text-left font-medium text-muted-foreground">Env Key</th>
+                  <th className="px-4 py-2 text-left font-medium text-muted-foreground">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {overviewData?.integrations.map((int) => (
+                  <tr 
+                    key={int.name} 
+                    className="border-t hover:bg-muted/30"
+                    data-testid={`row-integration-${int.name.toLowerCase()}`}
+                  >
+                    <td className="px-4 py-2 font-medium">{int.name}</td>
+                    <td className="px-4 py-2 text-muted-foreground">{int.category}</td>
+                    <td className="px-4 py-2 font-mono text-xs text-muted-foreground">{int.envKey}</td>
+                    <td className="px-4 py-2">
+                      {int.configured ? (
+                        <Badge className="bg-green-500/20 text-green-400 border-green-500/30">
+                          <Check className="h-3 w-3 mr-1" />
+                          Configured
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-muted-foreground">
+                          <X className="h-3 w-3 mr-1" />
+                          Not Set
+                        </Badge>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </TabsContent>
         
         {/* Tab C: Data Sources / Pipelines */}
         <TabsContent value="pipelines" className="mt-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {overviewData?.pipelines.map((p) => (
-              <Card key={p.name} data-testid={`card-pipeline-${p.name.toLowerCase().replace(/\s+/g, '-')}`}>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-base flex items-center justify-between gap-2">
-                    {p.name}
-                    {p.exists ? (
-                      <Badge variant="secondary">{p.count} locations</Badge>
-                    ) : (
-                      <Badge variant="outline" className="text-muted-foreground">
-                        <AlertCircle className="h-3 w-3 mr-1" />
-                        No Data
-                      </Badge>
-                    )}
-                  </CardTitle>
-                  <CardDescription className="text-xs">
-                    {p.category}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-1">
-                  <p className="text-xs text-muted-foreground font-mono">
-                    {p.table}.data.{p.jsonPath}
-                  </p>
-                  {p.lastUpdated && (
-                    <p className="text-xs text-muted-foreground">
-                      Last updated: {new Date(p.lastUpdated).toLocaleString()}
-                    </p>
-                  )}
-                  <Button 
-                    variant="ghost" 
-                    size="sm"
-                    className="mt-2"
-                    onClick={() => inspectTable('snapshots')}
-                    data-testid={`button-inspect-pipeline-${p.name.toLowerCase().replace(/\s+/g, '-')}`}
+          <div className="border rounded-md overflow-hidden">
+            <table className="w-full text-sm" data-testid="table-pipelines">
+              <thead className="bg-muted/50">
+                <tr>
+                  <th className="px-4 py-2 text-left font-medium text-muted-foreground">Source</th>
+                  <th className="px-4 py-2 text-left font-medium text-muted-foreground">Category</th>
+                  <th className="px-4 py-2 text-left font-medium text-muted-foreground">Path</th>
+                  <th className="px-4 py-2 text-left font-medium text-muted-foreground">Last Updated</th>
+                  <th className="px-4 py-2 text-right font-medium text-muted-foreground">Locations</th>
+                  <th className="px-4 py-2 text-left font-medium text-muted-foreground"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {overviewData?.pipelines.map((p) => (
+                  <tr 
+                    key={p.name} 
+                    className="border-t hover:bg-muted/30"
+                    data-testid={`row-pipeline-${p.name.toLowerCase().replace(/\s+/g, '-')}`}
                   >
-                    <Table2 className="h-3 w-3 mr-1" />
-                    Inspect Snapshots
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
+                    <td className="px-4 py-2 font-medium">{p.name}</td>
+                    <td className="px-4 py-2 text-muted-foreground">{p.category}</td>
+                    <td className="px-4 py-2 font-mono text-xs text-muted-foreground">{p.table}.data.{p.jsonPath}</td>
+                    <td className="px-4 py-2 text-xs text-muted-foreground">
+                      {p.lastUpdated ? new Date(p.lastUpdated).toLocaleString() : '-'}
+                    </td>
+                    <td className="px-4 py-2 text-right">
+                      {p.exists ? (
+                        <Badge variant="secondary">{p.count}</Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-muted-foreground">
+                          <AlertCircle className="h-3 w-3 mr-1" />
+                          No Data
+                        </Badge>
+                      )}
+                    </td>
+                    <td className="px-4 py-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => inspectTable('snapshots')}
+                        data-testid={`button-inspect-pipeline-${p.name.toLowerCase().replace(/\s+/g, '-')}`}
+                      >
+                        <Table2 className="h-3 w-3 mr-1" />
+                        Inspect
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </TabsContent>
         
