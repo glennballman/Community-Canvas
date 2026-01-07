@@ -141,10 +141,10 @@ export default function AdminInventory() {
       <div className="space-y-1">
         <h1 className="text-2xl font-bold flex items-center gap-2">
           <Package className="w-6 h-6" />
-          Inventory (Audit)
+          Assets (Audit)
         </h1>
         <p className="text-muted-foreground">
-          System-wide inventory registry for QA and debugging.
+          System-wide asset registry for QA and debugging.
         </p>
       </div>
 
