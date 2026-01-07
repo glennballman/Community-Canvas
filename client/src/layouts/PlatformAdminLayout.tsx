@@ -80,7 +80,7 @@ const ADMIN_NAV: NavSection[] = [
       { icon: FileText, label: 'NAICS', href: '/admin/data/naics' },
       { icon: Home, label: 'Accommodations', href: '/admin/data/accommodations' },
       { icon: Package, label: 'Inventory (Audit)', href: '/admin/inventory' },
-      { icon: Search, label: 'System Explorer', href: '/app/system-explorer' },
+      { icon: Search, label: 'System Explorer', href: '/admin/system-explorer' },
       { icon: Presentation, label: 'Presentations', href: '/admin/presentations' },
       { icon: FileBox, label: 'Import/Export', href: '/admin/data/import-export' },
     ],

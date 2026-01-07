@@ -232,6 +232,7 @@ export default function App() {
                 <Route path="data/naics" element={<AdminNAICS />} />
                 <Route path="data/accommodations" element={<Accommodations />} />
                 <Route path="inventory" element={<AdminInventory />} />
+                <Route path="system-explorer" element={<SystemExplorerPage />} />
                 <Route path="presentations" element={<PresentationsPage />} />
                 <Route path="data/import-export" element={<DataImport />} />
                 
