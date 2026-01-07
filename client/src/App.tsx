@@ -16,6 +16,7 @@ import { queryClient } from './lib/queryClient';
 // Context
 import { AuthProvider } from './contexts/AuthContext';
 import { TenantProvider } from './contexts/TenantContext';
+import { PortalProvider } from './contexts/PortalContext';
 
 // Global Components
 import { ImpersonationBanner } from './components/ImpersonationBanner';
@@ -141,6 +142,7 @@ export default function App() {
       <BrowserRouter>
         <AuthProvider>
           <TenantProvider>
+            <PortalProvider>
             {/* GLOBAL: Impersonation banner - appears on all pages when active */}
             <ImpersonationBanner />
             
@@ -247,6 +249,7 @@ export default function App() {
               <Route path="/" element={<Navigate to="/app" replace />} />
               <Route path="*" element={<NotFoundPage />} />
             </Routes>
+            </PortalProvider>
           </TenantProvider>
         </AuthProvider>
       </BrowserRouter>

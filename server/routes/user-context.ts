@@ -324,4 +324,131 @@ router.put('/me/profile', authenticateToken, async (req: AuthRequest, res: Respo
   }
 });
 
+// ============================================================================
+// PORTAL CONTEXT ROUTES
+// ============================================================================
+
+/**
+ * GET /api/portals
+ * 
+ * Returns portals owned by the current tenant.
+ * Uses X-Tenant-ID header to determine which portals to return.
+ */
+router.get('/portals', authenticateToken, async (req: AuthRequest, res: Response) => {
+  try {
+    const tenantId = req.headers['x-tenant-id'] as string;
+    const session = (req as any).session;
+    
+    // Use session tenant if header not provided
+    const effectiveTenantId = tenantId || session?.current_tenant_id;
+    
+    if (!effectiveTenantId) {
+      return res.json({ portals: [] });
+    }
+    
+    const result = await serviceQuery(`
+      SELECT 
+        id,
+        name,
+        slug,
+        portal_type,
+        legal_dba_name,
+        status,
+        tagline
+      FROM portals
+      WHERE owning_tenant_id = $1
+        AND status = 'active'
+      ORDER BY name ASC
+    `, [effectiveTenantId]);
+    
+    res.json({ portals: result.rows });
+    
+  } catch (error) {
+    console.error('Error fetching portals:', error);
+    res.status(500).json({ error: 'Failed to fetch portals' });
+  }
+});
+
+/**
+ * GET /api/me/portal-preference
+ * 
+ * Returns the user's default portal for the current tenant.
+ */
+router.get('/me/portal-preference', authenticateToken, async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    const tenantId = req.headers['x-tenant-id'] as string;
+    const session = (req as any).session;
+    
+    const effectiveTenantId = tenantId || session?.current_tenant_id;
+    
+    if (!effectiveTenantId) {
+      return res.json({ default_portal_id: null });
+    }
+    
+    const result = await serviceQuery(`
+      SELECT default_portal_id
+      FROM cc_tenant_users
+      WHERE user_id = $1 AND tenant_id = $2
+    `, [userId, effectiveTenantId]);
+    
+    if (result.rows.length === 0) {
+      return res.json({ default_portal_id: null });
+    }
+    
+    res.json({ default_portal_id: result.rows[0].default_portal_id });
+    
+  } catch (error) {
+    console.error('Error fetching portal preference:', error);
+    res.status(500).json({ error: 'Failed to fetch portal preference' });
+  }
+});
+
+/**
+ * PUT /api/me/portal-preference
+ * 
+ * Sets the user's default portal for the current tenant.
+ */
+router.put('/me/portal-preference', authenticateToken, async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    const { portal_id } = req.body;
+    const tenantId = req.headers['x-tenant-id'] as string;
+    const session = (req as any).session;
+    
+    const effectiveTenantId = tenantId || session?.current_tenant_id;
+    
+    if (!effectiveTenantId) {
+      return res.status(400).json({ error: 'No tenant context' });
+    }
+    
+    if (!portal_id) {
+      return res.status(400).json({ error: 'portal_id is required' });
+    }
+    
+    // Verify portal belongs to tenant
+    const portalCheck = await serviceQuery(`
+      SELECT id FROM portals
+      WHERE id = $1 AND owning_tenant_id = $2
+    `, [portal_id, effectiveTenantId]);
+    
+    if (portalCheck.rows.length === 0) {
+      return res.status(403).json({ error: 'Portal does not belong to tenant' });
+    }
+    
+    // Update preference
+    await serviceQuery(`
+      UPDATE cc_tenant_users
+      SET default_portal_id = $1
+      WHERE user_id = $2 AND tenant_id = $3
+    `, [portal_id, userId, effectiveTenantId]);
+    
+    res.json({ success: true, default_portal_id: portal_id });
+    
+  } catch (error) {
+    console.error('Error setting portal preference:', error);
+    res.status(500).json({ error: 'Failed to set portal preference' });
+  }
+});
+
 export default router;

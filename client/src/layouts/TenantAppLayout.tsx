@@ -45,6 +45,7 @@ import {
   Contact,
 } from 'lucide-react';
 import { useTenant, TenantMembership } from '../contexts/TenantContext';
+import { PortalSelector } from '../components/PortalSelector';
 
 // ============================================================================
 // NAVIGATION CONFIGURATION
@@ -476,6 +477,11 @@ export function TenantAppLayout(): React.ReactElement {
               )}
             </div>
           </div>
+        )}
+
+        {/* Portal Selector - for multi-portal tenants */}
+        {currentTenant && !sidebarCollapsed && (
+          <PortalSelector />
         )}
 
         {/* Navigation */}
