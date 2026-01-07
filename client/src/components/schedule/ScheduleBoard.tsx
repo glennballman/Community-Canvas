@@ -1,7 +1,6 @@
 import { useState, useRef, useCallback, useMemo, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -281,7 +280,37 @@ export default function ScheduleBoard({
   const [zoomLevel, setZoomLevel] = useState<ZoomLevel>(initialZoom);
 
   const gridRef = useRef<HTMLDivElement>(null);
+  const sidebarRef = useRef<HTMLDivElement>(null);
   const nowLineRef = useRef<HTMLDivElement>(null);
+  const isScrolling = useRef(false);
+
+  useEffect(() => {
+    const grid = gridRef.current;
+    const sidebar = sidebarRef.current;
+    if (!grid || !sidebar) return;
+
+    const syncGridToSidebar = () => {
+      if (isScrolling.current) return;
+      isScrolling.current = true;
+      sidebar.scrollTop = grid.scrollTop;
+      requestAnimationFrame(() => { isScrolling.current = false; });
+    };
+
+    const syncSidebarToGrid = () => {
+      if (isScrolling.current) return;
+      isScrolling.current = true;
+      grid.scrollTop = sidebar.scrollTop;
+      requestAnimationFrame(() => { isScrolling.current = false; });
+    };
+
+    grid.addEventListener('scroll', syncGridToSidebar);
+    sidebar.addEventListener('scroll', syncSidebarToGrid);
+
+    return () => {
+      grid.removeEventListener('scroll', syncGridToSidebar);
+      sidebar.removeEventListener('scroll', syncSidebarToGrid);
+    };
+  }, []);
 
   const config = ZOOM_CONFIGS[zoomLevel];
   const { from, to } = config.getRange(currentDate);
@@ -518,12 +547,12 @@ export default function ScheduleBoard({
           </div>
         </div>
       ) : (
-        <div className="flex-1 flex overflow-hidden">
-          <div className="w-56 flex-shrink-0 border-r bg-muted/30 flex flex-col">
-            {(showSearch || showTypeFilter || showInactiveToggle) && (
-              <div className="p-2 border-b space-y-2">
+        <div className="flex-1 flex flex-col overflow-hidden">
+          {(showSearch || showTypeFilter || showInactiveToggle) && (
+            <div className="p-2 border-b space-y-2 flex-shrink-0 bg-muted/30">
+              <div className="flex items-center gap-4 flex-wrap">
                 {showSearch && onSearchChange && (
-                  <div className="relative">
+                  <div className="relative w-48">
                     <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                       placeholder="Search..."
@@ -568,16 +597,36 @@ export default function ScheduleBoard({
                   </div>
                 )}
               </div>
-            )}
+            </div>
+          )}
 
-            <div className="h-10 border-b flex items-center px-3 sticky top-0 bg-muted/30 z-10">
+          <div className="flex h-10 border-b flex-shrink-0">
+            <div className="w-56 flex-shrink-0 border-r bg-muted/30 flex items-center px-3">
               <span className="text-sm font-medium text-muted-foreground">Resources</span>
             </div>
+            <div className="flex-1 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
+              <div className="flex h-full" style={{ minWidth: timeSlots.length * slotWidth }}>
+                {timeSlots.map((slot, idx) => {
+                  const isTodaySlot = isToday(slot);
+                  return (
+                    <div
+                      key={idx}
+                      style={{ width: slotWidth, minWidth: slotWidth }}
+                      className={`flex-shrink-0 border-r px-1 flex items-center justify-center text-xs font-medium ${isTodaySlot ? 'bg-primary/10 text-primary' : 'text-muted-foreground'}`}
+                    >
+                      {formatSlotHeader(slot, zoomLevel)}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
 
-            <ScrollArea className="flex-1">
+          <div className="flex-1 flex overflow-hidden">
+            <div ref={sidebarRef} className="w-56 flex-shrink-0 border-r bg-muted/30 overflow-y-auto" style={{ scrollbarWidth: 'none' }}>
               {Object.entries(groupedResources).map(([assetType, groupResources]) => (
                 <div key={assetType}>
-                  <div className="px-3 py-1.5 bg-muted/50 text-xs font-semibold text-muted-foreground uppercase tracking-wide sticky top-0">
+                  <div className="h-6 px-3 flex items-center bg-muted/50 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
                     {ASSET_TYPE_LABELS[assetType] || assetType}
                   </div>
                   {groupResources.map((resource) => {
@@ -606,91 +655,76 @@ export default function ScheduleBoard({
                   })}
                 </div>
               ))}
-            </ScrollArea>
-          </div>
+            </div>
 
-          <div className="flex-1 overflow-x-auto" ref={gridRef}>
-            <div style={{ minWidth: timeSlots.length * slotWidth }}>
-              <div className="flex h-10 border-b sticky top-0 bg-background z-20">
-                {timeSlots.map((slot, idx) => {
-                  const isTodaySlot = isToday(slot);
-                  return (
+            <div className="flex-1 overflow-auto" ref={gridRef}>
+              <div style={{ minWidth: timeSlots.length * slotWidth }}>
+                <div className="relative">
+                  {nowPosition !== null && (zoomLevel === '15m' || zoomLevel === '1h') && (
                     <div
-                      key={idx}
-                      style={{ width: slotWidth, minWidth: slotWidth }}
-                      className={`flex-shrink-0 border-r px-1 flex items-center justify-center text-xs font-medium ${isTodaySlot ? 'bg-primary/10 text-primary' : 'text-muted-foreground'}`}
-                    >
-                      {formatSlotHeader(slot, zoomLevel)}
+                      ref={nowLineRef}
+                      className="absolute top-0 bottom-0 w-0.5 bg-red-500 z-30 pointer-events-none"
+                      style={{ left: `${nowPosition}%` }}
+                      data-testid="now-line"
+                    />
+                  )}
+
+                  {Object.entries(groupedResources).map(([assetType, groupResources]) => (
+                    <div key={assetType}>
+                      <div className="h-6 bg-muted/50" />
+                      {groupResources.map((resource) => {
+                        const resourceEvents = getEventsForResource(resource.id);
+                        return (
+                          <div
+                            key={resource.id}
+                            className="h-12 flex border-b relative"
+                            data-testid={`schedule-row-${resource.id}`}
+                          >
+                            {timeSlots.map((slot, idx) => {
+                              const slotEnd = new Date(slot);
+                              slotEnd.setMinutes(slotEnd.getMinutes() + config.slotMinutes);
+
+                              return (
+                                <div
+                                  key={idx}
+                                  style={{ width: slotWidth, minWidth: slotWidth }}
+                                  className="flex-shrink-0 border-r relative hover-elevate cursor-pointer"
+                                  onClick={() => handleSlotClick(resource.id, slot)}
+                                  data-testid={`schedule-slot-${resource.id}-${format(slot, 'yyyy-MM-dd-HHmm')}`}
+                                >
+                                  {resourceEvents.map((event) => {
+                                    const pos = getEventPosition(event, slot, slotEnd);
+                                    if (!pos) return null;
+                                    const colorClass = EVENT_COLORS[event.event_type] || EVENT_COLORS[event.status] || EVENT_COLORS.booked;
+                                    return (
+                                      <div
+                                        key={`${event.id}-${idx}`}
+                                        className={`absolute top-1 bottom-1 rounded border text-white text-xs px-1 truncate cursor-pointer ${colorClass}`}
+                                        style={{
+                                          left: `${pos.left}%`,
+                                          width: `${Math.max(pos.width, 5)}%`,
+                                          zIndex: 10,
+                                        }}
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          onEventClick?.(event);
+                                        }}
+                                        title={`${event.title} (${format(new Date(event.starts_at), 'HH:mm')} - ${format(new Date(event.ends_at), 'HH:mm')})`}
+                                        data-testid={`schedule-event-${event.id}`}
+                                      >
+                                        {pos.width > 20 && event.title}
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        );
+                      })}
                     </div>
-                  );
-                })}
-              </div>
-
-              <div className="relative">
-                {nowPosition !== null && (zoomLevel === '15m' || zoomLevel === '1h') && (
-                  <div
-                    ref={nowLineRef}
-                    className="absolute top-0 bottom-0 w-0.5 bg-red-500 z-30 pointer-events-none"
-                    style={{ left: `${nowPosition}%` }}
-                    data-testid="now-line"
-                  />
-                )}
-
-                {Object.entries(groupedResources).map(([assetType, groupResources]) => (
-                  <div key={assetType}>
-                    <div className="h-6 bg-muted/50" />
-                    {groupResources.map((resource) => {
-                      const resourceEvents = getEventsForResource(resource.id);
-                      return (
-                        <div
-                          key={resource.id}
-                          className="h-12 flex border-b relative"
-                          data-testid={`schedule-row-${resource.id}`}
-                        >
-                          {timeSlots.map((slot, idx) => {
-                            const slotEnd = new Date(slot);
-                            slotEnd.setMinutes(slotEnd.getMinutes() + config.slotMinutes);
-
-                            return (
-                              <div
-                                key={idx}
-                                style={{ width: slotWidth, minWidth: slotWidth }}
-                                className="flex-shrink-0 border-r relative hover-elevate cursor-pointer"
-                                onClick={() => handleSlotClick(resource.id, slot)}
-                                data-testid={`schedule-slot-${resource.id}-${format(slot, 'yyyy-MM-dd-HHmm')}`}
-                              >
-                                {resourceEvents.map((event) => {
-                                  const pos = getEventPosition(event, slot, slotEnd);
-                                  if (!pos) return null;
-                                  const colorClass = EVENT_COLORS[event.event_type] || EVENT_COLORS[event.status] || EVENT_COLORS.booked;
-                                  return (
-                                    <div
-                                      key={`${event.id}-${idx}`}
-                                      className={`absolute top-1 bottom-1 rounded border text-white text-xs px-1 truncate cursor-pointer ${colorClass}`}
-                                      style={{
-                                        left: `${pos.left}%`,
-                                        width: `${Math.max(pos.width, 5)}%`,
-                                        zIndex: 10,
-                                      }}
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        onEventClick?.(event);
-                                      }}
-                                      title={`${event.title} (${format(new Date(event.starts_at), 'HH:mm')} - ${format(new Date(event.ends_at), 'HH:mm')})`}
-                                      data-testid={`schedule-event-${event.id}`}
-                                    >
-                                      {pos.width > 20 && event.title}
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      );
-                    })}
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             </div>
           </div>
