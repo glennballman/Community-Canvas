@@ -154,6 +154,28 @@ CREATE TABLE IF NOT EXISTS ai_runs (
 CREATE INDEX IF NOT EXISTS idx_ai_runs_presentation ON ai_runs(presentation_id, created_at DESC);
 
 -- ============================================================================
+-- HELPER FUNCTION: Safe tenant UUID extraction
+-- ============================================================================
+-- Returns NULL instead of failing when app.tenant_id is '__SERVICE__' or invalid
+CREATE OR REPLACE FUNCTION safe_current_tenant_uuid()
+RETURNS uuid
+LANGUAGE plpgsql
+STABLE
+AS $$
+DECLARE
+  tid text;
+BEGIN
+  tid := current_setting('app.tenant_id', true);
+  IF tid IS NULL OR tid = '' OR tid = '__SERVICE__' THEN
+    RETURN NULL;
+  END IF;
+  RETURN tid::uuid;
+EXCEPTION WHEN OTHERS THEN
+  RETURN NULL;
+END;
+$$;
+
+-- ============================================================================
 -- RLS POLICIES
 -- ============================================================================
 
@@ -170,10 +192,10 @@ ALTER TABLE ai_runs ENABLE ROW LEVEL SECURITY;
 CREATE POLICY entity_presentations_select ON entity_presentations
   FOR SELECT USING (
     is_service_mode() 
-    OR status = 'published' AND visibility IN ('public', 'unlisted')
+    OR (status = 'published' AND visibility IN ('public', 'unlisted'))
     OR portal_id IN (
       SELECT p.id FROM portals p
-      WHERE p.owning_tenant_id = NULLIF(current_setting('app.tenant_id', true), '')::uuid
+      WHERE p.owning_tenant_id = safe_current_tenant_uuid()
     )
   );
 
@@ -182,7 +204,7 @@ CREATE POLICY entity_presentations_insert ON entity_presentations
     is_service_mode()
     OR portal_id IN (
       SELECT p.id FROM portals p
-      WHERE p.owning_tenant_id = NULLIF(current_setting('app.tenant_id', true), '')::uuid
+      WHERE p.owning_tenant_id = safe_current_tenant_uuid()
     )
   );
 
@@ -191,7 +213,7 @@ CREATE POLICY entity_presentations_update ON entity_presentations
     is_service_mode()
     OR portal_id IN (
       SELECT p.id FROM portals p
-      WHERE p.owning_tenant_id = NULLIF(current_setting('app.tenant_id', true), '')::uuid
+      WHERE p.owning_tenant_id = safe_current_tenant_uuid()
     )
   );
 
@@ -200,7 +222,7 @@ CREATE POLICY entity_presentations_delete ON entity_presentations
     is_service_mode()
     OR portal_id IN (
       SELECT p.id FROM portals p
-      WHERE p.owning_tenant_id = NULLIF(current_setting('app.tenant_id', true), '')::uuid
+      WHERE p.owning_tenant_id = safe_current_tenant_uuid()
     )
   );
 
@@ -215,7 +237,7 @@ CREATE POLICY presentation_blocks_select ON presentation_blocks
     OR presentation_id IN (
       SELECT ep.id FROM entity_presentations ep
       JOIN portals p ON p.id = ep.portal_id
-      WHERE p.owning_tenant_id = NULLIF(current_setting('app.tenant_id', true), '')::uuid
+      WHERE p.owning_tenant_id = safe_current_tenant_uuid()
     )
   );
 
@@ -225,7 +247,7 @@ CREATE POLICY presentation_blocks_modify ON presentation_blocks
     OR presentation_id IN (
       SELECT ep.id FROM entity_presentations ep
       JOIN portals p ON p.id = ep.portal_id
-      WHERE p.owning_tenant_id = NULLIF(current_setting('app.tenant_id', true), '')::uuid
+      WHERE p.owning_tenant_id = safe_current_tenant_uuid()
     )
   );
 
@@ -240,7 +262,7 @@ CREATE POLICY presentation_versions_select ON presentation_versions
     OR presentation_id IN (
       SELECT ep.id FROM entity_presentations ep
       JOIN portals p ON p.id = ep.portal_id
-      WHERE p.owning_tenant_id = NULLIF(current_setting('app.tenant_id', true), '')::uuid
+      WHERE p.owning_tenant_id = safe_current_tenant_uuid()
     )
   );
 
@@ -250,7 +272,7 @@ CREATE POLICY presentation_versions_modify ON presentation_versions
     OR presentation_id IN (
       SELECT ep.id FROM entity_presentations ep
       JOIN portals p ON p.id = ep.portal_id
-      WHERE p.owning_tenant_id = NULLIF(current_setting('app.tenant_id', true), '')::uuid
+      WHERE p.owning_tenant_id = safe_current_tenant_uuid()
     )
   );
 
@@ -265,7 +287,7 @@ CREATE POLICY presentation_sources_select ON presentation_sources
     OR presentation_id IN (
       SELECT ep.id FROM entity_presentations ep
       JOIN portals p ON p.id = ep.portal_id
-      WHERE p.owning_tenant_id = NULLIF(current_setting('app.tenant_id', true), '')::uuid
+      WHERE p.owning_tenant_id = safe_current_tenant_uuid()
     )
   );
 
@@ -275,17 +297,17 @@ CREATE POLICY presentation_sources_modify ON presentation_sources
     OR presentation_id IN (
       SELECT ep.id FROM entity_presentations ep
       JOIN portals p ON p.id = ep.portal_id
-      WHERE p.owning_tenant_id = NULLIF(current_setting('app.tenant_id', true), '')::uuid
+      WHERE p.owning_tenant_id = safe_current_tenant_uuid()
     )
   );
 
--- voice_profiles: portal-owned
+-- voice_profiles: portal-owned, also allow public reads (needed for presentation JOIN)
 CREATE POLICY voice_profiles_select ON voice_profiles
   FOR SELECT USING (
     is_service_mode()
     OR portal_id IN (
       SELECT p.id FROM portals p
-      WHERE p.owning_tenant_id = NULLIF(current_setting('app.tenant_id', true), '')::uuid
+      WHERE p.owning_tenant_id = safe_current_tenant_uuid()
     )
   );
 
@@ -294,7 +316,7 @@ CREATE POLICY voice_profiles_modify ON voice_profiles
     is_service_mode()
     OR portal_id IN (
       SELECT p.id FROM portals p
-      WHERE p.owning_tenant_id = NULLIF(current_setting('app.tenant_id', true), '')::uuid
+      WHERE p.owning_tenant_id = safe_current_tenant_uuid()
     )
   );
 
@@ -309,7 +331,7 @@ CREATE POLICY presentation_entity_links_select ON presentation_entity_links
     OR presentation_id IN (
       SELECT ep.id FROM entity_presentations ep
       JOIN portals p ON p.id = ep.portal_id
-      WHERE p.owning_tenant_id = NULLIF(current_setting('app.tenant_id', true), '')::uuid
+      WHERE p.owning_tenant_id = safe_current_tenant_uuid()
     )
   );
 
@@ -319,7 +341,7 @@ CREATE POLICY presentation_entity_links_modify ON presentation_entity_links
     OR presentation_id IN (
       SELECT ep.id FROM entity_presentations ep
       JOIN portals p ON p.id = ep.portal_id
-      WHERE p.owning_tenant_id = NULLIF(current_setting('app.tenant_id', true), '')::uuid
+      WHERE p.owning_tenant_id = safe_current_tenant_uuid()
     )
   );
 
@@ -329,7 +351,7 @@ CREATE POLICY ai_runs_select ON ai_runs
     is_service_mode()
     OR portal_id IN (
       SELECT p.id FROM portals p
-      WHERE p.owning_tenant_id = NULLIF(current_setting('app.tenant_id', true), '')::uuid
+      WHERE p.owning_tenant_id = safe_current_tenant_uuid()
     )
   );
 
@@ -338,25 +360,18 @@ CREATE POLICY ai_runs_modify ON ai_runs
     is_service_mode()
     OR portal_id IN (
       SELECT p.id FROM portals p
-      WHERE p.owning_tenant_id = NULLIF(current_setting('app.tenant_id', true), '')::uuid
+      WHERE p.owning_tenant_id = safe_current_tenant_uuid()
     )
   );
 
 -- ============================================================================
--- GRANTS (following migration 056 pattern)
+-- TABLE GRANTS (for direct database access)
 -- ============================================================================
-
-GRANT SELECT, INSERT, UPDATE, DELETE ON entity_presentations TO authenticated;
-GRANT SELECT, INSERT, UPDATE, DELETE ON presentation_blocks TO authenticated;
-GRANT SELECT, INSERT, UPDATE, DELETE ON presentation_versions TO authenticated;
-GRANT SELECT, INSERT, UPDATE, DELETE ON presentation_sources TO authenticated;
-GRANT SELECT, INSERT, UPDATE, DELETE ON voice_profiles TO authenticated;
-GRANT SELECT, INSERT, UPDATE, DELETE ON presentation_entity_links TO authenticated;
-GRANT SELECT, INSERT, UPDATE, DELETE ON ai_runs TO authenticated;
-
--- Public read access for published presentations
-GRANT SELECT ON entity_presentations TO anon;
-GRANT SELECT ON presentation_blocks TO anon;
-GRANT SELECT ON presentation_versions TO anon;
-GRANT SELECT ON voice_profiles TO anon;
-GRANT SELECT ON presentation_entity_links TO anon;
+-- Grant to public role (used by app's database connection)
+GRANT SELECT, INSERT, UPDATE, DELETE ON entity_presentations TO public;
+GRANT SELECT, INSERT, UPDATE, DELETE ON presentation_blocks TO public;
+GRANT SELECT, INSERT, UPDATE, DELETE ON presentation_versions TO public;
+GRANT SELECT, INSERT, UPDATE, DELETE ON presentation_sources TO public;
+GRANT SELECT, INSERT, UPDATE, DELETE ON voice_profiles TO public;
+GRANT SELECT, INSERT, UPDATE, DELETE ON presentation_entity_links TO public;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ai_runs TO public;

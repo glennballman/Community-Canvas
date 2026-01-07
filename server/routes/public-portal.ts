@@ -1,5 +1,5 @@
 import express, { Request, Response } from 'express';
-import { serviceQuery } from '../db/tenantDb';
+import { serviceQuery, publicQuery } from '../db/tenantDb';
 import { TenantRequest } from '../middleware/tenantContext';
 
 const router = express.Router();
@@ -701,6 +701,197 @@ router.get('/portals/:slug/good-news', async (req: Request, res: Response) => {
     res.status(500).json({ 
       success: false, 
       error: 'Failed to fetch good news' 
+    });
+  }
+});
+
+// ============================================================================
+// ENTITY PRESENTATIONS - Public Read Endpoints
+// ============================================================================
+
+/**
+ * GET /api/public/portals/:slug/presentations
+ * 
+ * List published presentations for a portal.
+ * Supports filtering by entity_type and presentation_type.
+ */
+router.get('/portals/:slug/presentations', async (req: Request, res: Response) => {
+  try {
+    const { slug } = req.params;
+    const { entity_type, presentation_type, tag, limit = '20', offset = '0' } = req.query;
+
+    // Verify portal exists (serviceQuery bypasses RLS to find any portal by slug)
+    const portalResult = await serviceQuery(`
+      SELECT p.id FROM portals p 
+      WHERE p.slug = $1 AND p.status = 'active'
+    `, [slug]);
+
+    if (portalResult.rows.length === 0) {
+      return res.status(404).json({ 
+        success: false, 
+        error: 'Portal not found' 
+      });
+    }
+
+    const portalId = portalResult.rows[0].id;
+
+    // Build query with optional filters (publicQuery for RLS to see only published/public)
+    let query = `
+      SELECT 
+        ep.id,
+        ep.slug,
+        ep.title,
+        ep.subtitle,
+        ep.entity_type,
+        ep.presentation_type,
+        ep.tags,
+        ep.seasonality,
+        ep.cta,
+        ep.created_at,
+        ep.updated_at,
+        (SELECT jsonb_agg(
+          jsonb_build_object('block_type', pb.block_type, 'block_data', pb.block_data)
+          ORDER BY pb.block_order
+        ) FROM presentation_blocks pb WHERE pb.presentation_id = ep.id) as blocks
+      FROM entity_presentations ep
+      WHERE ep.portal_id = $1
+        AND ep.status = 'published'
+        AND ep.visibility IN ('public', 'unlisted')
+    `;
+    const params: any[] = [portalId];
+    let paramIndex = 2;
+
+    if (entity_type) {
+      query += ` AND ep.entity_type = $${paramIndex}`;
+      params.push(entity_type);
+      paramIndex++;
+    }
+
+    if (presentation_type) {
+      query += ` AND ep.presentation_type = $${paramIndex}`;
+      params.push(presentation_type);
+      paramIndex++;
+    }
+
+    if (tag) {
+      query += ` AND $${paramIndex} = ANY(ep.tags)`;
+      params.push(tag);
+      paramIndex++;
+    }
+
+    query += ` ORDER BY ep.updated_at DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
+    params.push(parseInt(limit as string), parseInt(offset as string));
+
+    const result = await serviceQuery(query, params);
+
+    res.json({
+      success: true,
+      presentations: result.rows,
+      count: result.rows.length
+    });
+
+  } catch (error: any) {
+    console.error('Public presentations list error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Failed to fetch presentations' 
+    });
+  }
+});
+
+/**
+ * GET /api/public/portals/:slug/presentations/:presentationSlug
+ * 
+ * Get a single presentation with all blocks and metadata.
+ */
+router.get('/portals/:slug/presentations/:presentationSlug', async (req: Request, res: Response) => {
+  try {
+    const { slug, presentationSlug } = req.params;
+
+    // Verify portal exists (serviceQuery bypasses RLS to find any portal by slug)
+    const portalResult = await serviceQuery(`
+      SELECT p.id, p.name, p.slug FROM portals p 
+      WHERE p.slug = $1 AND p.status = 'active'
+    `, [slug]);
+
+    if (portalResult.rows.length === 0) {
+      return res.status(404).json({ 
+        success: false, 
+        error: 'Portal not found' 
+      });
+    }
+
+    const portalId = portalResult.rows[0].id;
+
+    // Fetch presentation with blocks and voice profile (serviceQuery - RLS handles visibility)
+    const result = await serviceQuery(`
+      SELECT 
+        ep.id,
+        ep.slug,
+        ep.title,
+        ep.subtitle,
+        ep.entity_type,
+        ep.entity_id,
+        ep.presentation_type,
+        ep.tags,
+        ep.seasonality,
+        ep.cta,
+        ep.layout,
+        ep.created_at,
+        ep.updated_at,
+        vp.name as voice_profile_name,
+        vp.guidance as voice_guidance,
+        (SELECT jsonb_agg(
+          jsonb_build_object(
+            'id', pb.id,
+            'block_order', pb.block_order,
+            'block_type', pb.block_type,
+            'block_data', pb.block_data
+          )
+          ORDER BY pb.block_order
+        ) FROM presentation_blocks pb WHERE pb.presentation_id = ep.id) as blocks,
+        (SELECT jsonb_agg(
+          jsonb_build_object(
+            'entity_type', pel.entity_type,
+            'entity_id', pel.entity_id,
+            'role', pel.role
+          )
+          ORDER BY pel.sort_order
+        ) FROM presentation_entity_links pel WHERE pel.presentation_id = ep.id) as entity_links
+      FROM entity_presentations ep
+      LEFT JOIN voice_profiles vp ON vp.id = ep.voice_profile_id
+      WHERE ep.portal_id = $1
+        AND ep.slug = $2
+        AND ep.status = 'published'
+        AND ep.visibility IN ('public', 'unlisted')
+    `, [portalId, presentationSlug]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ 
+        success: false, 
+        error: 'Presentation not found' 
+      });
+    }
+
+    const presentation = result.rows[0];
+
+    res.json({
+      success: true,
+      presentation: {
+        ...presentation,
+        portal: {
+          id: portalResult.rows[0].id,
+          name: portalResult.rows[0].name,
+          slug: portalResult.rows[0].slug
+        }
+      }
+    });
+
+  } catch (error: any) {
+    console.error('Public presentation detail error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Failed to fetch presentation' 
     });
   }
 });
