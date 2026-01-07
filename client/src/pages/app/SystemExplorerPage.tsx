@@ -253,39 +253,57 @@ export default function SystemExplorerPage() {
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {overviewData?.allowedTables.map((table) => {
-                const count = overviewData.counts[table.name];
-                
-                return (
-                  <Card key={table.name} data-testid={`card-entity-${table.name}`}>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-base flex items-center justify-between gap-2">
-                        {table.label}
-                        {count === null ? (
-                          <Badge variant="outline" className="text-xs">N/A</Badge>
-                        ) : (
-                          <Badge variant="secondary">{count}</Badge>
-                        )}
-                      </CardTitle>
-                      <CardDescription className="text-xs font-mono">
-                        {table.name}
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => inspectTable(table.name)}
-                        data-testid={`button-inspect-${table.name}`}
+            <div className="border rounded-md overflow-hidden">
+              <table className="w-full text-sm" data-testid="table-overview">
+                <thead className="bg-muted/50">
+                  <tr>
+                    <th className="px-4 py-2 text-left font-medium text-muted-foreground">Table</th>
+                    <th className="px-4 py-2 text-left font-medium text-muted-foreground">Name</th>
+                    <th className="px-4 py-2 text-right font-medium text-muted-foreground">Rows</th>
+                    <th className="px-4 py-2 text-left font-medium text-muted-foreground">Scope</th>
+                    <th className="px-4 py-2 text-left font-medium text-muted-foreground"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {overviewData?.allowedTables.map((table) => {
+                    const count = overviewData.counts[table.name];
+                    
+                    return (
+                      <tr 
+                        key={table.name} 
+                        className="border-t hover:bg-muted/30"
+                        data-testid={`row-entity-${table.name}`}
                       >
-                        <Table2 className="h-3 w-3 mr-1" />
-                        Inspect Data
-                      </Button>
-                    </CardContent>
-                  </Card>
-                );
-              })}
+                        <td className="px-4 py-2 font-medium">{table.label}</td>
+                        <td className="px-4 py-2 font-mono text-xs text-muted-foreground">{table.name}</td>
+                        <td className="px-4 py-2 text-right">
+                          {count === null ? (
+                            <Badge variant="outline" className="text-xs">N/A</Badge>
+                          ) : (
+                            <Badge variant="secondary">{count.toLocaleString()}</Badge>
+                          )}
+                        </td>
+                        <td className="px-4 py-2">
+                          <Badge variant="outline" className="text-xs">
+                            {table.tenantScoped ? 'tenant' : 'global'}
+                          </Badge>
+                        </td>
+                        <td className="px-4 py-2">
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => inspectTable(table.name)}
+                            data-testid={`button-inspect-${table.name}`}
+                          >
+                            <Table2 className="h-3 w-3 mr-1" />
+                            Inspect
+                          </Button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
           )}
         </TabsContent>
