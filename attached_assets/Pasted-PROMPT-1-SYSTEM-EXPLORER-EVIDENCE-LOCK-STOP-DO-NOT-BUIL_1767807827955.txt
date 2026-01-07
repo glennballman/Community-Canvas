@@ -1,0 +1,80 @@
+PROMPT 1 — SYSTEM EXPLORER EVIDENCE LOCK
+STOP. DO NOT BUILD ANY NEW FEATURES.
+
+You are working in Community Canvas.
+
+Your ONLY task is to harden System Explorer as the permanent,
+authoritative source of truth for what exists in the platform.
+
+This is PLATFORM ADMIN infrastructure, not tenant functionality.
+
+────────────────────────────────
+NON-NEGOTIABLE REQUIREMENTS
+────────────────────────────────
+
+A) PLACEMENT & VISIBILITY
+1. System Explorer route must be:
+   /admin/system-explorer
+2. It must appear ONLY in PLATFORM_ADMIN_NAV.
+3. It must be completely hidden from:
+   - BUSINESS_NAV
+   - COMMUNITY_NAV
+4. When impersonating a tenant:
+   - System Explorer must NOT appear in nav
+   - Direct access to /admin/system-explorer must be blocked
+     with a clear message:
+     “Exit impersonation to access System Explorer.”
+
+B) NO BROKEN LINKS — EVER
+1. Remove ALL links from System Explorer that navigate to /app/*
+2. System Explorer must NEVER redirect to tenant routes.
+3. All exploration must remain inside System Explorer.
+
+C) DATA BROWSER MUST WORK (THIS IS THE CORE)
+1. “Inspect Data” must open the Data Browser tab.
+2. Data Browser must:
+   - Render rows if data exists
+   - Render an explicit empty state if zero rows
+   - Show column names even when empty
+3. If a table requires tenant context:
+   - Provide a tenant selector
+   - Default to a sensible tenant (or “All tenants” if safe)
+
+D) DATA SOURCES MUST BE TRUTHFUL
+1. Data Sources tab must show:
+   - Actual backing table(s)
+   - Real record counts
+   - Last updated timestamps
+2. If a source has no table:
+   - Status = NOT WIRED
+   - Reason must be shown
+3. “Inspect Snapshots” must open Data Browser
+   filtered to the correct table.
+
+E) EVIDENCE RULE (MANDATORY)
+You may NOT claim “fixed” unless you provide:
+
+1. Screenshot:
+   - Platform Admin nav WITH System Explorer
+2. Screenshot:
+   - Tenant nav (while impersonating) WITHOUT System Explorer
+3. Screenshot:
+   - Attempt to access /admin/system-explorer while impersonating
+     showing the block message
+4. Screenshot:
+   - Data Browser showing rows for at least TWO different tables
+5. Screenshot:
+   - Data Browser showing a valid empty state for one table
+
+F) REGRESSION LOCK
+Update QA to assert:
+- System Explorer exists in PLATFORM_ADMIN_NAV
+- System Explorer does NOT exist in tenant navs
+- /admin/system-explorer renders for platform admin
+- /admin/system-explorer is blocked during impersonation
+
+If ANY requirement cannot be met:
+Say “NOT FIXED” and explain exactly why.
+
+Do NOT touch anything else.
+Begin.

@@ -23,7 +23,6 @@ import {
   Globe
 } from 'lucide-react';
 import { useTenant } from '@/contexts/TenantContext';
-import { Link } from 'react-router-dom';
 
 interface OverviewData {
   tenantId: string | null;
@@ -518,9 +517,20 @@ export default function SystemExplorerPage() {
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
             </div>
           ) : tableResult?.rows.length === 0 ? (
-            <Card>
-              <CardContent className="py-12 text-center text-muted-foreground">
-                No data in this table{currentTenant ? ' for this tenant' : ''}.
+            <Card data-testid="card-empty-state">
+              <CardHeader>
+                <CardTitle className="text-base">
+                  {overviewData?.allowedTables.find(t => t.name === selectedTable)?.label || selectedTable}
+                </CardTitle>
+                <CardDescription>
+                  Table: <span className="font-mono">{selectedTable}</span>
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="py-8 text-center">
+                <p className="text-muted-foreground mb-4" data-testid="text-empty-state">
+                  No data in this table{tableResult?.tenantScoped ? ' (tenant-scoped - requires tenant context)' : ''}.
+                </p>
+                <Badge variant="outline" data-testid="badge-row-count">0 rows</Badge>
               </CardContent>
             </Card>
           ) : (
