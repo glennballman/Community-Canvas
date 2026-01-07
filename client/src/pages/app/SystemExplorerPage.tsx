@@ -538,7 +538,7 @@ export default function SystemExplorerPage() {
               </CardContent>
             </Card>
           ) : (
-            <div className="border rounded-md overflow-auto max-h-[600px]">
+            <div className="border rounded-md overflow-auto max-h-[900px]">
               <table className="w-full text-sm" data-testid="table-data-browser">
                 <thead className="bg-muted/50 sticky top-0">
                   <tr>
