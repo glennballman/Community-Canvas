@@ -157,7 +157,7 @@ export default function SystemExplorerPage() {
   });
   
   const { data: tableData, isLoading: tableLoading } = useQuery<{ success: boolean; data: TableData }>({
-    queryKey: ['/api/admin/system-explorer/table', selectedTable, tablePage],
+    queryKey: [`/api/admin/system-explorer/table/${selectedTable}?page=${tablePage}`, selectedTable, tablePage],
     enabled: !!selectedTable,
   });
   
