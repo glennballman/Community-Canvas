@@ -86,6 +86,58 @@ async function switchTenant(token: string, tenantId: string): Promise<boolean> {
   }
 }
 
+// NAV REGRESSION LOCK - Required nav items that must exist
+const REQUIRED_NAV_ITEMS = [
+  { label: 'Dashboard', href: '/app/dashboard' },
+  { label: 'Inventory', href: '/app/inventory' },
+  { label: 'Bookings', href: '/app/bookings' },
+  { label: 'Operations', href: '/app/operations' },
+  { label: 'System Explorer', href: '/app/system-explorer' },
+  { label: 'Settings', href: '/app/settings' },
+];
+
+async function verifyNavItemsExist(): Promise<TestResult> {
+  try {
+    const fs = await import('fs');
+    const path = await import('path');
+    
+    const layoutPath = path.join(process.cwd(), 'client/src/layouts/TenantAppLayout.tsx');
+    const content = fs.readFileSync(layoutPath, 'utf-8');
+    
+    const missing: string[] = [];
+    
+    for (const item of REQUIRED_NAV_ITEMS) {
+      // Check if this nav item exists in BUSINESS_NAV or COMMUNITY_NAV
+      const labelPattern = new RegExp(`label:\\s*['"]${item.label}['"]`);
+      const hrefPattern = new RegExp(`href:\\s*['"]${item.href.replace('/', '\\/')}['"]`);
+      
+      if (!labelPattern.test(content) || !hrefPattern.test(content)) {
+        missing.push(`${item.label} (${item.href})`);
+      }
+    }
+    
+    if (missing.length > 0) {
+      return {
+        name: 'NAV REGRESSION LOCK',
+        status: 'FAIL',
+        details: `Missing nav items: ${missing.join(', ')}`,
+      };
+    }
+    
+    return {
+      name: 'NAV REGRESSION LOCK',
+      status: 'PASS',
+      details: `All ${REQUIRED_NAV_ITEMS.length} required nav items present`,
+    };
+  } catch (error: any) {
+    return {
+      name: 'NAV REGRESSION LOCK',
+      status: 'FAIL',
+      details: `Failed to verify: ${error.message}`,
+    };
+  }
+}
+
 async function runTests() {
   console.log('\n========================================');
   console.log('QA SMOKE TEST - Community Status Dashboard');
@@ -157,6 +209,14 @@ async function runTests() {
   
   // Test 8: User Context API
   results.push(await testEndpoint('User Context API', '/api/me/context', 200, token));
+  
+  // Test 9: System Explorer API (infrastructure)
+  results.push(await testEndpoint('System Explorer Overview', '/api/admin/system-explorer/overview', 200, token));
+  
+  // Test 10: NAV REGRESSION LOCK - Verify required nav items exist in code
+  // This is a static assertion that key nav items haven't been removed
+  const navLockResult = await verifyNavItemsExist();
+  results.push(navLockResult);
   
   // Print Results
   console.log('Results:');
