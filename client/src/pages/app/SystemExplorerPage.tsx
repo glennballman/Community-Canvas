@@ -15,13 +15,11 @@ import {
   Check, 
   X, 
   AlertCircle,
-  ExternalLink,
   RefreshCw,
   Loader2,
   Shield,
   Clock
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
 import { useTenant } from '@/contexts/TenantContext';
 
 interface OverviewData {
@@ -36,6 +34,7 @@ interface OverviewData {
   pipelines: Array<{
     name: string;
     table: string;
+    jsonPath?: string;
     category: string;
     exists: boolean;
     count: number;
@@ -115,6 +114,7 @@ export default function SystemExplorerPage() {
   const { currentTenant, impersonation } = useTenant();
   const [selectedTable, setSelectedTable] = useState<string>('unified_assets');
   const [tablePage, setTablePage] = useState(1);
+  const [activeTab, setActiveTab] = useState('overview');
   
   const { data: overview, isLoading: overviewLoading, refetch: refetchOverview } = useQuery<{ success: boolean; data: OverviewData }>({
     queryKey: ['/api/admin/system-explorer/overview'],
@@ -143,16 +143,11 @@ export default function SystemExplorerPage() {
   const tableResult = tableData?.data;
   const evidence = evidenceData?.data;
 
-  // Route to page mapping for "View" links
-  const routePageMap: Record<string, string> = {
-    unified_assets: '/app/inventory',
-    unified_bookings: '/app/bookings',
-    work_requests: '/app/intake/work-requests',
-    projects: '/app/projects',
-    crm_contacts: '/app/crm/people',
-    crm_organizations: '/app/crm/orgs',
-    crm_places: '/app/crm/places',
-    portals: '/app/settings',
+  // Helper to switch to Data Browser with a specific table
+  const inspectTable = (tableName: string) => {
+    setSelectedTable(tableName);
+    setTablePage(1);
+    setActiveTab('browser');
   };
 
   return (
@@ -188,7 +183,7 @@ export default function SystemExplorerPage() {
         </div>
       </div>
       
-      <Tabs defaultValue="overview" className="w-full">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-6 max-w-3xl">
           <TabsTrigger value="overview" data-testid="tab-overview">
             <Database className="h-4 w-4 mr-2" />
@@ -226,7 +221,6 @@ export default function SystemExplorerPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {overviewData?.allowedTables.map((table) => {
                 const count = overviewData.counts[table.name];
-                const hasPage = routePageMap[table.name];
                 
                 return (
                   <Card key={table.name} data-testid={`card-entity-${table.name}`}>
@@ -243,29 +237,15 @@ export default function SystemExplorerPage() {
                         {table.name}
                       </CardDescription>
                     </CardHeader>
-                    <CardContent className="flex gap-2 flex-wrap">
-                      {hasPage && (
-                        <Link to={hasPage}>
-                          <Button variant="outline" size="sm" data-testid={`button-view-${table.name}`}>
-                            <ExternalLink className="h-3 w-3 mr-1" />
-                            View
-                          </Button>
-                        </Link>
-                      )}
+                    <CardContent>
                       <Button 
-                        variant="ghost" 
+                        variant="outline" 
                         size="sm"
-                        onClick={() => {
-                          setSelectedTable(table.name);
-                          setTablePage(1);
-                          document.querySelector('[data-testid="tab-browser"]')?.dispatchEvent(
-                            new MouseEvent('click', { bubbles: true })
-                          );
-                        }}
+                        onClick={() => inspectTable(table.name)}
                         data-testid={`button-inspect-${table.name}`}
                       >
                         <Table2 className="h-3 w-3 mr-1" />
-                        Inspect
+                        Inspect Data
                       </Button>
                     </CardContent>
                   </Card>
@@ -415,31 +395,42 @@ export default function SystemExplorerPage() {
         <TabsContent value="pipelines" className="mt-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {overviewData?.pipelines.map((p) => (
-              <Card key={p.name} data-testid={`card-pipeline-${p.table}`}>
+              <Card key={p.name} data-testid={`card-pipeline-${p.name.toLowerCase().replace(/\s+/g, '-')}`}>
                 <CardHeader className="pb-2">
                   <CardTitle className="text-base flex items-center justify-between gap-2">
                     {p.name}
                     {p.exists ? (
-                      <Badge variant="secondary">{p.count} records</Badge>
+                      <Badge variant="secondary">{p.count} locations</Badge>
                     ) : (
                       <Badge variant="outline" className="text-muted-foreground">
                         <AlertCircle className="h-3 w-3 mr-1" />
-                        No Table
+                        No Data
                       </Badge>
                     )}
                   </CardTitle>
                   <CardDescription className="text-xs">
-                    {p.category} | Table: {p.table}
+                    {p.category}
                   </CardDescription>
                 </CardHeader>
-                <CardContent>
-                  {p.lastUpdated ? (
+                <CardContent className="space-y-1">
+                  <p className="text-xs text-muted-foreground font-mono">
+                    {p.table}.data.{p.jsonPath}
+                  </p>
+                  {p.lastUpdated && (
                     <p className="text-xs text-muted-foreground">
                       Last updated: {new Date(p.lastUpdated).toLocaleString()}
                     </p>
-                  ) : (
-                    <p className="text-xs text-muted-foreground">No data</p>
                   )}
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    className="mt-2"
+                    onClick={() => inspectTable('snapshots')}
+                    data-testid={`button-inspect-pipeline-${p.name.toLowerCase().replace(/\s+/g, '-')}`}
+                  >
+                    <Table2 className="h-3 w-3 mr-1" />
+                    Inspect Snapshots
+                  </Button>
                 </CardContent>
               </Card>
             ))}
@@ -567,11 +558,9 @@ export default function SystemExplorerPage() {
                           Missing
                         </Badge>
                       )}
-                      <Link to={r.path}>
-                        <Button variant="ghost" size="sm" data-testid={`button-visit-${r.path.replace(/\//g, '-')}`}>
-                          <ExternalLink className="h-3 w-3" />
-                        </Button>
-                      </Link>
+                      <span className="text-xs text-muted-foreground font-mono hidden sm:inline">
+                        {r.required ? 'required' : 'optional'}
+                      </span>
                     </div>
                   </div>
                 ))}

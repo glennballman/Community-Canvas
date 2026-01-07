@@ -13,13 +13,14 @@ const KNOWN_INTEGRATIONS = [
   { name: 'CompanyCam', envKey: 'COMPANYCAM_ACCESS_TOKEN', category: 'photos' },
 ];
 
-// Known data sources/pipelines
+// Known data sources/pipelines - data stored in snapshots table as nested JSONB fields
+// Each snapshot contains: road_conditions, ferry_schedules, bc_hydro_outages, active_alerts
 const KNOWN_PIPELINES = [
-  { name: 'DriveBC Road Events', table: 'drivebc_events', category: 'transportation' },
-  { name: 'BC Ferries', table: 'bcferries_conditions', category: 'transportation' },
-  { name: 'BC Hydro Outages', table: 'bchydro_outages', category: 'utilities' },
-  { name: 'Environment Canada Weather', table: 'weather_observations', category: 'weather' },
-  { name: 'Earthquakes Canada', table: 'earthquake_events', category: 'emergency' },
+  { name: 'DriveBC Road Conditions', table: 'snapshots', jsonPath: 'real_time_status_updates.road_conditions', category: 'transportation' },
+  { name: 'BC Ferries Schedules', table: 'snapshots', jsonPath: 'real_time_status_updates.ferry_schedules', category: 'transportation' },
+  { name: 'BC Hydro Outages', table: 'snapshots', jsonPath: 'real_time_status_updates.bc_hydro_outages', category: 'utilities' },
+  { name: 'Active Alerts', table: 'snapshots', jsonPath: 'real_time_status_updates.active_alerts', category: 'emergency' },
+  { name: 'Water/Sewer Alerts', table: 'snapshots', jsonPath: 'real_time_status_updates.water_sewer_alerts', category: 'utilities' },
 ];
 
 // Key routes that should exist
@@ -35,7 +36,7 @@ const KEY_ROUTES = [
   { path: '/app/crm/orgs', label: 'Organizations', required: true },
   { path: '/app/conversations', label: 'Conversations', required: false },
   { path: '/app/settings', label: 'Settings', required: true },
-  { path: '/app/system-explorer', label: 'System Explorer', required: true },
+  { path: '/admin/system-explorer', label: 'System Explorer', required: true },
 ];
 
 // Allowed tables for data browser with tenant column names
@@ -54,10 +55,10 @@ export const ALLOWED_TABLES = [
   { name: 'presentation_blocks', label: 'Presentation Blocks', tenantScoped: false },
   { name: 'service_runs', label: 'Service Runs', tenantScoped: true, tenantColumn: 'tenant_id' },
   { name: 'crews', label: 'Crews', tenantScoped: true, tenantColumn: 'tenant_id' },
-  { name: 'drivebc_events', label: 'DriveBC Events', tenantScoped: false },
-  { name: 'bchydro_outages', label: 'BC Hydro Outages', tenantScoped: false },
-  { name: 'weather_observations', label: 'Weather Observations', tenantScoped: false },
-  { name: 'earthquake_events', label: 'Earthquake Events', tenantScoped: false },
+  { name: 'snapshots', label: 'Status Snapshots', tenantScoped: false },
+  { name: 'tenants', label: 'Tenants', tenantScoped: false },
+  { name: 'users', label: 'Users', tenantScoped: false },
+  { name: 'system_evidence', label: 'Evidence Ledger', tenantScoped: false },
 ];
 
 // GET /api/admin/system-explorer/overview
@@ -90,27 +91,33 @@ router.get('/overview', async (req, res) => {
       configured: !!process.env[int.envKey],
     }));
     
-    // Pipeline/data source status
+    // Pipeline/data source status (all use snapshots table with JSONB fields)
     const pipelines = await Promise.all(KNOWN_PIPELINES.map(async (p) => {
       try {
+        // Count records that have data for this specific JSON path
+        const pathParts = (p as any).jsonPath.split('.');
+        const jsonQuery = pathParts.map(part => `'${part}'`).join('->');
         const result = await serviceQuery(`
           SELECT 
-            COUNT(*) as count,
+            COUNT(*) FILTER (WHERE data->${jsonQuery} IS NOT NULL AND jsonb_array_length(data->${jsonQuery}) > 0) as count,
             MAX(created_at) as last_updated
-          FROM ${p.table}
+          FROM snapshots
         `);
+        const count = parseInt(result.rows[0]?.count || '0', 10);
         return {
           name: p.name,
           table: p.table,
+          jsonPath: (p as any).jsonPath,
           category: p.category,
-          exists: true,
-          count: parseInt(result.rows[0]?.count || '0', 10),
+          exists: count > 0,
+          count,
           lastUpdated: result.rows[0]?.last_updated || null,
         };
-      } catch {
+      } catch (err) {
         return {
           name: p.name,
           table: p.table,
+          jsonPath: (p as any).jsonPath,
           category: p.category,
           exists: false,
           count: 0,
