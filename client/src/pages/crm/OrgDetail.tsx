@@ -26,7 +26,7 @@ interface Org {
   id: string;
   name: string;
   legal_name: string | null;
-  phone: string | null;
+  telephone: string | null;
   email: string | null;
   website: string | null;
   address_line1: string | null;
@@ -42,10 +42,10 @@ interface Org {
 
 interface Person {
   id: string;
-  first_name: string;
-  last_name: string | null;
+  given_name: string;
+  family_name: string | null;
   role_title: string | null;
-  phone: string | null;
+  telephone: string | null;
   email: string | null;
 }
 
@@ -107,7 +107,7 @@ export default function OrgDetail() {
       setEditData({
         name: data.org.name,
         legal_name: data.org.legal_name || '',
-        phone: data.org.phone || '',
+        telephone: data.org.telephone || '',
         email: data.org.email || '',
         website: data.org.website || '',
         address_line1: data.org.address_line1 || '',
@@ -226,8 +226,8 @@ export default function OrgDetail() {
                     <div className="space-y-2">
                       <Label>Phone</Label>
                       <Input
-                        value={editData.phone || ''}
-                        onChange={(e) => setEditData({ ...editData, phone: e.target.value })}
+                        value={editData.telephone || ''}
+                        onChange={(e) => setEditData({ ...editData, telephone: e.target.value })}
                         placeholder="(250) 555-0123"
                         data-testid="input-edit-phone"
                       />
@@ -281,10 +281,10 @@ export default function OrgDetail() {
                 </>
               ) : (
                 <div className="space-y-3">
-                  {org.phone && (
+                  {org.telephone && (
                     <div className="flex items-center gap-3">
                       <Phone className="w-4 h-4 text-muted-foreground" />
-                      <a href={`tel:${org.phone}`} className="hover:underline">{org.phone}</a>
+                      <a href={`tel:${org.telephone}`} className="hover:underline">{org.telephone}</a>
                     </div>
                   )}
                   {org.email && (
@@ -311,7 +311,7 @@ export default function OrgDetail() {
                       </span>
                     </div>
                   )}
-                  {!org.phone && !org.email && !org.website && !org.address_line1 && (
+                  {!org.telephone && !org.email && !org.website && !org.address_line1 && (
                     <p className="text-muted-foreground text-sm">No contact information on file</p>
                   )}
                 </div>
@@ -363,15 +363,15 @@ export default function OrgDetail() {
                     >
                       <div className="flex items-center justify-between gap-2">
                         <p className="font-medium text-sm">
-                          {person.first_name} {person.last_name}
+                          {person.given_name} {person.family_name}
                         </p>
                         {person.role_title && (
                           <Badge variant="secondary" className="text-xs">{person.role_title}</Badge>
                         )}
                       </div>
-                      {(person.phone || person.email) && (
+                      {(person.telephone || person.email) && (
                         <p className="text-xs text-muted-foreground mt-1">
-                          {person.phone || person.email}
+                          {person.telephone || person.email}
                         </p>
                       )}
                     </div>

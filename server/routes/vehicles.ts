@@ -69,7 +69,7 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
             SELECT 
                 v.*,
                 CASE v.owner_type
-                    WHEN 'individual' THEN u.first_name || ' ' || u.last_name
+                    WHEN 'individual' THEN u.given_name || ' ' || u.family_name
                     WHEN 'business' THEN t.name
                 END as owner_name
             FROM cc_vehicles v
@@ -237,7 +237,7 @@ router.get('/:id', requireAuth, async (req: Request, res: Response) => {
         const vehicleResult = await req.tenantQuery(`
             SELECT v.*, 
                 CASE v.owner_type
-                    WHEN 'individual' THEN u.first_name || ' ' || u.last_name
+                    WHEN 'individual' THEN u.given_name || ' ' || u.family_name
                     WHEN 'business' THEN t.name
                 END as owner_name
             FROM cc_vehicles v
@@ -258,7 +258,7 @@ router.get('/:id', requireAuth, async (req: Request, res: Response) => {
         `, [id]);
 
         const driverResult = await req.tenantQuery(`
-            SELECT u.id, u.first_name, u.last_name, u.email, vda.assignment_type, vda.valid_from
+            SELECT u.id, u.given_name, u.family_name, u.email, vda.assignment_type, vda.valid_from
             FROM cc_vehicle_driver_assignments vda
             JOIN cc_users u ON u.id = vda.user_id
             WHERE vda.vehicle_id = $1 AND vda.is_active = true
@@ -471,7 +471,7 @@ router.get('/trailers/list', requireAuth, async (req: Request, res: Response) =>
         let query = `
             SELECT t.*, 
                 CASE t.owner_type
-                    WHEN 'individual' THEN u.first_name || ' ' || u.last_name
+                    WHEN 'individual' THEN u.given_name || ' ' || u.family_name
                     WHEN 'business' THEN tn.name
                 END as owner_name
             FROM cc_trailers t
@@ -577,7 +577,7 @@ router.get('/trailers/:id', requireAuth, async (req: Request, res: Response) => 
         const result = await req.tenantQuery(`
             SELECT t.*, 
                 CASE t.owner_type
-                    WHEN 'individual' THEN u.first_name || ' ' || u.last_name
+                    WHEN 'individual' THEN u.given_name || ' ' || u.family_name
                     WHEN 'business' THEN tn.name
                 END as owner_name
             FROM cc_trailers t

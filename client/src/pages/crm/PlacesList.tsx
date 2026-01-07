@@ -34,8 +34,8 @@ interface Place {
   province: string | null;
   postal_code: string | null;
   photo_count: number;
-  owner_first_name: string | null;
-  owner_last_name: string | null;
+  owner_given_name: string | null;
+  owner_family_name: string | null;
   owner_org_name: string | null;
   created_at: string;
   updated_at: string;
@@ -191,7 +191,7 @@ export default function PlacesList() {
                     <span>{place.photo_count} photo{place.photo_count !== 1 ? 's' : ''}</span>
                   </div>
                 )}
-                {(place.owner_first_name || place.owner_org_name) && (
+                {(place.owner_given_name || place.owner_org_name) && (
                   <div className="flex items-center gap-2">
                     {place.owner_org_name ? (
                       <>
@@ -202,7 +202,7 @@ export default function PlacesList() {
                       <>
                         <User className="w-3 h-3" />
                         <span className="truncate">
-                          {place.owner_first_name} {place.owner_last_name}
+                          {place.owner_given_name} {place.owner_family_name}
                         </span>
                       </>
                     )}

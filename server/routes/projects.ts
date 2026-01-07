@@ -29,7 +29,7 @@ const router = Router();
 router.get('/', requireAuth, requireTenant, async (req: Request, res: Response) => {
   const tenantReq = req as TenantRequest;
   try {
-    const { status, search, contact_id, property_id, limit = '50', offset = '0' } = req.query;
+    const { status, search, person_id, property_id, limit = '50', offset = '0' } = req.query;
     const params: any[] = [];
     let paramIndex = 1;
     
@@ -41,9 +41,9 @@ router.get('/', requireAuth, requireTenant, async (req: Request, res: Response) 
       paramIndex++;
     }
     
-    if (contact_id) {
-      whereClauses.push(`p.contact_id = $${paramIndex}`);
-      params.push(contact_id);
+    if (person_id) {
+      whereClauses.push(`p.person_id = $${paramIndex}`);
+      params.push(person_id);
       paramIndex++;
     }
     
@@ -57,8 +57,8 @@ router.get('/', requireAuth, requireTenant, async (req: Request, res: Response) 
       whereClauses.push(`(
         p.title ILIKE $${paramIndex} 
         OR p.description ILIKE $${paramIndex}
-        OR c.first_name ILIKE $${paramIndex}
-        OR c.last_name ILIKE $${paramIndex}
+        OR c.given_name ILIKE $${paramIndex}
+        OR c.family_name ILIKE $${paramIndex}
         OR prop.name ILIKE $${paramIndex}
       )`);
       params.push(`%${search}%`);
@@ -73,13 +73,13 @@ router.get('/', requireAuth, requireTenant, async (req: Request, res: Response) 
         p.quoted_amount, p.final_amount, p.deposit_required, p.deposit_received,
         p.scheduled_start, p.scheduled_end, p.completed_at,
         p.created_at, p.updated_at,
-        c.id as contact_id, c.first_name as contact_first_name, c.last_name as contact_last_name,
+        c.id as person_id, c.given_name as contact_given_name, c.family_name as contact_family_name,
         o.id as organization_id, o.name as organization_name,
         prop.id as property_id, prop.name as property_name, prop.address_line1 as property_address,
         (SELECT COUNT(*) FROM project_photos pp WHERE pp.project_id = p.id) as photos_count,
         (SELECT COUNT(*) FROM project_notes pn WHERE pn.project_id = p.id) as notes_count
       FROM projects p
-      LEFT JOIN people c ON p.contact_id = c.id
+      LEFT JOIN people c ON p.person_id = c.id
       LEFT JOIN organizations o ON p.organization_id = o.id
       LEFT JOIN crm_properties prop ON p.property_id = prop.id
       ${whereClause}
@@ -141,12 +141,12 @@ router.get('/:id', requireAuth, requireTenant, async (req: Request, res: Respons
     const result = await tenantReq.tenantQuery!(
       `SELECT 
         p.*,
-        c.first_name as contact_first_name, c.last_name as contact_last_name, 
-        c.phone as contact_phone, c.email as contact_email,
+        c.given_name as contact_given_name, c.family_name as contact_family_name, 
+        c.telephone as contact_telephone, c.email as contact_email,
         o.name as organization_name,
         prop.name as property_name, prop.address_line1 as property_address, prop.city as property_city
       FROM projects p
-      LEFT JOIN people c ON p.contact_id = c.id
+      LEFT JOIN people c ON p.person_id = c.id
       LEFT JOIN organizations o ON p.organization_id = o.id
       LEFT JOIN crm_properties prop ON p.property_id = prop.id
       WHERE p.id = $1`,
@@ -209,7 +209,7 @@ router.post('/', requireAuth, requireTenant, async (req: Request, res: Response)
     const {
       title,
       description,
-      contact_id,
+      person_id,
       organization_id,
       property_id,
       unit_id,
@@ -242,7 +242,7 @@ router.post('/', requireAuth, requireTenant, async (req: Request, res: Response)
     const result = await tenantReq.tenantQuery!(
       `INSERT INTO projects (
         tenant_id, title, description,
-        contact_id, organization_id, property_id, unit_id, location_text,
+        person_id, organization_id, property_id, unit_id, location_text,
         status, quoted_amount, final_amount,
         deposit_required, deposit_received,
         scheduled_start, scheduled_end, completed_at,
@@ -256,7 +256,7 @@ router.post('/', requireAuth, requireTenant, async (req: Request, res: Response)
       ) RETURNING *`,
       [
         tenantId, title, description || null,
-        contact_id || null, organization_id || null, property_id || null, unit_id || null, location_text || null,
+        person_id || null, organization_id || null, property_id || null, unit_id || null, location_text || null,
         status, quoted_amount || null, final_amount || null,
         deposit_required || null, deposit_received || false,
         scheduled_start || null, scheduled_end || null, actualCompletedAt,
@@ -290,7 +290,7 @@ router.put('/:id', requireAuth, requireTenant, async (req: Request, res: Respons
     const {
       title,
       description,
-      contact_id,
+      person_id,
       organization_id,
       property_id,
       unit_id,
@@ -312,7 +312,7 @@ router.put('/:id', requireAuth, requireTenant, async (req: Request, res: Respons
       `UPDATE projects SET
         title = COALESCE($2, title),
         description = $3,
-        contact_id = $4,
+        person_id = $4,
         organization_id = $5,
         property_id = $6,
         unit_id = $7,
@@ -331,7 +331,7 @@ router.put('/:id', requireAuth, requireTenant, async (req: Request, res: Respons
       WHERE id = $1
       RETURNING *`,
       [
-        id, title, description, contact_id, organization_id, property_id, unit_id, location_text,
+        id, title, description, person_id, organization_id, property_id, unit_id, location_text,
         quoted_amount, final_amount, deposit_required, deposit_received, deposit_received_at,
         scheduled_start, scheduled_end, warranty_months, warranty_notes, settlement_type, settlement_notes
       ]

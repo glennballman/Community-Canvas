@@ -22,9 +22,9 @@ interface Project {
   title: string;
   description: string | null;
   status: string;
-  contact_id: string | null;
-  contact_first_name: string | null;
-  contact_last_name: string | null;
+  person_id: string | null;
+  contact_given_name: string | null;
+  contact_family_name: string | null;
   organization_id: string | null;
   organization_name: string | null;
   property_id: string | null;
@@ -168,8 +168,8 @@ export default function ProjectsList() {
               {projects.map((project) => {
                 const statusConfig = STATUS_CONFIG[project.status] || { label: project.status, color: 'bg-muted text-muted-foreground' };
                 const displayAmount = project.final_amount || project.quoted_amount;
-                const contactName = project.contact_first_name 
-                  ? `${project.contact_first_name} ${project.contact_last_name || ''}`.trim()
+                const contactName = project.contact_given_name 
+                  ? `${project.contact_given_name} ${project.contact_family_name || ''}`.trim()
                   : project.organization_name || null;
                 
                 return (

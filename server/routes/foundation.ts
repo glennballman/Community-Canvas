@@ -149,9 +149,9 @@ router.post('/auth/login', async (req: Request, res: Response) => {
             user: {
                 id: user.id,
                 email: user.email,
-                firstName: user.first_name,
-                lastName: user.last_name,
-                displayName: user.display_name || `${user.first_name} ${user.last_name}`,
+                firstName: user.given_name,
+                lastName: user.family_name,
+                displayName: user.display_name || `${user.given_name} ${user.family_name}`,
                 avatarUrl: user.avatar_url,
                 isPlatformAdmin: user.is_platform_admin
             },
@@ -174,7 +174,7 @@ router.post('/auth/login', async (req: Request, res: Response) => {
 router.get('/auth/me', authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
         const userResult = await serviceQuery(`
-            SELECT id, email, first_name, last_name, display_name, avatar_url, 
+            SELECT id, email, given_name, family_name, display_name, avatar_url, 
                    is_platform_admin, status, last_login_at
             FROM cc_users WHERE id = $1
         `, [req.user!.userId]);
@@ -198,9 +198,9 @@ router.get('/auth/me', authenticateToken, async (req: AuthRequest, res: Response
             user: {
                 id: user.id,
                 email: user.email,
-                firstName: user.first_name,
-                lastName: user.last_name,
-                displayName: user.display_name || `${user.first_name} ${user.last_name}`,
+                firstName: user.given_name,
+                lastName: user.family_name,
+                displayName: user.display_name || `${user.given_name} ${user.family_name}`,
                 avatarUrl: user.avatar_url,
                 isPlatformAdmin: user.is_platform_admin,
                 status: user.status,
@@ -228,7 +228,7 @@ router.get('/users', authenticateToken, requirePlatformAdmin, async (req: AuthRe
 
         let query = `
             SELECT 
-                u.id, u.email, u.first_name, u.last_name, u.display_name,
+                u.id, u.email, u.given_name, u.family_name, u.display_name,
                 u.is_platform_admin, u.status, u.created_at, u.last_login_at,
                 COUNT(DISTINCT tu.tenant_id) as tenant_count
             FROM cc_users u
@@ -240,7 +240,7 @@ router.get('/users', authenticateToken, requirePlatformAdmin, async (req: AuthRe
 
         if (search) {
             paramCount++;
-            query += ` AND (u.email ILIKE $${paramCount} OR u.first_name ILIKE $${paramCount} OR u.last_name ILIKE $${paramCount})`;
+            query += ` AND (u.email ILIKE $${paramCount} OR u.given_name ILIKE $${paramCount} OR u.family_name ILIKE $${paramCount})`;
             params.push(`%${search}%`);
         }
 
@@ -324,7 +324,7 @@ router.get('/users/:id', authenticateToken, requirePlatformAdmin, async (req: Au
 router.patch('/users/:id', authenticateToken, requirePlatformAdmin, async (req: AuthRequest, res: Response) => {
     try {
         const { id } = req.params;
-        const { email, first_name, last_name, status } = req.body;
+        const { email, given_name, family_name, status } = req.body;
 
         const userResult = await serviceQuery('SELECT * FROM cc_users WHERE id = $1', [id]);
         if (userResult.rows.length === 0) {
@@ -340,15 +340,15 @@ router.patch('/users/:id', authenticateToken, requirePlatformAdmin, async (req: 
             updates.push(`email = $${paramCount}`);
             params.push(email);
         }
-        if (first_name !== undefined) {
+        if (given_name !== undefined) {
             paramCount++;
-            updates.push(`first_name = $${paramCount}`);
-            params.push(first_name);
+            updates.push(`given_name = $${paramCount}`);
+            params.push(given_name);
         }
-        if (last_name !== undefined) {
+        if (family_name !== undefined) {
             paramCount++;
-            updates.push(`last_name = $${paramCount}`);
-            params.push(last_name);
+            updates.push(`family_name = $${paramCount}`);
+            params.push(family_name);
         }
         if (status) {
             paramCount++;
@@ -420,8 +420,8 @@ router.get('/tenants', authenticateToken, async (req: AuthRequest, res: Response
                 t.*,
                 COUNT(DISTINCT tu.user_id) as member_count,
                 u.email as owner_email,
-                u.first_name as owner_first_name,
-                u.last_name as owner_last_name
+                u.given_name as owner_given_name,
+                u.family_name as owner_family_name
             FROM cc_tenants t
             LEFT JOIN cc_tenant_users tu ON tu.tenant_id = t.id AND tu.status = 'active'
             LEFT JOIN cc_users u ON u.id = t.owner_user_id
@@ -454,7 +454,7 @@ router.get('/tenants', authenticateToken, async (req: AuthRequest, res: Response
             params.push(`%${search}%`);
         }
 
-        query += ` GROUP BY t.id, u.email, u.first_name, u.last_name ORDER BY t.tenant_type, t.name`;
+        query += ` GROUP BY t.id, u.email, u.given_name, u.family_name ORDER BY t.tenant_type, t.name`;
 
         const result = await serviceQuery(query, params);
 
@@ -485,12 +485,12 @@ router.get('/tenants/:id', authenticateToken, loadTenantContext, async (req: Aut
 
         const membersResult = await serviceQuery(`
             SELECT 
-                u.id, u.email, u.first_name, u.last_name, u.avatar_url,
+                u.id, u.email, u.given_name, u.family_name, u.avatar_url,
                 tu.role, tu.title, tu.status, tu.joined_at
             FROM cc_tenant_users tu
             JOIN cc_users u ON u.id = tu.user_id
             WHERE tu.tenant_id = $1
-            ORDER BY tu.role, u.first_name
+            ORDER BY tu.role, u.given_name
         `, [id]);
 
         res.json({
@@ -628,7 +628,7 @@ router.get('/me/context', authenticateToken, async (req: AuthRequest, res: Respo
         const userId = req.user?.userId;
 
         const userResult = await serviceQuery(
-            'SELECT id, email, first_name, last_name, display_name, is_platform_admin FROM cc_users WHERE id = $1',
+            'SELECT id, email, given_name, family_name, display_name, is_platform_admin FROM cc_users WHERE id = $1',
             [userId]
         );
 
@@ -659,7 +659,7 @@ router.get('/me/context', authenticateToken, async (req: AuthRequest, res: Respo
             user: {
                 id: user.id,
                 email: user.email,
-                full_name: user.display_name || `${user.first_name} ${user.last_name}`,
+                full_name: user.display_name || `${user.given_name} ${user.family_name}`,
                 is_platform_admin: user.is_platform_admin
             },
             memberships: membershipsResult.rows.map(m => ({

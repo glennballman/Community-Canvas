@@ -35,9 +35,9 @@ interface WorkRequest {
   status: 'new' | 'contacted' | 'quoted' | 'booked' | 'completed' | 'dropped' | 'spam';
   contact_channel_type: string;
   contact_channel_value: string;
-  contact_id: string | null;
-  contact_first_name: string | null;
-  contact_last_name: string | null;
+  person_id: string | null;
+  contact_given_name: string | null;
+  contact_family_name: string | null;
   property_id: string | null;
   property_address: string | null;
   property_name: string | null;
@@ -246,7 +246,7 @@ export default function WorkRequestDetail() {
             </Badge>
           </div>
           <h1 className="text-xl font-bold mt-1" data-testid="text-title">
-            {request.contact_first_name ? `${request.contact_first_name} ${request.contact_last_name || ''}`.trim() : request.contact_channel_value}
+            {request.contact_given_name ? `${request.contact_given_name} ${request.contact_family_name || ''}`.trim() : request.contact_channel_value}
           </h1>
         </div>
         <div className="flex items-center gap-2">

@@ -60,9 +60,9 @@ interface Place {
   notes: string | null;
   owner_person_id: string | null;
   owner_org_id: string | null;
-  owner_first_name: string | null;
-  owner_last_name: string | null;
-  owner_phone: string | null;
+  owner_given_name: string | null;
+  owner_family_name: string | null;
+  owner_telephone: string | null;
   owner_email: string | null;
   owner_org_name: string | null;
   created_at: string;
@@ -400,26 +400,26 @@ export default function PlaceDetail() {
                     <Building2 className="w-4 h-4 text-muted-foreground" />
                     <span className="font-medium">{place.owner_org_name}</span>
                   </div>
-                  {(place.owner_first_name || place.owner_last_name) && (
+                  {(place.owner_given_name || place.owner_family_name) && (
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <User className="w-4 h-4" />
-                      <span>{place.owner_first_name} {place.owner_last_name}</span>
+                      <span>{place.owner_given_name} {place.owner_family_name}</span>
                     </div>
                   )}
                 </div>
-              ) : place.owner_first_name ? (
+              ) : place.owner_given_name ? (
                 <div className="space-y-3">
                   <div className="flex items-center gap-2">
                     <User className="w-4 h-4 text-muted-foreground" />
                     <span className="font-medium">
-                      {place.owner_first_name} {place.owner_last_name}
+                      {place.owner_given_name} {place.owner_family_name}
                     </span>
                   </div>
-                  {place.owner_phone && (
+                  {place.owner_telephone && (
                     <div className="flex items-center gap-2 text-sm">
                       <Phone className="w-4 h-4 text-muted-foreground" />
-                      <a href={`tel:${place.owner_phone}`} className="hover:underline">
-                        {place.owner_phone}
+                      <a href={`tel:${place.owner_telephone}`} className="hover:underline">
+                        {place.owner_telephone}
                       </a>
                     </div>
                   )}

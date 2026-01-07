@@ -24,10 +24,10 @@ import { useToast } from '@/hooks/use-toast';
 
 interface Person {
   id: string;
-  first_name: string;
-  last_name: string | null;
+  given_name: string;
+  family_name: string | null;
   display_name: string | null;
-  phone: string | null;
+  telephone: string | null;
   email: string | null;
   role_title: string | null;
   org_id: string | null;
@@ -99,9 +99,9 @@ export default function PersonDetail() {
   const handleStartEdit = () => {
     if (data?.person) {
       setEditData({
-        first_name: data.person.first_name,
-        last_name: data.person.last_name || '',
-        phone: data.person.phone || '',
+        given_name: data.person.given_name,
+        family_name: data.person.family_name || '',
+        telephone: data.person.telephone || '',
         email: data.person.email || '',
         role_title: data.person.role_title || '',
         address_line1: data.person.address_line1 || '',
@@ -114,7 +114,7 @@ export default function PersonDetail() {
   };
 
   const handleSave = () => {
-    if (!editData.first_name?.trim()) {
+    if (!editData.given_name?.trim()) {
       toast({ title: 'First name required', variant: 'destructive' });
       return;
     }
@@ -146,7 +146,7 @@ export default function PersonDetail() {
   }
 
   const { person, places } = data;
-  const displayName = person.display_name || [person.first_name, person.last_name].filter(Boolean).join(' ');
+  const displayName = person.display_name || [person.given_name, person.family_name].filter(Boolean).join(' ');
 
   return (
     <div className="p-6 space-y-6">
@@ -158,15 +158,15 @@ export default function PersonDetail() {
           {editing ? (
             <div className="flex gap-2">
               <Input
-                value={editData.first_name || ''}
-                onChange={(e) => setEditData({ ...editData, first_name: e.target.value })}
+                value={editData.given_name || ''}
+                onChange={(e) => setEditData({ ...editData, given_name: e.target.value })}
                 placeholder="First name"
                 className="text-xl font-semibold h-auto py-1 max-w-[150px]"
                 data-testid="input-edit-first-name"
               />
               <Input
-                value={editData.last_name || ''}
-                onChange={(e) => setEditData({ ...editData, last_name: e.target.value })}
+                value={editData.family_name || ''}
+                onChange={(e) => setEditData({ ...editData, family_name: e.target.value })}
                 placeholder="Last name"
                 className="text-xl font-semibold h-auto py-1 max-w-[150px]"
                 data-testid="input-edit-last-name"
@@ -222,8 +222,8 @@ export default function PersonDetail() {
                     <div className="space-y-2">
                       <Label>Phone</Label>
                       <Input
-                        value={editData.phone || ''}
-                        onChange={(e) => setEditData({ ...editData, phone: e.target.value })}
+                        value={editData.telephone || ''}
+                        onChange={(e) => setEditData({ ...editData, telephone: e.target.value })}
                         placeholder="(250) 555-0123"
                         data-testid="input-edit-phone"
                       />
@@ -277,10 +277,10 @@ export default function PersonDetail() {
                 </>
               ) : (
                 <div className="space-y-3">
-                  {person.phone && (
+                  {person.telephone && (
                     <div className="flex items-center gap-3">
                       <Phone className="w-4 h-4 text-muted-foreground" />
-                      <a href={`tel:${person.phone}`} className="hover:underline">{person.phone}</a>
+                      <a href={`tel:${person.telephone}`} className="hover:underline">{person.telephone}</a>
                     </div>
                   )}
                   {person.email && (
@@ -305,7 +305,7 @@ export default function PersonDetail() {
                       </span>
                     </div>
                   )}
-                  {!person.phone && !person.email && !person.address_line1 && (
+                  {!person.telephone && !person.email && !person.address_line1 && (
                     <p className="text-muted-foreground text-sm">No contact information on file</p>
                   )}
                 </div>

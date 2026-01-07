@@ -22,15 +22,15 @@ interface Tenant {
     created_at: string;
     member_count: number;
     owner_email: string;
-    owner_first_name: string;
-    owner_last_name: string;
+    owner_given_name: string;
+    owner_family_name: string;
 }
 
 interface TenantMember {
     id: string;
     email: string;
-    first_name: string;
-    last_name: string;
+    given_name: string;
+    family_name: string;
     avatar_url: string;
     role: string;
     title: string;
@@ -311,12 +311,12 @@ export default function TenantsManagement() {
                                                             <div key={m.id} className="bg-muted rounded-md p-2 flex items-center gap-2">
                                                                 <Avatar className="w-8 h-8">
                                                                     <AvatarFallback className="text-xs">
-                                                                        {(m.first_name?.[0] || m.email[0]).toUpperCase()}
+                                                                        {(m.given_name?.[0] || m.email[0]).toUpperCase()}
                                                                     </AvatarFallback>
                                                                 </Avatar>
                                                                 <div className="flex-1 min-w-0">
                                                                     <div className="text-sm font-medium truncate">
-                                                                        {m.first_name} {m.last_name}
+                                                                        {m.given_name} {m.family_name}
                                                                     </div>
                                                                     <div className="text-xs text-muted-foreground">{m.role}</div>
                                                                 </div>

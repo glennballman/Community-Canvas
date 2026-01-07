@@ -40,8 +40,8 @@ router.get('/', requireAuth, requireTenant, async (req: Request, res: Response) 
         wr.contact_channel_value ILIKE $${paramIndex} 
         OR wr.summary ILIKE $${paramIndex}
         OR wr.description ILIKE $${paramIndex}
-        OR c.first_name ILIKE $${paramIndex}
-        OR c.last_name ILIKE $${paramIndex}
+        OR c.given_name ILIKE $${paramIndex}
+        OR c.family_name ILIKE $${paramIndex}
       )`);
       params.push(`%${search}%`);
       paramIndex++;
@@ -56,11 +56,11 @@ router.get('/', requireAuth, requireTenant, async (req: Request, res: Response) 
         wr.source, wr.referral_source, wr.location_text,
         wr.created_at, wr.updated_at,
         wr.converted_to_project_id, wr.converted_at,
-        c.id as contact_id, c.first_name as contact_first_name, c.last_name as contact_last_name,
+        c.id as person_id, c.given_name as contact_given_name, c.family_name as contact_family_name,
         p.id as property_id, p.name as property_name, p.address_line1 as property_address,
         (SELECT COUNT(*) FROM work_request_notes wn WHERE wn.work_request_id = wr.id) as notes_count
       FROM work_requests wr
-      LEFT JOIN people c ON wr.contact_id = c.id
+      LEFT JOIN people c ON wr.person_id = c.id
       LEFT JOIN crm_properties p ON wr.property_id = p.id
       ${whereClause}
       ORDER BY wr.created_at DESC
@@ -79,7 +79,7 @@ router.get('/', requireAuth, requireTenant, async (req: Request, res: Response) 
         COUNT(*) FILTER (WHERE status = 'dropped') as count_dropped,
         COUNT(*) FILTER (WHERE status = 'spam') as count_spam
       FROM work_requests wr
-      LEFT JOIN people c ON wr.contact_id = c.id`,
+      LEFT JOIN people c ON wr.person_id = c.id`,
       []
     );
 
@@ -111,12 +111,12 @@ router.get('/:id', requireAuth, requireTenant, async (req: Request, res: Respons
     const result = await tenantReq.tenantQuery!(
       `SELECT 
         wr.*,
-        c.first_name as contact_first_name, c.last_name as contact_last_name, 
-        c.phone as contact_phone, c.email as contact_email,
+        c.given_name as contact_given_name, c.family_name as contact_family_name, 
+        c.telephone as contact_telephone, c.email as contact_email,
         o.name as organization_name,
         p.name as property_name, p.address_line1 as property_address, p.city as property_city
       FROM work_requests wr
-      LEFT JOIN people c ON wr.contact_id = c.id
+      LEFT JOIN people c ON wr.person_id = c.id
       LEFT JOIN organizations o ON wr.organization_id = o.id
       LEFT JOIN crm_properties p ON wr.property_id = p.id
       WHERE wr.id = $1`,
@@ -154,7 +154,7 @@ router.post('/', requireAuth, requireTenant, async (req: Request, res: Response)
       contact_channel_value,
       contact_channel_type = 'phone',
       contact_channel_notes,
-      contact_id,
+      person_id,
       organization_id,
       property_id,
       unit_id,
@@ -174,7 +174,7 @@ router.post('/', requireAuth, requireTenant, async (req: Request, res: Response)
     const result = await tenantReq.tenantQuery!(
       `INSERT INTO work_requests (
         tenant_id, contact_channel_value, contact_channel_type, contact_channel_notes,
-        contact_id, organization_id, property_id, unit_id, location_text,
+        person_id, organization_id, property_id, unit_id, location_text,
         summary, description, category, priority, source, referral_source,
         created_by_actor_id
       ) VALUES (
@@ -182,7 +182,7 @@ router.post('/', requireAuth, requireTenant, async (req: Request, res: Response)
       ) RETURNING *`,
       [
         tenantId, contact_channel_value, contact_channel_type, contact_channel_notes || null,
-        contact_id || null, organization_id || null, property_id || null, unit_id || null, location_text || null,
+        person_id || null, organization_id || null, property_id || null, unit_id || null, location_text || null,
         summary || null, description || null, category || null, priority, source || null, referral_source || null,
         actorId
       ]
@@ -204,7 +204,7 @@ router.put('/:id', requireAuth, requireTenant, async (req: Request, res: Respons
       contact_channel_value,
       contact_channel_type,
       contact_channel_notes,
-      contact_id,
+      person_id,
       organization_id,
       property_id,
       unit_id,
@@ -223,7 +223,7 @@ router.put('/:id', requireAuth, requireTenant, async (req: Request, res: Respons
         contact_channel_value = COALESCE($2, contact_channel_value),
         contact_channel_type = COALESCE($3, contact_channel_type),
         contact_channel_notes = $4,
-        contact_id = $5,
+        person_id = $5,
         organization_id = $6,
         property_id = $7,
         unit_id = $8,
@@ -239,7 +239,7 @@ router.put('/:id', requireAuth, requireTenant, async (req: Request, res: Respons
       RETURNING *`,
       [
         id, contact_channel_value, contact_channel_type, contact_channel_notes,
-        contact_id, organization_id, property_id, unit_id, location_text,
+        person_id, organization_id, property_id, unit_id, location_text,
         summary, description, category, priority, source, referral_source, status
       ]
     );
@@ -290,7 +290,7 @@ router.post('/:id/book', requireAuth, requireTenant, async (req: Request, res: R
     // Create the project
     const projectResult = await tenantReq.tenantQuery!(
       `INSERT INTO projects (
-        tenant_id, title, description, contact_id, organization_id, property_id, unit_id, location_text,
+        tenant_id, title, description, person_id, organization_id, property_id, unit_id, location_text,
         status, quoted_amount, scheduled_start, source_work_request_id, source, created_by_actor_id
       ) VALUES (
         $1, $2, $3, $4, $5, $6, $7, $8, $9::project_status, $10, $11, $12, 'work_request', $13
@@ -299,7 +299,7 @@ router.post('/:id/book', requireAuth, requireTenant, async (req: Request, res: R
         tenantId,
         title || wr.summary || `Project from Work Request`,
         description || wr.description,
-        wr.contact_id,
+        wr.person_id,
         wr.organization_id,
         wr.property_id,
         wr.unit_id,

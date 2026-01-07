@@ -682,7 +682,7 @@ export async function getCalendar(propertyId: number, startDate: string, endDate
 
 export async function createBlock(data: Partial<CalendarBlock>): Promise<CalendarBlock> {
   const result = await db.execute(sql`
-    INSERT INTO staging_calendar_blocks (property_id, spot_id, start_date, end_date, block_type, booking_id, notes)
+    INSERT INTO staging_calendar_blocks (property_id, spot_id, start_date, end_date, block_type, reservation_id, notes)
     VALUES (${data.propertyId}, ${data.spotId || null}, ${data.startDate}, ${data.endDate}, ${data.blockType || 'blocked'}, ${data.bookingId || null}, ${data.notes || null})
     RETURNING *
   `);

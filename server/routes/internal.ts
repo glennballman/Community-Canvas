@@ -179,7 +179,7 @@ router.post('/auth/exchange', async (req: Request, res: Response) => {
     
     // Fetch the user from cc_users to get their full details
     const userResult = await superuserPool.query(
-      `SELECT id, email, first_name, last_name, display_name, is_platform_admin 
+      `SELECT id, email, given_name, family_name, display_name, is_platform_admin 
        FROM cc_users 
        WHERE id = $1 AND is_platform_admin = true`,
       [decoded.userId]
@@ -195,7 +195,7 @@ router.post('/auth/exchange', async (req: Request, res: Response) => {
     }
     
     const user = userResult.rows[0];
-    const displayName = user.display_name || `${user.first_name} ${user.last_name}`.trim() || user.email;
+    const displayName = user.display_name || `${user.given_name} ${user.family_name}`.trim() || user.email;
     
     // Set platform staff session
     (req as any).session.platformStaff = {

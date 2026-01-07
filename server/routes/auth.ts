@@ -37,10 +37,10 @@ router.post('/register', async (req: Request, res: Response) => {
 
         const result = await serviceQuery(`
             INSERT INTO staging_users (
-                email, password_hash, first_name, last_name, phone,
+                email, password_hash, given_name, family_name, telephone,
                 user_type, company_name
             ) VALUES ($1, $2, $3, $4, $5, $6, $7)
-            RETURNING id, email, first_name, last_name, user_type
+            RETURNING id, email, given_name, family_name, user_type
         `, [
             email.toLowerCase(),
             passwordHash,
@@ -66,8 +66,8 @@ router.post('/register', async (req: Request, res: Response) => {
             user: {
                 id: user.id,
                 email: user.email,
-                firstName: user.first_name,
-                lastName: user.last_name,
+                firstName: user.given_name,
+                lastName: user.family_name,
                 userType: user.user_type
             },
             accessToken,
@@ -89,7 +89,7 @@ router.post('/login', async (req: Request, res: Response) => {
         }
 
         const result = await serviceQuery(`
-            SELECT id, email, password_hash, first_name, last_name, user_type, status
+            SELECT id, email, password_hash, given_name, family_name, user_type, status
             FROM staging_users WHERE email = $1
         `, [email.toLowerCase()]);
 
@@ -127,8 +127,8 @@ router.post('/login', async (req: Request, res: Response) => {
             user: {
                 id: user.id,
                 email: user.email,
-                firstName: user.first_name,
-                lastName: user.last_name,
+                firstName: user.given_name,
+                lastName: user.family_name,
                 userType: user.user_type
             },
             accessToken,
@@ -220,7 +220,7 @@ router.post('/logout', authenticateToken, async (req: AuthRequest, res: Response
 router.get('/me', authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
         const result = await serviceQuery(`
-            SELECT id, email, first_name, last_name, phone, avatar_url,
+            SELECT id, email, given_name, family_name, telephone, avatar_url,
                    user_type, company_name, company_role,
                    email_verified, preferences, notification_settings,
                    created_at, last_login_at
@@ -238,9 +238,9 @@ router.get('/me', authenticateToken, async (req: AuthRequest, res: Response) => 
             user: {
                 id: user.id,
                 email: user.email,
-                firstName: user.first_name,
-                lastName: user.last_name,
-                phone: user.phone,
+                firstName: user.given_name,
+                lastName: user.family_name,
+                phone: user.telephone,
                 avatarUrl: user.avatar_url,
                 userType: user.user_type,
                 companyName: user.company_name,
@@ -265,16 +265,16 @@ router.put('/me', authenticateToken, async (req: AuthRequest, res: Response) => 
 
         const result = await serviceQuery(`
             UPDATE staging_users SET
-                first_name = COALESCE($2, first_name),
-                last_name = COALESCE($3, last_name),
-                phone = COALESCE($4, phone),
+                given_name = COALESCE($2, given_name),
+                family_name = COALESCE($3, family_name),
+                telephone = COALESCE($4, telephone),
                 company_name = COALESCE($5, company_name),
                 company_role = COALESCE($6, company_role),
                 preferences = COALESCE($7, preferences),
                 notification_settings = COALESCE($8, notification_settings),
                 updated_at = NOW()
             WHERE id = $1
-            RETURNING id, email, first_name, last_name, phone, user_type, company_name, company_role
+            RETURNING id, email, given_name, family_name, telephone, user_type, company_name, company_role
         `, [
             req.user!.id,
             firstName,
@@ -293,9 +293,9 @@ router.put('/me', authenticateToken, async (req: AuthRequest, res: Response) => 
             user: {
                 id: user.id,
                 email: user.email,
-                firstName: user.first_name,
-                lastName: user.last_name,
-                phone: user.phone,
+                firstName: user.given_name,
+                lastName: user.family_name,
+                phone: user.telephone,
                 userType: user.user_type,
                 companyName: user.company_name,
                 companyRole: user.company_role

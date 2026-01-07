@@ -22,7 +22,7 @@ interface Org {
   id: string;
   name: string;
   legal_name: string | null;
-  phone: string | null;
+  telephone: string | null;
   email: string | null;
   website: string | null;
   city: string | null;
@@ -39,7 +39,7 @@ export default function OrgsList() {
   const [showCreate, setShowCreate] = useState(false);
   const [newOrg, setNewOrg] = useState({
     name: '',
-    phone: '',
+    telephone: '',
     email: '',
     website: '',
     notes: '',
@@ -61,7 +61,7 @@ export default function OrgsList() {
     onSuccess: (result: { org: Org }) => {
       queryClient.invalidateQueries({ queryKey: ['/api/crm/orgs'] });
       setShowCreate(false);
-      setNewOrg({ name: '', phone: '', email: '', website: '', notes: '' });
+      setNewOrg({ name: '', telephone: '', email: '', website: '', notes: '' });
       toast({ title: 'Organization created', description: `${result.org.name} has been added.` });
       navigate(`/app/crm/orgs/${result.org.id}`);
     },
@@ -153,10 +153,10 @@ export default function OrgsList() {
                 )}
               </CardHeader>
               <CardContent className="space-y-2 text-sm text-muted-foreground">
-                {org.phone && (
+                {org.telephone && (
                   <div className="flex items-center gap-2">
                     <Phone className="w-3 h-3 shrink-0" />
-                    <span>{org.phone}</span>
+                    <span>{org.telephone}</span>
                   </div>
                 )}
                 {org.email && (
@@ -199,13 +199,13 @@ export default function OrgsList() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="phone">Phone</Label>
+              <Label htmlFor="telephone">Phone</Label>
               <Input
-                id="phone"
+                id="telephone"
                 type="tel"
                 placeholder="(250) 555-0123"
-                value={newOrg.phone}
-                onChange={(e) => setNewOrg({ ...newOrg, phone: e.target.value })}
+                value={newOrg.telephone}
+                onChange={(e) => setNewOrg({ ...newOrg, telephone: e.target.value })}
                 data-testid="input-org-phone"
               />
             </div>

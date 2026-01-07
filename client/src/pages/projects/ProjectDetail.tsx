@@ -36,7 +36,7 @@ interface Project {
   title: string;
   description: string | null;
   status: string;
-  contact_id: string | null;
+  person_id: string | null;
   contact_name: string | null;
   property_id: string | null;
   property_address: string | null;

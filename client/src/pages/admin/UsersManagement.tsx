@@ -16,8 +16,8 @@ import { useToast } from '@/hooks/use-toast';
 interface User {
     id: string;
     email: string;
-    first_name: string;
-    last_name: string;
+    given_name: string;
+    family_name: string;
     display_name: string;
     is_platform_admin: boolean;
     status: string;
@@ -29,10 +29,10 @@ interface User {
 interface UserDetail {
     id: string;
     email: string;
-    first_name: string;
-    last_name: string;
+    given_name: string;
+    family_name: string;
     display_name: string;
-    phone: string;
+    telephone: string;
     avatar_url: string;
     is_platform_admin: boolean;
     status: string;
@@ -163,8 +163,8 @@ export default function UsersManagement() {
         if (!selectedUser) return;
         setEditForm({
             email: selectedUser.email,
-            firstName: selectedUser.first_name,
-            lastName: selectedUser.last_name
+            firstName: selectedUser.given_name,
+            lastName: selectedUser.family_name
         });
         setEditDialogOpen(true);
     }
@@ -186,8 +186,8 @@ export default function UsersManagement() {
                 },
                 body: JSON.stringify({
                     email: editForm.email,
-                    first_name: editForm.firstName,
-                    last_name: editForm.lastName
+                    given_name: editForm.firstName,
+                    family_name: editForm.lastName
                 })
             });
             const data = await res.json();
@@ -340,12 +340,12 @@ export default function UsersManagement() {
                                                         <div className="flex items-center gap-3">
                                                             <Avatar>
                                                                 <AvatarFallback className="bg-primary text-primary-foreground">
-                                                                    {(user.first_name?.[0] || user.email[0]).toUpperCase()}
+                                                                    {(user.given_name?.[0] || user.email[0]).toUpperCase()}
                                                                 </AvatarFallback>
                                                             </Avatar>
                                                             <div>
                                                                 <div className="font-medium flex items-center gap-2">
-                                                                    {user.first_name} {user.last_name}
+                                                                    {user.given_name} {user.family_name}
                                                                     {user.is_platform_admin && (
                                                                         <Badge variant="secondary" className="text-xs">
                                                                             <Shield className="w-3 h-3 mr-1" />
@@ -398,11 +398,11 @@ export default function UsersManagement() {
                                         <div className="text-center pb-4 border-b">
                                             <Avatar className="w-16 h-16 mx-auto mb-3">
                                                 <AvatarFallback className="bg-primary text-primary-foreground text-2xl">
-                                                    {(selectedUser.first_name?.[0] || selectedUser.email[0]).toUpperCase()}
+                                                    {(selectedUser.given_name?.[0] || selectedUser.email[0]).toUpperCase()}
                                                 </AvatarFallback>
                                             </Avatar>
                                             <h3 className="text-xl font-bold">
-                                                {selectedUser.first_name} {selectedUser.last_name}
+                                                {selectedUser.given_name} {selectedUser.family_name}
                                             </h3>
                                             <p className="text-muted-foreground">{selectedUser.email}</p>
                                             {selectedUser.is_platform_admin && (
@@ -585,7 +585,7 @@ export default function UsersManagement() {
                 <DialogContent>
                     <DialogHeader>
                         <DialogTitle>Reset Password</DialogTitle>
-                        <DialogDescription>Enter a new password for {selectedUser?.first_name} {selectedUser?.last_name}.</DialogDescription>
+                        <DialogDescription>Enter a new password for {selectedUser?.given_name} {selectedUser?.family_name}.</DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4 py-4">
                         <div className="space-y-2">

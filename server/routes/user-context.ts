@@ -23,7 +23,7 @@ router.get('/me/context', authenticateToken, async (req: AuthRequest, res: Respo
       SELECT 
         id,
         email,
-        COALESCE(display_name, first_name || ' ' || last_name) as full_name,
+        COALESCE(display_name, given_name || ' ' || family_name) as full_name,
         is_platform_admin
       FROM cc_users
       WHERE id = $1
@@ -161,10 +161,10 @@ router.get('/me/profile', authenticateToken, async (req: AuthRequest, res: Respo
       SELECT 
         id,
         email,
-        first_name,
-        last_name,
+        given_name,
+        family_name,
         display_name,
-        phone,
+        telephone,
         avatar_url,
         bio,
         timezone,
@@ -192,10 +192,10 @@ router.get('/me/profile', authenticateToken, async (req: AuthRequest, res: Respo
       profile: {
         id: user.id,
         email: user.email,
-        first_name: user.first_name,
-        last_name: user.last_name,
+        given_name: user.given_name,
+        family_name: user.family_name,
         display_name: user.display_name,
-        phone: user.phone,
+        telephone: user.telephone,
         avatar_url: user.avatar_url,
         bio: user.bio,
         timezone: user.timezone || 'America/Vancouver',
@@ -221,10 +221,10 @@ router.put('/me/profile', authenticateToken, async (req: AuthRequest, res: Respo
   try {
     const userId = req.user?.userId;
     const {
-      first_name,
-      last_name,
+      given_name,
+      family_name,
       display_name,
-      phone,
+      telephone,
       bio,
       timezone,
       locale,
@@ -235,15 +235,15 @@ router.put('/me/profile', authenticateToken, async (req: AuthRequest, res: Respo
     const params: any[] = [];
     let paramIndex = 1;
 
-    if (first_name !== undefined) {
-      updates.push(`first_name = $${paramIndex}`);
-      params.push(first_name);
+    if (given_name !== undefined) {
+      updates.push(`given_name = $${paramIndex}`);
+      params.push(given_name);
       paramIndex++;
     }
 
-    if (last_name !== undefined) {
-      updates.push(`last_name = $${paramIndex}`);
-      params.push(last_name);
+    if (family_name !== undefined) {
+      updates.push(`family_name = $${paramIndex}`);
+      params.push(family_name);
       paramIndex++;
     }
 
@@ -253,9 +253,9 @@ router.put('/me/profile', authenticateToken, async (req: AuthRequest, res: Respo
       paramIndex++;
     }
 
-    if (phone !== undefined) {
-      updates.push(`phone = $${paramIndex}`);
-      params.push(phone);
+    if (telephone !== undefined) {
+      updates.push(`telephone = $${paramIndex}`);
+      params.push(telephone);
       paramIndex++;
     }
 
@@ -298,8 +298,8 @@ router.put('/me/profile', authenticateToken, async (req: AuthRequest, res: Respo
       SET ${updates.join(', ')}
       WHERE id = $${paramIndex}
       RETURNING 
-        id, email, first_name, last_name, display_name, 
-        phone, bio, timezone, locale, notification_preferences,
+        id, email, given_name, family_name, display_name, 
+        telephone, bio, timezone, locale, notification_preferences,
         updated_at
     `, params);
 

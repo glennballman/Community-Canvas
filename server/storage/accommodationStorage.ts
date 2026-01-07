@@ -11,7 +11,7 @@ import type {
 } from '../../shared/types/accommodations';
 
 const ALLOWED_PROPERTY_COLUMNS = new Set([
-  'airbnb_id', 'booking_id', 'canvas_id', 'name', 'description', 'property_type',
+  'airbnb_id', 'reservation_id', 'canvas_id', 'name', 'description', 'property_type',
   'municipality_id', 'region', 'city', 'latitude', 'longitude',
   'max_guests', 'bedrooms', 'beds', 'bathrooms',
   'has_parking', 'has_kitchen', 'has_wifi', 'has_washer', 'has_dryer',
@@ -30,7 +30,7 @@ const ALLOWED_HOST_COLUMNS = new Set([
 const ALLOWED_BOOKING_COLUMNS = new Set([
   'property_id', 'host_id', 'trip_id', 'trip_name',
   'external_platform', 'external_confirmation',
-  'check_in_date', 'check_out_date', 'check_in_time', 'check_out_time',
+  'check_in_date', 'check_out_date', 'checkin_time', 'checkout_time',
   'num_guests', 'guest_names', 'primary_guest_name', 'primary_guest_phone',
   'nightly_rate', 'cleaning_fee', 'service_fee', 'taxes', 'total_cost',
   'status', 'payment_status', 'guest_rating', 'guest_review', 'would_book_again',

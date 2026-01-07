@@ -101,7 +101,7 @@ export async function signUp(
     // Create account
     const result = await db.execute(sql`
       INSERT INTO staging_host_accounts (
-        email, password_hash, first_name, last_name, phone,
+        email, password_hash, given_name, family_name, telephone,
         business_name, business_type, email_verified,
         email_verify_token, email_verify_expires, status
       ) VALUES (

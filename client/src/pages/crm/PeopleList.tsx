@@ -20,10 +20,10 @@ import { useToast } from '@/hooks/use-toast';
 
 interface Person {
   id: string;
-  first_name: string;
-  last_name: string | null;
+  given_name: string;
+  family_name: string | null;
   display_name: string | null;
-  phone: string | null;
+  telephone: string | null;
   email: string | null;
   role_title: string | null;
   city: string | null;
@@ -39,9 +39,9 @@ export default function PeopleList() {
   const [search, setSearch] = useState('');
   const [showCreate, setShowCreate] = useState(false);
   const [newPerson, setNewPerson] = useState({
-    first_name: '',
-    last_name: '',
-    phone: '',
+    given_name: '',
+    family_name: '',
+    telephone: '',
     email: '',
     notes: '',
   });
@@ -62,8 +62,8 @@ export default function PeopleList() {
     onSuccess: (result: { person: Person }) => {
       queryClient.invalidateQueries({ queryKey: ['/api/crm/people'] });
       setShowCreate(false);
-      setNewPerson({ first_name: '', last_name: '', phone: '', email: '', notes: '' });
-      toast({ title: 'Person created', description: `${result.person.first_name} has been added.` });
+      setNewPerson({ given_name: '', family_name: '', telephone: '', email: '', notes: '' });
+      toast({ title: 'Person created', description: `${result.person.given_name} has been added.` });
       navigate(`/app/crm/people/${result.person.id}`);
     },
     onError: () => {
@@ -72,7 +72,7 @@ export default function PeopleList() {
   });
 
   const handleCreate = () => {
-    if (!newPerson.first_name.trim()) {
+    if (!newPerson.given_name.trim()) {
       toast({ title: 'First name required', variant: 'destructive' });
       return;
     }
@@ -83,7 +83,7 @@ export default function PeopleList() {
 
   const getDisplayName = (p: Person) => {
     if (p.display_name) return p.display_name;
-    return [p.first_name, p.last_name].filter(Boolean).join(' ');
+    return [p.given_name, p.family_name].filter(Boolean).join(' ');
   };
 
   return (
@@ -158,10 +158,10 @@ export default function PeopleList() {
                 )}
               </CardHeader>
               <CardContent className="space-y-2 text-sm text-muted-foreground">
-                {person.phone && (
+                {person.telephone && (
                   <div className="flex items-center gap-2">
                     <Phone className="w-3 h-3 shrink-0" />
-                    <span>{person.phone}</span>
+                    <span>{person.telephone}</span>
                   </div>
                 )}
                 {person.email && (
@@ -195,34 +195,34 @@ export default function PeopleList() {
           <div className="space-y-4 py-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="first_name">First Name *</Label>
+                <Label htmlFor="given_name">First Name *</Label>
                 <Input
-                  id="first_name"
+                  id="given_name"
                   placeholder="First name"
-                  value={newPerson.first_name}
-                  onChange={(e) => setNewPerson({ ...newPerson, first_name: e.target.value })}
+                  value={newPerson.given_name}
+                  onChange={(e) => setNewPerson({ ...newPerson, given_name: e.target.value })}
                   data-testid="input-person-first-name"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="last_name">Last Name</Label>
+                <Label htmlFor="family_name">Last Name</Label>
                 <Input
-                  id="last_name"
+                  id="family_name"
                   placeholder="Last name"
-                  value={newPerson.last_name}
-                  onChange={(e) => setNewPerson({ ...newPerson, last_name: e.target.value })}
+                  value={newPerson.family_name}
+                  onChange={(e) => setNewPerson({ ...newPerson, family_name: e.target.value })}
                   data-testid="input-person-last-name"
                 />
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="phone">Phone</Label>
+              <Label htmlFor="telephone">Phone</Label>
               <Input
-                id="phone"
+                id="telephone"
                 type="tel"
                 placeholder="(250) 555-0123"
-                value={newPerson.phone}
-                onChange={(e) => setNewPerson({ ...newPerson, phone: e.target.value })}
+                value={newPerson.telephone}
+                onChange={(e) => setNewPerson({ ...newPerson, telephone: e.target.value })}
                 data-testid="input-person-phone"
               />
             </div>

@@ -34,9 +34,9 @@ interface WorkRequest {
   status: 'new' | 'contacted' | 'quoted' | 'booked' | 'completed' | 'dropped' | 'spam';
   contact_channel_type: string;
   contact_channel_value: string;
-  contact_id: string | null;
-  contact_first_name: string | null;
-  contact_last_name: string | null;
+  person_id: string | null;
+  contact_given_name: string | null;
+  contact_family_name: string | null;
   property_id: string | null;
   property_address: string | null;
   property_name: string | null;
@@ -106,7 +106,7 @@ export default function WorkRequestsList() {
   const [newRequest, setNewRequest] = useState({
     contact_channel_value: '',
     contact_channel_type: 'phone' as const,
-    contact_first_name: '',
+    contact_given_name: '',
     summary: '',
     priority: '' as string,
   });
@@ -130,7 +130,7 @@ export default function WorkRequestsList() {
       const res = await apiRequest('POST', '/api/work-requests', {
         contact_channel_value: formData.contact_channel_value,
         contact_channel_type: formData.contact_channel_type,
-        contact_first_name: formData.contact_first_name || undefined,
+        contact_given_name: formData.contact_given_name || undefined,
         summary: formData.summary || undefined,
         priority: formData.priority || undefined,
       });
@@ -142,7 +142,7 @@ export default function WorkRequestsList() {
       setNewRequest({
         contact_channel_value: '',
         contact_channel_type: 'phone',
-        contact_first_name: '',
+        contact_given_name: '',
         summary: '',
         priority: '',
       });
@@ -215,12 +215,12 @@ export default function WorkRequestsList() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="contact_first_name">Name (optional)</Label>
+                <Label htmlFor="contact_given_name">Name (optional)</Label>
                 <Input
-                  id="contact_first_name"
+                  id="contact_given_name"
                   placeholder="Customer name"
-                  value={newRequest.contact_first_name}
-                  onChange={(e) => setNewRequest(prev => ({ ...prev, contact_first_name: e.target.value }))}
+                  value={newRequest.contact_given_name}
+                  onChange={(e) => setNewRequest(prev => ({ ...prev, contact_given_name: e.target.value }))}
                   data-testid="input-contact-name"
                 />
               </div>
@@ -324,8 +324,8 @@ export default function WorkRequestsList() {
                 const ChannelIcon = CHANNEL_ICONS[channelType] || MessageCircle;
                 const statusConfig = STATUS_CONFIG[request.status];
                 const priorityConfig = request.priority ? PRIORITY_CONFIG[request.priority] : null;
-                const contactName = request.contact_first_name 
-                  ? `${request.contact_first_name} ${request.contact_last_name || ''}`.trim() 
+                const contactName = request.contact_given_name 
+                  ? `${request.contact_given_name} ${request.contact_family_name || ''}`.trim() 
                   : null;
                 
                 return (
