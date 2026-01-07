@@ -151,10 +151,11 @@ router.get('/overview', async (req, res) => {
 });
 
 // GET /api/admin/system-explorer/table/:tableName
+// Platform Admin only - allows viewing ALL data across tenants
 router.get('/table/:tableName', async (req, res) => {
   try {
     const { tableName } = req.params;
-    const tenantId = req.headers['x-tenant-id'] as string | undefined;
+    const tenantIdFilter = req.query.tenantId as string | undefined; // Optional tenant filter
     const page = parseInt(req.query.page as string) || 1;
     const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
     const offset = (page - 1) * limit;
@@ -165,23 +166,16 @@ router.get('/table/:tableName', async (req, res) => {
       return res.status(400).json({ success: false, error: 'Table not allowed' });
     }
     
-    // SECURITY: Tenant-scoped tables REQUIRE a tenant ID
-    if (tableConfig.tenantScoped && !tenantId) {
-      return res.status(403).json({ 
-        success: false, 
-        error: 'Tenant context required for tenant-scoped tables' 
-      });
-    }
-    
-    // Build query with proper tenant scoping (use table-specific tenant column)
+    // PLATFORM ADMIN: Can view ALL data across tenants (no tenant filter required)
+    // Optionally filter by tenantId if provided
     const tenantColumn = (tableConfig as any).tenantColumn || 'tenant_id';
     let query = `SELECT * FROM ${tableName}`;
     const params: any[] = [];
     
-    if (tableConfig.tenantScoped) {
-      // Always filter by tenant for tenant-scoped tables
+    // Only apply tenant filter if explicitly provided (optional for Platform Admin)
+    if (tableConfig.tenantScoped && tenantIdFilter) {
       query += ` WHERE ${tenantColumn} = $1`;
-      params.push(tenantId);
+      params.push(tenantIdFilter);
     }
     
     query += ` ORDER BY 1 DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
@@ -189,12 +183,12 @@ router.get('/table/:tableName', async (req, res) => {
     
     const result = await serviceQuery(query, params);
     
-    // Get total count (with same tenant scoping)
+    // Get total count (with same optional tenant filter)
     let countQuery = `SELECT COUNT(*) as count FROM ${tableName}`;
     const countParams: any[] = [];
-    if (tableConfig.tenantScoped) {
+    if (tableConfig.tenantScoped && tenantIdFilter) {
       countQuery += ` WHERE ${tenantColumn} = $1`;
-      countParams.push(tenantId);
+      countParams.push(tenantIdFilter);
     }
     const countResult = await serviceQuery(countQuery, countParams);
     const total = parseInt(countResult.rows[0]?.count || '0', 10);
@@ -204,6 +198,7 @@ router.get('/table/:tableName', async (req, res) => {
       data: {
         table: tableName,
         tenantScoped: tableConfig.tenantScoped,
+        tenantFiltered: !!tenantIdFilter,
         rows: result.rows,
         pagination: {
           page,

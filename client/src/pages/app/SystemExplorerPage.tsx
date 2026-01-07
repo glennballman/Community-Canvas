@@ -59,6 +59,7 @@ interface OverviewData {
 interface TableData {
   table: string;
   tenantScoped: boolean;
+  tenantFiltered: boolean;
   rows: any[];
   pagination: {
     page: number;
