@@ -1,7 +1,102 @@
 import express, { Request, Response } from 'express';
 import { serviceQuery } from '../db/tenantDb';
+import { TenantRequest } from '../middleware/tenantContext';
 
 const router = express.Router();
+
+/**
+ * GET /api/public/portal-context
+ * 
+ * Returns the portal context derived from the request (domain or /b/:slug path).
+ * This is useful for:
+ * 1. Dev/QA testing of portal resolution
+ * 2. Frontend bootstrapping to get portal theme/settings
+ * 
+ * SECURITY: Returns ONLY public portal info. Does NOT expose tenant internals.
+ */
+router.get('/portal-context', async (req: Request, res: Response) => {
+  const tenantReq = req as TenantRequest;
+  const ctx = tenantReq.ctx;
+  
+  if (!ctx?.portal_id) {
+    return res.status(404).json({
+      success: false,
+      error: 'PORTAL_NOT_FOUND',
+      message: 'Unable to determine portal from request. Check domain or path.',
+      host: req.headers.host,
+      path: req.path
+    });
+  }
+  
+  try {
+    // Fetch full portal details including theme
+    const result = await serviceQuery(`
+      SELECT 
+        p.id as portal_id,
+        p.slug,
+        p.name,
+        p.legal_dba_name,
+        p.portal_type,
+        p.tagline,
+        p.description,
+        p.primary_audience,
+        p.default_locale,
+        p.default_currency,
+        p.supported_locales,
+        p.default_route,
+        p.terms_url,
+        p.privacy_url,
+        p.settings,
+        pt.tokens as theme
+      FROM portals p
+      LEFT JOIN portal_theme pt ON pt.portal_id = p.id AND pt.is_live = true
+      WHERE p.id = $1 AND p.status = 'active'
+    `, [ctx.portal_id]);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'PORTAL_NOT_FOUND',
+        message: 'Portal not found or not active'
+      });
+    }
+    
+    const portal = result.rows[0];
+    
+    res.json({
+      success: true,
+      portal: {
+        portal_id: portal.portal_id,
+        slug: portal.slug,
+        name: portal.name,
+        legal_dba_name: portal.legal_dba_name,
+        portal_type: portal.portal_type,
+        tagline: portal.tagline,
+        description: portal.description,
+        primary_audience: portal.primary_audience,
+        default_locale: portal.default_locale,
+        default_currency: portal.default_currency,
+        supported_locales: portal.supported_locales,
+        default_route: portal.default_route,
+        terms_url: portal.terms_url,
+        privacy_url: portal.privacy_url,
+        settings: portal.settings,
+        theme: portal.theme
+      },
+      resolution: {
+        host: req.headers.host,
+        path: req.path,
+        tenant_id: ctx.tenant_id
+      }
+    });
+  } catch (error: any) {
+    console.error('Portal context fetch error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch portal context'
+    });
+  }
+});
 
 /**
  * PUBLIC PORTAL ROUTES

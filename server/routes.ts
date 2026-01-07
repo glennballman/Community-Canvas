@@ -77,6 +77,7 @@ export async function registerRoutes(
   app: Express
 ): Promise<Server> {
 
+
   // SECURITY NOTE: Platform staff session isolation is enforced via cookie path restriction
   // The platform_sid cookie has path=/api/internal, so it's ONLY sent to /api/internal routes
   // This means platform staff sessions are invisible on tenant routes by design:
@@ -209,7 +210,9 @@ export async function registerRoutes(
   app.use('/api/operator', operatorRouter);
 
   // Register public portal routes (no auth required)
+  // Mount at both standard path and /b/:slug dev path for portal resolution
   app.use('/api/public', publicPortalRouter);
+  app.use('/b/:portalSlug/api/public', publicPortalRouter);
 
   // Register user context routes (auth required)
   app.use('/api', userContextRouter);

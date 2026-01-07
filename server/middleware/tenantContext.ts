@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { Session } from 'express-session';
 import { pool } from '../db';
-import { ActorContext } from '../db/tenantDb';
+import { ActorContext, serviceQuery } from '../db/tenantDb';
 import { hashImpersonationToken, isPepperAvailable } from '../lib/impersonationPepper';
 
 interface SessionData extends Session {
@@ -14,6 +14,10 @@ interface SessionData extends Session {
 export interface TenantContext {
   domain: string | null;
   portal_id: string | null;
+  portal_slug?: string | null;
+  portal_name?: string | null;
+  portal_legal_dba_name?: string | null;
+  portal_type?: string | null;
   tenant_id: string | null;
   individual_id: string | null;
   roles: string[];
@@ -44,6 +48,11 @@ export interface TenantRequest extends Request {
 }
 
 export async function tenantContext(req: TenantRequest, res: Response, next: NextFunction) {
+  // PRESERVE: If ctx already exists with portal_id (e.g., from /b/:slug path rewrite), don't reinitialize
+  if (req.ctx?.portal_id) {
+    return next();
+  }
+  
   const forwardedHost = req.headers['x-forwarded-host'];
   const hostHeader = req.headers.host || '';
   const rawHost = (Array.isArray(forwardedHost) ? forwardedHost[0] : forwardedHost) || hostHeader;
@@ -60,8 +69,10 @@ export async function tenantContext(req: TenantRequest, res: Response, next: Nex
   };
 
   try {
-    const portalResult = await pool.query(`
-      SELECT d.portal_id, p.owning_tenant_id
+    // Priority 1: Domain-based portal resolution
+    // NOTE: Use serviceQuery to bypass RLS since tenant context isn't established yet
+    const portalResult = await serviceQuery(`
+      SELECT d.portal_id, p.owning_tenant_id, p.slug, p.name, p.legal_dba_name, p.portal_type
       FROM portal_domains d 
       JOIN portals p ON p.id = d.portal_id
       WHERE d.domain = $1 
@@ -74,6 +85,41 @@ export async function tenantContext(req: TenantRequest, res: Response, next: Nex
       const row = portalResult.rows[0];
       req.ctx.portal_id = row.portal_id;
       req.ctx.tenant_id = row.owning_tenant_id;
+      req.ctx.portal_slug = row.slug;
+      req.ctx.portal_name = row.name;
+      req.ctx.portal_legal_dba_name = row.legal_dba_name;
+      req.ctx.portal_type = row.portal_type;
+      
+      if (process.env.NODE_ENV !== 'production') {
+        console.log(`[tenantContext] Domain resolved: ${domain} -> portal=${row.slug} tenant=${row.owning_tenant_id}`);
+      }
+    } else {
+      // Priority 2: /b/:slug path prefix for dev (fallback when domain not found)
+      const pathMatch = req.path.match(/^\/b\/([^\/]+)/);
+      if (pathMatch) {
+        const slug = pathMatch[1];
+        // NOTE: Use serviceQuery to bypass RLS since tenant context isn't established yet
+        const slugResult = await serviceQuery(`
+          SELECT id as portal_id, owning_tenant_id, slug, name, legal_dba_name, portal_type
+          FROM portals 
+          WHERE slug = $1 AND status = 'active'
+          LIMIT 1
+        `, [slug]);
+        
+        if (slugResult.rows.length > 0) {
+          const row = slugResult.rows[0];
+          req.ctx.portal_id = row.portal_id;
+          req.ctx.tenant_id = row.owning_tenant_id;
+          req.ctx.portal_slug = row.slug;
+          req.ctx.portal_name = row.name;
+          req.ctx.portal_legal_dba_name = row.legal_dba_name;
+          req.ctx.portal_type = row.portal_type;
+          
+          if (process.env.NODE_ENV !== 'production') {
+            console.log(`[tenantContext] Slug resolved: /b/${slug} -> portal=${row.slug} tenant=${row.owning_tenant_id}`);
+          }
+        }
+      }
     }
   } catch (err) {
     console.error('[tenantContext] Portal resolution error (tables may not exist yet):', err);
