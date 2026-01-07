@@ -79,7 +79,7 @@ const ADMIN_NAV: NavSection[] = [
       { icon: Landmark, label: 'Chambers', href: '/admin/data/chambers' },
       { icon: FileText, label: 'NAICS', href: '/admin/data/naics' },
       { icon: Home, label: 'Accommodations', href: '/admin/data/accommodations' },
-      { icon: Package, label: 'Inventory (Audit)', href: '/admin/inventory' },
+      { icon: Package, label: 'Assets (Audit)', href: '/admin/assets' },
       { icon: Search, label: 'System Explorer', href: '/admin/system-explorer' },
       { icon: Presentation, label: 'Presentations', href: '/admin/presentations' },
       { icon: FileBox, label: 'Import/Export', href: '/admin/data/import-export' },
