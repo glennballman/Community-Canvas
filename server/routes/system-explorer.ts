@@ -37,21 +37,22 @@ const KEY_ROUTES = [
   { path: '/app/system-explorer', label: 'System Explorer', required: true },
 ];
 
-// Allowed tables for data browser
+// Allowed tables for data browser with tenant column names
+// Different tables use different column names for tenant scoping
 export const ALLOWED_TABLES = [
-  { name: 'unified_assets', label: 'Assets', tenantScoped: true },
-  { name: 'unified_bookings', label: 'Bookings', tenantScoped: true },
-  { name: 'work_requests', label: 'Work Requests', tenantScoped: true },
-  { name: 'projects', label: 'Projects', tenantScoped: true },
-  { name: 'crm_contacts', label: 'Contacts', tenantScoped: true },
-  { name: 'crm_organizations', label: 'Organizations', tenantScoped: true },
-  { name: 'crm_places', label: 'Places', tenantScoped: true },
-  { name: 'portals', label: 'Portals', tenantScoped: true },
+  { name: 'unified_assets', label: 'Assets', tenantScoped: true, tenantColumn: 'owner_tenant_id' },
+  { name: 'unified_bookings', label: 'Bookings', tenantScoped: true, tenantColumn: 'booker_tenant_id' },
+  { name: 'work_requests', label: 'Work Requests', tenantScoped: true, tenantColumn: 'tenant_id' },
+  { name: 'projects', label: 'Projects', tenantScoped: true, tenantColumn: 'tenant_id' },
+  { name: 'crm_contacts', label: 'Contacts', tenantScoped: true, tenantColumn: 'tenant_id' },
+  { name: 'crm_organizations', label: 'Organizations', tenantScoped: true, tenantColumn: 'tenant_id' },
+  { name: 'crm_places', label: 'Places', tenantScoped: true, tenantColumn: 'tenant_id' },
+  { name: 'portals', label: 'Portals', tenantScoped: true, tenantColumn: 'owning_tenant_id' },
   { name: 'portal_domains', label: 'Portal Domains', tenantScoped: false },
-  { name: 'entity_presentations', label: 'Presentations', tenantScoped: true },
+  { name: 'entity_presentations', label: 'Presentations', tenantScoped: true, tenantColumn: 'canonical_tenant_id' },
   { name: 'presentation_blocks', label: 'Presentation Blocks', tenantScoped: false },
-  { name: 'service_runs', label: 'Service Runs', tenantScoped: true },
-  { name: 'crews', label: 'Crews', tenantScoped: true },
+  { name: 'service_runs', label: 'Service Runs', tenantScoped: true, tenantColumn: 'tenant_id' },
+  { name: 'crews', label: 'Crews', tenantScoped: true, tenantColumn: 'tenant_id' },
   { name: 'drivebc_events', label: 'DriveBC Events', tenantScoped: false },
   { name: 'bchydro_outages', label: 'BC Hydro Outages', tenantScoped: false },
   { name: 'weather_observations', label: 'Weather Observations', tenantScoped: false },
@@ -68,9 +69,10 @@ router.get('/overview', async (req, res) => {
     
     for (const table of ALLOWED_TABLES) {
       try {
+        const tenantColumn = (table as any).tenantColumn || 'tenant_id';
         let query = `SELECT COUNT(*) as count FROM ${table.name}`;
         if (table.tenantScoped && tenantId) {
-          query += ` WHERE tenant_id = $1`;
+          query += ` WHERE ${tenantColumn} = $1`;
         }
         const result = await serviceQuery(query, table.tenantScoped && tenantId ? [tenantId] : []);
         counts[table.name] = parseInt(result.rows[0]?.count || '0', 10);
@@ -155,12 +157,22 @@ router.get('/table/:tableName', async (req, res) => {
       return res.status(400).json({ success: false, error: 'Table not allowed' });
     }
     
-    // Build query
+    // SECURITY: Tenant-scoped tables REQUIRE a tenant ID
+    if (tableConfig.tenantScoped && !tenantId) {
+      return res.status(403).json({ 
+        success: false, 
+        error: 'Tenant context required for tenant-scoped tables' 
+      });
+    }
+    
+    // Build query with proper tenant scoping (use table-specific tenant column)
+    const tenantColumn = (tableConfig as any).tenantColumn || 'tenant_id';
     let query = `SELECT * FROM ${tableName}`;
     const params: any[] = [];
     
-    if (tableConfig.tenantScoped && tenantId) {
-      query += ` WHERE tenant_id = $1`;
+    if (tableConfig.tenantScoped) {
+      // Always filter by tenant for tenant-scoped tables
+      query += ` WHERE ${tenantColumn} = $1`;
       params.push(tenantId);
     }
     
@@ -169,11 +181,11 @@ router.get('/table/:tableName', async (req, res) => {
     
     const result = await serviceQuery(query, params);
     
-    // Get total count
+    // Get total count (with same tenant scoping)
     let countQuery = `SELECT COUNT(*) as count FROM ${tableName}`;
     const countParams: any[] = [];
-    if (tableConfig.tenantScoped && tenantId) {
-      countQuery += ` WHERE tenant_id = $1`;
+    if (tableConfig.tenantScoped) {
+      countQuery += ` WHERE ${tenantColumn} = $1`;
       countParams.push(tenantId);
     }
     const countResult = await serviceQuery(countQuery, countParams);
@@ -183,6 +195,7 @@ router.get('/table/:tableName', async (req, res) => {
       success: true,
       data: {
         table: tableName,
+        tenantScoped: tableConfig.tenantScoped,
         rows: result.rows,
         pagination: {
           page,
