@@ -60,6 +60,7 @@ import crmRouter from "./routes/crm";
 import scheduleRouter from "./routes/schedule";
 import capacityConstraintsRouter from "./routes/capacityConstraints";
 import qaSeedRouter from "./routes/qa-seed";
+import systemExplorerRouter from "./routes/system-explorer";
 import { publicQuery, serviceQuery } from "./db/tenantDb";
 import express from "express";
 
@@ -231,6 +232,9 @@ export async function registerRoutes(
 
   // Register admin inventory routes (platform admin only)
   app.use('/api/admin/inventory', adminInventoryRouter);
+  
+  // Register system explorer routes (debug/discovery surface)
+  app.use('/api/admin/system-explorer', systemExplorerRouter);
 
   // Admin presentations endpoint (platform admin only)
   app.get('/api/admin/presentations', async (req, res) => {

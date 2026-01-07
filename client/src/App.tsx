@@ -73,6 +73,7 @@ import CustomersPage from './pages/app/business/CustomersPage';
 // Pages - App Shared
 import ConversationsPage from './pages/ConversationsPage';
 import SettingsPage from './pages/app/SettingsPage';
+import SystemExplorerPage from './pages/app/SystemExplorerPage';
 
 // Pages - Admin
 import { ImpersonationConsole } from './pages/admin/ImpersonationConsole';
@@ -210,6 +211,7 @@ export default function App() {
                 
                 {/* Shared routes */}
                 <Route path="conversations" element={<ConversationsPage />} />
+                <Route path="system-explorer" element={<SystemExplorerPage />} />
                 <Route path="settings" element={<SettingsPage />} />
               </Route>
 

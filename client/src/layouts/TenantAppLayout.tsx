@@ -43,6 +43,7 @@ import {
   Briefcase,
   MapPin,
   Contact,
+  Search,
 } from 'lucide-react';
 import { useTenant, TenantMembership } from '../contexts/TenantContext';
 import { PortalSelector } from '../components/PortalSelector';
@@ -71,6 +72,7 @@ const COMMUNITY_NAV: NavItem[] = [
   { icon: Contact, label: 'Contacts', href: '/app/crm/people' },
   { icon: Building2, label: 'Organizations', href: '/app/crm/orgs' },
   { icon: Palette, label: 'Content', href: '/app/content' },
+  { icon: Search, label: 'System Explorer', href: '/app/system-explorer' },
   { icon: Settings, label: 'Settings', href: '/app/settings' },
 ];
 
@@ -85,12 +87,14 @@ const BUSINESS_NAV: NavItem[] = [
   { icon: Contact, label: 'Contacts', href: '/app/crm/people' },
   { icon: Building2, label: 'Organizations', href: '/app/crm/orgs' },
   { icon: MessageSquare, label: 'Conversations', href: '/app/conversations' },
+  { icon: Search, label: 'System Explorer', href: '/app/system-explorer' },
   { icon: Settings, label: 'Settings', href: '/app/settings' },
 ];
 
 const INDIVIDUAL_NAV: NavItem[] = [
   { icon: LayoutDashboard, label: 'Dashboard', href: '/app/dashboard' },
   { icon: MessageSquare, label: 'Conversations', href: '/app/conversations' },
+  { icon: Search, label: 'System Explorer', href: '/app/system-explorer' },
   { icon: Settings, label: 'Settings', href: '/app/settings' },
 ];
 

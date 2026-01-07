@@ -1,0 +1,416 @@
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { 
+  Database, 
+  Plug, 
+  Activity, 
+  Table2, 
+  Route, 
+  Check, 
+  X, 
+  AlertCircle,
+  ExternalLink,
+  RefreshCw,
+  Loader2
+} from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { useTenant } from '@/contexts/TenantContext';
+
+interface OverviewData {
+  tenantId: string | null;
+  counts: Record<string, number | null>;
+  integrations: Array<{
+    name: string;
+    envKey: string;
+    category: string;
+    configured: boolean;
+  }>;
+  pipelines: Array<{
+    name: string;
+    table: string;
+    category: string;
+    exists: boolean;
+    count: number;
+    lastUpdated: string | null;
+  }>;
+  routesAudit: Array<{
+    path: string;
+    label: string;
+    required: boolean;
+    inNav: boolean;
+    status: string;
+  }>;
+  allowedTables: Array<{
+    name: string;
+    label: string;
+    tenantScoped: boolean;
+  }>;
+}
+
+interface TableData {
+  table: string;
+  rows: any[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    pages: number;
+  };
+}
+
+export default function SystemExplorerPage() {
+  const { currentTenant, impersonation } = useTenant();
+  const [selectedTable, setSelectedTable] = useState<string>('unified_assets');
+  const [tablePage, setTablePage] = useState(1);
+  
+  const { data: overview, isLoading: overviewLoading, refetch: refetchOverview } = useQuery<{ success: boolean; data: OverviewData }>({
+    queryKey: ['/api/admin/system-explorer/overview'],
+  });
+  
+  const { data: tableData, isLoading: tableLoading } = useQuery<{ success: boolean; data: TableData }>({
+    queryKey: ['/api/admin/system-explorer/table', selectedTable, tablePage],
+    enabled: !!selectedTable,
+  });
+  
+  const overviewData = overview?.data;
+  const tableResult = tableData?.data;
+
+  // Route to page mapping for "View" links
+  const routePageMap: Record<string, string> = {
+    unified_assets: '/app/inventory',
+    unified_bookings: '/app/bookings',
+    work_requests: '/app/intake/work-requests',
+    projects: '/app/projects',
+    crm_contacts: '/app/crm/people',
+    crm_organizations: '/app/crm/orgs',
+    crm_places: '/app/crm/places',
+    portals: '/app/settings',
+  };
+
+  return (
+    <div className="p-6 space-y-6 bg-background min-h-screen" data-testid="page-system-explorer">
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        <div>
+          <h1 className="text-2xl font-bold" data-testid="text-page-title">System Explorer</h1>
+          <p className="text-muted-foreground text-sm">
+            Discovery surface for debugging and testing. Read-only.
+          </p>
+        </div>
+        <div className="flex items-center gap-2 flex-wrap">
+          {currentTenant && (
+            <Badge variant="outline" data-testid="badge-current-tenant">
+              {currentTenant.tenant_name}
+            </Badge>
+          )}
+          {impersonation?.is_impersonating && (
+            <Badge variant="destructive" data-testid="badge-impersonating">
+              Impersonating
+            </Badge>
+          )}
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => refetchOverview()}
+            disabled={overviewLoading}
+            data-testid="button-refresh"
+          >
+            {overviewLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+            Refresh
+          </Button>
+        </div>
+      </div>
+      
+      <Tabs defaultValue="overview" className="w-full">
+        <TabsList className="grid w-full grid-cols-5 max-w-2xl">
+          <TabsTrigger value="overview" data-testid="tab-overview">
+            <Database className="h-4 w-4 mr-2" />
+            Overview
+          </TabsTrigger>
+          <TabsTrigger value="integrations" data-testid="tab-integrations">
+            <Plug className="h-4 w-4 mr-2" />
+            Integrations
+          </TabsTrigger>
+          <TabsTrigger value="pipelines" data-testid="tab-pipelines">
+            <Activity className="h-4 w-4 mr-2" />
+            Data Sources
+          </TabsTrigger>
+          <TabsTrigger value="browser" data-testid="tab-browser">
+            <Table2 className="h-4 w-4 mr-2" />
+            Data Browser
+          </TabsTrigger>
+          <TabsTrigger value="routes" data-testid="tab-routes">
+            <Route className="h-4 w-4 mr-2" />
+            Routes Audit
+          </TabsTrigger>
+        </TabsList>
+        
+        {/* Tab A: Overview */}
+        <TabsContent value="overview" className="mt-6">
+          {overviewLoading ? (
+            <div className="flex items-center justify-center p-12">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {overviewData?.allowedTables.map((table) => {
+                const count = overviewData.counts[table.name];
+                const hasPage = routePageMap[table.name];
+                
+                return (
+                  <Card key={table.name} data-testid={`card-entity-${table.name}`}>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-base flex items-center justify-between gap-2">
+                        {table.label}
+                        {count === null ? (
+                          <Badge variant="outline" className="text-xs">N/A</Badge>
+                        ) : (
+                          <Badge variant="secondary">{count}</Badge>
+                        )}
+                      </CardTitle>
+                      <CardDescription className="text-xs font-mono">
+                        {table.name}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="flex gap-2 flex-wrap">
+                      {hasPage && (
+                        <Link to={hasPage}>
+                          <Button variant="outline" size="sm" data-testid={`button-view-${table.name}`}>
+                            <ExternalLink className="h-3 w-3 mr-1" />
+                            View
+                          </Button>
+                        </Link>
+                      )}
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => {
+                          setSelectedTable(table.name);
+                          setTablePage(1);
+                          document.querySelector('[data-testid="tab-browser"]')?.dispatchEvent(
+                            new MouseEvent('click', { bubbles: true })
+                          );
+                        }}
+                        data-testid={`button-inspect-${table.name}`}
+                      >
+                        <Table2 className="h-3 w-3 mr-1" />
+                        Inspect
+                      </Button>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+        </TabsContent>
+        
+        {/* Tab B: Integrations */}
+        <TabsContent value="integrations" className="mt-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {overviewData?.integrations.map((int) => (
+              <Card key={int.name} data-testid={`card-integration-${int.name.toLowerCase()}`}>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base flex items-center justify-between gap-2">
+                    {int.name}
+                    {int.configured ? (
+                      <Badge className="bg-green-500/20 text-green-400 border-green-500/30">
+                        <Check className="h-3 w-3 mr-1" />
+                        Configured
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="text-muted-foreground">
+                        <X className="h-3 w-3 mr-1" />
+                        Not Set
+                      </Badge>
+                    )}
+                  </CardTitle>
+                  <CardDescription className="text-xs">
+                    Category: {int.category}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-xs text-muted-foreground font-mono">
+                    Env: {int.envKey}
+                  </p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </TabsContent>
+        
+        {/* Tab C: Data Sources / Pipelines */}
+        <TabsContent value="pipelines" className="mt-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {overviewData?.pipelines.map((p) => (
+              <Card key={p.name} data-testid={`card-pipeline-${p.table}`}>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base flex items-center justify-between gap-2">
+                    {p.name}
+                    {p.exists ? (
+                      <Badge variant="secondary">{p.count} records</Badge>
+                    ) : (
+                      <Badge variant="outline" className="text-muted-foreground">
+                        <AlertCircle className="h-3 w-3 mr-1" />
+                        No Table
+                      </Badge>
+                    )}
+                  </CardTitle>
+                  <CardDescription className="text-xs">
+                    {p.category} | Table: {p.table}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {p.lastUpdated ? (
+                    <p className="text-xs text-muted-foreground">
+                      Last updated: {new Date(p.lastUpdated).toLocaleString()}
+                    </p>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">No data</p>
+                  )}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </TabsContent>
+        
+        {/* Tab D: Data Browser */}
+        <TabsContent value="browser" className="mt-6 space-y-4">
+          <div className="flex items-center gap-4 flex-wrap">
+            <Select value={selectedTable} onValueChange={(v) => { setSelectedTable(v); setTablePage(1); }}>
+              <SelectTrigger className="w-64" data-testid="select-table">
+                <SelectValue placeholder="Select table" />
+              </SelectTrigger>
+              <SelectContent>
+                {overviewData?.allowedTables.map((t) => (
+                  <SelectItem key={t.name} value={t.name}>
+                    {t.label} ({t.name})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            
+            {tableResult && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <span>
+                  Page {tableResult.pagination.page} of {tableResult.pagination.pages} 
+                  ({tableResult.pagination.total} total)
+                </span>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  disabled={tablePage <= 1}
+                  onClick={() => setTablePage(p => p - 1)}
+                  data-testid="button-prev-page"
+                >
+                  Prev
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  disabled={tablePage >= tableResult.pagination.pages}
+                  onClick={() => setTablePage(p => p + 1)}
+                  data-testid="button-next-page"
+                >
+                  Next
+                </Button>
+              </div>
+            )}
+          </div>
+          
+          {tableLoading ? (
+            <div className="flex items-center justify-center p-12">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : tableResult?.rows.length === 0 ? (
+            <Card>
+              <CardContent className="py-12 text-center text-muted-foreground">
+                No data in this table{currentTenant ? ' for this tenant' : ''}.
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="border rounded-md overflow-auto max-h-[600px]">
+              <table className="w-full text-sm" data-testid="table-data-browser">
+                <thead className="bg-muted/50 sticky top-0">
+                  <tr>
+                    {tableResult?.rows[0] && Object.keys(tableResult.rows[0]).map((key) => (
+                      <th key={key} className="px-3 py-2 text-left font-medium text-muted-foreground whitespace-nowrap">
+                        {key}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {tableResult?.rows.map((row, i) => (
+                    <tr key={i} className="border-t hover:bg-muted/30">
+                      {Object.values(row).map((val, j) => (
+                        <td key={j} className="px-3 py-2 whitespace-nowrap max-w-[300px] truncate">
+                          {val === null ? (
+                            <span className="text-muted-foreground italic">null</span>
+                          ) : typeof val === 'object' ? (
+                            <span className="font-mono text-xs">{JSON.stringify(val).slice(0, 100)}</span>
+                          ) : (
+                            String(val).slice(0, 100)
+                          )}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </TabsContent>
+        
+        {/* Tab E: Routes Audit */}
+        <TabsContent value="routes" className="mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Key Routes Audit</CardTitle>
+              <CardDescription>
+                Verifies that critical routes are present in navigation.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                {overviewData?.routesAudit.map((r) => (
+                  <div 
+                    key={r.path} 
+                    className="flex items-center justify-between gap-4 p-2 rounded-md hover:bg-muted/30"
+                    data-testid={`route-audit-${r.path.replace(/\//g, '-')}`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="font-mono text-sm">{r.path}</span>
+                      <span className="text-sm text-muted-foreground">{r.label}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {r.inNav ? (
+                        <Badge className="bg-green-500/20 text-green-400 border-green-500/30">
+                          <Check className="h-3 w-3 mr-1" />
+                          In Nav
+                        </Badge>
+                      ) : (
+                        <Badge variant="destructive">
+                          <X className="h-3 w-3 mr-1" />
+                          Missing
+                        </Badge>
+                      )}
+                      <Link to={r.path}>
+                        <Button variant="ghost" size="sm" data-testid={`button-visit-${r.path.replace(/\//g, '-')}`}>
+                          <ExternalLink className="h-3 w-3" />
+                        </Button>
+                      </Link>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}
