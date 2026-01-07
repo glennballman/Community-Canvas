@@ -1,0 +1,208 @@
+TASK: Operations Board UX Improvements (4 Issues)
+Issue 1: Sticky Headers on Operations Board
+Problem: When scrolling down the Operations Board (e.g., 34 kayaks), the time headers (00:00, 01:00, 02:00...) scroll away and disappear. Users lose context of what time column they're looking at.
+Fix: Make the time header row sticky so it persists at the top when scrolling vertically.
+css/* Time header row should be sticky */
+.time-header-row {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--background); /* Prevent content showing through */
+}
+Requirements:
+
+Time headers stay visible when scrolling down through resources
+Resource names column should also stay fixed when scrolling horizontally
+Both should work together (top-left corner stays anchored)
+
+
+Issue 2: Click-to-Book on Grid Cells
+Problem: Currently the only way to create a booking is the "+ Add Block" button. Users expect to click on a cell in the grid to start a booking.
+Fix: Make grid cells clickable. Clicking opens the Create Booking modal pre-populated with:
+
+The resource (row) that was clicked
+The start time (column) that was clicked
+End time = start time + default duration for that resource type
+
+Implementation:
+jsx// Each grid cell should be clickable
+<div 
+  className="grid-cell"
+  onClick={() => handleCellClick(resourceId, timeSlot)}
+>
+  {/* existing content */}
+</div>
+
+const handleCellClick = (resourceId, startTime) => {
+  // Get resource to determine default duration
+  const resource = resources.find(r => r.id === resourceId);
+  const defaultDuration = getDefaultDuration(resource.type);
+  
+  // Open booking modal with pre-filled values
+  openBookingModal({
+    resourceId,
+    resourceName: resource.name,
+    startTime,
+    endTime: addMinutes(startTime, defaultDuration),
+  });
+};
+
+const getDefaultDuration = (resourceType) => {
+  switch(resourceType) {
+    case 'accommodation': return 24 * 60; // 1 night
+    case 'rental': return 4 * 60; // 4 hours (half day)
+    case 'charter': return 4 * 60; // 4 hours (half day)
+    case 'parking': return 24 * 60; // 1 day
+    case 'moorage': return 24 * 60; // 1 day
+    case 'table': return 2 * 60; // 2 hours
+    default: return 4 * 60; // 4 hours
+  }
+};
+Visual Feedback:
+
+Cells should highlight on hover (subtle background change)
+Cursor should be pointer on hoverable cells
+Cells with existing bookings should NOT be clickable for new bookings
+
+
+Issue 3: Resource Photo Tooltip on Hover
+Problem: When looking at a list of kayaks (Sea Kayak Single - 1, Sea Kayak Single - 2, etc.), it's hard to know which physical kayak is which. A photo on hover would help identify (e.g., "the red one" vs "the blue one").
+Fix: Show a tooltip with the resource photo when hovering over the resource name.
+Implementation:
+jsx// Resource name with hover tooltip
+<div 
+  className="resource-name"
+  onMouseEnter={() => setHoveredResource(resource)}
+  onMouseLeave={() => setHoveredResource(null)}
+>
+  {resource.name}
+  
+  {hoveredResource?.id === resource.id && resource.imageUrl && (
+    <div className="resource-tooltip">
+      <img 
+        src={resource.imageUrl} 
+        alt={resource.name}
+        className="resource-tooltip-image"
+      />
+      <div className="resource-tooltip-name">{resource.name}</div>
+      {resource.description && (
+        <div className="resource-tooltip-desc">{resource.description}</div>
+      )}
+    </div>
+  )}
+</div>
+Styling:
+css.resource-tooltip {
+  position: absolute;
+  left: 100%;
+  top: 0;
+  z-index: 100;
+  background: var(--card-background);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  width: 200px;
+}
+
+.resource-tooltip-image {
+  width: 100%;
+  height: 120px;
+  object-fit: cover;
+  border-radius: 4px;
+}
+Notes:
+
+Only show tooltip if resource has an image
+Tooltip should not overflow viewport (position intelligently)
+Small delay before showing (200ms) to avoid flicker
+
+
+Issue 4: Tenant Switching Not Updating View
+Problem: When user changes tenant using the dropdown in the top-left (e.g., from "Bamfield Adventure Center" to "Woods End Landing"), the Operations Board and Inventory views do NOT update. They continue showing the old tenant's data.
+This is a critical bug.
+Fix: Tenant switch must trigger data refresh.
+Root Cause (likely):
+
+React Query or state is caching the old tenant's data
+The query key doesn't include tenant_id
+Or the tenant context isn't being passed to the API calls
+
+Implementation:
+jsx// Queries MUST include tenant_id in the key
+const { data: resources } = useQuery({
+  queryKey: ['resources', currentTenantId], // <-- tenant in key
+  queryFn: () => fetchResources(currentTenantId),
+  enabled: !!currentTenantId,
+});
+
+const { data: bookings } = useQuery({
+  queryKey: ['bookings', currentTenantId, dateRange], // <-- tenant in key
+  queryFn: () => fetchBookings(currentTenantId, dateRange),
+  enabled: !!currentTenantId,
+});
+When tenant changes:
+jsx// In tenant switcher component
+const handleTenantChange = (newTenantId) => {
+  setCurrentTenantId(newTenantId);
+  
+  // Invalidate all tenant-specific queries
+  queryClient.invalidateQueries({ queryKey: ['resources'] });
+  queryClient.invalidateQueries({ queryKey: ['bookings'] });
+  queryClient.invalidateQueries({ queryKey: ['inventory'] });
+  
+  // Or more surgical:
+  queryClient.invalidateQueries({ 
+    predicate: (query) => query.queryKey[1] === oldTenantId 
+  });
+};
+Verification:
+
+Log in as Glenn
+Impersonate Bamfield Adventure Center
+Go to Operations Board - should show kayaks
+Switch dropdown to Woods End Landing
+Operations Board should now show cottages (NOT kayaks)
+Switch to Save Paradise Parking
+Operations Board should now show parking stalls
+
+
+VERIFICATION CHECKLIST
+Issue 1: Sticky Headers
+
+ Scroll down through 34 kayaks - time headers stay visible
+ Scroll right through time - resource names stay visible
+ No visual glitches at intersection
+
+Issue 2: Click-to-Book
+
+ Clicking empty cell opens Create Booking modal
+ Modal pre-filled with correct resource
+ Modal pre-filled with correct start time
+ Cells highlight on hover
+ Booked cells are not clickable for new bookings
+
+Issue 3: Resource Photo Tooltip
+
+ Hovering resource name shows tooltip (if image exists)
+ Tooltip shows resource photo
+ Tooltip disappears on mouse leave
+ No tooltip if resource has no image
+
+Issue 4: Tenant Switching
+
+ Switch from BAC to Woods End - data updates immediately
+ Switch from Woods End to Save Paradise - data updates immediately
+ Operations Board shows correct resources for selected tenant
+ Inventory page shows correct items for selected tenant
+ Bookings page shows correct bookings for selected tenant
+
+
+PRIORITY ORDER
+
+Issue 4 (Tenant Switching) - This is a critical bug, fix first
+Issue 1 (Sticky Headers) - Major usability issue
+Issue 2 (Click-to-Book) - Important workflow improvement
+Issue 3 (Photo Tooltip) - Nice to have
+
+BEGIN.
