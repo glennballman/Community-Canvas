@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Plus, Search, Package, Home, Car, Anchor, Wrench, Loader2 } from 'lucide-react';
 import { useState } from 'react';
+import { useTenant } from '@/contexts/TenantContext';
 
 interface InventoryItem {
   id: string;
@@ -28,11 +29,13 @@ interface ResourcesResponse {
 }
 
 export default function InventoryPage() {
+  const { currentTenant } = useTenant();
   const [searchTerm, setSearchTerm] = useState('');
   
   const { data, isLoading, isError, error } = useQuery<ResourcesResponse>({
-    queryKey: ['/api/schedule/resources'],
+    queryKey: ['/api/schedule/resources', currentTenant?.tenant_id],
     refetchOnMount: 'always',
+    enabled: !!currentTenant?.tenant_id,
   });
   
   const items = (data?.resources ?? [])

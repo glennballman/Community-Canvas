@@ -15,6 +15,7 @@ import { useState, useMemo, useCallback } from 'react';
 import { useLocation, useSearch } from 'wouter';
 import { format, parseISO } from 'date-fns';
 import ScheduleBoard, { Resource, ScheduleEvent, ZoomLevel, ZOOM_CONFIGS } from '@/components/schedule/ScheduleBoard';
+import { useTenant } from '@/contexts/TenantContext';
 
 interface Booking {
   id: string;
@@ -48,6 +49,7 @@ interface ResourcesResponse {
 }
 
 export default function BookingsPage() {
+  const { currentTenant } = useTenant();
   const search = useSearch();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
@@ -86,8 +88,8 @@ export default function BookingsPage() {
 
   const { data: bookingsData, isLoading: bookingsLoading, isError: bookingsError } = useQuery<BookingsResponse>({
     queryKey: viewMode === 'calendar' 
-      ? ['/api/schedule/bookings', dateRange.from.toISOString(), dateRange.to.toISOString()]
-      : ['/api/schedule/bookings'],
+      ? ['/api/schedule/bookings', currentTenant?.tenant_id, dateRange.from.toISOString(), dateRange.to.toISOString()]
+      : ['/api/schedule/bookings', currentTenant?.tenant_id],
     queryFn: async () => {
       const token = localStorage.getItem('cc_token');
       const headers: Record<string, string> = {};
@@ -97,11 +99,13 @@ export default function BookingsPage() {
       return response.json();
     },
     refetchOnMount: 'always',
+    enabled: !!currentTenant?.tenant_id,
   });
 
   const { data: resourcesData, isLoading: resourcesLoading } = useQuery<ResourcesResponse>({
-    queryKey: ['/api/schedule/resources'],
+    queryKey: ['/api/schedule/resources', currentTenant?.tenant_id],
     refetchOnMount: 'always',
+    enabled: !!currentTenant?.tenant_id,
   });
 
   const resources = useMemo(() =>

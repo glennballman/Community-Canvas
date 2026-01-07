@@ -98,7 +98,7 @@ export default function OperationsBoard() {
     grouped: Record<string, Resource[]>;
     asset_types: string[];
   }>({
-    queryKey: ['schedule-resources', resourceQueryParams],
+    queryKey: ['schedule-resources', currentTenant?.tenant_id, resourceQueryParams],
     queryFn: async () => {
       console.log('[OPS] Fetching resources...', { url: resourcesUrl, ts: new Date().toISOString() });
       const token = localStorage.getItem('cc_token');
@@ -124,7 +124,7 @@ export default function OperationsBoard() {
   const scheduleUrl = `/api/schedule?from=${dateRange.from.toISOString()}&to=${dateRange.to.toISOString()}`;
 
   const { data: scheduleData, isLoading: loadingSchedule, error: scheduleError } = useQuery<{ success: boolean; events: ScheduleEvent[] }>({
-    queryKey: ['schedule-events', dateRange.from.toISOString(), dateRange.to.toISOString()],
+    queryKey: ['schedule-events', currentTenant?.tenant_id, dateRange.from.toISOString(), dateRange.to.toISOString()],
     queryFn: async () => {
       console.log('[OPS] Fetching schedule...', { url: scheduleUrl, ts: new Date().toISOString() });
       const token = localStorage.getItem('cc_token');
@@ -224,10 +224,33 @@ export default function OperationsBoard() {
     setConflictError(null);
   }
 
+  function getDefaultDuration(assetType: string): number {
+    switch (assetType) {
+      case 'accommodation':
+      case 'property':
+        return 24 * 60;
+      case 'equipment':
+      case 'rental':
+      case 'charter':
+      case 'watercraft':
+        return 4 * 60;
+      case 'parking':
+      case 'spot':
+      case 'moorage':
+        return 24 * 60;
+      case 'table':
+        return 2 * 60;
+      default:
+        return 60;
+    }
+  }
+
   function handleSlotClick(resourceId: string, slotStart: Date) {
     const snappedStart = snapTo15Min(slotStart);
+    const resource = resources.find(r => r.id === resourceId);
+    const durationMinutes = getDefaultDuration(resource?.asset_type || '');
     const snappedEnd = new Date(snappedStart);
-    snappedEnd.setMinutes(snappedEnd.getMinutes() + 60);
+    snappedEnd.setMinutes(snappedEnd.getMinutes() + durationMinutes);
 
     setEventForm({
       resource_id: resourceId,

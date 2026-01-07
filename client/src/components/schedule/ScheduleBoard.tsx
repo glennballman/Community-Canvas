@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
+import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card';
 import {
   ChevronLeft,
   ChevronRight,
@@ -281,34 +282,59 @@ export default function ScheduleBoard({
 
   const gridRef = useRef<HTMLDivElement>(null);
   const sidebarRef = useRef<HTMLDivElement>(null);
+  const timeHeaderRef = useRef<HTMLDivElement>(null);
   const nowLineRef = useRef<HTMLDivElement>(null);
-  const isScrolling = useRef(false);
+  const isScrollingVertical = useRef(false);
+  const isScrollingHorizontal = useRef(false);
 
   useEffect(() => {
     const grid = gridRef.current;
     const sidebar = sidebarRef.current;
+    const timeHeader = timeHeaderRef.current;
     if (!grid || !sidebar) return;
 
     const syncGridToSidebar = () => {
-      if (isScrolling.current) return;
-      isScrolling.current = true;
+      if (isScrollingVertical.current) return;
+      isScrollingVertical.current = true;
       sidebar.scrollTop = grid.scrollTop;
-      requestAnimationFrame(() => { isScrolling.current = false; });
+      requestAnimationFrame(() => { isScrollingVertical.current = false; });
     };
 
     const syncSidebarToGrid = () => {
-      if (isScrolling.current) return;
-      isScrolling.current = true;
+      if (isScrollingVertical.current) return;
+      isScrollingVertical.current = true;
       grid.scrollTop = sidebar.scrollTop;
-      requestAnimationFrame(() => { isScrolling.current = false; });
+      requestAnimationFrame(() => { isScrollingVertical.current = false; });
+    };
+
+    const syncGridToTimeHeader = () => {
+      if (isScrollingHorizontal.current || !timeHeader) return;
+      isScrollingHorizontal.current = true;
+      timeHeader.scrollLeft = grid.scrollLeft;
+      requestAnimationFrame(() => { isScrollingHorizontal.current = false; });
+    };
+
+    const syncTimeHeaderToGrid = () => {
+      if (isScrollingHorizontal.current || !timeHeader) return;
+      isScrollingHorizontal.current = true;
+      grid.scrollLeft = timeHeader.scrollLeft;
+      requestAnimationFrame(() => { isScrollingHorizontal.current = false; });
     };
 
     grid.addEventListener('scroll', syncGridToSidebar);
+    grid.addEventListener('scroll', syncGridToTimeHeader);
     sidebar.addEventListener('scroll', syncSidebarToGrid);
+    if (timeHeader) {
+      timeHeader.addEventListener('scroll', syncTimeHeaderToGrid);
+    }
 
     return () => {
       grid.removeEventListener('scroll', syncGridToSidebar);
+      grid.removeEventListener('scroll', syncGridToTimeHeader);
       sidebar.removeEventListener('scroll', syncSidebarToGrid);
+      if (timeHeader) {
+        timeHeader.removeEventListener('scroll', syncTimeHeaderToGrid);
+      }
     };
   }, []);
 
@@ -604,7 +630,7 @@ export default function ScheduleBoard({
             <div className="w-56 flex-shrink-0 border-r bg-muted/30 flex items-center px-3">
               <span className="text-sm font-medium text-muted-foreground">Resources</span>
             </div>
-            <div className="flex-1 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
+            <div ref={timeHeaderRef} className="flex-1 overflow-x-auto" style={{ scrollbarWidth: 'none', overflowY: 'hidden' }}>
               <div className="flex h-full" style={{ minWidth: timeSlots.length * slotWidth }}>
                 {timeSlots.map((slot, idx) => {
                   const isTodaySlot = isToday(slot);
@@ -635,14 +661,15 @@ export default function ScheduleBoard({
                     const statusBadge = isCapability && resource.capability_status !== 'operational'
                       ? resource.capability_status
                       : (resource.is_under_maintenance ? 'maint' : null);
-                    return (
+                    const hasImage = !!resource.thumbnail_url;
+                    
+                    const resourceContent = (
                       <div
-                        key={resource.id}
                         className={`h-12 flex items-center gap-2 px-3 border-b text-sm ${isCapability ? 'pl-6 bg-muted/20' : ''}`}
                         data-testid={`resource-row-${resource.id}`}
                       >
                         <Icon className={`h-4 w-4 flex-shrink-0 ${isCapability ? 'text-muted-foreground' : 'text-foreground'}`} />
-                        <span className={`truncate flex-1 ${isCapability ? 'text-muted-foreground text-xs' : ''}`}>
+                        <span className={`truncate flex-1 ${isCapability ? 'text-muted-foreground text-xs' : ''} ${hasImage ? 'cursor-help' : ''}`}>
                           {resource.name}
                         </span>
                         {statusBadge && (
@@ -650,6 +677,26 @@ export default function ScheduleBoard({
                             {statusBadge}
                           </Badge>
                         )}
+                      </div>
+                    );
+                    
+                    return hasImage ? (
+                      <HoverCard key={resource.id} openDelay={200} closeDelay={0}>
+                        <HoverCardTrigger asChild>
+                          {resourceContent}
+                        </HoverCardTrigger>
+                        <HoverCardContent side="right" align="start" className="w-52 p-2">
+                          <img 
+                            src={resource.thumbnail_url}
+                            alt={resource.name}
+                            className="w-full h-32 object-cover rounded-md mb-2"
+                          />
+                          <p className="text-sm font-medium">{resource.name}</p>
+                        </HoverCardContent>
+                      </HoverCard>
+                    ) : (
+                      <div key={resource.id}>
+                        {resourceContent}
                       </div>
                     );
                   })}
