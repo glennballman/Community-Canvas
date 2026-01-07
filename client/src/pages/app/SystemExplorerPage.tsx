@@ -58,6 +58,7 @@ interface OverviewData {
 
 interface TableData {
   table: string;
+  tenantScoped: boolean;
   rows: any[];
   pagination: {
     page: number;
@@ -136,12 +137,14 @@ export default function SystemExplorerPage() {
             <p className="text-sm text-muted-foreground">
               Exit impersonation to use System Explorer. This protects against accidental cross-tenant data exposure.
             </p>
-            <Link to="/admin/impersonation">
-              <Button variant="default" data-testid="button-exit-impersonation">
-                <Shield className="h-4 w-4 mr-2" />
-                Exit Impersonation
-              </Button>
-            </Link>
+            <Button 
+              variant="default" 
+              onClick={() => window.location.href = '/admin/impersonation'}
+              data-testid="button-exit-impersonation"
+            >
+              <Shield className="h-4 w-4 mr-2" />
+              Exit Impersonation
+            </Button>
           </CardContent>
         </Card>
       </div>
