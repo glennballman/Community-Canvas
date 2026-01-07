@@ -86,13 +86,13 @@ async function switchTenant(token: string, tenantId: string): Promise<boolean> {
   }
 }
 
-// NAV REGRESSION LOCK - Required nav items that must exist
+// NAV REGRESSION LOCK - Required nav items that must exist in TENANT nav
+// Note: System Explorer is Platform Admin only (in PlatformAdminLayout)
 const REQUIRED_NAV_ITEMS = [
   { label: 'Dashboard', href: '/app/dashboard' },
   { label: 'Inventory', href: '/app/inventory' },
   { label: 'Bookings', href: '/app/bookings' },
   { label: 'Operations', href: '/app/operations' },
-  { label: 'System Explorer', href: '/app/system-explorer' },
   { label: 'Settings', href: '/app/settings' },
 ];
 

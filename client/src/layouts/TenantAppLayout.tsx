@@ -43,7 +43,6 @@ import {
   Briefcase,
   MapPin,
   Contact,
-  Search,
 } from 'lucide-react';
 import { useTenant, TenantMembership } from '../contexts/TenantContext';
 import { PortalSelector } from '../components/PortalSelector';
@@ -62,7 +61,6 @@ const COMMUNITY_NAV: NavItem[] = [
   { icon: LayoutDashboard, label: 'Dashboard', href: '/app/dashboard' },
   { icon: Phone, label: 'Availability', href: '/app/availability' },
   { icon: Calendar, label: 'Operations', href: '/app/operations' },
-  { icon: Search, label: 'System Explorer', href: '/app/system-explorer' },
   { icon: Wrench, label: 'Service Runs', href: '/app/service-runs' },
   { icon: Briefcase, label: 'Services', href: '/app/services' },
   { icon: Layers, label: 'Bundles', href: '/app/bundles' },
@@ -81,7 +79,6 @@ const BUSINESS_NAV: NavItem[] = [
   { icon: Package, label: 'Inventory', href: '/app/inventory' },
   { icon: Calendar, label: 'Bookings', href: '/app/bookings' },
   { icon: Calendar, label: 'Operations', href: '/app/operations' },
-  { icon: Search, label: 'System Explorer', href: '/app/system-explorer' },
   { icon: MessageSquare, label: 'Work Requests', href: '/app/intake/work-requests' },
   { icon: Briefcase, label: 'Projects', href: '/app/projects' },
   { icon: MapPin, label: 'Places', href: '/app/crm/places' },
@@ -94,7 +91,6 @@ const BUSINESS_NAV: NavItem[] = [
 const INDIVIDUAL_NAV: NavItem[] = [
   { icon: LayoutDashboard, label: 'Dashboard', href: '/app/dashboard' },
   { icon: MessageSquare, label: 'Conversations', href: '/app/conversations' },
-  { icon: Search, label: 'System Explorer', href: '/app/system-explorer' },
   { icon: Settings, label: 'Settings', href: '/app/settings' },
 ];
 
