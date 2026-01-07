@@ -23,8 +23,8 @@ interface Individual {
   fullName: string;
   preferredName: string;
   email: string;
-  phone: string;
-  phoneVerified: boolean;
+  telephone: string;
+  telephoneVerified: boolean;
   emailVerified: boolean;
   photoUrl: string;
   homeCountry: string;
@@ -325,7 +325,7 @@ export default function IndividualProfile() {
 
   const profileComplete = individual?.profileScore || 0;
   const missingItems: string[] = [];
-  if (!individual?.phoneVerified) missingItems.push('Verify phone');
+  if (!individual?.telephoneVerified) missingItems.push('Verify phone');
   if (documents.filter(d => d.documentType === 'photo_id' && d.verified).length === 0 &&
       documents.filter(d => d.documentType === 'drivers_license' && d.verified).length === 0) {
     missingItems.push('Add photo ID');
@@ -384,7 +384,7 @@ export default function IndividualProfile() {
                     Email Verified
                   </Badge>
                 )}
-                {individual.phoneVerified && (
+                {individual.telephoneVerified && (
                   <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/30" data-testid="badge-phone-verified">
                     <Phone className="w-3 h-3 mr-1" />
                     Phone Verified

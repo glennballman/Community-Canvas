@@ -271,7 +271,7 @@ router.get('/portals/:slug/businesses', async (req: Request, res: Response) => {
         t.slug,
         t.business_type,
         t.website,
-        t.phone,
+        t.telephone,
         t.city,
         t.province
       FROM cc_tenants t
@@ -449,7 +449,7 @@ router.get('/portals/:slug/infrastructure', async (req: Request, res: Response) 
         n.region,
         n.latitude,
         n.longitude,
-        n.phone,
+        n.telephone,
         n.hours,
         n.status
       FROM infrastructure_nodes n

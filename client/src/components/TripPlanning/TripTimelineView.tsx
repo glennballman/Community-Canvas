@@ -80,7 +80,7 @@ export interface TimelineAlert {
 
 export interface WaterCrossingOperator {
   name: string;
-  phone: string;
+  telephone: string;
   hours?: string;
   notes?: string;
 }
@@ -127,7 +127,7 @@ export interface TimelineEvent {
     provider?: string;
     price?: number;
     link?: string;
-    phone?: string;
+    telephone?: string;
   };
   duration?: number;
   distance?: number;
@@ -803,12 +803,12 @@ function TimelineEventCard({
                             )}
                           </div>
                           <a 
-                            href={`tel:${op.phone}`} 
+                            href={`tel:${op.telephone}`} 
                             className="text-primary flex items-center gap-1 hover:underline"
                             data-testid={`link-phone-${i}`}
                           >
                             <Phone className="h-3 w-3" />
-                            {op.phone}
+                            {op.telephone}
                           </a>
                         </div>
                       ))}
@@ -977,14 +977,14 @@ function TimelineEventCard({
                         Manage
                       </a>
                     )}
-                    {event.booking.phone && (
+                    {event.booking.telephone && (
                       <a 
-                        href={`tel:${event.booking.phone}`}
+                        href={`tel:${event.booking.telephone}`}
                         className="text-primary hover:underline flex items-center gap-1"
                         onClick={(e) => e.stopPropagation()}
                       >
                         <Phone className="h-3 w-3" />
-                        {event.booking.phone}
+                        {event.booking.telephone}
                       </a>
                     )}
                   </div>

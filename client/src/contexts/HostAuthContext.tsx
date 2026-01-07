@@ -6,7 +6,7 @@ interface HostAccount {
   email: string;
   firstName: string;
   lastName: string;
-  phone: string | null;
+  telephone: string | null;
   businessName: string | null;
   businessType: string | null;
   emailVerified: boolean;

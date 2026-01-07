@@ -36,7 +36,7 @@ export default function HostSignup() {
     email: '',
     password: '',
     confirmPassword: '',
-    phone: '',
+    telephone: '',
     businessName: '',
     businessType: ''
   });
@@ -86,7 +86,7 @@ export default function HostSignup() {
           password: formData.password,
           firstName: formData.firstName,
           lastName: formData.lastName,
-          phone: formData.phone || undefined,
+          telephone: formData.telephone || undefined,
           businessName: formData.businessName || undefined,
           businessType: formData.businessType || undefined
         })
@@ -280,13 +280,13 @@ export default function HostSignup() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="phone">Phone (optional)</Label>
+              <Label htmlFor="telephone">Phone (optional)</Label>
               <Input
-                id="phone"
+                id="telephone"
                 type="tel"
                 placeholder="+1 (555) 000-0000"
-                value={formData.phone}
-                onChange={(e) => handleChange('phone', e.target.value)}
+                value={formData.telephone}
+                onChange={(e) => handleChange('telephone', e.target.value)}
                 disabled={isLoading}
                 data-testid="input-phone"
               />

@@ -78,9 +78,9 @@ export function ParticipantProfileForm({ participant, onSave, onCancel }: Partic
   const [formData, setFormData] = useState<Partial<ParticipantProfile>>({
     name: participant?.name || '',
     email: participant?.email || '',
-    phone: participant?.phone || '',
+    telephone: participant?.telephone || '',
     emergency_contact_name: participant?.emergency_contact_name || '',
-    emergency_contact_phone: participant?.emergency_contact_phone || '',
+    emergency_contact_telephone: participant?.emergency_contact_telephone || '',
     country_of_origin: participant?.country_of_origin || '',
     languages: participant?.languages || ['English'],
     medical_conditions: participant?.medical_conditions || [],
@@ -98,9 +98,9 @@ export function ParticipantProfileForm({ participant, onSave, onCancel }: Partic
       setFormData({
         name: participant.name || '',
         email: participant.email || '',
-        phone: participant.phone || '',
+        telephone: participant.telephone || '',
         emergency_contact_name: participant.emergency_contact_name || '',
-        emergency_contact_phone: participant.emergency_contact_phone || '',
+        emergency_contact_telephone: participant.emergency_contact_telephone || '',
         country_of_origin: participant.country_of_origin || '',
         languages: participant.languages || ['English'],
         medical_conditions: participant.medical_conditions || [],
@@ -258,12 +258,12 @@ export function ParticipantProfileForm({ participant, onSave, onCancel }: Partic
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="phone">Phone</Label>
+                <Label htmlFor="telephone">Phone</Label>
                 <Input
-                  id="phone"
+                  id="telephone"
                   type="tel"
-                  value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  value={formData.telephone}
+                  onChange={(e) => setFormData({ ...formData, telephone: e.target.value })}
                   placeholder="+1 (555) 123-4567"
                   data-testid="input-phone"
                 />
@@ -500,8 +500,8 @@ export function ParticipantProfileForm({ participant, onSave, onCancel }: Partic
                 <Label>Emergency Contact Phone</Label>
                 <Input
                   type="tel"
-                  value={formData.emergency_contact_phone}
-                  onChange={(e) => setFormData({ ...formData, emergency_contact_phone: e.target.value })}
+                  value={formData.emergency_contact_telephone}
+                  onChange={(e) => setFormData({ ...formData, emergency_contact_telephone: e.target.value })}
                   placeholder="+1 (555) 123-4567"
                   data-testid="input-emergency-phone"
                 />

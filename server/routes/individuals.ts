@@ -34,8 +34,8 @@ router.get('/me', requireSession, async (req: Request, res: Response) => {
           fullName: '',
           preferredName: '',
           email: tenantReq.user?.email || '',
-          phone: '',
-          phoneVerified: false,
+          telephone: '',
+          telephoneVerified: false,
           emailVerified: false,
           photoUrl: '',
           homeCountry: 'Canada',
@@ -43,7 +43,7 @@ router.get('/me', requireSession, async (req: Request, res: Response) => {
           currentCommunity: null,
           languages: ['en'],
           emergencyContactName: '',
-          emergencyContactPhone: '',
+          emergencyContactTelephone: '',
           profileScore: 0
         },
         documents: [],
@@ -64,8 +64,8 @@ router.get('/me', requireSession, async (req: Request, res: Response) => {
           fullName: '',
           preferredName: '',
           email: tenantReq.user?.email || '',
-          phone: '',
-          phoneVerified: false,
+          telephone: '',
+          telephoneVerified: false,
           emailVerified: false,
           photoUrl: '',
           homeCountry: 'Canada',
@@ -73,7 +73,7 @@ router.get('/me', requireSession, async (req: Request, res: Response) => {
           currentCommunity: null,
           languages: ['en'],
           emergencyContactName: '',
-          emergencyContactPhone: '',
+          emergencyContactTelephone: '',
           profileScore: 0
         },
         documents: [],
@@ -171,7 +171,7 @@ router.get('/me', requireSession, async (req: Request, res: Response) => {
     let profileScore = 0;
     if (individual.full_name) profileScore += 15;
     if (individual.email_verified) profileScore += 15;
-    if (individual.phone_verified) profileScore += 10;
+    if (individual.telephone_verified) profileScore += 10;
     if (documentsResult.rows.some((d: any) => d.document_type === 'photo_id' && d.verified)) profileScore += 20;
     if (paymentsResult.rows.some((p: any) => !p.is_expired)) profileScore += 15;
     if (waiversResult.rows.some((w: any) => !w.is_expired)) profileScore += 10;
@@ -185,8 +185,8 @@ router.get('/me', requireSession, async (req: Request, res: Response) => {
         fullName: individual.full_name,
         preferredName: individual.preferred_name || '',
         email: individual.email,
-        phone: individual.phone || '',
-        phoneVerified: individual.phone_verified,
+        telephone: individual.telephone || '',
+        telephoneVerified: individual.telephone_verified,
         emailVerified: individual.email_verified,
         photoUrl: individual.photo_url || '',
         homeCountry: individual.home_country || 'Canada',
@@ -194,7 +194,7 @@ router.get('/me', requireSession, async (req: Request, res: Response) => {
         currentCommunity,
         languages: individual.languages || ['en'],
         emergencyContactName: individual.emergency_contact_name || '',
-        emergencyContactPhone: individual.emergency_contact_phone || '',
+        emergencyContactTelephone: individual.emergency_contact_telephone || '',
         profileScore
       },
       documents: documentsResult.rows.map((d: any) => ({

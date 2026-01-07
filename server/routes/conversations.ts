@@ -52,7 +52,7 @@ router.post('/conversations', async (req: Request, res: Response) => {
 
       if (!ownerPartyId) {
         const ownerTenantResult = await client.query(
-          `SELECT name, email, phone FROM tenants WHERE id = $1`,
+          `SELECT name, email, telephone FROM tenants WHERE id = $1`,
           [wr.owner_tenant_id]
         );
         const ownerTenant = ownerTenantResult.rows[0];
@@ -63,10 +63,10 @@ router.post('/conversations', async (req: Request, res: Response) => {
         }
 
         const createOwnerResult = await client.query(
-          `INSERT INTO parties (tenant_id, party_kind, party_type, status, legal_name, trade_name, primary_contact_email, primary_contact_phone)
+          `INSERT INTO parties (tenant_id, party_kind, party_type, status, legal_name, trade_name, primary_contact_email, primary_contact_telephone)
            VALUES ($1, 'organization', 'owner', 'active', $2, $2, $3, $4)
            RETURNING id`,
-          [wr.owner_tenant_id, ownerTenant.name, ownerTenant.email, ownerTenant.phone]
+          [wr.owner_tenant_id, ownerTenant.name, ownerTenant.email, ownerTenant.telephone]
         );
         ownerPartyId = createOwnerResult.rows[0].id;
       }

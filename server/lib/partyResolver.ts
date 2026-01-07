@@ -48,7 +48,7 @@ export async function resolveActorParty(req: any, role: PartyRole): Promise<Reso
 
       if (!org_party_id) {
         const tenantResult = await client.query(
-          `SELECT name, email, phone, business_number,
+          `SELECT name, email, telephone, business_number,
                   address_line1, address_line2, city, province, postal_code, country
            FROM tenants WHERE id = $1`,
           [tenant_id]
@@ -66,7 +66,7 @@ export async function resolveActorParty(req: any, role: PartyRole): Promise<Reso
               tenant_id, party_kind, party_type, status,
               legal_name, trade_name,
               tax_id,
-              primary_contact_email, primary_contact_phone,
+              primary_contact_email, primary_contact_telephone,
               address_line1, address_line2, city, province, postal_code, country
            ) VALUES (
               $1, 'organization', $2::party_type, 'active',
@@ -83,7 +83,7 @@ export async function resolveActorParty(req: any, role: PartyRole): Promise<Reso
             tenant.name,
             tenant.business_number || null,
             tenant.email || null,
-            tenant.phone || null,
+            tenant.telephone || null,
             tenant.address_line1 || null,
             tenant.address_line2 || null,
             tenant.city || null,

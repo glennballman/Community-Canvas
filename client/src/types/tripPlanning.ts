@@ -2,9 +2,9 @@ export interface ParticipantProfile {
   id: string;
   name: string;
   email?: string;
-  phone?: string;
+  telephone?: string;
   emergency_contact_name?: string;
-  emergency_contact_phone?: string;
+  emergency_contact_telephone?: string;
   country_of_origin?: string;
   languages: string[];
   medical_conditions: string[];
@@ -115,7 +115,7 @@ export interface TransportProvider {
   id: string;
   name: string;
   provider_type: 'ferry' | 'float_plane' | 'water_taxi' | 'bus' | 'shuttle' | 'train' | 'rental_car';
-  phone?: string;
+  telephone?: string;
   website?: string;
   booking_url?: string;
   base_location?: string;

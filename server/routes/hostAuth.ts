@@ -124,8 +124,8 @@ router.post('/login', async (req: Request, res: Response) => {
       host: {
         id: result.host?.id,
         email: result.host?.email,
-        firstName: result.host?.firstName,
-        lastName: result.host?.lastName,
+        givenName: result.host?.givenName,
+        familyName: result.host?.familyName,
         businessName: result.host?.businessName,
         emailVerified: result.host?.emailVerified,
         status: result.host?.status
@@ -239,9 +239,9 @@ router.get('/me', requireHostAuth as any, async (req: HostAuthRequest, res: Resp
       host: {
         id: host.id,
         email: host.email,
-        firstName: host.firstName,
-        lastName: host.lastName,
-        phone: host.phone,
+        givenName: host.givenName,
+        familyName: host.familyName,
+        telephone: host.telephone,
         profilePhotoUrl: host.profilePhotoUrl,
         businessName: host.businessName,
         businessType: host.businessType,

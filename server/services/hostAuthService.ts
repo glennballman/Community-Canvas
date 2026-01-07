@@ -16,9 +16,9 @@ export interface HostAccount {
   id: number;
   email: string;
   passwordHash: string;
-  firstName: string;
-  lastName: string;
-  phone?: string;
+  givenName: string;
+  familyName: string;
+  telephone?: string;
   profilePhotoUrl?: string;
   businessName?: string;
   businessType?: string;

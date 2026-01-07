@@ -22,7 +22,7 @@ const ALLOWED_PROPERTY_COLUMNS = new Set([
 ]);
 
 const ALLOWED_HOST_COLUMNS = new Set([
-  'name', 'email', 'phone', 'airbnb_host_id', 'airbnb_host_url',
+  'name', 'email', 'telephone', 'airbnb_host_id', 'airbnb_host_url',
   'is_superhost', 'contact_status', 'is_in_network', 'offers_direct_booking',
   'first_contacted_at', 'last_contacted_at', 'contact_attempts', 'last_response_at', 'notes'
 ]);
