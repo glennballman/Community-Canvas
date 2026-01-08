@@ -6,7 +6,7 @@
  */
 
 import { useState, useRef, useEffect } from 'react';
-import { ChevronDown, Building2 } from 'lucide-react';
+import { ChevronDown, Building2, ExternalLink } from 'lucide-react';
 import { usePortal } from '../contexts/PortalContext';
 
 export function PortalSelector() {
@@ -30,16 +30,45 @@ export function PortalSelector() {
 
   if (portals.length === 1) {
     return (
-      <div style={{
-        padding: '8px 12px',
-        fontSize: '12px',
-        color: '#6b7280',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '8px',
-      }}>
-        <Building2 size={14} />
-        <span style={{ opacity: 0.7 }}>{portals[0].name}</span>
+      <div style={{ padding: '8px 12px' }}>
+        <div style={{
+          fontSize: '12px',
+          color: '#6b7280',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          marginBottom: '8px',
+        }}>
+          <Building2 size={14} />
+          <span style={{ opacity: 0.7 }}>{portals[0].name}</span>
+        </div>
+        <a
+          href={`/p/${portals[0].slug}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          data-testid="link-view-my-site"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            padding: '6px 10px',
+            fontSize: '12px',
+            color: '#60a5fa',
+            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+            borderRadius: '6px',
+            textDecoration: 'none',
+            transition: 'background-color 0.15s',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = 'rgba(59, 130, 246, 0.2)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = 'rgba(59, 130, 246, 0.1)';
+          }}
+        >
+          <ExternalLink size={12} />
+          View My Public Site
+        </a>
       </div>
     );
   }
@@ -138,6 +167,37 @@ export function PortalSelector() {
             </button>
           ))}
         </div>
+      )}
+
+      {currentPortal && (
+        <a
+          href={`/p/${currentPortal.slug}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          data-testid="link-view-my-site"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            padding: '6px 10px',
+            marginTop: '8px',
+            fontSize: '12px',
+            color: '#60a5fa',
+            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+            borderRadius: '6px',
+            textDecoration: 'none',
+            transition: 'background-color 0.15s',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = 'rgba(59, 130, 246, 0.2)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = 'rgba(59, 130, 246, 0.1)';
+          }}
+        >
+          <ExternalLink size={12} />
+          View My Public Site
+        </a>
       )}
     </div>
   );

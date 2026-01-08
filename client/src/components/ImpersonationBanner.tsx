@@ -133,30 +133,8 @@ export function ImpersonationBanner(): React.ReactElement | null {
         </span>
       </div>
 
-      {/* Right side - View Site, Timer and Stop button */}
+      {/* Right side - Timer and Stop button */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-        {impersonation.portal_slug && (
-          <a
-            href={`/p/${impersonation.portal_slug}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              backgroundColor: '#fcd34d',
-              color: '#78350f',
-              padding: '6px 12px',
-              borderRadius: '6px',
-              fontSize: '13px',
-              fontWeight: 600,
-              textDecoration: 'none',
-            }}
-            data-testid="link-view-public-site"
-          >
-            View Site
-          </a>
-        )}
         {timeLeft && (
           <span style={{ opacity: 0.8, fontSize: '13px' }}>
             {timeLeft}
