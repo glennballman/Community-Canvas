@@ -1491,7 +1491,7 @@ router.post('/cc_portals/:slug/cc_reservations', async (req: Request, res: Respo
       INSERT INTO cc_resource_schedule_events (
         tenant_id, resource_id, event_type, start_date, end_date, 
         status, title, related_entity_type, related_entity_id
-      ) VALUES ($1, $2, 'reservation', $3, $4, 'confirmed', $5, 'reservation', $6)
+      ) VALUES ($1, $2, 'booked', $3, $4, 'active', $5, 'reservation', $6)
     `, [tenantId, asset_id, startDate, endDate, `${customer.name} - ${asset.name}`, reservation.id]);
     
     res.status(201).json({
