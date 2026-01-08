@@ -29,18 +29,18 @@ interface PortalPresentations {
   presentations: Presentation[];
 }
 
-export default function PresentationsPage() {
+export default function ArticlesPage() {
   const { data, isLoading, error } = useQuery<{ success: boolean; data: PortalPresentations[] }>({
-    queryKey: ['/api/admin/presentations'],
+    queryKey: ['/api/admin/articles'],
   });
 
   if (isLoading) {
     return (
       <div style={{ padding: '32px' }}>
         <h1 style={{ fontSize: '24px', fontWeight: 600, marginBottom: '24px' }}>
-          Entity Presentations
+          Articles
         </h1>
-        <div style={{ color: '#9ca3af' }}>Loading presentations...</div>
+        <div style={{ color: '#9ca3af' }}>Loading articles...</div>
       </div>
     );
   }
@@ -49,9 +49,9 @@ export default function PresentationsPage() {
     return (
       <div style={{ padding: '32px' }}>
         <h1 style={{ fontSize: '24px', fontWeight: 600, marginBottom: '24px' }}>
-          Entity Presentations
+          Articles
         </h1>
-        <div style={{ color: '#ef4444' }}>Failed to load presentations</div>
+        <div style={{ color: '#ef4444' }}>Failed to load articles</div>
       </div>
     );
   }
@@ -63,11 +63,11 @@ export default function PresentationsPage() {
     <div style={{ padding: '32px' }}>
       <div style={{ marginBottom: '24px' }}>
         <h1 style={{ fontSize: '24px', fontWeight: 600, marginBottom: '8px' }}>
-          Entity Presentations
+          Articles
         </h1>
         <p style={{ color: '#9ca3af', fontSize: '14px' }}>
-          Portal-owned editorial content presenting entities with unique voice and CTAs.
-          {' '}Total: {totalPresentations} presentations across {portalGroups.length} portals.
+          Editorial content with schema.org Article markup for search engine discovery.
+          {' '}Total: {totalPresentations} articles across {portalGroups.length} portals.
         </p>
       </div>
 
@@ -75,9 +75,9 @@ export default function PresentationsPage() {
         <Card>
           <CardContent style={{ padding: '32px', textAlign: 'center' }}>
             <FileText size={48} style={{ margin: '0 auto 16px', opacity: 0.3 }} />
-            <p style={{ color: '#9ca3af' }}>No presentations found.</p>
+            <p style={{ color: '#9ca3af' }}>No articles found.</p>
             <p style={{ color: '#6b7280', fontSize: '13px', marginTop: '8px' }}>
-              Presentations are created by portals to editorially present entities.
+              Articles are created by portals as editorial content with schema.org markup.
             </p>
           </CardContent>
         </Card>
@@ -89,7 +89,7 @@ export default function PresentationsPage() {
                 <CardTitle style={{ fontSize: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                   {group.portal_name}
                   <Badge variant="outline" className="text-xs">
-                    {group.presentations.length} presentations
+                    {group.presentations.length} articles
                   </Badge>
                 </CardTitle>
               </CardHeader>
@@ -171,10 +171,10 @@ export default function PresentationsPage() {
         <CardContent>
           <div style={{ fontSize: '13px', fontFamily: 'monospace', color: '#9ca3af' }}>
             <div style={{ marginBottom: '8px' }}>
-              <strong>List:</strong> GET /api/public/portals/:slug/presentations
+              <strong>List:</strong> GET /api/public/portals/:slug/articles
             </div>
             <div>
-              <strong>Detail:</strong> GET /api/public/portals/:slug/presentations/:presentationSlug
+              <strong>Detail:</strong> GET /api/public/portals/:slug/articles/:articleSlug
             </div>
           </div>
         </CardContent>

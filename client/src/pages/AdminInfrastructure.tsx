@@ -1357,7 +1357,7 @@ export default function AdminInfrastructure() {
               data-testid="tab-airports"
             >
               <Plane className="w-3 h-3 mr-1" />
-              AIRPORTS ({airportStats.total})
+              Airport ({airportStats.total})
             </TabsTrigger>
             <TabsTrigger 
               value="weather" 
@@ -1365,7 +1365,7 @@ export default function AdminInfrastructure() {
               data-testid="tab-weather"
             >
               <Radio className="w-3 h-3 mr-1" />
-              WEATHER STATIONS ({weatherStats.total})
+              Weather Station ({weatherStats.total})
             </TabsTrigger>
             <TabsTrigger 
               value="marine" 
@@ -1373,7 +1373,7 @@ export default function AdminInfrastructure() {
               data-testid="tab-marine"
             >
               <Anchor className="w-3 h-3 mr-1" />
-              MARINE ({marineStats.total})
+              Marine ({marineStats.total})
             </TabsTrigger>
             <TabsTrigger 
               value="healthcare" 
@@ -1381,7 +1381,7 @@ export default function AdminInfrastructure() {
               data-testid="tab-healthcare"
             >
               <Heart className="w-3 h-3 mr-1" />
-              HEALTHCARE ({healthcareStats.total})
+              Hospital ({healthcareStats.total})
             </TabsTrigger>
             <TabsTrigger 
               value="fire" 
@@ -1389,7 +1389,7 @@ export default function AdminInfrastructure() {
               data-testid="tab-fire"
             >
               <Flame className="w-3 h-3 mr-1" />
-              FIRE ({fireStats.total})
+              Fire Station ({fireStats.total})
             </TabsTrigger>
             <TabsTrigger 
               value="police" 
@@ -1397,7 +1397,7 @@ export default function AdminInfrastructure() {
               data-testid="tab-police"
             >
               <Shield className="w-3 h-3 mr-1" />
-              POLICE ({policeStats.total})
+              Police Station ({policeStats.total})
             </TabsTrigger>
             <TabsTrigger 
               value="sar" 
@@ -1405,7 +1405,7 @@ export default function AdminInfrastructure() {
               data-testid="tab-sar"
             >
               <Mountain className="w-3 h-3 mr-1" />
-              SAR ({sarStats.total})
+              Search and Rescue ({sarStats.total})
             </TabsTrigger>
             <TabsTrigger 
               value="ground-lifeline" 
@@ -1413,7 +1413,7 @@ export default function AdminInfrastructure() {
               data-testid="tab-ground-lifeline"
             >
               <Fuel className="w-3 h-3 mr-1" />
-              GROUND - LIFELINE ({groundStats.lifelineTotal})
+              Lifeline ({groundStats.lifelineTotal})
             </TabsTrigger>
             <TabsTrigger 
               value="ground-supply" 
@@ -1421,7 +1421,7 @@ export default function AdminInfrastructure() {
               data-testid="tab-ground-supply"
             >
               <Container className="w-3 h-3 mr-1" />
-              GROUND - SUPPLY CHAIN ({groundStats.supplyTotal})
+              Supply Chain ({groundStats.supplyTotal})
             </TabsTrigger>
             <TabsTrigger 
               value="ground-bus" 
@@ -1429,7 +1429,7 @@ export default function AdminInfrastructure() {
               data-testid="tab-ground-bus"
             >
               <Bus className="w-3 h-3 mr-1" />
-              GROUND - BUS ({groundStats.busTotal})
+              Bus Station ({groundStats.busTotal})
             </TabsTrigger>
             <TabsTrigger 
               value="ground-taxi" 
@@ -1437,7 +1437,7 @@ export default function AdminInfrastructure() {
               data-testid="tab-ground-taxi"
             >
               <Car className="w-3 h-3 mr-1" />
-              GROUND - TAXI ({taxiStats.total})
+              Taxi Stand ({taxiStats.total})
             </TabsTrigger>
             <TabsTrigger 
               value="ground-courier" 
@@ -1445,7 +1445,7 @@ export default function AdminInfrastructure() {
               data-testid="tab-ground-courier"
             >
               <Package className="w-3 h-3 mr-1" />
-              GROUND - COURIER ({groundStats.courierTotal})
+              Courier ({groundStats.courierTotal})
             </TabsTrigger>
             <TabsTrigger 
               value="ground-postal" 
@@ -1453,7 +1453,7 @@ export default function AdminInfrastructure() {
               data-testid="tab-ground-postal"
             >
               <Mail className="w-3 h-3 mr-1" />
-              GROUND - POSTAL ({groundStats.postalTotal})
+              Post Office ({groundStats.postalTotal})
             </TabsTrigger>
             <TabsTrigger 
               value="water" 
@@ -1461,7 +1461,7 @@ export default function AdminInfrastructure() {
               data-testid="tab-water"
             >
               <Droplets className="w-3 h-3 mr-1" />
-              WATER ({waterStats.total})
+              Water Utility ({waterStats.total})
             </TabsTrigger>
             <TabsTrigger 
               value="waste" 
@@ -1469,7 +1469,7 @@ export default function AdminInfrastructure() {
               data-testid="tab-waste"
             >
               <Trash2 className="w-3 h-3 mr-1" />
-              WASTE ({wasteStats.total})
+              Waste Facility ({wasteStats.total})
             </TabsTrigger>
             <TabsTrigger 
               value="electricity" 
@@ -1477,7 +1477,7 @@ export default function AdminInfrastructure() {
               data-testid="tab-electricity"
             >
               <Zap className="w-3 h-3 mr-1" />
-              ELECTRICITY ({electricityStats.total})
+              Power Station ({electricityStats.total})
             </TabsTrigger>
             <TabsTrigger 
               value="pharmacies" 
@@ -1485,7 +1485,7 @@ export default function AdminInfrastructure() {
               data-testid="tab-pharmacies"
             >
               <Pill className="w-3 h-3 mr-1" />
-              PHARMACIES ({pharmacyStats.total})
+              Pharmacy ({pharmacyStats.total})
             </TabsTrigger>
             <TabsTrigger 
               value="facilities" 
@@ -1493,7 +1493,7 @@ export default function AdminInfrastructure() {
               data-testid="tab-facilities"
             >
               <Building2 className="w-3 h-3 mr-1" />
-              REC FACILITIES ({facilityStats.total})
+              Recreation Center ({facilityStats.total})
             </TabsTrigger>
             <TabsTrigger 
               value="schools" 
@@ -1501,7 +1501,7 @@ export default function AdminInfrastructure() {
               data-testid="tab-schools"
             >
               <GraduationCap className="w-3 h-3 mr-1" />
-              SCHOOLS ({schoolStats.total})
+              School ({schoolStats.total})
             </TabsTrigger>
             <TabsTrigger 
               value="municipal-offices" 
@@ -1509,7 +1509,7 @@ export default function AdminInfrastructure() {
               data-testid="tab-municipal-offices"
             >
               <Building2 className="w-3 h-3 mr-1" />
-              MUNICIPAL ({municipalOfficeStats.total})
+              Government Office ({municipalOfficeStats.total})
             </TabsTrigger>
             <TabsTrigger 
               value="summary" 

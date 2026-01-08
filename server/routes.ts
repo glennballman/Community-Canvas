@@ -236,8 +236,9 @@ export async function registerRoutes(
   // Register system explorer routes (debug/discovery surface)
   app.use('/api/admin/system-explorer', systemExplorerRouter);
 
-  // Admin presentations endpoint (platform admin only)
-  app.get('/api/admin/presentations', async (req, res) => {
+  // Admin articles endpoint (platform admin only) - renamed from presentations for schema.org compliance
+  app.get('/api/admin/presentations', (req, res) => res.redirect('/api/admin/articles'));
+  app.get('/api/admin/articles', async (req, res) => {
     try {
       // First get presentations with portal info
       const presentationsResult = await serviceQuery(`

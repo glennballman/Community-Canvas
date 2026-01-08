@@ -93,7 +93,7 @@ import PortalConfigPage from './pages/admin/PortalConfigPage';
 import AIQueuePage from './pages/admin/AIQueuePage';
 import FlaggedContentPage from './pages/admin/FlaggedContentPage';
 import AdminInventory from './pages/admin/AdminInventory';
-import PresentationsPage from './pages/admin/PresentationsPage';
+import ArticlesPage from './pages/admin/ArticlesPage';
 
 // Pages - Public
 import PresentationViewer from './pages/public/PresentationViewer';
@@ -244,7 +244,8 @@ export default function App() {
                 <Route path="assets" element={<AdminInventory />} />
                 <Route path="inventory" element={<Navigate to="/admin/assets" replace />} />
                 <Route path="system-explorer" element={<SystemExplorerPage />} />
-                <Route path="presentations" element={<PresentationsPage />} />
+                <Route path="articles" element={<ArticlesPage />} />
+                <Route path="presentations" element={<Navigate to="/admin/articles" replace />} />
                 <Route path="data/import-export" element={<DataImport />} />
                 
                 {/* Communities */}
