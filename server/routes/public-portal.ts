@@ -1486,13 +1486,24 @@ router.post('/cc_portals/:slug/cc_reservations', async (req: Request, res: Respo
     
     const reservation = reservationResult.rows[0];
     
+    // Snap times to 15-minute boundaries for schedule event (required by check constraint)
+    const snapTo15Min = (date: Date): Date => {
+      const d = new Date(date);
+      d.setMinutes(Math.floor(d.getMinutes() / 15) * 15);
+      d.setSeconds(0);
+      d.setMilliseconds(0);
+      return d;
+    };
+    const scheduleStart = snapTo15Min(startDate);
+    const scheduleEnd = snapTo15Min(endDate);
+    
     // Create schedule event to block time
     await serviceQuery(`
       INSERT INTO cc_resource_schedule_events (
         tenant_id, resource_id, event_type, start_date, end_date, 
         status, title, related_entity_type, related_entity_id
       ) VALUES ($1, $2, 'booked', $3, $4, 'active', $5, 'reservation', $6)
-    `, [tenantId, asset_id, startDate, endDate, `${customer.name} - ${asset.name}`, reservation.id]);
+    `, [tenantId, asset_id, scheduleStart, scheduleEnd, `${customer.name} - ${asset.name}`, reservation.id]);
     
     res.status(201).json({
       success: true,
