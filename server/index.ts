@@ -6,6 +6,7 @@ import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
 import { startPipelineScheduler } from "./pipelines";
+import { ensurePortalsExist } from "./seeds/ensure-portals";
 import { tenantContext } from "./middleware/tenantContext";
 import { attachTenantDb } from "./db/tenantDb";
 import { optionalAuth } from "./middleware/auth";
@@ -170,6 +171,8 @@ app.use('/api', (req, res, next) => {
 });
 
 (async () => {
+  await ensurePortalsExist();
+  
   await registerRoutes(httpServer, app);
 
   app.use((err: any, req: Request, res: Response, _next: NextFunction) => {

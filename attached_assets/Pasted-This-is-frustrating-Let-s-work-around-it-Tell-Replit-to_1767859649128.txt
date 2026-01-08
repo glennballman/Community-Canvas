@@ -1,0 +1,80 @@
+This is frustrating. Let's work around it. Tell Replit to create a migration or startup seed that runs automatically:
+
+To Replit:
+I cannot access the production database - the Database pane only shows Development Database. Republishing doesn't help.
+Please create a migration or startup script that seeds the portals automatically when the app runs. This way the data will exist in production without manual SQL access.
+Create a file like server/seeds/ensure-portals.ts that:
+
+Runs on app startup (or as a migration)
+Checks if key portals exist
+Creates them if they don't
+
+typescript// server/seeds/ensure-portals.ts
+
+export async function ensurePortalsExist(db: Database) {
+  // Check if save-paradise-parking exists
+  const existing = await db.query.portals.findFirst({
+    where: eq(portals.slug, 'save-paradise-parking')
+  });
+  
+  if (existing) {
+    console.log('Portals already seeded');
+    return;
+  }
+  
+  console.log('Seeding portals for production...');
+  
+  // Get a tenant to own these portals
+  const tenant = await db.query.ccTenants.findFirst({
+    where: or(
+      eq(ccTenants.slug, 'bamfield-operations'),
+      ilike(ccTenants.name, '%bamfield%'),
+      eq(ccTenants.slug, '1252093-bc-ltd')
+    )
+  });
+  
+  if (!tenant) {
+    console.error('No tenant found to own portals');
+    return;
+  }
+  
+  // Insert Save Paradise Parking
+  await db.insert(portals).values({
+    owning_tenant_id: tenant.id,
+    name: 'Save Paradise Parking',
+    slug: 'save-paradise-parking',
+    portal_type: 'business_service',
+    status: 'active',
+    site_config: {
+      brand_name: 'Save Paradise Parking',
+      tagline: 'Secure parking at the gateway to Bamfield',
+      hero: { title: 'Park Safe. Explore More.', subtitle: 'Secure vehicle storage while you adventure on the water' },
+      primary_cta: { label: 'Reserve Your Spot', action: 'reserve' },
+      theme: { primary_color: '#2563eb', secondary_color: '#1e40af', accent_color: '#fbbf24' }
+    }
+  }).onConflictDoNothing();
+  
+  // Insert Woods End Landing
+  await db.insert(portals).values({
+    owning_tenant_id: tenant.id,
+    name: 'Woods End Landing',
+    slug: 'woods-end-landing',
+    portal_type: 'business_service', 
+    status: 'active',
+    site_config: {
+      brand_name: 'Woods End Landing',
+      tagline: 'Waterfront cottages in the heart of Bamfield',
+      hero: { title: 'Your Bamfield Basecamp', subtitle: 'Cozy waterfront cottages with kayaks, hot tub, and adventure' },
+      primary_cta: { label: 'Check Availability', action: 'reserve' },
+      theme: { primary_color: '#065f46', secondary_color: '#047857', accent_color: '#fcd34d' }
+    }
+  }).onConflictDoNothing();
+  
+  // Add more portals...
+  
+  console.log('Portals seeded successfully');
+}
+Then call ensurePortalsExist(db) in your server startup (index.ts or similar).
+This way portals will be created automatically in production on next deploy.
+
+This is the proper workaround when you can't access production DB directly. The seed runs once on startup and skips if data already exists.
