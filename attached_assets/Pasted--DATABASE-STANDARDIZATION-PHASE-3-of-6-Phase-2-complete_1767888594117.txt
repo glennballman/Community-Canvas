@@ -1,0 +1,92 @@
+**DATABASE STANDARDIZATION - PHASE 3 of 6**
+
+Phase 2 complete. Now we standardize the `assets` table.
+
+**STEP 3A: Audit assets table columns**
+
+First, show me the current column list for the assets table:
+```sql
+SELECT column_name, data_type, is_nullable
+FROM information_schema.columns
+WHERE table_name = 'assets'
+ORDER BY ordinal_position;
+```
+
+Identify any columns that don't follow schema.org naming (like `num_*`, `*_at` timestamps that should be `*_date`, or any `booker_*` / `owner_*` patterns that should be standardized).
+
+**STEP 3B: Rename non-standard columns**
+
+Based on audit, rename columns to schema.org standards. Common patterns to fix:
+- `owner_individual_id` → consider if this should be `owner_id` or keep as-is
+- `owner_tenant_id` → consider if this should be `provider_id` or keep as-is
+- Any `num_*` columns → descriptive names like `capacity`, `count`, etc.
+- Any `*_at` that represents a date (not timestamp) → `*_date`
+
+**STEP 3C: Update all code references**
+
+Search entire codebase for old column names and update:
+- `shared/schema.ts`
+- `server/routes/*.ts`
+- `client/src/**/*.tsx`
+
+**STEP 3D: Now rename the table itself**
+```sql
+ALTER TABLE assets RENAME TO cc_assets;
+```
+
+**STEP 3E: Update ALL code references to the table name**
+
+Find and replace:
+- `FROM assets` → `FROM cc_assets`
+- `INTO assets` → `INTO cc_assets`
+- `UPDATE assets` → `UPDATE cc_assets`
+- `JOIN assets` → `JOIN cc_assets`
+- `"assets"` → `"cc_assets"` (in schema definitions)
+- Any other references
+
+**STEP 3F: Rename constraints and indexes to match new table name**
+```sql
+ALTER TABLE cc_assets RENAME CONSTRAINT assets_pkey TO cc_assets_pkey;
+ALTER TABLE cc_assets RENAME CONSTRAINT assets_canvas_id_key TO cc_assets_canvas_id_key;
+ALTER TABLE cc_assets RENAME CONSTRAINT assets_source_key TO cc_assets_source_key;
+ALTER TABLE cc_assets RENAME CONSTRAINT assets_owner_individual_id_fkey TO cc_assets_owner_individual_id_fkey;
+ALTER TABLE cc_assets RENAME CONSTRAINT assets_owner_tenant_id_fkey TO cc_assets_owner_tenant_id_fkey;
+
+-- Rename all indexes
+ALTER INDEX assets_pkey RENAME TO cc_assets_pkey;
+ALTER INDEX idx_assets_canvas RENAME TO idx_cc_assets_canvas;
+-- (rename all other idx_assets_* indexes)
+```
+
+**STEP 3G: Update foreign key references in OTHER tables**
+
+Any table that has a foreign key pointing to `assets` needs updating:
+```sql
+-- Find them first:
+SELECT 
+    tc.table_name, 
+    kcu.column_name,
+    tc.constraint_name
+FROM information_schema.table_constraints AS tc
+JOIN information_schema.key_column_usage AS kcu
+    ON tc.constraint_name = kcu.constraint_name
+JOIN information_schema.constraint_column_usage AS ccu
+    ON ccu.constraint_name = tc.constraint_name
+WHERE tc.constraint_type = 'FOREIGN KEY'
+  AND ccu.table_name = 'assets';
+```
+
+Then update each one.
+
+**STEP 3H: Verify**
+1. App compiles without errors
+2. Assets display correctly on portal pages
+3. Run: `SELECT COUNT(*) FROM cc_assets;` (should return data)
+
+**Report:**
+- Columns renamed (if any)
+- Files changed
+- Foreign key references updated
+- Any errors encountered
+
+**DO NOT proceed to Phase 4 until I confirm Phase 3 is verified.**
