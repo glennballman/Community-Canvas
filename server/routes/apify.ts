@@ -96,7 +96,7 @@ router.get('/records', adminGuard, async (req: Request, res: Response) => {
         let query = `
             SELECT er.*, c.name as community_name
             FROM external_records er
-            LEFT JOIN sr_communities c ON c.id = er.community_id
+            LEFT JOIN cc_sr_communities c ON c.id = er.community_id
             WHERE 1=1
         `;
         const params: any[] = [];
@@ -144,7 +144,7 @@ router.get('/records/:id', adminGuard, async (req: Request, res: Response) => {
         const record = await serviceQuery(`
             SELECT er.*, c.name as community_name, d.name as dataset_name
             FROM external_records er
-            LEFT JOIN sr_communities c ON c.id = er.community_id
+            LEFT JOIN cc_sr_communities c ON c.id = er.community_id
             LEFT JOIN apify_datasets d ON d.id = er.dataset_id
             WHERE er.id = $1
         `, [id]);

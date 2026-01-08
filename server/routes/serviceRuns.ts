@@ -37,8 +37,8 @@ async function loadServiceWithDetails(serviceId: string): Promise<ServiceWithDet
   // Main service
   const serviceResult = await serviceQuery(`
     SELECT s.*, s.icon as service_icon, sc.name as category_name, sc.slug as category_slug, sc.icon as category_icon
-    FROM sr_services s
-    JOIN sr_service_categories sc ON sc.id = s.category_id
+    FROM cc_sr_services s
+    JOIN cc_sr_service_categories sc ON sc.id = s.category_id
     WHERE s.id = $1
   `, [serviceId]);
   
@@ -49,40 +49,40 @@ async function loadServiceWithDetails(serviceId: string): Promise<ServiceWithDet
   // Seasonality
   const seasonalityResult = await serviceQuery(`
     SELECT ss.*, cr.name as climate_region_name
-    FROM sr_service_seasonality ss
-    JOIN sr_climate_regions cr ON cr.id = ss.climate_region_id
+    FROM cc_sr_service_seasonality ss
+    JOIN cc_sr_climate_regions cr ON cr.id = ss.climate_region_id
     WHERE ss.service_id = $1
   `, [serviceId]);
   
   // Pricing
   const pricingResult = await serviceQuery(`
     SELECT sp.*, pm.model as pricing_model
-    FROM sr_service_pricing sp
-    JOIN sr_pricing_models pm ON pm.id = sp.pricing_model_id
+    FROM cc_sr_service_pricing sp
+    JOIN cc_sr_pricing_models pm ON pm.id = sp.pricing_model_id
     WHERE sp.service_id = $1
   `, [serviceId]);
   
   // Certifications
   const certResult = await serviceQuery(`
     SELECT c.*, sc.is_required
-    FROM sr_service_certifications sc
-    JOIN sr_certifications c ON c.id = sc.certification_id
+    FROM cc_sr_service_certifications sc
+    JOIN cc_sr_certifications c ON c.id = sc.certification_id
     WHERE sc.service_id = $1
   `, [serviceId]);
   
   // Access requirements
   const accessResult = await serviceQuery(`
     SELECT ar.*, sar.is_required
-    FROM sr_service_access_requirements sar
-    JOIN sr_access_requirements ar ON ar.id = sar.access_requirement_id
+    FROM cc_sr_service_access_requirements sar
+    JOIN cc_sr_access_requirements ar ON ar.id = sar.access_requirement_id
     WHERE sar.service_id = $1
   `, [serviceId]);
   
   // Mobilization class
   const mobResult = await serviceQuery(`
     SELECT mc.*
-    FROM sr_service_mobilization sm
-    JOIN sr_mobilization_classes mc ON mc.id = sm.mobilization_class_id
+    FROM cc_sr_service_mobilization sm
+    JOIN cc_sr_mobilization_classes mc ON mc.id = sm.mobilization_class_id
     WHERE sm.service_id = $1
   `, [serviceId]);
   
@@ -180,8 +180,8 @@ router.get('/categories', async (req: Request, res: Response) => {
     const result = await serviceQuery(`
       SELECT sc.*, 
              COUNT(s.id) as service_count
-      FROM sr_service_categories sc
-      LEFT JOIN sr_services s ON s.category_id = sc.id AND s.is_active = true
+      FROM cc_sr_service_categories sc
+      LEFT JOIN cc_sr_services s ON s.category_id = sc.id AND s.is_active = true
       WHERE sc.is_active = true
       GROUP BY sc.id
       ORDER BY sc.sort_order
@@ -222,8 +222,8 @@ router.get('/services', async (req: Request, res: Response) => {
              sc.name as category_name, 
              sc.slug as category_slug,
              sc.icon as category_icon
-      FROM sr_services s
-      JOIN sr_service_categories sc ON sc.id = s.category_id
+      FROM cc_sr_services s
+      JOIN cc_sr_service_categories sc ON sc.id = s.category_id
       WHERE s.is_active = true
     `;
     const params: any[] = [];
@@ -290,7 +290,7 @@ router.get('/services/:slug', async (req: Request, res: Response) => {
     
     // Get service ID first
     const idResult = await serviceQuery(
-      'SELECT id FROM sr_services WHERE slug = $1',
+      'SELECT id FROM cc_sr_services WHERE slug = $1',
       [slug]
     );
     
@@ -318,7 +318,7 @@ router.get('/services/:slug', async (req: Request, res: Response) => {
 // GET /api/service-runs/climate-regions
 router.get('/climate-regions', async (req: Request, res: Response) => {
   try {
-    const result = await serviceQuery('SELECT * FROM sr_climate_regions ORDER BY name');
+    const result = await serviceQuery('SELECT * FROM cc_sr_climate_regions ORDER BY name');
     
     res.json({
       success: true,
@@ -340,7 +340,7 @@ router.get('/climate-regions', async (req: Request, res: Response) => {
 // GET /api/service-runs/access-requirements
 router.get('/access-requirements', async (req: Request, res: Response) => {
   try {
-    const result = await serviceQuery('SELECT * FROM sr_access_requirements ORDER BY sort_order');
+    const result = await serviceQuery('SELECT * FROM cc_sr_access_requirements ORDER BY sort_order');
     
     res.json({
       success: true,
@@ -360,7 +360,7 @@ router.get('/access-requirements', async (req: Request, res: Response) => {
 // GET /api/service-runs/mobilization-classes
 router.get('/mobilization-classes', async (req: Request, res: Response) => {
   try {
-    const result = await serviceQuery('SELECT * FROM sr_mobilization_classes ORDER BY sort_order');
+    const result = await serviceQuery('SELECT * FROM cc_sr_mobilization_classes ORDER BY sort_order');
     
     res.json({
       success: true,
@@ -380,7 +380,7 @@ router.get('/mobilization-classes', async (req: Request, res: Response) => {
 // GET /api/service-runs/certifications
 router.get('/certifications', async (req: Request, res: Response) => {
   try {
-    const result = await serviceQuery('SELECT * FROM sr_certifications ORDER BY name');
+    const result = await serviceQuery('SELECT * FROM cc_sr_certifications ORDER BY name');
     
     res.json({
       success: true,
@@ -410,8 +410,8 @@ router.get('/communities', async (req: Request, res: Response) => {
   try {
     const result = await serviceQuery(`
       SELECT c.*, cr.name as climate_region_name
-      FROM sr_communities c
-      JOIN sr_climate_regions cr ON cr.id = c.climate_region_id
+      FROM cc_sr_communities c
+      JOIN cc_sr_climate_regions cr ON cr.id = c.climate_region_id
       ORDER BY c.name
     `);
     
@@ -447,7 +447,7 @@ router.post('/communities', requireAuth, async (req: Request, res: Response) => 
     
     const result = await req.tenantTransaction(async (client) => {
       return await client.query(`
-        INSERT INTO sr_communities 
+        INSERT INTO cc_sr_communities 
           (name, region, country, latitude, longitude, climate_region_id, remote_multiplier, notes)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
         RETURNING *
@@ -477,9 +477,9 @@ router.get('/bundles', async (req: Request, res: Response) => {
     let query = `
       SELECT b.*, 
              bp.base_price, bp.discount_factor, bp.mobilization_surcharge, bp.remote_multiplier,
-             (SELECT COUNT(*) FROM sr_bundle_items bi WHERE bi.bundle_id = b.id) as item_count
-      FROM sr_bundles b
-      LEFT JOIN sr_bundle_pricing bp ON bp.bundle_id = b.id
+             (SELECT COUNT(*) FROM cc_sr_bundle_items bi WHERE bi.bundle_id = b.id) as item_count
+      FROM cc_sr_bundles b
+      LEFT JOIN cc_sr_bundle_pricing bp ON bp.bundle_id = b.id
       WHERE b.is_active = true
     `;
     
@@ -522,8 +522,8 @@ router.get('/bundles/:slug', async (req: Request, res: Response) => {
     // Get bundle
     const bundleResult = await serviceQuery(`
       SELECT b.*, bp.base_price, bp.discount_factor, bp.mobilization_surcharge, bp.remote_multiplier, bp.notes as pricing_notes
-      FROM sr_bundles b
-      LEFT JOIN sr_bundle_pricing bp ON bp.bundle_id = b.id
+      FROM cc_sr_bundles b
+      LEFT JOIN cc_sr_bundle_pricing bp ON bp.bundle_id = b.id
       WHERE b.slug = $1
     `, [slug]);
     
@@ -536,8 +536,8 @@ router.get('/bundles/:slug', async (req: Request, res: Response) => {
     // Get bundle items with services
     const itemsResult = await serviceQuery(`
       SELECT bi.*, s.name as service_name, s.slug as service_slug, s.description as service_description
-      FROM sr_bundle_items bi
-      JOIN sr_services s ON s.id = bi.service_id
+      FROM cc_sr_bundle_items bi
+      JOIN cc_sr_services s ON s.id = bi.service_id
       WHERE bi.bundle_id = $1
       ORDER BY bi.sort_order
     `, [bundle.id]);
@@ -545,8 +545,8 @@ router.get('/bundles/:slug', async (req: Request, res: Response) => {
     // Get bundle seasonality
     const seasonalityResult = await serviceQuery(`
       SELECT bs.*, cr.name as climate_region_name
-      FROM sr_bundle_seasonality bs
-      JOIN sr_climate_regions cr ON cr.id = bs.climate_region_id
+      FROM cc_sr_bundle_seasonality bs
+      JOIN cc_sr_climate_regions cr ON cr.id = bs.climate_region_id
       WHERE bs.bundle_id = $1
     `, [bundle.id]);
     
@@ -603,9 +603,9 @@ router.get('/run-types', async (req: Request, res: Response) => {
     
     let query = `
       SELECT rt.*, cr.name as climate_region_name,
-             (SELECT COUNT(*) FROM sr_run_type_services rts WHERE rts.run_type_id = rt.id) as service_count
-      FROM sr_run_types rt
-      JOIN sr_climate_regions cr ON cr.id = rt.climate_region_id
+             (SELECT COUNT(*) FROM cc_sr_run_type_services rts WHERE rts.run_type_id = rt.id) as service_count
+      FROM cc_sr_run_types rt
+      JOIN cc_sr_climate_regions cr ON cr.id = rt.climate_region_id
     `;
     const params: any[] = [];
     
@@ -674,7 +674,7 @@ router.post('/suggest-bundles', async (req: Request, res: Response) => {
     // Load all specified services with details
     const services: ServiceWithDetails[] = [];
     for (const slug of serviceSlugs) {
-      const idResult = await serviceQuery('SELECT id FROM sr_services WHERE slug = $1', [slug]);
+      const idResult = await serviceQuery('SELECT id FROM cc_sr_services WHERE slug = $1', [slug]);
       if (idResult.rows.length > 0) {
         const service = await loadServiceWithDetails(idResult.rows[0].id);
         if (service) services.push(service);
@@ -736,12 +736,12 @@ router.get('/runs', async (req: Request, res: Response) => {
         c.name as community_name,
         rt.name as run_type_name,
         b.name as bundle_name,
-        (SELECT COUNT(*) FROM sr_service_slots s WHERE s.run_id = r.id) as slot_count,
-        (SELECT COALESCE(SUM(s.estimated_cost), 0) FROM sr_service_slots s WHERE s.run_id = r.id) as total_estimated_revenue
-      FROM sr_service_runs r
-      LEFT JOIN sr_communities c ON c.id = r.community_id
-      LEFT JOIN sr_run_types rt ON rt.id = r.run_type_id
-      LEFT JOIN sr_bundles b ON b.id = r.bundle_id
+        (SELECT COUNT(*) FROM cc_sr_service_slots s WHERE s.run_id = r.id) as slot_count,
+        (SELECT COALESCE(SUM(s.estimated_cost), 0) FROM cc_sr_service_slots s WHERE s.run_id = r.id) as total_estimated_revenue
+      FROM cc_sr_service_runs r
+      LEFT JOIN cc_sr_communities c ON c.id = r.community_id
+      LEFT JOIN cc_sr_run_types rt ON rt.id = r.run_type_id
+      LEFT JOIN cc_sr_bundles b ON b.id = r.bundle_id
       WHERE 1=1
     `;
     const params: any[] = [];
@@ -812,10 +812,10 @@ router.get('/runs/:slug', async (req: Request, res: Response) => {
         c.name as community_name, c.remote_multiplier,
         rt.name as run_type_name, rt.description as run_type_description,
         b.name as bundle_name, b.slug as bundle_slug
-      FROM sr_service_runs r
-      LEFT JOIN sr_communities c ON c.id = r.community_id
-      LEFT JOIN sr_run_types rt ON rt.id = r.run_type_id
-      LEFT JOIN sr_bundles b ON b.id = r.bundle_id
+      FROM cc_sr_service_runs r
+      LEFT JOIN cc_sr_communities c ON c.id = r.community_id
+      LEFT JOIN cc_sr_run_types rt ON rt.id = r.run_type_id
+      LEFT JOIN cc_sr_bundles b ON b.id = r.bundle_id
       WHERE r.slug = $1
     `, [slug]);
     
@@ -826,13 +826,13 @@ router.get('/runs/:slug', async (req: Request, res: Response) => {
     const run = runResult.rows[0];
     
     const slotsResult = await serviceQuery(`
-      SELECT * FROM sr_service_slots
+      SELECT * FROM cc_sr_service_slots
       WHERE run_id = $1
       ORDER BY created_at
     `, [run.id]);
     
     const bidsResult = await serviceQuery(`
-      SELECT * FROM sr_contractor_bids
+      SELECT * FROM cc_sr_contractor_bids
       WHERE run_id = $1
       ORDER BY submitted_at DESC
     `, [run.id]);
@@ -965,7 +965,7 @@ router.post('/runs', requireAuth, async (req: Request, res: Response) => {
     
     const result = await req.tenantTransaction(async (client) => {
       return await client.query(`
-        INSERT INTO sr_service_runs (
+        INSERT INTO cc_sr_service_runs (
           title, slug, description, run_type_id, bundle_id, community_id,
           service_area_description, target_start_date, target_end_date,
           min_slots, max_slots, bidding_opens_at, bidding_closes_at,
@@ -1010,7 +1010,7 @@ router.patch('/runs/:id/status', requireAuth, async (req: Request, res: Response
     
     const result = await req.tenantTransaction(async (client) => {
       return await client.query(`
-        UPDATE sr_service_runs 
+        UPDATE cc_sr_service_runs 
         SET status = $1, updated_at = NOW()
         WHERE id = $2
         RETURNING *
@@ -1043,7 +1043,7 @@ router.post('/runs/:id/slots', async (req: Request, res: Response) => {
     
     // Check run status first (read operation)
     const runCheck = await serviceQuery(
-      `SELECT id, status, current_slots, max_slots FROM sr_service_runs WHERE id = $1`,
+      `SELECT id, status, current_slots, max_slots FROM cc_sr_service_runs WHERE id = $1`,
       [id]
     );
     
@@ -1063,7 +1063,7 @@ router.post('/runs/:id/slots', async (req: Request, res: Response) => {
     // Use tenant transaction for the mutation
     const result = await req.tenantTransaction(async (client) => {
       const slotResult = await client.query(`
-        INSERT INTO sr_service_slots (
+        INSERT INTO cc_sr_service_slots (
           run_id, customer_name, customer_email, customer_phone,
           property_address, property_lat, property_lng,
           property_access_notes, property_access_type,
@@ -1080,7 +1080,7 @@ router.post('/runs/:id/slots', async (req: Request, res: Response) => {
       ]);
       
       await client.query(`
-        UPDATE sr_service_runs 
+        UPDATE cc_sr_service_runs 
         SET current_slots = current_slots + 1, updated_at = NOW()
         WHERE id = $1
       `, [id]);
@@ -1107,11 +1107,11 @@ router.post('/runs/:id/slots', async (req: Request, res: Response) => {
 router.get('/stats', async (req: Request, res: Response) => {
   try {
     const [categories, services, bundles, communities, climateRegions] = await Promise.all([
-      serviceQuery('SELECT COUNT(*) FROM sr_service_categories WHERE is_active = true'),
-      serviceQuery('SELECT COUNT(*) FROM sr_services WHERE is_active = true'),
-      serviceQuery('SELECT COUNT(*) FROM sr_bundles WHERE is_active = true'),
-      serviceQuery('SELECT COUNT(*) FROM sr_communities'),
-      serviceQuery('SELECT COUNT(*) FROM sr_climate_regions')
+      serviceQuery('SELECT COUNT(*) FROM cc_sr_service_categories WHERE is_active = true'),
+      serviceQuery('SELECT COUNT(*) FROM cc_sr_services WHERE is_active = true'),
+      serviceQuery('SELECT COUNT(*) FROM cc_sr_bundles WHERE is_active = true'),
+      serviceQuery('SELECT COUNT(*) FROM cc_sr_communities'),
+      serviceQuery('SELECT COUNT(*) FROM cc_sr_climate_regions')
     ]);
     
     res.json({

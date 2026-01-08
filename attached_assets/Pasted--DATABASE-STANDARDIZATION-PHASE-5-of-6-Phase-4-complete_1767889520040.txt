@@ -1,0 +1,73 @@
+**DATABASE STANDARDIZATION - PHASE 5 of 6**
+
+Phase 4 complete. Now we rename the service run tables (36 tables).
+
+**STEP 5A: Get the complete list of sr_* tables**
+```sql
+SELECT tablename 
+FROM pg_tables 
+WHERE schemaname = 'public' 
+  AND tablename LIKE 'sr_%'
+ORDER BY tablename;
+```
+
+**STEP 5B: Rename all sr_* tables**
+
+Execute as a single transaction:
+```sql
+BEGIN;
+
+-- Rename each sr_* table to cc_sr_*
+ALTER TABLE sr_passengers RENAME TO cc_sr_passengers;
+ALTER TABLE sr_stops RENAME TO cc_sr_stops;
+-- ... (continue for ALL sr_* tables from the list)
+
+COMMIT;
+```
+
+**STEP 5C: Find all code references to sr_* tables**
+```bash
+grep -r "sr_" --include="*.ts" --include="*.tsx" server/ client/ shared/ | grep -v node_modules | grep -v ".git"
+```
+
+**STEP 5D: Update all code references**
+
+For each file found:
+- `FROM sr_` → `FROM cc_sr_`
+- `INTO sr_` → `INTO cc_sr_`
+- `UPDATE sr_` → `UPDATE cc_sr_`
+- `JOIN sr_` → `JOIN cc_sr_`
+- `"sr_` → `"cc_sr_` (in schema definitions)
+
+**STEP 5E: Rename constraints and indexes**
+```sql
+-- Find constraints needing rename
+SELECT conname, conrelid::regclass as table_name
+FROM pg_constraint 
+WHERE conrelid::regclass::text LIKE 'cc_sr_%'
+  AND conname LIKE 'sr_%';
+
+-- Find indexes needing rename
+SELECT indexname, tablename 
+FROM pg_indexes 
+WHERE tablename LIKE 'cc_sr_%'
+  AND indexname LIKE 'sr_%';
+```
+
+Then rename each one following the pattern:
+- `sr_passengers_pkey` → `cc_sr_passengers_pkey`
+- `idx_sr_passengers_*` → `idx_cc_sr_passengers_*`
+
+**STEP 5F: Verify**
+1. App compiles without errors
+2. Run: `SELECT tablename FROM pg_tables WHERE tablename LIKE 'sr_%' AND tablename NOT LIKE 'cc_sr_%';` (should return 0 rows)
+3. Run: `SELECT COUNT(*) FROM pg_tables WHERE tablename LIKE 'cc_sr_%';` (should return ~36)
+4. Test service run functionality if applicable
+
+**Report:**
+- Number of tables renamed
+- Number of code files updated
+- Number of constraints/indexes renamed
+- Any errors encountered
+
+**DO NOT proceed to Phase 6 until I confirm Phase 5 is verified.**

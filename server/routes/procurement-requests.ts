@@ -318,8 +318,8 @@ router.get('/', async (req: Request, res: Response) => {
         (SELECT COUNT(*) FROM bids b WHERE b.work_request_id = wr.id) as bid_count,
         (SELECT COUNT(*) FROM work_request_media wrm WHERE wrm.work_request_id = wr.id) as media_count
       FROM procurement_requests wr
-      LEFT JOIN sr_communities c ON c.id = wr.community_id
-      LEFT JOIN sr_bundles sb ON sb.id = wr.service_bundle_id
+      LEFT JOIN cc_sr_communities c ON c.id = wr.community_id
+      LEFT JOIN cc_sr_bundles sb ON sb.id = wr.service_bundle_id
       LEFT JOIN LATERAL (
         SELECT p.trade_name
         FROM parties p
@@ -340,7 +340,7 @@ router.get('/', async (req: Request, res: Response) => {
     const countQuery = `
       SELECT COUNT(*) as total
       FROM procurement_requests wr
-      LEFT JOIN sr_communities c ON c.id = wr.community_id
+      LEFT JOIN cc_sr_communities c ON c.id = wr.community_id
       ${whereClause}
     `;
     const countResult = await runQuery(tenantReq, countQuery, countParams);
@@ -398,8 +398,8 @@ router.get('/:id', async (req: Request, res: Response) => {
         owner.primary_contact_name as owner_contact_name,
         owner.primary_contact_email as owner_contact_email
       FROM procurement_requests wr
-      LEFT JOIN sr_communities c ON c.id = wr.community_id
-      LEFT JOIN sr_bundles sb ON sb.id = wr.service_bundle_id
+      LEFT JOIN cc_sr_communities c ON c.id = wr.community_id
+      LEFT JOIN cc_sr_bundles sb ON sb.id = wr.service_bundle_id
       LEFT JOIN LATERAL (
         SELECT p.trade_name, p.primary_contact_name, p.primary_contact_email
         FROM parties p

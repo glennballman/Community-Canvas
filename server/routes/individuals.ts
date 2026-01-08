@@ -123,7 +123,7 @@ router.get('/me', requireSession, async (req: Request, res: Response) => {
       `SELECT cis.id, cis.skill_id, sk.name as skill_name, sk.category,
               cis.proficiency_level, cis.years_experience, cis.verified
        FROM cc_individual_skills cis
-       JOIN sr_skills sk ON sk.id = cis.skill_id
+       JOIN cc_sr_skills sk ON sk.id = cis.skill_id
        WHERE cis.individual_id = $1
        ORDER BY cis.created_at DESC`,
       [individual.id]
@@ -134,8 +134,8 @@ router.get('/me', requireSession, async (req: Request, res: Response) => {
               cit.current_location, c.name as current_community,
               cit.condition, cit.available_for_rent, cit.rental_rate_daily
        FROM cc_individual_tools cit
-       JOIN sr_tools t ON t.id = cit.tool_id
-       LEFT JOIN sr_communities c ON c.id = cit.current_community_id
+       JOIN cc_sr_tools t ON t.id = cit.tool_id
+       LEFT JOIN cc_sr_communities c ON c.id = cit.current_community_id
        WHERE cit.individual_id = $1
        ORDER BY cit.created_at DESC`,
       [individual.id]
@@ -159,7 +159,7 @@ router.get('/me', requireSession, async (req: Request, res: Response) => {
     let currentCommunity = null;
     if (individual.current_community_id) {
       const commResult = await serviceQuery(
-        'SELECT name FROM sr_communities WHERE id = $1',
+        'SELECT name FROM cc_sr_communities WHERE id = $1',
         [individual.current_community_id]
       );
       if (commResult.rows.length > 0) {
@@ -252,11 +252,11 @@ router.get('/me', requireSession, async (req: Request, res: Response) => {
 });
 
 // GET /api/individuals/skills - Get available skills (GLOBAL reference data)
-// SERVICE MODE: sr_skills is global reference data, not tenant-scoped
+// SERVICE MODE: cc_sr_skills is global reference data, not tenant-scoped
 router.get('/skills', async (req: Request, res: Response) => {
   try {
     const result = await serviceQuery(
-      'SELECT id, name, slug, category, certification_required FROM sr_skills ORDER BY category, name'
+      'SELECT id, name, slug, category, certification_required FROM cc_sr_skills ORDER BY category, name'
     );
     res.json({ success: true, skills: result.rows });
   } catch (error) {
@@ -266,11 +266,11 @@ router.get('/skills', async (req: Request, res: Response) => {
 });
 
 // GET /api/individuals/tools - Get available tools (GLOBAL reference data)
-// SERVICE MODE: sr_tools is global reference data, not tenant-scoped
+// SERVICE MODE: cc_sr_tools is global reference data, not tenant-scoped
 router.get('/tools', async (req: Request, res: Response) => {
   try {
     const result = await serviceQuery(
-      'SELECT id, name, slug, category, typical_daily_rental FROM sr_tools ORDER BY category, name'
+      'SELECT id, name, slug, category, typical_daily_rental FROM cc_sr_tools ORDER BY category, name'
     );
     res.json({ success: true, tools: result.rows });
   } catch (error) {
@@ -297,11 +297,11 @@ router.get('/waiver-templates', async (req: Request, res: Response) => {
 });
 
 // GET /api/individuals/communities - Get communities (GLOBAL reference data)
-// SERVICE MODE: sr_communities is global reference data
+// SERVICE MODE: cc_sr_communities is global reference data
 router.get('/communities', async (req: Request, res: Response) => {
   try {
     const result = await serviceQuery(
-      'SELECT id, name, region FROM sr_communities ORDER BY region, name'
+      'SELECT id, name, region FROM cc_sr_communities ORDER BY region, name'
     );
     res.json({ success: true, communities: result.rows });
   } catch (error) {

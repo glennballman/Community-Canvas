@@ -129,7 +129,7 @@ router.get('/browse', async (req: Request, res: Response) => {
         ri.turnover_buffer_minutes
       FROM cc_rental_items ri
       JOIN cc_rental_categories rc ON rc.id = ri.category_id
-      LEFT JOIN sr_communities c ON c.id = ri.home_community_id
+      LEFT JOIN cc_sr_communities c ON c.id = ri.home_community_id
       WHERE ri.status = 'active'
     `;
     
@@ -669,7 +669,7 @@ router.get('/bookings', requireAuth, async (req: Request, res: Response) => {
       FROM cc_rental_bookings b
       JOIN cc_rental_items ri ON ri.id = b.rental_item_id
       JOIN cc_rental_categories rc ON rc.id = ri.category_id
-      LEFT JOIN sr_communities c ON c.id = ri.home_community_id
+      LEFT JOIN cc_sr_communities c ON c.id = ri.home_community_id
       WHERE b.renter_individual_id = $1
       ORDER BY 
         CASE b.status 

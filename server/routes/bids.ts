@@ -49,7 +49,7 @@ router.get('/mine', requireAuth, requireTenant, async (req, res) => {
              c.name as community_name, c.region as community_region
       FROM bids b
       JOIN work_requests wr ON wr.id = b.work_request_id
-      LEFT JOIN sr_communities c ON c.id = wr.community_id
+      LEFT JOIN cc_sr_communities c ON c.id = wr.community_id
       WHERE b.party_id = $1::uuid
     `;
 
@@ -88,7 +88,7 @@ router.get('/:id', requireAuth, requireTenant, async (req: Request, res: Respons
               p.trade_name as bidder_name
        FROM bids b
        JOIN work_requests wr ON wr.id = b.work_request_id
-       LEFT JOIN sr_communities c ON c.id = wr.community_id
+       LEFT JOIN cc_sr_communities c ON c.id = wr.community_id
        LEFT JOIN parties p ON p.id = b.party_id
        WHERE b.id = $1::uuid AND (b.party_id = $2 OR wr.owner_tenant_id = $3)`,
       [id, partyId, tenantReq.ctx!.tenant_id]
