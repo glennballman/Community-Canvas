@@ -1,0 +1,146 @@
+**DATABASE STANDARDIZATION - PHASE 6 of 6 (FINAL)**
+
+This is the largest phase - all remaining tables without the `cc_` prefix. We'll do it in sub-batches for safety.
+
+**STEP 6A: Get complete inventory of remaining tables**
+```sql
+SELECT tablename 
+FROM pg_tables 
+WHERE schemaname = 'public' 
+  AND tablename NOT LIKE 'cc_%'
+  AND tablename NOT IN ('migrations', 'schema_migrations', 'drizzle_migrations')
+ORDER BY tablename;
+```
+
+Group them by category and show me the count for each:
+- `entity_*` or `entities` → will become `cc_entity_*`
+- `trip_*` or `road_trips` → will become `cc_trip_*`
+- `ref_*` → will become `cc_ref_*`
+- `accommodation_*` → will become `cc_accommodation_*`
+- `legacy_*` → will become `cc_legacy_*`
+- Everything else → will become `cc_*`
+
+**STEP 6B: Rename in sub-batches (one transaction per batch)**
+
+Execute each batch separately so we can recover if one fails:
+
+**Batch 6B-1: Entity tables**
+```sql
+BEGIN;
+ALTER TABLE entities RENAME TO cc_entities;
+ALTER TABLE entity_types RENAME TO cc_entity_types;
+-- ... all entity_* tables
+COMMIT;
+```
+
+**Batch 6B-2: Trip tables**
+```sql
+BEGIN;
+ALTER TABLE road_trips RENAME TO cc_road_trips;
+ALTER TABLE trip_legs RENAME TO cc_trip_legs;
+-- ... all trip_* tables
+COMMIT;
+```
+
+**Batch 6B-3: Reference tables**
+```sql
+BEGIN;
+ALTER TABLE ref_countries RENAME TO cc_ref_countries;
+-- ... all ref_* tables
+COMMIT;
+```
+
+**Batch 6B-4: Accommodation tables**
+```sql
+BEGIN;
+ALTER TABLE accommodation_bookings RENAME TO cc_accommodation_bookings;
+-- ... all accommodation_* tables
+COMMIT;
+```
+
+**Batch 6B-5: Legacy tables**
+```sql
+BEGIN;
+ALTER TABLE legacy_vehicle_profiles RENAME TO cc_legacy_vehicle_profiles;
+-- ... all legacy_* tables
+COMMIT;
+```
+
+**Batch 6B-6: All remaining tables (the big one)**
+```sql
+BEGIN;
+-- Alphabetically, rename each remaining table
+ALTER TABLE assets_availability RENAME TO cc_assets_availability;
+ALTER TABLE bids RENAME TO cc_bids;
+-- ... continue for ALL remaining tables
+COMMIT;
+```
+
+**STEP 6C: Update all code references**
+
+After all tables are renamed, find and update ALL code references:
+```bash
+# Find all SQL references to tables that don't have cc_ prefix
+grep -rn "FROM \|INTO \|UPDATE \|JOIN " --include="*.ts" --include="*.tsx" server/ client/ shared/ | grep -v "cc_" | grep -v node_modules
+```
+
+Update each file found.
+
+**STEP 6D: Rename all constraints and indexes**
+```sql
+-- Find all constraints that don't match cc_* pattern
+SELECT conname, conrelid::regclass as table_name
+FROM pg_constraint 
+WHERE conrelid::regclass::text LIKE 'cc_%'
+  AND conname NOT LIKE 'cc_%'
+ORDER BY conrelid::regclass, conname;
+
+-- Find all indexes that don't match cc_* or idx_cc_* pattern
+SELECT indexname, tablename 
+FROM pg_indexes 
+WHERE tablename LIKE 'cc_%'
+  AND indexname NOT LIKE 'cc_%'
+  AND indexname NOT LIKE 'idx_cc_%'
+ORDER BY tablename, indexname;
+```
+
+Rename each one to follow the standard.
+
+**STEP 6E: Final verification**
+```sql
+-- Should return 0 (only migration tables allowed without prefix)
+SELECT COUNT(*) 
+FROM pg_tables 
+WHERE schemaname = 'public' 
+  AND tablename NOT LIKE 'cc_%'
+  AND tablename NOT IN ('migrations', 'schema_migrations', 'drizzle_migrations');
+
+-- Should return 0 (no legacy constraint names)
+SELECT COUNT(*)
+FROM pg_constraint 
+WHERE conrelid::regclass::text LIKE 'cc_%'
+  AND conname NOT LIKE 'cc_%';
+
+-- Should return 0 (no legacy index names)
+SELECT COUNT(*)
+FROM pg_indexes 
+WHERE tablename LIKE 'cc_%'
+  AND indexname NOT LIKE 'cc_%'
+  AND indexname NOT LIKE 'idx_cc_%';
+```
+
+**STEP 6F: Full app test**
+1. App compiles and starts
+2. Test reservation flow at `/p/save-paradise-parking/reserve`
+3. Test admin console loads
+4. Test any other critical paths
+
+**Report after completion:**
+- Total tables renamed
+- Total code files updated
+- Total constraints renamed
+- Total indexes renamed
+- Final verification query results
+- Any errors or warnings
+
+**This is the final phase. Take your time, be thorough.**
