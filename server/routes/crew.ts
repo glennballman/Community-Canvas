@@ -280,7 +280,7 @@ export function createCrewRouter() {
            FROM asset_capabilities
            WHERE asset_id = a.id AND is_active = true) as capabilities
           ${distanceSelect}
-        FROM assets a
+        FROM cc_assets a
         LEFT JOIN asset_terms t ON t.asset_id = a.id
         WHERE ${conditions.join(' AND ')}
         ORDER BY a.id, ${distanceOrder} a.crew_score DESC NULLS LAST, a.overall_rating DESC NULLS LAST

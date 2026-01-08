@@ -533,7 +533,7 @@ export async function registerRoutes(
         // Verify asset record in same transaction
         const assetRes = await client.query(`
           SELECT tenant_id, owner_tenant_id, source_table, source_id 
-          FROM assets WHERE id = $1
+          FROM cc_assets WHERE id = $1
         `, [aid]);
         
         // Check asset_capabilities
@@ -626,7 +626,7 @@ export async function registerRoutes(
         
         // d) Delete assets
         if (assetId) {
-          const aRes = await client.query('DELETE FROM assets WHERE id = $1 RETURNING id', [assetId]);
+          const aRes = await client.query('DELETE FROM cc_assets WHERE id = $1 RETURNING id', [assetId]);
           deleted.asset = aRes.rowCount;
           if (aRes.rowCount !== 1) {
             deleted.errors.push(`Expected asset delete rowCount=1, got ${aRes.rowCount}`);
@@ -681,7 +681,7 @@ export async function registerRoutes(
           const { withServiceTransaction } = await import('./db/tenantDb');
           await withServiceTransaction(async (client) => {
             if (vehicleId) await client.query('DELETE FROM tenant_vehicles WHERE id = $1', [vehicleId]);
-            if (assetId) await client.query('DELETE FROM assets WHERE id = $1', [assetId]);
+            if (assetId) await client.query('DELETE FROM cc_assets WHERE id = $1', [assetId]);
             if (individualId) await client.query('DELETE FROM cc_individuals WHERE id = $1', [individualId]);
             if (tenantId) await client.query('DELETE FROM cc_tenants WHERE id = $1', [tenantId]);
           });

@@ -954,7 +954,7 @@ router.get('/portals/:slug/site', async (req: Request, res: Response) => {
         a.bathrooms_full,
         a.overall_rating,
         a.review_count
-      FROM assets a
+      FROM cc_assets a
       WHERE a.owner_tenant_id = $1 
         AND a.status = 'active'
         AND a.is_available = true
@@ -1090,7 +1090,7 @@ router.get('/portals/:slug/assets', async (req: Request, res: Response) => {
         a.bathrooms_full,
         a.overall_rating,
         a.review_count
-      FROM assets a
+      FROM cc_assets a
       WHERE a.owner_tenant_id = $1 
         AND a.status = 'active'
         AND a.is_available = true
@@ -1191,7 +1191,7 @@ router.get('/portals/:slug/availability', async (req: Request, res: Response) =>
     // Get assets
     let assetsQuery = `
       SELECT id, name, asset_type, schema_type, description, thumbnail_url
-      FROM assets
+      FROM cc_assets
       WHERE owner_tenant_id = $1 
         AND status = 'active'
         AND is_available = true
@@ -1307,7 +1307,7 @@ router.get('/portals/:slug/availability/calendar', async (req: Request, res: Res
     }
     
     const assetResult = await serviceQuery(`
-      SELECT id, name FROM assets 
+      SELECT id, name FROM cc_assets 
       WHERE id = $1::uuid AND owner_tenant_id = $2 AND status = 'active'
     `, [asset_id, portalResult.rows[0].owning_tenant_id]);
     
@@ -1420,7 +1420,7 @@ router.post('/portals/:slug/reservations', async (req: Request, res: Response) =
     // Verify asset belongs to this tenant
     const assetResult = await serviceQuery(`
       SELECT id, name, asset_type, rate_daily, rate_hourly
-      FROM assets
+      FROM cc_assets
       WHERE id = $1::uuid AND owner_tenant_id = $2 AND status = 'active'
     `, [asset_id, tenantId]);
     

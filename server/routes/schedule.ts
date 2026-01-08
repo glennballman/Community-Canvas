@@ -188,7 +188,7 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
         a.name as resource_name,
         a.asset_type as resource_type
       FROM resource_schedule_events e
-      JOIN assets a ON a.id = e.resource_id
+      JOIN cc_assets a ON a.id = e.resource_id
       WHERE e.tenant_id = $1
         AND e.status = 'active'
         AND e.starts_at < $3
@@ -222,7 +222,7 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
         a.name as resource_name,
         a.asset_type as resource_type
       FROM reservations b
-      JOIN assets a ON a.id = b.asset_id
+      JOIN cc_assets a ON a.id = b.asset_id
       WHERE (a.owner_tenant_id = $1 OR b.provider_id = $1)
         AND b.status NOT IN ('cancelled', 'no_show')
         AND b.start_date < $3
@@ -291,7 +291,7 @@ router.post('/events', requireAuth, async (req: Request, res: Response) => {
     }
 
     const assetCheck = await pool.query(
-      `SELECT id FROM assets WHERE id = $1 AND (owner_tenant_id = $2 OR owner_tenant_id IS NULL)`,
+      `SELECT id FROM cc_assets WHERE id = $1 AND (owner_tenant_id = $2 OR owner_tenant_id IS NULL)`,
       [resource_id, tenantId]
     );
 
@@ -517,7 +517,7 @@ router.get('/resources', requireAuth, async (req: Request, res: Response) => {
             AND e.starts_at <= now()
             AND e.ends_at > now()
         ) THEN true ELSE false END as is_under_maintenance
-       FROM assets a
+       FROM cc_assets a
        WHERE a.owner_tenant_id = $1
     `;
     const params: any[] = [tenantId];
@@ -674,7 +674,7 @@ router.get('/bookings', requireAuth, async (req: Request, res: Response) => {
         b.special_requests,
         b.created_at
       FROM reservations b
-      JOIN assets a ON a.id = b.asset_id
+      JOIN cc_assets a ON a.id = b.asset_id
       WHERE a.owner_tenant_id = $1
     `;
     const params: any[] = [tenantId];
@@ -745,7 +745,7 @@ router.post('/bookings', requireAuth, async (req: Request, res: Response) => {
 
     // Verify asset belongs to tenant
     const assetCheck = await pool.query(
-      'SELECT id, name FROM assets WHERE id = $1 AND owner_tenant_id = $2',
+      'SELECT id, name FROM cc_assets WHERE id = $1 AND owner_tenant_id = $2',
       [data.asset_id, tenantId]
     );
     if (assetCheck.rows.length === 0) {
@@ -818,7 +818,7 @@ router.put('/bookings/:id/status', requireAuth, async (req: Request, res: Respon
     // Verify booking belongs to tenant's asset
     const booking = await pool.query(`
       SELECT b.id FROM reservations b
-      JOIN assets a ON a.id = b.asset_id
+      JOIN cc_assets a ON a.id = b.asset_id
       WHERE b.id = $1 AND a.owner_tenant_id = $2
     `, [id, tenantId]);
 

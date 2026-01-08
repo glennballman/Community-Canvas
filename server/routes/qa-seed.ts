@@ -10,7 +10,7 @@ router.post('/qa/seed-booking-test-assets', async (req, res) => {
       const tenantId = tenantResult.rows?.[0]?.id || null;
       
       const accommodationResult = await client.query(`
-        INSERT INTO assets (
+        INSERT INTO cc_assets (
           id, owner_tenant_id, owner_type, source_table, source_id, 
           name, asset_type, booking_mode, 
           time_granularity_minutes, operational_status,
@@ -26,7 +26,7 @@ router.post('/qa/seed-booking-test-assets', async (req, res) => {
       `, [tenantId]);
 
       const rentalResult = await client.query(`
-        INSERT INTO assets (
+        INSERT INTO cc_assets (
           id, owner_tenant_id, owner_type, source_table, source_id,
           name, asset_type, booking_mode,
           time_granularity_minutes, operational_status
@@ -40,7 +40,7 @@ router.post('/qa/seed-booking-test-assets', async (req, res) => {
       `, [tenantId]);
 
       const transportResult = await client.query(`
-        INSERT INTO assets (
+        INSERT INTO cc_assets (
           id, owner_tenant_id, owner_type, source_table, source_id,
           name, asset_type, booking_mode,
           time_granularity_minutes, operational_status
@@ -56,7 +56,7 @@ router.post('/qa/seed-booking-test-assets', async (req, res) => {
       const transportId = transportResult.rows?.[0]?.id;
 
       const craneResult = await client.query(`
-        INSERT INTO assets (
+        INSERT INTO cc_assets (
           id, owner_tenant_id, owner_type, source_table, source_id,
           name, asset_type, booking_mode,
           time_granularity_minutes, operational_status
@@ -123,28 +123,28 @@ router.post('/qa/test-booking-semantics', async (req, res) => {
 
     const accommodationResult = await serviceQuery(`
       SELECT id, name, booking_mode, default_start_time_local, default_end_time_local
-      FROM assets 
+      FROM cc_assets 
       WHERE name = 'QA Test Cabin' AND asset_type = 'accommodation'
       LIMIT 1
     `);
     
     const rentalResult = await serviceQuery(`
       SELECT id, name, booking_mode
-      FROM assets 
+      FROM cc_assets 
       WHERE name = 'QA Test Kayak' AND asset_type = 'equipment'
       LIMIT 1
     `);
 
     const transportResult = await serviceQuery(`
       SELECT id, name, booking_mode
-      FROM assets 
+      FROM cc_assets 
       WHERE name = 'QA Test Transport Van' AND asset_type = 'vehicle'
       LIMIT 1
     `);
 
     const craneResult = await serviceQuery(`
       SELECT id, name, booking_mode, operational_status
-      FROM assets 
+      FROM cc_assets 
       WHERE name = 'QA Test Crane Attachment' AND asset_type = 'equipment'
       LIMIT 1
     `);
@@ -217,7 +217,7 @@ router.post('/qa/test-booking-semantics', async (req, res) => {
     if (crane && transportForDegraded) {
       await withServiceTransaction(async (client) => {
         await client.query(`
-          UPDATE assets SET operational_status = 'out_of_service' WHERE id = $1
+          UPDATE cc_assets SET operational_status = 'out_of_service' WHERE id = $1
         `, [crane.id]);
         await client.query(`
           UPDATE asset_children SET is_required = false 
@@ -226,7 +226,7 @@ router.post('/qa/test-booking-semantics', async (req, res) => {
       });
       
       const parentAfterD = await serviceQuery(`
-        SELECT operational_status FROM assets WHERE id = $1
+        SELECT operational_status FROM cc_assets WHERE id = $1
       `, [transportForDegraded.id]);
       
       results.testD = {
@@ -247,7 +247,7 @@ router.post('/qa/test-booking-semantics', async (req, res) => {
       const childrenLinks = await serviceQuery(`
         SELECT ac.is_required, ua.operational_status as child_status
         FROM asset_children ac
-        JOIN assets ua ON ua.id = ac.child_asset_id
+        JOIN cc_assets ua ON ua.id = ac.child_asset_id
         WHERE ac.parent_asset_id = $1
         AND ac.is_required = true
         AND ua.operational_status = 'out_of_service'
@@ -265,7 +265,7 @@ router.post('/qa/test-booking-semantics', async (req, res) => {
 
       await withServiceTransaction(async (client) => {
         await client.query(`
-          UPDATE assets SET operational_status = 'operational' WHERE id = $1
+          UPDATE cc_assets SET operational_status = 'operational' WHERE id = $1
         `, [crane.id]);
       });
     }
@@ -294,13 +294,13 @@ router.delete('/qa/cleanup-test-assets', async (req, res) => {
     await withServiceTransaction(async (client) => {
       await client.query(`
         DELETE FROM asset_children WHERE parent_asset_id IN (
-          SELECT id FROM assets WHERE name LIKE 'QA Test%'
+          SELECT id FROM cc_assets WHERE name LIKE 'QA Test%'
         ) OR child_asset_id IN (
-          SELECT id FROM assets WHERE name LIKE 'QA Test%'
+          SELECT id FROM cc_assets WHERE name LIKE 'QA Test%'
         )
       `);
       await client.query(`
-        DELETE FROM assets WHERE name LIKE 'QA Test%'
+        DELETE FROM cc_assets WHERE name LIKE 'QA Test%'
       `);
     });
     res.json({ success: true, message: 'QA test assets cleaned up' });

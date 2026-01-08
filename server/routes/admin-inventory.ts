@@ -44,7 +44,7 @@ router.get('/', async (req: AuthRequest, res: Response) => {
         ua.updated_at,
         ua.source_table,
         ua.source_id
-      FROM assets ua
+      FROM cc_assets ua
       LEFT JOIN cc_tenants t ON ua.owner_tenant_id = t.id
       WHERE 1=1
     `;
@@ -87,7 +87,7 @@ router.get('/', async (req: AuthRequest, res: Response) => {
     
     const typesResult = await serviceQuery(`
       SELECT DISTINCT asset_type 
-      FROM assets 
+      FROM cc_assets 
       WHERE asset_type IS NOT NULL
       ORDER BY asset_type
     `);
@@ -104,7 +104,7 @@ router.get('/', async (req: AuthRequest, res: Response) => {
       }
     }
     
-    const totalResult = await serviceQuery('SELECT COUNT(*)::int as count FROM assets');
+    const totalResult = await serviceQuery('SELECT COUNT(*)::int as count FROM cc_assets');
     
     res.json({
       assets: assetsResult.rows,

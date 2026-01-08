@@ -402,7 +402,7 @@ router.post('/:id/book', requireAuth, async (req: Request, res: Response) => {
       
       // Check for maintenance blocks on unified_asset (if linked)
       const assetLookup = await client.query(
-        `SELECT id FROM assets WHERE source_table = 'cc_rental_items' AND source_id = $1`,
+        `SELECT id FROM cc_assets WHERE source_table = 'cc_rental_items' AND source_id = $1`,
         [itemId]
       );
       
