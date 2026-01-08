@@ -41,8 +41,8 @@ function HeroBlock({ data }: { data: Record<string, unknown> }) {
       <h1 style={{ fontSize: '32px', fontWeight: 700, marginBottom: '8px' }}>
         {String(data.headline || '')}
       </h1>
-      {data.subhead && (
-        <p style={{ fontSize: '18px', color: '#9ca3af' }}>{String(data.subhead)}</p>
+      {typeof data.subhead === 'string' && data.subhead && (
+        <p style={{ fontSize: '18px', color: '#9ca3af' }}>{data.subhead}</p>
       )}
     </div>
   );
@@ -144,9 +144,9 @@ function CTABlock({ data }: { data: Record<string, unknown> }) {
       }}
       data-testid="block-cta"
     >
-      {data.description && (
+      {typeof data.description === 'string' && data.description && (
         <p style={{ fontSize: '14px', color: '#9ca3af', marginBottom: '12px' }}>
-          {String(data.description)}
+          {data.description}
         </p>
       )}
       <Button size="lg">
