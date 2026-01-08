@@ -1,4 +1,4 @@
-import { pgTable, text, serial, timestamp, jsonb, integer, uuid, pgEnum } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, jsonb, integer, uuid, pgEnum, boolean, numeric, date, time, varchar } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -203,3 +203,183 @@ export const insertCrawlMediaQueueSchema = createInsertSchema(crawlMediaQueue).o
 
 export type CrawlMediaQueue = typeof crawlMediaQueue.$inferSelect;
 export type InsertCrawlMediaQueue = z.infer<typeof insertCrawlMediaQueueSchema>;
+
+// ============================================================================
+// EXPEDITION ENGINE - TRIP SYSTEM
+// ============================================================================
+
+// Trips (main container)
+export const ccTrips = pgTable('cc_trips', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tripId: varchar('trip_id'),
+  customTrip: boolean('custom_trip'),
+  leadParticipantId: uuid('lead_participant_id'),
+  groupName: varchar('group_name'),
+  groupSize: integer('group_size'),
+  startDate: date('start_date'),
+  endDate: date('end_date'),
+  flexibleDates: boolean('flexible_dates'),
+  budgetLevel: varchar('budget_level'),
+  estimatedCost: numeric('estimated_cost'),
+  status: varchar('status'),
+  participantAssessmentComplete: boolean('participant_assessment_complete'),
+  vehicleAssessmentComplete: boolean('vehicle_assessment_complete'),
+  equipmentGapsIdentified: boolean('equipment_gaps_identified'),
+  skillGapsIdentified: boolean('skill_gaps_identified'),
+  allRequirementsMet: boolean('all_requirements_met'),
+  monitoringActive: boolean('monitoring_active'),
+  lastConditionsCheck: timestamp('last_conditions_check', { withTimezone: true }),
+  currentAlertLevel: varchar('current_alert_level'),
+  notes: text('notes'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+  
+  // Expedition fields
+  portalId: uuid('portal_id'),
+  tenantId: uuid('tenant_id'),
+  accessCode: varchar('access_code').unique(),
+  
+  primaryContactName: varchar('primary_contact_name'),
+  primaryContactEmail: varchar('primary_contact_email'),
+  primaryContactPhone: varchar('primary_contact_phone'),
+  
+  originName: varchar('origin_name'),
+  originType: varchar('origin_type'),
+  originLat: numeric('origin_lat', { precision: 10, scale: 7 }),
+  originLng: numeric('origin_lng', { precision: 10, scale: 7 }),
+  
+  hasVehicle: boolean('has_vehicle').default(true),
+  hasTrailer: boolean('has_trailer').default(false),
+  trailerType: varchar('trailer_type'),
+  boatLengthFt: integer('boat_length_ft'),
+  trailerLengthFt: integer('trailer_length_ft'),
+  
+  nextDestinationName: varchar('next_destination_name'),
+  nextDestinationLat: numeric('next_destination_lat', { precision: 10, scale: 7 }),
+  nextDestinationLng: numeric('next_destination_lng', { precision: 10, scale: 7 }),
+  nextDestinationEmail: varchar('next_destination_email'),
+  nextDestinationPhone: varchar('next_destination_phone'),
+  coordinateHandoff: boolean('coordinate_handoff').default(false),
+});
+
+export const insertTripSchema = createInsertSchema(ccTrips).omit({ id: true, createdAt: true, updatedAt: true });
+export type Trip = typeof ccTrips.$inferSelect;
+export type InsertTrip = z.infer<typeof insertTripSchema>;
+
+// Trip Itinerary Items (calendar events)
+export const ccTripItineraryItems = pgTable('cc_trip_itinerary_items', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tripId: uuid('trip_id').notNull().references(() => ccTrips.id, { onDelete: 'cascade' }),
+  
+  itemType: varchar('item_type').notNull(),
+  title: varchar('title').notNull(),
+  description: text('description'),
+  
+  isBooked: boolean('is_booked').notNull().default(false),
+  reservationId: uuid('reservation_id'),
+  
+  status: varchar('status').notNull().default('idea'),
+  
+  dayDate: date('day_date').notNull(),
+  startTime: time('start_time'),
+  endTime: time('end_time'),
+  allDay: boolean('all_day').default(false),
+  
+  everyone: boolean('everyone').default(true),
+  assignedParticipantIds: uuid('assigned_participant_ids').array(),
+  
+  locationName: varchar('location_name'),
+  locationLat: numeric('location_lat', { precision: 10, scale: 7 }),
+  locationLng: numeric('location_lng', { precision: 10, scale: 7 }),
+  
+  weatherSensitive: boolean('weather_sensitive').default(false),
+  indoorAlternative: text('indoor_alternative'),
+  
+  photoMoment: boolean('photo_moment').default(false),
+  suggestedCaption: text('suggested_caption'),
+  
+  externalUrl: text('external_url'),
+  externalBookingRef: varchar('external_booking_ref'),
+  
+  icon: varchar('icon'),
+  color: varchar('color'),
+  sortOrder: integer('sort_order').default(0),
+  
+  createdBy: varchar('created_by'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const insertTripItineraryItemSchema = createInsertSchema(ccTripItineraryItems).omit({ id: true, createdAt: true, updatedAt: true });
+export type TripItineraryItem = typeof ccTripItineraryItems.$inferSelect;
+export type InsertTripItineraryItem = z.infer<typeof insertTripItineraryItemSchema>;
+
+// Trip Timepoints (operational anchors)
+export const ccTripTimepoints = pgTable('cc_trip_timepoints', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tripId: uuid('trip_id').notNull().references(() => ccTrips.id, { onDelete: 'cascade' }),
+  
+  kind: varchar('kind').notNull(),
+  
+  timeExact: timestamp('time_exact', { withTimezone: true }),
+  timeWindowStart: timestamp('time_window_start', { withTimezone: true }),
+  timeWindowEnd: timestamp('time_window_end', { withTimezone: true }),
+  timeConfidence: varchar('time_confidence').notNull().default('window'),
+  
+  locationName: varchar('location_name'),
+  locationLat: numeric('location_lat', { precision: 10, scale: 7 }),
+  locationLng: numeric('location_lng', { precision: 10, scale: 7 }),
+  
+  staffAction: text('staff_action'),
+  staffAssignedTo: uuid('staff_assigned_to'),
+  completedAt: timestamp('completed_at', { withTimezone: true }),
+  completedBy: uuid('completed_by'),
+  
+  guestNotes: text('guest_notes'),
+  internalNotes: text('internal_notes'),
+  
+  itineraryItemId: uuid('itinerary_item_id').references(() => ccTripItineraryItems.id, { onDelete: 'set null' }),
+  
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const insertTripTimepointSchema = createInsertSchema(ccTripTimepoints).omit({ id: true, createdAt: true, updatedAt: true });
+export type TripTimepoint = typeof ccTripTimepoints.$inferSelect;
+export type InsertTripTimepoint = z.infer<typeof insertTripTimepointSchema>;
+
+// Portal Moments (curated fun suggestions)
+export const ccPortalMoments = pgTable('cc_portal_moments', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  portalId: uuid('portal_id').notNull(),
+  
+  title: varchar('title').notNull(),
+  description: text('description'),
+  momentType: varchar('moment_type').notNull(),
+  
+  bestTimeOfDay: varchar('best_time_of_day'),
+  bestWeather: varchar('best_weather'),
+  
+  locationName: varchar('location_name'),
+  locationLat: numeric('location_lat', { precision: 10, scale: 7 }),
+  locationLng: numeric('location_lng', { precision: 10, scale: 7 }),
+  
+  kidFriendly: boolean('kid_friendly').default(true),
+  
+  proTip: text('pro_tip'),
+  safetyNote: text('safety_note'),
+  
+  photoMoment: boolean('photo_moment').default(true),
+  suggestedCaption: text('suggested_caption'),
+  
+  imageUrl: text('image_url'),
+  icon: varchar('icon'),
+  sortOrder: integer('sort_order').default(0),
+  isActive: boolean('is_active').default(true),
+  
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const insertPortalMomentSchema = createInsertSchema(ccPortalMoments).omit({ id: true, createdAt: true });
+export type PortalMoment = typeof ccPortalMoments.$inferSelect;
+export type InsertPortalMoment = z.infer<typeof insertPortalMomentSchema>;
