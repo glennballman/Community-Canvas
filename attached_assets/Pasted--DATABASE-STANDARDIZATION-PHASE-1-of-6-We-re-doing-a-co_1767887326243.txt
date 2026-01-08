@@ -1,0 +1,63 @@
+**DATABASE STANDARDIZATION - PHASE 1 of 6**
+
+We're doing a complete database cleanup in controlled phases. Start with the lowest-risk items.
+
+**PHASE 1: Fix legacy constraint and index names ONLY**
+
+This phase renames constraints and indexes but does NOT rename tables or columns yet. This is safe because constraint/index names don't affect application code.
+
+**Create database backup point first:**
+```sql
+-- Note the current timestamp for potential point-in-time recovery
+SELECT NOW() as backup_timestamp;
+```
+
+**Execute this transaction:**
+```sql
+BEGIN;
+
+-- ============================================
+-- RESERVATIONS TABLE: Constraints
+-- ============================================
+ALTER TABLE reservations RENAME CONSTRAINT unified_bookings_pkey TO reservations_pkey;
+ALTER TABLE reservations RENAME CONSTRAINT unified_bookings_asset_id_fkey TO reservations_asset_id_fkey;
+ALTER TABLE reservations RENAME CONSTRAINT unified_bookings_bond_id_fkey TO reservations_bond_id_fkey;
+ALTER TABLE reservations RENAME CONSTRAINT unified_bookings_booker_individual_id_fkey TO reservations_booker_individual_id_fkey;
+ALTER TABLE reservations RENAME CONSTRAINT unified_bookings_booker_tenant_id_fkey TO reservations_booker_tenant_id_fkey;
+
+-- ============================================
+-- RESERVATIONS TABLE: Indexes
+-- ============================================
+ALTER INDEX idx_unified_bookings_asset RENAME TO idx_reservations_asset;
+ALTER INDEX idx_unified_bookings_booker RENAME TO idx_reservations_booker;
+ALTER INDEX idx_unified_bookings_context RENAME TO idx_reservations_context;
+ALTER INDEX idx_unified_bookings_dates RENAME TO idx_reservations_dates;
+ALTER INDEX idx_unified_bookings_ref RENAME TO idx_reservations_ref;
+ALTER INDEX idx_unified_bookings_status RENAME TO idx_reservations_status;
+
+-- ============================================
+-- ASSETS TABLE: Constraints
+-- ============================================
+ALTER TABLE assets RENAME CONSTRAINT unified_assets_pkey TO assets_pkey;
+ALTER TABLE assets RENAME CONSTRAINT unified_assets_canvas_id_key TO assets_canvas_id_key;
+ALTER TABLE assets RENAME CONSTRAINT unified_assets_source_table_source_id_key TO assets_source_key;
+ALTER TABLE assets RENAME CONSTRAINT unified_assets_owner_individual_id_fkey TO assets_owner_individual_id_fkey;
+ALTER TABLE assets RENAME CONSTRAINT unified_assets_owner_tenant_id_fkey TO assets_owner_tenant_id_fkey;
+
+-- ============================================
+-- ASSETS TABLE: Indexes (list all idx_unified_assets_* indexes)
+-- ============================================
+-- Query first to get exact names:
+-- SELECT indexname FROM pg_indexes WHERE indexname LIKE 'idx_unified_assets%' OR indexname LIKE 'unified_assets%';
+-- Then rename each one
+
+COMMIT;
+```
+
+**After execution:**
+1. Verify the app still starts
+2. Run: `SELECT conname FROM pg_constraint WHERE conname LIKE '%unified%';` (should return 0 rows)
+3. Run: `SELECT indexname FROM pg_indexes WHERE indexname LIKE '%unified%';` (should return 0 rows)
+4. Report results
+
+**DO NOT proceed to Phase 2 until I confirm Phase 1 is verified.**
