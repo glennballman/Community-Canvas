@@ -14,7 +14,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { format, addDays } from "date-fns";
 import { 
   ArrowLeft, Calendar as CalendarIcon, Check, MapPin, 
-  Users, Bed, Bath, Star, Loader2, AlertCircle 
+  Users, Bed, Bath, Star, Loader2, AlertCircle, Car
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -126,6 +126,15 @@ function DateRangePicker({
   );
 }
 
+function ImagePlaceholder({ type }: { type: string }) {
+  const Icon = type === 'parking_spot' ? Car : MapPin;
+  return (
+    <div className="w-full h-full flex items-center justify-center text-muted-foreground bg-muted">
+      <Icon className="h-12 w-12" />
+    </div>
+  );
+}
+
 function AssetCard({ 
   asset, 
   available,
@@ -141,6 +150,12 @@ function AssetCard({
   endDate?: Date;
   onSelect: (assetId: string) => void;
 }) {
+  const [imageError, setImageError] = useState(false);
+  
+  const handleImageError = (e: React.SyntheticEvent<HTMLImageElement>) => {
+    setImageError(true);
+  };
+  
   return (
     <Card 
       className={cn(
@@ -151,16 +166,15 @@ function AssetCard({
       data-testid={`card-asset-${asset.asset_id}`}
     >
       <div className="aspect-video bg-muted relative">
-        {asset.thumbnail_url ? (
+        {asset.thumbnail_url && !imageError ? (
           <img 
             src={asset.thumbnail_url}
             alt={asset.name}
             className="w-full h-full object-cover"
+            onError={handleImageError}
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-            <MapPin className="h-12 w-12" />
-          </div>
+          <ImagePlaceholder type={asset.asset_type} />
         )}
         <Badge 
           variant={available ? "default" : "secondary"} 
@@ -392,11 +406,11 @@ export default function PortalReservePage() {
   const [showForm, setShowForm] = useState(false);
   const [confirmationNumber, setConfirmationNumber] = useState<string | null>(null);
   
+  const startStr = startDate?.toISOString().split('T')[0];
+  const endStr = endDate?.toISOString().split('T')[0];
+  
   const { data: availability, isLoading } = useQuery<AvailabilityResult>({
-    queryKey: ['/api/public/portals', portalSlug, 'availability', { 
-      start: startDate?.toISOString().split('T')[0], 
-      end: endDate?.toISOString().split('T')[0] 
-    }],
+    queryKey: [`/api/public/portals/${portalSlug}/availability?start=${startStr}&end=${endStr}`],
     enabled: !!portalSlug && !!startDate && !!endDate,
   });
   
