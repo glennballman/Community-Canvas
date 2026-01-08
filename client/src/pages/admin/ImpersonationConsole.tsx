@@ -13,7 +13,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useTenant } from '../../contexts/TenantContext';
-import { Search, AlertTriangle } from 'lucide-react';
+import { Search, AlertTriangle, ExternalLink } from 'lucide-react';
 
 // ============================================================================
 // TYPES
@@ -25,6 +25,7 @@ interface Tenant {
   slug: string;
   type: string;
   status: string;
+  portal_slug?: string | null;
 }
 
 // ============================================================================
@@ -291,25 +292,57 @@ export function ImpersonationConsole(): React.ReactElement {
                     </div>
                   </div>
                 </div>
-                <button
-                  onClick={() => handleImpersonate(tenant.id)}
-                  disabled={starting === tenant.id || impersonation.is_impersonating}
-                  style={{
-                    backgroundColor: '#7c3aed',
-                    color: 'white',
-                    border: 'none',
-                    padding: '8px 16px',
-                    borderRadius: '6px',
-                    fontSize: '14px',
-                    fontWeight: 500,
-                    cursor: starting === tenant.id || impersonation.is_impersonating 
-                      ? 'not-allowed' 
-                      : 'pointer',
-                    opacity: starting === tenant.id || impersonation.is_impersonating ? 0.5 : 1,
-                  }}
-                >
-                  {starting === tenant.id ? 'Starting...' : 'Impersonate'}
-                </button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  {tenant.portal_slug && (
+                    <a
+                      href={`/p/${tenant.portal_slug}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      title="View public site"
+                      data-testid={`link-view-site-${tenant.slug}`}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        width: '36px',
+                        height: '36px',
+                        borderRadius: '6px',
+                        backgroundColor: 'rgba(255,255,255,0.1)',
+                        color: '#9ca3af',
+                        transition: 'background-color 0.15s, color 0.15s',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.2)';
+                        e.currentTarget.style.color = 'white';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.1)';
+                        e.currentTarget.style.color = '#9ca3af';
+                      }}
+                    >
+                      <ExternalLink size={18} />
+                    </a>
+                  )}
+                  <button
+                    onClick={() => handleImpersonate(tenant.id)}
+                    disabled={starting === tenant.id || impersonation.is_impersonating}
+                    style={{
+                      backgroundColor: '#7c3aed',
+                      color: 'white',
+                      border: 'none',
+                      padding: '8px 16px',
+                      borderRadius: '6px',
+                      fontSize: '14px',
+                      fontWeight: 500,
+                      cursor: starting === tenant.id || impersonation.is_impersonating 
+                        ? 'not-allowed' 
+                        : 'pointer',
+                      opacity: starting === tenant.id || impersonation.is_impersonating ? 0.5 : 1,
+                    }}
+                  >
+                    {starting === tenant.id ? 'Starting...' : 'Impersonate'}
+                  </button>
+                </div>
               </div>
             ))}
 
