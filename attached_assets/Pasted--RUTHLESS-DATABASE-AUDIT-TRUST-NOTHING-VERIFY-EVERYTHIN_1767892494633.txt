@@ -1,0 +1,156 @@
+**RUTHLESS DATABASE AUDIT - TRUST NOTHING, VERIFY EVERYTHING**
+
+We've done 6 phases of cleanup. Now we verify EVERYTHING independently. Run each query and report RAW RESULTS - no summaries, no "looks good", just data.
+
+**SECTION 1: TABLE NAMING**
+```sql
+-- Q1: ALL tables without cc_ prefix (should be only system tables)
+SELECT tablename, 
+       CASE 
+         WHEN tablename IN ('session', 'spatial_ref_sys', 'migrations', 'schema_migrations', 'drizzle_migrations') THEN 'SYSTEM-OK'
+         ELSE 'NEEDS FIX'
+       END as status
+FROM pg_tables 
+WHERE schemaname = 'public' 
+  AND tablename NOT LIKE 'cc_%'
+ORDER BY status DESC, tablename;
+```
+
+**SECTION 2: CONSTRAINT NAMING**
+```sql
+-- Q2: ALL constraints that don't follow cc_* pattern (on cc_ tables)
+SELECT conrelid::regclass as table_name, conname, contype
+FROM pg_constraint 
+WHERE conrelid::regclass::text LIKE 'cc_%'
+  AND conname NOT LIKE 'cc_%'
+ORDER BY table_name, conname;
+
+-- Q3: ANY constraints with legacy keywords
+SELECT conrelid::regclass as table_name, conname
+FROM pg_constraint 
+WHERE conname LIKE '%unified%'
+   OR conname LIKE '%booker%'
+   OR conname LIKE '%booking%'
+   OR conname LIKE '%staging_%'
+   OR conname LIKE '%sr_%'
+ORDER BY table_name;
+```
+
+**SECTION 3: INDEX NAMING**
+```sql
+-- Q4: ALL indexes that don't follow pattern (on cc_ tables)
+SELECT tablename, indexname
+FROM pg_indexes 
+WHERE schemaname = 'public'
+  AND tablename LIKE 'cc_%'
+  AND indexname NOT LIKE 'cc_%'
+  AND indexname NOT LIKE 'idx_cc_%'
+ORDER BY tablename, indexname;
+
+-- Q5: ANY indexes with legacy keywords
+SELECT tablename, indexname
+FROM pg_indexes 
+WHERE schemaname = 'public'
+  AND (indexname LIKE '%unified%'
+       OR indexname LIKE '%booker%'
+       OR indexname LIKE '%booking%'
+       OR indexname LIKE 'staging_%'
+       OR indexname LIKE 'sr_%'
+       OR indexname LIKE 'idx_staging_%'
+       OR indexname LIKE 'idx_sr_%')
+ORDER BY tablename;
+```
+
+**SECTION 4: COLUMN NAMING**
+```sql
+-- Q6: ALL columns with 'booker' anywhere
+SELECT table_name, column_name
+FROM information_schema.columns
+WHERE table_schema = 'public'
+  AND column_name LIKE '%booker%'
+ORDER BY table_name;
+
+-- Q7: ALL columns with 'unified' anywhere
+SELECT table_name, column_name
+FROM information_schema.columns
+WHERE table_schema = 'public'
+  AND column_name LIKE '%unified%'
+ORDER BY table_name;
+
+-- Q8: Columns named 'starts_at' or 'ends_at' (should be start_date/end_date)
+SELECT table_name, column_name
+FROM information_schema.columns
+WHERE table_schema = 'public'
+  AND column_name IN ('starts_at', 'ends_at')
+ORDER BY table_name;
+
+-- Q9: Columns with 'num_' prefix (should be descriptive names)
+SELECT table_name, column_name
+FROM information_schema.columns
+WHERE table_schema = 'public'
+  AND column_name LIKE 'num_%'
+ORDER BY table_name, column_name;
+
+-- Q10: Columns named 'booking_ref' (should be confirmation_number)
+SELECT table_name, column_name
+FROM information_schema.columns
+WHERE table_schema = 'public'
+  AND column_name = 'booking_ref'
+ORDER BY table_name;
+```
+
+**SECTION 5: CODE REFERENCES**
+```bash
+# Q11: Any code still referencing old table names
+echo "=== References to 'staging_' (not cc_staging_) ==="
+grep -rn "FROM staging_\|INTO staging_\|UPDATE staging_\|JOIN staging_\|\"staging_" --include="*.ts" --include="*.tsx" server/ client/ shared/ 2>/dev/null | grep -v "cc_staging" | grep -v node_modules | head -50
+
+echo "=== References to 'sr_' (not cc_sr_) ==="
+grep -rn "FROM sr_\|INTO sr_\|UPDATE sr_\|JOIN sr_\|\"sr_" --include="*.ts" --include="*.tsx" server/ client/ shared/ 2>/dev/null | grep -v "cc_sr" | grep -v node_modules | head -50
+
+echo "=== References to 'unified_' ==="
+grep -rn "unified_" --include="*.ts" --include="*.tsx" server/ client/ shared/ 2>/dev/null | grep -v node_modules | head -50
+
+echo "=== References to 'booker_' ==="
+grep -rn "booker_" --include="*.ts" --include="*.tsx" server/ client/ shared/ 2>/dev/null | grep -v node_modules | head -50
+
+echo "=== References to old column names in reservations ==="
+grep -rn "starts_at\|ends_at\|num_guests\|booking_ref" --include="*.ts" --include="*.tsx" server/ client/ shared/ 2>/dev/null | grep -v node_modules | grep -v "\.sql" | head -50
+```
+
+**SECTION 6: SCHEMA DEFINITION CHECK**
+```bash
+# Q12: Check shared/schema.ts for any legacy references
+echo "=== Schema file audit ==="
+grep -n "booker\|unified\|starts_at\|ends_at\|num_guests\|booking_ref" shared/schema.ts 2>/dev/null | head -50
+```
+
+**SECTION 7: FOREIGN KEY INTEGRITY**
+```sql
+-- Q13: Foreign keys referencing non-cc_ tables (except system tables)
+SELECT 
+    tc.table_name as from_table,
+    kcu.column_name,
+    ccu.table_name AS to_table,
+    tc.constraint_name
+FROM information_schema.table_constraints AS tc
+JOIN information_schema.key_column_usage AS kcu
+    ON tc.constraint_name = kcu.constraint_name
+JOIN information_schema.constraint_column_usage AS ccu
+    ON ccu.constraint_name = tc.constraint_name
+WHERE tc.constraint_type = 'FOREIGN KEY'
+  AND tc.table_schema = 'public'
+  AND ccu.table_name NOT LIKE 'cc_%'
+  AND ccu.table_name NOT IN ('session', 'spatial_ref_sys')
+ORDER BY tc.table_name;
+```
+
+**OUTPUT FORMAT**
+
+For each query, show:
+1. The query number (Q1, Q2, etc.)
+2. Row count returned
+3. If rows > 0, show ALL rows (not just a sample)
+4. If rows = 0, just say "0 rows - CLEAN"
+
+**DO NOT SUMMARIZE. DO NOT SAY "LOOKS GOOD". SHOW ME THE RAW DATA.**
