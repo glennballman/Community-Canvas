@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Building2, Users, Globe, Home, User, Search, Plus, Edit, UserPlus, Shield, Briefcase, Landmark } from 'lucide-react';
+import { Building2, Users, Globe, Home, User, Search, Plus, Edit, UserPlus, Shield, Briefcase, Landmark, ExternalLink } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface Tenant {
@@ -24,6 +24,7 @@ interface Tenant {
     owner_email: string;
     owner_given_name: string;
     owner_family_name: string;
+    portal_slug?: string | null;
 }
 
 interface TenantMember {
@@ -336,6 +337,19 @@ export default function TenantsManagement() {
                                                 <Users className="w-4 h-4 mr-2" />
                                                 Manage Members
                                             </Button>
+                                            {selectedTenant.portal_slug && (
+                                                <a
+                                                    href={`/p/${selectedTenant.portal_slug}`}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="block"
+                                                >
+                                                    <Button variant="outline" className="w-full" size="sm" data-testid="button-view-public-site">
+                                                        <ExternalLink className="w-4 h-4 mr-2" />
+                                                        View Public Site
+                                                    </Button>
+                                                </a>
+                                            )}
                                         </div>
                                     </>
                                 )}

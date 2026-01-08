@@ -29,13 +29,19 @@ router.get('/', async (req: AuthRequest, res: Response) => {
     
     let query = `
       SELECT 
-        id,
-        name,
-        slug,
-        tenant_type as type,
-        status,
-        created_at
-      FROM cc_tenants
+        t.id,
+        t.name,
+        t.slug,
+        t.tenant_type as type,
+        t.status,
+        t.created_at,
+        p.slug as portal_slug
+      FROM cc_tenants t
+      LEFT JOIN LATERAL (
+        SELECT slug FROM portals 
+        WHERE owning_tenant_id = t.id AND status = 'active'
+        ORDER BY created_at LIMIT 1
+      ) p ON true
       WHERE 1=1
     `;
     const params: any[] = [];
@@ -43,24 +49,24 @@ router.get('/', async (req: AuthRequest, res: Response) => {
     
     // Optional filters
     if (search) {
-      query += ` AND (name ILIKE $${paramIndex} OR slug ILIKE $${paramIndex})`;
+      query += ` AND (t.name ILIKE $${paramIndex} OR t.slug ILIKE $${paramIndex})`;
       params.push(`%${search}%`);
       paramIndex++;
     }
     
     if (type) {
-      query += ` AND tenant_type = $${paramIndex}`;
+      query += ` AND t.tenant_type = $${paramIndex}`;
       params.push(type);
       paramIndex++;
     }
     
     if (status) {
-      query += ` AND status = $${paramIndex}`;
+      query += ` AND t.status = $${paramIndex}`;
       params.push(status);
       paramIndex++;
     }
     
-    query += ` ORDER BY tenant_type, name ASC`;
+    query += ` ORDER BY t.tenant_type, t.name ASC`;
     
     const result = await serviceQuery(query, params);
     
@@ -72,6 +78,7 @@ router.get('/', async (req: AuthRequest, res: Response) => {
         type: t.type,
         status: t.status || 'active',
         created_at: t.created_at,
+        portal_slug: t.portal_slug || null,
       })),
     });
     
@@ -91,9 +98,14 @@ router.get('/:id', async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
     
     const result = await serviceQuery(`
-      SELECT *
-      FROM cc_tenants
-      WHERE id = $1
+      SELECT t.*, p.slug as portal_slug
+      FROM cc_tenants t
+      LEFT JOIN LATERAL (
+        SELECT slug FROM portals 
+        WHERE owning_tenant_id = t.id AND status = 'active'
+        ORDER BY created_at LIMIT 1
+      ) p ON true
+      WHERE t.id = $1
     `, [id]);
     
     if (result.rows.length === 0) {
@@ -114,6 +126,7 @@ router.get('/:id', async (req: AuthRequest, res: Response) => {
         ...tenant,
         type: tenant.tenant_type,
         member_count: parseInt(memberResult.rows[0].count, 10),
+        portal_slug: tenant.portal_slug || null,
       },
     });
     

@@ -9,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Shield, Search, Users, Building2, Clock, AlertTriangle, Zap } from 'lucide-react';
+import { Shield, Search, Users, Building2, Clock, AlertTriangle, Zap, ExternalLink } from 'lucide-react';
 import { useImpersonationQAMode } from '@/pages/AdminSettings';
 
 interface Tenant {
@@ -17,6 +17,7 @@ interface Tenant {
   name: string;
   slug: string;
   type: string;
+  portal_slug?: string | null;
 }
 
 interface Individual {
@@ -241,23 +242,42 @@ export default function ImpersonationConsole() {
                     <p className="text-muted-foreground text-sm p-2">No tenants found</p>
                   ) : (
                     filteredTenants.map(tenant => (
-                      <button
+                      <div
                         key={tenant.id}
-                        onClick={() => setSelectedTenant(tenant)}
-                        className={`flex items-center gap-3 p-3 rounded-md text-left transition-colors ${
+                        className={`flex items-center gap-3 p-3 rounded-md transition-colors ${
                           selectedTenant?.id === tenant.id
                             ? 'bg-primary/10 border border-primary'
                             : 'hover-elevate border border-transparent'
                         }`}
-                        data-testid={`button-tenant-${tenant.slug}`}
                       >
-                        <Building2 className="w-5 h-5 text-muted-foreground" />
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium truncate">{tenant.name}</p>
-                          <p className="text-xs text-muted-foreground">{tenant.slug}</p>
+                        <button
+                          onClick={() => setSelectedTenant(tenant)}
+                          className="flex items-center gap-3 flex-1 min-w-0 text-left"
+                          data-testid={`button-tenant-${tenant.slug}`}
+                        >
+                          <Building2 className="w-5 h-5 text-muted-foreground" />
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium truncate">{tenant.name}</p>
+                            <p className="text-xs text-muted-foreground">{tenant.slug}</p>
+                          </div>
+                        </button>
+                        <div className="flex items-center gap-2 shrink-0">
+                          {tenant.portal_slug && (
+                            <a
+                              href={`/p/${tenant.portal_slug}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              onClick={(e) => e.stopPropagation()}
+                              className="p-1.5 rounded-md hover-elevate text-muted-foreground hover:text-foreground"
+                              title="View public site"
+                              data-testid={`link-view-site-${tenant.slug}`}
+                            >
+                              <ExternalLink className="w-4 h-4" />
+                            </a>
+                          )}
+                          <Badge variant="secondary" className="text-xs">{tenant.type}</Badge>
                         </div>
-                        <Badge variant="secondary" className="text-xs">{tenant.type}</Badge>
-                      </button>
+                      </div>
                     ))
                   )}
                 </div>

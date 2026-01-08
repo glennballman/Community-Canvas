@@ -912,25 +912,31 @@ router.get(
       
       let query = `
         SELECT 
-          id,
-          name,
-          slug,
-          tenant_type as type,
-          created_at,
-          (SELECT COUNT(*) FROM cc_tenant_users WHERE tenant_id = cc_tenants.id) as member_count
-        FROM cc_tenants
+          t.id,
+          t.name,
+          t.slug,
+          t.tenant_type as type,
+          t.created_at,
+          (SELECT COUNT(*) FROM cc_tenant_users WHERE tenant_id = t.id) as member_count,
+          p.slug as portal_slug
+        FROM cc_tenants t
+        LEFT JOIN LATERAL (
+          SELECT slug FROM portals 
+          WHERE owning_tenant_id = t.id AND status = 'active'
+          ORDER BY created_at LIMIT 1
+        ) p ON true
         WHERE 1=1
       `;
       const params: any[] = [];
       let paramIdx = 1;
       
       if (q && typeof q === 'string' && q.trim()) {
-        query += ` AND (name ILIKE $${paramIdx} OR slug ILIKE $${paramIdx})`;
+        query += ` AND (t.name ILIKE $${paramIdx} OR t.slug ILIKE $${paramIdx})`;
         params.push(`%${q.trim()}%`);
         paramIdx++;
       }
       
-      query += ` ORDER BY name ASC LIMIT $${paramIdx} OFFSET $${paramIdx + 1}`;
+      query += ` ORDER BY t.name ASC LIMIT $${paramIdx} OFFSET $${paramIdx + 1}`;
       params.push(parseInt(limit as string), parseInt(offset as string));
       
       const result = await serviceQuery(query, params);

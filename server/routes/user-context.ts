@@ -61,11 +61,16 @@ router.get('/me/context', authenticateToken, async (req: AuthRequest, res: Respo
     if (impersonation?.tenant_id && impersonation?.expires_at) {
       // Check if impersonation is still valid
       if (new Date(impersonation.expires_at) > new Date()) {
-        // Get impersonated tenant info
+        // Get impersonated tenant info with portal slug
         const tenantResult = await serviceQuery(`
-          SELECT id, name, tenant_type, slug
-          FROM cc_tenants
-          WHERE id = $1
+          SELECT t.id, t.name, t.tenant_type, t.slug, p.slug as portal_slug
+          FROM cc_tenants t
+          LEFT JOIN LATERAL (
+            SELECT slug FROM portals 
+            WHERE owning_tenant_id = t.id AND status = 'active'
+            ORDER BY created_at LIMIT 1
+          ) p ON true
+          WHERE t.id = $1
         `, [impersonation.tenant_id]);
         
         if (tenantResult.rows.length > 0) {
@@ -99,6 +104,7 @@ router.get('/me/context', authenticateToken, async (req: AuthRequest, res: Respo
         id: impersonatedTenant.id,
         name: impersonatedTenant.name,
         type: impersonatedTenant.tenant_type,
+        portal_slug: impersonatedTenant.portal_slug || null,
       } : null,
       impersonation_expires_at: impersonation?.expires_at || null,
     });

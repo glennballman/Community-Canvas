@@ -45,6 +45,7 @@ export interface ImpersonationState {
   tenant_id?: string;
   tenant_name?: string;
   tenant_type?: string;
+  portal_slug?: string;
   expires_at?: string;
 }
 
@@ -151,6 +152,7 @@ export function TenantProvider({ children }: TenantProviderProps) {
           tenant_id: data.impersonated_tenant.id,
           tenant_name: data.impersonated_tenant.name,
           tenant_type: data.impersonated_tenant.type,
+          portal_slug: data.impersonated_tenant.portal_slug,
           expires_at: data.impersonation_expires_at,
         });
         // When impersonating, current tenant is the impersonated tenant

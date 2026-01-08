@@ -433,7 +433,7 @@ export default function PortalConfigPage() {
                     </p>
                     <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
                       <a
-                        href={`/c/${selectedCommunity.portal_slug}`}
+                        href={`/p/${selectedCommunity.portal_slug}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         data-testid="button-open-preview"
@@ -453,7 +453,7 @@ export default function PortalConfigPage() {
                         Open preview
                       </a>
                       <button
-                        onClick={() => navigator.clipboard.writeText(`${window.location.origin}/c/${selectedCommunity.portal_slug}`)}
+                        onClick={() => navigator.clipboard.writeText(`${window.location.origin}/p/${selectedCommunity.portal_slug}`)}
                         data-testid="button-copy-link"
                         style={{
                           display: 'inline-flex',

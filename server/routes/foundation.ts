@@ -421,10 +421,16 @@ router.get('/tenants', authenticateToken, async (req: AuthRequest, res: Response
                 COUNT(DISTINCT tu.user_id) as member_count,
                 u.email as owner_email,
                 u.given_name as owner_given_name,
-                u.family_name as owner_family_name
+                u.family_name as owner_family_name,
+                p.slug as portal_slug
             FROM cc_tenants t
             LEFT JOIN cc_tenant_users tu ON tu.tenant_id = t.id AND tu.status = 'active'
             LEFT JOIN cc_users u ON u.id = t.owner_user_id
+            LEFT JOIN LATERAL (
+                SELECT slug FROM portals 
+                WHERE owning_tenant_id = t.id AND status = 'active'
+                ORDER BY created_at LIMIT 1
+            ) p ON true
             WHERE 1=1
         `;
         const params: any[] = [];
@@ -454,7 +460,7 @@ router.get('/tenants', authenticateToken, async (req: AuthRequest, res: Response
             params.push(`%${search}%`);
         }
 
-        query += ` GROUP BY t.id, u.email, u.given_name, u.family_name ORDER BY t.tenant_type, t.name`;
+        query += ` GROUP BY t.id, u.email, u.given_name, u.family_name, p.slug ORDER BY t.tenant_type, t.name`;
 
         const result = await serviceQuery(query, params);
 
@@ -477,7 +483,16 @@ router.get('/tenants/:id', authenticateToken, loadTenantContext, async (req: Aut
             return res.status(403).json({ success: false, error: 'Access denied' });
         }
 
-        const tenantResult = await serviceQuery('SELECT * FROM cc_tenants WHERE id = $1', [id]);
+        const tenantResult = await serviceQuery(`
+            SELECT t.*, p.slug as portal_slug
+            FROM cc_tenants t
+            LEFT JOIN LATERAL (
+                SELECT slug FROM portals 
+                WHERE owning_tenant_id = t.id AND status = 'active'
+                ORDER BY created_at LIMIT 1
+            ) p ON true
+            WHERE t.id = $1
+        `, [id]);
 
         if (tenantResult.rows.length === 0) {
             return res.status(404).json({ success: false, error: 'Tenant not found' });
