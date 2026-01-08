@@ -1,0 +1,135 @@
+Prompt 5: Add Basic Integration Tests (🟢 LOW)
+**FEATURE: Add Basic Integration Tests**
+
+The project has no visible test coverage. Add foundational integration tests for critical flows.
+
+**Task:**
+
+1. Create test directory structure if it doesn't exist:
+tests/
+integration/
+reservations.test.ts
+articles.test.ts
+schema-org.test.ts
+
+2. Install test dependencies if needed:
+```bash
+npm install -D vitest @testing-library/react jsdom
+```
+
+3. Add vitest config (if not present) in `vitest.config.ts`:
+```typescript
+import { defineConfig } from 'vitest/config';
+import path from 'path';
+
+export default defineConfig({
+  test: {
+    environment: 'jsdom',
+    globals: true,
+  },
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './'),
+    },
+  },
+});
+```
+
+4. Create `tests/integration/reservations.test.ts`:
+```typescript
+import { describe, it, expect } from 'vitest';
+
+describe('Reservations', () => {
+  it('should have correct column names (schema.org aligned)', async () => {
+    // Verify the schema uses new column names
+    const expectedColumns = [
+      'customer_id',      // not booker_individual_id
+      'provider_id',      // not booker_tenant_id
+      'start_date',       // not starts_at
+      'end_date',         // not ends_at
+      'party_size',       // not num_guests
+      'confirmation_number', // not booking_ref
+    ];
+    
+    // This is a schema validation test
+    expectedColumns.forEach(col => {
+      expect(col).not.toContain('booker');
+      expect(col).not.toContain('num_');
+      expect(col).not.toMatch(/_at$/);
+    });
+  });
+
+  it('should validate reservation data structure', () => {
+    const validReservation = {
+      customer_id: null,
+      provider_id: 'uuid-here',
+      start_date: new Date('2026-01-09'),
+      end_date: new Date('2026-01-10'),
+      party_size: 1,
+      confirmation_number: 'ABC123',
+      status: 'pending',
+    };
+    
+    expect(validReservation.start_date).toBeInstanceOf(Date);
+    expect(validReservation.end_date).toBeInstanceOf(Date);
+    expect(validReservation.party_size).toBeGreaterThan(0);
+  });
+});
+```
+
+5. Create `tests/integration/schema-org.test.ts`:
+```typescript
+import { describe, it, expect } from 'vitest';
+// Import your JSON-LD generators
+// import { generateArticleJsonLd, generateHowToJsonLd, generateFaqPageJsonLd } from '@/server/lib/schema-org';
+
+describe('Schema.org JSON-LD', () => {
+  it('should generate valid Article JSON-LD', () => {
+    const mockArticle = {
+      title: 'Test Article',
+      summary: 'A test summary',
+      schema_type: 'Article',
+      updated_at: new Date(),
+    };
+    
+    // When generators are imported:
+    // const jsonLd = generateArticleJsonLd(mockArticle);
+    // expect(jsonLd['@context']).toBe('https://schema.org');
+    // expect(jsonLd['@type']).toBe('Article');
+    // expect(jsonLd.headline).toBe('Test Article');
+    
+    expect(mockArticle.title).toBeDefined();
+  });
+
+  it('should generate valid HowTo JSON-LD', () => {
+    const mockHowTo = {
+      title: 'How to Reserve Parking',
+      steps: [
+        { name: 'Select dates', text: 'Choose your check-in and check-out dates' },
+        { name: 'Pick a spot', text: 'Select an available parking spot' },
+        { name: 'Confirm', text: 'Enter your details and confirm' },
+      ],
+    };
+    
+    expect(mockHowTo.steps.length).toBe(3);
+    expect(mockHowTo.steps[0].name).toBeDefined();
+  });
+});
+```
+
+6. Add test script to `package.json`:
+```json
+{
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest"
+  }
+}
+```
+
+7. Run tests: `npm test`
+
+**Report:**
+- Test files created
+- Dependencies installed
+- Test results (pass/fail counts)
