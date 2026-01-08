@@ -1228,18 +1228,18 @@ router.get('/cc_portals/:slug/availability', async (req: Request, res: Response)
       
       // Also check cc_resource_schedule_events
       const scheduleResult = await serviceQuery(`
-        SELECT id, starts_at, ends_at, status
+        SELECT id, start_date, end_date, status
         FROM cc_resource_schedule_events
         WHERE resource_id = $1
           AND status NOT IN ('cancelled')
           AND (
-            (starts_at < $3 AND ends_at > $2)
+            (start_date < $3 AND end_date > $2)
           )
       `, [asset.id, startDate, endDate]);
       
       const busyPeriods = [
         ...conflictsResult.rows.map(r => ({ start: r.start_date, end: r.end_date, source: 'reservation' })),
-        ...scheduleResult.rows.map(r => ({ start: r.starts_at, end: r.ends_at, source: 'schedule' }))
+        ...scheduleResult.rows.map(r => ({ start: r.start_date, end: r.end_date, source: 'schedule' }))
       ];
       
       const isAvailable = busyPeriods.length === 0;
@@ -1330,12 +1330,12 @@ router.get('/cc_portals/:slug/availability/calendar', async (req: Request, res: 
     
     // Get schedule cc_events
     const scheduleResult = await serviceQuery(`
-      SELECT starts_at, ends_at
+      SELECT start_date, end_date
       FROM cc_resource_schedule_events
       WHERE resource_id = $1::uuid
         AND status NOT IN ('cancelled')
-        AND starts_at <= $3
-        AND ends_at >= $2
+        AND start_date <= $3
+        AND end_date >= $2
     `, [asset_id, startOfMonth, endOfMonth]);
     
     const cc_events = [...reservationsResult.rows, ...scheduleResult.rows];
@@ -1349,8 +1349,8 @@ router.get('/cc_portals/:slug/availability/calendar', async (req: Request, res: 
       const dayEnd = new Date(year, monthNum - 1, day, 23, 59, 59);
       
       const dayEvents = cc_events.filter(e => {
-        const eStart = new Date(e.start_date || e.starts_at);
-        const eEnd = new Date(e.end_date || e.ends_at);
+        const eStart = new Date(e.start_date || e.start_date);
+        const eEnd = new Date(e.end_date || e.end_date);
         return eStart <= dayEnd && eEnd >= dayStart;
       });
       
@@ -1440,11 +1440,11 @@ router.post('/cc_portals/:slug/cc_reservations', async (req: Request, res: Respo
     `, [asset_id, startDate, endDate]);
     
     const scheduleConflicts = await serviceQuery(`
-      SELECT id, starts_at, ends_at
+      SELECT id, start_date, end_date
       FROM cc_resource_schedule_events
       WHERE resource_id = $1::uuid
         AND status NOT IN ('cancelled')
-        AND (starts_at < $3 AND ends_at > $2)
+        AND (start_date < $3 AND end_date > $2)
     `, [asset_id, startDate, endDate]);
     
     if (conflictsResult.rows.length > 0 || scheduleConflicts.rows.length > 0) {
@@ -1454,7 +1454,7 @@ router.post('/cc_portals/:slug/cc_reservations', async (req: Request, res: Respo
         message: 'This time slot is no longer available',
         conflicts: [
           ...conflictsResult.rows.map(c => ({ start: c.start_date, end: c.end_date })),
-          ...scheduleConflicts.rows.map(c => ({ start: c.starts_at, end: c.ends_at }))
+          ...scheduleConflicts.rows.map(c => ({ start: c.start_date, end: c.end_date }))
         ]
       });
     }
@@ -1489,7 +1489,7 @@ router.post('/cc_portals/:slug/cc_reservations', async (req: Request, res: Respo
     // Create schedule event to block time
     await serviceQuery(`
       INSERT INTO cc_resource_schedule_events (
-        tenant_id, resource_id, event_type, starts_at, ends_at, 
+        tenant_id, resource_id, event_type, start_date, end_date, 
         status, title, related_entity_type, related_entity_id
       ) VALUES ($1, $2, 'reservation', $3, $4, 'confirmed', $5, 'reservation', $6)
     `, [tenantId, asset_id, startDate, endDate, `${customer.name} - ${asset.name}`, reservation.id]);

@@ -19,7 +19,7 @@ interface CalendarData {
   endDate: string;
   bookings: Array<{
     id: number;
-    booking_ref: string;
+    confirmation_number: string;
     guest_name: string;
     check_in_date: string;
     check_out_date: string;

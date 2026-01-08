@@ -29,8 +29,8 @@ const scheduleQuerySchema = z.object({
 const createEventSchema = z.object({
   resource_id: z.string().uuid(),
   event_type: z.enum(['hold', 'maintenance', 'buffer']),
-  starts_at: z.string().refine(val => !isNaN(Date.parse(val)), 'Invalid starts_at'),
-  ends_at: z.string().refine(val => !isNaN(Date.parse(val)), 'Invalid ends_at'),
+  start_date: z.string().refine(val => !isNaN(Date.parse(val)), 'Invalid start_date'),
+  end_date: z.string().refine(val => !isNaN(Date.parse(val)), 'Invalid end_date'),
   title: z.string().optional(),
   notes: z.string().optional(),
   related_entity_type: z.string().optional(),
@@ -39,8 +39,8 @@ const createEventSchema = z.object({
 
 const updateEventSchema = z.object({
   event_type: z.enum(['hold', 'maintenance', 'buffer']).optional(),
-  starts_at: z.string().refine(val => !isNaN(Date.parse(val)), 'Invalid starts_at').optional(),
-  ends_at: z.string().refine(val => !isNaN(Date.parse(val)), 'Invalid ends_at').optional(),
+  start_date: z.string().refine(val => !isNaN(Date.parse(val)), 'Invalid start_date').optional(),
+  end_date: z.string().refine(val => !isNaN(Date.parse(val)), 'Invalid end_date').optional(),
   status: z.enum(['active', 'cancelled']).optional(),
   title: z.string().optional(),
   notes: z.string().optional(),
@@ -58,8 +58,8 @@ interface ConflictBlock {
   type: 'booking' | 'schedule_event';
   event_type: string;
   title: string;
-  starts_at: string;
-  ends_at: string;
+  start_date: string;
+  end_date: string;
 }
 
 async function checkTimeConflicts(
@@ -71,12 +71,12 @@ async function checkTimeConflicts(
   const conflicts: ConflictBlock[] = [];
 
   let scheduleQuery = `
-    SELECT id, event_type, title, starts_at, ends_at
+    SELECT id, event_type, title, start_date, end_date
     FROM cc_resource_schedule_events
     WHERE resource_id = $1
       AND status = 'active'
-      AND starts_at < $3
-      AND ends_at > $2
+      AND start_date < $3
+      AND end_date > $2
   `;
   const scheduleParams: any[] = [resourceId, startsAt, endsAt];
   
@@ -92,15 +92,15 @@ async function checkTimeConflicts(
       type: 'schedule_event',
       event_type: row.event_type,
       title: row.title || row.event_type,
-      starts_at: row.starts_at,
-      ends_at: row.ends_at,
+      start_date: row.start_date,
+      end_date: row.end_date,
     });
   }
 
   const bookingsResult = await pool.query(`
     SELECT b.id, 'booked' as event_type, 
            COALESCE(b.primary_guest_name, 'Booking') as title,
-           b.start_date as starts_at, b.end_date as ends_at
+           b.start_date as start_date, b.end_date as end_date
     FROM cc_reservations b
     WHERE b.asset_id = $1
       AND b.status NOT IN ('cancelled', 'no_show')
@@ -114,8 +114,8 @@ async function checkTimeConflicts(
       type: 'booking',
       event_type: row.event_type,
       title: row.title,
-      starts_at: row.starts_at,
-      ends_at: row.ends_at,
+      start_date: row.start_date,
+      end_date: row.end_date,
     });
   }
 
@@ -128,13 +128,13 @@ export async function checkMaintenanceConflict(
   endsAt: Date
 ): Promise<{ hasConflict: boolean; conflicts: ConflictBlock[] }> {
   const result = await pool.query(`
-    SELECT id, event_type, title, starts_at, ends_at
+    SELECT id, event_type, title, start_date, end_date
     FROM cc_resource_schedule_events
     WHERE resource_id = $1
       AND event_type = 'maintenance'
       AND status = 'active'
-      AND starts_at < $3
-      AND ends_at > $2
+      AND start_date < $3
+      AND end_date > $2
   `, [assetId, startsAt, endsAt]);
 
   const conflicts: ConflictBlock[] = result.rows.map(row => ({
@@ -142,8 +142,8 @@ export async function checkMaintenanceConflict(
     type: 'schedule_event' as const,
     event_type: row.event_type,
     title: row.title || 'Maintenance',
-    starts_at: row.starts_at,
-    ends_at: row.ends_at,
+    start_date: row.start_date,
+    end_date: row.end_date,
   }));
 
   return { hasConflict: conflicts.length > 0, conflicts };
@@ -177,8 +177,8 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
         e.tenant_id,
         e.resource_id,
         e.event_type,
-        e.starts_at,
-        e.ends_at,
+        e.start_date,
+        e.end_date,
         e.status,
         e.title,
         e.notes,
@@ -191,8 +191,8 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
       JOIN cc_assets a ON a.id = e.resource_id
       WHERE e.tenant_id = $1
         AND e.status = 'active'
-        AND e.starts_at < $3
-        AND e.ends_at > $2
+        AND e.start_date < $3
+        AND e.end_date > $2
     `;
     
     const params: any[] = [tenantId, from, to];
@@ -202,7 +202,7 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
       params.push(resourceIdArray);
     }
     
-    query += ` ORDER BY e.starts_at`;
+    query += ` ORDER BY e.start_date`;
 
     const result = await pool.query(query, params);
 
@@ -211,8 +211,8 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
         b.id,
         b.asset_id as resource_id,
         'booked' as event_type,
-        b.start_date as starts_at,
-        b.end_date as ends_at,
+        b.start_date as start_date,
+        b.end_date as end_date,
         'active' as status,
         COALESCE(b.primary_guest_name, 'Booking') as title,
         b.confirmation_number as notes,
@@ -246,7 +246,7 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
         ...b,
         is_booking: true
       }))
-    ].sort((a, b) => new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime());
+    ].sort((a, b) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime());
 
     return res.json({
       success: true,
@@ -278,10 +278,10 @@ router.post('/cc_events', requireAuth, async (req: Request, res: Response) => {
       return res.status(400).json({ success: false, error: 'Tenant context required' });
     }
 
-    const { resource_id, event_type, starts_at, ends_at, title, notes, related_entity_type, related_entity_id } = parsed.data;
+    const { resource_id, event_type, start_date, end_date, title, notes, related_entity_type, related_entity_id } = parsed.data;
 
-    const snappedStart = snapTo15Min(new Date(starts_at));
-    const snappedEnd = snapTo15Min(new Date(ends_at));
+    const snappedStart = snapTo15Min(new Date(start_date));
+    const snappedEnd = snapTo15Min(new Date(end_date));
 
     if (snappedEnd <= snappedStart) {
       return res.status(400).json({ 
@@ -314,7 +314,7 @@ router.post('/cc_events', requireAuth, async (req: Request, res: Response) => {
 
     const result = await pool.query(
       `INSERT INTO cc_resource_schedule_events 
-        (tenant_id, resource_id, event_type, starts_at, ends_at, title, notes, created_by_actor_id, related_entity_type, related_entity_id)
+        (tenant_id, resource_id, event_type, start_date, end_date, title, notes, created_by_actor_id, related_entity_type, related_entity_id)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
        RETURNING *`,
       [tenantId, resource_id, event_type, snappedStart, snappedEnd, title || event_type, notes, individualId, related_entity_type, related_entity_id]
@@ -377,15 +377,15 @@ router.patch('/cc_events/:id', requireAuth, async (req: Request, res: Response) 
       values.push(data.event_type);
     }
     
-    if (data.starts_at) {
-      const snapped = snapTo15Min(new Date(data.starts_at));
-      updates.push(`starts_at = $${paramIdx++}`);
+    if (data.start_date) {
+      const snapped = snapTo15Min(new Date(data.start_date));
+      updates.push(`start_date = $${paramIdx++}`);
       values.push(snapped);
     }
     
-    if (data.ends_at) {
-      const snapped = snapTo15Min(new Date(data.ends_at));
-      updates.push(`ends_at = $${paramIdx++}`);
+    if (data.end_date) {
+      const snapped = snapTo15Min(new Date(data.end_date));
+      updates.push(`end_date = $${paramIdx++}`);
       values.push(snapped);
     }
     
@@ -409,8 +409,8 @@ router.patch('/cc_events/:id', requireAuth, async (req: Request, res: Response) 
     }
 
     const existingEvent = eventCheck.rows[0];
-    const checkStart = data.starts_at ? snapTo15Min(new Date(data.starts_at)) : new Date(existingEvent.starts_at);
-    const checkEnd = data.ends_at ? snapTo15Min(new Date(data.ends_at)) : new Date(existingEvent.ends_at);
+    const checkStart = data.start_date ? snapTo15Min(new Date(data.start_date)) : new Date(existingEvent.start_date);
+    const checkEnd = data.end_date ? snapTo15Min(new Date(data.end_date)) : new Date(existingEvent.end_date);
     
     const conflicts = await checkTimeConflicts(existingEvent.resource_id, checkStart, checkEnd, id);
     if (conflicts.length > 0) {
@@ -514,8 +514,8 @@ router.get('/resources', requireAuth, async (req: Request, res: Response) => {
           WHERE e.resource_id = a.id
             AND e.event_type = 'maintenance'
             AND e.status = 'active'
-            AND e.starts_at <= now()
-            AND e.ends_at > now()
+            AND e.start_date <= now()
+            AND e.end_date > now()
         ) THEN true ELSE false END as is_under_maintenance
        FROM cc_assets a
        WHERE a.owner_tenant_id = $1
@@ -572,8 +572,8 @@ router.get('/resources', requireAuth, async (req: Request, res: Response) => {
                 WHERE c.capability_unit_id = cu.id
                   AND c.severity = 'blocking'
                   AND c.active = true
-                  AND (c.starts_at IS NULL OR c.starts_at <= now())
-                  AND (c.ends_at IS NULL OR c.ends_at >= now())
+                  AND (c.start_date IS NULL OR c.start_date <= now())
+                  AND (c.end_date IS NULL OR c.end_date >= now())
               ) THEN true
               ELSE false 
             END as is_under_maintenance
@@ -638,9 +638,9 @@ const createBookingSchema = z.object({
   primary_guest_name: z.string().min(1, 'Guest name is required'),
   primary_guest_email: z.string().email().optional(),
   primary_guest_phone: z.string().optional(),
-  starts_at: z.string().refine(val => !isNaN(Date.parse(val)), 'Invalid starts_at'),
-  ends_at: z.string().refine(val => !isNaN(Date.parse(val)), 'Invalid ends_at'),
-  num_guests: z.number().int().positive().optional(),
+  start_date: z.string().refine(val => !isNaN(Date.parse(val)), 'Invalid start_date'),
+  end_date: z.string().refine(val => !isNaN(Date.parse(val)), 'Invalid end_date'),
+  party_size: z.number().int().positive().optional(),
   special_requests: z.string().optional(),
   status: z.enum(['pending', 'confirmed']).optional(),
 });
@@ -658,16 +658,16 @@ router.get('/bookings', requireAuth, async (req: Request, res: Response) => {
     let query = `
       SELECT 
         b.id,
-        b.confirmation_number as booking_ref,
+        b.confirmation_number as confirmation_number,
         b.asset_id,
         a.name as asset_name,
         a.asset_type,
         b.primary_guest_name,
         b.primary_guest_email,
         b.primary_guest_phone,
-        b.party_size as num_guests,
-        b.start_date as starts_at,
-        b.end_date as ends_at,
+        b.party_size as party_size,
+        b.start_date as start_date,
+        b.end_date as end_date,
         b.status,
         b.payment_status,
         b.total,
@@ -733,8 +733,8 @@ router.post('/bookings', requireAuth, async (req: Request, res: Response) => {
     }
 
     const data = parsed.data;
-    const startsAt = new Date(data.starts_at);
-    const endsAt = new Date(data.ends_at);
+    const startsAt = new Date(data.start_date);
+    const endsAt = new Date(data.end_date);
 
     if (endsAt <= startsAt) {
       return res.status(400).json({ 
@@ -784,7 +784,7 @@ router.post('/bookings', requireAuth, async (req: Request, res: Response) => {
       data.primary_guest_phone || null,
       startsAt,
       endsAt,
-      data.num_guests || 1,
+      data.party_size || 1,
       data.special_requests || null,
       data.status || 'pending'
     ]);

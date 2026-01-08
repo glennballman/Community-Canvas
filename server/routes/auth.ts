@@ -698,7 +698,7 @@ router.get('/bookings', authenticateToken, async (req: AuthRequest, res: Respons
             success: true,
             bookings: result.rows.map(b => ({
                 id: b.id,
-                bookingRef: b.booking_ref,
+                bookingRef: b.confirmation_number,
                 propertyId: b.property_id,
                 propertyName: b.property_name,
                 city: b.city,
@@ -706,7 +706,7 @@ router.get('/bookings', authenticateToken, async (req: AuthRequest, res: Respons
                 thumbnailUrl: b.thumbnail_url,
                 checkInDate: b.check_in_date,
                 checkOutDate: b.check_out_date,
-                numNights: b.num_nights,
+                numNights: b.night_count,
                 totalCost: parseFloat(b.total_cost),
                 status: b.status,
                 createdAt: b.created_at

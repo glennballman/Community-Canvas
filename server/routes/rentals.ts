@@ -429,8 +429,8 @@ router.post('/:id/book', requireAuth, async (req: Request, res: Response) => {
           WHERE ac.asset_id = $1
             AND ac.severity = 'blocking'
             AND ac.active = true
-            AND (ac.starts_at IS NULL OR ac.starts_at <= $3::timestamptz)
-            AND (ac.ends_at IS NULL OR ac.ends_at >= $2::timestamptz)
+            AND (ac.start_date IS NULL OR ac.start_date <= $3::timestamptz)
+            AND (ac.end_date IS NULL OR ac.end_date >= $2::timestamptz)
           LIMIT 1
         `, [assetId, startTs, endTs]);
         
@@ -470,9 +470,9 @@ router.post('/:id/book', requireAuth, async (req: Request, res: Response) => {
         WHERE rental_item_id = $1
         AND status NOT IN ('cancelled', 'completed')
         AND (
-          (starts_at < $2::timestamptz + ($4 || ' minutes')::interval)
+          (start_date < $2::timestamptz + ($4 || ' minutes')::interval)
           AND
-          (ends_at + ($4 || ' minutes')::interval > $3::timestamptz)
+          (end_date + ($4 || ' minutes')::interval > $3::timestamptz)
         )
       `, [itemId, endTs, startTs, bufferMinutes.toString()]);
       
@@ -519,8 +519,8 @@ router.post('/:id/book', requireAuth, async (req: Request, res: Response) => {
         INSERT INTO cc_rental_bookings (
           rental_item_id,
           renter_individual_id,
-          starts_at,
-          ends_at,
+          start_date,
+          end_date,
           subtotal,
           tax,
           damage_deposit_held,
@@ -545,7 +545,7 @@ router.post('/:id/book', requireAuth, async (req: Request, res: Response) => {
         
         await client.query(`
           INSERT INTO cc_resource_schedule_events 
-            (resource_id, event_type, starts_at, ends_at, title, notes, related_entity_type, related_entity_id)
+            (resource_id, event_type, start_date, end_date, title, notes, related_entity_type, related_entity_id)
           VALUES ($1, 'buffer', $2, $3, 'Turnover', 'Auto-generated cleanup buffer', 'booking', $4)
         `, [assetLookup.rows[0].id, bufferStart, bufferEnd, bookingId]);
       }
@@ -584,8 +584,8 @@ router.get('/my-bookings', requireAuth, async (req: Request, res: Response) => {
     const result = await req.tenantQuery(`
       SELECT 
         b.id,
-        b.starts_at,
-        b.ends_at,
+        b.start_date,
+        b.end_date,
         b.total,
         b.status,
         ri.name as item_name,
@@ -596,15 +596,15 @@ router.get('/my-bookings', requireAuth, async (req: Request, res: Response) => {
       JOIN cc_rental_items ri ON ri.id = b.rental_item_id
       JOIN cc_rental_categories rc ON rc.id = ri.category_id
       WHERE b.renter_individual_id = $1
-      ORDER BY b.starts_at DESC
+      ORDER BY b.start_date DESC
     `, [individualId]);
     
     res.json({
       success: true,
       bookings: result.rows.map((row: any) => ({
         id: row.id,
-        startsAt: row.starts_at,
-        endsAt: row.ends_at,
+        startsAt: row.start_date,
+        endsAt: row.end_date,
         priceTotal: parseFloat(row.total),
         status: row.status,
         itemName: row.item_name,
@@ -633,8 +633,8 @@ router.get('/bookings', requireAuth, async (req: Request, res: Response) => {
       SELECT 
         b.id,
         b.status,
-        b.starts_at,
-        b.ends_at,
+        b.start_date,
+        b.end_date,
         b.actual_checkout_at,
         b.actual_checkin_at,
         b.pricing_model,
@@ -679,7 +679,7 @@ router.get('/bookings', requireAuth, async (req: Request, res: Response) => {
           WHEN 'pending' THEN 4
           ELSE 5
         END,
-        b.starts_at DESC
+        b.start_date DESC
     `, [individualId]);
     
     res.json({ 
@@ -687,8 +687,8 @@ router.get('/bookings', requireAuth, async (req: Request, res: Response) => {
       bookings: result.rows.map(row => ({
         id: row.id,
         status: row.status,
-        startsAt: row.starts_at,
-        endsAt: row.ends_at,
+        startsAt: row.start_date,
+        endsAt: row.end_date,
         actualCheckoutAt: row.actual_checkout_at,
         actualCheckinAt: row.actual_checkin_at,
         pricingModel: row.pricing_model,
@@ -746,7 +746,7 @@ router.post('/bookings/:id/cancel', requireAuth, async (req: Request, res: Respo
     // Use tenantTransaction - user can only cancel their own bookings
     const result = await req.tenantTransaction(async (client) => {
       const bookingResult = await client.query(`
-        SELECT id, status, starts_at 
+        SELECT id, status, start_date 
         FROM cc_rental_bookings 
         WHERE id = $1 AND renter_individual_id = $2
       `, [bookingId, individualId]);

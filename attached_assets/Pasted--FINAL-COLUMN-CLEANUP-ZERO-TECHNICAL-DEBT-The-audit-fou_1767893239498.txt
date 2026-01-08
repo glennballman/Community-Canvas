@@ -1,0 +1,180 @@
+**FINAL COLUMN CLEANUP - ZERO TECHNICAL DEBT**
+
+The audit found remaining non-standard column names. Fix ALL of them.
+
+**PHASE 7A: Fix starts_at/ends_at columns (6 tables)**
+```sql
+BEGIN;
+
+-- cc_asset_constraints
+ALTER TABLE cc_asset_constraints RENAME COLUMN starts_at TO start_date;
+ALTER TABLE cc_asset_constraints RENAME COLUMN ends_at TO end_date;
+
+-- cc_rental_bookings
+ALTER TABLE cc_rental_bookings RENAME COLUMN starts_at TO start_date;
+ALTER TABLE cc_rental_bookings RENAME COLUMN ends_at TO end_date;
+
+-- cc_resource_schedule_events
+ALTER TABLE cc_resource_schedule_events RENAME COLUMN starts_at TO start_date;
+ALTER TABLE cc_resource_schedule_events RENAME COLUMN ends_at TO end_date;
+
+COMMIT;
+```
+
+**PHASE 7B: Fix booking_ref columns (2 tables)**
+```sql
+BEGIN;
+
+ALTER TABLE cc_accommodation_bookings RENAME COLUMN booking_ref TO confirmation_number;
+ALTER TABLE cc_staging_bookings RENAME COLUMN booking_ref TO confirmation_number;
+
+COMMIT;
+```
+
+**PHASE 7C: Fix num_* columns - cc_accommodation_bookings**
+```sql
+BEGIN;
+
+ALTER TABLE cc_accommodation_bookings RENAME COLUMN num_guests TO party_size;
+
+COMMIT;
+```
+
+**PHASE 7D: Fix num_* columns - cc_staging_bookings**
+```sql
+BEGIN;
+
+ALTER TABLE cc_staging_bookings RENAME COLUMN num_adults TO adult_count;
+ALTER TABLE cc_staging_bookings RENAME COLUMN num_children TO child_count;
+ALTER TABLE cc_staging_bookings RENAME COLUMN num_horses TO horse_count;
+ALTER TABLE cc_staging_bookings RENAME COLUMN num_nights TO night_count;
+ALTER TABLE cc_staging_bookings RENAME COLUMN num_pets TO pet_count;
+ALTER TABLE cc_staging_bookings RENAME COLUMN num_vehicles TO vehicle_count;
+
+COMMIT;
+```
+
+**PHASE 7E: Fix num_* columns - cc_staging_properties**
+```sql
+BEGIN;
+
+ALTER TABLE cc_staging_properties RENAME COLUMN num_accessible_sites TO accessible_site_count;
+ALTER TABLE cc_staging_properties RENAME COLUMN num_bathrooms TO bathroom_count;
+ALTER TABLE cc_staging_properties RENAME COLUMN num_diesel_lanes TO diesel_lane_count;
+ALTER TABLE cc_staging_properties RENAME COLUMN num_dryers TO dryer_count;
+ALTER TABLE cc_staging_properties RENAME COLUMN num_horse_stalls TO horse_stall_count;
+ALTER TABLE cc_staging_properties RENAME COLUMN num_paddocks TO paddock_count;
+ALTER TABLE cc_staging_properties RENAME COLUMN num_power_hookups TO power_hookup_count;
+ALTER TABLE cc_staging_properties RENAME COLUMN num_sewer_hookups TO sewer_hookup_count;
+ALTER TABLE cc_staging_properties RENAME COLUMN num_showers TO shower_count;
+ALTER TABLE cc_staging_properties RENAME COLUMN num_truck_spots TO truck_spot_count;
+ALTER TABLE cc_staging_properties RENAME COLUMN num_washers TO washer_count;
+ALTER TABLE cc_staging_properties RENAME COLUMN num_water_hookups TO water_hookup_count;
+
+COMMIT;
+```
+
+**PHASE 7F: Fix num_* columns - cc_staging_vehicle_profiles & cc_staging_user_vehicles**
+```sql
+BEGIN;
+
+ALTER TABLE cc_staging_vehicle_profiles RENAME COLUMN num_sleeps TO sleep_capacity;
+ALTER TABLE cc_staging_vehicle_profiles RENAME COLUMN num_slides TO slide_count;
+ALTER TABLE cc_staging_user_vehicles RENAME COLUMN num_slideouts TO slideout_count;
+
+COMMIT;
+```
+
+**PHASE 7G: Recreate views that reference renamed columns**
+
+The views `v_bookings_pending_requirements` and `v_rental_checkout_gate` reference `starts_at`/`ends_at`. 
+
+1. First, get the current view definitions:
+```sql
+SELECT viewname, definition 
+FROM pg_views 
+WHERE viewname IN ('v_bookings_pending_requirements', 'v_rental_checkout_gate');
+```
+
+2. Drop and recreate each view with updated column references:
+```sql
+DROP VIEW IF EXISTS v_bookings_pending_requirements;
+DROP VIEW IF EXISTS v_rental_checkout_gate;
+
+-- Recreate with start_date/end_date instead of starts_at/ends_at
+CREATE VIEW v_bookings_pending_requirements AS
+  -- (updated definition here)
+;
+
+CREATE VIEW v_rental_checkout_gate AS
+  -- (updated definition here)
+;
+```
+
+**PHASE 7H: Update ALL code references**
+
+Search and replace in entire codebase:
+
+| Find | Replace |
+|------|---------|
+| `starts_at` (not created_at/updated_at) | `start_date` |
+| `ends_at` | `end_date` |
+| `booking_ref` | `confirmation_number` |
+| `num_guests` | `party_size` |
+| `num_adults` | `adult_count` |
+| `num_children` | `child_count` |
+| `num_horses` | `horse_count` |
+| `num_nights` | `night_count` |
+| `num_pets` | `pet_count` |
+| `num_vehicles` | `vehicle_count` |
+| `num_accessible_sites` | `accessible_site_count` |
+| `num_bathrooms` | `bathroom_count` |
+| `num_diesel_lanes` | `diesel_lane_count` |
+| `num_dryers` | `dryer_count` |
+| `num_horse_stalls` | `horse_stall_count` |
+| `num_paddocks` | `paddock_count` |
+| `num_power_hookups` | `power_hookup_count` |
+| `num_sewer_hookups` | `sewer_hookup_count` |
+| `num_showers` | `shower_count` |
+| `num_truck_spots` | `truck_spot_count` |
+| `num_washers` | `washer_count` |
+| `num_water_hookups` | `water_hookup_count` |
+| `num_sleeps` | `sleep_capacity` |
+| `num_slides` | `slide_count` |
+| `num_slideouts` | `slideout_count` |
+
+Check these locations:
+- All `server/routes/*.ts` files
+- `shared/schema.ts`
+- `server/storage.ts`
+- `client/src/**/*.tsx`
+
+**PHASE 7I: Final verification**
+
+Run the same audit queries again:
+```sql
+-- Should return 0
+SELECT table_name, column_name
+FROM information_schema.columns
+WHERE table_schema = 'public'
+  AND column_name IN ('starts_at', 'ends_at')
+  AND table_name LIKE 'cc_%';
+
+-- Should return 0
+SELECT table_name, column_name
+FROM information_schema.columns
+WHERE table_schema = 'public'
+  AND column_name LIKE 'num_%';
+
+-- Should return 0
+SELECT table_name, column_name
+FROM information_schema.columns
+WHERE table_schema = 'public'
+  AND column_name = 'booking_ref';
+```
+
+**Report:**
+- Each phase completed (7A through 7I)
+- Views recreated
+- Code files updated
+- Final verification query results (must all be 0)

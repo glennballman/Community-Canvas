@@ -2,7 +2,7 @@
  * Booking Semantics Layer
  * 
  * Human-friendly labels for booking start/end times based on asset booking_mode.
- * The system stores starts_at/ends_at in 15-minute TIMESTAMPTZ,
+ * The system stores start_date/end_date in 15-minute TIMESTAMPTZ,
  * but humans think in Arriving/Departing, Check-in/Check-out, etc.
  */
 
@@ -105,7 +105,7 @@ export function snapTo15Minutes(date: Date, direction: 'floor' | 'ceil' = 'floor
 }
 
 /**
- * Calculate ends_at from starts_at and a preset
+ * Calculate end_date from start_date and a preset
  */
 export function calculateEndFromPreset(startsAt: Date, preset: DurationPreset): Date {
   const end = new Date(startsAt);

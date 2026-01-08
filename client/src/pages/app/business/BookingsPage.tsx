@@ -19,16 +19,16 @@ import { useTenant } from '@/contexts/TenantContext';
 
 interface Booking {
   id: string;
-  booking_ref: string;
+  confirmation_number: string;
   asset_id: string;
   asset_name: string;
   asset_type: string;
   primary_guest_name: string;
   primary_guest_email: string | null;
   primary_guest_phone: string | null;
-  num_guests: number;
-  starts_at: string;
-  ends_at: string;
+  party_size: number;
+  start_date: string;
+  end_date: string;
   status: string;
   payment_status: string;
   total: number | null;
@@ -67,9 +67,9 @@ export default function BookingsPage() {
     primary_guest_name: '',
     primary_guest_email: '',
     primary_guest_phone: '',
-    starts_at: '',
-    ends_at: '',
-    num_guests: 1,
+    start_date: '',
+    end_date: '',
+    party_size: 1,
     special_requests: '',
     status: 'pending' as 'pending' | 'confirmed',
   });
@@ -132,8 +132,8 @@ export default function BookingsPage() {
       id: b.id,
       resource_id: b.asset_id,
       event_type: 'booking' as const,
-      starts_at: b.starts_at,
-      ends_at: b.ends_at,
+      start_date: b.start_date,
+      end_date: b.end_date,
       status: b.status,
       title: b.primary_guest_name,
       is_booking: true,
@@ -165,9 +165,9 @@ export default function BookingsPage() {
       primary_guest_name: '',
       primary_guest_email: '',
       primary_guest_phone: '',
-      starts_at: '',
-      ends_at: '',
-      num_guests: 1,
+      start_date: '',
+      end_date: '',
+      party_size: 1,
       special_requests: '',
       status: 'pending',
     });
@@ -181,8 +181,8 @@ export default function BookingsPage() {
       setFormData(prev => ({
         ...prev,
         asset_id: resourceId,
-        starts_at: format(slotStart, "yyyy-MM-dd'T'HH:mm"),
-        ends_at: format(endDate, "yyyy-MM-dd'T'HH:mm"),
+        start_date: format(slotStart, "yyyy-MM-dd'T'HH:mm"),
+        end_date: format(endDate, "yyyy-MM-dd'T'HH:mm"),
       }));
     }
     setCreateModalOpen(true);
@@ -190,7 +190,7 @@ export default function BookingsPage() {
 
   const handleCreateSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.asset_id || !formData.primary_guest_name || !formData.starts_at || !formData.ends_at) {
+    if (!formData.asset_id || !formData.primary_guest_name || !formData.start_date || !formData.end_date) {
       toast({ title: 'Please fill in all required fields', variant: 'destructive' });
       return;
     }
@@ -294,22 +294,22 @@ export default function BookingsPage() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="starts_at">Start *</Label>
+                  <Label htmlFor="start_date">Start *</Label>
                   <Input
-                    id="starts_at"
+                    id="start_date"
                     type="datetime-local"
-                    value={formData.starts_at}
-                    onChange={(e) => setFormData(prev => ({ ...prev, starts_at: e.target.value }))}
+                    value={formData.start_date}
+                    onChange={(e) => setFormData(prev => ({ ...prev, start_date: e.target.value }))}
                     data-testid="input-starts-at"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="ends_at">End *</Label>
+                  <Label htmlFor="end_date">End *</Label>
                   <Input
-                    id="ends_at"
+                    id="end_date"
                     type="datetime-local"
-                    value={formData.ends_at}
-                    onChange={(e) => setFormData(prev => ({ ...prev, ends_at: e.target.value }))}
+                    value={formData.end_date}
+                    onChange={(e) => setFormData(prev => ({ ...prev, end_date: e.target.value }))}
                     data-testid="input-ends-at"
                   />
                 </div>
@@ -436,7 +436,7 @@ export default function BookingsPage() {
                         <div>
                           <CardTitle className="text-lg">{booking.primary_guest_name}</CardTitle>
                           <p className="text-sm text-muted-foreground">
-                            {booking.asset_name} - {format(parseISO(booking.starts_at), 'MMM d')} to {format(parseISO(booking.ends_at), 'MMM d')}
+                            {booking.asset_name} - {format(parseISO(booking.start_date), 'MMM d')} to {format(parseISO(booking.end_date), 'MMM d')}
                           </p>
                         </div>
                         {getStatusBadge(booking.status)}
@@ -486,22 +486,22 @@ export default function BookingsPage() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="starts_at">Start *</Label>
+                <Label htmlFor="start_date">Start *</Label>
                 <Input
-                  id="starts_at"
+                  id="start_date"
                   type="datetime-local"
-                  value={formData.starts_at}
-                  onChange={(e) => setFormData(prev => ({ ...prev, starts_at: e.target.value }))}
+                  value={formData.start_date}
+                  onChange={(e) => setFormData(prev => ({ ...prev, start_date: e.target.value }))}
                   data-testid="input-starts-at"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="ends_at">End *</Label>
+                <Label htmlFor="end_date">End *</Label>
                 <Input
-                  id="ends_at"
+                  id="end_date"
                   type="datetime-local"
-                  value={formData.ends_at}
-                  onChange={(e) => setFormData(prev => ({ ...prev, ends_at: e.target.value }))}
+                  value={formData.end_date}
+                  onChange={(e) => setFormData(prev => ({ ...prev, end_date: e.target.value }))}
                   data-testid="input-ends-at"
                 />
               </div>

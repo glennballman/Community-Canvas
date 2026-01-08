@@ -582,7 +582,7 @@ router.post('/bookings/:id/cancel', async (req: Request, res: Response) => {
     const { id } = req.params;
     const { reason } = req.body;
 
-    // Find booking by ID or booking_ref
+    // Find booking by ID or confirmation_number
     const booking = await stagingStorage.findBookingByIdOrRef(id);
     
     if (!booking) {

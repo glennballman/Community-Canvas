@@ -38,8 +38,8 @@ export interface ScheduleEvent {
   id: string;
   resource_id: string;
   event_type: 'booked' | 'hold' | 'maintenance' | 'buffer' | 'booking';
-  starts_at: string;
-  ends_at: string;
+  start_date: string;
+  end_date: string;
   status: string;
   title: string;
   notes?: string;
@@ -379,8 +379,8 @@ export default function ScheduleBoard({
   }, [events]);
 
   const getEventPosition = useCallback((event: ScheduleEvent, slotStart: Date, slotEnd: Date): { left: number; width: number } | null => {
-    const eventStart = new Date(event.starts_at);
-    const eventEnd = new Date(event.ends_at);
+    const eventStart = new Date(event.start_date);
+    const eventEnd = new Date(event.end_date);
 
     if (eventEnd <= slotStart || eventStart >= slotEnd) {
       return null;
@@ -756,7 +756,7 @@ export default function ScheduleBoard({
                                           e.stopPropagation();
                                           onEventClick?.(event);
                                         }}
-                                        title={`${event.title} (${format(new Date(event.starts_at), 'HH:mm')} - ${format(new Date(event.ends_at), 'HH:mm')})`}
+                                        title={`${event.title} (${format(new Date(event.start_date), 'HH:mm')} - ${format(new Date(event.end_date), 'HH:mm')})`}
                                         data-testid={`schedule-event-${event.id}`}
                                       >
                                         {pos.width > 20 && event.title}

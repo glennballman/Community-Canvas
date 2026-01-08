@@ -30,8 +30,8 @@ const constraintSchema = z.object({
   severity: z.enum(['info', 'warning', 'blocking']).default('info'),
   details: z.string().optional().nullable(),
   active: z.boolean().default(true),
-  starts_at: z.string().datetime({ offset: true }).optional().nullable(),
-  ends_at: z.string().datetime({ offset: true }).optional().nullable(),
+  start_date: z.string().datetime({ offset: true }).optional().nullable(),
+  end_date: z.string().datetime({ offset: true }).optional().nullable(),
 });
 
 router.get('/assets/:assetId/capability-units', requireAuth, async (req: Request, res: Response) => {
@@ -64,7 +64,7 @@ router.post('/capability-units', requireAuth, async (req: Request, res: Response
     
     if (data.status === 'maintenance') {
       await req.tenantQuery(`
-        INSERT INTO cc_resource_schedule_events (resource_id, event_type, starts_at, ends_at, title, notes, status, related_entity_type, related_entity_id)
+        INSERT INTO cc_resource_schedule_events (resource_id, event_type, start_date, end_date, title, notes, status, related_entity_type, related_entity_id)
         VALUES ($1, 'maintenance', NOW(), NOW() + INTERVAL '1 day', $2, 'Auto-created from capability maintenance status', 'active', 'capability_unit', $3)
       `, [data.asset_id, `${data.name} Maintenance`, capUnit.id]);
     }
@@ -104,7 +104,7 @@ router.patch('/capability-units/:id', requireAuth, async (req: Request, res: Res
     if (status === 'maintenance' && oldStatus !== 'maintenance') {
       const assetId = existing.rows[0].asset_id;
       await req.tenantQuery(`
-        INSERT INTO cc_resource_schedule_events (resource_id, event_type, starts_at, ends_at, title, notes, status, related_entity_type, related_entity_id)
+        INSERT INTO cc_resource_schedule_events (resource_id, event_type, start_date, end_date, title, notes, status, related_entity_type, related_entity_id)
         VALUES ($1, 'maintenance', NOW(), NOW() + INTERVAL '7 days', $2, 'Auto-created from capability maintenance status', 'active', 'capability_unit', $3)
       `, [assetId, `${result.rows[0].name} Maintenance`, id]);
     } else if (status !== 'maintenance' && oldStatus === 'maintenance') {
@@ -236,11 +236,11 @@ router.post('/constraints', requireAuth, async (req: Request, res: Response) => 
   try {
     const data = constraintSchema.parse(req.body);
     
-    const startsAt = data.starts_at ? new Date(data.starts_at) : null;
-    const endsAt = data.ends_at ? new Date(data.ends_at) : null;
+    const startsAt = data.start_date ? new Date(data.start_date) : null;
+    const endsAt = data.end_date ? new Date(data.end_date) : null;
     
     const result = await req.tenantQuery(`
-      INSERT INTO cc_asset_constraints (asset_id, capability_unit_id, constraint_type, severity, details, active, starts_at, ends_at)
+      INSERT INTO cc_asset_constraints (asset_id, capability_unit_id, constraint_type, severity, details, active, start_date, end_date)
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
       RETURNING *
     `, [
@@ -256,7 +256,7 @@ router.post('/constraints', requireAuth, async (req: Request, res: Response) => 
     
     if (data.severity === 'blocking' && startsAt && endsAt) {
       await req.tenantQuery(`
-        INSERT INTO cc_resource_schedule_events (resource_id, event_type, starts_at, ends_at, title, notes, status, related_entity_type, related_entity_id)
+        INSERT INTO cc_resource_schedule_events (resource_id, event_type, start_date, end_date, title, notes, status, related_entity_type, related_entity_id)
         VALUES ($1, 'maintenance', $2, $3, $4, $5, 'active', 'constraint', $6)
       `, [
         data.asset_id,
@@ -281,10 +281,10 @@ router.post('/constraints', requireAuth, async (req: Request, res: Response) => 
 router.patch('/constraints/:id', requireAuth, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { constraint_type, severity, details, active, starts_at, ends_at } = req.body;
+    const { constraint_type, severity, details, active, start_date, end_date } = req.body;
     
-    const startsAt = starts_at ? new Date(starts_at) : undefined;
-    const endsAt = ends_at ? new Date(ends_at) : undefined;
+    const startsAt = start_date ? new Date(start_date) : undefined;
+    const endsAt = end_date ? new Date(end_date) : undefined;
     
     const result = await req.tenantQuery(`
       UPDATE cc_asset_constraints
@@ -292,8 +292,8 @@ router.patch('/constraints/:id', requireAuth, async (req: Request, res: Response
           severity = COALESCE($3, severity),
           details = COALESCE($4, details),
           active = COALESCE($5, active),
-          starts_at = COALESCE($6, starts_at),
-          ends_at = COALESCE($7, ends_at),
+          start_date = COALESCE($6, start_date),
+          end_date = COALESCE($7, end_date),
           updated_at = NOW()
       WHERE id = $1
       RETURNING *

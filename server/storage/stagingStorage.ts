@@ -549,7 +549,7 @@ export async function getBookingByRef(ref: string): Promise<StagingBooking | nul
     FROM cc_staging_bookings b
     LEFT JOIN cc_staging_properties sp ON sp.id = b.property_id
     LEFT JOIN cc_staging_spots ss ON ss.id = b.spot_id
-    WHERE b.booking_ref = ${ref}
+    WHERE b.confirmation_number = ${ref}
   `);
   if (result.rows.length === 0) return null;
   return snakeToCamel(result.rows[0] as Record<string, any>) as StagingBooking;
@@ -632,7 +632,7 @@ export async function findBookingByIdOrRef(idOrRef: string): Promise<StagingBook
   const result = await db.execute(sql`
     SELECT * FROM cc_staging_bookings 
     WHERE id = ${isNaN(numericId) ? -1 : numericId} 
-       OR booking_ref = ${idOrRef}
+       OR confirmation_number = ${idOrRef}
     LIMIT 1
   `);
   

@@ -147,7 +147,7 @@ router.get('/bookings', async (req: AuthRequest, res: Response) => {
             success: true,
             bookings: result.rows.map(b => ({
                 id: b.id,
-                bookingRef: b.booking_ref,
+                bookingRef: b.confirmation_number,
                 propertyId: b.property_id,
                 propertyName: b.property_name,
                 city: b.city,
@@ -202,7 +202,7 @@ router.put('/bookings/:id/status', async (req: AuthRequest, res: Response) => {
                 host_notes = COALESCE($3, host_notes),
                 updated_at = NOW()
             WHERE id = $1
-            RETURNING id, booking_ref, status
+            RETURNING id, confirmation_number, status
         `, [id, status, notes]);
 
         res.json({ success: true, booking: result.rows[0] });
@@ -231,7 +231,7 @@ router.get('/properties/:id/calendar', async (req: AuthRequest, res: Response) =
         const end = endDate || new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
         const bookingsResult = await serviceQuery(`
-            SELECT id, booking_ref, guest_name, check_in_date, check_out_date, status, num_nights
+            SELECT id, confirmation_number, guest_name, check_in_date, check_out_date, status, num_nights
             FROM cc_staging_bookings
             WHERE property_id = $1 
             AND status IN ('pending', 'confirmed')

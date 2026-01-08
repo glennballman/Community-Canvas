@@ -20,8 +20,8 @@ interface ConflictBlock {
   type: string;
   event_type: string;
   title: string;
-  starts_at: string;
-  ends_at: string;
+  start_date: string;
+  end_date: string;
 }
 
 function snapTo15MinUp(date: Date): Date {
@@ -73,8 +73,8 @@ export default function OperationsBoard() {
   const [eventForm, setEventForm] = useState({
     resource_id: '',
     event_type: 'hold' as 'hold' | 'maintenance' | 'buffer',
-    starts_at: '',
-    ends_at: '',
+    start_date: '',
+    end_date: '',
     title: '',
     notes: '',
   });
@@ -216,8 +216,8 @@ export default function OperationsBoard() {
     setEventForm({
       resource_id: lastUsedResource || '',
       event_type: 'hold',
-      starts_at: format(now, "yyyy-MM-dd'T'HH:mm"),
-      ends_at: format(end, "yyyy-MM-dd'T'HH:mm"),
+      start_date: format(now, "yyyy-MM-dd'T'HH:mm"),
+      end_date: format(end, "yyyy-MM-dd'T'HH:mm"),
       title: '',
       notes: '',
     });
@@ -255,8 +255,8 @@ export default function OperationsBoard() {
     setEventForm({
       resource_id: resourceId,
       event_type: 'hold',
-      starts_at: format(snappedStart, "yyyy-MM-dd'T'HH:mm"),
-      ends_at: format(snappedEnd, "yyyy-MM-dd'T'HH:mm"),
+      start_date: format(snappedStart, "yyyy-MM-dd'T'HH:mm"),
+      end_date: format(snappedEnd, "yyyy-MM-dd'T'HH:mm"),
       title: '',
       notes: '',
     });
@@ -269,7 +269,7 @@ export default function OperationsBoard() {
     setShowEventDialog(true);
   }
 
-  function handleTimeChange(field: 'starts_at' | 'ends_at', value: string) {
+  function handleTimeChange(field: 'start_date' | 'end_date', value: string) {
     const date = new Date(value);
     const snapped = snapTo15Min(date);
     setEventForm(prev => ({ ...prev, [field]: format(snapped, "yyyy-MM-dd'T'HH:mm") }));
@@ -277,15 +277,15 @@ export default function OperationsBoard() {
   }
 
   function handleCreateEvent() {
-    if (!eventForm.resource_id || !eventForm.starts_at || !eventForm.ends_at) {
+    if (!eventForm.resource_id || !eventForm.start_date || !eventForm.end_date) {
       return;
     }
 
     setConflictError(null);
     createEventMutation.mutate({
       ...eventForm,
-      starts_at: new Date(eventForm.starts_at).toISOString(),
-      ends_at: new Date(eventForm.ends_at).toISOString(),
+      start_date: new Date(eventForm.start_date).toISOString(),
+      end_date: new Date(eventForm.end_date).toISOString(),
       title: eventForm.title || eventForm.event_type,
     });
   }
@@ -355,7 +355,7 @@ export default function OperationsBoard() {
                     <ul className="mt-2 space-y-1 text-destructive/80">
                       {conflictError.conflicts.map((c) => (
                         <li key={c.id}>
-                          {c.title} ({c.event_type}): {format(new Date(c.starts_at), 'MMM d HH:mm')} - {format(new Date(c.ends_at), 'HH:mm')}
+                          {c.title} ({c.event_type}): {format(new Date(c.start_date), 'MMM d HH:mm')} - {format(new Date(c.end_date), 'HH:mm')}
                         </li>
                       ))}
                     </ul>
@@ -405,8 +405,8 @@ export default function OperationsBoard() {
                 <Label>Start</Label>
                 <Input
                   type="datetime-local"
-                  value={eventForm.starts_at}
-                  onChange={(e) => handleTimeChange('starts_at', e.target.value)}
+                  value={eventForm.start_date}
+                  onChange={(e) => handleTimeChange('start_date', e.target.value)}
                   data-testid="input-start-time"
                 />
               </div>
@@ -414,8 +414,8 @@ export default function OperationsBoard() {
                 <Label>End</Label>
                 <Input
                   type="datetime-local"
-                  value={eventForm.ends_at}
-                  onChange={(e) => handleTimeChange('ends_at', e.target.value)}
+                  value={eventForm.end_date}
+                  onChange={(e) => handleTimeChange('end_date', e.target.value)}
                   data-testid="input-end-time"
                 />
               </div>

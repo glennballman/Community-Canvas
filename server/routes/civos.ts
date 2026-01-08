@@ -109,7 +109,7 @@ router.get('/capacity', async (req: Request, res: Response) => {
                 COUNT(*) as total_properties,
                 COALESCE(SUM(total_spots), 0) as total_spots,
                 COALESCE(SUM(CASE WHEN has_shore_power THEN total_spots ELSE 0 END), 0) as powered_spots,
-                COALESCE(SUM(num_truck_spots), 0) as truck_spots,
+                COALESCE(SUM(truck_spot_count), 0) as truck_spots,
                 COUNT(*) FILTER (WHERE has_onsite_mechanic) as properties_with_mechanic
             FROM cc_staging_properties
             WHERE status = 'active'

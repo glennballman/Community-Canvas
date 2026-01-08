@@ -69,8 +69,8 @@ interface Constraint {
   severity: 'info' | 'warning' | 'blocking';
   details: string | null;
   active: boolean;
-  starts_at: string | null;
-  ends_at: string | null;
+  start_date: string | null;
+  end_date: string | null;
   capability_unit_id: string | null;
   capability_unit_name: string | null;
 }
@@ -151,16 +151,16 @@ export default function InventoryItemDetail() {
     severity: 'info' | 'warning' | 'blocking';
     details: string;
     active: boolean;
-    starts_at: string;
-    ends_at: string;
+    start_date: string;
+    end_date: string;
     capability_unit_id: string;
   }>({
     constraint_type: '',
     severity: 'info',
     details: '',
     active: true,
-    starts_at: '',
-    ends_at: '',
+    start_date: '',
+    end_date: '',
     capability_unit_id: '',
   });
   
@@ -266,8 +266,8 @@ export default function InventoryItemDetail() {
         severity: data.severity,
         details: data.details || null,
         active: data.active,
-        starts_at: data.starts_at || null,
-        ends_at: data.ends_at || null,
+        start_date: data.start_date || null,
+        end_date: data.end_date || null,
         capability_unit_id: data.capability_unit_id || null,
       });
     },
@@ -300,7 +300,7 @@ export default function InventoryItemDetail() {
   }
   
   function resetConstraintForm() {
-    setConstraintForm({ constraint_type: '', severity: 'info' as const, details: '', active: true, starts_at: '', ends_at: '', capability_unit_id: '' });
+    setConstraintForm({ constraint_type: '', severity: 'info' as const, details: '', active: true, start_date: '', end_date: '', capability_unit_id: '' });
   }
   
   function openEditCapability(unit: CapabilityUnit) {
@@ -532,11 +532,11 @@ export default function InventoryItemDetail() {
                       {con.details && (
                         <p className="text-sm text-muted-foreground">{con.details}</p>
                       )}
-                      {(con.starts_at || con.ends_at) && (
+                      {(con.start_date || con.end_date) && (
                         <p className="text-xs text-muted-foreground">
-                          {con.starts_at && `From: ${new Date(con.starts_at).toLocaleDateString()}`}
-                          {con.starts_at && con.ends_at && ' - '}
-                          {con.ends_at && `To: ${new Date(con.ends_at).toLocaleDateString()}`}
+                          {con.start_date && `From: ${new Date(con.start_date).toLocaleDateString()}`}
+                          {con.start_date && con.end_date && ' - '}
+                          {con.end_date && `To: ${new Date(con.end_date).toLocaleDateString()}`}
                         </p>
                       )}
                       <div className="flex justify-end">
@@ -794,8 +794,8 @@ export default function InventoryItemDetail() {
                   <Label>Start Date (optional)</Label>
                   <Input
                     type="datetime-local"
-                    value={constraintForm.starts_at}
-                    onChange={(e) => setConstraintForm({ ...constraintForm, starts_at: e.target.value })}
+                    value={constraintForm.start_date}
+                    onChange={(e) => setConstraintForm({ ...constraintForm, start_date: e.target.value })}
                     data-testid="input-constraint-starts"
                   />
                 </div>
@@ -803,8 +803,8 @@ export default function InventoryItemDetail() {
                   <Label>End Date (optional)</Label>
                   <Input
                     type="datetime-local"
-                    value={constraintForm.ends_at}
-                    onChange={(e) => setConstraintForm({ ...constraintForm, ends_at: e.target.value })}
+                    value={constraintForm.end_date}
+                    onChange={(e) => setConstraintForm({ ...constraintForm, end_date: e.target.value })}
                     data-testid="input-constraint-ends"
                   />
                 </div>
