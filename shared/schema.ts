@@ -1,6 +1,46 @@
-import { pgTable, text, serial, timestamp, jsonb, integer, uuid } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, jsonb, integer, uuid, pgEnum } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+
+// ============================================================================
+// ENTITY KIND ENUM - For polymorphic entity links
+// ============================================================================
+export const entityKindEnum = pgEnum('entity_kind', [
+  'contractor',
+  'dock',
+  'project',
+  'community',
+  'moorage',
+  'parking',
+  'infrastructure',
+  'organization',
+  'asset',
+  'equipment',
+  'service',
+  'person',
+  'article',
+  'presentation',
+  'reservation',
+  'trip',
+  'accommodation',
+  'place',
+  'property',
+  'vehicle',
+  'trailer',
+  'portal',
+  'tenant',
+  'user',
+  'booking',
+  'work_request',
+  'shared_run',
+  'media',
+]);
+
+// TypeScript type for entity kind values
+export type EntityKind = (typeof entityKindEnum.enumValues)[number];
+
+// Zod schema for entity kind validation
+export const entityKindSchema = z.enum(entityKindEnum.enumValues);
 
 // Schema for a single status value with citation
 const statusValueSchema = z.object({
@@ -111,10 +151,11 @@ export type Media = typeof cc_media.$inferSelect;
 export type InsertMedia = z.infer<typeof insertMediaSchema>;
 
 // Entity Media (polymorphic links)
+// Note: entityType is text in DB for flexibility, but validated via entityKindSchema
 export const entityMedia = pgTable("cc_entity_media", {
   id: uuid("id").primaryKey().defaultRandom(),
   mediaId: uuid("media_id").notNull(),
-  entityType: text("entity_type").notNull(),
+  entityType: text("entity_type").notNull(), // Validated via entityKindSchema
   entityId: uuid("entity_id").notNull(),
   role: text("role").notNull().default('gallery'),
   sortOrder: integer("sort_order").default(0),
@@ -125,19 +166,22 @@ export const entityMedia = pgTable("cc_entity_media", {
 export const insertEntityMediaSchema = createInsertSchema(entityMedia).omit({
   id: true,
   createdAt: true,
+}).extend({
+  entityType: entityKindSchema, // Type-safe validation
 });
 
 export type EntityMedia = typeof entityMedia.$inferSelect;
 export type InsertEntityMedia = z.infer<typeof insertEntityMediaSchema>;
 
 // Crawl Media Queue
+// Note: entityType is text in DB for flexibility, but validated via entityKindSchema
 export const crawlMediaQueue = pgTable("cc_crawl_media_queue", {
   id: uuid("id").primaryKey().defaultRandom(),
   tenantId: uuid("tenant_id").notNull(),
   sourceUrl: text("source_url").notNull(),
   sourcePageUrl: text("source_page_url"),
   crawlJobId: uuid("crawl_job_id"),
-  entityType: text("entity_type"),
+  entityType: text("entity_type"), // Validated via entityKindSchema (optional)
   entityId: uuid("entity_id"),
   suggestedRole: text("suggested_role").default('gallery'),
   status: text("status").notNull().default('pending'),
@@ -153,6 +197,8 @@ export const insertCrawlMediaQueueSchema = createInsertSchema(crawlMediaQueue).o
   id: true,
   createdAt: true,
   processedAt: true,
+}).extend({
+  entityType: entityKindSchema.optional(), // Type-safe validation (optional field)
 });
 
 export type CrawlMediaQueue = typeof crawlMediaQueue.$inferSelect;
