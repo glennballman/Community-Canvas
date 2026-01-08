@@ -1459,24 +1459,9 @@ router.post('/portals/:slug/reservations', async (req: Request, res: Response) =
       });
     }
     
-    // Find or create person
-    let personId = null;
-    const existingPerson = await serviceQuery(`
-      SELECT id FROM people 
-      WHERE email = $1 AND tenant_id = $2
-    `, [customer.email, tenantId]);
-    
-    if (existingPerson.rows.length > 0) {
-      personId = existingPerson.rows[0].id;
-    } else {
-      const nameParts = customer.name.split(' ');
-      const newPerson = await serviceQuery(`
-        INSERT INTO people (tenant_id, portal_id, given_name, family_name, email, telephone, schema_type)
-        VALUES ($1, $2, $3, $4, $5, $6, 'Person')
-        RETURNING id
-      `, [tenantId, portal.id, nameParts[0], nameParts.slice(1).join(' ') || null, customer.email, customer.telephone || null]);
-      personId = newPerson.rows[0].id;
-    }
+    // For public guest bookings, we don't require a cc_individuals record
+    // Guest info is stored in primary_guest_* fields on the reservation
+    // booker_individual_id will be NULL for anonymous public bookings
     
     // Generate confirmation number
     const prefix = slug.substring(0, 3).toUpperCase().replace(/-/g, '');
@@ -1484,17 +1469,17 @@ router.post('/portals/:slug/reservations', async (req: Request, res: Response) =
     const seq = Math.random().toString(36).substring(2, 8).toUpperCase();
     const confirmationNumber = `${prefix}-${year}-${seq}`;
     
-    // Create reservation
+    // Create reservation (booker_individual_id is NULL for public guest bookings)
     const reservationResult = await serviceQuery(`
       INSERT INTO reservations (
-        booking_ref, asset_id, booker_individual_id, booker_tenant_id,
+        booking_ref, asset_id, booker_tenant_id,
         primary_guest_name, primary_guest_email, primary_guest_telephone,
         starts_at, ends_at, status, payment_status, portal_id,
         special_requests, schema_type
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pending', 'unpaid', $10, $11, 'Reservation')
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'pending', 'unpaid', $9, $10, 'Reservation')
       RETURNING id, booking_ref
     `, [
-      confirmationNumber, asset_id, personId, tenantId,
+      confirmationNumber, asset_id, tenantId,
       customer.name, customer.email, customer.telephone || null,
       startDate, endDate, portal.id, notes || null
     ]);
