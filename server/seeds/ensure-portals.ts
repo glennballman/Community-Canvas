@@ -2,6 +2,11 @@ import { withServiceTransaction } from '../db/tenantDb';
 import { PoolClient } from 'pg';
 
 export async function ensurePortalsExist(): Promise<void> {
+  const dbUrl = process.env.CC_APP_DATABASE_URL || process.env.DATABASE_URL;
+  console.log(`[SEED] Using database: ${dbUrl?.substring(0, 40)}...`);
+  console.log(`[SEED] CC_APP_DATABASE_URL set: ${!!process.env.CC_APP_DATABASE_URL}`);
+  console.log(`[SEED] DATABASE_URL set: ${!!process.env.DATABASE_URL}`);
+  
   try {
     await withServiceTransaction(async (client: PoolClient) => {
       const existingCheck = await client.query(
