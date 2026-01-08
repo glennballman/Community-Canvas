@@ -92,8 +92,8 @@ export async function getAllProperties(filters: PropertyFilters = {}): Promise<S
            pr.nightly_rate as base_nightly_rate,
            pr.weekly_rate as base_weekly_rate,
            pr.monthly_rate as base_monthly_rate
-    FROM staging_properties sp
-    LEFT JOIN staging_pricing pr ON pr.property_id = sp.id 
+    FROM cc_staging_properties sp
+    LEFT JOIN cc_staging_pricing pr ON pr.property_id = sp.id 
       AND pr.pricing_type = 'base_nightly' AND pr.is_active = true
     ${whereClause}
     ORDER BY sp.crew_score DESC, sp.updated_at DESC
@@ -122,8 +122,8 @@ export async function getPropertyById(id: number): Promise<StagingProperty | nul
            pr.nightly_rate as base_nightly_rate,
            pr.weekly_rate as base_weekly_rate,
            pr.monthly_rate as base_monthly_rate
-    FROM staging_properties sp
-    LEFT JOIN staging_pricing pr ON pr.property_id = sp.id 
+    FROM cc_staging_properties sp
+    LEFT JOIN cc_staging_pricing pr ON pr.property_id = sp.id 
       AND pr.pricing_type = 'base_nightly' AND pr.is_active = true
     WHERE sp.id = ${id}
   `);
@@ -138,8 +138,8 @@ export async function getPropertyByCanvasId(canvasId: string): Promise<StagingPr
            pr.nightly_rate as base_nightly_rate,
            pr.weekly_rate as base_weekly_rate,
            pr.monthly_rate as base_monthly_rate
-    FROM staging_properties sp
-    LEFT JOIN staging_pricing pr ON pr.property_id = sp.id 
+    FROM cc_staging_properties sp
+    LEFT JOIN cc_staging_pricing pr ON pr.property_id = sp.id 
       AND pr.pricing_type = 'base_nightly' AND pr.is_active = true
     WHERE sp.canvas_id = ${canvasId}
   `);
@@ -163,7 +163,7 @@ export async function createProperty(data: Partial<StagingProperty>): Promise<St
   }
 
   const query = `
-    INSERT INTO staging_properties (${columns.join(', ')})
+    INSERT INTO cc_staging_properties (${columns.join(', ')})
     VALUES (${placeholders.join(', ')})
     RETURNING *
   `;
@@ -196,7 +196,7 @@ export async function updateProperty(id: number, data: Partial<StagingProperty>)
   if (updates.length === 0) return getPropertyById(id);
 
   const query = `
-    UPDATE staging_properties 
+    UPDATE cc_staging_properties 
     SET ${updates.join(', ')}, updated_at = CURRENT_TIMESTAMP
     WHERE id = $${idx}
     RETURNING *
@@ -254,7 +254,7 @@ export async function searchAvailableProperties(params: StagingSearchParams): Pr
 
 export async function getSpotsForProperty(propertyId: number): Promise<StagingSpot[]> {
   const result = await db.execute(sql`
-    SELECT * FROM staging_spots
+    SELECT * FROM cc_staging_spots
     WHERE property_id = ${propertyId}
     ORDER BY spot_number
   `);
@@ -263,7 +263,7 @@ export async function getSpotsForProperty(propertyId: number): Promise<StagingSp
 
 export async function getSpotById(id: number): Promise<StagingSpot | null> {
   const result = await db.execute(sql`
-    SELECT * FROM staging_spots WHERE id = ${id}
+    SELECT * FROM cc_staging_spots WHERE id = ${id}
   `);
   if (result.rows.length === 0) return null;
   return snakeToCamel(result.rows[0] as Record<string, any>) as StagingSpot;
@@ -284,7 +284,7 @@ export async function createSpot(data: Partial<StagingSpot>): Promise<StagingSpo
   }
 
   const query = `
-    INSERT INTO staging_spots (${columns.join(', ')})
+    INSERT INTO cc_staging_spots (${columns.join(', ')})
     VALUES (${placeholders.join(', ')})
     RETURNING *
   `;
@@ -316,7 +316,7 @@ export async function updateSpot(id: number, data: Partial<StagingSpot>): Promis
   if (updates.length === 0) return getSpotById(id);
 
   const query = `
-    UPDATE staging_spots 
+    UPDATE cc_staging_spots 
     SET ${updates.join(', ')}, updated_at = CURRENT_TIMESTAMP
     WHERE id = $${idx}
     RETURNING *
@@ -351,7 +351,7 @@ export interface ProviderFilters {
 
 export async function getProvidersForProperty(propertyId: number): Promise<ServiceProvider[]> {
   const result = await db.execute(sql`
-    SELECT * FROM staging_service_providers
+    SELECT * FROM cc_staging_service_providers
     WHERE property_id = ${propertyId} AND is_active = true
     ORDER BY provider_type, business_name
   `);
@@ -360,7 +360,7 @@ export async function getProvidersForProperty(propertyId: number): Promise<Servi
 
 export async function getProviderById(id: number): Promise<ServiceProvider | null> {
   const result = await db.execute(sql`
-    SELECT * FROM staging_service_providers WHERE id = ${id}
+    SELECT * FROM cc_staging_service_providers WHERE id = ${id}
   `);
   if (result.rows.length === 0) return null;
   return snakeToCamel(result.rows[0] as Record<string, any>) as ServiceProvider;
@@ -382,7 +382,7 @@ export async function createProvider(data: Partial<ServiceProvider>): Promise<Se
   }
 
   const query = `
-    INSERT INTO staging_service_providers (${columns.join(', ')})
+    INSERT INTO cc_staging_service_providers (${columns.join(', ')})
     VALUES (${placeholders.join(', ')})
     RETURNING *
   `;
@@ -420,7 +420,7 @@ export async function updateProvider(id: number, data: Partial<ServiceProvider>)
   if (updates.length === 0) return getProviderById(id);
 
   const query = `
-    UPDATE staging_service_providers 
+    UPDATE cc_staging_service_providers 
     SET ${updates.join(', ')}, updated_at = CURRENT_TIMESTAMP
     WHERE id = $${idx}
     RETURNING *
@@ -466,7 +466,7 @@ export async function searchProviders(filters: ProviderFilters = {}): Promise<Se
   const offset = filters.offset || 0;
 
   const result = await db.execute(sql.raw(`
-    SELECT * FROM staging_service_providers
+    SELECT * FROM cc_staging_service_providers
     ${whereClause}
     ORDER BY overall_rating DESC NULLS LAST, business_name
     LIMIT ${limit} OFFSET ${offset}
@@ -516,9 +516,9 @@ export async function getBookings(filters: BookingFilters = {}): Promise<Staging
     SELECT b.*, 
            sp.name as property_name, sp.canvas_id as property_canvas_id,
            ss.spot_number, ss.spot_name
-    FROM staging_bookings b
-    LEFT JOIN staging_properties sp ON sp.id = b.property_id
-    LEFT JOIN staging_spots ss ON ss.id = b.spot_id
+    FROM cc_staging_bookings b
+    LEFT JOIN cc_staging_properties sp ON sp.id = b.property_id
+    LEFT JOIN cc_staging_spots ss ON ss.id = b.spot_id
     ${whereClause}
     ORDER BY b.check_in_date DESC
     LIMIT ${limit} OFFSET ${offset}
@@ -532,9 +532,9 @@ export async function getBookingById(id: number): Promise<StagingBooking | null>
     SELECT b.*, 
            sp.name as property_name, sp.canvas_id as property_canvas_id,
            ss.spot_number, ss.spot_name
-    FROM staging_bookings b
-    LEFT JOIN staging_properties sp ON sp.id = b.property_id
-    LEFT JOIN staging_spots ss ON ss.id = b.spot_id
+    FROM cc_staging_bookings b
+    LEFT JOIN cc_staging_properties sp ON sp.id = b.property_id
+    LEFT JOIN cc_staging_spots ss ON ss.id = b.spot_id
     WHERE b.id = ${id}
   `);
   if (result.rows.length === 0) return null;
@@ -546,9 +546,9 @@ export async function getBookingByRef(ref: string): Promise<StagingBooking | nul
     SELECT b.*, 
            sp.name as property_name, sp.canvas_id as property_canvas_id,
            ss.spot_number, ss.spot_name
-    FROM staging_bookings b
-    LEFT JOIN staging_properties sp ON sp.id = b.property_id
-    LEFT JOIN staging_spots ss ON ss.id = b.spot_id
+    FROM cc_staging_bookings b
+    LEFT JOIN cc_staging_properties sp ON sp.id = b.property_id
+    LEFT JOIN cc_staging_spots ss ON ss.id = b.spot_id
     WHERE b.booking_ref = ${ref}
   `);
   if (result.rows.length === 0) return null;
@@ -572,7 +572,7 @@ export async function createBooking(data: Partial<StagingBooking>): Promise<Stag
   }
 
   const query = `
-    INSERT INTO staging_bookings (${columns.join(', ')})
+    INSERT INTO cc_staging_bookings (${columns.join(', ')})
     VALUES (${placeholders.join(', ')})
     RETURNING *
   `;
@@ -606,7 +606,7 @@ export async function updateBooking(id: number, data: Partial<StagingBooking>): 
   if (updates.length === 0) return getBookingById(id);
 
   const query = `
-    UPDATE staging_bookings 
+    UPDATE cc_staging_bookings 
     SET ${updates.join(', ')}, updated_at = CURRENT_TIMESTAMP
     WHERE id = $${idx}
     RETURNING *
@@ -630,7 +630,7 @@ export async function findBookingByIdOrRef(idOrRef: string): Promise<StagingBook
   const numericId = parseInt(idOrRef, 10);
   
   const result = await db.execute(sql`
-    SELECT * FROM staging_bookings 
+    SELECT * FROM cc_staging_bookings 
     WHERE id = ${isNaN(numericId) ? -1 : numericId} 
        OR booking_ref = ${idOrRef}
     LIMIT 1
@@ -642,7 +642,7 @@ export async function findBookingByIdOrRef(idOrRef: string): Promise<StagingBook
 
 export async function cancelBooking(id: number, reason?: string): Promise<StagingBooking | null> {
   const result = await db.execute(sql`
-    UPDATE staging_bookings 
+    UPDATE cc_staging_bookings 
     SET status = 'cancelled', 
         cancellation_reason = ${reason || null},
         cancelled_at = CURRENT_TIMESTAMP,
@@ -671,7 +671,7 @@ export interface CalendarBlock {
 
 export async function getCalendar(propertyId: number, startDate: string, endDate: string): Promise<CalendarBlock[]> {
   const result = await db.execute(sql`
-    SELECT * FROM staging_calendar_blocks
+    SELECT * FROM cc_staging_calendar_blocks
     WHERE property_id = ${propertyId}
       AND start_date <= ${endDate}::date
       AND end_date >= ${startDate}::date
@@ -682,7 +682,7 @@ export async function getCalendar(propertyId: number, startDate: string, endDate
 
 export async function createBlock(data: Partial<CalendarBlock>): Promise<CalendarBlock> {
   const result = await db.execute(sql`
-    INSERT INTO staging_calendar_blocks (property_id, spot_id, start_date, end_date, block_type, reservation_id, notes)
+    INSERT INTO cc_staging_calendar_blocks (property_id, spot_id, start_date, end_date, block_type, reservation_id, notes)
     VALUES (${data.propertyId}, ${data.spotId || null}, ${data.startDate}, ${data.endDate}, ${data.blockType || 'blocked'}, ${data.bookingId || null}, ${data.notes || null})
     RETURNING *
   `);
@@ -698,13 +698,13 @@ export async function updateBlock(id: number, data: Partial<CalendarBlock>): Pro
   if (data.notes !== undefined) updates.push(`notes = ${data.notes ? `'${data.notes}'` : 'NULL'}`);
 
   if (updates.length === 0) {
-    const existing = await db.execute(sql`SELECT * FROM staging_calendar_blocks WHERE id = ${id}`);
+    const existing = await db.execute(sql`SELECT * FROM cc_staging_calendar_blocks WHERE id = ${id}`);
     if (existing.rows.length === 0) return null;
     return snakeToCamel(existing.rows[0] as Record<string, any>) as CalendarBlock;
   }
 
   const result = await db.execute(sql.raw(`
-    UPDATE staging_calendar_blocks 
+    UPDATE cc_staging_calendar_blocks 
     SET ${updates.join(', ')}
     WHERE id = ${id}
     RETURNING *
@@ -715,7 +715,7 @@ export async function updateBlock(id: number, data: Partial<CalendarBlock>): Pro
 
 export async function deleteBlock(id: number): Promise<boolean> {
   const result = await db.execute(sql`
-    DELETE FROM staging_calendar_blocks WHERE id = ${id}
+    DELETE FROM cc_staging_calendar_blocks WHERE id = ${id}
   `);
   return (result.rowCount ?? 0) > 0;
 }
@@ -727,7 +727,7 @@ export async function checkAvailability(
   vehicleLengthFt?: number
 ): Promise<PropertyAvailability> {
   const blocksResult = await db.execute(sql`
-    SELECT start_date, end_date FROM staging_calendar_blocks
+    SELECT start_date, end_date FROM cc_staging_calendar_blocks
     WHERE property_id = ${propertyId}
       AND spot_id IS NULL
       AND start_date < ${checkOut}::date
@@ -736,8 +736,8 @@ export async function checkAvailability(
 
   const propertyResult = await db.execute(sql`
     SELECT sp.*, pr.nightly_rate
-    FROM staging_properties sp
-    LEFT JOIN staging_pricing pr ON pr.property_id = sp.id 
+    FROM cc_staging_properties sp
+    LEFT JOIN cc_staging_pricing pr ON pr.property_id = sp.id 
       AND pr.pricing_type = 'base_nightly' AND pr.is_active = true
     WHERE sp.id = ${propertyId}
   `);
@@ -782,7 +782,7 @@ export async function checkAvailability(
 
 export async function getVehicleProfiles(hostAccountId: number): Promise<VehicleProfile[]> {
   const result = await db.execute(sql`
-    SELECT * FROM staging_vehicle_profiles
+    SELECT * FROM cc_staging_vehicle_profiles
     WHERE host_account_id = ${hostAccountId}
     ORDER BY name
   `);
@@ -804,7 +804,7 @@ export async function createVehicleProfile(data: Partial<VehicleProfile>): Promi
   }
 
   const query = `
-    INSERT INTO staging_vehicle_profiles (${columns.join(', ')})
+    INSERT INTO cc_staging_vehicle_profiles (${columns.join(', ')})
     VALUES (${placeholders.join(', ')})
     RETURNING *
   `;
@@ -834,13 +834,13 @@ export async function updateVehicleProfile(id: number, data: Partial<VehicleProf
   }
 
   if (updates.length === 0) {
-    const existing = await db.execute(sql`SELECT * FROM staging_vehicle_profiles WHERE id = ${id}`);
+    const existing = await db.execute(sql`SELECT * FROM cc_staging_vehicle_profiles WHERE id = ${id}`);
     if (existing.rows.length === 0) return null;
     return snakeToCamel(existing.rows[0] as Record<string, any>) as VehicleProfile;
   }
 
   const query = `
-    UPDATE staging_vehicle_profiles 
+    UPDATE cc_staging_vehicle_profiles 
     SET ${updates.join(', ')}
     WHERE id = $${idx}
     RETURNING *
@@ -880,7 +880,7 @@ export interface PricingRecord {
 
 export async function getPricingForProperty(propertyId: number): Promise<PricingRecord[]> {
   const result = await db.execute(sql`
-    SELECT * FROM staging_pricing
+    SELECT * FROM cc_staging_pricing
     WHERE property_id = ${propertyId}
     ORDER BY pricing_type, start_date NULLS FIRST
   `);
@@ -905,7 +905,7 @@ export async function calculatePrice(
   const numNights = Math.ceil((checkOutDate.getTime() - checkInDate.getTime()) / (1000 * 60 * 60 * 24));
 
   const pricingResult = await db.execute(sql`
-    SELECT * FROM staging_pricing
+    SELECT * FROM cc_staging_pricing
     WHERE property_id = ${propertyId}
       AND is_active = true
       AND (spot_id IS NULL OR spot_id = ${options.spotId || null})
@@ -934,7 +934,7 @@ export async function calculatePrice(
   const fees: Record<string, number> = {};
 
   const propertyResult = await db.execute(sql`
-    SELECT pet_fee_per_night FROM staging_properties WHERE id = ${propertyId}
+    SELECT pet_fee_per_night FROM cc_staging_properties WHERE id = ${propertyId}
   `);
   const property = propertyResult.rows[0] as any;
 
@@ -968,18 +968,18 @@ export async function getOverallStats(): Promise<StagingStats> {
       COUNT(*) FILTER (WHERE accepts_semi_trucks = true) as accepts_semi,
       ROUND(AVG(crew_score)::numeric, 1) as avg_crew_score,
       ROUND(AVG(rv_score)::numeric, 1) as avg_rv_score
-    FROM staging_properties
+    FROM cc_staging_properties
   `);
 
   const byTypeResult = await db.execute(sql`
     SELECT property_type, COUNT(*) as count
-    FROM staging_properties
+    FROM cc_staging_properties
     GROUP BY property_type
   `);
 
   const byRegionResult = await db.execute(sql`
     SELECT region, COUNT(*) as count
-    FROM staging_properties
+    FROM cc_staging_properties
     WHERE region IS NOT NULL
     GROUP BY region
     ORDER BY count DESC
@@ -1023,12 +1023,12 @@ export async function getPropertyStats(propertyId: number): Promise<{
       COUNT(*) as total_bookings,
       COUNT(*) FILTER (WHERE check_in_date > CURRENT_DATE AND status != 'cancelled') as upcoming_bookings,
       COALESCE(SUM(total_cost) FILTER (WHERE payment_status = 'paid'), 0) as total_revenue
-    FROM staging_bookings
+    FROM cc_staging_bookings
     WHERE property_id = ${propertyId}
   `);
 
   const propertyResult = await db.execute(sql`
-    SELECT overall_rating FROM staging_properties WHERE id = ${propertyId}
+    SELECT overall_rating FROM cc_staging_properties WHERE id = ${propertyId}
   `);
 
   const stats = bookingStats.rows[0] as any;

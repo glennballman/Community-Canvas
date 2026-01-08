@@ -84,7 +84,7 @@ export async function signUp(
   try {
     // Check if email already exists
     const existing = await db.execute(sql`
-      SELECT id FROM staging_host_accounts WHERE email = ${email.toLowerCase()}
+      SELECT id FROM cc_staging_host_accounts WHERE email = ${email.toLowerCase()}
     `);
     
     if (existing.rows.length > 0) {
@@ -100,7 +100,7 @@ export async function signUp(
 
     // Create account
     const result = await db.execute(sql`
-      INSERT INTO staging_host_accounts (
+      INSERT INTO cc_staging_host_accounts (
         email, password_hash, given_name, family_name, telephone,
         business_name, business_type, email_verified,
         email_verify_token, email_verify_expires, status
@@ -135,7 +135,7 @@ export async function login(
   try {
     // Find host by email
     const result = await db.execute(sql`
-      SELECT * FROM staging_host_accounts WHERE email = ${email.toLowerCase()}
+      SELECT * FROM cc_staging_host_accounts WHERE email = ${email.toLowerCase()}
     `);
 
     if (result.rows.length === 0) {
@@ -164,13 +164,13 @@ export async function login(
 
     // Create session
     await db.execute(sql`
-      INSERT INTO staging_host_sessions (host_account_id, token, expires_at, ip_address, user_agent)
+      INSERT INTO cc_staging_host_sessions (host_account_id, token, expires_at, ip_address, user_agent)
       VALUES (${host.id}, ${token}, ${expiresAt}, ${ipAddress || null}, ${userAgent || null})
     `);
 
     // Update last login
     await db.execute(sql`
-      UPDATE staging_host_accounts 
+      UPDATE cc_staging_host_accounts 
       SET last_login_at = CURRENT_TIMESTAMP, last_login_ip = ${ipAddress || null}
       WHERE id = ${host.id}
     `);
@@ -193,7 +193,7 @@ export async function verifySession(token: string): Promise<SessionValidation> {
   try {
     // Find session
     const sessionResult = await db.execute(sql`
-      SELECT * FROM staging_host_sessions 
+      SELECT * FROM cc_staging_host_sessions 
       WHERE token = ${token} AND expires_at > CURRENT_TIMESTAMP
     `);
 
@@ -205,7 +205,7 @@ export async function verifySession(token: string): Promise<SessionValidation> {
 
     // Get host
     const hostResult = await db.execute(sql`
-      SELECT * FROM staging_host_accounts WHERE id = ${session.hostAccountId}
+      SELECT * FROM cc_staging_host_accounts WHERE id = ${session.hostAccountId}
     `);
 
     if (hostResult.rows.length === 0) {
@@ -220,7 +220,7 @@ export async function verifySession(token: string): Promise<SessionValidation> {
 
     // Update last accessed
     await db.execute(sql`
-      UPDATE staging_host_sessions 
+      UPDATE cc_staging_host_sessions 
       SET last_accessed_at = CURRENT_TIMESTAMP 
       WHERE id = ${session.id}
     `);
@@ -239,7 +239,7 @@ export async function verifySession(token: string): Promise<SessionValidation> {
 export async function logout(token: string): Promise<boolean> {
   try {
     const result = await db.execute(sql`
-      DELETE FROM staging_host_sessions WHERE token = ${token}
+      DELETE FROM cc_staging_host_sessions WHERE token = ${token}
     `);
     return (result.rowCount ?? 0) > 0;
   } catch (error) {
@@ -255,7 +255,7 @@ export async function logout(token: string): Promise<boolean> {
 export async function verifyEmail(token: string): Promise<{ success: boolean; error?: string }> {
   try {
     const result = await db.execute(sql`
-      UPDATE staging_host_accounts 
+      UPDATE cc_staging_host_accounts 
       SET email_verified = true, 
           email_verify_token = NULL,
           email_verify_expires = NULL,
@@ -287,7 +287,7 @@ export async function requestPasswordReset(email: string): Promise<{ success: bo
   try {
     // Find account
     const result = await db.execute(sql`
-      SELECT id FROM staging_host_accounts WHERE email = ${email.toLowerCase()}
+      SELECT id FROM cc_staging_host_accounts WHERE email = ${email.toLowerCase()}
     `);
 
     if (result.rows.length === 0) {
@@ -300,7 +300,7 @@ export async function requestPasswordReset(email: string): Promise<{ success: bo
     const resetExpires = new Date(Date.now() + RESET_TOKEN_EXPIRY_HOURS * 60 * 60 * 1000);
 
     await db.execute(sql`
-      UPDATE staging_host_accounts 
+      UPDATE cc_staging_host_accounts 
       SET password_reset_token = ${resetToken},
           password_reset_expires = ${resetExpires}
       WHERE id = ${hostId}
@@ -319,7 +319,7 @@ export async function resetPassword(token: string, newPassword: string): Promise
   try {
     // Find account with valid token
     const result = await db.execute(sql`
-      SELECT id FROM staging_host_accounts 
+      SELECT id FROM cc_staging_host_accounts 
       WHERE password_reset_token = ${token}
         AND password_reset_expires > CURRENT_TIMESTAMP
     `);
@@ -333,7 +333,7 @@ export async function resetPassword(token: string, newPassword: string): Promise
 
     // Update password and clear token
     await db.execute(sql`
-      UPDATE staging_host_accounts 
+      UPDATE cc_staging_host_accounts 
       SET password_hash = ${passwordHash},
           password_reset_token = NULL,
           password_reset_expires = NULL
@@ -342,7 +342,7 @@ export async function resetPassword(token: string, newPassword: string): Promise
 
     // Invalidate all existing sessions
     await db.execute(sql`
-      DELETE FROM staging_host_sessions WHERE host_account_id = ${hostId}
+      DELETE FROM cc_staging_host_sessions WHERE host_account_id = ${hostId}
     `);
 
     await logActivity(hostId, 'password_reset_completed', 'Password was reset');
@@ -366,7 +366,7 @@ export async function updatePassword(
   try {
     // Get current password hash
     const result = await db.execute(sql`
-      SELECT password_hash FROM staging_host_accounts WHERE id = ${hostId}
+      SELECT password_hash FROM cc_staging_host_accounts WHERE id = ${hostId}
     `);
 
     if (result.rows.length === 0) {
@@ -384,7 +384,7 @@ export async function updatePassword(
     const newHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
 
     await db.execute(sql`
-      UPDATE staging_host_accounts 
+      UPDATE cc_staging_host_accounts 
       SET password_hash = ${newHash}, updated_at = CURRENT_TIMESTAMP
       WHERE id = ${hostId}
     `);
@@ -411,7 +411,7 @@ export async function logActivity(
 ): Promise<void> {
   try {
     await db.execute(sql`
-      INSERT INTO staging_host_activity_log (host_account_id, action, description, property_id, metadata)
+      INSERT INTO cc_staging_host_activity_log (host_account_id, action, description, property_id, metadata)
       VALUES (${hostId}, ${action}, ${description}, ${propertyId || null}, ${metadata ? JSON.stringify(metadata) : null})
     `);
   } catch (error) {
@@ -426,7 +426,7 @@ export async function logActivity(
 export async function getHostById(id: number): Promise<HostAccount | null> {
   try {
     const result = await db.execute(sql`
-      SELECT * FROM staging_host_accounts WHERE id = ${id}
+      SELECT * FROM cc_staging_host_accounts WHERE id = ${id}
     `);
     
     if (result.rows.length === 0) return null;
@@ -444,7 +444,7 @@ export async function getHostById(id: number): Promise<HostAccount | null> {
 export async function cleanupExpiredSessions(): Promise<number> {
   try {
     const result = await db.execute(sql`
-      DELETE FROM staging_host_sessions WHERE expires_at < CURRENT_TIMESTAMP
+      DELETE FROM cc_staging_host_sessions WHERE expires_at < CURRENT_TIMESTAMP
     `);
     return result.rowCount ?? 0;
   } catch (error) {

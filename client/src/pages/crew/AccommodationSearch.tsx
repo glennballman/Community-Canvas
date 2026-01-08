@@ -173,7 +173,7 @@ export default function AccommodationSearch() {
   const getSourceLabel = (source: string) => {
     switch (source) {
       case 'external_records': return 'Airbnb/VRBO';
-      case 'staging_properties': return 'Direct';
+      case 'cc_staging_properties': return 'Direct';
       case 'trailer_profiles': return 'Trailer';
       case 'cc_rental_items': return 'Equipment';
       default: return source;

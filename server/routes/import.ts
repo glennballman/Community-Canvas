@@ -23,7 +23,7 @@ router.use(requireServiceKey);
 router.get('/batches', async (req: Request, res: Response) => {
     try {
         const result = await serviceQuery(`
-            SELECT * FROM staging_import_batches
+            SELECT * FROM cc_staging_import_batches
             ORDER BY created_at DESC
             LIMIT 50
         `);
@@ -40,7 +40,7 @@ router.get('/batches/:id', async (req: Request, res: Response) => {
         const { id } = req.params;
 
         const batchResult = await serviceQuery(
-            'SELECT * FROM staging_import_batches WHERE id = $1',
+            'SELECT * FROM cc_staging_import_batches WHERE id = $1',
             [id]
         );
 
@@ -50,7 +50,7 @@ router.get('/batches/:id', async (req: Request, res: Response) => {
 
         const recordsResult = await serviceQuery(`
             SELECT id, name, city, status, matched_property_id, confidence_score, processing_notes
-            FROM staging_import_raw
+            FROM cc_staging_import_raw
             WHERE batch_id = $1
             ORDER BY name
         `, [id]);
@@ -96,7 +96,7 @@ router.post('/csv', upload.single('file'), async (req: Request, res: Response) =
 
         const result = await withServiceTransaction(async (client) => {
             const batchResult = await client.query(`
-                INSERT INTO staging_import_batches 
+                INSERT INTO cc_staging_import_batches 
                 (batch_name, source_type, source_name, status, total_records, created_by)
                 VALUES ($1, $2, $3, 'processing', $4, 'service')
                 RETURNING id
@@ -111,7 +111,7 @@ router.post('/csv', upload.single('file'), async (req: Request, res: Response) =
 
             for (const record of records) {
                 await client.query(`
-                    INSERT INTO staging_import_raw (batch_id, raw_data, name, city, latitude, longitude, phone, email, website)
+                    INSERT INTO cc_staging_import_raw (batch_id, raw_data, name, city, latitude, longitude, phone, email, website)
                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
                 `, [
                     batchId,
@@ -127,7 +127,7 @@ router.post('/csv', upload.single('file'), async (req: Request, res: Response) =
             }
 
             await client.query(`
-                UPDATE staging_import_batches 
+                UPDATE cc_staging_import_batches 
                 SET status = 'pending_review', processed_records = $2
                 WHERE id = $1
             `, [batchId, records.length]);
@@ -173,7 +173,7 @@ router.post('/batches/:id/detect-duplicates', async (req: Request, res: Response
 
         const rawRecords = await serviceQuery(`
             SELECT id, name, city, latitude, longitude
-            FROM staging_import_raw
+            FROM cc_staging_import_raw
             WHERE batch_id = $1 AND status = 'pending'
         `, [id]);
 
@@ -189,7 +189,7 @@ router.post('/batches/:id/detect-duplicates', async (req: Request, res: Response
                         WHEN LOWER(name) LIKE '%' || LOWER($1) || '%' THEN 60
                         ELSE 0
                     END as name_score
-                FROM staging_properties
+                FROM cc_staging_properties
                 WHERE 1=1
             `;
             const params: any[] = [record.name];
@@ -206,7 +206,7 @@ router.post('/batches/:id/detect-duplicates', async (req: Request, res: Response
                             POW(latitude - $2, 2) + 
                             POW((longitude - $3) * COS(RADIANS($2)), 2)
                         )) as distance_km
-                    FROM staging_properties
+                    FROM cc_staging_properties
                     WHERE latitude IS NOT NULL
                     ORDER BY distance_km
                     LIMIT 5
@@ -234,7 +234,7 @@ router.post('/batches/:id/detect-duplicates', async (req: Request, res: Response
 
             if (bestMatch && confidence >= 70) {
                 await serviceQuery(`
-                    UPDATE staging_import_raw 
+                    UPDATE cc_staging_import_raw 
                     SET status = 'matched', 
                         matched_property_id = $2, 
                         confidence_score = $3,
@@ -245,7 +245,7 @@ router.post('/batches/:id/detect-duplicates', async (req: Request, res: Response
                 matchedCount++;
             } else if (bestMatch && confidence >= 50) {
                 await serviceQuery(`
-                    UPDATE staging_import_raw 
+                    UPDATE cc_staging_import_raw 
                     SET status = 'review', 
                         matched_property_id = $2, 
                         confidence_score = $3,
@@ -255,7 +255,7 @@ router.post('/batches/:id/detect-duplicates', async (req: Request, res: Response
                 `, [record.id, bestMatch.id, confidence, `Possible match: ${bestMatch.name} (${confidence.toFixed(0)}%)`]);
             } else {
                 await serviceQuery(`
-                    UPDATE staging_import_raw 
+                    UPDATE cc_staging_import_raw 
                     SET status = 'new', 
                         confidence_score = 0,
                         processing_notes = 'No existing match found',
@@ -267,9 +267,9 @@ router.post('/batches/:id/detect-duplicates', async (req: Request, res: Response
         }
 
         await serviceQuery(`
-            UPDATE staging_import_batches
-            SET imported_records = (SELECT COUNT(*) FROM staging_import_raw WHERE batch_id = $1 AND status = 'matched'),
-                skipped_records = (SELECT COUNT(*) FROM staging_import_raw WHERE batch_id = $1 AND status = 'review')
+            UPDATE cc_staging_import_batches
+            SET imported_records = (SELECT COUNT(*) FROM cc_staging_import_raw WHERE batch_id = $1 AND status = 'matched'),
+                skipped_records = (SELECT COUNT(*) FROM cc_staging_import_raw WHERE batch_id = $1 AND status = 'review')
             WHERE id = $1
         `, [id]);
 
@@ -294,7 +294,7 @@ router.post('/batches/:id/import', async (req: Request, res: Response) => {
         const { recordIds } = req.body;
 
         let query = `
-            SELECT * FROM staging_import_raw
+            SELECT * FROM cc_staging_import_raw
             WHERE batch_id = $1 AND status = 'new'
         `;
         const params: any[] = [id];
@@ -327,7 +327,7 @@ router.post('/batches/:id/import', async (req: Request, res: Response) => {
                 }
 
                 const propResult = await serviceQuery(`
-                    INSERT INTO staging_properties (
+                    INSERT INTO cc_staging_properties (
                         name, description, short_description,
                         property_type, property_subtype,
                         region, city, address, postal_code,
@@ -358,7 +358,7 @@ router.post('/batches/:id/import', async (req: Request, res: Response) => {
                 ]);
 
                 await serviceQuery(`
-                    UPDATE staging_import_raw
+                    UPDATE cc_staging_import_raw
                     SET status = 'imported', matched_property_id = $2, processed_at = NOW()
                     WHERE id = $1
                 `, [record.id, propResult.rows[0].id]);
@@ -368,7 +368,7 @@ router.post('/batches/:id/import', async (req: Request, res: Response) => {
             } catch (err: any) {
                 errors.push({ recordId: record.id, name: record.name, error: err.message });
                 await serviceQuery(`
-                    UPDATE staging_import_raw
+                    UPDATE cc_staging_import_raw
                     SET status = 'error', processing_notes = $2, processed_at = NOW()
                     WHERE id = $1
                 `, [record.id, err.message]);
@@ -376,7 +376,7 @@ router.post('/batches/:id/import', async (req: Request, res: Response) => {
         }
 
         await serviceQuery(`
-            UPDATE staging_import_batches
+            UPDATE cc_staging_import_batches
             SET imported_records = imported_records + $2,
                 error_records = error_records + $3,
                 error_log = error_log || $4::jsonb,
@@ -427,7 +427,7 @@ function determineRegion(city: string): string {
 // GET /api/import/sources - List data sources (SERVICE MODE)
 router.get('/sources', async (req: Request, res: Response) => {
     try {
-        const result = await serviceQuery('SELECT * FROM staging_data_sources ORDER BY name');
+        const result = await serviceQuery('SELECT * FROM cc_staging_data_sources ORDER BY name');
         res.json({ success: true, sources: result.rows });
     } catch (error: any) {
         res.status(500).json({ success: false, error: 'Failed to load sources' });

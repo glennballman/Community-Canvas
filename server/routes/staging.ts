@@ -936,7 +936,7 @@ router.post('/trips', async (req: Request, res: Response) => {
     } = req.body;
 
     const tripResult = await stagingStorage.rawQuery(`
-      INSERT INTO staging_trips (
+      INSERT INTO cc_staging_trips (
         name, description,
         origin_name, origin_lat, origin_lng,
         destination_name, destination_lat, destination_lng,
@@ -963,7 +963,7 @@ router.post('/trips', async (req: Request, res: Response) => {
     if (stops && stops.length > 0) {
       for (const stop of stops) {
         await stagingStorage.rawQuery(`
-          INSERT INTO staging_trip_stops (
+          INSERT INTO cc_staging_trip_stops (
             trip_id, property_id, stop_order, stop_type,
             check_in_date, check_out_date, notes
           ) VALUES ($1, $2, $3, $4, $5, $6, $7)
@@ -1000,7 +1000,7 @@ router.get('/trips/:id', async (req: Request, res: Response) => {
     const numericId = parseInt(id, 10);
 
     const tripResult = await stagingStorage.rawQuery(`
-      SELECT * FROM staging_trips WHERE id = $1 OR trip_ref = $2
+      SELECT * FROM cc_staging_trips WHERE id = $1 OR trip_ref = $2
     `, [isNaN(numericId) ? -1 : numericId, id]);
 
     if (tripResult.rows.length === 0) {
@@ -1019,9 +1019,9 @@ router.get('/trips/:id', async (req: Request, res: Response) => {
         sp.longitude,
         sp.thumbnail_url,
         pr.nightly_rate
-      FROM staging_trip_stops ts
-      JOIN staging_properties sp ON sp.id = ts.property_id
-      LEFT JOIN staging_pricing pr ON pr.property_id = sp.id 
+      FROM cc_staging_trip_stops ts
+      JOIN cc_staging_properties sp ON sp.id = ts.property_id
+      LEFT JOIN cc_staging_pricing pr ON pr.property_id = sp.id 
         AND pr.pricing_type = 'base_nightly' AND pr.is_active = true
       WHERE ts.trip_id = $1
       ORDER BY ts.stop_order
@@ -1088,8 +1088,8 @@ router.get('/chamber/opportunities/:id', async (req: Request, res: Response) => 
         cl.*,
         p.name as property_name,
         p.status as property_status
-      FROM staging_chamber_links cl
-      LEFT JOIN staging_properties p ON p.id = cl.property_id
+      FROM cc_staging_chamber_links cl
+      LEFT JOIN cc_staging_properties p ON p.id = cl.property_id
       WHERE cl.id = $1
     `, [id]);
 
@@ -1114,8 +1114,8 @@ router.get('/chamber/opportunities', async (req: Request, res: Response) => {
         cl.*,
         p.name as property_name,
         p.status as property_status
-      FROM staging_chamber_links cl
-      LEFT JOIN staging_properties p ON p.id = cl.property_id
+      FROM cc_staging_chamber_links cl
+      LEFT JOIN cc_staging_properties p ON p.id = cl.property_id
       WHERE 1=1
     `;
     const params: any[] = [];
@@ -1142,7 +1142,7 @@ router.get('/chamber/opportunities', async (req: Request, res: Response) => {
         opportunity_status as status,
         COUNT(*) as count,
         SUM(estimated_spots) as spots
-      FROM staging_chamber_links
+      FROM cc_staging_chamber_links
       GROUP BY opportunity_status
     `);
 
@@ -1173,7 +1173,7 @@ router.get('/chamber/stats', async (_req: Request, res: Response) => {
         SUM(estimated_spots) as total_potential_spots,
         SUM(estimated_spots) FILTER (WHERE opportunity_status = 'active') as active_spots,
         COUNT(DISTINCT chamber_name) as chambers_represented
-      FROM staging_chamber_links
+      FROM cc_staging_chamber_links
     `);
 
     res.json({ success: true, stats: result.rows[0] });
@@ -1201,7 +1201,7 @@ router.put('/chamber/opportunities/:id', async (req: Request, res: Response) => 
     } = req.body;
 
     const result = await stagingStorage.rawQuery(`
-      UPDATE staging_chamber_links SET
+      UPDATE cc_staging_chamber_links SET
         opportunity_status = COALESCE($2, opportunity_status),
         primary_contact_name = COALESCE($3, primary_contact_name),
         primary_contact_email = COALESCE($4, primary_contact_email),
@@ -1237,7 +1237,7 @@ router.post('/chamber/opportunities/:id/convert', async (req: Request, res: Resp
     const { id } = req.params;
     
     const oppResult = await stagingStorage.rawQuery(
-      'SELECT * FROM staging_chamber_links WHERE id = $1',
+      'SELECT * FROM cc_staging_chamber_links WHERE id = $1',
       [id]
     );
     
@@ -1252,7 +1252,7 @@ router.post('/chamber/opportunities/:id/convert', async (req: Request, res: Resp
     }
 
     const propResult = await stagingStorage.rawQuery(`
-      INSERT INTO staging_properties (
+      INSERT INTO cc_staging_properties (
         name,
         description,
         property_type,
@@ -1280,7 +1280,7 @@ router.post('/chamber/opportunities/:id/convert', async (req: Request, res: Resp
     const newProperty = propResult.rows[0];
 
     await stagingStorage.rawQuery(`
-      UPDATE staging_chamber_links 
+      UPDATE cc_staging_chamber_links 
       SET property_id = $1, 
           opportunity_status = 'active',
           updated_at = NOW()

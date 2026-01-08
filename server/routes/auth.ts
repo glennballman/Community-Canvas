@@ -25,7 +25,7 @@ router.post('/register', async (req: Request, res: Response) => {
         }
 
         const existing = await serviceQuery(
-            'SELECT id FROM staging_users WHERE email = $1',
+            'SELECT id FROM cc_staging_users WHERE email = $1',
             [email.toLowerCase()]
         );
 
@@ -36,7 +36,7 @@ router.post('/register', async (req: Request, res: Response) => {
         const passwordHash = await bcrypt.hash(password, 12);
 
         const result = await serviceQuery(`
-            INSERT INTO staging_users (
+            INSERT INTO cc_staging_users (
                 email, password_hash, given_name, family_name, telephone,
                 user_type, company_name
             ) VALUES ($1, $2, $3, $4, $5, $6, $7)
@@ -57,7 +57,7 @@ router.post('/register', async (req: Request, res: Response) => {
 
         const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
         await serviceQuery(`
-            INSERT INTO staging_sessions (user_id, refresh_token, expires_at)
+            INSERT INTO cc_staging_sessions (user_id, refresh_token, expires_at)
             VALUES ($1, $2, $3)
         `, [user.id, refreshToken, expiresAt]);
 
@@ -90,7 +90,7 @@ router.post('/login', async (req: Request, res: Response) => {
 
         const result = await serviceQuery(`
             SELECT id, email, password_hash, given_name, family_name, user_type, status
-            FROM staging_users WHERE email = $1
+            FROM cc_staging_users WHERE email = $1
         `, [email.toLowerCase()]);
 
         if (result.rows.length === 0) {
@@ -109,7 +109,7 @@ router.post('/login', async (req: Request, res: Response) => {
         }
 
         await serviceQuery(`
-            UPDATE staging_users 
+            UPDATE cc_staging_users 
             SET last_login_at = NOW(), login_count = login_count + 1
             WHERE id = $1
         `, [user.id]);
@@ -118,7 +118,7 @@ router.post('/login', async (req: Request, res: Response) => {
 
         const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
         await serviceQuery(`
-            INSERT INTO staging_sessions (user_id, refresh_token, expires_at)
+            INSERT INTO cc_staging_sessions (user_id, refresh_token, expires_at)
             VALUES ($1, $2, $3)
         `, [user.id, refreshToken, expiresAt]);
 
@@ -158,8 +158,8 @@ router.post('/refresh', async (req: Request, res: Response) => {
 
         const sessionResult = await serviceQuery(`
             SELECT s.*, u.email, u.user_type, u.status
-            FROM staging_sessions s
-            JOIN staging_users u ON u.id = s.user_id
+            FROM cc_staging_sessions s
+            JOIN cc_staging_users u ON u.id = s.user_id
             WHERE s.refresh_token = $1 AND s.revoked_at IS NULL AND s.expires_at > NOW()
         `, [refreshToken]);
 
@@ -180,9 +180,9 @@ router.post('/refresh', async (req: Request, res: Response) => {
         );
 
         const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-        await serviceQuery('UPDATE staging_sessions SET revoked_at = NOW() WHERE id = $1', [session.id]);
+        await serviceQuery('UPDATE cc_staging_sessions SET revoked_at = NOW() WHERE id = $1', [session.id]);
         await serviceQuery(`
-            INSERT INTO staging_sessions (user_id, refresh_token, expires_at)
+            INSERT INTO cc_staging_sessions (user_id, refresh_token, expires_at)
             VALUES ($1, $2, $3)
         `, [session.user_id, newRefreshToken, expiresAt]);
 
@@ -204,7 +204,7 @@ router.post('/logout', authenticateToken, async (req: AuthRequest, res: Response
 
         if (refreshToken) {
             await serviceQuery(
-                'UPDATE staging_sessions SET revoked_at = NOW() WHERE refresh_token = $1',
+                'UPDATE cc_staging_sessions SET revoked_at = NOW() WHERE refresh_token = $1',
                 [refreshToken]
             );
         }
@@ -224,7 +224,7 @@ router.get('/me', authenticateToken, async (req: AuthRequest, res: Response) => 
                    user_type, company_name, company_role,
                    email_verified, preferences, notification_settings,
                    created_at, last_login_at
-            FROM staging_users WHERE id = $1
+            FROM cc_staging_users WHERE id = $1
         `, [req.user!.id]);
 
         if (result.rows.length === 0) {
@@ -264,7 +264,7 @@ router.put('/me', authenticateToken, async (req: AuthRequest, res: Response) => 
         const { firstName, lastName, phone, companyName, companyRole, preferences, notificationSettings } = req.body;
 
         const result = await serviceQuery(`
-            UPDATE staging_users SET
+            UPDATE cc_staging_users SET
                 given_name = COALESCE($2, given_name),
                 family_name = COALESCE($3, family_name),
                 telephone = COALESCE($4, telephone),
@@ -321,7 +321,7 @@ router.post('/password/change', authenticateToken, async (req: AuthRequest, res:
         }
 
         const result = await serviceQuery(
-            'SELECT password_hash FROM staging_users WHERE id = $1',
+            'SELECT password_hash FROM cc_staging_users WHERE id = $1',
             [req.user!.id]
         );
 
@@ -332,12 +332,12 @@ router.post('/password/change', authenticateToken, async (req: AuthRequest, res:
 
         const newHash = await bcrypt.hash(newPassword, 12);
         await serviceQuery(
-            'UPDATE staging_users SET password_hash = $2, updated_at = NOW() WHERE id = $1',
+            'UPDATE cc_staging_users SET password_hash = $2, updated_at = NOW() WHERE id = $1',
             [req.user!.id, newHash]
         );
 
         await serviceQuery(
-            'UPDATE staging_sessions SET revoked_at = NOW() WHERE user_id = $1',
+            'UPDATE cc_staging_sessions SET revoked_at = NOW() WHERE user_id = $1',
             [req.user!.id]
         );
 
@@ -358,7 +358,7 @@ router.post('/password/forgot', async (req: Request, res: Response) => {
         }
 
         const result = await serviceQuery(
-            'SELECT id FROM staging_users WHERE email = $1 AND status = $2',
+            'SELECT id FROM cc_staging_users WHERE email = $1 AND status = $2',
             [email.toLowerCase(), 'active']
         );
 
@@ -370,7 +370,7 @@ router.post('/password/forgot', async (req: Request, res: Response) => {
         const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
 
         await serviceQuery(`
-            INSERT INTO staging_password_resets (user_id, token, expires_at)
+            INSERT INTO cc_staging_password_resets (user_id, token, expires_at)
             VALUES ($1, $2, $3)
         `, [result.rows[0].id, token, expiresAt]);
 
@@ -398,8 +398,8 @@ router.post('/password/reset', async (req: Request, res: Response) => {
 
         const result = await serviceQuery(`
             SELECT pr.*, u.id as user_id
-            FROM staging_password_resets pr
-            JOIN staging_users u ON u.id = pr.user_id
+            FROM cc_staging_password_resets pr
+            JOIN cc_staging_users u ON u.id = pr.user_id
             WHERE pr.token = $1 AND pr.expires_at > NOW() AND pr.used_at IS NULL
         `, [token]);
 
@@ -411,17 +411,17 @@ router.post('/password/reset', async (req: Request, res: Response) => {
         const newHash = await bcrypt.hash(newPassword, 12);
 
         await serviceQuery(
-            'UPDATE staging_users SET password_hash = $2, updated_at = NOW() WHERE id = $1',
+            'UPDATE cc_staging_users SET password_hash = $2, updated_at = NOW() WHERE id = $1',
             [resetRecord.user_id, newHash]
         );
 
         await serviceQuery(
-            'UPDATE staging_password_resets SET used_at = NOW() WHERE id = $1',
+            'UPDATE cc_staging_password_resets SET used_at = NOW() WHERE id = $1',
             [resetRecord.id]
         );
 
         await serviceQuery(
-            'UPDATE staging_sessions SET revoked_at = NOW() WHERE user_id = $1',
+            'UPDATE cc_staging_sessions SET revoked_at = NOW() WHERE user_id = $1',
             [resetRecord.user_id]
         );
 
@@ -436,7 +436,7 @@ router.post('/password/reset', async (req: Request, res: Response) => {
 router.get('/vehicles', authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
         const result = await serviceQuery(`
-            SELECT * FROM staging_user_vehicles 
+            SELECT * FROM cc_staging_user_vehicles 
             WHERE user_id = $1 AND is_active = true
             ORDER BY is_primary DESC, created_at DESC
         `, [req.user!.id]);
@@ -484,13 +484,13 @@ router.post('/vehicles', authenticateToken, async (req: AuthRequest, res: Respon
 
         if (isPrimary) {
             await serviceQuery(
-                'UPDATE staging_user_vehicles SET is_primary = false WHERE user_id = $1',
+                'UPDATE cc_staging_user_vehicles SET is_primary = false WHERE user_id = $1',
                 [req.user!.id]
             );
         }
 
         const result = await serviceQuery(`
-            INSERT INTO staging_user_vehicles (
+            INSERT INTO cc_staging_user_vehicles (
                 user_id, nickname, vehicle_type, make, model, year,
                 length_ft, width_ft, height_ft, combined_length_ft,
                 power_amp_requirement, has_slideouts, num_slideouts, has_generator,
@@ -518,7 +518,7 @@ router.put('/vehicles/:id', authenticateToken, async (req: AuthRequest, res: Res
         const updates = req.body;
 
         const check = await serviceQuery(
-            'SELECT id FROM staging_user_vehicles WHERE id = $1 AND user_id = $2',
+            'SELECT id FROM cc_staging_user_vehicles WHERE id = $1 AND user_id = $2',
             [id, req.user!.id]
         );
 
@@ -528,13 +528,13 @@ router.put('/vehicles/:id', authenticateToken, async (req: AuthRequest, res: Res
 
         if (updates.isPrimary) {
             await serviceQuery(
-                'UPDATE staging_user_vehicles SET is_primary = false WHERE user_id = $1',
+                'UPDATE cc_staging_user_vehicles SET is_primary = false WHERE user_id = $1',
                 [req.user!.id]
             );
         }
 
         const result = await serviceQuery(`
-            UPDATE staging_user_vehicles SET
+            UPDATE cc_staging_user_vehicles SET
                 nickname = COALESCE($2, nickname),
                 vehicle_type = COALESCE($3, vehicle_type),
                 make = COALESCE($4, make),
@@ -565,7 +565,7 @@ router.delete('/vehicles/:id', authenticateToken, async (req: AuthRequest, res: 
         const { id } = req.params;
 
         const result = await serviceQuery(`
-            UPDATE staging_user_vehicles 
+            UPDATE cc_staging_user_vehicles 
             SET is_active = false, updated_at = NOW()
             WHERE id = $1 AND user_id = $2
             RETURNING id
@@ -594,9 +594,9 @@ router.get('/favorites', authenticateToken, async (req: AuthRequest, res: Respon
                 p.total_spots, p.rv_score, p.crew_score, p.trucker_score,
                 p.thumbnail_url,
                 pr.nightly_rate
-            FROM staging_user_favorites f
-            JOIN staging_properties p ON p.id = f.property_id
-            LEFT JOIN staging_pricing pr ON pr.property_id = p.id 
+            FROM cc_staging_user_favorites f
+            JOIN cc_staging_properties p ON p.id = f.property_id
+            LEFT JOIN cc_staging_pricing pr ON pr.property_id = p.id 
                 AND pr.pricing_type = 'base_nightly' AND pr.is_active = true
             WHERE f.user_id = $1
             ORDER BY f.created_at DESC
@@ -637,13 +637,13 @@ router.post('/favorites', authenticateToken, async (req: AuthRequest, res: Respo
             return res.status(400).json({ success: false, error: 'Property ID required' });
         }
 
-        const propCheck = await serviceQuery('SELECT id FROM staging_properties WHERE id = $1', [propertyId]);
+        const propCheck = await serviceQuery('SELECT id FROM cc_staging_properties WHERE id = $1', [propertyId]);
         if (propCheck.rows.length === 0) {
             return res.status(404).json({ success: false, error: 'Property not found' });
         }
 
         const result = await serviceQuery(`
-            INSERT INTO staging_user_favorites (user_id, property_id, notes)
+            INSERT INTO cc_staging_user_favorites (user_id, property_id, notes)
             VALUES ($1, $2, $3)
             ON CONFLICT (user_id, property_id) DO UPDATE SET notes = $3
             RETURNING id
@@ -662,7 +662,7 @@ router.delete('/favorites/:propertyId', authenticateToken, async (req: AuthReque
         const { propertyId } = req.params;
 
         const result = await serviceQuery(`
-            DELETE FROM staging_user_favorites 
+            DELETE FROM cc_staging_user_favorites 
             WHERE user_id = $1 AND property_id = $2
             RETURNING id
         `, [req.user!.id, propertyId]);
@@ -688,8 +688,8 @@ router.get('/bookings', authenticateToken, async (req: AuthRequest, res: Respons
                 p.city,
                 p.region,
                 p.thumbnail_url
-            FROM staging_bookings b
-            JOIN staging_properties p ON p.id = b.property_id
+            FROM cc_staging_bookings b
+            JOIN cc_staging_properties p ON p.id = b.property_id
             WHERE b.user_id = $1 OR b.guest_email = $2
             ORDER BY b.check_in_date DESC
         `, [req.user!.id, req.user!.email]);
@@ -724,8 +724,8 @@ router.get('/trips', authenticateToken, async (req: AuthRequest, res: Response) 
         const result = await serviceQuery(`
             SELECT 
                 t.*,
-                (SELECT COUNT(*) FROM staging_trip_stops WHERE trip_id = t.id) as stop_count
-            FROM staging_trips t
+                (SELECT COUNT(*) FROM cc_staging_trip_stops WHERE trip_id = t.id) as stop_count
+            FROM cc_staging_trips t
             WHERE t.user_id = $1
             ORDER BY t.created_at DESC
         `, [req.user!.id]);

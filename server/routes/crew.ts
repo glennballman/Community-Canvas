@@ -190,8 +190,8 @@ export function createCrewRouter() {
                   AND (er.metadata->>'${amenity}')::boolean = true
                 ))
                 OR
-                (a.source_table = 'staging_properties' AND a.source_id ~ '^\\d+$' AND EXISTS (
-                  SELECT 1 FROM staging_properties sp 
+                (a.source_table = 'cc_staging_properties' AND a.source_id ~ '^\\d+$' AND EXISTS (
+                  SELECT 1 FROM cc_staging_properties sp 
                   WHERE sp.id = a.source_id::integer 
                   AND sp.${amenity} = true
                 ))

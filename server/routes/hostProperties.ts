@@ -16,7 +16,7 @@ router.use(requireHostAuth as any);
 
 async function verifyOwnership(hostId: number, propertyId: number): Promise<boolean> {
   const result = await db.execute(sql`
-    SELECT id FROM staging_properties 
+    SELECT id FROM cc_staging_properties 
     WHERE id = ${propertyId} AND host_account_id = ${hostId}
   `);
   return result.rows.length > 0;
@@ -24,7 +24,7 @@ async function verifyOwnership(hostId: number, propertyId: number): Promise<bool
 
 async function getHostProperties(hostId: number): Promise<number[]> {
   const result = await db.execute(sql`
-    SELECT id FROM staging_properties WHERE host_account_id = ${hostId}
+    SELECT id FROM cc_staging_properties WHERE host_account_id = ${hostId}
   `);
   return (result.rows as any[]).map(r => r.id);
 }
@@ -41,9 +41,9 @@ router.get('/properties', async (req: HostAuthRequest, res: Response) => {
     const result = await db.execute(sql`
       SELECT sp.*, 
              pr.nightly_rate as base_nightly_rate,
-             (SELECT COUNT(*) FROM staging_bookings WHERE property_id = sp.id AND status NOT IN ('cancelled', 'no_show')) as booking_count
-      FROM staging_properties sp
-      LEFT JOIN staging_pricing pr ON pr.property_id = sp.id 
+             (SELECT COUNT(*) FROM cc_staging_bookings WHERE property_id = sp.id AND status NOT IN ('cancelled', 'no_show')) as booking_count
+      FROM cc_staging_properties sp
+      LEFT JOIN cc_staging_pricing pr ON pr.property_id = sp.id 
         AND pr.pricing_type = 'base_nightly' AND pr.is_active = true
       WHERE sp.host_account_id = ${hostId}
       ORDER BY sp.updated_at DESC
@@ -181,7 +181,7 @@ router.get('/properties/search', async (req: HostAuthRequest, res: Response) => 
     let query = `
       SELECT id, canvas_id, name, city, region, property_type, total_spots,
              crew_score, rv_score, thumbnail_url, status
-      FROM staging_properties 
+      FROM cc_staging_properties 
       WHERE host_account_id IS NULL
     `;
 
@@ -212,7 +212,7 @@ router.get('/properties/unclaimed', async (req: HostAuthRequest, res: Response) 
     let query = `
       SELECT id, canvas_id, name, city, region, property_type, total_spots,
              crew_score, rv_score, thumbnail_url, status
-      FROM staging_properties 
+      FROM cc_staging_properties 
       WHERE host_account_id IS NULL
     `;
 
@@ -242,7 +242,7 @@ router.post('/properties/claim', async (req: HostAuthRequest, res: Response) => 
 
     // Check if property exists and is unclaimed
     const result = await db.execute(sql`
-      SELECT id, name, host_account_id FROM staging_properties WHERE id = ${propertyId}
+      SELECT id, name, host_account_id FROM cc_staging_properties WHERE id = ${propertyId}
     `);
 
     if (result.rows.length === 0) {
@@ -260,7 +260,7 @@ router.post('/properties/claim', async (req: HostAuthRequest, res: Response) => 
 
     // Store claim request
     await db.execute(sql`
-      INSERT INTO staging_property_claims (
+      INSERT INTO cc_staging_property_claims (
         property_id, host_account_id, verification_code, verification_method, 
         status, expires_at
       ) VALUES (
@@ -296,7 +296,7 @@ router.post('/properties/verify-claim', async (req: HostAuthRequest, res: Respon
 
     // Find pending claim
     const claimResult = await db.execute(sql`
-      SELECT * FROM staging_property_claims 
+      SELECT * FROM cc_staging_property_claims 
       WHERE property_id = ${propertyId} 
         AND host_account_id = ${hostId}
         AND verification_code = ${code}
@@ -310,14 +310,14 @@ router.post('/properties/verify-claim', async (req: HostAuthRequest, res: Respon
 
     // Update claim status
     await db.execute(sql`
-      UPDATE staging_property_claims 
+      UPDATE cc_staging_property_claims 
       SET status = 'verified', verified_at = CURRENT_TIMESTAMP
       WHERE property_id = ${propertyId} AND host_account_id = ${hostId}
     `);
 
     // Assign property to host
     await db.execute(sql`
-      UPDATE staging_properties 
+      UPDATE cc_staging_properties 
       SET host_account_id = ${hostId}, status = 'active', updated_at = CURRENT_TIMESTAMP
       WHERE id = ${propertyId}
     `);
@@ -428,7 +428,7 @@ router.delete('/properties/:id/spots/:spotId', async (req: HostAuthRequest, res:
       return res.status(403).json({ error: 'Access denied' });
     }
 
-    await db.execute(sql`DELETE FROM staging_spots WHERE id = ${spotId} AND property_id = ${propertyId}`);
+    await db.execute(sql`DELETE FROM cc_staging_spots WHERE id = ${spotId} AND property_id = ${propertyId}`);
     
     await logActivity(hostId, 'spot_deleted', `Removed spot from property ${propertyId}`, propertyId);
 
@@ -474,7 +474,7 @@ router.post('/properties/:id/pricing', async (req: HostAuthRequest, res: Respons
     const { pricingType, nightlyRate, weeklyRate, monthlyRate, seasonName, startDate, endDate, spotId } = req.body;
 
     const result = await db.execute(sql`
-      INSERT INTO staging_pricing (
+      INSERT INTO cc_staging_pricing (
         property_id, spot_id, pricing_type, nightly_rate, weekly_rate, monthly_rate,
         season_name, start_date, end_date, is_active
       ) VALUES (
@@ -508,7 +508,7 @@ router.put('/properties/:id/pricing/:ruleId', async (req: HostAuthRequest, res: 
     const { nightlyRate, weeklyRate, monthlyRate, seasonName, startDate, endDate, isActive } = req.body;
 
     const result = await db.execute(sql`
-      UPDATE staging_pricing 
+      UPDATE cc_staging_pricing 
       SET nightly_rate = COALESCE(${nightlyRate}, nightly_rate),
           weekly_rate = COALESCE(${weeklyRate}, weekly_rate),
           monthly_rate = COALESCE(${monthlyRate}, monthly_rate),
@@ -542,7 +542,7 @@ router.delete('/properties/:id/pricing/:ruleId', async (req: HostAuthRequest, re
       return res.status(403).json({ error: 'Access denied' });
     }
 
-    await db.execute(sql`DELETE FROM staging_pricing WHERE id = ${ruleId} AND property_id = ${propertyId}`);
+    await db.execute(sql`DELETE FROM cc_staging_pricing WHERE id = ${ruleId} AND property_id = ${propertyId}`);
 
     res.json({ success: true });
   } catch (error) {
@@ -629,7 +629,7 @@ router.delete('/properties/:id/providers/:providerId', async (req: HostAuthReque
     }
 
     await db.execute(sql`
-      DELETE FROM staging_service_providers 
+      DELETE FROM cc_staging_service_providers 
       WHERE id = ${providerId} AND property_id = ${propertyId}
     `);
 
@@ -718,8 +718,8 @@ router.put('/calendar/block/:blockId', async (req: HostAuthRequest, res: Respons
     // Get block and verify ownership
     const blockResult = await db.execute(sql`
       SELECT cb.*, sp.host_account_id 
-      FROM staging_calendar_blocks cb
-      JOIN staging_properties sp ON sp.id = cb.property_id
+      FROM cc_staging_calendar_blocks cb
+      JOIN cc_staging_properties sp ON sp.id = cb.property_id
       WHERE cb.id = ${blockId}
     `);
 
@@ -748,8 +748,8 @@ router.delete('/calendar/block/:blockId', async (req: HostAuthRequest, res: Resp
     // Get block and verify ownership
     const blockResult = await db.execute(sql`
       SELECT cb.*, sp.host_account_id 
-      FROM staging_calendar_blocks cb
-      JOIN staging_properties sp ON sp.id = cb.property_id
+      FROM cc_staging_calendar_blocks cb
+      JOIN cc_staging_properties sp ON sp.id = cb.property_id
       WHERE cb.id = ${blockId}
     `);
 
@@ -862,8 +862,8 @@ router.get('/bookings', async (req: HostAuthRequest, res: Response) => {
 
     let query = `
       SELECT b.*, sp.name as property_name, sp.canvas_id as property_canvas_id
-      FROM staging_bookings b
-      JOIN staging_properties sp ON sp.id = b.property_id
+      FROM cc_staging_bookings b
+      JOIN cc_staging_properties sp ON sp.id = b.property_id
       WHERE b.property_id IN (${propertyIds.join(',')})
     `;
 

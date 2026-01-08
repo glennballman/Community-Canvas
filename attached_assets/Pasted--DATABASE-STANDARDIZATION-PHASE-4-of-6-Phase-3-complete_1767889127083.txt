@@ -1,0 +1,78 @@
+**DATABASE STANDARDIZATION - PHASE 4 of 6**
+
+Phase 3 complete. Now we rename the staging tables (28 tables).
+
+**STEP 4A: Get the complete list of staging tables**
+```sql
+SELECT tablename 
+FROM pg_tables 
+WHERE schemaname = 'public' 
+  AND tablename LIKE 'staging_%'
+ORDER BY tablename;
+```
+
+**STEP 4B: Rename all staging tables**
+
+Execute as a single transaction:
+```sql
+BEGIN;
+
+-- Rename each staging_* table to cc_staging_*
+ALTER TABLE staging_bookings RENAME TO cc_staging_bookings;
+ALTER TABLE staging_properties RENAME TO cc_staging_properties;
+-- ... (continue for ALL staging_* tables from the list)
+
+COMMIT;
+```
+
+**STEP 4C: Find all code references to staging tables**
+```bash
+grep -r "staging_" --include="*.ts" --include="*.tsx" server/ client/ shared/ | grep -v node_modules | grep -v ".git"
+```
+
+**STEP 4D: Update all code references**
+
+For each file found:
+- `FROM staging_` → `FROM cc_staging_`
+- `INTO staging_` → `INTO cc_staging_`
+- `UPDATE staging_` → `UPDATE cc_staging_`
+- `JOIN staging_` → `JOIN cc_staging_`
+- `"staging_` → `"cc_staging_` (in schema definitions)
+
+**STEP 4E: Rename constraints and indexes**
+
+For each renamed table, rename its constraints and indexes to match:
+```sql
+-- Pattern: 
+-- staging_bookings_pkey → cc_staging_bookings_pkey
+-- idx_staging_bookings_* → idx_cc_staging_bookings_*
+```
+
+First query to find them all:
+```sql
+SELECT conname, conrelid::regclass as table_name
+FROM pg_constraint 
+WHERE conrelid::regclass::text LIKE 'cc_staging_%'
+  AND conname LIKE 'staging_%';
+
+SELECT indexname, tablename 
+FROM pg_indexes 
+WHERE tablename LIKE 'cc_staging_%'
+  AND indexname LIKE 'staging_%';
+```
+
+Then rename each one.
+
+**STEP 4F: Verify**
+1. App compiles without errors
+2. Run: `SELECT tablename FROM pg_tables WHERE tablename LIKE 'staging_%';` (should return 0 rows)
+3. Run: `SELECT tablename FROM pg_tables WHERE tablename LIKE 'cc_staging_%';` (should return 28 rows)
+4. Test any staging/ETL functionality if applicable
+
+**Report:**
+- Number of tables renamed
+- Number of code files updated
+- Number of constraints/indexes renamed
+- Any errors encountered
+
+**DO NOT proceed to Phase 5 until I confirm Phase 4 is verified.**

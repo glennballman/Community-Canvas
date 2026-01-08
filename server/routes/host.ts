@@ -16,16 +16,16 @@ router.get('/properties', async (req: AuthRequest, res: Response) => {
                 ph.can_manage_bookings,
                 ph.can_view_revenue,
                 ph.is_primary_contact,
-                (SELECT COUNT(*) FROM staging_bookings b 
+                (SELECT COUNT(*) FROM cc_staging_bookings b 
                  WHERE b.property_id = p.id AND b.status = 'pending') as pending_bookings,
-                (SELECT COUNT(*) FROM staging_bookings b 
+                (SELECT COUNT(*) FROM cc_staging_bookings b 
                  WHERE b.property_id = p.id AND b.status = 'confirmed' 
                  AND b.check_in_date <= CURRENT_DATE AND b.check_out_date > CURRENT_DATE) as active_guests,
-                (SELECT COALESCE(SUM(b.total_cost), 0) FROM staging_bookings b 
+                (SELECT COALESCE(SUM(b.total_cost), 0) FROM cc_staging_bookings b 
                  WHERE b.property_id = p.id AND b.status IN ('confirmed', 'completed')
                  AND b.created_at >= DATE_TRUNC('month', CURRENT_DATE)) as month_revenue
-            FROM staging_properties p
-            JOIN staging_property_hosts ph ON ph.property_id = p.id
+            FROM cc_staging_properties p
+            JOIN cc_staging_property_hosts ph ON ph.property_id = p.id
             WHERE ph.user_id = $1
             ORDER BY p.name
         `, [req.user!.id]);
@@ -62,7 +62,7 @@ router.get('/properties/:id', async (req: AuthRequest, res: Response) => {
         const { id } = req.params;
 
         const accessCheck = await serviceQuery(
-            'SELECT role FROM staging_property_hosts WHERE property_id = $1 AND user_id = $2',
+            'SELECT role FROM cc_staging_property_hosts WHERE property_id = $1 AND user_id = $2',
             [id, req.user!.id]
         );
 
@@ -70,18 +70,18 @@ router.get('/properties/:id', async (req: AuthRequest, res: Response) => {
             return res.status(403).json({ success: false, error: 'Access denied' });
         }
 
-        const propResult = await serviceQuery('SELECT * FROM staging_properties WHERE id = $1', [id]);
+        const propResult = await serviceQuery('SELECT * FROM cc_staging_properties WHERE id = $1', [id]);
         if (propResult.rows.length === 0) {
             return res.status(404).json({ success: false, error: 'Property not found' });
         }
 
         const pricingResult = await serviceQuery(
-            'SELECT * FROM staging_pricing WHERE property_id = $1 ORDER BY pricing_type',
+            'SELECT * FROM cc_staging_pricing WHERE property_id = $1 ORDER BY pricing_type',
             [id]
         );
 
         const spotsResult = await serviceQuery(
-            'SELECT * FROM staging_spots WHERE property_id = $1 ORDER BY name',
+            'SELECT * FROM cc_staging_spots WHERE property_id = $1 ORDER BY name',
             [id]
         );
 
@@ -107,9 +107,9 @@ router.get('/bookings', async (req: AuthRequest, res: Response) => {
                 b.*,
                 p.name as property_name,
                 p.city
-            FROM staging_bookings b
-            JOIN staging_properties p ON p.id = b.property_id
-            JOIN staging_property_hosts ph ON ph.property_id = p.id
+            FROM cc_staging_bookings b
+            JOIN cc_staging_properties p ON p.id = b.property_id
+            JOIN cc_staging_property_hosts ph ON ph.property_id = p.id
             WHERE ph.user_id = $1
         `;
         const params: any[] = [req.user!.id];
@@ -182,8 +182,8 @@ router.put('/bookings/:id/status', async (req: AuthRequest, res: Response) => {
         const { status, notes } = req.body;
 
         const accessCheck = await serviceQuery(`
-            SELECT b.id FROM staging_bookings b
-            JOIN staging_property_hosts ph ON ph.property_id = b.property_id
+            SELECT b.id FROM cc_staging_bookings b
+            JOIN cc_staging_property_hosts ph ON ph.property_id = b.property_id
             WHERE b.id = $1 AND ph.user_id = $2 AND ph.can_manage_bookings = true
         `, [id, req.user!.id]);
 
@@ -197,7 +197,7 @@ router.put('/bookings/:id/status', async (req: AuthRequest, res: Response) => {
         }
 
         const result = await serviceQuery(`
-            UPDATE staging_bookings 
+            UPDATE cc_staging_bookings 
             SET status = $2, 
                 host_notes = COALESCE($3, host_notes),
                 updated_at = NOW()
@@ -219,7 +219,7 @@ router.get('/properties/:id/calendar', async (req: AuthRequest, res: Response) =
         const { startDate, endDate } = req.query;
 
         const accessCheck = await serviceQuery(
-            'SELECT role FROM staging_property_hosts WHERE property_id = $1 AND user_id = $2',
+            'SELECT role FROM cc_staging_property_hosts WHERE property_id = $1 AND user_id = $2',
             [id, req.user!.id]
         );
 
@@ -232,7 +232,7 @@ router.get('/properties/:id/calendar', async (req: AuthRequest, res: Response) =
 
         const bookingsResult = await serviceQuery(`
             SELECT id, booking_ref, guest_name, check_in_date, check_out_date, status, num_nights
-            FROM staging_bookings
+            FROM cc_staging_bookings
             WHERE property_id = $1 
             AND status IN ('pending', 'confirmed')
             AND check_out_date >= $2 AND check_in_date <= $3
@@ -241,7 +241,7 @@ router.get('/properties/:id/calendar', async (req: AuthRequest, res: Response) =
 
         const blocksResult = await serviceQuery(`
             SELECT id, block_type, title, start_date, end_date
-            FROM staging_calendar_blocks
+            FROM cc_staging_calendar_blocks
             WHERE property_id = $1 
             AND end_date >= $2 AND start_date <= $3
             ORDER BY start_date
@@ -249,7 +249,7 @@ router.get('/properties/:id/calendar', async (req: AuthRequest, res: Response) =
 
         const overridesResult = await serviceQuery(`
             SELECT id, name, override_type, start_date, end_date, nightly_rate, rate_multiplier
-            FROM staging_pricing_overrides
+            FROM cc_cc_staging_pricing_overrides
             WHERE property_id = $1 
             AND end_date >= $2 AND start_date <= $3
             AND is_active = true
@@ -279,7 +279,7 @@ router.post('/properties/:id/blocks', async (req: AuthRequest, res: Response) =>
         const { blockType, title, description, startDate, endDate, spotId } = req.body;
 
         const accessCheck = await serviceQuery(
-            'SELECT role FROM staging_property_hosts WHERE property_id = $1 AND user_id = $2 AND can_manage_calendar = true',
+            'SELECT role FROM cc_staging_property_hosts WHERE property_id = $1 AND user_id = $2 AND can_manage_calendar = true',
             [id, req.user!.id]
         );
 
@@ -292,7 +292,7 @@ router.post('/properties/:id/blocks', async (req: AuthRequest, res: Response) =>
         }
 
         const result = await serviceQuery(`
-            INSERT INTO staging_calendar_blocks 
+            INSERT INTO cc_staging_calendar_blocks 
             (property_id, spot_id, block_type, title, description, start_date, end_date, created_by)
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
             RETURNING *
@@ -311,7 +311,7 @@ router.delete('/properties/:id/blocks/:blockId', async (req: AuthRequest, res: R
         const { id, blockId } = req.params;
 
         const accessCheck = await serviceQuery(
-            'SELECT role FROM staging_property_hosts WHERE property_id = $1 AND user_id = $2 AND can_manage_calendar = true',
+            'SELECT role FROM cc_staging_property_hosts WHERE property_id = $1 AND user_id = $2 AND can_manage_calendar = true',
             [id, req.user!.id]
         );
 
@@ -320,7 +320,7 @@ router.delete('/properties/:id/blocks/:blockId', async (req: AuthRequest, res: R
         }
 
         const result = await serviceQuery(
-            'DELETE FROM staging_calendar_blocks WHERE id = $1 AND property_id = $2 RETURNING id',
+            'DELETE FROM cc_staging_calendar_blocks WHERE id = $1 AND property_id = $2 RETURNING id',
             [blockId, id]
         );
 
@@ -342,7 +342,7 @@ router.post('/properties/:id/pricing-overrides', async (req: AuthRequest, res: R
         const { overrideType, name, description, startDate, endDate, nightlyRate, rateMultiplier, minimumNights } = req.body;
 
         const accessCheck = await serviceQuery(
-            'SELECT role FROM staging_property_hosts WHERE property_id = $1 AND user_id = $2',
+            'SELECT role FROM cc_staging_property_hosts WHERE property_id = $1 AND user_id = $2',
             [id, req.user!.id]
         );
 
@@ -355,7 +355,7 @@ router.post('/properties/:id/pricing-overrides', async (req: AuthRequest, res: R
         }
 
         const result = await serviceQuery(`
-            INSERT INTO staging_pricing_overrides 
+            INSERT INTO cc_cc_staging_pricing_overrides 
             (property_id, override_type, name, description, start_date, end_date, nightly_rate, rate_multiplier, minimum_nights, created_by)
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
             RETURNING *
@@ -374,7 +374,7 @@ router.delete('/properties/:id/pricing-overrides/:overrideId', async (req: AuthR
         const { id, overrideId } = req.params;
 
         const accessCheck = await serviceQuery(
-            'SELECT role FROM staging_property_hosts WHERE property_id = $1 AND user_id = $2',
+            'SELECT role FROM cc_staging_property_hosts WHERE property_id = $1 AND user_id = $2',
             [id, req.user!.id]
         );
 
@@ -383,7 +383,7 @@ router.delete('/properties/:id/pricing-overrides/:overrideId', async (req: AuthR
         }
 
         const result = await serviceQuery(
-            'DELETE FROM staging_pricing_overrides WHERE id = $1 AND property_id = $2 RETURNING id',
+            'DELETE FROM cc_cc_staging_pricing_overrides WHERE id = $1 AND property_id = $2 RETURNING id',
             [overrideId, id]
         );
 
@@ -405,8 +405,8 @@ router.get('/notifications', async (req: AuthRequest, res: Response) => {
 
         let query = `
             SELECT n.*, p.name as property_name
-            FROM staging_host_notifications n
-            LEFT JOIN staging_properties p ON p.id = n.property_id
+            FROM cc_staging_host_notifications n
+            LEFT JOIN cc_staging_properties p ON p.id = n.property_id
             WHERE n.user_id = $1
         `;
 
@@ -445,7 +445,7 @@ router.put('/notifications/:id/read', async (req: AuthRequest, res: Response) =>
         const { id } = req.params;
 
         await serviceQuery(
-            'UPDATE staging_host_notifications SET is_read = true, read_at = NOW() WHERE id = $1 AND user_id = $2',
+            'UPDATE cc_staging_host_notifications SET is_read = true, read_at = NOW() WHERE id = $1 AND user_id = $2',
             [id, req.user!.id]
         );
 
@@ -460,7 +460,7 @@ router.put('/notifications/:id/read', async (req: AuthRequest, res: Response) =>
 router.put('/notifications/read-all', async (req: AuthRequest, res: Response) => {
     try {
         await serviceQuery(
-            'UPDATE staging_host_notifications SET is_read = true, read_at = NOW() WHERE user_id = $1 AND is_read = false',
+            'UPDATE cc_staging_host_notifications SET is_read = true, read_at = NOW() WHERE user_id = $1 AND is_read = false',
             [req.user!.id]
         );
 
@@ -478,21 +478,21 @@ router.get('/dashboard/stats', async (req: AuthRequest, res: Response) => {
             SELECT 
                 COUNT(DISTINCT p.id) as total_properties,
                 COALESCE(SUM(p.total_spots), 0) as total_spots,
-                (SELECT COUNT(*) FROM staging_bookings b 
-                 JOIN staging_property_hosts ph ON ph.property_id = b.property_id 
+                (SELECT COUNT(*) FROM cc_staging_bookings b 
+                 JOIN cc_staging_property_hosts ph ON ph.property_id = b.property_id 
                  WHERE ph.user_id = $1 AND b.status = 'pending') as pending_bookings,
-                (SELECT COUNT(*) FROM staging_bookings b 
-                 JOIN staging_property_hosts ph ON ph.property_id = b.property_id 
+                (SELECT COUNT(*) FROM cc_staging_bookings b 
+                 JOIN cc_staging_property_hosts ph ON ph.property_id = b.property_id 
                  WHERE ph.user_id = $1 AND b.status = 'confirmed'
                  AND b.check_in_date <= CURRENT_DATE AND b.check_out_date > CURRENT_DATE) as active_guests,
-                (SELECT COALESCE(SUM(b.total_cost), 0) FROM staging_bookings b 
-                 JOIN staging_property_hosts ph ON ph.property_id = b.property_id 
+                (SELECT COALESCE(SUM(b.total_cost), 0) FROM cc_staging_bookings b 
+                 JOIN cc_staging_property_hosts ph ON ph.property_id = b.property_id 
                  WHERE ph.user_id = $1 AND b.status IN ('confirmed', 'completed')
                  AND b.created_at >= DATE_TRUNC('month', CURRENT_DATE)) as month_revenue,
-                (SELECT COUNT(*) FROM staging_host_notifications n 
+                (SELECT COUNT(*) FROM cc_staging_host_notifications n 
                  WHERE n.user_id = $1 AND n.is_read = false) as unread_notifications
-            FROM staging_properties p
-            JOIN staging_property_hosts ph ON ph.property_id = p.id
+            FROM cc_staging_properties p
+            JOIN cc_staging_property_hosts ph ON ph.property_id = p.id
             WHERE ph.user_id = $1
         `, [req.user!.id]);
 

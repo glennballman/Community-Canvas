@@ -29,7 +29,7 @@ router.get('/signals', async (req: Request, res: Response) => {
                 p.city
             FROM civos_signals s
             JOIN civos_signal_types st ON st.id = s.signal_type_id
-            LEFT JOIN staging_properties p ON p.id = s.property_id
+            LEFT JOIN cc_staging_properties p ON p.id = s.property_id
             WHERE s.status = 'active'
             AND (s.expires_at IS NULL OR s.expires_at > NOW())
         `;
@@ -111,7 +111,7 @@ router.get('/capacity', async (req: Request, res: Response) => {
                 COALESCE(SUM(CASE WHEN has_shore_power THEN total_spots ELSE 0 END), 0) as powered_spots,
                 COALESCE(SUM(num_truck_spots), 0) as truck_spots,
                 COUNT(*) FILTER (WHERE has_onsite_mechanic) as properties_with_mechanic
-            FROM staging_properties
+            FROM cc_staging_properties
             WHERE status = 'active'
             ${region ? 'AND region = $1' : ''}
         `, region ? [region] : []);
@@ -124,7 +124,7 @@ router.get('/capacity', async (req: Request, res: Response) => {
                 COALESCE(SUM(CASE WHEN has_shore_power THEN total_spots ELSE 0 END), 0) as powered_spots,
                 ROUND(AVG(NULLIF(rv_score, 0))::numeric, 1) as avg_rv_score,
                 ROUND(AVG(NULLIF(crew_score, 0))::numeric, 1) as avg_crew_score
-            FROM staging_properties
+            FROM cc_staging_properties
             WHERE status = 'active'
             GROUP BY region
             ORDER BY spots DESC
@@ -134,8 +134,8 @@ router.get('/capacity', async (req: Request, res: Response) => {
             SELECT 
                 p.region,
                 COUNT(DISTINCT b.id) as active_bookings
-            FROM staging_bookings b
-            JOIN staging_properties p ON p.id = b.property_id
+            FROM cc_staging_bookings b
+            JOIN cc_staging_properties p ON p.id = b.property_id
             WHERE b.status IN ('confirmed', 'pending')
             AND b.check_in_date <= CURRENT_DATE
             AND b.check_out_date > CURRENT_DATE
@@ -203,9 +203,9 @@ router.get('/properties', async (req: Request, res: Response) => {
                 p.has_shore_power, p.has_water_hookup, p.has_sewer_hookup,
                 p.has_onsite_mechanic, p.accepts_semi_trucks,
                 p.rv_score, p.crew_score, p.trucker_score,
-                (SELECT COUNT(*) FROM staging_service_providers sp 
+                (SELECT COUNT(*) FROM cc_staging_service_providers sp 
                  WHERE sp.property_id = p.id AND sp.is_active = true) as service_provider_count
-            FROM staging_properties p
+            FROM cc_staging_properties p
             WHERE p.status = 'active'
         `;
         const params: any[] = [];
@@ -297,7 +297,7 @@ router.get('/signal-types', async (req: Request, res: Response) => {
 router.post('/signals/generate', async (req: Request, res: Response) => {
     try {
         const properties = await serviceQuery(
-            'SELECT id FROM staging_properties WHERE status = $1',
+            'SELECT id FROM cc_staging_properties WHERE status = $1',
             ['active']
         );
 
@@ -358,7 +358,7 @@ router.post('/signals', async (req: Request, res: Response) => {
         let lat = null, lng = null, propRegion = region;
         if (propertyId) {
             const propResult = await serviceQuery(
-                'SELECT latitude, longitude, region FROM staging_properties WHERE id = $1',
+                'SELECT latitude, longitude, region FROM cc_staging_properties WHERE id = $1',
                 [propertyId]
             );
             if (propResult.rows.length > 0) {
@@ -448,7 +448,7 @@ router.get('/stats', async (req: Request, res: Response) => {
                 COUNT(*) as total_properties,
                 COALESCE(SUM(total_spots), 0) as total_spots,
                 COUNT(*) FILTER (WHERE has_onsite_mechanic) as with_mechanic
-            FROM staging_properties
+            FROM cc_staging_properties
             WHERE status = 'active'
         `);
 
