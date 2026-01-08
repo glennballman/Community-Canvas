@@ -1,4 +1,4 @@
-import { pgTable, text, serial, timestamp, jsonb, integer } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, jsonb, integer, uuid } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -54,3 +54,106 @@ export const chamberOverrides = pgTable("chamber_overrides", {
 export const insertChamberOverrideSchema = createInsertSchema(chamberOverrides);
 export type ChamberOverride = typeof chamberOverrides.$inferSelect;
 export type InsertChamberOverride = z.infer<typeof insertChamberOverrideSchema>;
+
+// ============================================================================
+// MEDIA STORAGE SYSTEM
+// ============================================================================
+
+// Media type enums (matching database enums)
+export const mediaTypeEnum = z.enum(['image', 'document', 'video']);
+export const mediaPurposeEnum = z.enum(['hero', 'gallery', 'thumbnail', 'avatar', 'proof', 'document', 'before', 'after', 'logo', 'cover']);
+export const mediaSourceEnum = z.enum(['upload', 'crawl', 'import', 'ai_generated']);
+export const mediaProcessingStatusEnum = z.enum(['pending', 'processing', 'complete', 'failed']);
+export const crawlMediaStatusEnum = z.enum(['pending', 'downloading', 'processing', 'complete', 'failed', 'skipped']);
+
+// Media variants schema (thumbnails, etc.)
+export const mediaVariantsSchema = z.object({
+  thumbnail: z.string().optional(),
+  medium: z.string().optional(),
+  large: z.string().optional(),
+}).passthrough();
+
+// Media table
+export const media = pgTable("media", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id").notNull(),
+  storageKey: text("storage_key").notNull(),
+  storageProvider: text("storage_provider").notNull().default('r2'),
+  publicUrl: text("public_url").notNull(),
+  filename: text("filename").notNull(),
+  mimeType: text("mime_type").notNull(),
+  fileSize: integer("file_size").notNull().default(0),
+  width: integer("width"),
+  height: integer("height"),
+  altText: text("alt_text"),
+  caption: text("caption"),
+  title: text("title"),
+  mediaType: text("media_type").notNull().default('image'),
+  purpose: text("purpose"),
+  tags: text("tags").array().default([]),
+  source: text("source").notNull().default('upload'),
+  sourceUrl: text("source_url"),
+  crawlJobId: uuid("crawl_job_id"),
+  processingStatus: text("processing_status").notNull().default('complete'),
+  variants: jsonb("variants").$type<z.infer<typeof mediaVariantsSchema>>().default({}),
+  uploadedBy: uuid("uploaded_by"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertMediaSchema = createInsertSchema(media).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type Media = typeof media.$inferSelect;
+export type InsertMedia = z.infer<typeof insertMediaSchema>;
+
+// Entity Media (polymorphic links)
+export const entityMedia = pgTable("entity_media", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  mediaId: uuid("media_id").notNull(),
+  entityType: text("entity_type").notNull(),
+  entityId: uuid("entity_id").notNull(),
+  role: text("role").notNull().default('gallery'),
+  sortOrder: integer("sort_order").default(0),
+  portalId: uuid("portal_id"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertEntityMediaSchema = createInsertSchema(entityMedia).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type EntityMedia = typeof entityMedia.$inferSelect;
+export type InsertEntityMedia = z.infer<typeof insertEntityMediaSchema>;
+
+// Crawl Media Queue
+export const crawlMediaQueue = pgTable("crawl_media_queue", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id").notNull(),
+  sourceUrl: text("source_url").notNull(),
+  sourcePageUrl: text("source_page_url"),
+  crawlJobId: uuid("crawl_job_id"),
+  entityType: text("entity_type"),
+  entityId: uuid("entity_id"),
+  suggestedRole: text("suggested_role").default('gallery'),
+  status: text("status").notNull().default('pending'),
+  errorMessage: text("error_message"),
+  mediaId: uuid("media_id"),
+  suggestedAltText: text("suggested_alt_text"),
+  pageContext: text("page_context"),
+  createdAt: timestamp("created_at").defaultNow(),
+  processedAt: timestamp("processed_at"),
+});
+
+export const insertCrawlMediaQueueSchema = createInsertSchema(crawlMediaQueue).omit({
+  id: true,
+  createdAt: true,
+  processedAt: true,
+});
+
+export type CrawlMediaQueue = typeof crawlMediaQueue.$inferSelect;
+export type InsertCrawlMediaQueue = z.infer<typeof insertCrawlMediaQueueSchema>;
