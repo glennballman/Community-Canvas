@@ -1,0 +1,163 @@
+**COMPLETE DATABASE STANDARDIZATION - FULL REBUILD**
+
+We are doing a complete database cleanup to established naming standards. This is a one-time, thorough refactor. Take your time, be methodical, don't skip anything.
+
+## NAMING STANDARDS (apply these everywhere)
+
+### Table Naming
+- All tables MUST have a prefix based on their purpose:
+  - `cc_` = Core Community Canvas tables (individuals, tenants, reservations, assets, etc.)
+  - `cc_staging_` = ETL/staging tables (currently `staging_*`)
+  - `cc_ref_` = Reference/lookup tables (currently `ref_*`)
+  - `cc_sr_` = Service run tables (currently `sr_*`)
+  - `cc_entity_` = Entity tables (currently `entity_*`, `entities`)
+  - `cc_trip_` = Trip tables (currently `trip_*`, `road_trips`)
+  - `cc_legacy_` = Legacy tables pending removal (currently `legacy_*`)
+  - `cc_accommodation_` = Accommodation tables (currently `accommodation_*`)
+
+### Column Naming (schema.org aligned)
+- `customer_id` not `booker_individual_id`
+- `provider_id` not `booker_tenant_id`
+- `start_date` / `end_date` not `starts_at` / `ends_at`
+- `checkin_time` / `checkout_time` not `actual_checkin_at` / `actual_checkout_at`
+- `party_size` not `num_guests`
+- `confirmation_number` not `booking_ref`
+- `bathroom_count` not `num_bathrooms`
+- `guest_count` not `num_adults`, `num_children` (or use nested JSON)
+- Keep `created_at`, `updated_at`, `deleted_at` as-is (these are standard)
+
+### Constraint Naming
+- Primary key: `{table_name}_pkey`
+- Foreign key: `{table_name}_{column_name}_fkey`
+- Unique: `{table_name}_{column_name}_key`
+- Check: `{table_name}_{description}_check`
+
+### Index Naming
+- `idx_{table_name}_{column_names}`
+
+---
+
+## EXECUTION PLAN
+
+### STEP 1: Generate Complete Inventory
+Create a spreadsheet/table showing EVERY object that needs renaming:
+- All tables not matching conventions
+- All constraints not matching conventions  
+- All indexes not matching conventions
+- All columns not matching conventions
+
+Format as:
+| Object Type | Current Name | New Name | Table | Priority |
+
+### STEP 2: Rename Tables (do this FIRST)
+Rename all tables to follow conventions. This must happen before constraint/index renaming.
+
+Run as transaction:
+```sql
+BEGIN;
+-- Core tables
+ALTER TABLE reservations RENAME TO cc_reservations;
+ALTER TABLE assets RENAME TO cc_assets;
+-- ... (list ALL tables)
+
+-- Staging tables  
+ALTER TABLE staging_bookings RENAME TO cc_staging_bookings;
+-- ... (list ALL staging_* tables)
+
+-- Reference tables
+ALTER TABLE ref_countries RENAME TO cc_ref_countries;
+-- ... (list ALL ref_* tables)
+
+-- Service run tables
+ALTER TABLE sr_passengers RENAME TO cc_sr_passengers;
+-- ... (list ALL sr_* tables)
+
+-- Entity tables
+ALTER TABLE entities RENAME TO cc_entities;
+-- ... (list ALL entity tables)
+
+-- Trip tables
+ALTER TABLE road_trips RENAME TO cc_trip_road_trips;
+-- ... (list ALL trip tables)
+
+-- Accommodation tables
+ALTER TABLE accommodation_bookings RENAME TO cc_accommodation_bookings;
+-- ... (list ALL accommodation_* tables)
+
+-- Legacy tables
+ALTER TABLE legacy_vehicle_profiles RENAME TO cc_legacy_vehicle_profiles;
+-- ... (list ALL legacy_* tables)
+
+COMMIT;
+```
+
+### STEP 3: Rename Columns
+After tables are renamed, rename non-standard columns:
+```sql
+BEGIN;
+-- Reservations columns
+ALTER TABLE cc_reservations RENAME COLUMN booker_individual_id TO customer_id;
+ALTER TABLE cc_reservations RENAME COLUMN booker_tenant_id TO provider_id;
+ALTER TABLE cc_reservations RENAME COLUMN starts_at TO start_date;
+ALTER TABLE cc_reservations RENAME COLUMN ends_at TO end_date;
+ALTER TABLE cc_reservations RENAME COLUMN actual_checkin_at TO checkin_time;
+ALTER TABLE cc_reservations RENAME COLUMN actual_checkout_at TO checkout_time;
+ALTER TABLE cc_reservations RENAME COLUMN num_guests TO party_size;
+ALTER TABLE cc_reservations RENAME COLUMN booking_ref TO confirmation_number;
+
+-- Fix num_* columns across ALL tables
+-- Fix starts_at/ends_at across ALL tables
+-- ... (list ALL column renames)
+
+COMMIT;
+```
+
+### STEP 4: Rename Constraints
+After tables and columns are renamed:
+```sql
+BEGIN;
+-- Reservations constraints
+ALTER TABLE cc_reservations RENAME CONSTRAINT unified_bookings_pkey TO cc_reservations_pkey;
+-- ... (list ALL constraint renames)
+
+-- Assets constraints
+ALTER TABLE cc_assets RENAME CONSTRAINT unified_assets_pkey TO cc_assets_pkey;
+-- ... (list ALL constraint renames)
+
+COMMIT;
+```
+
+### STEP 5: Rename Indexes
+```sql
+BEGIN;
+ALTER INDEX idx_unified_bookings_asset RENAME TO idx_cc_reservations_asset;
+-- ... (list ALL index renames)
+COMMIT;
+```
+
+### STEP 6: Update ALL Code References
+Search entire codebase and update:
+- All table references
+- All column references
+- All SQL queries
+- All ORM models
+- All API endpoints
+
+### STEP 7: Verify
+- Run full test suite
+- Test reservation flow manually
+- Check all API endpoints respond
+
+---
+
+## IMPORTANT RULES
+
+1. **Run each step as a transaction** - if anything fails, rollback
+2. **Do NOT skip any objects** - we want 100% compliance
+3. **Report progress** after each step
+4. **Stop and report** if you encounter errors
+5. **Create a backup point** before starting
+
+## START NOW
+
+Begin with STEP 1 - generate the complete inventory. Show me the full list before executing any changes.
