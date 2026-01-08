@@ -28,6 +28,7 @@ The application uses a modern web stack: React 18 with TypeScript and Vite for t
 - **Database**: PostgreSQL with Drizzle ORM
 - **Schema**: `snapshots` table for location-based JSONB status data
 - **Migrations**: Drizzle Kit
+- **Table Naming Convention**: All 365 application tables use `cc_*` prefix (e.g., `cc_tenants`, `cc_users`, `cc_sr_bookings`). System tables (`session`, `spatial_ref_sys`) are excluded. All constraints and indexes also use `cc_*` prefix. SQL column aliasing maintains backward compatibility with API contracts.
 
 ### Key Design Patterns
 - **Shared Types**: Schema definitions in `shared/` for client/server consistency.
