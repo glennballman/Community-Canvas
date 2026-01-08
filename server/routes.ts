@@ -1904,7 +1904,7 @@ export async function registerRoutes(
       let query = `
         SELECT t.*, COUNT(s.id) as segment_count
         FROM cc_road_trips t
-        LEFT JOIN cc_trip_segments s ON t.id = s.trip_id
+        LEFT JOIN cc_trip_segment_templates s ON t.id = s.trip_id
         WHERE t.is_published = true
       `;
       
@@ -2007,7 +2007,7 @@ export async function registerRoutes(
       const trip = tripResult.rows[0];
       
       const segmentsResult = await storage.query(
-        `SELECT * FROM cc_trip_segments WHERE trip_id = $1 ORDER BY segment_order`,
+        `SELECT * FROM cc_trip_segment_templates WHERE trip_id = $1 ORDER BY segment_order`,
         [trip.id]
       );
       
@@ -2042,7 +2042,7 @@ export async function registerRoutes(
       
       // Get segments to check for ferry requirements
       const segmentsResult = await storage.query(
-        `SELECT details FROM cc_trip_segments WHERE trip_id = $1`,
+        `SELECT details FROM cc_trip_segment_templates WHERE trip_id = $1`,
         [trip.id]
       );
       
@@ -2091,7 +2091,7 @@ export async function registerRoutes(
       const { id } = req.params;
       
       const segmentsResult = await storage.query(
-        `SELECT segment_order, title, webcam_ids FROM cc_trip_segments WHERE trip_id = $1 ORDER BY segment_order`,
+        `SELECT segment_order, title, webcam_ids FROM cc_trip_segment_templates WHERE trip_id = $1 ORDER BY segment_order`,
         [id]
       );
       

@@ -1,0 +1,233 @@
+**MIGRATION: Standardize Trip Tables (4 Tables, 4 Columns)**
+
+We missed these tables in our earlier standardization. Fix them now.
+
+## PHASE 1: Backup + Verify Current State
+```sql
+-- Create backup timestamp
+SELECT NOW() as backup_timestamp;
+
+-- Count records in each table before migration
+SELECT 'cc_trip_bookings' as table_name, COUNT(*) as record_count FROM cc_trip_bookings
+UNION ALL
+SELECT 'cc_trip_booking_participants', COUNT(*) FROM cc_trip_booking_participants
+UNION ALL
+SELECT 'cc_trip_booking_segments', COUNT(*) FROM cc_trip_booking_segments
+UNION ALL
+SELECT 'cc_trip_segments', COUNT(*) FROM cc_trip_segments
+UNION ALL
+SELECT 'cc_trip_passengers', COUNT(*) FROM cc_trip_passengers;
+```
+
+## PHASE 2: Rename Tables (Order Matters - Templates First, Then Parent, Then Children)
+```sql
+-- Step 1: Rename template table first (no FKs pointing to it)
+ALTER TABLE cc_trip_segments RENAME TO cc_trip_segment_templates;
+
+-- Step 2: Rename parent table
+ALTER TABLE cc_trip_bookings RENAME TO cc_trips;
+
+-- Step 3: Rename child tables
+ALTER TABLE cc_trip_booking_participants RENAME TO cc_trip_participants;
+ALTER TABLE cc_trip_booking_segments RENAME TO cc_trip_route_points;
+```
+
+## PHASE 3: Rename Columns (FK columns that were misnamed)
+```sql
+-- Fix the FK columns that said "reservation_id" but pointed to trips
+ALTER TABLE cc_trip_participants RENAME COLUMN reservation_id TO trip_id;
+ALTER TABLE cc_trip_route_points RENAME COLUMN reservation_id TO trip_id;
+
+-- Fix the booking_status column
+ALTER TABLE cc_trip_route_points RENAME COLUMN booking_status TO status;
+
+-- Fix the trip_booking_id column in passengers
+ALTER TABLE cc_trip_passengers RENAME COLUMN trip_booking_id TO trip_id;
+```
+
+## PHASE 4: Rename All Constraints
+```sql
+-- Get and rename all constraints for cc_trips (was cc_trip_bookings)
+ALTER TABLE cc_trips RENAME CONSTRAINT cc_trip_bookings_pkey TO cc_trips_pkey;
+
+-- Get all constraints for child tables and rename them
+-- Run this query first to see what constraints exist:
+SELECT 
+    tc.table_name,
+    tc.constraint_name,
+    tc.constraint_type
+FROM information_schema.table_constraints tc
+WHERE tc.table_schema = 'public'
+AND tc.table_name IN ('cc_trips', 'cc_trip_participants', 'cc_trip_route_points', 'cc_trip_segment_templates', 'cc_trip_passengers')
+ORDER BY tc.table_name, tc.constraint_type;
+
+-- Then rename each constraint found (examples - adjust based on actual names):
+-- cc_trip_participants
+ALTER TABLE cc_trip_participants RENAME CONSTRAINT cc_trip_booking_participants_pkey TO cc_trip_participants_pkey;
+ALTER TABLE cc_trip_participants RENAME CONSTRAINT cc_trip_booking_participants_reservation_id_fkey TO cc_trip_participants_trip_id_fkey;
+
+-- cc_trip_route_points
+ALTER TABLE cc_trip_route_points RENAME CONSTRAINT cc_trip_booking_segments_pkey TO cc_trip_route_points_pkey;
+ALTER TABLE cc_trip_route_points RENAME CONSTRAINT cc_trip_booking_segments_reservation_id_fkey TO cc_trip_route_points_trip_id_fkey;
+
+-- cc_trip_segment_templates
+ALTER TABLE cc_trip_segment_templates RENAME CONSTRAINT cc_trip_segments_pkey TO cc_trip_segment_templates_pkey;
+
+-- cc_trip_passengers (if it has constraints referencing old names)
+-- Check and rename as needed
+```
+
+## PHASE 5: Rename All Indexes
+```sql
+-- Find all indexes on these tables
+SELECT 
+    tablename,
+    indexname
+FROM pg_indexes
+WHERE schemaname = 'public'
+AND tablename IN ('cc_trips', 'cc_trip_participants', 'cc_trip_route_points', 'cc_trip_segment_templates', 'cc_trip_passengers')
+ORDER BY tablename, indexname;
+
+-- Rename indexes to match new table names (examples - adjust based on actual names):
+ALTER INDEX IF EXISTS idx_cc_trip_bookings_portal RENAME TO idx_cc_trips_portal;
+ALTER INDEX IF EXISTS idx_cc_trip_bookings_dates RENAME TO idx_cc_trips_dates;
+ALTER INDEX IF EXISTS idx_cc_trip_bookings_status RENAME TO idx_cc_trips_status;
+
+ALTER INDEX IF EXISTS idx_cc_trip_booking_participants_reservation RENAME TO idx_cc_trip_participants_trip;
+ALTER INDEX IF EXISTS idx_cc_trip_booking_segments_reservation RENAME TO idx_cc_trip_route_points_trip;
+
+-- Continue for all indexes found
+```
+
+## PHASE 6: Update Drizzle Schema (shared/schema.ts)
+
+Find and replace in shared/schema.ts:
+```typescript
+// OLD
+export const ccTripBookings = pgTable('cc_trip_bookings', {
+// NEW  
+export const ccTrips = pgTable('cc_trips', {
+
+// OLD
+export const ccTripBookingParticipants = pgTable('cc_trip_booking_participants', {
+  reservationId: uuid('reservation_id').references(() => ccTripBookings.id),
+// NEW
+export const ccTripParticipants = pgTable('cc_trip_participants', {
+  tripId: uuid('trip_id').references(() => ccTrips.id),
+
+// OLD
+export const ccTripBookingSegments = pgTable('cc_trip_booking_segments', {
+  reservationId: uuid('reservation_id').references(() => ccTripBookings.id),
+  bookingStatus: varchar('booking_status'),
+// NEW
+export const ccTripRoutePoints = pgTable('cc_trip_route_points', {
+  tripId: uuid('trip_id').references(() => ccTrips.id),
+  status: varchar('status'),
+
+// OLD
+export const ccTripSegments = pgTable('cc_trip_segments', {
+// NEW
+export const ccTripSegmentTemplates = pgTable('cc_trip_segment_templates', {
+
+// OLD (in cc_trip_passengers)
+tripBookingId: uuid('trip_booking_id'),
+// NEW
+tripId: uuid('trip_id'),
+```
+
+## PHASE 7: Update Server Routes
+```bash
+# Find all files referencing old names
+grep -rn "cc_trip_booking\|ccTripBooking\|trip_booking_id\|reservationId.*trip" --include="*.ts" server/ | grep -v node_modules
+```
+
+Update each file found:
+- `server/routes/trips.ts`
+- Any other files referencing these tables
+
+Replace:
+- `cc_trip_bookings` → `cc_trips`
+- `cc_trip_booking_participants` → `cc_trip_participants`
+- `cc_trip_booking_segments` → `cc_trip_route_points`
+- `cc_trip_segments` → `cc_trip_segment_templates`
+- `ccTripBookings` → `ccTrips`
+- `ccTripBookingParticipants` → `ccTripParticipants`
+- `ccTripBookingSegments` → `ccTripRoutePoints`
+- `ccTripSegments` → `ccTripSegmentTemplates`
+- `reservation_id` (in trip context) → `trip_id`
+- `trip_booking_id` → `trip_id`
+- `booking_status` (in route points) → `status`
+
+## PHASE 8: Update Client Components
+```bash
+# Find all client files referencing old names
+grep -rn "trip_booking\|tripBooking\|TripBooking" --include="*.ts" --include="*.tsx" client/ | grep -v node_modules
+```
+
+Update each file found with same replacements as above.
+
+## PHASE 9: Verify Migration
+```sql
+-- Confirm tables renamed
+SELECT tablename FROM pg_tables 
+WHERE schemaname = 'public' 
+AND tablename LIKE '%trip%'
+ORDER BY tablename;
+
+-- Should show:
+-- cc_trip_analytics
+-- cc_trip_participants (was cc_trip_booking_participants)
+-- cc_trip_passengers
+-- cc_trip_reviews
+-- cc_trip_route_points (was cc_trip_booking_segments)
+-- cc_trip_segment_templates (was cc_trip_segments)
+-- cc_trips (was cc_trip_bookings)
+-- cc_user_saved_trips
+-- etc.
+
+-- Confirm NO tables with "booking" in trip domain
+SELECT tablename FROM pg_tables 
+WHERE schemaname = 'public' 
+AND tablename LIKE '%trip%booking%';
+-- Should return 0 rows
+
+-- Confirm columns renamed
+SELECT column_name FROM information_schema.columns 
+WHERE table_schema = 'public' 
+AND table_name = 'cc_trip_participants'
+AND column_name = 'trip_id';
+-- Should return 1 row
+
+-- Confirm record counts unchanged
+SELECT 'cc_trips' as table_name, COUNT(*) as record_count FROM cc_trips
+UNION ALL
+SELECT 'cc_trip_participants', COUNT(*) FROM cc_trip_participants
+UNION ALL
+SELECT 'cc_trip_route_points', COUNT(*) FROM cc_trip_route_points
+UNION ALL
+SELECT 'cc_trip_segment_templates', COUNT(*) FROM cc_trip_segment_templates
+UNION ALL
+SELECT 'cc_trip_passengers', COUNT(*) FROM cc_trip_passengers;
+```
+
+## PHASE 10: Build + Test
+```bash
+# Rebuild
+npm run build
+
+# Check for TypeScript errors
+npx tsc --noEmit
+
+# Run the app and verify trips functionality still works
+```
+
+## EVIDENCE REQUIRED
+
+1. **SQL proof:** Show `\dt cc_trip*` listing all renamed tables
+2. **SQL proof:** Show columns on `cc_trip_participants` and `cc_trip_route_points` confirming `trip_id` exists
+3. **SQL proof:** Show record counts match before/after
+4. **Code proof:** Show updated schema.ts exports
+5. **Build proof:** Show clean build with no errors
+6. **Screenshot:** TripTimelineDemo or any trip page still loads
+
+## DO NOT PROCEED TO EXPEDITION ENGINE UNTIL THIS IS COMPLETE AND VERIFIED
