@@ -2,7 +2,7 @@
 // API routes for Apify dataset sync and external records management
 // 
 // SERVICE MODE: This is an INGESTION route for platform-global data.
-// All operations use serviceQuery() because apify_datasets and external_records
+// All operations use serviceQuery() because cc_apify_datasets and cc_external_records
 // are platform-level tables that exist outside tenant boundaries.
 // All endpoints require admin role for security.
 
@@ -17,7 +17,7 @@ const router = Router();
 const adminGuard = [requireAuth, requireRole('admin')];
 
 // GET /api/apify/datasets - List all datasets with sync status
-// SERVICE MODE: apify_datasets is platform-level configuration data
+// SERVICE MODE: cc_apify_datasets is platform-level configuration data
 router.get('/datasets', adminGuard, async (req: Request, res: Response) => {
     try {
         const datasets = await getDatasetStatus();
@@ -28,13 +28,13 @@ router.get('/datasets', adminGuard, async (req: Request, res: Response) => {
 });
 
 // POST /api/apify/datasets - Create a new dataset configuration
-// SERVICE MODE: apify_datasets is platform-level configuration data
+// SERVICE MODE: cc_apify_datasets is platform-level configuration data
 router.post('/datasets', adminGuard, async (req: Request, res: Response) => {
     try {
         const { name, slug, source, record_type, region, apify_actor_id, apify_dataset_id, sync_enabled } = req.body;
         
         const result = await serviceQuery(`
-            INSERT INTO apify_datasets (name, slug, source, record_type, region, apify_actor_id, apify_dataset_id, sync_enabled)
+            INSERT INTO cc_apify_datasets (name, slug, source, record_type, region, apify_actor_id, apify_dataset_id, sync_enabled)
             VALUES ($1, $2, $3::external_source, $4::external_record_type, $5, $6, $7, $8)
             RETURNING *
         `, [name, slug, source || 'other', record_type || 'other', region, apify_actor_id, apify_dataset_id, sync_enabled ?? true]);
@@ -46,7 +46,7 @@ router.post('/datasets', adminGuard, async (req: Request, res: Response) => {
 });
 
 // POST /api/apify/sync/:slug - Trigger sync for a dataset
-// SERVICE MODE: Dataset sync ingests external_records which are platform-global
+// SERVICE MODE: Dataset sync ingests cc_external_records which are platform-global
 router.post('/sync/:slug', adminGuard, async (req: Request, res: Response) => {
     try {
         const { slug } = req.params;
@@ -75,10 +75,10 @@ router.get('/stats', adminGuard, async (_req: Request, res: Response) => {
         const stats = await getEntityStats();
         const totals = await serviceQuery(`
             SELECT 
-                (SELECT COUNT(*) FROM external_records) as total_records,
-                (SELECT COUNT(*) FROM entities) as total_entities,
-                (SELECT COUNT(*) FROM entity_claims) as claimed_entities,
-                (SELECT COUNT(*) FROM entity_inquiries WHERE status = 'pending') as pending_inquiries
+                (SELECT COUNT(*) FROM cc_external_records) as total_records,
+                (SELECT COUNT(*) FROM cc_entities) as total_entities,
+                (SELECT COUNT(*) FROM cc_entity_claims) as claimed_entities,
+                (SELECT COUNT(*) FROM cc_entity_inquiries WHERE status = 'pending') as pending_inquiries
         `);
         
         res.json({ success: true, stats, totals: totals.rows[0] });
@@ -88,14 +88,14 @@ router.get('/stats', adminGuard, async (_req: Request, res: Response) => {
 });
 
 // GET /api/apify/records - Query external records
-// SERVICE MODE: external_records are platform-level ingested data
+// SERVICE MODE: cc_external_records are platform-level ingested data
 router.get('/records', adminGuard, async (req: Request, res: Response) => {
     try {
         const { source, record_type, community, city, search, limit = '50', offset = '0' } = req.query;
         
         let query = `
             SELECT er.*, c.name as community_name
-            FROM external_records er
+            FROM cc_external_records er
             LEFT JOIN cc_sr_communities c ON c.id = er.community_id
             WHERE 1=1
         `;
@@ -136,16 +136,16 @@ router.get('/records', adminGuard, async (req: Request, res: Response) => {
 });
 
 // GET /api/apify/records/:id - Get single record with full details
-// SERVICE MODE: external_records and entity_links are platform-level data
+// SERVICE MODE: cc_external_records and cc_entity_links are platform-level data
 router.get('/records/:id', adminGuard, async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
         
         const record = await serviceQuery(`
             SELECT er.*, c.name as community_name, d.name as dataset_name
-            FROM external_records er
+            FROM cc_external_records er
             LEFT JOIN cc_sr_communities c ON c.id = er.community_id
-            LEFT JOIN apify_datasets d ON d.id = er.dataset_id
+            LEFT JOIN cc_apify_datasets d ON d.id = er.dataset_id
             WHERE er.id = $1
         `, [id]);
         
@@ -153,23 +153,23 @@ router.get('/records/:id', adminGuard, async (req: Request, res: Response) => {
             return res.status(404).json({ success: false, error: 'Record not found' });
         }
         
-        // Get linked entities
+        // Get linked cc_entities
         const links = await serviceQuery(`
             SELECT el.*, e.name as entity_name, e.entity_type_id
-            FROM entity_links el
-            JOIN entities e ON e.id = el.entity_id
+            FROM cc_entity_links el
+            JOIN cc_entities e ON e.id = el.entity_id
             WHERE el.external_record_id = $1
         `, [id]);
         
         // Get contact points
         const contacts = await serviceQuery(`
-            SELECT * FROM external_contact_points WHERE external_record_id = $1
+            SELECT * FROM cc_external_contact_points WHERE external_record_id = $1
         `, [id]);
         
         res.json({ 
             success: true, 
             record: record.rows[0],
-            entity_links: links.rows,
+            cc_entity_links: links.rows,
             contact_points: contacts.rows
         });
         
@@ -179,7 +179,7 @@ router.get('/records/:id', adminGuard, async (req: Request, res: Response) => {
 });
 
 // GET /api/apify/unresolved - Get records without accepted entity links
-// SERVICE MODE: external_records are platform-level ingested data
+// SERVICE MODE: cc_external_records are platform-level ingested data
 router.get('/unresolved', adminGuard, async (req: Request, res: Response) => {
     try {
         const limit = parseInt(req.query.limit as string) || 100;
@@ -191,7 +191,7 @@ router.get('/unresolved', adminGuard, async (req: Request, res: Response) => {
 });
 
 // GET /api/apify/rentals - Get rental listings with filters
-// SERVICE MODE: external_records rentals are platform-level ingested data
+// SERVICE MODE: cc_external_records rentals are platform-level ingested data
 router.get('/rentals', adminGuard, async (req: Request, res: Response) => {
     try {
         const { city, minPrice, maxPrice, bedrooms, limit } = req.query;
@@ -234,7 +234,7 @@ router.post('/records/:id/create-entity', adminGuard, async (req: Request, res: 
 });
 
 // GET /api/apify/sync-history/:slug - Get sync history for a dataset
-// SERVICE MODE: apify_sync_history is platform-level operational data
+// SERVICE MODE: cc_apify_sync_history is platform-level operational data
 router.get('/sync-history/:slug', adminGuard, async (req: Request, res: Response) => {
     try {
         const { slug } = req.params;
@@ -242,8 +242,8 @@ router.get('/sync-history/:slug', adminGuard, async (req: Request, res: Response
         
         const result = await serviceQuery(`
             SELECT sh.* 
-            FROM apify_sync_history sh
-            JOIN apify_datasets d ON d.id = sh.dataset_id
+            FROM cc_apify_sync_history sh
+            JOIN cc_apify_datasets d ON d.id = sh.dataset_id
             WHERE d.slug = $1
             ORDER BY sh.started_at DESC
             LIMIT $2
@@ -256,7 +256,7 @@ router.get('/sync-history/:slug', adminGuard, async (req: Request, res: Response
 });
 
 // PATCH /api/apify/datasets/:id - Update dataset configuration
-// SERVICE MODE: apify_datasets is platform-level configuration data
+// SERVICE MODE: cc_apify_datasets is platform-level configuration data
 router.patch('/datasets/:id', adminGuard, async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
@@ -303,7 +303,7 @@ router.patch('/datasets/:id', adminGuard, async (req: Request, res: Response) =>
         params.push(id);
         
         const result = await serviceQuery(
-            `UPDATE apify_datasets SET ${updates.join(', ')} WHERE id = $${idx} RETURNING *`,
+            `UPDATE cc_apify_datasets SET ${updates.join(', ')} WHERE id = $${idx} RETURNING *`,
             params
         );
         
@@ -318,19 +318,19 @@ router.patch('/datasets/:id', adminGuard, async (req: Request, res: Response) =>
 });
 
 // DELETE /api/apify/datasets/:id - Delete a dataset and its records
-// SERVICE MODE: apify_datasets is platform-level configuration data
+// SERVICE MODE: cc_apify_datasets is platform-level configuration data
 router.delete('/datasets/:id', adminGuard, async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
         
         // Check if dataset exists
-        const check = await serviceQuery('SELECT id, name FROM apify_datasets WHERE id = $1', [id]);
+        const check = await serviceQuery('SELECT id, name FROM cc_apify_datasets WHERE id = $1', [id]);
         if (check.rows.length === 0) {
             return res.status(404).json({ success: false, error: 'Dataset not found' });
         }
         
-        // Delete cascade handles external_records and sync_history
-        await serviceQuery('DELETE FROM apify_datasets WHERE id = $1', [id]);
+        // Delete cascade handles cc_external_records and sync_history
+        await serviceQuery('DELETE FROM cc_apify_datasets WHERE id = $1', [id]);
         
         res.json({ success: true, message: `Dataset "${check.rows[0].name}" deleted` });
     } catch (error: any) {
@@ -339,18 +339,18 @@ router.delete('/datasets/:id', adminGuard, async (req: Request, res: Response) =
 });
 
 // DELETE /api/apify/records/:id - Delete a single external record
-// SERVICE MODE: external_records are platform-level ingested data
+// SERVICE MODE: cc_external_records are platform-level ingested data
 router.delete('/records/:id', adminGuard, async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
         
-        const check = await serviceQuery('SELECT id, name FROM external_records WHERE id = $1', [id]);
+        const check = await serviceQuery('SELECT id, name FROM cc_external_records WHERE id = $1', [id]);
         if (check.rows.length === 0) {
             return res.status(404).json({ success: false, error: 'Record not found' });
         }
         
-        // Delete cascade handles entity_links and contact_points
-        await serviceQuery('DELETE FROM external_records WHERE id = $1', [id]);
+        // Delete cascade handles cc_entity_links and contact_points
+        await serviceQuery('DELETE FROM cc_external_records WHERE id = $1', [id]);
         
         res.json({ success: true, message: 'Record deleted' });
     } catch (error: any) {
@@ -359,7 +359,7 @@ router.delete('/records/:id', adminGuard, async (req: Request, res: Response) =>
 });
 
 // POST /api/apify/records/:id/resolve - Accept/reject entity link
-// SERVICE MODE: entity_links bridge external_records to platform entities
+// SERVICE MODE: cc_entity_links bridge cc_external_records to platform cc_entities
 router.post('/records/:id/resolve', adminGuard, async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
@@ -372,7 +372,7 @@ router.post('/records/:id/resolve', adminGuard, async (req: Request, res: Respon
         const newStatus = action === 'accept' ? 'accepted' : 'rejected';
         
         const result = await serviceQuery(`
-            UPDATE entity_links 
+            UPDATE cc_entity_links 
             SET status = $1::link_status, decided_at = NOW()
             WHERE external_record_id = $2 AND entity_id = $3
             RETURNING *
@@ -389,7 +389,7 @@ router.post('/records/:id/resolve', adminGuard, async (req: Request, res: Respon
 });
 
 // DELETE /api/apify/records/stale - Delete records not seen since a date
-// SERVICE MODE: Bulk cleanup of platform-level external_records
+// SERVICE MODE: Bulk cleanup of platform-level cc_external_records
 router.delete('/records/stale', adminGuard, async (req: Request, res: Response) => {
     try {
         const { before } = req.query; // ISO date string
@@ -399,7 +399,7 @@ router.delete('/records/stale', adminGuard, async (req: Request, res: Response) 
         }
         
         const result = await serviceQuery(`
-            DELETE FROM external_records 
+            DELETE FROM cc_external_records 
             WHERE last_seen_at < $1::timestamptz
             RETURNING id
         `, [before]);

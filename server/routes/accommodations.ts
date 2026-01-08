@@ -130,7 +130,7 @@ export function createAccommodationsRouter(db: Pool) {
     try {
       const campaignId = parseInt(req.params.id);
       const result = await db.query(
-        'SELECT * FROM outreach_campaigns WHERE id = $1',
+        'SELECT * FROM cc_outreach_campaigns WHERE id = $1',
         [campaignId]
       );
       
@@ -152,7 +152,7 @@ export function createAccommodationsRouter(db: Pool) {
     }
   });
 
-  router.post('/outreach/messages', async (req: Request, res: Response) => {
+  router.post('/outreach/cc_messages', async (req: Request, res: Response) => {
     try {
       const message = await storage.createOutreachMessage(req.body);
       res.status(201).json(message);

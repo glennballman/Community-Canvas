@@ -36,7 +36,7 @@ export async function resolveActorParty(req: any, role: PartyRole): Promise<Reso
 
     if (tenant_id) {
       const orgPartyResult = await client.query(
-        `SELECT id, trade_name, legal_name FROM parties
+        `SELECT id, trade_name, legal_name FROM cc_parties
          WHERE tenant_id = $1 AND party_kind = 'organization'
          ORDER BY created_at ASC LIMIT 1`,
         [tenant_id]
@@ -62,7 +62,7 @@ export async function resolveActorParty(req: any, role: PartyRole): Promise<Reso
         }
 
         const createResult = await client.query(
-          `INSERT INTO parties (
+          `INSERT INTO cc_parties (
               tenant_id, party_kind, party_type, status,
               legal_name, trade_name,
               tax_id,
@@ -98,7 +98,7 @@ export async function resolveActorParty(req: any, role: PartyRole): Promise<Reso
       }
 
       await client.query(
-        `INSERT INTO party_memberships (party_id, individual_id, role, is_active)
+        `INSERT INTO cc_party_memberships (party_id, individual_id, role, is_active)
          VALUES ($1, $2, 'admin', true)
          ON CONFLICT (party_id, individual_id)
          DO UPDATE SET is_active = true, updated_at = now()`,
@@ -117,7 +117,7 @@ export async function resolveActorParty(req: any, role: PartyRole): Promise<Reso
     }
 
     const existingIndParty = await client.query(
-      `SELECT id, trade_name, legal_name FROM parties
+      `SELECT id, trade_name, legal_name FROM cc_parties
        WHERE party_kind = 'individual'
          AND metadata->>'individual_id' = $1
        ORDER BY created_at ASC LIMIT 1`,
@@ -131,7 +131,7 @@ export async function resolveActorParty(req: any, role: PartyRole): Promise<Reso
 
     if (!ind_party_id) {
       const createResult = await client.query(
-        `INSERT INTO parties (
+        `INSERT INTO cc_parties (
             party_kind, party_type, status, 
             legal_name, trade_name, 
             metadata
@@ -172,7 +172,7 @@ export async function isPartyMember(
   individual_id: string
 ): Promise<boolean> {
   const result = await pool.query(
-    `SELECT 1 FROM party_memberships 
+    `SELECT 1 FROM cc_party_memberships 
      WHERE party_id = $1 AND individual_id = $2 AND is_active = true
      LIMIT 1`,
     [party_id, individual_id]
@@ -189,7 +189,7 @@ export async function canUnlockContact(conversation_id: string): Promise<{
   try {
     const convResult = await client.query(
       `SELECT c.*, c.contact_unlocked, c.contact_unlock_gate
-       FROM conversations c WHERE c.id = $1`,
+       FROM cc_conversations c WHERE c.id = $1`,
       [conversation_id]
     );
 
@@ -208,7 +208,7 @@ export async function canUnlockContact(conversation_id: string): Promise<{
     }
 
     const priorResult = await client.query(
-      `SELECT 1 FROM conversations
+      `SELECT 1 FROM cc_conversations
        WHERE contractor_party_id = $1 AND owner_party_id = $2
          AND state = 'completed'
          AND id != $3
@@ -225,8 +225,8 @@ export async function canUnlockContact(conversation_id: string): Promise<{
     }
 
     const depositResult = await client.query(
-      `SELECT 1 FROM payment_promises pp
-       JOIN payment_milestones pm ON pm.payment_promise_id = pp.id
+      `SELECT 1 FROM cc_payment_promises pp
+       JOIN cc_payment_milestones pm ON pm.payment_promise_id = pp.id
        WHERE pp.conversation_id = $1
          AND pm.trigger_type IN ('on_award', 'on_contract_sign')
          AND pm.status = 'verified'

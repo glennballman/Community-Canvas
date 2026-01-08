@@ -29,7 +29,7 @@ export function createCrewRouter() {
       
       if (filters.searchMode === 'work_order' && filters.workOrderId) {
         const woResult = await serviceQuery(
-          `SELECT * FROM work_orders WHERE id = $1`,
+          `SELECT * FROM cc_work_orders WHERE id = $1`,
           [filters.workOrderId]
         );
         
@@ -101,11 +101,11 @@ export function createCrewRouter() {
 
       if (filters.totalPeople > 1) {
         conditions.push(`EXISTS (
-          SELECT 1 FROM asset_capabilities sleeping_cap 
+          SELECT 1 FROM cc_asset_capabilities sleeping_cap 
           WHERE sleeping_cap.asset_id = a.id 
           AND sleeping_cap.capability_type = 'sleeping' 
           AND sleeping_cap.is_active = true
-          AND (sleeping_cap.attributes->>'people')::int >= $${paramIndex}
+          AND (sleeping_cap.attributes->>'cc_people')::int >= $${paramIndex}
         )`);
         params.push(filters.totalPeople);
         paramIndex++;
@@ -113,7 +113,7 @@ export function createCrewRouter() {
 
       if (filters.privateBedroomsNeeded > 0) {
         conditions.push(`EXISTS (
-          SELECT 1 FROM asset_capabilities br_cap 
+          SELECT 1 FROM cc_asset_capabilities br_cap 
           WHERE br_cap.asset_id = a.id 
           AND br_cap.capability_type = 'sleeping' 
           AND br_cap.is_active = true
@@ -132,7 +132,7 @@ export function createCrewRouter() {
       if (filters.vehicleSituation === 'has_trailer' || filters.vehicleSituation === 'needs_spot') {
         if (filters.trailerLengthFt) {
           conditions.push(`EXISTS (
-            SELECT 1 FROM asset_capabilities pac 
+            SELECT 1 FROM cc_asset_capabilities pac 
             WHERE pac.asset_id = a.id 
             AND pac.capability_type = 'parking'
             AND pac.is_active = true
@@ -142,7 +142,7 @@ export function createCrewRouter() {
           paramIndex++;
         } else {
           conditions.push(`EXISTS (
-            SELECT 1 FROM asset_capabilities pac 
+            SELECT 1 FROM cc_asset_capabilities pac 
             WHERE pac.asset_id = a.id 
             AND pac.capability_type = 'parking'
             AND pac.is_active = true
@@ -184,8 +184,8 @@ export function createCrewRouter() {
             case 'has_playground':
             case 'bedding_provided':
               amenityConditions.push(`(
-                (a.source_table = 'external_records' AND a.source_id ~ '^[0-9a-f]{8}-' AND EXISTS (
-                  SELECT 1 FROM external_records er 
+                (a.source_table = 'cc_external_records' AND a.source_id ~ '^[0-9a-f]{8}-' AND EXISTS (
+                  SELECT 1 FROM cc_external_records er 
                   WHERE er.id = a.source_id::uuid 
                   AND (er.metadata->>'${amenity}')::boolean = true
                 ))
@@ -203,7 +203,7 @@ export function createCrewRouter() {
             case 'has_dump_station':
             case 'has_propane_refill':
               amenityConditions.push(`EXISTS (
-                SELECT 1 FROM asset_capabilities ac_rv 
+                SELECT 1 FROM cc_asset_capabilities ac_rv 
                 WHERE ac_rv.asset_id = a.id 
                 AND ac_rv.capability_type IN ('power_supply', 'water_supply', 'waste_handling')
                 AND ac_rv.is_active = true
@@ -211,7 +211,7 @@ export function createCrewRouter() {
               break;
             case 'has_workspace':
               amenityConditions.push(`EXISTS (
-                SELECT 1 FROM asset_capabilities ac_ws 
+                SELECT 1 FROM cc_asset_capabilities ac_ws 
                 WHERE ac_ws.asset_id = a.id 
                 AND ac_ws.capability_type = 'workspace'
                 AND ac_ws.is_active = true
@@ -272,16 +272,16 @@ export function createCrewRouter() {
           a.review_count,
           a.crew_score,
           t.rate_daily,
-          (SELECT (attributes->>'people')::int 
-           FROM asset_capabilities 
+          (SELECT (attributes->>'cc_people')::int 
+           FROM cc_asset_capabilities 
            WHERE asset_id = a.id AND capability_type = 'sleeping' 
            LIMIT 1) as sleeps_total,
           (SELECT jsonb_agg(jsonb_build_object('type', capability_type, 'attrs', attributes))
-           FROM asset_capabilities
+           FROM cc_asset_capabilities
            WHERE asset_id = a.id AND is_active = true) as capabilities
           ${distanceSelect}
         FROM cc_assets a
-        LEFT JOIN asset_terms t ON t.asset_id = a.id
+        LEFT JOIN cc_asset_terms t ON t.asset_id = a.id
         WHERE ${conditions.join(' AND ')}
         ORDER BY a.id, ${distanceOrder} a.crew_score DESC NULLS LAST, a.overall_rating DESC NULLS LAST
         LIMIT 100
@@ -309,7 +309,7 @@ export function createCrewRouter() {
     try {
       const result = await serviceQuery(`
         SELECT id, work_order_ref, title, status, crew_size_min, crew_size_max
-        FROM work_orders
+        FROM cc_work_orders
         WHERE status IN ('draft', 'pending', 'active')
         ORDER BY created_at DESC
         LIMIT 50

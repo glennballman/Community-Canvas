@@ -72,7 +72,7 @@ async function checkTimeConflicts(
 
   let scheduleQuery = `
     SELECT id, event_type, title, starts_at, ends_at
-    FROM resource_schedule_events
+    FROM cc_resource_schedule_events
     WHERE resource_id = $1
       AND status = 'active'
       AND starts_at < $3
@@ -101,7 +101,7 @@ async function checkTimeConflicts(
     SELECT b.id, 'booked' as event_type, 
            COALESCE(b.primary_guest_name, 'Booking') as title,
            b.start_date as starts_at, b.end_date as ends_at
-    FROM reservations b
+    FROM cc_reservations b
     WHERE b.asset_id = $1
       AND b.status NOT IN ('cancelled', 'no_show')
       AND b.start_date < $3
@@ -129,7 +129,7 @@ export async function checkMaintenanceConflict(
 ): Promise<{ hasConflict: boolean; conflicts: ConflictBlock[] }> {
   const result = await pool.query(`
     SELECT id, event_type, title, starts_at, ends_at
-    FROM resource_schedule_events
+    FROM cc_resource_schedule_events
     WHERE resource_id = $1
       AND event_type = 'maintenance'
       AND status = 'active'
@@ -187,7 +187,7 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
         e.created_at,
         a.name as resource_name,
         a.asset_type as resource_type
-      FROM resource_schedule_events e
+      FROM cc_resource_schedule_events e
       JOIN cc_assets a ON a.id = e.resource_id
       WHERE e.tenant_id = $1
         AND e.status = 'active'
@@ -221,7 +221,7 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
         b.created_at,
         a.name as resource_name,
         a.asset_type as resource_type
-      FROM reservations b
+      FROM cc_reservations b
       JOIN cc_assets a ON a.id = b.asset_id
       WHERE (a.owner_tenant_id = $1 OR b.provider_id = $1)
         AND b.status NOT IN ('cancelled', 'no_show')
@@ -250,7 +250,7 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
 
     return res.json({
       success: true,
-      events: allEvents,
+      cc_events: allEvents,
       query: { from, to, resourceIds: resourceIdArray }
     });
   } catch (error) {
@@ -259,7 +259,7 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
   }
 });
 
-router.post('/events', requireAuth, async (req: Request, res: Response) => {
+router.post('/cc_events', requireAuth, async (req: Request, res: Response) => {
   try {
     const parsed = createEventSchema.safeParse(req.body);
     if (!parsed.success) {
@@ -313,7 +313,7 @@ router.post('/events', requireAuth, async (req: Request, res: Response) => {
     }
 
     const result = await pool.query(
-      `INSERT INTO resource_schedule_events 
+      `INSERT INTO cc_resource_schedule_events 
         (tenant_id, resource_id, event_type, starts_at, ends_at, title, notes, created_by_actor_id, related_entity_type, related_entity_id)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
        RETURNING *`,
@@ -338,7 +338,7 @@ router.post('/events', requireAuth, async (req: Request, res: Response) => {
   }
 });
 
-router.patch('/events/:id', requireAuth, async (req: Request, res: Response) => {
+router.patch('/cc_events/:id', requireAuth, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const parsed = updateEventSchema.safeParse(req.body);
@@ -358,7 +358,7 @@ router.patch('/events/:id', requireAuth, async (req: Request, res: Response) => 
     }
 
     const eventCheck = await pool.query(
-      `SELECT * FROM resource_schedule_events WHERE id = $1 AND tenant_id = $2`,
+      `SELECT * FROM cc_resource_schedule_events WHERE id = $1 AND tenant_id = $2`,
       [id, tenantId]
     );
 
@@ -427,7 +427,7 @@ router.patch('/events/:id', requireAuth, async (req: Request, res: Response) => 
     values.push(id, tenantId);
     
     const result = await pool.query(
-      `UPDATE resource_schedule_events 
+      `UPDATE cc_resource_schedule_events 
        SET ${updates.join(', ')} 
        WHERE id = $${paramIdx++} AND tenant_id = $${paramIdx}
        RETURNING *`,
@@ -452,7 +452,7 @@ router.patch('/events/:id', requireAuth, async (req: Request, res: Response) => 
   }
 });
 
-router.delete('/events/:id', requireAuth, async (req: Request, res: Response) => {
+router.delete('/cc_events/:id', requireAuth, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const tenantId = getTenantId(req);
@@ -462,7 +462,7 @@ router.delete('/events/:id', requireAuth, async (req: Request, res: Response) =>
     }
 
     const result = await pool.query(
-      `UPDATE resource_schedule_events 
+      `UPDATE cc_resource_schedule_events 
        SET status = 'cancelled', updated_at = now()
        WHERE id = $1 AND tenant_id = $2
        RETURNING *`,
@@ -510,7 +510,7 @@ router.get('/resources', requireAuth, async (req: Request, res: Response) => {
         NULL as capability_status,
         false as is_capability_unit,
         CASE WHEN EXISTS (
-          SELECT 1 FROM resource_schedule_events e
+          SELECT 1 FROM cc_resource_schedule_events e
           WHERE e.resource_id = a.id
             AND e.event_type = 'maintenance'
             AND e.status = 'active'
@@ -568,7 +568,7 @@ router.get('/resources', requireAuth, async (req: Request, res: Response) => {
             CASE 
               WHEN cu.status != 'operational' THEN true
               WHEN EXISTS (
-                SELECT 1 FROM asset_constraints c
+                SELECT 1 FROM cc_asset_constraints c
                 WHERE c.capability_unit_id = cu.id
                   AND c.severity = 'blocking'
                   AND c.active = true
@@ -577,7 +577,7 @@ router.get('/resources', requireAuth, async (req: Request, res: Response) => {
               ) THEN true
               ELSE false 
             END as is_under_maintenance
-          FROM asset_capability_units cu
+          FROM cc_asset_capability_units cu
           WHERE cu.asset_id = ANY($1::uuid[])
           ORDER BY cu.name
         `, [assetIds]);
@@ -673,7 +673,7 @@ router.get('/bookings', requireAuth, async (req: Request, res: Response) => {
         b.total,
         b.special_requests,
         b.created_at
-      FROM reservations b
+      FROM cc_reservations b
       JOIN cc_assets a ON a.id = b.asset_id
       WHERE a.owner_tenant_id = $1
     `;
@@ -764,7 +764,7 @@ router.post('/bookings', requireAuth, async (req: Request, res: Response) => {
 
     // Create booking
     const result = await pool.query(`
-      INSERT INTO reservations (
+      INSERT INTO cc_reservations (
         asset_id,
         primary_guest_name,
         primary_guest_email,
@@ -817,7 +817,7 @@ router.put('/bookings/:id/status', requireAuth, async (req: Request, res: Respon
 
     // Verify booking belongs to tenant's asset
     const booking = await pool.query(`
-      SELECT b.id FROM reservations b
+      SELECT b.id FROM cc_reservations b
       JOIN cc_assets a ON a.id = b.asset_id
       WHERE b.id = $1 AND a.owner_tenant_id = $2
     `, [id, tenantId]);
@@ -834,7 +834,7 @@ router.put('/bookings/:id/status', requireAuth, async (req: Request, res: Respon
     }
 
     const result = await pool.query(`
-      UPDATE reservations 
+      UPDATE cc_reservations 
       SET ${updateFields.join(', ')}, updated_at = now()
       WHERE id = $1
       RETURNING *

@@ -16,7 +16,7 @@ router.get('/contractors/me/trust-signals', async (req: Request, res: Response) 
     }
 
     const result = await pool.query(
-      `SELECT * FROM trust_signals 
+      `SELECT * FROM cc_trust_signals 
        WHERE party_id = $1 AND model = 'v1_agg'`,
       [actor.actor_party_id]
     );
@@ -27,7 +27,7 @@ router.get('/contractors/me/trust-signals', async (req: Request, res: Response) 
       const display = formatTrustDisplay(signals);
       
       return res.json({
-        trust_signals: signals,
+        cc_trust_signals: signals,
         display,
         note: 'Computed fresh. Call recompute to update.'
       });
@@ -63,7 +63,7 @@ router.get('/contractors/me/trust-signals', async (req: Request, res: Response) 
     const display = formatTrustDisplay(signalsSummary as any);
 
     res.json({
-      trust_signals: signalsSummary,
+      cc_trust_signals: signalsSummary,
       display,
       last_updated: signals.last_updated,
       computed_at: signals.computed_at
@@ -77,12 +77,12 @@ router.get('/contractors/me/trust-signals', async (req: Request, res: Response) 
 // ============================================================
 // GET PUBLIC TRUST SIGNALS FOR ANY PARTY
 // ============================================================
-router.get('/parties/:id/trust-signals', async (req: Request, res: Response) => {
+router.get('/cc_parties/:id/trust-signals', async (req: Request, res: Response) => {
   try {
     const { id: party_id } = req.params;
 
     const result = await pool.query(
-      `SELECT * FROM trust_signals 
+      `SELECT * FROM cc_trust_signals 
        WHERE party_id = $1 AND model = 'v1_agg'`,
       [party_id]
     );
@@ -197,7 +197,7 @@ router.put('/contractors/me/trust-signals/preferences', async (req: Request, res
     }
 
     const result = await pool.query(
-      `UPDATE trust_signals SET
+      `UPDATE cc_trust_signals SET
         display_preferences = display_preferences || $1::jsonb,
         last_updated = now()
        WHERE party_id = $2 AND model = 'v1_agg'
@@ -207,7 +207,7 @@ router.put('/contractors/me/trust-signals/preferences', async (req: Request, res
 
     if (result.rows.length === 0) {
       await pool.query(
-        `INSERT INTO trust_signals (party_id, party_type, model, display_preferences)
+        `INSERT INTO cc_trust_signals (party_id, party_type, model, display_preferences)
          VALUES ($1, 'contractor', 'v1_agg', $2)`,
         [actor.actor_party_id, JSON.stringify({
           show_repeat_customers: true,
@@ -237,7 +237,7 @@ router.put('/contractors/me/trust-signals/preferences', async (req: Request, res
 // ============================================================
 // REQUEST FEEDBACK (Contractor)
 // ============================================================
-router.post('/conversations/:id/request-feedback', async (req: Request, res: Response) => {
+router.post('/cc_conversations/:id/request-feedback', async (req: Request, res: Response) => {
   try {
     const { id: conversation_id } = req.params;
 
@@ -247,7 +247,7 @@ router.post('/conversations/:id/request-feedback', async (req: Request, res: Res
     }
 
     const convResult = await pool.query(
-      `SELECT * FROM conversations 
+      `SELECT * FROM cc_conversations 
        WHERE id = $1 AND contractor_party_id = $2`,
       [conversation_id, actor.actor_party_id]
     );
@@ -257,7 +257,7 @@ router.post('/conversations/:id/request-feedback', async (req: Request, res: Res
     }
 
     await pool.query(
-      `INSERT INTO messages (
+      `INSERT INTO cc_messages (
         conversation_id, sender_party_id, sender_individual_id,
         content, metadata
       ) VALUES ($1, $2, $3, $4, $5)`,
@@ -287,7 +287,7 @@ router.post('/conversations/:id/request-feedback', async (req: Request, res: Res
 // ============================================================
 // SUBMIT FEEDBACK (Owner/Customer)
 // ============================================================
-router.post('/conversations/:id/feedback', async (req: Request, res: Response) => {
+router.post('/cc_conversations/:id/feedback', async (req: Request, res: Response) => {
   try {
     const { id: conversation_id } = req.params;
     const { 
@@ -311,8 +311,8 @@ router.post('/conversations/:id/feedback', async (req: Request, res: Response) =
 
     const convResult = await pool.query(
       `SELECT c.*, wr.id as wr_id
-       FROM conversations c
-       LEFT JOIN work_requests wr ON c.work_request_id = wr.id
+       FROM cc_conversations c
+       LEFT JOIN cc_work_requests wr ON c.work_request_id = wr.id
        WHERE c.id = $1 AND c.owner_party_id = $2`,
       [conversation_id, actor.actor_party_id]
     );
@@ -335,7 +335,7 @@ router.post('/conversations/:id/feedback', async (req: Request, res: Response) =
       const displayName = nameResult.rows[0]?.name || 'A customer';
 
       const feedbackResult = await client.query(
-        `INSERT INTO contractor_feedback (
+        `INSERT INTO cc_contractor_feedback (
           conversation_id, work_request_id,
           from_party_id, from_individual_id, from_display_name,
           to_party_id,
@@ -363,7 +363,7 @@ router.post('/conversations/:id/feedback', async (req: Request, res: Response) =
 
       if (allow_public_snippet && sentiment === 'positive' && public_snippet) {
         await client.query(
-          `INSERT INTO public_appreciations (
+          `INSERT INTO cc_public_appreciations (
             source_feedback_id, conversation_id, work_request_id,
             from_party_id, from_individual_id, from_display_name,
             to_party_id,
@@ -385,7 +385,7 @@ router.post('/conversations/:id/feedback', async (req: Request, res: Response) =
 
       if (sentiment === 'positive') {
         await client.query(
-          `UPDATE trust_signals SET
+          `UPDATE cc_trust_signals SET
             positive_feedback_count = COALESCE(positive_feedback_count, 0) + 1,
             last_updated = now()
            WHERE party_id = $1 AND model = 'v1_agg'`,
@@ -427,8 +427,8 @@ router.get('/contractors/me/feedback', async (req: Request, res: Response) => {
 
     let query = `
       SELECT cf.*, wr.title as work_request_title
-      FROM contractor_feedback cf
-      LEFT JOIN work_requests wr ON cf.work_request_id = wr.id
+      FROM cc_contractor_feedback cf
+      LEFT JOIN cc_work_requests wr ON cf.work_request_id = wr.id
       WHERE cf.to_party_id = $1
     `;
     const params: any[] = [actor.actor_party_id];
@@ -485,7 +485,7 @@ router.post('/contractors/me/feedback/:id/handle', async (req: Request, res: Res
     switch (action) {
       case 'mark_handled':
         updateQuery = `
-          UPDATE contractor_feedback SET
+          UPDATE cc_contractor_feedback SET
             is_handled = true,
             handled_at = now(),
             handled_by_individual_id = $1,
@@ -498,7 +498,7 @@ router.post('/contractors/me/feedback/:id/handle', async (req: Request, res: Res
       
       case 'archive':
         updateQuery = `
-          UPDATE contractor_feedback SET
+          UPDATE cc_contractor_feedback SET
             archived_at = now(),
             updated_at = now()
           WHERE id = $1 AND to_party_id = $2
@@ -508,7 +508,7 @@ router.post('/contractors/me/feedback/:id/handle', async (req: Request, res: Res
       
       case 'delete':
         updateQuery = `
-          UPDATE contractor_feedback SET
+          UPDATE cc_contractor_feedback SET
             contractor_deleted_at = now(),
             contractor_delete_reason = $1,
             updated_at = now()
@@ -549,8 +549,8 @@ router.get('/contractors/me/appreciations/pending', async (req: Request, res: Re
 
     const result = await pool.query(
       `SELECT pa.*, wr.title as work_request_title
-       FROM public_appreciations pa
-       LEFT JOIN work_requests wr ON pa.work_request_id = wr.id
+       FROM cc_public_appreciations pa
+       LEFT JOIN cc_work_requests wr ON pa.work_request_id = wr.id
        WHERE pa.to_party_id = $1 
          AND pa.is_public = false 
          AND pa.hidden_by_contractor = false
@@ -582,7 +582,7 @@ router.post('/contractors/me/appreciations/:id/promote', async (req: Request, re
     }
 
     const result = await pool.query(
-      `UPDATE public_appreciations SET
+      `UPDATE cc_public_appreciations SET
         is_public = true,
         made_public_at = now()
        WHERE id = $1 AND to_party_id = $2 AND is_public = false
@@ -597,7 +597,7 @@ router.post('/contractors/me/appreciations/:id/promote', async (req: Request, re
     }
 
     await pool.query(
-      `UPDATE trust_signals SET
+      `UPDATE cc_trust_signals SET
         public_appreciation_count = COALESCE(public_appreciation_count, 0) + 1,
         last_updated = now()
        WHERE party_id = $1 AND model = 'v1_agg'`,
@@ -627,7 +627,7 @@ router.post('/contractors/me/appreciations/:id/hide', async (req: Request, res: 
     }
 
     const result = await pool.query(
-      `UPDATE public_appreciations SET
+      `UPDATE cc_public_appreciations SET
         hidden_by_contractor = true,
         hidden_at = now()
        WHERE id = $1 AND to_party_id = $2
@@ -641,7 +641,7 @@ router.post('/contractors/me/appreciations/:id/hide', async (req: Request, res: 
 
     if (result.rows[0].is_public) {
       await pool.query(
-        `UPDATE trust_signals SET
+        `UPDATE cc_trust_signals SET
           public_appreciation_count = GREATEST(COALESCE(public_appreciation_count, 0) - 1, 0),
           last_updated = now()
          WHERE party_id = $1 AND model = 'v1_agg'`,
@@ -677,7 +677,7 @@ router.post('/contractors/me/community-verification', async (req: Request, res: 
     }
 
     await pool.query(
-      `INSERT INTO community_verifications (
+      `INSERT INTO cc_community_verifications (
         party_id, community_name, community_type,
         verification_method, verification_notes
       ) VALUES ($1, $2, $3, $4, $5)
@@ -695,10 +695,10 @@ router.post('/contractors/me/community-verification', async (req: Request, res: 
     );
 
     await pool.query(
-      `UPDATE trust_signals SET
+      `UPDATE cc_trust_signals SET
         verified_communities = (
           SELECT array_agg(DISTINCT community_name)
-          FROM community_verifications
+          FROM cc_community_verifications
           WHERE party_id = $1
         ),
         last_updated = now()
@@ -731,7 +731,7 @@ router.post('/contractors/me/trust-signals/recompute', async (req: Request, res:
     const display = formatTrustDisplay(signals);
 
     res.json({
-      trust_signals: signals,
+      cc_trust_signals: signals,
       display,
       message: 'Trust signals recomputed successfully.',
       computed_at: new Date().toISOString()

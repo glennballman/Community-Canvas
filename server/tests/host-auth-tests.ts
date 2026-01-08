@@ -262,7 +262,7 @@ async function testHostAuth() {
 
     console.log('\n🧹 Cleaning up test user...');
     // You may want to delete the test user from the database
-    // DELETE FROM host_accounts WHERE email LIKE 'qa-test-%@test.com';
+    // DELETE FROM cc_host_accounts WHERE email LIKE 'qa-test-%@test.com';
 
     console.log('\n✅ HOST AUTH TESTS COMPLETE');
 }

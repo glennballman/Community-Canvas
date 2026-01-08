@@ -64,7 +64,7 @@ router.get('/status', (_req: Request, res: Response) => {
   });
 });
 
-// POST /api/media/upload - Direct file upload
+// POST /api/cc_media/upload - Direct file upload
 router.post('/upload', requireAuth, upload.single('file'), async (req: Request, res: Response) => {
   try {
     const tenantId = getTenantId(req);
@@ -104,7 +104,7 @@ router.post('/upload', requireAuth, upload.single('file'), async (req: Request, 
     
     return res.status(201).json({
       success: true,
-      media: result,
+      cc_media: result,
     });
   } catch (error: any) {
     console.error('[Media] Upload error:', error);
@@ -112,7 +112,7 @@ router.post('/upload', requireAuth, upload.single('file'), async (req: Request, 
   }
 });
 
-// POST /api/media/presign - Get presigned URL for direct browser upload
+// POST /api/cc_media/presign - Get presigned URL for direct browser upload
 router.post('/presign', requireAuth, async (req: Request, res: Response) => {
   try {
     const tenantId = getTenantId(req);
@@ -148,7 +148,7 @@ router.post('/presign', requireAuth, async (req: Request, res: Response) => {
   }
 });
 
-// POST /api/media/:id/complete - Complete presigned upload
+// POST /api/cc_media/:id/complete - Complete presigned upload
 router.post('/:id/complete', requireAuth, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
@@ -177,44 +177,44 @@ router.post('/:id/complete', requireAuth, async (req: Request, res: Response) =>
   }
 });
 
-// GET /api/media/:id - Get single media item
+// GET /api/cc_media/:id - Get single cc_media item
 router.get('/:id', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     
-    const media = await getMediaById(id);
+    const cc_media = await getMediaById(id);
     
-    if (!media) {
+    if (!cc_media) {
       return res.status(404).json({ success: false, error: 'Media not found' });
     }
     
-    return res.json({ success: true, media });
+    return res.json({ success: true, cc_media });
   } catch (error: any) {
     console.error('[Media] Get error:', error);
-    return res.status(500).json({ success: false, error: 'Failed to get media' });
+    return res.status(500).json({ success: false, error: 'Failed to get cc_media' });
   }
 });
 
-// GET /api/media/entity/:type/:id - Get media for an entity
+// GET /api/cc_media/entity/:type/:id - Get cc_media for an entity
 router.get('/entity/:type/:entityId', async (req: Request, res: Response) => {
   try {
     const { type, entityId } = req.params;
     const { role } = req.query;
     
-    const media = await getMediaForEntity(type, entityId, role as string | undefined);
+    const cc_media = await getMediaForEntity(type, entityId, role as string | undefined);
     
     return res.json({
       success: true,
-      media,
-      count: media.length,
+      cc_media,
+      count: cc_media.length,
     });
   } catch (error: any) {
-    console.error('[Media] Get entity media error:', error);
-    return res.status(500).json({ success: false, error: 'Failed to get media' });
+    console.error('[Media] Get entity cc_media error:', error);
+    return res.status(500).json({ success: false, error: 'Failed to get cc_media' });
   }
 });
 
-// DELETE /api/media/:id - Delete media
+// DELETE /api/cc_media/:id - Delete cc_media
 router.delete('/:id', requireAuth, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
@@ -229,7 +229,7 @@ router.delete('/:id', requireAuth, async (req: Request, res: Response) => {
     return res.json({ success: true });
   } catch (error: any) {
     console.error('[Media] Delete error:', error);
-    return res.status(500).json({ success: false, error: error.message || 'Failed to delete media' });
+    return res.status(500).json({ success: false, error: error.message || 'Failed to delete cc_media' });
   }
 });
 

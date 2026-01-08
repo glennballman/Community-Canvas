@@ -13,14 +13,14 @@ const KNOWN_INTEGRATIONS = [
   { name: 'CompanyCam', envKey: 'COMPANYCAM_ACCESS_TOKEN', category: 'photos' },
 ];
 
-// Known data sources/pipelines - data stored in snapshots table as nested JSONB fields
+// Known data sources/pipelines - data stored in cc_snapshots table as nested JSONB fields
 // Each snapshot contains: road_conditions, ferry_schedules, bc_hydro_outages, active_alerts
 const KNOWN_PIPELINES = [
-  { name: 'DriveBC Road Conditions', table: 'snapshots', jsonPath: 'real_time_status_updates.road_conditions', category: 'transportation' },
-  { name: 'BC Ferries Schedules', table: 'snapshots', jsonPath: 'real_time_status_updates.ferry_schedules', category: 'transportation' },
-  { name: 'BC Hydro Outages', table: 'snapshots', jsonPath: 'real_time_status_updates.bc_hydro_outages', category: 'utilities' },
-  { name: 'Active Alerts', table: 'snapshots', jsonPath: 'real_time_status_updates.active_alerts', category: 'emergency' },
-  { name: 'Water/Sewer Alerts', table: 'snapshots', jsonPath: 'real_time_status_updates.water_sewer_alerts', category: 'utilities' },
+  { name: 'DriveBC Road Conditions', table: 'cc_snapshots', jsonPath: 'real_time_status_updates.road_conditions', category: 'transportation' },
+  { name: 'BC Ferries Schedules', table: 'cc_snapshots', jsonPath: 'real_time_status_updates.ferry_schedules', category: 'transportation' },
+  { name: 'BC Hydro Outages', table: 'cc_snapshots', jsonPath: 'real_time_status_updates.bc_hydro_outages', category: 'utilities' },
+  { name: 'Active Alerts', table: 'cc_snapshots', jsonPath: 'real_time_status_updates.active_alerts', category: 'emergency' },
+  { name: 'Water/Sewer Alerts', table: 'cc_snapshots', jsonPath: 'real_time_status_updates.water_sewer_alerts', category: 'utilities' },
 ];
 
 // Key routes that should exist
@@ -30,35 +30,35 @@ const KEY_ROUTES = [
   { path: '/app/bookings', label: 'Bookings', required: true },
   { path: '/app/operations', label: 'Operations', required: true },
   { path: '/app/intake/work-requests', label: 'Work Requests', required: true },
-  { path: '/app/projects', label: 'Projects', required: true },
+  { path: '/app/cc_projects', label: 'Projects', required: true },
   { path: '/app/crm/places', label: 'Places', required: true },
-  { path: '/app/crm/people', label: 'Contacts', required: true },
+  { path: '/app/crm/cc_people', label: 'Contacts', required: true },
   { path: '/app/crm/orgs', label: 'Organizations', required: true },
-  { path: '/app/conversations', label: 'Conversations', required: false },
+  { path: '/app/cc_conversations', label: 'Conversations', required: false },
   { path: '/app/settings', label: 'Settings', required: true },
   { path: '/admin/system-explorer', label: 'System Explorer', required: true },
 ];
 
 // Allowed tables for data browser with tenant column names
 // Different tables use different column names for tenant scoping
-// Updated to schema.org-aligned names: assets, reservations, people, organizations, articles
+// Updated to schema.org-aligned names: assets, cc_reservations, cc_people, cc_organizations, cc_articles
 export const ALLOWED_TABLES = [
   { name: 'assets', label: 'Assets', tenantScoped: true, tenantColumn: 'owner_tenant_id' },
-  { name: 'reservations', label: 'Reservations', tenantScoped: true, tenantColumn: 'provider_id' },
-  { name: 'work_requests', label: 'Work Requests', tenantScoped: true, tenantColumn: 'tenant_id' },
-  { name: 'projects', label: 'Projects', tenantScoped: true, tenantColumn: 'tenant_id' },
-  { name: 'people', label: 'People', tenantScoped: true, tenantColumn: 'tenant_id' },
-  { name: 'organizations', label: 'Organizations', tenantScoped: true, tenantColumn: 'tenant_id' },
-  { name: 'portals', label: 'Portals', tenantScoped: true, tenantColumn: 'owning_tenant_id' },
-  { name: 'portal_domains', label: 'Portal Domains', tenantScoped: false },
-  { name: 'articles', label: 'Articles', tenantScoped: true, tenantColumn: 'canonical_tenant_id' },
-  { name: 'presentation_blocks', label: 'Presentation Blocks', tenantScoped: false },
-  { name: 'service_runs', label: 'Service Runs', tenantScoped: true, tenantColumn: 'tenant_id' },
+  { name: 'cc_reservations', label: 'Reservations', tenantScoped: true, tenantColumn: 'provider_id' },
+  { name: 'cc_work_requests', label: 'Work Requests', tenantScoped: true, tenantColumn: 'tenant_id' },
+  { name: 'cc_projects', label: 'Projects', tenantScoped: true, tenantColumn: 'tenant_id' },
+  { name: 'cc_people', label: 'People', tenantScoped: true, tenantColumn: 'tenant_id' },
+  { name: 'cc_organizations', label: 'Organizations', tenantScoped: true, tenantColumn: 'tenant_id' },
+  { name: 'cc_portals', label: 'Portals', tenantScoped: true, tenantColumn: 'owning_tenant_id' },
+  { name: 'cc_portal_domains', label: 'Portal Domains', tenantScoped: false },
+  { name: 'cc_articles', label: 'Articles', tenantScoped: true, tenantColumn: 'canonical_tenant_id' },
+  { name: 'cc_presentation_blocks', label: 'Presentation Blocks', tenantScoped: false },
+  { name: 'cc_service_runs', label: 'Service Runs', tenantScoped: true, tenantColumn: 'tenant_id' },
   { name: 'crews', label: 'Crews', tenantScoped: true, tenantColumn: 'tenant_id' },
-  { name: 'snapshots', label: 'Status Snapshots', tenantScoped: false },
+  { name: 'cc_snapshots', label: 'Status Snapshots', tenantScoped: false },
   { name: 'tenants', label: 'Tenants', tenantScoped: false },
   { name: 'users', label: 'Users', tenantScoped: false },
-  { name: 'system_evidence', label: 'Evidence Ledger', tenantScoped: false },
+  { name: 'cc_system_evidence', label: 'Evidence Ledger', tenantScoped: false },
 ];
 
 // GET /api/admin/system-explorer/overview
@@ -91,7 +91,7 @@ router.get('/overview', async (req, res) => {
       configured: !!process.env[int.envKey],
     }));
     
-    // Pipeline/data source status (all use snapshots table with JSONB fields)
+    // Pipeline/data source status (all use cc_snapshots table with JSONB fields)
     const pipelines = await Promise.all(KNOWN_PIPELINES.map(async (p) => {
       try {
         // Count records that have data for this specific JSON path
@@ -101,7 +101,7 @@ router.get('/overview', async (req, res) => {
           SELECT 
             COUNT(*) FILTER (WHERE data->${jsonQuery} IS NOT NULL AND jsonb_array_length(data->${jsonQuery}) > 0) as count,
             MAX(created_at) as last_updated
-          FROM snapshots
+          FROM cc_snapshots
         `);
         const count = parseInt(result.rows[0]?.count || '0', 10);
         return {

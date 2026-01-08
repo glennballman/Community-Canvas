@@ -921,7 +921,7 @@ router.get(
           p.slug as portal_slug
         FROM cc_tenants t
         LEFT JOIN LATERAL (
-          SELECT slug FROM portals 
+          SELECT slug FROM cc_portals 
           WHERE owning_tenant_id = t.id AND status = 'active'
           ORDER BY created_at LIMIT 1
         ) p ON true
@@ -1156,7 +1156,7 @@ router.get(
         success: true,
         claim: claimResult.rows[0],
         evidence: evidenceResult.rows,
-        events: eventsResult.rows,
+        cc_events: eventsResult.rows,
         actor: {
           staff_id: platformReq.platformStaff?.id,
           staff_name: platformReq.platformStaff?.full_name
@@ -1331,7 +1331,7 @@ router.get(
         claim_id: id,
         tenant_id: claimResult.rows[0].tenant_id,
         status: claimResult.rows[0].status,
-        events: eventsResult.rows,
+        cc_events: eventsResult.rows,
         total_events: eventsResult.rows.length,
         actor: {
           staff_id: platformReq.platformStaff?.id,

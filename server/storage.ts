@@ -1,6 +1,6 @@
 import { db, pool } from "./db";
 import {
-  snapshots,
+  cc_snapshots,
   chamberOverrides,
   type InsertSnapshot,
   type Snapshot,
@@ -23,16 +23,16 @@ export class DatabaseStorage implements IStorage {
   async getLatestSnapshot(location: string): Promise<Snapshot | undefined> {
     const results = await db
       .select()
-      .from(snapshots)
-      .where(eq(snapshots.location, location))
-      .orderBy(desc(snapshots.createdAt))
+      .from(cc_snapshots)
+      .where(eq(cc_snapshots.location, location))
+      .orderBy(desc(cc_snapshots.createdAt))
       .limit(1);
     return results[0];
   }
 
   async createSnapshot(insertSnapshot: InsertSnapshot): Promise<Snapshot> {
     const results = await db
-      .insert(snapshots)
+      .insert(cc_snapshots)
       .values(insertSnapshot)
       .returning();
     return results[0];

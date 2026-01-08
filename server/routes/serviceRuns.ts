@@ -2,7 +2,7 @@
 // SERVICE RUNS API ROUTES
 // =====================================================================
 // SERVICE MODE: This file primarily reads platform-global reference data
-// (services, categories, bundles, communities, climate regions, etc.)
+// (cc_services, categories, bundles, communities, climate regions, etc.)
 // that is shared across all tenants. Uses serviceQuery for reads.
 // User-initiated mutations use tenantTransaction for tenant isolation.
 // =====================================================================
@@ -211,7 +211,7 @@ router.get('/categories', async (req: Request, res: Response) => {
 // SERVICE MODE: Platform-global service directory reference data
 // =====================================================================
 
-// GET /api/service-runs/services - List services with filtering
+// GET /api/service-runs/cc_services - List cc_services with filtering
 router.get('/services', async (req: Request, res: Response) => {
   try {
     const { category, search, emergency, climateRegion, week } = req.query;
@@ -250,7 +250,7 @@ router.get('/services', async (req: Request, res: Response) => {
     const result = await serviceQuery(query, params);
     
     // If climate region and week specified, check eligibility
-    let services = result.rows.map(row => ({
+    let cc_services = result.rows.map(row => ({
       id: row.id,
       categoryId: row.category_id,
       name: row.name,
@@ -274,12 +274,12 @@ router.get('/services', async (req: Request, res: Response) => {
     
     res.json({
       success: true,
-      services,
+      cc_services,
       total: services.length
     });
   } catch (err) {
     console.error('Failed to load services:', err);
-    res.status(500).json({ success: false, error: 'Failed to load services' });
+    res.status(500).json({ success: false, error: 'Failed to load cc_services' });
   }
 });
 
@@ -533,7 +533,7 @@ router.get('/bundles/:slug', async (req: Request, res: Response) => {
     
     const bundle = bundleResult.rows[0];
     
-    // Get bundle items with services
+    // Get bundle items with cc_services
     const itemsResult = await serviceQuery(`
       SELECT bi.*, s.name as service_name, s.slug as service_slug, s.description as service_description
       FROM cc_sr_bundle_items bi
@@ -662,7 +662,7 @@ router.get('/run-types', async (req: Request, res: Response) => {
 // SERVICE MODE: Reads service directory to generate bundle suggestions
 // =====================================================================
 
-// POST /api/service-runs/suggest-bundles - Get bundle suggestions for selected services
+// POST /api/service-runs/suggest-bundles - Get bundle suggestions for selected cc_services
 router.post('/suggest-bundles', async (req: Request, res: Response) => {
   try {
     const { serviceSlugs, climateRegionId, week } = req.body;
@@ -671,7 +671,7 @@ router.post('/suggest-bundles', async (req: Request, res: Response) => {
       return res.status(400).json({ success: false, error: 'serviceSlugs required' });
     }
     
-    // Load all specified services with details
+    // Load all specified cc_services with details
     const services: ServiceWithDetails[] = [];
     for (const slug of serviceSlugs) {
       const idResult = await serviceQuery('SELECT id FROM cc_sr_services WHERE slug = $1', [slug]);
@@ -690,15 +690,15 @@ router.post('/suggest-bundles', async (req: Request, res: Response) => {
     }
     
     // Build compatibility graph
-    const edges = buildCompatibilityGraph(services, DEFAULT_COMPATIBILITY_WEIGHTS, 40);
+    const edges = buildCompatibilityGraph(cc_services, DEFAULT_COMPATIBILITY_WEIGHTS, 40);
     
     // Get suggested bundles
-    const suggestions = suggestBundles(services, edges, 8, 2);
+    const suggestions = suggestBundles(cc_services, edges, 8, 2);
     
     // Check seasonality if provided
     let eligibilityNotes: string[] = [];
     if (climateRegionId && week) {
-      for (const service of services) {
+      for (const service of cc_services) {
         const eligibility = isServiceEligibleForWeek(service, climateRegionId, parseInt(week));
         if (!eligibility.eligible) {
           eligibilityNotes.push(`${service.name}: ${eligibility.reason}`);
@@ -722,7 +722,7 @@ router.post('/suggest-bundles', async (req: Request, res: Response) => {
 // =====================================================================
 // SERVICE RUNS MANAGEMENT
 // SERVICE MODE: Reads for listing/viewing runs are platform-global
-// Mutations require authentication and use tenant transactions
+// Mutations require authentication and use tenant cc_transactions
 // =====================================================================
 
 // GET /api/service-runs/runs - List all service runs
@@ -914,7 +914,7 @@ router.get('/runs/:slug', async (req: Request, res: Response) => {
         customerReview: s.customer_review,
         createdAt: s.created_at
       })),
-      bids: bidsResult.rows.map(b => ({
+      cc_bids: bidsResult.rows.map(b => ({
         id: b.id,
         contractorName: b.contractor_name,
         contractorEmail: b.contractor_email,
@@ -1106,7 +1106,7 @@ router.post('/runs/:id/slots', async (req: Request, res: Response) => {
 // GET /api/service-runs/stats - Get overall stats
 router.get('/stats', async (req: Request, res: Response) => {
   try {
-    const [categories, services, bundles, communities, climateRegions] = await Promise.all([
+    const [categories, cc_services, bundles, communities, climateRegions] = await Promise.all([
       serviceQuery('SELECT COUNT(*) FROM cc_sr_service_categories WHERE is_active = true'),
       serviceQuery('SELECT COUNT(*) FROM cc_sr_services WHERE is_active = true'),
       serviceQuery('SELECT COUNT(*) FROM cc_sr_bundles WHERE is_active = true'),

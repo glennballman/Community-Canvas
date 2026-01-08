@@ -125,9 +125,9 @@ export class BCFerriesPipeline extends BasePipeline {
     let updated = 0;
 
     for (const sailing of sailings) {
-      // Find matching ferry terminal entities
+      // Find matching ferry terminal cc_entities
       const terminalQuery = await pool.query(`
-        SELECT id, name FROM entities 
+        SELECT id, name FROM cc_entities 
         WHERE entity_type_id = 'ferry-terminal'
         AND (
           LOWER(name) LIKE $1 
@@ -153,17 +153,17 @@ export class BCFerriesPipeline extends BasePipeline {
         fetched_at: new Date().toISOString()
       };
 
-      // Create alerts for delays or cancellations
-      let alerts = null;
+      // Create cc_alerts for delays or cancellations
+      let cc_alerts = null;
       if (sailing.status === 'cancelled') {
-        alerts = [{
+        cc_alerts = [{
           type: 'cancellation',
           severity: 'high',
           message: `Route ${sailing.route} sailing cancelled`,
           timestamp: new Date().toISOString()
         }];
       } else if (sailing.status === 'delayed' && sailing.delayMinutes > 30) {
-        alerts = [{
+        cc_alerts = [{
           type: 'delay',
           severity: 'medium',
           message: `Route ${sailing.route} delayed ${sailing.delayMinutes} minutes`,
@@ -171,11 +171,11 @@ export class BCFerriesPipeline extends BasePipeline {
         }];
       }
 
-      // Update terminal entities with latest status
-      // Note: entity_snapshots table uses integer IDs but entities uses UUID, so we skip snapshot saving
+      // Update terminal cc_entities with latest status
+      // Note: cc_entity_snapshots table uses integer IDs but cc_entities uses UUID, so we skip snapshot saving
       for (const terminal of terminalQuery.rows) {
         await pool.query(`
-          UPDATE entities SET
+          UPDATE cc_entities SET
             configuration = configuration || $2::jsonb
           WHERE id = $1
         `, [
@@ -199,14 +199,14 @@ export class BCFerriesPipeline extends BasePipeline {
       const routeSlug = `bcferries-route-${sailing.route.toLowerCase().replace(/[^a-z0-9]/g, '-')}`;
       
       const existingRoute = await pool.query(
-        'SELECT id FROM entities WHERE slug = $1',
+        'SELECT id FROM cc_entities WHERE slug = $1',
         [routeSlug]
       );
 
       if (existingRoute.rows.length === 0) {
         // Create route entity
         await pool.query(`
-          INSERT INTO entities (slug, name, entity_type_id, configuration)
+          INSERT INTO cc_entities (slug, name, entity_type_id, configuration)
           VALUES ($1, $2, 'ferry-route', $3)
         `, [
           routeSlug,
@@ -226,7 +226,7 @@ export class BCFerriesPipeline extends BasePipeline {
       } else {
         // Update existing route
         await pool.query(`
-          UPDATE entities SET
+          UPDATE cc_entities SET
             configuration = configuration || $2::jsonb
           WHERE slug = $1
         `, [

@@ -11,8 +11,8 @@ export function createTripsRouter() {
       
       let query = `
         SELECT t.*, COUNT(s.id) as segment_count
-        FROM road_trips t
-        LEFT JOIN trip_segments s ON t.id = s.trip_id
+        FROM cc_road_trips t
+        LEFT JOIN cc_trip_segments s ON t.id = s.trip_id
         WHERE t.is_published = true
       `;
       
@@ -56,7 +56,7 @@ export function createTripsRouter() {
       
       const result = await serviceQuery(query, params);
       
-      const countResult = await serviceQuery(`SELECT COUNT(*) FROM road_trips WHERE is_published = true`);
+      const countResult = await serviceQuery(`SELECT COUNT(*) FROM cc_road_trips WHERE is_published = true`);
       
       res.json({
         trips: result.rows,
@@ -75,7 +75,7 @@ export function createTripsRouter() {
       const { id } = req.params;
       
       const tripResult = await serviceQuery(
-        `SELECT * FROM road_trips WHERE id = $1 OR slug = $1`,
+        `SELECT * FROM cc_road_trips WHERE id = $1 OR slug = $1`,
         [id]
       );
       
@@ -86,7 +86,7 @@ export function createTripsRouter() {
       const trip = tripResult.rows[0];
       
       const segmentsResult = await serviceQuery(
-        `SELECT * FROM trip_segments WHERE trip_id = $1 ORDER BY segment_order`,
+        `SELECT * FROM cc_trip_segments WHERE trip_id = $1 ORDER BY segment_order`,
         [trip.id]
       );
       
@@ -105,7 +105,7 @@ export function createTripsRouter() {
       const { id } = req.params;
       
       const tripResult = await serviceQuery(
-        `SELECT * FROM road_trips WHERE id = $1 OR slug = $1`,
+        `SELECT * FROM cc_road_trips WHERE id = $1 OR slug = $1`,
         [id]
       );
       
@@ -114,12 +114,12 @@ export function createTripsRouter() {
       }
       
       const alertsResult = await serviceQuery(
-        `SELECT * FROM alerts WHERE is_active = true ORDER BY severity DESC LIMIT 10`
+        `SELECT * FROM cc_alerts WHERE is_active = true ORDER BY severity DESC LIMIT 10`
       ).catch(() => ({ rows: [] }));
       
       res.json({
         trip_id: id,
-        alerts: alertsResult.rows,
+        cc_alerts: alertsResult.rows,
         weather: { temperature: -5, condition: 'Light Snow', wind_speed: 15 },
         road_status: 'Clear',
         ferry_status: null,
@@ -137,7 +137,7 @@ export function createTripsRouter() {
       const { id } = req.params;
       
       const segmentsResult = await serviceQuery(
-        `SELECT segment_order, title, webcam_ids FROM trip_segments WHERE trip_id = $1 ORDER BY segment_order`,
+        `SELECT segment_order, title, webcam_ids FROM cc_trip_segments WHERE trip_id = $1 ORDER BY segment_order`,
         [id]
       );
       
@@ -146,7 +146,7 @@ export function createTripsRouter() {
       let webcams: any[] = [];
       if (allWebcamIds.length > 0) {
         const webcamsResult = await serviceQuery(
-          `SELECT * FROM entities WHERE id = ANY($1::int[])`,
+          `SELECT * FROM cc_entities WHERE id = ANY($1::int[])`,
           [allWebcamIds]
         ).catch(() => ({ rows: [] }));
         webcams = webcamsResult.rows;
@@ -174,7 +174,7 @@ export function createTripsRouter() {
   router.get('/featured/list', async (_req: Request, res: Response) => {
     try {
       const result = await serviceQuery(`
-        SELECT * FROM road_trips 
+        SELECT * FROM cc_road_trips 
         WHERE is_published = true AND is_featured = true 
         ORDER BY popularity_score DESC 
         LIMIT 5

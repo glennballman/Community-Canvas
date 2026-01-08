@@ -72,9 +72,9 @@ async function runPipelineWithLogging(config: PipelineConfig): Promise<PipelineR
   try {
     const result = await config.pipeline.run();
     
-    // Log to pipeline_runs table
+    // Log to cc_pipeline_runs table
     await pool.query(`
-      INSERT INTO pipeline_runs (data_source_id, started_at, completed_at, status, records_processed, records_created, records_updated)
+      INSERT INTO cc_pipeline_runs (data_source_id, started_at, completed_at, status, records_processed, records_created, records_updated)
       VALUES ($1, $2, NOW(), 'completed', $3, $4, $5)
     `, [config.id, startTime, result.recordsProcessed, result.recordsCreated, result.recordsUpdated]);
     
@@ -85,7 +85,7 @@ async function runPipelineWithLogging(config: PipelineConfig): Promise<PipelineR
     console.error(`[${config.id}] Failed:`, errorMessage);
     
     await pool.query(`
-      INSERT INTO pipeline_runs (data_source_id, started_at, completed_at, status, error_message)
+      INSERT INTO cc_pipeline_runs (data_source_id, started_at, completed_at, status, error_message)
       VALUES ($1, $2, NOW(), 'failed', $3)
     `, [config.id, startTime, errorMessage]);
     

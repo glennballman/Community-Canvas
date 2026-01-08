@@ -19,7 +19,7 @@ import { pool } from '../db';
  * - Private feedback content
  * 
  * Schema notes:
- * - trust_signals uses UNIQUE(party_id, model)
+ * - cc_trust_signals uses UNIQUE(party_id, model)
  * - Use model = 'v1_agg' consistently
  * - Use existing column names (response_time_avg_hours, not avg_response_hours)
  */
@@ -61,7 +61,7 @@ export async function computeTrustSignals(party_id: string): Promise<TrustSignal
   const client = await pool.connect();
   try {
     const partyResult = await client.query(
-      `SELECT created_at, party_type FROM parties WHERE id = $1`,
+      `SELECT created_at, party_type FROM cc_parties WHERE id = $1`,
       [party_id]
     );
     
@@ -73,7 +73,7 @@ export async function computeTrustSignals(party_id: string): Promise<TrustSignal
          COUNT(*) FILTER (WHERE state = 'in_progress') as in_progress,
          COUNT(*) FILTER (WHERE state IN ('completed', 'cancelled', 'closed')) as total_finished,
          COUNT(DISTINCT owner_party_id) as unique_customers
-       FROM conversations
+       FROM cc_conversations
        WHERE contractor_party_id = $1`,
       [party_id]
     );
@@ -91,7 +91,7 @@ export async function computeTrustSignals(party_id: string): Promise<TrustSignal
       `SELECT COUNT(*) as repeat_count
        FROM (
          SELECT owner_party_id
-         FROM conversations
+         FROM cc_conversations
          WHERE contractor_party_id = $1 AND state = 'completed'
          GROUP BY owner_party_id
          HAVING COUNT(*) > 1
@@ -109,8 +109,8 @@ export async function computeTrustSignals(party_id: string): Promise<TrustSignal
        FROM (
          SELECT c.created_at as conv_created,
                 MIN(m.created_at) as first_response
-         FROM conversations c
-         JOIN messages m ON m.conversation_id = c.id
+         FROM cc_conversations c
+         JOIN cc_messages m ON m.conversation_id = c.id
          WHERE c.contractor_party_id = $1
            AND m.sender_party_id = $1
          GROUP BY c.id, c.created_at
@@ -124,7 +124,7 @@ export async function computeTrustSignals(party_id: string): Promise<TrustSignal
       : null;
 
     const communityResult = await client.query(
-      `SELECT community_name FROM community_verifications
+      `SELECT community_name FROM cc_community_verifications
        WHERE party_id = $1 AND is_active = true`,
       [party_id]
     );
@@ -133,7 +133,7 @@ export async function computeTrustSignals(party_id: string): Promise<TrustSignal
 
     const credentialResult = await client.query(
       `SELECT credential_type, credential_name 
-       FROM credential_verifications
+       FROM cc_credential_verifications
        WHERE party_id = $1 AND is_current = true`,
       [party_id]
     );
@@ -150,7 +150,7 @@ export async function computeTrustSignals(party_id: string): Promise<TrustSignal
 
     const positiveFeedbackResult = await client.query(
       `SELECT COUNT(*) as count
-       FROM contractor_feedback
+       FROM cc_contractor_feedback
        WHERE to_party_id = $1 
          AND sentiment = 'positive'
          AND contractor_deleted_at IS NULL`,
@@ -161,7 +161,7 @@ export async function computeTrustSignals(party_id: string): Promise<TrustSignal
 
     const appreciationResult = await client.query(
       `SELECT COUNT(*) as count
-       FROM public_appreciations
+       FROM cc_public_appreciations
        WHERE to_party_id = $1 
          AND is_public = true 
          AND hidden_by_contractor = false`,
@@ -171,7 +171,7 @@ export async function computeTrustSignals(party_id: string): Promise<TrustSignal
     const appreciationCount = parseInt(appreciationResult.rows[0]?.count || '0');
 
     const highlightsResult = await client.query(
-      `SELECT theme FROM appreciation_themes
+      `SELECT theme FROM cc_appreciation_themes
        WHERE party_id = $1
        ORDER BY mention_count DESC
        LIMIT 5`,
@@ -181,7 +181,7 @@ export async function computeTrustSignals(party_id: string): Promise<TrustSignal
     const highlights = highlightsResult.rows.map(r => r.theme);
 
     const prefsResult = await client.query(
-      `SELECT display_preferences FROM trust_signals 
+      `SELECT display_preferences FROM cc_trust_signals 
        WHERE party_id = $1 AND model = $2`,
       [party_id, MODEL_NAME]
     );
@@ -227,13 +227,13 @@ export async function computeTrustSignals(party_id: string): Promise<TrustSignal
 
 export async function saveTrustSignals(signals: TrustSignalSummary): Promise<void> {
   const partyResult = await pool.query(
-    `SELECT party_type FROM parties WHERE id = $1`,
+    `SELECT party_type FROM cc_parties WHERE id = $1`,
     [signals.party_id]
   );
   const partyType = partyResult.rows[0]?.party_type || 'contractor';
 
   await pool.query(
-    `INSERT INTO trust_signals (
+    `INSERT INTO cc_trust_signals (
       party_id, party_type, model,
       response_time_avg_hours, completion_rate,
       repeat_customer_count, positive_feedback_count, public_appreciation_count,
@@ -258,7 +258,7 @@ export async function saveTrustSignals(signals: TrustSignalSummary): Promise<voi
       platform_verified = EXCLUDED.platform_verified,
       appreciation_highlights = EXCLUDED.appreciation_highlights,
       computed_at = now(),
-      computation_version = trust_signals.computation_version + 1,
+      computation_version = cc_trust_signals.computation_version + 1,
       last_updated = now()`,
     [
       signals.party_id,
@@ -333,7 +333,7 @@ export function formatTrustDisplay(signals: TrustSignalSummary): TrustDisplayInf
   if (prefs.show_years_in_community && signals.verified_communities.length > 0) {
     publicSignals.verified_in = signals.verified_communities;
   } else if (signals.verified_communities.length > 0) {
-    hiddenSignals.push('community_verifications');
+    hiddenSignals.push('cc_community_verifications');
   }
 
   if (prefs.show_public_appreciations && signals.public_appreciation_count > 0) {

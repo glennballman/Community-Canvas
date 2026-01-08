@@ -10,7 +10,7 @@ const router = Router();
  * - Tracking and communication, NOT enforcement
  * - Work never stops because of payment status
  * - Honor system by default
- * - Both parties can always unlock contact
+ * - Both cc_parties can always unlock contact
  * - Write-offs are contractor-private
  * - Multiple promises per conversation (one active)
  * 
@@ -26,7 +26,7 @@ function mapPayerPayee(promise: any, actorPartyId: string) {
   };
 }
 
-router.post('/conversations/:id/payment-promise', async (req: Request, res: Response) => {
+router.post('/cc_conversations/:id/payment-promise', async (req: Request, res: Response) => {
   try {
     const { id: conversation_id } = req.params;
     const {
@@ -54,7 +54,7 @@ router.post('/conversations/:id/payment-promise', async (req: Request, res: Resp
       await client.query('BEGIN');
 
       const convResult = await client.query(
-        `SELECT * FROM conversations WHERE id = $1 AND owner_party_id = $2`,
+        `SELECT * FROM cc_conversations WHERE id = $1 AND owner_party_id = $2`,
         [conversation_id, actor.actor_party_id]
       );
 
@@ -66,7 +66,7 @@ router.post('/conversations/:id/payment-promise', async (req: Request, res: Resp
       const conv = convResult.rows[0];
 
       await client.query(
-        `UPDATE payment_promises SET 
+        `UPDATE cc_payment_promises SET 
           is_active = false, 
           archived_at = now(), 
           archived_reason = 'Superseded by new promise'
@@ -75,7 +75,7 @@ router.post('/conversations/:id/payment-promise', async (req: Request, res: Resp
       );
 
       const promiseResult = await client.query(
-        `INSERT INTO payment_promises (
+        `INSERT INTO cc_payment_promises (
           conversation_id, 
           payer_party_id, payee_party_id,
           total_amount, currency,
@@ -105,7 +105,7 @@ router.post('/conversations/:id/payment-promise', async (req: Request, res: Resp
         for (let i = 0; i < milestones.length; i++) {
           const ms = milestones[i];
           await client.query(
-            `INSERT INTO payment_milestones (
+            `INSERT INTO cc_payment_milestones (
               payment_promise_id,
               name, description,
               amount, method,
@@ -128,7 +128,7 @@ router.post('/conversations/:id/payment-promise', async (req: Request, res: Resp
         }
       } else if (deposit_amount > 0) {
         await client.query(
-          `INSERT INTO payment_milestones (
+          `INSERT INTO cc_payment_milestones (
             payment_promise_id,
             name, amount, method,
             trigger_type, sequence_order,
@@ -139,7 +139,7 @@ router.post('/conversations/:id/payment-promise', async (req: Request, res: Resp
 
         if (total_amount > deposit_amount) {
           await client.query(
-            `INSERT INTO payment_milestones (
+            `INSERT INTO cc_payment_milestones (
               payment_promise_id,
               name, amount, method,
               trigger_type, sequence_order,
@@ -150,7 +150,7 @@ router.post('/conversations/:id/payment-promise', async (req: Request, res: Resp
         }
       } else {
         await client.query(
-          `INSERT INTO payment_milestones (
+          `INSERT INTO cc_payment_milestones (
             payment_promise_id,
             name, amount, method,
             trigger_type, sequence_order,
@@ -161,7 +161,7 @@ router.post('/conversations/:id/payment-promise', async (req: Request, res: Resp
       }
 
       await client.query(
-        `INSERT INTO payment_events (
+        `INSERT INTO cc_payment_events (
           payment_promise_id, actor_party_id, actor_individual_id, actor_role,
           event_type, amount, message
         ) VALUES ($1, $2, $3, 'owner', 'promise_created', $4, $5)`,
@@ -173,7 +173,7 @@ router.post('/conversations/:id/payment-promise', async (req: Request, res: Resp
       );
 
       await client.query(
-        `INSERT INTO messages (
+        `INSERT INTO cc_messages (
           conversation_id, sender_party_id, sender_individual_id,
           message_type, content, structured_data
         ) VALUES ($1, $2, $3, 'payment', $4, $5)`,
@@ -189,7 +189,7 @@ router.post('/conversations/:id/payment-promise', async (req: Request, res: Resp
       await client.query('COMMIT');
 
       const milestonesResult = await pool.query(
-        `SELECT * FROM payment_milestones WHERE payment_promise_id = $1 ORDER BY sequence_order, created_at`,
+        `SELECT * FROM cc_payment_milestones WHERE payment_promise_id = $1 ORDER BY sequence_order, created_at`,
         [promise.id]
       );
 
@@ -211,7 +211,7 @@ router.post('/conversations/:id/payment-promise', async (req: Request, res: Resp
   }
 });
 
-router.get('/conversations/:id/payment-promise', async (req: Request, res: Response) => {
+router.get('/cc_conversations/:id/payment-promise', async (req: Request, res: Response) => {
   try {
     const { id: conversation_id } = req.params;
     const { include_archived = 'false' } = req.query;
@@ -222,7 +222,7 @@ router.get('/conversations/:id/payment-promise', async (req: Request, res: Respo
     }
 
     const convResult = await pool.query(
-      `SELECT * FROM conversations WHERE id = $1
+      `SELECT * FROM cc_conversations WHERE id = $1
        AND (owner_party_id = $2 OR contractor_party_id = $2)`,
       [conversation_id, actor.actor_party_id]
     );
@@ -238,9 +238,9 @@ router.get('/conversations/:id/payment-promise', async (req: Request, res: Respo
       SELECT pp.*, 
              payer_p.trade_name as owner_name,
              payee_p.trade_name as contractor_name
-       FROM payment_promises pp
-       LEFT JOIN parties payer_p ON pp.payer_party_id = payer_p.id
-       LEFT JOIN parties payee_p ON pp.payee_party_id = payee_p.id
+       FROM cc_payment_promises pp
+       LEFT JOIN cc_parties payer_p ON pp.payer_party_id = payer_p.id
+       LEFT JOIN cc_parties payee_p ON pp.payee_party_id = payee_p.id
        WHERE pp.conversation_id = $1
     `;
     
@@ -275,7 +275,7 @@ router.get('/conversations/:id/payment-promise', async (req: Request, res: Respo
     }
 
     milestonesQuery += `
-       FROM payment_milestones 
+       FROM cc_payment_milestones 
        WHERE payment_promise_id = $1 
        ORDER BY sequence_order, created_at
     `;
@@ -283,7 +283,7 @@ router.get('/conversations/:id/payment-promise', async (req: Request, res: Respo
     const milestonesResult = await pool.query(milestonesQuery, [promise.id]);
 
     let eventsQuery = `
-      SELECT * FROM payment_events 
+      SELECT * FROM cc_payment_events 
       WHERE payment_promise_id = $1
     `;
     
@@ -322,8 +322,8 @@ router.post('/payment-milestones/:id/payment-sent', async (req: Request, res: Re
     try {
       const msResult = await client.query(
         `SELECT pm.*, pp.payer_party_id, pp.id as promise_id
-         FROM payment_milestones pm
-         JOIN payment_promises pp ON pm.payment_promise_id = pp.id
+         FROM cc_payment_milestones pm
+         JOIN cc_payment_promises pp ON pm.payment_promise_id = pp.id
          WHERE pm.id = $1 AND pp.payer_party_id = $2`,
         [milestone_id, actor.actor_party_id]
       );
@@ -336,7 +336,7 @@ router.post('/payment-milestones/:id/payment-sent', async (req: Request, res: Re
       const paymentAmount = amount || milestone.amount;
 
       await client.query(
-        `UPDATE payment_milestones SET
+        `UPDATE cc_payment_milestones SET
           status = 'submitted',
           owner_message = $1,
           owner_message_at = now(),
@@ -346,7 +346,7 @@ router.post('/payment-milestones/:id/payment-sent', async (req: Request, res: Re
       );
 
       await client.query(
-        `INSERT INTO payment_events (
+        `INSERT INTO cc_payment_events (
           payment_promise_id, milestone_id,
           actor_party_id, actor_individual_id, actor_role,
           event_type, amount, message, proof_reference
@@ -391,8 +391,8 @@ router.post('/payment-milestones/:id/payment-received', async (req: Request, res
     try {
       const msResult = await client.query(
         `SELECT pm.*, pp.payee_party_id, pp.id as promise_id
-         FROM payment_milestones pm
-         JOIN payment_promises pp ON pm.payment_promise_id = pp.id
+         FROM cc_payment_milestones pm
+         JOIN cc_payment_promises pp ON pm.payment_promise_id = pp.id
          WHERE pm.id = $1 AND pp.payee_party_id = $2`,
         [milestone_id, actor.actor_party_id]
       );
@@ -406,7 +406,7 @@ router.post('/payment-milestones/:id/payment-received', async (req: Request, res
       const isPartial = receivedAmount < milestone.amount;
 
       await client.query(
-        `UPDATE payment_milestones SET
+        `UPDATE cc_payment_milestones SET
           status = $1,
           paid_at = now(),
           payment_reference = $2,
@@ -435,7 +435,7 @@ router.post('/payment-milestones/:id/payment-received', async (req: Request, res
       );
 
       await client.query(
-        `INSERT INTO payment_events (
+        `INSERT INTO cc_payment_events (
           payment_promise_id, milestone_id,
           actor_party_id, actor_individual_id, actor_role,
           event_type, amount, message, proof_reference
@@ -486,8 +486,8 @@ router.post('/payment-milestones/:id/request-extension', async (req: Request, re
     try {
       const msResult = await client.query(
         `SELECT pm.*, pp.payer_party_id, pp.id as promise_id
-         FROM payment_milestones pm
-         JOIN payment_promises pp ON pm.payment_promise_id = pp.id
+         FROM cc_payment_milestones pm
+         JOIN cc_payment_promises pp ON pm.payment_promise_id = pp.id
          WHERE pm.id = $1 AND pp.payer_party_id = $2`,
         [milestone_id, actor.actor_party_id]
       );
@@ -499,7 +499,7 @@ router.post('/payment-milestones/:id/request-extension', async (req: Request, re
       const milestone = msResult.rows[0];
 
       await client.query(
-        `UPDATE payment_milestones SET
+        `UPDATE cc_payment_milestones SET
           communication_status = 'behind_schedule',
           owner_message = $1,
           owner_message_at = now(),
@@ -509,7 +509,7 @@ router.post('/payment-milestones/:id/request-extension', async (req: Request, re
       );
 
       await client.query(
-        `INSERT INTO payment_events (
+        `INSERT INTO cc_payment_events (
           payment_promise_id, milestone_id,
           actor_party_id, actor_individual_id, actor_role,
           event_type, message, metadata
@@ -556,8 +556,8 @@ router.post('/payment-milestones/:id/grant-extension', async (req: Request, res:
     try {
       const msResult = await client.query(
         `SELECT pm.*, pp.payee_party_id, pp.id as promise_id
-         FROM payment_milestones pm
-         JOIN payment_promises pp ON pm.payment_promise_id = pp.id
+         FROM cc_payment_milestones pm
+         JOIN cc_payment_promises pp ON pm.payment_promise_id = pp.id
          WHERE pm.id = $1 AND pp.payee_party_id = $2`,
         [milestone_id, actor.actor_party_id]
       );
@@ -569,7 +569,7 @@ router.post('/payment-milestones/:id/grant-extension', async (req: Request, res:
       const milestone = msResult.rows[0];
 
       await client.query(
-        `UPDATE payment_milestones SET
+        `UPDATE cc_payment_milestones SET
           extended_to = $1,
           extension_reason = $2,
           communication_status = 'on_track',
@@ -581,7 +581,7 @@ router.post('/payment-milestones/:id/grant-extension', async (req: Request, res:
       );
 
       await client.query(
-        `INSERT INTO payment_events (
+        `INSERT INTO cc_payment_events (
           payment_promise_id, milestone_id,
           actor_party_id, actor_individual_id, actor_role,
           event_type, message, metadata
@@ -623,7 +623,7 @@ router.post('/payment-promises/:id/community-event', async (req: Request, res: R
     const client = await pool.connect();
     try {
       const promiseResult = await client.query(
-        `SELECT * FROM payment_promises 
+        `SELECT * FROM cc_payment_promises 
          WHERE id = $1 AND (payer_party_id = $2 OR payee_party_id = $2)`,
         [promise_id, actor.actor_party_id]
       );
@@ -636,7 +636,7 @@ router.post('/payment-promises/:id/community-event', async (req: Request, res: R
       const actorRole = promise.payer_party_id === actor.actor_party_id ? 'owner' : 'contractor';
 
       await client.query(
-        `UPDATE payment_promises SET
+        `UPDATE cc_payment_promises SET
           affected_by_community_event = true,
           community_event_description = $1,
           communication_status = 'community_event',
@@ -646,7 +646,7 @@ router.post('/payment-promises/:id/community-event', async (req: Request, res: R
       );
 
       await client.query(
-        `INSERT INTO payment_events (
+        `INSERT INTO cc_payment_events (
           payment_promise_id,
           actor_party_id, actor_individual_id, actor_role,
           event_type, message
@@ -687,8 +687,8 @@ router.post('/payment-milestones/:id/write-off', async (req: Request, res: Respo
     try {
       const msResult = await client.query(
         `SELECT pm.*, pp.payee_party_id, pp.id as promise_id
-         FROM payment_milestones pm
-         JOIN payment_promises pp ON pm.payment_promise_id = pp.id
+         FROM cc_payment_milestones pm
+         JOIN cc_payment_promises pp ON pm.payment_promise_id = pp.id
          WHERE pm.id = $1 AND pp.payee_party_id = $2`,
         [milestone_id, actor.actor_party_id]
       );
@@ -701,7 +701,7 @@ router.post('/payment-milestones/:id/write-off', async (req: Request, res: Respo
       const writeOffAmount = amount || milestone.remaining_amount || milestone.amount;
 
       await client.query(
-        `UPDATE payment_milestones SET
+        `UPDATE cc_payment_milestones SET
           written_off = true,
           written_off_amount = $1,
           written_off_reason = $2,
@@ -715,7 +715,7 @@ router.post('/payment-milestones/:id/write-off', async (req: Request, res: Respo
       );
 
       await client.query(
-        `INSERT INTO payment_events (
+        `INSERT INTO cc_payment_events (
           payment_promise_id, milestone_id,
           actor_party_id, actor_individual_id, actor_role,
           event_type, amount, message, is_private
@@ -744,7 +744,7 @@ router.post('/payment-milestones/:id/write-off', async (req: Request, res: Respo
   }
 });
 
-router.post('/conversations/:id/contractor-unlock-contact', async (req: Request, res: Response) => {
+router.post('/cc_conversations/:id/contractor-unlock-contact', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { reason } = req.body;
@@ -757,7 +757,7 @@ router.post('/conversations/:id/contractor-unlock-contact', async (req: Request,
     const client = await pool.connect();
     try {
       const convResult = await client.query(
-        `SELECT * FROM conversations WHERE id = $1 AND contractor_party_id = $2`,
+        `SELECT * FROM cc_conversations WHERE id = $1 AND contractor_party_id = $2`,
         [id, actor.actor_party_id]
       );
 
@@ -774,7 +774,7 @@ router.post('/conversations/:id/contractor-unlock-contact', async (req: Request,
       }
 
       const result = await client.query(
-        `UPDATE conversations SET
+        `UPDATE cc_conversations SET
           contact_unlocked = true,
           contact_unlocked_at = now(),
           contact_unlock_gate = 'contractor_override',
@@ -786,7 +786,7 @@ router.post('/conversations/:id/contractor-unlock-contact', async (req: Request,
       );
 
       await client.query(
-        `INSERT INTO messages (
+        `INSERT INTO cc_messages (
           conversation_id, sender_party_id, sender_individual_id,
           message_type, content, visibility
         ) VALUES ($1, $2, $3, 'system', 'Contact information is now shared.', 'normal')`,
@@ -796,7 +796,7 @@ router.post('/conversations/:id/contractor-unlock-contact', async (req: Request,
       res.json({ 
         conversation: result.rows[0],
         contact_unlocked: true,
-        note: 'Both parties can always unlock. No payment gate.'
+        note: 'Both cc_parties can always unlock. No payment gate.'
       });
 
     } finally {
@@ -808,11 +808,11 @@ router.post('/conversations/:id/contractor-unlock-contact', async (req: Request,
   }
 });
 
-router.get('/community-events/active', async (req: Request, res: Response) => {
+router.get('/community-cc_events/active', async (req: Request, res: Response) => {
   try {
     const { region, postal_prefix } = req.query;
 
-    let query = `SELECT * FROM community_events WHERE ongoing = true`;
+    let query = `SELECT * FROM cc_community_events WHERE ongoing = true`;
     const params: any[] = [];
 
     if (region) {
@@ -830,14 +830,14 @@ router.get('/community-events/active', async (req: Request, res: Response) => {
     const result = await pool.query(query, params);
 
     res.json({
-      community_events: result.rows,
+      cc_community_events: result.rows,
       message: result.rows.length > 0 
-        ? 'Active events may affect timelines. Flexibility expected.'
-        : 'No active community events.'
+        ? 'Active cc_events may affect timelines. Flexibility expected.'
+        : 'No active community cc_events.'
     });
   } catch (error) {
-    console.error('Error fetching community events:', error);
-    res.status(500).json({ error: 'Failed to fetch community events' });
+    console.error('Error fetching community cc_events:', error);
+    res.status(500).json({ error: 'Failed to fetch community cc_events' });
   }
 });
 

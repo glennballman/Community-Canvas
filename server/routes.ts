@@ -137,7 +137,7 @@ export async function registerRoutes(
   app.use('/api/rentals', rentalsRouter);
 
   // Register external data lake + entity resolution routes
-  app.use('/api/entities', entitiesRouter);
+  app.use('/api/cc_entities', entitiesRouter);
 
   // Register Apify sync and external records routes
   app.use('/api/apify', apifyRouter);
@@ -160,10 +160,10 @@ export async function registerRoutes(
   app.use('/api/procurement-requests', procurementRequestsRouter);
   // TODO: Remove /api/opportunities alias after launch stabilization
   app.use('/api/opportunities', procurementRequestsRouter);
-  app.use('/api/bids', bidsRouter);
+  app.use('/api/cc_bids', bidsRouter);
 
-  // Register projects routes (job tracking from lead to paid)
-  app.use('/api/projects', projectsRouter);
+  // Register cc_projects routes (job tracking from lead to paid)
+  app.use('/api/cc_projects', projectsRouter);
 
   // Register file uploads and serve uploaded files
   app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
@@ -172,7 +172,7 @@ export async function registerRoutes(
   // Register tenant tools inventory routes
   app.use('/api/tools', toolsRouter);
 
-  // Register conversations/messaging routes
+  // Register cc_conversations/messaging routes
   app.use('/api', conversationsRouter);
 
   // Register private feedback routes (small-town trust model)
@@ -207,8 +207,8 @@ export async function registerRoutes(
   // Register capacity/constraints management routes
   app.use('/api/capacity', capacityConstraintsRouter);
   
-  // Register media storage routes
-  app.use('/api/media', mediaRouter);
+  // Register cc_media storage routes
+  app.use('/api/cc_media', mediaRouter);
 
   // Register QA seed/test routes (dev only)
   if (process.env.NODE_ENV === 'development') {
@@ -244,9 +244,9 @@ export async function registerRoutes(
   // Register system explorer routes (debug/discovery surface)
   app.use('/api/admin/system-explorer', systemExplorerRouter);
 
-  // Admin articles endpoint (platform admin only) - renamed from presentations for schema.org compliance
-  app.get('/api/admin/presentations', (req, res) => res.redirect('/api/admin/articles'));
-  app.get('/api/admin/articles', async (req, res) => {
+  // Admin cc_articles endpoint (platform admin only) - renamed from presentations for schema.org compliance
+  app.get('/api/admin/presentations', (req, res) => res.redirect('/api/admin/cc_articles'));
+  app.get('/api/admin/cc_articles', async (req, res) => {
     try {
       // First get presentations with portal info
       const presentationsResult = await serviceQuery(`
@@ -264,8 +264,8 @@ export async function registerRoutes(
           p.id as portal_id,
           p.slug as portal_slug,
           p.name as portal_name
-        FROM articles ep
-        JOIN portals p ON p.id = ep.portal_id
+        FROM cc_articles ep
+        JOIN cc_portals p ON p.id = ep.portal_id
         ORDER BY p.name, ep.created_at DESC
       `);
       
@@ -275,7 +275,7 @@ export async function registerRoutes(
           pb.presentation_id,
           pb.block_type,
           pb.block_order
-        FROM presentation_blocks pb
+        FROM cc_presentation_blocks pb
         ORDER BY pb.presentation_id, pb.block_order
       `);
       
@@ -346,7 +346,7 @@ export async function registerRoutes(
              FROM inventory_media cm 
              WHERE cm.vehicle_inventory_id = vc.id),
             '[]'::json
-          ) as media,
+          ) as cc_media,
           (SELECT COUNT(*) FROM inventory_listings cl WHERE cl.vehicle_inventory_id = vc.id)::int as listings_count
         FROM vehicle_inventory vc
         WHERE 1=1
@@ -417,7 +417,7 @@ export async function registerRoutes(
              FROM inventory_media cm 
              WHERE cm.trailer_inventory_id = tc.id),
             '[]'::json
-          ) as media,
+          ) as cc_media,
           (SELECT COUNT(*) FROM inventory_listings cl WHERE cl.trailer_inventory_id = tc.id)::int as listings_count
         FROM trailer_inventory tc
         WHERE 1=1
@@ -522,7 +522,7 @@ export async function registerRoutes(
         
         // Insert tenant_vehicle
         const insertRes = await client.query(`
-          INSERT INTO tenant_vehicles (id, tenant_id, nickname, is_active, status)
+          INSERT INTO cc_tenant_vehicles (id, tenant_id, nickname, is_active, status)
           VALUES (gen_random_uuid(), $1, 'RLS Happy Path Vehicle', true, 'active')
           RETURNING id, asset_id
         `, [tenantId]);
@@ -536,9 +536,9 @@ export async function registerRoutes(
           FROM cc_assets WHERE id = $1
         `, [aid]);
         
-        // Check asset_capabilities
+        // Check cc_asset_capabilities
         const capRes = await client.query(`
-          SELECT COUNT(*) as count FROM asset_capabilities WHERE asset_id = $1
+          SELECT COUNT(*) as count FROM cc_asset_capabilities WHERE asset_id = $1
         `, [aid]);
         
         return {
@@ -575,7 +575,7 @@ export async function registerRoutes(
       const assetVerification = {
         tenant_id_matches: insertResult.asset_record?.tenant_id === tenantId,
         owner_tenant_id_matches: insertResult.asset_record?.owner_tenant_id === tenantId,
-        source_table_correct: insertResult.asset_record?.source_table === 'tenant_vehicles',
+        source_table_correct: insertResult.asset_record?.source_table === 'cc_tenant_vehicles',
         source_id_matches: insertResult.asset_record?.source_id === vehicleId
       };
       
@@ -593,7 +593,7 @@ export async function registerRoutes(
       
       results.steps.push({
         step: '4b',
-        description: 'Query asset_capabilities (must not error)',
+        description: 'Query cc_asset_capabilities (must not error)',
         capability_count: insertResult.capability_count,
         status: 'SUCCESS'
       });
@@ -603,25 +603,25 @@ export async function registerRoutes(
         const deleted: any = { errors: [] };
         
         // Delete in correct order for FK constraints:
-        // a) Delete tenant_vehicle_photos first
+        // a) Delete cc_tenant_vehicle_photos first
         if (vehicleId) {
-          const photosRes = await client.query('DELETE FROM tenant_vehicle_photos WHERE tenant_vehicle_id = $1', [vehicleId]);
+          const photosRes = await client.query('DELETE FROM cc_tenant_vehicle_photos WHERE tenant_vehicle_id = $1', [vehicleId]);
           deleted.vehicle_photos = photosRes.rowCount;
         }
         
-        // b) Delete tenant_vehicles
+        // b) Delete cc_tenant_vehicles
         if (vehicleId) {
-          const vRes = await client.query('DELETE FROM tenant_vehicles WHERE id = $1 RETURNING id', [vehicleId]);
+          const vRes = await client.query('DELETE FROM cc_tenant_vehicles WHERE id = $1 RETURNING id', [vehicleId]);
           deleted.vehicle = vRes.rowCount;
           if (vRes.rowCount !== 1) {
             deleted.errors.push(`Expected vehicle delete rowCount=1, got ${vRes.rowCount}`);
           }
         }
         
-        // c) Delete asset_capabilities
+        // c) Delete cc_asset_capabilities
         if (assetId) {
-          const capRes = await client.query('DELETE FROM asset_capabilities WHERE asset_id = $1', [assetId]);
-          deleted.asset_capabilities = capRes.rowCount;
+          const capRes = await client.query('DELETE FROM cc_asset_capabilities WHERE asset_id = $1', [assetId]);
+          deleted.cc_asset_capabilities = capRes.rowCount;
         }
         
         // d) Delete assets
@@ -680,7 +680,7 @@ export async function registerRoutes(
         try {
           const { withServiceTransaction } = await import('./db/tenantDb');
           await withServiceTransaction(async (client) => {
-            if (vehicleId) await client.query('DELETE FROM tenant_vehicles WHERE id = $1', [vehicleId]);
+            if (vehicleId) await client.query('DELETE FROM cc_tenant_vehicles WHERE id = $1', [vehicleId]);
             if (assetId) await client.query('DELETE FROM cc_assets WHERE id = $1', [assetId]);
             if (individualId) await client.query('DELETE FROM cc_individuals WHERE id = $1', [individualId]);
             if (tenantId) await client.query('DELETE FROM cc_tenants WHERE id = $1', [tenantId]);
@@ -716,13 +716,13 @@ export async function registerRoutes(
         await client.query(`SELECT set_config('app.individual_id', '', true)`);
         
         // Count should be 0 with no tenant context
-        const countResult = await client.query('SELECT COUNT(*) as count FROM tenant_vehicles');
+        const countResult = await client.query('SELECT COUNT(*) as count FROM cc_tenant_vehicles');
         
         // Try insert - should fail
         let insertError = null;
         try {
           await client.query(`
-            INSERT INTO tenant_vehicles (tenant_id, nickname, is_active, status)
+            INSERT INTO cc_tenant_vehicles (tenant_id, nickname, is_active, status)
             VALUES (gen_random_uuid(), 'should_fail', true, 'active')
           `);
         } catch (e: any) {
@@ -736,7 +736,7 @@ export async function registerRoutes(
         if (tenantResult.rows.length > 0) {
           tenantId = tenantResult.rows[0].id;
           await client.query(`SELECT set_config('app.tenant_id', $1, true)`, [tenantId]);
-          const countWithContextResult = await client.query('SELECT COUNT(*) as count FROM tenant_vehicles');
+          const countWithContextResult = await client.query('SELECT COUNT(*) as count FROM cc_tenant_vehicles');
           countWithContext = parseInt(countWithContextResult.rows[0].count);
           // Clear context again
           await client.query(`SELECT set_config('app.tenant_id', '', true)`);
@@ -1006,16 +1006,16 @@ export async function registerRoutes(
       }
 
       const companycam = new CompanyCamService({ accessToken });
-      const projects = await companycam.searchProjects(String(q));
+      const cc_projects = await companycam.searchProjects(String(q));
 
-      res.json(projects);
+      res.json(cc_projects);
     } catch (error) {
       console.error('CompanyCam API error:', error);
-      res.status(500).json({ error: 'Failed to search projects' });
+      res.status(500).json({ error: 'Failed to search cc_projects' });
     }
   });
 
-  app.get('/api/v1/integrations/companycam/projects', async (req, res) => {
+  app.get('/api/v1/integrations/companycam/cc_projects', async (req, res) => {
     try {
       const { page = '1', limit = '50' } = req.query;
       
@@ -1025,16 +1025,16 @@ export async function registerRoutes(
       }
 
       const companycam = new CompanyCamService({ accessToken });
-      const projects = await companycam.getProjects(Number(page), Number(limit));
+      const cc_projects = await companycam.getProjects(Number(page), Number(limit));
 
-      res.json(projects);
+      res.json(cc_projects);
     } catch (error) {
       console.error('CompanyCam API error:', error);
-      res.status(500).json({ error: 'Failed to fetch projects' });
+      res.status(500).json({ error: 'Failed to fetch cc_projects' });
     }
   });
 
-  app.get(api.snapshots.getLatest.path, async (req, res) => {
+  app.get(api.cc_snapshots.getLatest.path, async (req, res) => {
     try {
       const { cityName } = req.params;
       const snapshot = await storage.getLatestSnapshot(cityName);
@@ -1052,9 +1052,9 @@ export async function registerRoutes(
     }
   });
 
-  app.post(api.snapshots.refresh.path, async (req, res) => {
+  app.post(api.cc_snapshots.refresh.path, async (req, res) => {
     try {
-      const { location } = api.snapshots.refresh.input.parse(req.body);
+      const { location } = api.cc_snapshots.refresh.input.parse(req.body);
       const apiKey = process.env.FIRECRAWL_API_KEY;
 
       if (!apiKey || apiKey === 'your-api-key') {
@@ -1063,8 +1063,8 @@ export async function registerRoutes(
 
       const firecrawl = await getFirecrawlApp(apiKey);
 
-      const prompt = `Extract real-time status updates and snapshots for ${location}. 
-      Structure the response into a 'categories' object where keys are standard IDs (emergency, power, water, ferry, traffic, transit, airport, weather, tides, air_quality, health, events, parking, construction, economic, fire) and values are arrays of status objects.
+      const prompt = `Extract real-time status updates and cc_snapshots for ${location}. 
+      Structure the response into a 'categories' object where keys are standard IDs (emergency, power, water, ferry, traffic, transit, airport, weather, tides, air_quality, health, cc_events, parking, construction, economic, fire) and values are arrays of status objects.
       
       Standard Status Object:
       {
@@ -1467,16 +1467,16 @@ export async function registerRoutes(
           COUNT(*) FILTER (WHERE severity::text = 'advisory') as advisory,
           COUNT(*) FILTER (WHERE severity::text = 'minor' OR severity::text = 'info') as minor,
           COUNT(*) as total
-        FROM alerts 
+        FROM cc_alerts 
         WHERE is_active = true
       `);
       
-      // Get ferry status from entities (BC Ferries routes)
+      // Get ferry status from cc_entities (BC Ferries routes)
       const ferriesResult = await storage.query(`
         SELECT 
           COUNT(*) FILTER (WHERE configuration->>'current_status' = 'delayed') as delays,
           COUNT(*) FILTER (WHERE configuration->>'current_status' = 'on_time') as on_time
-        FROM entities 
+        FROM cc_entities 
         WHERE slug LIKE 'bcferries-route-%'
       `);
       
@@ -1487,7 +1487,7 @@ export async function registerRoutes(
           COUNT(*) FILTER (WHERE alert_type = 'closure' AND severity::text NOT IN ('major', 'critical')) as incidents,
           COUNT(*) FILTER (WHERE details->>'event_type' = 'CONSTRUCTION') as construction,
           COUNT(*) as total
-        FROM alerts 
+        FROM cc_alerts 
         WHERE is_active = true AND alert_type = 'closure'
       `);
       
@@ -1499,7 +1499,7 @@ export async function registerRoutes(
       };
       
       res.json({
-        alerts: {
+        cc_alerts: {
           critical: parseInt(alertsResult.rows[0]?.critical || '0', 10),
           major: parseInt(alertsResult.rows[0]?.major || '0', 10),
           warning: parseInt(alertsResult.rows[0]?.warning || '0', 10),
@@ -1531,12 +1531,12 @@ export async function registerRoutes(
     try {
       const overview = await storage.query(`
         SELECT 
-          (SELECT COUNT(*) FROM alerts WHERE severity = 'major' AND is_active = true) as critical_alerts,
-          (SELECT COUNT(*) FROM alerts WHERE is_active = true) as total_alerts,
-          (SELECT COUNT(*) FROM entity_snapshots WHERE snapshot_time > NOW() - INTERVAL '1 hour') as recent_updates,
-          (SELECT MAX(completed_at) FROM pipeline_runs WHERE status = 'completed') as last_pipeline_run,
+          (SELECT COUNT(*) FROM cc_alerts WHERE severity = 'major' AND is_active = true) as critical_alerts,
+          (SELECT COUNT(*) FROM cc_alerts WHERE is_active = true) as total_alerts,
+          (SELECT COUNT(*) FROM cc_entity_snapshots WHERE snapshot_time > NOW() - INTERVAL '1 hour') as recent_updates,
+          (SELECT MAX(completed_at) FROM cc_pipeline_runs WHERE status = 'completed') as last_pipeline_run,
           (SELECT COUNT(*) FROM infrastructure_entities) as total_entities,
-          (SELECT COUNT(DISTINCT region_id) FROM alerts WHERE is_active = true AND region_id IS NOT NULL) as regions_affected
+          (SELECT COUNT(DISTINCT region_id) FROM cc_alerts WHERE is_active = true AND region_id IS NOT NULL) as regions_affected
       `);
       
       res.json(overview.rows[0]);
@@ -1554,7 +1554,7 @@ export async function registerRoutes(
       // Get region info
       const regionResult = await storage.query(`
         SELECT id, name, region_type, parent_id, centroid_lat, centroid_lon
-        FROM geo_regions WHERE id = $1
+        FROM cc_geo_regions WHERE id = $1
       `, [regionId]);
       
       if (regionResult.rows.length === 0) {
@@ -1563,11 +1563,11 @@ export async function registerRoutes(
       
       const region = regionResult.rows[0];
       
-      // Get active alerts for this region
+      // Get active cc_alerts for this region
       const alertsResult = await storage.query(`
         SELECT id, alert_type, severity, signal_type, title, summary, 
                latitude, longitude, effective_from, effective_until, details
-        FROM alerts 
+        FROM cc_alerts 
         WHERE region_id = $1 AND is_active = true
         ORDER BY 
           CASE severity 
@@ -1580,22 +1580,22 @@ export async function registerRoutes(
       // Get road events in this region
       const roadsResult = await storage.query(`
         SELECT id, alert_type, title, summary, details, latitude, longitude
-        FROM alerts 
+        FROM cc_alerts 
         WHERE region_id = $1 AND alert_type = 'road_event' AND is_active = true
         ORDER BY created_at DESC
         LIMIT 20
       `, [regionId]);
       
-      // Get weather alerts for this region
+      // Get weather cc_alerts for this region
       const weatherResult = await storage.query(`
         SELECT id, title, summary, severity, details
-        FROM alerts 
+        FROM cc_alerts 
         WHERE region_id = $1 AND alert_type = 'weather' AND is_active = true
         ORDER BY severity DESC, created_at DESC
         LIMIT 10
       `, [regionId]);
       
-      // Get infrastructure entities in this region
+      // Get infrastructure cc_entities in this region
       const entitiesResult = await storage.query(`
         SELECT id, name, entity_type, category, latitude, longitude, status
         FROM infrastructure_entities
@@ -1606,10 +1606,10 @@ export async function registerRoutes(
       
       res.json({
         region,
-        alerts: alertsResult.rows,
+        cc_alerts: alertsResult.rows,
         roads: roadsResult.rows,
         weather: weatherResult.rows,
-        entities: entitiesResult.rows
+        cc_entities: entitiesResult.rows
       });
     } catch (error) {
       console.error("Region status error:", error);
@@ -1617,15 +1617,15 @@ export async function registerRoutes(
     }
   });
 
-  // GET /api/v1/alerts/active - All active alerts
-  app.get("/api/v1/alerts/active", async (req, res) => {
+  // GET /api/v1/cc_alerts/active - All active cc_alerts
+  app.get("/api/v1/cc_alerts/active", async (req, res) => {
     try {
       const { type, severity, region } = req.query;
       
       let query = `
         SELECT a.*, gr.name as region_name
-        FROM alerts a
-        LEFT JOIN geo_regions gr ON a.region_id = gr.id
+        FROM cc_alerts a
+        LEFT JOIN cc_geo_regions gr ON a.region_id = gr.id
         WHERE a.is_active = true
         AND (a.effective_until IS NULL OR a.effective_until > NOW())
       `;
@@ -1666,17 +1666,17 @@ export async function registerRoutes(
       const result = await storage.query(query, params);
       res.json(result.rows);
     } catch (error) {
-      console.error("Active alerts error:", error);
-      res.status(500).json({ message: "Failed to fetch active alerts" });
+      console.error("Active cc_alerts error:", error);
+      res.status(500).json({ message: "Failed to fetch active cc_alerts" });
     }
   });
 
-  // GET /api/v1/alerts/count - Count of active alerts
-  app.get("/api/v1/alerts/count", async (req, res) => {
+  // GET /api/v1/cc_alerts/count - Count of active cc_alerts
+  app.get("/api/v1/cc_alerts/count", async (req, res) => {
     try {
       const result = await storage.query(`
         SELECT COUNT(*) as count
-        FROM alerts 
+        FROM cc_alerts 
         WHERE is_active = true
         AND (effective_until IS NULL OR effective_until > NOW())
       `);
@@ -1684,19 +1684,19 @@ export async function registerRoutes(
       res.json({ count: parseInt(result.rows[0]?.count || '0', 10) });
     } catch (error) {
       console.error("Alerts count error:", error);
-      res.status(500).json({ message: "Failed to count alerts" });
+      res.status(500).json({ message: "Failed to count cc_alerts" });
     }
   });
 
-  // GET /api/v1/alerts/by-type/:alertType - Alerts filtered by type
-  app.get("/api/v1/alerts/by-type/:alertType", async (req, res) => {
+  // GET /api/v1/cc_alerts/by-type/:alertType - Alerts filtered by type
+  app.get("/api/v1/cc_alerts/by-type/:alertType", async (req, res) => {
     try {
       const { alertType } = req.params;
       
       const result = await storage.query(`
         SELECT a.*, gr.name as region_name
-        FROM alerts a
-        LEFT JOIN geo_regions gr ON a.region_id = gr.id
+        FROM cc_alerts a
+        LEFT JOIN cc_geo_regions gr ON a.region_id = gr.id
         WHERE a.alert_type = $1 AND a.is_active = true
         ORDER BY a.created_at DESC
         LIMIT 100
@@ -1705,11 +1705,11 @@ export async function registerRoutes(
       res.json(result.rows);
     } catch (error) {
       console.error("Alerts by type error:", error);
-      res.status(500).json({ message: "Failed to fetch alerts" });
+      res.status(500).json({ message: "Failed to fetch cc_alerts" });
     }
   });
 
-  // GET /api/v1/entities - List entities with optional filtering
+  // GET /api/v1/cc_entities - List cc_entities with optional filtering
   app.get("/api/v1/entities", async (req, res) => {
     try {
       const { type, region, limit = '50' } = req.query;
@@ -1720,7 +1720,7 @@ export async function registerRoutes(
         SELECT id, name, slug, entity_type_id, 
                latitude, longitude, primary_region_id as region_id, 
                configuration as metadata, website, description
-        FROM entities
+        FROM cc_entities
         WHERE 1=1
       `;
       
@@ -1741,12 +1741,12 @@ export async function registerRoutes(
       res.json(result.rows);
     } catch (error) {
       console.error("Entities list error:", error);
-      res.status(500).json({ message: "Failed to fetch entities" });
+      res.status(500).json({ message: "Failed to fetch cc_entities" });
     }
   });
 
-  // GET /api/v1/entities/geo - Get entities with coordinates for map
-  app.get("/api/v1/entities/geo", async (req, res) => {
+  // GET /api/v1/cc_entities/geo - Get cc_entities with coordinates for map
+  app.get("/api/v1/cc_entities/geo", async (req, res) => {
     try {
       const { region, category, type, limit = '15000' } = req.query;
       const params: (string | number)[] = [];
@@ -1757,9 +1757,9 @@ export async function registerRoutes(
           e.id, e.slug, e.name, e.entity_type_id,
           et.category_id as category, e.latitude, e.longitude,
           gr.name as region_name
-        FROM entities e
-        LEFT JOIN entity_types et ON e.entity_type_id = et.id
-        LEFT JOIN geo_regions gr ON e.primary_region_id = gr.id
+        FROM cc_entities e
+        LEFT JOIN cc_entity_types et ON e.entity_type_id = et.id
+        LEFT JOIN cc_geo_regions gr ON e.primary_region_id = gr.id
         WHERE e.latitude IS NOT NULL 
           AND e.longitude IS NOT NULL
       `;
@@ -1783,10 +1783,10 @@ export async function registerRoutes(
       params.push(parseInt(limit as string, 10));
       
       const result = await storage.query(query, params);
-      res.json({ entities: result.rows, total: result.rows.length });
+      res.json({ cc_entities: result.rows, total: result.rows.length });
     } catch (error) {
-      console.error("Geo entities error:", error);
-      res.status(500).json({ message: "Failed to fetch geo entities" });
+      console.error("Geo cc_entities error:", error);
+      res.status(500).json({ message: "Failed to fetch geo cc_entities" });
     }
   });
 
@@ -1806,20 +1806,20 @@ export async function registerRoutes(
       
       // Get latest snapshot
       const snapshotResult = await storage.query(`
-        SELECT * FROM entity_snapshots
+        SELECT * FROM cc_entity_snapshots
         WHERE entity_id = $1
         ORDER BY snapshot_time DESC
         LIMIT 1
       `, [id]);
       
-      // Get any active alerts for this entity's location
+      // Get any active cc_alerts for this entity's location
       const entity = entityResult.rows[0];
-      let alerts: any[] = [];
+      let cc_alerts: any[] = [];
       
       if (entity.latitude && entity.longitude) {
         const alertsResult = await storage.query(`
           SELECT id, alert_type, severity, title, summary
-          FROM alerts
+          FROM cc_alerts
           WHERE is_active = true
           AND latitude IS NOT NULL
           AND (
@@ -1827,13 +1827,13 @@ export async function registerRoutes(
           )
           LIMIT 10
         `, [entity.latitude, entity.longitude]);
-        alerts = alertsResult.rows;
+        cc_alerts = alertsResult.rows;
       }
       
       res.json({
         entity: entityResult.rows[0],
         snapshot: snapshotResult.rows[0] || null,
-        nearbyAlerts: alerts
+        nearbyAlerts: cc_alerts
       });
     } catch (error) {
       console.error("Entity status error:", error);
@@ -1848,7 +1848,7 @@ export async function registerRoutes(
       const runsResult = await storage.query(`
         SELECT data_source_id, status, started_at, completed_at, 
                records_processed, records_created, records_updated, error_message
-        FROM pipeline_runs
+        FROM cc_pipeline_runs
         ORDER BY started_at DESC
         LIMIT 50
       `);
@@ -1903,8 +1903,8 @@ export async function registerRoutes(
       
       let query = `
         SELECT t.*, COUNT(s.id) as segment_count
-        FROM road_trips t
-        LEFT JOIN trip_segments s ON t.id = s.trip_id
+        FROM cc_road_trips t
+        LEFT JOIN cc_trip_segments s ON t.id = s.trip_id
         WHERE t.is_published = true
       `;
       
@@ -1948,7 +1948,7 @@ export async function registerRoutes(
       
       const result = await storage.query(query, params);
       
-      const countResult = await storage.query(`SELECT COUNT(*) FROM road_trips WHERE is_published = true`);
+      const countResult = await storage.query(`SELECT COUNT(*) FROM cc_road_trips WHERE is_published = true`);
       
       res.json({
         trips: result.rows,
@@ -1966,7 +1966,7 @@ export async function registerRoutes(
   app.get("/api/v1/trips/featured", async (_req, res) => {
     try {
       const result = await storage.query(`
-        SELECT * FROM road_trips 
+        SELECT * FROM cc_road_trips 
         WHERE is_published = true AND is_featured = true 
         ORDER BY popularity_score DESC 
         LIMIT 5
@@ -1989,13 +1989,13 @@ export async function registerRoutes(
       let tripResult;
       if (isUuid) {
         tripResult = await storage.query(
-          `SELECT * FROM road_trips WHERE id = $1`,
+          `SELECT * FROM cc_road_trips WHERE id = $1`,
           [id]
         );
       } else {
         // Treat as slug
         tripResult = await storage.query(
-          `SELECT * FROM road_trips WHERE slug = $1 OR id = $1`,
+          `SELECT * FROM cc_road_trips WHERE slug = $1 OR id = $1`,
           [id]
         );
       }
@@ -2007,13 +2007,13 @@ export async function registerRoutes(
       const trip = tripResult.rows[0];
       
       const segmentsResult = await storage.query(
-        `SELECT * FROM trip_segments WHERE trip_id = $1 ORDER BY segment_order`,
+        `SELECT * FROM cc_trip_segments WHERE trip_id = $1 ORDER BY segment_order`,
         [trip.id]
       );
       
       // Track view
       await storage.query(
-        `INSERT INTO trip_analytics (trip_id, event_type) VALUES ($1, 'view')`,
+        `INSERT INTO cc_trip_analytics (trip_id, event_type) VALUES ($1, 'view')`,
         [trip.id]
       ).catch(() => {});
       
@@ -2030,7 +2030,7 @@ export async function registerRoutes(
       const { id } = req.params;
       
       const tripResult = await storage.query(
-        `SELECT * FROM road_trips WHERE id = $1 OR slug = $1`,
+        `SELECT * FROM cc_road_trips WHERE id = $1 OR slug = $1`,
         [id]
       );
       
@@ -2042,7 +2042,7 @@ export async function registerRoutes(
       
       // Get segments to check for ferry requirements
       const segmentsResult = await storage.query(
-        `SELECT details FROM trip_segments WHERE trip_id = $1`,
+        `SELECT details FROM cc_trip_segments WHERE trip_id = $1`,
         [trip.id]
       );
       
@@ -2061,7 +2061,7 @@ export async function registerRoutes(
       const weather = regionWeather[trip.id] || { temperature: 5, condition: 'Variable', wind_speed: 10 };
       
       const alertsResult = await storage.query(
-        `SELECT * FROM alerts WHERE is_active = true ORDER BY severity DESC LIMIT 10`
+        `SELECT * FROM cc_alerts WHERE is_active = true ORDER BY severity DESC LIMIT 10`
       ).catch(() => ({ rows: [] }));
       
       // Determine ferry status
@@ -2072,7 +2072,7 @@ export async function registerRoutes(
       
       res.json({
         trip_id: id,
-        alerts: alertsResult.rows,
+        cc_alerts: alertsResult.rows,
         weather,
         road_status: alertsResult.rows.length > 0 ? 'Caution' : 'Clear',
         ferry_status: ferryStatus,
@@ -2091,7 +2091,7 @@ export async function registerRoutes(
       const { id } = req.params;
       
       const segmentsResult = await storage.query(
-        `SELECT segment_order, title, webcam_ids FROM trip_segments WHERE trip_id = $1 ORDER BY segment_order`,
+        `SELECT segment_order, title, webcam_ids FROM cc_trip_segments WHERE trip_id = $1 ORDER BY segment_order`,
         [id]
       );
       
@@ -2100,7 +2100,7 @@ export async function registerRoutes(
       let webcams: any[] = [];
       if (allWebcamIds.length > 0) {
         const webcamsResult = await storage.query(
-          `SELECT id, name, slug, configuration FROM entities WHERE id = ANY($1::uuid[])`,
+          `SELECT id, name, slug, configuration FROM cc_entities WHERE id = ANY($1::uuid[])`,
           [allWebcamIds]
         ).catch(() => ({ rows: [] }));
         webcams = webcamsResult.rows.map((w: any) => ({
@@ -2252,7 +2252,7 @@ export async function registerRoutes(
   app.get("/api/v1/planning/participants", async (req, res) => {
     try {
       const { search } = req.query;
-      let query = 'SELECT * FROM participant_profiles';
+      let query = 'SELECT * FROM cc_participant_profiles';
       const params: any[] = [];
 
       if (search) {
@@ -2275,7 +2275,7 @@ export async function registerRoutes(
       const { name, email, phone, emergency_contact_name, emergency_contact_phone, country_of_origin, languages, medical_conditions, dietary_restrictions, fitness_level, swimming_ability, mobility_notes } = req.body;
 
       const result = await storage.query(`
-        INSERT INTO participant_profiles (name, email, phone, emergency_contact_name, emergency_contact_phone, country_of_origin, languages, medical_conditions, dietary_restrictions, fitness_level, swimming_ability, mobility_notes)
+        INSERT INTO cc_participant_profiles (name, email, phone, emergency_contact_name, emergency_contact_phone, country_of_origin, languages, medical_conditions, dietary_restrictions, fitness_level, swimming_ability, mobility_notes)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
         RETURNING *
       `, [name, email, phone, emergency_contact_name, emergency_contact_phone, country_of_origin, languages || ['English'], medical_conditions || [], dietary_restrictions || [], fitness_level || 5, swimming_ability || 'basic', mobility_notes]);
@@ -2291,13 +2291,13 @@ export async function registerRoutes(
   app.get("/api/v1/planning/participants/:id", async (req, res) => {
     try {
       const { id } = req.params;
-      const participantResult = await storage.query('SELECT * FROM participant_profiles WHERE id = $1', [id]);
+      const participantResult = await storage.query('SELECT * FROM cc_participant_profiles WHERE id = $1', [id]);
 
       if (participantResult.rows.length === 0) {
         return res.status(404).json({ error: 'Participant not found' });
       }
 
-      const skillsResult = await storage.query('SELECT * FROM participant_skills WHERE participant_id = $1', [id]);
+      const skillsResult = await storage.query('SELECT * FROM cc_participant_skills WHERE participant_id = $1', [id]);
 
       res.json({
         participant: participantResult.rows[0],
@@ -2316,7 +2316,7 @@ export async function registerRoutes(
       const { skill_category, skill_type, skill_level, certification_name, certification_issuer, certification_date, certification_expiry, notes } = req.body;
 
       const result = await storage.query(`
-        INSERT INTO participant_skills (participant_id, skill_category, skill_type, skill_level, certification_name, certification_issuer, certification_date, certification_expiry, notes)
+        INSERT INTO cc_participant_skills (participant_id, skill_category, skill_type, skill_level, certification_name, certification_issuer, certification_date, certification_expiry, notes)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
         RETURNING *
       `, [id, skill_category, skill_type, skill_level, certification_name, certification_issuer, certification_date, certification_expiry, notes]);
@@ -2368,7 +2368,7 @@ export async function registerRoutes(
       }
       
       const assessmentResult = await storage.query(`
-        SELECT * FROM vehicle_assessments 
+        SELECT * FROM cc_vehicle_assessments 
         WHERE vehicle_id = $1 
         ORDER BY assessment_date DESC 
         LIMIT 1
@@ -2411,7 +2411,7 @@ export async function registerRoutes(
       const assessment = req.body;
 
       const result = await storage.query(`
-        INSERT INTO vehicle_assessments (vehicle_id, assessed_by, tire_tread_condition, tires_winter_rated, chains_available, oil_level, coolant_level, brake_condition, current_mileage, has_first_aid_kit, has_fire_extinguisher, has_blankets, has_water, has_flashlight, overall_condition, notes)
+        INSERT INTO cc_vehicle_assessments (vehicle_id, assessed_by, tire_tread_condition, tires_winter_rated, chains_available, oil_level, coolant_level, brake_condition, current_mileage, has_first_aid_kit, has_fire_extinguisher, has_blankets, has_water, has_flashlight, overall_condition, notes)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
         RETURNING *
       `, [id, assessment.assessed_by, assessment.tire_tread_condition, assessment.tires_winter_rated, assessment.chains_available, assessment.oil_level, assessment.coolant_level, assessment.brake_condition, assessment.current_mileage, assessment.has_first_aid_kit, assessment.has_fire_extinguisher, assessment.has_blankets, assessment.has_water, assessment.has_flashlight, assessment.overall_condition, assessment.notes]);
@@ -2460,7 +2460,7 @@ export async function registerRoutes(
       };
 
       // Get trips and their skill requirements count
-      const tripsResult = await storage.query('SELECT * FROM road_trips WHERE is_published = true ORDER BY title');
+      const tripsResult = await storage.query('SELECT * FROM cc_road_trips WHERE is_published = true ORDER BY title');
       const trips = tripsResult.rows.map((trip: any) => ({
         ...trip,
         difficulty: difficulties[trip.id] || { level: 'Unknown', color: 'text-gray-400 bg-gray-500/20', description: 'Difficulty not assessed' }
@@ -2477,7 +2477,7 @@ export async function registerRoutes(
   app.get("/api/v1/planning/route-segments", async (req, res) => {
     try {
       const { route_type, region } = req.query;
-      let query = 'SELECT * FROM route_segments WHERE is_active = true';
+      let query = 'SELECT * FROM cc_route_segments WHERE is_active = true';
       const params: any[] = [];
       let paramIndex = 1;
 
@@ -2501,8 +2501,8 @@ export async function registerRoutes(
       const { id } = req.params;
       const result = await storage.query(`
         SELECT ra.*, rs.name as alternative_segment_name 
-        FROM route_alternatives ra
-        LEFT JOIN route_segments rs ON ra.alternative_segment_id = rs.id
+        FROM cc_route_alternatives ra
+        LEFT JOIN cc_route_segments rs ON ra.alternative_segment_id = rs.id
         WHERE ra.primary_segment_id = $1
         ORDER BY ra.priority
       `, [id]);
@@ -2522,7 +2522,7 @@ export async function registerRoutes(
       const vehicleResult = await storage.query(
         `SELECT v.*, va.tires_winter_rated, va.chains_available 
          FROM vehicle_profiles v 
-         LEFT JOIN vehicle_assessments va ON v.id = va.vehicle_id 
+         LEFT JOIN cc_vehicle_assessments va ON v.id = va.vehicle_id 
          WHERE v.id = $1 
          ORDER BY va.assessment_date DESC LIMIT 1`,
         [vehicle_id]
@@ -2534,7 +2534,7 @@ export async function registerRoutes(
 
       const vehicle = vehicleResult.rows[0];
       const segmentsResult = await storage.query(
-        'SELECT * FROM route_segments WHERE id = ANY($1)',
+        'SELECT * FROM cc_route_segments WHERE id = ANY($1)',
         [route_segment_ids]
       );
 
@@ -2602,7 +2602,7 @@ export async function registerRoutes(
   app.get("/api/v1/planning/transport-providers", async (req, res) => {
     try {
       const { type, region } = req.query;
-      let query = 'SELECT * FROM transport_providers WHERE is_active = true';
+      let query = 'SELECT * FROM cc_transport_providers WHERE is_active = true';
       const params: any[] = [];
       let paramIndex = 1;
 
@@ -2625,13 +2625,13 @@ export async function registerRoutes(
     }
   });
 
-  // GET /api/v1/planning/transport-providers/:id/schedules - Get provider schedules
-  app.get("/api/v1/planning/transport-providers/:id/schedules", async (req, res) => {
+  // GET /api/v1/planning/transport-providers/:id/cc_schedules - Get provider cc_schedules
+  app.get("/api/v1/planning/transport-providers/:id/cc_schedules", async (req, res) => {
     try {
       const { id } = req.params;
       const { date } = req.query;
 
-      let query = 'SELECT * FROM transport_schedules WHERE provider_id = $1';
+      let query = 'SELECT * FROM cc_transport_schedules WHERE provider_id = $1';
       const params: any[] = [id];
 
       if (date) {
@@ -2641,10 +2641,10 @@ export async function registerRoutes(
 
       query += ' ORDER BY departure_time';
       const result = await storage.query(query, params);
-      res.json({ schedules: result.rows });
+      res.json({ cc_schedules: result.rows });
     } catch (error) {
-      console.error('Error fetching schedules:', error);
-      res.status(500).json({ error: 'Failed to fetch schedules' });
+      console.error('Error fetching cc_schedules:', error);
+      res.status(500).json({ error: 'Failed to fetch cc_schedules' });
     }
   });
 
@@ -2654,7 +2654,7 @@ export async function registerRoutes(
       const { company_name, service_type, destination_region, planned_date, planned_duration_days, total_job_slots, crew_size, crew_lead_name, vehicle_id, vehicle_description, logistics_cost_total, minimum_job_value, booking_deadline, contact_email, contact_phone, booking_notes } = req.body;
 
       const result = await storage.query(`
-        INSERT INTO service_runs (company_name, service_type, destination_region, planned_date, planned_duration_days, total_job_slots, crew_size, crew_lead_name, vehicle_id, vehicle_description, logistics_cost_total, minimum_job_value, booking_deadline, contact_email, contact_phone, booking_notes)
+        INSERT INTO cc_service_runs (company_name, service_type, destination_region, planned_date, planned_duration_days, total_job_slots, crew_size, crew_lead_name, vehicle_id, vehicle_description, logistics_cost_total, minimum_job_value, booking_deadline, contact_email, contact_phone, booking_notes)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
         RETURNING *
       `, [company_name, service_type, destination_region, planned_date, planned_duration_days || 1, total_job_slots, crew_size, crew_lead_name, vehicle_id, vehicle_description, logistics_cost_total, minimum_job_value, booking_deadline, contact_email, contact_phone, booking_notes]);
@@ -2675,8 +2675,8 @@ export async function registerRoutes(
         SELECT sr.*, 
                COUNT(srb.id) as bookings_count,
                sr.total_job_slots - COALESCE(sr.slots_filled, 0) as slots_available
-        FROM service_runs sr
-        LEFT JOIN service_run_bookings srb ON sr.id = srb.service_run_id AND srb.status != 'cancelled'
+        FROM cc_service_runs sr
+        LEFT JOIN cc_service_run_bookings srb ON sr.id = srb.service_run_id AND srb.status != 'cancelled'
         WHERE 1=1
       `;
       const params: any[] = [];
@@ -2699,7 +2699,7 @@ export async function registerRoutes(
       query += ` GROUP BY sr.id ORDER BY sr.planned_date`;
 
       const result = await storage.query(query, params);
-      res.json({ service_runs: result.rows });
+      res.json({ cc_service_runs: result.rows });
     } catch (error) {
       console.error('Error fetching service runs:', error);
       res.status(500).json({ error: 'Failed to fetch service runs' });
@@ -2712,7 +2712,7 @@ export async function registerRoutes(
       const { id } = req.params;
       const { customer_name, customer_email, customer_phone, customer_address, job_description, estimated_duration_hours, job_value, preferred_time } = req.body;
 
-      const runResult = await storage.query('SELECT * FROM service_runs WHERE id = $1', [id]);
+      const runResult = await storage.query('SELECT * FROM cc_service_runs WHERE id = $1', [id]);
 
       if (runResult.rows.length === 0) {
         return res.status(404).json({ error: 'Service run not found' });
@@ -2728,12 +2728,12 @@ export async function registerRoutes(
       const total_price = job_value + logistics_share;
 
       const result = await storage.query(`
-        INSERT INTO service_run_bookings (service_run_id, customer_name, customer_email, customer_phone, customer_address, job_description, estimated_duration_hours, job_value, logistics_share, total_price, preferred_time)
+        INSERT INTO cc_service_run_bookings (service_run_id, customer_name, customer_email, customer_phone, customer_address, job_description, estimated_duration_hours, job_value, logistics_share, total_price, preferred_time)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
         RETURNING *
       `, [id, customer_name, customer_email, customer_phone, customer_address, job_description, estimated_duration_hours, job_value, logistics_share, total_price, preferred_time]);
 
-      await storage.query('UPDATE service_runs SET slots_filled = slots_filled + 1 WHERE id = $1', [id]);
+      await storage.query('UPDATE cc_service_runs SET slots_filled = slots_filled + 1 WHERE id = $1', [id]);
 
       res.json(result.rows[0]);
     } catch (error) {
@@ -2751,11 +2751,11 @@ export async function registerRoutes(
         return res.status(400).json({ error: 'participant_id and trip_id required' });
       }
 
-      const skillsResult = await storage.query('SELECT * FROM participant_skills WHERE participant_id = $1', [participant_id]);
+      const skillsResult = await storage.query('SELECT * FROM cc_participant_skills WHERE participant_id = $1', [participant_id]);
       const participantSkills = skillsResult.rows;
 
       const requirementsResult = await storage.query(`
-        SELECT * FROM skill_requirements 
+        SELECT * FROM cc_skill_requirements 
         WHERE requirement_type = 'trip' AND requirement_target_id = $1
         ORDER BY 
           CASE enforcement 
@@ -2847,7 +2847,7 @@ export async function registerRoutes(
   app.get("/api/v1/planning/equipment-types", async (req, res) => {
     try {
       const { category } = req.query;
-      let query = 'SELECT * FROM equipment_types';
+      let query = 'SELECT * FROM cc_equipment_types';
       const params: any[] = [];
 
       if (category) {
@@ -2870,11 +2870,11 @@ export async function registerRoutes(
       const { id } = req.params;
 
       const tripsResult = await storage.query(
-        "SELECT id, title, difficulty FROM road_trips WHERE is_published = true"
+        "SELECT id, title, difficulty FROM cc_road_trips WHERE is_published = true"
       );
 
       const skillsResult = await storage.query(
-        'SELECT skill_category, skill_type, skill_level FROM participant_skills WHERE participant_id = $1',
+        'SELECT skill_category, skill_type, skill_level FROM cc_participant_skills WHERE participant_id = $1',
         [id]
       );
       const participantSkills = skillsResult.rows;
@@ -2886,7 +2886,7 @@ export async function registerRoutes(
       for (const trip of tripsResult.rows) {
         const reqResult = await storage.query(`
           SELECT skill_category, skill_type, minimum_level, enforcement 
-          FROM skill_requirements 
+          FROM cc_skill_requirements 
           WHERE requirement_type = 'trip' AND requirement_target_id = $1 AND enforcement = 'required'
         `, [trip.id]);
 
@@ -2923,7 +2923,7 @@ export async function registerRoutes(
   app.get("/api/v1/planning/safety-equipment-types", async (req, res) => {
     try {
       const result = await storage.query(
-        'SELECT * FROM safety_equipment_types ORDER BY sort_order, name'
+        'SELECT * FROM cc_safety_equipment_types ORDER BY sort_order, name'
       );
       res.json({ types: result.rows });
     } catch (error) {
@@ -2937,7 +2937,7 @@ export async function registerRoutes(
     try {
       const { id } = req.params;
       const result = await storage.query(
-        'SELECT * FROM vehicle_safety_equipment WHERE vehicle_id = $1',
+        'SELECT * FROM cc_vehicle_safety_equipment WHERE vehicle_id = $1',
         [id]
       );
       res.json({ equipment: result.rows });
@@ -2954,7 +2954,7 @@ export async function registerRoutes(
       const { present, condition, notes } = req.body;
 
       const result = await storage.query(`
-        INSERT INTO vehicle_safety_equipment (vehicle_id, equipment_type_id, present, condition, notes, last_checked)
+        INSERT INTO cc_vehicle_safety_equipment (vehicle_id, equipment_type_id, present, condition, notes, last_checked)
         VALUES ($1, $2, $3, $4, $5, CURRENT_DATE)
         ON CONFLICT (vehicle_id, equipment_type_id)
         DO UPDATE SET present = $3, condition = $4, notes = $5, last_checked = CURRENT_DATE

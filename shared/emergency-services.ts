@@ -157,7 +157,7 @@ export const BC_EMERGENCY_SERVICES: EmergencyService[] = [
     address: "2211 Wesbrook Mall, Vancouver",
     health_authority: "Vancouver Coastal Health",
     emergency_department: false,
-    notes: "Specialty and rehabilitation services"
+    notes: "Specialty and rehabilitation cc_services"
   },
   {
     id: "hospital-squamish",
@@ -3639,13 +3639,13 @@ export function getNearestEmergencyServices(
   count: number = 5,
   typeFilter?: EmergencyServiceType[]
 ): { service: EmergencyService; distance_km: number }[] {
-  let services = BC_EMERGENCY_SERVICES;
+  let cc_services = BC_EMERGENCY_SERVICES;
   
   if (typeFilter && typeFilter.length > 0) {
-    services = services.filter(s => typeFilter.includes(s.type));
+    cc_services = cc_services.filter(s => typeFilter.includes(s.type));
   }
   
-  const withDistances = services.map(service => ({
+  const withDistances = cc_services.map(service => ({
     service,
     distance_km: calculateDistance(lat, lon, service.latitude, service.longitude)
   }));

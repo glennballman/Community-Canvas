@@ -75,8 +75,8 @@ export async function tenantContext(req: TenantRequest, res: Response, next: Nex
     // NOTE: Use serviceQuery to bypass RLS since tenant context isn't established yet
     const portalResult = await serviceQuery(`
       SELECT d.portal_id, p.owning_tenant_id, p.slug, p.name, p.legal_dba_name, p.portal_type
-      FROM portal_domains d 
-      JOIN portals p ON p.id = d.portal_id
+      FROM cc_portal_domains d 
+      JOIN cc_portals p ON p.id = d.portal_id
       WHERE d.domain = $1 
         AND d.status IN ('verified', 'active') 
         AND p.status = 'active'
@@ -103,7 +103,7 @@ export async function tenantContext(req: TenantRequest, res: Response, next: Nex
         // NOTE: Use serviceQuery to bypass RLS since tenant context isn't established yet
         const slugResult = await serviceQuery(`
           SELECT id as portal_id, owning_tenant_id, slug, name, legal_dba_name, portal_type
-          FROM portals 
+          FROM cc_portals 
           WHERE slug = $1 AND status = 'active'
           LIMIT 1
         `, [slug]);

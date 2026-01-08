@@ -2878,7 +2878,7 @@ export const BC_COMMUNITY_FACILITIES: CommunityFacility[] = [
       { type: "gymnasium", indoor: true, notes: "Full-size basketball court" },
       { type: "basketball_court", indoor: true },
       { type: "volleyball_court", indoor: true },
-      { type: "meeting_room", indoor: true, notes: "Community events space" },
+      { type: "meeting_room", indoor: true, notes: "Community cc_events space" },
       { type: "community_kitchen", indoor: true },
     ],
     notes: "Primary community gathering space for Huu-ay-aht First Nations and Bamfield area",
@@ -3022,7 +3022,7 @@ export const BC_COMMUNITY_FACILITIES: CommunityFacility[] = [
     amenities: [
       { type: "gymnasium", indoor: true },
       { type: "meeting_room", indoor: true },
-      { type: "banquet_hall", indoor: true, notes: "Cultural events and potlatches" },
+      { type: "banquet_hall", indoor: true, notes: "Cultural cc_events and potlatches" },
     ],
     notes: "Traditional Big House and community recreation facility",
   },

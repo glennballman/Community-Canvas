@@ -56,7 +56,7 @@ export const BC_CHAMBERS_OF_COMMERCE: ChamberOfCommerce[] = [
     website: "https://www.bbot.ca",
     founded: 1910,
     members: "1,100+",
-    notes: "Official economic development office for City of Burnaby. 70+ events annually."
+    notes: "Official economic development office for City of Burnaby. 70+ cc_events annually."
   },
   {
     id: "surrey-white-rock-board-of-trade",
@@ -246,7 +246,7 @@ export const BC_CHAMBERS_OF_COMMERCE: ChamberOfCommerce[] = [
     website: "https://www.missionchamber.bc.ca",
     founded: 1893,
     members: "425+",
-    notes: "BC's 4th Board of Trade. 70% of members have 5 or fewer employees."
+    notes: "BC's 4th Board of Trade. 70% of members have 5 or fewer cc_employees."
   },
   {
     id: "maple-ridge-pitt-meadows-chamber",
@@ -432,7 +432,7 @@ export const BC_CHAMBERS_OF_COMMERCE: ChamberOfCommerce[] = [
     phone: "(250) 245-2112",
     email: "info@ladysmithcofc.com",
     website: "https://www.ladysmithcofc.com",
-    notes: "Mid-Vancouver Island. Active community events, Tour de Rock sponsorship."
+    notes: "Mid-Vancouver Island. Active community cc_events, Tour de Rock sponsorship."
   },
   {
     id: "chemainus-chamber",
@@ -691,7 +691,7 @@ export const BC_CHAMBERS_OF_COMMERCE: ChamberOfCommerce[] = [
     website: "https://www.kelownachamber.org",
     founded: 1906,
     members: "1,000",
-    notes: "50+ networking events annually. Top 40 Under 40, Business Excellence Awards."
+    notes: "50+ networking cc_events annually. Top 40 Under 40, Business Excellence Awards."
   },
   {
     id: "west-kelowna-board-of-trade",
@@ -1675,7 +1675,7 @@ export const BC_CHAMBERS_OF_COMMERCE: ChamberOfCommerce[] = [
     },
     phone: "(604) 886-2325",
     website: "https://www.gibsonschamber.com",
-    notes: "Beachcombers country. Visitor information services."
+    notes: "Beachcombers country. Visitor information cc_services."
   },
   {
     id: "pender-harbour-chamber",

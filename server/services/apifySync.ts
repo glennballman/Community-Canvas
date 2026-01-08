@@ -1,5 +1,5 @@
 // server/services/apifySync.ts
-// Sync service compatible with V2 external_records schema
+// Sync service compatible with V2 cc_external_records schema
 // Supports Apify API and local JSON file streaming
 
 import { createReadStream } from 'fs';
@@ -147,7 +147,7 @@ async function processRecord(
         
         // Check if exists
         const existing = await pool.query(
-            `SELECT id, sync_hash FROM external_records WHERE source = $1::external_source AND external_id = $2`,
+            `SELECT id, sync_hash FROM cc_external_records WHERE source = $1::external_source AND external_id = $2`,
             [config.source, externalId]
         );
         
@@ -157,7 +157,7 @@ async function processRecord(
             if (row.sync_hash === hash) {
                 // No changes, just update last_seen
                 await pool.query(
-                    `UPDATE external_records SET last_seen_at = NOW() WHERE id = $1`,
+                    `UPDATE cc_external_records SET last_seen_at = NOW() WHERE id = $1`,
                     [row.id]
                 );
                 return { status: 'skipped', recordId: row.id };
@@ -165,7 +165,7 @@ async function processRecord(
             
             // Update existing record
             await pool.query(`
-                UPDATE external_records SET
+                UPDATE cc_external_records SET
                     name = $1,
                     description = $2,
                     external_url = $3,
@@ -230,7 +230,7 @@ async function processRecord(
         
         // Insert new record
         const inserted = await pool.query(`
-            INSERT INTO external_records (
+            INSERT INTO cc_external_records (
                 dataset_id, source, record_type,
                 external_id, external_url,
                 name, description, address,
@@ -334,7 +334,7 @@ export async function syncFromFile(
     // Get dataset config
     const configResult = await pool.query(
         `SELECT id, slug, source::text, record_type::text, region, apify_actor_id, apify_dataset_id
-         FROM apify_datasets WHERE slug = $1`,
+         FROM cc_apify_datasets WHERE slug = $1`,
         [datasetSlug]
     );
     
@@ -346,7 +346,7 @@ export async function syncFromFile(
     
     // Create sync history
     const syncRecord = await pool.query(
-        `INSERT INTO apify_sync_history (dataset_id, triggered_by) VALUES ($1, 'file') RETURNING id`,
+        `INSERT INTO cc_apify_sync_history (dataset_id, triggered_by) VALUES ($1, 'file') RETURNING id`,
         [config.id]
     );
     const syncId = syncRecord.rows[0].id;
@@ -410,7 +410,7 @@ export async function syncFromFile(
     
     // Update sync history
     await pool.query(`
-        UPDATE apify_sync_history SET
+        UPDATE cc_apify_sync_history SET
             completed_at = NOW(),
             status = $2,
             records_processed = $3,
@@ -435,7 +435,7 @@ export async function syncFromFile(
     
     // Update dataset
     await pool.query(`
-        UPDATE apify_datasets SET 
+        UPDATE cc_apify_datasets SET 
             last_sync_at = NOW(),
             last_sync_record_count = $2,
             last_sync_error = $3
@@ -461,7 +461,7 @@ export async function syncFromApify(datasetSlug: string): Promise<SyncResult> {
     // Get dataset config
     const configResult = await pool.query(
         `SELECT id, slug, source::text, record_type::text, region, apify_actor_id, apify_dataset_id
-         FROM apify_datasets WHERE slug = $1`,
+         FROM cc_apify_datasets WHERE slug = $1`,
         [datasetSlug]
     );
     
@@ -473,7 +473,7 @@ export async function syncFromApify(datasetSlug: string): Promise<SyncResult> {
     
     // Create sync history
     const syncRecord = await pool.query(
-        `INSERT INTO apify_sync_history (dataset_id, triggered_by) VALUES ($1, 'api') RETURNING id`,
+        `INSERT INTO cc_apify_sync_history (dataset_id, triggered_by) VALUES ($1, 'api') RETURNING id`,
         [config.id]
     );
     const syncId = syncRecord.rows[0].id;
@@ -552,7 +552,7 @@ export async function syncFromApify(datasetSlug: string): Promise<SyncResult> {
     
     // Update sync history
     await pool.query(`
-        UPDATE apify_sync_history SET
+        UPDATE cc_apify_sync_history SET
             completed_at = NOW(),
             status = $2,
             records_processed = $3,
@@ -577,7 +577,7 @@ export async function syncFromApify(datasetSlug: string): Promise<SyncResult> {
     
     // Update dataset
     await pool.query(`
-        UPDATE apify_datasets SET 
+        UPDATE cc_apify_datasets SET 
             last_sync_at = NOW(),
             last_sync_record_count = $2,
             last_sync_error = $3

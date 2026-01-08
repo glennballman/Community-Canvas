@@ -73,7 +73,7 @@ export function generateSitemapIndexXml(sitemaps: SitemapIndexEntry[]): string {
 }
 
 /**
- * Fetch all active portals for sitemap
+ * Fetch all active cc_portals for sitemap
  */
 export async function getPortalsForSitemap(): Promise<Array<{
   id: string;
@@ -83,7 +83,7 @@ export async function getPortalsForSitemap(): Promise<Array<{
 }>> {
   const result = await serviceQuery(`
     SELECT id, slug, base_url, name
-    FROM portals
+    FROM cc_portals
     WHERE status = 'active'
     ORDER BY name
   `);
@@ -91,7 +91,7 @@ export async function getPortalsForSitemap(): Promise<Array<{
 }
 
 /**
- * Fetch published articles for sitemap
+ * Fetch published cc_articles for sitemap
  */
 export async function getArticlesForSitemap(portalId?: string): Promise<Array<{
   slug: string;
@@ -107,8 +107,8 @@ export async function getArticlesForSitemap(portalId?: string): Promise<Array<{
       a.portal_id,
       p.slug as portal_slug,
       p.base_url as portal_base_url
-    FROM articles a
-    JOIN portals p ON p.id = a.portal_id
+    FROM cc_articles a
+    JOIN cc_portals p ON p.id = a.portal_id
     WHERE a.status = 'published'
       AND a.published_at IS NOT NULL
   `;
@@ -126,7 +126,7 @@ export async function getArticlesForSitemap(portalId?: string): Promise<Array<{
 }
 
 /**
- * Fetch organizations for sitemap
+ * Fetch cc_organizations for sitemap
  */
 export async function getOrganizationsForSitemap(limit = 5000): Promise<Array<{
   id: string;
@@ -138,7 +138,7 @@ export async function getOrganizationsForSitemap(limit = 5000): Promise<Array<{
       id,
       name,
       updated_at
-    FROM organizations
+    FROM cc_organizations
     ORDER BY updated_at DESC NULLS LAST
     LIMIT $1
   `, [limit]);
@@ -146,7 +146,7 @@ export async function getOrganizationsForSitemap(limit = 5000): Promise<Array<{
 }
 
 /**
- * Fetch infrastructure for sitemap (from organizations with infrastructure flag)
+ * Fetch infrastructure for sitemap (from cc_organizations with infrastructure flag)
  */
 export async function getInfrastructureForSitemap(limit = 5000): Promise<Array<{
   id: string;
@@ -160,7 +160,7 @@ export async function getInfrastructureForSitemap(limit = 5000): Promise<Array<{
       name,
       infrastructure_type,
       updated_at
-    FROM organizations
+    FROM cc_organizations
     WHERE is_infrastructure = true
     ORDER BY updated_at DESC NULLS LAST
     LIMIT $1
@@ -192,13 +192,13 @@ function derivePortalBaseUrl(baseUrl: string | null, slug: string | null): strin
 }
 
 /**
- * Generate sitemap entries for articles
+ * Generate sitemap entries for cc_articles
  */
 export async function generateArticlesSitemapEntries(portalId?: string): Promise<SitemapEntry[]> {
-  const articles = await getArticlesForSitemap(portalId);
+  const cc_articles = await getArticlesForSitemap(portalId);
   const entries: SitemapEntry[] = [];
   
-  for (const article of articles) {
+  for (const article of cc_articles) {
     const baseUrl = derivePortalBaseUrl(article.portal_base_url, article.portal_slug);
     
     // Skip entries without valid base URL
@@ -208,7 +208,7 @@ export async function generateArticlesSitemapEntries(portalId?: string): Promise
     }
     
     entries.push({
-      loc: `${baseUrl}/articles/${article.slug}`,
+      loc: `${baseUrl}/cc_articles/${article.slug}`,
       lastmod: article.updated_at?.toISOString().split('T')[0],
       changefreq: 'weekly',
       priority: '0.8',
@@ -219,13 +219,13 @@ export async function generateArticlesSitemapEntries(portalId?: string): Promise
 }
 
 /**
- * Generate sitemap entries for organizations
+ * Generate sitemap entries for cc_organizations
  */
 export async function generateOrganizationsSitemapEntries(baseUrl = 'https://communitycanvas.ca'): Promise<SitemapEntry[]> {
   const orgs = await getOrganizationsForSitemap();
   
   return orgs.map(org => ({
-    loc: `${baseUrl}/organizations/${org.id}`,
+    loc: `${baseUrl}/cc_organizations/${org.id}`,
     lastmod: org.updated_at?.toISOString().split('T')[0],
     changefreq: 'monthly' as const,
     priority: '0.6',

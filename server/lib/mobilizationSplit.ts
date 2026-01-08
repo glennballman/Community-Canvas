@@ -39,7 +39,7 @@ export async function computeMobilizationSplit(run_id: string): Promise<Mobiliza
       r.min_mobilization_threshold,
       r.estimated_total_value,
       r.pricing_model
-    FROM shared_service_runs r
+    FROM cc_shared_service_runs r
     WHERE r.id = $1`,
     [run_id]
   );
@@ -102,8 +102,8 @@ export async function computeContractorMargins(run_id: string): Promise<{
       r.estimated_total_value,
       r.pricing_model,
       SUM(m.unit_count) as total_units
-    FROM shared_service_runs r
-    LEFT JOIN shared_run_members m ON m.run_id = r.id AND m.status IN ('interested', 'joined', 'scheduled')
+    FROM cc_shared_service_runs r
+    LEFT JOIN cc_shared_run_members m ON m.run_id = r.id AND m.status IN ('interested', 'joined', 'scheduled')
     WHERE r.id = $1
     GROUP BY r.id`,
     [run_id]

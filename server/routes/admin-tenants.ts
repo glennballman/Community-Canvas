@@ -38,7 +38,7 @@ router.get('/', async (req: AuthRequest, res: Response) => {
         p.slug as portal_slug
       FROM cc_tenants t
       LEFT JOIN LATERAL (
-        SELECT slug FROM portals 
+        SELECT slug FROM cc_portals 
         WHERE owning_tenant_id = t.id AND status = 'active'
         ORDER BY created_at LIMIT 1
       ) p ON true
@@ -101,7 +101,7 @@ router.get('/:id', async (req: AuthRequest, res: Response) => {
       SELECT t.*, p.slug as portal_slug
       FROM cc_tenants t
       LEFT JOIN LATERAL (
-        SELECT slug FROM portals 
+        SELECT slug FROM cc_portals 
         WHERE owning_tenant_id = t.id AND status = 'active'
         ORDER BY created_at LIMIT 1
       ) p ON true

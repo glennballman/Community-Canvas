@@ -18,7 +18,7 @@ export interface MarineFacility {
   region: string;
   latitude: number;
   longitude: number;
-  services?: string[];
+  cc_services?: string[];
   vhf_channel?: string;
   phone?: string;
   has_fuel?: boolean;
@@ -40,7 +40,7 @@ export const BC_MARINE_FACILITIES: MarineFacility[] = [
     longitude: -123.3656,
     vhf_channel: "16",
     emergency_services: true,
-    services: ["Search and Rescue", "Marine Communications", "Environmental Response"]
+    cc_services: ["Search and Rescue", "Marine Communications", "Environmental Response"]
   },
   {
     id: "ccg-vancouver",
@@ -52,7 +52,7 @@ export const BC_MARINE_FACILITIES: MarineFacility[] = [
     longitude: -123.1815,
     vhf_channel: "16",
     emergency_services: true,
-    services: ["Search and Rescue", "Hovercraft Operations", "Environmental Response"]
+    cc_services: ["Search and Rescue", "Hovercraft Operations", "Environmental Response"]
   },
   {
     id: "ccg-prince-rupert",
@@ -64,7 +64,7 @@ export const BC_MARINE_FACILITIES: MarineFacility[] = [
     longitude: -130.3208,
     vhf_channel: "16",
     emergency_services: true,
-    services: ["Search and Rescue", "Icebreaking", "Marine Communications"]
+    cc_services: ["Search and Rescue", "Icebreaking", "Marine Communications"]
   },
   {
     id: "ccg-comox",
@@ -76,7 +76,7 @@ export const BC_MARINE_FACILITIES: MarineFacility[] = [
     longitude: -124.9020,
     vhf_channel: "16",
     emergency_services: true,
-    services: ["Search and Rescue", "Lifeboat Station"]
+    cc_services: ["Search and Rescue", "Lifeboat Station"]
   },
   {
     id: "ccg-tofino",
@@ -88,7 +88,7 @@ export const BC_MARINE_FACILITIES: MarineFacility[] = [
     longitude: -125.9066,
     vhf_channel: "16",
     emergency_services: true,
-    services: ["Search and Rescue", "Lifeboat Operations"]
+    cc_services: ["Search and Rescue", "Lifeboat Operations"]
   },
   {
     id: "ccg-bamfield",
@@ -100,7 +100,7 @@ export const BC_MARINE_FACILITIES: MarineFacility[] = [
     longitude: -125.1353,
     vhf_channel: "16",
     emergency_services: true,
-    services: ["Search and Rescue", "Lifeboat Operations"]
+    cc_services: ["Search and Rescue", "Lifeboat Operations"]
   },
   {
     id: "ccg-ganges",
@@ -112,7 +112,7 @@ export const BC_MARINE_FACILITIES: MarineFacility[] = [
     longitude: -123.5090,
     vhf_channel: "16",
     emergency_services: true,
-    services: ["Search and Rescue", "Inshore Rescue"]
+    cc_services: ["Search and Rescue", "Inshore Rescue"]
   },
   {
     id: "ccg-kitsilano",
@@ -124,7 +124,7 @@ export const BC_MARINE_FACILITIES: MarineFacility[] = [
     longitude: -123.1500,
     vhf_channel: "16",
     emergency_services: true,
-    services: ["Search and Rescue", "Inshore Rescue"]
+    cc_services: ["Search and Rescue", "Inshore Rescue"]
   },
   {
     id: "ccg-powell-river",
@@ -136,7 +136,7 @@ export const BC_MARINE_FACILITIES: MarineFacility[] = [
     longitude: -124.5247,
     vhf_channel: "16",
     emergency_services: true,
-    services: ["Search and Rescue Auxiliary"]
+    cc_services: ["Search and Rescue Auxiliary"]
   },
 
   // MAJOR MARINAS - METRO VANCOUVER
@@ -151,7 +151,7 @@ export const BC_MARINE_FACILITIES: MarineFacility[] = [
     has_fuel: true,
     has_moorage: true,
     vhf_channel: "66A",
-    services: ["Transient Moorage", "Power", "Water", "Pump-out"]
+    cc_services: ["Transient Moorage", "Power", "Water", "Pump-out"]
   },
   {
     id: "marina-granville-island",
@@ -163,7 +163,7 @@ export const BC_MARINE_FACILITIES: MarineFacility[] = [
     longitude: -123.1340,
     has_fuel: false,
     has_moorage: true,
-    services: ["Transient Moorage", "Power", "Water"]
+    cc_services: ["Transient Moorage", "Power", "Water"]
   },
   {
     id: "marina-false-creek",
@@ -174,7 +174,7 @@ export const BC_MARINE_FACILITIES: MarineFacility[] = [
     latitude: 49.2680,
     longitude: -123.1180,
     has_moorage: true,
-    services: ["Member Moorage", "Reciprocal"]
+    cc_services: ["Member Moorage", "Reciprocal"]
   },
   {
     id: "marina-spruce-harbour",
@@ -185,7 +185,7 @@ export const BC_MARINE_FACILITIES: MarineFacility[] = [
     latitude: 49.2650,
     longitude: -123.1820,
     has_moorage: true,
-    services: ["Transient Moorage", "Power", "Water"]
+    cc_services: ["Transient Moorage", "Power", "Water"]
   },
   {
     id: "marina-heather-civic",
@@ -196,7 +196,7 @@ export const BC_MARINE_FACILITIES: MarineFacility[] = [
     latitude: 49.2620,
     longitude: -123.1130,
     has_moorage: true,
-    services: ["Transient Moorage", "Launch"]
+    cc_services: ["Transient Moorage", "Launch"]
   },
   {
     id: "marina-horseshoe-bay",
@@ -209,7 +209,7 @@ export const BC_MARINE_FACILITIES: MarineFacility[] = [
     has_fuel: true,
     has_moorage: true,
     has_launch: true,
-    services: ["Fuel", "Moorage", "Boat Rentals", "Launch Ramp"]
+    cc_services: ["Fuel", "Moorage", "Boat Rentals", "Launch Ramp"]
   },
   {
     id: "marina-deep-cove",
@@ -221,7 +221,7 @@ export const BC_MARINE_FACILITIES: MarineFacility[] = [
     longitude: -122.9460,
     has_moorage: true,
     has_launch: true,
-    services: ["Moorage", "Kayak Rentals"]
+    cc_services: ["Moorage", "Kayak Rentals"]
   },
   {
     id: "marina-reed-point",
@@ -233,7 +233,7 @@ export const BC_MARINE_FACILITIES: MarineFacility[] = [
     longitude: -122.8580,
     has_moorage: true,
     has_launch: true,
-    services: ["Moorage", "Launch", "Boat Sales"]
+    cc_services: ["Moorage", "Launch", "Boat Sales"]
   },
   {
     id: "marina-steveston",
@@ -246,7 +246,7 @@ export const BC_MARINE_FACILITIES: MarineFacility[] = [
     has_fuel: true,
     has_moorage: true,
     vhf_channel: "66A",
-    services: ["Commercial Moorage", "Transient", "Fuel", "Ice"]
+    cc_services: ["Commercial Moorage", "Transient", "Fuel", "Ice"]
   },
   {
     id: "marina-captain-cove",
@@ -258,7 +258,7 @@ export const BC_MARINE_FACILITIES: MarineFacility[] = [
     longitude: -123.0580,
     has_fuel: true,
     has_moorage: true,
-    services: ["Fuel", "Moorage", "Repairs"]
+    cc_services: ["Fuel", "Moorage", "Repairs"]
   },
 
   // VANCOUVER ISLAND - VICTORIA AREA
@@ -273,7 +273,7 @@ export const BC_MARINE_FACILITIES: MarineFacility[] = [
     has_fuel: false,
     has_moorage: true,
     vhf_channel: "66A",
-    services: ["Transient Moorage", "Power", "Water", "Pump-out"]
+    cc_services: ["Transient Moorage", "Power", "Water", "Pump-out"]
   },
   {
     id: "marina-oak-bay",
@@ -286,7 +286,7 @@ export const BC_MARINE_FACILITIES: MarineFacility[] = [
     has_fuel: true,
     has_moorage: true,
     has_launch: true,
-    services: ["Fuel", "Moorage", "Launch", "Boat Rentals", "Fishing Charters"]
+    cc_services: ["Fuel", "Moorage", "Launch", "Boat Rentals", "Fishing Charters"]
   },
   {
     id: "marina-sidney",
@@ -299,7 +299,7 @@ export const BC_MARINE_FACILITIES: MarineFacility[] = [
     has_fuel: true,
     has_moorage: true,
     vhf_channel: "66A",
-    services: ["Fuel", "Transient Moorage", "Customs", "Provisioning"]
+    cc_services: ["Fuel", "Transient Moorage", "Customs", "Provisioning"]
   },
   {
     id: "marina-van-isle",
@@ -311,7 +311,7 @@ export const BC_MARINE_FACILITIES: MarineFacility[] = [
     longitude: -123.4050,
     has_fuel: true,
     has_moorage: true,
-    services: ["Fuel", "Moorage", "Haul-out", "Repairs"]
+    cc_services: ["Fuel", "Moorage", "Haul-out", "Repairs"]
   },
   {
     id: "marina-canoe-cove",
@@ -323,7 +323,7 @@ export const BC_MARINE_FACILITIES: MarineFacility[] = [
     longitude: -123.4100,
     has_fuel: true,
     has_moorage: true,
-    services: ["Fuel", "Moorage", "Haul-out", "Full Service Yard"]
+    cc_services: ["Fuel", "Moorage", "Haul-out", "Full Service Yard"]
   },
   {
     id: "marina-brentwood",
@@ -335,7 +335,7 @@ export const BC_MARINE_FACILITIES: MarineFacility[] = [
     longitude: -123.4650,
     has_moorage: true,
     has_launch: true,
-    services: ["Moorage", "Launch", "Kayak Rentals"]
+    cc_services: ["Moorage", "Launch", "Kayak Rentals"]
   },
   {
     id: "marina-sooke",
@@ -347,7 +347,7 @@ export const BC_MARINE_FACILITIES: MarineFacility[] = [
     longitude: -123.7250,
     has_fuel: true,
     has_moorage: true,
-    services: ["Fuel", "Moorage", "Fishing Charters"]
+    cc_services: ["Fuel", "Moorage", "Fishing Charters"]
   },
 
   // GULF ISLANDS
@@ -362,7 +362,7 @@ export const BC_MARINE_FACILITIES: MarineFacility[] = [
     has_fuel: true,
     has_moorage: true,
     vhf_channel: "66A",
-    services: ["Fuel", "Transient Moorage", "Provisioning"]
+    cc_services: ["Fuel", "Transient Moorage", "Provisioning"]
   },
   {
     id: "marina-salt-spring",
@@ -373,7 +373,7 @@ export const BC_MARINE_FACILITIES: MarineFacility[] = [
     latitude: 48.8580,
     longitude: -123.4960,
     has_moorage: true,
-    services: ["Moorage", "Water Taxi"]
+    cc_services: ["Moorage", "Water Taxi"]
   },
   {
     id: "marina-montague",
@@ -385,7 +385,7 @@ export const BC_MARINE_FACILITIES: MarineFacility[] = [
     longitude: -123.3880,
     has_fuel: true,
     has_moorage: true,
-    services: ["Fuel", "Moorage", "Store"]
+    cc_services: ["Fuel", "Moorage", "Store"]
   },
   {
     id: "marina-poets-cove",
@@ -397,7 +397,7 @@ export const BC_MARINE_FACILITIES: MarineFacility[] = [
     longitude: -123.2320,
     has_fuel: true,
     has_moorage: true,
-    services: ["Fuel", "Moorage", "Resort Amenities", "Restaurant"]
+    cc_services: ["Fuel", "Moorage", "Resort Amenities", "Restaurant"]
   },
   {
     id: "marina-telegraph",
@@ -409,7 +409,7 @@ export const BC_MARINE_FACILITIES: MarineFacility[] = [
     longitude: -123.6650,
     has_fuel: true,
     has_moorage: true,
-    services: ["Fuel", "Moorage", "Store", "Laundry"]
+    cc_services: ["Fuel", "Moorage", "Store", "Laundry"]
   },
 
   // VANCOUVER ISLAND - CENTRAL/NORTH
@@ -424,7 +424,7 @@ export const BC_MARINE_FACILITIES: MarineFacility[] = [
     has_fuel: true,
     has_moorage: true,
     vhf_channel: "67",
-    services: ["Transient Moorage", "Fuel", "Customs", "Provisioning"]
+    cc_services: ["Transient Moorage", "Fuel", "Customs", "Provisioning"]
   },
   {
     id: "marina-stones",
@@ -436,7 +436,7 @@ export const BC_MARINE_FACILITIES: MarineFacility[] = [
     longitude: -123.9400,
     has_fuel: true,
     has_moorage: true,
-    services: ["Fuel", "Moorage", "Repairs", "Haul-out"]
+    cc_services: ["Fuel", "Moorage", "Repairs", "Haul-out"]
   },
   {
     id: "marina-comox",
@@ -448,7 +448,7 @@ export const BC_MARINE_FACILITIES: MarineFacility[] = [
     longitude: -124.9280,
     has_fuel: true,
     has_moorage: true,
-    services: ["Fuel", "Moorage", "Launch"]
+    cc_services: ["Fuel", "Moorage", "Launch"]
   },
   {
     id: "marina-campbell-river",
@@ -461,7 +461,7 @@ export const BC_MARINE_FACILITIES: MarineFacility[] = [
     has_fuel: true,
     has_moorage: true,
     vhf_channel: "66A",
-    services: ["Fuel", "Transient Moorage", "Fishing Resort"]
+    cc_services: ["Fuel", "Transient Moorage", "Fishing Resort"]
   },
   {
     id: "marina-port-hardy",
@@ -474,7 +474,7 @@ export const BC_MARINE_FACILITIES: MarineFacility[] = [
     has_fuel: true,
     has_moorage: true,
     vhf_channel: "66A",
-    services: ["Fuel", "Moorage", "Provisioning"]
+    cc_services: ["Fuel", "Moorage", "Provisioning"]
   },
   {
     id: "marina-port-mcneill",
@@ -486,7 +486,7 @@ export const BC_MARINE_FACILITIES: MarineFacility[] = [
     longitude: -127.0850,
     has_fuel: true,
     has_moorage: true,
-    services: ["Fuel", "Moorage", "Launch"]
+    cc_services: ["Fuel", "Moorage", "Launch"]
   },
   {
     id: "marina-alert-bay",
@@ -498,7 +498,7 @@ export const BC_MARINE_FACILITIES: MarineFacility[] = [
     longitude: -126.9300,
     has_fuel: true,
     has_moorage: true,
-    services: ["Fuel", "Moorage"]
+    cc_services: ["Fuel", "Moorage"]
   },
 
   // WEST COAST VANCOUVER ISLAND
@@ -513,7 +513,7 @@ export const BC_MARINE_FACILITIES: MarineFacility[] = [
     has_fuel: true,
     has_moorage: true,
     vhf_channel: "66A",
-    services: ["Fuel", "Transient Moorage", "Water Taxi"]
+    cc_services: ["Fuel", "Transient Moorage", "Water Taxi"]
   },
   {
     id: "marina-ucluelet",
@@ -525,7 +525,7 @@ export const BC_MARINE_FACILITIES: MarineFacility[] = [
     longitude: -125.5460,
     has_fuel: true,
     has_moorage: true,
-    services: ["Fuel", "Moorage", "Fishing Charters"]
+    cc_services: ["Fuel", "Moorage", "Fishing Charters"]
   },
   {
     id: "marina-port-alberni",
@@ -537,7 +537,7 @@ export const BC_MARINE_FACILITIES: MarineFacility[] = [
     longitude: -124.8050,
     has_fuel: true,
     has_moorage: true,
-    services: ["Fuel", "Moorage", "Lady Rose Terminal"]
+    cc_services: ["Fuel", "Moorage", "Lady Rose Terminal"]
   },
   {
     id: "marina-bamfield",
@@ -549,7 +549,7 @@ export const BC_MARINE_FACILITIES: MarineFacility[] = [
     longitude: -125.1353,
     has_fuel: true,
     has_moorage: true,
-    services: ["Fuel", "Transient Moorage", "Water Taxi"]
+    cc_services: ["Fuel", "Transient Moorage", "Water Taxi"]
   },
 
   // SUNSHINE COAST
@@ -563,7 +563,7 @@ export const BC_MARINE_FACILITIES: MarineFacility[] = [
     longitude: -123.5050,
     has_fuel: true,
     has_moorage: true,
-    services: ["Fuel", "Moorage", "Haul-out"]
+    cc_services: ["Fuel", "Moorage", "Haul-out"]
   },
   {
     id: "marina-secret-cove",
@@ -575,7 +575,7 @@ export const BC_MARINE_FACILITIES: MarineFacility[] = [
     longitude: -123.9580,
     has_fuel: true,
     has_moorage: true,
-    services: ["Fuel", "Moorage", "Store"]
+    cc_services: ["Fuel", "Moorage", "Store"]
   },
   {
     id: "marina-madeira-park",
@@ -586,7 +586,7 @@ export const BC_MARINE_FACILITIES: MarineFacility[] = [
     latitude: 49.6280,
     longitude: -124.0250,
     has_moorage: true,
-    services: ["Transient Moorage"]
+    cc_services: ["Transient Moorage"]
   },
   {
     id: "marina-pender-harbour",
@@ -598,7 +598,7 @@ export const BC_MARINE_FACILITIES: MarineFacility[] = [
     longitude: -124.0280,
     has_fuel: true,
     has_moorage: true,
-    services: ["Fuel", "Moorage", "Resort"]
+    cc_services: ["Fuel", "Moorage", "Resort"]
   },
   {
     id: "marina-egmont",
@@ -610,7 +610,7 @@ export const BC_MARINE_FACILITIES: MarineFacility[] = [
     longitude: -123.9350,
     has_fuel: true,
     has_moorage: true,
-    services: ["Fuel", "Moorage", "Skookumchuck Tours"]
+    cc_services: ["Fuel", "Moorage", "Skookumchuck Tours"]
   },
   {
     id: "marina-powell-river",
@@ -622,7 +622,7 @@ export const BC_MARINE_FACILITIES: MarineFacility[] = [
     longitude: -124.5247,
     has_fuel: true,
     has_moorage: true,
-    services: ["Fuel", "Moorage", "Ferry Terminal"]
+    cc_services: ["Fuel", "Moorage", "Ferry Terminal"]
   },
 
   // DESOLATION SOUND / DISCOVERY ISLANDS
@@ -636,7 +636,7 @@ export const BC_MARINE_FACILITIES: MarineFacility[] = [
     longitude: -124.7620,
     has_fuel: true,
     has_moorage: true,
-    services: ["Fuel", "Moorage", "Gateway to Desolation Sound"]
+    cc_services: ["Fuel", "Moorage", "Gateway to Desolation Sound"]
   },
   {
     id: "marina-refuge-cove",
@@ -648,7 +648,7 @@ export const BC_MARINE_FACILITIES: MarineFacility[] = [
     longitude: -124.8420,
     has_fuel: true,
     has_moorage: true,
-    services: ["Fuel", "Moorage", "Provisions", "Liquor Store"]
+    cc_services: ["Fuel", "Moorage", "Provisions", "Liquor Store"]
   },
   {
     id: "marina-heriot-bay",
@@ -660,7 +660,7 @@ export const BC_MARINE_FACILITIES: MarineFacility[] = [
     longitude: -125.2170,
     has_fuel: true,
     has_moorage: true,
-    services: ["Fuel", "Moorage", "Store"]
+    cc_services: ["Fuel", "Moorage", "Store"]
   },
   {
     id: "marina-quathiaski",
@@ -671,7 +671,7 @@ export const BC_MARINE_FACILITIES: MarineFacility[] = [
     latitude: 50.0350,
     longitude: -125.2150,
     has_moorage: true,
-    services: ["Ferry Terminal", "Moorage"]
+    cc_services: ["Ferry Terminal", "Moorage"]
   },
 
   // NORTH COAST
@@ -685,7 +685,7 @@ export const BC_MARINE_FACILITIES: MarineFacility[] = [
     longitude: -130.3150,
     has_fuel: true,
     has_moorage: true,
-    services: ["Fuel", "Moorage", "Haul-out"]
+    cc_services: ["Fuel", "Moorage", "Haul-out"]
   },
   {
     id: "marina-cow-bay",
@@ -696,7 +696,7 @@ export const BC_MARINE_FACILITIES: MarineFacility[] = [
     latitude: 54.3130,
     longitude: -130.3050,
     has_moorage: true,
-    services: ["Moorage", "Tourism"]
+    cc_services: ["Moorage", "Tourism"]
   },
   {
     id: "marina-kitimat",
@@ -708,7 +708,7 @@ export const BC_MARINE_FACILITIES: MarineFacility[] = [
     longitude: -128.6560,
     has_moorage: true,
     has_launch: true,
-    services: ["Moorage", "Launch"]
+    cc_services: ["Moorage", "Launch"]
   },
   {
     id: "marina-bella-bella",
@@ -720,7 +720,7 @@ export const BC_MARINE_FACILITIES: MarineFacility[] = [
     longitude: -128.0920,
     has_fuel: true,
     has_moorage: true,
-    services: ["Fuel", "Moorage", "Repairs", "Provisioning"]
+    cc_services: ["Fuel", "Moorage", "Repairs", "Provisioning"]
   },
   {
     id: "marina-bella-coola",
@@ -732,7 +732,7 @@ export const BC_MARINE_FACILITIES: MarineFacility[] = [
     longitude: -126.7580,
     has_fuel: true,
     has_moorage: true,
-    services: ["Fuel", "Moorage", "Ferry Terminal"]
+    cc_services: ["Fuel", "Moorage", "Ferry Terminal"]
   },
 
   // HAIDA GWAII
@@ -746,7 +746,7 @@ export const BC_MARINE_FACILITIES: MarineFacility[] = [
     longitude: -132.0740,
     has_fuel: true,
     has_moorage: true,
-    services: ["Fuel", "Moorage"]
+    cc_services: ["Fuel", "Moorage"]
   },
   {
     id: "marina-sandspit",
@@ -757,7 +757,7 @@ export const BC_MARINE_FACILITIES: MarineFacility[] = [
     latitude: 53.2450,
     longitude: -131.8180,
     has_moorage: true,
-    services: ["Moorage", "Air Access"]
+    cc_services: ["Moorage", "Air Access"]
   },
   {
     id: "marina-masset",
@@ -769,7 +769,7 @@ export const BC_MARINE_FACILITIES: MarineFacility[] = [
     longitude: -132.1450,
     has_fuel: true,
     has_moorage: true,
-    services: ["Fuel", "Moorage", "Commercial Fishing"]
+    cc_services: ["Fuel", "Moorage", "Commercial Fishing"]
   },
 
   // FERRY TERMINALS
@@ -781,7 +781,7 @@ export const BC_MARINE_FACILITIES: MarineFacility[] = [
     region: "Metro Vancouver",
     latitude: 49.3746,
     longitude: -123.2737,
-    services: ["Ferry to Nanaimo", "Ferry to Langdale", "Ferry to Bowen Island"]
+    cc_services: ["Ferry to Nanaimo", "Ferry to Langdale", "Ferry to Bowen Island"]
   },
   {
     id: "ferry-tsawwassen",
@@ -791,7 +791,7 @@ export const BC_MARINE_FACILITIES: MarineFacility[] = [
     region: "Metro Vancouver",
     latitude: 49.0060,
     longitude: -123.1310,
-    services: ["Ferry to Swartz Bay", "Ferry to Gulf Islands", "Ferry to Duke Point"]
+    cc_services: ["Ferry to Swartz Bay", "Ferry to Gulf Islands", "Ferry to Duke Point"]
   },
   {
     id: "ferry-swartz-bay",
@@ -801,7 +801,7 @@ export const BC_MARINE_FACILITIES: MarineFacility[] = [
     region: "Capital",
     latitude: 48.6890,
     longitude: -123.4100,
-    services: ["Ferry to Tsawwassen", "Ferry to Gulf Islands"]
+    cc_services: ["Ferry to Tsawwassen", "Ferry to Gulf Islands"]
   },
   {
     id: "ferry-departure-bay",
@@ -811,7 +811,7 @@ export const BC_MARINE_FACILITIES: MarineFacility[] = [
     region: "Nanaimo",
     latitude: 49.2090,
     longitude: -123.9580,
-    services: ["Ferry to Horseshoe Bay"]
+    cc_services: ["Ferry to Horseshoe Bay"]
   },
   {
     id: "ferry-duke-point",
@@ -821,7 +821,7 @@ export const BC_MARINE_FACILITIES: MarineFacility[] = [
     region: "Nanaimo",
     latitude: 49.1600,
     longitude: -123.8900,
-    services: ["Ferry to Tsawwassen"]
+    cc_services: ["Ferry to Tsawwassen"]
   },
   {
     id: "ferry-langdale",
@@ -831,7 +831,7 @@ export const BC_MARINE_FACILITIES: MarineFacility[] = [
     region: "Sunshine Coast",
     latitude: 49.4340,
     longitude: -123.4750,
-    services: ["Ferry to Horseshoe Bay"]
+    cc_services: ["Ferry to Horseshoe Bay"]
   },
   {
     id: "ferry-earls-cove",
@@ -841,7 +841,7 @@ export const BC_MARINE_FACILITIES: MarineFacility[] = [
     region: "Sunshine Coast",
     latitude: 49.7540,
     longitude: -124.0020,
-    services: ["Ferry to Saltery Bay"]
+    cc_services: ["Ferry to Saltery Bay"]
   },
 
   // FUEL DOCKS (Standalone)
@@ -854,7 +854,7 @@ export const BC_MARINE_FACILITIES: MarineFacility[] = [
     latitude: 49.2910,
     longitude: -123.1250,
     has_fuel: true,
-    services: ["Gas", "Diesel", "Propane"]
+    cc_services: ["Gas", "Diesel", "Propane"]
   },
   {
     id: "fuel-esso-nanaimo",
@@ -865,7 +865,7 @@ export const BC_MARINE_FACILITIES: MarineFacility[] = [
     latitude: 49.1680,
     longitude: -123.9350,
     has_fuel: true,
-    services: ["Gas", "Diesel"]
+    cc_services: ["Gas", "Diesel"]
   },
   {
     id: "fuel-petro-can-victoria",
@@ -876,7 +876,7 @@ export const BC_MARINE_FACILITIES: MarineFacility[] = [
     latitude: 48.4290,
     longitude: -123.3680,
     has_fuel: true,
-    services: ["Gas", "Diesel"]
+    cc_services: ["Gas", "Diesel"]
   },
 
   // SEAPLANE DOCKS
@@ -888,7 +888,7 @@ export const BC_MARINE_FACILITIES: MarineFacility[] = [
     region: "Metro Vancouver",
     latitude: 49.2939,
     longitude: -123.1128,
-    services: ["Harbour Air", "Seair", "Float Plane Departures"]
+    cc_services: ["Harbour Air", "Seair", "Float Plane Departures"]
   },
   {
     id: "seaplane-victoria-inner",
@@ -898,7 +898,7 @@ export const BC_MARINE_FACILITIES: MarineFacility[] = [
     region: "Capital",
     latitude: 48.4185,
     longitude: -123.3890,
-    services: ["Harbour Air", "Float Plane Departures"]
+    cc_services: ["Harbour Air", "Float Plane Departures"]
   },
   {
     id: "seaplane-nanaimo",
@@ -908,7 +908,7 @@ export const BC_MARINE_FACILITIES: MarineFacility[] = [
     region: "Nanaimo",
     latitude: 49.1680,
     longitude: -123.9400,
-    services: ["Harbour Air", "Seair"]
+    cc_services: ["Harbour Air", "Seair"]
   },
   {
     id: "seaplane-ganges",
@@ -918,7 +918,7 @@ export const BC_MARINE_FACILITIES: MarineFacility[] = [
     region: "Capital",
     latitude: 48.8550,
     longitude: -123.5000,
-    services: ["Harbour Air", "Salt Spring Air"]
+    cc_services: ["Harbour Air", "Salt Spring Air"]
   },
   {
     id: "seaplane-tofino",
@@ -928,7 +928,7 @@ export const BC_MARINE_FACILITIES: MarineFacility[] = [
     region: "Alberni-Clayoquot",
     latitude: 49.1535,
     longitude: -125.9100,
-    services: ["Float Plane Departures"]
+    cc_services: ["Float Plane Departures"]
   },
 
   // PRIVATE FERRY OPERATORS
@@ -940,7 +940,7 @@ export const BC_MARINE_FACILITIES: MarineFacility[] = [
     region: "Metro Vancouver",
     latitude: 49.2890,
     longitude: -123.1128,
-    services: ["Fast Ferry to Nanaimo", "Passenger Only", "70 min crossing"],
+    cc_services: ["Fast Ferry to Nanaimo", "Passenger Only", "70 min crossing"],
     notes: "Vancouver Convention Centre - 354 passenger catamarans"
   },
   {
@@ -951,7 +951,7 @@ export const BC_MARINE_FACILITIES: MarineFacility[] = [
     region: "Nanaimo",
     latitude: 49.1690,
     longitude: -123.9350,
-    services: ["Fast Ferry to Vancouver", "Passenger Only", "70 min crossing"],
+    cc_services: ["Fast Ferry to Vancouver", "Passenger Only", "70 min crossing"],
     notes: "Nanaimo Cruise Terminal - 354 passenger catamarans"
   },
   {
@@ -962,7 +962,7 @@ export const BC_MARINE_FACILITIES: MarineFacility[] = [
     region: "Alberni-Clayoquot",
     latitude: 49.2340,
     longitude: -124.8050,
-    services: ["Passenger Ferry", "Freight", "Bamfield Route", "Ucluelet Route", "Broken Group Islands"],
+    cc_services: ["Passenger Ferry", "Freight", "Bamfield Route", "Ucluelet Route", "Broken Group Islands"],
     notes: "Heritage freight/passenger ferry - 200 passenger capacity - serves remote communities"
   },
   {
@@ -973,7 +973,7 @@ export const BC_MARINE_FACILITIES: MarineFacility[] = [
     region: "Alberni-Clayoquot",
     latitude: 48.8339,
     longitude: -125.1353,
-    services: ["Passenger Ferry", "Freight", "Connection to Port Alberni"],
+    cc_services: ["Passenger Ferry", "Freight", "Connection to Port Alberni"],
     notes: "MV Frances Barkley service - Tue/Thu/Sat year-round"
   },
 
@@ -986,7 +986,7 @@ export const BC_MARINE_FACILITIES: MarineFacility[] = [
     region: "Capital",
     latitude: 48.6483,
     longitude: -123.3950,
-    services: ["Southern Gulf Islands", "24/7 Service", "Cargo Transport"],
+    cc_services: ["Southern Gulf Islands", "24/7 Service", "Cargo Transport"],
     notes: "Serving Gulf Islands since 1999 - up to 11 passengers"
   },
   {
@@ -997,7 +997,7 @@ export const BC_MARINE_FACILITIES: MarineFacility[] = [
     region: "Capital",
     latitude: 48.6500,
     longitude: -123.4000,
-    services: ["Gulf Islands", "Charter Service"],
+    cc_services: ["Gulf Islands", "Charter Service"],
     notes: "24ft Northwest Aluminum boat"
   },
   {
@@ -1008,7 +1008,7 @@ export const BC_MARINE_FACILITIES: MarineFacility[] = [
     region: "Capital",
     latitude: 48.6880,
     longitude: -123.4100,
-    services: ["Launch Services", "Pilot Transfers", "Government Officials"],
+    cc_services: ["Launch Services", "Pilot Transfers", "Government Officials"],
     notes: "Canoe Cove base - 24/7 operations"
   },
   {
@@ -1019,7 +1019,7 @@ export const BC_MARINE_FACILITIES: MarineFacility[] = [
     region: "Capital",
     latitude: 48.8548,
     longitude: -123.5090,
-    services: ["Salt Spring", "Mill Bay", "Pender Island", "Deep Cove"],
+    cc_services: ["Salt Spring", "Mill Bay", "Pender Island", "Deep Cove"],
     notes: "Water taxi to Vancouver Island and Gulf Islands"
   },
   {
@@ -1030,7 +1030,7 @@ export const BC_MARINE_FACILITIES: MarineFacility[] = [
     region: "Capital",
     latitude: 48.8550,
     longitude: -123.5000,
-    services: ["Private Charters", "Southern Gulf Islands", "Bicycle Transport", "Pet Friendly"],
+    cc_services: ["Private Charters", "Southern Gulf Islands", "Bicycle Transport", "Pet Friendly"],
     notes: "Custom destinations including Galiano, Mayne, Saturna, Penders"
   },
 
@@ -1043,7 +1043,7 @@ export const BC_MARINE_FACILITIES: MarineFacility[] = [
     region: "Alberni-Clayoquot",
     latitude: 49.1530,
     longitude: -125.9066,
-    services: ["Meares Island", "Hot Springs Cove", "Vargas Island", "Lone Cone"],
+    cc_services: ["Meares Island", "Hot Springs Cove", "Vargas Island", "Lone Cone"],
     notes: "First Street Dock - includes zero-emission electric charter boat"
   },
   {
@@ -1054,7 +1054,7 @@ export const BC_MARINE_FACILITIES: MarineFacility[] = [
     region: "Alberni-Clayoquot",
     latitude: 49.1535,
     longitude: -125.9080,
-    services: ["Meares Island", "Vargas Island", "Opitsaht", "Bear Watching", "Kayak Pickup"],
+    cc_services: ["Meares Island", "Vargas Island", "Opitsaht", "Bear Watching", "Kayak Pickup"],
     notes: "Personalized charters throughout Clayoquot Sound"
   },
   {
@@ -1065,7 +1065,7 @@ export const BC_MARINE_FACILITIES: MarineFacility[] = [
     region: "Alberni-Clayoquot",
     latitude: 49.1540,
     longitude: -125.9100,
-    services: ["Ahousaht Community Service", "Scheduled Trips", "Charter Bookings"],
+    cc_services: ["Ahousaht Community Service", "Scheduled Trips", "Charter Bookings"],
     notes: "Maaqutusiis (Ahousaht) to Tofino route - community transportation"
   },
 
@@ -1078,7 +1078,7 @@ export const BC_MARINE_FACILITIES: MarineFacility[] = [
     region: "Sunshine Coast",
     latitude: 49.6320,
     longitude: -124.0280,
-    services: ["Local Transport", "Garden Bay", "Irvines Landing"],
+    cc_services: ["Local Transport", "Garden Bay", "Irvines Landing"],
     notes: "Serving Pender Harbour communities"
   },
 
@@ -1091,8 +1091,8 @@ export const BC_MARINE_FACILITIES: MarineFacility[] = [
     region: "North Coast",
     latitude: 54.3150,
     longitude: -130.3208,
-    services: ["Local Islands", "Charter Service", "Fishing Access"],
-    notes: "North coast water taxi services"
+    cc_services: ["Local Islands", "Charter Service", "Fishing Access"],
+    notes: "North coast water taxi cc_services"
   },
 
   // INLAND FERRY SERVICES (BC Ministry contracted)
@@ -1104,7 +1104,7 @@ export const BC_MARINE_FACILITIES: MarineFacility[] = [
     region: "Central Kootenay",
     latitude: 49.6310,
     longitude: -116.9580,
-    services: ["Free Vehicle Ferry", "Balfour to Kootenay Bay", "35 min crossing"],
+    cc_services: ["Free Vehicle Ferry", "Balfour to Kootenay Bay", "35 min crossing"],
     notes: "Ministry of Transportation contracted - longest free ferry in world"
   },
   {
@@ -1115,7 +1115,7 @@ export const BC_MARINE_FACILITIES: MarineFacility[] = [
     region: "Columbia-Shuswap",
     latitude: 50.7520,
     longitude: -117.8560,
-    services: ["Free Vehicle Ferry", "Galena Bay to Shelter Bay", "20 min crossing"],
+    cc_services: ["Free Vehicle Ferry", "Galena Bay to Shelter Bay", "20 min crossing"],
     notes: "Ministry of Transportation contracted"
   },
   {
@@ -1126,7 +1126,7 @@ export const BC_MARINE_FACILITIES: MarineFacility[] = [
     region: "Columbia-Shuswap",
     latitude: 51.0830,
     longitude: -119.6350,
-    services: ["Free Vehicle Ferry", "Cable Ferry"],
+    cc_services: ["Free Vehicle Ferry", "Cable Ferry"],
     notes: "Ministry of Transportation contracted - reaction ferry"
   },
   {
@@ -1137,7 +1137,7 @@ export const BC_MARINE_FACILITIES: MarineFacility[] = [
     region: "Bulkley-Nechako",
     latitude: 54.0540,
     longitude: -125.7850,
-    services: ["Free Vehicle Ferry", "15 min crossing"],
+    cc_services: ["Free Vehicle Ferry", "15 min crossing"],
     notes: "Ministry of Transportation contracted"
   },
   {
@@ -1148,7 +1148,7 @@ export const BC_MARINE_FACILITIES: MarineFacility[] = [
     region: "Thompson-Nicola",
     latitude: 50.2330,
     longitude: -121.5680,
-    services: ["Free Vehicle Ferry", "Fraser River Crossing", "Cable Ferry"],
+    cc_services: ["Free Vehicle Ferry", "Fraser River Crossing", "Cable Ferry"],
     notes: "Ministry of Transportation contracted - reaction ferry"
   }
 ];

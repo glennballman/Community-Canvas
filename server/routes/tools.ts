@@ -9,7 +9,7 @@ router.get('/', requireAuth, requireTenant, async (req: Request, res: Response) 
     const tenantReq = req as TenantRequest;
     const tenantId = tenantReq.ctx!.tenant_id;
     const result = await tenantReq.tenantQuery!(
-      `SELECT * FROM tenant_tools WHERE tenant_id = $1 ORDER BY category NULLS LAST, name`,
+      `SELECT * FROM cc_tenant_tools WHERE tenant_id = $1 ORDER BY category NULLS LAST, name`,
       [tenantId]
     );
     res.json({ tools: result.rows });
@@ -28,7 +28,7 @@ router.post('/', requireAuth, requireTenant, async (req: Request, res: Response)
     if (!name) return res.status(400).json({ error: 'name is required' });
 
     const result = await tenantReq.tenantQuery!(
-      `INSERT INTO tenant_tools (
+      `INSERT INTO cc_tenant_tools (
         tenant_id, name, category, description, policy, daily_rate, operator_required, availability_notes
       ) VALUES ($1::uuid, $2, $3, $4, $5, $6, $7, $8)
       RETURNING *`,
@@ -59,7 +59,7 @@ router.patch('/:id', requireAuth, requireTenant, async (req: Request, res: Respo
     const { name, category, description, policy, daily_rate, operator_required, availability_notes } = req.body;
 
     const result = await tenantReq.tenantQuery!(
-      `UPDATE tenant_tools SET
+      `UPDATE cc_tenant_tools SET
         name = COALESCE($3, name),
         category = COALESCE($4, category),
         description = COALESCE($5, description),
@@ -90,7 +90,7 @@ router.delete('/:id', requireAuth, requireTenant, async (req: Request, res: Resp
     const { id } = req.params;
 
     const result = await tenantReq.tenantQuery!(
-      `DELETE FROM tenant_tools WHERE id = $1::uuid AND tenant_id = $2::uuid RETURNING id`,
+      `DELETE FROM cc_tenant_tools WHERE id = $1::uuid AND tenant_id = $2::uuid RETURNING id`,
       [id, tenantId]
     );
 

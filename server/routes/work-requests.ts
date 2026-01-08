@@ -58,10 +58,10 @@ router.get('/', requireAuth, requireTenant, async (req: Request, res: Response) 
         wr.converted_to_project_id, wr.converted_at,
         c.id as person_id, c.given_name as contact_given_name, c.family_name as contact_family_name,
         p.id as property_id, p.name as property_name, p.address_line1 as property_address,
-        (SELECT COUNT(*) FROM work_request_notes wn WHERE wn.work_request_id = wr.id) as notes_count
-      FROM work_requests wr
-      LEFT JOIN people c ON wr.person_id = c.id
-      LEFT JOIN crm_properties p ON wr.property_id = p.id
+        (SELECT COUNT(*) FROM cc_work_request_notes wn WHERE wn.work_request_id = wr.id) as notes_count
+      FROM cc_work_requests wr
+      LEFT JOIN cc_people c ON wr.person_id = c.id
+      LEFT JOIN cc_crm_properties p ON wr.property_id = p.id
       ${whereClause}
       ORDER BY wr.created_at DESC
       LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
@@ -78,8 +78,8 @@ router.get('/', requireAuth, requireTenant, async (req: Request, res: Response) 
         COUNT(*) FILTER (WHERE status = 'completed') as count_completed,
         COUNT(*) FILTER (WHERE status = 'dropped') as count_dropped,
         COUNT(*) FILTER (WHERE status = 'spam') as count_spam
-      FROM work_requests wr
-      LEFT JOIN people c ON wr.person_id = c.id`,
+      FROM cc_work_requests wr
+      LEFT JOIN cc_people c ON wr.person_id = c.id`,
       []
     );
 
@@ -115,10 +115,10 @@ router.get('/:id', requireAuth, requireTenant, async (req: Request, res: Respons
         c.telephone as contact_telephone, c.email as contact_email,
         o.name as organization_name,
         p.name as property_name, p.address_line1 as property_address, p.city as property_city
-      FROM work_requests wr
-      LEFT JOIN people c ON wr.person_id = c.id
-      LEFT JOIN organizations o ON wr.organization_id = o.id
-      LEFT JOIN crm_properties p ON wr.property_id = p.id
+      FROM cc_work_requests wr
+      LEFT JOIN cc_people c ON wr.person_id = c.id
+      LEFT JOIN cc_organizations o ON wr.organization_id = o.id
+      LEFT JOIN cc_crm_properties p ON wr.property_id = p.id
       WHERE wr.id = $1`,
       [id]
     );
@@ -128,7 +128,7 @@ router.get('/:id', requireAuth, requireTenant, async (req: Request, res: Respons
     }
 
     const notesResult = await tenantReq.tenantQuery!(
-      `SELECT * FROM work_request_notes WHERE work_request_id = $1 ORDER BY created_at DESC`,
+      `SELECT * FROM cc_work_request_notes WHERE work_request_id = $1 ORDER BY created_at DESC`,
       [id]
     );
 
@@ -172,7 +172,7 @@ router.post('/', requireAuth, requireTenant, async (req: Request, res: Response)
     }
 
     const result = await tenantReq.tenantQuery!(
-      `INSERT INTO work_requests (
+      `INSERT INTO cc_work_requests (
         tenant_id, contact_channel_value, contact_channel_type, contact_channel_notes,
         person_id, organization_id, property_id, unit_id, location_text,
         summary, description, category, priority, source, referral_source,
@@ -219,7 +219,7 @@ router.put('/:id', requireAuth, requireTenant, async (req: Request, res: Respons
     } = req.body;
 
     const result = await tenantReq.tenantQuery!(
-      `UPDATE work_requests SET
+      `UPDATE cc_work_requests SET
         contact_channel_value = COALESCE($2, contact_channel_value),
         contact_channel_type = COALESCE($3, contact_channel_type),
         contact_channel_notes = $4,
@@ -273,7 +273,7 @@ router.post('/:id/book', requireAuth, requireTenant, async (req: Request, res: R
 
     // Get the work request
     const wrResult = await tenantReq.tenantQuery!(
-      `SELECT * FROM work_requests WHERE id = $1`,
+      `SELECT * FROM cc_work_requests WHERE id = $1`,
       [id]
     );
 
@@ -289,7 +289,7 @@ router.post('/:id/book', requireAuth, requireTenant, async (req: Request, res: R
 
     // Create the project
     const projectResult = await tenantReq.tenantQuery!(
-      `INSERT INTO projects (
+      `INSERT INTO cc_projects (
         tenant_id, title, description, person_id, organization_id, property_id, unit_id, location_text,
         status, quoted_amount, scheduled_start, source_work_request_id, source, created_by_actor_id
       ) VALUES (
@@ -316,7 +316,7 @@ router.post('/:id/book', requireAuth, requireTenant, async (req: Request, res: R
 
     // Update work request status to booked
     await tenantReq.tenantQuery!(
-      `UPDATE work_requests SET 
+      `UPDATE cc_work_requests SET 
         status = 'booked',
         converted_to_project_id = $2,
         converted_at = NOW(),
@@ -344,7 +344,7 @@ router.post('/:id/drop', requireAuth, requireTenant, async (req: Request, res: R
     const { reason } = req.body;
 
     const result = await tenantReq.tenantQuery!(
-      `UPDATE work_requests SET 
+      `UPDATE cc_work_requests SET 
         status = 'dropped'::work_request_status,
         closed_reason = $2
       WHERE id = $1
@@ -376,7 +376,7 @@ router.post('/:id/notes', requireAuth, requireTenant, async (req: Request, res: 
     }
 
     const result = await tenantReq.tenantQuery!(
-      `INSERT INTO work_request_notes (work_request_id, content, created_by_actor_id)
+      `INSERT INTO cc_work_request_notes (work_request_id, content, created_by_actor_id)
        VALUES ($1, $2, $3)
        RETURNING *`,
       [id, content, actorId]
@@ -396,7 +396,7 @@ router.get('/:id/notes', requireAuth, requireTenant, async (req: Request, res: R
     const { id } = req.params;
 
     const result = await tenantReq.tenantQuery!(
-      `SELECT * FROM work_request_notes WHERE work_request_id = $1 ORDER BY created_at DESC`,
+      `SELECT * FROM cc_work_request_notes WHERE work_request_id = $1 ORDER BY created_at DESC`,
       [id]
     );
 

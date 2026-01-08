@@ -59,7 +59,7 @@ export class WeatherPipeline extends BasePipeline {
     console.log('[Weather] Fetching BC weather data...');
     
     const observations: any[] = [];
-    const alerts: any[] = [];
+    const cc_alerts: any[] = [];
     
     for (const station of BC_STATIONS) {
       try {
@@ -83,12 +83,12 @@ export class WeatherPipeline extends BasePipeline {
     }
     
     console.log(`[Weather] Fetched ${observations.length} station observations`);
-    return { observations, alerts };
+    return { observations, cc_alerts };
   }
 
-  transform(rawData: any): { observations: WeatherObservation[]; alerts: WeatherAlert[] } {
+  transform(rawData: any): { observations: WeatherObservation[]; cc_alerts: WeatherAlert[] } {
     const observations: WeatherObservation[] = [];
-    const alerts: WeatherAlert[] = [];
+    const cc_alerts: WeatherAlert[] = [];
     
     for (const obs of rawData.observations || []) {
       const xml = obs.xml || '';
@@ -120,7 +120,7 @@ export class WeatherPipeline extends BasePipeline {
         observedAt: obsTimeMatch ? obsTimeMatch[1] : new Date().toISOString()
       });
       
-      // Parse weather warnings/alerts
+      // Parse weather warnings/cc_alerts
       const warningMatches = xml.matchAll(/<warning.*?>([\s\S]*?)<\/warning>/g);
       for (const match of warningMatches) {
         const warningXml = match[1];
@@ -138,7 +138,7 @@ export class WeatherPipeline extends BasePipeline {
             severity = 'major';
           }
           
-          alerts.push({
+          cc_alerts.push({
             title: titleMatch[1],
             description: descMatch ? descMatch[1].trim() : '',
             type: typeMatch ? typeMatch[1] : 'unknown',
@@ -151,10 +151,10 @@ export class WeatherPipeline extends BasePipeline {
       }
     }
     
-    return { observations, alerts };
+    return { observations, cc_alerts };
   }
 
-  async load(data: { observations: WeatherObservation[]; alerts: WeatherAlert[] }): Promise<{ created: number; updated: number }> {
+  async load(data: { observations: WeatherObservation[]; cc_alerts: WeatherAlert[] }): Promise<{ created: number; updated: number }> {
     let created = 0;
     let updated = 0;
 
@@ -162,7 +162,7 @@ export class WeatherPipeline extends BasePipeline {
     for (const obs of data.observations) {
       // Find matching weather station entity
       const stationResult = await pool.query(`
-        SELECT id, primary_region_id FROM entities 
+        SELECT id, primary_region_id FROM cc_entities 
         WHERE entity_type_id = 'weather-station'
         AND (
           configuration->>'station_id' = $1
@@ -181,7 +181,7 @@ export class WeatherPipeline extends BasePipeline {
       } else {
         // Try to find by city match
         const cityResult = await pool.query(`
-          SELECT id FROM geo_regions 
+          SELECT id FROM cc_geo_regions 
           WHERE LOWER(name) LIKE $1 
           AND region_type = 'municipality'
           LIMIT 1
@@ -221,7 +221,7 @@ export class WeatherPipeline extends BasePipeline {
         
         // Update entity with current conditions
         await pool.query(`
-          UPDATE entities SET
+          UPDATE cc_entities SET
             configuration = configuration || $2::jsonb
           WHERE id = $1
         `, [
@@ -240,13 +240,13 @@ export class WeatherPipeline extends BasePipeline {
       }
     }
 
-    // Process weather alerts
-    for (const alert of data.alerts) {
+    // Process weather cc_alerts
+    for (const alert of data.cc_alerts) {
       const sourceKey = `eccc-weather-${alert.stationId}-${alert.title.replace(/\s+/g, '-').toLowerCase()}`;
       
       // Find region for the station
       const regionResult = await pool.query(`
-        SELECT id FROM geo_regions 
+        SELECT id FROM cc_geo_regions 
         WHERE LOWER(name) LIKE $1 
         LIMIT 1
       `, [`%${BC_STATIONS.find(s => s.id === alert.stationId)?.city.toLowerCase() || ''}%`]);
@@ -255,13 +255,13 @@ export class WeatherPipeline extends BasePipeline {
 
       // Check if alert already exists
       const existing = await pool.query(
-        `SELECT id FROM alerts WHERE source_key = $1 AND is_active = true`,
+        `SELECT id FROM cc_alerts WHERE source_key = $1 AND is_active = true`,
         [sourceKey]
       );
 
       if (existing.rows.length === 0) {
         await pool.query(`
-          INSERT INTO alerts (
+          INSERT INTO cc_alerts (
             alert_type, severity, signal_type, title, summary, message,
             region_id, details, effective_from, is_active, source_key, observed_at
           ) VALUES (

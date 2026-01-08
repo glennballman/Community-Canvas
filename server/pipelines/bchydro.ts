@@ -106,9 +106,9 @@ export class BCHydroPipeline extends BasePipeline {
     let created = 0;
     let updated = 0;
 
-    // Get all active BC Hydro alerts to track which ones to deactivate
+    // Get all active BC Hydro cc_alerts to track which ones to deactivate
     const activeAlerts = await pool.query(
-      `SELECT source_key FROM alerts WHERE alert_type = 'outage' AND is_active = true`
+      `SELECT source_key FROM cc_alerts WHERE alert_type = 'outage' AND is_active = true`
     );
     const activeSourceKeys = new Set(activeAlerts.rows.map(r => r.source_key));
     const processedKeys = new Set<string>();
@@ -132,7 +132,7 @@ export class BCHydroPipeline extends BasePipeline {
       let longitude: number | null = null;
       
       const regionResult = await pool.query(`
-        SELECT id, centroid_lat, centroid_lon FROM geo_regions 
+        SELECT id, centroid_lat, centroid_lon FROM cc_geo_regions 
         WHERE LOWER(name) LIKE $1 
         AND region_type IN ('municipality', 'regional-district')
         LIMIT 1
@@ -160,7 +160,7 @@ export class BCHydroPipeline extends BasePipeline {
 
       // Check if alert already exists
       const existing = await pool.query(
-        `SELECT id FROM alerts WHERE source_key = $1`,
+        `SELECT id FROM cc_alerts WHERE source_key = $1`,
         [sourceKey]
       );
 
@@ -178,7 +178,7 @@ export class BCHydroPipeline extends BasePipeline {
       if (existing.rows.length > 0) {
         // Update existing alert
         await pool.query(`
-          UPDATE alerts SET
+          UPDATE cc_alerts SET
             title = $2,
             summary = $3,
             message = $4,
@@ -217,7 +217,7 @@ export class BCHydroPipeline extends BasePipeline {
         }
         
         await pool.query(`
-          INSERT INTO alerts (
+          INSERT INTO cc_alerts (
             alert_type, severity, signal_type, title, summary, message,
             latitude, longitude, region_id, details,
             effective_from, effective_until, is_active,
@@ -249,7 +249,7 @@ export class BCHydroPipeline extends BasePipeline {
     const toResolve = [...activeSourceKeys].filter(k => !processedKeys.has(k));
     if (toResolve.length > 0) {
       await pool.query(`
-        UPDATE alerts SET 
+        UPDATE cc_alerts SET 
           is_active = false,
           resolved_at = NOW(),
           details = details || '{"status": "restored"}'::jsonb

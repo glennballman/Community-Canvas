@@ -93,7 +93,7 @@ router.post('/', async (req: Request, res: Response) => {
 
     const { run, workRequest } = await withTenantTransaction(req, async (client) => {
       const runResult = await client.query(
-        `INSERT INTO shared_service_runs (
+        `INSERT INTO cc_shared_service_runs (
           tenant_id, trade_category, service_description,
           contractor_name, contractor_contact_email, contractor_website,
           window_start, window_end, preferred_months,
@@ -127,7 +127,7 @@ router.post('/', async (req: Request, res: Response) => {
       const run = runResult.rows[0];
 
       const wrResult = await client.query(
-        `INSERT INTO work_requests (
+        `INSERT INTO cc_work_requests (
           tenant_id, owner_party_id, owner_individual_id,
           title, description, intake_mode, shared_run_id,
           property_address, postal_code,
@@ -149,7 +149,7 @@ router.post('/', async (req: Request, res: Response) => {
       const workRequest = wrResult.rows[0];
 
       await client.query(
-        `INSERT INTO shared_run_members (
+        `INSERT INTO cc_shared_run_members (
           run_id, work_request_id, owner_party_id, owner_individual_id,
           property_address, property_postal_code, property_community,
           unit_count, units, access_notes, status
@@ -172,7 +172,7 @@ router.post('/', async (req: Request, res: Response) => {
         const inviteToken = randomBytes(32).toString('hex');
         
         await client.query(
-          `INSERT INTO shared_run_invites (
+          `INSERT INTO cc_shared_run_invites (
             shared_run_id, contractor_name, contractor_email,
             contractor_phone, contractor_website,
             source, invite_token, status,
@@ -191,7 +191,7 @@ router.post('/', async (req: Request, res: Response) => {
         );
 
         await client.query(
-          `UPDATE shared_service_runs SET status = 'contractor_invited' WHERE id = $1`,
+          `UPDATE cc_shared_service_runs SET status = 'contractor_invited' WHERE id = $1`,
           [run.id]
         );
       }
@@ -230,8 +230,8 @@ router.get('/:id', async (req: Request, res: Response) => {
         r.*,
         COUNT(m.id) FILTER (WHERE m.status IN ('interested', 'joined', 'scheduled')) as member_count,
         SUM(m.unit_count) FILTER (WHERE m.status IN ('interested', 'joined', 'scheduled')) as total_units
-       FROM shared_service_runs r
-       LEFT JOIN shared_run_members m ON m.run_id = r.id
+       FROM cc_shared_service_runs r
+       LEFT JOIN cc_shared_run_members m ON m.run_id = r.id
        WHERE r.id = $1
        GROUP BY r.id`,
       [id]
@@ -300,7 +300,7 @@ router.post('/:id/join', async (req: Request, res: Response) => {
 
     const runResult = await tenantQuery(
       req,
-      `SELECT * FROM shared_service_runs WHERE id = $1 AND status IN ('forming', 'contractor_invited', 'contractor_claimed')`,
+      `SELECT * FROM cc_shared_service_runs WHERE id = $1 AND status IN ('forming', 'contractor_invited', 'contractor_claimed')`,
       [id]
     );
 
@@ -312,7 +312,7 @@ router.post('/:id/join', async (req: Request, res: Response) => {
 
     const existingResult = await tenantQuery(
       req,
-      `SELECT id FROM shared_run_members 
+      `SELECT id FROM cc_shared_run_members 
        WHERE run_id = $1 AND owner_party_id = $2 AND status != 'withdrawn'`,
       [id, actor.actor_party_id]
     );
@@ -323,7 +323,7 @@ router.post('/:id/join', async (req: Request, res: Response) => {
 
     const { member, workRequest } = await withTenantTransaction(req, async (client) => {
       const wrResult = await client.query(
-        `INSERT INTO work_requests (
+        `INSERT INTO cc_work_requests (
           tenant_id, owner_party_id, owner_individual_id,
           title, description, intake_mode, shared_run_id,
           property_address, postal_code,
@@ -345,7 +345,7 @@ router.post('/:id/join', async (req: Request, res: Response) => {
       const workRequest = wrResult.rows[0];
 
       const memberResult = await client.query(
-        `INSERT INTO shared_run_members (
+        `INSERT INTO cc_shared_run_members (
           run_id, work_request_id, owner_party_id, owner_individual_id,
           property_address, property_postal_code, property_community,
           unit_count, units, access_notes, special_requirements, status
@@ -406,7 +406,7 @@ router.post('/:id/claim', async (req: Request, res: Response) => {
     if (invite_token) {
       const inviteResult = await tenantQuery(
         req,
-        `SELECT * FROM shared_run_invites 
+        `SELECT * FROM cc_shared_run_invites 
          WHERE shared_run_id = $1 AND invite_token = $2 AND status != 'claimed'`,
         [id, invite_token]
       );
@@ -418,7 +418,7 @@ router.post('/:id/claim', async (req: Request, res: Response) => {
 
     const runResult = await tenantQuery(
       req,
-      `SELECT * FROM shared_service_runs 
+      `SELECT * FROM cc_shared_service_runs 
        WHERE id = $1 AND status IN ('forming', 'contractor_invited') AND contractor_party_id IS NULL`,
       [id]
     );
@@ -429,7 +429,7 @@ router.post('/:id/claim', async (req: Request, res: Response) => {
 
     const membersResult = await withTenantTransaction(req, async (client) => {
       await client.query(
-        `UPDATE shared_service_runs SET
+        `UPDATE cc_shared_service_runs SET
           contractor_party_id = $1,
           status = 'contractor_claimed',
           updated_at = now()
@@ -439,7 +439,7 @@ router.post('/:id/claim', async (req: Request, res: Response) => {
 
       if (invite_token) {
         await client.query(
-          `UPDATE shared_run_invites SET
+          `UPDATE cc_shared_run_invites SET
             status = 'claimed',
             claimed_party_id = $1,
             claimed_at = now()
@@ -449,15 +449,15 @@ router.post('/:id/claim', async (req: Request, res: Response) => {
       }
 
       const membersResult = await client.query(
-        `SELECT m.*, wr.id as wr_id FROM shared_run_members m
-         JOIN work_requests wr ON m.work_request_id = wr.id
+        `SELECT m.*, wr.id as wr_id FROM cc_shared_run_members m
+         JOIN cc_work_requests wr ON m.work_request_id = wr.id
          WHERE m.run_id = $1 AND m.status IN ('interested', 'joined')`,
         [id]
       );
 
       for (const member of membersResult.rows) {
         await client.query(
-          `INSERT INTO conversations (
+          `INSERT INTO cc_conversations (
             work_request_id, owner_party_id, contractor_party_id, state
           ) VALUES ($1, $2, $3, 'interest')
           ON CONFLICT (work_request_id, contractor_party_id) DO NOTHING`,
@@ -503,7 +503,7 @@ router.get('/', async (req: Request, res: Response) => {
         r.status, r.window_start, r.window_end,
         r.current_member_count, r.mobilization_fee_total,
         r.pricing_model
-      FROM shared_service_runs r
+      FROM cc_shared_service_runs r
       WHERE r.tenant_id = $1
     `;
     const params: any[] = [tenant.id];
@@ -577,7 +577,7 @@ router.post('/:id/outreach-campaign', async (req: Request, res: Response) => {
 
     const runResult = await tenantQuery(
       req,
-      `SELECT * FROM shared_service_runs WHERE id = $1 AND contractor_party_id = $2`,
+      `SELECT * FROM cc_shared_service_runs WHERE id = $1 AND contractor_party_id = $2`,
       [id, actor.actor_party_id]
     );
 
@@ -587,7 +587,7 @@ router.post('/:id/outreach-campaign', async (req: Request, res: Response) => {
 
     const result = await tenantQuery(
       req,
-      `INSERT INTO shared_outreach_campaigns (
+      `INSERT INTO cc_shared_outreach_campaigns (
         run_id, contractor_party_id, campaign_name, message_template,
         target_emails, target_phones
       ) VALUES ($1, $2, $3, $4, $5, $6)
@@ -621,7 +621,7 @@ router.get('/:id/contractor-margins', async (req: Request, res: Response) => {
 
     const runResult = await tenantQuery(
       req,
-      `SELECT * FROM shared_service_runs WHERE id = $1 AND contractor_party_id = $2`,
+      `SELECT * FROM cc_shared_service_runs WHERE id = $1 AND contractor_party_id = $2`,
       [id, actor.actor_party_id]
     );
 

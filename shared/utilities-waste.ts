@@ -17,7 +17,7 @@ export interface WasteFacility {
   operator?: string;
   capacity_tonnes_day?: number;
   accepts_public?: boolean;
-  services?: string[];
+  cc_services?: string[];
   phone?: string;
   notes?: string;
 }
@@ -62,7 +62,7 @@ export const BC_WASTE_FACILITIES: WasteFacility[] = [
     longitude: -122.9833,
     operator: "Metro Vancouver",
     accepts_public: true,
-    services: ["Recycling", "Household hazardous waste", "Electronics"]
+    cc_services: ["Recycling", "Household hazardous waste", "Electronics"]
   },
   {
     id: "waste-north-shore-transfer",
@@ -74,7 +74,7 @@ export const BC_WASTE_FACILITIES: WasteFacility[] = [
     longitude: -123.0667,
     operator: "Metro Vancouver",
     accepts_public: true,
-    services: ["Garbage", "Recycling", "Yard waste", "Large items"]
+    cc_services: ["Garbage", "Recycling", "Yard waste", "Large items"]
   },
   {
     id: "waste-surrey-transfer",
@@ -86,7 +86,7 @@ export const BC_WASTE_FACILITIES: WasteFacility[] = [
     longitude: -122.8167,
     operator: "Metro Vancouver",
     accepts_public: true,
-    services: ["Garbage", "Recycling", "Green waste"]
+    cc_services: ["Garbage", "Recycling", "Green waste"]
   },
   {
     id: "waste-coquitlam-transfer",
@@ -131,7 +131,7 @@ export const BC_WASTE_FACILITIES: WasteFacility[] = [
     longitude: -122.9333,
     operator: "Metro Vancouver",
     capacity_tonnes_day: 500000,
-    notes: "Largest wastewater plant in BC - serves 1.4 million people"
+    notes: "Largest wastewater plant in BC - serves 1.4 million cc_people"
   },
   {
     id: "waste-lions-gate-wastewater",
@@ -216,7 +216,7 @@ export const BC_WASTE_FACILITIES: WasteFacility[] = [
     longitude: -123.4833,
     operator: "Capital Regional District",
     accepts_public: true,
-    services: ["Garbage", "Recycling", "Yard waste", "Hazardous waste"],
+    cc_services: ["Garbage", "Recycling", "Yard waste", "Hazardous waste"],
     notes: "Only landfill serving Greater Victoria"
   },
   {
@@ -521,7 +521,7 @@ export const BC_WASTE_FACILITIES: WasteFacility[] = [
     latitude: 49.1667,
     longitude: -123.0833,
     operator: "Harvest Power",
-    services: ["Food waste", "Yard waste", "Biogas generation"],
+    cc_services: ["Food waste", "Yard waste", "Biogas generation"],
     notes: "Converts organic waste to renewable natural gas"
   },
   {
@@ -533,7 +533,7 @@ export const BC_WASTE_FACILITIES: WasteFacility[] = [
     latitude: 49.1333,
     longitude: -122.8000,
     operator: "City of Surrey",
-    services: ["Food waste", "Biogas generation"],
+    cc_services: ["Food waste", "Biogas generation"],
     notes: "District energy from organic waste"
   },
 
@@ -550,7 +550,7 @@ export const BC_WASTE_FACILITIES: WasteFacility[] = [
     longitude: -122.9667,
     operator: "Metro Vancouver",
     accepts_public: true,
-    services: ["Paint", "Solvents", "Pesticides", "Electronics", "Batteries"]
+    cc_services: ["Paint", "Solvents", "Pesticides", "Electronics", "Batteries"]
   },
   {
     id: "waste-surrey-hazmat",
@@ -562,7 +562,7 @@ export const BC_WASTE_FACILITIES: WasteFacility[] = [
     longitude: -122.8000,
     operator: "City of Surrey",
     accepts_public: true,
-    services: ["Paint", "Chemicals", "Electronics"]
+    cc_services: ["Paint", "Chemicals", "Electronics"]
   }
 ];
 

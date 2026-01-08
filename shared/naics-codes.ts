@@ -275,7 +275,7 @@ export const categoryToNAICS: Record<string, NAICSCode> = {
   "Windows": { code: "238170", subsector: "238", sector: "23", title: "Siding Contractors" },
   "Windows/Doors": { code: "238170", subsector: "238", sector: "23", title: "Siding Contractors" },
   "Building Controls": { code: "238210", subsector: "238", sector: "23", title: "Electrical Contractors" },
-  "home-services": { code: "236118", subsector: "236", sector: "23", title: "Residential Remodelers" },
+  "home-cc_services": { code: "236118", subsector: "236", sector: "23", title: "Residential Remodelers" },
 
   // ============================================================================
   // SECTOR 31-33: MANUFACTURING
@@ -454,7 +454,7 @@ export const categoryToNAICS: Record<string, NAICSCode> = {
   // ============================================================================
   // SECTOR 51: INFORMATION
   // ============================================================================
-  "media": { code: "511000", subsector: "511", sector: "51", title: "Publishing Industries" },
+  "cc_media": { code: "511000", subsector: "511", sector: "51", title: "Publishing Industries" },
   "Newspaper": { code: "511110", subsector: "511", sector: "51", title: "Newspaper Publishers" },
   "Community News": { code: "511110", subsector: "511", sector: "51", title: "Newspaper Publishers" },
   "Online Magazine": { code: "511120", subsector: "511", sector: "51", title: "Periodical Publishers" },
@@ -481,7 +481,7 @@ export const categoryToNAICS: Record<string, NAICSCode> = {
   "Communications": { code: "517311", subsector: "517", sector: "51", title: "Wired Telecommunications Carriers" },
   "Communications Provider": { code: "517311", subsector: "517", sector: "51", title: "Wired Telecommunications Carriers" },
   "Internet Provider": { code: "517311", subsector: "517", sector: "51", title: "Wired Telecommunications Carriers" },
-  "Cloud services": { code: "518210", subsector: "518", sector: "51", title: "Data Processing, Hosting, Related Services" },
+  "Cloud cc_services": { code: "518210", subsector: "518", sector: "51", title: "Data Processing, Hosting, Related Services" },
   "Data Centre": { code: "518210", subsector: "518", sector: "51", title: "Data Processing, Hosting, Related Services" },
   "News Media": { code: "519130", subsector: "519", sector: "51", title: "Internet Publishing and Broadcasting" },
   "Digital Media": { code: "519130", subsector: "519", sector: "51", title: "Internet Publishing and Broadcasting" },
@@ -491,7 +491,7 @@ export const categoryToNAICS: Record<string, NAICSCode> = {
   // SECTOR 52: FINANCE AND INSURANCE
   // ============================================================================
   "banking-finance": { code: "522000", subsector: "522", sector: "52", title: "Credit Intermediation and Related Activities" },
-  "financial-services": { code: "522000", subsector: "522", sector: "52", title: "Credit Intermediation and Related Activities" },
+  "financial-cc_services": { code: "522000", subsector: "522", sector: "52", title: "Credit Intermediation and Related Activities" },
   "finance": { code: "522000", subsector: "522", sector: "52", title: "Credit Intermediation and Related Activities" },
   "Bank": { code: "522110", subsector: "522", sector: "52", title: "Commercial Banking" },
   "Credit Union": { code: "522130", subsector: "522", sector: "52", title: "Credit Unions" },
@@ -532,10 +532,10 @@ export const categoryToNAICS: Record<string, NAICSCode> = {
   // ============================================================================
   // SECTOR 54: PROFESSIONAL, SCIENTIFIC, AND TECHNICAL SERVICES
   // ============================================================================
-  "professional-services": { code: "541000", subsector: "541", sector: "54", title: "Professional, Scientific, and Technical Services" },
+  "professional-cc_services": { code: "541000", subsector: "541", sector: "54", title: "Professional, Scientific, and Technical Services" },
   "professional": { code: "541000", subsector: "541", sector: "54", title: "Professional, Scientific, and Technical Services" },
-  "Professional services": { code: "541000", subsector: "541", sector: "54", title: "Professional, Scientific, and Technical Services" },
-  "services": { code: "541000", subsector: "541", sector: "54", title: "Professional, Scientific, and Technical Services" },
+  "Professional cc_services": { code: "541000", subsector: "541", sector: "54", title: "Professional, Scientific, and Technical Services" },
+  "cc_services": { code: "541000", subsector: "541", sector: "54", title: "Professional, Scientific, and Technical Services" },
   "legal": { code: "541110", subsector: "541", sector: "54", title: "Offices of Lawyers" },
   "Law Firm": { code: "541110", subsector: "541", sector: "54", title: "Offices of Lawyers" },
   "Law firm": { code: "541110", subsector: "541", sector: "54", title: "Offices of Lawyers" },

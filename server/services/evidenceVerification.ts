@@ -40,7 +40,7 @@ export async function verifyAllEvidence(): Promise<EvidenceResult[]> {
   
   // Get all evidence records
   const evidenceResult = await serviceQuery(
-    `SELECT * FROM system_evidence ORDER BY is_required DESC, artifact_type, artifact_name`
+    `SELECT * FROM cc_system_evidence ORDER BY is_required DESC, artifact_type, artifact_name`
   );
   
   const evidence = evidenceResult.rows as EvidenceItem[];
@@ -51,7 +51,7 @@ export async function verifyAllEvidence(): Promise<EvidenceResult[]> {
     
     // Update verification status in database
     await serviceQuery(
-      `UPDATE system_evidence 
+      `UPDATE cc_system_evidence 
        SET verification_status = $1, last_verified_at = now(), verified_by = 'system', updated_at = now()
        WHERE id = $2`,
       [result.status, item.id]
@@ -77,7 +77,7 @@ export async function getAllEvidence(): Promise<EvidenceItem[]> {
       verification_status,
       last_verified_at,
       description
-    FROM system_evidence
+    FROM cc_system_evidence
     ORDER BY is_required DESC, artifact_type, artifact_name`
   );
   

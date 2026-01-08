@@ -2,18 +2,18 @@
  * CRM ROUTES - Contacts, Properties, Organizations
  * 
  * Endpoints:
- * - GET/POST /api/crm/contacts (formerly people)
+ * - GET/POST /api/crm/contacts (formerly cc_people)
  * - GET/PUT/DELETE /api/crm/contacts/:id
  * - GET/POST /api/crm/properties (formerly places)
  * - GET/PUT/DELETE /api/crm/properties/:id
- * - GET/POST /api/crm/organizations (formerly orgs)
- * - GET/PUT/DELETE /api/crm/organizations/:id
+ * - GET/POST /api/crm/cc_organizations (formerly orgs)
+ * - GET/PUT/DELETE /api/crm/cc_organizations/:id
  * - POST /api/crm/properties/:id/photos
  * 
  * Legacy aliases for backwards compatibility:
- * - /api/crm/people -> /api/crm/contacts
+ * - /api/crm/cc_people -> /api/crm/contacts
  * - /api/crm/places -> /api/crm/properties
- * - /api/crm/orgs -> /api/crm/organizations
+ * - /api/crm/orgs -> /api/crm/cc_organizations
  */
 
 import { Router, Request, Response } from 'express';
@@ -46,10 +46,10 @@ router.get('/properties', requireAuth, requireTenant, async (req: Request, res: 
         p.latitude, p.longitude, p.notes, p.created_at, p.updated_at,
         c.given_name as owner_given_name, c.family_name as owner_family_name,
         org.name as owner_org_name,
-        (SELECT COUNT(*) FROM crm_property_photos ph WHERE ph.property_id = p.id) as photo_count
-      FROM crm_properties p
-      LEFT JOIN people c ON p.owner_person_id = c.id
-      LEFT JOIN organizations org ON p.owner_organization_id = org.id
+        (SELECT COUNT(*) FROM cc_crm_property_photos ph WHERE ph.property_id = p.id) as photo_count
+      FROM cc_crm_properties p
+      LEFT JOIN cc_people c ON p.owner_person_id = c.id
+      LEFT JOIN cc_organizations org ON p.owner_organization_id = org.id
       ${whereClause}
       ORDER BY p.updated_at DESC
       LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
@@ -57,7 +57,7 @@ router.get('/properties', requireAuth, requireTenant, async (req: Request, res: 
     );
 
     const countResult = await tenantReq.tenantQuery!(
-      `SELECT COUNT(*) as total FROM crm_properties p ${whereClause}`,
+      `SELECT COUNT(*) as total FROM cc_crm_properties p ${whereClause}`,
       params
     );
 
@@ -81,9 +81,9 @@ router.get('/properties/:id', requireAuth, requireTenant, async (req: Request, r
         p.*,
         c.id as owner_person_id, c.given_name as owner_given_name, c.family_name as owner_family_name, c.telephone as owner_telephone, c.email as owner_email,
         org.id as owner_organization_id, org.name as owner_org_name
-      FROM crm_properties p
-      LEFT JOIN people c ON p.owner_person_id = c.id
-      LEFT JOIN organizations org ON p.owner_organization_id = org.id
+      FROM cc_crm_properties p
+      LEFT JOIN cc_people c ON p.owner_person_id = c.id
+      LEFT JOIN cc_organizations org ON p.owner_organization_id = org.id
       WHERE p.id = $1`,
       [id]
     );
@@ -94,7 +94,7 @@ router.get('/properties/:id', requireAuth, requireTenant, async (req: Request, r
 
     const photosResult = await tenantReq.tenantQuery!(
       `SELECT id, url, caption, taken_at, sort_order, created_at
-       FROM crm_property_photos
+       FROM cc_crm_property_photos
        WHERE property_id = $1
        ORDER BY sort_order ASC, created_at DESC`,
       [id]
@@ -121,7 +121,7 @@ router.post('/properties', requireAuth, requireTenant, async (req: Request, res:
     }
 
     const result = await tenantReq.tenantQuery!(
-      `INSERT INTO crm_properties (tenant_id, name, place_type, owner_person_id, owner_organization_id, address_line1, address_line2, city, province, postal_code, country, latitude, longitude, notes)
+      `INSERT INTO cc_crm_properties (tenant_id, name, place_type, owner_person_id, owner_organization_id, address_line1, address_line2, city, province, postal_code, country, latitude, longitude, notes)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
        RETURNING *`,
       [tenantId, name, place_type || 'property', owner_person_id || null, owner_organization_id || null, address_line1 || null, address_line2 || null, city || null, province || 'BC', postal_code || null, country || 'Canada', latitude || null, longitude || null, notes || null]
@@ -141,7 +141,7 @@ router.put('/properties/:id', requireAuth, requireTenant, async (req: Request, r
     const { name, place_type, owner_person_id, owner_organization_id, address_line1, address_line2, city, province, postal_code, country, latitude, longitude, notes } = req.body;
 
     const result = await tenantReq.tenantQuery!(
-      `UPDATE crm_properties SET
+      `UPDATE cc_crm_properties SET
         name = COALESCE($2, name),
         place_type = COALESCE($3, place_type),
         owner_person_id = $4,
@@ -175,7 +175,7 @@ router.delete('/properties/:id', requireAuth, requireTenant, async (req: Request
   const tenantReq = req as TenantRequest;
   try {
     const { id } = req.params;
-    const result = await tenantReq.tenantQuery!(`DELETE FROM crm_properties WHERE id = $1 RETURNING id`, [id]);
+    const result = await tenantReq.tenantQuery!(`DELETE FROM cc_crm_properties WHERE id = $1 RETURNING id`, [id]);
     
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Property not found' });
@@ -199,7 +199,7 @@ router.post('/properties/:id/photos', requireAuth, requireTenant, async (req: Re
     }
 
     const result = await tenantReq.tenantQuery!(
-      `INSERT INTO crm_property_photos (tenant_id, property_id, url, caption, taken_at)
+      `INSERT INTO cc_crm_property_photos (tenant_id, property_id, url, caption, taken_at)
        VALUES ($1, $2, $3, $4, $5)
        RETURNING *`,
       [tenantId, id, url, caption || null, taken_at || null]
@@ -233,10 +233,10 @@ router.get('/places', requireAuth, requireTenant, async (req: Request, res: Resp
         p.latitude, p.longitude, p.notes, p.created_at, p.updated_at,
         c.given_name as owner_given_name, c.family_name as owner_family_name,
         org.name as owner_org_name,
-        (SELECT COUNT(*) FROM crm_property_photos ph WHERE ph.property_id = p.id) as photo_count
-      FROM crm_properties p
-      LEFT JOIN people c ON p.owner_person_id = c.id
-      LEFT JOIN organizations org ON p.owner_organization_id = org.id
+        (SELECT COUNT(*) FROM cc_crm_property_photos ph WHERE ph.property_id = p.id) as photo_count
+      FROM cc_crm_properties p
+      LEFT JOIN cc_people c ON p.owner_person_id = c.id
+      LEFT JOIN cc_organizations org ON p.owner_organization_id = org.id
       ${whereClause}
       ORDER BY p.updated_at DESC
       LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
@@ -244,7 +244,7 @@ router.get('/places', requireAuth, requireTenant, async (req: Request, res: Resp
     );
 
     const countResult = await tenantReq.tenantQuery!(
-      `SELECT COUNT(*) as total FROM crm_properties p ${whereClause}`,
+      `SELECT COUNT(*) as total FROM cc_crm_properties p ${whereClause}`,
       params
     );
 
@@ -281,8 +281,8 @@ router.get('/contacts', requireAuth, requireTenant, async (req: Request, res: Re
         c.id, c.given_name, c.family_name, c.display_name, c.telephone, c.email, c.role_title,
         c.city, c.province, c.notes, c.created_at, c.updated_at,
         o.name as org_name
-      FROM people c
-      LEFT JOIN organizations o ON c.organization_id = o.id
+      FROM cc_people c
+      LEFT JOIN cc_organizations o ON c.organization_id = o.id
       ${whereClause}
       ORDER BY c.family_name ASC, c.given_name ASC
       LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
@@ -290,7 +290,7 @@ router.get('/contacts', requireAuth, requireTenant, async (req: Request, res: Re
     );
 
     const countResult = await tenantReq.tenantQuery!(
-      `SELECT COUNT(*) as total FROM people c ${whereClause}`,
+      `SELECT COUNT(*) as total FROM cc_people c ${whereClause}`,
       params
     );
 
@@ -311,8 +311,8 @@ router.get('/contacts/:id', requireAuth, requireTenant, async (req: Request, res
 
     const result = await tenantReq.tenantQuery!(
       `SELECT c.*, o.name as org_name
-       FROM people c
-       LEFT JOIN organizations o ON c.organization_id = o.id
+       FROM cc_people c
+       LEFT JOIN cc_organizations o ON c.organization_id = o.id
        WHERE c.id = $1`,
       [id]
     );
@@ -322,7 +322,7 @@ router.get('/contacts/:id', requireAuth, requireTenant, async (req: Request, res
     }
 
     const propertiesResult = await tenantReq.tenantQuery!(
-      `SELECT id, name, address_line1, city FROM crm_properties WHERE owner_person_id = $1 ORDER BY name`,
+      `SELECT id, name, address_line1, city FROM cc_crm_properties WHERE owner_person_id = $1 ORDER BY name`,
       [id]
     );
 
@@ -347,7 +347,7 @@ router.post('/contacts', requireAuth, requireTenant, async (req: Request, res: R
     }
 
     const result = await tenantReq.tenantQuery!(
-      `INSERT INTO people (tenant_id, given_name, family_name, display_name, telephone, email, role_title, organization_id, address_line1, address_line2, city, province, postal_code, country, notes)
+      `INSERT INTO cc_people (tenant_id, given_name, family_name, display_name, telephone, email, role_title, organization_id, address_line1, address_line2, city, province, postal_code, country, notes)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
        RETURNING *`,
       [tenantId, given_name, family_name || null, display_name || null, telephone || null, email || null, role_title || null, organization_id || null, address_line1 || null, address_line2 || null, city || null, province || 'BC', postal_code || null, country || 'Canada', notes || null]
@@ -367,7 +367,7 @@ router.put('/contacts/:id', requireAuth, requireTenant, async (req: Request, res
     const { given_name, family_name, display_name, telephone, email, role_title, organization_id, address_line1, address_line2, city, province, postal_code, country, notes } = req.body;
 
     const result = await tenantReq.tenantQuery!(
-      `UPDATE people SET
+      `UPDATE cc_people SET
         given_name = COALESCE($2, given_name),
         family_name = $3,
         display_name = $4,
@@ -402,7 +402,7 @@ router.delete('/contacts/:id', requireAuth, requireTenant, async (req: Request, 
   const tenantReq = req as TenantRequest;
   try {
     const { id } = req.params;
-    const result = await tenantReq.tenantQuery!(`DELETE FROM people WHERE id = $1 RETURNING id`, [id]);
+    const result = await tenantReq.tenantQuery!(`DELETE FROM cc_people WHERE id = $1 RETURNING id`, [id]);
     
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Contact not found' });
@@ -414,8 +414,8 @@ router.delete('/contacts/:id', requireAuth, requireTenant, async (req: Request, 
   }
 });
 
-// Legacy alias: /people -> /contacts (reuse same handler)
-router.get('/people', requireAuth, requireTenant, async (req: Request, res: Response) => {
+// Legacy alias: /cc_people -> /contacts (reuse same handler)
+router.get('/cc_people', requireAuth, requireTenant, async (req: Request, res: Response) => {
   const tenantReq = req as TenantRequest;
   try {
     const { search, limit = '50', offset = '0' } = req.query;
@@ -434,8 +434,8 @@ router.get('/people', requireAuth, requireTenant, async (req: Request, res: Resp
         c.id, c.given_name, c.family_name, c.display_name, c.telephone, c.email, c.role_title,
         c.city, c.province, c.notes, c.created_at, c.updated_at,
         o.name as org_name
-      FROM people c
-      LEFT JOIN organizations o ON c.organization_id = o.id
+      FROM cc_people c
+      LEFT JOIN cc_organizations o ON c.organization_id = o.id
       ${whereClause}
       ORDER BY c.family_name ASC, c.given_name ASC
       LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
@@ -443,17 +443,17 @@ router.get('/people', requireAuth, requireTenant, async (req: Request, res: Resp
     );
 
     const countResult = await tenantReq.tenantQuery!(
-      `SELECT COUNT(*) as total FROM people c ${whereClause}`,
+      `SELECT COUNT(*) as total FROM cc_people c ${whereClause}`,
       params
     );
 
     res.json({
-      people: result.rows,
+      cc_people: result.rows,
       total: parseInt(countResult.rows[0].total, 10)
     });
   } catch (error) {
-    console.error('Error fetching people:', error);
-    res.status(500).json({ error: 'Failed to fetch people' });
+    console.error('Error fetching cc_people:', error);
+    res.status(500).json({ error: 'Failed to fetch cc_people' });
   }
 });
 
@@ -461,7 +461,7 @@ router.get('/people', requireAuth, requireTenant, async (req: Request, res: Resp
 // ORGANIZATIONS (formerly ORGS)
 // ============================================================================
 
-router.get('/organizations', requireAuth, requireTenant, async (req: Request, res: Response) => {
+router.get('/cc_organizations', requireAuth, requireTenant, async (req: Request, res: Response) => {
   const tenantReq = req as TenantRequest;
   try {
     const { search, limit = '50', offset = '0' } = req.query;
@@ -479,8 +479,8 @@ router.get('/organizations', requireAuth, requireTenant, async (req: Request, re
       `SELECT 
         o.id, o.name, o.legal_name, o.telephone, o.email, o.website, o.city, o.province,
         o.notes, o.created_at, o.updated_at,
-        (SELECT COUNT(*) FROM people c WHERE c.organization_id = o.id) as contacts_count
-      FROM organizations o
+        (SELECT COUNT(*) FROM cc_people c WHERE c.organization_id = o.id) as contacts_count
+      FROM cc_organizations o
       ${whereClause}
       ORDER BY o.name ASC
       LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
@@ -488,27 +488,27 @@ router.get('/organizations', requireAuth, requireTenant, async (req: Request, re
     );
 
     const countResult = await tenantReq.tenantQuery!(
-      `SELECT COUNT(*) as total FROM organizations o ${whereClause}`,
+      `SELECT COUNT(*) as total FROM cc_organizations o ${whereClause}`,
       params
     );
 
     res.json({
-      organizations: result.rows,
+      cc_organizations: result.rows,
       total: parseInt(countResult.rows[0].total, 10)
     });
   } catch (error) {
-    console.error('Error fetching organizations:', error);
-    res.status(500).json({ error: 'Failed to fetch organizations' });
+    console.error('Error fetching cc_organizations:', error);
+    res.status(500).json({ error: 'Failed to fetch cc_organizations' });
   }
 });
 
-router.get('/organizations/:id', requireAuth, requireTenant, async (req: Request, res: Response) => {
+router.get('/cc_organizations/:id', requireAuth, requireTenant, async (req: Request, res: Response) => {
   const tenantReq = req as TenantRequest;
   try {
     const { id } = req.params;
 
     const result = await tenantReq.tenantQuery!(
-      `SELECT * FROM organizations WHERE id = $1`,
+      `SELECT * FROM cc_organizations WHERE id = $1`,
       [id]
     );
 
@@ -517,12 +517,12 @@ router.get('/organizations/:id', requireAuth, requireTenant, async (req: Request
     }
 
     const contactsResult = await tenantReq.tenantQuery!(
-      `SELECT id, given_name, family_name, role_title, telephone, email FROM people WHERE organization_id = $1 ORDER BY family_name, given_name`,
+      `SELECT id, given_name, family_name, role_title, telephone, email FROM cc_people WHERE organization_id = $1 ORDER BY family_name, given_name`,
       [id]
     );
 
     const propertiesResult = await tenantReq.tenantQuery!(
-      `SELECT id, name, address_line1, city FROM crm_properties WHERE owner_organization_id = $1 ORDER BY name`,
+      `SELECT id, name, address_line1, city FROM cc_crm_properties WHERE owner_organization_id = $1 ORDER BY name`,
       [id]
     );
 
@@ -537,7 +537,7 @@ router.get('/organizations/:id', requireAuth, requireTenant, async (req: Request
   }
 });
 
-router.post('/organizations', requireAuth, requireTenant, async (req: Request, res: Response) => {
+router.post('/cc_organizations', requireAuth, requireTenant, async (req: Request, res: Response) => {
   const tenantReq = req as TenantRequest;
   try {
     const tenantId = tenantReq.ctx!.tenant_id;
@@ -548,7 +548,7 @@ router.post('/organizations', requireAuth, requireTenant, async (req: Request, r
     }
 
     const result = await tenantReq.tenantQuery!(
-      `INSERT INTO organizations (tenant_id, name, legal_name, telephone, email, website, address_line1, address_line2, city, province, postal_code, country, notes)
+      `INSERT INTO cc_organizations (tenant_id, name, legal_name, telephone, email, website, address_line1, address_line2, city, province, postal_code, country, notes)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
        RETURNING *`,
       [tenantId, name, legal_name || null, telephone || null, email || null, website || null, address_line1 || null, address_line2 || null, city || null, province || 'BC', postal_code || null, country || 'Canada', notes || null]
@@ -561,14 +561,14 @@ router.post('/organizations', requireAuth, requireTenant, async (req: Request, r
   }
 });
 
-router.put('/organizations/:id', requireAuth, requireTenant, async (req: Request, res: Response) => {
+router.put('/cc_organizations/:id', requireAuth, requireTenant, async (req: Request, res: Response) => {
   const tenantReq = req as TenantRequest;
   try {
     const { id } = req.params;
     const { name, legal_name, telephone, email, website, address_line1, address_line2, city, province, postal_code, country, notes } = req.body;
 
     const result = await tenantReq.tenantQuery!(
-      `UPDATE organizations SET
+      `UPDATE cc_organizations SET
         name = COALESCE($2, name),
         legal_name = $3,
         telephone = $4,
@@ -597,11 +597,11 @@ router.put('/organizations/:id', requireAuth, requireTenant, async (req: Request
   }
 });
 
-router.delete('/organizations/:id', requireAuth, requireTenant, async (req: Request, res: Response) => {
+router.delete('/cc_organizations/:id', requireAuth, requireTenant, async (req: Request, res: Response) => {
   const tenantReq = req as TenantRequest;
   try {
     const { id } = req.params;
-    const result = await tenantReq.tenantQuery!(`DELETE FROM organizations WHERE id = $1 RETURNING id`, [id]);
+    const result = await tenantReq.tenantQuery!(`DELETE FROM cc_organizations WHERE id = $1 RETURNING id`, [id]);
     
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Organization not found' });
@@ -613,7 +613,7 @@ router.delete('/organizations/:id', requireAuth, requireTenant, async (req: Requ
   }
 });
 
-// Legacy alias: /orgs -> /organizations (reuse same handler)
+// Legacy alias: /orgs -> /cc_organizations (reuse same handler)
 router.get('/orgs', requireAuth, requireTenant, async (req: Request, res: Response) => {
   const tenantReq = req as TenantRequest;
   try {
@@ -632,8 +632,8 @@ router.get('/orgs', requireAuth, requireTenant, async (req: Request, res: Respon
       `SELECT 
         o.id, o.name, o.legal_name, o.telephone, o.email, o.website, o.city, o.province,
         o.notes, o.created_at, o.updated_at,
-        (SELECT COUNT(*) FROM people c WHERE c.organization_id = o.id) as contacts_count
-      FROM organizations o
+        (SELECT COUNT(*) FROM cc_people c WHERE c.organization_id = o.id) as contacts_count
+      FROM cc_organizations o
       ${whereClause}
       ORDER BY o.name ASC
       LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
@@ -641,7 +641,7 @@ router.get('/orgs', requireAuth, requireTenant, async (req: Request, res: Respon
     );
 
     const countResult = await tenantReq.tenantQuery!(
-      `SELECT COUNT(*) as total FROM organizations o ${whereClause}`,
+      `SELECT COUNT(*) as total FROM cc_organizations o ${whereClause}`,
       params
     );
 
@@ -651,7 +651,7 @@ router.get('/orgs', requireAuth, requireTenant, async (req: Request, res: Respon
     });
   } catch (error) {
     console.error('Error fetching orgs:', error);
-    res.status(500).json({ error: 'Failed to fetch organizations' });
+    res.status(500).json({ error: 'Failed to fetch cc_organizations' });
   }
 });
 
@@ -663,7 +663,7 @@ router.get('/lookup/contacts', requireAuth, requireTenant, async (req: Request, 
   const tenantReq = req as TenantRequest;
   try {
     const result = await tenantReq.tenantQuery!(
-      `SELECT id, given_name, family_name, telephone, email FROM people ORDER BY family_name, given_name LIMIT 100`
+      `SELECT id, given_name, family_name, telephone, email FROM cc_people ORDER BY family_name, given_name LIMIT 100`
     );
     res.json({ contacts: result.rows });
   } catch (error) {
@@ -673,29 +673,29 @@ router.get('/lookup/contacts', requireAuth, requireTenant, async (req: Request, 
 });
 
 // Legacy alias
-router.get('/lookup/people', requireAuth, requireTenant, async (req: Request, res: Response) => {
+router.get('/lookup/cc_people', requireAuth, requireTenant, async (req: Request, res: Response) => {
   const tenantReq = req as TenantRequest;
   try {
     const result = await tenantReq.tenantQuery!(
-      `SELECT id, given_name, family_name, telephone, email FROM people ORDER BY family_name, given_name LIMIT 100`
+      `SELECT id, given_name, family_name, telephone, email FROM cc_people ORDER BY family_name, given_name LIMIT 100`
     );
-    res.json({ people: result.rows });
+    res.json({ cc_people: result.rows });
   } catch (error) {
-    console.error('Error fetching people lookup:', error);
-    res.status(500).json({ error: 'Failed to fetch people' });
+    console.error('Error fetching cc_people lookup:', error);
+    res.status(500).json({ error: 'Failed to fetch cc_people' });
   }
 });
 
-router.get('/lookup/organizations', requireAuth, requireTenant, async (req: Request, res: Response) => {
+router.get('/lookup/cc_organizations', requireAuth, requireTenant, async (req: Request, res: Response) => {
   const tenantReq = req as TenantRequest;
   try {
     const result = await tenantReq.tenantQuery!(
-      `SELECT id, name FROM organizations ORDER BY name LIMIT 100`
+      `SELECT id, name FROM cc_organizations ORDER BY name LIMIT 100`
     );
-    res.json({ organizations: result.rows });
+    res.json({ cc_organizations: result.rows });
   } catch (error) {
-    console.error('Error fetching organizations lookup:', error);
-    res.status(500).json({ error: 'Failed to fetch organizations' });
+    console.error('Error fetching cc_organizations lookup:', error);
+    res.status(500).json({ error: 'Failed to fetch cc_organizations' });
   }
 });
 
@@ -704,12 +704,12 @@ router.get('/lookup/orgs', requireAuth, requireTenant, async (req: Request, res:
   const tenantReq = req as TenantRequest;
   try {
     const result = await tenantReq.tenantQuery!(
-      `SELECT id, name FROM organizations ORDER BY name LIMIT 100`
+      `SELECT id, name FROM cc_organizations ORDER BY name LIMIT 100`
     );
     res.json({ orgs: result.rows });
   } catch (error) {
     console.error('Error fetching orgs lookup:', error);
-    res.status(500).json({ error: 'Failed to fetch organizations' });
+    res.status(500).json({ error: 'Failed to fetch cc_organizations' });
   }
 });
 
@@ -717,7 +717,7 @@ router.get('/lookup/properties', requireAuth, requireTenant, async (req: Request
   const tenantReq = req as TenantRequest;
   try {
     const result = await tenantReq.tenantQuery!(
-      `SELECT id, name, address_line1, city FROM crm_properties ORDER BY name LIMIT 100`
+      `SELECT id, name, address_line1, city FROM cc_crm_properties ORDER BY name LIMIT 100`
     );
     res.json({ properties: result.rows });
   } catch (error) {
@@ -731,7 +731,7 @@ router.get('/lookup/places', requireAuth, requireTenant, async (req: Request, re
   const tenantReq = req as TenantRequest;
   try {
     const result = await tenantReq.tenantQuery!(
-      `SELECT id, name, address_line1, city FROM crm_properties ORDER BY name LIMIT 100`
+      `SELECT id, name, address_line1, city FROM cc_crm_properties ORDER BY name LIMIT 100`
     );
     res.json({ places: result.rows });
   } catch (error) {

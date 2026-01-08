@@ -23,7 +23,7 @@ const CATEGORY_ADJACENCIES = new Set([
   'roof-chimney|pest-wildlife',
   'septic-water|seasonal-tasks',
   'waterfront-marine|seasonal-tasks',
-  'grounds-property|safety-inspections',
+  'grounds-property|safety-cc_inspections',
   'structural-foundations|drainage-water-control',
   'heating-fuel|seasonal-tasks',
   'electrical|seasonal-tasks',
@@ -48,7 +48,7 @@ function areCategoriesAdjacent(catA: string, catB: string): boolean {
 }
 
 /**
- * Score compatibility between two services
+ * Score compatibility between two cc_services
  */
 export function scoreServicePair(
   a: ServiceWithDetails,
@@ -122,7 +122,7 @@ export function scoreServicePair(
 }
 
 /**
- * Build compatibility graph for all services
+ * Build compatibility graph for all cc_services
  */
 export function buildCompatibilityGraph(
   services: ServiceWithDetails[],
@@ -161,8 +161,8 @@ export function suggestBundles(
     edgeMap.get(e.serviceBSlug)!.set(e.serviceASlug, e.score);
   }
   
-  // Rank services by degree (number of compatible services)
-  const degrees = services
+  // Rank cc_services by degree (number of compatible services)
+  const degrees = cc_services
     .map(s => ({ slug: s.slug, name: s.name, deg: edgeMap.get(s.slug)?.size ?? 0 }))
     .sort((x, y) => y.deg - x.deg);
   

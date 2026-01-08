@@ -18,8 +18,8 @@ const router = Router();
 
 const uuidSchema = z.string().uuid();
 
-// GET /api/entities/datasets - List all datasets (ADMIN ONLY)
-// SERVICE MODE: apify_datasets is platform configuration, not tenant-scoped
+// GET /api/cc_entities/datasets - List all datasets (ADMIN ONLY)
+// SERVICE MODE: cc_apify_datasets is platform configuration, not tenant-scoped
 router.get("/datasets", requireAuth, requireRole('admin'), async (_req: Request, res: Response) => {
   try {
     const result = await serviceQuery(`
@@ -27,7 +27,7 @@ router.get("/datasets", requireAuth, requireRole('admin'), async (_req: Request,
         id, name, slug, source::text, record_type::text, 
         region, sync_enabled, last_sync_at, last_sync_record_count,
         created_at
-      FROM apify_datasets
+      FROM cc_apify_datasets
       ORDER BY name
     `);
     res.json({ success: true, datasets: result.rows });
@@ -37,7 +37,7 @@ router.get("/datasets", requireAuth, requireRole('admin'), async (_req: Request,
   }
 });
 
-// POST /api/entities/datasets - Create/update dataset (ADMIN ONLY)
+// POST /api/cc_entities/datasets - Create/update dataset (ADMIN ONLY)
 // SERVICE MODE: Platform configuration mutation
 router.post("/datasets", requireAuth, requireRole('admin'), async (req: Request, res: Response) => {
   try {
@@ -58,7 +58,7 @@ router.post("/datasets", requireAuth, requireRole('admin'), async (req: Request,
     const { name, slug, apify_actor_id, source, record_type, region } = parsed.data;
 
     const result = await serviceQuery(`
-      INSERT INTO apify_datasets (name, slug, apify_actor_id, source, record_type, region)
+      INSERT INTO cc_apify_datasets (name, slug, apify_actor_id, source, record_type, region)
       VALUES ($1, $2, $3, $4::external_source, $5::external_record_type, $6)
       ON CONFLICT (slug) DO UPDATE SET
         name = EXCLUDED.name,
@@ -74,8 +74,8 @@ router.post("/datasets", requireAuth, requireRole('admin'), async (req: Request,
   }
 });
 
-// GET /api/entities/records - List external records (ADMIN ONLY)
-// SERVICE MODE: external_records is platform-scraped data for admin curation
+// GET /api/cc_entities/records - List external records (ADMIN ONLY)
+// SERVICE MODE: cc_external_records is platform-scraped data for admin curation
 router.get("/records", requireAuth, requireRole('admin'), async (req: Request, res: Response) => {
   try {
     const limit = Math.min(parseInt(req.query.limit as string) || 50, 200);
@@ -90,9 +90,9 @@ router.get("/records", requireAuth, requireRole('admin'), async (req: Request, r
         r.external_url, r.latitude, r.longitude, r.community_id,
         r.first_seen_at, r.last_seen_at, r.pii_risk, r.do_not_contact,
         d.name as dataset_name,
-        (SELECT COUNT(*) FROM entity_links l WHERE l.external_record_id = r.id AND l.status = 'accepted') > 0 as is_resolved
-      FROM external_records r
-      JOIN apify_datasets d ON d.id = r.dataset_id
+        (SELECT COUNT(*) FROM cc_entity_links l WHERE l.external_record_id = r.id AND l.status = 'accepted') > 0 as is_resolved
+      FROM cc_external_records r
+      JOIN cc_apify_datasets d ON d.id = r.dataset_id
       WHERE 1=1
     `;
     const params: any[] = [];
@@ -112,7 +112,7 @@ router.get("/records", requireAuth, requireRole('admin'), async (req: Request, r
 
     if (needsResolution) {
       query += ` AND NOT EXISTS (
-        SELECT 1 FROM entity_links l 
+        SELECT 1 FROM cc_entity_links l 
         WHERE l.external_record_id = r.id AND l.status = 'accepted'
       )`;
     }
@@ -128,8 +128,8 @@ router.get("/records", requireAuth, requireRole('admin'), async (req: Request, r
   }
 });
 
-// GET /api/entities/entities - List entities with visibility filtering
-// SERVICE MODE: entities are platform-global but filtered by visibility
+// GET /api/cc_entities/cc_entities - List cc_entities with visibility filtering
+// SERVICE MODE: cc_entities are platform-global but filtered by visibility
 router.get("/entities", requireAuth, async (req: Request, res: Response) => {
   try {
     const limit = Math.min(parseInt(req.query.limit as string) || 50, 200);
@@ -137,7 +137,7 @@ router.get("/entities", requireAuth, async (req: Request, res: Response) => {
     const entityType = req.query.entity_type as string | undefined;
     const unclaimed = req.query.unclaimed === "true";
 
-    // Filter by visibility - only show public entities unless admin
+    // Filter by visibility - only show public cc_entities unless admin
     const tenantReq = req as any;
     const isAdmin = tenantReq.ctx?.roles?.includes('admin');
     
@@ -147,15 +147,15 @@ router.get("/entities", requireAuth, async (req: Request, res: Response) => {
         e.city, e.province as region, e.latitude, e.longitude, e.community_id,
         e.visibility, e.created_at,
         c.claimed_by_individual_id IS NOT NULL as is_claimed,
-        (SELECT COUNT(*) FROM entity_links l WHERE l.entity_id = e.id AND l.status = 'accepted') as linked_records
-      FROM entities e
-      LEFT JOIN entity_claims c ON c.entity_id = e.id
+        (SELECT COUNT(*) FROM cc_entity_links l WHERE l.entity_id = e.id AND l.status = 'accepted') as linked_records
+      FROM cc_entities e
+      LEFT JOIN cc_entity_claims c ON c.entity_id = e.id
       WHERE 1=1
     `;
     const params: any[] = [];
     let paramIndex = 1;
 
-    // Non-admins only see public entities
+    // Non-admins only see public cc_entities
     if (!isAdmin) {
       query += ` AND e.visibility = 'public'`;
     }
@@ -174,14 +174,14 @@ router.get("/entities", requireAuth, async (req: Request, res: Response) => {
     params.push(limit, offset);
 
     const result = await serviceQuery(query, params);
-    res.json({ success: true, entities: result.rows });
+    res.json({ success: true, cc_entities: result.rows });
   } catch (error) {
-    console.error("Error fetching entities:", error);
-    res.status(500).json({ success: false, error: "Failed to fetch entities" });
+    console.error("Error fetching cc_entities:", error);
+    res.status(500).json({ success: false, error: "Failed to fetch cc_entities" });
   }
 });
 
-// POST /api/entities/entities - Create entity (ADMIN ONLY)
+// POST /api/cc_entities/cc_entities - Create entity (ADMIN ONLY)
 // SERVICE MODE: Entity creation is admin operation
 router.post("/entities", requireAuth, requireRole('admin'), async (req: Request, res: Response) => {
   try {
@@ -205,7 +205,7 @@ router.post("/entities", requireAuth, requireRole('admin'), async (req: Request,
     const data = parsed.data;
 
     const result = await serviceQuery(`
-      INSERT INTO entities (
+      INSERT INTO cc_entities (
         entity_type_id, name, description, address_line1, city, province,
         latitude, longitude, community_id, visibility
       ) VALUES (
@@ -231,8 +231,8 @@ router.post("/entities", requireAuth, requireRole('admin'), async (req: Request,
   }
 });
 
-// POST /api/entities/entities/from-record/:recordId - Create entity from record (ADMIN ONLY)
-router.post("/entities/from-record/:recordId", requireAuth, requireRole('admin'), async (req: Request, res: Response) => {
+// POST /api/cc_entities/cc_entities/from-record/:recordId - Create entity from record (ADMIN ONLY)
+router.post("/cc_entities/from-record/:recordId", requireAuth, requireRole('admin'), async (req: Request, res: Response) => {
   try {
     const recordId = uuidSchema.parse(req.params.recordId);
     const entityType = (req.body.entity_type as string) || "other";
@@ -249,7 +249,7 @@ router.post("/entities/from-record/:recordId", requireAuth, requireRole('admin')
   }
 });
 
-// GET /api/entities/links/queue - Get resolution queue (ADMIN ONLY)
+// GET /api/cc_entities/links/queue - Get resolution queue (ADMIN ONLY)
 // SERVICE MODE: Admin curation view
 router.get("/links/queue", requireAuth, requireRole('admin'), async (_req: Request, res: Response) => {
   try {
@@ -263,7 +263,7 @@ router.get("/links/queue", requireAuth, requireRole('admin'), async (_req: Reque
   }
 });
 
-// POST /api/entities/links/:linkId/accept - Accept link (ADMIN ONLY)
+// POST /api/cc_entities/links/:linkId/accept - Accept link (ADMIN ONLY)
 router.post("/links/:linkId/accept", requireAuth, requireRole('admin'), async (req: Request, res: Response) => {
   try {
     const linkId = uuidSchema.parse(req.params.linkId);
@@ -281,7 +281,7 @@ router.post("/links/:linkId/accept", requireAuth, requireRole('admin'), async (r
   }
 });
 
-// POST /api/entities/links/:linkId/reject - Reject link (ADMIN ONLY)
+// POST /api/cc_entities/links/:linkId/reject - Reject link (ADMIN ONLY)
 router.post("/links/:linkId/reject", requireAuth, requireRole('admin'), async (req: Request, res: Response) => {
   try {
     const linkId = uuidSchema.parse(req.params.linkId);
@@ -299,7 +299,7 @@ router.post("/links/:linkId/reject", requireAuth, requireRole('admin'), async (r
   }
 });
 
-// POST /api/entities/resolution/run-batch - Run resolution batch (ADMIN ONLY)
+// POST /api/cc_entities/resolution/run-batch - Run resolution batch (ADMIN ONLY)
 router.post("/resolution/run-batch", requireAuth, requireRole('admin'), async (_req: Request, res: Response) => {
   try {
     const result = await runResolutionBatch(100);
@@ -310,7 +310,7 @@ router.post("/resolution/run-batch", requireAuth, requireRole('admin'), async (_
   }
 });
 
-// POST /api/entities/records/:recordId/propose-links - Propose links (ADMIN ONLY)
+// POST /api/cc_entities/records/:recordId/propose-links - Propose links (ADMIN ONLY)
 router.post("/records/:recordId/propose-links", requireAuth, requireRole('admin'), async (req: Request, res: Response) => {
   try {
     const recordId = uuidSchema.parse(req.params.recordId);
@@ -322,7 +322,7 @@ router.post("/records/:recordId/propose-links", requireAuth, requireRole('admin'
   }
 });
 
-// POST /api/entities/claims - Submit claim request (SELF)
+// POST /api/cc_entities/claims - Submit claim request (SELF)
 router.post("/claims", requireAuth, async (req: Request, res: Response) => {
   try {
     const tenantReq = req as any;
@@ -358,7 +358,7 @@ router.post("/claims", requireAuth, async (req: Request, res: Response) => {
       const individual = individualResult.rows[0];
 
       const insertResult = await client.query(`
-        INSERT INTO entity_claim_requests (
+        INSERT INTO cc_entity_claim_requests (
           entity_id, claimant_individual_id, claimant_email, claimant_name,
           verification_method, verification_data, status
         ) VALUES ($1, $2, $3, $4, $5, $6, 'pending'::claim_status)
@@ -386,7 +386,7 @@ router.post("/claims", requireAuth, async (req: Request, res: Response) => {
   }
 });
 
-// GET /api/entities/claims/pending - Get pending claims (ADMIN ONLY)
+// GET /api/cc_entities/claims/pending - Get pending claims (ADMIN ONLY)
 // SERVICE MODE: Admin review queue
 router.get("/claims/pending", requireAuth, requireRole('admin'), async (_req: Request, res: Response) => {
   try {
@@ -395,8 +395,8 @@ router.get("/claims/pending", requireAuth, requireRole('admin'), async (_req: Re
         cr.id, cr.entity_id, cr.claimant_email, cr.claimant_name,
         cr.verification_method, cr.status::text, cr.created_at,
         e.name as entity_name, e.entity_type_id
-      FROM entity_claim_requests cr
-      JOIN entities e ON e.id = cr.entity_id
+      FROM cc_entity_claim_requests cr
+      JOIN cc_entities e ON e.id = cr.entity_id
       WHERE cr.status = 'pending'
       ORDER BY cr.created_at
     `);
@@ -407,7 +407,7 @@ router.get("/claims/pending", requireAuth, requireRole('admin'), async (_req: Re
   }
 });
 
-// POST /api/entities/claims/:claimId/approve - Approve claim (ADMIN ONLY)
+// POST /api/cc_entities/claims/:claimId/approve - Approve claim (ADMIN ONLY)
 router.post("/claims/:claimId/approve", requireAuth, requireRole('admin'), async (req: Request, res: Response) => {
   try {
     const claimId = uuidSchema.parse(req.params.claimId);
@@ -416,7 +416,7 @@ router.post("/claims/:claimId/approve", requireAuth, requireRole('admin'), async
     await withServiceTransaction(async (client) => {
       const claimResult = await client.query(
         `SELECT entity_id, claimant_individual_id, claimant_tenant_id 
-         FROM entity_claim_requests WHERE id = $1 AND status = 'pending'`,
+         FROM cc_entity_claim_requests WHERE id = $1 AND status = 'pending'`,
         [claimId]
       );
 
@@ -427,12 +427,12 @@ router.post("/claims/:claimId/approve", requireAuth, requireRole('admin'), async
       const claim = claimResult.rows[0];
 
       await client.query(
-        `UPDATE entity_claim_requests SET status = 'approved', reviewed_at = NOW() WHERE id = $1`,
+        `UPDATE cc_entity_claim_requests SET status = 'approved', reviewed_at = NOW() WHERE id = $1`,
         [claimId]
       );
 
       await client.query(`
-        INSERT INTO entity_claims (entity_id, claimed_by_individual_id, claimed_by_tenant_id)
+        INSERT INTO cc_entity_claims (entity_id, claimed_by_individual_id, claimed_by_tenant_id)
         VALUES ($1, $2, $3)
         ON CONFLICT (entity_id) DO UPDATE SET
           claimed_by_individual_id = EXCLUDED.claimed_by_individual_id,
@@ -451,7 +451,7 @@ router.post("/claims/:claimId/approve", requireAuth, requireRole('admin'), async
   }
 });
 
-// POST /api/entities/claims/:claimId/reject - Reject claim (ADMIN ONLY)
+// POST /api/cc_entities/claims/:claimId/reject - Reject claim (ADMIN ONLY)
 router.post("/claims/:claimId/reject", requireAuth, requireRole('admin'), async (req: Request, res: Response) => {
   try {
     const claimId = uuidSchema.parse(req.params.claimId);
@@ -459,7 +459,7 @@ router.post("/claims/:claimId/reject", requireAuth, requireRole('admin'), async 
 
     // SERVICE MODE: Admin operation
     const result = await serviceQuery(
-      `UPDATE entity_claim_requests SET status = 'rejected', reviewed_at = NOW(), rejection_reason = $2
+      `UPDATE cc_entity_claim_requests SET status = 'rejected', reviewed_at = NOW(), rejection_reason = $2
        WHERE id = $1 AND status = 'pending'
        RETURNING id`,
       [claimId, reason]
@@ -476,7 +476,7 @@ router.post("/claims/:claimId/reject", requireAuth, requireRole('admin'), async 
   }
 });
 
-// GET /api/entities/inquiries - List inquiries (ADMIN ONLY for all, or self for own)
+// GET /api/cc_entities/inquiries - List inquiries (ADMIN ONLY for all, or self for own)
 router.get("/inquiries", requireAuth, async (req: Request, res: Response) => {
   try {
     const tenantReq = req as any;
@@ -495,8 +495,8 @@ router.get("/inquiries", requireAuth, async (req: Request, res: Response) => {
           e.name as entity_name,
           ind.full_name as inquirer_name,
           ind.email as inquirer_email
-        FROM entity_inquiries i
-        LEFT JOIN entities e ON e.id = i.entity_id
+        FROM cc_entity_inquiries i
+        LEFT JOIN cc_entities e ON e.id = i.entity_id
         JOIN cc_individuals ind ON ind.id = i.inquirer_individual_id
         WHERE 1=1
       `;
@@ -517,8 +517,8 @@ router.get("/inquiries", requireAuth, async (req: Request, res: Response) => {
           i.id, i.entity_id, i.external_record_id, i.inquiry_type, 
           i.message, i.status, i.created_at,
           e.name as entity_name
-        FROM entity_inquiries i
-        LEFT JOIN entities e ON e.id = i.entity_id
+        FROM cc_entity_inquiries i
+        LEFT JOIN cc_entities e ON e.id = i.entity_id
         JOIN cc_individuals ind ON ind.id = i.inquirer_individual_id
         WHERE ind.email = $1
         ORDER BY i.created_at DESC LIMIT 100
@@ -531,7 +531,7 @@ router.get("/inquiries", requireAuth, async (req: Request, res: Response) => {
   }
 });
 
-// POST /api/entities/inquiries - Create inquiry (SELF)
+// POST /api/cc_entities/inquiries - Create inquiry (SELF)
 router.post("/inquiries", requireAuth, async (req: Request, res: Response) => {
   try {
     const tenantReq = req as any;
@@ -572,7 +572,7 @@ router.post("/inquiries", requireAuth, async (req: Request, res: Response) => {
       const individualId = individualResult.rows[0].id;
 
       const insertResult = await client.query(`
-        INSERT INTO entity_inquiries (
+        INSERT INTO cc_entity_inquiries (
           entity_id, external_record_id, inquirer_individual_id,
           inquiry_type, message, requested_dates, status,
           expires_at

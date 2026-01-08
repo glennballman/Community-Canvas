@@ -15,7 +15,7 @@ function jaccardTokens(a: string, b: string): number {
 
 export async function proposeLinksForExternalRecord(externalRecordId: string): Promise<number> {
   const r = await pool.query(
-    `SELECT id, name, latitude, longitude, community_id, source::text, record_type::text FROM external_records WHERE id = $1`,
+    `SELECT id, name, latitude, longitude, community_id, source::text, record_type::text FROM cc_external_records WHERE id = $1`,
     [externalRecordId]
   );
   if (r.rows.length === 0) return 0;
@@ -29,7 +29,7 @@ export async function proposeLinksForExternalRecord(externalRecordId: string): P
   const candidates = await pool.query(
     `
     SELECT id, name, latitude, longitude, community_id
-    FROM entities
+    FROM cc_entities
     WHERE
       ( $1::uuid IS NOT NULL AND community_id = $1 )
       OR ( 
@@ -58,10 +58,10 @@ export async function proposeLinksForExternalRecord(externalRecordId: string): P
 
     await pool.query(
       `
-      INSERT INTO entity_links (external_record_id, entity_id, status, confidence, reasons, resolver_version)
+      INSERT INTO cc_entity_links (external_record_id, entity_id, status, confidence, reasons, resolver_version)
       VALUES ($1, $2, 'suggested'::link_status, $3, $4, 'v1')
       ON CONFLICT (external_record_id, entity_id) DO UPDATE SET
-        confidence = GREATEST(entity_links.confidence, EXCLUDED.confidence),
+        confidence = GREATEST(cc_entity_links.confidence, EXCLUDED.confidence),
         reasons = EXCLUDED.reasons,
         resolver_version = EXCLUDED.resolver_version
       `,
@@ -76,7 +76,7 @@ export async function proposeLinksForExternalRecord(externalRecordId: string): P
 export async function createEntityFromRecord(externalRecordId: string, entityType: string): Promise<string | null> {
   const r = await pool.query(
     `SELECT id, name, description, address, city, region, country, latitude, longitude, community_id
-     FROM external_records WHERE id = $1`,
+     FROM cc_external_records WHERE id = $1`,
     [externalRecordId]
   );
   if (r.rows.length === 0) return null;
@@ -85,7 +85,7 @@ export async function createEntityFromRecord(externalRecordId: string, entityTyp
 
   const entityResult = await pool.query(
     `
-    INSERT INTO entities (
+    INSERT INTO cc_entities (
       entity_type_id, name, description, address_line1, city, province, country,
       latitude, longitude, community_id, visibility
     ) VALUES (
@@ -111,7 +111,7 @@ export async function createEntityFromRecord(externalRecordId: string, entityTyp
 
   await pool.query(
     `
-    INSERT INTO entity_links (external_record_id, entity_id, status, confidence, reasons, resolver_version)
+    INSERT INTO cc_entity_links (external_record_id, entity_id, status, confidence, reasons, resolver_version)
     VALUES ($1, $2, 'accepted'::link_status, 1.0, '{"rule":"auto_create"}'::jsonb, 'v1')
     ON CONFLICT (external_record_id, entity_id) DO UPDATE SET
       status = 'accepted',
@@ -127,7 +127,7 @@ export async function createEntityFromRecord(externalRecordId: string, entityTyp
 export async function acceptLink(linkId: string, decidedBy?: string): Promise<boolean> {
   const result = await pool.query(
     `
-    UPDATE entity_links SET
+    UPDATE cc_entity_links SET
       status = 'accepted'::link_status,
       decided_at = NOW(),
       decided_by = $2
@@ -142,7 +142,7 @@ export async function acceptLink(linkId: string, decidedBy?: string): Promise<bo
 export async function rejectLink(linkId: string, decidedBy?: string): Promise<boolean> {
   const result = await pool.query(
     `
-    UPDATE entity_links SET
+    UPDATE cc_entity_links SET
       status = 'rejected'::link_status,
       decided_at = NOW(),
       decided_by = $2
@@ -157,8 +157,8 @@ export async function rejectLink(linkId: string, decidedBy?: string): Promise<bo
 export async function runResolutionBatch(limit: number = 100): Promise<{ processed: number; linksCreated: number }> {
   const records = await pool.query(
     `
-    SELECT r.id FROM external_records r
-    LEFT JOIN entity_links l ON l.external_record_id = r.id
+    SELECT r.id FROM cc_external_records r
+    LEFT JOIN cc_entity_links l ON l.external_record_id = r.id
     WHERE l.id IS NULL
     ORDER BY r.created_at DESC
     LIMIT $1

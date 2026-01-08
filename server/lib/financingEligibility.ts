@@ -47,13 +47,13 @@ export async function computeFinancingEligibility(
     const opp = oppResult.rows[0];
 
     const trustResult = await client.query(
-      `SELECT * FROM trust_signals WHERE party_id = $1 ORDER BY created_at DESC LIMIT 1`,
+      `SELECT * FROM cc_trust_signals WHERE party_id = $1 ORDER BY created_at DESC LIMIT 1`,
       [contractor_party_id]
     );
     const trustScore = trustResult.rows[0]?.overall_score || 50;
 
     const contractResult = await client.query(
-      `SELECT 1 FROM conversations 
+      `SELECT 1 FROM cc_conversations 
        WHERE opportunity_id = $1 AND contractor_party_id = $2 
        AND state IN ('contracted', 'in_progress', 'completed') LIMIT 1`,
       [opportunity_id, contractor_party_id]
@@ -62,9 +62,9 @@ export async function computeFinancingEligibility(
 
     const milestoneResult = await client.query(
       `SELECT COUNT(*) as count, SUM(amount) as total
-       FROM payment_milestones pm
-       JOIN payment_promises pp ON pm.payment_promise_id = pp.id
-       JOIN conversations c ON pp.conversation_id = c.id
+       FROM cc_payment_milestones pm
+       JOIN cc_payment_promises pp ON pm.payment_promise_id = pp.id
+       JOIN cc_conversations c ON pp.conversation_id = c.id
        WHERE c.opportunity_id = $1 AND c.contractor_party_id = $2`,
       [opportunity_id, contractor_party_id]
     );
@@ -89,7 +89,7 @@ export async function computeFinancingEligibility(
 
     const productsResult = await client.query(
       `SELECT id, product_code, product_name, product_category, advance_percent, fee_percent, min_amount, max_amount
-       FROM financing_products
+       FROM cc_financing_products
        WHERE is_active = true
          AND ($1::text IS NULL OR $1 = ANY(eligible_counterparties))
          AND min_contractor_trust_score <= $2
@@ -104,7 +104,7 @@ export async function computeFinancingEligibility(
     let canRequest = true;
 
     if (!ownerType || !['government', 'first_nation', 'municipal'].includes(ownerType)) {
-      reasons.push('Financing currently available for government, First Nations, and municipal projects');
+      reasons.push('Financing currently available for government, First Nations, and municipal cc_projects');
       canRequest = false;
     }
 

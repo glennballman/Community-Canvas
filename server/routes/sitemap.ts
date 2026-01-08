@@ -3,9 +3,9 @@
  * 
  * Provides XML sitemaps for SEO:
  * - /sitemap.xml - Sitemap index (portal-aware: main domain shows index, portal domains show portal sitemap)
- * - /sitemap-articles.xml - All published articles (or portal-specific if on portal domain)
- * - /sitemap-organizations.xml - All organizations
- * - /sitemap-infrastructure.xml - All infrastructure entities
+ * - /sitemap-cc_articles.xml - All published cc_articles (or portal-specific if on portal domain)
+ * - /sitemap-cc_organizations.xml - All cc_organizations
+ * - /sitemap-infrastructure.xml - All infrastructure cc_entities
  */
 
 import { Router, Request, Response } from 'express';
@@ -43,8 +43,8 @@ function normalizeHostname(host: string): string {
  * Returns portal info if the host is a portal domain, null for main domain
  * 
  * Resolution order:
- * 1. Exact match in portal_domains table
- * 2. Match against portals.base_url (for custom domains)
+ * 1. Exact match in cc_portal_domains table
+ * 2. Match against cc_portals.base_url (for custom domains)
  * 3. Subdomain pattern match (e.g., portalslug.communitycanvas.ca)
  */
 async function resolvePortalFromHost(host: string | undefined): Promise<{
@@ -62,11 +62,11 @@ async function resolvePortalFromHost(host: string | undefined): Promise<{
     return null;
   }
   
-  // 1. Check portal_domains table for exact match
+  // 1. Check cc_portal_domains table for exact match
   const domainResult = await serviceQuery(`
     SELECT p.id, p.slug, p.base_url, p.name
-    FROM portals p
-    JOIN portal_domains pd ON pd.portal_id = p.id
+    FROM cc_portals p
+    JOIN cc_portal_domains pd ON pd.portal_id = p.id
     WHERE LOWER(pd.domain) = $1 AND p.status = 'active'
     LIMIT 1
   `, [hostname]);
@@ -75,11 +75,11 @@ async function resolvePortalFromHost(host: string | undefined): Promise<{
     return domainResult.rows[0];
   }
   
-  // 2. Check portals.base_url for custom domain match
+  // 2. Check cc_portals.base_url for custom domain match
   // Extract hostname from base_url and compare
   const baseUrlResult = await serviceQuery(`
     SELECT id, slug, base_url, name
-    FROM portals
+    FROM cc_portals
     WHERE status = 'active'
       AND base_url IS NOT NULL
       AND (
@@ -99,7 +99,7 @@ async function resolvePortalFromHost(host: string | undefined): Promise<{
     const slug = subdomainMatch[1];
     const slugResult = await serviceQuery(`
       SELECT id, slug, base_url, name
-      FROM portals
+      FROM cc_portals
       WHERE slug = $1 AND status = 'active'
       LIMIT 1
     `, [slug]);
@@ -116,7 +116,7 @@ async function resolvePortalFromHost(host: string | undefined): Promise<{
  * GET /sitemap.xml - Main sitemap index or portal-specific sitemap
  * 
  * On main domain: returns sitemap index pointing to sub-sitemaps and portal sitemaps
- * On portal domain: returns sitemap with only that portal's articles
+ * On portal domain: returns sitemap with only that portal's cc_articles
  */
 router.get('/sitemap.xml', async (req: Request, res: Response) => {
   try {
@@ -124,7 +124,7 @@ router.get('/sitemap.xml', async (req: Request, res: Response) => {
     const portal = await resolvePortalFromHost(host);
     
     if (portal) {
-      // Portal-specific sitemap: return only this portal's articles
+      // Portal-specific sitemap: return only this portal's cc_articles
       const entries = await generateArticlesSitemapEntries(portal.id);
       const xml = generateSitemapXml(entries);
       
@@ -136,18 +136,18 @@ router.get('/sitemap.xml', async (req: Request, res: Response) => {
     }
     
     // Main domain: return sitemap index
-    const portals = await getPortalsForSitemap();
+    const cc_portals = await getPortalsForSitemap();
     const now = new Date().toISOString().split('T')[0];
     const baseUrl = process.env.BASE_URL || 'https://communitycanvas.ca';
 
     const sitemaps = [
-      { loc: `${baseUrl}/sitemap-articles.xml`, lastmod: now },
-      { loc: `${baseUrl}/sitemap-organizations.xml`, lastmod: now },
+      { loc: `${baseUrl}/sitemap-cc_articles.xml`, lastmod: now },
+      { loc: `${baseUrl}/sitemap-cc_organizations.xml`, lastmod: now },
       { loc: `${baseUrl}/sitemap-infrastructure.xml`, lastmod: now },
     ];
 
     // Add per-portal sitemaps
-    for (const p of portals) {
+    for (const p of cc_portals) {
       const portalUrl = p.base_url || `https://${p.slug}.communitycanvas.ca`;
       sitemaps.push({ loc: `${portalUrl}/sitemap.xml`, lastmod: now });
     }
@@ -165,9 +165,9 @@ router.get('/sitemap.xml', async (req: Request, res: Response) => {
 });
 
 /**
- * GET /sitemap-articles.xml - Articles sitemap (all portals for main domain)
+ * GET /sitemap-cc_articles.xml - Articles sitemap (all cc_portals for main domain)
  */
-router.get('/sitemap-articles.xml', async (req: Request, res: Response) => {
+router.get('/sitemap-cc_articles.xml', async (req: Request, res: Response) => {
   try {
     const host = req.get('host');
     const portal = await resolvePortalFromHost(host);
@@ -181,15 +181,15 @@ router.get('/sitemap-articles.xml', async (req: Request, res: Response) => {
     res.set('Vary', VARY_HEADERS);
     res.send(xml);
   } catch (error) {
-    console.error('[Sitemap] Error generating articles sitemap:', error);
+    console.error('[Sitemap] Error generating cc_articles sitemap:', error);
     res.status(500).send('Error generating sitemap');
   }
 });
 
 /**
- * GET /sitemap-organizations.xml - Organizations sitemap
+ * GET /sitemap-cc_organizations.xml - Organizations sitemap
  */
-router.get('/sitemap-organizations.xml', async (_req: Request, res: Response) => {
+router.get('/sitemap-cc_organizations.xml', async (_req: Request, res: Response) => {
   try {
     const baseUrl = process.env.BASE_URL || 'https://communitycanvas.ca';
     const entries = await generateOrganizationsSitemapEntries(baseUrl);
@@ -200,7 +200,7 @@ router.get('/sitemap-organizations.xml', async (_req: Request, res: Response) =>
     res.set('Vary', VARY_HEADERS);
     res.send(xml);
   } catch (error) {
-    console.error('[Sitemap] Error generating organizations sitemap:', error);
+    console.error('[Sitemap] Error generating cc_organizations sitemap:', error);
     res.status(500).send('Error generating sitemap');
   }
 });

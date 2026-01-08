@@ -28,7 +28,7 @@ export const subcategoryOverrides: Record<string, NAICSClassification> = {
   "Marine transportation": { code: "483114", subsector: "483", sector: "48-49", title: "Coastal and Great Lakes Passenger Transportation" },
   "Marina": { code: "713930", subsector: "713", sector: "71", title: "Marinas" },
   "Boat rental": { code: "532292", subsector: "532", sector: "53", title: "Recreational Goods Rental" },
-  "Marine services": { code: "488390", subsector: "488", sector: "48-49", title: "Other Support Activities for Water Transportation" },
+  "Marine cc_services": { code: "488390", subsector: "488", sector: "48-49", title: "Other Support Activities for Water Transportation" },
   "Seafood processing": { code: "311710", subsector: "311", sector: "31-33", title: "Seafood Product Preparation and Packaging" },
 };
 
@@ -65,12 +65,12 @@ export const namePatterns: NamePattern[] = [
   { 
     pattern: /\bFerry\b/i, 
     classification: { code: "483114", subsector: "483", sector: "48-49", title: "Coastal and Great Lakes Passenger Transportation" },
-    description: "Ferry services"
+    description: "Ferry cc_services"
   },
   { 
     pattern: /\bSeabus\b/i, 
     classification: { code: "483114", subsector: "483", sector: "48-49", title: "Coastal and Great Lakes Passenger Transportation" },
-    description: "Seabus services"
+    description: "Seabus cc_services"
   },
   { 
     pattern: /Lady Rose Marine/i, 
@@ -80,7 +80,7 @@ export const namePatterns: NamePattern[] = [
   { 
     pattern: /Water Taxi/i, 
     classification: { code: "483114", subsector: "483", sector: "48-49", title: "Coastal and Great Lakes Passenger Transportation" },
-    description: "Water taxi services"
+    description: "Water taxi cc_services"
   },
   // Marinas
   { 
@@ -97,7 +97,7 @@ export const namePatterns: NamePattern[] = [
   { 
     pattern: /Marine.*Service/i, 
     classification: { code: "488390", subsector: "488", sector: "48-49", title: "Other Support Activities for Water Transportation" },
-    description: "Marine services"
+    description: "Marine cc_services"
   },
   { 
     pattern: /Shipyard/i, 

@@ -66,7 +66,7 @@ export class EarthquakesPipeline extends BasePipeline {
       const slug = `earthquake-${eq.eventId}`;
       
       const existing = await pool.query(
-        'SELECT id FROM entities WHERE slug = $1',
+        'SELECT id FROM cc_entities WHERE slug = $1',
         [slug]
       );
 
@@ -82,14 +82,14 @@ export class EarthquakesPipeline extends BasePipeline {
 
       if (existing.rows.length > 0) {
         await pool.query(`
-          UPDATE entities SET
+          UPDATE cc_entities SET
             configuration = $2::jsonb
           WHERE slug = $1
         `, [slug, JSON.stringify(config)]);
         updated++;
       } else {
         await pool.query(`
-          INSERT INTO entities (slug, name, entity_type_id, latitude, longitude, configuration)
+          INSERT INTO cc_entities (slug, name, entity_type_id, latitude, longitude, configuration)
           VALUES ($1, $2, 'earthquake', $3, $4, $5)
         `, [
           slug,

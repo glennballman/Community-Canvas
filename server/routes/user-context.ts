@@ -66,7 +66,7 @@ router.get('/me/context', authenticateToken, async (req: AuthRequest, res: Respo
           SELECT t.id, t.name, t.tenant_type, t.slug, p.slug as portal_slug
           FROM cc_tenants t
           LEFT JOIN LATERAL (
-            SELECT slug FROM portals 
+            SELECT slug FROM cc_portals 
             WHERE owning_tenant_id = t.id AND status = 'active'
             ORDER BY created_at LIMIT 1
           ) p ON true
@@ -335,12 +335,12 @@ router.put('/me/profile', authenticateToken, async (req: AuthRequest, res: Respo
 // ============================================================================
 
 /**
- * GET /api/portals
+ * GET /api/cc_portals
  * 
- * Returns portals owned by the current tenant.
- * Uses X-Tenant-ID header to determine which portals to return.
+ * Returns cc_portals owned by the current tenant.
+ * Uses X-Tenant-ID header to determine which cc_portals to return.
  */
-router.get('/portals', authenticateToken, async (req: AuthRequest, res: Response) => {
+router.get('/cc_portals', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
     const tenantId = req.headers['x-tenant-id'] as string;
     const session = (req as any).session;
@@ -349,7 +349,7 @@ router.get('/portals', authenticateToken, async (req: AuthRequest, res: Response
     const effectiveTenantId = tenantId || session?.current_tenant_id;
     
     if (!effectiveTenantId) {
-      return res.json({ portals: [] });
+      return res.json({ cc_portals: [] });
     }
     
     const result = await serviceQuery(`
@@ -361,17 +361,17 @@ router.get('/portals', authenticateToken, async (req: AuthRequest, res: Response
         legal_dba_name,
         status,
         tagline
-      FROM portals
+      FROM cc_portals
       WHERE owning_tenant_id = $1
         AND status = 'active'
       ORDER BY name ASC
     `, [effectiveTenantId]);
     
-    res.json({ portals: result.rows });
+    res.json({ cc_portals: result.rows });
     
   } catch (error) {
-    console.error('Error fetching portals:', error);
-    res.status(500).json({ error: 'Failed to fetch portals' });
+    console.error('Error fetching cc_portals:', error);
+    res.status(500).json({ error: 'Failed to fetch cc_portals' });
   }
 });
 
@@ -434,7 +434,7 @@ router.put('/me/portal-preference', authenticateToken, async (req: AuthRequest, 
     
     // Verify portal belongs to tenant
     const portalCheck = await serviceQuery(`
-      SELECT id FROM portals
+      SELECT id FROM cc_portals
       WHERE id = $1 AND owning_tenant_id = $2
     `, [portal_id, effectiveTenantId]);
     

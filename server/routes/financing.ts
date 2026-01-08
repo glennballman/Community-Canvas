@@ -32,7 +32,7 @@ router.get('/financing/products', async (req: Request, res: Response) => {
   try {
     const { category, owner_type } = req.query;
 
-    let query = `SELECT * FROM financing_products WHERE is_active = true`;
+    let query = `SELECT * FROM cc_financing_products WHERE is_active = true`;
     const params: any[] = [];
 
     if (category) {
@@ -96,7 +96,7 @@ router.post('/work-requests/:id/financing-request', async (req: Request, res: Re
       await client.query('BEGIN');
 
       const result = await client.query(
-        `INSERT INTO contractor_financing_requests (
+        `INSERT INTO cc_contractor_financing_requests (
           work_request_id, conversation_id, contractor_party_id, requested_by_individual_id,
           financing_type, amount_requested, use_of_funds,
           repayment_source, related_milestone_id,
@@ -152,9 +152,9 @@ router.get('/financing', async (req: Request, res: Response) => {
     let query = `
       SELECT cfr.*, wr.title as work_request_title, wr.work_request_ref,
              fp.product_name, fp.provider_name
-      FROM contractor_financing_requests cfr
-      JOIN work_requests wr ON cfr.work_request_id = wr.id
-      LEFT JOIN financing_products fp ON cfr.financing_product_id = fp.id
+      FROM cc_contractor_financing_requests cfr
+      JOIN cc_work_requests wr ON cfr.work_request_id = wr.id
+      LEFT JOIN cc_financing_products fp ON cfr.financing_product_id = fp.id
       WHERE cfr.contractor_party_id = $1
     `;
     const params: any[] = [actor.actor_party_id];
@@ -202,9 +202,9 @@ router.get('/financing/:id', async (req: Request, res: Response) => {
     const result = await pool.query(
       `SELECT cfr.*, wr.title as work_request_title, wr.work_request_ref, wr.site_address,
               fp.product_name, fp.provider_name, fp.advance_percent, fp.fee_percent
-       FROM contractor_financing_requests cfr
-       JOIN work_requests wr ON cfr.work_request_id = wr.id
-       LEFT JOIN financing_products fp ON cfr.financing_product_id = fp.id
+       FROM cc_contractor_financing_requests cfr
+       JOIN cc_work_requests wr ON cfr.work_request_id = wr.id
+       LEFT JOIN cc_financing_products fp ON cfr.financing_product_id = fp.id
        WHERE cfr.id = $1 AND cfr.contractor_party_id = $2`,
       [id, actor.actor_party_id]
     );
@@ -214,12 +214,12 @@ router.get('/financing/:id', async (req: Request, res: Response) => {
     }
 
     const disbursements = await pool.query(
-      `SELECT * FROM financing_disbursements WHERE financing_request_id = $1 ORDER BY created_at`,
+      `SELECT * FROM cc_financing_disbursements WHERE financing_request_id = $1 ORDER BY created_at`,
       [id]
     );
 
     const repayments = await pool.query(
-      `SELECT * FROM financing_repayments WHERE financing_request_id = $1 ORDER BY expected_date`,
+      `SELECT * FROM cc_financing_repayments WHERE financing_request_id = $1 ORDER BY expected_date`,
       [id]
     );
 
@@ -245,7 +245,7 @@ router.patch('/financing/:id', async (req: Request, res: Response) => {
     }
 
     const existing = await pool.query(
-      `SELECT * FROM contractor_financing_requests WHERE id = $1 AND contractor_party_id = $2`,
+      `SELECT * FROM cc_contractor_financing_requests WHERE id = $1 AND contractor_party_id = $2`,
       [id, actor.actor_party_id]
     );
 
@@ -295,7 +295,7 @@ router.patch('/financing/:id', async (req: Request, res: Response) => {
     params.push(id);
 
     const result = await pool.query(
-      `UPDATE contractor_financing_requests SET ${updates.join(', ')} WHERE id = $${paramIndex} RETURNING *`,
+      `UPDATE cc_contractor_financing_requests SET ${updates.join(', ')} WHERE id = $${paramIndex} RETURNING *`,
       params
     );
 
@@ -320,8 +320,8 @@ router.post('/financing/:id/submit', async (req: Request, res: Response) => {
       await client.query('BEGIN');
 
       const existing = await client.query(
-        `SELECT cfr.*, wr.id as wr_id FROM contractor_financing_requests cfr
-         JOIN work_requests wr ON cfr.work_request_id = wr.id
+        `SELECT cfr.*, wr.id as wr_id FROM cc_contractor_financing_requests cfr
+         JOIN cc_work_requests wr ON cfr.work_request_id = wr.id
          WHERE cfr.id = $1 AND cfr.contractor_party_id = $2`,
         [id, actor.actor_party_id]
       );
@@ -349,10 +349,10 @@ router.post('/financing/:id/submit', async (req: Request, res: Response) => {
       }
 
       const result = await client.query(
-        `UPDATE contractor_financing_requests SET
+        `UPDATE cc_contractor_financing_requests SET
           status = 'submitted',
           status_changed_at = now(),
-          status_history = COALESCE(status_history, '[]'::jsonb) || jsonb_build_array($1::jsonb),
+          cc_status_history = COALESCE(cc_status_history, '[]'::jsonb) || jsonb_build_array($1::jsonb),
           eligibility_signals = $2,
           updated_at = now()
          WHERE id = $3 RETURNING *`,
@@ -393,10 +393,10 @@ router.post('/financing/:id/cancel', async (req: Request, res: Response) => {
     }
 
     const result = await pool.query(
-      `UPDATE contractor_financing_requests SET
+      `UPDATE cc_contractor_financing_requests SET
         status = 'cancelled',
         status_changed_at = now(),
-        status_history = COALESCE(status_history, '[]'::jsonb) || jsonb_build_array($1::jsonb),
+        cc_status_history = COALESCE(cc_status_history, '[]'::jsonb) || jsonb_build_array($1::jsonb),
         cancelled_reason = $2,
         cancelled_by_party_id = $3,
         updated_at = now()

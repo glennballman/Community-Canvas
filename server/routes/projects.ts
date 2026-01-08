@@ -5,18 +5,18 @@
  * Supports both "New Job" and "I Already Did This Job" (backwards entry) modes.
  * 
  * Endpoints:
- * - GET /api/projects - List projects with status filter
- * - GET /api/projects/:id - Get single project with photos/notes
- * - POST /api/projects - Create new project
- * - PUT /api/projects/:id - Update project
- * - PUT /api/projects/:id/status - Update project status
- * - POST /api/projects/:id/photos - Upload photo
- * - GET /api/projects/:id/photos - Get photos by stage
- * - POST /api/projects/:id/notes - Add note
- * - GET /api/projects/:id/notes - Get notes
- * - POST /api/projects/:id/change-order - Create change order snapshot
- * - POST /api/projects/:id/line-items - Add line item
- * - GET /api/projects/:id/line-items - Get line items
+ * - GET /api/cc_projects - List cc_projects with status filter
+ * - GET /api/cc_projects/:id - Get single project with photos/notes
+ * - POST /api/cc_projects - Create new project
+ * - PUT /api/cc_projects/:id - Update project
+ * - PUT /api/cc_projects/:id/status - Update project status
+ * - POST /api/cc_projects/:id/photos - Upload photo
+ * - GET /api/cc_projects/:id/photos - Get photos by stage
+ * - POST /api/cc_projects/:id/notes - Add note
+ * - GET /api/cc_projects/:id/notes - Get notes
+ * - POST /api/cc_projects/:id/change-order - Create change order snapshot
+ * - POST /api/cc_projects/:id/line-items - Add line item
+ * - GET /api/cc_projects/:id/line-items - Get line items
  */
 
 import { Router, Request, Response } from 'express';
@@ -25,7 +25,7 @@ import { TenantRequest } from '../middleware/tenantContext';
 
 const router = Router();
 
-// List projects with optional status filter
+// List cc_projects with optional status filter
 router.get('/', requireAuth, requireTenant, async (req: Request, res: Response) => {
   const tenantReq = req as TenantRequest;
   try {
@@ -76,12 +76,12 @@ router.get('/', requireAuth, requireTenant, async (req: Request, res: Response) 
         c.id as person_id, c.given_name as contact_given_name, c.family_name as contact_family_name,
         o.id as organization_id, o.name as organization_name,
         prop.id as property_id, prop.name as property_name, prop.address_line1 as property_address,
-        (SELECT COUNT(*) FROM project_photos pp WHERE pp.project_id = p.id) as photos_count,
-        (SELECT COUNT(*) FROM project_notes pn WHERE pn.project_id = p.id) as notes_count
-      FROM projects p
-      LEFT JOIN people c ON p.person_id = c.id
-      LEFT JOIN organizations o ON p.organization_id = o.id
-      LEFT JOIN crm_properties prop ON p.property_id = prop.id
+        (SELECT COUNT(*) FROM cc_project_photos pp WHERE pp.project_id = p.id) as photos_count,
+        (SELECT COUNT(*) FROM cc_project_notes pn WHERE pn.project_id = p.id) as notes_count
+      FROM cc_projects p
+      LEFT JOIN cc_people c ON p.person_id = c.id
+      LEFT JOIN cc_organizations o ON p.organization_id = o.id
+      LEFT JOIN cc_crm_properties prop ON p.property_id = prop.id
       ${whereClause}
       ORDER BY 
         CASE WHEN p.status IN ('scheduled', 'in_progress') THEN 0 ELSE 1 END,
@@ -104,14 +104,14 @@ router.get('/', requireAuth, requireTenant, async (req: Request, res: Response) 
         COUNT(*) FILTER (WHERE status = 'paid') as count_paid,
         COUNT(*) FILTER (WHERE status = 'cancelled') as count_cancelled,
         COUNT(*) FILTER (WHERE status = 'warranty') as count_warranty
-      FROM projects`,
+      FROM cc_projects`,
       []
     );
 
     const counts = countResult.rows[0];
 
     res.json({
-      projects: result.rows,
+      cc_projects: result.rows,
       total: parseInt(counts.total, 10),
       counts: {
         lead: parseInt(counts.count_lead, 10),
@@ -127,8 +127,8 @@ router.get('/', requireAuth, requireTenant, async (req: Request, res: Response) 
       }
     });
   } catch (error) {
-    console.error('Error fetching projects:', error);
-    res.status(500).json({ error: 'Failed to fetch projects' });
+    console.error('Error fetching cc_projects:', error);
+    res.status(500).json({ error: 'Failed to fetch cc_projects' });
   }
 });
 
@@ -145,10 +145,10 @@ router.get('/:id', requireAuth, requireTenant, async (req: Request, res: Respons
         c.telephone as contact_telephone, c.email as contact_email,
         o.name as organization_name,
         prop.name as property_name, prop.address_line1 as property_address, prop.city as property_city
-      FROM projects p
-      LEFT JOIN people c ON p.person_id = c.id
-      LEFT JOIN organizations o ON p.organization_id = o.id
-      LEFT JOIN crm_properties prop ON p.property_id = prop.id
+      FROM cc_projects p
+      LEFT JOIN cc_people c ON p.person_id = c.id
+      LEFT JOIN cc_organizations o ON p.organization_id = o.id
+      LEFT JOIN cc_crm_properties prop ON p.property_id = prop.id
       WHERE p.id = $1`,
       [id]
     );
@@ -159,25 +159,25 @@ router.get('/:id', requireAuth, requireTenant, async (req: Request, res: Respons
 
     // Get photos grouped by stage
     const photosResult = await tenantReq.tenantQuery!(
-      `SELECT * FROM project_photos WHERE project_id = $1 ORDER BY stage, uploaded_at DESC`,
+      `SELECT * FROM cc_project_photos WHERE project_id = $1 ORDER BY stage, uploaded_at DESC`,
       [id]
     );
 
     // Get notes
     const notesResult = await tenantReq.tenantQuery!(
-      `SELECT * FROM project_notes WHERE project_id = $1 ORDER BY created_at DESC`,
+      `SELECT * FROM cc_project_notes WHERE project_id = $1 ORDER BY created_at DESC`,
       [id]
     );
 
     // Get line items
     const lineItemsResult = await tenantReq.tenantQuery!(
-      `SELECT * FROM project_line_items WHERE project_id = $1 ORDER BY sort_order, created_at`,
+      `SELECT * FROM cc_project_line_items WHERE project_id = $1 ORDER BY sort_order, created_at`,
       [id]
     );
 
-    // Get scope snapshots
+    // Get scope cc_snapshots
     const snapshotsResult = await tenantReq.tenantQuery!(
-      `SELECT * FROM project_scope_snapshots WHERE project_id = $1 ORDER BY version DESC`,
+      `SELECT * FROM cc_project_scope_snapshots WHERE project_id = $1 ORDER BY version DESC`,
       [id]
     );
 
@@ -240,7 +240,7 @@ router.post('/', requireAuth, requireTenant, async (req: Request, res: Response)
       new Date(new Date(actualCompletedAt!).getTime() + (warranty_months * 30 * 24 * 60 * 60 * 1000)) : null;
 
     const result = await tenantReq.tenantQuery!(
-      `INSERT INTO projects (
+      `INSERT INTO cc_projects (
         tenant_id, title, description,
         person_id, organization_id, property_id, unit_id, location_text,
         status, quoted_amount, final_amount,
@@ -269,7 +269,7 @@ router.post('/', requireAuth, requireTenant, async (req: Request, res: Response)
     // Create initial scope snapshot if there's a quoted amount
     if (quoted_amount) {
       await tenantReq.tenantQuery!(
-        `INSERT INTO project_scope_snapshots (project_id, version, description, amount, reason, created_by_actor_id)
+        `INSERT INTO cc_project_scope_snapshots (project_id, version, description, amount, reason, created_by_actor_id)
          VALUES ($1, 1, $2, $3, 'original', $4)`,
         [result.rows[0].id, description || title, quoted_amount, actorId]
       );
@@ -309,7 +309,7 @@ router.put('/:id', requireAuth, requireTenant, async (req: Request, res: Respons
     } = req.body;
 
     const result = await tenantReq.tenantQuery!(
-      `UPDATE projects SET
+      `UPDATE cc_projects SET
         title = COALESCE($2, title),
         description = $3,
         person_id = $4,
@@ -376,7 +376,7 @@ router.put('/:id/status', requireAuth, requireTenant, async (req: Request, res: 
     }
 
     const result = await tenantReq.tenantQuery!(
-      `UPDATE projects SET 
+      `UPDATE cc_projects SET 
         status = $2::project_status
         ${additionalUpdates}
       WHERE id = $1
@@ -426,7 +426,7 @@ router.post('/:id/photos', requireAuth, requireTenant, async (req: Request, res:
     }
 
     const result = await tenantReq.tenantQuery!(
-      `INSERT INTO project_photos (
+      `INSERT INTO cc_project_photos (
         project_id, tenant_id, stage,
         storage_key, storage_url, filename, mime_type, size_bytes,
         caption, taken_at, device_info, geo_lat, geo_lng,
@@ -456,7 +456,7 @@ router.get('/:id/photos', requireAuth, requireTenant, async (req: Request, res: 
     const { id } = req.params;
     const { stage } = req.query;
 
-    let query = `SELECT * FROM project_photos WHERE project_id = $1`;
+    let query = `SELECT * FROM cc_project_photos WHERE project_id = $1`;
     const params: any[] = [id];
 
     if (stage) {
@@ -488,7 +488,7 @@ router.post('/:id/notes', requireAuth, requireTenant, async (req: Request, res: 
     }
 
     const result = await tenantReq.tenantQuery!(
-      `INSERT INTO project_notes (project_id, note_type, content, created_by_actor_id)
+      `INSERT INTO cc_project_notes (project_id, note_type, content, created_by_actor_id)
        VALUES ($1, $2, $3, $4)
        RETURNING *`,
       [id, note_type, content, actorId]
@@ -508,7 +508,7 @@ router.get('/:id/notes', requireAuth, requireTenant, async (req: Request, res: R
     const { id } = req.params;
 
     const result = await tenantReq.tenantQuery!(
-      `SELECT * FROM project_notes WHERE project_id = $1 ORDER BY created_at DESC`,
+      `SELECT * FROM cc_project_notes WHERE project_id = $1 ORDER BY created_at DESC`,
       [id]
     );
 
@@ -533,14 +533,14 @@ router.post('/:id/change-order', requireAuth, requireTenant, async (req: Request
 
     // Get current version
     const versionResult = await tenantReq.tenantQuery!(
-      `SELECT COALESCE(MAX(version), 0) + 1 as next_version FROM project_scope_snapshots WHERE project_id = $1`,
+      `SELECT COALESCE(MAX(version), 0) + 1 as next_version FROM cc_project_scope_snapshots WHERE project_id = $1`,
       [id]
     );
     const nextVersion = versionResult.rows[0].next_version;
 
     // Create snapshot
     const snapshotResult = await tenantReq.tenantQuery!(
-      `INSERT INTO project_scope_snapshots (project_id, version, description, amount, reason, notes, created_by_actor_id)
+      `INSERT INTO cc_project_scope_snapshots (project_id, version, description, amount, reason, notes, created_by_actor_id)
        VALUES ($1, $2, $3, $4, 'change_order', $5, $6)
        RETURNING *`,
       [id, nextVersion, description || null, amount, notes || null, actorId]
@@ -548,13 +548,13 @@ router.post('/:id/change-order', requireAuth, requireTenant, async (req: Request
 
     // Update project quoted amount
     await tenantReq.tenantQuery!(
-      `UPDATE projects SET quoted_amount = $2 WHERE id = $1`,
+      `UPDATE cc_projects SET quoted_amount = $2 WHERE id = $1`,
       [id, amount]
     );
 
     // Add note about change order
     await tenantReq.tenantQuery!(
-      `INSERT INTO project_notes (project_id, note_type, content, created_by_actor_id)
+      `INSERT INTO cc_project_notes (project_id, note_type, content, created_by_actor_id)
        VALUES ($1, 'change_order', $2, $3)`,
       [id, `Change order #${nextVersion}: Amount updated to $${amount}${notes ? `. ${notes}` : ''}`, actorId]
     );
@@ -583,7 +583,7 @@ router.post('/:id/line-items', requireAuth, requireTenant, async (req: Request, 
     const calculatedTotal = total || (quantity * (unit_price || 0));
 
     const result = await tenantReq.tenantQuery!(
-      `INSERT INTO project_line_items (project_id, description, quantity, unit_price, total, sort_order)
+      `INSERT INTO cc_project_line_items (project_id, description, quantity, unit_price, total, sort_order)
        VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING *`,
       [id, description, quantity, unit_price || null, calculatedTotal, sort_order]
@@ -603,7 +603,7 @@ router.get('/:id/line-items', requireAuth, requireTenant, async (req: Request, r
     const { id } = req.params;
 
     const result = await tenantReq.tenantQuery!(
-      `SELECT * FROM project_line_items WHERE project_id = $1 ORDER BY sort_order, created_at`,
+      `SELECT * FROM cc_project_line_items WHERE project_id = $1 ORDER BY sort_order, created_at`,
       [id]
     );
 
@@ -621,7 +621,7 @@ router.delete('/:id/line-items/:lineItemId', requireAuth, requireTenant, async (
     const { lineItemId } = req.params;
 
     const result = await tenantReq.tenantQuery!(
-      `DELETE FROM project_line_items WHERE id = $1 RETURNING id`,
+      `DELETE FROM cc_project_line_items WHERE id = $1 RETURNING id`,
       [lineItemId]
     );
 

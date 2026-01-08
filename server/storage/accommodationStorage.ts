@@ -84,7 +84,7 @@ export class AccommodationStorage {
     minCrewScore?: number;
     status?: string;
   }): Promise<AccommodationProperty[]> {
-    let query = 'SELECT * FROM accommodation_properties WHERE 1=1';
+    let query = 'SELECT * FROM cc_accommodation_properties WHERE 1=1';
     const params: any[] = [];
     let paramIndex = 1;
 
@@ -112,7 +112,7 @@ export class AccommodationStorage {
 
   async getPropertyById(id: number): Promise<AccommodationProperty | null> {
     const result = await this.db.query(
-      'SELECT * FROM accommodation_properties WHERE id = $1',
+      'SELECT * FROM cc_accommodation_properties WHERE id = $1',
       [id]
     );
     return result.rows[0] ? convertKeysToCamel(result.rows[0]) as AccommodationProperty : null;
@@ -120,7 +120,7 @@ export class AccommodationStorage {
 
   async getPropertyByAirbnbId(airbnbId: string): Promise<AccommodationProperty | null> {
     const result = await this.db.query(
-      'SELECT * FROM accommodation_properties WHERE airbnb_id = $1',
+      'SELECT * FROM cc_accommodation_properties WHERE airbnb_id = $1',
       [airbnbId]
     );
     return result.rows[0] ? convertKeysToCamel(result.rows[0]) as AccommodationProperty : null;
@@ -134,7 +134,7 @@ export class AccommodationStorage {
     const placeholders = columns.map((_, i) => `$${i + 1}`);
 
     const query = `
-      INSERT INTO accommodation_properties (${columns.join(', ')})
+      INSERT INTO cc_accommodation_properties (${columns.join(', ')})
       VALUES (${placeholders.join(', ')})
       RETURNING *
     `;
@@ -152,7 +152,7 @@ export class AccommodationStorage {
     const values = [...Object.values(filtered), id];
 
     const query = `
-      UPDATE accommodation_properties
+      UPDATE cc_accommodation_properties
       SET ${setClause}, updated_at = CURRENT_TIMESTAMP
       WHERE id = $${values.length}
       RETURNING *
@@ -179,20 +179,20 @@ export class AccommodationStorage {
         COALESCE(AVG(crew_score), 0)::float as avg_crew_score,
         COALESCE(AVG(overall_rating), 0)::float as avg_rating,
         COALESCE(AVG(base_nightly_rate), 0)::float as avg_nightly_rate
-      FROM accommodation_properties p
-      LEFT JOIN ical_feeds f ON f.property_id = p.id
+      FROM cc_accommodation_properties p
+      LEFT JOIN cc_ical_feeds f ON f.property_id = p.id
     `);
 
     const byRegion = await this.db.query(`
       SELECT region, COUNT(*)::int as count 
-      FROM accommodation_properties 
+      FROM cc_accommodation_properties 
       WHERE region IS NOT NULL
       GROUP BY region
     `);
 
     const byStatus = await this.db.query(`
       SELECT status, COUNT(*)::int as count 
-      FROM accommodation_properties 
+      FROM cc_accommodation_properties 
       GROUP BY status
     `);
 
@@ -215,7 +215,7 @@ export class AccommodationStorage {
   // =====================================================
 
   async getAllHosts(filters?: { contactStatus?: string; isInNetwork?: boolean }): Promise<AccommodationHost[]> {
-    let query = 'SELECT * FROM accommodation_hosts WHERE 1=1';
+    let query = 'SELECT * FROM cc_accommodation_hosts WHERE 1=1';
     const params: any[] = [];
     let paramIndex = 1;
 
@@ -234,7 +234,7 @@ export class AccommodationStorage {
   }
 
   async getHostById(id: number): Promise<AccommodationHost | null> {
-    const result = await this.db.query('SELECT * FROM accommodation_hosts WHERE id = $1', [id]);
+    const result = await this.db.query('SELECT * FROM cc_accommodation_hosts WHERE id = $1', [id]);
     return result.rows[0] ? convertKeysToCamel(result.rows[0]) as AccommodationHost : null;
   }
 
@@ -246,7 +246,7 @@ export class AccommodationStorage {
     const placeholders = columns.map((_, i) => `$${i + 1}`);
 
     const query = `
-      INSERT INTO accommodation_hosts (${columns.join(', ')})
+      INSERT INTO cc_accommodation_hosts (${columns.join(', ')})
       VALUES (${placeholders.join(', ')})
       RETURNING *
     `;
@@ -264,7 +264,7 @@ export class AccommodationStorage {
     const values = [...Object.values(filtered), id];
 
     const query = `
-      UPDATE accommodation_hosts
+      UPDATE cc_accommodation_hosts
       SET ${setClause}, updated_at = CURRENT_TIMESTAMP
       WHERE id = $${values.length}
       RETURNING *
@@ -275,7 +275,7 @@ export class AccommodationStorage {
 
   async linkHostToProperty(hostId: number, propertyId: number, isPrimary = true): Promise<void> {
     await this.db.query(`
-      INSERT INTO host_properties (host_id, property_id, is_primary_host)
+      INSERT INTO cc_host_properties (host_id, property_id, is_primary_host)
       VALUES ($1, $2, $3)
       ON CONFLICT (host_id, property_id) DO UPDATE SET is_primary_host = $3
     `, [hostId, propertyId, isPrimary]);
@@ -287,7 +287,7 @@ export class AccommodationStorage {
 
   async getFeedsByPropertyId(propertyId: number): Promise<ICalFeed[]> {
     const result = await this.db.query(
-      'SELECT * FROM ical_feeds WHERE property_id = $1 ORDER BY feed_name',
+      'SELECT * FROM cc_ical_feeds WHERE property_id = $1 ORDER BY feed_name',
       [propertyId]
     );
     return result.rows.map(convertKeysToCamel) as ICalFeed[];
@@ -295,7 +295,7 @@ export class AccommodationStorage {
 
   async createFeed(feed: Partial<ICalFeed>): Promise<ICalFeed> {
     const result = await this.db.query(`
-      INSERT INTO ical_feeds (property_id, host_id, ical_url, feed_name, sync_frequency_minutes)
+      INSERT INTO cc_ical_feeds (property_id, host_id, ical_url, feed_name, sync_frequency_minutes)
       VALUES ($1, $2, $3, $4, $5)
       RETURNING *
     `, [feed.propertyId, feed.hostId, feed.icalUrl, feed.feedName, feed.syncFrequencyMinutes || 60]);
@@ -304,7 +304,7 @@ export class AccommodationStorage {
 
   async updateFeedSyncStatus(feedId: number, status: string, error?: string): Promise<void> {
     await this.db.query(`
-      UPDATE ical_feeds
+      UPDATE cc_ical_feeds
       SET last_synced_at = CURRENT_TIMESTAMP,
           last_sync_status = $2,
           last_sync_error = $3,
@@ -316,7 +316,7 @@ export class AccommodationStorage {
 
   async getFeedsDueForSync(): Promise<ICalFeed[]> {
     const result = await this.db.query(`
-      SELECT * FROM ical_feeds
+      SELECT * FROM cc_ical_feeds
       WHERE is_active = true
         AND (last_synced_at IS NULL 
              OR last_synced_at < NOW() - INTERVAL '1 minute' * sync_frequency_minutes)
@@ -331,7 +331,7 @@ export class AccommodationStorage {
 
   async getAvailabilityBlocks(propertyId: number, startDate: Date, endDate: Date): Promise<AvailabilityBlock[]> {
     const result = await this.db.query(`
-      SELECT * FROM availability_blocks
+      SELECT * FROM cc_availability_blocks
       WHERE property_id = $1
         AND start_date <= $3
         AND end_date >= $2
@@ -342,7 +342,7 @@ export class AccommodationStorage {
 
   async upsertAvailabilityBlock(block: Partial<AvailabilityBlock>): Promise<AvailabilityBlock> {
     const result = await this.db.query(`
-      INSERT INTO availability_blocks (property_id, feed_id, start_date, end_date, block_type, summary, uid)
+      INSERT INTO cc_availability_blocks (property_id, feed_id, start_date, end_date, block_type, summary, uid)
       VALUES ($1, $2, $3, $4, $5, $6, $7)
       ON CONFLICT (property_id, uid) DO UPDATE SET
         start_date = EXCLUDED.start_date,
@@ -355,13 +355,13 @@ export class AccommodationStorage {
   }
 
   async clearBlocksForFeed(feedId: number): Promise<void> {
-    await this.db.query('DELETE FROM availability_blocks WHERE feed_id = $1', [feedId]);
+    await this.db.query('DELETE FROM cc_availability_blocks WHERE feed_id = $1', [feedId]);
   }
 
   async checkAvailability(propertyId: number, checkIn: Date, checkOut: Date): Promise<boolean> {
     const result = await this.db.query(`
       SELECT COUNT(*) as conflicts
-      FROM availability_blocks
+      FROM cc_availability_blocks
       WHERE property_id = $1
         AND start_date < $3
         AND end_date > $2
@@ -381,8 +381,8 @@ export class AccommodationStorage {
   }): Promise<AccommodationBooking[]> {
     let query = `
       SELECT b.*, p.name as property_name, p.city as property_city
-      FROM accommodation_bookings b
-      LEFT JOIN accommodation_properties p ON b.property_id = p.id
+      FROM cc_accommodation_bookings b
+      LEFT JOIN cc_accommodation_properties p ON b.property_id = p.id
       WHERE 1=1
     `;
     const params: any[] = [];
@@ -413,8 +413,8 @@ export class AccommodationStorage {
   async getBookingById(id: number): Promise<AccommodationBooking | null> {
     const result = await this.db.query(`
       SELECT b.*, p.name as property_name, p.city as property_city
-      FROM accommodation_bookings b
-      LEFT JOIN accommodation_properties p ON b.property_id = p.id
+      FROM cc_accommodation_bookings b
+      LEFT JOIN cc_accommodation_properties p ON b.property_id = p.id
       WHERE b.id = $1
     `, [id]);
     return result.rows[0] ? convertKeysToCamel(result.rows[0]) as AccommodationBooking : null;
@@ -428,7 +428,7 @@ export class AccommodationStorage {
     const placeholders = columns.map((_, i) => `$${i + 1}`);
 
     const query = `
-      INSERT INTO accommodation_bookings (${columns.join(', ')})
+      INSERT INTO cc_accommodation_bookings (${columns.join(', ')})
       VALUES (${placeholders.join(', ')})
       RETURNING *
     `;
@@ -446,7 +446,7 @@ export class AccommodationStorage {
     const values = [...Object.values(filtered), id];
 
     const query = `
-      UPDATE accommodation_bookings
+      UPDATE cc_accommodation_bookings
       SET ${setClause}, updated_at = CURRENT_TIMESTAMP
       WHERE id = $${values.length}
       RETURNING *
@@ -460,13 +460,13 @@ export class AccommodationStorage {
   // =====================================================
 
   async getCampaigns(): Promise<OutreachCampaign[]> {
-    const result = await this.db.query('SELECT * FROM outreach_campaigns ORDER BY created_at DESC');
+    const result = await this.db.query('SELECT * FROM cc_outreach_campaigns ORDER BY created_at DESC');
     return result.rows.map(convertKeysToCamel) as OutreachCampaign[];
   }
 
   async createCampaign(campaign: Partial<OutreachCampaign>): Promise<OutreachCampaign> {
     const result = await this.db.query(`
-      INSERT INTO outreach_campaigns (name, description, target_region, target_cities, target_min_crew_score, template_id, status)
+      INSERT INTO cc_outreach_campaigns (name, description, target_region, target_cities, target_min_crew_score, template_id, status)
       VALUES ($1, $2, $3, $4, $5, $6, $7)
       RETURNING *
     `, [
@@ -483,7 +483,7 @@ export class AccommodationStorage {
 
   async getMessagesForCampaign(campaignId: number): Promise<OutreachMessage[]> {
     const result = await this.db.query(
-      'SELECT * FROM outreach_messages WHERE campaign_id = $1 ORDER BY created_at DESC',
+      'SELECT * FROM cc_outreach_messages WHERE campaign_id = $1 ORDER BY created_at DESC',
       [campaignId]
     );
     return result.rows.map(convertKeysToCamel) as OutreachMessage[];
@@ -491,7 +491,7 @@ export class AccommodationStorage {
 
   async createOutreachMessage(message: Partial<OutreachMessage>): Promise<OutreachMessage> {
     const result = await this.db.query(`
-      INSERT INTO outreach_messages (campaign_id, host_id, property_id, channel, subject, message_body, status)
+      INSERT INTO cc_outreach_messages (campaign_id, host_id, property_id, channel, subject, message_body, status)
       VALUES ($1, $2, $3, $4, $5, $6, $7)
       RETURNING *
     `, [
@@ -524,7 +524,7 @@ export class AccommodationStorage {
     }
 
     await this.db.query(`
-      UPDATE outreach_messages
+      UPDATE cc_outreach_messages
       SET ${updates.join(', ')}, updated_at = CURRENT_TIMESTAMP
       WHERE id = $1
     `, params);

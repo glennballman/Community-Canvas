@@ -427,7 +427,7 @@ router.get('/tenants', authenticateToken, async (req: AuthRequest, res: Response
             LEFT JOIN cc_tenant_users tu ON tu.tenant_id = t.id AND tu.status = 'active'
             LEFT JOIN cc_users u ON u.id = t.owner_user_id
             LEFT JOIN LATERAL (
-                SELECT slug FROM portals 
+                SELECT slug FROM cc_portals 
                 WHERE owning_tenant_id = t.id AND status = 'active'
                 ORDER BY created_at LIMIT 1
             ) p ON true
@@ -487,7 +487,7 @@ router.get('/tenants/:id', authenticateToken, loadTenantContext, async (req: Aut
             SELECT t.*, p.slug as portal_slug
             FROM cc_tenants t
             LEFT JOIN LATERAL (
-                SELECT slug FROM portals 
+                SELECT slug FROM cc_portals 
                 WHERE owning_tenant_id = t.id AND status = 'active'
                 ORDER BY created_at LIMIT 1
             ) p ON true

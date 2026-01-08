@@ -30,8 +30,8 @@ router.post('/work-requests/:id/appreciation', async (req: Request, res: Respons
     try {
       const wrResult = await client.query(
         `SELECT wr.id, c.contractor_party_id
-         FROM work_requests wr
-         LEFT JOIN conversations c ON c.work_request_id = wr.id
+         FROM cc_work_requests wr
+         LEFT JOIN cc_conversations c ON c.work_request_id = wr.id
          WHERE wr.id = $1
          ORDER BY c.created_at DESC LIMIT 1`,
         [work_request_id]
@@ -49,7 +49,7 @@ router.post('/work-requests/:id/appreciation', async (req: Request, res: Respons
 
       const settingsResult = await client.query(
         `SELECT accepts_appreciation_requests 
-         FROM contractor_feedback_settings 
+         FROM cc_contractor_feedback_settings 
          WHERE party_id = $1`,
         [wr.contractor_party_id]
       );
@@ -70,7 +70,7 @@ router.post('/work-requests/:id/appreciation', async (req: Request, res: Respons
       }
 
       const result = await client.query(
-        `INSERT INTO public_appreciations (
+        `INSERT INTO cc_public_appreciations (
           work_request_id,
           from_party_id, from_individual_id, from_display_name,
           to_party_id,
@@ -118,8 +118,8 @@ router.get('/appreciations/received', async (req: Request, res: Response) => {
       SELECT pa.*, 
              wr.title as work_request_title,
              wr.work_request_ref
-      FROM public_appreciations pa
-      JOIN work_requests wr ON pa.work_request_id = wr.id
+      FROM cc_public_appreciations pa
+      JOIN cc_work_requests wr ON pa.work_request_id = wr.id
       WHERE pa.to_party_id = $1
     `;
 
@@ -144,15 +144,15 @@ router.get('/appreciations/received', async (req: Request, res: Response) => {
 // ============================================================
 // GET PUBLIC APPRECIATIONS (Anyone can view public ones)
 // ============================================================
-router.get('/parties/:party_id/appreciations', async (req: Request, res: Response) => {
+router.get('/cc_parties/:party_id/appreciations', async (req: Request, res: Response) => {
   try {
     const { party_id } = req.params;
 
     const result = await pool.query(
       `SELECT pa.id, pa.from_display_name, pa.content, pa.highlights, pa.created_at,
               wr.title as work_request_title
-       FROM public_appreciations pa
-       JOIN work_requests wr ON pa.work_request_id = wr.id
+       FROM cc_public_appreciations pa
+       JOIN cc_work_requests wr ON pa.work_request_id = wr.id
        WHERE pa.to_party_id = $1 
          AND pa.is_public = true 
          AND NOT pa.hidden_by_contractor
@@ -184,7 +184,7 @@ router.post('/appreciations/:id/publish', async (req: Request, res: Response) =>
     }
 
     const result = await pool.query(
-      `UPDATE public_appreciations SET 
+      `UPDATE cc_public_appreciations SET 
         is_public = true, 
         made_public_at = now()
        WHERE id = $1 AND to_party_id = $2
@@ -219,7 +219,7 @@ router.post('/appreciations/:id/unpublish', async (req: Request, res: Response) 
     }
 
     const result = await pool.query(
-      `UPDATE public_appreciations SET 
+      `UPDATE cc_public_appreciations SET 
         is_public = false
        WHERE id = $1 AND to_party_id = $2
        RETURNING *`,
@@ -253,7 +253,7 @@ router.post('/appreciations/:id/hide', async (req: Request, res: Response) => {
     }
 
     const result = await pool.query(
-      `UPDATE public_appreciations SET 
+      `UPDATE cc_public_appreciations SET 
         hidden_by_contractor = true,
         hidden_at = now(),
         is_public = false
@@ -286,7 +286,7 @@ router.post('/appreciations/:id/unhide', async (req: Request, res: Response) => 
     }
 
     const result = await pool.query(
-      `UPDATE public_appreciations SET 
+      `UPDATE cc_public_appreciations SET 
         hidden_by_contractor = false,
         hidden_at = null
        WHERE id = $1 AND to_party_id = $2
@@ -308,7 +308,7 @@ router.post('/appreciations/:id/unhide', async (req: Request, res: Response) => 
 // ============================================================
 // GET CONTRACTOR TRUST SUMMARY (Public Profile)
 // ============================================================
-router.get('/parties/:party_id/trust-summary', async (req: Request, res: Response) => {
+router.get('/cc_parties/:party_id/trust-summary', async (req: Request, res: Response) => {
   try {
     const { party_id } = req.params;
 
@@ -317,7 +317,7 @@ router.get('/parties/:party_id/trust-summary', async (req: Request, res: Respons
       const partyResult = await client.query(
         `SELECT trade_name, legal_name, party_type, status, 
                 metadata, payment_preferences
-         FROM parties WHERE id = $1`,
+         FROM cc_parties WHERE id = $1`,
         [party_id]
       );
 
@@ -326,22 +326,22 @@ router.get('/parties/:party_id/trust-summary', async (req: Request, res: Respons
       }
 
       const appreciationCount = await client.query(
-        `SELECT COUNT(*) FROM public_appreciations 
+        `SELECT COUNT(*) FROM cc_public_appreciations 
          WHERE to_party_id = $1 AND is_public = true AND NOT hidden_by_contractor`,
         [party_id]
       );
 
       const completedJobs = await client.query(
         `SELECT COUNT(DISTINCT wr.id) 
-         FROM work_requests wr
-         JOIN conversations c ON c.work_request_id = wr.id
+         FROM cc_work_requests wr
+         JOIN cc_conversations c ON c.work_request_id = wr.id
          WHERE c.contractor_party_id = $1 AND c.state = 'completed'`,
         [party_id]
       );
 
       const repeatCustomers = await client.query(
         `SELECT COUNT(*) FROM (
-           SELECT owner_party_id FROM conversations
+           SELECT owner_party_id FROM cc_conversations
            WHERE contractor_party_id = $1 AND state = 'completed'
            GROUP BY owner_party_id
            HAVING COUNT(*) > 1
@@ -350,7 +350,7 @@ router.get('/parties/:party_id/trust-summary', async (req: Request, res: Respons
       );
 
       const trustSignals = await client.query(
-        `SELECT * FROM trust_signals WHERE party_id = $1`,
+        `SELECT * FROM cc_trust_signals WHERE party_id = $1`,
         [party_id]
       );
 

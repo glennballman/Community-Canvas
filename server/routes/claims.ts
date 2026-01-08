@@ -29,7 +29,7 @@ function handleTransitionError(res: Response, error: any, currentStatus?: string
 }
 
 // Log service-key audit event to database
-// For security audit events, claim_id may be NULL if the claim doesn't exist
+// For security audit cc_events, claim_id may be NULL if the claim doesn't exist
 // The attempted claim_id is always stored in the payload for forensics
 async function logServiceKeyAudit(
   claimId: string, 

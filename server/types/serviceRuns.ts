@@ -13,7 +13,7 @@ export type DependencyType = 'requires' | 'blocks';
 export type ServiceRunStatus = 
   | 'collecting'      // Accepting signups
   | 'bidding'         // Contractors bidding
-  | 'bid_review'      // Reviewing bids
+  | 'bid_review'      // Reviewing cc_bids
   | 'confirmed'       // Bid accepted
   | 'scheduled'       // Dates locked
   | 'in_progress'     // Work underway

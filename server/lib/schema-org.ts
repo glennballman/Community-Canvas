@@ -3,7 +3,7 @@
  * 
  * Provides structured data generation for:
  * - Articles (with multiple schema.org types)
- * - Infrastructure entities
+ * - Infrastructure cc_entities
  * - Organizations
  */
 
@@ -24,7 +24,7 @@ export interface ArticleForJsonLd {
   reading_time_minutes?: number | null;
   portal_name?: string | null;
   portal_base_url?: string | null;
-  entity_links?: Array<{
+  cc_entity_links?: Array<{
     entity_kind: string;
     entity_id: string;
     entity_name?: string | null;
@@ -89,7 +89,7 @@ function mapEntityKindToSchemaType(entityKind: string): string {
  */
 export function generateArticleJsonLd(article: ArticleForJsonLd): object {
   const baseUrl = article.portal_base_url || 'https://communitycanvas.ca';
-  const articleUrl = article.canonical_url || `${baseUrl}/articles/${article.slug}`;
+  const articleUrl = article.canonical_url || `${baseUrl}/cc_articles/${article.slug}`;
   
   const jsonLd: Record<string, unknown> = {
     '@context': 'https://schema.org',
@@ -144,8 +144,8 @@ export function generateArticleJsonLd(article: ArticleForJsonLd): object {
   };
 
   // Entity links as "about" and "mentions" references
-  if (article.entity_links && article.entity_links.length > 0) {
-    const aboutLinks = article.entity_links
+  if (article.cc_entity_links && article.cc_entity_links.length > 0) {
+    const aboutLinks = article.cc_entity_links
       .filter(link => link.relation === 'about' || link.relation === 'featured')
       .map(link => ({
         '@type': mapEntityKindToSchemaType(link.entity_kind),
@@ -157,7 +157,7 @@ export function generateArticleJsonLd(article: ArticleForJsonLd): object {
       jsonLd.about = aboutLinks;
     }
     
-    const mentionLinks = article.entity_links
+    const mentionLinks = article.cc_entity_links
       .filter(link => link.relation === 'mentions')
       .map(link => ({
         '@type': mapEntityKindToSchemaType(link.entity_kind),
@@ -174,7 +174,7 @@ export function generateArticleJsonLd(article: ArticleForJsonLd): object {
 }
 
 /**
- * Generate JSON-LD for infrastructure entities
+ * Generate JSON-LD for infrastructure cc_entities
  */
 export function generateInfrastructureJsonLd(entity: InfrastructureForJsonLd): object {
   const jsonLd: Record<string, unknown> = {
@@ -206,7 +206,7 @@ export function generateInfrastructureJsonLd(entity: InfrastructureForJsonLd): o
 }
 
 /**
- * Generate JSON-LD for organizations
+ * Generate JSON-LD for cc_organizations
  */
 export function generateOrganizationJsonLd(org: OrganizationForJsonLd): object {
   const jsonLd: Record<string, unknown> = {

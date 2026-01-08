@@ -5,7 +5,7 @@ import { redactContactInfo, shouldBlockMessage } from '../lib/contactRedaction';
 
 const router = Router();
 
-router.post('/conversations', async (req: Request, res: Response) => {
+router.post('/cc_conversations', async (req: Request, res: Response) => {
   try {
     const work_request_id = req.body.work_request_id || req.body.opportunity_id;
 
@@ -24,7 +24,7 @@ router.post('/conversations', async (req: Request, res: Response) => {
 
       const wrResult = await client.query(
         `SELECT wr.id, wr.owner_tenant_id, wr.title
-         FROM work_requests wr
+         FROM cc_work_requests wr
          WHERE wr.id = $1`,
         [work_request_id]
       );
@@ -42,7 +42,7 @@ router.post('/conversations', async (req: Request, res: Response) => {
       }
 
       let ownerPartyResult = await client.query(
-        `SELECT id FROM parties
+        `SELECT id FROM cc_parties
          WHERE tenant_id = $1 AND party_kind = 'organization'
          ORDER BY created_at ASC LIMIT 1`,
         [wr.owner_tenant_id]
@@ -63,7 +63,7 @@ router.post('/conversations', async (req: Request, res: Response) => {
         }
 
         const createOwnerResult = await client.query(
-          `INSERT INTO parties (tenant_id, party_kind, party_type, status, legal_name, trade_name, primary_contact_email, primary_contact_telephone)
+          `INSERT INTO cc_parties (tenant_id, party_kind, party_type, status, legal_name, trade_name, primary_contact_email, primary_contact_telephone)
            VALUES ($1, 'organization', 'owner', 'active', $2, $2, $3, $4)
            RETURNING id`,
           [wr.owner_tenant_id, ownerTenant.name, ownerTenant.email, ownerTenant.telephone]
@@ -77,7 +77,7 @@ router.post('/conversations', async (req: Request, res: Response) => {
       }
 
       const existingResult = await client.query(
-        `SELECT * FROM conversations
+        `SELECT * FROM cc_conversations
          WHERE work_request_id = $1 AND contractor_party_id = $2`,
         [work_request_id, contractor.actor_party_id]
       );
@@ -96,7 +96,7 @@ router.post('/conversations', async (req: Request, res: Response) => {
       }
 
       const priorResult = await client.query(
-        `SELECT 1 FROM conversations
+        `SELECT 1 FROM cc_conversations
          WHERE contractor_party_id = $1 AND owner_party_id = $2
            AND state = 'completed'
          LIMIT 1`,
@@ -105,7 +105,7 @@ router.post('/conversations', async (req: Request, res: Response) => {
       const hasPriorRelationship = priorResult.rows.length > 0;
 
       const createResult = await client.query(
-        `INSERT INTO conversations (
+        `INSERT INTO cc_conversations (
           work_request_id,
           contractor_party_id, owner_party_id,
           contractor_actor_party_id, owner_actor_party_id,
@@ -128,7 +128,7 @@ router.post('/conversations', async (req: Request, res: Response) => {
       const conversation = createResult.rows[0];
 
       await client.query(
-        `INSERT INTO messages (
+        `INSERT INTO cc_messages (
           conversation_id, sender_party_id, sender_individual_id,
           message_type, content, visibility
         ) VALUES ($1, NULL, NULL, 'system', $2, 'normal')`,
@@ -164,7 +164,7 @@ router.post('/conversations', async (req: Request, res: Response) => {
   }
 });
 
-router.get('/conversations', async (req: Request, res: Response) => {
+router.get('/cc_conversations', async (req: Request, res: Response) => {
   try {
     const actor = await resolveActorParty(req, 'contractor');
     if (!actor) {
@@ -182,11 +182,11 @@ router.get('/conversations', async (req: Request, res: Response) => {
              wr.owner_type,
              owner_p.trade_name as owner_name,
              contractor_p.trade_name as contractor_name,
-             (SELECT content FROM messages WHERE conversation_id = c.id ORDER BY created_at DESC LIMIT 1) as last_message_preview
-      FROM conversations c
-      JOIN work_requests wr ON c.work_request_id = wr.id
-      LEFT JOIN parties owner_p ON c.owner_party_id = owner_p.id
-      LEFT JOIN parties contractor_p ON c.contractor_party_id = contractor_p.id
+             (SELECT content FROM cc_messages WHERE conversation_id = c.id ORDER BY created_at DESC LIMIT 1) as last_message_preview
+      FROM cc_conversations c
+      JOIN cc_work_requests wr ON c.work_request_id = wr.id
+      LEFT JOIN cc_parties owner_p ON c.owner_party_id = owner_p.id
+      LEFT JOIN cc_parties contractor_p ON c.contractor_party_id = contractor_p.id
       WHERE (c.owner_party_id = $1 OR c.contractor_party_id = $1)
     `;
     const params: any[] = [actor.actor_party_id];
@@ -208,15 +208,15 @@ router.get('/conversations', async (req: Request, res: Response) => {
 
     const result = await pool.query(query, params);
 
-    const conversations = result.rows.map(c => ({
+    const cc_conversations = result.rows.map(c => ({
       ...c,
       my_role: c.owner_party_id === actor.actor_party_id ? 'owner' : 'contractor',
       unread_count: c.owner_party_id === actor.actor_party_id ? c.unread_owner : c.unread_contractor
     }));
 
     res.json({ 
-      conversations,
-      count: conversations.length,
+      cc_conversations,
+      count: cc_conversations.length,
       actor: {
         party_id: actor.actor_party_id,
         individual_id: actor.individual_id,
@@ -224,12 +224,12 @@ router.get('/conversations', async (req: Request, res: Response) => {
       }
     });
   } catch (error) {
-    console.error('Error fetching conversations:', error);
-    res.status(500).json({ error: 'Failed to fetch conversations' });
+    console.error('Error fetching cc_conversations:', error);
+    res.status(500).json({ error: 'Failed to fetch cc_conversations' });
   }
 });
 
-router.get('/conversations/:id', async (req: Request, res: Response) => {
+router.get('/cc_conversations/:id', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const actor = await resolveActorParty(req, 'contractor');
@@ -252,10 +252,10 @@ router.get('/conversations/:id', async (req: Request, res: Response) => {
               contractor_p.trade_name as contractor_name,
               contractor_p.primary_contact_email as contractor_email,
               contractor_p.primary_contact_phone as contractor_phone
-       FROM conversations c
-       JOIN work_requests wr ON c.work_request_id = wr.id
-       LEFT JOIN parties owner_p ON c.owner_party_id = owner_p.id
-       LEFT JOIN parties contractor_p ON c.contractor_party_id = contractor_p.id
+       FROM cc_conversations c
+       JOIN cc_work_requests wr ON c.work_request_id = wr.id
+       LEFT JOIN cc_parties owner_p ON c.owner_party_id = owner_p.id
+       LEFT JOIN cc_parties contractor_p ON c.contractor_party_id = contractor_p.id
        WHERE c.id = $1
          AND (c.owner_party_id = $2 OR c.contractor_party_id = $2)`,
       [id, actor.actor_party_id]
@@ -298,7 +298,7 @@ router.get('/conversations/:id', async (req: Request, res: Response) => {
   }
 });
 
-router.get('/conversations/:id/contact-status', async (req: Request, res: Response) => {
+router.get('/cc_conversations/:id/contact-status', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const actor = await resolveActorParty(req, 'contractor');
@@ -308,7 +308,7 @@ router.get('/conversations/:id/contact-status', async (req: Request, res: Respon
     }
 
     const convResult = await pool.query(
-      `SELECT * FROM conversations WHERE id = $1
+      `SELECT * FROM cc_conversations WHERE id = $1
        AND (owner_party_id = $2 OR contractor_party_id = $2)`,
       [id, actor.actor_party_id]
     );
@@ -333,7 +333,7 @@ router.get('/conversations/:id/contact-status', async (req: Request, res: Respon
   }
 });
 
-router.post('/conversations/:id/messages', async (req: Request, res: Response) => {
+router.post('/cc_conversations/:id/cc_messages', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { content, message_type = 'text', structured_data, attachments } = req.body;
@@ -352,7 +352,7 @@ router.post('/conversations/:id/messages', async (req: Request, res: Response) =
       await client.query('BEGIN');
 
       const convResult = await client.query(
-        `SELECT * FROM conversations WHERE id = $1`,
+        `SELECT * FROM cc_conversations WHERE id = $1`,
         [id]
       );
 
@@ -379,7 +379,7 @@ router.post('/conversations/:id/messages', async (req: Request, res: Response) =
 
       if (!conversation.contact_unlocked) {
         const recentRedactions = await client.query(
-          `SELECT COUNT(*) as count FROM message_redactions
+          `SELECT COUNT(*) as count FROM cc_message_redactions
            WHERE conversation_id = $1 
              AND sender_party_id = $2
              AND created_at > now() - interval '1 hour'`,
@@ -398,7 +398,7 @@ router.post('/conversations/:id/messages', async (req: Request, res: Response) =
           redactionReason = blockCheck.reason || 'Contact details are shared after deposit is confirmed';
 
           await client.query(
-            `INSERT INTO message_redactions (
+            `INSERT INTO cc_message_redactions (
               message_id, conversation_id, 
               sender_party_id, sender_individual_id,
               original_content, detected_items
@@ -415,7 +415,7 @@ router.post('/conversations/:id/messages', async (req: Request, res: Response) =
       }
 
       const msgResult = await client.query(
-        `INSERT INTO messages (
+        `INSERT INTO cc_messages (
           conversation_id, 
           sender_party_id, sender_individual_id,
           message_type, content,
@@ -441,7 +441,7 @@ router.post('/conversations/:id/messages', async (req: Request, res: Response) =
 
       if (wasRedacted) {
         await client.query(
-          `UPDATE message_redactions SET message_id = $1
+          `UPDATE cc_message_redactions SET message_id = $1
            WHERE conversation_id = $2 AND message_id IS NULL
            ORDER BY created_at DESC LIMIT 1`,
           [message.id, id]
@@ -449,7 +449,7 @@ router.post('/conversations/:id/messages', async (req: Request, res: Response) =
       }
 
       await client.query(
-        `UPDATE conversations SET
+        `UPDATE cc_conversations SET
           last_message_at = now(),
           last_message_id = $1,
           message_count = message_count + 1,
@@ -486,7 +486,7 @@ router.post('/conversations/:id/messages', async (req: Request, res: Response) =
   }
 });
 
-router.get('/conversations/:id/messages', async (req: Request, res: Response) => {
+router.get('/cc_conversations/:id/cc_messages', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { limit = '50', before, after } = req.query;
@@ -499,7 +499,7 @@ router.get('/conversations/:id/messages', async (req: Request, res: Response) =>
     const client = await pool.connect();
     try {
       const convResult = await client.query(
-        `SELECT * FROM conversations WHERE id = $1
+        `SELECT * FROM cc_conversations WHERE id = $1
          AND (owner_party_id = $2 OR contractor_party_id = $2)`,
         [id, actor.actor_party_id]
       );
@@ -521,9 +521,9 @@ router.get('/conversations/:id/messages', async (req: Request, res: Response) =>
                  WHEN m.sender_party_id IS NULL THEN 'system'
                  ELSE 'them'
                END as sender_role
-        FROM messages m
+        FROM cc_messages m
         LEFT JOIN cc_individuals ind ON m.sender_individual_id = ind.id
-        LEFT JOIN parties p ON m.sender_party_id = p.id
+        LEFT JOIN cc_parties p ON m.sender_party_id = p.id
         WHERE m.conversation_id = $1
           AND m.deleted_at IS NULL
           AND m.visibility != 'hidden'
@@ -547,26 +547,26 @@ router.get('/conversations/:id/messages', async (req: Request, res: Response) =>
 
       const unreadField = isOwner ? 'unread_owner' : 'unread_contractor';
       await client.query(
-        `UPDATE conversations SET ${unreadField} = 0, updated_at = now() WHERE id = $1`,
+        `UPDATE cc_conversations SET ${unreadField} = 0, updated_at = now() WHERE id = $1`,
         [id]
       );
 
       await client.query(
-        `UPDATE messages SET read_at = now()
+        `UPDATE cc_messages SET read_at = now()
          WHERE conversation_id = $1
            AND sender_party_id != $2
            AND read_at IS NULL`,
         [id, actor.actor_party_id]
       );
 
-      const messages = result.rows.reverse().map(m => ({
+      const cc_messages = result.rows.reverse().map(m => ({
         ...m,
         sender_display_name: m.sender_preferred_name || m.sender_name || m.sender_party_name || 'System'
       }));
 
       res.json({ 
-        messages,
-        count: messages.length,
+        cc_messages,
+        count: cc_messages.length,
         contact_unlocked: conversation.contact_unlocked,
         has_more: result.rows.length === parseInt(limit as string)
       });
@@ -575,12 +575,12 @@ router.get('/conversations/:id/messages', async (req: Request, res: Response) =>
       client.release();
     }
   } catch (error) {
-    console.error('Error fetching messages:', error);
-    res.status(500).json({ error: 'Failed to fetch messages' });
+    console.error('Error fetching cc_messages:', error);
+    res.status(500).json({ error: 'Failed to fetch cc_messages' });
   }
 });
 
-router.patch('/conversations/:id/state', async (req: Request, res: Response) => {
+router.patch('/cc_conversations/:id/state', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { state } = req.body;
@@ -604,7 +604,7 @@ router.patch('/conversations/:id/state', async (req: Request, res: Response) => 
       await client.query('BEGIN');
 
       const convResult = await client.query(
-        `SELECT * FROM conversations WHERE id = $1`,
+        `SELECT * FROM cc_conversations WHERE id = $1`,
         [id]
       );
 
@@ -624,7 +624,7 @@ router.patch('/conversations/:id/state', async (req: Request, res: Response) => 
       const unlockStatus = await canUnlockContact(id);
 
       const result = await client.query(
-        `UPDATE conversations SET
+        `UPDATE cc_conversations SET
           state = $1::conversation_state,
           state_changed_at = now(),
           contact_unlocked = CASE WHEN $2 THEN true ELSE contact_unlocked END,
@@ -644,7 +644,7 @@ router.patch('/conversations/:id/state', async (req: Request, res: Response) => 
       );
 
       await client.query(
-        `INSERT INTO messages (
+        `INSERT INTO cc_messages (
           conversation_id, sender_party_id, sender_individual_id,
           message_type, content
         ) VALUES ($1, $2, $3, 'system', $4)`,
@@ -675,7 +675,7 @@ router.patch('/conversations/:id/state', async (req: Request, res: Response) => 
   }
 });
 
-router.post('/conversations/:id/unlock-contact', async (req: Request, res: Response) => {
+router.post('/cc_conversations/:id/unlock-contact', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { reason, gate = 'owner_override' } = req.body;
@@ -690,7 +690,7 @@ router.post('/conversations/:id/unlock-contact', async (req: Request, res: Respo
       await client.query('BEGIN');
 
       const convResult = await client.query(
-        `SELECT * FROM conversations WHERE id = $1 AND owner_party_id = $2`,
+        `SELECT * FROM cc_conversations WHERE id = $1 AND owner_party_id = $2`,
         [id, actor.actor_party_id]
       );
 
@@ -710,7 +710,7 @@ router.post('/conversations/:id/unlock-contact', async (req: Request, res: Respo
       }
 
       const result = await client.query(
-        `UPDATE conversations SET
+        `UPDATE cc_conversations SET
           contact_unlocked = true,
           contact_unlocked_at = now(),
           contact_unlock_gate = $1::contact_unlock_gate,
@@ -722,7 +722,7 @@ router.post('/conversations/:id/unlock-contact', async (req: Request, res: Respo
       );
 
       await client.query(
-        `INSERT INTO messages (
+        `INSERT INTO cc_messages (
           conversation_id, sender_party_id, sender_individual_id,
           message_type, content, visibility
         ) VALUES ($1, NULL, NULL, 'system', 'Contact details are now available.', 'normal')`,
@@ -734,7 +734,7 @@ router.post('/conversations/:id/unlock-contact', async (req: Request, res: Respo
       res.json({
         conversation: result.rows[0],
         contact_unlocked: true,
-        message: 'Contact details are now available to both parties.'
+        message: 'Contact details are now available to both cc_parties.'
       });
 
     } catch (error) {

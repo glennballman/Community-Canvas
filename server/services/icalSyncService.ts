@@ -44,7 +44,7 @@ function parseICalDate(dateStr: string): string | null {
 }
 
 function parseICalEvents(icalData: string): ICalEvent[] {
-  const events: ICalEvent[] = [];
+  const cc_events: ICalEvent[] = [];
   
   const eventBlocks = icalData.split('BEGIN:VEVENT');
   
@@ -76,7 +76,7 @@ function parseICalEvents(icalData: string): ICalEvent[] {
         ? 'booked' 
         : 'blocked';
     
-    events.push({
+    cc_events.push({
       uid,
       summary,
       startDate,
@@ -85,7 +85,7 @@ function parseICalEvents(icalData: string): ICalEvent[] {
     });
   }
   
-  return events;
+  return cc_events;
 }
 
 export class ICalSyncService {
@@ -128,7 +128,7 @@ export class ICalSyncService {
 
     try {
       const feedResult = await this.db.query(
-        'SELECT * FROM ical_feeds WHERE id = $1',
+        'SELECT * FROM cc_ical_feeds WHERE id = $1',
         [feedId]
       );
 
@@ -149,18 +149,18 @@ export class ICalSyncService {
         return result;
       }
 
-      const events = parseICalEvents(fetchResult.data);
-      result.eventsFound = events.length;
+      const cc_events = parseICalEvents(fetchResult.data);
+      result.eventsFound = cc_events.length;
 
-      for (const event of events) {
+      for (const event of cc_events) {
         const existingBlock = await this.db.query(
-          'SELECT id FROM availability_blocks WHERE feed_id = $1 AND uid = $2',
+          'SELECT id FROM cc_availability_blocks WHERE feed_id = $1 AND uid = $2',
           [feedId, event.uid]
         );
 
         if (existingBlock.rows.length > 0) {
           await this.db.query(`
-            UPDATE availability_blocks SET
+            UPDATE cc_availability_blocks SET
               start_date = $1,
               end_date = $2,
               block_type = $3,
@@ -170,7 +170,7 @@ export class ICalSyncService {
           result.blocksUpdated++;
         } else {
           await this.db.query(`
-            INSERT INTO availability_blocks (property_id, feed_id, start_date, end_date, block_type, summary, uid)
+            INSERT INTO cc_availability_blocks (property_id, feed_id, start_date, end_date, block_type, summary, uid)
             VALUES ($1, $2, $3, $4, $5, $6, $7)
           `, [propertyId, feedId, event.startDate, event.endDate, event.blockType, event.summary, event.uid]);
           result.blocksCreated++;
@@ -197,7 +197,7 @@ export class ICalSyncService {
   ): Promise<void> {
     if (status === 'success') {
       await this.db.query(`
-        UPDATE ical_feeds SET
+        UPDATE cc_ical_feeds SET
           last_synced_at = CURRENT_TIMESTAMP,
           last_sync_status = $1,
           last_sync_error = NULL,
@@ -207,7 +207,7 @@ export class ICalSyncService {
       `, [status, feedId]);
     } else {
       await this.db.query(`
-        UPDATE ical_feeds SET
+        UPDATE cc_ical_feeds SET
           last_synced_at = CURRENT_TIMESTAMP,
           last_sync_status = $1,
           last_sync_error = $2,
@@ -224,7 +224,7 @@ export class ICalSyncService {
 
     try {
       const feedsResult = await this.db.query(
-        'SELECT id, property_id FROM ical_feeds WHERE is_active = true'
+        'SELECT id, property_id FROM cc_ical_feeds WHERE is_active = true'
       );
 
       console.log(`[iCal Sync] Starting sync for ${feedsResult.rows.length} active feeds`);
@@ -234,7 +234,7 @@ export class ICalSyncService {
         
         if (syncResult.success) {
           result.synced++;
-          console.log(`[iCal Sync] Feed ${feed.id}: ${syncResult.eventsFound} events, ${syncResult.blocksCreated} created, ${syncResult.blocksUpdated} updated`);
+          console.log(`[iCal Sync] Feed ${feed.id}: ${syncResult.eventsFound} cc_events, ${syncResult.blocksCreated} created, ${syncResult.blocksUpdated} updated`);
         } else {
           result.failed++;
           result.errors.push(`Feed ${feed.id}: ${syncResult.error}`);
@@ -256,7 +256,7 @@ export class ICalSyncService {
   async getAvailabilityBlocks(propertyId: number, days: number = 30): Promise<{ start: string; end: string; type: string }[]> {
     const result = await this.db.query(`
       SELECT start_date, end_date, block_type
-      FROM availability_blocks
+      FROM cc_availability_blocks
       WHERE property_id = $1
         AND end_date >= CURRENT_DATE
         AND start_date <= CURRENT_DATE + INTERVAL '1 day' * $2

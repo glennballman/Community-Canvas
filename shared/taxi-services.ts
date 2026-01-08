@@ -2,7 +2,7 @@
  * BC Taxi Services Dataset
  * Comprehensive list of taxi companies across British Columbia
  * All coordinates in WGS84 (lat/lng)
- * Tier 3 MOBILITY: Community movement services
+ * Tier 3 MOBILITY: Community movement cc_services
  */
 
 export type TaxiServiceType =

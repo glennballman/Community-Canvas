@@ -8,7 +8,7 @@ import { pool } from '../db.js';
 const R2_ACCOUNT_ID = process.env.R2_ACCOUNT_ID;
 const R2_ACCESS_KEY_ID = process.env.R2_ACCESS_KEY_ID;
 const R2_SECRET_ACCESS_KEY = process.env.R2_SECRET_ACCESS_KEY;
-const R2_BUCKET_NAME = process.env.R2_BUCKET_NAME || 'community-canvas-media';
+const R2_BUCKET_NAME = process.env.R2_BUCKET_NAME || 'community-canvas-cc_media';
 const R2_PUBLIC_URL = process.env.R2_PUBLIC_URL || '';
 
 // Check if R2 is configured
@@ -145,7 +145,7 @@ async function processImage(buffer: Buffer): Promise<{
   };
 }
 
-// Upload media file directly
+// Upload cc_media file directly
 export async function uploadMedia(
   file: { buffer: Buffer; originalname: string; mimetype: string },
   options: UploadOptions
@@ -198,7 +198,7 @@ export async function uploadMedia(
   const mediaType = ALLOWED_IMAGE_TYPES.includes(file.mimetype) ? 'image' : 'document';
   
   const result = await pool.query(`
-    INSERT INTO media (
+    INSERT INTO cc_media (
       tenant_id, storage_key, storage_provider, public_url,
       filename, mime_type, file_size, width, height,
       alt_text, media_type, purpose, source, variants, uploaded_by
@@ -216,7 +216,7 @@ export async function uploadMedia(
   // Link to entity if provided
   if (entityType !== 'general' && entityId !== 'misc') {
     await pool.query(`
-      INSERT INTO entity_media (media_id, entity_type, entity_id, role)
+      INSERT INTO cc_entity_media (media_id, entity_type, entity_id, role)
       VALUES ($1, $2, $3, $4)
     `, [mediaId, entityType, entityId, role]);
   }
@@ -258,9 +258,9 @@ export async function getPresignedUploadUrl(
   const uploadUrl = await getSignedUrl(client, command, { expiresIn: 3600 });
   const publicUrl = getPublicUrl(storageKey);
   
-  // Create pending media record
+  // Create pending cc_media record
   const result = await pool.query(`
-    INSERT INTO media (
+    INSERT INTO cc_media (
       tenant_id, storage_key, storage_provider, public_url,
       filename, mime_type, file_size, media_type, source, processing_status
     ) VALUES ($1, $2, 'r2', $3, $4, $5, 0, $6, 'upload', 'pending')
@@ -286,9 +286,9 @@ export async function completePresignedUpload(
 ): Promise<void> {
   const { entityType, entityId, role = 'gallery', altText } = options;
   
-  // Get media record
+  // Get cc_media record
   const mediaResult = await pool.query(
-    'SELECT storage_key, mime_type FROM media WHERE id = $1 AND tenant_id = $2',
+    'SELECT storage_key, mime_type FROM cc_media WHERE id = $1 AND tenant_id = $2',
     [mediaId, tenantId]
   );
   
@@ -305,9 +305,9 @@ export async function completePresignedUpload(
     Key: storage_key,
   }));
   
-  // Update media record
+  // Update cc_media record
   await pool.query(`
-    UPDATE media SET
+    UPDATE cc_media SET
       file_size = $1,
       alt_text = $2,
       processing_status = 'complete',
@@ -318,14 +318,14 @@ export async function completePresignedUpload(
   // Link to entity if provided
   if (entityType && entityId) {
     await pool.query(`
-      INSERT INTO entity_media (media_id, entity_type, entity_id, role)
+      INSERT INTO cc_entity_media (media_id, entity_type, entity_id, role)
       VALUES ($1, $2, $3, $4)
       ON CONFLICT DO NOTHING
     `, [mediaId, entityType, entityId, role]);
   }
 }
 
-// Get media for an entity
+// Get cc_media for an entity
 export async function getMediaForEntity(
   entityType: string,
   entityId: string,
@@ -350,8 +350,8 @@ export async function getMediaForEntity(
       m.alt_text as "altText",
       em.role,
       em.sort_order as "sortOrder"
-    FROM entity_media em
-    JOIN media m ON m.id = em.media_id
+    FROM cc_entity_media em
+    JOIN cc_media m ON m.id = em.media_id
     WHERE em.entity_type = $1 AND em.entity_id = $2
   `;
   
@@ -368,7 +368,7 @@ export async function getMediaForEntity(
   return result.rows;
 }
 
-// Get single media by ID
+// Get single cc_media by ID
 export async function getMediaById(mediaId: string): Promise<{
   id: string;
   publicUrl: string;
@@ -393,18 +393,18 @@ export async function getMediaById(mediaId: string): Promise<{
       height,
       alt_text as "altText",
       caption
-    FROM media
+    FROM cc_media
     WHERE id = $1
   `, [mediaId]);
   
   return result.rows[0] || null;
 }
 
-// Delete media
+// Delete cc_media
 export async function deleteMedia(mediaId: string, tenantId: string): Promise<void> {
-  // Get media record
+  // Get cc_media record
   const result = await pool.query(
-    'SELECT storage_key, variants FROM media WHERE id = $1 AND tenant_id = $2',
+    'SELECT storage_key, variants FROM cc_media WHERE id = $1 AND tenant_id = $2',
     [mediaId, tenantId]
   );
   
@@ -431,8 +431,8 @@ export async function deleteMedia(mediaId: string, tenantId: string): Promise<vo
     }
   }
   
-  // Delete from database (cascades to entity_media)
-  await pool.query('DELETE FROM media WHERE id = $1', [mediaId]);
+  // Delete from database (cascades to cc_entity_media)
+  await pool.query('DELETE FROM cc_media WHERE id = $1', [mediaId]);
 }
 
 // Queue crawled image for download
@@ -450,7 +450,7 @@ export async function queueCrawledImage(
   }
 ): Promise<string> {
   const result = await pool.query(`
-    INSERT INTO crawl_media_queue (
+    INSERT INTO cc_crawl_media_queue (
       tenant_id, source_url, source_page_url, entity_type, entity_id,
       suggested_role, suggested_alt_text, page_context, crawl_job_id
     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)

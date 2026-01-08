@@ -31,8 +31,8 @@ router.post('/work-requests/:id/private-feedback', async (req: Request, res: Res
     try {
       const wrResult = await client.query(
         `SELECT wr.id, c.contractor_party_id, c.id as conversation_id
-         FROM work_requests wr
-         LEFT JOIN conversations c ON c.work_request_id = wr.id
+         FROM cc_work_requests wr
+         LEFT JOIN cc_conversations c ON c.work_request_id = wr.id
          WHERE wr.id = $1
          ORDER BY c.created_at DESC LIMIT 1`,
         [work_request_id]
@@ -50,7 +50,7 @@ router.post('/work-requests/:id/private-feedback', async (req: Request, res: Res
 
       const settingsResult = await client.query(
         `SELECT accepts_private_feedback, blocked_party_ids 
-         FROM contractor_feedback_settings 
+         FROM cc_contractor_feedback_settings 
          WHERE party_id = $1`,
         [wr.contractor_party_id]
       );
@@ -68,13 +68,13 @@ router.post('/work-requests/:id/private-feedback', async (req: Request, res: Res
       }
 
       const result = await client.query(
-        `INSERT INTO private_feedback (
+        `INSERT INTO cc_private_feedback (
           work_request_id, conversation_id,
           from_party_id, from_individual_id,
           to_party_id,
           feedback_type, content,
           quality_rating, communication_rating, timeliness_rating
-        ) VALUES ($1, $2, $3, $4, $5, 'private_feedback', $6, $7, $8, $9)
+        ) VALUES ($1, $2, $3, $4, $5, 'cc_private_feedback', $6, $7, $8, $9)
         RETURNING *`,
         [
           work_request_id,
@@ -120,9 +120,9 @@ router.get('/feedback/received', async (req: Request, res: Response) => {
              wr.title as work_request_title,
              wr.work_request_ref,
              from_p.trade_name as from_party_name
-      FROM private_feedback pf
-      JOIN work_requests wr ON pf.work_request_id = wr.id
-      LEFT JOIN parties from_p ON pf.from_party_id = from_p.id
+      FROM cc_private_feedback pf
+      JOIN cc_work_requests wr ON pf.work_request_id = wr.id
+      LEFT JOIN cc_parties from_p ON pf.from_party_id = from_p.id
       WHERE pf.to_party_id = $1
     `;
     const params: any[] = [actor.actor_party_id];
@@ -165,7 +165,7 @@ router.delete('/feedback/:id', async (req: Request, res: Response) => {
     const client = await pool.connect();
     try {
       const existing = await client.query(
-        `SELECT * FROM private_feedback WHERE id = $1 AND to_party_id = $2`,
+        `SELECT * FROM cc_private_feedback WHERE id = $1 AND to_party_id = $2`,
         [id, actor.actor_party_id]
       );
 
@@ -174,11 +174,11 @@ router.delete('/feedback/:id', async (req: Request, res: Response) => {
       }
 
       if (hard_delete === 'true') {
-        await client.query(`DELETE FROM private_feedback WHERE id = $1`, [id]);
+        await client.query(`DELETE FROM cc_private_feedback WHERE id = $1`, [id]);
         res.json({ deleted: true, type: 'hard_delete' });
       } else {
         await client.query(
-          `UPDATE private_feedback SET 
+          `UPDATE cc_private_feedback SET 
             deleted_by_contractor = true, 
             deleted_at = now(),
             content = '[Deleted by contractor]'
@@ -209,7 +209,7 @@ router.post('/feedback/:id/archive', async (req: Request, res: Response) => {
     }
 
     const result = await pool.query(
-      `UPDATE private_feedback SET archived_at = now(), updated_at = now()
+      `UPDATE cc_private_feedback SET archived_at = now(), updated_at = now()
        WHERE id = $1 AND to_party_id = $2
        RETURNING *`,
       [id, actor.actor_party_id]
@@ -239,7 +239,7 @@ router.post('/feedback/:id/read', async (req: Request, res: Response) => {
     }
 
     const result = await pool.query(
-      `UPDATE private_feedback SET read_at = now(), updated_at = now()
+      `UPDATE cc_private_feedback SET read_at = now(), updated_at = now()
        WHERE id = $1 AND to_party_id = $2 AND read_at IS NULL
        RETURNING *`,
       [id, actor.actor_party_id]
@@ -263,7 +263,7 @@ router.get('/feedback/settings', async (req: Request, res: Response) => {
     }
 
     const result = await pool.query(
-      `SELECT * FROM contractor_feedback_settings WHERE party_id = $1`,
+      `SELECT * FROM cc_contractor_feedback_settings WHERE party_id = $1`,
       [actor.actor_party_id]
     );
 
@@ -307,16 +307,16 @@ router.put('/feedback/settings', async (req: Request, res: Response) => {
     }
 
     const result = await pool.query(
-      `INSERT INTO contractor_feedback_settings (
+      `INSERT INTO cc_contractor_feedback_settings (
         party_id, accepts_private_feedback, accepts_appreciation_requests,
         auto_archive_after_days, notify_on_feedback, notify_on_appreciation
       ) VALUES ($1, $2, $3, $4, $5, $6)
       ON CONFLICT (party_id) DO UPDATE SET
-        accepts_private_feedback = COALESCE($2, contractor_feedback_settings.accepts_private_feedback),
-        accepts_appreciation_requests = COALESCE($3, contractor_feedback_settings.accepts_appreciation_requests),
-        auto_archive_after_days = COALESCE($4, contractor_feedback_settings.auto_archive_after_days),
-        notify_on_feedback = COALESCE($5, contractor_feedback_settings.notify_on_feedback),
-        notify_on_appreciation = COALESCE($6, contractor_feedback_settings.notify_on_appreciation),
+        accepts_private_feedback = COALESCE($2, cc_contractor_feedback_settings.accepts_private_feedback),
+        accepts_appreciation_requests = COALESCE($3, cc_contractor_feedback_settings.accepts_appreciation_requests),
+        auto_archive_after_days = COALESCE($4, cc_contractor_feedback_settings.auto_archive_after_days),
+        notify_on_feedback = COALESCE($5, cc_contractor_feedback_settings.notify_on_feedback),
+        notify_on_appreciation = COALESCE($6, cc_contractor_feedback_settings.notify_on_appreciation),
         updated_at = now()
       RETURNING *`,
       [
@@ -349,11 +349,11 @@ router.post('/feedback/block/:party_id', async (req: Request, res: Response) => 
     }
 
     const result = await pool.query(
-      `INSERT INTO contractor_feedback_settings (party_id, blocked_party_ids)
+      `INSERT INTO cc_contractor_feedback_settings (party_id, blocked_party_ids)
        VALUES ($1, ARRAY[$2]::uuid[])
        ON CONFLICT (party_id) DO UPDATE SET
          blocked_party_ids = array_append(
-           COALESCE(contractor_feedback_settings.blocked_party_ids, ARRAY[]::uuid[]),
+           COALESCE(cc_contractor_feedback_settings.blocked_party_ids, ARRAY[]::uuid[]),
            $2::uuid
          ),
          updated_at = now()
@@ -381,7 +381,7 @@ router.delete('/feedback/block/:party_id', async (req: Request, res: Response) =
     }
 
     const result = await pool.query(
-      `UPDATE contractor_feedback_settings SET
+      `UPDATE cc_contractor_feedback_settings SET
          blocked_party_ids = array_remove(blocked_party_ids, $2::uuid),
          updated_at = now()
        WHERE party_id = $1

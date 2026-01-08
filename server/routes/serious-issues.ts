@@ -45,7 +45,7 @@ router.post('/work-requests/:id/serious-issue', async (req: Request, res: Respon
     const client = await pool.connect();
     try {
       const patternCheck = await client.query(
-        `SELECT id FROM serious_issue_reports 
+        `SELECT id FROM cc_serious_issue_reports 
          WHERE subject_party_id = $1 
          AND category = $2
          AND created_at > now() - interval '6 months'`,
@@ -56,7 +56,7 @@ router.post('/work-requests/:id/serious-issue', async (req: Request, res: Respon
       const relatedIds = patternCheck.rows.map(r => r.id);
 
       const result = await client.query(
-        `INSERT INTO serious_issue_reports (
+        `INSERT INTO cc_serious_issue_reports (
           work_request_id, conversation_id,
           reporter_party_id, reporter_individual_id,
           subject_party_id, subject_type,
@@ -111,10 +111,10 @@ router.get('/admin/serious-issues', async (req: Request, res: Response) => {
              subject.trade_name as subject_name,
              wr.title as work_request_title,
              wr.work_request_ref
-      FROM serious_issue_reports sir
-      LEFT JOIN parties reporter ON sir.reporter_party_id = reporter.id
-      LEFT JOIN parties subject ON sir.subject_party_id = subject.id
-      LEFT JOIN work_requests wr ON sir.work_request_id = wr.id
+      FROM cc_serious_issue_reports sir
+      LEFT JOIN cc_parties reporter ON sir.reporter_party_id = reporter.id
+      LEFT JOIN cc_parties subject ON sir.subject_party_id = subject.id
+      LEFT JOIN cc_work_requests wr ON sir.work_request_id = wr.id
       WHERE 1=1
     `;
     const params: any[] = [];
@@ -147,7 +147,7 @@ router.get('/admin/serious-issues', async (req: Request, res: Response) => {
     const result = await pool.query(query, params);
 
     const countResult = await pool.query(
-      `SELECT COUNT(*) FROM serious_issue_reports WHERE status NOT IN ('resolved_no_action', 'resolved_action_taken', 'dismissed')`
+      `SELECT COUNT(*) FROM cc_serious_issue_reports WHERE status NOT IN ('resolved_no_action', 'resolved_action_taken', 'dismissed')`
     );
 
     res.json({
@@ -179,10 +179,10 @@ router.get('/admin/serious-issues/:id', async (req: Request, res: Response) => {
               subject.primary_contact_email as subject_email,
               wr.title as work_request_title,
               wr.work_request_ref
-       FROM serious_issue_reports sir
-       LEFT JOIN parties reporter ON sir.reporter_party_id = reporter.id
-       LEFT JOIN parties subject ON sir.subject_party_id = subject.id
-       LEFT JOIN work_requests wr ON sir.work_request_id = wr.id
+       FROM cc_serious_issue_reports sir
+       LEFT JOIN cc_parties reporter ON sir.reporter_party_id = reporter.id
+       LEFT JOIN cc_parties subject ON sir.subject_party_id = subject.id
+       LEFT JOIN cc_work_requests wr ON sir.work_request_id = wr.id
        WHERE sir.id = $1`,
       [id]
     );
@@ -197,7 +197,7 @@ router.get('/admin/serious-issues/:id', async (req: Request, res: Response) => {
     if (issue.related_report_ids?.length > 0) {
       const relatedResult = await pool.query(
         `SELECT id, category, status, description, created_at 
-         FROM serious_issue_reports 
+         FROM cc_serious_issue_reports 
          WHERE id = ANY($1)`,
         [issue.related_report_ids]
       );
@@ -206,7 +206,7 @@ router.get('/admin/serious-issues/:id', async (req: Request, res: Response) => {
 
     const historyResult = await pool.query(
       `SELECT id, category, status, created_at, resolution_summary
-       FROM serious_issue_reports
+       FROM cc_serious_issue_reports
        WHERE subject_party_id = $1 AND id != $2
        ORDER BY created_at DESC LIMIT 10`,
       [issue.subject_party_id, id]
@@ -283,7 +283,7 @@ router.patch('/admin/serious-issues/:id', async (req: Request, res: Response) =>
     updates.push(`updated_at = now()`);
 
     const result = await pool.query(
-      `UPDATE serious_issue_reports SET ${updates.join(', ')} WHERE id = $1 RETURNING *`,
+      `UPDATE cc_serious_issue_reports SET ${updates.join(', ')} WHERE id = $1 RETURNING *`,
       params
     );
 
@@ -316,8 +316,8 @@ router.get('/admin/serious-issues/analysis/patterns', async (req: Request, res: 
         array_agg(DISTINCT category) as categories,
         MIN(sir.created_at) as first_report,
         MAX(sir.created_at) as latest_report
-      FROM serious_issue_reports sir
-      JOIN parties p ON sir.subject_party_id = p.id
+      FROM cc_serious_issue_reports sir
+      JOIN cc_parties p ON sir.subject_party_id = p.id
       WHERE sir.created_at > now() - interval '1 year'
       GROUP BY subject_party_id, p.trade_name
       HAVING COUNT(*) >= 2

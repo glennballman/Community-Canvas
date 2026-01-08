@@ -19,7 +19,7 @@ interface DriveBCEvent {
 
 export class DriveBCPipeline extends BasePipeline {
   constructor() {
-    super('drivebc-events', 'DriveBC Road Events', 300000); // 5 min rate limit
+    super('drivebc-cc_events', 'DriveBC Road Events', 300000); // 5 min rate limit
   }
 
   async fetch(): Promise<any> {
@@ -27,7 +27,7 @@ export class DriveBCPipeline extends BasePipeline {
     
     // DriveBC Open511 API
     const response = await fetch(
-      'https://api.open511.gov.bc.ca/events?format=json&status=ACTIVE&limit=500',
+      'https://api.open511.gov.bc.ca/cc_events?format=json&status=ACTIVE&limit=500',
       {
         headers: { 
           'Accept': 'application/json',
@@ -41,14 +41,14 @@ export class DriveBCPipeline extends BasePipeline {
     }
     
     const data = await response.json();
-    console.log(`[DriveBC] Retrieved ${data.events?.length || 0} events`);
+    console.log(`[DriveBC] Retrieved ${data.cc_events?.length || 0} cc_events`);
     return data;
   }
 
   transform(rawData: any): DriveBCEvent[] {
-    const events = rawData.events || [];
+    const cc_events = rawData.cc_events || [];
     
-    return events.map((event: any) => {
+    return cc_events.map((event: any) => {
       // Extract coordinates from geography
       let latitude = 0;
       let longitude = 0;
@@ -108,18 +108,18 @@ export class DriveBCPipeline extends BasePipeline {
     });
   }
 
-  async load(events: DriveBCEvent[]): Promise<{ created: number; updated: number }> {
+  async load(cc_events: DriveBCEvent[]): Promise<{ created: number; updated: number }> {
     let created = 0;
     let updated = 0;
 
-    // Get all active DriveBC alerts to track which ones to deactivate
+    // Get all active DriveBC cc_alerts to track which ones to deactivate
     const activeAlerts = await pool.query(
-      `SELECT source_key FROM alerts WHERE alert_type = 'closure' AND is_active = true`
+      `SELECT source_key FROM cc_alerts WHERE alert_type = 'closure' AND is_active = true`
     );
     const activeSourceKeys = new Set(activeAlerts.rows.map(r => r.source_key));
     const processedKeys = new Set<string>();
 
-    for (const event of events) {
+    for (const event of cc_events) {
       const sourceKey = `drivebc-${event.id}`;
       processedKeys.add(sourceKey);
       
@@ -127,7 +127,7 @@ export class DriveBCPipeline extends BasePipeline {
       let regionId: string | null = null;
       if (event.latitude && event.longitude) {
         const regionResult = await pool.query(`
-          SELECT id FROM geo_regions 
+          SELECT id FROM cc_geo_regions 
           WHERE centroid_lat IS NOT NULL 
           AND centroid_lon IS NOT NULL
           ORDER BY 
@@ -151,7 +151,7 @@ export class DriveBCPipeline extends BasePipeline {
 
       // Check if alert already exists
       const existing = await pool.query(
-        `SELECT id FROM alerts WHERE source_key = $1`,
+        `SELECT id FROM cc_alerts WHERE source_key = $1`,
         [sourceKey]
       );
 
@@ -169,7 +169,7 @@ export class DriveBCPipeline extends BasePipeline {
       if (existing.rows.length > 0) {
         // Update existing alert
         await pool.query(`
-          UPDATE alerts SET
+          UPDATE cc_alerts SET
             title = $2,
             summary = $3,
             message = $4,
@@ -198,7 +198,7 @@ export class DriveBCPipeline extends BasePipeline {
       } else {
         // Create new alert
         await pool.query(`
-          INSERT INTO alerts (
+          INSERT INTO cc_alerts (
             alert_type, severity, signal_type, title, summary, message,
             latitude, longitude, region_id, details,
             effective_from, effective_until, is_active,
@@ -221,22 +221,22 @@ export class DriveBCPipeline extends BasePipeline {
           new Date(event.startTime),
           event.endTime ? new Date(event.endTime) : null,
           sourceKey,
-          `https://www.drivebc.ca/events/${event.id}`
+          `https://www.drivebc.ca/cc_events/${event.id}`
         ]);
         created++;
       }
     }
 
-    // Deactivate alerts that are no longer in the feed
+    // Deactivate cc_alerts that are no longer in the feed
     const toDeactivate = [...activeSourceKeys].filter(k => !processedKeys.has(k));
     if (toDeactivate.length > 0) {
       await pool.query(`
-        UPDATE alerts SET 
+        UPDATE cc_alerts SET 
           is_active = false,
           resolved_at = NOW()
         WHERE source_key = ANY($1)
       `, [toDeactivate]);
-      console.log(`[DriveBC] Deactivated ${toDeactivate.length} resolved events`);
+      console.log(`[DriveBC] Deactivated ${toDeactivate.length} resolved cc_events`);
     }
 
     console.log(`[DriveBC] Created: ${created}, Updated: ${updated}`);

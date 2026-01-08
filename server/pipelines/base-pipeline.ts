@@ -27,7 +27,7 @@ export abstract class BasePipeline {
 
   protected async startRun(): Promise<number> {
     const result = await pool.query(
-      `INSERT INTO pipeline_runs (data_source_id, status) VALUES ($1, 'running') RETURNING id`,
+      `INSERT INTO cc_pipeline_runs (data_source_id, status) VALUES ($1, 'running') RETURNING id`,
       [this.dataSourceId]
     );
     return result.rows[0].id;
@@ -35,7 +35,7 @@ export abstract class BasePipeline {
 
   protected async completeRun(runId: number, result: PipelineResult): Promise<void> {
     await pool.query(
-      `UPDATE pipeline_runs SET 
+      `UPDATE cc_pipeline_runs SET 
         completed_at = NOW(),
         status = $2,
         records_processed = $3,
@@ -59,12 +59,12 @@ export abstract class BasePipeline {
     status: string,
     rawData: any,
     metrics?: any,
-    alerts?: any
+    cc_alerts?: any
   ): Promise<void> {
     await pool.query(
-      `INSERT INTO entity_snapshots (entity_id, data_source_id, status, raw_data, metrics, alerts)
+      `INSERT INTO cc_entity_snapshots (entity_id, data_source_id, status, raw_data, metrics, cc_alerts)
        VALUES ($1, $2, $3, $4, $5, $6)`,
-      [entityId, this.dataSourceId, status, rawData, metrics || null, alerts || null]
+      [entityId, this.dataSourceId, status, rawData, metrics || null, cc_alerts || null]
     );
   }
 

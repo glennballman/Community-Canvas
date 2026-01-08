@@ -336,9 +336,9 @@ export function createFleetRouter(_db?: Pool) {
         SELECT v.*, 
                p.name as assigned_to_display_name,
                (SELECT COUNT(*) FROM vehicle_photos WHERE vehicle_id = v.id) as photo_count,
-               (SELECT COUNT(*) FROM vehicle_safety_equipment WHERE vehicle_id = v.id AND present = true) as equipment_count
+               (SELECT COUNT(*) FROM cc_vehicle_safety_equipment WHERE vehicle_id = v.id AND present = true) as equipment_count
         FROM vehicle_profiles v
-        LEFT JOIN participant_profiles p ON v.assigned_to_id = p.id
+        LEFT JOIN cc_participant_profiles p ON v.assigned_to_id = p.id
         ${baseWhere}
       `;
       const params: any[] = [];
@@ -383,9 +383,9 @@ export function createFleetRouter(_db?: Pool) {
         SELECT v.*, 
                p.name as assigned_to_display_name,
                (SELECT COUNT(*) FROM vehicle_photos WHERE vehicle_id = v.id) as photo_count,
-               (SELECT COUNT(*) FROM vehicle_safety_equipment WHERE vehicle_id = v.id AND present = true) as equipment_count
+               (SELECT COUNT(*) FROM cc_vehicle_safety_equipment WHERE vehicle_id = v.id AND present = true) as equipment_count
         FROM vehicle_profiles v
-        LEFT JOIN participant_profiles p ON v.assigned_to_id = p.id
+        LEFT JOIN cc_participant_profiles p ON v.assigned_to_id = p.id
         WHERE v.id = $1${visibilityClause}
       `;
       
@@ -1053,7 +1053,7 @@ export function createFleetRouter(_db?: Pool) {
             heavy_trailer_medical_expiry,
             fifth_wheel_experience, gooseneck_experience,
             horse_trailer_experience, boat_launching_experience
-          FROM participant_profiles
+          FROM cc_participant_profiles
           WHERE id = $1
         `, [driverId]);
 
@@ -1141,7 +1141,7 @@ export function createFleetRouter(_db?: Pool) {
             heavy_equipment_loading_experience, horse_trailer_experience,
             livestock_handling_experience, boat_launching_experience,
             rv_driving_course_completed, rv_course_provider, rv_course_date
-          FROM participant_profiles
+          FROM cc_participant_profiles
           WHERE id = $1
         `, [driverId]);
 
@@ -1199,13 +1199,13 @@ export function createFleetRouter(_db?: Pool) {
 
       values.push(driverId);
       const query = `
-        UPDATE participant_profiles
+        UPDATE cc_participant_profiles
         SET ${setClauses.join(', ')}, updated_at = NOW()
         WHERE id = $${paramIndex}
         RETURNING *
       `;
 
-      // Use tenantTransaction for proper context (even though participant_profiles 
+      // Use tenantTransaction for proper context (even though cc_participant_profiles 
       // doesn't have tenant_id, the guard already enforced self-or-admin)
       const result = await withTenantTransaction(req, async (client: PoolClient) => {
         return client.query(query, values);

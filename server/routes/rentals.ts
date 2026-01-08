@@ -424,8 +424,8 @@ router.post('/:id/book', requireAuth, async (req: Request, res: Response) => {
         // Check blocking constraints on the asset (asset-level and capability-level)
         const constraintCheck = await client.query(`
           SELECT ac.constraint_type, ac.details, acu.name as capability_name
-          FROM asset_constraints ac
-          LEFT JOIN asset_capability_units acu ON ac.capability_unit_id = acu.id
+          FROM cc_asset_constraints ac
+          LEFT JOIN cc_asset_capability_units acu ON ac.capability_unit_id = acu.id
           WHERE ac.asset_id = $1
             AND ac.severity = 'blocking'
             AND ac.active = true
@@ -447,7 +447,7 @@ router.post('/:id/book', requireAuth, async (req: Request, res: Response) => {
         // Check if any capability units are inoperable (blocking condition)
         const capabilityCheck = await client.query(`
           SELECT name, status
-          FROM asset_capability_units
+          FROM cc_asset_capability_units
           WHERE asset_id = $1
             AND status = 'inoperable'
           LIMIT 1
@@ -544,7 +544,7 @@ router.post('/:id/book', requireAuth, async (req: Request, res: Response) => {
         const bufferEnd = new Date(bufferStart.getTime() + turnoverMinutes * 60 * 1000);
         
         await client.query(`
-          INSERT INTO resource_schedule_events 
+          INSERT INTO cc_resource_schedule_events 
             (resource_id, event_type, starts_at, ends_at, title, notes, related_entity_type, related_entity_id)
           VALUES ($1, 'buffer', $2, $3, 'Turnover', 'Auto-generated cleanup buffer', 'booking', $4)
         `, [assetLookup.rows[0].id, bufferStart, bufferEnd, bookingId]);

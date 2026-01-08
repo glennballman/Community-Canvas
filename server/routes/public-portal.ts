@@ -48,8 +48,8 @@ router.get('/portal-context', async (req: Request, res: Response) => {
         p.privacy_url,
         p.settings,
         pt.tokens as theme
-      FROM portals p
-      LEFT JOIN portal_theme pt ON pt.portal_id = p.id AND pt.is_live = true
+      FROM cc_portals p
+      LEFT JOIN cc_portal_theme pt ON pt.portal_id = p.id AND pt.is_live = true
       WHERE p.id = $1 AND p.status = 'active'
     `, [ctx.portal_id]);
     
@@ -104,7 +104,7 @@ router.get('/portal-context', async (req: Request, res: Response) => {
  * These endpoints serve public community portal data without authentication.
  * 
  * PORTAL SETTINGS REQUIREMENTS:
- * For geographic data (accommodations, infrastructure, weather, alerts), portals must
+ * For geographic data (accommodations, infrastructure, weather, cc_alerts), cc_portals must
  * have settings configured with region/city values. If not configured, these endpoints
  * return empty results to prevent cross-community data leakage.
  * 
@@ -116,7 +116,7 @@ router.get('/portal-context', async (req: Request, res: Response) => {
  * }
  */
 
-router.get('/portals/:slug', async (req: Request, res: Response) => {
+router.get('/cc_portals/:slug', async (req: Request, res: Response) => {
   try {
     const { slug } = req.params;
 
@@ -139,8 +139,8 @@ router.get('/portals/:slug', async (req: Request, res: Response) => {
         pt.tokens as theme,
         t.id as tenant_id,
         t.name as tenant_name
-      FROM portals p
-      LEFT JOIN portal_theme pt ON pt.portal_id = p.id AND pt.is_live = true
+      FROM cc_portals p
+      LEFT JOIN cc_portal_theme pt ON pt.portal_id = p.id AND pt.is_live = true
       LEFT JOIN cc_tenants t ON t.id = p.owning_tenant_id
       WHERE p.slug = $1 AND p.status = 'active'
     `, [slug]);
@@ -166,14 +166,14 @@ router.get('/portals/:slug', async (req: Request, res: Response) => {
   }
 });
 
-router.get('/portals/:slug/service-runs', async (req: Request, res: Response) => {
+router.get('/cc_portals/:slug/service-runs', async (req: Request, res: Response) => {
   try {
     const { slug } = req.params;
     const { status, limit = '20' } = req.query;
 
     const portalResult = await serviceQuery(`
       SELECT p.id, p.owning_tenant_id 
-      FROM portals p 
+      FROM cc_portals p 
       WHERE p.slug = $1 AND p.status = 'active'
     `, [slug]);
 
@@ -199,7 +199,7 @@ router.get('/portals/:slug/service-runs', async (req: Request, res: Response) =>
         csr.participants_confirmed,
         csr.estimated_savings_per_participant,
         csr.created_at
-      FROM shared_service_runs csr
+      FROM cc_shared_service_runs csr
       WHERE csr.community_tenant_id = $1
         AND csr.visibility = 'public'
     `;
@@ -221,7 +221,7 @@ router.get('/portals/:slug/service-runs', async (req: Request, res: Response) =>
 
     res.json({
       success: true,
-      service_runs: result.rows,
+      cc_service_runs: result.rows,
       count: result.rows.length
     });
 
@@ -234,14 +234,14 @@ router.get('/portals/:slug/service-runs', async (req: Request, res: Response) =>
   }
 });
 
-router.get('/portals/:slug/businesses', async (req: Request, res: Response) => {
+router.get('/cc_portals/:slug/businesses', async (req: Request, res: Response) => {
   try {
     const { slug } = req.params;
     const { category, search, limit = '50' } = req.query;
 
     const portalResult = await serviceQuery(`
       SELECT p.id, p.owning_tenant_id, p.settings 
-      FROM portals p 
+      FROM cc_portals p 
       WHERE p.slug = $1 AND p.status = 'active'
     `, [slug]);
 
@@ -275,7 +275,7 @@ router.get('/portals/:slug/businesses', async (req: Request, res: Response) => {
         t.city,
         t.province
       FROM cc_tenants t
-      JOIN tenant_sharing_settings tss ON tss.tenant_id = t.id
+      JOIN cc_tenant_sharing_settings tss ON tss.tenant_id = t.id
       WHERE t.tenant_type = 'business'
         AND t.status = 'active'
         AND t.city ILIKE $1
@@ -316,14 +316,14 @@ router.get('/portals/:slug/businesses', async (req: Request, res: Response) => {
   }
 });
 
-router.get('/portals/:slug/accommodations', async (req: Request, res: Response) => {
+router.get('/cc_portals/:slug/accommodations', async (req: Request, res: Response) => {
   try {
     const { slug } = req.params;
     const { property_type, limit = '50' } = req.query;
 
     const portalResult = await serviceQuery(`
       SELECT p.id, p.owning_tenant_id, p.settings
-      FROM portals p 
+      FROM cc_portals p 
       WHERE p.slug = $1 AND p.status = 'active'
     `, [slug]);
 
@@ -407,14 +407,14 @@ router.get('/portals/:slug/accommodations', async (req: Request, res: Response) 
   }
 });
 
-router.get('/portals/:slug/infrastructure', async (req: Request, res: Response) => {
+router.get('/cc_portals/:slug/infrastructure', async (req: Request, res: Response) => {
   try {
     const { slug } = req.params;
     const { type, limit = '100' } = req.query;
 
     const portalResult = await serviceQuery(`
       SELECT p.id, p.owning_tenant_id, p.settings
-      FROM portals p 
+      FROM cc_portals p 
       WHERE p.slug = $1 AND p.status = 'active'
     `, [slug]);
 
@@ -496,13 +496,13 @@ router.get('/portals/:slug/infrastructure', async (req: Request, res: Response) 
   }
 });
 
-router.get('/portals/:slug/alerts', async (req: Request, res: Response) => {
+router.get('/cc_portals/:slug/cc_alerts', async (req: Request, res: Response) => {
   try {
     const { slug } = req.params;
 
     const portalResult = await serviceQuery(`
       SELECT p.id, p.owning_tenant_id, p.settings
-      FROM portals p 
+      FROM cc_portals p 
       WHERE p.slug = $1 AND p.status = 'active'
     `, [slug]);
 
@@ -519,7 +519,7 @@ router.get('/portals/:slug/alerts', async (req: Request, res: Response) => {
     if (!region) {
       return res.json({
         success: true,
-        alerts: [],
+        cc_alerts: [],
         count: 0,
         message: 'Portal geographic settings not configured'
       });
@@ -538,7 +538,7 @@ router.get('/portals/:slug/alerts', async (req: Request, res: Response) => {
         a.effective_until,
         a.source_url,
         a.created_at
-      FROM alerts a
+      FROM cc_alerts a
       WHERE a.is_active = true
         AND (a.effective_until IS NULL OR a.effective_until > now())
         AND (a.region_id ILIKE $1)
@@ -550,26 +550,26 @@ router.get('/portals/:slug/alerts', async (req: Request, res: Response) => {
 
     res.json({
       success: true,
-      alerts: result.rows,
+      cc_alerts: result.rows,
       count: result.rows.length
     });
 
   } catch (error: any) {
-    console.error('Public alerts fetch error:', error);
+    console.error('Public cc_alerts fetch error:', error);
     res.status(500).json({ 
       success: false, 
-      error: 'Failed to fetch alerts' 
+      error: 'Failed to fetch cc_alerts' 
     });
   }
 });
 
-router.get('/portals/:slug/weather', async (req: Request, res: Response) => {
+router.get('/cc_portals/:slug/weather', async (req: Request, res: Response) => {
   try {
     const { slug } = req.params;
 
     const portalResult = await serviceQuery(`
       SELECT p.id, p.owning_tenant_id, p.settings
-      FROM portals p 
+      FROM cc_portals p 
       WHERE p.slug = $1 AND p.status = 'active'
     `, [slug]);
 
@@ -608,13 +608,13 @@ router.get('/portals/:slug/weather', async (req: Request, res: Response) => {
   }
 });
 
-router.get('/portals/:slug/ferries', async (req: Request, res: Response) => {
+router.get('/cc_portals/:slug/ferries', async (req: Request, res: Response) => {
   try {
     const { slug } = req.params;
 
     const portalResult = await serviceQuery(`
       SELECT p.id, p.owning_tenant_id, p.settings
-      FROM portals p 
+      FROM cc_portals p 
       WHERE p.slug = $1 AND p.status = 'active'
     `, [slug]);
 
@@ -653,14 +653,14 @@ router.get('/portals/:slug/ferries', async (req: Request, res: Response) => {
   }
 });
 
-router.get('/portals/:slug/good-news', async (req: Request, res: Response) => {
+router.get('/cc_portals/:slug/good-news', async (req: Request, res: Response) => {
   try {
     const { slug } = req.params;
     const { limit = '20' } = req.query;
 
     const portalResult = await serviceQuery(`
       SELECT p.id, p.owning_tenant_id
-      FROM portals p 
+      FROM cc_portals p 
       WHERE p.slug = $1 AND p.status = 'active'
     `, [slug]);
 
@@ -710,19 +710,19 @@ router.get('/portals/:slug/good-news', async (req: Request, res: Response) => {
 // ============================================================================
 
 /**
- * GET /api/public/portals/:slug/presentations
+ * GET /api/public/cc_portals/:slug/presentations
  * 
  * List published presentations for a portal.
  * Supports filtering by entity_type and presentation_type.
  */
-router.get('/portals/:slug/presentations', async (req: Request, res: Response) => {
+router.get('/cc_portals/:slug/presentations', async (req: Request, res: Response) => {
   try {
     const { slug } = req.params;
     const { entity_type, presentation_type, tag, limit = '20', offset = '0' } = req.query;
 
     // Verify portal exists (serviceQuery bypasses RLS to find any portal by slug)
     const portalResult = await serviceQuery(`
-      SELECT p.id FROM portals p 
+      SELECT p.id FROM cc_portals p 
       WHERE p.slug = $1 AND p.status = 'active'
     `, [slug]);
 
@@ -752,8 +752,8 @@ router.get('/portals/:slug/presentations', async (req: Request, res: Response) =
         (SELECT jsonb_agg(
           jsonb_build_object('block_type', pb.block_type, 'block_data', pb.block_data)
           ORDER BY pb.block_order
-        ) FROM presentation_blocks pb WHERE pb.presentation_id = ep.id) as blocks
-      FROM articles ep
+        ) FROM cc_presentation_blocks pb WHERE pb.presentation_id = ep.id) as blocks
+      FROM cc_articles ep
       WHERE ep.portal_id = $1
         AND ep.status = 'published'
         AND ep.visibility IN ('public', 'unlisted')
@@ -800,17 +800,17 @@ router.get('/portals/:slug/presentations', async (req: Request, res: Response) =
 });
 
 /**
- * GET /api/public/portals/:slug/presentations/:presentationSlug
+ * GET /api/public/cc_portals/:slug/presentations/:presentationSlug
  * 
  * Get a single presentation with all blocks and metadata.
  */
-router.get('/portals/:slug/presentations/:presentationSlug', async (req: Request, res: Response) => {
+router.get('/cc_portals/:slug/presentations/:presentationSlug', async (req: Request, res: Response) => {
   try {
     const { slug, presentationSlug } = req.params;
 
     // Verify portal exists (serviceQuery bypasses RLS to find any portal by slug)
     const portalResult = await serviceQuery(`
-      SELECT p.id, p.name, p.slug FROM portals p 
+      SELECT p.id, p.name, p.slug FROM cc_portals p 
       WHERE p.slug = $1 AND p.status = 'active'
     `, [slug]);
 
@@ -849,7 +849,7 @@ router.get('/portals/:slug/presentations/:presentationSlug', async (req: Request
             'block_data', pb.block_data
           )
           ORDER BY pb.block_order
-        ) FROM presentation_blocks pb WHERE pb.presentation_id = ep.id) as blocks,
+        ) FROM cc_presentation_blocks pb WHERE pb.presentation_id = ep.id) as blocks,
         (SELECT jsonb_agg(
           jsonb_build_object(
             'entity_type', pel.entity_type,
@@ -857,9 +857,9 @@ router.get('/portals/:slug/presentations/:presentationSlug', async (req: Request
             'role', pel.role
           )
           ORDER BY pel.sort_order
-        ) FROM presentation_entity_links pel WHERE pel.presentation_id = ep.id) as entity_links
-      FROM articles ep
-      LEFT JOIN voice_profiles vp ON vp.id = ep.voice_profile_id
+        ) FROM cc_presentation_entity_links pel WHERE pel.presentation_id = ep.id) as cc_entity_links
+      FROM cc_articles ep
+      LEFT JOIN cc_voice_profiles vp ON vp.id = ep.voice_profile_id
       WHERE ep.portal_id = $1
         AND ep.slug = $2
         AND ep.status = 'published'
@@ -897,12 +897,12 @@ router.get('/portals/:slug/presentations/:presentationSlug', async (req: Request
 });
 
 /**
- * GET /api/public/portals/:slug/site
+ * GET /api/public/cc_portals/:slug/site
  * 
  * Returns complete site configuration + initial data for public site rendering.
- * Includes brand info, sections config, theme, assets, and articles.
+ * Includes brand info, sections config, theme, assets, and cc_articles.
  */
-router.get('/portals/:slug/site', async (req: Request, res: Response) => {
+router.get('/cc_portals/:slug/site', async (req: Request, res: Response) => {
   try {
     const { slug } = req.params;
     
@@ -921,8 +921,8 @@ router.get('/portals/:slug/site', async (req: Request, res: Response) => {
         p.site_config,
         p.owning_tenant_id,
         pt.tokens as theme
-      FROM portals p
-      LEFT JOIN portal_theme pt ON pt.portal_id = p.id AND pt.is_live = true
+      FROM cc_portals p
+      LEFT JOIN cc_portal_theme pt ON pt.portal_id = p.id AND pt.is_live = true
       WHERE p.slug = $1 AND p.status = 'active'
     `, [slug]);
     
@@ -962,7 +962,7 @@ router.get('/portals/:slug/site', async (req: Request, res: Response) => {
       LIMIT 50
     `, [tenantId]);
     
-    // Get media for assets
+    // Get cc_media for assets
     const assetIds = assetsResult.rows.map(a => a.id);
     let assetsWithMedia = assetsResult.rows;
     
@@ -976,8 +976,8 @@ router.get('/portals/:slug/site', async (req: Request, res: Response) => {
           m.public_url,
           m.alt_text,
           m.variants
-        FROM entity_media em
-        JOIN media m ON m.id = em.media_id
+        FROM cc_entity_media em
+        JOIN cc_media m ON m.id = em.media_id
         WHERE em.entity_type = 'asset' 
           AND em.entity_id = ANY($1::uuid[])
         ORDER BY em.sort_order
@@ -995,7 +995,7 @@ router.get('/portals/:slug/site', async (req: Request, res: Response) => {
         const gallery = assetMedia.filter(m => m.role === 'gallery');
         return {
           ...asset,
-          media: {
+          cc_media: {
             hero: hero ? { url: hero.public_url, thumbnail: hero.variants?.thumbnail, alt: hero.alt_text } : null,
             gallery: gallery.map(g => ({ url: g.public_url, thumbnail: g.variants?.thumbnail, alt: g.alt_text }))
           }
@@ -1003,11 +1003,11 @@ router.get('/portals/:slug/site', async (req: Request, res: Response) => {
       });
     }
     
-    // Get latest articles for this portal
+    // Get latest cc_articles for this portal
     const articlesResult = await serviceQuery(`
       SELECT 
         id, slug, title, subtitle, summary, featured_image_url, published_at
-      FROM articles
+      FROM cc_articles
       WHERE portal_id = $1 
         AND status = 'published'
         AND visibility = 'public'
@@ -1040,7 +1040,7 @@ router.get('/portals/:slug/site', async (req: Request, res: Response) => {
       theme: portal.theme || {},
       initial_data: {
         assets: assetsWithMedia,
-        articles: articlesResult.rows
+        cc_articles: articlesResult.rows
       },
       json_ld: jsonLd
     });
@@ -1052,17 +1052,17 @@ router.get('/portals/:slug/site', async (req: Request, res: Response) => {
 });
 
 /**
- * GET /api/public/portals/:slug/assets
+ * GET /api/public/cc_portals/:slug/assets
  * 
  * Returns public assets for a portal, optionally filtered by type.
  */
-router.get('/portals/:slug/assets', async (req: Request, res: Response) => {
+router.get('/cc_portals/:slug/assets', async (req: Request, res: Response) => {
   try {
     const { slug } = req.params;
     const { type } = req.query;
     
     const portalResult = await serviceQuery(`
-      SELECT id, owning_tenant_id FROM portals WHERE slug = $1 AND status = 'active'
+      SELECT id, owning_tenant_id FROM cc_portals WHERE slug = $1 AND status = 'active'
     `, [slug]);
     
     if (portalResult.rows.length === 0) {
@@ -1106,7 +1106,7 @@ router.get('/portals/:slug/assets', async (req: Request, res: Response) => {
     
     const assetsResult = await serviceQuery(assetsQuery, params);
     
-    // Get media for assets
+    // Get cc_media for assets
     const assetIds = assetsResult.rows.map(a => a.id);
     let assetsWithMedia = assetsResult.rows;
     
@@ -1118,8 +1118,8 @@ router.get('/portals/:slug/assets', async (req: Request, res: Response) => {
           m.public_url,
           m.alt_text,
           m.variants
-        FROM entity_media em
-        JOIN media m ON m.id = em.media_id
+        FROM cc_entity_media em
+        JOIN cc_media m ON m.id = em.media_id
         WHERE em.entity_type = 'asset' 
           AND em.entity_id = ANY($1::uuid[])
         ORDER BY em.sort_order
@@ -1137,7 +1137,7 @@ router.get('/portals/:slug/assets', async (req: Request, res: Response) => {
         const gallery = assetMedia.filter(m => m.role === 'gallery');
         return {
           ...asset,
-          media: {
+          cc_media: {
             hero: hero ? { url: hero.public_url, thumbnail: hero.variants?.thumbnail, alt: hero.alt_text } : null,
             gallery: gallery.map(g => ({ url: g.public_url, thumbnail: g.variants?.thumbnail, alt: g.alt_text }))
           }
@@ -1154,11 +1154,11 @@ router.get('/portals/:slug/assets', async (req: Request, res: Response) => {
 });
 
 /**
- * GET /api/public/portals/:slug/availability
+ * GET /api/public/cc_portals/:slug/availability
  * 
  * Check availability for assets within a date range.
  */
-router.get('/portals/:slug/availability', async (req: Request, res: Response) => {
+router.get('/cc_portals/:slug/availability', async (req: Request, res: Response) => {
   try {
     const { slug } = req.params;
     const { asset_id, asset_type, start, end } = req.query;
@@ -1178,7 +1178,7 @@ router.get('/portals/:slug/availability', async (req: Request, res: Response) =>
     }
     
     const portalResult = await serviceQuery(`
-      SELECT id, name, slug, owning_tenant_id FROM portals WHERE slug = $1 AND status = 'active'
+      SELECT id, name, slug, owning_tenant_id FROM cc_portals WHERE slug = $1 AND status = 'active'
     `, [slug]);
     
     if (portalResult.rows.length === 0) {
@@ -1215,10 +1215,10 @@ router.get('/portals/:slug/availability', async (req: Request, res: Response) =>
     
     // For each asset, check for conflicts
     const results = await Promise.all(assetsResult.rows.map(async (asset) => {
-      // Check reservations that overlap
+      // Check cc_reservations that overlap
       const conflictsResult = await serviceQuery(`
         SELECT id, start_date, end_date, status
-        FROM reservations
+        FROM cc_reservations
         WHERE asset_id = $1
           AND status NOT IN ('cancelled')
           AND (
@@ -1226,10 +1226,10 @@ router.get('/portals/:slug/availability', async (req: Request, res: Response) =>
           )
       `, [asset.id, startDate, endDate]);
       
-      // Also check resource_schedule_events
+      // Also check cc_resource_schedule_events
       const scheduleResult = await serviceQuery(`
         SELECT id, starts_at, ends_at, status
-        FROM resource_schedule_events
+        FROM cc_resource_schedule_events
         WHERE resource_id = $1
           AND status NOT IN ('cancelled')
           AND (
@@ -1275,11 +1275,11 @@ router.get('/portals/:slug/availability', async (req: Request, res: Response) =>
 });
 
 /**
- * GET /api/public/portals/:slug/availability/calendar
+ * GET /api/public/cc_portals/:slug/availability/calendar
  * 
  * Get availability calendar for a specific asset for a month.
  */
-router.get('/portals/:slug/availability/calendar', async (req: Request, res: Response) => {
+router.get('/cc_portals/:slug/availability/calendar', async (req: Request, res: Response) => {
   try {
     const { slug } = req.params;
     const { asset_id, month } = req.query;
@@ -1299,7 +1299,7 @@ router.get('/portals/:slug/availability/calendar', async (req: Request, res: Res
     // Verify portal and asset
     const portalResult = await serviceQuery(`
       SELECT p.id, p.owning_tenant_id 
-      FROM portals p WHERE p.slug = $1 AND p.status = 'active'
+      FROM cc_portals p WHERE p.slug = $1 AND p.status = 'active'
     `, [slug]);
     
     if (portalResult.rows.length === 0) {
@@ -1318,27 +1318,27 @@ router.get('/portals/:slug/availability/calendar', async (req: Request, res: Res
     const startOfMonth = new Date(year, monthNum - 1, 1);
     const endOfMonth = new Date(year, monthNum, 0, 23, 59, 59);
     
-    // Get all reservations for this month
+    // Get all cc_reservations for this month
     const reservationsResult = await serviceQuery(`
       SELECT start_date, end_date
-      FROM reservations
+      FROM cc_reservations
       WHERE asset_id = $1::uuid
         AND status NOT IN ('cancelled')
         AND start_date <= $3
         AND end_date >= $2
     `, [asset_id, startOfMonth, endOfMonth]);
     
-    // Get schedule events
+    // Get schedule cc_events
     const scheduleResult = await serviceQuery(`
       SELECT starts_at, ends_at
-      FROM resource_schedule_events
+      FROM cc_resource_schedule_events
       WHERE resource_id = $1::uuid
         AND status NOT IN ('cancelled')
         AND starts_at <= $3
         AND ends_at >= $2
     `, [asset_id, startOfMonth, endOfMonth]);
     
-    const events = [...reservationsResult.rows, ...scheduleResult.rows];
+    const cc_events = [...reservationsResult.rows, ...scheduleResult.rows];
     
     // Build day-by-day status
     const daysInMonth = endOfMonth.getDate();
@@ -1348,7 +1348,7 @@ router.get('/portals/:slug/availability/calendar', async (req: Request, res: Res
       const dayStart = new Date(year, monthNum - 1, day, 0, 0, 0);
       const dayEnd = new Date(year, monthNum - 1, day, 23, 59, 59);
       
-      const dayEvents = events.filter(e => {
+      const dayEvents = cc_events.filter(e => {
         const eStart = new Date(e.start_date || e.starts_at);
         const eEnd = new Date(e.end_date || e.ends_at);
         return eStart <= dayEnd && eEnd >= dayStart;
@@ -1376,11 +1376,11 @@ router.get('/portals/:slug/availability/calendar', async (req: Request, res: Res
 });
 
 /**
- * POST /api/public/portals/:slug/reservations
+ * POST /api/public/cc_portals/:slug/cc_reservations
  * 
  * Create a public reservation for an asset.
  */
-router.post('/portals/:slug/reservations', async (req: Request, res: Response) => {
+router.post('/cc_portals/:slug/cc_reservations', async (req: Request, res: Response) => {
   try {
     const { slug } = req.params;
     const { asset_id, start, end, customer, notes, consents } = req.body;
@@ -1407,7 +1407,7 @@ router.post('/portals/:slug/reservations', async (req: Request, res: Response) =
     // Get portal
     const portalResult = await serviceQuery(`
       SELECT id, name, slug, owning_tenant_id 
-      FROM portals WHERE slug = $1 AND status = 'active'
+      FROM cc_portals WHERE slug = $1 AND status = 'active'
     `, [slug]);
     
     if (portalResult.rows.length === 0) {
@@ -1433,7 +1433,7 @@ router.post('/portals/:slug/reservations', async (req: Request, res: Response) =
     // Check for conflicts
     const conflictsResult = await serviceQuery(`
       SELECT id, start_date, end_date
-      FROM reservations
+      FROM cc_reservations
       WHERE asset_id = $1::uuid
         AND status NOT IN ('cancelled')
         AND (start_date < $3 AND end_date > $2)
@@ -1441,7 +1441,7 @@ router.post('/portals/:slug/reservations', async (req: Request, res: Response) =
     
     const scheduleConflicts = await serviceQuery(`
       SELECT id, starts_at, ends_at
-      FROM resource_schedule_events
+      FROM cc_resource_schedule_events
       WHERE resource_id = $1::uuid
         AND status NOT IN ('cancelled')
         AND (starts_at < $3 AND ends_at > $2)
@@ -1471,7 +1471,7 @@ router.post('/portals/:slug/reservations', async (req: Request, res: Response) =
     
     // Create reservation (customer_id is NULL for public guest bookings)
     const reservationResult = await serviceQuery(`
-      INSERT INTO reservations (
+      INSERT INTO cc_reservations (
         confirmation_number, asset_id, provider_id,
         primary_guest_name, primary_guest_email, primary_guest_telephone,
         start_date, end_date, status, payment_status, portal_id,
@@ -1488,7 +1488,7 @@ router.post('/portals/:slug/reservations', async (req: Request, res: Response) =
     
     // Create schedule event to block time
     await serviceQuery(`
-      INSERT INTO resource_schedule_events (
+      INSERT INTO cc_resource_schedule_events (
         tenant_id, resource_id, event_type, starts_at, ends_at, 
         status, title, related_entity_type, related_entity_id
       ) VALUES ($1, $2, 'reservation', $3, $4, 'confirmed', $5, 'reservation', $6)

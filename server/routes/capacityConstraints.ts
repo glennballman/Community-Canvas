@@ -39,7 +39,7 @@ router.get('/assets/:assetId/capability-units', requireAuth, async (req: Request
     const { assetId } = req.params;
     const result = await req.tenantQuery(`
       SELECT id, asset_id, name, capability_type, status, notes, created_at, updated_at
-      FROM asset_capability_units
+      FROM cc_asset_capability_units
       WHERE asset_id = $1
       ORDER BY name
     `, [assetId]);
@@ -55,7 +55,7 @@ router.post('/capability-units', requireAuth, async (req: Request, res: Response
     const data = capabilityUnitSchema.parse(req.body);
     
     const capResult = await req.tenantQuery(`
-      INSERT INTO asset_capability_units (asset_id, name, capability_type, status, notes)
+      INSERT INTO cc_asset_capability_units (asset_id, name, capability_type, status, notes)
       VALUES ($1, $2, $3, $4, $5)
       RETURNING *
     `, [data.asset_id, data.name, data.capability_type, data.status, data.notes || null]);
@@ -64,7 +64,7 @@ router.post('/capability-units', requireAuth, async (req: Request, res: Response
     
     if (data.status === 'maintenance') {
       await req.tenantQuery(`
-        INSERT INTO resource_schedule_events (resource_id, event_type, starts_at, ends_at, title, notes, status, related_entity_type, related_entity_id)
+        INSERT INTO cc_resource_schedule_events (resource_id, event_type, starts_at, ends_at, title, notes, status, related_entity_type, related_entity_id)
         VALUES ($1, 'maintenance', NOW(), NOW() + INTERVAL '1 day', $2, 'Auto-created from capability maintenance status', 'active', 'capability_unit', $3)
       `, [data.asset_id, `${data.name} Maintenance`, capUnit.id]);
     }
@@ -84,14 +84,14 @@ router.patch('/capability-units/:id', requireAuth, async (req: Request, res: Res
     const { id } = req.params;
     const { name, capability_type, status, notes } = req.body;
     
-    const existing = await req.tenantQuery('SELECT * FROM asset_capability_units WHERE id = $1', [id]);
+    const existing = await req.tenantQuery('SELECT * FROM cc_asset_capability_units WHERE id = $1', [id]);
     if (existing.rows.length === 0) {
       return res.status(404).json({ error: 'Capability unit not found' });
     }
     
     const oldStatus = existing.rows[0].status;
     const result = await req.tenantQuery(`
-      UPDATE asset_capability_units
+      UPDATE cc_asset_capability_units
       SET name = COALESCE($2, name),
           capability_type = COALESCE($3, capability_type),
           status = COALESCE($4, status),
@@ -104,12 +104,12 @@ router.patch('/capability-units/:id', requireAuth, async (req: Request, res: Res
     if (status === 'maintenance' && oldStatus !== 'maintenance') {
       const assetId = existing.rows[0].asset_id;
       await req.tenantQuery(`
-        INSERT INTO resource_schedule_events (resource_id, event_type, starts_at, ends_at, title, notes, status, related_entity_type, related_entity_id)
+        INSERT INTO cc_resource_schedule_events (resource_id, event_type, starts_at, ends_at, title, notes, status, related_entity_type, related_entity_id)
         VALUES ($1, 'maintenance', NOW(), NOW() + INTERVAL '7 days', $2, 'Auto-created from capability maintenance status', 'active', 'capability_unit', $3)
       `, [assetId, `${result.rows[0].name} Maintenance`, id]);
     } else if (status !== 'maintenance' && oldStatus === 'maintenance') {
       await req.tenantQuery(`
-        UPDATE resource_schedule_events
+        UPDATE cc_resource_schedule_events
         SET status = 'cancelled'
         WHERE related_entity_type = 'capability_unit'
           AND related_entity_id = $1
@@ -129,12 +129,12 @@ router.delete('/capability-units/:id', requireAuth, async (req: Request, res: Re
   try {
     const { id } = req.params;
     await req.tenantQuery(`
-      UPDATE resource_schedule_events
+      UPDATE cc_resource_schedule_events
       SET status = 'cancelled'
       WHERE related_entity_type = 'capability_unit'
         AND related_entity_id = $1
     `, [id]);
-    await req.tenantQuery('DELETE FROM asset_capability_units WHERE id = $1', [id]);
+    await req.tenantQuery('DELETE FROM cc_asset_capability_units WHERE id = $1', [id]);
     res.status(204).send();
   } catch (error) {
     console.error('Error deleting capability unit:', error);
@@ -147,8 +147,8 @@ router.get('/assets/:assetId/capacities', requireAuth, async (req: Request, res:
     const { assetId } = req.params;
     const result = await req.tenantQuery(`
       SELECT c.*, cu.name as capability_unit_name
-      FROM asset_capacities c
-      LEFT JOIN asset_capability_units cu ON c.capability_unit_id = cu.id
+      FROM cc_asset_capacities c
+      LEFT JOIN cc_asset_capability_units cu ON c.capability_unit_id = cu.id
       WHERE c.asset_id = $1
       ORDER BY c.key
     `, [assetId]);
@@ -163,7 +163,7 @@ router.post('/capacities', requireAuth, async (req: Request, res: Response) => {
   try {
     const data = capacitySchema.parse(req.body);
     const result = await req.tenantQuery(`
-      INSERT INTO asset_capacities (asset_id, capability_unit_id, key, value_num, value_text, unit, applies_to, notes)
+      INSERT INTO cc_asset_capacities (asset_id, capability_unit_id, key, value_num, value_text, unit, applies_to, notes)
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
       RETURNING *
     `, [data.asset_id, data.capability_unit_id || null, data.key, data.value_num, data.value_text, data.unit, data.applies_to, data.notes]);
@@ -182,7 +182,7 @@ router.patch('/capacities/:id', requireAuth, async (req: Request, res: Response)
     const { id } = req.params;
     const { key, value_num, value_text, unit, applies_to, notes } = req.body;
     const result = await req.tenantQuery(`
-      UPDATE asset_capacities
+      UPDATE cc_asset_capacities
       SET key = COALESCE($2, key),
           value_num = COALESCE($3, value_num),
           value_text = COALESCE($4, value_text),
@@ -207,7 +207,7 @@ router.patch('/capacities/:id', requireAuth, async (req: Request, res: Response)
 router.delete('/capacities/:id', requireAuth, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    await req.tenantQuery('DELETE FROM asset_capacities WHERE id = $1', [id]);
+    await req.tenantQuery('DELETE FROM cc_asset_capacities WHERE id = $1', [id]);
     res.status(204).send();
   } catch (error) {
     console.error('Error deleting capacity:', error);
@@ -220,8 +220,8 @@ router.get('/assets/:assetId/constraints', requireAuth, async (req: Request, res
     const { assetId } = req.params;
     const result = await req.tenantQuery(`
       SELECT c.*, cu.name as capability_unit_name
-      FROM asset_constraints c
-      LEFT JOIN asset_capability_units cu ON c.capability_unit_id = cu.id
+      FROM cc_asset_constraints c
+      LEFT JOIN cc_asset_capability_units cu ON c.capability_unit_id = cu.id
       WHERE c.asset_id = $1
       ORDER BY c.severity DESC, c.constraint_type
     `, [assetId]);
@@ -240,7 +240,7 @@ router.post('/constraints', requireAuth, async (req: Request, res: Response) => 
     const endsAt = data.ends_at ? new Date(data.ends_at) : null;
     
     const result = await req.tenantQuery(`
-      INSERT INTO asset_constraints (asset_id, capability_unit_id, constraint_type, severity, details, active, starts_at, ends_at)
+      INSERT INTO cc_asset_constraints (asset_id, capability_unit_id, constraint_type, severity, details, active, starts_at, ends_at)
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
       RETURNING *
     `, [
@@ -256,7 +256,7 @@ router.post('/constraints', requireAuth, async (req: Request, res: Response) => 
     
     if (data.severity === 'blocking' && startsAt && endsAt) {
       await req.tenantQuery(`
-        INSERT INTO resource_schedule_events (resource_id, event_type, starts_at, ends_at, title, notes, status, related_entity_type, related_entity_id)
+        INSERT INTO cc_resource_schedule_events (resource_id, event_type, starts_at, ends_at, title, notes, status, related_entity_type, related_entity_id)
         VALUES ($1, 'maintenance', $2, $3, $4, $5, 'active', 'constraint', $6)
       `, [
         data.asset_id,
@@ -287,7 +287,7 @@ router.patch('/constraints/:id', requireAuth, async (req: Request, res: Response
     const endsAt = ends_at ? new Date(ends_at) : undefined;
     
     const result = await req.tenantQuery(`
-      UPDATE asset_constraints
+      UPDATE cc_asset_constraints
       SET constraint_type = COALESCE($2, constraint_type),
           severity = COALESCE($3, severity),
           details = COALESCE($4, details),
@@ -313,12 +313,12 @@ router.delete('/constraints/:id', requireAuth, async (req: Request, res: Respons
   try {
     const { id } = req.params;
     await req.tenantQuery(`
-      UPDATE resource_schedule_events
+      UPDATE cc_resource_schedule_events
       SET status = 'cancelled'
       WHERE related_entity_type = 'constraint'
         AND related_entity_id = $1
     `, [id]);
-    await req.tenantQuery('DELETE FROM asset_constraints WHERE id = $1', [id]);
+    await req.tenantQuery('DELETE FROM cc_asset_constraints WHERE id = $1', [id]);
     res.status(204).send();
   } catch (error) {
     console.error('Error deleting constraint:', error);

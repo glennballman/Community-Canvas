@@ -64,7 +64,7 @@ export function getCourierTier(): CriticalityTier {
   return 4;
 }
 
-// Helper for people carrier criticality tier (all are Tier 3 mobility)
+// Helper for cc_people carrier criticality tier (all are Tier 3 mobility)
 export function getPeopleCarrierTier(): CriticalityTier {
   return 3;
 }
@@ -2386,7 +2386,7 @@ export const BC_TRUCKING_SERVICES: TruckingService[] = [
     service_coverage: ["Province-wide", "Western Canada", "Alaska Highway"],
     fleet_size: "500+ units company-wide",
     website: "https://www.mullen-group.com",
-    notes: "Major LTL and TL carrier; oilfield services"
+    notes: "Major LTL and TL carrier; oilfield cc_services"
   },
   {
     id: "day-ross",
@@ -2487,7 +2487,7 @@ export const BC_TRUCKING_SERVICES: TruckingService[] = [
     service_coverage: ["Interior BC", "Cariboo", "Forestry regions"],
     fleet_size: "300+ log trucks",
     website: "https://www.arrow.ca",
-    notes: "Major log hauler; chip trucks; forestry services"
+    notes: "Major log hauler; chip trucks; forestry cc_services"
   },
   {
     id: "teal-jones-trucking",

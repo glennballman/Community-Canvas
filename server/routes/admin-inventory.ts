@@ -94,7 +94,7 @@ router.get('/', async (req: AuthRequest, res: Response) => {
     
     const tableCounts: Record<string, number | null> = {};
     
-    const countTables = ['catalog_items', 'cc_rental_items', 'reservations'];
+    const countTables = ['cc_catalog_items', 'cc_rental_items', 'cc_reservations'];
     for (const tableName of countTables) {
       try {
         const countResult = await serviceQuery(`SELECT COUNT(*)::int as count FROM ${tableName}`);

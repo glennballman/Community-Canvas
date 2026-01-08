@@ -26,25 +26,25 @@ export const snapshotDataSchema = z.object({
   emergency_alerts: z.array(statusValueSchema).optional(),
 });
 
-export const snapshots = pgTable("snapshots", {
+export const cc_snapshots = pgTable("cc_snapshots", {
   id: serial("id").primaryKey(),
   location: text("location").notNull(),
   data: jsonb("data").$type<z.infer<typeof snapshotDataSchema>>().notNull(),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-export const insertSnapshotSchema = createInsertSchema(snapshots).pick({
+export const insertSnapshotSchema = createInsertSchema(cc_snapshots).pick({
   location: true,
   data: true,
 });
 
-export type Snapshot = typeof snapshots.$inferSelect;
-export type InsertSnapshot = typeof snapshots.$inferInsert;
+export type Snapshot = typeof cc_snapshots.$inferSelect;
+export type InsertSnapshot = typeof cc_snapshots.$inferInsert;
 export type SnapshotData = z.infer<typeof snapshotDataSchema>;
 export type StatusEntry = z.infer<typeof statusEntrySchema>;
 
 // Chamber member count overrides (Expected/Estimated manual edits)
-export const chamberOverrides = pgTable("chamber_overrides", {
+export const chamberOverrides = pgTable("cc_chamber_overrides", {
   chamberId: text("chamber_id").primaryKey(),
   expectedMembers: integer("expected_members"),
   estimatedMembers: integer("estimated_members"),
@@ -74,7 +74,7 @@ export const mediaVariantsSchema = z.object({
 }).passthrough();
 
 // Media table
-export const media = pgTable("media", {
+export const cc_media = pgTable("cc_media", {
   id: uuid("id").primaryKey().defaultRandom(),
   tenantId: uuid("tenant_id").notNull(),
   storageKey: text("storage_key").notNull(),
@@ -101,17 +101,17 @@ export const media = pgTable("media", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-export const insertMediaSchema = createInsertSchema(media).omit({
+export const insertMediaSchema = createInsertSchema(cc_media).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
 });
 
-export type Media = typeof media.$inferSelect;
+export type Media = typeof cc_media.$inferSelect;
 export type InsertMedia = z.infer<typeof insertMediaSchema>;
 
 // Entity Media (polymorphic links)
-export const entityMedia = pgTable("entity_media", {
+export const entityMedia = pgTable("cc_entity_media", {
   id: uuid("id").primaryKey().defaultRandom(),
   mediaId: uuid("media_id").notNull(),
   entityType: text("entity_type").notNull(),
@@ -131,7 +131,7 @@ export type EntityMedia = typeof entityMedia.$inferSelect;
 export type InsertEntityMedia = z.infer<typeof insertEntityMediaSchema>;
 
 // Crawl Media Queue
-export const crawlMediaQueue = pgTable("crawl_media_queue", {
+export const crawlMediaQueue = pgTable("cc_crawl_media_queue", {
   id: uuid("id").primaryKey().defaultRandom(),
   tenantId: uuid("tenant_id").notNull(),
   sourceUrl: text("source_url").notNull(),

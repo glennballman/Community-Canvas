@@ -74,7 +74,7 @@ router.post('/qa/seed-booking-test-assets', async (req, res) => {
       let childLink = null;
       if (transportId && craneId) {
         const childLinkResult = await client.query(`
-          INSERT INTO asset_children (
+          INSERT INTO cc_asset_children (
             parent_asset_id, child_asset_id, relationship_type, is_required
           ) VALUES (
             $1, $2, 'mounted_tool', false
@@ -220,7 +220,7 @@ router.post('/qa/test-booking-semantics', async (req, res) => {
           UPDATE cc_assets SET operational_status = 'out_of_service' WHERE id = $1
         `, [crane.id]);
         await client.query(`
-          UPDATE asset_children SET is_required = false 
+          UPDATE cc_asset_children SET is_required = false 
           WHERE child_asset_id = $1 AND parent_asset_id = $2
         `, [crane.id, transportForDegraded.id]);
       });
@@ -239,14 +239,14 @@ router.post('/qa/test-booking-semantics', async (req, res) => {
 
       await withServiceTransaction(async (client) => {
         await client.query(`
-          UPDATE asset_children SET is_required = true 
+          UPDATE cc_asset_children SET is_required = true 
           WHERE child_asset_id = $1 AND parent_asset_id = $2
         `, [crane.id, transportForDegraded.id]);
       });
 
       const childrenLinks = await serviceQuery(`
         SELECT ac.is_required, ua.operational_status as child_status
-        FROM asset_children ac
+        FROM cc_asset_children ac
         JOIN cc_assets ua ON ua.id = ac.child_asset_id
         WHERE ac.parent_asset_id = $1
         AND ac.is_required = true
@@ -293,7 +293,7 @@ router.delete('/qa/cleanup-test-assets', async (req, res) => {
   try {
     await withServiceTransaction(async (client) => {
       await client.query(`
-        DELETE FROM asset_children WHERE parent_asset_id IN (
+        DELETE FROM cc_asset_children WHERE parent_asset_id IN (
           SELECT id FROM cc_assets WHERE name LIKE 'QA Test%'
         ) OR child_asset_id IN (
           SELECT id FROM cc_assets WHERE name LIKE 'QA Test%'

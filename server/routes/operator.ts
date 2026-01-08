@@ -182,7 +182,7 @@ router.post('/hold-request', authenticateToken, async (req: AuthRequest, res: Re
       SELECT ci.id, ci.tenant_id, ci.name,
              tss.allow_hold_requests
       FROM inventory_items ci
-      LEFT JOIN tenant_sharing_settings tss ON ci.tenant_id = tss.tenant_id
+      LEFT JOIN cc_tenant_sharing_settings tss ON ci.tenant_id = tss.tenant_id
       WHERE ci.id = $1 AND ci.status = 'active'
     `, [inventory_item_id]);
 
@@ -203,7 +203,7 @@ router.post('/hold-request', authenticateToken, async (req: AuthRequest, res: Re
     }
 
     const holdResult = await serviceQuery(`
-      INSERT INTO hold_requests (
+      INSERT INTO cc_hold_requests (
         inventory_item_id, business_tenant_id, requesting_tenant_id, requesting_user_id,
         date_start, date_end, party_size,
         caller_name, caller_phone, caller_email, caller_notes,
@@ -293,7 +293,7 @@ router.post('/call-log', authenticateToken, async (req: AuthRequest, res: Respon
     }
 
     const result = await serviceQuery(`
-      INSERT INTO operator_call_logs (
+      INSERT INTO cc_operator_call_logs (
         operator_tenant_id, operator_user_id,
         caller_name, caller_phone, caller_email,
         need_type, need_summary, date_start, date_end, party_size, special_requirements,

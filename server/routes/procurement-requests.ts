@@ -49,7 +49,7 @@ router.get('/stats/summary', async (req: Request, res: Response) => {
         COUNT(*) FILTER (WHERE status = 'evaluating'::procurement_request_status) as evaluating,
         COUNT(*) FILTER (WHERE status = 'awarded'::procurement_request_status)     as awarded,
         COUNT(*) as total
-      FROM procurement_requests wr
+      FROM cc_procurement_requests wr
       ${whereClause}
       `,
       params
@@ -106,7 +106,7 @@ router.post('/', requireAuth, requireTenant, async (req: Request, res: Response)
 
     const result = await tenantReq.tenantQuery!(
       `
-      INSERT INTO procurement_requests (
+      INSERT INTO cc_procurement_requests (
         procurement_request_ref, owner_tenant_id, title, description, scope_of_work, work_category,
         site_address, site_latitude, site_longitude,
         estimated_value_low, estimated_value_high, budget_ceiling,
@@ -144,7 +144,7 @@ router.post('/', requireAuth, requireTenant, async (req: Request, res: Response)
   }
 });
 
-router.post('/:id/media', requireAuth, requireTenant, async (req: Request, res: Response) => {
+router.post('/:id/cc_media', requireAuth, requireTenant, async (req: Request, res: Response) => {
   const tenantReq = req as TenantRequest;
   try {
     const { id } = req.params;
@@ -157,7 +157,7 @@ router.post('/:id/media', requireAuth, requireTenant, async (req: Request, res: 
     }
 
     const ownerCheck = await tenantReq.tenantQuery!(
-      `SELECT id FROM procurement_requests WHERE id = $1::uuid AND owner_tenant_id = $2`,
+      `SELECT id FROM cc_procurement_requests WHERE id = $1::uuid AND owner_tenant_id = $2`,
       [id, tenantId]
     );
     if (ownerCheck.rows.length === 0) {
@@ -165,7 +165,7 @@ router.post('/:id/media', requireAuth, requireTenant, async (req: Request, res: 
     }
 
     const result = await tenantReq.tenantQuery!(
-      `INSERT INTO work_request_media (work_request_id, media_type, file_name, file_url, file_size, description, is_public, uploaded_by)
+      `INSERT INTO cc_work_request_media (work_request_id, media_type, file_name, file_url, file_size, description, is_public, uploaded_by)
        VALUES ($1::uuid, $2, $3, $4, $5, $6, $7, $8::uuid)
        RETURNING *`,
       [id, media_type, file_name || null, file_url, file_size || null, description || null, is_public !== false, individualId || null]
@@ -173,8 +173,8 @@ router.post('/:id/media', requireAuth, requireTenant, async (req: Request, res: 
 
     res.status(201).json(result.rows[0]);
   } catch (e: any) {
-    console.error('Error adding media:', e);
-    res.status(500).json({ error: 'Failed to add media', details: e.message });
+    console.error('Error adding cc_media:', e);
+    res.status(500).json({ error: 'Failed to add cc_media', details: e.message });
   }
 });
 
@@ -315,14 +315,14 @@ router.get('/', async (req: Request, res: Response) => {
         c.region as community_region,
         sb.name as service_bundle_name,
         owner.trade_name as owner_name,
-        (SELECT COUNT(*) FROM bids b WHERE b.work_request_id = wr.id) as bid_count,
-        (SELECT COUNT(*) FROM work_request_media wrm WHERE wrm.work_request_id = wr.id) as media_count
-      FROM procurement_requests wr
+        (SELECT COUNT(*) FROM cc_bids b WHERE b.work_request_id = wr.id) as bid_count,
+        (SELECT COUNT(*) FROM cc_work_request_media wrm WHERE wrm.work_request_id = wr.id) as media_count
+      FROM cc_procurement_requests wr
       LEFT JOIN cc_sr_communities c ON c.id = wr.community_id
       LEFT JOIN cc_sr_bundles sb ON sb.id = wr.service_bundle_id
       LEFT JOIN LATERAL (
         SELECT p.trade_name
-        FROM parties p
+        FROM cc_parties p
         WHERE p.tenant_id = wr.owner_tenant_id
         ORDER BY p.created_at ASC
         LIMIT 1
@@ -339,7 +339,7 @@ router.get('/', async (req: Request, res: Response) => {
     const countParams = params.slice(0, -2);
     const countQuery = `
       SELECT COUNT(*) as total
-      FROM procurement_requests wr
+      FROM cc_procurement_requests wr
       LEFT JOIN cc_sr_communities c ON c.id = wr.community_id
       ${whereClause}
     `;
@@ -397,12 +397,12 @@ router.get('/:id', async (req: Request, res: Response) => {
         owner.trade_name as owner_name,
         owner.primary_contact_name as owner_contact_name,
         owner.primary_contact_email as owner_contact_email
-      FROM procurement_requests wr
+      FROM cc_procurement_requests wr
       LEFT JOIN cc_sr_communities c ON c.id = wr.community_id
       LEFT JOIN cc_sr_bundles sb ON sb.id = wr.service_bundle_id
       LEFT JOIN LATERAL (
         SELECT p.trade_name, p.primary_contact_name, p.primary_contact_email
-        FROM parties p
+        FROM cc_parties p
         WHERE p.tenant_id = wr.owner_tenant_id
         ORDER BY p.created_at ASC
         LIMIT 1
@@ -420,20 +420,20 @@ router.get('/:id', async (req: Request, res: Response) => {
     const workRequest = result.rows[0];
     const isOwner = workRequest.owner_tenant_id === tenantId;
 
-    const media = await runQuery(tenantReq,
+    const cc_media = await runQuery(tenantReq,
       `SELECT id, media_type, file_name, file_url, file_size, description, is_public, created_at
-       FROM work_request_media WHERE work_request_id = $1 ORDER BY created_at`,
+       FROM cc_work_request_media WHERE work_request_id = $1 ORDER BY created_at`,
       [id]
     );
 
     const measurements = await runQuery(tenantReq,
       `SELECT id, measurement_type, description, quantity, unit, notes, created_at
-       FROM work_request_measurements WHERE work_request_id = $1 ORDER BY created_at`,
+       FROM cc_work_request_measurements WHERE work_request_id = $1 ORDER BY created_at`,
       [id]
     );
 
     const bidCountResult = await runQuery(tenantReq,
-      `SELECT COUNT(*) as count FROM bids WHERE work_request_id = $1`,
+      `SELECT COUNT(*) as count FROM cc_bids WHERE work_request_id = $1`,
       [id]
     );
     const bidCount = parseInt(bidCountResult.rows[0]?.count || '0');
@@ -441,14 +441,14 @@ router.get('/:id', async (req: Request, res: Response) => {
     let userBid = null;
     if (tenantId) {
       const partyResult = await runQuery(tenantReq,
-        `SELECT id FROM parties WHERE tenant_id = $1 ORDER BY created_at ASC LIMIT 1`,
+        `SELECT id FROM cc_parties WHERE tenant_id = $1 ORDER BY created_at ASC LIMIT 1`,
         [tenantId]
       );
 
       if (partyResult.rows.length > 0) {
         const userBidResult = await runQuery(tenantReq,
           `SELECT id, bid_ref, status, bid_amount, proposed_start_date, submitted_at
-           FROM bids WHERE work_request_id = $1 AND party_id = $2 LIMIT 1`,
+           FROM cc_bids WHERE work_request_id = $1 AND party_id = $2 LIMIT 1`,
           [id, partyResult.rows[0].id]
         );
         userBid = userBidResult.rows[0] || null;
@@ -457,21 +457,21 @@ router.get('/:id', async (req: Request, res: Response) => {
 
     const messagesQuery = isOwner
       ? `SELECT bm.*, p.trade_name as from_party_name
-         FROM bid_messages bm LEFT JOIN parties p ON p.id = bm.from_party_id
+         FROM cc_bid_messages bm LEFT JOIN cc_parties p ON p.id = bm.from_party_id
          WHERE bm.work_request_id = $1 ORDER BY bm.created_at`
       : `SELECT bm.*, p.trade_name as from_party_name
-         FROM bid_messages bm LEFT JOIN parties p ON p.id = bm.from_party_id
+         FROM cc_bid_messages bm LEFT JOIN cc_parties p ON p.id = bm.from_party_id
          WHERE bm.work_request_id = $1 AND bm.is_public = true ORDER BY bm.created_at`;
 
-    const messages = await runQuery(tenantReq, messagesQuery, [id]);
+    const cc_messages = await runQuery(tenantReq, messagesQuery, [id]);
 
     res.json({
       ...workRequest,
-      media: media.rows,
+      cc_media: cc_media.rows,
       measurements: measurements.rows,
       bid_count: bidCount,
       user_bid: userBid,
-      messages: messages.rows,
+      cc_messages: cc_messages.rows,
       is_owner: isOwner
     });
   } catch (error) {
@@ -480,35 +480,35 @@ router.get('/:id', async (req: Request, res: Response) => {
   }
 });
 
-router.get('/:id/bids', requireAuth, requireTenant, async (req: Request, res: Response) => {
+router.get('/:id/cc_bids', requireAuth, requireTenant, async (req: Request, res: Response) => {
   const tenantReq = req as TenantRequest;
   try {
     const { id } = req.params;
     const tenantId = tenantReq.ctx!.tenant_id;
 
     const ownerCheck = await tenantReq.tenantQuery(
-      `SELECT id FROM procurement_requests WHERE id = $1::uuid AND owner_tenant_id = $2`,
+      `SELECT id FROM cc_procurement_requests WHERE id = $1::uuid AND owner_tenant_id = $2`,
       [id, tenantId]
     );
 
     if (ownerCheck.rows.length === 0) {
-      return res.status(403).json({ error: 'Not authorized to view bids for this work request' });
+      return res.status(403).json({ error: 'Not authorized to view cc_bids for this work request' });
     }
 
     const result = await tenantReq.tenantQuery(
       `SELECT b.*, p.trade_name as bidder_name, p.rating as bidder_rating,
               p.total_contracts as bidder_contracts, p.certifications as bidder_certifications,
               p.status as bidder_status
-       FROM bids b JOIN parties p ON p.id = b.party_id
+       FROM cc_bids b JOIN cc_parties p ON p.id = b.party_id
        WHERE b.work_request_id = $1::uuid
        ORDER BY b.submitted_at DESC NULLS LAST, b.created_at DESC`,
       [id]
     );
 
-    res.json({ bids: result.rows });
+    res.json({ cc_bids: result.rows });
   } catch (error) {
-    console.error('Error fetching bids:', error);
-    res.status(500).json({ error: 'Failed to fetch bids' });
+    console.error('Error fetching cc_bids:', error);
+    res.status(500).json({ error: 'Failed to fetch cc_bids' });
   }
 });
 

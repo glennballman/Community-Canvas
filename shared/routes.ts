@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { snapshots, snapshotDataSchema } from './schema';
+import { cc_snapshots, snapshotDataSchema } from './schema';
 
 export const errorSchemas = {
   validation: z.object({
@@ -15,7 +15,7 @@ export const errorSchemas = {
 };
 
 export const api = {
-  snapshots: {
+  cc_snapshots: {
     getLatest: {
       method: 'GET' as const,
       path: '/api/city/:cityName',

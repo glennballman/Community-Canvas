@@ -66,20 +66,20 @@ export async function upsertExternalRecord(args: {
   const address = String(record.address?.full || record.address || "").slice(0, 500);
 
   const existing = await pool.query(
-    `SELECT id, sync_hash FROM external_records WHERE source = $1::external_source AND external_id = $2`,
+    `SELECT id, sync_hash FROM cc_external_records WHERE source = $1::external_source AND external_id = $2`,
     [dataset.source, externalId]
   );
 
   if (existing.rows.length > 0) {
     const row = existing.rows[0];
     if (row.sync_hash === hash) {
-      await pool.query(`UPDATE external_records SET last_seen_at = NOW() WHERE id = $1`, [row.id]);
+      await pool.query(`UPDATE cc_external_records SET last_seen_at = NOW() WHERE id = $1`, [row.id]);
       return "skipped";
     }
 
     await pool.query(
       `
-      UPDATE external_records SET
+      UPDATE cc_external_records SET
         dataset_id = $1,
         record_type = $2::external_record_type,
         name = $3,
@@ -122,7 +122,7 @@ export async function upsertExternalRecord(args: {
 
   const inserted = await pool.query(
     `
-    INSERT INTO external_records (
+    INSERT INTO cc_external_records (
       dataset_id, source, record_type,
       external_id, external_url,
       name, description, address,
@@ -187,7 +187,7 @@ async function upsertContactPointsFromRecord(externalRecordId: string, record: a
     const norm = normalizeEmail(e);
     await pool.query(
       `
-      INSERT INTO external_contact_points (
+      INSERT INTO cc_external_contact_points (
         external_record_id, contact_type, contact_value, normalized_value,
         is_verified, consent, do_not_contact, is_primary
       ) VALUES ($1, 'email'::contact_type, $2, $3, false, 'unknown'::consent_basis, true, false)
@@ -201,7 +201,7 @@ async function upsertContactPointsFromRecord(externalRecordId: string, record: a
     const norm = normalizePhone(p);
     await pool.query(
       `
-      INSERT INTO external_contact_points (
+      INSERT INTO cc_external_contact_points (
         external_record_id, contact_type, contact_value, normalized_value,
         is_verified, consent, do_not_contact, is_primary
       ) VALUES ($1, 'phone'::contact_type, $2, $3, false, 'unknown'::consent_basis, true, false)
@@ -220,7 +220,7 @@ export async function syncDataset(datasetSlug: string, records: any[]): Promise<
   errored: number;
 }> {
   const datasetResult = await pool.query(
-    `SELECT id, slug, source::text, record_type::text, region FROM apify_datasets WHERE slug = $1`,
+    `SELECT id, slug, source::text, record_type::text, region FROM cc_apify_datasets WHERE slug = $1`,
     [datasetSlug]
   );
 
@@ -231,7 +231,7 @@ export async function syncDataset(datasetSlug: string, records: any[]): Promise<
   const dataset = datasetResult.rows[0] as DatasetRow;
 
   const historyResult = await pool.query(
-    `INSERT INTO apify_sync_history (dataset_id, triggered_by) VALUES ($1, 'api') RETURNING id`,
+    `INSERT INTO cc_apify_sync_history (dataset_id, triggered_by) VALUES ($1, 'api') RETURNING id`,
     [dataset.id]
   );
   const historyId = historyResult.rows[0].id;
@@ -255,7 +255,7 @@ export async function syncDataset(datasetSlug: string, records: any[]): Promise<
 
   await pool.query(
     `
-    UPDATE apify_sync_history SET
+    UPDATE cc_apify_sync_history SET
       status = 'completed',
       completed_at = NOW(),
       records_processed = $1,
@@ -270,7 +270,7 @@ export async function syncDataset(datasetSlug: string, records: any[]): Promise<
   );
 
   await pool.query(
-    `UPDATE apify_datasets SET last_sync_at = NOW(), last_sync_record_count = $1 WHERE id = $2`,
+    `UPDATE cc_apify_datasets SET last_sync_at = NOW(), last_sync_record_count = $1 WHERE id = $2`,
     [records.length, dataset.id]
   );
 

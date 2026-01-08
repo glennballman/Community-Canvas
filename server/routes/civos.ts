@@ -27,8 +27,8 @@ router.get('/signals', async (req: Request, res: Response) => {
                 st.category,
                 p.name as property_name,
                 p.city
-            FROM civos_signals s
-            JOIN civos_signal_types st ON st.id = s.signal_type_id
+            FROM cc_civos_signals s
+            JOIN cc_civos_signal_types st ON st.id = s.signal_type_id
             LEFT JOIN cc_staging_properties p ON p.id = s.property_id
             WHERE s.status = 'active'
             AND (s.expires_at IS NULL OR s.expires_at > NOW())
@@ -274,7 +274,7 @@ router.get('/signal-types', async (req: Request, res: Response) => {
     try {
         const result = await serviceQuery(`
             SELECT signal_code, signal_name, category, severity_levels, description
-            FROM civos_signal_types
+            FROM cc_civos_signal_types
             WHERE is_active = true
             ORDER BY category, signal_code
         `);
@@ -347,7 +347,7 @@ router.post('/signals', async (req: Request, res: Response) => {
         }
 
         const typeResult = await serviceQuery(
-            'SELECT id FROM civos_signal_types WHERE signal_code = $1',
+            'SELECT id FROM cc_civos_signal_types WHERE signal_code = $1',
             [signalCode]
         );
 
@@ -369,7 +369,7 @@ router.post('/signals', async (req: Request, res: Response) => {
         }
 
         const result = await serviceQuery(`
-            INSERT INTO civos_signals (
+            INSERT INTO cc_civos_signals (
                 signal_type_id, signal_code, property_id, region,
                 latitude, longitude, severity, message, signal_value, expires_at
             ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
@@ -404,7 +404,7 @@ router.put('/signals/:id/resolve', async (req: Request, res: Response) => {
         const { reason } = req.body;
 
         const currentSignal = await serviceQuery(
-            'SELECT severity, status FROM civos_signals WHERE id = $1',
+            'SELECT severity, status FROM cc_civos_signals WHERE id = $1',
             [id]
         );
 
@@ -413,14 +413,14 @@ router.put('/signals/:id/resolve', async (req: Request, res: Response) => {
         }
 
         const result = await serviceQuery(`
-            UPDATE civos_signals
+            UPDATE cc_civos_signals
             SET status = 'resolved', resolved_at = NOW(), updated_at = NOW()
             WHERE id = $1
             RETURNING id, signal_code, status
         `, [id]);
 
         await serviceQuery(`
-            INSERT INTO civos_signal_history (signal_id, previous_status, new_status, change_reason, changed_by)
+            INSERT INTO cc_civos_signal_history (signal_id, previous_status, new_status, change_reason, changed_by)
             VALUES ($1, $2, 'resolved', $3, $4)
         `, [id, currentSignal.rows[0].status, reason || 'Manually resolved', 'dashboard']);
 
@@ -436,11 +436,11 @@ router.get('/stats', async (req: Request, res: Response) => {
     try {
         const statsResult = await serviceQuery(`
             SELECT 
-                (SELECT COUNT(*) FROM civos_signals WHERE status = 'active') as active_signals,
-                (SELECT COUNT(*) FROM civos_signals WHERE status = 'active' AND severity = 'critical') as critical_signals,
-                (SELECT COUNT(*) FROM civos_signals WHERE status = 'active' AND severity = 'high') as high_signals,
-                (SELECT COUNT(*) FROM civos_signals WHERE status = 'resolved' AND resolved_at > NOW() - INTERVAL '24 hours') as resolved_24h,
-                (SELECT COUNT(DISTINCT region) FROM civos_signals WHERE status = 'active') as regions_with_signals
+                (SELECT COUNT(*) FROM cc_civos_signals WHERE status = 'active') as active_signals,
+                (SELECT COUNT(*) FROM cc_civos_signals WHERE status = 'active' AND severity = 'critical') as critical_signals,
+                (SELECT COUNT(*) FROM cc_civos_signals WHERE status = 'active' AND severity = 'high') as high_signals,
+                (SELECT COUNT(*) FROM cc_civos_signals WHERE status = 'resolved' AND resolved_at > NOW() - INTERVAL '24 hours') as resolved_24h,
+                (SELECT COUNT(DISTINCT region) FROM cc_civos_signals WHERE status = 'active') as regions_with_signals
         `);
 
         const capacityResult = await serviceQuery(`
@@ -478,7 +478,7 @@ router.get('/stats', async (req: Request, res: Response) => {
 
 router.get('/config', async (req: Request, res: Response) => {
     try {
-        const result = await serviceQuery('SELECT key, value, description FROM civos_config');
+        const result = await serviceQuery('SELECT key, value, description FROM cc_civos_config');
         
         const config: Record<string, any> = {};
         result.rows.forEach(row => {

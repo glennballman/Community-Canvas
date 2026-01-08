@@ -249,13 +249,13 @@ export class AccommodationImportService {
 
       try {
         const existing = await this.db.query(
-          'SELECT id FROM accommodation_properties WHERE airbnb_id = $1',
+          'SELECT id FROM cc_accommodation_properties WHERE airbnb_id = $1',
           [property.airbnbId]
         );
 
         if (existing.rows.length > 0) {
           await this.db.query(`
-            UPDATE accommodation_properties SET
+            UPDATE cc_accommodation_properties SET
               name = $1,
               description = $2,
               thumbnail_url = $3,
@@ -301,7 +301,7 @@ export class AccommodationImportService {
           result.updated++;
         } else {
           await this.db.query(`
-            INSERT INTO accommodation_properties (
+            INSERT INTO cc_accommodation_properties (
               airbnb_id, name, description, thumbnail_url, source_url,
               latitude, longitude, overall_rating, review_count, base_nightly_rate,
               crew_score, region, city, source, status, is_verified, is_crew_friendly,

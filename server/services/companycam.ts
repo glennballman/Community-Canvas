@@ -76,19 +76,19 @@ export class CompanyCamService {
   }
 
   async getProjects(page: number = 1, perPage: number = 50): Promise<CompanyCamProject[]> {
-    return this.request<CompanyCamProject[]>('/projects', { page, per_page: perPage });
+    return this.request<CompanyCamProject[]>('/cc_projects', { page, per_page: perPage });
   }
 
   async getProject(projectId: string): Promise<CompanyCamProject> {
-    return this.request<CompanyCamProject>(`/projects/${projectId}`);
+    return this.request<CompanyCamProject>(`/cc_projects/${projectId}`);
   }
 
   async searchProjects(query: string): Promise<CompanyCamProject[]> {
-    return this.request<CompanyCamProject[]>('/projects', { query });
+    return this.request<CompanyCamProject[]>('/cc_projects', { query });
   }
 
   async getProjectPhotos(projectId: string, page: number = 1, perPage: number = 20): Promise<CompanyCamPhoto[]> {
-    return this.request<CompanyCamPhoto[]>(`/projects/${projectId}/photos`, { page, per_page: perPage });
+    return this.request<CompanyCamPhoto[]>(`/cc_projects/${projectId}/photos`, { page, per_page: perPage });
   }
 
   async getPhoto(photoId: string): Promise<CompanyCamPhoto> {
@@ -108,8 +108,8 @@ export class CompanyCamService {
 
   async testConnection(): Promise<{ connected: boolean; projectCount?: number }> {
     try {
-      const projects = await this.getProjects(1, 1);
-      return { connected: true, projectCount: Array.isArray(projects) ? projects.length : 0 };
+      const cc_projects = await this.getProjects(1, 1);
+      return { connected: true, projectCount: Array.isArray(cc_projects) ? cc_projects.length : 0 };
     } catch (error) {
       throw error;
     }

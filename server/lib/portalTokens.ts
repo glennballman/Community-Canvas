@@ -21,7 +21,7 @@ export async function createPortalDomainVerification(portalId: string, domain: s
   const hashedToken = await hashToken(token);
   
   await pool.query(`
-    UPDATE portal_domains 
+    UPDATE cc_portal_domains 
     SET verification_token = $1,
         verification_method = 'dns_txt',
         updated_at = NOW()
@@ -33,7 +33,7 @@ export async function createPortalDomainVerification(portalId: string, domain: s
 
 export async function verifyPortalDomain(domain: string, providedToken: string): Promise<boolean> {
   const result = await pool.query(`
-    SELECT verification_token FROM portal_domains 
+    SELECT verification_token FROM cc_portal_domains 
     WHERE domain = $1 AND status = 'pending'
   `, [domain]);
   
@@ -45,7 +45,7 @@ export async function verifyPortalDomain(domain: string, providedToken: string):
   
   if (isValid) {
     await pool.query(`
-      UPDATE portal_domains 
+      UPDATE cc_portal_domains 
       SET status = 'verified',
           verified_at = NOW(),
           verification_token = NULL,
