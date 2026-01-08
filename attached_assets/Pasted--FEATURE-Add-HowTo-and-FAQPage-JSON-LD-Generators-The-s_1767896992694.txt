@@ -1,0 +1,80 @@
+**FEATURE: Add HowTo and FAQPage JSON-LD Generators**
+
+The schema.org JSON-LD generator is missing support for HowTo and FAQPage content types.
+
+**Task:**
+
+1. Open `server/lib/schema-org.ts` (or wherever JSON-LD generation lives)
+
+2. Add these two new generator functions:
+```typescript
+// HowTo JSON-LD generator (for guides, tutorials, instructions)
+export function generateHowToJsonLd(article: {
+  title: string;
+  summary?: string;
+  featured_image_url?: string;
+  steps?: Array<{ name: string; text: string; image_url?: string }>;
+}): object {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'HowTo',
+    name: article.title,
+    description: article.summary || '',
+    image: article.featured_image_url,
+    step: (article.steps || []).map((step, index) => ({
+      '@type': 'HowToStep',
+      position: index + 1,
+      name: step.name,
+      itemListElement: {
+        '@type': 'HowToDirection',
+        text: step.text,
+      },
+      ...(step.image_url && { image: step.image_url }),
+    })),
+  };
+}
+
+// FAQPage JSON-LD generator (for FAQ sections)
+export function generateFaqPageJsonLd(article: {
+  title: string;
+  faqs?: Array<{ question: string; answer: string }>;
+}): object {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: (article.faqs || []).map((faq) => ({
+      '@type': 'Question',
+      name: faq.question,
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: faq.answer,
+      },
+    })),
+  };
+}
+```
+
+3. Update the main JSON-LD generation logic to use these based on `schema_type`:
+```typescript
+export function generateJsonLd(article: Article): object {
+  switch (article.schema_type) {
+    case 'HowTo':
+      return generateHowToJsonLd(article);
+    case 'FAQPage':
+      return generateFaqPageJsonLd(article);
+    case 'NewsArticle':
+      return generateNewsArticleJsonLd(article);
+    case 'BlogPosting':
+      return generateBlogPostingJsonLd(article);
+    default:
+      return generateArticleJsonLd(article);
+  }
+}
+```
+
+4. Export the new functions
+
+**Report:**
+- Functions added
+- Integration with existing generator
+- Any schema_type enum updates needed

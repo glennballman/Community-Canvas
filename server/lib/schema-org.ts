@@ -5,6 +5,10 @@
  * - Articles (with multiple schema.org types)
  * - Infrastructure cc_entities
  * - Organizations
+ * - HowTo guides and tutorials
+ * - FAQPage for FAQ sections
+ * - Breadcrumbs for navigation
+ * - WebSite for portal homepages
  */
 
 export interface ArticleForJsonLd {
@@ -285,4 +289,138 @@ export function generateWebSiteJsonLd(portal: {
   }
 
   return jsonLd;
+}
+
+// ============================================================================
+// HOWTO AND FAQ JSON-LD GENERATORS
+// ============================================================================
+
+export interface HowToStep {
+  name: string;
+  text: string;
+  image_url?: string | null;
+}
+
+export interface FaqItem {
+  question: string;
+  answer: string;
+}
+
+export interface HowToArticle {
+  title: string;
+  summary?: string | null;
+  featured_image_url?: string | null;
+  total_time_minutes?: number | null;
+  steps?: HowToStep[];
+}
+
+export interface FaqPageArticle {
+  title: string;
+  faqs?: FaqItem[];
+}
+
+/**
+ * Generate HowTo JSON-LD for guides, tutorials, and instructions
+ */
+export function generateHowToJsonLd(article: HowToArticle): object {
+  const jsonLd: Record<string, unknown> = {
+    '@context': 'https://schema.org',
+    '@type': 'HowTo',
+    name: article.title,
+  };
+
+  if (article.summary) {
+    jsonLd.description = article.summary;
+  }
+
+  if (article.featured_image_url) {
+    jsonLd.image = {
+      '@type': 'ImageObject',
+      url: article.featured_image_url,
+    };
+  }
+
+  if (article.total_time_minutes) {
+    jsonLd.totalTime = `PT${article.total_time_minutes}M`;
+  }
+
+  if (article.steps && article.steps.length > 0) {
+    jsonLd.step = article.steps.map((step, index) => {
+      const stepJsonLd: Record<string, unknown> = {
+        '@type': 'HowToStep',
+        position: index + 1,
+        name: step.name,
+        itemListElement: {
+          '@type': 'HowToDirection',
+          text: step.text,
+        },
+      };
+
+      if (step.image_url) {
+        stepJsonLd.image = {
+          '@type': 'ImageObject',
+          url: step.image_url,
+        };
+      }
+
+      return stepJsonLd;
+    });
+  }
+
+  return jsonLd;
+}
+
+/**
+ * Generate FAQPage JSON-LD for FAQ sections
+ */
+export function generateFaqPageJsonLd(article: FaqPageArticle): object {
+  const jsonLd: Record<string, unknown> = {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+  };
+
+  if (article.faqs && article.faqs.length > 0) {
+    jsonLd.mainEntity = article.faqs.map((faq) => ({
+      '@type': 'Question',
+      name: faq.question,
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: faq.answer,
+      },
+    }));
+  }
+
+  return jsonLd;
+}
+
+/**
+ * Unified JSON-LD generator that routes based on schema_type
+ */
+export function generateContentJsonLd(article: ArticleForJsonLd & {
+  steps?: HowToStep[];
+  faqs?: FaqItem[];
+  total_time_minutes?: number | null;
+}): object {
+  switch (article.schema_type) {
+    case 'HowTo':
+      return generateHowToJsonLd({
+        title: article.title,
+        summary: article.summary,
+        featured_image_url: article.featured_image_url,
+        total_time_minutes: article.total_time_minutes || article.reading_time_minutes,
+        steps: article.steps,
+      });
+
+    case 'FAQPage':
+      return generateFaqPageJsonLd({
+        title: article.title,
+        faqs: article.faqs,
+      });
+
+    case 'NewsArticle':
+    case 'BlogPosting':
+    case 'Article':
+    default:
+      return generateArticleJsonLd(article);
+  }
 }
