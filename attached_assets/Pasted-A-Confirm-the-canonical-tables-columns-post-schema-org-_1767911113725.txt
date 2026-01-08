@@ -1,0 +1,102 @@
+A) Confirm the canonical tables + columns (post schema.org refactor)
+
+Run these SQL queries and paste results:
+
+-- 1) List key public tables (names matter)
+SELECT tablename
+FROM pg_tables
+WHERE schemaname='public'
+ORDER BY tablename;
+
+-- 2) Show columns for the booking tables (whatever they are now)
+-- Replace these names if different:
+SELECT column_name, data_type
+FROM information_schema.columns
+WHERE table_schema='public' AND table_name IN (
+  'reservations','bookings','unified_bookings',
+  'assets','unified_assets',
+  'articles','entity_presentations','presentations',
+  'portals','portal_domains',
+  'resource_schedule_events','schedule_events'
+)
+ORDER BY table_name, ordinal_position;
+
+-- 3) Are there existing "trip" tables already?
+SELECT tablename
+FROM pg_tables
+WHERE schemaname='public' AND tablename ILIKE '%trip%'
+ORDER BY tablename;
+
+-- 4) Are there existing timepoint / itinerary tables already?
+SELECT tablename
+FROM pg_tables
+WHERE schemaname='public'
+AND (tablename ILIKE '%timepoint%' OR tablename ILIKE '%itinerary%' OR tablename ILIKE '%activity%')
+ORDER BY tablename;
+
+B) Confirm the API endpoints that are actually live
+
+In the codebase, run:
+
+# 1) List server route files
+ls -la server/routes
+
+# 2) Show all registered API paths quickly (best-effort grep)
+grep -RIn "app\.(get|post|put|delete)\(" server/routes server/index* server/app* 2>/dev/null | head -200
+
+# 3) Find reservation creation + conflict checking endpoints
+grep -RIn "reservation|book|booking|schedule/events|RESOURCE_TIME_CONFLICT|checkTimeConflicts" server 2>/dev/null | head -200
+
+C) Confirm where the booking UI lives (public portal)
+# Find the public booking page(s)
+grep -RIn "Reserve|Reservation|Book now|availability|schedule" client/src/pages client/src/components 2>/dev/null | head -200
+
+# If you already know the file(s), print them:
+ls -la client/src/pages/public 2>/dev/null || true
+find client/src -maxdepth 4 -type f -name "*Reserve*.tsx" -o -name "*Booking*.tsx" -o -name "*Portal*.tsx"
+
+D) Confirm the Journey Timeline system is still present (files + routes)
+# Confirm the timeline components exist
+ls -la client/src/pages/TripTimelineDemo.tsx
+ls -la client/src/components/TripPlanning/TripTimelineView.tsx
+ls -la client/src/lib/routeRealTimeData.ts
+ls -la server/pipelines/bcferries.ts
+ls -la server/pipelines/drivebc.ts
+
+# Confirm any trip/journey API route exists
+grep -RIn "journey|timeline|trip" server/routes 2>/dev/null | head -200
+
+E) Confirm auth context separation (critical)
+
+We need to know how the app decides “tenant vs platform admin” so we don’t repeat the System Explorer mistake.
+
+# Look for nav definitions + role gating
+grep -RIn "PLATFORM_ADMIN_NAV|BUSINESS_NAV|COMMUNITY_NAV|System Explorer|impersonat" client/src 2>/dev/null | head -200
+
+# Look for auth middleware / role checks
+grep -RIn "platform_admin|tenant_admin|impersonation|requireRole|requireAdmin" server client/src 2>/dev/null | head -200
+
+F) Confirm assets are polymorphic + how types are stored (schema.org alignment)
+-- What column tells us what an asset is?
+SELECT column_name, data_type
+FROM information_schema.columns
+WHERE table_schema='public' AND table_name IN ('assets','unified_assets')
+ORDER BY table_name, ordinal_position;
+
+-- Sample 30 assets to see type system
+SELECT *
+FROM assets
+ORDER BY created_at DESC
+LIMIT 30;
+
+G) Confirm “Articles” table + routing
+SELECT column_name, data_type
+FROM information_schema.columns
+WHERE table_schema='public' AND table_name='articles'
+ORDER BY ordinal_position;
+
+-- sample
+SELECT id, title, slug, status, published_at, updated_at
+FROM articles
+ORDER BY updated_at DESC
+LIMIT 30;
