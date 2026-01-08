@@ -84,7 +84,7 @@ export function PublicPortalLayout(): React.ReactElement {
     setError(null);
     
     try {
-      const response = await fetch(`/api/public/portals/${portalSlug}`);
+      const response = await fetch(`/api/public/cc_portals/${portalSlug}`);
       
       if (!response.ok) {
         if (response.status === 404) {

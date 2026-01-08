@@ -190,9 +190,9 @@ export default function PresentationViewer() {
   const { portalSlug, presentationSlug } = useParams<{ portalSlug: string; presentationSlug: string }>();
 
   const { data, isLoading, error } = useQuery<{ success: boolean; presentation: Presentation }>({
-    queryKey: ['/api/public/portals', portalSlug, 'presentations', presentationSlug],
+    queryKey: ['/api/public/cc_portals', portalSlug, 'presentations', presentationSlug],
     queryFn: async () => {
-      const res = await fetch(`/api/public/portals/${portalSlug}/presentations/${presentationSlug}`);
+      const res = await fetch(`/api/public/cc_portals/${portalSlug}/presentations/${presentationSlug}`);
       if (!res.ok) throw new Error('Failed to fetch presentation');
       return res.json();
     },

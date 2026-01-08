@@ -229,7 +229,7 @@ function ReservationForm({
   
   const mutation = useMutation({
     mutationFn: async () => {
-      const response = await apiRequest('POST', `/api/public/portals/${portalSlug}/reservations`, {
+      const response = await apiRequest('POST', `/api/public/cc_portals/${portalSlug}/cc_reservations`, {
         asset_id: assetId,
         start: startDate.toISOString(),
         end: endDate.toISOString(),
@@ -410,7 +410,7 @@ export default function PortalReservePage() {
   const endStr = endDate?.toISOString().split('T')[0];
   
   const { data: availability, isLoading } = useQuery<AvailabilityResult>({
-    queryKey: [`/api/public/portals/${portalSlug}/availability?start=${startStr}&end=${endStr}`],
+    queryKey: [`/api/public/cc_portals/${portalSlug}/availability?start=${startStr}&end=${endStr}`],
     enabled: !!portalSlug && !!startDate && !!endDate,
   });
   

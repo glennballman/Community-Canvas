@@ -131,7 +131,7 @@ export default function ArticlesPage() {
                           data-testid={`btn-view-api-${p.slug}`}
                         >
                           <a 
-                            href={`/api/public/portals/${group.portal_slug}/presentations/${p.slug}`}
+                            href={`/api/public/cc_portals/${group.portal_slug}/presentations/${p.slug}`}
                             target="_blank"
                             rel="noopener noreferrer"
                           >
@@ -171,10 +171,10 @@ export default function ArticlesPage() {
         <CardContent>
           <div style={{ fontSize: '13px', fontFamily: 'monospace', color: '#9ca3af' }}>
             <div style={{ marginBottom: '8px' }}>
-              <strong>List:</strong> GET /api/public/portals/:slug/articles
+              <strong>List:</strong> GET /api/public/cc_portals/:slug/presentations
             </div>
             <div>
-              <strong>Detail:</strong> GET /api/public/portals/:slug/articles/:articleSlug
+              <strong>Detail:</strong> GET /api/public/cc_portals/:slug/presentations/:slug
             </div>
           </div>
         </CardContent>
