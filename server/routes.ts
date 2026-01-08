@@ -62,6 +62,7 @@ import capacityConstraintsRouter from "./routes/capacityConstraints";
 import qaSeedRouter from "./routes/qa-seed";
 import systemExplorerRouter from "./routes/system-explorer";
 import sitemapRouter from "./routes/sitemap";
+import mediaRouter from "./routes/media";
 import { publicQuery, serviceQuery } from "./db/tenantDb";
 import express from "express";
 
@@ -205,6 +206,9 @@ export async function registerRoutes(
   
   // Register capacity/constraints management routes
   app.use('/api/capacity', capacityConstraintsRouter);
+  
+  // Register media storage routes
+  app.use('/api/media', mediaRouter);
 
   // Register QA seed/test routes (dev only)
   if (process.env.NODE_ENV === 'development') {
