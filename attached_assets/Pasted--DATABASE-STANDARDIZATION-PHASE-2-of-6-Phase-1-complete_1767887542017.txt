@@ -1,0 +1,70 @@
+**DATABASE STANDARDIZATION - PHASE 2 of 6**
+
+Phase 1 complete. Now we rename the reservations table and its columns to schema.org standards.
+
+**This phase WILL require code changes.** 
+
+**STEP 2A: Rename columns first (while table is still named `reservations`)**
+```sql
+BEGIN;
+
+-- Schema.org aligned column renames
+ALTER TABLE reservations RENAME COLUMN booker_individual_id TO customer_id;
+ALTER TABLE reservations RENAME COLUMN booker_tenant_id TO provider_id;
+ALTER TABLE reservations RENAME COLUMN starts_at TO start_date;
+ALTER TABLE reservations RENAME COLUMN ends_at TO end_date;
+ALTER TABLE reservations RENAME COLUMN actual_checkin_at TO checkin_time;
+ALTER TABLE reservations RENAME COLUMN actual_checkout_at TO checkout_time;
+ALTER TABLE reservations RENAME COLUMN num_guests TO party_size;
+ALTER TABLE reservations RENAME COLUMN booking_ref TO confirmation_number;
+
+COMMIT;
+```
+
+**STEP 2B: Update all code references to these columns**
+
+Search the ENTIRE codebase for these patterns and replace:
+
+| Find | Replace With |
+|------|--------------|
+| `booker_individual_id` | `customer_id` |
+| `booker_tenant_id` | `provider_id` |
+| `starts_at` (but NOT `created_at`, `updated_at`, `deleted_at`) | `start_date` |
+| `ends_at` | `end_date` |
+| `actual_checkin_at` | `checkin_time` |
+| `actual_checkout_at` | `checkout_time` |
+| `num_guests` | `party_size` |
+| `booking_ref` | `confirmation_number` |
+
+Check these locations:
+- `shared/schema.ts` (Drizzle schema definitions)
+- `server/routes/*.ts` (API routes)
+- `server/storage.ts` (if exists)
+- `client/src/**/*.tsx` (frontend components)
+- Any SQL queries in the codebase
+
+**STEP 2C: Rename the reservations constraint that references old column name**
+```sql
+ALTER TABLE reservations RENAME CONSTRAINT reservations_booker_individual_id_fkey TO reservations_customer_id_fkey;
+ALTER TABLE reservations RENAME CONSTRAINT reservations_booker_tenant_id_fkey TO reservations_provider_id_fkey;
+```
+
+**STEP 2D: Rename the index that references old column name**
+```sql
+ALTER INDEX idx_reservations_booker RENAME TO idx_reservations_customer;
+```
+
+**STEP 2E: Verify**
+1. App compiles without errors
+2. Test reservation flow at `/p/save-paradise-parking/reserve`
+3. Complete a test booking with:
+   - Name: Glenn Tester
+   - Email: bamfieldadventures+phase2test@gmail.com
+   - Any available dates
+
+**Report:**
+- List of files changed
+- Any errors encountered
+- Test results
+
+**DO NOT proceed to Phase 3 until I confirm Phase 2 is verified.**

@@ -100,12 +100,12 @@ async function checkTimeConflicts(
   const bookingsResult = await pool.query(`
     SELECT b.id, 'booked' as event_type, 
            COALESCE(b.primary_guest_name, 'Booking') as title,
-           b.starts_at, b.ends_at
+           b.start_date as starts_at, b.end_date as ends_at
     FROM reservations b
     WHERE b.asset_id = $1
       AND b.status NOT IN ('cancelled', 'no_show')
-      AND b.starts_at < $3
-      AND b.ends_at > $2
+      AND b.start_date < $3
+      AND b.end_date > $2
   `, [resourceId, startsAt, endsAt]);
 
   for (const row of bookingsResult.rows) {
@@ -211,11 +211,11 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
         b.id,
         b.asset_id as resource_id,
         'booked' as event_type,
-        b.starts_at,
-        b.ends_at,
+        b.start_date as starts_at,
+        b.end_date as ends_at,
         'active' as status,
         COALESCE(b.primary_guest_name, 'Booking') as title,
-        b.booking_ref as notes,
+        b.confirmation_number as notes,
         'booking' as related_entity_type,
         b.id as related_entity_id,
         b.created_at,
@@ -223,10 +223,10 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
         a.asset_type as resource_type
       FROM reservations b
       JOIN assets a ON a.id = b.asset_id
-      WHERE (a.owner_tenant_id = $1 OR b.booker_tenant_id = $1)
+      WHERE (a.owner_tenant_id = $1 OR b.provider_id = $1)
         AND b.status NOT IN ('cancelled', 'no_show')
-        AND b.starts_at < $3
-        AND b.ends_at > $2
+        AND b.start_date < $3
+        AND b.end_date > $2
     `;
     
     const bookingsParams: any[] = [tenantId, from, to];
@@ -236,7 +236,7 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
       bookingsParams.push(resourceIdArray);
     }
     
-    bookingsQuery += ` ORDER BY b.starts_at`;
+    bookingsQuery += ` ORDER BY b.start_date`;
 
     const bookingsResult = await pool.query(bookingsQuery, bookingsParams);
 
@@ -658,16 +658,16 @@ router.get('/bookings', requireAuth, async (req: Request, res: Response) => {
     let query = `
       SELECT 
         b.id,
-        b.booking_ref,
+        b.confirmation_number as booking_ref,
         b.asset_id,
         a.name as asset_name,
         a.asset_type,
         b.primary_guest_name,
         b.primary_guest_email,
         b.primary_guest_phone,
-        b.num_guests,
-        b.starts_at,
-        b.ends_at,
+        b.party_size as num_guests,
+        b.start_date as starts_at,
+        b.end_date as ends_at,
         b.status,
         b.payment_status,
         b.total,
@@ -682,12 +682,12 @@ router.get('/bookings', requireAuth, async (req: Request, res: Response) => {
 
     if (from) {
       paramIdx++;
-      query += ` AND b.starts_at >= $${paramIdx}`;
+      query += ` AND b.start_date >= $${paramIdx}`;
       params.push(from);
     }
     if (to) {
       paramIdx++;
-      query += ` AND b.ends_at <= $${paramIdx}`;
+      query += ` AND b.end_date <= $${paramIdx}`;
       params.push(to);
     }
     if (status) {
@@ -701,7 +701,7 @@ router.get('/bookings', requireAuth, async (req: Request, res: Response) => {
       params.push(assetId);
     }
 
-    query += ' ORDER BY b.starts_at DESC';
+    query += ' ORDER BY b.start_date DESC';
 
     const result = await pool.query(query, params);
 
@@ -769,9 +769,9 @@ router.post('/bookings', requireAuth, async (req: Request, res: Response) => {
         primary_guest_name,
         primary_guest_email,
         primary_guest_phone,
-        starts_at,
-        ends_at,
-        num_guests,
+        start_date,
+        end_date,
+        party_size,
         special_requests,
         status,
         booking_context

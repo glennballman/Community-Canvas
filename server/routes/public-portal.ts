@@ -1217,12 +1217,12 @@ router.get('/portals/:slug/availability', async (req: Request, res: Response) =>
     const results = await Promise.all(assetsResult.rows.map(async (asset) => {
       // Check reservations that overlap
       const conflictsResult = await serviceQuery(`
-        SELECT id, starts_at, ends_at, status
+        SELECT id, start_date, end_date, status
         FROM reservations
         WHERE asset_id = $1
           AND status NOT IN ('cancelled')
           AND (
-            (starts_at < $3 AND ends_at > $2)
+            (start_date < $3 AND end_date > $2)
           )
       `, [asset.id, startDate, endDate]);
       
@@ -1238,7 +1238,7 @@ router.get('/portals/:slug/availability', async (req: Request, res: Response) =>
       `, [asset.id, startDate, endDate]);
       
       const busyPeriods = [
-        ...conflictsResult.rows.map(r => ({ start: r.starts_at, end: r.ends_at, source: 'reservation' })),
+        ...conflictsResult.rows.map(r => ({ start: r.start_date, end: r.end_date, source: 'reservation' })),
         ...scheduleResult.rows.map(r => ({ start: r.starts_at, end: r.ends_at, source: 'schedule' }))
       ];
       
@@ -1320,12 +1320,12 @@ router.get('/portals/:slug/availability/calendar', async (req: Request, res: Res
     
     // Get all reservations for this month
     const reservationsResult = await serviceQuery(`
-      SELECT starts_at, ends_at
+      SELECT start_date, end_date
       FROM reservations
       WHERE asset_id = $1::uuid
         AND status NOT IN ('cancelled')
-        AND starts_at <= $3
-        AND ends_at >= $2
+        AND start_date <= $3
+        AND end_date >= $2
     `, [asset_id, startOfMonth, endOfMonth]);
     
     // Get schedule events
@@ -1349,8 +1349,8 @@ router.get('/portals/:slug/availability/calendar', async (req: Request, res: Res
       const dayEnd = new Date(year, monthNum - 1, day, 23, 59, 59);
       
       const dayEvents = events.filter(e => {
-        const eStart = new Date(e.starts_at);
-        const eEnd = new Date(e.ends_at);
+        const eStart = new Date(e.start_date || e.starts_at);
+        const eEnd = new Date(e.end_date || e.ends_at);
         return eStart <= dayEnd && eEnd >= dayStart;
       });
       
@@ -1432,11 +1432,11 @@ router.post('/portals/:slug/reservations', async (req: Request, res: Response) =
     
     // Check for conflicts
     const conflictsResult = await serviceQuery(`
-      SELECT id, starts_at, ends_at
+      SELECT id, start_date, end_date
       FROM reservations
       WHERE asset_id = $1::uuid
         AND status NOT IN ('cancelled')
-        AND (starts_at < $3 AND ends_at > $2)
+        AND (start_date < $3 AND end_date > $2)
     `, [asset_id, startDate, endDate]);
     
     const scheduleConflicts = await serviceQuery(`
@@ -1453,7 +1453,7 @@ router.post('/portals/:slug/reservations', async (req: Request, res: Response) =
         error: 'RESOURCE_TIME_CONFLICT',
         message: 'This time slot is no longer available',
         conflicts: [
-          ...conflictsResult.rows.map(c => ({ start: c.starts_at, end: c.ends_at })),
+          ...conflictsResult.rows.map(c => ({ start: c.start_date, end: c.end_date })),
           ...scheduleConflicts.rows.map(c => ({ start: c.starts_at, end: c.ends_at }))
         ]
       });
@@ -1461,7 +1461,7 @@ router.post('/portals/:slug/reservations', async (req: Request, res: Response) =
     
     // For public guest bookings, we don't require a cc_individuals record
     // Guest info is stored in primary_guest_* fields on the reservation
-    // booker_individual_id will be NULL for anonymous public bookings
+    // customer_id will be NULL for anonymous public bookings
     
     // Generate confirmation number
     const prefix = slug.substring(0, 3).toUpperCase().replace(/-/g, '');
@@ -1469,15 +1469,15 @@ router.post('/portals/:slug/reservations', async (req: Request, res: Response) =
     const seq = Math.random().toString(36).substring(2, 8).toUpperCase();
     const confirmationNumber = `${prefix}-${year}-${seq}`;
     
-    // Create reservation (booker_individual_id is NULL for public guest bookings)
+    // Create reservation (customer_id is NULL for public guest bookings)
     const reservationResult = await serviceQuery(`
       INSERT INTO reservations (
-        booking_ref, asset_id, booker_tenant_id,
+        confirmation_number, asset_id, provider_id,
         primary_guest_name, primary_guest_email, primary_guest_telephone,
-        starts_at, ends_at, status, payment_status, portal_id,
+        start_date, end_date, status, payment_status, portal_id,
         special_requests, schema_type
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'pending', 'unpaid', $9, $10, 'Reservation')
-      RETURNING id, booking_ref
+      RETURNING id, confirmation_number
     `, [
       confirmationNumber, asset_id, tenantId,
       customer.name, customer.email, customer.telephone || null,

@@ -44,7 +44,7 @@ const KEY_ROUTES = [
 // Updated to schema.org-aligned names: assets, reservations, people, organizations, articles
 export const ALLOWED_TABLES = [
   { name: 'assets', label: 'Assets', tenantScoped: true, tenantColumn: 'owner_tenant_id' },
-  { name: 'reservations', label: 'Reservations', tenantScoped: true, tenantColumn: 'booker_tenant_id' },
+  { name: 'reservations', label: 'Reservations', tenantScoped: true, tenantColumn: 'provider_id' },
   { name: 'work_requests', label: 'Work Requests', tenantScoped: true, tenantColumn: 'tenant_id' },
   { name: 'projects', label: 'Projects', tenantScoped: true, tenantColumn: 'tenant_id' },
   { name: 'people', label: 'People', tenantScoped: true, tenantColumn: 'tenant_id' },
