@@ -491,7 +491,7 @@ export default function PortalHomePage() {
   const portalSlug = params.portalSlug as string;
   
   const { data, isLoading, error } = useQuery<PortalSiteData>({
-    queryKey: ['/api/public/portals', portalSlug, 'site'],
+    queryKey: [`/api/public/portals/${portalSlug}/site`],
     enabled: !!portalSlug,
   });
   
