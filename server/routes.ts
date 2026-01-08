@@ -61,6 +61,7 @@ import scheduleRouter from "./routes/schedule";
 import capacityConstraintsRouter from "./routes/capacityConstraints";
 import qaSeedRouter from "./routes/qa-seed";
 import systemExplorerRouter from "./routes/system-explorer";
+import sitemapRouter from "./routes/sitemap";
 import { publicQuery, serviceQuery } from "./db/tenantDb";
 import express from "express";
 
@@ -85,6 +86,9 @@ export async function registerRoutes(
   // - Public endpoints are accessible by anyone (expected behavior)
   // - Tenant-protected endpoints require tenant_sid which platform staff don't have
   // - Platform staff must use impersonation system to access tenant data on /api/internal routes
+
+  // Register sitemap routes (at root level for SEO)
+  app.use('/', sitemapRouter);
 
   // Register fleet management routes
   app.use('/api/v1/fleet', createFleetRouter(pool));

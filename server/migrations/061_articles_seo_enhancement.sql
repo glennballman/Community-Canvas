@@ -58,3 +58,4 @@ WHERE base_url IS NULL;
 -- ============================================================================
 
 GRANT SELECT, INSERT, UPDATE, DELETE ON articles TO public;
+GRANT SELECT ON organizations TO public;
