@@ -97,6 +97,8 @@ import ArticlesPage from './pages/admin/ArticlesPage';
 
 // Pages - Public
 import PresentationViewer from './pages/public/PresentationViewer';
+import PortalHomePage from './pages/public/PortalHomePage';
+import PortalReservePage from './pages/public/PortalReservePage';
 
 // Pages - Auth
 import LoginPage from './pages/auth/LoginPage';
@@ -160,6 +162,13 @@ export default function App() {
             <DebugPanel />
 
             <Routes>
+              {/* ========================================== */}
+              {/* PUBLIC BUSINESS PORTAL - /p/:portalSlug/* */}
+              {/* ========================================== */}
+              <Route path="/p/:portalSlug" element={<PortalHomePage />} />
+              <Route path="/p/:portalSlug/reserve" element={<PortalReservePage />} />
+              <Route path="/p/:portalSlug/reserve/:assetId" element={<PortalReservePage />} />
+
               {/* ========================================== */}
               {/* PUBLIC PORTAL - /c/:slug/*                */}
               {/* ========================================== */}

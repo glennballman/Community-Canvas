@@ -16,3 +16,8 @@ CREATE INDEX IF NOT EXISTS idx_reservations_booking_ref ON reservations(booking_
 -- 3. Add indexes to resource_schedule_events for availability queries
 CREATE INDEX IF NOT EXISTS idx_rse_resource_dates ON resource_schedule_events(resource_id, starts_at, ends_at);
 CREATE INDEX IF NOT EXISTS idx_rse_status ON resource_schedule_events(status);
+
+-- 4. Ensure SELECT grants on media tables for public access (RLS policies provide tenant isolation)
+-- Note: INSERT/UPDATE/DELETE removed for security - writes require authenticated tenant context
+GRANT SELECT ON entity_media TO PUBLIC;
+GRANT SELECT ON media TO PUBLIC;

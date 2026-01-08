@@ -896,4 +896,639 @@ router.get('/portals/:slug/presentations/:presentationSlug', async (req: Request
   }
 });
 
+/**
+ * GET /api/public/portals/:slug/site
+ * 
+ * Returns complete site configuration + initial data for public site rendering.
+ * Includes brand info, sections config, theme, assets, and articles.
+ */
+router.get('/portals/:slug/site', async (req: Request, res: Response) => {
+  try {
+    const { slug } = req.params;
+    
+    const portalResult = await serviceQuery(`
+      SELECT 
+        p.id,
+        p.name,
+        p.slug,
+        p.status,
+        p.tagline,
+        p.description,
+        p.legal_dba_name,
+        p.portal_type,
+        p.base_url,
+        p.settings,
+        p.site_config,
+        p.owning_tenant_id,
+        pt.tokens as theme
+      FROM portals p
+      LEFT JOIN portal_theme pt ON pt.portal_id = p.id AND pt.is_live = true
+      WHERE p.slug = $1 AND p.status = 'active'
+    `, [slug]);
+    
+    if (portalResult.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Portal not found' });
+    }
+    
+    const portal = portalResult.rows[0];
+    const siteConfig = portal.site_config || {};
+    const tenantId = portal.owning_tenant_id;
+    
+    // Get assets for this portal's tenant
+    const assetsResult = await serviceQuery(`
+      SELECT 
+        a.id,
+        a.name,
+        a.description,
+        a.asset_type,
+        a.schema_type,
+        a.slug,
+        a.is_available,
+        a.rate_hourly,
+        a.rate_daily,
+        a.rate_weekly,
+        a.thumbnail_url,
+        a.images,
+        a.sleeps_total,
+        a.bedrooms,
+        a.bathrooms_full,
+        a.overall_rating,
+        a.review_count
+      FROM assets a
+      WHERE a.owner_tenant_id = $1 
+        AND a.status = 'active'
+        AND a.is_available = true
+      ORDER BY a.name
+      LIMIT 50
+    `, [tenantId]);
+    
+    // Get media for assets
+    const assetIds = assetsResult.rows.map(a => a.id);
+    let assetsWithMedia = assetsResult.rows;
+    
+    if (assetIds.length > 0) {
+      const mediaResult = await serviceQuery(`
+        SELECT 
+          em.entity_id as asset_id,
+          em.role,
+          em.sort_order,
+          m.id as media_id,
+          m.public_url,
+          m.alt_text,
+          m.variants
+        FROM entity_media em
+        JOIN media m ON m.id = em.media_id
+        WHERE em.entity_type = 'asset' 
+          AND em.entity_id = ANY($1::uuid[])
+        ORDER BY em.sort_order
+      `, [assetIds]);
+      
+      const mediaByAsset: Record<string, any[]> = {};
+      for (const m of mediaResult.rows) {
+        if (!mediaByAsset[m.asset_id]) mediaByAsset[m.asset_id] = [];
+        mediaByAsset[m.asset_id].push(m);
+      }
+      
+      assetsWithMedia = assetsResult.rows.map(asset => {
+        const assetMedia = mediaByAsset[asset.id] || [];
+        const hero = assetMedia.find(m => m.role === 'hero');
+        const gallery = assetMedia.filter(m => m.role === 'gallery');
+        return {
+          ...asset,
+          media: {
+            hero: hero ? { url: hero.public_url, thumbnail: hero.variants?.thumbnail, alt: hero.alt_text } : null,
+            gallery: gallery.map(g => ({ url: g.public_url, thumbnail: g.variants?.thumbnail, alt: g.alt_text }))
+          }
+        };
+      });
+    }
+    
+    // Get latest articles for this portal
+    const articlesResult = await serviceQuery(`
+      SELECT 
+        id, slug, title, subtitle, summary, featured_image_url, published_at
+      FROM articles
+      WHERE portal_id = $1 
+        AND status = 'published'
+        AND visibility = 'public'
+      ORDER BY published_at DESC NULLS LAST
+      LIMIT 6
+    `, [portal.id]);
+    
+    // Build JSON-LD for SEO
+    const jsonLd = {
+      '@context': 'https://schema.org',
+      '@type': siteConfig.schema_type || 'LocalBusiness',
+      'name': siteConfig.brand_name || portal.name,
+      'description': siteConfig.seo?.description || siteConfig.tagline || portal.tagline,
+      'url': portal.base_url || `https://${slug}.communitycanvas.ca`,
+      'telephone': siteConfig.contact?.telephone,
+      'email': siteConfig.contact?.email,
+    };
+    
+    res.json({
+      success: true,
+      portal: {
+        id: portal.id,
+        slug: portal.slug,
+        name: portal.name,
+        legal_dba_name: portal.legal_dba_name,
+        portal_type: portal.portal_type,
+        base_url: portal.base_url
+      },
+      site: siteConfig,
+      theme: portal.theme || {},
+      initial_data: {
+        assets: assetsWithMedia,
+        articles: articlesResult.rows
+      },
+      json_ld: jsonLd
+    });
+    
+  } catch (error: any) {
+    console.error('Public site fetch error:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch site' });
+  }
+});
+
+/**
+ * GET /api/public/portals/:slug/assets
+ * 
+ * Returns public assets for a portal, optionally filtered by type.
+ */
+router.get('/portals/:slug/assets', async (req: Request, res: Response) => {
+  try {
+    const { slug } = req.params;
+    const { type } = req.query;
+    
+    const portalResult = await serviceQuery(`
+      SELECT id, owning_tenant_id FROM portals WHERE slug = $1 AND status = 'active'
+    `, [slug]);
+    
+    if (portalResult.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Portal not found' });
+    }
+    
+    const tenantId = portalResult.rows[0].owning_tenant_id;
+    
+    let assetsQuery = `
+      SELECT 
+        a.id,
+        a.name,
+        a.description,
+        a.asset_type,
+        a.schema_type,
+        a.slug,
+        a.is_available,
+        a.rate_hourly,
+        a.rate_daily,
+        a.rate_weekly,
+        a.thumbnail_url,
+        a.images,
+        a.sleeps_total,
+        a.bedrooms,
+        a.bathrooms_full,
+        a.overall_rating,
+        a.review_count
+      FROM assets a
+      WHERE a.owner_tenant_id = $1 
+        AND a.status = 'active'
+        AND a.is_available = true
+    `;
+    const params: any[] = [tenantId];
+    
+    if (type) {
+      assetsQuery += ` AND a.asset_type = $2`;
+      params.push(type);
+    }
+    
+    assetsQuery += ` ORDER BY a.name LIMIT 100`;
+    
+    const assetsResult = await serviceQuery(assetsQuery, params);
+    
+    // Get media for assets
+    const assetIds = assetsResult.rows.map(a => a.id);
+    let assetsWithMedia = assetsResult.rows;
+    
+    if (assetIds.length > 0) {
+      const mediaResult = await serviceQuery(`
+        SELECT 
+          em.entity_id as asset_id,
+          em.role,
+          m.public_url,
+          m.alt_text,
+          m.variants
+        FROM entity_media em
+        JOIN media m ON m.id = em.media_id
+        WHERE em.entity_type = 'asset' 
+          AND em.entity_id = ANY($1::uuid[])
+        ORDER BY em.sort_order
+      `, [assetIds]);
+      
+      const mediaByAsset: Record<string, any[]> = {};
+      for (const m of mediaResult.rows) {
+        if (!mediaByAsset[m.asset_id]) mediaByAsset[m.asset_id] = [];
+        mediaByAsset[m.asset_id].push(m);
+      }
+      
+      assetsWithMedia = assetsResult.rows.map(asset => {
+        const assetMedia = mediaByAsset[asset.id] || [];
+        const hero = assetMedia.find(m => m.role === 'hero');
+        const gallery = assetMedia.filter(m => m.role === 'gallery');
+        return {
+          ...asset,
+          media: {
+            hero: hero ? { url: hero.public_url, thumbnail: hero.variants?.thumbnail, alt: hero.alt_text } : null,
+            gallery: gallery.map(g => ({ url: g.public_url, thumbnail: g.variants?.thumbnail, alt: g.alt_text }))
+          }
+        };
+      });
+    }
+    
+    res.json({ success: true, assets: assetsWithMedia });
+    
+  } catch (error: any) {
+    console.error('Public assets fetch error:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch assets' });
+  }
+});
+
+/**
+ * GET /api/public/portals/:slug/availability
+ * 
+ * Check availability for assets within a date range.
+ */
+router.get('/portals/:slug/availability', async (req: Request, res: Response) => {
+  try {
+    const { slug } = req.params;
+    const { asset_id, asset_type, start, end } = req.query;
+    
+    if (!start || !end) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'start and end query parameters are required (ISO format)' 
+      });
+    }
+    
+    const startDate = new Date(start as string);
+    const endDate = new Date(end as string);
+    
+    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+      return res.status(400).json({ success: false, error: 'Invalid date format' });
+    }
+    
+    const portalResult = await serviceQuery(`
+      SELECT id, name, slug, owning_tenant_id FROM portals WHERE slug = $1 AND status = 'active'
+    `, [slug]);
+    
+    if (portalResult.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Portal not found' });
+    }
+    
+    const portal = portalResult.rows[0];
+    const tenantId = portal.owning_tenant_id;
+    
+    // Get assets
+    let assetsQuery = `
+      SELECT id, name, asset_type, schema_type, description, thumbnail_url
+      FROM assets
+      WHERE owner_tenant_id = $1 
+        AND status = 'active'
+        AND is_available = true
+    `;
+    const params: any[] = [tenantId];
+    let paramIndex = 2;
+    
+    if (asset_type) {
+      assetsQuery += ` AND asset_type = $${paramIndex}`;
+      params.push(asset_type);
+      paramIndex++;
+    }
+    
+    if (asset_id) {
+      assetsQuery += ` AND id = $${paramIndex}::uuid`;
+      params.push(asset_id);
+      paramIndex++;
+    }
+    
+    const assetsResult = await serviceQuery(assetsQuery, params);
+    
+    // For each asset, check for conflicts
+    const results = await Promise.all(assetsResult.rows.map(async (asset) => {
+      // Check reservations that overlap
+      const conflictsResult = await serviceQuery(`
+        SELECT id, starts_at, ends_at, status
+        FROM reservations
+        WHERE asset_id = $1
+          AND status NOT IN ('cancelled')
+          AND (
+            (starts_at < $3 AND ends_at > $2)
+          )
+      `, [asset.id, startDate, endDate]);
+      
+      // Also check resource_schedule_events
+      const scheduleResult = await serviceQuery(`
+        SELECT id, starts_at, ends_at, status
+        FROM resource_schedule_events
+        WHERE resource_id = $1
+          AND status NOT IN ('cancelled')
+          AND (
+            (starts_at < $3 AND ends_at > $2)
+          )
+      `, [asset.id, startDate, endDate]);
+      
+      const busyPeriods = [
+        ...conflictsResult.rows.map(r => ({ start: r.starts_at, end: r.ends_at, source: 'reservation' })),
+        ...scheduleResult.rows.map(r => ({ start: r.starts_at, end: r.ends_at, source: 'schedule' }))
+      ];
+      
+      const isAvailable = busyPeriods.length === 0;
+      
+      return {
+        asset_id: asset.id,
+        name: asset.name,
+        asset_type: asset.asset_type,
+        schema_type: asset.schema_type,
+        description: asset.description,
+        thumbnail_url: asset.thumbnail_url,
+        busy_periods: busyPeriods,
+        available: isAvailable
+      };
+    }));
+    
+    res.json({
+      success: true,
+      portal: { id: portal.id, slug: portal.slug, name: portal.name },
+      query: { start, end },
+      assets: results,
+      summary: {
+        total: results.length,
+        available: results.filter(r => r.available).length,
+        booked: results.filter(r => !r.available).length
+      }
+    });
+    
+  } catch (error: any) {
+    console.error('Availability check error:', error);
+    res.status(500).json({ success: false, error: 'Failed to check availability' });
+  }
+});
+
+/**
+ * GET /api/public/portals/:slug/availability/calendar
+ * 
+ * Get availability calendar for a specific asset for a month.
+ */
+router.get('/portals/:slug/availability/calendar', async (req: Request, res: Response) => {
+  try {
+    const { slug } = req.params;
+    const { asset_id, month } = req.query;
+    
+    if (!asset_id || !month) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'asset_id and month (YYYY-MM) query parameters are required' 
+      });
+    }
+    
+    const [year, monthNum] = (month as string).split('-').map(Number);
+    if (!year || !monthNum || monthNum < 1 || monthNum > 12) {
+      return res.status(400).json({ success: false, error: 'Invalid month format. Use YYYY-MM' });
+    }
+    
+    // Verify portal and asset
+    const portalResult = await serviceQuery(`
+      SELECT p.id, p.owning_tenant_id 
+      FROM portals p WHERE p.slug = $1 AND p.status = 'active'
+    `, [slug]);
+    
+    if (portalResult.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Portal not found' });
+    }
+    
+    const assetResult = await serviceQuery(`
+      SELECT id, name FROM assets 
+      WHERE id = $1::uuid AND owner_tenant_id = $2 AND status = 'active'
+    `, [asset_id, portalResult.rows[0].owning_tenant_id]);
+    
+    if (assetResult.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Asset not found' });
+    }
+    
+    const startOfMonth = new Date(year, monthNum - 1, 1);
+    const endOfMonth = new Date(year, monthNum, 0, 23, 59, 59);
+    
+    // Get all reservations for this month
+    const reservationsResult = await serviceQuery(`
+      SELECT starts_at, ends_at
+      FROM reservations
+      WHERE asset_id = $1::uuid
+        AND status NOT IN ('cancelled')
+        AND starts_at <= $3
+        AND ends_at >= $2
+    `, [asset_id, startOfMonth, endOfMonth]);
+    
+    // Get schedule events
+    const scheduleResult = await serviceQuery(`
+      SELECT starts_at, ends_at
+      FROM resource_schedule_events
+      WHERE resource_id = $1::uuid
+        AND status NOT IN ('cancelled')
+        AND starts_at <= $3
+        AND ends_at >= $2
+    `, [asset_id, startOfMonth, endOfMonth]);
+    
+    const events = [...reservationsResult.rows, ...scheduleResult.rows];
+    
+    // Build day-by-day status
+    const daysInMonth = endOfMonth.getDate();
+    const days = [];
+    
+    for (let day = 1; day <= daysInMonth; day++) {
+      const dayStart = new Date(year, monthNum - 1, day, 0, 0, 0);
+      const dayEnd = new Date(year, monthNum - 1, day, 23, 59, 59);
+      
+      const dayEvents = events.filter(e => {
+        const eStart = new Date(e.starts_at);
+        const eEnd = new Date(e.ends_at);
+        return eStart <= dayEnd && eEnd >= dayStart;
+      });
+      
+      days.push({
+        date: `${year}-${String(monthNum).padStart(2, '0')}-${String(day).padStart(2, '0')}`,
+        status: dayEvents.length > 0 ? 'booked' : 'available',
+        events_count: dayEvents.length
+      });
+    }
+    
+    res.json({
+      success: true,
+      asset_id,
+      asset_name: assetResult.rows[0].name,
+      month: month as string,
+      days
+    });
+    
+  } catch (error: any) {
+    console.error('Availability calendar error:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch calendar' });
+  }
+});
+
+/**
+ * POST /api/public/portals/:slug/reservations
+ * 
+ * Create a public reservation for an asset.
+ */
+router.post('/portals/:slug/reservations', async (req: Request, res: Response) => {
+  try {
+    const { slug } = req.params;
+    const { asset_id, start, end, customer, notes, consents } = req.body;
+    
+    // Validate required fields
+    if (!asset_id || !start || !end || !customer?.name || !customer?.email) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Required fields: asset_id, start, end, customer.name, customer.email' 
+      });
+    }
+    
+    const startDate = new Date(start);
+    const endDate = new Date(end);
+    
+    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+      return res.status(400).json({ success: false, error: 'Invalid date format' });
+    }
+    
+    if (endDate <= startDate) {
+      return res.status(400).json({ success: false, error: 'End date must be after start date' });
+    }
+    
+    // Get portal
+    const portalResult = await serviceQuery(`
+      SELECT id, name, slug, owning_tenant_id 
+      FROM portals WHERE slug = $1 AND status = 'active'
+    `, [slug]);
+    
+    if (portalResult.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Portal not found' });
+    }
+    
+    const portal = portalResult.rows[0];
+    const tenantId = portal.owning_tenant_id;
+    
+    // Verify asset belongs to this tenant
+    const assetResult = await serviceQuery(`
+      SELECT id, name, asset_type, rate_daily, rate_hourly
+      FROM assets
+      WHERE id = $1::uuid AND owner_tenant_id = $2 AND status = 'active'
+    `, [asset_id, tenantId]);
+    
+    if (assetResult.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Asset not found' });
+    }
+    
+    const asset = assetResult.rows[0];
+    
+    // Check for conflicts
+    const conflictsResult = await serviceQuery(`
+      SELECT id, starts_at, ends_at
+      FROM reservations
+      WHERE asset_id = $1::uuid
+        AND status NOT IN ('cancelled')
+        AND (starts_at < $3 AND ends_at > $2)
+    `, [asset_id, startDate, endDate]);
+    
+    const scheduleConflicts = await serviceQuery(`
+      SELECT id, starts_at, ends_at
+      FROM resource_schedule_events
+      WHERE resource_id = $1::uuid
+        AND status NOT IN ('cancelled')
+        AND (starts_at < $3 AND ends_at > $2)
+    `, [asset_id, startDate, endDate]);
+    
+    if (conflictsResult.rows.length > 0 || scheduleConflicts.rows.length > 0) {
+      return res.status(409).json({
+        success: false,
+        error: 'RESOURCE_TIME_CONFLICT',
+        message: 'This time slot is no longer available',
+        conflicts: [
+          ...conflictsResult.rows.map(c => ({ start: c.starts_at, end: c.ends_at })),
+          ...scheduleConflicts.rows.map(c => ({ start: c.starts_at, end: c.ends_at }))
+        ]
+      });
+    }
+    
+    // Find or create person
+    let personId = null;
+    const existingPerson = await serviceQuery(`
+      SELECT id FROM people 
+      WHERE email = $1 AND tenant_id = $2
+    `, [customer.email, tenantId]);
+    
+    if (existingPerson.rows.length > 0) {
+      personId = existingPerson.rows[0].id;
+    } else {
+      const nameParts = customer.name.split(' ');
+      const newPerson = await serviceQuery(`
+        INSERT INTO people (tenant_id, portal_id, given_name, family_name, email, telephone, schema_type)
+        VALUES ($1, $2, $3, $4, $5, $6, 'Person')
+        RETURNING id
+      `, [tenantId, portal.id, nameParts[0], nameParts.slice(1).join(' ') || null, customer.email, customer.telephone || null]);
+      personId = newPerson.rows[0].id;
+    }
+    
+    // Generate confirmation number
+    const prefix = slug.substring(0, 3).toUpperCase().replace(/-/g, '');
+    const year = new Date().getFullYear();
+    const seq = Math.random().toString(36).substring(2, 8).toUpperCase();
+    const confirmationNumber = `${prefix}-${year}-${seq}`;
+    
+    // Create reservation
+    const reservationResult = await serviceQuery(`
+      INSERT INTO reservations (
+        booking_ref, asset_id, booker_individual_id, booker_tenant_id,
+        primary_guest_name, primary_guest_email, primary_guest_telephone,
+        starts_at, ends_at, status, payment_status, portal_id,
+        special_requests, schema_type
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pending', 'unpaid', $10, $11, 'Reservation')
+      RETURNING id, booking_ref
+    `, [
+      confirmationNumber, asset_id, personId, tenantId,
+      customer.name, customer.email, customer.telephone || null,
+      startDate, endDate, portal.id, notes || null
+    ]);
+    
+    const reservation = reservationResult.rows[0];
+    
+    // Create schedule event to block time
+    await serviceQuery(`
+      INSERT INTO resource_schedule_events (
+        tenant_id, resource_id, event_type, starts_at, ends_at, 
+        status, title, related_entity_type, related_entity_id
+      ) VALUES ($1, $2, 'reservation', $3, $4, 'confirmed', $5, 'reservation', $6)
+    `, [tenantId, asset_id, startDate, endDate, `${customer.name} - ${asset.name}`, reservation.id]);
+    
+    res.status(201).json({
+      success: true,
+      reservation_id: reservation.id,
+      confirmation_number: confirmationNumber,
+      status: 'pending',
+      payment_status: 'unpaid',
+      asset: {
+        id: asset.id,
+        name: asset.name,
+        type: asset.asset_type
+      },
+      dates: { start, end },
+      customer: { name: customer.name, email: customer.email },
+      next_steps: 'A confirmation email will be sent shortly. Payment can be completed upon arrival or via link.'
+    });
+    
+  } catch (error: any) {
+    console.error('Create reservation error:', error);
+    res.status(500).json({ success: false, error: 'Failed to create reservation' });
+  }
+});
+
 export default router;
