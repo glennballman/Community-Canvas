@@ -1,0 +1,41 @@
+You are an expert senior full-stack engineer and SEO/schema.org auditor performing a **Ruthless QA Pass** on my Replit project as of January 08, 2026.
+
+Project context:
+- We are building a multi-portal platform with contractors, equipment, projects, communities, docks, moorage, parking, infrastructure (airports, weather stations, fire halls, hospitals), Chambers of Commerce, and 5000+ member businesses.
+- The core content system is now called "Articles" (rebuilt from scratch after renaming from "Presentations").
+- Using: Next.js App Router, Drizzle ORM with PostgreSQL (Neon), TypeScript, Zod validation.
+- Key files/patterns:
+  - shared/schema.ts: defines tables like 'articles' and 'article_entity_links'
+  - Enums for article_status, article_content_type, article_schema_type (using schema.org types like Article, BlogPosting, NewsArticle, HowTo, FAQPage, etc.)
+  - Polymorphic entity links: article_entity_links table with entity_kind (string like 'contractor', 'dock', 'community') and entity_id (uuid)
+  - JSON-LD generator function that outputs minimal schema.org markup
+  - Dynamic sitemap generation with multi-portal support, sitemap index, and entity sub-sitemaps
+
+Task: Perform a thorough, no-holds-barred QA audit and produce a structured Ruthless QA Pass Report.
+
+The report must answer these exact questions with clear Pass/Fail + evidence + recommendations:
+
+1. Does this platform have any technical debt?
+   - Rate severity (None / Low / Medium / High)
+   - List specific indicators (complexity, duplication, scalability risks, test gaps, hardcoded values, etc.)
+   - Estimate Technical Debt Ratio (TDR) percentage
+
+2. Are all of the schemas and code aligned with industry standard naming conventions and fully enabled for NAICS, UNSPSC, and HS Codes?
+   - Check schema.org naming: camelCase, standard property names, required/recommended fields, correct use of subtypes
+   - Check integration readiness for NAICS (6-digit codes), UNSPSC (8-10 digit), HS (6-10 digit) – are there dedicated columns, lookup tables, or polymorphic support?
+   - Rate overall compliance: 0-100% + breakdown
+
+3. During the recent refactor from non-standard naming ("Presentations") to schema.org-aligned "Articles", were any shortcuts taken that compromise auditability or world-class quality?
+   - List any shortcuts, compromises, or half-measures (e.g., polymorphic without type safety, skipped reverse relations, missing error handling)
+   - Assess refactor quality: Clean rebuild vs. patched Frankenstein
+
+Also include these sections:
+- Overall Compliance Score (0-100%)
+- schema.org Alignment Summary (pass rate + gaps)
+- Strengths
+- Critical Fixes (top 3-5 prioritized recommendations)
+- Long-term Risks if not addressed
+
+Be brutally honest, cite specific code patterns from the project (e.g., polymorphic entity_id, enum usage, JSON-LD properties), and reference current 2026 schema.org / Google Search Central / NAICS/UNSPSC best practices.
+
+Output format: Use markdown with clear headings, tables where helpful, and bullet points for readability.
