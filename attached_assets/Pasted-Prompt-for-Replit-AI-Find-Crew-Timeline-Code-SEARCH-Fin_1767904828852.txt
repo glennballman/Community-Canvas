@@ -1,0 +1,68 @@
+Prompt for Replit AI - Find Crew Timeline Code
+**SEARCH: Find the Crew Service Run Timeline / Journey Planning Code**
+
+We previously built a feature that displayed a complete timeline view for a crew traveling from Surrey to Bamfield to install windows. This included:
+
+- Driving route with time estimates
+- BC Ferries schedules and real-time capacity
+- DriveBC road conditions and webcams
+- Tide tables
+- Water taxi schedules
+- Bamfield Marine Science Centre webcams
+- Real-time status updates
+
+**Task: Find all related code**
+
+1. **Search for keywords in the codebase:**
+```bash
+# Search for timeline/journey related files
+grep -rn "timeline\|journey\|service.run\|crew\|bamfield\|ferry\|drivebc" --include="*.ts" --include="*.tsx" server/ client/ shared/ | grep -v node_modules | head -100
+
+# Search for BC Ferries integration
+grep -rn "bcferries\|bc.ferries\|ferry.capacity\|sailing" --include="*.ts" --include="*.tsx" server/ client/ shared/ | grep -v node_modules
+
+# Search for DriveBC integration  
+grep -rn "drivebc\|drive.bc\|road.condition\|webcam\|highway" --include="*.ts" --include="*.tsx" server/ client/ shared/ | grep -v node_modules
+
+# Search for real-time feeds
+grep -rn "realtime\|real.time\|live.feed\|weather.station\|tide" --include="*.ts" --include="*.tsx" server/ client/ shared/ | grep -v node_modules
+```
+
+2. **Check for service run related tables:**
+```sql
+SELECT tablename FROM pg_tables 
+WHERE schemaname = 'public' 
+  AND (tablename LIKE '%service%' 
+       OR tablename LIKE '%crew%' 
+       OR tablename LIKE '%journey%'
+       OR tablename LIKE '%timeline%'
+       OR tablename LIKE '%ferry%'
+       OR tablename LIKE '%road%');
+```
+
+3. **Check for API routes related to:**
+- Service runs
+- Crew scheduling
+- Journey planning
+- BC Ferries
+- DriveBC
+- Real-time feeds
+
+Look in:
+- `server/routes/` for any files mentioning service runs, crews, ferries, roads
+- `client/src/pages/` for timeline or journey views
+- `shared/` for any feed integration types
+
+4. **List all files that might be relevant:**
+```bash
+find . -type f -name "*.ts" -o -name "*.tsx" | xargs grep -l "ferry\|drivebc\|timeline\|journey\|crew\|service.run" 2>/dev/null | grep -v node_modules
+```
+
+**Report back:**
+- All files found related to this feature
+- Key functions/components that render timelines
+- API endpoints that fetch real-time data
+- Database tables that store journey/service run data
+- Any feed integration code (BC Ferries, DriveBC, weather, tides, webcams)
+
+Show me the file paths and a brief description of what each contains.
