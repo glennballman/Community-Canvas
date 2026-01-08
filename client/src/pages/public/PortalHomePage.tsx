@@ -178,10 +178,10 @@ function AssetsSection({
               data-testid={`card-asset-${asset.id}`}
             >
               <div className="aspect-video bg-muted relative">
-                {asset.media.hero?.url || asset.thumbnail_url ? (
+                {asset.media?.hero?.url || asset.thumbnail_url ? (
                   <img 
-                    src={asset.media.hero?.thumbnail || asset.media.hero?.url || asset.thumbnail_url || ''}
-                    alt={asset.media.hero?.alt || asset.name}
+                    src={asset.media?.hero?.thumbnail || asset.media?.hero?.url || asset.thumbnail_url || ''}
+                    alt={asset.media?.hero?.alt || asset.name}
                     className="w-full h-full object-cover"
                   />
                 ) : (
