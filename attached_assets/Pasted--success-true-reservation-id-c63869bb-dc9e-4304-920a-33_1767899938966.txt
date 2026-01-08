@@ -1,0 +1,84 @@
+{
+  "success": true,
+  "reservation_id": "c63869bb-dc9e-4304-920a-33490c68e632",
+  "confirmation_number": "SAV-2026-G5DCP2",
+  "status": "pending",
+  "asset": { "name": "Stall 42" },
+  "dates": { "start": "2026-01-09", "end": "2026-01-10" },
+  "customer": { "name": "Glenn Tester" }
+}
+```
+
+**The reservation IS being created** - the problem is the **frontend isn't showing the confirmation**. It's stuck on the form instead of redirecting to a success page.
+
+---
+
+## Prompt for Replit AI
+```
+**FIX: Frontend not showing reservation confirmation**
+
+The reservation API is working correctly - it returns:
+```json
+{
+  "success": true,
+  "reservation_id": "...",
+  "confirmation_number": "SAV-2026-G5DCP2",
+  "status": "pending"
+}
+```
+
+But the UI stays on the form instead of showing a confirmation screen.
+
+**Task:**
+
+1. Find the reservation form component (likely in `client/src/pages/public/` related to the portal reserve flow)
+
+2. Check the form submission handler - it should:
+   - Make the POST request (this works ✅)
+   - On success, either redirect to a confirmation page OR update state to show confirmation
+
+3. The issue is likely one of:
+   - The success handler isn't checking for `success: true`
+   - The state update to show confirmation isn't triggering
+   - There's no confirmation view/component being rendered
+   - The navigation/redirect isn't firing
+
+4. Fix the form to properly handle successful submission:
+```typescript
+// Example fix pattern
+const handleSubmit = async () => {
+  setIsSubmitting(true);
+  try {
+    const response = await fetch('/api/public/cc_portals/.../cc_reservations', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+    const result = await response.json();
+    
+    if (result.success) {
+      // Option A: Update state to show confirmation
+      setReservation(result);
+      setStep('confirmation'); // or setShowConfirmation(true)
+      
+      // Option B: Redirect to confirmation page
+      // navigate(`/p/${slug}/confirmation/${result.reservation_id}`);
+    } else {
+      setError(result.error || 'Reservation failed');
+    }
+  } catch (err) {
+    setError('Network error');
+  } finally {
+    setIsSubmitting(false);
+  }
+};
+```
+
+5. Ensure there's a confirmation view that displays:
+   - "Reservation Confirmed!" header
+   - Confirmation number (SAV-2026-G5DCP2)
+   - Asset name (Stall 72)
+   - Dates
+   - Customer name
+   - Next steps / what to expect
+
+**Test:** Submit a new reservation and confirm the UI shows the confirmation screen.

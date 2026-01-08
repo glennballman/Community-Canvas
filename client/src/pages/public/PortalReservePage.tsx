@@ -240,7 +240,8 @@ function ReservationForm({
         },
         notes: formData.notes || undefined
       });
-      return response.json();
+      const data = await response.json();
+      return data;
     },
     onSuccess: (data) => {
       if (data.success) {
