@@ -4,7 +4,7 @@ import { BarChart3, Calendar, DollarSign, Users } from 'lucide-react';
 export default function TenantDashboard() {
   const stats = [
     { label: 'Total Revenue', value: '$12,450', icon: DollarSign, change: '+12%' },
-    { label: 'Active Bookings', value: '24', icon: Calendar, change: '+3' },
+    { label: 'Active Reservations', value: '24', icon: Calendar, change: '+3' },
     { label: 'Customers', value: '156', icon: Users, change: '+8' },
     { label: 'Conversion Rate', value: '3.2%', icon: BarChart3, change: '+0.4%' },
   ];
@@ -51,11 +51,11 @@ export default function TenantDashboard() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Upcoming Bookings</CardTitle>
+            <CardTitle>Upcoming Reservations</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground">
-              Booking list coming soon...
+              Reservation list coming soon...
             </p>
           </CardContent>
         </Card>

@@ -30,7 +30,7 @@ export const entityKindEnum = pgEnum('entity_kind', [
   'portal',
   'tenant',
   'user',
-  'booking',
+  'reservation',
   'work_request',
   'shared_run',
   'media',
@@ -275,7 +275,7 @@ export const ccTripItineraryItems = pgTable('cc_trip_itinerary_items', {
   title: varchar('title').notNull(),
   description: text('description'),
   
-  isBooked: boolean('is_booked').notNull().default(false),
+  isReserved: boolean('is_booked').notNull().default(false),
   reservationId: uuid('reservation_id'),
   
   status: varchar('status').notNull().default('idea'),
@@ -299,7 +299,7 @@ export const ccTripItineraryItems = pgTable('cc_trip_itinerary_items', {
   suggestedCaption: text('suggested_caption'),
   
   externalUrl: text('external_url'),
-  externalBookingRef: varchar('external_booking_ref'),
+  externalReservationRef: varchar('external_reservation_ref'),
   
   icon: varchar('icon'),
   color: varchar('color'),

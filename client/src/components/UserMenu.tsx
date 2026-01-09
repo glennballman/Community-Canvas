@@ -102,9 +102,9 @@ export default function UserMenu() {
                     <Heart className="mr-2 h-4 w-4" />
                     Favorites
                 </DropdownMenuItem>
-                <DropdownMenuItem data-testid="menu-item-bookings">
+                <DropdownMenuItem data-testid="menu-item-reservations">
                     <Calendar className="mr-2 h-4 w-4" />
-                    Bookings
+                    Reservations
                 </DropdownMenuItem>
                 <DropdownMenuItem data-testid="menu-item-trips">
                     <MapPin className="mr-2 h-4 w-4" />

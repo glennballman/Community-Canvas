@@ -383,7 +383,7 @@ export function TenantPicker(): React.ReactElement {
               <h2 style={styles.sectionTitle}>Businesses you manage</h2>
             </div>
             <p style={styles.sectionDesc}>
-              Publish your inventory, manage availability, and handle bookings
+              Publish your inventory, manage availability, and handle reservations
             </p>
             <div style={styles.grid}>
               {businesses.map((tenant) => (

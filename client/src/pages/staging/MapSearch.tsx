@@ -298,7 +298,7 @@ export default function MapSearch() {
                                 </Link>
                                 <Link href={`/staging/${selectedProperty.id}/book`}>
                                     <Button variant="outline" className="w-full" data-testid="book-now">
-                                        Book Now
+                                        Reserve Now
                                     </Button>
                                 </Link>
                             </div>

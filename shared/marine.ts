@@ -1065,7 +1065,7 @@ export const BC_MARINE_FACILITIES: MarineFacility[] = [
     region: "Alberni-Clayoquot",
     latitude: 49.1540,
     longitude: -125.9100,
-    cc_services: ["Ahousaht Community Service", "Scheduled Trips", "Charter Bookings"],
+    cc_services: ["Ahousaht Community Service", "Scheduled Trips", "Charter Reservations"],
     notes: "Maaqutusiis (Ahousaht) to Tofino route - community transportation"
   },
 

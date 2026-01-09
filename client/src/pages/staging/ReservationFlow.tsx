@@ -28,7 +28,7 @@ interface PricingEstimate {
   totalCost: number;
 }
 
-export default function BookingFlow() {
+export default function ReservationFlow() {
   const [, params] = useRoute('/staging/:id/book');
   const [, setLocation] = useLocation();
   const id = params?.id;
@@ -58,7 +58,7 @@ export default function BookingFlow() {
   const [specialRequests, setSpecialRequests] = useState('');
 
   const [pricing, setPricing] = useState<PricingEstimate | null>(null);
-  const [bookingResult, setBookingResult] = useState<any>(null);
+  const [reservationResult, setReservationResult] = useState<any>(null);
 
   useEffect(() => {
     async function loadProperty() {
@@ -130,7 +130,7 @@ export default function BookingFlow() {
     setError(null);
 
     try {
-      const res = await fetch('/api/staging/bookings', {
+      const res = await fetch('/api/staging/reservations', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -156,13 +156,13 @@ export default function BookingFlow() {
       const data = await res.json();
 
       if (data.success) {
-        setBookingResult(data);
+        setReservationResult(data);
         setStep(5);
       } else {
-        setError(data.error || 'Failed to create booking');
+        setError(data.error || 'Failed to create reservation');
       }
     } catch (err) {
-      setError('Failed to submit booking');
+      setError('Failed to submit reservation');
     } finally {
       setSubmitting(false);
     }
@@ -195,7 +195,7 @@ export default function BookingFlow() {
             <ArrowLeft className="h-4 w-4" />
             Back to property
           </Link>
-          <h1 className="text-2xl font-bold" data-testid="text-booking-title">Book Your Stay</h1>
+          <h1 className="text-2xl font-bold" data-testid="text-reservation-title">Book Your Stay</h1>
           <p className="text-muted-foreground">{property?.name} - {property?.city}, {property?.region}</p>
         </div>
 
@@ -433,7 +433,7 @@ export default function BookingFlow() {
                     </div>
 
                     <div className="mb-4">
-                      <Label>Company Name (for business bookings)</Label>
+                      <Label>Company Name (for business reservations)</Label>
                       <Input
                         type="text"
                         value={companyName}
@@ -464,7 +464,7 @@ export default function BookingFlow() {
                         className="flex-1"
                         data-testid="button-continue-step3"
                       >
-                        Review Booking
+                        Review Reservation
                       </Button>
                     </div>
                   </div>
@@ -472,7 +472,7 @@ export default function BookingFlow() {
 
                 {step === 4 && (
                   <div>
-                    <h2 className="text-xl font-semibold mb-6">Review Your Booking</h2>
+                    <h2 className="text-xl font-semibold mb-6">Review Your Reservation</h2>
 
                     <div className="space-y-4 mb-6">
                       <div className="border-b pb-4">
@@ -522,7 +522,7 @@ export default function BookingFlow() {
                         onClick={handleSubmit}
                         disabled={submitting}
                         className="flex-1"
-                        data-testid="button-confirm-booking"
+                        data-testid="button-confirm-reservation"
                       >
                         {submitting ? (
                           <>
@@ -530,19 +530,19 @@ export default function BookingFlow() {
                             Processing...
                           </>
                         ) : (
-                          'Confirm Booking'
+                          'Confirm Reservation'
                         )}
                       </Button>
                     </div>
                   </div>
                 )}
 
-                {step === 5 && bookingResult && (
+                {step === 5 && reservationResult && (
                   <div className="text-center py-8">
                     <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
                       <Check className="h-8 w-8 text-white" />
                     </div>
-                    <h2 className="text-2xl font-bold mb-2">Booking Confirmed!</h2>
+                    <h2 className="text-2xl font-bold mb-2">Reservation Confirmed!</h2>
                     <p className="text-muted-foreground mb-6">
                       Your reservation has been submitted successfully.
                     </p>
@@ -550,24 +550,24 @@ export default function BookingFlow() {
                     <Card className="text-left mb-6">
                       <CardContent className="p-4 space-y-2">
                         <div className="flex justify-between">
-                          <span className="text-muted-foreground">Booking Reference</span>
-                          <span className="font-mono font-bold" data-testid="text-booking-ref">{bookingResult.booking.bookingRef}</span>
+                          <span className="text-muted-foreground">Reservation Reference</span>
+                          <span className="font-mono font-bold" data-testid="text-reservation-ref">{reservationResult.reservation.reservationRef}</span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">Property</span>
-                          <span>{bookingResult.booking.propertyName}</span>
+                          <span>{reservationResult.reservation.propertyName}</span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">Dates</span>
-                          <span>{bookingResult.booking.checkInDate} to {bookingResult.booking.checkOutDate}</span>
+                          <span>{reservationResult.reservation.checkInDate} to {reservationResult.reservation.checkOutDate}</span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">Nights</span>
-                          <span>{bookingResult.booking.numNights}</span>
+                          <span>{reservationResult.reservation.numNights}</span>
                         </div>
                         <div className="flex justify-between border-t pt-2">
                           <span className="font-medium">Total</span>
-                          <span className="font-bold text-green-600">${bookingResult.booking.totalCost}</span>
+                          <span className="font-bold text-green-600">${reservationResult.reservation.totalCost}</span>
                         </div>
                       </CardContent>
                     </Card>

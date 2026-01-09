@@ -3,7 +3,7 @@
  * 
  * Shows different content based on tenant type:
  * - Community/Government: Service runs, opted-in businesses, activity
- * - Business: Revenue, bookings, customers
+ * - Business: Revenue, reservations, customers
  * - Individual: Personal activity
  * 
  * CRITICAL REQUIREMENTS:

@@ -26,7 +26,7 @@ const GENERIC_PHRASES = [
   "Clean setup. Ready to add the details?",
   "Got it. Let me pull some specs from this photo.",
   "Looking good. What's the capacity on this one?",
-  "Noted. Is this available for booking right away?",
+  "Noted. Is this available for reservation right away?",
   "Sharp looking {type}. Should we add any special requirements?",
 ];
 
@@ -60,7 +60,7 @@ const WATERCRAFT_PHRASES = [
   "Nice boat. Does the crane still run smooth?",
   "Good looking vessel. What's the passenger capacity?",
   "Solid craft. Any special certifications needed?",
-  "Clean boat. Ready to set up the booking profile?",
+  "Clean boat. Ready to set up the reservation profile?",
   "Got it. Is there safety gear included?",
 ];
 

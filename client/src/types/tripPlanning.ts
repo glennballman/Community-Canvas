@@ -117,7 +117,7 @@ export interface TransportProvider {
   provider_type: 'ferry' | 'float_plane' | 'water_taxi' | 'bus' | 'shuttle' | 'train' | 'rental_car';
   telephone?: string;
   website?: string;
-  booking_url?: string;
+  reservation_url?: string;
   base_location?: string;
   service_area: string[];
   has_live_api: boolean;
@@ -155,7 +155,7 @@ export interface ResolutionOption {
 }
 
 export interface RequiredAction {
-  type: 'skill_upgrade' | 'equipment_rental' | 'vehicle_upgrade' | 'booking';
+  type: 'skill_upgrade' | 'equipment_rental' | 'vehicle_upgrade' | 'reservation';
   skill_category?: string;
   skill_type?: string;
   required_level?: string;
@@ -193,7 +193,7 @@ export interface ServiceRun {
   logistics_cost_per_slot: number;
   minimum_job_value?: number;
   status: 'planning' | 'published' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled';
-  booking_deadline?: string;
+  reservation_deadline?: string;
   contact_email?: string;
   contact_phone?: string;
 }

@@ -37,7 +37,7 @@ export type ZoomLevel = '15m' | '1h' | 'day' | 'week' | 'month' | 'season' | 'ye
 export interface ScheduleEvent {
   id: string;
   resource_id: string;
-  event_type: 'booked' | 'hold' | 'maintenance' | 'buffer' | 'booking';
+  event_type: 'booked' | 'hold' | 'maintenance' | 'buffer' | 'reservation';
   start_date: string;
   end_date: string;
   status: string;
@@ -45,7 +45,7 @@ export interface ScheduleEvent {
   notes?: string;
   resource_name?: string;
   resource_type?: string;
-  is_booking?: boolean;
+  is_reservation?: boolean;
 }
 
 export interface Resource {
@@ -175,7 +175,7 @@ export const ZOOM_CONFIGS: Record<ZoomLevel, { label: string; slotMinutes: numbe
 
 const EVENT_COLORS: Record<string, string> = {
   booked: 'bg-blue-500/90 border-blue-600',
-  booking: 'bg-blue-500/90 border-blue-600',
+  reservation: 'bg-blue-500/90 border-blue-600',
   hold: 'bg-amber-500/90 border-amber-600',
   maintenance: 'bg-red-500/90 border-red-600',
   buffer: 'bg-purple-500/90 border-purple-600',

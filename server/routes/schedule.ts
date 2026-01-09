@@ -55,7 +55,7 @@ function snapTo15Min(date: Date): Date {
 
 interface ConflictBlock {
   id: string;
-  type: 'booking' | 'schedule_event';
+  type: 'reservation' | 'schedule_event';
   event_type: string;
   title: string;
   start_date: string;
@@ -97,9 +97,9 @@ async function checkTimeConflicts(
     });
   }
 
-  const bookingsResult = await pool.query(`
+  const reservationsResult = await pool.query(`
     SELECT b.id, 'booked' as event_type, 
-           COALESCE(b.primary_guest_name, 'Booking') as title,
+           COALESCE(b.primary_guest_name, 'Reservation') as title,
            b.start_date as start_date, b.end_date as end_date
     FROM cc_reservations b
     WHERE b.asset_id = $1
@@ -108,10 +108,10 @@ async function checkTimeConflicts(
       AND b.end_date > $2
   `, [resourceId, startsAt, endsAt]);
 
-  for (const row of bookingsResult.rows) {
+  for (const row of reservationsResult.rows) {
     conflicts.push({
       id: row.id,
-      type: 'booking',
+      type: 'reservation',
       event_type: row.event_type,
       title: row.title,
       start_date: row.start_date,
@@ -206,7 +206,7 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
 
     const result = await pool.query(query, params);
 
-    let bookingsQuery = `
+    let reservationsQuery = `
       SELECT 
         b.id,
         b.asset_id as resource_id,
@@ -214,9 +214,9 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
         b.start_date as start_date,
         b.end_date as end_date,
         'active' as status,
-        COALESCE(b.primary_guest_name, 'Booking') as title,
+        COALESCE(b.primary_guest_name, 'Reservation') as title,
         b.confirmation_number as notes,
-        'booking' as related_entity_type,
+        'reservation' as related_entity_type,
         b.id as related_entity_id,
         b.created_at,
         a.name as resource_name,
@@ -229,22 +229,22 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
         AND b.end_date > $2
     `;
     
-    const bookingsParams: any[] = [tenantId, from, to];
+    const reservationsParams: any[] = [tenantId, from, to];
     
     if (resourceIdArray.length > 0) {
-      bookingsQuery += ` AND b.asset_id = ANY($4::uuid[])`;
-      bookingsParams.push(resourceIdArray);
+      reservationsQuery += ` AND b.asset_id = ANY($4::uuid[])`;
+      reservationsParams.push(resourceIdArray);
     }
     
-    bookingsQuery += ` ORDER BY b.start_date`;
+    reservationsQuery += ` ORDER BY b.start_date`;
 
-    const bookingsResult = await pool.query(bookingsQuery, bookingsParams);
+    const reservationsResult = await pool.query(reservationsQuery, reservationsParams);
 
     const allEvents = [
       ...result.rows,
-      ...bookingsResult.rows.map(b => ({
+      ...reservationsResult.rows.map(b => ({
         ...b,
-        is_booking: true
+        is_reservation: true
       }))
     ].sort((a, b) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime());
 
@@ -630,10 +630,10 @@ router.get('/resources', requireAuth, async (req: Request, res: Response) => {
 });
 
 // ============================================================================
-// BOOKINGS ENDPOINTS
+// RESERVATIONS ENDPOINTS
 // ============================================================================
 
-const createBookingSchema = z.object({
+const createReservationSchema = z.object({
   asset_id: z.string().uuid(),
   primary_guest_name: z.string().min(1, 'Guest name is required'),
   primary_guest_email: z.string().email().optional(),
@@ -645,8 +645,8 @@ const createBookingSchema = z.object({
   status: z.enum(['pending', 'confirmed']).optional(),
 });
 
-// GET /api/schedule/bookings - Get tenant bookings
-router.get('/bookings', requireAuth, async (req: Request, res: Response) => {
+// GET /api/schedule/reservations - Get tenant reservations
+router.get('/reservations', requireAuth, async (req: Request, res: Response) => {
   try {
     const tenantId = getTenantId(req);
     if (!tenantId) {
@@ -707,27 +707,27 @@ router.get('/bookings', requireAuth, async (req: Request, res: Response) => {
 
     return res.json({
       success: true,
-      bookings: result.rows,
+      reservations: result.rows,
     });
   } catch (error) {
-    console.error('Bookings fetch error:', error);
-    return res.status(500).json({ success: false, error: 'Failed to fetch bookings' });
+    console.error('Reservations fetch error:', error);
+    return res.status(500).json({ success: false, error: 'Failed to fetch reservations' });
   }
 });
 
-// POST /api/schedule/bookings - Create booking
-router.post('/bookings', requireAuth, async (req: Request, res: Response) => {
+// POST /api/schedule/reservations - Create reservation
+router.post('/reservations', requireAuth, async (req: Request, res: Response) => {
   try {
     const tenantId = getTenantId(req);
     if (!tenantId) {
       return res.status(400).json({ success: false, error: 'Tenant context required' });
     }
 
-    const parsed = createBookingSchema.safeParse(req.body);
+    const parsed = createReservationSchema.safeParse(req.body);
     if (!parsed.success) {
       return res.status(400).json({ 
         success: false, 
-        error: 'Invalid booking data',
+        error: 'Invalid reservation data',
         details: parsed.error.errors 
       });
     }
@@ -757,12 +757,12 @@ router.post('/bookings', requireAuth, async (req: Request, res: Response) => {
     if (conflicts.length > 0) {
       return res.status(409).json({ 
         success: false, 
-        error: 'Time conflict with existing booking or event',
+        error: 'Time conflict with existing reservation or event',
         conflicts 
       });
     }
 
-    // Create booking
+    // Create reservation
     const result = await pool.query(`
       INSERT INTO cc_reservations (
         asset_id,
@@ -774,7 +774,7 @@ router.post('/bookings', requireAuth, async (req: Request, res: Response) => {
         party_size,
         special_requests,
         status,
-        booking_context
+        reservation_context
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'direct')
       RETURNING *
     `, [
@@ -791,16 +791,16 @@ router.post('/bookings', requireAuth, async (req: Request, res: Response) => {
 
     return res.status(201).json({
       success: true,
-      booking: result.rows[0],
+      reservation: result.rows[0],
     });
   } catch (error) {
-    console.error('Booking create error:', error);
-    return res.status(500).json({ success: false, error: 'Failed to create booking' });
+    console.error('Reservation create error:', error);
+    return res.status(500).json({ success: false, error: 'Failed to create reservation' });
   }
 });
 
-// PUT /api/schedule/bookings/:id/status - Update booking status
-router.put('/bookings/:id/status', requireAuth, async (req: Request, res: Response) => {
+// PUT /api/schedule/reservations/:id/status - Update reservation status
+router.put('/reservations/:id/status', requireAuth, async (req: Request, res: Response) => {
   try {
     const tenantId = getTenantId(req);
     if (!tenantId) {
@@ -815,15 +815,15 @@ router.put('/bookings/:id/status', requireAuth, async (req: Request, res: Respon
       return res.status(400).json({ success: false, error: 'Invalid status' });
     }
 
-    // Verify booking belongs to tenant's asset
-    const booking = await pool.query(`
+    // Verify reservation belongs to tenant's asset
+    const reservation = await pool.query(`
       SELECT b.id FROM cc_reservations b
       JOIN cc_assets a ON a.id = b.asset_id
       WHERE b.id = $1 AND a.owner_tenant_id = $2
     `, [id, tenantId]);
 
-    if (booking.rows.length === 0) {
-      return res.status(404).json({ success: false, error: 'Booking not found' });
+    if (reservation.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Reservation not found' });
     }
 
     const updateFields: string[] = ['status = $2'];
@@ -842,11 +842,11 @@ router.put('/bookings/:id/status', requireAuth, async (req: Request, res: Respon
 
     return res.json({
       success: true,
-      booking: result.rows[0],
+      reservation: result.rows[0],
     });
   } catch (error) {
-    console.error('Booking status update error:', error);
-    return res.status(500).json({ success: false, error: 'Failed to update booking' });
+    console.error('Reservation status update error:', error);
+    return res.status(500).json({ success: false, error: 'Failed to update reservation' });
   }
 });
 

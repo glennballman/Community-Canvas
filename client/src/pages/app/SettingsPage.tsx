@@ -26,7 +26,7 @@ export default function SettingsPage() {
             <div className="space-y-0.5">
               <Label htmlFor="email-notifications">Email Notifications</Label>
               <p className="text-sm text-muted-foreground">
-                Receive email updates about bookings and messages
+                Receive email updates about reservations and messages
               </p>
             </div>
             <Switch id="email-notifications" defaultChecked data-testid="switch-email-notifications" />

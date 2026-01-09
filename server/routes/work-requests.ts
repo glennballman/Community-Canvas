@@ -314,7 +314,7 @@ router.post('/:id/book', requireAuth, requireTenant, async (req: Request, res: R
 
     const project = projectResult.rows[0];
 
-    // Update work request status to booked
+    // Update work request status to reserveed
     await tenantReq.tenantQuery!(
       `UPDATE cc_work_requests SET 
         status = 'booked',
@@ -332,7 +332,7 @@ router.post('/:id/book', requireAuth, requireTenant, async (req: Request, res: R
     });
   } catch (error) {
     console.error('Error reserving work request:', error);
-    res.status(500).json({ error: 'Failed to book work request' });
+    res.status(500).json({ error: 'Failed to reserve work request' });
   }
 });
 

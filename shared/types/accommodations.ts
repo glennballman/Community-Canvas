@@ -1,7 +1,7 @@
 // Accommodation Property Types
-export type PropertySource = 'airbnb' | 'booking' | 'vrbo' | 'direct' | 'manual';
+export type PropertySource = 'airbnb' | 'reservation' | 'vrbo' | 'direct' | 'manual';
 export type PropertyStatus = 'discovered' | 'contacted' | 'onboarded' | 'active' | 'inactive';
-export type BookingStatus = 'pending' | 'confirmed' | 'checked_in' | 'checked_out' | 'completed' | 'cancelled' | 'no_show';
+export type ReservationStatus = 'pending' | 'confirmed' | 'checked_in' | 'checked_out' | 'completed' | 'cancelled' | 'no_show';
 export type PaymentStatus = 'pending' | 'partial' | 'paid' | 'refunded';
 export type ContactStatus = 'not_contacted' | 'contacted' | 'responded' | 'interested' | 'onboarded' | 'declined' | 'no_response';
 export type OutreachChannel = 'email' | 'airbnb_message' | 'phone' | 'sms';
@@ -10,7 +10,7 @@ export type MessageStatus = 'pending' | 'sent' | 'delivered' | 'opened' | 'click
 export interface AccommodationProperty {
   id: number;
   airbnbId?: string;
-  bookingId?: string;
+  reservationId?: string;
   canvasId?: string;
   
   name: string;
@@ -67,7 +67,7 @@ export interface AccommodationHost {
   isSuperhost: boolean;
   contactStatus: ContactStatus;
   isInNetwork: boolean;
-  offersDirectBooking: boolean;
+  offersDirectReservation: boolean;
   firstContactedAt?: string;
   lastContactedAt?: string;
   contactAttempts: number;
@@ -146,7 +146,7 @@ export interface OutreachMessage {
 
 export interface AccommodationReservation {
   id: number;
-  bookingRef: string;
+  reservationRef: string;
   propertyId?: number;
   hostId?: number;
   tripId?: number;
@@ -166,7 +166,7 @@ export interface AccommodationReservation {
   serviceFee?: number;
   taxes?: number;
   totalCost?: number;
-  status: BookingStatus;
+  status: ReservationStatus;
   paymentStatus: PaymentStatus;
   guestRating?: number;
   guestReview?: string;

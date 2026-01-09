@@ -15,7 +15,7 @@ export type SpotType =
   | 'parking_standard' | 'parking_oversized' | 'parking_pull_through'
   | 'tent' | 'cabin' | 'glamping' | 'horse_stall' | 'paddock';
 
-export type BookingStatus = 
+export type ReservationStatus = 
   | 'pending' | 'confirmed' | 'checked_in' | 'checked_out' 
   | 'completed' | 'cancelled' | 'no_show';
 
@@ -302,7 +302,7 @@ export interface VehicleProfile {
 
 export interface StagingReservation {
   id: number;
-  bookingRef: string;
+  reservationRef: string;
   propertyId: number;
   spotId?: number;
   
@@ -331,7 +331,7 @@ export interface StagingReservation {
   subtotal?: number;
   totalCost?: number;
   
-  status: BookingStatus;
+  status: ReservationStatus;
   paymentStatus: PaymentStatus;
   
   specialRequests?: string;

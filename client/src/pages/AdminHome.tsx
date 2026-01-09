@@ -157,7 +157,7 @@ export default function AdminHome() {
                 <Badge variant="secondary" className="text-xs">{civosData?.stats?.signals?.active || 0} active</Badge>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-muted-foreground">New bookings</span>
+                <span className="text-muted-foreground">New reservations</span>
                 <span className="text-xs text-foreground">3 today</span>
               </div>
             </CardContent>

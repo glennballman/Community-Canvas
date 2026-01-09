@@ -19,7 +19,7 @@ export default function MobileNav() {
     ];
 
     const userItems = user ? [
-        { path: '/staging/bookings', label: 'My Bookings', icon: Calendar },
+        { path: '/staging/reservations', label: 'My Reservations', icon: Calendar },
     ] : [];
 
     const hostItems = (user?.userType === 'host' || user?.userType === 'admin') ? [
@@ -213,12 +213,12 @@ export default function MobileNav() {
                         </Link>
                     ))}
                     {user && (
-                        <Link href="/staging/bookings">
+                        <Link href="/staging/reservations">
                             <div className={`flex flex-col items-center py-1 px-3 cursor-pointer ${
-                                isActive('/staging/bookings') ? 'text-primary' : 'text-muted-foreground'
+                                isActive('/staging/reservations') ? 'text-primary' : 'text-muted-foreground'
                             }`}>
                                 <Calendar className="h-5 w-5" />
-                                <span className="text-xs mt-1">Bookings</span>
+                                <<span className="text-xs mt-1">Reservations</span>
                             </div>
                         </Link>
                     )}

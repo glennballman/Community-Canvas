@@ -150,7 +150,7 @@ async function runEvidenceVerification(token: string): Promise<TestResult> {
 const REQUIRED_NAV_ITEMS = [
   { label: 'Dashboard', href: '/app/dashboard' },
   { label: 'Inventory', href: '/app/inventory' },
-  { label: 'Bookings', href: '/app/bookings' },
+  { label: 'Reservations', href: '/app/reservations' },
   { label: 'Operations', href: '/app/operations' },
   { label: 'Settings', href: '/app/settings' },
 ];

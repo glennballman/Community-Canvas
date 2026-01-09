@@ -7,12 +7,12 @@ import { checkMaintenanceConflict } from './schedule';
 const router = Router();
 
 /**
- * P0-C: Rental Routes - Assets, availability, and bookings
+ * P0-C: Rental Routes - Assets, availability, and reservations
  * 
  * Security model:
  * - /browse, /quote: Public reads, use serviceQuery (global inventory)
  * - Authenticated endpoints: Use tenantQuery/tenantTransaction for user-scoped data
- * - Bookings: User can only see/modify their own bookings
+ * - Reservations: User can only see/modify their own reservations
  */
 
 interface RentalCategory {
@@ -364,7 +364,7 @@ router.post('/:id/quote', async (req: Request, res: Response) => {
   }
 });
 
-// POST /api/rentals/:id/book - Create booking (SELF)
+// POST /api/rentals/:id/book - Create reservation (SELF)
 router.post('/:id/book', requireAuth, async (req: Request, res: Response) => {
   try {
     const idParsed = uuidSchema.safeParse(req.params.id);
@@ -383,10 +383,10 @@ router.post('/:id/book', requireAuth, async (req: Request, res: Response) => {
     const individualId = tenantReq.ctx?.individual_id;
     
     if (!individualId) {
-      return res.status(401).json({ success: false, error: 'Individual profile required to book' });
+      return res.status(401).json({ success: false, error: 'Individual profile required to reserve' });
     }
     
-    // Use tenantTransaction for booking creation - user can only book for themselves
+    // Use tenantTransaction for reservation creation - user can only book for themselves
     const result = await req.tenantTransaction(async (client) => {
       // Check item exists (service mode for inventory data)
       const itemCheck = await client.query(
@@ -438,7 +438,7 @@ router.post('/:id/book', requireAuth, async (req: Request, res: Response) => {
           const constraint = constraintCheck.rows[0];
           const capInfo = constraint.capability_name ? ` (${constraint.capability_name})` : '';
           return {
-            error: `Not bookable: ${constraint.constraint_type.replace(/_/g, ' ')}${capInfo}${constraint.details ? ` - ${constraint.details}` : ''}`,
+            error: `Not reservable: ${constraint.constraint_type.replace(/_/g, ' ')}${capInfo}${constraint.details ? ` - ${constraint.details}` : ''}`,
             status: 409,
             code: 'BLOCKING_CONSTRAINT'
           };
@@ -456,7 +456,7 @@ router.post('/:id/book', requireAuth, async (req: Request, res: Response) => {
         if (capabilityCheck.rows.length > 0) {
           const cap = capabilityCheck.rows[0];
           return {
-            error: `Not bookable: ${cap.name} is ${cap.status}`,
+            error: `Not reservable: ${cap.name} is ${cap.status}`,
             status: 409,
             code: 'CAPABILITY_INOPERABLE'
           };
@@ -515,7 +515,7 @@ router.post('/:id/book', requireAuth, async (req: Request, res: Response) => {
       const tax = subtotal * 0.12;
       const total = subtotal + tax + damageDeposit;
       
-      const bookingResult = await client.query(`
+      const reservationResult = await client.query(`
         INSERT INTO cc_rental_reservations (
           rental_item_id,
           renter_individual_id,
@@ -530,7 +530,7 @@ router.post('/:id/book', requireAuth, async (req: Request, res: Response) => {
         RETURNING id
       `, [itemId, individualId, startTs, endTs, subtotal, tax, damageDeposit, total]);
       
-      const reservationId = bookingResult.rows[0].id;
+      const reservationId = reservationResult.rows[0].id;
       
       // E5: Auto-create turnover buffer event if turnover_buffer_minutes > 0
       const itemMeta = await client.query(
@@ -546,7 +546,7 @@ router.post('/:id/book', requireAuth, async (req: Request, res: Response) => {
         await client.query(`
           INSERT INTO cc_resource_schedule_events 
             (resource_id, event_type, start_date, end_date, title, notes, related_entity_type, related_entity_id)
-          VALUES ($1, 'buffer', $2, $3, 'Turnover', 'Auto-generated cleanup buffer', 'booking', $4)
+          VALUES ($1, 'buffer', $2, $3, 'Turnover', 'Auto-generated cleanup buffer', 'reservation', $4)
         `, [assetLookup.rows[0].id, bufferStart, bufferEnd, reservationId]);
       }
       
@@ -559,18 +559,18 @@ router.post('/:id/book', requireAuth, async (req: Request, res: Response) => {
     
     res.json({
       success: true,
-      booking: {
+      reservation: {
         id: result.reservationId,
         total: result.total
       }
     });
   } catch (error) {
-    console.error('Error creating booking:', error);
-    res.status(500).json({ success: false, error: 'Failed to create booking' });
+    console.error('Error creating reservation:', error);
+    res.status(500).json({ success: false, error: 'Failed to create reservation' });
   }
 });
 
-// GET /api/rentals/my-reservations - Get user's bookings (SELF)
+// GET /api/rentals/my-reservations - Get user's reservations (SELF)
 router.get('/my-reservations', requireAuth, async (req: Request, res: Response) => {
   try {
     const tenantReq = req as any;
@@ -580,7 +580,7 @@ router.get('/my-reservations', requireAuth, async (req: Request, res: Response) 
       return res.status(401).json({ success: false, error: 'Individual profile required' });
     }
     
-    // Use tenantQuery - user can only see their own bookings
+    // Use tenantQuery - user can only see their own reservations
     const result = await req.tenantQuery(`
       SELECT 
         b.id,
@@ -615,11 +615,11 @@ router.get('/my-reservations', requireAuth, async (req: Request, res: Response) 
     });
   } catch (error) {
     console.error('Error fetching reservations:', error);
-    res.status(500).json({ success: false, error: 'Failed to fetch bookings' });
+    res.status(500).json({ success: false, error: 'Failed to fetch reservations' });
   }
 });
 
-// GET /api/rentals/reservations - Get user's detailed bookings (SELF)
+// GET /api/rentals/reservations - Get user's detailed reservations (SELF)
 router.get('/reservations', requireAuth, async (req: Request, res: Response) => {
   try {
     const tenantReq = req as any;
@@ -722,11 +722,11 @@ router.get('/reservations', requireAuth, async (req: Request, res: Response) => 
     });
   } catch (error) {
     console.error('Error fetching reservations:', error);
-    res.status(500).json({ success: false, error: 'Failed to fetch bookings' });
+    res.status(500).json({ success: false, error: 'Failed to fetch reservations' });
   }
 });
 
-// POST /api/rentals/reservations/:id/cancel - Cancel booking (SELF)
+// POST /api/rentals/reservations/:id/cancel - Cancel reservation (SELF)
 router.post('/reservations/:id/cancel', requireAuth, async (req: Request, res: Response) => {
   try {
     const tenantReq = req as any;
@@ -734,7 +734,7 @@ router.post('/reservations/:id/cancel', requireAuth, async (req: Request, res: R
     const reservationIdParsed = uuidSchema.safeParse(req.params.id);
     
     if (!reservationIdParsed.success) {
-      return res.status(400).json({ success: false, error: 'Invalid booking ID' });
+      return res.status(400).json({ success: false, error: 'Invalid reservation ID' });
     }
     
     if (!individualId) {
@@ -743,22 +743,22 @@ router.post('/reservations/:id/cancel', requireAuth, async (req: Request, res: R
     
     const reservationId = reservationIdParsed.data;
     
-    // Use tenantTransaction - user can only cancel their own bookings
+    // Use tenantTransaction - user can only cancel their own reservations
     const result = await req.tenantTransaction(async (client) => {
-      const bookingResult = await client.query(`
+      const reservationResult = await client.query(`
         SELECT id, status, start_date 
         FROM cc_rental_reservations 
         WHERE id = $1 AND renter_individual_id = $2
       `, [reservationId, individualId]);
       
-      if (bookingResult.rows.length === 0) {
-        return { error: 'Booking not found', status: 404 };
+      if (reservationResult.rows.length === 0) {
+        return { error: 'Reservation not found', status: 404 };
       }
       
-      const booking = bookingResult.rows[0];
+      const reservation = reservationResult.rows[0];
       
-      if (!['pending', 'confirmed'].includes(booking.status)) {
-        return { error: `Cannot cancel booking with status: ${booking.status}`, status: 400 };
+      if (!['pending', 'confirmed'].includes(reservation.status)) {
+        return { error: `Cannot cancel reservation with status: ${reservation.status}`, status: 400 };
       }
       
       await client.query(`
@@ -774,10 +774,10 @@ router.post('/reservations/:id/cancel', requireAuth, async (req: Request, res: R
       return res.status(result.status || 400).json({ success: false, error: result.error });
     }
     
-    res.json({ success: true, message: 'Booking cancelled' });
+    res.json({ success: true, message: 'Reservation cancelled' });
   } catch (error) {
-    console.error('Error cancelling booking:', error);
-    res.status(500).json({ success: false, error: 'Failed to cancel booking' });
+    console.error('Error cancelling reservation:', error);
+    res.status(500).json({ success: false, error: 'Failed to cancel reservation' });
   }
 });
 

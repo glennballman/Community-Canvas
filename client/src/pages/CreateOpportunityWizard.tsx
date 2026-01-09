@@ -168,7 +168,7 @@ export default function CreateOpportunityWizard() {
   const [accessNotes, setAccessNotes] = useState<string>("");
   const [heavyEquipmentPossible, setHeavyEquipmentPossible] = useState<boolean>(true);
   const [ferryOrLanderRequired, setFerryOrLanderRequired] = useState<boolean>(false);
-  const [bookingLeadTimeDays, setBookingLeadTimeDays] = useState<string>("");
+  const [reservationLeadTimeDays, setReservationLeadTimeDays] = useState<string>("");
   const [transportNotes, setTransportNotes] = useState<string>("");
 
   const [selectedToolIds, setSelectedToolIds] = useState<Record<string, boolean>>({});
@@ -252,10 +252,10 @@ export default function CreateOpportunityWizard() {
     transport_constraints: {
       heavy_equipment_possible: heavyEquipmentPossible,
       ferry_or_lander_required: ferryOrLanderRequired,
-      booking_lead_time_days: safeNumber(bookingLeadTimeDays),
+      reservation_lead_time_days: safeNumber(reservationLeadTimeDays),
       contact_notes: transportNotes?.trim() || "",
     },
-  }), [vehicleAccess, requiresBoat, requiresWaterTaxi, eastBamfieldDropoff, walkingDistanceM, stairsOrBoardwalk, accessNotes, heavyEquipmentPossible, ferryOrLanderRequired, bookingLeadTimeDays, transportNotes]);
+  }), [vehicleAccess, requiresBoat, requiresWaterTaxi, eastBamfieldDropoff, walkingDistanceM, stairsOrBoardwalk, accessNotes, heavyEquipmentPossible, ferryOrLanderRequired, reservationLeadTimeDays, transportNotes]);
 
   const availableToolsSnapshot = useMemo(() => ({
     tools: selectedToolsSnapshot,
@@ -720,9 +720,9 @@ export default function CreateOpportunityWizard() {
                       Ferry/Lander required<input type="checkbox" checked={ferryOrLanderRequired} onChange={(e) => setFerryOrLanderRequired(e.target.checked)} className="h-4 w-4 accent-blue-600" data-testid="checkbox-ferry-lander" />
                     </label>
                     <div>
-                      <label className="text-xs text-slate-400">Booking lead-time (days)</label>
-                      <input type="number" value={bookingLeadTimeDays} onChange={(e) => setBookingLeadTimeDays(e.target.value)} placeholder="14"
-                        data-testid="input-booking-lead-time"
+                      <label className="text-xs text-slate-400">Reservation lead-time (days)</label>
+                      <input type="number" value={reservationLeadTimeDays} onChange={(e) => setReservationLeadTimeDays(e.target.value)} placeholder="14"
+                        data-testid="input-reservation-lead-time"
                         className="mt-1 w-full rounded-lg bg-slate-800 border border-slate-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
                     </div>
                     <div>

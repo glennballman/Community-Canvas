@@ -221,7 +221,7 @@ export function TripTimelineDemo() {
     console.log('Event clicked:', event);
   };
 
-  const handleBookEvent = (event: TimelineEvent) => {
+  const handleReserveEvent = (event: TimelineEvent) => {
     console.log('Book event:', event);
   };
   
@@ -386,7 +386,7 @@ export function TripTimelineDemo() {
           tripName={bamfieldTripSummary.name}
           events={eventsWithLiveData}
           onEventClick={handleEventClick}
-          onBookEvent={handleBookEvent}
+          onReserveEvent={handleReserveEvent}
         />
         
         {/* Data Sources Footer */}

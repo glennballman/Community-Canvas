@@ -20,7 +20,7 @@ export default function AvailabilityPricingPage() {
               Availability Calendar
             </CardTitle>
             <CardDescription>
-              Set when your items are available for booking
+              Set when your items are available for reservation
             </CardDescription>
           </CardHeader>
           <CardContent>

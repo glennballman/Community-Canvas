@@ -113,7 +113,7 @@ const navSections: NavSection[] = [
     defaultOpen: true,
     items: [
       { path: "/rentals", label: "Rent Equipment", icon: Sailboat },
-      { path: "/rentals/bookings", label: "My Bookings", icon: ClipboardList },
+      { path: "/rentals/reservations", label: "My Reservations", icon: ClipboardList },
     ]
   },
   {

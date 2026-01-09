@@ -1,6 +1,6 @@
 /**
- * QA 4: Booking Edge Cases Test
- * Tests booking validation, conflicts, and edge cases
+ * QA 4: Reservation Edge Cases Test
+ * Tests reservation validation, conflicts, and edge cases
  */
 
 const BASE_URL = 'http://localhost:5000';
@@ -25,29 +25,29 @@ async function test(name: string, fn: () => Promise<void>) {
 }
 
 async function runTests() {
-  console.log('\n🧪 QA 4: BOOKING EDGE CASES\n');
+  console.log('\n🧪 QA 4: RESERVATION EDGE CASES\n');
 
   // Get QA test property ID
   const propsRes = await fetch(`${BASE_URL}/api/staging/properties`);
   const propsData = await propsRes.json();
-  const testProperty = propsData.properties.find((p: any) => p.name === 'QA Booking Test Property');
+  const testProperty = propsData.properties.find((p: any) => p.name === 'QA Reservation Test Property');
   
   if (!testProperty) {
-    console.error('❌ QA Booking Test Property not found. Run setup SQL first.');
+    console.error('❌ QA Reservation Test Property not found. Run setup SQL first.');
     return;
   }
   
   const propertyId = testProperty.id;
   console.log(`Using property ID: ${propertyId}\n`);
 
-  // Test 1: Valid booking creation
-  await test('Create valid booking', async () => {
+  // Test 1: Valid reservation creation
+  await test('Create valid reservation', async () => {
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
     const dayAfter = new Date();
     dayAfter.setDate(dayAfter.getDate() + 3);
     
-    const res = await fetch(`${BASE_URL}/api/staging/bookings`, {
+    const res = await fetch(`${BASE_URL}/api/staging/reservations`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -61,13 +61,13 @@ async function runTests() {
     });
     
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Failed to create booking');
-    if (!data.bookingRef) throw new Error('No booking reference returned');
+    if (!res.ok) throw new Error(data.error || 'Failed to create reservation');
+    if (!data.reservationRef) throw new Error('No reservation reference returned');
   });
 
-  // Test 2: Booking with missing required fields
-  await test('Reject booking with missing fields', async () => {
-    const res = await fetch(`${BASE_URL}/api/staging/bookings`, {
+  // Test 2: Reservation with missing required fields
+  await test('Reject reservation with missing fields', async () => {
+    const res = await fetch(`${BASE_URL}/api/staging/reservations`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -77,14 +77,14 @@ async function runTests() {
       })
     });
     
-    if (res.ok) throw new Error('Should have rejected incomplete booking');
+    if (res.ok) throw new Error('Should have rejected incomplete reservation');
     const data = await res.json();
     if (!data.error) throw new Error('Should return error message');
   });
 
-  // Test 3: Booking with invalid dates (checkout before checkin)
-  await test('Reject booking with invalid date order', async () => {
-    const res = await fetch(`${BASE_URL}/api/staging/bookings`, {
+  // Test 3: Reservation with invalid dates (checkout before checkin)
+  await test('Reject reservation with invalid date order', async () => {
+    const res = await fetch(`${BASE_URL}/api/staging/reservations`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -100,15 +100,15 @@ async function runTests() {
     if (res.ok) throw new Error('Should have rejected invalid dates');
   });
 
-  // Test 4: Booking during blocked period
-  await test('Reject booking during blocked period', async () => {
+  // Test 4: Reservation during blocked period
+  await test('Reject reservation during blocked period', async () => {
     const today = new Date();
     const checkIn = new Date(today);
     checkIn.setDate(today.getDate() + 21); // During block (20-25)
     const checkOut = new Date(today);
     checkOut.setDate(today.getDate() + 23);
     
-    const res = await fetch(`${BASE_URL}/api/staging/bookings`, {
+    const res = await fetch(`${BASE_URL}/api/staging/reservations`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -121,18 +121,18 @@ async function runTests() {
       })
     });
     
-    if (res.ok) throw new Error('Should have rejected booking during blocked period');
+    if (res.ok) throw new Error('Should have rejected reservation during blocked period');
   });
 
-  // Test 5: Booking overlapping existing booking
-  await test('Reject booking overlapping existing reservation', async () => {
+  // Test 5: Reservation overlapping existing reservation
+  await test('Reject reservation overlapping existing reservation', async () => {
     const today = new Date();
     const checkIn = new Date(today);
-    checkIn.setDate(today.getDate() + 31); // During existing booking (30-35)
+    checkIn.setDate(today.getDate() + 31); // During existing reservation (30-35)
     const checkOut = new Date(today);
     checkOut.setDate(today.getDate() + 33);
     
-    const res = await fetch(`${BASE_URL}/api/staging/bookings`, {
+    const res = await fetch(`${BASE_URL}/api/staging/reservations`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -145,7 +145,7 @@ async function runTests() {
       })
     });
     
-    // This might pass if we don't have booking conflict detection yet
+    // This might pass if we don't have reservation conflict detection yet
     // For now, just check it doesn't crash
     const data = await res.json();
     // Soft check - either succeeds or fails gracefully
@@ -196,52 +196,52 @@ async function runTests() {
     if (typeof data.total !== 'number') throw new Error('Missing total price');
   });
 
-  // Test 8: Get booking by reference
-  await test('Get booking by reference', async () => {
-    // First get all bookings
-    const res = await fetch(`${BASE_URL}/api/staging/bookings?propertyId=${propertyId}`);
+  // Test 8: Get reservation by reference
+  await test('Get reservation by reference', async () => {
+    // First get all reservations
+    const res = await fetch(`${BASE_URL}/api/staging/reservations?propertyId=${propertyId}`);
     const data = await res.json();
     
-    if (!data.bookings || data.bookings.length === 0) {
-      throw new Error('No bookings found to test');
+    if (!data.reservations || data.reservations.length === 0) {
+      throw new Error('No reservations found to test');
     }
     
-    const bookingRef = data.bookings[0].bookingRef;
-    const detailRes = await fetch(`${BASE_URL}/api/staging/bookings/${bookingRef}`);
+    const reservationRef = data.reservations[0].reservationRef;
+    const detailRes = await fetch(`${BASE_URL}/api/staging/reservations/${reservationRef}`);
     
-    if (!detailRes.ok) throw new Error('Failed to get booking by reference');
+    if (!detailRes.ok) throw new Error('Failed to get reservation by reference');
     const detail = await detailRes.json();
-    if (detail.bookingRef !== bookingRef) throw new Error('Booking reference mismatch');
+    if (detail.reservationRef !== reservationRef) throw new Error('Reservation reference mismatch');
   });
 
-  // Test 9: Update booking status
-  await test('Update booking status', async () => {
-    const res = await fetch(`${BASE_URL}/api/staging/bookings?propertyId=${propertyId}`);
+  // Test 9: Update reservation status
+  await test('Update reservation status', async () => {
+    const res = await fetch(`${BASE_URL}/api/staging/reservations?propertyId=${propertyId}`);
     const data = await res.json();
     
-    if (!data.bookings || data.bookings.length === 0) {
-      throw new Error('No bookings found to test');
+    if (!data.reservations || data.reservations.length === 0) {
+      throw new Error('No reservations found to test');
     }
     
-    const bookingId = data.bookings[0].id;
-    const updateRes = await fetch(`${BASE_URL}/api/staging/bookings/${bookingId}`, {
+    const reservationId = data.reservations[0].id;
+    const updateRes = await fetch(`${BASE_URL}/api/staging/reservations/${reservationId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status: 'confirmed' })
     });
     
-    if (!updateRes.ok) throw new Error('Failed to update booking');
+    if (!updateRes.ok) throw new Error('Failed to update reservation');
   });
 
-  // Test 10: Cancel booking
-  await test('Cancel booking', async () => {
-    // Create a booking to cancel
+  // Test 10: Cancel reservation
+  await test('Cancel reservation', async () => {
+    // Create a reservation to cancel
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 40);
     const dayAfter = new Date();
     dayAfter.setDate(dayAfter.getDate() + 42);
     
-    const createRes = await fetch(`${BASE_URL}/api/staging/bookings`, {
+    const createRes = await fetch(`${BASE_URL}/api/staging/reservations`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -254,18 +254,18 @@ async function runTests() {
       })
     });
     
-    const booking = await createRes.json();
-    if (!createRes.ok) throw new Error('Failed to create test booking');
+    const reservation = await createRes.json();
+    if (!createRes.ok) throw new Error('Failed to create test reservation');
     
-    const cancelRes = await fetch(`${BASE_URL}/api/staging/bookings/${booking.id}/cancel`, {
+    const cancelRes = await fetch(`${BASE_URL}/api/staging/reservations/${reservation.id}/cancel`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ reason: 'Test cancellation' })
     });
     
-    if (!cancelRes.ok) throw new Error('Failed to cancel booking');
+    if (!cancelRes.ok) throw new Error('Failed to cancel reservation');
     const cancelled = await cancelRes.json();
-    if (cancelled.status !== 'cancelled') throw new Error('Booking not marked as cancelled');
+    if (cancelled.status !== 'cancelled') throw new Error('Reservation not marked as cancelled');
   });
 
   // Summary

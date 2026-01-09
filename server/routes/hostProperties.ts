@@ -661,14 +661,14 @@ router.get('/calendar/:propertyId', async (req: HostAuthRequest, res: Response) 
 
     const blocks = await stagingStorage.getCalendar(propertyId, startDate, endDate);
     
-    // Also get bookings for the period
-    const bookings = await stagingStorage.getReservations({
+    // Also get reservations for the period
+    const reservations = await stagingStorage.getReservations({
       propertyId,
       checkInFrom: startDate,
       checkInTo: endDate
     });
 
-    res.json({ blocks, bookings, startDate, endDate });
+    res.json({ blocks, reservations, startDate, endDate });
   } catch (error) {
     console.error('[HostProperties] Get calendar error:', error);
     res.status(500).json({ error: 'Failed to get calendar' });
@@ -843,17 +843,17 @@ router.post('/properties/:id/feeds', async (req: HostAuthRequest, res: Response)
 });
 
 // ============================================================================
-// BOOKINGS
+// RESERVATIONS
 // ============================================================================
 
-// GET /api/host/bookings - All bookings for host's properties
-router.get('/bookings', async (req: HostAuthRequest, res: Response) => {
+// GET /api/host/reservations - All reservations for host's properties
+router.get('/reservations', async (req: HostAuthRequest, res: Response) => {
   try {
     const hostId = req.hostAccount!.id;
     const propertyIds = await getHostProperties(hostId);
 
     if (propertyIds.length === 0) {
-      return res.json({ bookings: [], total: 0 });
+      return res.json({ reservations: [], total: 0 });
     }
 
     const status = req.query.status as string;
@@ -874,41 +874,41 @@ router.get('/bookings', async (req: HostAuthRequest, res: Response) => {
     query += ` ORDER BY b.check_in_date DESC LIMIT ${limit} OFFSET ${offset}`;
 
     const result = await db.execute(sql.raw(query));
-    res.json({ bookings: result.rows, total: result.rows.length });
+    res.json({ reservations: result.rows, total: result.rows.length });
   } catch (error) {
-    console.error('[HostProperties] Get bookings error:', error);
-    res.status(500).json({ error: 'Failed to get bookings' });
+    console.error('[HostProperties] Get reservations error:', error);
+    res.status(500).json({ error: 'Failed to get reservations' });
   }
 });
 
-// GET /api/host/bookings/:id
-router.get('/bookings/:id', async (req: HostAuthRequest, res: Response) => {
+// GET /api/host/reservations/:id
+router.get('/reservations/:id', async (req: HostAuthRequest, res: Response) => {
   try {
     const hostId = req.hostAccount!.id;
-    const bookingId = parseInt(req.params.id);
+    const reservationId = parseInt(req.params.id);
 
-    const booking = await stagingStorage.getBookingById(bookingId);
-    if (!booking) {
-      return res.status(404).json({ error: 'Booking not found' });
+    const reservation = await stagingStorage.getReservationById(reservationId);
+    if (!reservation) {
+      return res.status(404).json({ error: 'Reservation not found' });
     }
 
     // Verify host owns the property
-    if (!await verifyOwnership(hostId, booking.propertyId)) {
+    if (!await verifyOwnership(hostId, reservation.propertyId)) {
       return res.status(403).json({ error: 'Access denied' });
     }
 
-    res.json(booking);
+    res.json(reservation);
   } catch (error) {
-    console.error('[HostProperties] Get booking error:', error);
-    res.status(500).json({ error: 'Failed to get booking' });
+    console.error('[HostProperties] Get reservation error:', error);
+    res.status(500).json({ error: 'Failed to get reservation' });
   }
 });
 
-// PUT /api/host/bookings/:id/status
-router.put('/bookings/:id/status', async (req: HostAuthRequest, res: Response) => {
+// PUT /api/host/reservations/:id/status
+router.put('/reservations/:id/status', async (req: HostAuthRequest, res: Response) => {
   try {
     const hostId = req.hostAccount!.id;
-    const bookingId = parseInt(req.params.id);
+    const reservationId = parseInt(req.params.id);
     const { status } = req.body;
 
     const validStatuses = ['pending', 'confirmed', 'checked_in', 'checked_out', 'completed', 'cancelled', 'no_show'];
@@ -916,23 +916,23 @@ router.put('/bookings/:id/status', async (req: HostAuthRequest, res: Response) =
       return res.status(400).json({ error: 'Invalid status' });
     }
 
-    const booking = await stagingStorage.getBookingById(bookingId);
-    if (!booking) {
-      return res.status(404).json({ error: 'Booking not found' });
+    const reservation = await stagingStorage.getReservationById(reservationId);
+    if (!reservation) {
+      return res.status(404).json({ error: 'Reservation not found' });
     }
 
-    if (!await verifyOwnership(hostId, booking.propertyId)) {
+    if (!await verifyOwnership(hostId, reservation.propertyId)) {
       return res.status(403).json({ error: 'Access denied' });
     }
 
-    const updated = await stagingStorage.updateBooking(bookingId, { status });
+    const updated = await stagingStorage.updateReservation(reservationId, { status });
     
-    await logActivity(hostId, 'booking_status_changed', `Changed booking ${bookingId} to ${status}`, booking.propertyId);
+    await logActivity(hostId, 'reservation.status_changed', `Changed reservation ${reservationId} to ${status}`, reservation.propertyId);
 
     res.json(updated);
   } catch (error) {
-    console.error('[HostProperties] Update booking status error:', error);
-    res.status(500).json({ error: 'Failed to update booking status' });
+    console.error('[HostProperties] Update reservation status error:', error);
+    res.status(500).json({ error: 'Failed to update reservation status' });
   }
 });
 

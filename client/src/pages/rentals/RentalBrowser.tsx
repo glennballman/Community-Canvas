@@ -49,7 +49,7 @@ interface RentalCategory {
   itemCount: number;
 }
 
-type BookingMode = 'check_in_out' | 'arrive_depart' | 'pickup_return';
+type ReservationMode = 'check_in_out' | 'arrive_depart' | 'pickup_return';
 type DurationPreset = 'half_day_4h' | 'full_day_8h' | 'overnight_24h' | 'nights' | 'custom' | null;
 
 interface RentalItem {
@@ -78,14 +78,14 @@ interface RentalItem {
   minimumAge: number;
   isAvailable: boolean;
   ownerName: string;
-  bookingMode: BookingMode;
+  reservationMode: ReservationMode;
   defaultDurationPreset: DurationPreset;
   defaultStartTimeLocal: string;
   defaultEndTimeLocal: string;
   turnoverBufferMinutes: number;
 }
 
-const BOOKING_MODE_LABELS: Record<BookingMode, { start: string; end: string }> = {
+const RESERVATION_MODE_LABELS: Record<ReservationMode, { start: string; end: string }> = {
   check_in_out: { start: 'Checking in', end: 'Checking out' },
   arrive_depart: { start: 'Arriving', end: 'Departing' },
   pickup_return: { start: 'Pickup', end: 'Return' },
@@ -153,12 +153,12 @@ export default function RentalBrowser() {
   const [searchQuery, setSearchQuery] = useState('');
   
   const [selectedItem, setSelectedItem] = useState<RentalItem | null>(null);
-  const [bookingStart, setBookingStart] = useState('');
-  const [bookingEnd, setBookingEnd] = useState('');
-  const [bookingDuration, setBookingDuration] = useState<number>(2);
+  const [reservationStart, setReservationStart] = useState('');
+  const [reservationEnd, setReservationEnd] = useState('');
+  const [reservationDuration, setReservationDuration] = useState<number>(2);
   const [priceQuote, setPriceQuote] = useState<PriceQuote | null>(null);
   const [eligibility, setEligibility] = useState<CheckoutEligibility | null>(null);
-  const [bookingInProgress, setBookingInProgress] = useState(false);
+  const [reservationInProgress, setReservationInProgress] = useState(false);
 
   const loadRentals = useCallback(async () => {
     setLoading(true);
@@ -207,7 +207,7 @@ export default function RentalBrowser() {
     let endDate: Date;
     let duration: number;
     
-    if (item.bookingMode === 'check_in_out') {
+    if (item.reservationMode === 'check_in_out') {
       const [checkInH, checkInM] = (item.defaultStartTimeLocal || '16:00').split(':').map(Number);
       const [checkOutH, checkOutM] = (item.defaultEndTimeLocal || '11:00').split(':').map(Number);
       
@@ -245,9 +245,9 @@ export default function RentalBrowser() {
       endDate.setTime(endDate.getTime() + duration * 60 * 60 * 1000);
     }
     
-    setBookingStart(startDate.toISOString().slice(0, 16));
-    setBookingEnd(endDate.toISOString().slice(0, 16));
-    setBookingDuration(duration);
+    setReservationStart(startDate.toISOString().slice(0, 16));
+    setReservationEnd(endDate.toISOString().slice(0, 16));
+    setReservationDuration(duration);
     
     if (token) {
       try {
@@ -265,7 +265,7 @@ export default function RentalBrowser() {
   }
 
   async function calculatePrice() {
-    if (!selectedItem || !bookingStart || !bookingEnd) return;
+    if (!selectedItem || !reservationStart || !reservationEnd) return;
     
     try {
       const res = await fetch(`/api/rentals/${selectedItem.id}/quote`, {
@@ -275,8 +275,8 @@ export default function RentalBrowser() {
           ...(token ? { 'Authorization': `Bearer ${token}` } : {})
         },
         body: JSON.stringify({
-          startTs: bookingStart,
-          endTs: bookingEnd
+          startTs: reservationStart,
+          endTs: reservationEnd
         })
       });
       const data = await res.json();
@@ -289,36 +289,36 @@ export default function RentalBrowser() {
   }
 
   useEffect(() => {
-    if (selectedItem && bookingStart && bookingEnd) {
+    if (selectedItem && reservationStart && reservationEnd) {
       calculatePrice();
     }
-  }, [bookingStart, bookingEnd, selectedItem]);
+  }, [reservationStart, reservationEnd, selectedItem]);
 
   function setDurationHours(hours: number) {
-    setBookingDuration(hours);
-    if (bookingStart && selectedItem) {
-      const start = new Date(bookingStart);
+    setReservationDuration(hours);
+    if (reservationStart && selectedItem) {
+      const start = new Date(reservationStart);
       
-      if (selectedItem.bookingMode === 'check_in_out') {
+      if (selectedItem.reservationMode === 'check_in_out') {
         const nights = Math.round(hours / 24) || 1;
         const [checkOutH, checkOutM] = (selectedItem.defaultEndTimeLocal || '11:00').split(':').map(Number);
         
         const end = new Date(start);
         end.setDate(end.getDate() + nights);
         end.setHours(checkOutH, checkOutM, 0, 0);
-        setBookingEnd(end.toISOString().slice(0, 16));
+        setReservationEnd(end.toISOString().slice(0, 16));
       } else {
         const end = new Date(start);
         end.setTime(end.getTime() + hours * 60 * 60 * 1000);
-        setBookingEnd(end.toISOString().slice(0, 16));
+        setReservationEnd(end.toISOString().slice(0, 16));
       }
     }
   }
 
-  async function confirmBooking() {
-    if (!selectedItem || !bookingStart || !bookingEnd || !eligibility?.ready || !token) return;
+  async function confirmReservation() {
+    if (!selectedItem || !reservationStart || !reservationEnd || !eligibility?.ready || !token) return;
     
-    setBookingInProgress(true);
+    setReservationInProgress(true);
     try {
       const res = await fetch(`/api/rentals/${selectedItem.id}/book`, {
         method: 'POST',
@@ -327,23 +327,23 @@ export default function RentalBrowser() {
           'Authorization': `Bearer ${token}` 
         },
         body: JSON.stringify({
-          startTs: bookingStart,
-          endTs: bookingEnd
+          startTs: reservationStart,
+          endTs: reservationEnd
         })
       });
       const data = await res.json();
       
       if (data.success) {
-        toast({ title: 'Booking confirmed!', description: 'Check "My Bookings" for details.' });
+        toast({ title: 'Reservation confirmed!', description: 'Check "My Reservations" for details.' });
         setSelectedItem(null);
         loadRentals();
       } else {
-        toast({ title: 'Booking failed', description: data.error, variant: 'destructive' });
+        toast({ title: 'Reservation failed', description: data.error, variant: 'destructive' });
       }
     } catch (err) {
-      toast({ title: 'Error', description: 'Failed to create booking', variant: 'destructive' });
+      toast({ title: 'Error', description: 'Failed to create reservation', variant: 'destructive' });
     } finally {
-      setBookingInProgress(false);
+      setReservationInProgress(false);
     }
   }
 
@@ -479,7 +479,7 @@ export default function RentalBrowser() {
       )}
 
       <Dialog open={!!selectedItem} onOpenChange={() => setSelectedItem(null)}>
-        <DialogContent className="max-w-lg" data-testid="modal-booking">
+        <DialogContent className="max-w-lg" data-testid="modal-reservation">
           {selectedItem && (
             <>
               <DialogHeader>
@@ -521,12 +521,12 @@ export default function RentalBrowser() {
                 <div className="space-y-2">
                   <Label>Duration</Label>
                   <div className="flex flex-wrap gap-2">
-                    {selectedItem.bookingMode === 'check_in_out' ? (
+                    {selectedItem.reservationMode === 'check_in_out' ? (
                       [1, 2, 3, 5, 7].map(nights => (
                         <Button
                           key={nights}
                           size="sm"
-                          variant={bookingDuration === nights * 24 ? 'default' : 'outline'}
+                          variant={reservationDuration === nights * 24 ? 'default' : 'outline'}
                           onClick={() => setDurationHours(nights * 24)}
                           data-testid={`button-nights-${nights}`}
                         >
@@ -538,7 +538,7 @@ export default function RentalBrowser() {
                         <Button
                           key={key}
                           size="sm"
-                          variant={bookingDuration === hours ? 'default' : 'outline'}
+                          variant={reservationDuration === hours ? 'default' : 'outline'}
                           onClick={() => setDurationHours(hours)}
                           data-testid={`button-duration-${key}`}
                         >
@@ -548,7 +548,7 @@ export default function RentalBrowser() {
                     )}
                     <Button
                       size="sm"
-                      variant={![4, 8, 24, 48, 72, 120, 168].includes(bookingDuration) ? 'default' : 'outline'}
+                      variant={![4, 8, 24, 48, 72, 120, 168].includes(reservationDuration) ? 'default' : 'outline'}
                       onClick={() => {}}
                       data-testid="button-duration-custom"
                     >
@@ -560,26 +560,26 @@ export default function RentalBrowser() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="start-time">
-                      {BOOKING_MODE_LABELS[selectedItem.bookingMode]?.start || 'Start'}
+                      {RESERVATION_MODE_LABELS[selectedItem.reservationMode]?.start || 'Start'}
                     </Label>
                     <Input
                       id="start-time"
                       type="datetime-local"
-                      value={bookingStart}
-                      onChange={(e) => setBookingStart(e.target.value)}
+                      value={reservationStart}
+                      onChange={(e) => setReservationStart(e.target.value)}
                       step={900}
                       data-testid="input-start-time"
                     />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="end-time">
-                      {BOOKING_MODE_LABELS[selectedItem.bookingMode]?.end || 'End'}
+                      {RESERVATION_MODE_LABELS[selectedItem.reservationMode]?.end || 'End'}
                     </Label>
                     <Input
                       id="end-time"
                       type="datetime-local"
-                      value={bookingEnd}
-                      onChange={(e) => setBookingEnd(e.target.value)}
+                      value={reservationEnd}
+                      onChange={(e) => setReservationEnd(e.target.value)}
                       step={900}
                       data-testid="input-end-time"
                     />
@@ -622,7 +622,7 @@ export default function RentalBrowser() {
                         <div>
                           <div className="flex items-center gap-2 text-green-600 dark:text-green-400 mb-2">
                             <Check className="w-5 h-5" />
-                            <span>Ready to book!</span>
+                            <span>Ready to reserve!</span>
                           </div>
                           
                           {eligibility.warnings && eligibility.warnings.length > 0 && (
@@ -656,7 +656,7 @@ export default function RentalBrowser() {
                         <div>
                           <div className="flex items-center gap-2 text-red-600 dark:text-red-400 font-medium mb-2">
                             <AlertTriangle className="w-5 h-5" />
-                            Required to book:
+                            Required to reserve:
                           </div>
                           <div className="space-y-1 text-sm">
                             {eligibility.blockers?.map((blocker: string, i: number) => {
@@ -697,7 +697,7 @@ export default function RentalBrowser() {
                   <Card className="bg-blue-500/10 border-blue-500/30">
                     <CardContent className="py-3 text-center text-sm">
                       <a href="/login" className="text-blue-600 dark:text-blue-400 font-medium">
-                        Log in to book this item
+                        Log in to reserve this item
                       </a>
                     </CardContent>
                   </Card>
@@ -705,18 +705,18 @@ export default function RentalBrowser() {
               </div>
               
               <DialogFooter>
-                <Button variant="outline" onClick={() => setSelectedItem(null)} data-testid="button-cancel-booking">
+                <Button variant="outline" onClick={() => setSelectedItem(null)} data-testid="button-cancel-reservation">
                   Cancel
                 </Button>
                 <Button
-                  onClick={confirmBooking}
-                  disabled={!eligibility?.ready || bookingInProgress || !priceQuote}
-                  data-testid="button-confirm-booking"
+                  onClick={confirmReservation}
+                  disabled={!eligibility?.ready || reservationInProgress || !priceQuote}
+                  data-testid="button-confirm-reservation"
                 >
-                  {bookingInProgress && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                  {reservationInProgress && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                   {eligibility?.ready 
-                    ? `Confirm Booking - $${priceQuote?.total || '0'}` 
-                    : 'Complete requirements to book'}
+                    ? `Confirm Reservation - $${priceQuote?.total || '0'}` 
+                    : 'Complete requirements to reserve'}
                 </Button>
               </DialogFooter>
             </>

@@ -679,7 +679,7 @@ router.delete('/favorites/:propertyId', authenticateToken, async (req: AuthReque
     }
 });
 
-router.get('/bookings', authenticateToken, async (req: AuthRequest, res: Response) => {
+router.get('/reservations', authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
         const result = await serviceQuery(`
             SELECT 
@@ -688,7 +688,7 @@ router.get('/bookings', authenticateToken, async (req: AuthRequest, res: Respons
                 p.city,
                 p.region,
                 p.thumbnail_url
-            FROM cc_staging_bookings b
+            FROM cc_staging_reservations b
             JOIN cc_staging_properties p ON p.id = b.property_id
             WHERE b.user_id = $1 OR b.guest_email = $2
             ORDER BY b.check_in_date DESC
@@ -696,9 +696,9 @@ router.get('/bookings', authenticateToken, async (req: AuthRequest, res: Respons
 
         res.json({
             success: true,
-            bookings: result.rows.map(b => ({
+            reservations: result.rows.map(b => ({
                 id: b.id,
-                bookingRef: b.confirmation_number,
+                reservationRef: b.confirmation_number,
                 propertyId: b.property_id,
                 propertyName: b.property_name,
                 city: b.city,
@@ -714,8 +714,8 @@ router.get('/bookings', authenticateToken, async (req: AuthRequest, res: Respons
         });
 
     } catch (error: any) {
-        console.error('Get bookings error:', error);
-        res.status(500).json({ success: false, error: 'Failed to get bookings' });
+        console.error('Get reservations error:', error);
+        res.status(500).json({ success: false, error: 'Failed to get reservations' });
     }
 });
 

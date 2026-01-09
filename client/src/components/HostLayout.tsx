@@ -18,7 +18,7 @@ import { useState } from 'react';
 const navItems = [
   { href: '/host/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/host/properties', label: 'Properties', icon: Building2 },
-  { href: '/host/bookings', label: 'Bookings', icon: Calendar },
+  { href: '/host/reservations', label: "Reservations", icon: Calendar },
   { href: '/host/payouts', label: 'Payouts', icon: CreditCard },
 ];
 

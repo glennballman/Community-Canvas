@@ -81760,7 +81760,7 @@ export const chamberMembers: ChamberMember[] = [
     address: "Qualicum Beach, B.C. V9K 2S1",
     phone: "604-628-1632",
     website: "https://www.janettehooper.com",
-    description: "Freelance software development with a side of travel advising and booking (specializing in cruising)."
+    description: "Freelance software development with a side of travel advising and reservation (specializing in cruising)."
   },
   {
     id: "pentlatch-gallery",

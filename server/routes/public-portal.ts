@@ -1459,9 +1459,9 @@ router.post('/cc_portals/:slug/cc_reservations', async (req: Request, res: Respo
       });
     }
     
-    // For public guest bookings, we don't require a cc_individuals record
+    // For public guest reservations, we don't require a cc_individuals record
     // Guest info is stored in primary_guest_* fields on the reservation
-    // customer_id will be NULL for anonymous public bookings
+    // customer_id will be NULL for anonymous public reservations
     
     // Generate confirmation number
     const prefix = slug.substring(0, 3).toUpperCase().replace(/-/g, '');
@@ -1469,7 +1469,7 @@ router.post('/cc_portals/:slug/cc_reservations', async (req: Request, res: Respo
     const seq = Math.random().toString(36).substring(2, 8).toUpperCase();
     const confirmationNumber = `${prefix}-${year}-${seq}`;
     
-    // Create reservation (customer_id is NULL for public guest bookings)
+    // Create reservation (customer_id is NULL for public guest reservations)
     const reservationResult = await serviceQuery(`
       INSERT INTO cc_reservations (
         confirmation_number, asset_id, provider_id,

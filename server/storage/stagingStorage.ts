@@ -476,7 +476,7 @@ export async function searchProviders(filters: ProviderFilters = {}): Promise<Se
 }
 
 // ============================================================================
-// BOOKINGS
+// RESERVATIONS
 // ============================================================================
 
 export interface ReservationFilters {
@@ -516,7 +516,7 @@ export async function getReservations(filters: ReservationFilters = {}): Promise
     SELECT b.*, 
            sp.name as property_name, sp.canvas_id as property_canvas_id,
            ss.spot_number, ss.spot_name
-    FROM cc_staging_bookings b
+    FROM cc_staging_reservations b
     LEFT JOIN cc_staging_properties sp ON sp.id = b.property_id
     LEFT JOIN cc_staging_spots ss ON ss.id = b.spot_id
     ${whereClause}
@@ -532,7 +532,7 @@ export async function getReservationById(id: number): Promise<StagingReservation
     SELECT b.*, 
            sp.name as property_name, sp.canvas_id as property_canvas_id,
            ss.spot_number, ss.spot_name
-    FROM cc_staging_bookings b
+    FROM cc_staging_reservations b
     LEFT JOIN cc_staging_properties sp ON sp.id = b.property_id
     LEFT JOIN cc_staging_spots ss ON ss.id = b.spot_id
     WHERE b.id = ${id}
@@ -546,7 +546,7 @@ export async function getReservationByRef(ref: string): Promise<StagingReservati
     SELECT b.*, 
            sp.name as property_name, sp.canvas_id as property_canvas_id,
            ss.spot_number, ss.spot_name
-    FROM cc_staging_bookings b
+    FROM cc_staging_reservations b
     LEFT JOIN cc_staging_properties sp ON sp.id = b.property_id
     LEFT JOIN cc_staging_spots ss ON ss.id = b.spot_id
     WHERE b.confirmation_number = ${ref}
@@ -562,7 +562,7 @@ export async function createReservation(data: Partial<StagingReservation>): Prom
   let idx = 1;
 
   // Exclude generated columns like numNights
-  const excludedColumns = ['id', 'bookingRef', 'numNights'];
+  const excludedColumns = ['id', 'reservationRef', 'numNights'];
   for (const [key, value] of Object.entries(data)) {
     if (value !== undefined && !excludedColumns.includes(key)) {
       columns.push(camelToSnake(key));
@@ -572,7 +572,7 @@ export async function createReservation(data: Partial<StagingReservation>): Prom
   }
 
   const query = `
-    INSERT INTO cc_staging_bookings (${columns.join(', ')})
+    INSERT INTO cc_staging_reservations (${columns.join(', ')})
     VALUES (${placeholders.join(', ')})
     RETURNING *
   `;
@@ -595,7 +595,7 @@ export async function updateReservation(id: number, data: Partial<StagingReserva
   let idx = 1;
 
   // Exclude generated columns like numNights
-  const excludedColumns = ['id', 'bookingRef', 'numNights'];
+  const excludedColumns = ['id', 'reservationRef', 'numNights'];
   for (const [key, value] of Object.entries(data)) {
     if (value !== undefined && !excludedColumns.includes(key)) {
       updates.push(`${camelToSnake(key)} = $${idx++}`);
@@ -606,7 +606,7 @@ export async function updateReservation(id: number, data: Partial<StagingReserva
   if (updates.length === 0) return getReservationById(id);
 
   const query = `
-    UPDATE cc_staging_bookings 
+    UPDATE cc_staging_reservations 
     SET ${updates.join(', ')}, updated_at = CURRENT_TIMESTAMP
     WHERE id = $${idx}
     RETURNING *
@@ -630,7 +630,7 @@ export async function findReservationByIdOrRef(idOrRef: string): Promise<Staging
   const numericId = parseInt(idOrRef, 10);
   
   const result = await db.execute(sql`
-    SELECT * FROM cc_staging_bookings 
+    SELECT * FROM cc_staging_reservations 
     WHERE id = ${isNaN(numericId) ? -1 : numericId} 
        OR confirmation_number = ${idOrRef}
     LIMIT 1
@@ -642,7 +642,7 @@ export async function findReservationByIdOrRef(idOrRef: string): Promise<Staging
 
 export async function cancelReservation(id: number, reason?: string): Promise<StagingReservation | null> {
   const result = await db.execute(sql`
-    UPDATE cc_staging_bookings 
+    UPDATE cc_staging_reservations 
     SET status = 'cancelled', 
         cancellation_reason = ${reason || null},
         cancelled_at = CURRENT_TIMESTAMP,
@@ -665,7 +665,7 @@ export interface CalendarBlock {
   startDate: string;
   endDate: string;
   blockType: string;
-  bookingId?: number;
+  reservationId?: number;
   notes?: string;
 }
 
@@ -683,7 +683,7 @@ export async function getCalendar(propertyId: number, startDate: string, endDate
 export async function createBlock(data: Partial<CalendarBlock>): Promise<CalendarBlock> {
   const result = await db.execute(sql`
     INSERT INTO cc_staging_calendar_blocks (property_id, spot_id, start_date, end_date, block_type, reservation_id, notes)
-    VALUES (${data.propertyId}, ${data.spotId || null}, ${data.startDate}, ${data.endDate}, ${data.blockType || 'blocked'}, ${data.bookingId || null}, ${data.notes || null})
+    VALUES (${data.propertyId}, ${data.spotId || null}, ${data.startDate}, ${data.endDate}, ${data.blockType || 'blocked'}, ${data.reservationId || null}, ${data.notes || null})
     RETURNING *
   `);
   return snakeToCamel(result.rows[0] as Record<string, any>) as CalendarBlock;
@@ -1012,18 +1012,18 @@ export async function getOverallStats(): Promise<StagingStats> {
 }
 
 export async function getPropertyStats(propertyId: number): Promise<{
-  totalBookings: number;
-  upcomingBookings: number;
+  totalReservations: number;
+  upcomingReservations: number;
   totalRevenue: number;
   occupancyRate: number;
   avgRating: number;
 }> {
-  const bookingStats = await db.execute(sql`
+  const reservationStats = await db.execute(sql`
     SELECT 
-      COUNT(*) as total_bookings,
-      COUNT(*) FILTER (WHERE check_in_date > CURRENT_DATE AND status != 'cancelled') as upcoming_bookings,
+      COUNT(*) as total_reservations,
+      COUNT(*) FILTER (WHERE check_in_date > CURRENT_DATE AND status != 'cancelled') as upcoming_reservations,
       COALESCE(SUM(total_cost) FILTER (WHERE payment_status = 'paid'), 0) as total_revenue
-    FROM cc_staging_bookings
+    FROM cc_staging_reservations
     WHERE property_id = ${propertyId}
   `);
 
@@ -1031,12 +1031,12 @@ export async function getPropertyStats(propertyId: number): Promise<{
     SELECT overall_rating FROM cc_staging_properties WHERE id = ${propertyId}
   `);
 
-  const stats = bookingStats.rows[0] as any;
+  const stats = reservationStats.rows[0] as any;
   const property = propertyResult.rows[0] as any;
 
   return {
-    totalBookings: Number(stats.total_bookings),
-    upcomingBookings: Number(stats.upcoming_bookings),
+    totalReservations: Number(stats.total_reservations),
+    upcomingReservations: Number(stats.upcoming_reservations),
     totalRevenue: Number(stats.total_revenue),
     occupancyRate: 0,
     avgRating: Number(property?.overall_rating) || 0,

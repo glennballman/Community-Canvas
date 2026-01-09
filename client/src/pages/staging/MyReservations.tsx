@@ -10,9 +10,9 @@ import {
   Calendar, MapPin, Loader2, ArrowLeft, TreePine, AlertCircle
 } from 'lucide-react';
 
-interface Booking {
+interface Reservation {
   id: number;
-  bookingRef: string;
+  reservationRef: string;
   propertyId: number;
   propertyName: string;
   propertyCity: string;
@@ -44,21 +44,21 @@ function getStatusBadge(status: string) {
   }
 }
 
-function BookingCard({ booking, onCancel }: { booking: Booking; onCancel: () => void }) {
-  const checkIn = new Date(booking.checkInDate);
-  const checkOut = new Date(booking.checkOutDate);
+function ReservationCard({ reservation, onCancel }: { reservation: Reservation; onCancel: () => void }) {
+  const checkIn = new Date(reservation.checkInDate);
+  const checkOut = new Date(reservation.checkOutDate);
   const nights = Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24));
   const isPast = checkOut < new Date();
-  const canCancel = booking.status === 'pending' || booking.status === 'confirmed';
+  const canCancel = reservation.status === 'pending' || reservation.status === 'confirmed';
 
   return (
-    <Card className="overflow-hidden" data-testid={`card-booking-${booking.id}`}>
+    <Card className="overflow-hidden" data-testid={`card-reservation-${reservation.id}`}>
       <div className="flex flex-col sm:flex-row">
         <div className="w-full sm:w-48 h-32 sm:h-auto bg-muted flex-shrink-0">
-          {booking.propertyThumbnail ? (
+          {reservation.propertyThumbnail ? (
             <img 
-              src={booking.propertyThumbnail} 
-              alt={booking.propertyName} 
+              src={reservation.propertyThumbnail} 
+              alt={reservation.propertyName} 
               className="w-full h-full object-cover"
             />
           ) : (
@@ -70,13 +70,13 @@ function BookingCard({ booking, onCancel }: { booking: Booking; onCancel: () => 
         <CardContent className="flex-1 p-4">
           <div className="flex flex-wrap items-start justify-between gap-2 mb-3">
             <div>
-              <h3 className="font-semibold text-lg">{booking.propertyName}</h3>
+              <h3 className="font-semibold text-lg">{reservation.propertyName}</h3>
               <div className="flex items-center gap-1 text-sm text-muted-foreground">
                 <MapPin className="h-3 w-3" />
-                <span>{booking.propertyCity || booking.propertyRegion}</span>
+                <span>{reservation.propertyCity || reservation.propertyRegion}</span>
               </div>
             </div>
-            {getStatusBadge(booking.status)}
+            {getStatusBadge(reservation.status)}
           </div>
 
           <div className="grid gap-2 text-sm mb-4">
@@ -88,17 +88,17 @@ function BookingCard({ booking, onCancel }: { booking: Booking; onCancel: () => 
               </span>
             </div>
             <div className="flex items-center gap-2 text-muted-foreground">
-              <span>Ref: <span className="font-mono">{booking.bookingRef}</span></span>
+              <span>Ref: <span className="font-mono">{reservation.reservationRef}</span></span>
             </div>
           </div>
 
           <div className="flex flex-wrap items-center justify-between gap-2">
-            {booking.totalCost && (
-              <span className="font-semibold">${parseFloat(booking.totalCost).toFixed(2)}</span>
+            {reservation.totalCost && (
+              <span className="font-semibold">${parseFloat(reservation.totalCost).toFixed(2)}</span>
             )}
             <div className="flex gap-2">
-              <Link href={`/staging/${booking.propertyId}`}>
-                <Button variant="outline" size="sm" data-testid={`button-view-property-${booking.id}`}>
+              <Link href={`/staging/${reservation.propertyId}`}>
+                <Button variant="outline" size="sm" data-testid={`button-view-property-${reservation.id}`}>
                   View Property
                 </Button>
               </Link>
@@ -108,7 +108,7 @@ function BookingCard({ booking, onCancel }: { booking: Booking; onCancel: () => 
                   size="sm" 
                   className="text-destructive"
                   onClick={onCancel}
-                  data-testid={`button-cancel-booking-${booking.id}`}
+                  data-testid={`button-cancel-reservation-${reservation.id}`}
                 >
                   Cancel
                 </Button>
@@ -121,34 +121,34 @@ function BookingCard({ booking, onCancel }: { booking: Booking; onCancel: () => 
   );
 }
 
-export default function MyBookings() {
+export default function MyReservations() {
   const [activeTab, setActiveTab] = useState('upcoming');
-  const [cancelBooking, setCancelBooking] = useState<Booking | null>(null);
+  const [cancelReservation, setCancelReservation] = useState<Reservation | null>(null);
 
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ['/api/staging/my-bookings'],
+    queryKey: ['/api/staging/my-reservations'],
     queryFn: async () => {
-      const res = await fetch('/api/staging/my-bookings');
+      const res = await fetch('/api/staging/my-reservations');
       if (!res.ok) {
-        if (res.status === 401) return { bookings: [] };
-        throw new Error('Failed to load bookings');
+        if (res.status === 401) return { reservations: [] };
+        throw new Error('Failed to load reservations');
       }
       return res.json();
     }
   });
 
   const now = new Date();
-  const upcomingBookings = data?.bookings?.filter((b: Booking) => 
+  const upcomingReservations = data?.reservations?.filter((b: Reservation) => 
     new Date(b.checkOutDate) >= now && b.status !== 'cancelled'
   ) || [];
-  const pastBookings = data?.bookings?.filter((b: Booking) => 
+  const pastReservations = data?.reservations?.filter((b: Reservation) => 
     new Date(b.checkOutDate) < now || b.status === 'cancelled'
   ) || [];
 
   const handleCancelConfirm = async () => {
-    if (!cancelBooking) return;
+    if (!cancelReservation) return;
     try {
-      const res = await fetch(`/api/staging/bookings/${cancelBooking.id}/cancel`, {
+      const res = await fetch(`/api/staging/reservations/${cancelReservation.id}/cancel`, {
         method: 'POST'
       });
       if (res.ok) {
@@ -157,7 +157,7 @@ export default function MyBookings() {
     } catch (error) {
       console.error('Cancel failed:', error);
     }
-    setCancelBooking(null);
+    setCancelReservation(null);
   };
 
   if (isLoading) {
@@ -177,24 +177,24 @@ export default function MyBookings() {
           </Button>
         </Link>
 
-        <h1 className="text-2xl font-bold mb-6">My Bookings</h1>
+        <h1 className="text-2xl font-bold mb-6">My Reservations</h1>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="mb-6">
             <TabsTrigger value="upcoming" data-testid="tab-upcoming">
-              Upcoming ({upcomingBookings.length})
+              Upcoming ({upcomingReservations.length})
             </TabsTrigger>
             <TabsTrigger value="past" data-testid="tab-past">
-              Past ({pastBookings.length})
+              Past ({pastReservations.length})
             </TabsTrigger>
           </TabsList>
 
           <TabsContent value="upcoming">
-            {upcomingBookings.length === 0 ? (
+            {upcomingReservations.length === 0 ? (
               <Card>
                 <CardContent className="py-12 text-center">
                   <Calendar className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                  <p className="text-muted-foreground mb-4">No upcoming bookings</p>
+                  <p className="text-muted-foreground mb-4">No upcoming reservations</p>
                   <Link href="/staging">
                     <Button data-testid="button-find-spot">Find a Spot</Button>
                   </Link>
@@ -202,11 +202,11 @@ export default function MyBookings() {
               </Card>
             ) : (
               <div className="space-y-4">
-                {upcomingBookings.map((booking: Booking) => (
-                  <BookingCard 
-                    key={booking.id} 
-                    booking={booking} 
-                    onCancel={() => setCancelBooking(booking)}
+                {upcomingReservations.map((reservation: Reservation) => (
+                  <ReservationCard 
+                    key={reservation.id} 
+                    reservation={reservation} 
+                    onCancel={() => setCancelReservation(reservation)}
                   />
                 ))}
               </div>
@@ -214,20 +214,20 @@ export default function MyBookings() {
           </TabsContent>
 
           <TabsContent value="past">
-            {pastBookings.length === 0 ? (
+            {pastReservations.length === 0 ? (
               <Card>
                 <CardContent className="py-12 text-center">
                   <Calendar className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                  <p className="text-muted-foreground">No past bookings</p>
+                  <p className="text-muted-foreground">No past reservations</p>
                 </CardContent>
               </Card>
             ) : (
               <div className="space-y-4">
-                {pastBookings.map((booking: Booking) => (
-                  <BookingCard 
-                    key={booking.id} 
-                    booking={booking} 
-                    onCancel={() => setCancelBooking(booking)}
+                {pastReservations.map((reservation: Reservation) => (
+                  <ReservationCard 
+                    key={reservation.id} 
+                    reservation={reservation} 
+                    onCancel={() => setCancelReservation(reservation)}
                   />
                 ))}
               </div>
@@ -236,31 +236,31 @@ export default function MyBookings() {
         </Tabs>
       </div>
 
-      <Dialog open={!!cancelBooking} onOpenChange={() => setCancelBooking(null)}>
+      <Dialog open={!!cancelReservation} onOpenChange={() => setCancelReservation(null)}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <AlertCircle className="h-5 w-5 text-destructive" />
-              Cancel Booking
+              Cancel Reservation
             </DialogTitle>
             <DialogDescription>
-              Are you sure you want to cancel this booking?
+              Are you sure you want to cancel this reservation?
             </DialogDescription>
           </DialogHeader>
-          {cancelBooking && (
+          {cancelReservation && (
             <div className="py-4">
-              <p className="font-medium">{cancelBooking.propertyName}</p>
+              <p className="font-medium">{cancelReservation.propertyName}</p>
               <p className="text-sm text-muted-foreground">
-                {cancelBooking.checkInDate} - {cancelBooking.checkOutDate}
+                {cancelReservation.checkInDate} - {cancelReservation.checkOutDate}
               </p>
               <p className="text-sm text-muted-foreground mt-2">
-                Ref: {cancelBooking.bookingRef}
+                Ref: {cancelReservation.reservationRef}
               </p>
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setCancelBooking(null)}>
-              Keep Booking
+            <Button variant="outline" onClick={() => setCancelReservation(null)}>
+              Keep Reservation
             </Button>
             <Button variant="destructive" onClick={handleCancelConfirm} data-testid="button-confirm-cancel">
               Yes, Cancel

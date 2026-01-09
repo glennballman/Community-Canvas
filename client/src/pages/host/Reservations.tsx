@@ -16,9 +16,9 @@ import {
 } from 'lucide-react';
 import { queryClient } from '@/lib/queryClient';
 
-interface Booking {
+interface Reservation {
   id: number;
-  bookingRef: string;
+  reservationRef: string;
   propertyId: number;
   propertyName: string;
   city: string;
@@ -67,12 +67,12 @@ function getStatusBadge(status: string) {
   }
 }
 
-export default function HostBookings() {
+export default function HostReservations() {
   const { user, loading: authLoading } = useAuth();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [propertyFilter, setPropertyFilter] = useState('all');
-  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
+  const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null);
 
   const { data: propertiesData, isLoading: loadingProperties } = useQuery({
     queryKey: ['/api/host-dashboard', 'properties'],
@@ -84,22 +84,22 @@ export default function HostBookings() {
     enabled: !!user
   });
 
-  const { data: bookingsData, isLoading: loadingBookings } = useQuery({
-    queryKey: ['/api/host-dashboard', 'bookings', statusFilter, propertyFilter],
+  const { data: reservationsData, isLoading: loadingReservations } = useQuery({
+    queryKey: ['/api/host-dashboard', 'reservations', statusFilter, propertyFilter],
     queryFn: async () => {
-      let url = '/api/host-dashboard/bookings?';
+      let url = '/api/host-dashboard/reservations?';
       if (statusFilter !== 'all') url += `status=${statusFilter}&`;
       if (propertyFilter !== 'all') url += `propertyId=${propertyFilter}&`;
       const res = await fetch(url, { headers: getAuthHeaders() });
-      if (!res.ok) throw new Error('Failed to load bookings');
+      if (!res.ok) throw new Error('Failed to load reservations');
       return res.json();
     },
     enabled: !!user
   });
 
   const updateStatusMutation = useMutation({
-    mutationFn: async ({ bookingId, status }: { bookingId: number; status: string }) => {
-      const res = await fetch(`/api/host-dashboard/bookings/${bookingId}/status`, {
+    mutationFn: async ({ reservationId, status }: { reservationId: number; status: string }) => {
+      const res = await fetch(`/api/host-dashboard/reservations/${reservationId}/status`, {
         method: 'PUT',
         headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
         body: JSON.stringify({ status })
@@ -108,21 +108,21 @@ export default function HostBookings() {
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/host-dashboard', 'bookings'] });
-      setSelectedBooking(null);
+      queryClient.invalidateQueries({ queryKey: ['/api/host-dashboard', 'reservations'] });
+      setSelectedReservation(null);
     }
   });
 
   const properties: Property[] = propertiesData?.properties || [];
-  const allBookings: Booking[] = bookingsData?.bookings || [];
+  const allReservations: Reservation[] = reservationsData?.reservations || [];
   
-  const filteredBookings = allBookings.filter(b =>
+  const filteredReservations = allReservations.filter(b =>
     b.guestName?.toLowerCase().includes(search.toLowerCase()) ||
-    b.bookingRef?.toLowerCase().includes(search.toLowerCase()) ||
+    b.reservationRef?.toLowerCase().includes(search.toLowerCase()) ||
     b.guestEmail?.toLowerCase().includes(search.toLowerCase())
   );
 
-  const isLoading = authLoading || loadingProperties || loadingBookings;
+  const isLoading = authLoading || loadingProperties || loadingReservations;
 
   if (isLoading) {
     return (
@@ -144,8 +144,8 @@ export default function HostBookings() {
             </Button>
           </Link>
           <div className="flex-1">
-            <h1 className="text-2xl font-bold" data-testid="text-bookings-title">Bookings</h1>
-            <p className="text-muted-foreground">{filteredBookings.length} booking{filteredBookings.length !== 1 ? 's' : ''}</p>
+            <h1 className="text-2xl font-bold" data-testid="text-reservations-title">Reservations</h1>
+            <p className="text-muted-foreground">{filteredReservations.length} reservation{filteredReservations.length !== 1 ? 's' : ''}</p>
           </div>
         </div>
 
@@ -157,7 +157,7 @@ export default function HostBookings() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-9 w-64"
-              data-testid="input-search-bookings"
+              data-testid="input-search-reservations"
             />
           </div>
 
@@ -203,38 +203,38 @@ export default function HostBookings() {
                   </tr>
                 </thead>
                 <tbody className="divide-y">
-                  {filteredBookings.map(booking => (
-                    <tr key={booking.id} className="hover-elevate" data-testid={`booking-row-${booking.id}`}>
+                  {filteredReservations.map(reservation => (
+                    <tr key={reservation.id} className="hover-elevate" data-testid={`reservation-row-${reservation.id}`}>
                       <td className="px-4 py-3">
-                        <p className="font-medium">{booking.guestName}</p>
-                        <p className="text-sm text-muted-foreground">{booking.guestEmail}</p>
-                        {booking.companyName && (
-                          <p className="text-sm text-blue-500">{booking.companyName}</p>
+                        <p className="font-medium">{reservation.guestName}</p>
+                        <p className="text-sm text-muted-foreground">{reservation.guestEmail}</p>
+                        {reservation.companyName && (
+                          <p className="text-sm text-blue-500">{reservation.companyName}</p>
                         )}
                       </td>
                       <td className="px-4 py-3">
-                        <p>{booking.propertyName}</p>
-                        <p className="text-sm text-muted-foreground">{booking.city}</p>
+                        <p>{reservation.propertyName}</p>
+                        <p className="text-sm text-muted-foreground">{reservation.city}</p>
                       </td>
                       <td className="px-4 py-3 text-sm">
-                        {new Date(booking.checkInDate).toLocaleDateString()}<br />
-                        {new Date(booking.checkOutDate).toLocaleDateString()}
+                        {new Date(reservation.checkInDate).toLocaleDateString()}<br />
+                        {new Date(reservation.checkOutDate).toLocaleDateString()}
                       </td>
                       <td className="px-4 py-3 text-center">
-                        {booking.numNights}
+                        {reservation.numNights}
                       </td>
                       <td className="px-4 py-3 text-right text-green-500 font-medium">
-                        ${booking.totalCost?.toFixed(2) || '0.00'}
+                        ${reservation.totalCost?.toFixed(2) || '0.00'}
                       </td>
                       <td className="px-4 py-3 text-center">
-                        {getStatusBadge(booking.status)}
+                        {getStatusBadge(reservation.status)}
                       </td>
                       <td className="px-4 py-3 text-right">
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => setSelectedBooking(booking)}
-                          data-testid={`view-booking-${booking.id}`}
+                          onClick={() => setSelectedReservation(reservation)}
+                          data-testid={`view-reservation-${reservation.id}`}
                         >
                           View
                         </Button>
@@ -244,10 +244,10 @@ export default function HostBookings() {
                 </tbody>
               </table>
 
-              {filteredBookings.length === 0 && (
+              {filteredReservations.length === 0 && (
                 <div className="p-8 text-center text-muted-foreground">
                   <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>No bookings found</p>
+                  <p>No reservations found</p>
                 </div>
               )}
             </div>
@@ -255,14 +255,14 @@ export default function HostBookings() {
         </Card>
       </div>
 
-      <Dialog open={!!selectedBooking} onOpenChange={() => setSelectedBooking(null)}>
+      <Dialog open={!!selectedReservation} onOpenChange={() => setSelectedReservation(null)}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          {selectedBooking && (
+          {selectedReservation && (
             <>
               <DialogHeader>
                 <DialogTitle className="flex items-center gap-3">
-                  <span>Booking {selectedBooking.bookingRef}</span>
-                  {getStatusBadge(selectedBooking.status)}
+                  <span>Reservation {selectedReservation.reservationRef}</span>
+                  {getStatusBadge(selectedReservation.status)}
                 </DialogTitle>
               </DialogHeader>
 
@@ -271,17 +271,17 @@ export default function HostBookings() {
                   <h3 className="text-sm text-muted-foreground mb-1 flex items-center gap-1">
                     <User className="h-3 w-3" /> Guest
                   </h3>
-                  <p className="font-medium">{selectedBooking.guestName}</p>
+                  <p className="font-medium">{selectedReservation.guestName}</p>
                   <p className="text-sm text-muted-foreground flex items-center gap-1">
-                    <Mail className="h-3 w-3" /> {selectedBooking.guestEmail}
+                    <Mail className="h-3 w-3" /> {selectedReservation.guestEmail}
                   </p>
-                  {selectedBooking.guestPhone && (
+                  {selectedReservation.guestPhone && (
                     <p className="text-sm text-muted-foreground flex items-center gap-1">
-                      <Phone className="h-3 w-3" /> {selectedBooking.guestPhone}
+                      <Phone className="h-3 w-3" /> {selectedReservation.guestPhone}
                     </p>
                   )}
-                  {selectedBooking.companyName && (
-                    <p className="text-sm text-blue-500">{selectedBooking.companyName}</p>
+                  {selectedReservation.companyName && (
+                    <p className="text-sm text-blue-500">{selectedReservation.companyName}</p>
                   )}
                 </div>
 
@@ -289,9 +289,9 @@ export default function HostBookings() {
                   <h3 className="text-sm text-muted-foreground mb-1 flex items-center gap-1">
                     <Building2 className="h-3 w-3" /> Property
                   </h3>
-                  <p className="font-medium">{selectedBooking.propertyName}</p>
+                  <p className="font-medium">{selectedReservation.propertyName}</p>
                   <p className="text-sm text-muted-foreground flex items-center gap-1">
-                    <MapPin className="h-3 w-3" /> {selectedBooking.city}
+                    <MapPin className="h-3 w-3" /> {selectedReservation.city}
                   </p>
                 </div>
 
@@ -300,9 +300,9 @@ export default function HostBookings() {
                     <Calendar className="h-3 w-3" /> Dates
                   </h3>
                   <p className="font-medium">
-                    {new Date(selectedBooking.checkInDate).toLocaleDateString()} - {new Date(selectedBooking.checkOutDate).toLocaleDateString()}
+                    {new Date(selectedReservation.checkInDate).toLocaleDateString()} - {new Date(selectedReservation.checkOutDate).toLocaleDateString()}
                   </p>
-                  <p className="text-sm text-muted-foreground">{selectedBooking.numNights} nights</p>
+                  <p className="text-sm text-muted-foreground">{selectedReservation.numNights} nights</p>
                 </div>
 
                 <div>
@@ -310,28 +310,28 @@ export default function HostBookings() {
                     <Users className="h-3 w-3" /> Guests
                   </h3>
                   <p className="font-medium">
-                    {selectedBooking.numAdults} adult{selectedBooking.numAdults !== 1 ? 's' : ''}
-                    {selectedBooking.numChildren > 0 && `, ${selectedBooking.numChildren} child${selectedBooking.numChildren !== 1 ? 'ren' : ''}`}
-                    {selectedBooking.numPets > 0 && `, ${selectedBooking.numPets} pet${selectedBooking.numPets !== 1 ? 's' : ''}`}
+                    {selectedReservation.numAdults} adult{selectedReservation.numAdults !== 1 ? 's' : ''}
+                    {selectedReservation.numChildren > 0 && `, ${selectedReservation.numChildren} child${selectedReservation.numChildren !== 1 ? 'ren' : ''}`}
+                    {selectedReservation.numPets > 0 && `, ${selectedReservation.numPets} pet${selectedReservation.numPets !== 1 ? 's' : ''}`}
                   </p>
                 </div>
 
-                {selectedBooking.vehicleDescription && (
+                {selectedReservation.vehicleDescription && (
                   <div className="col-span-2">
                     <h3 className="text-sm text-muted-foreground mb-1 flex items-center gap-1">
                       <Truck className="h-3 w-3" /> Vehicle
                     </h3>
-                    <p className="font-medium">{selectedBooking.vehicleDescription}</p>
-                    {selectedBooking.vehicleLengthFt && (
-                      <p className="text-sm text-muted-foreground">{selectedBooking.vehicleLengthFt} ft</p>
+                    <p className="font-medium">{selectedReservation.vehicleDescription}</p>
+                    {selectedReservation.vehicleLengthFt && (
+                      <p className="text-sm text-muted-foreground">{selectedReservation.vehicleLengthFt} ft</p>
                     )}
                   </div>
                 )}
 
-                {selectedBooking.specialRequests && (
+                {selectedReservation.specialRequests && (
                   <div className="col-span-2">
                     <h3 className="text-sm text-muted-foreground mb-1">Special Requests</h3>
-                    <p className="text-sm bg-muted p-2 rounded">{selectedBooking.specialRequests}</p>
+                    <p className="text-sm bg-muted p-2 rounded">{selectedReservation.specialRequests}</p>
                   </div>
                 )}
               </div>
@@ -341,40 +341,40 @@ export default function HostBookings() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground">Total Cost</p>
-                  <p className="text-2xl font-bold text-green-500">${selectedBooking.totalCost?.toFixed(2) || '0.00'}</p>
+                  <p className="text-2xl font-bold text-green-500">${selectedReservation.totalCost?.toFixed(2) || '0.00'}</p>
                 </div>
 
-                {selectedBooking.status === 'pending' && (
+                {selectedReservation.status === 'pending' && (
                   <div className="flex gap-2">
                     <Button
-                      onClick={() => updateStatusMutation.mutate({ bookingId: selectedBooking.id, status: 'confirmed' })}
+                      onClick={() => updateStatusMutation.mutate({ reservationId: selectedReservation.id, status: 'confirmed' })}
                       disabled={updateStatusMutation.isPending}
-                      data-testid="confirm-booking"
+                      data-testid="confirm-reservation"
                     >
                       <Check className="h-4 w-4 mr-1" /> Confirm
                     </Button>
                     <Button
                       variant="destructive"
-                      onClick={() => updateStatusMutation.mutate({ bookingId: selectedBooking.id, status: 'cancelled' })}
+                      onClick={() => updateStatusMutation.mutate({ reservationId: selectedReservation.id, status: 'cancelled' })}
                       disabled={updateStatusMutation.isPending}
-                      data-testid="cancel-booking"
+                      data-testid="cancel-reservation"
                     >
                       <X className="h-4 w-4 mr-1" /> Decline
                     </Button>
                   </div>
                 )}
 
-                {selectedBooking.status === 'confirmed' && (
+                {selectedReservation.status === 'confirmed' && (
                   <div className="flex gap-2">
                     <Button
-                      onClick={() => updateStatusMutation.mutate({ bookingId: selectedBooking.id, status: 'completed' })}
+                      onClick={() => updateStatusMutation.mutate({ reservationId: selectedReservation.id, status: 'completed' })}
                       disabled={updateStatusMutation.isPending}
                     >
                       Mark Completed
                     </Button>
                     <Button
                       variant="outline"
-                      onClick={() => updateStatusMutation.mutate({ bookingId: selectedBooking.id, status: 'no_show' })}
+                      onClick={() => updateStatusMutation.mutate({ reservationId: selectedReservation.id, status: 'no_show' })}
                       disabled={updateStatusMutation.isPending}
                     >
                       No Show

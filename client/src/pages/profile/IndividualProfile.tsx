@@ -505,9 +505,9 @@ export default function IndividualProfile() {
                   <div className="font-medium">Find Work</div>
                   <div className="text-sm text-muted-foreground">Browse service runs</div>
                 </Button>
-                <Button variant="outline" className="h-auto p-4 flex flex-col items-start gap-1" data-testid="button-my-bookings">
+                <Button variant="outline" className="h-auto p-4 flex flex-col items-start gap-1" data-testid="button-my-reservations">
                   <Package className="w-5 h-5 text-purple-500" />
-                  <div className="font-medium">My Bookings</div>
+                  <div className="font-medium">My Reservations</div>
                   <div className="text-sm text-muted-foreground">Rentals & reservations</div>
                 </Button>
               </div>

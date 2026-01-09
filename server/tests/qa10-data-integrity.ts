@@ -68,46 +68,46 @@ async function runTests() {
     }
   });
 
-  // Test 4: Booking references are unique
-  await test('Booking references are unique', async () => {
-    const res = await fetch(`${BASE_URL}/api/staging/bookings`);
+  // Test 4: Reservation references are unique
+  await test('Reservation references are unique', async () => {
+    const res = await fetch(`${BASE_URL}/api/staging/reservations`);
     const data = await res.json();
     
-    const refs = (data.bookings || []).map((b: any) => b.bookingRef);
+    const refs = (data.reservations || []).map((b: any) => b.reservationRef);
     const uniqueRefs = new Set(refs);
     if (refs.length !== uniqueRefs.size) {
-      throw new Error('Duplicate booking references found');
+      throw new Error('Duplicate reservation references found');
     }
   });
 
-  // Test 5: All bookings reference valid properties
-  await test('All bookings reference valid properties', async () => {
+  // Test 5: All reservations reference valid properties
+  await test('All reservations reference valid properties', async () => {
     const propsRes = await fetch(`${BASE_URL}/api/staging/properties`);
     const propsData = await propsRes.json();
     const propertyIds = new Set(propsData.properties.map((p: any) => p.id));
     
-    const bookingsRes = await fetch(`${BASE_URL}/api/staging/bookings`);
-    const bookingsData = await bookingsRes.json();
+    const reservationsRes = await fetch(`${BASE_URL}/api/staging/reservations`);
+    const reservationsData = await reservationsRes.json();
     
-    for (const booking of bookingsData.bookings || []) {
-      if (!propertyIds.has(booking.propertyId)) {
-        throw new Error(`Booking ${booking.id} references non-existent property ${booking.propertyId}`);
+    for (const reservation of reservationsData.reservations || []) {
+      if (!propertyIds.has(reservation.propertyId)) {
+        throw new Error(`Reservation ${reservation.id} references non-existent property ${reservation.propertyId}`);
       }
     }
   });
 
   // Test 6: Date fields are properly formatted
   await test('Date fields are properly formatted', async () => {
-    const res = await fetch(`${BASE_URL}/api/staging/bookings`);
+    const res = await fetch(`${BASE_URL}/api/staging/reservations`);
     const data = await res.json();
     
     const dateRegex = /^\d{4}-\d{2}-\d{2}/; // YYYY-MM-DD format
-    for (const booking of data.bookings || []) {
-      if (booking.checkIn && !dateRegex.test(booking.checkIn)) {
-        throw new Error(`Booking ${booking.id} has invalid checkIn date format`);
+    for (const reservation of data.reservations || []) {
+      if (reservation.checkIn && !dateRegex.test(reservation.checkIn)) {
+        throw new Error(`Reservation ${reservation.id} has invalid checkIn date format`);
       }
-      if (booking.checkOut && !dateRegex.test(booking.checkOut)) {
-        throw new Error(`Booking ${booking.id} has invalid checkOut date format`);
+      if (reservation.checkOut && !dateRegex.test(reservation.checkOut)) {
+        throw new Error(`Reservation ${reservation.id} has invalid checkOut date format`);
       }
     }
   });

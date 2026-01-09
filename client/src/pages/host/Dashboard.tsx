@@ -48,24 +48,24 @@ function DashboardContent() {
     enabled: !!user
   });
 
-  const { data: bookingsData, isLoading: loadingBookings } = useQuery({
-    queryKey: ['/api/host-dashboard', 'bookings', 'pending'],
+  const { data: reservationsData, isLoading: loadingReservations } = useQuery({
+    queryKey: ['/api/host-dashboard', 'reservations', 'pending'],
     queryFn: async () => {
-      const res = await fetch('/api/host-dashboard/bookings?status=pending', { headers: getAuthHeaders() });
-      if (!res.ok) throw new Error('Failed to load bookings');
+      const res = await fetch('/api/host-dashboard/reservations?status=pending', { headers: getAuthHeaders() });
+      if (!res.ok) throw new Error('Failed to load reservations');
       return res.json();
     },
     enabled: !!user
   });
 
-  const updateBookingStatus = useMutation({
-    mutationFn: async ({ bookingId, status }: { bookingId: number; status: string }) => {
-      const res = await fetch(`/api/host-dashboard/bookings/${bookingId}/status`, {
+  const updateReservationStatus = useMutation({
+    mutationFn: async ({ reservationId, status }: { reservationId: number; status: string }) => {
+      const res = await fetch(`/api/host-dashboard/reservations/${reservationId}/status`, {
         method: 'PUT',
         headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
         body: JSON.stringify({ status })
       });
-      if (!res.ok) throw new Error('Failed to update booking');
+      if (!res.ok) throw new Error('Failed to update reservation');
       return res.json();
     },
     onSuccess: () => {
@@ -75,9 +75,9 @@ function DashboardContent() {
 
   const stats = statsData?.stats;
   const properties = propertiesData?.properties || [];
-  const pendingBookings = bookingsData?.bookings || [];
+  const pendingReservations = reservationsData?.reservations || [];
 
-  const isLoading = loadingStats || loadingProperties || loadingBookings;
+  const isLoading = loadingStats || loadingProperties || loadingReservations;
 
   if (isLoading) {
     return (
@@ -122,7 +122,7 @@ function DashboardContent() {
                 <div className="flex items-center justify-between gap-2">
                   <div>
                     <p className="text-sm text-muted-foreground">Pending</p>
-                    <p className="text-2xl font-bold text-yellow-500" data-testid="stat-pending">{stats.pendingBookings}</p>
+                    <p className="text-2xl font-bold text-yellow-500" data-testid="stat-pending">{stats.pendingReservations}</p>
                   </div>
                   <Clock className="h-8 w-8 text-yellow-500" />
                 </div>
@@ -209,9 +209,9 @@ function DashboardContent() {
                             </p>
                             <div className="flex flex-wrap gap-2 mt-1">
                               <span className="text-xs text-muted-foreground">{property.totalSpots} spots</span>
-                              {property.pendingBookings > 0 && (
+                              {property.pendingReservations > 0 && (
                                 <Badge variant="outline" className="text-yellow-500 border-yellow-500 text-xs">
-                                  {property.pendingBookings} pending
+                                  {property.pendingReservations} pending
                                 </Badge>
                               )}
                               {property.activeGuests > 0 && (
@@ -237,7 +237,7 @@ function DashboardContent() {
                           </Link>
                         </Button>
                         <Button variant="outline" size="sm" asChild>
-                          <Link href={`/host/properties/${property.id}/bookings`}>Bookings</Link>
+                          <Link href={`/host/properties/${property.id}/reservations`}>Reservations</Link>
                         </Button>
                         <Button variant="outline" size="sm" asChild>
                           <Link href={`/staging/${property.id}`}>View Listing</Link>
@@ -253,51 +253,51 @@ function DashboardContent() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between gap-2">
               <div>
-                <CardTitle>Pending Bookings</CardTitle>
+                <CardTitle>Pending Reservations</CardTitle>
                 <CardDescription>Requires action</CardDescription>
               </div>
-              <Link href="/host/bookings">
+              <Link href="/host/reservations">
                 <Button variant="ghost" size="sm">
                   View All <ArrowRight className="h-4 w-4 ml-1" />
                 </Button>
               </Link>
             </CardHeader>
             <CardContent>
-              {pendingBookings.length === 0 ? (
+              {pendingReservations.length === 0 ? (
                 <div className="text-center py-8">
                   <Calendar className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                  <p className="text-muted-foreground">No pending bookings</p>
+                  <p className="text-muted-foreground">No pending reservations</p>
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {pendingBookings.slice(0, 5).map((booking: any) => (
-                    <div key={booking.id} className="p-3 rounded-lg border" data-testid={`booking-${booking.id}`}>
+                  {pendingReservations.slice(0, 5).map((reservation: any) => (
+                    <div key={reservation.id} className="p-3 rounded-lg border" data-testid={`reservation-${reservation.id}`}>
                       <div className="flex justify-between items-start mb-2 gap-2">
                         <div>
-                          <p className="font-medium">{booking.guestName}</p>
-                          <p className="text-sm text-muted-foreground">{booking.propertyName}</p>
+                          <p className="font-medium">{reservation.guestName}</p>
+                          <p className="text-sm text-muted-foreground">{reservation.propertyName}</p>
                         </div>
-                        <p className="text-green-500 font-medium">${booking.totalCost?.toFixed(0) || 0}</p>
+                        <p className="text-green-500 font-medium">${reservation.totalCost?.toFixed(0) || 0}</p>
                       </div>
                       <p className="text-sm text-muted-foreground mb-3">
-                        {new Date(booking.checkInDate).toLocaleDateString()} - {new Date(booking.checkOutDate).toLocaleDateString()}
-                        <span className="ml-2">({booking.numNights} nights)</span>
+                        {new Date(reservation.checkInDate).toLocaleDateString()} - {new Date(reservation.checkOutDate).toLocaleDateString()}
+                        <span className="ml-2">({reservation.numNights} nights)</span>
                       </p>
                       <div className="flex gap-2">
                         <Button 
                           size="sm" 
-                          onClick={() => updateBookingStatus.mutate({ bookingId: booking.id, status: 'confirmed' })}
-                          disabled={updateBookingStatus.isPending}
-                          data-testid={`confirm-booking-${booking.id}`}
+                          onClick={() => updateReservationStatus.mutate({ reservationId: reservation.id, status: 'confirmed' })}
+                          disabled={updateReservationStatus.isPending}
+                          data-testid={`confirm-reservation-${reservation.id}`}
                         >
                           <Check className="h-3 w-3 mr-1" /> Confirm
                         </Button>
                         <Button 
                           size="sm" 
                           variant="destructive"
-                          onClick={() => updateBookingStatus.mutate({ bookingId: booking.id, status: 'cancelled' })}
-                          disabled={updateBookingStatus.isPending}
-                          data-testid={`cancel-booking-${booking.id}`}
+                          onClick={() => updateReservationStatus.mutate({ reservationId: reservation.id, status: 'cancelled' })}
+                          disabled={updateReservationStatus.isPending}
+                          data-testid={`cancel-reservation-${reservation.id}`}
                         >
                           <X className="h-3 w-3 mr-1" /> Decline
                         </Button>

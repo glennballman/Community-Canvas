@@ -1,24 +1,24 @@
 /**
- * Booking Semantics Layer
+ * Reservation Semantics Layer
  * 
- * Human-friendly labels for booking start/end times based on asset booking_mode.
+ * Human-friendly labels for reservation start/end times based on asset reservation_mode.
  * The system stores start_date/end_date in 15-minute TIMESTAMPTZ,
  * but humans think in Arriving/Departing, Check-in/Check-out, etc.
  */
 
-export type BookingMode = 'check_in_out' | 'arrive_depart' | 'pickup_return' | 'start_end';
+export type ReservationMode = 'check_in_out' | 'arrive_depart' | 'pickup_return' | 'start_end';
 
-export interface BookingLabels {
+export interface ReservationLabels {
   startLabel: string;
   endLabel: string;
   durationLabel: string;
 }
 
 /**
- * Get semantic labels for start/end times based on booking_mode
+ * Get semantic labels for start/end times based on reservation_mode
  */
-export function getBookingLabels(bookingMode: BookingMode | string | null | undefined): BookingLabels {
-  switch (bookingMode) {
+export function getReservationLabels(reservationMode: ReservationMode | string | null | undefined): ReservationLabels {
+  switch (reservationMode) {
     case 'check_in_out':
       return {
         startLabel: 'Checking in',
@@ -70,10 +70,10 @@ export const ACCOMMODATION_PRESETS: DurationPreset[] = [
 ];
 
 /**
- * Get appropriate presets based on booking_mode
+ * Get appropriate presets based on reservation_mode
  */
-export function getDurationPresets(bookingMode: BookingMode | string | null | undefined): DurationPreset[] {
-  switch (bookingMode) {
+export function getDurationPresets(reservationMode: ReservationMode | string | null | undefined): DurationPreset[] {
+  switch (reservationMode) {
     case 'check_in_out':
       return ACCOMMODATION_PRESETS;
     case 'pickup_return':

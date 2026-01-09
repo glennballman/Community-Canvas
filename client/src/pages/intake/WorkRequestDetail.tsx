@@ -142,7 +142,7 @@ export default function WorkRequestDetail() {
     }
   });
 
-  const bookMutation = useMutation({
+  const reserveMutation = useMutation({
     mutationFn: async () => {
       const res = await apiRequest('POST', `/api/work-requests/${id}/book`, {
         project_title: projectTitle || undefined,
@@ -158,7 +158,7 @@ export default function WorkRequestDetail() {
       }
     },
     onError: () => {
-      toast({ title: 'Error', description: 'Failed to book', variant: 'destructive' });
+      toast({ title: 'Error', description: 'Failed to reserve', variant: 'destructive' });
     }
   });
 
@@ -280,8 +280,8 @@ export default function WorkRequestDetail() {
                     <Button variant="outline" onClick={() => setBookDialogOpen(false)} data-testid="button-book-cancel">
                       Cancel
                     </Button>
-                    <Button onClick={() => bookMutation.mutate()} disabled={bookMutation.isPending} data-testid="button-book-confirm">
-                      {bookMutation.isPending ? 'Booking...' : 'Book'}
+                    <Button onClick={() => reserveMutation.mutate()} disabled={reserveMutation.isPending} data-testid="button-book-confirm">
+                      {reserveMutation.isPending ? 'Reserving...' : 'Book'}
                     </Button>
                   </div>
                 </div>

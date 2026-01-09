@@ -429,8 +429,8 @@ export interface ServiceRunBid {
 // =====================================================================
 
 export interface TripDetails {
-  ferryOutbound: FerryBooking | null;
-  ferryReturn: FerryBooking | null;
+  ferryOutbound: FerryReservation | null;
+  ferryReturn: FerryReservation | null;
   ferryTotalCost: number;
   accommodations: AccommodationReservation[];
   accommodationTotalCost: number;
@@ -438,7 +438,7 @@ export interface TripDetails {
   routeOptimizationNotes: string;
 }
 
-export interface FerryBooking {
+export interface FerryReservation {
   route: string;
   date: string;
   time: string;

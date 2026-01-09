@@ -484,7 +484,7 @@ export default function InventoryItemDetail() {
         <TabsContent value="constraints" className="space-y-4">
           <div className="flex items-center justify-between gap-4 flex-wrap">
             <p className="text-sm text-muted-foreground">
-              Constraints that may limit or block bookings. Blocking constraints prevent bookings during their time window.
+              Constraints that may limit or block reservations. Blocking constraints prevent reservations during their time window.
             </p>
             <Button onClick={() => setShowConstraintDialog(true)} data-testid="button-add-constraint">
               <Plus className="h-4 w-4 mr-2" />
@@ -775,7 +775,7 @@ export default function InventoryItemDetail() {
                 <SelectContent>
                   <SelectItem value="info">Info - Display only</SelectItem>
                   <SelectItem value="warning">Warning - Show warning but allow</SelectItem>
-                  <SelectItem value="blocking">Blocking - Prevents booking</SelectItem>
+                  <SelectItem value="blocking">Blocking - Prevents reservation</SelectItem>
                 </SelectContent>
               </Select>
             </div>

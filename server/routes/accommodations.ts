@@ -57,13 +57,13 @@ export function createAccommodationsRouter(db: Pool) {
     try {
       const { status, propertyId, upcoming } = req.query;
       
-      const bookings = await storage.getAllBookings({
+      const reservations = await storage.getAllReservations({
         status: status as string,
         propertyId: propertyId ? parseInt(propertyId as string) : undefined,
         startDate: upcoming === 'true' ? new Date() : undefined
       });
 
-      res.json({ bookings });
+      res.json({ reservations });
     } catch (error) {
       console.error('Error fetching reservations:', error);
       res.status(500).json({ error: 'Failed to fetch reservations' });
@@ -72,11 +72,11 @@ export function createAccommodationsRouter(db: Pool) {
 
   router.get('/reservations/:id', async (req: Request, res: Response) => {
     try {
-      const booking = await storage.getBookingById(parseInt(req.params.id));
-      if (!booking) {
-        return res.status(404).json({ error: 'Booking not found' });
+      const reservation = await storage.getReservationById(parseInt(req.params.id));
+      if (!reservation) {
+        return res.status(404).json({ error: 'Reservation not found' });
       }
-      res.json(booking);
+      res.json(reservation);
     } catch (error) {
       console.error('Error fetching reservation:', error);
       res.status(500).json({ error: 'Failed to fetch reservation' });
@@ -85,8 +85,8 @@ export function createAccommodationsRouter(db: Pool) {
 
   router.post('/reservations', async (req: Request, res: Response) => {
     try {
-      const booking = await storage.createBooking(req.body);
-      res.status(201).json(booking);
+      const reservation = await storage.createReservation(req.body);
+      res.status(201).json(reservation);
     } catch (error) {
       console.error('Error creating reservation:', error);
       res.status(500).json({ error: 'Failed to create reservation' });
@@ -95,11 +95,11 @@ export function createAccommodationsRouter(db: Pool) {
 
   router.put('/reservations/:id', async (req: Request, res: Response) => {
     try {
-      const booking = await storage.updateBooking(parseInt(req.params.id), req.body);
-      if (!booking) {
-        return res.status(404).json({ error: 'Booking not found' });
+      const reservation = await storage.updateReservation(parseInt(req.params.id), req.body);
+      if (!reservation) {
+        return res.status(404).json({ error: 'Reservation not found' });
       }
-      res.json(booking);
+      res.json(reservation);
     } catch (error) {
       console.error('Error updating reservation:', error);
       res.status(500).json({ error: 'Failed to update reservation' });

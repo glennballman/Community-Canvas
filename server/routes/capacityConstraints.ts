@@ -326,7 +326,7 @@ router.delete('/constraints/:id', requireAuth, async (req: Request, res: Respons
   }
 });
 
-router.get('/check-bookable', requireAuth, async (req: Request, res: Response) => {
+router.get('/check-reservable', requireAuth, async (req: Request, res: Response) => {
   try {
     const { asset_id, capability_unit_id, start_time, end_time } = req.query;
     
@@ -338,7 +338,7 @@ router.get('/check-bookable', requireAuth, async (req: Request, res: Response) =
     const endTimeDate = end_time ? new Date(end_time as string) : new Date();
     
     const result = await req.tenantQuery(
-      `SELECT * FROM is_resource_bookable($1, $2, $3, $4)`,
+      `SELECT * FROM is_resource_reservable($1, $2, $3, $4)`,
       [
         asset_id,
         capability_unit_id || null,
@@ -347,7 +347,7 @@ router.get('/check-bookable', requireAuth, async (req: Request, res: Response) =
       ]
     );
     
-    res.json(result.rows[0] || { bookable: true, reason: null });
+    res.json(result.rows[0] || { reservable: true, reason: null });
   } catch (error) {
     console.error('Error checking bookability:', error);
     res.status(500).json({ error: 'Failed to check bookability' });

@@ -43,7 +43,7 @@ export type EventType =
   | 'arrival'
   | 'alert';
 
-export type BookingStatus = 'confirmed' | 'pending' | 'not_booked' | 'cancelled';
+export type ReservationStatus = 'confirmed' | 'pending' | 'not_booked' | 'cancelled';
 
 export interface WeatherData {
   temperature: number;
@@ -89,8 +89,8 @@ export interface WaterCrossingDetails {
   crossingType: 'water_taxi' | 'vehicle_ferry' | 'private_boat';
   operators: WaterCrossingOperator[];
   restrictions: string[];
-  bookingRequired: boolean;
-  advanceBookingDays?: number;
+  reservationRequired: boolean;
+  advanceReservationDays?: number;
   vehicleCapacity?: {
     maxWeight?: number;
     maxLength?: number;
@@ -121,8 +121,8 @@ export interface TimelineEvent {
   weather?: WeatherData;
   weatherForecast?: WeatherData[];
   alerts: TimelineAlert[];
-  booking?: {
-    status: BookingStatus;
+  reservation?: {
+    status: ReservationStatus;
     confirmationNumber?: string;
     provider?: string;
     price?: number;
@@ -191,7 +191,7 @@ export interface TripTimelineViewProps {
   events: TimelineEvent[];
   isLoading?: boolean;
   onEventClick?: (event: TimelineEvent) => void;
-  onBookEvent?: (event: TimelineEvent) => void;
+  onReserveEvent?: (event: TimelineEvent) => void;
 }
 
 function formatTime(isoString: string): string {
@@ -288,7 +288,7 @@ function getEventColor(type: EventType): string {
   }
 }
 
-function BookingStatusBadge({ status }: { status: BookingStatus }) {
+function ReservationStatusBadge({ status }: { status: ReservationStatus }) {
   switch (status) {
     case 'confirmed':
       return (
@@ -613,13 +613,13 @@ function TimelineEventCard({
   isFirst,
   isLast,
   onEventClick,
-  onBookEvent 
+  onReserveEvent 
 }: { 
   event: TimelineEvent;
   isFirst: boolean;
   isLast: boolean;
   onEventClick?: (event: TimelineEvent) => void;
-  onBookEvent?: (event: TimelineEvent) => void;
+  onReserveEvent?: (event: TimelineEvent) => void;
 }) {
   const [isExpanded, setIsExpanded] = useState(true);
   const Icon = getEventIcon(event.type);
@@ -664,7 +664,7 @@ function TimelineEventCard({
                     ${event.cost.toFixed(2)}
                   </span>
                 )}
-                {event.booking && <BookingStatusBadge status={event.booking.status} />}
+                {event.reservation && <ReservationStatusBadge status={event.reservation.status} />}
                 <Button
                   size="icon"
                   variant="ghost"
@@ -790,7 +790,7 @@ function TimelineEventCard({
                     </div>
                     
                     <div>
-                      <p className="text-sm font-medium mb-2">Contact to Book:</p>
+                      <p className="text-sm font-medium mb-2">Contact to Reserve:</p>
                       {event.waterCrossing.operators.map((op, i) => (
                         <div key={i} className="flex items-center justify-between text-sm mb-2 p-2 bg-muted/50 rounded">
                           <div>
@@ -832,10 +832,10 @@ function TimelineEventCard({
                       </div>
                     )}
                     
-                    {event.waterCrossing.bookingRequired && event.waterCrossing.advanceBookingDays && (
+                    {event.waterCrossing.reservationRequired && event.waterCrossing.advanceReservationDays && (
                       <div className="p-2 bg-amber-500/20 rounded text-sm text-amber-400 flex items-center gap-2">
                         <AlertTriangle className="h-4 w-4" />
-                        Book at least {event.waterCrossing.advanceBookingDays} days in advance
+                        Book at least {event.waterCrossing.advanceReservationDays} days in advance
                       </div>
                     )}
                     
@@ -942,32 +942,32 @@ function TimelineEventCard({
                 </div>
               )}
 
-              {event.booking && event.booking.status === 'not_booked' && onBookEvent && (
+              {event.reservation && event.reservation.status === 'not_booked' && onReserveEvent && (
                 <div className="px-4 pb-4">
                   <Button
                     onClick={(e) => {
                       e.stopPropagation();
-                      onBookEvent(event);
+                      onReserveEvent(event);
                     }}
                     className="w-full"
                     data-testid={`button-book-${event.id}`}
                   >
-                    Book Now
+                    Reserve Now
                   </Button>
                 </div>
               )}
 
-              {event.booking && event.booking.status === 'confirmed' && (
+              {event.reservation && event.reservation.status === 'confirmed' && (
                 <div className="px-4 pb-4">
                   <div className="flex flex-wrap items-center gap-3 text-sm">
-                    {event.booking.confirmationNumber && (
+                    {event.reservation.confirmationNumber && (
                       <span className="text-muted-foreground">
-                        Confirmation: <span className="font-mono">{event.booking.confirmationNumber}</span>
+                        Confirmation: <span className="font-mono">{event.reservation.confirmationNumber}</span>
                       </span>
                     )}
-                    {event.booking.link && (
+                    {event.reservation.link && (
                       <a 
-                        href={event.booking.link}
+                        href={event.reservation.link}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-primary hover:underline flex items-center gap-1"
@@ -977,14 +977,14 @@ function TimelineEventCard({
                         Manage
                       </a>
                     )}
-                    {event.booking.telephone && (
+                    {event.reservation.telephone && (
                       <a 
-                        href={`tel:${event.booking.telephone}`}
+                        href={`tel:${event.reservation.telephone}`}
                         className="text-primary hover:underline flex items-center gap-1"
                         onClick={(e) => e.stopPropagation()}
                       >
                         <Phone className="h-3 w-3" />
-                        {event.booking.telephone}
+                        {event.reservation.telephone}
                       </a>
                     )}
                   </div>
@@ -1017,7 +1017,7 @@ export function TripTimelineView({
   events,
   isLoading,
   onEventClick,
-  onBookEvent,
+  onReserveEvent,
 }: TripTimelineViewProps) {
   const groupedEvents = groupEventsByDate(events);
 
@@ -1064,7 +1064,7 @@ export function TripTimelineView({
                   isFirst={globalIndex === 0}
                   isLast={globalIndex === events.length - 1}
                   onEventClick={onEventClick}
-                  onBookEvent={onBookEvent}
+                  onReserveEvent={onReserveEvent}
                 />
               );
             })}

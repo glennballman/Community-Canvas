@@ -17,7 +17,7 @@ import { queryClient } from '@/lib/queryClient';
 interface CalendarData {
   startDate: string;
   endDate: string;
-  bookings: Array<{
+  reservations: Array<{
     id: number;
     confirmation_number: string;
     guest_name: string;
@@ -137,17 +137,17 @@ export default function HostCalendar() {
     const firstDay = new Date(year, month, 1);
     const lastDay = new Date(year, month + 1, 0);
     const startPadding = firstDay.getDay();
-    const days: Array<{ date: Date | null; bookings: any[]; blocks: any[]; overrides: any[] }> = [];
+    const days: Array<{ date: Date | null; reservations: any[]; blocks: any[]; overrides: any[] }> = [];
 
     for (let i = 0; i < startPadding; i++) {
-      days.push({ date: null, bookings: [], blocks: [], overrides: [] });
+      days.push({ date: null, reservations: [], blocks: [], overrides: [] });
     }
 
     for (let d = 1; d <= lastDay.getDate(); d++) {
       const date = new Date(year, month, d);
       const dateStr = date.toISOString().split('T')[0];
 
-      const dayBookings = calendar?.bookings.filter(b => 
+      const dayReservations = calendar?.reservations.filter(b => 
         dateStr >= b.check_in_date && dateStr < b.check_out_date
       ) || [];
 
@@ -159,7 +159,7 @@ export default function HostCalendar() {
         dateStr >= o.start_date && dateStr <= o.end_date
       ) || [];
 
-      days.push({ date, bookings: dayBookings, blocks: dayBlocks, overrides: dayOverrides });
+      days.push({ date, reservations: dayReservations, blocks: dayBlocks, overrides: dayOverrides });
     }
 
     return days;
@@ -238,7 +238,7 @@ export default function HostCalendar() {
                         <div className="text-sm text-muted-foreground mb-1">
                           {day.date.getDate()}
                         </div>
-                        {day.bookings.map((b, i) => (
+                        {day.reservations.map((b, i) => (
                           <Badge
                             key={i}
                             variant={b.status === 'confirmed' ? 'default' : 'secondary'}

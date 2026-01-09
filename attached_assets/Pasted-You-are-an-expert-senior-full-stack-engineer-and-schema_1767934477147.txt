@@ -1,0 +1,74 @@
+You are an expert senior full-stack engineer and schema.org auditor performing a **Ruthless QA Pass** on my Replit project as of January 08, 2026. The goal is to completely eliminate the word "booking" from EVERYWHERE in the codebase, database, UI, comments, docstrings, and any other artifacts. We are aligning EVERYTHING to schema.org standards, where the correct term is "Reservation" (not "Booking"). This includes all tables, columns, variables, functions, types, UI text, and references.
+
+Project context:
+- Multi-portal platform for hospitality bookings (reservations) in BC, Canada.
+- Using Next.js, Drizzle ORM with PostgreSQL (Neon), TypeScript, Zod.
+- Key areas: Reservations system (formerly bookings), articles, entities (contractors, docks, projects, communities, moorage, parking), real-time feeds (BC Ferries, DriveBC), journey timelines.
+- No customer data exists—safe to drop/recreate if needed.
+- Previous refactors missed instances; be exhaustive.
+
+Task: Audit, identify, and fix ALL non-compliant code/schema. Produce a structured report with fixes.
+
+The report MUST answer:
+1. Where is "booking" still hiding? (Tables, columns, indexes, constraints, views, code, UI, comments—list ALL instances with file/line).
+2. Are schemas/code fully aligned with schema.org (use "Reservation" for bookings, subtypes like HotelReservation; camelCase in JSON-LD; no invented terms)?
+3. Are naming conventions industry-standard (snake_case DB columns, camelCase TS vars; no "booking" nouns; use "reservation" everywhere)?
+4. Any shortcuts from prior refactors (e.g., polymorphic without safety, unrenamed views like v_unified_* or v_pending_notifications)?
+
+Include sections:
+- Overall Compliance Score (0-100%)
+- Full List of "Booking" Instances (tables, files, lines)
+- schema.org Alignment Summary (pass rate + gaps, cite schema.org/docs/hotels.html and schema.org/Reservation)
+- NAICS/UNSPSC/HS/CSI Integration Check (dedicated columns/lookups present?)
+- Strengths
+- Critical Fixes (top 5 prioritized, with exact code/SQL to paste)
+
+Phases (execute sequentially):
+PHASE 0: Full Audit - Run these commands and paste ALL output.
+```bash
+# All files with "booking" (case-insensitive)
+grep -ir "booking" --include="*.ts" --include="*.tsx" --include="*.sql" --include="*.md" --include="*.json" . | grep -v node_modules | grep -v .next | head -200
+
+# DB tables/columns with "booking"
+psql -d $DATABASE_URL -c "SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND tablename ILIKE '%booking%' ORDER BY tablename;"
+psql -d $DATABASE_URL -c "SELECT table_name, column_name FROM information_schema.columns WHERE table_schema = 'public' AND column_name ILIKE '%booking%' ORDER BY table_name;"
+
+# Views with "booking"
+psql -d $DATABASE_URL -c "SELECT viewname FROM pg_views WHERE schemaname = 'public' AND viewname ILIKE '%booking%';"
+
+# Constraints/indexes with "booking"
+psql -d $DATABASE_URL -c "SELECT table_name, constraint_name FROM information_schema.table_constraints WHERE constraint_name ILIKE '%booking%';"
+psql -d $DATABASE_URL -c "SELECT tablename, indexname FROM pg_indexes WHERE indexname ILIKE '%booking%';"
+
+# Record counts for any "booking" tables (if still exist)
+psql -d $DATABASE_URL -c "SELECT 'cc_accommodation_bookings', COUNT(*) FROM cc_accommodation_bookings UNION ALL ... " # Add for all potential
+PHASE 1: Propose Fixes - For EVERY found instance, provide exact SQL/code to rename/remove.
+
+If table empty (count=0), prefer DROP + RECREATE with correct name.
+For views: DROP + CREATE with new names/columns.
+For code/UI: Find/replace snippets.
+
+PHASE 2: Execute Fixes - Apply all, then re-run Phase 0 queries to prove 0 results.
+PHASE 3: schema.org Compliance Check
+
+Verify all reservation-related use "Reservation" (per schema.org/Reservation).
+JSON-LD must use camelCase properties (headline, datePublished).
+No invented terms—align with schema.org/Hotel, /HotelRoom, /Reservation.
+Cite gaps from schema.org/docs/hotels.html.
+
+PHASE 4: Naming Standards Check
+
+DB: snake_case columns, cc_* tables.
+TS: camelCase vars/types.
+No "booking" nouns; use "reservation".
+Enabled for NAICS/UNSPSC/HS: Dedicated columns/lookups?
+
+Evidence Required:
+
+Before/After SQL outputs (tables=0 with "booking")
+Grep results before/after (0 matches)
+Build logs (npm run build clean)
+Screenshots: UI with no "booking" (e.g., confirmation page says "Your reservation")
+
+Be brutally honest—no "domain-appropriate" excuses. If any "booking" remains, FAIL the report.
+Output format: Markdown with headings, tables for lists, code blocks for fixes/SQL.

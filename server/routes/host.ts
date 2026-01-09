@@ -13,15 +13,15 @@ router.get('/properties', async (req: AuthRequest, res: Response) => {
                 p.*,
                 ph.role,
                 ph.can_edit_property,
-                ph.can_manage_bookings,
+                ph.can_manage_reservations,
                 ph.can_view_revenue,
                 ph.is_primary_contact,
-                (SELECT COUNT(*) FROM cc_staging_bookings b 
-                 WHERE b.property_id = p.id AND b.status = 'pending') as pending_bookings,
-                (SELECT COUNT(*) FROM cc_staging_bookings b 
+                (SELECT COUNT(*) FROM cc_staging_reservations b 
+                 WHERE b.property_id = p.id AND b.status = 'pending') as pending_reservations,
+                (SELECT COUNT(*) FROM cc_staging_reservations b 
                  WHERE b.property_id = p.id AND b.status = 'confirmed' 
                  AND b.check_in_date <= CURRENT_DATE AND b.check_out_date > CURRENT_DATE) as active_guests,
-                (SELECT COALESCE(SUM(b.total_cost), 0) FROM cc_staging_bookings b 
+                (SELECT COALESCE(SUM(b.total_cost), 0) FROM cc_staging_reservations b 
                  WHERE b.property_id = p.id AND b.status IN ('confirmed', 'completed')
                  AND b.created_at >= DATE_TRUNC('month', CURRENT_DATE)) as month_revenue
             FROM cc_staging_properties p
@@ -42,10 +42,10 @@ router.get('/properties', async (req: AuthRequest, res: Response) => {
                 thumbnailUrl: p.thumbnail_url,
                 role: p.role,
                 canEdit: p.can_edit_property,
-                canManageBookings: p.can_manage_bookings,
+                canManageReservations: p.can_manage_reservations,
                 canViewRevenue: p.can_view_revenue,
                 isPrimaryContact: p.is_primary_contact,
-                pendingBookings: parseInt(p.pending_bookings),
+                pendingReservations: parseInt(p.pending_reservations),
                 activeGuests: parseInt(p.active_guests),
                 monthRevenue: parseFloat(p.month_revenue)
             }))
@@ -98,7 +98,7 @@ router.get('/properties/:id', async (req: AuthRequest, res: Response) => {
     }
 });
 
-router.get('/bookings', async (req: AuthRequest, res: Response) => {
+router.get('/reservations', async (req: AuthRequest, res: Response) => {
     try {
         const { propertyId, status, startDate, endDate } = req.query;
 
@@ -107,7 +107,7 @@ router.get('/bookings', async (req: AuthRequest, res: Response) => {
                 b.*,
                 p.name as property_name,
                 p.city
-            FROM cc_staging_bookings b
+            FROM cc_staging_reservations b
             JOIN cc_staging_properties p ON p.id = b.property_id
             JOIN cc_staging_property_hosts ph ON ph.property_id = p.id
             WHERE ph.user_id = $1
@@ -145,9 +145,9 @@ router.get('/bookings', async (req: AuthRequest, res: Response) => {
 
         res.json({
             success: true,
-            bookings: result.rows.map(b => ({
+            reservations: result.rows.map(b => ({
                 id: b.id,
-                bookingRef: b.confirmation_number,
+                reservationRef: b.confirmation_number,
                 propertyId: b.property_id,
                 propertyName: b.property_name,
                 city: b.city,
@@ -171,20 +171,20 @@ router.get('/bookings', async (req: AuthRequest, res: Response) => {
         });
 
     } catch (error: any) {
-        console.error('Get host bookings error:', error);
-        res.status(500).json({ success: false, error: 'Failed to load bookings' });
+        console.error('Get host reservations error:', error);
+        res.status(500).json({ success: false, error: 'Failed to load reservations' });
     }
 });
 
-router.put('/bookings/:id/status', async (req: AuthRequest, res: Response) => {
+router.put('/reservations/:id/status', async (req: AuthRequest, res: Response) => {
     try {
         const { id } = req.params;
         const { status, notes } = req.body;
 
         const accessCheck = await serviceQuery(`
-            SELECT b.id FROM cc_staging_bookings b
+            SELECT b.id FROM cc_staging_reservations b
             JOIN cc_staging_property_hosts ph ON ph.property_id = b.property_id
-            WHERE b.id = $1 AND ph.user_id = $2 AND ph.can_manage_bookings = true
+            WHERE b.id = $1 AND ph.user_id = $2 AND ph.can_manage_reservations = true
         `, [id, req.user!.id]);
 
         if (accessCheck.rows.length === 0) {
@@ -197,7 +197,7 @@ router.put('/bookings/:id/status', async (req: AuthRequest, res: Response) => {
         }
 
         const result = await serviceQuery(`
-            UPDATE cc_staging_bookings 
+            UPDATE cc_staging_reservations 
             SET status = $2, 
                 host_notes = COALESCE($3, host_notes),
                 updated_at = NOW()
@@ -205,11 +205,11 @@ router.put('/bookings/:id/status', async (req: AuthRequest, res: Response) => {
             RETURNING id, confirmation_number, status
         `, [id, status, notes]);
 
-        res.json({ success: true, booking: result.rows[0] });
+        res.json({ success: true, reservation: result.rows[0] });
 
     } catch (error: any) {
-        console.error('Update booking status error:', error);
-        res.status(500).json({ success: false, error: 'Failed to update booking' });
+        console.error('Update reservation status error:', error);
+        res.status(500).json({ success: false, error: 'Failed to update reservation' });
     }
 });
 
@@ -230,9 +230,9 @@ router.get('/properties/:id/calendar', async (req: AuthRequest, res: Response) =
         const start = startDate || new Date().toISOString().split('T')[0];
         const end = endDate || new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
-        const bookingsResult = await serviceQuery(`
+        const reservationsResult = await serviceQuery(`
             SELECT id, confirmation_number, guest_name, check_in_date, check_out_date, status, num_nights
-            FROM cc_staging_bookings
+            FROM cc_staging_reservations
             WHERE property_id = $1 
             AND status IN ('pending', 'confirmed')
             AND check_out_date >= $2 AND check_in_date <= $3
@@ -261,7 +261,7 @@ router.get('/properties/:id/calendar', async (req: AuthRequest, res: Response) =
             calendar: {
                 startDate: start,
                 endDate: end,
-                bookings: bookingsResult.rows,
+                reservations: reservationsResult.rows,
                 blocks: blocksResult.rows,
                 pricingOverrides: overridesResult.rows
             }
@@ -478,14 +478,14 @@ router.get('/dashboard/stats', async (req: AuthRequest, res: Response) => {
             SELECT 
                 COUNT(DISTINCT p.id) as total_properties,
                 COALESCE(SUM(p.total_spots), 0) as total_spots,
-                (SELECT COUNT(*) FROM cc_staging_bookings b 
+                (SELECT COUNT(*) FROM cc_staging_reservations b 
                  JOIN cc_staging_property_hosts ph ON ph.property_id = b.property_id 
-                 WHERE ph.user_id = $1 AND b.status = 'pending') as pending_bookings,
-                (SELECT COUNT(*) FROM cc_staging_bookings b 
+                 WHERE ph.user_id = $1 AND b.status = 'pending') as pending_reservations,
+                (SELECT COUNT(*) FROM cc_staging_reservations b 
                  JOIN cc_staging_property_hosts ph ON ph.property_id = b.property_id 
                  WHERE ph.user_id = $1 AND b.status = 'confirmed'
                  AND b.check_in_date <= CURRENT_DATE AND b.check_out_date > CURRENT_DATE) as active_guests,
-                (SELECT COALESCE(SUM(b.total_cost), 0) FROM cc_staging_bookings b 
+                (SELECT COALESCE(SUM(b.total_cost), 0) FROM cc_staging_reservations b 
                  JOIN cc_staging_property_hosts ph ON ph.property_id = b.property_id 
                  WHERE ph.user_id = $1 AND b.status IN ('confirmed', 'completed')
                  AND b.created_at >= DATE_TRUNC('month', CURRENT_DATE)) as month_revenue,
@@ -503,7 +503,7 @@ router.get('/dashboard/stats', async (req: AuthRequest, res: Response) => {
             stats: {
                 totalProperties: parseInt(stats.total_properties) || 0,
                 totalSpots: parseInt(stats.total_spots) || 0,
-                pendingBookings: parseInt(stats.pending_bookings) || 0,
+                pendingReservations: parseInt(stats.pending_reservations) || 0,
                 activeGuests: parseInt(stats.active_guests) || 0,
                 monthRevenue: parseFloat(stats.month_revenue) || 0,
                 unreadNotifications: parseInt(stats.unread_notifications) || 0

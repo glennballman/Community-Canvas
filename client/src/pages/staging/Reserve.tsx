@@ -54,7 +54,7 @@ interface Provider {
   servicesOffered?: string[];
 }
 
-interface BookingData {
+interface ReservationData {
   checkIn: string;
   checkOut: string;
   vehicleType: string;
@@ -87,7 +87,7 @@ const vehicleTypes = [
   { value: 'other', label: 'Other' }
 ];
 
-const defaultBooking: BookingData = {
+const defaultReservation: ReservationData = {
   checkIn: '',
   checkOut: '',
   vehicleType: '',
@@ -135,9 +135,9 @@ export default function BookStaging() {
   const propertyId = params?.id ? parseInt(params.id) : null;
   
   const [step, setStep] = useState(0);
-  const [booking, setBooking] = useState<BookingData>(defaultBooking);
-  const [bookingComplete, setBookingComplete] = useState(false);
-  const [bookingRef, setBookingRef] = useState('');
+  const [reservation, setReservation] = useState<ReservationData>(defaultReservation);
+  const [reservationComplete, setReservationComplete] = useState(false);
+  const [reservationRef, setReservationRef] = useState('');
 
   const steps = ['Dates & Vehicle', 'Select Spot', 'Services', 'Review', 'Payment'];
 
@@ -145,8 +145,8 @@ export default function BookStaging() {
     const urlParams = new URLSearchParams(window.location.search);
     const checkIn = urlParams.get('checkIn');
     const checkOut = urlParams.get('checkOut');
-    if (checkIn) setBooking(b => ({ ...b, checkIn }));
-    if (checkOut) setBooking(b => ({ ...b, checkOut }));
+    if (checkIn) setReservation(b => ({ ...b, checkIn }));
+    if (checkOut) setReservation(b => ({ ...b, checkOut }));
   }, []);
 
   const { data: property, isLoading: loadingProperty } = useQuery<PropertyDetail>({
@@ -179,36 +179,36 @@ export default function BookStaging() {
     }
   });
 
-  const createBookingMutation = useMutation({
+  const createReservationMutation = useMutation({
     mutationFn: async (data: any) => {
-      const res = await fetch('/api/staging/bookings', {
+      const res = await fetch('/api/staging/reservations', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
       });
-      if (!res.ok) throw new Error('Booking failed');
+      if (!res.ok) throw new Error('Reservation failed');
       return res.json();
     },
     onSuccess: (data) => {
-      setBookingRef(data.bookingRef || 'BK-' + Date.now());
-      setBookingComplete(true);
-      toast({ title: 'Booking confirmed!' });
+      setReservationRef(data.reservationRef || 'BK-' + Date.now());
+      setReservationComplete(true);
+      toast({ title: 'Reservation confirmed!' });
     },
     onError: () => {
-      toast({ title: 'Booking failed', description: 'Please try again', variant: 'destructive' });
+      toast({ title: 'Reservation failed', description: 'Please try again', variant: 'destructive' });
     }
   });
 
   const calculateNights = () => {
-    if (!booking.checkIn || !booking.checkOut) return 0;
-    const start = new Date(booking.checkIn);
-    const end = new Date(booking.checkOut);
+    if (!reservation.checkIn || !reservation.checkOut) return 0;
+    const start = new Date(reservation.checkIn);
+    const end = new Date(reservation.checkOut);
     return Math.max(0, Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)));
   };
 
   const calculatePrice = () => {
     const nights = calculateNights();
-    const spot = spotsData?.spots?.find((s: Spot) => s.id === booking.selectedSpot);
+    const spot = spotsData?.spots?.find((s: Spot) => s.id === reservation.selectedSpot);
     const nightlyRate = spot?.nightlyRate 
       ? parseFloat(spot.nightlyRate) 
       : property?.baseNightlyRate 
@@ -216,8 +216,8 @@ export default function BookStaging() {
         : 0;
     
     const subtotal = nightlyRate * nights;
-    const petFee = booking.pets > 0 && property?.petFeePerNight 
-      ? parseFloat(property.petFeePerNight) * booking.pets * nights 
+    const petFee = reservation.pets > 0 && property?.petFeePerNight 
+      ? parseFloat(property.petFeePerNight) * reservation.pets * nights 
       : 0;
     const taxes = (subtotal + petFee) * 0.12;
     const total = subtotal + petFee + taxes;
@@ -228,15 +228,15 @@ export default function BookStaging() {
   const canProceed = () => {
     switch (step) {
       case 0:
-        return booking.checkIn && booking.checkOut && booking.vehicleType && booking.guests > 0;
+        return reservation.checkIn && reservation.checkOut && reservation.vehicleType && reservation.guests > 0;
       case 1:
-        return spotsData?.spots?.length === 0 || booking.selectedSpot !== null;
+        return spotsData?.spots?.length === 0 || reservation.selectedSpot !== null;
       case 2:
         return true;
       case 3:
         return true;
       case 4:
-        return booking.guestName && booking.guestEmail && booking.acceptTerms;
+        return reservation.guestName && reservation.guestEmail && reservation.acceptTerms;
       default:
         return false;
     }
@@ -247,20 +247,20 @@ export default function BookStaging() {
       setStep(step + 1);
     } else {
       const price = calculatePrice();
-      createBookingMutation.mutate({
+      createReservationMutation.mutate({
         propertyId,
-        spotId: booking.selectedSpot,
-        checkInDate: booking.checkIn,
-        checkOutDate: booking.checkOut,
-        guestName: booking.guestName,
-        guestEmail: booking.guestEmail,
-        guestPhone: booking.guestPhone,
-        vehicleType: booking.vehicleType,
-        vehicleLength: booking.vehicleLength ? parseInt(booking.vehicleLength) : null,
-        guests: booking.guests,
-        pets: booking.pets,
-        horses: booking.horses,
-        specialRequests: booking.specialRequests,
+        spotId: reservation.selectedSpot,
+        checkInDate: reservation.checkIn,
+        checkOutDate: reservation.checkOut,
+        guestName: reservation.guestName,
+        guestEmail: reservation.guestEmail,
+        guestPhone: reservation.guestPhone,
+        vehicleType: reservation.vehicleType,
+        vehicleLength: reservation.vehicleLength ? parseInt(reservation.vehicleLength) : null,
+        guests: reservation.guests,
+        pets: reservation.pets,
+        horses: reservation.horses,
+        specialRequests: reservation.specialRequests,
         totalCost: price.total.toFixed(2),
         status: 'pending'
       });
@@ -272,9 +272,9 @@ export default function BookStaging() {
   };
 
   const availableSpots = spotsData?.spots?.filter((spot: Spot) => {
-    if (!booking.vehicleLength) return true;
+    if (!reservation.vehicleLength) return true;
     if (!spot.maxLengthFt) return true;
-    return spot.maxLengthFt >= parseInt(booking.vehicleLength);
+    return spot.maxLengthFt >= parseInt(reservation.vehicleLength);
   }) || [];
 
   if (loadingProperty) {
@@ -298,7 +298,7 @@ export default function BookStaging() {
     );
   }
 
-  if (bookingComplete) {
+  if (reservationComplete) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <Card className="max-w-lg w-full">
@@ -306,12 +306,12 @@ export default function BookStaging() {
             <div className="w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
               <CheckCircle className="h-8 w-8 text-green-600" />
             </div>
-            <h1 className="text-2xl font-bold mb-2">Booking Confirmed!</h1>
+            <h1 className="text-2xl font-bold mb-2">Reservation Confirmed!</h1>
             <p className="text-muted-foreground mb-6">Your reservation has been submitted</p>
             
             <div className="bg-muted rounded-lg p-4 mb-6 text-left">
-              <p className="text-sm text-muted-foreground">Booking Reference</p>
-              <p className="text-xl font-mono font-bold" data-testid="text-booking-ref">{bookingRef}</p>
+              <p className="text-sm text-muted-foreground">Reservation Reference</p>
+              <p className="text-xl font-mono font-bold" data-testid="text-reservation-ref">{reservationRef}</p>
             </div>
 
             <div className="text-left space-y-3 mb-6">
@@ -321,11 +321,11 @@ export default function BookStaging() {
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Check-in</span>
-                <span>{booking.checkIn}</span>
+                <span>{reservation.checkIn}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Check-out</span>
-                <span>{booking.checkOut}</span>
+                <span>{reservation.checkOut}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Total</span>
@@ -345,9 +345,9 @@ export default function BookStaging() {
               <Button variant="outline" data-testid="button-download-calendar">
                 <Download className="h-4 w-4 mr-2" /> Add to Calendar
               </Button>
-              <Link href="/staging/bookings">
-                <Button className="w-full" data-testid="button-view-bookings">
-                  View My Bookings
+              <Link href="/staging/reservations">
+                <Button className="w-full" data-testid="button-view-reservations">
+                  View My Reservations
                 </Button>
               </Link>
             </div>
@@ -391,8 +391,8 @@ export default function BookStaging() {
                             <Label>Check In</Label>
                             <Input
                               type="date"
-                              value={booking.checkIn}
-                              onChange={(e) => setBooking({ ...booking, checkIn: e.target.value })}
+                              value={reservation.checkIn}
+                              onChange={(e) => setReservation({ ...reservation, checkIn: e.target.value })}
                               min={new Date().toISOString().split('T')[0]}
                               data-testid="input-checkin"
                             />
@@ -401,9 +401,9 @@ export default function BookStaging() {
                             <Label>Check Out</Label>
                             <Input
                               type="date"
-                              value={booking.checkOut}
-                              onChange={(e) => setBooking({ ...booking, checkOut: e.target.value })}
-                              min={booking.checkIn || new Date().toISOString().split('T')[0]}
+                              value={reservation.checkOut}
+                              onChange={(e) => setReservation({ ...reservation, checkOut: e.target.value })}
+                              min={reservation.checkIn || new Date().toISOString().split('T')[0]}
                               data-testid="input-checkout"
                             />
                           </div>
@@ -420,8 +420,8 @@ export default function BookStaging() {
                           <div className="space-y-2">
                             <Label>Vehicle Type</Label>
                             <Select 
-                              value={booking.vehicleType} 
-                              onValueChange={(v) => setBooking({ ...booking, vehicleType: v })}
+                              value={reservation.vehicleType} 
+                              onValueChange={(v) => setReservation({ ...reservation, vehicleType: v })}
                             >
                               <SelectTrigger data-testid="select-vehicle-type">
                                 <SelectValue placeholder="Select vehicle type" />
@@ -438,8 +438,8 @@ export default function BookStaging() {
                               <Label>Length (ft)</Label>
                               <Input
                                 type="number"
-                                value={booking.vehicleLength}
-                                onChange={(e) => setBooking({ ...booking, vehicleLength: e.target.value })}
+                                value={reservation.vehicleLength}
+                                onChange={(e) => setReservation({ ...reservation, vehicleLength: e.target.value })}
                                 placeholder="e.g. 35"
                                 data-testid="input-vehicle-length"
                               />
@@ -448,8 +448,8 @@ export default function BookStaging() {
                               <Label>Width (ft)</Label>
                               <Input
                                 type="number"
-                                value={booking.vehicleWidth}
-                                onChange={(e) => setBooking({ ...booking, vehicleWidth: e.target.value })}
+                                value={reservation.vehicleWidth}
+                                onChange={(e) => setReservation({ ...reservation, vehicleWidth: e.target.value })}
                                 placeholder="e.g. 8"
                                 data-testid="input-vehicle-width"
                               />
@@ -461,12 +461,12 @@ export default function BookStaging() {
                               {['Power', 'Water', 'Sewer'].map(need => (
                                 <div key={need} className="flex items-center gap-2">
                                   <Checkbox
-                                    checked={booking.vehicleNeeds.includes(need.toLowerCase())}
+                                    checked={reservation.vehicleNeeds.includes(need.toLowerCase())}
                                     onCheckedChange={(c) => {
                                       const needs = c 
-                                        ? [...booking.vehicleNeeds, need.toLowerCase()]
-                                        : booking.vehicleNeeds.filter(n => n !== need.toLowerCase());
-                                      setBooking({ ...booking, vehicleNeeds: needs });
+                                        ? [...reservation.vehicleNeeds, need.toLowerCase()]
+                                        : reservation.vehicleNeeds.filter(n => n !== need.toLowerCase());
+                                      setReservation({ ...reservation, vehicleNeeds: needs });
                                     }}
                                   />
                                   <Label className="font-normal">{need}</Label>
@@ -489,8 +489,8 @@ export default function BookStaging() {
                             <Input
                               type="number"
                               min={1}
-                              value={booking.guests}
-                              onChange={(e) => setBooking({ ...booking, guests: parseInt(e.target.value) || 1 })}
+                              value={reservation.guests}
+                              onChange={(e) => setReservation({ ...reservation, guests: parseInt(e.target.value) || 1 })}
                               data-testid="input-guests"
                             />
                           </div>
@@ -500,8 +500,8 @@ export default function BookStaging() {
                               <Input
                                 type="number"
                                 min={0}
-                                value={booking.pets}
-                                onChange={(e) => setBooking({ ...booking, pets: parseInt(e.target.value) || 0 })}
+                                value={reservation.pets}
+                                onChange={(e) => setReservation({ ...reservation, pets: parseInt(e.target.value) || 0 })}
                                 data-testid="input-pets"
                               />
                             </div>
@@ -512,8 +512,8 @@ export default function BookStaging() {
                               <Input
                                 type="number"
                                 min={0}
-                                value={booking.horses}
-                                onChange={(e) => setBooking({ ...booking, horses: parseInt(e.target.value) || 0 })}
+                                value={reservation.horses}
+                                onChange={(e) => setReservation({ ...reservation, horses: parseInt(e.target.value) || 0 })}
                                 data-testid="input-horses"
                               />
                             </div>
@@ -535,26 +535,26 @@ export default function BookStaging() {
                           <Button 
                             variant="outline" 
                             className="mt-4"
-                            onClick={() => setBooking({ ...booking, selectedSpot: -1 })}
+                            onClick={() => setReservation({ ...reservation, selectedSpot: -1 })}
                           >
                             Continue with any available spot
                           </Button>
                         </div>
                       ) : (
                         <RadioGroup
-                          value={booking.selectedSpot?.toString() || ''}
-                          onValueChange={(v) => setBooking({ ...booking, selectedSpot: parseInt(v) })}
+                          value={reservation.selectedSpot?.toString() || ''}
+                          onValueChange={(v) => setReservation({ ...reservation, selectedSpot: parseInt(v) })}
                         >
                           <div className="space-y-3">
                             {availableSpots.map((spot: Spot) => (
                               <div 
                                 key={spot.id}
                                 className={`p-4 rounded-lg border-2 cursor-pointer transition-colors ${
-                                  booking.selectedSpot === spot.id 
+                                  reservation.selectedSpot === spot.id 
                                     ? 'border-primary bg-primary/5' 
                                     : 'border-muted hover-elevate'
                                 }`}
-                                onClick={() => setBooking({ ...booking, selectedSpot: spot.id })}
+                                onClick={() => setReservation({ ...reservation, selectedSpot: spot.id })}
                               >
                                 <div className="flex items-start gap-3">
                                   <RadioGroupItem value={spot.id.toString()} id={`spot-${spot.id}`} />
@@ -601,19 +601,19 @@ export default function BookStaging() {
                             <div
                               key={provider.id}
                               className={`p-4 rounded-lg border-2 cursor-pointer transition-colors ${
-                                booking.selectedServices.includes(provider.id)
+                                reservation.selectedServices.includes(provider.id)
                                   ? 'border-primary bg-primary/5'
                                   : 'border-muted hover-elevate'
                               }`}
                               onClick={() => {
-                                const services = booking.selectedServices.includes(provider.id)
-                                  ? booking.selectedServices.filter(id => id !== provider.id)
-                                  : [...booking.selectedServices, provider.id];
-                                setBooking({ ...booking, selectedServices: services });
+                                const services = reservation.selectedServices.includes(provider.id)
+                                  ? reservation.selectedServices.filter(id => id !== provider.id)
+                                  : [...reservation.selectedServices, provider.id];
+                                setReservation({ ...reservation, selectedServices: services });
                               }}
                             >
                               <div className="flex items-start gap-3">
-                                <Checkbox checked={booking.selectedServices.includes(provider.id)} />
+                                <Checkbox checked={reservation.selectedServices.includes(provider.id)} />
                                 <div>
                                   <div className="flex items-center gap-2 mb-1">
                                     <span className="font-medium">
@@ -642,25 +642,25 @@ export default function BookStaging() {
 
                   {step === 3 && (
                     <div className="space-y-6">
-                      <h3 className="font-semibold">Review Your Booking</h3>
+                      <h3 className="font-semibold">Review Your Reservation</h3>
                       
                       <div className="space-y-4">
                         <div className="grid grid-cols-2 gap-4 p-4 bg-muted rounded-lg">
                           <div>
                             <p className="text-sm text-muted-foreground">Check-in</p>
-                            <p className="font-medium">{booking.checkIn}</p>
+                            <p className="font-medium">{reservation.checkIn}</p>
                           </div>
                           <div>
                             <p className="text-sm text-muted-foreground">Check-out</p>
-                            <p className="font-medium">{booking.checkOut}</p>
+                            <p className="font-medium">{reservation.checkOut}</p>
                           </div>
                           <div>
                             <p className="text-sm text-muted-foreground">Vehicle</p>
-                            <p className="font-medium">{vehicleTypes.find(t => t.value === booking.vehicleType)?.label}</p>
+                            <p className="font-medium">{vehicleTypes.find(t => t.value === reservation.vehicleType)?.label}</p>
                           </div>
                           <div>
                             <p className="text-sm text-muted-foreground">Guests</p>
-                            <p className="font-medium">{booking.guests} {booking.pets > 0 && `+ ${booking.pets} pet(s)`}</p>
+                            <p className="font-medium">{reservation.guests} {reservation.pets > 0 && `+ ${reservation.pets} pet(s)`}</p>
                           </div>
                         </div>
 
@@ -694,8 +694,8 @@ export default function BookStaging() {
                         <div className="space-y-2">
                           <Label>Special Requests (optional)</Label>
                           <Textarea
-                            value={booking.specialRequests}
-                            onChange={(e) => setBooking({ ...booking, specialRequests: e.target.value })}
+                            value={reservation.specialRequests}
+                            onChange={(e) => setReservation({ ...reservation, specialRequests: e.target.value })}
                             placeholder="Any special requirements or requests..."
                             data-testid="textarea-special-requests"
                           />
@@ -715,15 +715,15 @@ export default function BookStaging() {
                   {step === 4 && (
                     <div className="space-y-6">
                       <h3 className="font-semibold flex items-center gap-2">
-                        <CreditCard className="h-5 w-5" /> Complete Your Booking
+                        <CreditCard className="h-5 w-5" /> Complete Your Reservation
                       </h3>
                       
                       <div className="space-y-4">
                         <div className="space-y-2">
                           <Label>Full Name</Label>
                           <Input
-                            value={booking.guestName}
-                            onChange={(e) => setBooking({ ...booking, guestName: e.target.value })}
+                            value={reservation.guestName}
+                            onChange={(e) => setReservation({ ...reservation, guestName: e.target.value })}
                             placeholder="John Doe"
                             data-testid="input-guest-name"
                           />
@@ -732,8 +732,8 @@ export default function BookStaging() {
                           <Label>Email</Label>
                           <Input
                             type="email"
-                            value={booking.guestEmail}
-                            onChange={(e) => setBooking({ ...booking, guestEmail: e.target.value })}
+                            value={reservation.guestEmail}
+                            onChange={(e) => setReservation({ ...reservation, guestEmail: e.target.value })}
                             placeholder="john@example.com"
                             data-testid="input-guest-email"
                           />
@@ -742,8 +742,8 @@ export default function BookStaging() {
                           <Label>Phone</Label>
                           <Input
                             type="tel"
-                            value={booking.guestPhone}
-                            onChange={(e) => setBooking({ ...booking, guestPhone: e.target.value })}
+                            value={reservation.guestPhone}
+                            onChange={(e) => setReservation({ ...reservation, guestPhone: e.target.value })}
                             placeholder="+1 (555) 000-0000"
                             data-testid="input-guest-phone"
                           />
@@ -760,8 +760,8 @@ export default function BookStaging() {
 
                       <div className="flex items-start gap-2">
                         <Checkbox
-                          checked={booking.acceptTerms}
-                          onCheckedChange={(c) => setBooking({ ...booking, acceptTerms: c === true })}
+                          checked={reservation.acceptTerms}
+                          onCheckedChange={(c) => setReservation({ ...reservation, acceptTerms: c === true })}
                           data-testid="checkbox-terms"
                         />
                         <Label className="font-normal text-sm">
@@ -784,11 +784,11 @@ export default function BookStaging() {
                 </Button>
                 <Button
                   onClick={handleNext}
-                  disabled={!canProceed() || createBookingMutation.isPending}
+                  disabled={!canProceed() || createReservationMutation.isPending}
                   data-testid="button-next-step"
                 >
-                  {createBookingMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                  {step === steps.length - 1 ? 'Complete Booking' : 'Continue'}
+                  {createReservationMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                  {step === steps.length - 1 ? 'Complete Reservation' : 'Continue'}
                   {step < steps.length - 1 && <ArrowRight className="h-4 w-4 ml-2" />}
                 </Button>
               </div>
@@ -804,7 +804,7 @@ export default function BookStaging() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  {booking.checkIn && booking.checkOut && (
+                  {reservation.checkIn && reservation.checkOut && (
                     <div className="space-y-3 text-sm">
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Dates</span>

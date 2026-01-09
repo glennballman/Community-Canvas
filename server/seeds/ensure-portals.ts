@@ -60,7 +60,7 @@ export async function ensurePortalsExist(): Promise<void> {
       await client.query(`
         INSERT INTO cc_portals (owning_tenant_id, name, slug, portal_type, legal_dba_name, status, primary_audience, tagline, site_config)
         VALUES ($1, 'Bamfield Adventure Center', 'bamfield-adventure', 'business_service', 'Bamfield Adventure Center', 'active', 'buyer', 'Tours and rentals in Bamfield',
-          '{"brand_name": "Bamfield Adventure Center", "tagline": "Tours and rentals in Bamfield", "hero": {"title": "Adventure Awaits", "subtitle": "Kayak rentals, fishing charters, and guided tours"}, "primary_cta": {"label": "Book Now", "action": "reserve"}, "theme": {"primary_color": "#0891b2", "secondary_color": "#0e7490", "accent_color": "#fcd34d"}}'::jsonb)
+          '{"brand_name": "Bamfield Adventure Center", "tagline": "Tours and rentals in Bamfield", "hero": {"title": "Adventure Awaits", "subtitle": "Kayak rentals, fishing charters, and guided tours"}, "primary_cta": {"label": "Reserve Now", "action": "reserve"}, "theme": {"primary_color": "#0891b2", "secondary_color": "#0e7490", "accent_color": "#fcd34d"}}'::jsonb)
         ON CONFLICT (slug) DO UPDATE SET status = 'active'
       `, [tenantId]);
       console.log('[SEED] Created Bamfield Adventure Center portal');

@@ -70,10 +70,10 @@ interface Provider {
   servicesOffered: string[];
 }
 
-interface Booking {
+interface Reservation {
   id: number;
   propertyId: number;
-  bookingRef: string;
+  reservationRef: string;
   guestName: string;
   checkInDate: string;
   checkOutDate: string;
@@ -184,12 +184,12 @@ function PropertyManageContent() {
     }
   });
 
-  const { data: bookingsData } = useQuery({
-    queryKey: ['/api/host/bookings'],
-    enabled: !!propertyId && activeTab === 'bookings',
+  const { data: reservationsData } = useQuery({
+    queryKey: ['/api/host/reservations'],
+    enabled: !!propertyId && activeTab === 'reservations',
     queryFn: async () => {
-      const res = await fetch(`/api/host/bookings`, { headers: getAuthHeaders() });
-      if (!res.ok) throw new Error('Failed to load bookings');
+      const res = await fetch(`/api/host/reservations`, { headers: getAuthHeaders() });
+      if (!res.ok) throw new Error('Failed to load reservations');
       return res.json();
     }
   });
@@ -350,10 +350,10 @@ function PropertyManageContent() {
   const getDateStatus = (date: Date): 'available' | 'blocked' | 'booked' => {
     const dateStr = date.toISOString().split('T')[0];
     const blocks = calendarData?.blocks || [];
-    const bookings = calendarData?.bookings || [];
+    const reservations = calendarData?.reservations || [];
     
-    for (const booking of bookings) {
-      if (dateStr >= booking.checkInDate && dateStr < booking.checkOutDate) {
+    for (const reservation of reservations) {
+      if (dateStr >= reservation.checkInDate && dateStr < reservation.checkOutDate) {
         return 'booked';
       }
     }
@@ -588,7 +588,7 @@ function PropertyManageContent() {
             <TabsTrigger value="amenities" data-testid="tab-amenities"><Settings className="h-4 w-4 mr-1" /> Amenities</TabsTrigger>
             <TabsTrigger value="pricing" data-testid="tab-pricing"><DollarSign className="h-4 w-4 mr-1" /> Pricing</TabsTrigger>
             <TabsTrigger value="providers" data-testid="tab-providers"><Wrench className="h-4 w-4 mr-1" /> Providers</TabsTrigger>
-            <TabsTrigger value="bookings" data-testid="tab-bookings"><Users className="h-4 w-4 mr-1" /> Bookings</TabsTrigger>
+            <TabsTrigger value="reservations" data-testid="tab-reservations"><Users className="h-4 w-4 mr-1" /> Reservations</TabsTrigger>
             <TabsTrigger value="reviews" data-testid="tab-reviews"><Star className="h-4 w-4 mr-1" /> Reviews</TabsTrigger>
             <TabsTrigger value="settings" data-testid="tab-settings"><Settings className="h-4 w-4 mr-1" /> Settings</TabsTrigger>
           </TabsList>
@@ -842,29 +842,29 @@ function PropertyManageContent() {
             </Card>
           </TabsContent>
 
-          <TabsContent value="bookings">
+          <TabsContent value="reservations">
             <Card>
               <CardHeader>
-                <CardTitle>Bookings</CardTitle>
+                <CardTitle>Reservations</CardTitle>
                 <CardDescription>View and manage reservations</CardDescription>
               </CardHeader>
               <CardContent>
-                {bookingsData?.bookings?.length === 0 ? (
-                  <p className="text-muted-foreground text-center py-8">No bookings yet</p>
+                {reservationsData?.reservations?.length === 0 ? (
+                  <p className="text-muted-foreground text-center py-8">No reservations yet</p>
                 ) : (
                   <div className="space-y-4">
-                    {bookingsData?.bookings?.filter((b: Booking) => b.propertyId === propertyId).map((booking: Booking) => (
-                      <div key={booking.id} className="flex flex-wrap items-center justify-between gap-2 p-4 rounded-md bg-muted">
+                    {reservationsData?.reservations?.filter((b: Reservation) => b.propertyId === propertyId).map((reservation: Reservation) => (
+                      <div key={reservation.id} className="flex flex-wrap items-center justify-between gap-2 p-4 rounded-md bg-muted">
                         <div>
-                          <p className="font-medium">{booking.guestName}</p>
-                          <p className="text-sm text-muted-foreground">{booking.bookingRef}</p>
+                          <p className="font-medium">{reservation.guestName}</p>
+                          <p className="text-sm text-muted-foreground">{reservation.reservationRef}</p>
                         </div>
                         <div className="text-center">
-                          <p className="text-sm">{booking.checkInDate} - {booking.checkOutDate}</p>
+                          <p className="text-sm">{reservation.checkInDate} - {reservation.checkOutDate}</p>
                         </div>
                         <div>
-                          <Badge variant={booking.status === 'confirmed' ? 'default' : 'secondary'}>
-                            {booking.status}
+                          <Badge variant={reservation.status === 'confirmed' ? 'default' : 'secondary'}>
+                            {reservation.status}
                           </Badge>
                         </div>
                       </div>

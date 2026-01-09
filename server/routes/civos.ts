@@ -133,8 +133,8 @@ router.get('/capacity', async (req: Request, res: Response) => {
         const utilizationResult = await serviceQuery(`
             SELECT 
                 p.region,
-                COUNT(DISTINCT b.id) as active_bookings
-            FROM cc_staging_bookings b
+                COUNT(DISTINCT b.id) as active_reservations
+            FROM cc_staging_reservations b
             JOIN cc_staging_properties p ON p.id = b.property_id
             WHERE b.status IN ('confirmed', 'pending')
             AND b.check_in_date <= CURRENT_DATE
@@ -165,7 +165,7 @@ router.get('/capacity', async (req: Request, res: Response) => {
                 })),
                 utilization: utilizationResult.rows.map(u => ({
                     region: u.region,
-                    activeBookings: parseInt(u.active_bookings)
+                    activeReservations: parseInt(u.active_reservations)
                 }))
             }
         });

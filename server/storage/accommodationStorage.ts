@@ -23,11 +23,11 @@ const ALLOWED_PROPERTY_COLUMNS = new Set([
 
 const ALLOWED_HOST_COLUMNS = new Set([
   'name', 'email', 'telephone', 'airbnb_host_id', 'airbnb_host_url',
-  'is_superhost', 'contact_status', 'is_in_network', 'offers_direct_booking',
+  'is_superhost', 'contact_status', 'is_in_network', 'offers_direct_reservation',
   'first_contacted_at', 'last_contacted_at', 'contact_attempts', 'last_response_at', 'notes'
 ]);
 
-const ALLOWED_BOOKING_COLUMNS = new Set([
+const ALLOWED_RESERVATION_COLUMNS = new Set([
   'property_id', 'host_id', 'trip_id', 'trip_name',
   'external_platform', 'external_confirmation',
   'check_in_date', 'check_out_date', 'checkin_time', 'checkout_time',
@@ -370,7 +370,7 @@ export class AccommodationStorage {
   }
 
   // =====================================================
-  // BOOKINGS
+  // RESERVATIONS
   // =====================================================
 
   async getAllReservations(filters?: {
@@ -381,7 +381,7 @@ export class AccommodationStorage {
   }): Promise<AccommodationReservation[]> {
     let query = `
       SELECT b.*, p.name as property_name, p.city as property_city
-      FROM cc_accommodation_bookings b
+      FROM cc_accommodation_reservations b
       LEFT JOIN cc_accommodation_properties p ON b.property_id = p.id
       WHERE 1=1
     `;
@@ -413,22 +413,22 @@ export class AccommodationStorage {
   async getReservationById(id: number): Promise<AccommodationReservation | null> {
     const result = await this.db.query(`
       SELECT b.*, p.name as property_name, p.city as property_city
-      FROM cc_accommodation_bookings b
+      FROM cc_accommodation_reservations b
       LEFT JOIN cc_accommodation_properties p ON b.property_id = p.id
       WHERE b.id = $1
     `, [id]);
     return result.rows[0] ? convertKeysToCamel(result.rows[0]) as AccommodationReservation : null;
   }
 
-  async createReservation(booking: Partial<AccommodationReservation>): Promise<AccommodationReservation> {
-    const snakeData = convertKeysToSnake(booking);
-    const filtered = filterAllowedColumns(snakeData, ALLOWED_BOOKING_COLUMNS);
+  async createReservation(reservation: Partial<AccommodationReservation>): Promise<AccommodationReservation> {
+    const snakeData = convertKeysToSnake(reservation);
+    const filtered = filterAllowedColumns(snakeData, ALLOWED_RESERVATION_COLUMNS);
     const columns = Object.keys(filtered);
     const values = Object.values(filtered);
     const placeholders = columns.map((_, i) => `$${i + 1}`);
 
     const query = `
-      INSERT INTO cc_accommodation_bookings (${columns.join(', ')})
+      INSERT INTO cc_accommodation_reservations (${columns.join(', ')})
       VALUES (${placeholders.join(', ')})
       RETURNING *
     `;
@@ -438,7 +438,7 @@ export class AccommodationStorage {
 
   async updateReservation(id: number, updates: Partial<AccommodationReservation>): Promise<AccommodationReservation | null> {
     const snakeData = convertKeysToSnake(updates);
-    const filtered = filterAllowedColumns(snakeData, ALLOWED_BOOKING_COLUMNS);
+    const filtered = filterAllowedColumns(snakeData, ALLOWED_RESERVATION_COLUMNS);
     const columns = Object.keys(filtered);
     if (columns.length === 0) return this.getReservationById(id);
 
@@ -446,7 +446,7 @@ export class AccommodationStorage {
     const values = [...Object.values(filtered), id];
 
     const query = `
-      UPDATE cc_accommodation_bookings
+      UPDATE cc_accommodation_reservations
       SET ${setClause}, updated_at = CURRENT_TIMESTAMP
       WHERE id = $${values.length}
       RETURNING *

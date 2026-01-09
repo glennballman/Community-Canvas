@@ -8,7 +8,7 @@
  * - Work Requests list/create (filtered + default)
  * - Projects list/create (filtered + default)
  * - Contacts list/create (filtered + default)
- * - Bookings create (attaches portal_id)
+ * - Reservations create (attaches portal_id)
  */
 
 import { 

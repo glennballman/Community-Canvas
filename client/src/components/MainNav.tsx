@@ -44,7 +44,7 @@ const navSections: NavSection[] = [
     items: [
       { path: '/staging', label: 'Find Staging', icon: Search, description: 'Search crew-friendly stays' },
       { path: '/staging/map', label: 'Map View', icon: MapPin, description: 'Visual property search' },
-      { path: '/staging/bookings', label: 'My Bookings', icon: Calendar, description: 'Upcoming stays' },
+      { path: '/staging/reservations', label: 'My Reservations', icon: Calendar, description: 'Upcoming stays' },
       { path: '/staging/chamber', label: 'Local Services', icon: Store, description: 'Chamber of Commerce' },
     ]
   },

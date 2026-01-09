@@ -31,7 +31,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
-interface BookingItem {
+interface ReservationItem {
   id: string;
   name: string;
   slug: string;
@@ -45,7 +45,7 @@ interface BookingItem {
   communityName: string;
 }
 
-interface Booking {
+interface Reservation {
   id: string;
   status: 'pending' | 'confirmed' | 'checked_out' | 'active' | 'returned' | 'completed' | 'cancelled' | 'no_show' | 'overdue';
   startsAt: string;
@@ -66,45 +66,45 @@ interface Booking {
   damageNotes: string;
   notes: string;
   createdAt: string;
-  item: BookingItem;
+  item: ReservationItem;
 }
 
 type FilterType = 'all' | 'active' | 'upcoming' | 'past';
 
-export default function MyBookings() {
+export default function MyReservations() {
   const [filter, setFilter] = useState<FilterType>('all');
   const { token } = useAuth();
 
-  const { data, isLoading, error } = useQuery<{ success: boolean; bookings: Booking[] }>({
-    queryKey: ['/api/rentals/bookings'],
+  const { data, isLoading, error } = useQuery<{ success: boolean; reservations: Reservation[] }>({
+    queryKey: ['/api/rentals/reservations'],
     queryFn: async () => {
-      const res = await fetch('/api/rentals/bookings', {
+      const res = await fetch('/api/rentals/reservations', {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
-      if (!res.ok) throw new Error('Failed to fetch bookings');
+      if (!res.ok) throw new Error('Failed to fetch reservations');
       return res.json();
     },
     enabled: !!token,
   });
 
   const cancelMutation = useMutation({
-    mutationFn: async (bookingId: string) => {
-      const res = await fetch(`/api/rentals/bookings/${bookingId}/cancel`, {
+    mutationFn: async (reservationId: string) => {
+      const res = await fetch(`/api/rentals/reservations/${reservationId}/cancel`, {
         method: 'POST',
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
-      if (!res.ok) throw new Error('Failed to cancel booking');
+      if (!res.ok) throw new Error('Failed to cancel reservation');
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/rentals/bookings'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/rentals/reservations'] });
     },
   });
 
-  const bookings = data?.bookings || [];
+  const reservations = data?.reservations || [];
   const now = new Date();
 
-  const filteredBookings = bookings.filter(b => {
+  const filteredReservations = reservations.filter(b => {
     const start = new Date(b.startsAt);
     
     switch (filter) {
@@ -119,11 +119,11 @@ export default function MyBookings() {
     }
   });
 
-  const activeCount = bookings.filter(b => ['active', 'checked_out'].includes(b.status)).length;
-  const upcomingCount = bookings.filter(b => ['pending', 'confirmed'].includes(b.status)).length;
-  const totalSpent = bookings.reduce((sum, b) => sum + (b.total || 0), 0);
+  const activeCount = reservations.filter(b => ['active', 'checked_out'].includes(b.status)).length;
+  const upcomingCount = reservations.filter(b => ['pending', 'confirmed'].includes(b.status)).length;
+  const totalSpent = reservations.reduce((sum, b) => sum + (b.total || 0), 0);
 
-  const getStatusBadge = (status: Booking['status']) => {
+  const getStatusBadge = (status: Reservation['status']) => {
     const variants: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
       pending: 'secondary',
       confirmed: 'default',
@@ -181,7 +181,7 @@ export default function MyBookings() {
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
             <AlertCircle className="w-12 h-12 text-destructive mb-4" />
-            <p className="text-muted-foreground">Failed to load bookings. Please try again.</p>
+            <p className="text-muted-foreground">Failed to load reservations. Please try again.</p>
           </CardContent>
         </Card>
       </div>
@@ -192,7 +192,7 @@ export default function MyBookings() {
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl font-bold" data-testid="text-page-title">My Bookings</h1>
+          <h1 className="text-2xl font-bold" data-testid="text-page-title">My Reservations</h1>
           <p className="text-muted-foreground">Manage your equipment rentals</p>
         </div>
         <Link href="/rentals">
@@ -206,8 +206,8 @@ export default function MyBookings() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card>
           <CardContent className="p-4">
-            <div className="text-2xl font-bold" data-testid="text-total-count">{bookings.length}</div>
-            <div className="text-sm text-muted-foreground">Total Bookings</div>
+            <div className="text-2xl font-bold" data-testid="text-total-count">{reservations.length}</div>
+            <div className="text-sm text-muted-foreground">Total Reservations</div>
           </CardContent>
         </Card>
         <Card>
@@ -265,14 +265,14 @@ export default function MyBookings() {
             </Card>
           ))}
         </div>
-      ) : filteredBookings.length === 0 ? (
+      ) : filteredReservations.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
             <Sailboat className="w-16 h-16 text-muted-foreground mb-4" />
             <p className="text-muted-foreground mb-4">
               {filter === 'all' 
-                ? "You don't have any bookings yet"
-                : `No ${filter} bookings`}
+                ? "You don't have any reservations yet"
+                : `No ${filter} reservations`}
             </p>
             <Link href="/rentals">
               <Button data-testid="button-browse-equipment">
@@ -283,11 +283,11 @@ export default function MyBookings() {
         </Card>
       ) : (
         <div className="space-y-4">
-          {filteredBookings.map(booking => (
+          {filteredReservations.map(reservation => (
             <Card 
-              key={booking.id}
-              className={['active', 'checked_out'].includes(booking.status) ? 'ring-2 ring-green-500/50' : ''}
-              data-testid={`card-booking-${booking.id}`}
+              key={reservation.id}
+              className={['active', 'checked_out'].includes(reservation.status) ? 'ring-2 ring-green-500/50' : ''}
+              data-testid={`card-reservation-${reservation.id}`}
             >
               <CardContent className="p-4">
                 <div className="flex items-start gap-4">
@@ -299,23 +299,23 @@ export default function MyBookings() {
                     <div className="flex items-start justify-between gap-4 flex-wrap">
                       <div>
                         <div className="flex items-center gap-2 mb-1 flex-wrap">
-                          <h3 className="font-medium" data-testid={`text-item-name-${booking.id}`}>
-                            {booking.item?.name || 'Unknown Item'}
+                          <h3 className="font-medium" data-testid={`text-item-name-${reservation.id}`}>
+                            {reservation.item?.name || 'Unknown Item'}
                           </h3>
-                          {getStatusBadge(booking.status)}
+                          {getStatusBadge(reservation.status)}
                         </div>
                         <p className="text-sm text-muted-foreground">
-                          {booking.item?.category || 'Category'} 
-                          {booking.item?.locationName && ` • ${booking.item.locationName}`}
+                          {reservation.item?.category || 'Category'} 
+                          {reservation.item?.locationName && ` • ${reservation.item.locationName}`}
                         </p>
                       </div>
                       
                       <div className="text-right flex-shrink-0">
-                        <div className="font-semibold" data-testid={`text-total-${booking.id}`}>
-                          ${booking.total?.toFixed(2) || '0.00'}
+                        <div className="font-semibold" data-testid={`text-total-${reservation.id}`}>
+                          ${reservation.total?.toFixed(2) || '0.00'}
                         </div>
                         <div className="text-xs text-muted-foreground">
-                          {formatDuration(booking.durationHours)}
+                          {formatDuration(reservation.durationHours)}
                         </div>
                       </div>
                     </div>
@@ -323,16 +323,16 @@ export default function MyBookings() {
                     <div className="mt-3 flex items-center gap-4 text-sm flex-wrap">
                       <div className="flex items-center gap-1 text-muted-foreground">
                         <Calendar className="w-4 h-4" />
-                        <span>{formatDateTime(booking.startsAt)}</span>
+                        <span>{formatDateTime(reservation.startsAt)}</span>
                       </div>
                       <span className="text-muted-foreground">to</span>
                       <div className="text-muted-foreground">
-                        {formatDateTime(booking.endsAt)}
+                        {formatDateTime(reservation.endsAt)}
                       </div>
                     </div>
                     
                     <div className="mt-3 flex items-center gap-3 flex-wrap">
-                      {['pending', 'confirmed'].includes(booking.status) && (
+                      {['pending', 'confirmed'].includes(reservation.status) && (
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
                             <Button 
@@ -340,7 +340,7 @@ export default function MyBookings() {
                               size="sm" 
                               className="text-destructive hover:text-destructive"
                               disabled={cancelMutation.isPending}
-                              data-testid={`button-cancel-${booking.id}`}
+                              data-testid={`button-cancel-${reservation.id}`}
                             >
                               {cancelMutation.isPending ? (
                                 <>
@@ -350,23 +350,23 @@ export default function MyBookings() {
                               ) : (
                                 <>
                                   <XCircle className="w-4 h-4 mr-1" />
-                                  Cancel Booking
+                                  Cancel Reservation
                                 </>
                               )}
                             </Button>
                           </AlertDialogTrigger>
                           <AlertDialogContent>
                             <AlertDialogHeader>
-                              <AlertDialogTitle>Cancel Booking?</AlertDialogTitle>
+                              <AlertDialogTitle>Cancel Reservation?</AlertDialogTitle>
                               <AlertDialogDescription>
-                                Are you sure you want to cancel this booking for {booking.item?.name}? 
+                                Are you sure you want to cancel this reservation for {reservation.item?.name}? 
                                 This action cannot be undone.
                               </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
-                              <AlertDialogCancel data-testid="button-cancel-dialog-no">Keep Booking</AlertDialogCancel>
+                              <AlertDialogCancel data-testid="button-cancel-dialog-no">Keep Reservation</AlertDialogCancel>
                               <AlertDialogAction 
-                                onClick={() => cancelMutation.mutate(booking.id)}
+                                onClick={() => cancelMutation.mutate(reservation.id)}
                                 data-testid="button-cancel-dialog-yes"
                               >
                                 Yes, Cancel
@@ -376,15 +376,15 @@ export default function MyBookings() {
                         </AlertDialog>
                       )}
                       
-                      {booking.status === 'confirmed' && (
-                        <Button variant="ghost" size="sm" data-testid={`button-checkout-${booking.id}`}>
+                      {reservation.status === 'confirmed' && (
+                        <Button variant="ghost" size="sm" data-testid={`button-checkout-${reservation.id}`}>
                           <CheckCircle className="w-4 h-4 mr-1" />
                           Check Out Equipment
                         </Button>
                       )}
                       
-                      {['active', 'checked_out'].includes(booking.status) && (
-                        <Button variant="ghost" size="sm" className="text-green-500" data-testid={`button-return-${booking.id}`}>
+                      {['active', 'checked_out'].includes(reservation.status) && (
+                        <Button variant="ghost" size="sm" className="text-green-500" data-testid={`button-return-${reservation.id}`}>
                           <RefreshCw className="w-4 h-4 mr-1" />
                           Return Equipment
                         </Button>
@@ -394,10 +394,10 @@ export default function MyBookings() {
                 </div>
               </CardContent>
               
-              {['active', 'checked_out'].includes(booking.status) && (
+              {['active', 'checked_out'].includes(reservation.status) && (
                 <div className="h-1 bg-green-500" />
               )}
-              {booking.status === 'overdue' && (
+              {reservation.status === 'overdue' && (
                 <div className="h-1 bg-orange-500" />
               )}
             </Card>

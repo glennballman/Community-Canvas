@@ -2651,13 +2651,13 @@ export async function registerRoutes(
   // POST /api/v1/planning/service-runs - Create service run
   app.post("/api/v1/planning/service-runs", async (req, res) => {
     try {
-      const { company_name, service_type, destination_region, planned_date, planned_duration_days, total_job_slots, crew_size, crew_lead_name, vehicle_id, vehicle_description, logistics_cost_total, minimum_job_value, booking_deadline, contact_email, contact_phone, booking_notes } = req.body;
+      const { company_name, service_type, destination_region, planned_date, planned_duration_days, total_job_slots, crew_size, crew_lead_name, vehicle_id, vehicle_description, logistics_cost_total, minimum_job_value, reservation_deadline, contact_email, contact_phone, reservation_notes } = req.body;
 
       const result = await storage.query(`
-        INSERT INTO cc_service_runs (company_name, service_type, destination_region, planned_date, planned_duration_days, total_job_slots, crew_size, crew_lead_name, vehicle_id, vehicle_description, logistics_cost_total, minimum_job_value, booking_deadline, contact_email, contact_phone, booking_notes)
+        INSERT INTO cc_service_runs (company_name, service_type, destination_region, planned_date, planned_duration_days, total_job_slots, crew_size, crew_lead_name, vehicle_id, vehicle_description, logistics_cost_total, minimum_job_value, reservation_deadline, contact_email, contact_phone, reservation_notes)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
         RETURNING *
-      `, [company_name, service_type, destination_region, planned_date, planned_duration_days || 1, total_job_slots, crew_size, crew_lead_name, vehicle_id, vehicle_description, logistics_cost_total, minimum_job_value, booking_deadline, contact_email, contact_phone, booking_notes]);
+      `, [company_name, service_type, destination_region, planned_date, planned_duration_days || 1, total_job_slots, crew_size, crew_lead_name, vehicle_id, vehicle_description, logistics_cost_total, minimum_job_value, reservation_deadline, contact_email, contact_phone, reservation_notes]);
 
       res.json(result.rows[0]);
     } catch (error) {
@@ -2673,10 +2673,10 @@ export async function registerRoutes(
 
       let query = `
         SELECT sr.*, 
-               COUNT(srb.id) as bookings_count,
+               COUNT(srb.id) as reservations_count,
                sr.total_job_slots - COALESCE(sr.slots_filled, 0) as slots_available
         FROM cc_service_runs sr
-        LEFT JOIN cc_service_run_bookings srb ON sr.id = srb.service_run_id AND srb.status != 'cancelled'
+        LEFT JOIN cc_service_run_reservations srb ON sr.id = srb.service_run_id AND srb.status != 'cancelled'
         WHERE 1=1
       `;
       const params: any[] = [];
@@ -2728,7 +2728,7 @@ export async function registerRoutes(
       const total_price = job_value + logistics_share;
 
       const result = await storage.query(`
-        INSERT INTO cc_service_run_bookings (service_run_id, customer_name, customer_email, customer_phone, customer_address, job_description, estimated_duration_hours, job_value, logistics_share, total_price, preferred_time)
+        INSERT INTO cc_service_run_reservations (service_run_id, customer_name, customer_email, customer_phone, customer_address, job_description, estimated_duration_hours, job_value, logistics_share, total_price, preferred_time)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
         RETURNING *
       `, [id, customer_name, customer_email, customer_phone, customer_address, job_description, estimated_duration_hours, job_value, logistics_share, total_price, preferred_time]);
@@ -2737,8 +2737,8 @@ export async function registerRoutes(
 
       res.json(result.rows[0]);
     } catch (error) {
-      console.error('Error booking slot:', error);
-      res.status(500).json({ error: 'Failed to book slot' });
+      console.error('Error reservation slot:', error);
+      res.status(500).json({ error: 'Failed to reserve slot' });
     }
   });
 

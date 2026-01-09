@@ -122,7 +122,7 @@ export const sampleBamfieldTrip: TimelineEvent[] = [
       sailingTime: '8:20 AM',
       deckSpace: 'Commercial - Reserved',
     },
-    booking: {
+    reservation: {
       status: 'confirmed',
       confirmationNumber: 'BCF-2025-789456',
       provider: 'BC Ferries',
@@ -331,14 +331,14 @@ export const sampleBamfieldTrip: TimelineEvent[] = [
         'No service after sunset',
         'Weather dependent - may not operate in storms',
       ],
-      bookingRequired: false,
+      reservationRequired: false,
       weatherDependent: true,
       operatingHours: {
         start: 'Sunrise',
         end: 'Sunset',
       },
     },
-    booking: {
+    reservation: {
       status: 'not_booked',
       provider: 'Water Taxi',
       price: 15,
@@ -352,7 +352,7 @@ export const sampleBamfieldTrip: TimelineEvent[] = [
     type: 'water_crossing',
     time: '2025-01-07T14:00:00',
     title: 'Lucky Lander Vehicle Ferry',
-    subtitle: 'ADVANCE BOOKING REQUIRED - Vehicles only',
+    subtitle: 'ADVANCE RESERVATION REQUIRED - Vehicles only',
     description: 'Vehicle ferry to West Bamfield. Must book weeks in advance with the operator. Not all vehicles can be accommodated due to weight limits.',
     location: {
       name: 'Bamfield Vehicle Loading',
@@ -362,7 +362,7 @@ export const sampleBamfieldTrip: TimelineEvent[] = [
     alerts: [
       {
         severity: 'major',
-        title: 'Advance Booking Required',
+        title: 'Advance Reservation Required',
         description: 'Must book 2+ weeks in advance. Contact the operator directly. Limited availability.',
         source: 'Local Knowledge',
       },
@@ -388,15 +388,15 @@ export const sampleBamfieldTrip: TimelineEvent[] = [
         'Weather dependent',
         'Limited schedule',
       ],
-      bookingRequired: true,
-      advanceBookingDays: 14,
+      reservationRequired: true,
+      advanceReservationDays: 14,
       vehicleCapacity: {
         maxWeight: 5000,
         vehicleTypes: ['trucks', 'vans', 'small equipment'],
       },
       weatherDependent: true,
     },
-    booking: {
+    reservation: {
       status: 'pending',
       provider: 'Lucky Lander',
       price: 150,
@@ -426,7 +426,7 @@ export const sampleBamfieldTrip: TimelineEvent[] = [
       roomType: '2x Waterfront Cabins',
       amenities: ['Kitchen', 'WiFi', 'Parking', 'Boat Launch Access'],
     },
-    booking: {
+    reservation: {
       status: 'confirmed',
       confirmationNumber: 'WEL-2025-1234',
       provider: 'Woods End Landing',
@@ -672,7 +672,7 @@ export const sampleBamfieldTrip: TimelineEvent[] = [
       sailingTime: '6:45 PM',
       deckSpace: 'Commercial - Reserved',
     },
-    booking: {
+    reservation: {
       status: 'confirmed',
       confirmationNumber: 'BCF-2025-789457',
       provider: 'BC Ferries',

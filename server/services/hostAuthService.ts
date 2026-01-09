@@ -30,7 +30,7 @@ export interface HostAccount {
   passwordResetExpires?: Date;
   status: string;
   totalProperties?: number;
-  totalBookings?: number;
+  totalReservations?: number;
   memberSince?: Date;
   lastLoginAt?: Date;
   timezone?: string;

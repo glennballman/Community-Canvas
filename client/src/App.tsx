@@ -67,7 +67,7 @@ import ProjectDetail from './pages/projects/ProjectDetail';
 // Pages - App Business
 import InventoryPage from './pages/app/business/InventoryPage';
 import InventoryItemDetail from './pages/app/business/InventoryItemDetail';
-import BookingsPage from './pages/app/business/BookingsPage';
+import ReservationsPage from './pages/app/business/ReservationsPage';
 import CustomersPage from './pages/app/business/CustomersPage';
 
 // Pages - App Shared
@@ -224,13 +224,13 @@ export default function App() {
                 {/* Business tenant routes - new schema-aligned paths */}
                 <Route path="assets" element={<InventoryPage />} />
                 <Route path="assets/:id" element={<InventoryItemDetail />} />
-                <Route path="reservations" element={<BookingsPage />} />
+                <Route path="reservations" element={<ReservationsPage />} />
                 <Route path="customers" element={<CustomersPage />} />
                 
                 {/* Redirects from old paths */}
                 <Route path="inventory" element={<Navigate to="/app/assets" replace />} />
                 <Route path="inventory/:id" element={<InventoryRedirect />} />
-                <Route path="bookings" element={<Navigate to="/app/reservations" replace />} />
+                <Route path="reservations" element={<Navigate to="/app/reservations" replace />} />
                 <Route path="conversations" element={<Navigate to="/app/messages" replace />} />
                 
                 {/* Shared routes */}

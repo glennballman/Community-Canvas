@@ -141,8 +141,8 @@ export function PropertyDetails({ propertyId, open, onOpenChange }: PropertyDeta
     enabled: open && !!propertyId,
   });
 
-  const { data: bookingsData } = useQuery<{ bookings: AccommodationReservation[] }>({
-    queryKey: ['/api/accommodations', propertyId, 'bookings'],
+  const { data: reservationsData } = useQuery<{ reservations: AccommodationReservation[] }>({
+    queryKey: ['/api/accommodations', propertyId, 'reservations'],
     enabled: open && !!propertyId,
   });
 
@@ -244,7 +244,7 @@ export function PropertyDetails({ propertyId, open, onOpenChange }: PropertyDeta
   if (!open) return null;
 
   const currentStatus = selectedStatus || property?.status || 'discovered';
-  const bookings = bookingsData?.bookings || [];
+  const reservations = reservationsData?.reservations || [];
   const feeds = feedsData?.feeds || [];
   const availabilityBlocks = blocksData?.blocks || [];
 
@@ -313,7 +313,7 @@ export function PropertyDetails({ propertyId, open, onOpenChange }: PropertyDeta
                         data-testid="link-external"
                       >
                         <ExternalLink className="w-3 h-3" />
-                        View on {property.source === 'airbnb' ? 'Airbnb' : property.source === 'booking' ? 'Booking.com' : 'Source'}
+                        View on {property.source === 'airbnb' ? 'Airbnb' : property.source === 'reservation' ? 'Booking.com' : 'Source'}
                       </a>
                     )}
                   </div>
@@ -444,39 +444,39 @@ export function PropertyDetails({ propertyId, open, onOpenChange }: PropertyDeta
                   </CardContent>
                 </Card>
 
-                {/* BOOKING HISTORY */}
-                <Card data-testid="section-bookings">
+                {/* RESERVATION HISTORY */}
+                <Card data-testid="section-reservations">
                   <CardHeader className="pb-2 flex flex-row items-center justify-between gap-2">
-                    <CardTitle className="text-sm font-medium">Booking History</CardTitle>
-                    <Button size="sm" variant="outline" data-testid="button-add-booking">
+                    <CardTitle className="text-sm font-medium">Reservation History</CardTitle>
+                    <Button size="sm" variant="outline" data-testid="button-add-reservation">
                       <Plus className="w-3 h-3 mr-1" />
-                      Add Booking
+                      Add Reservation
                     </Button>
                   </CardHeader>
                   <CardContent>
-                    {bookings.length > 0 ? (
+                    {reservations.length > 0 ? (
                       <div className="space-y-2">
-                        {bookings.slice(0, 5).map((booking) => (
+                        {reservations.slice(0, 5).map((reservation) => (
                           <div 
-                            key={booking.id} 
+                            key={reservation.id} 
                             className="flex items-center justify-between p-2 bg-muted/50 rounded-md text-sm"
-                            data-testid={`row-booking-${booking.id}`}
+                            data-testid={`row-reservation-${reservation.id}`}
                           >
                             <div>
-                              <span className="font-medium">{booking.bookingRef}</span>
+                              <span className="font-medium">{reservation.reservationRef}</span>
                               <span className="text-muted-foreground ml-2">
-                                {booking.checkInDate} - {booking.checkOutDate}
+                                {reservation.checkInDate} - {reservation.checkOutDate}
                               </span>
                             </div>
                             <Badge variant="outline" className="text-xs">
-                              {booking.status}
+                              {reservation.status}
                             </Badge>
                           </div>
                         ))}
                       </div>
                     ) : (
                       <div className="text-center py-4 text-muted-foreground text-sm">
-                        No bookings recorded for this property.
+                        No reservations recorded for this property.
                       </div>
                     )}
                   </CardContent>
@@ -545,7 +545,7 @@ export function PropertyDetails({ propertyId, open, onOpenChange }: PropertyDeta
           <DialogHeader>
             <DialogTitle>Add iCal Feed</DialogTitle>
             <DialogDescription>
-              Enter the iCal URL from Airbnb, Booking.com, or another calendar source to sync availability.
+              Enter the iCal URL from Airbnb, Reservation.com, or another calendar source to sync availability.
             </DialogDescription>
           </DialogHeader>
           
@@ -560,7 +560,7 @@ export function PropertyDetails({ propertyId, open, onOpenChange }: PropertyDeta
                 data-testid="input-ical-url"
               />
               <p className="text-xs text-muted-foreground">
-                Find this in your Airbnb or Booking.com calendar settings under "Export Calendar"
+                Find this in your Airbnb or Reservation.com calendar settings under "Export Calendar"
               </p>
             </div>
             

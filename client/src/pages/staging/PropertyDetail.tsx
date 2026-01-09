@@ -505,7 +505,7 @@ export default function PropertyDetail() {
                         value={checkIn}
                         onChange={(e) => setCheckIn(e.target.value)}
                         min={new Date().toISOString().split('T')[0]}
-                        data-testid="input-booking-checkin"
+                        data-testid="input-reservation-checkin"
                       />
                     </div>
                     <div className="space-y-1">
@@ -515,7 +515,7 @@ export default function PropertyDetail() {
                         value={checkOut}
                         onChange={(e) => setCheckOut(e.target.value)}
                         min={checkIn || new Date().toISOString().split('T')[0]}
-                        data-testid="input-booking-checkout"
+                        data-testid="input-reservation-checkout"
                       />
                     </div>
                   </div>
@@ -544,7 +544,7 @@ export default function PropertyDetail() {
                       }
                     }}
                   >
-                    {checkIn && checkOut ? 'Book Now' : 'Check Availability'}
+                    {checkIn && checkOut ? 'Reserve Now' : 'Check Availability'}
                   </Button>
                   
                   <p className="text-xs text-center text-muted-foreground">

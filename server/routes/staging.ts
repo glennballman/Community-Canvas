@@ -353,13 +353,13 @@ router.put('/vehicles/:id', async (req: Request, res: Response) => {
 });
 
 // ============================================================================
-// BOOKINGS
+// RESERVATIONS
 // ============================================================================
 
-// GET /api/staging/bookings - Get bookings
-router.get('/bookings', async (req: Request, res: Response) => {
+// GET /api/staging/reservations - Get reservations
+router.get('/reservations', async (req: Request, res: Response) => {
   try {
-    const filters: stagingStorage.BookingFilters = {
+    const filters: stagingStorage.ReservationFilters = {
       propertyId: req.query.propertyId ? parseInt(req.query.propertyId as string) : undefined,
       status: req.query.status as string,
       guestEmail: req.query.guestEmail as string,
@@ -369,41 +369,41 @@ router.get('/bookings', async (req: Request, res: Response) => {
       offset: req.query.offset ? parseInt(req.query.offset as string) : 0,
     };
 
-    const bookings = await stagingStorage.getBookings(filters);
-    res.json({ bookings, total: bookings.length });
+    const reservations = await stagingStorage.getReservations(filters);
+    res.json({ reservations, total: reservations.length });
   } catch (error) {
-    console.error('[Staging Bookings] Error:', error);
-    res.status(500).json({ error: 'Failed to get bookings' });
+    console.error('[Staging Reservations] Error:', error);
+    res.status(500).json({ error: 'Failed to get reservations' });
   }
 });
 
-// GET /api/staging/bookings/:id - Get booking details
-router.get('/bookings/:id', async (req: Request, res: Response) => {
+// GET /api/staging/reservations/:id - Get reservation details
+router.get('/reservations/:id', async (req: Request, res: Response) => {
   try {
     const id = parseInt(req.params.id);
     
-    // Check if it's a booking reference (CC-STG-...) or numeric ID
+    // Check if it's a reservation reference (CC-STG-...) or numeric ID
     if (isNaN(id)) {
-      const booking = await stagingStorage.getBookingByRef(req.params.id);
-      if (!booking) {
-        return res.status(404).json({ error: 'Booking not found' });
+      const reservation = await stagingStorage.getReservationByRef(req.params.id);
+      if (!reservation) {
+        return res.status(404).json({ error: 'Reservation not found' });
       }
-      return res.json(booking);
+      return res.json(reservation);
     }
 
-    const booking = await stagingStorage.getBookingById(id);
-    if (!booking) {
-      return res.status(404).json({ error: 'Booking not found' });
+    const reservation = await stagingStorage.getReservationById(id);
+    if (!reservation) {
+      return res.status(404).json({ error: 'Reservation not found' });
     }
-    res.json(booking);
+    res.json(reservation);
   } catch (error) {
-    console.error('[Staging Booking] Error:', error);
-    res.status(500).json({ error: 'Failed to get booking' });
+    console.error('[Staging Reservation] Error:', error);
+    res.status(500).json({ error: 'Failed to get reservation' });
   }
 });
 
-// POST /api/staging/bookings - Create booking
-router.post('/bookings', async (req: Request, res: Response) => {
+// POST /api/staging/reservations - Create reservation
+router.post('/reservations', async (req: Request, res: Response) => {
   try {
     const {
       propertyId,
@@ -463,7 +463,7 @@ router.post('/bookings', async (req: Request, res: Response) => {
     if (property.status !== 'active') {
       return res.status(400).json({ 
         success: false, 
-        error: `Property is not accepting bookings (status: ${property.status})`,
+        error: `Property is not accepting reservations (status: ${property.status})`,
         code: 'PROPERTY_NOT_ACTIVE'
       });
     }
@@ -503,7 +503,7 @@ router.post('/bookings', async (req: Request, res: Response) => {
     const totalCost = pricing.subtotal + serviceFee + taxes;
 
     // property already fetched above for validation
-    const booking = await stagingStorage.createBooking({
+    const reservation = await stagingStorage.createReservation({
       propertyId,
       spotId,
       guestType: guestType || 'individual',
@@ -532,15 +532,15 @@ router.post('/bookings', async (req: Request, res: Response) => {
 
     res.status(201).json({
       success: true,
-      booking: {
-        id: booking.id,
-        bookingRef: booking.bookingRef,
+      reservation: {
+        id: reservation.id,
+        reservationRef: reservation.reservationRef,
         propertyName: property?.name,
-        checkInDate: booking.checkInDate,
-        checkOutDate: booking.checkOutDate,
-        numNights: booking.numNights,
-        totalCost: booking.totalCost,
-        status: booking.status
+        checkInDate: reservation.checkInDate,
+        checkOutDate: reservation.checkOutDate,
+        numNights: reservation.numNights,
+        totalCost: reservation.totalCost,
+        status: reservation.status
       },
       pricing: {
         nightlyRate: pricing.nightly,
@@ -552,70 +552,70 @@ router.post('/bookings', async (req: Request, res: Response) => {
       }
     });
   } catch (error) {
-    console.error('[Staging Create Booking] Error:', error);
-    res.status(500).json({ success: false, error: 'Failed to create booking' });
+    console.error('[Staging Create Reservation] Error:', error);
+    res.status(500).json({ success: false, error: 'Failed to create reservation' });
   }
 });
 
-// PUT /api/staging/bookings/:id - Update booking
-router.put('/bookings/:id', async (req: Request, res: Response) => {
+// PUT /api/staging/reservations/:id - Update reservation
+router.put('/reservations/:id', async (req: Request, res: Response) => {
   try {
     const id = parseInt(req.params.id);
     if (isNaN(id)) {
-      return res.status(400).json({ error: 'Invalid booking ID' });
+      return res.status(400).json({ error: 'Invalid reservation ID' });
     }
 
-    const booking = await stagingStorage.updateBooking(id, req.body);
-    if (!booking) {
-      return res.status(404).json({ error: 'Booking not found' });
+    const reservation = await stagingStorage.updateReservation(id, req.body);
+    if (!reservation) {
+      return res.status(404).json({ error: 'Reservation not found' });
     }
-    res.json(booking);
+    res.json(reservation);
   } catch (error) {
-    console.error('[Staging Update Booking] Error:', error);
-    res.status(500).json({ error: 'Failed to update booking' });
+    console.error('[Staging Update Reservation] Error:', error);
+    res.status(500).json({ error: 'Failed to update reservation' });
   }
 });
 
-// POST /api/staging/bookings/:id/cancel - Cancel booking (accepts ID or bookingRef)
-router.post('/bookings/:id/cancel', async (req: Request, res: Response) => {
+// POST /api/staging/reservations/:id/cancel - Cancel reservation (accepts ID or reservationRef)
+router.post('/reservations/:id/cancel', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { reason } = req.body;
 
-    // Find booking by ID or confirmation_number
-    const booking = await stagingStorage.findBookingByIdOrRef(id);
+    // Find reservation by ID or confirmation_number
+    const reservation = await stagingStorage.findReservationByIdOrRef(id);
     
-    if (!booking) {
-      return res.status(404).json({ success: false, error: 'Booking not found' });
+    if (!reservation) {
+      return res.status(404).json({ success: false, error: 'Reservation not found' });
     }
 
     // Check if already cancelled
-    if (booking.status === 'cancelled') {
-      return res.status(400).json({ success: false, error: 'Booking is already cancelled' });
+    if (reservation.status === 'cancelled') {
+      return res.status(400).json({ success: false, error: 'Reservation is already cancelled' });
     }
 
     // Check if completed
-    if (booking.status === 'completed') {
-      return res.status(400).json({ success: false, error: 'Cannot cancel a completed booking' });
+    if (reservation.status === 'completed') {
+      return res.status(400).json({ success: false, error: 'Cannot cancel a completed reservation' });
     }
 
-    // Only allow cancelling pending or confirmed bookings
-    if (!['pending', 'confirmed'].includes(booking.status)) {
+    // Only allow cancelling pending or confirmed reservations
+    if (!['pending', 'confirmed'].includes(reservation.status)) {
       return res.status(400).json({ 
         success: false, 
-        error: `Cannot cancel booking with status: ${booking.status}` 
+        error: `Cannot cancel reservation with status: ${reservation.status}` 
       });
     }
 
-    const cancelled = await stagingStorage.cancelBooking(booking.id, reason || 'Guest requested cancellation');
+    const cancelled = await stagingStorage.cancelReservation(reservation.id, reason || 'Guest requested cancellation');
     res.json({
       success: true,
-      message: 'Booking cancelled successfully',
-      booking: cancelled
+      message: 'Reservation cancelled successfully',
+      reservation: cancelled
     });
   } catch (error) {
-    console.error('[Staging Cancel Booking] Error:', error);
-    res.status(500).json({ success: false, error: 'Failed to cancel booking' });
+    console.error('[Staging Cancel Reservation] Error:', error);
+    res.status(500).json({ success: false, error: 'Failed to cancel reservation' });
   }
 });
 

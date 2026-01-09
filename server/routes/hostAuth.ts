@@ -249,7 +249,7 @@ router.get('/me', requireHostAuth as any, async (req: HostAuthRequest, res: Resp
         phoneVerified: host.phoneVerified,
         status: host.status,
         totalProperties: host.totalProperties || 0,
-        totalBookings: host.totalBookings || 0,
+        totalReservations: host.totalReservations || 0,
         memberSince: host.memberSince || host.createdAt,
         lastLoginAt: host.lastLoginAt,
         timezone: host.timezone || 'America/Vancouver',

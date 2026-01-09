@@ -160,10 +160,10 @@ export function ServiceRunsBoard({ onBack }: ServiceRunsBoardProps) {
                   )}
                 </div>
 
-                {run.booking_deadline && (
+                {run.reservation_deadline && (
                   <p className="text-xs text-muted-foreground flex items-center gap-1">
                     <Clock className="w-3 h-3" />
-                    Book by: {new Date(run.booking_deadline).toLocaleDateString()}
+                    Book by: {new Date(run.reservation_deadline).toLocaleDateString()}
                   </p>
                 )}
 

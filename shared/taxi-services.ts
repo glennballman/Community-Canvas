@@ -70,7 +70,7 @@ export const BC_TAXI_SERVICES: TaxiService[] = [
     website: "https://btccabs.ca",
     app_available: true,
     wheelchair_accessible: true,
-    notes: "Operating 80+ years. Uses eCab app for booking."
+    notes: "Operating 80+ years. Uses eCab app for reservation."
   },
   {
     id: "maclures-cabs",
@@ -290,7 +290,7 @@ export const BC_TAXI_SERVICES: TaxiService[] = [
     service_area: ["Victoria", "Greater Victoria", "Sidney", "YYJ Airport"],
     fleet_size: "59 cars",
     website: "https://victoriataxi.com",
-    notes: "Owner-operated fleet. Serves Greater Victoria and YYJ airport. Some pre-booking available."
+    notes: "Owner-operated fleet. Serves Greater Victoria and YYJ airport. Some pre-reservation available."
   },
   {
     id: "uptown-taxi",
@@ -401,7 +401,7 @@ export const BC_TAXI_SERVICES: TaxiService[] = [
     phone: "(250) 762-2222",
     website: "https://www.kelownacabs.ca",
     wheelchair_accessible: true,
-    notes: "Online booking available. Wheelchair accessible."
+    notes: "Online reservation available. Wheelchair accessible."
   },
   {
     id: "checkmate-cabs",
@@ -435,7 +435,7 @@ export const BC_TAXI_SERVICES: TaxiService[] = [
     phone: "(250) 864-8294",
     website: "https://currenttaxi.ca",
     app_available: true,
-    notes: "Electric Tesla fleet. Eco-friendly. App-based booking."
+    notes: "Electric Tesla fleet. Eco-friendly. App-based reservation."
   },
   {
     id: "west-cabs",
@@ -596,7 +596,7 @@ export const BC_TAXI_SERVICES: TaxiService[] = [
     service_area: ["Nanaimo", "Departure Bay", "Woodgrove"],
     website: "https://www.nanaimotaxi.ca",
     app_available: true,
-    notes: "Swiftsure Taxi Co Ltd. App and online booking available."
+    notes: "Swiftsure Taxi Co Ltd. App and online reservation available."
   },
   {
     id: "nanaimo-taxi-cab",
@@ -950,7 +950,7 @@ export const BC_TAXI_SERVICES: TaxiService[] = [
     website: "https://skeenataxi.com",
     app_available: true,
     wheelchair_accessible: true,
-    notes: "Mobile app (Android/iPhone). 3 wheelchair-accessible vehicles. IVR booking."
+    notes: "Mobile app (Android/iPhone). 3 wheelchair-accessible vehicles. IVR reservation."
   },
 
   // ============================================================================
@@ -1000,7 +1000,7 @@ export const BC_TAXI_SERVICES: TaxiService[] = [
       lng: -120.8476
     },
     service_area: ["Fort St. John"],
-    notes: "7-seaters and minivans. Airport pickup/dropoff. Pre-booking available."
+    notes: "7-seaters and minivans. Airport pickup/dropoff. Pre-reservation available."
   },
 
   // ============================================================================
@@ -1292,7 +1292,7 @@ export const BC_TAXI_SERVICES: TaxiService[] = [
     service_area: ["Sechelt", "Gibsons", "Pender Harbour", "Earls Cove to Langdale"],
     phone: "(604) 989-8294",
     website: "https://sechelttaxi.com",
-    notes: "Electric & gas vehicles. Ferry-to-ferry service. Pre-booking recommended."
+    notes: "Electric & gas vehicles. Ferry-to-ferry service. Pre-reservation recommended."
   },
   {
     id: "powell-river-taxi",

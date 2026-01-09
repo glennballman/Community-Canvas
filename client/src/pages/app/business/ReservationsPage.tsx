@@ -17,7 +17,7 @@ import { format, parseISO } from 'date-fns';
 import ScheduleBoard, { Resource, ScheduleEvent, ZoomLevel, ZOOM_CONFIGS } from '@/components/schedule/ScheduleBoard';
 import { useTenant } from '@/contexts/TenantContext';
 
-interface Booking {
+interface Reservation {
   id: string;
   confirmation_number: string;
   asset_id: string;
@@ -36,9 +36,9 @@ interface Booking {
   created_at: string;
 }
 
-interface BookingsResponse {
+interface ReservationsResponse {
   success: boolean;
-  bookings: Booking[];
+  reservations: Reservation[];
 }
 
 interface ResourcesResponse {
@@ -48,7 +48,7 @@ interface ResourcesResponse {
   asset_types: string[];
 }
 
-export default function BookingsPage() {
+export default function ReservationsPage() {
   const { currentTenant } = useTenant();
   const search = useSearch();
   const [, setLocation] = useLocation();
@@ -82,20 +82,20 @@ export default function BookingsPage() {
     }
   };
 
-  const bookingsUrl = viewMode === 'calendar' 
-    ? `/api/schedule/bookings?from=${dateRange.from.toISOString()}&to=${dateRange.to.toISOString()}`
-    : '/api/schedule/bookings';
+  const reservationsUrl = viewMode === 'calendar' 
+    ? `/api/schedule/reservations?from=${dateRange.from.toISOString()}&to=${dateRange.to.toISOString()}`
+    : '/api/schedule/reservations';
 
-  const { data: bookingsData, isLoading: bookingsLoading, isError: bookingsError } = useQuery<BookingsResponse>({
+  const { data: reservationsData, isLoading: reservationsLoading, isError: reservationsError } = useQuery<ReservationsResponse>({
     queryKey: viewMode === 'calendar' 
-      ? ['/api/schedule/bookings', currentTenant?.tenant_id, dateRange.from.toISOString(), dateRange.to.toISOString()]
-      : ['/api/schedule/bookings', currentTenant?.tenant_id],
+      ? ['/api/schedule/reservations', currentTenant?.tenant_id, dateRange.from.toISOString(), dateRange.to.toISOString()]
+      : ['/api/schedule/reservations', currentTenant?.tenant_id],
     queryFn: async () => {
       const token = localStorage.getItem('cc_token');
       const headers: Record<string, string> = {};
       if (token) headers['Authorization'] = `Bearer ${token}`;
-      const response = await fetch(bookingsUrl, { credentials: 'include', headers });
-      if (!response.ok) throw new Error('Failed to fetch bookings');
+      const response = await fetch(reservationsUrl, { credentials: 'include', headers });
+      if (!response.ok) throw new Error('Failed to fetch reservations');
       return response.json();
     },
     refetchOnMount: 'always',
@@ -125,27 +125,27 @@ export default function BookingsPage() {
 
   const assetTypes = useMemo(() => Object.keys(groupedResources), [groupedResources]);
 
-  const bookings = bookingsData?.bookings ?? [];
+  const reservations = reservationsData?.reservations ?? [];
 
-  const bookingsAsEvents: ScheduleEvent[] = useMemo(() => {
-    return bookings.map(b => ({
+  const reservationsAsEvents: ScheduleEvent[] = useMemo(() => {
+    return reservations.map(b => ({
       id: b.id,
       resource_id: b.asset_id,
-      event_type: 'booking' as const,
+      event_type: 'reservation' as const,
       start_date: b.start_date,
       end_date: b.end_date,
       status: b.status,
       title: b.primary_guest_name,
-      is_booking: true,
+      is_reservation: true,
     }));
-  }, [bookings]);
+  }, [reservations]);
 
   const createMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
-      return apiRequest('POST', '/api/schedule/bookings', data);
+      return apiRequest('POST', '/api/schedule/reservations', data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/schedule/bookings'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/schedule/reservations'] });
       setCreateModalOpen(false);
       resetForm();
       toast({ title: 'Reservation created successfully' });
@@ -222,14 +222,14 @@ export default function BookingsPage() {
 
   if (viewMode === 'calendar') {
     return (
-      <div className="h-full flex flex-col" data-testid="bookings-page">
+      <div className="h-full flex flex-col" data-testid="reservations-page">
         <ScheduleBoard
           resources={resources}
           groupedResources={groupedResources}
           assetTypes={assetTypes}
-          events={bookingsAsEvents}
-          isLoading={bookingsLoading || resourcesLoading}
-          error={bookingsError ? new Error('Failed to load bookings') : null}
+          events={reservationsAsEvents}
+          isLoading={reservationsLoading || resourcesLoading}
+          error={reservationsError ? new Error('Failed to load reservations') : null}
           onSlotClick={handleSlotClick}
           onRangeChange={handleRangeChange}
           title="Reservations"
@@ -265,7 +265,7 @@ export default function BookingsPage() {
             </DialogHeader>
             <form onSubmit={handleCreateSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="asset">What to book *</Label>
+                <Label htmlFor="asset">What to reserve *</Label>
                 <Select
                   value={formData.asset_id}
                   onValueChange={(v) => setFormData(prev => ({ ...prev, asset_id: v }))}
@@ -395,11 +395,11 @@ export default function BookingsPage() {
         </div>
       </div>
 
-      {bookingsLoading ? (
+      {reservationsLoading ? (
         <div className="flex items-center justify-center h-64">
           <Loader2 className="h-8 w-8 animate-spin" />
         </div>
-      ) : bookingsError ? (
+      ) : reservationsError ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12 text-center">
             <Calendar className="h-12 w-12 text-destructive mb-4" />
@@ -419,7 +419,7 @@ export default function BookingsPage() {
           {['all', 'pending', 'confirmed', 'completed'].map(tab => (
             <TabsContent key={tab} value={tab} className="mt-4">
               <div className="grid gap-4">
-                {(tab === 'all' ? bookings : bookings.filter(b => b.status === tab)).length === 0 ? (
+                {(tab === 'all' ? reservations : reservations.filter(b => b.status === tab)).length === 0 ? (
                   <Card>
                     <CardContent className="flex flex-col items-center justify-center py-12 text-center">
                       <Calendar className="h-12 w-12 text-muted-foreground mb-4" />
@@ -430,16 +430,16 @@ export default function BookingsPage() {
                     </CardContent>
                   </Card>
                 ) : (
-                  (tab === 'all' ? bookings : bookings.filter(b => b.status === tab)).map((booking) => (
-                    <Card key={booking.id} className="hover-elevate" data-testid={`card-reservation-${booking.id}`}>
+                  (tab === 'all' ? reservations : reservations.filter(b => b.status === tab)).map((reservation) => (
+                    <Card key={reservation.id} className="hover-elevate" data-testid={`card-reservation-${reservation.id}`}>
                       <CardHeader className="flex flex-row items-center justify-between gap-4">
                         <div>
-                          <CardTitle className="text-lg">{booking.primary_guest_name}</CardTitle>
+                          <CardTitle className="text-lg">{reservation.primary_guest_name}</CardTitle>
                           <p className="text-sm text-muted-foreground">
-                            {booking.asset_name} - {format(parseISO(booking.start_date), 'MMM d')} to {format(parseISO(booking.end_date), 'MMM d')}
+                            {reservation.asset_name} - {format(parseISO(reservation.start_date), 'MMM d')} to {format(parseISO(reservation.end_date), 'MMM d')}
                           </p>
                         </div>
-                        {getStatusBadge(booking.status)}
+                        {getStatusBadge(reservation.status)}
                       </CardHeader>
                     </Card>
                   ))
@@ -453,11 +453,11 @@ export default function BookingsPage() {
       <Dialog open={createModalOpen} onOpenChange={(open) => { setCreateModalOpen(open); if (!open) resetForm(); }}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Create Booking</DialogTitle>
+            <DialogTitle>Create Reservation</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleCreateSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="asset">What to book *</Label>
+              <Label htmlFor="asset">What to reserve *</Label>
               <Select
                 value={formData.asset_id}
                 onValueChange={(v) => setFormData(prev => ({ ...prev, asset_id: v }))}
@@ -550,9 +550,9 @@ export default function BookingsPage() {
               <Button type="button" variant="outline" onClick={() => setCreateModalOpen(false)}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={createMutation.isPending} data-testid="button-submit-booking">
+              <Button type="submit" disabled={createMutation.isPending} data-testid="button-submit-reservation">
                 {createMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                Create Booking
+                Create Reservation
               </Button>
             </DialogFooter>
           </form>
