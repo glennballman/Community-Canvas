@@ -1,0 +1,127 @@
+What I still need from Replit (copy/paste outputs)
+1) The Drizzle schema blocks for the 3 tables we are about to touch
+
+I need the actual pgTable(...) definitions (not \d) so I reference the right column names + arrays + defaults.
+
+Run:
+
+# Show the Drizzle blocks (adjust file path if schema split)
+rg -n "pgTable\\('cc_portal_moments'|pgTable\\('cc_trip_itinerary_items'|pgTable\\('cc_trip_passengers'" shared/schema.ts shared/**/*.ts server/**/*.ts
+
+
+Then paste the matching blocks for:
+
+cc_portal_moments
+
+cc_trip_itinerary_items
+
+cc_trip_passengers
+
+Why: our next step (Party View + approval gating + opt-out) depends on assigned_participant_ids, everyone, any existing “created_by” semantics, and how cc_trip_passengers relates to trips.
+
+2) The API route file that serves the trip portal today (post-rename)
+
+We have PortalReservePage.tsx and new reservation flow files, but I need to know which route file is serving:
+
+GET /api/public/trips/:accessCode/...
+
+GET itinerary
+
+GET portal moments
+
+any existing “timeline” endpoints
+
+Run:
+
+ls -la server/routes | rg -n "public|portal|trip|reservation"
+
+
+Then open the real file and paste the top-level route registrations and relevant handlers:
+
+sed -n '1,220p' server/routes/public-portal.ts 2>/dev/null || true
+sed -n '1,220p' server/routes/trips.ts 2>/dev/null || true
+
+
+Why: I must hook Party View endpoints into the right router and match existing auth/portal access patterns.
+
+3) Confirm whether “participants” vs “passengers” is the canonical party table now
+
+Your earlier schemas referenced cc_trip_booking_participants etc, but now we have:
+
+cc_trip_participants
+
+cc_trip_passengers
+
+I need the difference (or which one is used in the portal).
+
+Run:
+
+-- columns for both tables
+SELECT table_name, column_name, data_type
+FROM information_schema.columns
+WHERE table_name IN ('cc_trip_participants','cc_trip_passengers')
+ORDER BY table_name, ordinal_position;
+
+
+Why: Party View needs one canonical “people list” to render rows and assign/opt-out.
+
+4) Confirm cc_trip_itinerary_items has (or doesn’t have) the opt-out + approval fields already
+
+Grok says “booking eliminated” but doesn’t mention our new fields.
+
+Run:
+
+SELECT column_name, data_type
+FROM information_schema.columns
+WHERE table_name='cc_trip_itinerary_items'
+ORDER BY ordinal_position;
+
+
+Why: I’ll generate SQL migrations that only add missing columns and never break anything.
+
+5) Confirm cc_media + cc_entity_media entity_type conventions
+
+We’re going to attach:
+
+boardwalk map
+
+waiver
+
+rental contract
+
+menus (pdf)
+…as R2 objects linked to cc_portal_moments and optionally cc_trip_itinerary_items.
+
+I need to see if entity_type is constrained/enum-like in code or validated.
+
+Run:
+
+# find how entity_type is typed/validated
+rg -n "cc_entity_media|entity_type|entityType" shared/schema.ts server client | head -80
+
+
+And paste the cc_entity_media drizzle definition.
+
+Why: if entity_type is constrained to known strings, we must match it (e.g., portal_moment vs cc_portal_moments).
+
+6) R2 mediaService interface (so I don’t reference wrong function names)
+
+You told me the path: server/services/mediaService.ts. I need its exported methods.
+
+Run:
+
+sed -n '1,240p' server/services/mediaService.ts
+
+
+Why: Party invites + maps + waiver signing flows will need:
+
+upload
+
+presigned GET/PUT
+
+public URL generation
+…and I’ll call the correct helper.
+
+Why I’m asking for these (in one line)
+
+Because DB table names and file names are now correct, but the code contracts (Drizzle definitions + route wiring + entity_type conventions + mediaService exports) are what determines whether Prompt 3 works first try.
