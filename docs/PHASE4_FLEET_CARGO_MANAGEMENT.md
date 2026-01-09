@@ -447,7 +447,7 @@ CREATE TABLE trip_cargo (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   
   -- What trip/vehicle
-  trip_booking_id UUID REFERENCES trip_bookings(id) ON DELETE CASCADE,
+  trip_reservation_id UUID REFERENCES trip_reservations(id) ON DELETE CASCADE,
   vehicle_id UUID REFERENCES vehicle_profiles(id),
   trailer_id UUID REFERENCES trailer_profiles(id),
   
@@ -514,7 +514,7 @@ INSERT INTO cargo_item_types (id, name, category, default_weight_lbs, default_le
 
 ### Calculate Cargo Totals
 ```sql
-CREATE OR REPLACE FUNCTION calculate_cargo_totals(p_trip_booking_id UUID)
+CREATE OR REPLACE FUNCTION calculate_cargo_totals(p_trip_reservation_id UUID)
 RETURNS TABLE (
   total_weight_lbs INTEGER,
   max_height_inches INTEGER,
@@ -534,7 +534,7 @@ BEGIN
     ARRAY_AGG(DISTINCT ct.bc_ferries_notes) FILTER (WHERE ct.bc_ferries_notes IS NOT NULL) as ferry_warnings
   FROM trip_cargo tc
   JOIN cargo_item_types ct ON tc.cargo_type_id = ct.id
-  WHERE tc.trip_booking_id = p_trip_booking_id;
+  WHERE tc.trip_reservation_id = p_trip_reservation_id;
 END;
 $$ LANGUAGE plpgsql;
 ```

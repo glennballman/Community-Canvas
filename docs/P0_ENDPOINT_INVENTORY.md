@@ -97,8 +97,8 @@
 | GET | /browse | public_reference_readonly | None | serviceQuery | cc_rental_items |
 | GET | /item/:id | public_reference_readonly | None | serviceQuery | cc_rental_items |
 | POST | /quote | public_reference_readonly | None | serviceQuery | (pricing calculation) |
-| POST | /booking | tenant_scoped | requireAuth | tenantTransaction | cc_rental_bookings |
-| GET | /my-bookings | tenant_scoped | requireAuth | tenantQuery | cc_rental_bookings |
+| POST | /reservation | tenant_scoped | requireAuth | tenantTransaction | cc_rental_reservations |
+| GET | /my-reservations | tenant_scoped | requireAuth | tenantQuery | cc_rental_reservations |
 
 ### 9. Fleet Routes (`/api/v1/fleet/*`)
 
@@ -126,16 +126,16 @@ All mutations now use requireTenant + tenantQuery with RLS enforcement.
 |--------|------|-------|--------|-----------|------------|
 | GET | /properties | tenant_scoped | authenticateToken | serviceQuery | staging_properties (user filter) |
 | GET | /properties/:id | tenant_scoped | authenticateToken | serviceQuery | staging_properties |
-| GET | /bookings | tenant_scoped | authenticateToken | serviceQuery | staging_bookings (user filter) |
-| PUT | /bookings/:id | tenant_scoped | authenticateToken | serviceQuery | staging_bookings |
+| GET | /reservations | tenant_scoped | authenticateToken | serviceQuery | staging_reservations (user filter) |
+| PUT | /reservations/:id | tenant_scoped | authenticateToken | serviceQuery | staging_reservations |
 
 ### 11. Accommodations Routes (`/api/accommodations/*`)
 | Method | Path | Scope | Guards | DB Helper | RLS Tables |
 |--------|------|-------|--------|-----------|------------|
 | GET | / | public_reference_readonly | None | storage class | accommodation_properties |
 | GET | /stats | public_reference_readonly | None | storage class | (aggregated) |
-| GET | /bookings | public_reference_readonly | None | storage class | accommodation_bookings |
-| POST | /bookings | tenant_scoped | None (NEEDS: requireAuth) | storage class | accommodation_bookings |
+| GET | /reservations | public_reference_readonly | None | storage class | accommodation_reservations |
+| POST | /reservations | tenant_scoped | None (NEEDS: requireAuth) | storage class | accommodation_reservations |
 
 ### 12. Crew Routes (`/api/crew/*`)
 | Method | Path | Scope | Guards | DB Helper | RLS Tables |

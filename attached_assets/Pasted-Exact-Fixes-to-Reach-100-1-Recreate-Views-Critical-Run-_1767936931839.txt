@@ -1,0 +1,50 @@
+Exact Fixes to Reach 100%
+1. Recreate Views (Critical)
+Run these in your DB (adjust column names based on actual view definitions):
+SQL-- 1. Drop old views (CASCADE if dependencies)
+DROP VIEW IF EXISTS v_unified_accommodations CASCADE;
+DROP VIEW IF EXISTS v_unified_parking CASCADE;
+DROP VIEW IF EXISTS v_unified_self_contained CASCADE;
+DROP VIEW IF EXISTS v_unified_towables CASCADE;
+DROP VIEW IF EXISTS v_pending_notifications CASCADE;
+
+-- 2. Recreate with new names (example - adjust SELECT columns)
+CREATE VIEW v_unified_accommodations AS
+SELECT
+  id,
+  portal_id,
+  name,
+  status,                     -- was booking_status
+  reference_code,             -- was booking_reference
+  -- ... other columns ...
+FROM cc_accommodation_reservations;
+
+CREATE VIEW v_pending_notifications AS
+SELECT
+  id,
+  reservation_id,             -- was booking_id or similar
+  status,
+  -- ... other columns ...
+FROM cc_reservation_notifications
+WHERE status = 'pending';
+
+-- Repeat for other views
+Evidence Check:
+SQLSELECT viewname FROM pg_views 
+WHERE schemaname = 'public' 
+AND viewname ILIKE '%unified%' OR viewname ILIKE '%pending%';
+-- Should show new views with correct column names
+2. Bulk Search/Replace for Cosmetic References
+Run this in VS Code or terminal (adjust path):
+Bash# Find remaining "booking" (case-insensitive)
+grep -ir "booking" --include="*.ts" --include="*.tsx" --include="*.md" --include="*.json" . | grep -v node_modules | grep -v .next
+
+# Bulk replace in code (careful - review diffs!)
+find . -type f \( -name "*.ts" -o -name "*.tsx" -o -name "*.md" -o -name "*.json" \) -not -path "./node_modules/*" -not -path "./.next/*" \
+  -exec sed -i '' 's/booking/reservation/gi' {} \;
+
+# Then manually review UI strings (e.g., "Your booking is confirmed" → "Your reservation is confirmed")
+# Common places: components/Confirmation.tsx, emails/templates, etc.
+After:
+Bashgrep -ir "booking" . | grep -v node_modules | grep -v .next
+# Should return 0 (except maybe is_booked or comments you want to keep)

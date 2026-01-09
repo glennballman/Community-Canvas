@@ -11,7 +11,7 @@ This isn't just a fleet management system or a trip planner. It's a **comprehens
 
 1. **Knows everything** about BC infrastructure, services, conditions, and capacity
 2. **Understands context** - who's traveling, what they need, what could go wrong
-3. **Handles 100% of everything** - from idea to bookings to monitoring to contingencies
+3. **Handles 100% of everything** - from idea to reservations to monitoring to contingencies
 4. **Watches continuously** - weather, road conditions, ferry cancellations, landslides, floods
 5. **Adapts in real-time** - reroutes, rebooks, notifies when plans need to change
 
@@ -57,7 +57,7 @@ CivOS is the **sovereign-grade governmental operating system** launching January
   - Land access permissions (Crown land vs private)
 
 - **Camping Reservations**: BC Parks, recreation sites
-  - Knows capacity, booking windows, cancellation policies
+  - Knows capacity, reservation windows, cancellation policies
   - Handles reservation across multiple systems
   - Monitors: Fire bans, park closures, bear activity
 
@@ -154,7 +154,7 @@ Hans and Greta are flying into Kelowna from Zurich for a 2-week BC adventure. Th
 
 - Days 7-10: Vancouver Island & Wilderness
   - Ferry to Victoria
-  - Whale watching tour booking (Zodiac vs covered boat based on weather)
+  - Whale watching tour reservation (Zodiac vs covered boat based on weather)
   - Cathedral Grove (old growth forest)
   - Tofino for "wilderness beach" experience
   - Storm watching if season appropriate
@@ -177,7 +177,7 @@ Hans and Greta are flying into Kelowna from Zurich for a 2-week BC adventure. Th
 - "Whale activity high near Telegraph Cove - want to add a day trip?"
 
 ### The Magic
-> Swiss couple says: "We want to see the best of BC in 2 weeks." System creates a personalized itinerary, handles every booking, and adapts in real-time to conditions and opportunities.
+> Swiss couple says: "We want to see the best of BC in 2 weeks." System creates a personalized itinerary, handles every reservation, and adapts in real-time to conditions and opportunities.
 
 ---
 
@@ -387,7 +387,7 @@ A location scout from a Vancouver film production company needs to find location
 ### Traditional Trip Planning
 1. User researches destinations
 2. User checks availability
-3. User makes individual bookings
+3. User makes individual reservations
 4. User monitors conditions
 5. User adapts when things change
 6. **90% of the work is on the user**
@@ -398,7 +398,7 @@ A location scout from a Vancouver film production company needs to find location
 3. System checks everything simultaneously
 4. System presents optimized plan
 5. User approves or adjusts
-6. **System handles all bookings**
+6. **System handles all reservations**
 7. **System monitors continuously**
 8. **System adapts proactively**
 9. **User just shows up**
@@ -451,11 +451,11 @@ A location scout from a Vancouver film production company needs to find location
                               |
                               v
 +-------------------------------------------------------------+
-|                   BOOKING LAYER                              |
+|                   reservation LAYER                              |
 |                                                              |
 |  +----------+ +----------+ +----------+ +----------+        |
 |  |BC Ferries| | Cloudbeds| | Booqable | |Restaurant|        |
-|  | Booking  | |  Hotels  | |Equipment | |  Resos   |        |
+|  | reservation  | |  Hotels  | |Equipment | |  Resos   |        |
 |  +----------+ +----------+ +----------+ +----------+        |
 |                                                              |
 |  +----------+ +----------+ +----------+                     |
@@ -469,7 +469,7 @@ A location scout from a Vancouver film production company needs to find location
 |                CONTINUOUS MONITORING                         |
 |                                                              |
 |  - Weather changes -> Alert + Adaptation                     |
-|  - Ferry cancellation -> Alternative + Rebooking             |
+|  - Ferry cancellation -> Alternative + Rereservation             |
 |  - Road closure -> Reroute + Time adjustment                 |
 |  - Accommodation issue -> Backup activation                  |
 |  - Emergency event -> Full contingency execution             |
@@ -492,14 +492,14 @@ A location scout from a Vancouver film production company needs to find location
 
 ---
 
-# BOOKING SYSTEM INTEGRATIONS
+# reservation SYSTEM INTEGRATIONS
 
 ## Planned Integrations
 
 | System | Purpose | Integration Type |
 |--------|---------|------------------|
 | **BC Ferries** | Ferry reservations | API (if available) / Scraping |
-| **Cloudbeds** | Hotel/motel bookings | API |
+| **Cloudbeds** | Hotel/motel reservations | API |
 | **Booqable** | Equipment rental | API |
 | **Airbnb** | Vacation rentals | API |
 | **VRBO** | Vacation rentals | API |
@@ -509,7 +509,7 @@ A location scout from a Vancouver film production company needs to find location
 | **Resy** | Restaurant reservations | API |
 | **Viator** | Tours and activities | API |
 | **GetYourGuide** | Tours and activities | API |
-| **Whale watching operators** | Direct bookings | Custom |
+| **Whale watching operators** | Direct reservations | Custom |
 | **Ski resorts** | Lift tickets, rentals | Various APIs |
 
 ---
@@ -546,7 +546,7 @@ A location scout from a Vancouver film production company needs to find location
 
 ## For Individual Trips
 - User effort: < 10 minutes from intent to confirmed plan
-- Booking accuracy: 100% (no double-bookings, no mismatches)
+- reservation accuracy: 100% (no double-reservations, no mismatches)
 - Proactive alerts: Before user notices issues
 - Adaptation speed: New plan within 5 minutes of disruption
 - User satisfaction: "It just worked"
@@ -582,7 +582,7 @@ A location scout from a Vancouver film production company needs to find location
 - Ferry integration
 
 ## Phase 3: Orchestration
-- Booking integrations
+- reservation integrations
 - Continuous monitoring
 - Proactive alerts
 - Adaptation engine
