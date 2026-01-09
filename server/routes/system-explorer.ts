@@ -27,7 +27,7 @@ const KNOWN_PIPELINES = [
 const KEY_ROUTES = [
   { path: '/app/dashboard', label: 'Dashboard', required: true },
   { path: '/app/inventory', label: 'Inventory', required: true },
-  { path: '/app/bookings', label: 'Bookings', required: true },
+  { path: '/app/reservations', label: 'Reservations', required: true },
   { path: '/app/operations', label: 'Operations', required: true },
   { path: '/app/intake/work-requests', label: 'Work Requests', required: true },
   { path: '/app/cc_projects', label: 'Projects', required: true },

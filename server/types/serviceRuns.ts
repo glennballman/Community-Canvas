@@ -432,7 +432,7 @@ export interface TripDetails {
   ferryOutbound: FerryBooking | null;
   ferryReturn: FerryBooking | null;
   ferryTotalCost: number;
-  accommodations: AccommodationBooking[];
+  accommodations: AccommodationReservation[];
   accommodationTotalCost: number;
   dailySchedule: DailySchedule[];
   routeOptimizationNotes: string;
@@ -448,7 +448,7 @@ export interface FerryBooking {
   passengerCount: number;
 }
 
-export interface AccommodationBooking {
+export interface AccommodationReservation {
   propertyId: string;
   propertyName: string;
   checkIn: string;

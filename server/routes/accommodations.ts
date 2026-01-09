@@ -53,7 +53,7 @@ export function createAccommodationsRouter(db: Pool) {
     }
   });
 
-  router.get('/bookings', async (req: Request, res: Response) => {
+  router.get('/reservations', async (req: Request, res: Response) => {
     try {
       const { status, propertyId, upcoming } = req.query;
       
@@ -65,12 +65,12 @@ export function createAccommodationsRouter(db: Pool) {
 
       res.json({ bookings });
     } catch (error) {
-      console.error('Error fetching bookings:', error);
-      res.status(500).json({ error: 'Failed to fetch bookings' });
+      console.error('Error fetching reservations:', error);
+      res.status(500).json({ error: 'Failed to fetch reservations' });
     }
   });
 
-  router.get('/bookings/:id', async (req: Request, res: Response) => {
+  router.get('/reservations/:id', async (req: Request, res: Response) => {
     try {
       const booking = await storage.getBookingById(parseInt(req.params.id));
       if (!booking) {
@@ -78,22 +78,22 @@ export function createAccommodationsRouter(db: Pool) {
       }
       res.json(booking);
     } catch (error) {
-      console.error('Error fetching booking:', error);
-      res.status(500).json({ error: 'Failed to fetch booking' });
+      console.error('Error fetching reservation:', error);
+      res.status(500).json({ error: 'Failed to fetch reservation' });
     }
   });
 
-  router.post('/bookings', async (req: Request, res: Response) => {
+  router.post('/reservations', async (req: Request, res: Response) => {
     try {
       const booking = await storage.createBooking(req.body);
       res.status(201).json(booking);
     } catch (error) {
-      console.error('Error creating booking:', error);
-      res.status(500).json({ error: 'Failed to create booking' });
+      console.error('Error creating reservation:', error);
+      res.status(500).json({ error: 'Failed to create reservation' });
     }
   });
 
-  router.put('/bookings/:id', async (req: Request, res: Response) => {
+  router.put('/reservations/:id', async (req: Request, res: Response) => {
     try {
       const booking = await storage.updateBooking(parseInt(req.params.id), req.body);
       if (!booking) {
@@ -101,8 +101,8 @@ export function createAccommodationsRouter(db: Pool) {
       }
       res.json(booking);
     } catch (error) {
-      console.error('Error updating booking:', error);
-      res.status(500).json({ error: 'Failed to update booking' });
+      console.error('Error updating reservation:', error);
+      res.status(500).json({ error: 'Failed to update reservation' });
     }
   });
 

@@ -331,7 +331,7 @@ router.post('/:id/book', requireAuth, requireTenant, async (req: Request, res: R
       message: 'Work request booked as project'
     });
   } catch (error) {
-    console.error('Error booking work request:', error);
+    console.error('Error reserving work request:', error);
     res.status(500).json({ error: 'Failed to book work request' });
   }
 });

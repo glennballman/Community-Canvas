@@ -144,7 +144,7 @@ export interface OutreachMessage {
   updatedAt: string;
 }
 
-export interface AccommodationBooking {
+export interface AccommodationReservation {
   id: number;
   bookingRef: string;
   propertyId?: number;

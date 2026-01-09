@@ -50,7 +50,7 @@ interface RentalItem {
   minimumAge: number;
   isAvailable: boolean;
   ownerName: string;
-  bookingMode: 'check_in_out' | 'arrive_depart' | 'pickup_return';
+  reservationMode: 'check_in_out' | 'arrive_depart' | 'pickup_return';
   defaultDurationPreset: string | null;
   defaultStartTimeLocal: string;
   defaultEndTimeLocal: string;
@@ -122,7 +122,7 @@ router.get('/browse', async (req: Request, res: Response) => {
         rc.minimum_age,
         ri.is_available,
         ri.owner_name,
-        ri.booking_mode,
+        ri.reservation_mode,
         ri.default_duration_preset,
         ri.default_start_time_local,
         ri.default_end_time_local,
@@ -191,7 +191,7 @@ router.get('/browse', async (req: Request, res: Response) => {
       minimumAge: row.minimum_age || 18,
       isAvailable: row.is_available,
       ownerName: row.owner_name || 'Owner',
-      bookingMode: row.booking_mode || 'pickup_return',
+      reservationMode: row.reservation_mode || 'pickup_return',
       defaultDurationPreset: row.default_duration_preset || null,
       defaultStartTimeLocal: row.default_start_time_local || '09:00',
       defaultEndTimeLocal: row.default_end_time_local || '17:00',
@@ -256,7 +256,7 @@ router.get('/:id/eligibility', requireAuth, async (req: Request, res: Response) 
         hasPayment: elig.has_payment,
         blockers: elig.blockers || [],
         warnings: elig.warnings || [],
-        requirements: elig.requirements || { waiver: 'at_checkout', document: 'at_checkout', payment: 'at_booking' },
+        requirements: elig.requirements || { waiver: 'at_checkout', document: 'at_checkout', payment: 'at_reservation' },
         requiredWaiver: elig.required_waiver,
         requiredDocument: elig.required_document
       }
@@ -466,7 +466,7 @@ router.post('/:id/book', requireAuth, async (req: Request, res: Response) => {
       // Check conflicts
       const conflictResult = await client.query(`
         SELECT COUNT(*) as conflicts
-        FROM cc_rental_bookings
+        FROM cc_rental_reservations
         WHERE rental_item_id = $1
         AND status NOT IN ('cancelled', 'completed')
         AND (
@@ -516,7 +516,7 @@ router.post('/:id/book', requireAuth, async (req: Request, res: Response) => {
       const total = subtotal + tax + damageDeposit;
       
       const bookingResult = await client.query(`
-        INSERT INTO cc_rental_bookings (
+        INSERT INTO cc_rental_reservations (
           rental_item_id,
           renter_individual_id,
           start_date,
@@ -530,7 +530,7 @@ router.post('/:id/book', requireAuth, async (req: Request, res: Response) => {
         RETURNING id
       `, [itemId, individualId, startTs, endTs, subtotal, tax, damageDeposit, total]);
       
-      const bookingId = bookingResult.rows[0].id;
+      const reservationId = bookingResult.rows[0].id;
       
       // E5: Auto-create turnover buffer event if turnover_buffer_minutes > 0
       const itemMeta = await client.query(
@@ -547,10 +547,10 @@ router.post('/:id/book', requireAuth, async (req: Request, res: Response) => {
           INSERT INTO cc_resource_schedule_events 
             (resource_id, event_type, start_date, end_date, title, notes, related_entity_type, related_entity_id)
           VALUES ($1, 'buffer', $2, $3, 'Turnover', 'Auto-generated cleanup buffer', 'booking', $4)
-        `, [assetLookup.rows[0].id, bufferStart, bufferEnd, bookingId]);
+        `, [assetLookup.rows[0].id, bufferStart, bufferEnd, reservationId]);
       }
       
-      return { bookingId, total };
+      return { reservationId, total };
     });
     
     if (result.error) {
@@ -560,7 +560,7 @@ router.post('/:id/book', requireAuth, async (req: Request, res: Response) => {
     res.json({
       success: true,
       booking: {
-        id: result.bookingId,
+        id: result.reservationId,
         total: result.total
       }
     });
@@ -570,8 +570,8 @@ router.post('/:id/book', requireAuth, async (req: Request, res: Response) => {
   }
 });
 
-// GET /api/rentals/my-bookings - Get user's bookings (SELF)
-router.get('/my-bookings', requireAuth, async (req: Request, res: Response) => {
+// GET /api/rentals/my-reservations - Get user's bookings (SELF)
+router.get('/my-reservations', requireAuth, async (req: Request, res: Response) => {
   try {
     const tenantReq = req as any;
     const individualId = tenantReq.ctx?.individual_id;
@@ -592,7 +592,7 @@ router.get('/my-bookings', requireAuth, async (req: Request, res: Response) => {
         ri.location_name,
         rc.name as category,
         rc.icon as category_icon
-      FROM cc_rental_bookings b
+      FROM cc_rental_reservations b
       JOIN cc_rental_items ri ON ri.id = b.rental_item_id
       JOIN cc_rental_categories rc ON rc.id = ri.category_id
       WHERE b.renter_individual_id = $1
@@ -601,7 +601,7 @@ router.get('/my-bookings', requireAuth, async (req: Request, res: Response) => {
     
     res.json({
       success: true,
-      bookings: result.rows.map((row: any) => ({
+      reservations: result.rows.map((row: any) => ({
         id: row.id,
         startsAt: row.start_date,
         endsAt: row.end_date,
@@ -614,13 +614,13 @@ router.get('/my-bookings', requireAuth, async (req: Request, res: Response) => {
       }))
     });
   } catch (error) {
-    console.error('Error fetching bookings:', error);
+    console.error('Error fetching reservations:', error);
     res.status(500).json({ success: false, error: 'Failed to fetch bookings' });
   }
 });
 
-// GET /api/rentals/bookings - Get user's detailed bookings (SELF)
-router.get('/bookings', requireAuth, async (req: Request, res: Response) => {
+// GET /api/rentals/reservations - Get user's detailed bookings (SELF)
+router.get('/reservations', requireAuth, async (req: Request, res: Response) => {
   try {
     const tenantReq = req as any;
     const individualId = tenantReq.ctx?.individual_id;
@@ -666,7 +666,7 @@ router.get('/bookings', requireAuth, async (req: Request, res: Response) => {
         
         c.name as community_name
         
-      FROM cc_rental_bookings b
+      FROM cc_rental_reservations b
       JOIN cc_rental_items ri ON ri.id = b.rental_item_id
       JOIN cc_rental_categories rc ON rc.id = ri.category_id
       LEFT JOIN cc_sr_communities c ON c.id = ri.home_community_id
@@ -684,7 +684,7 @@ router.get('/bookings', requireAuth, async (req: Request, res: Response) => {
     
     res.json({ 
       success: true, 
-      bookings: result.rows.map(row => ({
+      reservations: result.rows.map(row => ({
         id: row.id,
         status: row.status,
         startsAt: row.start_date,
@@ -721,19 +721,19 @@ router.get('/bookings', requireAuth, async (req: Request, res: Response) => {
       }))
     });
   } catch (error) {
-    console.error('Error fetching bookings:', error);
+    console.error('Error fetching reservations:', error);
     res.status(500).json({ success: false, error: 'Failed to fetch bookings' });
   }
 });
 
-// POST /api/rentals/bookings/:id/cancel - Cancel booking (SELF)
-router.post('/bookings/:id/cancel', requireAuth, async (req: Request, res: Response) => {
+// POST /api/rentals/reservations/:id/cancel - Cancel booking (SELF)
+router.post('/reservations/:id/cancel', requireAuth, async (req: Request, res: Response) => {
   try {
     const tenantReq = req as any;
     const individualId = tenantReq.ctx?.individual_id;
-    const bookingIdParsed = uuidSchema.safeParse(req.params.id);
+    const reservationIdParsed = uuidSchema.safeParse(req.params.id);
     
-    if (!bookingIdParsed.success) {
+    if (!reservationIdParsed.success) {
       return res.status(400).json({ success: false, error: 'Invalid booking ID' });
     }
     
@@ -741,15 +741,15 @@ router.post('/bookings/:id/cancel', requireAuth, async (req: Request, res: Respo
       return res.status(401).json({ success: false, error: 'Individual profile required' });
     }
     
-    const bookingId = bookingIdParsed.data;
+    const reservationId = reservationIdParsed.data;
     
     // Use tenantTransaction - user can only cancel their own bookings
     const result = await req.tenantTransaction(async (client) => {
       const bookingResult = await client.query(`
         SELECT id, status, start_date 
-        FROM cc_rental_bookings 
+        FROM cc_rental_reservations 
         WHERE id = $1 AND renter_individual_id = $2
-      `, [bookingId, individualId]);
+      `, [reservationId, individualId]);
       
       if (bookingResult.rows.length === 0) {
         return { error: 'Booking not found', status: 404 };
@@ -762,10 +762,10 @@ router.post('/bookings/:id/cancel', requireAuth, async (req: Request, res: Respo
       }
       
       await client.query(`
-        UPDATE cc_rental_bookings 
+        UPDATE cc_rental_reservations 
         SET status = 'cancelled', updated_at = NOW()
         WHERE id = $1
-      `, [bookingId]);
+      `, [reservationId]);
       
       return { success: true };
     });

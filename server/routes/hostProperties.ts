@@ -41,7 +41,7 @@ router.get('/properties', async (req: HostAuthRequest, res: Response) => {
     const result = await db.execute(sql`
       SELECT sp.*, 
              pr.nightly_rate as base_nightly_rate,
-             (SELECT COUNT(*) FROM cc_staging_bookings WHERE property_id = sp.id AND status NOT IN ('cancelled', 'no_show')) as booking_count
+             (SELECT COUNT(*) FROM cc_staging_reservations WHERE property_id = sp.id AND status NOT IN ('cancelled', 'no_show')) as reservation_count
       FROM cc_staging_properties sp
       LEFT JOIN cc_staging_pricing pr ON pr.property_id = sp.id 
         AND pr.pricing_type = 'base_nightly' AND pr.is_active = true
@@ -662,7 +662,7 @@ router.get('/calendar/:propertyId', async (req: HostAuthRequest, res: Response) 
     const blocks = await stagingStorage.getCalendar(propertyId, startDate, endDate);
     
     // Also get bookings for the period
-    const bookings = await stagingStorage.getBookings({
+    const bookings = await stagingStorage.getReservations({
       propertyId,
       checkInFrom: startDate,
       checkInTo: endDate
@@ -862,7 +862,7 @@ router.get('/bookings', async (req: HostAuthRequest, res: Response) => {
 
     let query = `
       SELECT b.*, sp.name as property_name, sp.canvas_id as property_canvas_id
-      FROM cc_staging_bookings b
+      FROM cc_staging_reservations b
       JOIN cc_staging_properties sp ON sp.id = b.property_id
       WHERE b.property_id IN (${propertyIds.join(',')})
     `;

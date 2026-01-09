@@ -40,7 +40,7 @@ import {
 import type { 
   AccommodationProperty, 
   AccommodationHost, 
-  AccommodationBooking, 
+  AccommodationReservation, 
   ICalFeed,
   PropertyStatus 
 } from '@shared/types/accommodations';
@@ -141,7 +141,7 @@ export function PropertyDetails({ propertyId, open, onOpenChange }: PropertyDeta
     enabled: open && !!propertyId,
   });
 
-  const { data: bookingsData } = useQuery<{ bookings: AccommodationBooking[] }>({
+  const { data: bookingsData } = useQuery<{ bookings: AccommodationReservation[] }>({
     queryKey: ['/api/accommodations', propertyId, 'bookings'],
     enabled: open && !!propertyId,
   });

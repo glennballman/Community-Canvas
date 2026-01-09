@@ -300,7 +300,7 @@ export interface VehicleProfile {
   photos?: string[];
 }
 
-export interface StagingBooking {
+export interface StagingReservation {
   id: number;
   bookingRef: string;
   propertyId: number;

@@ -3,7 +3,7 @@ import { serviceQuery, withServiceTransaction } from '../db/tenantDb';
 
 const router = Router();
 
-router.post('/qa/seed-booking-test-assets', async (req, res) => {
+router.post('/qa/seed-reservation-test-assets', async (req, res) => {
   try {
     const result = await withServiceTransaction(async (client) => {
       const tenantResult = await client.query(`SELECT id FROM cc_tenants LIMIT 1`);
@@ -12,7 +12,7 @@ router.post('/qa/seed-booking-test-assets', async (req, res) => {
       const accommodationResult = await client.query(`
         INSERT INTO cc_assets (
           id, owner_tenant_id, owner_type, source_table, source_id, 
-          name, asset_type, booking_mode, 
+          name, asset_type, reservation_mode, 
           time_granularity_minutes, operational_status,
           default_start_time_local, default_end_time_local
         ) VALUES (
@@ -22,13 +22,13 @@ router.post('/qa/seed-booking-test-assets', async (req, res) => {
           '15:00', '11:00'
         )
         ON CONFLICT DO NOTHING
-        RETURNING id, name, booking_mode, default_start_time_local, default_end_time_local
+        RETURNING id, name, reservation_mode, default_start_time_local, default_end_time_local
       `, [tenantId]);
 
       const rentalResult = await client.query(`
         INSERT INTO cc_assets (
           id, owner_tenant_id, owner_type, source_table, source_id,
-          name, asset_type, booking_mode,
+          name, asset_type, reservation_mode,
           time_granularity_minutes, operational_status
         ) VALUES (
           gen_random_uuid(), $1, 'tenant', 'qa_test', 'qa_kayak_1',
@@ -36,13 +36,13 @@ router.post('/qa/seed-booking-test-assets', async (req, res) => {
           15, 'operational'
         )
         ON CONFLICT DO NOTHING
-        RETURNING id, name, booking_mode
+        RETURNING id, name, reservation_mode
       `, [tenantId]);
 
       const transportResult = await client.query(`
         INSERT INTO cc_assets (
           id, owner_tenant_id, owner_type, source_table, source_id,
-          name, asset_type, booking_mode,
+          name, asset_type, reservation_mode,
           time_granularity_minutes, operational_status
         ) VALUES (
           gen_random_uuid(), $1, 'tenant', 'qa_test', 'qa_van_1',
@@ -50,7 +50,7 @@ router.post('/qa/seed-booking-test-assets', async (req, res) => {
           15, 'operational'
         )
         ON CONFLICT DO NOTHING
-        RETURNING id, name, booking_mode
+        RETURNING id, name, reservation_mode
       `, [tenantId]);
 
       const transportId = transportResult.rows?.[0]?.id;
@@ -58,7 +58,7 @@ router.post('/qa/seed-booking-test-assets', async (req, res) => {
       const craneResult = await client.query(`
         INSERT INTO cc_assets (
           id, owner_tenant_id, owner_type, source_table, source_id,
-          name, asset_type, booking_mode,
+          name, asset_type, reservation_mode,
           time_granularity_minutes, operational_status
         ) VALUES (
           gen_random_uuid(), $1, 'tenant', 'qa_test', 'qa_crane_1',
@@ -66,7 +66,7 @@ router.post('/qa/seed-booking-test-assets', async (req, res) => {
           15, 'operational'
         )
         ON CONFLICT DO NOTHING
-        RETURNING id, name, booking_mode, operational_status
+        RETURNING id, name, reservation_mode, operational_status
       `, [tenantId]);
 
       const craneId = craneResult.rows?.[0]?.id;
@@ -104,7 +104,7 @@ router.post('/qa/seed-booking-test-assets', async (req, res) => {
   }
 });
 
-router.post('/qa/test-booking-semantics', async (req, res) => {
+router.post('/qa/test-reservation-semantics', async (req, res) => {
   try {
     const results: any = {
       testA: null,
@@ -114,7 +114,7 @@ router.post('/qa/test-booking-semantics', async (req, res) => {
       testE: null
     };
 
-    const BOOKING_MODE_LABELS: Record<string, { start: string; end: string }> = {
+    const RESERVATION_MODE_LABELS: Record<string, { start: string; end: string }> = {
       check_in_out: { start: 'Checking in', end: 'Checking out' },
       arrive_depart: { start: 'Arriving', end: 'Departing' },
       pickup_return: { start: 'Pickup', end: 'Return' },
@@ -122,28 +122,28 @@ router.post('/qa/test-booking-semantics', async (req, res) => {
     };
 
     const accommodationResult = await serviceQuery(`
-      SELECT id, name, booking_mode, default_start_time_local, default_end_time_local
+      SELECT id, name, reservation_mode, default_start_time_local, default_end_time_local
       FROM cc_assets 
       WHERE name = 'QA Test Cabin' AND asset_type = 'accommodation'
       LIMIT 1
     `);
     
     const rentalResult = await serviceQuery(`
-      SELECT id, name, booking_mode
+      SELECT id, name, reservation_mode
       FROM cc_assets 
       WHERE name = 'QA Test Kayak' AND asset_type = 'equipment'
       LIMIT 1
     `);
 
     const transportResult = await serviceQuery(`
-      SELECT id, name, booking_mode
+      SELECT id, name, reservation_mode
       FROM cc_assets 
       WHERE name = 'QA Test Transport Van' AND asset_type = 'vehicle'
       LIMIT 1
     `);
 
     const craneResult = await serviceQuery(`
-      SELECT id, name, booking_mode, operational_status
+      SELECT id, name, reservation_mode, operational_status
       FROM cc_assets 
       WHERE name = 'QA Test Crane Attachment' AND asset_type = 'equipment'
       LIMIT 1
@@ -163,11 +163,11 @@ router.post('/qa/test-booking-semantics', async (req, res) => {
       results.testA = {
         passed: true,
         asset: acc.name,
-        bookingMode: acc.booking_mode,
-        labels: BOOKING_MODE_LABELS[acc.booking_mode],
+        reservationMode: acc.reservation_mode,
+        labels: RESERVATION_MODE_LABELS[acc.reservation_mode],
         computedStartsAt: startsAt,
         computedEndsAt: endsAt,
-        assertion: `1-night booking uses check-in time ${checkInTime} and check-out time ${checkOutTime}`
+        assertion: `1-night reservation uses check-in time ${checkInTime} and check-out time ${checkOutTime}`
       };
     }
 
@@ -190,8 +190,8 @@ router.post('/qa/test-booking-semantics', async (req, res) => {
       results.testB = {
         passed: durationHours === 4 && isSnapped,
         asset: rental.name,
-        bookingMode: rental.booking_mode,
-        labels: BOOKING_MODE_LABELS[rental.booking_mode],
+        reservationMode: rental.reservation_mode,
+        labels: RESERVATION_MODE_LABELS[rental.reservation_mode],
         startTime: startTime.toISOString(),
         endTime: endTime.toISOString(),
         durationHours,
@@ -202,11 +202,11 @@ router.post('/qa/test-booking-semantics', async (req, res) => {
 
     const transport = transportResult.rows?.[0];
     if (transport) {
-      const labels = BOOKING_MODE_LABELS[transport.booking_mode];
+      const labels = RESERVATION_MODE_LABELS[transport.reservation_mode];
       results.testC = {
         passed: labels?.start === 'Arriving' && labels?.end === 'Departing',
         asset: transport.name,
-        bookingMode: transport.booking_mode,
+        reservationMode: transport.reservation_mode,
         labels,
         assertion: `Labels display "Arriving" / "Departing"`
       };

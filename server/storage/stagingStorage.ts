@@ -4,7 +4,7 @@ import type {
   StagingProperty,
   StagingSpot,
   ServiceProvider,
-  StagingBooking,
+  StagingReservation,
   VehicleProfile,
   StagingSearchParams,
   StagingStats,
@@ -479,7 +479,7 @@ export async function searchProviders(filters: ProviderFilters = {}): Promise<Se
 // BOOKINGS
 // ============================================================================
 
-export interface BookingFilters {
+export interface ReservationFilters {
   propertyId?: number;
   status?: string;
   guestEmail?: string;
@@ -489,7 +489,7 @@ export interface BookingFilters {
   offset?: number;
 }
 
-export async function getBookings(filters: BookingFilters = {}): Promise<StagingBooking[]> {
+export async function getReservations(filters: ReservationFilters = {}): Promise<StagingReservation[]> {
   const conditions: string[] = [];
   
   if (filters.propertyId) {
@@ -524,10 +524,10 @@ export async function getBookings(filters: BookingFilters = {}): Promise<Staging
     LIMIT ${limit} OFFSET ${offset}
   `));
 
-  return (result.rows as any[]).map(row => snakeToCamel(row) as StagingBooking);
+  return (result.rows as any[]).map(row => snakeToCamel(row) as StagingReservation);
 }
 
-export async function getBookingById(id: number): Promise<StagingBooking | null> {
+export async function getReservationById(id: number): Promise<StagingReservation | null> {
   const result = await db.execute(sql`
     SELECT b.*, 
            sp.name as property_name, sp.canvas_id as property_canvas_id,
@@ -538,10 +538,10 @@ export async function getBookingById(id: number): Promise<StagingBooking | null>
     WHERE b.id = ${id}
   `);
   if (result.rows.length === 0) return null;
-  return snakeToCamel(result.rows[0] as Record<string, any>) as StagingBooking;
+  return snakeToCamel(result.rows[0] as Record<string, any>) as StagingReservation;
 }
 
-export async function getBookingByRef(ref: string): Promise<StagingBooking | null> {
+export async function getReservationByRef(ref: string): Promise<StagingReservation | null> {
   const result = await db.execute(sql`
     SELECT b.*, 
            sp.name as property_name, sp.canvas_id as property_canvas_id,
@@ -552,10 +552,10 @@ export async function getBookingByRef(ref: string): Promise<StagingBooking | nul
     WHERE b.confirmation_number = ${ref}
   `);
   if (result.rows.length === 0) return null;
-  return snakeToCamel(result.rows[0] as Record<string, any>) as StagingBooking;
+  return snakeToCamel(result.rows[0] as Record<string, any>) as StagingReservation;
 }
 
-export async function createBooking(data: Partial<StagingBooking>): Promise<StagingBooking> {
+export async function createReservation(data: Partial<StagingReservation>): Promise<StagingReservation> {
   const columns: string[] = [];
   const placeholders: string[] = [];
   const values: any[] = [];
@@ -586,10 +586,10 @@ export async function createBooking(data: Partial<StagingBooking>): Promise<Stag
   });
 
   const result = await db.execute(sql.raw(paramQuery));
-  return snakeToCamel(result.rows[0] as Record<string, any>) as StagingBooking;
+  return snakeToCamel(result.rows[0] as Record<string, any>) as StagingReservation;
 }
 
-export async function updateBooking(id: number, data: Partial<StagingBooking>): Promise<StagingBooking | null> {
+export async function updateReservation(id: number, data: Partial<StagingReservation>): Promise<StagingReservation | null> {
   const updates: string[] = [];
   const values: any[] = [];
   let idx = 1;
@@ -603,7 +603,7 @@ export async function updateBooking(id: number, data: Partial<StagingBooking>): 
     }
   }
 
-  if (updates.length === 0) return getBookingById(id);
+  if (updates.length === 0) return getReservationById(id);
 
   const query = `
     UPDATE cc_staging_bookings 
@@ -623,10 +623,10 @@ export async function updateBooking(id: number, data: Partial<StagingBooking>): 
 
   const result = await db.execute(sql.raw(paramQuery));
   if (result.rows.length === 0) return null;
-  return snakeToCamel(result.rows[0] as Record<string, any>) as StagingBooking;
+  return snakeToCamel(result.rows[0] as Record<string, any>) as StagingReservation;
 }
 
-export async function findBookingByIdOrRef(idOrRef: string): Promise<StagingBooking | null> {
+export async function findReservationByIdOrRef(idOrRef: string): Promise<StagingReservation | null> {
   const numericId = parseInt(idOrRef, 10);
   
   const result = await db.execute(sql`
@@ -637,10 +637,10 @@ export async function findBookingByIdOrRef(idOrRef: string): Promise<StagingBook
   `);
   
   if (result.rows.length === 0) return null;
-  return snakeToCamel(result.rows[0] as Record<string, any>) as StagingBooking;
+  return snakeToCamel(result.rows[0] as Record<string, any>) as StagingReservation;
 }
 
-export async function cancelBooking(id: number, reason?: string): Promise<StagingBooking | null> {
+export async function cancelReservation(id: number, reason?: string): Promise<StagingReservation | null> {
   const result = await db.execute(sql`
     UPDATE cc_staging_bookings 
     SET status = 'cancelled', 
@@ -651,7 +651,7 @@ export async function cancelBooking(id: number, reason?: string): Promise<Stagin
     RETURNING *
   `);
   if (result.rows.length === 0) return null;
-  return snakeToCamel(result.rows[0] as Record<string, any>) as StagingBooking;
+  return snakeToCamel(result.rows[0] as Record<string, any>) as StagingReservation;
 }
 
 // ============================================================================

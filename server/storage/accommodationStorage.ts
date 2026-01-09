@@ -6,7 +6,7 @@ import type {
   AvailabilityBlock,
   OutreachCampaign,
   OutreachMessage,
-  AccommodationBooking,
+  AccommodationReservation,
   AccommodationStats
 } from '../../shared/types/accommodations';
 
@@ -373,12 +373,12 @@ export class AccommodationStorage {
   // BOOKINGS
   // =====================================================
 
-  async getAllBookings(filters?: {
+  async getAllReservations(filters?: {
     status?: string;
     propertyId?: number;
     startDate?: Date;
     endDate?: Date;
-  }): Promise<AccommodationBooking[]> {
+  }): Promise<AccommodationReservation[]> {
     let query = `
       SELECT b.*, p.name as property_name, p.city as property_city
       FROM cc_accommodation_bookings b
@@ -407,20 +407,20 @@ export class AccommodationStorage {
 
     query += ' ORDER BY b.check_in_date DESC';
     const result = await this.db.query(query, params);
-    return result.rows.map(convertKeysToCamel) as AccommodationBooking[];
+    return result.rows.map(convertKeysToCamel) as AccommodationReservation[];
   }
 
-  async getBookingById(id: number): Promise<AccommodationBooking | null> {
+  async getReservationById(id: number): Promise<AccommodationReservation | null> {
     const result = await this.db.query(`
       SELECT b.*, p.name as property_name, p.city as property_city
       FROM cc_accommodation_bookings b
       LEFT JOIN cc_accommodation_properties p ON b.property_id = p.id
       WHERE b.id = $1
     `, [id]);
-    return result.rows[0] ? convertKeysToCamel(result.rows[0]) as AccommodationBooking : null;
+    return result.rows[0] ? convertKeysToCamel(result.rows[0]) as AccommodationReservation : null;
   }
 
-  async createBooking(booking: Partial<AccommodationBooking>): Promise<AccommodationBooking> {
+  async createReservation(booking: Partial<AccommodationReservation>): Promise<AccommodationReservation> {
     const snakeData = convertKeysToSnake(booking);
     const filtered = filterAllowedColumns(snakeData, ALLOWED_BOOKING_COLUMNS);
     const columns = Object.keys(filtered);
@@ -433,14 +433,14 @@ export class AccommodationStorage {
       RETURNING *
     `;
     const result = await this.db.query(query, values);
-    return convertKeysToCamel(result.rows[0]) as AccommodationBooking;
+    return convertKeysToCamel(result.rows[0]) as AccommodationReservation;
   }
 
-  async updateBooking(id: number, updates: Partial<AccommodationBooking>): Promise<AccommodationBooking | null> {
+  async updateReservation(id: number, updates: Partial<AccommodationReservation>): Promise<AccommodationReservation | null> {
     const snakeData = convertKeysToSnake(updates);
     const filtered = filterAllowedColumns(snakeData, ALLOWED_BOOKING_COLUMNS);
     const columns = Object.keys(filtered);
-    if (columns.length === 0) return this.getBookingById(id);
+    if (columns.length === 0) return this.getReservationById(id);
 
     const setClause = columns.map((col, i) => `${col} = $${i + 1}`).join(', ');
     const values = [...Object.values(filtered), id];
@@ -452,7 +452,7 @@ export class AccommodationStorage {
       RETURNING *
     `;
     const result = await this.db.query(query, values);
-    return result.rows[0] ? convertKeysToCamel(result.rows[0]) as AccommodationBooking : null;
+    return result.rows[0] ? convertKeysToCamel(result.rows[0]) as AccommodationReservation : null;
   }
 
   // =====================================================
