@@ -1,0 +1,907 @@
+**EXPEDITION ENGINE - PROMPT 2: Public Trip Portal**
+
+The foundation is in place:
+- cc_trips has access_code, origin, vehicle fields
+- cc_trip_itinerary_items for calendar events
+- cc_trip_timepoints for operational anchors
+- cc_portal_moments for curated suggestions
+
+Now we build the guest-facing Trip Portal - the "forever link" that makes families feel coordinated.
+
+## PHASE 1: Public API - Get Trip by Access Code
+
+Create endpoint in `server/routes/public-portal.ts`:
+```typescript
+// GET /api/public/trips/:accessCode
+app.get('/api/public/trips/:accessCode', async (req, res) => {
+  const { accessCode } = req.params;
+  
+  try {
+    // Get trip with portal info
+    const trip = await db.query.ccTrips.findFirst({
+      where: eq(ccTrips.accessCode, accessCode),
+    });
+    
+    if (!trip) {
+      return res.status(404).json({ error: 'Trip not found' });
+    }
+    
+    // Get portal for context
+    const portal = trip.portalId ? await db.query.ccPortals.findFirst({
+      where: eq(ccPortals.id, trip.portalId),
+    }) : null;
+    
+    // Get itinerary items (calendar events)
+    const itineraryItems = await db.query.ccTripItineraryItems.findMany({
+      where: eq(ccTripItineraryItems.tripId, trip.id),
+      orderBy: [asc(ccTripItineraryItems.dayDate), asc(ccTripItineraryItems.sortOrder)],
+    });
+    
+    // Get timepoints (operational anchors)
+    const timepoints = await db.query.ccTripTimepoints.findMany({
+      where: eq(ccTripTimepoints.tripId, trip.id),
+      orderBy: asc(sql`COALESCE(time_exact, time_window_start)`),
+    });
+    
+    // Get participants
+    const participants = await db.query.ccTripParticipants.findMany({
+      where: eq(ccTripParticipants.tripId, trip.id),
+    });
+    
+    // Get passengers (travelers)
+    const passengers = await db.query.ccTripPassengers.findMany({
+      where: eq(ccTripPassengers.tripId, trip.id),
+    });
+    
+    // Get route points (journey segments)
+    const routePoints = await db.query.ccTripRoutePoints.findMany({
+      where: eq(ccTripRoutePoints.tripId, trip.id),
+      orderBy: asc(ccTripRoutePoints.segmentOrder),
+    });
+    
+    // Compute trip metadata
+    const startDate = new Date(trip.startDate);
+    const endDate = trip.endDate ? new Date(trip.endDate) : startDate;
+    const tripDays = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+    const daysUntilTrip = Math.ceil((startDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+    
+    // Generate day-by-day calendar structure
+    const calendar = [];
+    for (let i = 0; i < tripDays; i++) {
+      const dayDate = new Date(startDate);
+      dayDate.setDate(dayDate.getDate() + i);
+      const dateStr = dayDate.toISOString().split('T')[0];
+      
+      const dayItems = itineraryItems.filter(item => item.dayDate === dateStr);
+      const dayTimepoints = timepoints.filter(tp => {
+        const tpDate = tp.timeExact || tp.timeWindowStart;
+        return tpDate && tpDate.toISOString().split('T')[0] === dateStr;
+      });
+      
+      calendar.push({
+        date: dateStr,
+        dayNumber: i + 1,
+        isArrivalDay: i === 0,
+        isDepartureDay: i === tripDays - 1,
+        items: dayItems,
+        timepoints: dayTimepoints,
+      });
+    }
+    
+    // Return safe public data (no internal IDs exposed unnecessarily)
+    return res.json({
+      trip: {
+        id: trip.id,
+        accessCode: trip.accessCode,
+        status: trip.status,
+        startDate: trip.startDate,
+        endDate: trip.endDate,
+        groupName: trip.groupName,
+        groupSize: trip.groupSize,
+        
+        // Contact (for organizer view - could be gated later)
+        primaryContactName: trip.primaryContactName,
+        primaryContactEmail: trip.primaryContactEmail,
+        
+        // Origin & logistics
+        originName: trip.originName,
+        originType: trip.originType,
+        hasVehicle: trip.hasVehicle,
+        hasTrailer: trip.hasTrailer,
+        trailerType: trip.trailerType,
+        boatLengthFt: trip.boatLengthFt,
+        
+        // Handoff
+        nextDestinationName: trip.nextDestinationName,
+        coordinateHandoff: trip.coordinateHandoff,
+        
+        // Conditions
+        currentAlertLevel: trip.currentAlertLevel,
+        lastConditionsCheck: trip.lastConditionsCheck,
+      },
+      portal: portal ? {
+        id: portal.id,
+        name: portal.name,
+        slug: portal.slug,
+      } : null,
+      
+      // Computed
+      tripDays,
+      daysUntilTrip,
+      
+      // Calendar structure
+      calendar,
+      
+      // Raw collections for flexibility
+      itineraryItems,
+      timepoints,
+      participants,
+      passengers,
+      routePoints,
+    });
+    
+  } catch (error) {
+    console.error('Error fetching trip:', error);
+    return res.status(500).json({ error: 'Failed to fetch trip' });
+  }
+});
+```
+
+## PHASE 2: Get Portal Moments (Suggestions)
+```typescript
+// GET /api/public/portals/:portalId/moments
+app.get('/api/public/portals/:portalId/moments', async (req, res) => {
+  const { portalId } = req.params;
+  
+  try {
+    const moments = await db.query.ccPortalMoments.findMany({
+      where: and(
+        eq(ccPortalMoments.portalId, portalId),
+        eq(ccPortalMoments.isActive, true)
+      ),
+      orderBy: [asc(ccPortalMoments.momentType), asc(ccPortalMoments.sortOrder)],
+    });
+    
+    // Group by type for UI
+    const grouped = moments.reduce((acc, moment) => {
+      const type = moment.momentType;
+      if (!acc[type]) acc[type] = [];
+      acc[type].push(moment);
+      return acc;
+    }, {} as Record<string, typeof moments>);
+    
+    return res.json({ moments, grouped });
+  } catch (error) {
+    console.error('Error fetching moments:', error);
+    return res.status(500).json({ error: 'Failed to fetch moments' });
+  }
+});
+```
+
+## PHASE 3: Add Itinerary Item (from Moment or Custom)
+```typescript
+// POST /api/public/trips/:accessCode/itinerary
+app.post('/api/public/trips/:accessCode/itinerary', async (req, res) => {
+  const { accessCode } = req.params;
+  const { 
+    momentId,  // If adding from a portal moment
+    title, 
+    description,
+    itemType,
+    dayDate, 
+    startTime, 
+    endTime,
+    allDay,
+    locationName,
+    photoMoment,
+  } = req.body;
+  
+  try {
+    // Get trip
+    const trip = await db.query.ccTrips.findFirst({
+      where: eq(ccTrips.accessCode, accessCode),
+    });
+    
+    if (!trip) {
+      return res.status(404).json({ error: 'Trip not found' });
+    }
+    
+    let itemData: any = {
+      tripId: trip.id,
+      dayDate,
+      startTime,
+      endTime,
+      allDay: allDay || false,
+      status: 'planned',
+      createdBy: 'organizer',
+    };
+    
+    // If adding from a moment, copy its data
+    if (momentId) {
+      const moment = await db.query.ccPortalMoments.findFirst({
+        where: eq(ccPortalMoments.id, momentId),
+      });
+      
+      if (moment) {
+        itemData = {
+          ...itemData,
+          title: moment.title,
+          description: moment.description,
+          itemType: moment.momentType === 'rainy_day' ? 'activity' : moment.momentType,
+          locationName: moment.locationName,
+          locationLat: moment.locationLat,
+          locationLng: moment.locationLng,
+          photoMoment: moment.photoMoment,
+          suggestedCaption: moment.suggestedCaption,
+          icon: moment.icon,
+          weatherSensitive: moment.bestWeather === 'clear',
+          indoorAlternative: moment.bestWeather === 'rainy' ? null : 'Check rainy day alternatives',
+        };
+      }
+    } else {
+      // Custom item
+      itemData = {
+        ...itemData,
+        title,
+        description,
+        itemType: itemType || 'activity',
+        locationName,
+        photoMoment: photoMoment || false,
+      };
+    }
+    
+    const [newItem] = await db.insert(ccTripItineraryItems).values(itemData).returning();
+    
+    return res.json({ success: true, item: newItem });
+  } catch (error) {
+    console.error('Error adding itinerary item:', error);
+    return res.status(500).json({ error: 'Failed to add item' });
+  }
+});
+```
+
+## PHASE 4: Update/Delete Itinerary Item
+```typescript
+// PATCH /api/public/trips/:accessCode/itinerary/:itemId
+app.patch('/api/public/trips/:accessCode/itinerary/:itemId', async (req, res) => {
+  const { accessCode, itemId } = req.params;
+  const updates = req.body;
+  
+  try {
+    // Verify trip ownership
+    const trip = await db.query.ccTrips.findFirst({
+      where: eq(ccTrips.accessCode, accessCode),
+    });
+    
+    if (!trip) {
+      return res.status(404).json({ error: 'Trip not found' });
+    }
+    
+    // Update item
+    const [updated] = await db.update(ccTripItineraryItems)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(and(
+        eq(ccTripItineraryItems.id, itemId),
+        eq(ccTripItineraryItems.tripId, trip.id)
+      ))
+      .returning();
+    
+    if (!updated) {
+      return res.status(404).json({ error: 'Item not found' });
+    }
+    
+    return res.json({ success: true, item: updated });
+  } catch (error) {
+    console.error('Error updating itinerary item:', error);
+    return res.status(500).json({ error: 'Failed to update item' });
+  }
+});
+
+// DELETE /api/public/trips/:accessCode/itinerary/:itemId
+app.delete('/api/public/trips/:accessCode/itinerary/:itemId', async (req, res) => {
+  const { accessCode, itemId } = req.params;
+  
+  try {
+    const trip = await db.query.ccTrips.findFirst({
+      where: eq(ccTrips.accessCode, accessCode),
+    });
+    
+    if (!trip) {
+      return res.status(404).json({ error: 'Trip not found' });
+    }
+    
+    await db.delete(ccTripItineraryItems)
+      .where(and(
+        eq(ccTripItineraryItems.id, itemId),
+        eq(ccTripItineraryItems.tripId, trip.id)
+      ));
+    
+    return res.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting itinerary item:', error);
+    return res.status(500).json({ error: 'Failed to delete item' });
+  }
+});
+```
+
+## PHASE 5: Create Trip Portal Page
+
+Create `client/src/pages/public/TripPortalPage.tsx`:
+```tsx
+import { useParams } from 'wouter';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useState } from 'react';
+import { format, parseISO, differenceInDays } from 'date-fns';
+import { 
+  Calendar, Map, Clock, Users, Car, Ship, Sun, Cloud, CloudRain,
+  MapPin, Camera, Utensils, Tent, Fish, Anchor, ChevronRight,
+  Share2, QrCode, Plus, Check, AlertTriangle
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
+
+// Fetch trip data
+async function fetchTrip(accessCode: string) {
+  const res = await fetch(`/api/public/trips/${accessCode}`);
+  if (!res.ok) throw new Error('Trip not found');
+  return res.json();
+}
+
+// Fetch portal moments
+async function fetchMoments(portalId: string) {
+  const res = await fetch(`/api/public/portals/${portalId}/moments`);
+  if (!res.ok) throw new Error('Failed to fetch moments');
+  return res.json();
+}
+
+export default function TripPortalPage() {
+  const { accessCode } = useParams<{ accessCode: string }>();
+  const [activeTab, setActiveTab] = useState('calendar');
+  const queryClient = useQueryClient();
+  
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['trip', accessCode],
+    queryFn: () => fetchTrip(accessCode!),
+    enabled: !!accessCode,
+  });
+  
+  const { data: momentsData } = useQuery({
+    queryKey: ['moments', data?.portal?.id],
+    queryFn: () => fetchMoments(data.portal.id),
+    enabled: !!data?.portal?.id,
+  });
+  
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+        <div className="text-white">Loading your expedition...</div>
+      </div>
+    );
+  }
+  
+  if (error || !data) {
+    return (
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+        <Card className="bg-gray-800 border-gray-700">
+          <CardContent className="p-8 text-center">
+            <AlertTriangle className="w-12 h-12 text-yellow-500 mx-auto mb-4" />
+            <h2 className="text-xl text-white mb-2">Trip Not Found</h2>
+            <p className="text-gray-400">Check your access code and try again.</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+  
+  const { trip, portal, calendar, daysUntilTrip, tripDays } = data;
+  
+  // Alert level colors
+  const alertColors = {
+    green: 'bg-green-500',
+    yellow: 'bg-yellow-500',
+    red: 'bg-red-500',
+  };
+  
+  return (
+    <div className="min-h-screen bg-gray-900">
+      {/* Header */}
+      <header className="bg-gray-800 border-b border-gray-700 px-4 py-6">
+        <div className="max-w-6xl mx-auto">
+          <div className="flex justify-between items-start mb-4">
+            <div>
+              <h1 className="text-2xl font-bold text-white">
+                {trip.groupName || 'Your Expedition'}
+              </h1>
+              <p className="text-gray-400">
+                {portal?.name || 'Adventure Awaits'}
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" className="text-gray-300">
+                <Share2 className="w-4 h-4 mr-2" />
+                Share
+              </Button>
+              <Button variant="outline" size="sm" className="text-gray-300">
+                <QrCode className="w-4 h-4 mr-2" />
+                QR Code
+              </Button>
+            </div>
+          </div>
+          
+          {/* Trip Stats */}
+          <div className="flex flex-wrap gap-4 text-sm">
+            <div className="flex items-center text-gray-300">
+              <Calendar className="w-4 h-4 mr-2" />
+              {format(parseISO(trip.startDate), 'MMM d')} - {trip.endDate && format(parseISO(trip.endDate), 'MMM d, yyyy')}
+            </div>
+            <div className="flex items-center text-gray-300">
+              <Users className="w-4 h-4 mr-2" />
+              {trip.groupSize} {trip.groupSize === 1 ? 'guest' : 'guests'}
+            </div>
+            {trip.hasTrailer && (
+              <div className="flex items-center text-gray-300">
+                <Car className="w-4 h-4 mr-2" />
+                {trip.trailerType === 'boat' ? `${trip.boatLengthFt}' boat` : trip.trailerType}
+              </div>
+            )}
+            {trip.originName && (
+              <div className="flex items-center text-gray-300">
+                <MapPin className="w-4 h-4 mr-2" />
+                From {trip.originName}
+              </div>
+            )}
+          </div>
+          
+          {/* Countdown / Status */}
+          <div className="mt-4 flex items-center gap-4">
+            {daysUntilTrip > 0 ? (
+              <Badge variant="outline" className="text-blue-400 border-blue-400">
+                {daysUntilTrip} days until your trip
+              </Badge>
+            ) : daysUntilTrip === 0 ? (
+              <Badge className="bg-green-600">Today's the day! 🎉</Badge>
+            ) : (
+              <Badge variant="outline" className="text-gray-400">Trip completed</Badge>
+            )}
+            
+            {trip.currentAlertLevel && (
+              <div className={`w-3 h-3 rounded-full ${alertColors[trip.currentAlertLevel] || 'bg-gray-500'}`} 
+                   title={`Alert level: ${trip.currentAlertLevel}`} />
+            )}
+          </div>
+          
+          {/* Access Code */}
+          <div className="mt-4 text-xs text-gray-500">
+            Trip Code: <span className="font-mono text-gray-400">{trip.accessCode}</span>
+          </div>
+        </div>
+      </header>
+      
+      {/* Main Content */}
+      <main className="max-w-6xl mx-auto p-4">
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList className="bg-gray-800 mb-6">
+            <TabsTrigger value="calendar" className="data-[state=active]:bg-gray-700">
+              <Calendar className="w-4 h-4 mr-2" />
+              Calendar
+            </TabsTrigger>
+            <TabsTrigger value="arrival" className="data-[state=active]:bg-gray-700">
+              <Clock className="w-4 h-4 mr-2" />
+              Arrival Day
+            </TabsTrigger>
+            <TabsTrigger value="journey" className="data-[state=active]:bg-gray-700">
+              <Map className="w-4 h-4 mr-2" />
+              Journey
+            </TabsTrigger>
+          </TabsList>
+          
+          {/* Calendar Tab */}
+          <TabsContent value="calendar">
+            <TripCalendar 
+              calendar={calendar} 
+              moments={momentsData?.moments || []}
+              accessCode={accessCode!}
+              tripId={trip.id}
+            />
+          </TabsContent>
+          
+          {/* Arrival Day Tab */}
+          <TabsContent value="arrival">
+            <ArrivalDayView 
+              calendar={calendar}
+              trip={trip}
+            />
+          </TabsContent>
+          
+          {/* Journey Tab */}
+          <TabsContent value="journey">
+            <JourneyView 
+              trip={trip}
+              routePoints={data.routePoints}
+            />
+          </TabsContent>
+        </Tabs>
+      </main>
+    </div>
+  );
+}
+
+// Calendar Component
+function TripCalendar({ calendar, moments, accessCode, tripId }) {
+  const [showMoments, setShowMoments] = useState(false);
+  const [selectedDay, setSelectedDay] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+  
+  const addItemMutation = useMutation({
+    mutationFn: async ({ momentId, dayDate }: { momentId?: string; dayDate: string }) => {
+      const res = await fetch(`/api/public/trips/${accessCode}/itinerary`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ momentId, dayDate }),
+      });
+      if (!res.ok) throw new Error('Failed to add item');
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['trip', accessCode] });
+      setShowMoments(false);
+      setSelectedDay(null);
+    },
+  });
+  
+  // Get item icon
+  const getItemIcon = (itemType: string) => {
+    const icons = {
+      travel: Car,
+      accommodation: Tent,
+      charter: Fish,
+      parking: Car,
+      meal: Utensils,
+      activity: Sun,
+      moment: Camera,
+      beach: Sun,
+      sunset: Sun,
+      campfire: Tent,
+      stop: MapPin,
+      rainy_day: CloudRain,
+      photo: Camera,
+    };
+    return icons[itemType] || Calendar;
+  };
+  
+  return (
+    <div>
+      {/* Calendar Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        {calendar.map((day) => (
+          <Card key={day.date} className={`bg-gray-800 border-gray-700 ${day.isArrivalDay ? 'ring-2 ring-blue-500' : ''} ${day.isDepartureDay ? 'ring-2 ring-orange-500' : ''}`}>
+            <CardHeader className="pb-2">
+              <div className="flex justify-between items-center">
+                <CardTitle className="text-lg text-white">
+                  {format(parseISO(day.date), 'EEE, MMM d')}
+                </CardTitle>
+                {day.isArrivalDay && <Badge className="bg-blue-600">Arrival</Badge>}
+                {day.isDepartureDay && <Badge className="bg-orange-600">Departure</Badge>}
+              </div>
+              {/* Weather placeholder */}
+              <div className="flex items-center text-gray-400 text-sm">
+                <Sun className="w-4 h-4 mr-1" />
+                <span>--°C</span>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {/* Items for this day */}
+              {day.items.length === 0 && day.timepoints.length === 0 ? (
+                <p className="text-gray-500 text-sm italic">No plans yet</p>
+              ) : (
+                <>
+                  {day.items.map((item) => {
+                    const Icon = getItemIcon(item.itemType);
+                    return (
+                      <div 
+                        key={item.id} 
+                        className={`flex items-start gap-2 p-2 rounded ${item.isBooked ? 'bg-green-900/30' : 'bg-gray-700/50'}`}
+                      >
+                        <Icon className="w-4 h-4 text-gray-400 mt-0.5" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm text-white truncate">{item.title}</p>
+                          {item.startTime && (
+                            <p className="text-xs text-gray-400">
+                              {item.startTime.slice(0, 5)}
+                            </p>
+                          )}
+                        </div>
+                        {item.isBooked && <Check className="w-4 h-4 text-green-500" />}
+                      </div>
+                    );
+                  })}
+                </>
+              )}
+              
+              {/* Add button */}
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="w-full text-gray-400 hover:text-white"
+                onClick={() => {
+                  setSelectedDay(day.date);
+                  setShowMoments(true);
+                }}
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Add activity
+              </Button>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+      
+      {/* Moments Picker Modal */}
+      {showMoments && selectedDay && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <Card className="bg-gray-800 border-gray-700 max-w-lg w-full max-h-[80vh] overflow-y-auto">
+            <CardHeader>
+              <CardTitle className="text-white">
+                Add to {format(parseISO(selectedDay), 'EEEE, MMM d')}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {moments.map((moment) => {
+                const Icon = getItemIcon(moment.momentType);
+                return (
+                  <button
+                    key={moment.id}
+                    onClick={() => addItemMutation.mutate({ momentId: moment.id, dayDate: selectedDay })}
+                    disabled={addItemMutation.isPending}
+                    className="w-full flex items-start gap-3 p-3 rounded bg-gray-700 hover:bg-gray-600 text-left transition-colors"
+                  >
+                    <div className="text-2xl">{moment.icon || '📍'}</div>
+                    <div className="flex-1">
+                      <p className="text-white font-medium">{moment.title}</p>
+                      <p className="text-gray-400 text-sm">{moment.description}</p>
+                      {moment.proTip && (
+                        <p className="text-blue-400 text-xs mt-1">💡 {moment.proTip}</p>
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
+              
+              <Button 
+                variant="outline" 
+                className="w-full mt-4"
+                onClick={() => setShowMoments(false)}
+              >
+                Cancel
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Arrival Day View
+function ArrivalDayView({ calendar, trip }) {
+  const arrivalDay = calendar.find(d => d.isArrivalDay);
+  
+  if (!arrivalDay) {
+    return <p className="text-gray-400">No arrival day found</p>;
+  }
+  
+  // Combine items and timepoints, sort by time
+  const events = [
+    ...arrivalDay.items.map(i => ({ ...i, source: 'item' })),
+    ...arrivalDay.timepoints.map(t => ({ ...t, source: 'timepoint' })),
+  ].sort((a, b) => {
+    const timeA = a.startTime || a.timeExact || a.timeWindowStart || '23:59';
+    const timeB = b.startTime || b.timeExact || b.timeWindowStart || '23:59';
+    return String(timeA).localeCompare(String(timeB));
+  });
+  
+  return (
+    <Card className="bg-gray-800 border-gray-700">
+      <CardHeader>
+        <CardTitle className="text-white">
+          Arrival Day - {format(parseISO(arrivalDay.date), 'EEEE, MMMM d, yyyy')}
+        </CardTitle>
+        {trip.originName && (
+          <p className="text-gray-400">
+            Traveling from {trip.originName}
+            {trip.hasTrailer && trip.boatLengthFt && ` with ${trip.boatLengthFt}' boat`}
+          </p>
+        )}
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-4">
+          {events.length === 0 ? (
+            <p className="text-gray-500 italic">Your arrival day timeline will appear here.</p>
+          ) : (
+            events.map((event, idx) => (
+              <div key={event.id || idx} className="flex gap-4">
+                <div className="w-16 text-right text-gray-400 text-sm">
+                  {event.startTime?.slice(0, 5) || 
+                   event.timeExact?.toISOString().slice(11, 16) ||
+                   event.timeWindowStart?.toISOString().slice(11, 16) ||
+                   '—'}
+                </div>
+                <div className="flex-1 border-l-2 border-gray-600 pl-4 pb-4">
+                  <p className="text-white font-medium">{event.title || event.kind}</p>
+                  {event.description && (
+                    <p className="text-gray-400 text-sm">{event.description}</p>
+                  )}
+                  {event.guestNotes && (
+                    <p className="text-blue-400 text-sm mt-1">{event.guestNotes}</p>
+                  )}
+                  {event.locationName && (
+                    <p className="text-gray-500 text-xs mt-1">
+                      <MapPin className="w-3 h-3 inline mr-1" />
+                      {event.locationName}
+                    </p>
+                  )}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+        
+        {/* Late arrival warning placeholder */}
+        <div className="mt-6 p-4 bg-blue-900/30 rounded-lg border border-blue-700">
+          <p className="text-blue-300 text-sm">
+            <AlertTriangle className="w-4 h-4 inline mr-2" />
+            Late arrival possible if ferry load spikes — we'll update you automatically.
+          </p>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// Journey View (placeholder - will integrate TripTimelineView)
+function JourneyView({ trip, routePoints }) {
+  return (
+    <Card className="bg-gray-800 border-gray-700">
+      <CardHeader>
+        <CardTitle className="text-white">Your Journey</CardTitle>
+        {trip.originName && (
+          <p className="text-gray-400">
+            {trip.originName} → {/* TODO: Get destination from portal */}
+          </p>
+        )}
+      </CardHeader>
+      <CardContent>
+        {routePoints.length === 0 ? (
+          <div className="text-center py-8">
+            <Map className="w-12 h-12 text-gray-600 mx-auto mb-4" />
+            <p className="text-gray-400">
+              Your journey timeline will appear here as your trip approaches.
+            </p>
+            <p className="text-gray-500 text-sm mt-2">
+              Live ferry status, road conditions, weather, and webcams.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {routePoints.map((point, idx) => (
+              <div key={point.id} className="flex gap-4">
+                <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white text-sm">
+                  {idx + 1}
+                </div>
+                <div className="flex-1">
+                  <p className="text-white font-medium">{point.providerName || point.segmentType}</p>
+                  {point.locationName && (
+                    <p className="text-gray-400 text-sm">{point.locationName}</p>
+                  )}
+                  {point.durationMinutes && (
+                    <p className="text-gray-500 text-xs">
+                      {Math.floor(point.durationMinutes / 60)}h {point.durationMinutes % 60}m
+                    </p>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+        
+        {/* TODO: Integrate TripTimelineView here */}
+      </CardContent>
+    </Card>
+  );
+}
+```
+
+## PHASE 6: Add Route to Public Portal Layout
+
+In `client/src/App.tsx` or wherever routes are defined, add:
+```tsx
+import TripPortalPage from './pages/public/TripPortalPage';
+
+// In your router:
+<Route path="/trip/:accessCode" component={TripPortalPage} />
+<Route path="/p/:portalSlug/trip/:accessCode" component={TripPortalPage} />
+```
+
+## PHASE 7: Create Test Trip
+
+Create a test trip to verify everything works:
+```sql
+-- First, find a portal ID
+SELECT id, name, slug FROM cc_portals LIMIT 5;
+
+-- Create a test trip (replace PORTAL_ID with actual UUID)
+INSERT INTO cc_trips (
+  portal_id,
+  access_code,
+  group_name,
+  group_size,
+  start_date,
+  end_date,
+  status,
+  primary_contact_name,
+  primary_contact_email,
+  origin_name,
+  origin_type,
+  has_vehicle,
+  has_trailer,
+  trailer_type,
+  boat_length_ft
+) VALUES (
+  'PORTAL_ID',
+  'TEST-ABC123',
+  'Tester Family Adventure',
+  4,
+  CURRENT_DATE + INTERVAL '7 days',
+  CURRENT_DATE + INTERVAL '12 days',
+  'active',
+  'Glenn Tester',
+  'bamfieldadventures+trip@gmail.com',
+  'Surrey, BC',
+  'vancouver_area',
+  true,
+  true,
+  'boat',
+  26
+) RETURNING id, access_code;
+
+-- Add some itinerary items to the test trip (replace TRIP_ID)
+INSERT INTO cc_trip_itinerary_items (trip_id, item_type, title, description, day_date, all_day, status, created_by) VALUES
+('TRIP_ID', 'travel', 'Journey to Bamfield', 'Drive + ferry + gravel road adventure', CURRENT_DATE + INTERVAL '7 days', true, 'planned', 'system'),
+('TRIP_ID', 'accommodation', 'Check in to Oceanview Cottage', 'Your home for the next 5 nights', CURRENT_DATE + INTERVAL '7 days', false, 'booked', 'system'),
+('TRIP_ID', 'charter', 'Halibut Charter with Capt. Mike', 'Full day fishing - depart 5:30 AM', CURRENT_DATE + INTERVAL '8 days', false, 'booked', 'system'),
+('TRIP_ID', 'flex', 'Flex Day', 'Weather buffer - indoor alternatives ready', CURRENT_DATE + INTERVAL '10 days', true, 'planned', 'system'),
+('TRIP_ID', 'travel', 'Journey home', 'Return to Surrey', CURRENT_DATE + INTERVAL '12 days', true, 'planned', 'system');
+
+-- Add some timepoints
+INSERT INTO cc_trip_timepoints (trip_id, kind, time_exact, location_name, guest_notes) VALUES
+('TRIP_ID', 'arrival_expected', (CURRENT_DATE + INTERVAL '7 days')::timestamp + TIME '11:30', 'Save Paradise Parking', 'Gate code will be sent 24h before'),
+('TRIP_ID', 'bag_drop', (CURRENT_DATE + INTERVAL '7 days')::timestamp + TIME '11:45', 'Waterfront Building', 'Drop bags here - we''ll move them to your cottage by 3 PM'),
+('TRIP_ID', 'checkin_ready', (CURRENT_DATE + INTERVAL '7 days')::timestamp + TIME '15:00', 'Oceanview Cottage', 'Your cottage will be ready with bags inside'),
+('TRIP_ID', 'charter_depart', (CURRENT_DATE + INTERVAL '8 days')::timestamp + TIME '05:30', 'Government Dock, Slip 4', 'Captain Mike will meet you here. Coffee provided!');
+```
+
+## PHASE 8: Verify
+```bash
+# Build the app
+npm run build
+
+# Check for errors
+npx tsc --noEmit 2>&1 | head -50
+```
+
+Test the API:
+```bash
+curl http://localhost:5000/api/public/trips/TEST-ABC123
+```
+
+## EVIDENCE REQUIRED
+
+1. **API:** Show JSON response from `/api/public/trips/TEST-ABC123`
+2. **SQL:** Show test trip created with `SELECT * FROM cc_trips WHERE access_code = 'TEST-ABC123'`
+3. **SQL:** Show itinerary items `SELECT * FROM cc_trip_itinerary_items WHERE trip_id = '...'`
+4. **Screenshot:** Trip Portal page loading at `/trip/TEST-ABC123`
+5. **Screenshot:** Calendar showing the test trip days with items
+6. **Screenshot:** "Add activity" showing Bamfield moments
+7. **Build:** Clean build confirmation

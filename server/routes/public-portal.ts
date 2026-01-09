@@ -1527,4 +1527,396 @@ router.post('/cc_portals/:slug/cc_reservations', async (req: Request, res: Respo
   }
 });
 
+// ============================================================================
+// EXPEDITION ENGINE - Public Trip Portal Endpoints
+// ============================================================================
+
+// GET /api/public/trips/:accessCode - Get trip by access code (public guest view)
+router.get('/trips/:accessCode', async (req: Request, res: Response) => {
+  const { accessCode } = req.params;
+  
+  try {
+    const tripResult = await serviceQuery(`
+      SELECT 
+        t.id,
+        t.access_code,
+        t.status,
+        t.start_date,
+        t.end_date,
+        t.group_name,
+        t.group_size,
+        t.origin_name,
+        t.origin_type,
+        t.has_vehicle,
+        t.has_trailer,
+        t.trailer_type,
+        t.boat_length_ft,
+        t.next_destination_name,
+        t.coordinate_handoff,
+        t.current_alert_level,
+        t.last_conditions_check,
+        t.portal_id,
+        t.tenant_id
+      FROM cc_trips t
+      WHERE t.access_code = $1
+    `, [accessCode]);
+    
+    if (tripResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Trip not found' });
+    }
+    
+    const tripRow = tripResult.rows[0];
+    
+    let portal = null;
+    if (tripRow.portal_id) {
+      const portalResult = await serviceQuery(`
+        SELECT id, name, slug FROM cc_portals WHERE id = $1
+      `, [tripRow.portal_id]);
+      if (portalResult.rows.length > 0) {
+        portal = portalResult.rows[0];
+      }
+    }
+    
+    const itineraryResult = await serviceQuery(`
+      SELECT 
+        id, trip_id, item_type, title, description, is_booked, status,
+        day_date, start_time, end_time, all_day, everyone, location_name,
+        location_lat, location_lng, weather_sensitive, photo_moment,
+        suggested_caption, icon, color, sort_order
+      FROM cc_trip_itinerary_items
+      WHERE trip_id = $1
+      ORDER BY day_date, sort_order
+    `, [tripRow.id]);
+    
+    const timepointsResult = await serviceQuery(`
+      SELECT 
+        id, trip_id, kind, time_exact, time_window_start, time_window_end,
+        time_confidence, location_name, location_lat, location_lng,
+        guest_notes, itinerary_item_id
+      FROM cc_trip_timepoints
+      WHERE trip_id = $1
+      ORDER BY COALESCE(time_exact, time_window_start)
+    `, [tripRow.id]);
+    
+    const participantsResult = await serviceQuery(`
+      SELECT id, trip_id, participant_id, role, skills_verified, equipment_verified FROM cc_trip_participants
+      WHERE trip_id = $1
+    `, [tripRow.id]);
+    
+    const passengersResult = await serviceQuery(`
+      SELECT id, trip_id, name, age_category, exact_age, needs_car_seat FROM cc_trip_passengers
+      WHERE trip_id = $1
+    `, [tripRow.id]);
+    
+    const routePointsResult = await serviceQuery(`
+      SELECT 
+        id, trip_id, segment_order, segment_type, provider_name, provider_type,
+        scheduled_date, scheduled_time, duration_minutes, location_name,
+        location_lat, location_lng, confirmation_number, status
+      FROM cc_trip_route_points
+      WHERE trip_id = $1
+      ORDER BY segment_order
+    `, [tripRow.id]);
+    
+    const startDate = new Date(tripRow.start_date);
+    const endDate = tripRow.end_date ? new Date(tripRow.end_date) : startDate;
+    const tripDays = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+    const daysUntilTrip = Math.ceil((startDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+    
+    const calendar = [];
+    for (let i = 0; i < tripDays; i++) {
+      const dayDate = new Date(startDate);
+      dayDate.setDate(dayDate.getDate() + i);
+      const dateStr = dayDate.toISOString().split('T')[0];
+      
+      const dayItems = itineraryResult.rows.filter((item: any) => {
+        const itemDate = typeof item.day_date === 'string' ? item.day_date : item.day_date?.toISOString?.()?.split('T')[0];
+        return itemDate === dateStr;
+      });
+      const dayTimepoints = timepointsResult.rows.filter((tp: any) => {
+        const tpDate = tp.time_exact || tp.time_window_start;
+        return tpDate && new Date(tpDate).toISOString().split('T')[0] === dateStr;
+      });
+      
+      calendar.push({
+        date: dateStr,
+        dayNumber: i + 1,
+        isArrivalDay: i === 0,
+        isDepartureDay: i === tripDays - 1,
+        items: dayItems,
+        timepoints: dayTimepoints,
+      });
+    }
+    
+    return res.json({
+      trip: {
+        id: tripRow.id,
+        accessCode: tripRow.access_code,
+        status: tripRow.status,
+        startDate: tripRow.start_date,
+        endDate: tripRow.end_date,
+        groupName: tripRow.group_name,
+        groupSize: tripRow.group_size,
+        originName: tripRow.origin_name,
+        originType: tripRow.origin_type,
+        hasVehicle: tripRow.has_vehicle,
+        hasTrailer: tripRow.has_trailer,
+        trailerType: tripRow.trailer_type,
+        boatLengthFt: tripRow.boat_length_ft,
+        nextDestinationName: tripRow.next_destination_name,
+        coordinateHandoff: tripRow.coordinate_handoff,
+        currentAlertLevel: tripRow.current_alert_level,
+        lastConditionsCheck: tripRow.last_conditions_check,
+      },
+      portal: portal ? {
+        id: portal.id,
+        name: portal.name,
+        slug: portal.slug,
+      } : null,
+      tripDays,
+      daysUntilTrip,
+      calendar,
+      itineraryItems: itineraryResult.rows,
+      timepoints: timepointsResult.rows,
+      participants: participantsResult.rows,
+      passengers: passengersResult.rows,
+      routePoints: routePointsResult.rows,
+    });
+    
+  } catch (error) {
+    console.error('Error fetching trip:', error);
+    return res.status(500).json({ error: 'Failed to fetch trip' });
+  }
+});
+
+// GET /api/public/portals/:portalId/moments - Get curated moments for a portal
+router.get('/portals/:portalId/moments', async (req: Request, res: Response) => {
+  const { portalId } = req.params;
+  
+  try {
+    const momentsResult = await serviceQuery(`
+      SELECT 
+        id, portal_id, title, description, moment_type, best_time_of_day,
+        best_weather, location_name, location_lat, location_lng, kid_friendly,
+        pro_tip, safety_note, photo_moment, suggested_caption, image_url,
+        icon, sort_order, is_active
+      FROM cc_portal_moments
+      WHERE portal_id = $1 AND is_active = true
+      ORDER BY moment_type, sort_order
+    `, [portalId]);
+    
+    const moments = momentsResult.rows;
+    
+    const grouped = moments.reduce((acc: Record<string, any[]>, moment: any) => {
+      const type = moment.moment_type;
+      if (!acc[type]) acc[type] = [];
+      acc[type].push(moment);
+      return acc;
+    }, {});
+    
+    return res.json({ moments, grouped });
+  } catch (error) {
+    console.error('Error fetching moments:', error);
+    return res.status(500).json({ error: 'Failed to fetch moments' });
+  }
+});
+
+// POST /api/public/trips/:accessCode/itinerary - Add itinerary item
+router.post('/trips/:accessCode/itinerary', async (req: Request, res: Response) => {
+  const { accessCode } = req.params;
+  const { 
+    momentId,
+    title, 
+    description,
+    itemType,
+    dayDate, 
+    startTime, 
+    endTime,
+    allDay,
+    locationName,
+    photoMoment,
+  } = req.body;
+  
+  try {
+    const tripResult = await serviceQuery(`
+      SELECT id FROM cc_trips WHERE access_code = $1
+    `, [accessCode]);
+    
+    if (tripResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Trip not found' });
+    }
+    
+    const tripId = tripResult.rows[0].id;
+    
+    let itemData: any = {
+      trip_id: tripId,
+      day_date: dayDate,
+      start_time: startTime,
+      end_time: endTime,
+      all_day: allDay || false,
+      status: 'planned',
+      created_by: 'organizer',
+    };
+    
+    if (momentId) {
+      const momentResult = await serviceQuery(`
+        SELECT 
+          id, portal_id, title, description, moment_type, best_time_of_day,
+          best_weather, location_name, location_lat, location_lng, kid_friendly,
+          pro_tip, safety_note, photo_moment, suggested_caption, image_url, icon
+        FROM cc_portal_moments WHERE id = $1
+      `, [momentId]);
+      
+      if (momentResult.rows.length > 0) {
+        const moment = momentResult.rows[0];
+        itemData = {
+          ...itemData,
+          title: moment.title,
+          description: moment.description,
+          item_type: moment.moment_type === 'rainy_day' ? 'activity' : moment.moment_type,
+          location_name: moment.location_name,
+          location_lat: moment.location_lat,
+          location_lng: moment.location_lng,
+          photo_moment: moment.photo_moment,
+          suggested_caption: moment.suggested_caption,
+          icon: moment.icon,
+          weather_sensitive: moment.best_weather === 'clear',
+        };
+      }
+    } else {
+      itemData = {
+        ...itemData,
+        title,
+        description,
+        item_type: itemType || 'activity',
+        location_name: locationName,
+        photo_moment: photoMoment || false,
+      };
+    }
+    
+    const insertResult = await serviceQuery(`
+      INSERT INTO cc_trip_itinerary_items (
+        trip_id, item_type, title, description, is_booked, status,
+        day_date, start_time, end_time, all_day, location_name,
+        location_lat, location_lng, weather_sensitive, photo_moment,
+        suggested_caption, icon, created_by
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
+      RETURNING id, trip_id, item_type, title, description, is_booked, status,
+        day_date, start_time, end_time, all_day, everyone, location_name,
+        location_lat, location_lng, weather_sensitive, photo_moment,
+        suggested_caption, icon, color, sort_order
+    `, [
+      itemData.trip_id,
+      itemData.item_type || 'activity',
+      itemData.title,
+      itemData.description,
+      false,
+      itemData.status,
+      itemData.day_date,
+      itemData.start_time,
+      itemData.end_time,
+      itemData.all_day,
+      itemData.location_name,
+      itemData.location_lat,
+      itemData.location_lng,
+      itemData.weather_sensitive || false,
+      itemData.photo_moment || false,
+      itemData.suggested_caption,
+      itemData.icon,
+      itemData.created_by,
+    ]);
+    
+    return res.json({ success: true, item: insertResult.rows[0] });
+  } catch (error) {
+    console.error('Error adding itinerary item:', error);
+    return res.status(500).json({ error: 'Failed to add item' });
+  }
+});
+
+// PATCH /api/public/trips/:accessCode/itinerary/:itemId - Update itinerary item
+router.patch('/trips/:accessCode/itinerary/:itemId', async (req: Request, res: Response) => {
+  const { accessCode, itemId } = req.params;
+  const updates = req.body;
+  
+  try {
+    const tripResult = await serviceQuery(`
+      SELECT id FROM cc_trips WHERE access_code = $1
+    `, [accessCode]);
+    
+    if (tripResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Trip not found' });
+    }
+    
+    const tripId = tripResult.rows[0].id;
+    
+    const allowedFields = ['title', 'description', 'item_type', 'day_date', 'start_time', 'end_time', 
+                           'all_day', 'status', 'location_name', 'photo_moment', 'weather_sensitive'];
+    const setClause: string[] = [];
+    const values: any[] = [];
+    let paramIndex = 1;
+    
+    for (const [key, value] of Object.entries(updates)) {
+      const dbKey = key.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
+      if (allowedFields.includes(dbKey)) {
+        setClause.push(`${dbKey} = $${paramIndex}`);
+        values.push(value);
+        paramIndex++;
+      }
+    }
+    
+    if (setClause.length === 0) {
+      return res.status(400).json({ error: 'No valid fields to update' });
+    }
+    
+    setClause.push(`updated_at = NOW()`);
+    values.push(itemId, tripId);
+    
+    const updateResult = await serviceQuery(`
+      UPDATE cc_trip_itinerary_items 
+      SET ${setClause.join(', ')}
+      WHERE id = $${paramIndex} AND trip_id = $${paramIndex + 1}
+      RETURNING id, trip_id, item_type, title, description, is_booked, status,
+        day_date, start_time, end_time, all_day, everyone, location_name,
+        location_lat, location_lng, weather_sensitive, photo_moment,
+        suggested_caption, icon, color, sort_order
+    `, values);
+    
+    if (updateResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Item not found' });
+    }
+    
+    return res.json({ success: true, item: updateResult.rows[0] });
+  } catch (error) {
+    console.error('Error updating itinerary item:', error);
+    return res.status(500).json({ error: 'Failed to update item' });
+  }
+});
+
+// DELETE /api/public/trips/:accessCode/itinerary/:itemId - Delete itinerary item
+router.delete('/trips/:accessCode/itinerary/:itemId', async (req: Request, res: Response) => {
+  const { accessCode, itemId } = req.params;
+  
+  try {
+    const tripResult = await serviceQuery(`
+      SELECT id FROM cc_trips WHERE access_code = $1
+    `, [accessCode]);
+    
+    if (tripResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Trip not found' });
+    }
+    
+    const tripId = tripResult.rows[0].id;
+    
+    await serviceQuery(`
+      DELETE FROM cc_trip_itinerary_items 
+      WHERE id = $1 AND trip_id = $2
+    `, [itemId, tripId]);
+    
+    return res.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting itinerary item:', error);
+    return res.status(500).json({ error: 'Failed to delete item' });
+  }
+});
+
 export default router;

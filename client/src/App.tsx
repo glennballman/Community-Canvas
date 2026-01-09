@@ -99,6 +99,7 @@ import ArticlesPage from './pages/admin/ArticlesPage';
 import PresentationViewer from './pages/public/PresentationViewer';
 import PortalHomePage from './pages/public/PortalHomePage';
 import PortalReservePage from './pages/public/PortalReservePage';
+import TripPortalPage from './pages/public/TripPortalPage';
 
 // Pages - Auth
 import LoginPage from './pages/auth/LoginPage';
@@ -168,6 +169,9 @@ export default function App() {
               <Route path="/p/:portalSlug" element={<PortalHomePage />} />
               <Route path="/p/:portalSlug/reserve" element={<PortalReservePage />} />
               <Route path="/p/:portalSlug/reserve/:assetId" element={<PortalReservePage />} />
+              
+              {/* Public Trip Portal - guest-facing trip view */}
+              <Route path="/trip/:accessCode" element={<TripPortalPage />} />
 
               {/* ========================================== */}
               {/* PUBLIC PORTAL - /c/:slug/*                */}
