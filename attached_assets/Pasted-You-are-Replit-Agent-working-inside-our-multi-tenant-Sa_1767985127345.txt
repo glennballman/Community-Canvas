@@ -1,0 +1,149 @@
+You are Replit Agent working inside our multi-tenant SaaS codebase (SpecOS/CivOS). 
+Your job is to refresh context and produce an authoritative “Integration Map” so ChatGPT can design the Reservation Engine + Partner Ingestion + Demand Engine without missing navigation links or role-based access surfaces.
+
+NON-NEGOTIABLE:
+- Do NOT implement features yet.
+- First: discover and report the current codebase truth (routes, nav, roles, tenancy, messaging, articles).
+- Provide exact file paths + key snippets (short excerpts) + a precise list of integration points.
+
+DELIVERABLE: “Reservation Engine Integration Map v1”
+Return in this exact structure:
+
+A) CURRENT NAV + ROUTE MAP (Platform + Tenant)
+1) Platform (super-admin / platform staff) navigation:
+   - What is the main nav component file(s)?
+   - What are the platform routes and their route file(s)?
+   - Where is RBAC/ABAC enforced for platform routes?
+2) Tenant (tenant admin / tenant staff) navigation:
+   - What is the tenant nav component file(s)?
+   - What are the tenant routes and their route file(s)?
+   - How is tenancy derived (subdomain, path param, JWT claims, db)?
+3) Shared layout shell(s):
+   - Marketing shell vs app shell vs admin shell
+   - Where breadcrumbs / sidebar / topbar are defined
+4) Identify EXACT place(s) where we must add:
+   - “Reservations” (tenant-side)
+   - “Partner Integrations / External Inventory” (platform-side + optional tenant-side)
+   - “Demand Engine” (platform-side) + “Campaigns” (tenant-side)
+   - “Carts / Abandoned Carts / Failed Payments” (tenant-side)
+   - “Messages” deep-links from reservations
+   - “Articles / Presentations” deep-links from reservations
+
+B) AUTH, ROLES, & VISIBILITY
+1) List current roles and where defined (types/enums/db tables).
+2) For each role, what screens are visible today:
+   - platform_admin
+   - platform_staff
+   - tenant_super_admin
+   - tenant_admin
+   - tenant_staff
+   - read-only / analyst (if exists)
+3) Where route guards happen (middleware, hooks, layouts).
+4) Confirm whether we use RLS policies and where they live.
+
+C) RESERVATION SYSTEM EXISTING STATE
+1) Search for these keywords and report matches with file paths:
+   - reservation
+   - booking
+   - cart
+   - order
+   - checkout
+   - inventory
+   - availability
+   - stripe
+   - payment_intent
+   - webhook
+   - abandoned
+   - message / messaging
+   - articles / presentations / docs
+2) Identify existing DB tables relevant (Drizzle schema files + migrations):
+   - carts, cart_items, orders, order_items, inventory, itinerary items, messages, documents
+3) Identify existing API endpoints (server routes / edge functions) for:
+   - carts
+   - checkout/payments
+   - inventory search
+   - reservations creation
+   - messaging send/threads
+   - docs/articles/presentations
+
+D) PAYMENTS: STRIPE NOW, BUT NOT STRIPE-DEPENDENT FOREVER
+1) Identify the current payments abstraction, if any:
+   - Is there a payment_provider table? a provider enum? plugin pattern?
+2) If Stripe exists:
+   - Where is Stripe configured?
+   - Webhook handler location?
+   - How are PaymentIntents stored?
+   - How do we associate payments with tenant + order?
+3) If Stripe doesn’t exist:
+   - Identify where we SHOULD place a provider abstraction.
+4) Report the best insertion points so we can add:
+   - payment_provider='stripe' now
+   - and later payment_provider='adyen'|'paypal'|'offline_invoice' without refactor
+
+E) MESSAGING + DOCS INTEGRATION POINTS
+1) Messaging:
+   - Where are threads stored? Where is UI for threads?
+   - Do threads support linking to objects (order_id, reservation_id, cart_id)?
+   - Identify “deep link pattern”: /messages?ref=... or /tenant/:id/messages/:threadId
+2) Articles/Presentations platform:
+   - Where are articles stored? presentations?
+   - Can we attach them to reservations/orders?
+   - How do we deep-link from reservation UI to relevant docs?
+
+F) DEMAND ENGINE HOOKS
+We need the system to:
+- detect abandoned carts (time since last activity)
+- detect failed transactions (payment intent failed)
+- trigger messaging outreach (AI or staff)
+- trigger campaign automation (email/sms/social share)
+- measure conversion funnels
+
+1) Identify existing analytics/event tracking tables or event bus.
+2) Identify existing jobs/cron/scheduler mechanism (if any).
+3) Identify where we can implement:
+   - cart_activity events
+   - payment_status events
+   - automation triggers
+
+G) “SEED INVENTORY” FOR PRACTICE RUNS (JANUARY)
+We need a safe sandbox/seeding mode to simulate multi-tenant group bookings:
+Partners:
+- Flora’s Stays
+- Flora’s Restaurant
+- Woods End Landing
+- Bamfield Adventure Center
+- Save Paradise Parking
+- Harbourside Lodge
+
+1) Identify if we have seed scripts already (db/seed.ts or similar).
+2) Identify environment flags for “demo mode” or “seed mode”.
+3) Propose where to implement a “Seeder UI” (platform only) and/or CLI seed script.
+4) Confirm how to prevent collisions with real inventory:
+   - separate “demo tenant group”
+   - separate inventory set
+   - or date-window constraints (January only) + “test_only=true”
+
+H) OUTPUT REQUIREMENTS
+Return:
+1) A clickable list (file paths) of nav, route, auth, messaging, docs, payments files.
+2) A “Proposed Navigation Plan” showing:
+   - Platform sidebar sections + new menu items
+   - Tenant sidebar sections + new menu items
+   - Breadcrumb patterns
+3) A “Role Visibility Matrix” (roles x screens) for:
+   - Reservations
+   - External Inventory
+   - Partner Connections
+   - Demand Engine
+   - Carts/Checkout
+   - Abandoned carts
+   - Failed payments
+   - Messaging threads
+   - Articles/Presentations
+4) A list of questions to ask ChatGPT (max 10) ONLY if absolutely required.
+
+IMPORTANT:
+- Use grep/ripgrep and open the files to confirm.
+- Do not guess. If uncertain, show the exact evidence snippet.
+- Keep excerpts short (10–25 lines max per file).
+- End with a one-paragraph summary of “where to hook the Reservation Engine in” based on discovered architecture.
