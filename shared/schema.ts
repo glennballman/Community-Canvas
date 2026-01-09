@@ -275,7 +275,7 @@ export const ccTripItineraryItems = pgTable('cc_trip_itinerary_items', {
   title: varchar('title').notNull(),
   description: text('description'),
   
-  isReserved: boolean('is_booked').notNull().default(false),
+  isReserved: boolean('is_reserved').notNull().default(false),
   reservationId: uuid('reservation_id'),
   
   status: varchar('status').notNull().default('idea'),

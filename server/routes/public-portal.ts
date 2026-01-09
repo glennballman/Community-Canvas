@@ -1579,7 +1579,7 @@ router.get('/trips/:accessCode', async (req: Request, res: Response) => {
     
     const itineraryResult = await serviceQuery(`
       SELECT 
-        id, trip_id, item_type, title, description, is_booked, status,
+        id, trip_id, item_type, title, description, is_reserved, status,
         day_date, start_time, end_time, all_day, everyone, location_name,
         location_lat, location_lng, weather_sensitive, photo_moment,
         suggested_caption, icon, color, sort_order
@@ -1796,12 +1796,12 @@ router.post('/trips/:accessCode/itinerary', async (req: Request, res: Response) 
     
     const insertResult = await serviceQuery(`
       INSERT INTO cc_trip_itinerary_items (
-        trip_id, item_type, title, description, is_booked, status,
+        trip_id, item_type, title, description, is_reserved, status,
         day_date, start_time, end_time, all_day, location_name,
         location_lat, location_lng, weather_sensitive, photo_moment,
         suggested_caption, icon, created_by
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
-      RETURNING id, trip_id, item_type, title, description, is_booked, status,
+      RETURNING id, trip_id, item_type, title, description, is_reserved, status,
         day_date, start_time, end_time, all_day, everyone, location_name,
         location_lat, location_lng, weather_sensitive, photo_moment,
         suggested_caption, icon, color, sort_order
@@ -1875,7 +1875,7 @@ router.patch('/trips/:accessCode/itinerary/:itemId', async (req: Request, res: R
       UPDATE cc_trip_itinerary_items 
       SET ${setClause.join(', ')}
       WHERE id = $${paramIndex} AND trip_id = $${paramIndex + 1}
-      RETURNING id, trip_id, item_type, title, description, is_booked, status,
+      RETURNING id, trip_id, item_type, title, description, is_reserved, status,
         day_date, start_time, end_time, all_day, everyone, location_name,
         location_lat, location_lng, weather_sensitive, photo_moment,
         suggested_caption, icon, color, sort_order

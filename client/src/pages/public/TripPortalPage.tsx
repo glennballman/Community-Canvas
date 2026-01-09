@@ -64,7 +64,7 @@ interface ItineraryItem {
   item_type: string;
   title: string;
   description: string;
-  is_booked: boolean;
+  is_reserved: boolean;
   status: string;
   day_date: string;
   start_time: string;
@@ -314,7 +314,7 @@ export default function TripPortalPage() {
                             return (
                               <div 
                                 key={item.id} 
-                                className={`flex items-start gap-2 p-2 rounded ${item.is_booked ? 'bg-green-900/20' : 'bg-muted/50'}`}
+                                className={`flex items-start gap-2 p-2 rounded ${item.is_reserved ? 'bg-green-900/20' : 'bg-muted/50'}`}
                                 data-testid={`itinerary-item-${item.id}`}
                               >
                                 <Icon className="w-4 h-4 text-muted-foreground mt-0.5" />
@@ -326,7 +326,7 @@ export default function TripPortalPage() {
                                     </p>
                                   )}
                                 </div>
-                                {item.is_booked && <Check className="w-4 h-4 text-green-500" />}
+                                {item.is_reserved && <Check className="w-4 h-4 text-green-500" />}
                               </div>
                             );
                           })}
