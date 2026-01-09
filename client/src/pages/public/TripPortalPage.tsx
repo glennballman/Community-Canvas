@@ -1,4 +1,4 @@
-import { useParams } from 'wouter';
+import { useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { format, parseISO } from 'date-fns';
