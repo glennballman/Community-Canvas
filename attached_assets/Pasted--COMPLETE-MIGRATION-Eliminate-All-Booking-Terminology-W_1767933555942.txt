@@ -1,0 +1,454 @@
+**COMPLETE MIGRATION: Eliminate All "Booking" Terminology**
+
+We standardized the trip tables but left 6 other tables with "booking" in the name. This violates our schema.org alignment and creates inconsistent naming. Fix it ALL now.
+
+## PHASE 0: Full Audit - Confirm Scope
+```sql
+-- List ALL tables with "booking" in name
+SELECT tablename FROM pg_tables 
+WHERE schemaname = 'public' 
+AND tablename ILIKE '%booking%'
+ORDER BY tablename;
+
+-- List ALL columns with "booking" in name
+SELECT table_name, column_name, data_type
+FROM information_schema.columns 
+WHERE table_schema = 'public' 
+AND column_name ILIKE '%booking%'
+ORDER BY table_name, column_name;
+
+-- Count records in each booking table (to verify after migration)
+SELECT 'cc_accommodation_bookings' as tbl, COUNT(*) as cnt FROM cc_accommodation_bookings
+UNION ALL SELECT 'cc_transport_bookings', COUNT(*) FROM cc_transport_bookings
+UNION ALL SELECT 'cc_rental_bookings', COUNT(*) FROM cc_rental_bookings
+UNION ALL SELECT 'cc_service_run_bookings', COUNT(*) FROM cc_service_run_bookings
+UNION ALL SELECT 'cc_staging_bookings', COUNT(*) FROM cc_staging_bookings
+UNION ALL SELECT 'cc_booking_notifications', COUNT(*) FROM cc_booking_notifications;
+
+-- Find all constraints on these tables
+SELECT 
+    tc.table_name,
+    tc.constraint_name,
+    tc.constraint_type
+FROM information_schema.table_constraints tc
+WHERE tc.table_schema = 'public'
+AND tc.table_name IN (
+    'cc_accommodation_bookings',
+    'cc_transport_bookings', 
+    'cc_rental_bookings',
+    'cc_service_run_bookings',
+    'cc_staging_bookings',
+    'cc_booking_notifications'
+)
+ORDER BY tc.table_name, tc.constraint_type, tc.constraint_name;
+
+-- Find all indexes on these tables
+SELECT tablename, indexname
+FROM pg_indexes
+WHERE schemaname = 'public'
+AND tablename IN (
+    'cc_accommodation_bookings',
+    'cc_transport_bookings',
+    'cc_rental_bookings',
+    'cc_service_run_bookings',
+    'cc_staging_bookings',
+    'cc_booking_notifications'
+)
+ORDER BY tablename, indexname;
+
+-- Find all foreign keys REFERENCING these tables
+SELECT
+    tc.table_name as child_table,
+    kcu.column_name as child_column,
+    ccu.table_name AS parent_table,
+    tc.constraint_name
+FROM information_schema.table_constraints tc
+JOIN information_schema.key_column_usage kcu 
+    ON tc.constraint_name = kcu.constraint_name
+JOIN information_schema.constraint_column_usage ccu 
+    ON tc.constraint_name = ccu.constraint_name
+WHERE tc.constraint_type = 'FOREIGN KEY'
+AND ccu.table_name IN (
+    'cc_accommodation_bookings',
+    'cc_transport_bookings',
+    'cc_rental_bookings',
+    'cc_service_run_bookings',
+    'cc_staging_bookings',
+    'cc_booking_notifications'
+)
+ORDER BY parent_table, child_table;
+```
+
+**PASTE ALL RESULTS before proceeding. We need exact names.**
+
+## PHASE 1: Rename Tables (Order: No FK dependencies first, then parents)
+```sql
+-- 1. cc_booking_notifications → cc_reservation_notifications
+ALTER TABLE cc_booking_notifications RENAME TO cc_reservation_notifications;
+
+-- 2. cc_staging_bookings → cc_staging_reservations
+ALTER TABLE cc_staging_bookings RENAME TO cc_staging_reservations;
+
+-- 3. cc_accommodation_bookings → cc_accommodation_reservations
+ALTER TABLE cc_accommodation_bookings RENAME TO cc_accommodation_reservations;
+
+-- 4. cc_transport_bookings → cc_transport_reservations
+ALTER TABLE cc_transport_bookings RENAME TO cc_transport_reservations;
+
+-- 5. cc_rental_bookings → cc_rental_reservations
+ALTER TABLE cc_rental_bookings RENAME TO cc_rental_reservations;
+
+-- 6. cc_service_run_bookings → cc_service_run_reservations
+ALTER TABLE cc_service_run_bookings RENAME TO cc_service_run_reservations;
+```
+
+## PHASE 2: Rename Columns with "booking" in Name
+
+Run this query first to get exact column names:
+```sql
+SELECT table_name, column_name 
+FROM information_schema.columns 
+WHERE table_schema = 'public' 
+AND column_name ILIKE '%booking%'
+AND column_name != 'is_booked'  -- Keep boolean state flags
+ORDER BY table_name, column_name;
+```
+
+Then rename each (examples - adjust based on actual results):
+```sql
+-- booking_status → status (in multiple tables)
+ALTER TABLE cc_accommodation_reservations RENAME COLUMN booking_status TO status;
+ALTER TABLE cc_transport_reservations RENAME COLUMN booking_status TO status;
+ALTER TABLE cc_rental_reservations RENAME COLUMN booking_status TO status;
+ALTER TABLE cc_service_run_reservations RENAME COLUMN booking_status TO status;
+
+-- booking_reference → reference_code or external_reference
+ALTER TABLE cc_accommodation_reservations RENAME COLUMN booking_reference TO reference_code;
+ALTER TABLE cc_transport_reservations RENAME COLUMN booking_reference TO reference_code;
+
+-- external_booking_ref → external_reference
+-- (Find which tables have this and rename)
+
+-- booking_url → reservation_url
+-- (Find which tables have this and rename)
+
+-- provider_booking_url → provider_url
+-- (Find which tables have this and rename)
+
+-- booking_mode → reservation_mode
+-- (Find which tables have this and rename)
+
+-- booking_lead_time_hours → lead_time_hours
+-- (Find which tables have this and rename)
+
+-- min_booking_hours → min_lead_hours
+-- (Find which tables have this and rename)
+
+-- max_booking_days → max_advance_days
+-- (Find which tables have this and rename)
+
+-- booking_deadline → reservation_deadline
+-- (Find which tables have this and rename)
+
+-- booking_notes → notes
+-- (Find which tables have this and rename)
+
+-- booking_count / bookings_count → reservation_count
+-- (Find which tables have this and rename)
+
+-- advance_booking_days → advance_days
+-- (Find which tables have this and rename)
+```
+
+## PHASE 3: Rename All Constraints
+
+Get current constraint names:
+```sql
+SELECT table_name, constraint_name, constraint_type
+FROM information_schema.table_constraints
+WHERE table_schema = 'public'
+AND table_name IN (
+    'cc_reservation_notifications',
+    'cc_staging_reservations',
+    'cc_accommodation_reservations',
+    'cc_transport_reservations',
+    'cc_rental_reservations',
+    'cc_service_run_reservations'
+)
+ORDER BY table_name, constraint_type;
+```
+
+Rename each (pattern: replace "booking" with "reservation"):
+```sql
+-- Primary keys
+ALTER TABLE cc_accommodation_reservations 
+  RENAME CONSTRAINT cc_accommodation_bookings_pkey TO cc_accommodation_reservations_pkey;
+ALTER TABLE cc_transport_reservations 
+  RENAME CONSTRAINT cc_transport_bookings_pkey TO cc_transport_reservations_pkey;
+ALTER TABLE cc_rental_reservations 
+  RENAME CONSTRAINT cc_rental_bookings_pkey TO cc_rental_reservations_pkey;
+ALTER TABLE cc_service_run_reservations 
+  RENAME CONSTRAINT cc_service_run_bookings_pkey TO cc_service_run_reservations_pkey;
+ALTER TABLE cc_staging_reservations 
+  RENAME CONSTRAINT cc_staging_bookings_pkey TO cc_staging_reservations_pkey;
+ALTER TABLE cc_reservation_notifications 
+  RENAME CONSTRAINT cc_booking_notifications_pkey TO cc_reservation_notifications_pkey;
+
+-- Foreign keys (adjust names based on actual constraint names found)
+-- Pattern: *_bookings_*_fkey → *_reservations_*_fkey
+```
+
+## PHASE 4: Rename All Indexes
+
+Get current index names:
+```sql
+SELECT tablename, indexname
+FROM pg_indexes
+WHERE schemaname = 'public'
+AND (
+    indexname ILIKE '%booking%'
+    OR tablename IN (
+        'cc_reservation_notifications',
+        'cc_staging_reservations',
+        'cc_accommodation_reservations',
+        'cc_transport_reservations',
+        'cc_rental_reservations',
+        'cc_service_run_reservations'
+    )
+)
+ORDER BY tablename, indexname;
+```
+
+Rename each:
+```sql
+-- Pattern: idx_*_booking* → idx_*_reservation*
+-- Pattern: *_bookings_* → *_reservations_*
+
+-- Examples (adjust based on actual index names):
+ALTER INDEX idx_cc_accommodation_bookings_portal RENAME TO idx_cc_accommodation_reservations_portal;
+ALTER INDEX idx_cc_accommodation_bookings_dates RENAME TO idx_cc_accommodation_reservations_dates;
+ALTER INDEX idx_cc_accommodation_bookings_status RENAME TO idx_cc_accommodation_reservations_status;
+
+ALTER INDEX idx_cc_transport_bookings_trip RENAME TO idx_cc_transport_reservations_trip;
+ALTER INDEX idx_cc_rental_bookings_asset RENAME TO idx_cc_rental_reservations_asset;
+ALTER INDEX idx_cc_service_run_bookings_run RENAME TO idx_cc_service_run_reservations_run;
+ALTER INDEX idx_cc_staging_bookings_source RENAME TO idx_cc_staging_reservations_source;
+ALTER INDEX idx_cc_booking_notifications_reservation RENAME TO idx_cc_reservation_notifications_reservation;
+```
+
+## PHASE 5: Update Foreign Key References in OTHER Tables
+
+Check if any other tables reference the renamed tables:
+```sql
+SELECT
+    tc.table_name as referencing_table,
+    kcu.column_name as referencing_column,
+    ccu.table_name AS referenced_table,
+    tc.constraint_name
+FROM information_schema.table_constraints tc
+JOIN information_schema.key_column_usage kcu 
+    ON tc.constraint_name = kcu.constraint_name
+JOIN information_schema.constraint_column_usage ccu 
+    ON tc.constraint_name = ccu.constraint_name
+WHERE tc.constraint_type = 'FOREIGN KEY'
+AND (
+    kcu.column_name ILIKE '%booking%'
+    OR ccu.table_name ILIKE '%booking%'
+)
+ORDER BY tc.table_name;
+```
+
+For any found, rename the FK columns and constraints:
+```sql
+-- Example: if cc_staging_reviews has staging_booking_id
+ALTER TABLE cc_staging_reviews RENAME COLUMN staging_booking_id TO staging_reservation_id;
+ALTER TABLE cc_staging_reviews 
+  RENAME CONSTRAINT cc_staging_reviews_staging_booking_id_fkey 
+  TO cc_staging_reviews_staging_reservation_id_fkey;
+```
+
+## PHASE 6: Find and Update All Code References
+```bash
+# Find all TypeScript/JavaScript files referencing old table names
+grep -rn "accommodation_booking\|transport_booking\|rental_booking\|service_run_booking\|staging_booking\|booking_notification" \
+  --include="*.ts" --include="*.tsx" \
+  server/ client/ shared/ | grep -v node_modules | head -100
+
+# Find Drizzle schema definitions
+grep -rn "ccAccommodationBooking\|ccTransportBooking\|ccRentalBooking\|ccServiceRunBooking\|ccStagingBooking\|ccBookingNotification" \
+  --include="*.ts" \
+  shared/schema.ts server/ | head -50
+
+# Find API routes
+grep -rn "booking" --include="*.ts" server/routes/ | grep -v node_modules | head -100
+```
+
+## PHASE 7: Update Drizzle Schema (shared/schema.ts)
+
+Find and replace all occurrences:
+```typescript
+// Table names
+cc_accommodation_bookings → cc_accommodation_reservations
+cc_transport_bookings → cc_transport_reservations
+cc_rental_bookings → cc_rental_reservations
+cc_service_run_bookings → cc_service_run_reservations
+cc_staging_bookings → cc_staging_reservations
+cc_booking_notifications → cc_reservation_notifications
+
+// Export names
+ccAccommodationBookings → ccAccommodationReservations
+ccTransportBookings → ccTransportReservations
+ccRentalBookings → ccRentalReservations
+ccServiceRunBookings → ccServiceRunReservations
+ccStagingBookings → ccStagingReservations
+ccBookingNotifications → ccReservationNotifications
+
+// Column names
+bookingStatus → status
+bookingReference → referenceCode
+bookingMode → reservationMode
+bookingUrl → reservationUrl
+providerBookingUrl → providerUrl
+bookingLeadTimeHours → leadTimeHours
+minBookingHours → minLeadHours
+maxBookingDays → maxAdvanceDays
+bookingDeadline → reservationDeadline
+bookingNotes → notes
+bookingCount → reservationCount
+bookingsCount → reservationCount
+advanceBookingDays → advanceDays
+
+// Insert schema types
+InsertAccommodationBooking → InsertAccommodationReservation
+InsertTransportBooking → InsertTransportReservation
+// etc.
+```
+
+## PHASE 8: Update Server Routes
+
+Files likely to need updates:
+- `server/routes/accommodations.ts`
+- `server/routes/transport.ts`
+- `server/routes/rentals.ts`
+- `server/routes/service-runs.ts`
+- `server/routes/staging.ts`
+- `server/routes/notifications.ts`
+- `server/routes/host.ts`
+- `server/routes/hostProperties.ts`
+
+For each file:
+1. Update import names
+2. Update table references
+3. Update column names in queries
+4. Update API response field names (if exposed)
+
+## PHASE 9: Update Client Components
+```bash
+grep -rn "booking" --include="*.tsx" --include="*.ts" client/src/ | grep -v node_modules | head -100
+```
+
+Update any components that reference:
+- API endpoints with "booking"
+- Type definitions with "booking"
+- Display text (if showing "booking" to users)
+
+## PHASE 10: Verify Migration Complete
+```sql
+-- Confirm NO tables with "booking" in name
+SELECT tablename FROM pg_tables 
+WHERE schemaname = 'public' 
+AND tablename ILIKE '%booking%';
+-- Should return 0 rows
+
+-- Confirm renamed tables exist
+SELECT tablename FROM pg_tables 
+WHERE schemaname = 'public' 
+AND tablename IN (
+    'cc_accommodation_reservations',
+    'cc_transport_reservations',
+    'cc_rental_reservations',
+    'cc_service_run_reservations',
+    'cc_staging_reservations',
+    'cc_reservation_notifications'
+)
+ORDER BY tablename;
+-- Should return 6 rows
+
+-- Confirm record counts unchanged
+SELECT 'cc_accommodation_reservations' as tbl, COUNT(*) as cnt FROM cc_accommodation_reservations
+UNION ALL SELECT 'cc_transport_reservations', COUNT(*) FROM cc_transport_reservations
+UNION ALL SELECT 'cc_rental_reservations', COUNT(*) FROM cc_rental_reservations
+UNION ALL SELECT 'cc_service_run_reservations', COUNT(*) FROM cc_service_run_reservations
+UNION ALL SELECT 'cc_staging_reservations', COUNT(*) FROM cc_staging_reservations
+UNION ALL SELECT 'cc_reservation_notifications', COUNT(*) FROM cc_reservation_notifications;
+
+-- Confirm NO columns with "booking" (except is_booked which is OK)
+SELECT table_name, column_name 
+FROM information_schema.columns 
+WHERE table_schema = 'public' 
+AND column_name ILIKE '%booking%'
+AND column_name != 'is_booked'
+ORDER BY table_name, column_name;
+-- Should return 0 rows
+
+-- Confirm NO constraints with "booking"
+SELECT constraint_name 
+FROM information_schema.table_constraints 
+WHERE table_schema = 'public' 
+AND constraint_name ILIKE '%booking%';
+-- Should return 0 rows
+
+-- Confirm NO indexes with "booking"
+SELECT indexname 
+FROM pg_indexes 
+WHERE schemaname = 'public' 
+AND indexname ILIKE '%booking%';
+-- Should return 0 rows
+```
+
+## PHASE 11: Build and Test
+```bash
+# Full rebuild
+npm run build
+
+# Check for TypeScript errors
+npx tsc --noEmit 2>&1 | head -100
+
+# Run the app
+npm run dev
+
+# Test key functionality:
+# - Accommodation reservations still work
+# - Transport reservations still work
+# - Rental flow still works
+# - Service run bookings still work
+# - Notifications still send
+```
+
+## EVIDENCE REQUIRED
+
+1. **SQL - Before:** Record counts for all 6 tables
+2. **SQL - After:** Show 0 tables with "booking" in name
+3. **SQL - After:** Show 6 renamed tables exist
+4. **SQL - After:** Record counts match before
+5. **SQL - After:** Show 0 columns with "booking" (except is_booked)
+6. **SQL - After:** Show 0 constraints with "booking"
+7. **SQL - After:** Show 0 indexes with "booking"
+8. **Code:** Show updated schema.ts exports
+9. **Build:** Clean build with no TypeScript errors
+10. **Screenshot:** App still loads and functions
+
+## TERMINOLOGY STANDARD (For Future Reference)
+
+After this migration, our naming convention is:
+
+| Concept | Table Pattern | Column Pattern |
+|---------|---------------|----------------|
+| A reservation | `cc_*_reservations` | `*_reservation_id` |
+| Reservation status | - | `status` |
+| External reference | - | `external_reference` or `reference_code` |
+| Lead time | - | `lead_time_hours`, `min_lead_hours` |
+| Advance limit | - | `max_advance_days`, `advance_days` |
+| Boolean "is reserved" | - | `is_booked` (OK to keep) |
+
+**NEVER use "booking" as a noun in table or column names again.**
