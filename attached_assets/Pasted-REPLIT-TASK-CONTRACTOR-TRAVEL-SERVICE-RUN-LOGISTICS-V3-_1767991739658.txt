@@ -1,0 +1,155 @@
+REPLIT TASK: CONTRACTOR TRAVEL + SERVICE RUN LOGISTICS — V3 REDESIGN INPUT DUMP (NO GUESSING)
+
+Goal
+I need a precise repo + schema snapshot so ChatGPT can design the V3 contractor-travel + service-run logistics layer that compiles work into travel + reservations + tools + materials + proof packages, and integrates Jobber + CompanyCam. Provide exact file paths, key code blocks, and full table definitions where relevant.
+
+Return format
+- Use headings 1), 2), 3)...
+- Include: file path + brief purpose + the exact relevant code blocks (not summaries)
+- For DB: output the exact CREATE TABLE (or Drizzle schema definitions) and indexes/constraints
+- For routes: include the router file + route handlers + request/response shapes (types if exist)
+- For auth/RLS: include the guard middleware + any RLS migrations touching these tables
+
+1) Service Runs + Work Demand (all existing surfaces)
+A) DB tables + enums + views
+Dump full schemas for any of these (even if partially used):
+- cc_service_runs (or equivalent)
+- cc_work_requests
+- cc_projects
+- cc_bids / bid tables
+- any “job” or “visit” or “crew” related tables
+- any “attachments / documents / files” tables
+- any “milestones” tables tied to work/projects
+
+For each: show CREATE TABLE + indexes + FKs + enums. If Drizzle, show the schema blocks.
+
+B) Backend routes + services
+Find and paste code for all routes handling:
+- service runs (create/update/list)
+- work requests intake
+- bids/quotes
+- project creation / assignment
+- attachments upload/linking
+Include the file paths under server/routes/* and any service layer files.
+
+C) Frontend pages
+List and link the pages that render the above:
+- route path → file path
+- component(s) that fetch the data
+- query keys (react-query) and endpoints
+
+2) Messaging linking model (critical for concierge threads)
+A) DB schema
+Dump full schemas for:
+- cc_conversations
+- cc_messages
+- any entity link tables (if present)
+- any message participants tables
+Show columns that link to work_request_id / bid_id / project_id etc.
+
+B) Backend
+Paste all code in:
+- server/routes/conversations.ts
+- server/routes/messages.ts (or wherever)
+Show how threads are created and how they link to entities today.
+
+C) Frontend deep-linking
+Paste code for:
+- ConversationsPage.tsx
+- any thread view components
+Show how query params are handled (e.g., ?work_request_id=).
+
+3) Assets, availability, and “tools as rentable inventory”
+A) Tool / asset creation pathways
+Show where assets are created/edited:
+- server/routes that create/update cc_assets
+- any asset capability / child / capacity tables
+- InventoryPage + InventoryItemDetail UI
+Paste relevant code blocks and schema for:
+- cc_assets
+- cc_asset_children
+- cc_asset_capabilities / capability_units
+- cc_asset_capacities
+- cc_asset_constraints
+- cc_asset_terms
+- cc_asset_inspections
+
+B) Quantity-based inventory (IMPORTANT)
+Search repo for any tables or code patterns that support “N of M available” for a resource.
+Examples:
+- inventory_quantity, unit_count, pool_size, capacity_pool, allocatable_unit, seat_map, table_map
+If none exist, explicitly confirm “no quantity model exists.”
+
+C) Conflict + locking
+Paste the full implementation of:
+- checkTimeConflicts() in server/routes/schedule.ts
+- reservation creation code path (including SQL)
+- any transaction usage (BEGIN/COMMIT) around reservations/events
+Search for SELECT ... FOR UPDATE usage; if none, confirm.
+
+4) Payments + milestones (for materials deposits + proof-gated releases)
+A) DB schemas
+Dump full schemas for:
+- cc_payment_promises
+- cc_payment_milestones
+- cc_payment_events
+- any invoice tables
+Show provider columns if any exist.
+
+B) Backend routes
+Paste:
+- server/routes/payments.ts
+- any webhook route files (if any)
+- any “milestone” verification logic
+
+C) Frontend surfaces
+Where are payment promises/milestones shown? Provide page paths + components.
+
+5) Integrations / connectors (Jobber, CompanyCam, etc.)
+A) Search for any existing connector tables
+Search and paste any matches for:
+- connector, integration, external, oauth, api_key, webhook, sync, jobber, companycam, procore, servicetitan
+If any connector tables exist, dump full schema.
+
+B) Webhooks infrastructure
+Search for:
+- /api/webhooks
+- signature verification
+- idempotency keys
+Paste any relevant handler templates.
+
+6) Documents / file storage (needed for proof packages)
+A) Where are files stored?
+Search for:
+- upload route
+- storage bucket usage (Supabase Storage / S3)
+- file metadata tables
+Paste relevant code.
+
+7) Auth, roles, RLS for all above
+A) Server guards
+Paste:
+- server/middleware/guards.ts
+- any requireRole() usage for these routes
+
+B) RLS migrations
+Search migrations for:
+- cc_assets / cc_reservations / cc_conversations / cc_work_requests / cc_projects / payments tables
+Paste the RLS policies (even if disabled), and explicitly confirm which tables currently have RLS OFF.
+
+8) Output a final “Dependency Map”
+At the end, output a short table:
+Entity → Tables → Routes → UI pages
+for:
+- work request
+- bid
+- project
+- service run
+- asset/tool inventory
+- reservation
+- conversation/messages
+- payments/milestones
+
+IMPORTANT
+Do not summarize at a high level—paste the exact code blocks and schemas that implement these features.
+If a section has nothing in the repo, explicitly say “NOT FOUND” and show the search terms used.
