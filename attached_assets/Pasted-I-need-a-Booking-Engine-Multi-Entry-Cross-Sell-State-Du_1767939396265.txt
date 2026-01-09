@@ -1,0 +1,38 @@
+I need a “Booking Engine Multi-Entry Cross-Sell State Dump” so you (ChatGPT) can re-enter the project and fix the architectural gap without hallucinating.
+
+Return the following, in this order, with code/schema excerpts (not summaries):
+
+A) CURRENT DB TRUTH (authoritative)
+1) cc_reservations: full column list (including reservation_type/status/start_date/end_date/portal_id/tenant_id if present) + indexes + FKs
+2) cc_trips: full column list + how trips are created today
+3) cc_trip_participants + cc_trip_passengers: full column lists + meaning of participant_id vs id (clarify IDs)
+4) cc_trip_itinerary_items: full column list (confirm if updated_at exists; confirm is_booked vs isReserved mapping)
+5) cc_portal_moments: full column list + existing moment_type fields (confirm current 19 columns mentioned)
+6) Any existing “bundle” or “upsell” tables already present (search for bundle, upsell, cross_sell, offer, funnel, lead, opportunity)
+
+For each table above: provide `\d+ table_name` output (or equivalent) AND the CREATE TABLE snippet if available.
+
+B) CURRENT CODE TRUTH (authoritative)
+1) Where is cc_reservations created? List file paths + the handler functions.
+2) What are the current entry points that create reservations? (parking, accommodation, moorage, rentals, activities, etc.) Provide route paths and file paths.
+3) Confirm where “public portal” routes live (server/routes/...) and how auth is handled for access_code endpoints.
+4) Confirm DB access layer used in routes (db.query wrapper? drizzle? raw pg?) with a small example.
+
+C) CURRENT UI TRUTH (authoritative)
+1) Where is Trip Portal UI (TripPortalPage.tsx or equivalent)? Provide file path and how tabs are wired.
+2) Where does “create reservation” happen in the UI today? Provide file path and flow.
+3) Any existing cross-sell UI components already present (Offer cards, recommended add-ons, etc.) with file paths.
+
+D) DECISIONS + CONSTRAINTS
+1) Canonical terms: confirm final naming (reservation vs booking; status vs booking_status; route points table name)
+2) Multi-tenant scope: what identifies tenant and portal for these rows?
+3) Stripe integration: is Stripe already installed/configured anywhere?
+4) Any RLS/policies that affect these new tables?
+
+E) THE GAP (restate precisely)
+1) List the required “multi-entry cross-sell” behaviors as acceptance criteria (5–10 bullets).
+2) List the minimum viable architecture you believe we should implement first (rules table vs journey templates vs bundles).
+3) Identify anything in the Prompt 0 proposal that conflicts with current DB or code.
+
+Finally:
+F) Provide a short “DO / DON’T” list for the next implementation pass (e.g., do not add columns that collide; do not assume updated_at exists; etc.).
