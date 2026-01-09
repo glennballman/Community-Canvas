@@ -1,0 +1,161 @@
+You are Replit. I need a COMPLETE “System State Dump” of our current Assets + Availability + Reservations dependency surface so ChatGPT can redesign V3 correctly (no MVP shortcuts). Be pedantic.
+
+OUTPUT FORMAT REQUIREMENTS
+- Use headings exactly as requested below.
+- Include: file paths + code excerpts + DB schema + sample rows + route lists.
+- If something doesn’t exist, explicitly say “MISSING”.
+- Do NOT propose new designs yet. This is ONLY a factual inventory/audit.
+- Include any enums/types/constants that govern availability resolution.
+
+========================================
+1) DATABASE SCHEMA: ASSETS + AVAILABILITY + RESERVATIONS DEPENDENCIES
+========================================
+Provide the FULL CREATE TABLE definitions (or Drizzle schema blocks) for ALL tables that touch:
+A) Assets / inventory
+- cc_assets and any related tables (asset types, categories, locations, attributes, photos, pricing, capacity, dependencies)
+B) Availability
+- cc_asset_availability
+- cc_availability_blocks
+- any tables representing schedules, calendars, time windows, recurring rules, seasons, exceptions
+C) Reservations
+- cc_reservations (full)
+- any junction tables linking reservations to assets, guests, pricing, holds
+D) Bundles / services if they reference assets
+- cc_services, cc_bundles, etc. (if exists)
+E) Portals / tenants that scope assets
+- cc_tenants, cc_portals, any scoping tables used by RLS for assets/availability
+F) Any “pricing” tables used for assets (rate plans, fees, taxes, rules)
+
+For each table:
+- list columns, types, defaults, constraints, indexes
+- list foreign keys + cascade rules
+- show whether RLS is enabled and which policies exist for it
+
+Also output:
+- Any DB functions used (e.g. safe_current_tenant_uuid(), availability computation helpers)
+- Any materialized views or views used for availability or asset search
+
+========================================
+2) SAMPLE DATA SHAPE (REAL ROWS)
+========================================
+Dump example rows (JSON) for:
+- 3 cc_assets rows (different types if possible: accommodation, vehicle/kayak, “tool”, restaurant/table/seat if exists)
+- 5 cc_asset_availability rows
+- 10 cc_availability_blocks rows (including any “hold” or “maintenance” style blocks)
+- 5 cc_reservations rows
+Use sanitized sample data if needed, but match real column shapes.
+
+========================================
+3) FRONTEND: ASSETS + AVAILABILITY UI SURFACE
+========================================
+List ALL relevant frontend routes + components:
+- inventory list page(s)
+- asset detail page(s)
+- availability calendar UI
+- any scheduling widgets
+- any forms for asset creation/editing
+For each:
+- file path
+- primary components
+- where data is fetched from (endpoints/hooks)
+- what fields are editable and how they map to DB columns
+
+Also list:
+- any shared types/interfaces in client/shared
+- any constants/enums for asset types, capacity, time granularity, etc.
+
+========================================
+4) BACKEND ROUTES: ASSETS / AVAILABILITY / RESERVATIONS
+========================================
+List all backend endpoints related to:
+- asset CRUD
+- availability read/write
+- block creation/removal
+- reservation creation/modification/cancel
+- any “schedule” endpoints (server/routes/schedule.ts etc)
+
+For each endpoint:
+- method + path
+- handler file path
+- request body schema (or inferred)
+- response shape
+- which DB tables it reads/writes
+- any validation logic / business rules
+- any concurrency logic (locks, transactions)
+
+========================================
+5) AVAILABILITY COMPUTATION LOGIC (CRITICAL)
+========================================
+Find and paste ALL logic that computes availability or checks conflicts:
+- functions that decide if an asset is available for a given time range
+- functions that merge availability windows + blocks
+- logic for recurring schedules
+- logic for buffer times, turnaround times, prep/cleanup
+- logic for min/max durations
+- logic for capacity / quantity (e.g., “3 kayaks”, “10 seats”)
+- logic for partial overlap and minute-level scheduling
+
+Provide:
+- file path(s)
+- full function bodies
+- any tests
+
+========================================
+6) TIME + TIMEZONE + GRANULARITY STANDARDS
+========================================
+Tell me exactly what we currently use for:
+- timezone storage (timestamptz vs date/time fields)
+- how day_date + start_time/end_time are used
+- whether we store UTC or local
+- how we handle DST
+- smallest unit supported (day vs hour vs minute)
+- any known bugs or inconsistencies
+
+========================================
+7) SCHEMA.ORG / SEO / PUBLIC PORTAL INVENTORY OUTPUT
+========================================
+List any code that outputs public inventory/availability to portal pages:
+- schema.org JSON-LD (if any)
+- sitemap endpoints
+- public “availability” endpoints
+- any “offers” or “events” structured data
+
+If MISSING, say MISSING.
+
+========================================
+8) HARD CONSTRAINTS + DESIGN ASSUMPTIONS CURRENTLY BAKED IN
+========================================
+Enumerate all hard-coded assumptions:
+- asset types enumerations
+- booking duration assumptions (nightly only, hourly only, etc.)
+- max capacity rules
+- 1 reservation = 1 asset assumption
+- whether multi-asset reservations exist
+- whether restaurant seating is modeled at all
+- whether “tools” are modeled at all
+- whether “people” resources are modeled (staff, guides)
+
+========================================
+9) CONCURRENCY + IDENTITY + AUDIT
+========================================
+Show:
+- how we prevent double-booking today (if at all)
+- any transaction usage (BEGIN/COMMIT)
+- any advisory locks
+- audit trails (created_by, updated_by, events tables)
+- cancellation state machines
+- whether holds exist or only “booked blocks”
+
+========================================
+10) A QUICK “GAPS LIST” (FACTUAL ONLY)
+========================================
+Based on what you found above, list the gaps that prevent V3 checkout:
+- missing holds
+- missing minute-level
+- missing quantity/capacity
+- missing rate plans
+- missing multi-tenant fulfilment views
+- missing schema.org output
+But do not propose solutions yet.
+
+END.
