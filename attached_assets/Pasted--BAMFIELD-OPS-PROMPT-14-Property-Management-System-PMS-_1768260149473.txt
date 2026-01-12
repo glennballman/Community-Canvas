@@ -1,0 +1,1519 @@
+**BAMFIELD OPS - PROMPT 14: Property Management System (PMS) Core**
+
+Create the foundation for managing accommodations, properties, and units within Community Canvas.
+
+## Migration 090_pms_core.sql
+```sql
+BEGIN;
+
+-- ============ PROPERTIES ============
+-- Physical properties (lodges, B&Bs, cabin clusters, marinas)
+
+CREATE TABLE IF NOT EXISTS cc_properties (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  
+  -- Links
+  portal_id uuid REFERENCES cc_portals(id) ON DELETE SET NULL,
+  tenant_id uuid REFERENCES cc_tenants(id) ON DELETE SET NULL,
+  owner_id uuid REFERENCES cc_contacts(id) ON DELETE SET NULL,
+  location_id uuid REFERENCES cc_locations(id) ON DELETE SET NULL,
+  
+  -- Identity
+  name text NOT NULL,
+  code varchar(20),
+  slug varchar(50),
+  
+  property_type varchar NOT NULL CHECK (property_type IN (
+    'lodge',          -- Full-service lodge
+    'hotel',          -- Hotel/motel
+    'bnb',            -- Bed & breakfast
+    'cabin_cluster',  -- Multiple cabins
+    'vacation_rental', -- Single vacation rental
+    'campground',     -- Campground/RV park
+    'marina',         -- Marina with slip rentals
+    'hostel',         -- Hostel/dorm style
+    'resort',         -- Full resort
+    'other'
+  )),
+  
+  -- Description
+  description text,
+  tagline varchar(200),
+  
+  -- Address
+  address_line1 text,
+  address_line2 text,
+  city varchar(100),
+  province varchar(50) DEFAULT 'BC',
+  postal_code varchar(20),
+  country varchar(50) DEFAULT 'Canada',
+  
+  -- Geolocation
+  lat numeric(9,6),
+  lon numeric(9,6),
+  
+  -- Contact
+  contact_phone text,
+  contact_email text,
+  website_url text,
+  
+  -- Capacity
+  total_units integer DEFAULT 0,
+  total_beds integer DEFAULT 0,
+  max_occupancy integer DEFAULT 0,
+  
+  -- Amenities
+  amenities_json jsonb DEFAULT '[]'::jsonb,
+  -- ['wifi', 'parking', 'kitchen', 'laundry', 'hot_tub', 'sauna', 
+  --  'boat_launch', 'kayak_storage', 'gear_room', 'restaurant', 'bar']
+  
+  -- Policies
+  policies_json jsonb DEFAULT '{}'::jsonb,
+  -- {check_in_time: '15:00', check_out_time: '11:00',
+  --  min_stay_nights: 1, max_stay_nights: 30,
+  --  pets_allowed: true, pet_fee_cad: 25,
+  --  smoking_allowed: false, quiet_hours: '22:00-07:00',
+  --  cancellation_policy: 'moderate', damage_deposit_cad: 200}
+  
+  -- Pricing defaults
+  base_rate_cad numeric(10,2),
+  cleaning_fee_cad numeric(10,2) DEFAULT 0,
+  tax_rate_percent numeric(5,2) DEFAULT 13.0,
+  
+  -- Integration
+  external_pms varchar,
+  external_pms_id text,
+  ical_import_url text,
+  ical_export_url text,
+  
+  -- Media
+  photos_json jsonb DEFAULT '[]'::jsonb,
+  -- [{url: '...', caption: '...', primary: true}]
+  
+  -- Status
+  status varchar DEFAULT 'active' CHECK (status IN (
+    'draft', 'active', 'inactive', 'seasonal', 'closed'
+  )),
+  
+  -- Operational
+  accepts_instant_book boolean DEFAULT false,
+  requires_approval boolean DEFAULT true,
+  lead_time_hours integer DEFAULT 24,
+  
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now(),
+  
+  UNIQUE(portal_id, code),
+  UNIQUE(portal_id, slug)
+);
+
+CREATE INDEX idx_properties_portal ON cc_properties(portal_id, status);
+CREATE INDEX idx_properties_type ON cc_properties(property_type, status);
+CREATE INDEX idx_properties_location ON cc_properties(location_id) WHERE location_id IS NOT NULL;
+
+ALTER TABLE cc_properties ENABLE ROW LEVEL SECURITY;
+
+-- ============ UNITS ============
+-- Individual rentable units within a property
+
+CREATE TABLE IF NOT EXISTS cc_units (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  
+  -- Links
+  property_id uuid NOT NULL REFERENCES cc_properties(id) ON DELETE CASCADE,
+  
+  -- Identity
+  name text NOT NULL,
+  code varchar(20),
+  unit_number varchar(20),
+  
+  unit_type varchar NOT NULL CHECK (unit_type IN (
+    'room',           -- Hotel room
+    'suite',          -- Suite
+    'cabin',          -- Standalone cabin
+    'cottage',        -- Cottage
+    'tent_site',      -- Tent camping site
+    'rv_site',        -- RV/camper site
+    'slip',           -- Marina slip
+    'mooring',        -- Mooring buoy
+    'dorm_bed',       -- Single dorm bed
+    'apartment',      -- Full apartment
+    'house',          -- Entire house
+    'other'
+  )),
+  
+  -- Description
+  description text,
+  
+  -- Capacity
+  max_occupancy integer DEFAULT 2,
+  bedrooms integer DEFAULT 1,
+  beds_json jsonb DEFAULT '[]'::jsonb,
+  -- [{type: 'queen', count: 1}, {type: 'twin', count: 2}]
+  bathrooms numeric(3,1) DEFAULT 1,
+  
+  -- Size
+  size_sqft integer,
+  floor_level integer,
+  
+  -- For marina slips
+  slip_length_ft numeric(6,2),
+  slip_width_ft numeric(6,2),
+  power_amps integer,
+  water_available boolean DEFAULT true,
+  
+  -- Amenities (unit-specific, adds to property amenities)
+  amenities_json jsonb DEFAULT '[]'::jsonb,
+  -- ['private_bathroom', 'kitchenette', 'fireplace', 'deck', 'view', 'accessible']
+  
+  -- Pricing
+  base_rate_cad numeric(10,2),
+  weekend_rate_cad numeric(10,2),
+  weekly_rate_cad numeric(10,2),
+  monthly_rate_cad numeric(10,2),
+  extra_person_fee_cad numeric(10,2) DEFAULT 0,
+  
+  -- Seasonal pricing
+  seasonal_rates_json jsonb DEFAULT '[]'::jsonb,
+  -- [{name: 'Peak Summer', start: '07-01', end: '08-31', rate_cad: 250},
+  --  {name: 'Shoulder', start: '05-01', end: '06-30', rate_cad: 180}]
+  
+  -- Availability
+  status varchar DEFAULT 'available' CHECK (status IN (
+    'available',      -- Ready to book
+    'occupied',       -- Currently occupied
+    'blocked',        -- Blocked (owner use, maintenance)
+    'maintenance',    -- Under maintenance
+    'inactive',       -- Not in service
+    'seasonal'        -- Seasonally closed
+  )),
+  
+  -- Calendar sync
+  ical_url text,
+  last_ical_sync timestamptz,
+  
+  -- Media
+  photos_json jsonb DEFAULT '[]'::jsonb,
+  
+  -- Housekeeping
+  clean_status varchar DEFAULT 'clean' CHECK (clean_status IN (
+    'clean', 'dirty', 'in_progress', 'inspected', 'blocked'
+  )),
+  last_cleaned_at timestamptz,
+  next_inspection_at timestamptz,
+  
+  -- Display
+  sort_order integer DEFAULT 0,
+  featured boolean DEFAULT false,
+  
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now(),
+  
+  UNIQUE(property_id, code)
+);
+
+CREATE INDEX idx_units_property ON cc_units(property_id, status);
+CREATE INDEX idx_units_type ON cc_units(unit_type, status);
+CREATE INDEX idx_units_clean ON cc_units(clean_status) WHERE status = 'available';
+
+ALTER TABLE cc_units ENABLE ROW LEVEL SECURITY;
+
+-- ============ PMS RESERVATIONS ============
+-- Direct reservations managed in Community Canvas PMS
+
+CREATE TABLE IF NOT EXISTS cc_pms_reservations (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  
+  -- Links
+  portal_id uuid REFERENCES cc_portals(id) ON DELETE SET NULL,
+  property_id uuid NOT NULL REFERENCES cc_properties(id),
+  unit_id uuid NOT NULL REFERENCES cc_units(id),
+  
+  -- Cart/trip integration
+  cart_id uuid REFERENCES cc_reservation_carts(id) ON DELETE SET NULL,
+  cart_item_id uuid REFERENCES cc_reservation_cart_items(id) ON DELETE SET NULL,
+  trip_id uuid REFERENCES cc_trips(id) ON DELETE SET NULL,
+  
+  -- Identity
+  confirmation_number varchar(20) NOT NULL UNIQUE,
+  -- Format: RES-YYMMDD-XXXX
+  
+  -- Guest
+  guest_name text NOT NULL,
+  guest_email text,
+  guest_phone text,
+  guest_count integer DEFAULT 1,
+  guest_notes text,
+  
+  -- Dates
+  check_in_date date NOT NULL,
+  check_out_date date NOT NULL,
+  nights integer GENERATED ALWAYS AS (check_out_date - check_in_date) STORED,
+  
+  -- Times
+  expected_arrival_time time,
+  actual_arrival_time time,
+  expected_departure_time time,
+  actual_departure_time time,
+  
+  -- Pricing
+  base_rate_cad numeric(10,2) DEFAULT 0,
+  cleaning_fee_cad numeric(10,2) DEFAULT 0,
+  extra_fees_cad numeric(10,2) DEFAULT 0,
+  tax_cad numeric(10,2) DEFAULT 0,
+  total_cad numeric(10,2) DEFAULT 0,
+  
+  deposit_cad numeric(10,2) DEFAULT 0,
+  deposit_paid boolean DEFAULT false,
+  balance_cad numeric(10,2) DEFAULT 0,
+  
+  -- Payment
+  payment_status varchar DEFAULT 'pending' CHECK (payment_status IN (
+    'pending', 'deposit_paid', 'paid', 'partial', 'refunded', 'failed'
+  )),
+  payment_method varchar,
+  payment_reference text,
+  
+  -- Status
+  status varchar DEFAULT 'pending' CHECK (status IN (
+    'inquiry',        -- Initial inquiry
+    'pending',        -- Awaiting confirmation
+    'confirmed',      -- Confirmed
+    'checked_in',     -- Guest arrived
+    'checked_out',    -- Guest departed
+    'completed',      -- Finalized
+    'cancelled',      -- Cancelled
+    'no_show'         -- Guest didn't arrive
+  )),
+  
+  -- Timestamps
+  confirmed_at timestamptz,
+  checked_in_at timestamptz,
+  checked_out_at timestamptz,
+  cancelled_at timestamptz,
+  
+  cancellation_reason text,
+  
+  -- Source
+  source varchar DEFAULT 'direct' CHECK (source IN (
+    'direct',         -- Direct booking
+    'cart',           -- Via CC cart
+    'ical',           -- iCal import
+    'airbnb',         -- Airbnb
+    'vrbo',           -- VRBO
+    'booking_com',    -- Booking.com
+    'phone',          -- Phone booking
+    'walk_in',        -- Walk-in
+    'referral',       -- Referral
+    'other'
+  )),
+  source_reference text,
+  
+  -- Special requests
+  special_requests text,
+  internal_notes text,
+  
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+
+CREATE INDEX idx_pms_reservations_property ON cc_pms_reservations(property_id, status);
+CREATE INDEX idx_pms_reservations_unit ON cc_pms_reservations(unit_id, check_in_date, check_out_date);
+CREATE INDEX idx_pms_reservations_dates ON cc_pms_reservations(check_in_date, check_out_date, status);
+CREATE INDEX idx_pms_reservations_guest ON cc_pms_reservations(guest_email) WHERE guest_email IS NOT NULL;
+CREATE INDEX idx_pms_reservations_trip ON cc_pms_reservations(trip_id) WHERE trip_id IS NOT NULL;
+CREATE INDEX idx_pms_reservations_confirmation ON cc_pms_reservations(confirmation_number);
+
+ALTER TABLE cc_pms_reservations ENABLE ROW LEVEL SECURITY;
+
+-- ============ SEED BAMFIELD PROPERTIES ============
+
+DO $$
+DECLARE
+  v_portal_id uuid;
+  v_prop_id uuid;
+BEGIN
+  SELECT id INTO v_portal_id FROM cc_portals WHERE slug = 'bamfield' LIMIT 1;
+  
+  IF v_portal_id IS NOT NULL THEN
+    -- Bamfield Lodge
+    INSERT INTO cc_properties (
+      portal_id, name, code, slug, property_type,
+      description, tagline,
+      city, province, country,
+      amenities_json, policies_json,
+      base_rate_cad, cleaning_fee_cad,
+      status, accepts_instant_book
+    ) VALUES (
+      v_portal_id, 'Bamfield Lodge', 'BFLD-LODGE', 'bamfield-lodge', 'lodge',
+      'Historic waterfront lodge in the heart of Bamfield West, offering stunning views of Bamfield Inlet',
+      'Your basecamp for West Coast adventures',
+      'Bamfield', 'BC', 'Canada',
+      '["wifi", "parking", "restaurant", "bar", "kayak_storage", "gear_room", "boat_launch"]'::jsonb,
+      '{"check_in_time": "15:00", "check_out_time": "11:00", "min_stay_nights": 1, "pets_allowed": false, "cancellation_policy": "moderate"}'::jsonb,
+      150.00, 50.00,
+      'active', false
+    )
+    ON CONFLICT (portal_id, code) DO UPDATE SET updated_at = now()
+    RETURNING id INTO v_prop_id;
+    
+    -- Add units for Bamfield Lodge
+    IF v_prop_id IS NOT NULL THEN
+      INSERT INTO cc_units (property_id, name, code, unit_number, unit_type, max_occupancy, bedrooms, bathrooms, base_rate_cad, amenities_json, status)
+      VALUES
+        (v_prop_id, 'Inlet View Room', 'IVR-1', '101', 'room', 2, 1, 1, 150.00, '["view", "private_bathroom"]'::jsonb, 'available'),
+        (v_prop_id, 'Inlet View Room', 'IVR-2', '102', 'room', 2, 1, 1, 150.00, '["view", "private_bathroom"]'::jsonb, 'available'),
+        (v_prop_id, 'Family Suite', 'FST-1', '201', 'suite', 4, 2, 1, 250.00, '["view", "private_bathroom", "kitchenette"]'::jsonb, 'available'),
+        (v_prop_id, 'Captain''s Quarters', 'CPT-1', '301', 'suite', 2, 1, 1, 300.00, '["view", "private_bathroom", "deck", "fireplace"]'::jsonb, 'available')
+      ON CONFLICT (property_id, code) DO NOTHING;
+    END IF;
+    
+    -- Pachena Bay Campground
+    INSERT INTO cc_properties (
+      portal_id, name, code, slug, property_type,
+      description,
+      city, province, country,
+      amenities_json, policies_json,
+      base_rate_cad,
+      status
+    ) VALUES (
+      v_portal_id, 'Pachena Bay Campground', 'PACH-CAMP', 'pachena-bay-campground', 'campground',
+      'Beachfront camping at the southern trailhead of the West Coast Trail',
+      'Bamfield', 'BC', 'Canada',
+      '["parking", "fire_pits", "pit_toilets", "beach_access"]'::jsonb,
+      '{"check_in_time": "14:00", "check_out_time": "12:00", "pets_allowed": true, "quiet_hours": "22:00-07:00"}'::jsonb,
+      35.00,
+      'active'
+    )
+    ON CONFLICT (portal_id, code) DO UPDATE SET updated_at = now()
+    RETURNING id INTO v_prop_id;
+    
+    -- Add campsites
+    IF v_prop_id IS NOT NULL THEN
+      INSERT INTO cc_units (property_id, name, code, unit_number, unit_type, max_occupancy, base_rate_cad, amenities_json, status)
+      VALUES
+        (v_prop_id, 'Ocean View Site', 'OV-01', 'A1', 'tent_site', 6, 45.00, '["ocean_view", "fire_pit"]'::jsonb, 'available'),
+        (v_prop_id, 'Ocean View Site', 'OV-02', 'A2', 'tent_site', 6, 45.00, '["ocean_view", "fire_pit"]'::jsonb, 'available'),
+        (v_prop_id, 'Forest Site', 'FS-01', 'B1', 'tent_site', 4, 35.00, '["sheltered", "fire_pit"]'::jsonb, 'available'),
+        (v_prop_id, 'RV Site with Hookups', 'RV-01', 'R1', 'rv_site', 6, 55.00, '["power_30amp", "water"]'::jsonb, 'available')
+      ON CONFLICT (property_id, code) DO NOTHING;
+    END IF;
+    
+    -- Update property unit counts
+    UPDATE cc_properties SET 
+      total_units = (SELECT COUNT(*) FROM cc_units WHERE property_id = cc_properties.id),
+      updated_at = now()
+    WHERE portal_id = v_portal_id;
+    
+  END IF;
+END $$;
+
+COMMIT;
+```
+
+## Create server/services/pmsService.ts
+```typescript
+// server/services/pmsService.ts
+
+import { db } from '../db';
+import { eq, and, or, gte, lte, asc, desc, ne, sql } from 'drizzle-orm';
+import { nanoid } from 'nanoid';
+import { logActivity } from './activityService';
+
+// ============ TYPES ============
+
+interface CreatePropertyRequest {
+  portalSlug: string;
+  name: string;
+  code?: string;
+  propertyType: string;
+  description?: string;
+  tagline?: string;
+  addressLine1?: string;
+  city?: string;
+  province?: string;
+  postalCode?: string;
+  lat?: number;
+  lon?: number;
+  contactPhone?: string;
+  contactEmail?: string;
+  websiteUrl?: string;
+  amenities?: string[];
+  policies?: Record<string, any>;
+  baseRateCad?: number;
+  cleaningFeeCad?: number;
+}
+
+interface CreateUnitRequest {
+  propertyId: string;
+  name: string;
+  code?: string;
+  unitNumber?: string;
+  unitType: string;
+  description?: string;
+  maxOccupancy?: number;
+  bedrooms?: number;
+  bathrooms?: number;
+  amenities?: string[];
+  baseRateCad?: number;
+  weekendRateCad?: number;
+}
+
+interface CreateReservationRequest {
+  portalSlug: string;
+  propertyId: string;
+  unitId: string;
+  cartId?: string;
+  tripId?: string;
+  guestName: string;
+  guestEmail?: string;
+  guestPhone?: string;
+  guestCount?: number;
+  checkInDate: Date;
+  checkOutDate: Date;
+  expectedArrivalTime?: string;
+  source?: string;
+  sourceReference?: string;
+  specialRequests?: string;
+}
+
+// ============ HELPERS ============
+
+function generatePropertyCode(name: string): string {
+  const prefix = name.substring(0, 4).toUpperCase().replace(/[^A-Z]/g, '');
+  const suffix = nanoid(4).toUpperCase();
+  return `${prefix}-${suffix}`;
+}
+
+function generateConfirmationNumber(): string {
+  const date = new Date();
+  const dateStr = date.toISOString().slice(2, 10).replace(/-/g, '');
+  const suffix = nanoid(4).toUpperCase();
+  return `RES-${dateStr}-${suffix}`;
+}
+
+function calculateNights(checkIn: Date, checkOut: Date): number {
+  const diffTime = checkOut.getTime() - checkIn.getTime();
+  return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+}
+
+// ============ PROPERTY FUNCTIONS ============
+
+export async function createProperty(req: CreatePropertyRequest): Promise<any> {
+  const portal = await db.query.ccPortals.findFirst({
+    where: eq(ccPortals.slug, req.portalSlug)
+  });
+  
+  if (!portal) throw new Error('Portal not found');
+  
+  const code = req.code || generatePropertyCode(req.name);
+  const slug = req.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+$/, '');
+  
+  const [property] = await db.insert(ccProperties).values({
+    portalId: portal.id,
+    name: req.name,
+    code,
+    slug,
+    propertyType: req.propertyType,
+    description: req.description,
+    tagline: req.tagline,
+    addressLine1: req.addressLine1,
+    city: req.city,
+    province: req.province || 'BC',
+    postalCode: req.postalCode,
+    lat: req.lat,
+    lon: req.lon,
+    contactPhone: req.contactPhone,
+    contactEmail: req.contactEmail,
+    websiteUrl: req.websiteUrl,
+    amenitiesJson: req.amenities || [],
+    policiesJson: req.policies || {},
+    baseRateCad: req.baseRateCad,
+    cleaningFeeCad: req.cleaningFeeCad || 0,
+    status: 'active'
+  }).returning();
+  
+  await logActivity({
+    tenantId: 'system',
+    actorId: 'system',
+    action: 'property.created',
+    resourceType: 'property',
+    resourceId: property.id,
+    metadata: { name: req.name, code }
+  });
+  
+  return property;
+}
+
+export async function getProperties(
+  portalSlug: string,
+  options?: {
+    propertyType?: string;
+    status?: string;
+    query?: string;
+  }
+): Promise<any[]> {
+  const portal = await db.query.ccPortals.findFirst({
+    where: eq(ccPortals.slug, portalSlug)
+  });
+  
+  if (!portal) return [];
+  
+  const conditions: any[] = [eq(ccProperties.portalId, portal.id)];
+  
+  if (options?.propertyType) {
+    conditions.push(eq(ccProperties.propertyType, options.propertyType));
+  }
+  
+  if (options?.status) {
+    conditions.push(eq(ccProperties.status, options.status));
+  } else {
+    conditions.push(ne(ccProperties.status, 'draft'));
+  }
+  
+  return db.query.ccProperties.findMany({
+    where: and(...conditions),
+    orderBy: [asc(ccProperties.name)]
+  });
+}
+
+export async function getProperty(
+  portalSlug: string,
+  propertyId: string
+): Promise<{
+  property: any;
+  units: any[];
+} | null> {
+  const portal = await db.query.ccPortals.findFirst({
+    where: eq(ccPortals.slug, portalSlug)
+  });
+  
+  if (!portal) return null;
+  
+  const property = await db.query.ccProperties.findFirst({
+    where: and(
+      eq(ccProperties.id, propertyId),
+      eq(ccProperties.portalId, portal.id)
+    )
+  });
+  
+  if (!property) return null;
+  
+  const units = await db.query.ccUnits.findMany({
+    where: eq(ccUnits.propertyId, propertyId),
+    orderBy: [asc(ccUnits.sortOrder), asc(ccUnits.name)]
+  });
+  
+  return { property, units };
+}
+
+export async function getPropertyBySlug(
+  portalSlug: string,
+  propertySlug: string
+): Promise<any | null> {
+  const portal = await db.query.ccPortals.findFirst({
+    where: eq(ccPortals.slug, portalSlug)
+  });
+  
+  if (!portal) return null;
+  
+  const property = await db.query.ccProperties.findFirst({
+    where: and(
+      eq(ccProperties.slug, propertySlug),
+      eq(ccProperties.portalId, portal.id)
+    )
+  });
+  
+  if (!property) return null;
+  
+  return getProperty(portalSlug, property.id);
+}
+
+// ============ UNIT FUNCTIONS ============
+
+export async function createUnit(req: CreateUnitRequest): Promise<any> {
+  const code = req.code || `${req.unitType.substring(0, 3).toUpperCase()}-${nanoid(3).toUpperCase()}`;
+  
+  const [unit] = await db.insert(ccUnits).values({
+    propertyId: req.propertyId,
+    name: req.name,
+    code,
+    unitNumber: req.unitNumber,
+    unitType: req.unitType,
+    description: req.description,
+    maxOccupancy: req.maxOccupancy || 2,
+    bedrooms: req.bedrooms || 1,
+    bathrooms: req.bathrooms || 1,
+    amenitiesJson: req.amenities || [],
+    baseRateCad: req.baseRateCad,
+    weekendRateCad: req.weekendRateCad,
+    status: 'available'
+  }).returning();
+  
+  // Update property unit count
+  await updatePropertyUnitCount(req.propertyId);
+  
+  return unit;
+}
+
+async function updatePropertyUnitCount(propertyId: string): Promise<void> {
+  const units = await db.query.ccUnits.findMany({
+    where: eq(ccUnits.propertyId, propertyId)
+  });
+  
+  const totalUnits = units.length;
+  const maxOccupancy = units.reduce((sum, u) => sum + (u.maxOccupancy || 0), 0);
+  
+  await db.update(ccProperties)
+    .set({
+      totalUnits,
+      maxOccupancy,
+      updatedAt: new Date()
+    })
+    .where(eq(ccProperties.id, propertyId));
+}
+
+export async function getUnit(
+  portalSlug: string,
+  unitId: string
+): Promise<{
+  unit: any;
+  property: any;
+} | null> {
+  const unit = await db.query.ccUnits.findFirst({
+    where: eq(ccUnits.id, unitId)
+  });
+  
+  if (!unit) return null;
+  
+  const propertyResult = await getProperty(portalSlug, unit.propertyId);
+  if (!propertyResult) return null;
+  
+  return { unit, property: propertyResult.property };
+}
+
+export async function updateUnitStatus(
+  unitId: string,
+  status: string,
+  cleanStatus?: string
+): Promise<any> {
+  const updates: Record<string, any> = {
+    status,
+    updatedAt: new Date()
+  };
+  
+  if (cleanStatus) {
+    updates.cleanStatus = cleanStatus;
+    if (cleanStatus === 'clean' || cleanStatus === 'inspected') {
+      updates.lastCleanedAt = new Date();
+    }
+  }
+  
+  const [updated] = await db.update(ccUnits)
+    .set(updates)
+    .where(eq(ccUnits.id, unitId))
+    .returning();
+  
+  return updated;
+}
+
+// ============ AVAILABILITY CHECK ============
+
+export async function checkAvailability(
+  portalSlug: string,
+  options: {
+    propertyId?: string;
+    unitId?: string;
+    checkInDate: Date;
+    checkOutDate: Date;
+    guestCount?: number;
+  }
+): Promise<{
+  available: boolean;
+  units: any[];
+  conflicts: any[];
+}> {
+  const portal = await db.query.ccPortals.findFirst({
+    where: eq(ccPortals.slug, portalSlug)
+  });
+  
+  if (!portal) return { available: false, units: [], conflicts: [] };
+  
+  const checkIn = options.checkInDate.toISOString().split('T')[0];
+  const checkOut = options.checkOutDate.toISOString().split('T')[0];
+  
+  // Get units to check
+  let unitsToCheck: any[] = [];
+  
+  if (options.unitId) {
+    const unit = await db.query.ccUnits.findFirst({
+      where: eq(ccUnits.id, options.unitId)
+    });
+    if (unit) unitsToCheck = [unit];
+  } else if (options.propertyId) {
+    unitsToCheck = await db.query.ccUnits.findMany({
+      where: and(
+        eq(ccUnits.propertyId, options.propertyId),
+        eq(ccUnits.status, 'available')
+      )
+    });
+  }
+  
+  // Filter by guest count
+  if (options.guestCount) {
+    unitsToCheck = unitsToCheck.filter(u => u.maxOccupancy >= options.guestCount!);
+  }
+  
+  const availableUnits: any[] = [];
+  const conflicts: any[] = [];
+  
+  for (const unit of unitsToCheck) {
+    // Check for overlapping reservations
+    const overlapping = await db.query.ccPmsReservations.findFirst({
+      where: and(
+        eq(ccPmsReservations.unitId, unit.id),
+        ne(ccPmsReservations.status, 'cancelled'),
+        ne(ccPmsReservations.status, 'no_show'),
+        // Overlap check: existing.checkIn < new.checkOut AND existing.checkOut > new.checkIn
+        sql`${ccPmsReservations.checkInDate} < ${checkOut}::date`,
+        sql`${ccPmsReservations.checkOutDate} > ${checkIn}::date`
+      )
+    });
+    
+    if (overlapping) {
+      conflicts.push({
+        unit,
+        conflictingReservation: {
+          id: overlapping.id,
+          confirmationNumber: overlapping.confirmationNumber,
+          checkInDate: overlapping.checkInDate,
+          checkOutDate: overlapping.checkOutDate,
+          guestName: overlapping.guestName
+        }
+      });
+    } else {
+      availableUnits.push(unit);
+    }
+  }
+  
+  return {
+    available: availableUnits.length > 0,
+    units: availableUnits,
+    conflicts
+  };
+}
+
+// ============ RESERVATION FUNCTIONS ============
+
+export async function createReservation(req: CreateReservationRequest): Promise<any> {
+  const portal = await db.query.ccPortals.findFirst({
+    where: eq(ccPortals.slug, req.portalSlug)
+  });
+  
+  if (!portal) throw new Error('Portal not found');
+  
+  // Validate property belongs to portal
+  const property = await db.query.ccProperties.findFirst({
+    where: and(
+      eq(ccProperties.id, req.propertyId),
+      eq(ccProperties.portalId, portal.id)
+    )
+  });
+  
+  if (!property) throw new Error('Property not found');
+  
+  // Validate unit belongs to property
+  const unit = await db.query.ccUnits.findFirst({
+    where: and(
+      eq(ccUnits.id, req.unitId),
+      eq(ccUnits.propertyId, req.propertyId)
+    )
+  });
+  
+  if (!unit) throw new Error('Unit not found');
+  
+  // Check availability
+  const availability = await checkAvailability(req.portalSlug, {
+    unitId: req.unitId,
+    checkInDate: req.checkInDate,
+    checkOutDate: req.checkOutDate
+  });
+  
+  if (!availability.available) {
+    throw new Error('Unit not available for these dates');
+  }
+  
+  // Calculate pricing
+  const nights = calculateNights(req.checkInDate, req.checkOutDate);
+  const baseRate = Number(unit.baseRateCad) || Number(property.baseRateCad) || 0;
+  const baseTotal = baseRate * nights;
+  const cleaningFee = Number(property.cleaningFeeCad) || 0;
+  const taxRate = Number(property.taxRatePercent) || 13;
+  const subtotal = baseTotal + cleaningFee;
+  const tax = subtotal * (taxRate / 100);
+  const total = subtotal + tax;
+  
+  const confirmationNumber = generateConfirmationNumber();
+  
+  const [reservation] = await db.insert(ccPmsReservations).values({
+    portalId: portal.id,
+    propertyId: req.propertyId,
+    unitId: req.unitId,
+    cartId: req.cartId,
+    tripId: req.tripId,
+    confirmationNumber,
+    guestName: req.guestName,
+    guestEmail: req.guestEmail,
+    guestPhone: req.guestPhone,
+    guestCount: req.guestCount || 1,
+    checkInDate: req.checkInDate,
+    checkOutDate: req.checkOutDate,
+    expectedArrivalTime: req.expectedArrivalTime,
+    baseRateCad: baseTotal,
+    cleaningFeeCad: cleaningFee,
+    taxCad: tax,
+    totalCad: total,
+    balanceCad: total,
+    source: req.source || 'direct',
+    sourceReference: req.sourceReference,
+    specialRequests: req.specialRequests,
+    status: 'pending'
+  }).returning();
+  
+  await logActivity({
+    tenantId: 'system',
+    actorId: req.guestEmail || 'guest',
+    action: 'reservation.created',
+    resourceType: 'pms_reservation',
+    resourceId: reservation.id,
+    metadata: { confirmationNumber, property: property.name, unit: unit.name }
+  });
+  
+  return {
+    reservation,
+    property,
+    unit,
+    pricing: {
+      nights,
+      baseRate,
+      baseTotal,
+      cleaningFee,
+      taxRate,
+      tax,
+      total
+    }
+  };
+}
+
+export async function getReservation(
+  portalSlug: string,
+  reservationId: string
+): Promise<{
+  reservation: any;
+  property: any;
+  unit: any;
+} | null> {
+  const portal = await db.query.ccPortals.findFirst({
+    where: eq(ccPortals.slug, portalSlug)
+  });
+  
+  if (!portal) return null;
+  
+  const reservation = await db.query.ccPmsReservations.findFirst({
+    where: and(
+      eq(ccPmsReservations.id, reservationId),
+      eq(ccPmsReservations.portalId, portal.id)
+    )
+  });
+  
+  if (!reservation) return null;
+  
+  const property = await db.query.ccProperties.findFirst({
+    where: eq(ccProperties.id, reservation.propertyId)
+  });
+  
+  const unit = await db.query.ccUnits.findFirst({
+    where: eq(ccUnits.id, reservation.unitId)
+  });
+  
+  return { reservation, property, unit };
+}
+
+export async function getReservationByConfirmation(
+  portalSlug: string,
+  confirmationNumber: string
+): Promise<any | null> {
+  const portal = await db.query.ccPortals.findFirst({
+    where: eq(ccPortals.slug, portalSlug)
+  });
+  
+  if (!portal) return null;
+  
+  const reservation = await db.query.ccPmsReservations.findFirst({
+    where: and(
+      eq(ccPmsReservations.confirmationNumber, confirmationNumber),
+      eq(ccPmsReservations.portalId, portal.id)
+    )
+  });
+  
+  if (!reservation) return null;
+  
+  return getReservation(portalSlug, reservation.id);
+}
+
+export async function searchReservations(
+  portalSlug: string,
+  options?: {
+    propertyId?: string;
+    unitId?: string;
+    status?: string;
+    checkInFrom?: Date;
+    checkInTo?: Date;
+    guestEmail?: string;
+    limit?: number;
+  }
+): Promise<any[]> {
+  const portal = await db.query.ccPortals.findFirst({
+    where: eq(ccPortals.slug, portalSlug)
+  });
+  
+  if (!portal) return [];
+  
+  const conditions: any[] = [eq(ccPmsReservations.portalId, portal.id)];
+  
+  if (options?.propertyId) {
+    conditions.push(eq(ccPmsReservations.propertyId, options.propertyId));
+  }
+  
+  if (options?.unitId) {
+    conditions.push(eq(ccPmsReservations.unitId, options.unitId));
+  }
+  
+  if (options?.status) {
+    conditions.push(eq(ccPmsReservations.status, options.status));
+  }
+  
+  if (options?.checkInFrom) {
+    conditions.push(gte(ccPmsReservations.checkInDate, options.checkInFrom));
+  }
+  
+  if (options?.checkInTo) {
+    conditions.push(lte(ccPmsReservations.checkInDate, options.checkInTo));
+  }
+  
+  if (options?.guestEmail) {
+    conditions.push(eq(ccPmsReservations.guestEmail, options.guestEmail));
+  }
+  
+  return db.query.ccPmsReservations.findMany({
+    where: and(...conditions),
+    orderBy: [asc(ccPmsReservations.checkInDate)],
+    limit: options?.limit || 50
+  });
+}
+
+// ============ STATUS TRANSITIONS ============
+
+export async function confirmReservation(
+  portalSlug: string,
+  reservationId: string
+): Promise<any> {
+  const portal = await db.query.ccPortals.findFirst({
+    where: eq(ccPortals.slug, portalSlug)
+  });
+  
+  if (!portal) throw new Error('Portal not found');
+  
+  const [updated] = await db.update(ccPmsReservations)
+    .set({
+      status: 'confirmed',
+      confirmedAt: new Date(),
+      updatedAt: new Date()
+    })
+    .where(and(
+      eq(ccPmsReservations.id, reservationId),
+      eq(ccPmsReservations.portalId, portal.id)
+    ))
+    .returning();
+  
+  return updated;
+}
+
+export async function checkInGuest(
+  portalSlug: string,
+  reservationId: string,
+  actualArrivalTime?: string
+): Promise<any> {
+  const portal = await db.query.ccPortals.findFirst({
+    where: eq(ccPortals.slug, portalSlug)
+  });
+  
+  if (!portal) throw new Error('Portal not found');
+  
+  const [updated] = await db.update(ccPmsReservations)
+    .set({
+      status: 'checked_in',
+      checkedInAt: new Date(),
+      actualArrivalTime: actualArrivalTime || new Date().toTimeString().slice(0, 5),
+      updatedAt: new Date()
+    })
+    .where(and(
+      eq(ccPmsReservations.id, reservationId),
+      eq(ccPmsReservations.portalId, portal.id)
+    ))
+    .returning();
+  
+  // Update unit status
+  if (updated) {
+    await updateUnitStatus(updated.unitId, 'occupied');
+  }
+  
+  return updated;
+}
+
+export async function checkOutGuest(
+  portalSlug: string,
+  reservationId: string
+): Promise<any> {
+  const portal = await db.query.ccPortals.findFirst({
+    where: eq(ccPortals.slug, portalSlug)
+  });
+  
+  if (!portal) throw new Error('Portal not found');
+  
+  const [updated] = await db.update(ccPmsReservations)
+    .set({
+      status: 'checked_out',
+      checkedOutAt: new Date(),
+      actualDepartureTime: new Date().toTimeString().slice(0, 5),
+      updatedAt: new Date()
+    })
+    .where(and(
+      eq(ccPmsReservations.id, reservationId),
+      eq(ccPmsReservations.portalId, portal.id)
+    ))
+    .returning();
+  
+  // Update unit status to dirty (needs cleaning)
+  if (updated) {
+    await updateUnitStatus(updated.unitId, 'available', 'dirty');
+  }
+  
+  return updated;
+}
+
+export async function cancelReservation(
+  portalSlug: string,
+  reservationId: string,
+  reason?: string
+): Promise<any> {
+  const portal = await db.query.ccPortals.findFirst({
+    where: eq(ccPortals.slug, portalSlug)
+  });
+  
+  if (!portal) throw new Error('Portal not found');
+  
+  const [updated] = await db.update(ccPmsReservations)
+    .set({
+      status: 'cancelled',
+      cancelledAt: new Date(),
+      cancellationReason: reason,
+      updatedAt: new Date()
+    })
+    .where(and(
+      eq(ccPmsReservations.id, reservationId),
+      eq(ccPmsReservations.portalId, portal.id)
+    ))
+    .returning();
+  
+  return updated;
+}
+```
+
+## Create server/routes/pms.ts
+```typescript
+// server/routes/pms.ts
+
+import { Router } from 'express';
+import {
+  createProperty, getProperties, getProperty, getPropertyBySlug,
+  createUnit, getUnit, updateUnitStatus,
+  checkAvailability,
+  createReservation, getReservation, getReservationByConfirmation,
+  searchReservations,
+  confirmReservation, checkInGuest, checkOutGuest, cancelReservation
+} from '../services/pmsService';
+
+const router = Router();
+
+// ============ PROPERTY ENDPOINTS ============
+
+// POST /api/pms/portals/:slug/properties - Create property
+router.post('/portals/:slug/properties', async (req, res) => {
+  const { slug } = req.params;
+  const b = req.body || {};
+  
+  if (!b.name || !b.propertyType) {
+    return res.status(400).json({ error: 'name and propertyType required' });
+  }
+  
+  try {
+    const property = await createProperty({
+      portalSlug: slug,
+      name: b.name,
+      code: b.code,
+      propertyType: b.propertyType,
+      description: b.description,
+      tagline: b.tagline,
+      addressLine1: b.addressLine1,
+      city: b.city,
+      province: b.province,
+      postalCode: b.postalCode,
+      lat: b.lat,
+      lon: b.lon,
+      contactPhone: b.contactPhone,
+      contactEmail: b.contactEmail,
+      websiteUrl: b.websiteUrl,
+      amenities: b.amenities,
+      policies: b.policies,
+      baseRateCad: b.baseRateCad,
+      cleaningFeeCad: b.cleaningFeeCad
+    });
+    
+    res.json({ property });
+  } catch (e: any) {
+    console.error('Create property error:', e);
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// GET /api/pms/portals/:slug/properties - List properties
+router.get('/portals/:slug/properties', async (req, res) => {
+  const { slug } = req.params;
+  const { type, status, q } = req.query;
+  
+  try {
+    const properties = await getProperties(slug, {
+      propertyType: type as string,
+      status: status as string,
+      query: q as string
+    });
+    
+    res.json({ properties, count: properties.length });
+  } catch (e: any) {
+    console.error('Get properties error:', e);
+    res.status(500).json({ error: 'Failed to get properties' });
+  }
+});
+
+// GET /api/pms/portals/:slug/properties/:id - Get property with units
+router.get('/portals/:slug/properties/:id', async (req, res) => {
+  const { slug, id } = req.params;
+  
+  try {
+    const result = await getProperty(slug, id);
+    if (!result) {
+      return res.status(404).json({ error: 'Property not found' });
+    }
+    res.json(result);
+  } catch (e: any) {
+    console.error('Get property error:', e);
+    res.status(500).json({ error: 'Failed to get property' });
+  }
+});
+
+// GET /api/pms/portals/:slug/properties/by-slug/:propertySlug - Get by slug
+router.get('/portals/:slug/properties/by-slug/:propertySlug', async (req, res) => {
+  const { slug, propertySlug } = req.params;
+  
+  try {
+    const result = await getPropertyBySlug(slug, propertySlug);
+    if (!result) {
+      return res.status(404).json({ error: 'Property not found' });
+    }
+    res.json(result);
+  } catch (e: any) {
+    console.error('Get property error:', e);
+    res.status(500).json({ error: 'Failed to get property' });
+  }
+});
+
+// ============ UNIT ENDPOINTS ============
+
+// POST /api/pms/properties/:propertyId/units - Create unit
+router.post('/properties/:propertyId/units', async (req, res) => {
+  const { propertyId } = req.params;
+  const b = req.body || {};
+  
+  if (!b.name || !b.unitType) {
+    return res.status(400).json({ error: 'name and unitType required' });
+  }
+  
+  try {
+    const unit = await createUnit({
+      propertyId,
+      name: b.name,
+      code: b.code,
+      unitNumber: b.unitNumber,
+      unitType: b.unitType,
+      description: b.description,
+      maxOccupancy: b.maxOccupancy,
+      bedrooms: b.bedrooms,
+      bathrooms: b.bathrooms,
+      amenities: b.amenities,
+      baseRateCad: b.baseRateCad,
+      weekendRateCad: b.weekendRateCad
+    });
+    
+    res.json({ unit });
+  } catch (e: any) {
+    console.error('Create unit error:', e);
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// GET /api/pms/portals/:slug/units/:id - Get unit
+router.get('/portals/:slug/units/:id', async (req, res) => {
+  const { slug, id } = req.params;
+  
+  try {
+    const result = await getUnit(slug, id);
+    if (!result) {
+      return res.status(404).json({ error: 'Unit not found' });
+    }
+    res.json(result);
+  } catch (e: any) {
+    console.error('Get unit error:', e);
+    res.status(500).json({ error: 'Failed to get unit' });
+  }
+});
+
+// POST /api/pms/units/:id/status - Update unit status
+router.post('/units/:id/status', async (req, res) => {
+  const { id } = req.params;
+  const { status, cleanStatus } = req.body || {};
+  
+  if (!status) {
+    return res.status(400).json({ error: 'status required' });
+  }
+  
+  try {
+    const unit = await updateUnitStatus(id, status, cleanStatus);
+    res.json({ unit });
+  } catch (e: any) {
+    console.error('Update status error:', e);
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// ============ AVAILABILITY ============
+
+// GET /api/pms/portals/:slug/availability - Check availability
+router.get('/portals/:slug/availability', async (req, res) => {
+  const { slug } = req.params;
+  const { property, unit, checkIn, checkOut, guests } = req.query;
+  
+  if (!checkIn || !checkOut) {
+    return res.status(400).json({ error: 'checkIn and checkOut dates required' });
+  }
+  
+  try {
+    const result = await checkAvailability(slug, {
+      propertyId: property as string,
+      unitId: unit as string,
+      checkInDate: new Date(checkIn as string),
+      checkOutDate: new Date(checkOut as string),
+      guestCount: guests ? parseInt(guests as string) : undefined
+    });
+    
+    res.json(result);
+  } catch (e: any) {
+    console.error('Check availability error:', e);
+    res.status(500).json({ error: 'Failed to check availability' });
+  }
+});
+
+// ============ RESERVATION ENDPOINTS ============
+
+// POST /api/pms/portals/:slug/reservations - Create reservation
+router.post('/portals/:slug/reservations', async (req, res) => {
+  const { slug } = req.params;
+  const b = req.body || {};
+  
+  if (!b.propertyId || !b.unitId || !b.guestName || !b.checkInDate || !b.checkOutDate) {
+    return res.status(400).json({ 
+      error: 'propertyId, unitId, guestName, checkInDate, checkOutDate required' 
+    });
+  }
+  
+  try {
+    const result = await createReservation({
+      portalSlug: slug,
+      propertyId: b.propertyId,
+      unitId: b.unitId,
+      cartId: b.cartId,
+      tripId: b.tripId,
+      guestName: b.guestName,
+      guestEmail: b.guestEmail,
+      guestPhone: b.guestPhone,
+      guestCount: b.guestCount,
+      checkInDate: new Date(b.checkInDate),
+      checkOutDate: new Date(b.checkOutDate),
+      expectedArrivalTime: b.expectedArrivalTime,
+      source: b.source,
+      sourceReference: b.sourceReference,
+      specialRequests: b.specialRequests
+    });
+    
+    res.json(result);
+  } catch (e: any) {
+    console.error('Create reservation error:', e);
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// GET /api/pms/portals/:slug/reservations - Search reservations
+router.get('/portals/:slug/reservations', async (req, res) => {
+  const { slug } = req.params;
+  const { property, unit, status, from, to, email, limit } = req.query;
+  
+  try {
+    const reservations = await searchReservations(slug, {
+      propertyId: property as string,
+      unitId: unit as string,
+      status: status as string,
+      checkInFrom: from ? new Date(from as string) : undefined,
+      checkInTo: to ? new Date(to as string) : undefined,
+      guestEmail: email as string,
+      limit: limit ? parseInt(limit as string) : undefined
+    });
+    
+    res.json({ reservations, count: reservations.length });
+  } catch (e: any) {
+    console.error('Search reservations error:', e);
+    res.status(500).json({ error: 'Failed to search reservations' });
+  }
+});
+
+// GET /api/pms/portals/:slug/reservations/:id - Get reservation
+router.get('/portals/:slug/reservations/:id', async (req, res) => {
+  const { slug, id } = req.params;
+  
+  try {
+    const result = await getReservation(slug, id);
+    if (!result) {
+      return res.status(404).json({ error: 'Reservation not found' });
+    }
+    res.json(result);
+  } catch (e: any) {
+    console.error('Get reservation error:', e);
+    res.status(500).json({ error: 'Failed to get reservation' });
+  }
+});
+
+// GET /api/pms/portals/:slug/reservations/by-confirmation/:number
+router.get('/portals/:slug/reservations/by-confirmation/:number', async (req, res) => {
+  const { slug, number } = req.params;
+  
+  try {
+    const result = await getReservationByConfirmation(slug, number);
+    if (!result) {
+      return res.status(404).json({ error: 'Reservation not found' });
+    }
+    res.json(result);
+  } catch (e: any) {
+    console.error('Get reservation error:', e);
+    res.status(500).json({ error: 'Failed to get reservation' });
+  }
+});
+
+// POST /api/pms/portals/:slug/reservations/:id/confirm
+router.post('/portals/:slug/reservations/:id/confirm', async (req, res) => {
+  const { slug, id } = req.params;
+  try {
+    const reservation = await confirmReservation(slug, id);
+    res.json({ reservation });
+  } catch (e: any) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// POST /api/pms/portals/:slug/reservations/:id/check-in
+router.post('/portals/:slug/reservations/:id/check-in', async (req, res) => {
+  const { slug, id } = req.params;
+  const { arrivalTime } = req.body || {};
+  try {
+    const reservation = await checkInGuest(slug, id, arrivalTime);
+    res.json({ reservation });
+  } catch (e: any) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// POST /api/pms/portals/:slug/reservations/:id/check-out
+router.post('/portals/:slug/reservations/:id/check-out', async (req, res) => {
+  const { slug, id } = req.params;
+  try {
+    const reservation = await checkOutGuest(slug, id);
+    res.json({ reservation });
+  } catch (e: any) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// POST /api/pms/portals/:slug/reservations/:id/cancel
+router.post('/portals/:slug/reservations/:id/cancel', async (req, res) => {
+  const { slug, id } = req.params;
+  const { reason } = req.body || {};
+  try {
+    const reservation = await cancelReservation(slug, id, reason);
+    res.json({ reservation });
+  } catch (e: any) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+export default router;
+```
+
+### Register routes in server/index.ts
+```typescript
+import pmsRoutes from './routes/pms';
+
+// Add with other routes
+app.use('/api/pms', pmsRoutes);
+```
+
+## Drizzle Schema Exports
+
+Add to shared/schema.ts:
+- Property, InsertProperty
+- Unit, InsertUnit
+- PmsReservation, InsertPmsReservation
+
+## Deliverables
+- [ ] Migration 090_pms_core.sql
+- [ ] cc_properties table with RLS
+- [ ] cc_units table with RLS
+- [ ] cc_pms_reservations table with RLS
+- [ ] 2 properties seeded:
+  - Bamfield Lodge (4 units: 2 rooms, 2 suites)
+  - Pachena Bay Campground (4 units: 3 tent sites, 1 RV site)
+- [ ] server/services/pmsService.ts
+- [ ] server/routes/pms.ts
+- [ ] Routes registered in server/index.ts
+- [ ] API Endpoints:
+  - Properties: create, list, get, get by slug
+  - Units: create, get, update status
+  - Availability: check with conflict detection
+  - Reservations: create, search, get, get by confirmation
+  - Status: confirm, check-in, check-out, cancel
+- [ ] Reservation pricing auto-calculated (base × nights + cleaning + tax)
+- [ ] Confirmation number format: RES-YYMMDD-XXXX
+- [ ] Check-in updates unit status to 'occupied'
+- [ ] Check-out updates unit status to 'dirty' (needs cleaning)
+- [ ] Test: GET /api/pms/portals/bamfield/properties returns 2 properties
+- [ ] Test: Check availability with overlapping dates returns conflict
+- [ ] Test: Create reservation → auto-pricing → confirm → check-in → unit occupied
+
+Report with properties list, availability check result, and reservation with pricing breakdown.
