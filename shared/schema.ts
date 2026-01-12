@@ -826,3 +826,65 @@ export const cc_daily_sequences = pgTable('cc_daily_sequences', {
 }));
 
 export type DailySequence = typeof cc_daily_sequences.$inferSelect;
+
+// ============================================================================
+// V3.3.1 BLOCK 11 - Access Credentials + Events
+// ============================================================================
+
+// Access Credentials - QR codes, short codes, gate codes for reservations
+export const cc_access_credentials = pgTable('cc_access_credentials', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id').notNull(),
+  reservationId: uuid('reservation_id').notNull(),
+  reservationItemId: uuid('reservation_item_id'),
+  
+  credentialType: varchar('credential_type', { length: 30 }).notNull(),
+  
+  qrToken: varchar('qr_token', { length: 255 }),
+  shortCode: varchar('short_code', { length: 10 }),
+  gateCode: varchar('gate_code', { length: 20 }),
+  
+  scope: varchar('scope', { length: 30 }).notNull(),
+  
+  validFrom: timestamp('valid_from', { withTimezone: true }).notNull(),
+  validUntil: timestamp('valid_until', { withTimezone: true }).notNull(),
+  
+  isRevoked: boolean('is_revoked').default(false),
+  revokedAt: timestamp('revoked_at', { withTimezone: true }),
+  revokedBy: uuid('revoked_by'),
+  revokedReason: varchar('revoked_reason', { length: 255 }),
+  
+  issuedAt: timestamp('issued_at', { withTimezone: true }).defaultNow(),
+  issuedBy: uuid('issued_by'),
+  
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+});
+
+export const insertAccessCredentialSchema = createInsertSchema(cc_access_credentials).omit({ id: true, createdAt: true, issuedAt: true });
+export type AccessCredential = typeof cc_access_credentials.$inferSelect;
+export type InsertAccessCredential = z.infer<typeof insertAccessCredentialSchema>;
+
+// Access Events - validation attempts, check-ins, gate operations
+export const cc_access_events = pgTable('cc_access_events', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id').notNull(),
+  
+  credentialId: uuid('credential_id'),
+  facilityId: uuid('facility_id'),
+  inventoryUnitId: uuid('inventory_unit_id'),
+  
+  eventType: varchar('event_type', { length: 30 }).notNull(),
+  result: varchar('result', { length: 30 }).notNull(),
+  
+  validationMethod: varchar('validation_method', { length: 30 }),
+  actorId: uuid('actor_id'),
+  deviceId: varchar('device_id', { length: 100 }),
+  
+  metadata: jsonb('metadata').default({}),
+  
+  recordedAt: timestamp('recorded_at', { withTimezone: true }).defaultNow(),
+});
+
+export const insertAccessEventSchema = createInsertSchema(cc_access_events).omit({ id: true, recordedAt: true });
+export type AccessEvent = typeof cc_access_events.$inferSelect;
+export type InsertAccessEvent = z.infer<typeof insertAccessEventSchema>;
