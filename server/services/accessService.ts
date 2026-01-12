@@ -255,7 +255,8 @@ export async function validatePlate(
     LEFT JOIN cc_reservation_items ri ON ri.id = c.reservation_item_id
     LEFT JOIN cc_facilities f ON f.id = ri.facility_id
     LEFT JOIN cc_reservation_allocations ra ON ra.reservation_item_id = ri.id
-    WHERE c.scope IN ('parking_entry', 'parking_exit', 'facility_access')
+    WHERE REGEXP_REPLACE(UPPER(COALESCE(r.vehicle_plate, '')), '[^A-Z0-9]', '', 'g') = ${normalizedPlate}
+      AND c.scope IN ('parking_entry', 'parking_exit', 'facility_access')
       AND c.valid_until > NOW()
       AND NOT c.is_revoked
     ORDER BY c.valid_from DESC
