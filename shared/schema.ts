@@ -2272,3 +2272,201 @@ export const insertCulturalSiteSchema = createInsertSchema(ccCulturalSites).omit
 });
 export type CulturalSite = typeof ccCulturalSites.$inferSelect;
 export type InsertCulturalSite = z.infer<typeof insertCulturalSiteSchema>;
+
+// ============================================================================
+// PMS - PROPERTY MANAGEMENT SYSTEM
+// ============================================================================
+
+// ============ PROPERTIES ============
+export const ccProperties = pgTable('cc_properties', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  
+  portalId: uuid('portal_id'),
+  tenantId: uuid('tenant_id'),
+  ownerId: uuid('owner_id'),
+  locationId: uuid('location_id'),
+  
+  name: text('name').notNull(),
+  code: varchar('code', { length: 20 }),
+  slug: varchar('slug', { length: 50 }),
+  
+  propertyType: varchar('property_type').notNull(),
+  
+  description: text('description'),
+  tagline: varchar('tagline', { length: 200 }),
+  
+  addressLine1: text('address_line1'),
+  addressLine2: text('address_line2'),
+  city: varchar('city', { length: 100 }),
+  province: varchar('province', { length: 50 }).default('BC'),
+  postalCode: varchar('postal_code', { length: 20 }),
+  country: varchar('country', { length: 50 }).default('Canada'),
+  
+  lat: numeric('lat', { precision: 9, scale: 6 }),
+  lon: numeric('lon', { precision: 9, scale: 6 }),
+  
+  contactPhone: text('contact_phone'),
+  contactEmail: text('contact_email'),
+  websiteUrl: text('website_url'),
+  
+  totalUnits: integer('total_units').default(0),
+  totalBeds: integer('total_beds').default(0),
+  maxOccupancy: integer('max_occupancy').default(0),
+  
+  amenitiesJson: jsonb('amenities_json').default([]),
+  policiesJson: jsonb('policies_json').default({}),
+  
+  baseRateCad: numeric('base_rate_cad', { precision: 10, scale: 2 }),
+  cleaningFeeCad: numeric('cleaning_fee_cad', { precision: 10, scale: 2 }).default('0'),
+  taxRatePercent: numeric('tax_rate_percent', { precision: 5, scale: 2 }).default('13.0'),
+  
+  externalPms: varchar('external_pms'),
+  externalPmsId: text('external_pms_id'),
+  icalImportUrl: text('ical_import_url'),
+  icalExportUrl: text('ical_export_url'),
+  
+  photosJson: jsonb('photos_json').default([]),
+  
+  status: varchar('status').default('active'),
+  
+  acceptsInstantBook: boolean('accepts_instant_book').default(false),
+  requiresApproval: boolean('requires_approval').default(true),
+  leadTimeHours: integer('lead_time_hours').default(24),
+  
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+});
+
+export const insertPropertySchema = createInsertSchema(ccProperties).omit({ 
+  id: true, createdAt: true, updatedAt: true 
+});
+export type Property = typeof ccProperties.$inferSelect;
+export type InsertProperty = z.infer<typeof insertPropertySchema>;
+
+// ============ UNITS ============
+export const ccUnits = pgTable('cc_units', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  
+  propertyId: uuid('property_id').notNull(),
+  
+  name: text('name').notNull(),
+  code: varchar('code', { length: 20 }),
+  unitNumber: varchar('unit_number', { length: 20 }),
+  
+  unitType: varchar('unit_type').notNull(),
+  
+  description: text('description'),
+  
+  maxOccupancy: integer('max_occupancy').default(2),
+  bedrooms: integer('bedrooms').default(1),
+  bedsJson: jsonb('beds_json').default([]),
+  bathrooms: numeric('bathrooms', { precision: 3, scale: 1 }).default('1'),
+  
+  sizeSqft: integer('size_sqft'),
+  floorLevel: integer('floor_level'),
+  
+  slipLengthFt: numeric('slip_length_ft', { precision: 6, scale: 2 }),
+  slipWidthFt: numeric('slip_width_ft', { precision: 6, scale: 2 }),
+  powerAmps: integer('power_amps'),
+  waterAvailable: boolean('water_available').default(true),
+  
+  amenitiesJson: jsonb('amenities_json').default([]),
+  
+  baseRateCad: numeric('base_rate_cad', { precision: 10, scale: 2 }),
+  weekendRateCad: numeric('weekend_rate_cad', { precision: 10, scale: 2 }),
+  weeklyRateCad: numeric('weekly_rate_cad', { precision: 10, scale: 2 }),
+  monthlyRateCad: numeric('monthly_rate_cad', { precision: 10, scale: 2 }),
+  extraPersonFeeCad: numeric('extra_person_fee_cad', { precision: 10, scale: 2 }).default('0'),
+  
+  seasonalRatesJson: jsonb('seasonal_rates_json').default([]),
+  
+  status: varchar('status').default('available'),
+  
+  icalUrl: text('ical_url'),
+  lastIcalSync: timestamp('last_ical_sync', { withTimezone: true }),
+  
+  photosJson: jsonb('photos_json').default([]),
+  
+  cleanStatus: varchar('clean_status').default('clean'),
+  lastCleanedAt: timestamp('last_cleaned_at', { withTimezone: true }),
+  nextInspectionAt: timestamp('next_inspection_at', { withTimezone: true }),
+  
+  sortOrder: integer('sort_order').default(0),
+  featured: boolean('featured').default(false),
+  
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+});
+
+export const insertUnitSchema = createInsertSchema(ccUnits).omit({ 
+  id: true, createdAt: true, updatedAt: true 
+});
+export type Unit = typeof ccUnits.$inferSelect;
+export type InsertUnit = z.infer<typeof insertUnitSchema>;
+
+// ============ PMS RESERVATIONS ============
+export const ccPmsReservations = pgTable('cc_pms_reservations', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  
+  portalId: uuid('portal_id'),
+  propertyId: uuid('property_id').notNull(),
+  unitId: uuid('unit_id').notNull(),
+  
+  cartId: uuid('cart_id'),
+  cartItemId: uuid('cart_item_id'),
+  tripId: uuid('trip_id'),
+  
+  confirmationNumber: varchar('confirmation_number', { length: 20 }).notNull().unique(),
+  
+  guestName: text('guest_name').notNull(),
+  guestEmail: text('guest_email'),
+  guestPhone: text('guest_phone'),
+  guestCount: integer('guest_count').default(1),
+  guestNotes: text('guest_notes'),
+  
+  checkInDate: date('check_in_date').notNull(),
+  checkOutDate: date('check_out_date').notNull(),
+  
+  expectedArrivalTime: time('expected_arrival_time'),
+  actualArrivalTime: time('actual_arrival_time'),
+  expectedDepartureTime: time('expected_departure_time'),
+  actualDepartureTime: time('actual_departure_time'),
+  
+  baseRateCad: numeric('base_rate_cad', { precision: 10, scale: 2 }).default('0'),
+  cleaningFeeCad: numeric('cleaning_fee_cad', { precision: 10, scale: 2 }).default('0'),
+  extraFeesCad: numeric('extra_fees_cad', { precision: 10, scale: 2 }).default('0'),
+  taxCad: numeric('tax_cad', { precision: 10, scale: 2 }).default('0'),
+  totalCad: numeric('total_cad', { precision: 10, scale: 2 }).default('0'),
+  
+  depositCad: numeric('deposit_cad', { precision: 10, scale: 2 }).default('0'),
+  depositPaid: boolean('deposit_paid').default(false),
+  balanceCad: numeric('balance_cad', { precision: 10, scale: 2 }).default('0'),
+  
+  paymentStatus: varchar('payment_status').default('pending'),
+  paymentMethod: varchar('payment_method'),
+  paymentReference: text('payment_reference'),
+  
+  status: varchar('status').default('pending'),
+  
+  confirmedAt: timestamp('confirmed_at', { withTimezone: true }),
+  checkedInAt: timestamp('checked_in_at', { withTimezone: true }),
+  checkedOutAt: timestamp('checked_out_at', { withTimezone: true }),
+  cancelledAt: timestamp('cancelled_at', { withTimezone: true }),
+  
+  cancellationReason: text('cancellation_reason'),
+  
+  source: varchar('source').default('direct'),
+  sourceReference: text('source_reference'),
+  
+  specialRequests: text('special_requests'),
+  internalNotes: text('internal_notes'),
+  
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+});
+
+export const insertPmsReservationSchema = createInsertSchema(ccPmsReservations).omit({ 
+  id: true, createdAt: true, updatedAt: true 
+});
+export type PmsReservation = typeof ccPmsReservations.$inferSelect;
+export type InsertPmsReservation = z.infer<typeof insertPmsReservationSchema>;
