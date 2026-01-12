@@ -37,6 +37,10 @@ import {
   submitManifest, acceptManifest, markManifestLoaded, markManifestInTransit,
   markManifestArrived, markItemDelivered, cancelManifest
 } from '../services/freightService';
+import {
+  recordHandling, getHandlingHistory, getChainOfCustody,
+  createException, getExceptions, resolveException
+} from '../services/proofOfHandlingService';
 
 const router = Router();
 
@@ -1060,6 +1064,170 @@ router.post('/freight/items/:id/deliver', async (req, res) => {
   } catch (e: any) {
     console.error('Deliver item error:', e);
     res.status(400).json({ error: e.message });
+  }
+});
+
+// ============ PROOF OF HANDLING ENDPOINTS ============
+
+router.post('/freight/handling', async (req, res) => {
+  const b = req.body || {};
+  
+  if (!b.portalSlug || !b.manifestId || !b.handlingType || !b.handlerName) {
+    return res.status(400).json({ 
+      error: 'portalSlug, manifestId, handlingType, handlerName required' 
+    });
+  }
+  
+  try {
+    const poh = await recordHandling({
+      portalSlug: b.portalSlug,
+      manifestId: b.manifestId,
+      itemId: b.itemId,
+      locationId: b.locationId,
+      handlingType: b.handlingType,
+      handledAt: b.handledAt ? new Date(b.handledAt) : undefined,
+      locationName: b.locationName,
+      locationDescription: b.locationDescription,
+      handlerName: b.handlerName,
+      handlerRole: b.handlerRole,
+      handlerCompany: b.handlerCompany,
+      recipientName: b.recipientName,
+      recipientSignature: b.recipientSignature,
+      recipientIdType: b.recipientIdType,
+      recipientIdNumber: b.recipientIdNumber,
+      condition: b.condition,
+      conditionNotes: b.conditionNotes,
+      verifiedWeightLbs: b.verifiedWeightLbs,
+      photoUrls: b.photoUrls,
+      documentUrls: b.documentUrls,
+      notes: b.notes,
+      internalNotes: b.internalNotes,
+      lat: b.lat,
+      lon: b.lon,
+      deviceId: b.deviceId,
+      appVersion: b.appVersion
+    });
+    
+    res.json({ proofOfHandling: poh });
+  } catch (e: any) {
+    console.error('Record handling error:', e);
+    res.status(400).json({ error: e.message });
+  }
+});
+
+router.get('/freight/manifests/:id/handling', async (req, res) => {
+  const { id } = req.params;
+  const { portal, item } = req.query;
+  
+  if (!portal) {
+    return res.status(400).json({ error: 'portal query parameter required' });
+  }
+  
+  try {
+    const history = await getHandlingHistory(
+      portal as string, 
+      id, 
+      item as string
+    );
+    res.json({ history, count: history.length });
+  } catch (e: any) {
+    console.error('Get handling history error:', e);
+    res.status(500).json({ error: 'Failed to get handling history' });
+  }
+});
+
+router.get('/freight/chain/:trackingCode', async (req, res) => {
+  const { trackingCode } = req.params;
+  const { portal } = req.query;
+  
+  if (!portal) {
+    return res.status(400).json({ error: 'portal query parameter required' });
+  }
+  
+  try {
+    const result = await getChainOfCustody(portal as string, trackingCode);
+    if (!result) {
+      return res.status(404).json({ error: 'Item not found' });
+    }
+    res.json(result);
+  } catch (e: any) {
+    console.error('Get chain of custody error:', e);
+    res.status(500).json({ error: 'Failed to get chain of custody' });
+  }
+});
+
+// ============ EXCEPTION ENDPOINTS ============
+
+router.post('/freight/exceptions', async (req, res) => {
+  const b = req.body || {};
+  
+  if (!b.portalSlug || !b.manifestId || !b.exceptionType || !b.description) {
+    return res.status(400).json({ 
+      error: 'portalSlug, manifestId, exceptionType, description required' 
+    });
+  }
+  
+  try {
+    const exception = await createException({
+      portalSlug: b.portalSlug,
+      manifestId: b.manifestId,
+      itemId: b.itemId,
+      proofOfHandlingId: b.proofOfHandlingId,
+      exceptionType: b.exceptionType,
+      severity: b.severity,
+      description: b.description,
+      photoUrls: b.photoUrls,
+      claimedAmountCad: b.claimedAmountCad
+    });
+    
+    res.json({ exception });
+  } catch (e: any) {
+    console.error('Create exception error:', e);
+    res.status(400).json({ error: e.message });
+  }
+});
+
+router.get('/freight/exceptions', async (req, res) => {
+  const { portal, manifest, status, severity } = req.query;
+  
+  if (!portal) {
+    return res.status(400).json({ error: 'portal query parameter required' });
+  }
+  
+  try {
+    const exceptions = await getExceptions(portal as string, {
+      manifestId: manifest as string,
+      status: status as string,
+      severity: severity as string
+    });
+    
+    res.json({ exceptions, count: exceptions.length });
+  } catch (e: any) {
+    console.error('Get exceptions error:', e);
+    res.status(500).json({ error: 'Failed to get exceptions' });
+  }
+});
+
+router.post('/freight/exceptions/:id/resolve', async (req, res) => {
+  const { id } = req.params;
+  const { resolutionType, resolutionNotes, resolvedBy, approvedAmountCad } = req.body || {};
+  
+  if (!resolutionType || !resolvedBy) {
+    return res.status(400).json({ error: 'resolutionType and resolvedBy required' });
+  }
+  
+  try {
+    const exception = await resolveException(id, {
+      resolutionType,
+      resolutionNotes,
+      resolvedBy,
+      approvedAmountCad
+    });
+    
+    res.json({ exception });
+  } catch (e: any) {
+    console.error('Resolve exception error:', e);
+    res.status(500).json({ error: 'Failed to resolve exception' });
   }
 });
 
