@@ -63,6 +63,7 @@ import qaSeedRouter from "./routes/qa-seed";
 import systemExplorerRouter from "./routes/system-explorer";
 import sitemapRouter from "./routes/sitemap";
 import mediaRouter from "./routes/media";
+import communityRouter from "./routes/community";
 import { publicQuery, serviceQuery } from "./db/tenantDb";
 import express from "express";
 
@@ -195,6 +196,9 @@ export async function registerRoutes(
 
   // Register Shared Service Runs routes (bundling, NOT bidding)
   app.use('/api/shared-runs', sharedRunsRouter);
+
+  // Register community routes (cross-tenant Chamber operations)
+  app.use('/api/community', communityRouter);
 
   // Register CRM routes (Places, People, Organizations)
   app.use('/api/crm', crmRouter);

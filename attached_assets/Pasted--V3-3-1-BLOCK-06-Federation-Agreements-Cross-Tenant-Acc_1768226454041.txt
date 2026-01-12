@@ -1,0 +1,180 @@
+**V3.3.1 BLOCK 06: Federation Agreements + Cross-Tenant Access**
+
+Enable "Bamfield as one resort" by allowing Chamber to search and book across all federated providers.
+
+## Verify cc_federation_agreements exists (from Block 02)
+
+Should already have:
+```sql
+CREATE TABLE cc_federation_agreements (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id uuid NOT NULL REFERENCES cc_tenants(id), -- The provider
+  community_id uuid NOT NULL REFERENCES cc_tenants(id), -- The community (Bamfield)
+  
+  granted_to_tenant_id uuid REFERENCES cc_tenants(id), -- Chamber or specific partner
+  granted_to_role varchar, -- 'chamber_operator', 'partner'
+  
+  -- Scopes granted
+  scopes text[] NOT NULL DEFAULT '{}',
+  -- Valid scopes: 
+  -- 'availability:read' - Can see inventory
+  -- 'reservation:create' - Can book on behalf
+  -- 'reservation:read' - Can see reservations
+  -- 'incident:create' - Can report incidents
+  -- 'incident:dispatch' - Can dispatch enforcement
+  
+  is_active boolean DEFAULT true,
+  granted_at timestamptz DEFAULT now(),
+  granted_by uuid REFERENCES cc_individuals(id),
+  expires_at timestamptz,
+  
+  created_at timestamptz DEFAULT now()
+);
+```
+
+If not present, create it now.
+
+## Seed Federation Agreements
+
+All Bamfield providers opt-in to share with Chamber:
+```typescript
+const TENANTS = {
+  BAMFIELD_COMMUNITY: "c0000000-0000-0000-0000-000000000001",
+  BAMFIELD_CHAMBER: "chamber0-0000-0000-0000-000000000001",
+  WOODS_END_LANDING: "d0000000-0000-0000-0000-000000000001",
+  WOODS_END_MARINA: "ff08964d-94b5-4076-850c-2d002e3fd337",
+  SAVE_PARADISE_PARKING: "7d8e6df5-bf12-4965-85a9-20b4312ce6c8",
+  HFN_MARINA: "hfn00000-0000-0000-0000-000000000001",
+  EILEEN_SCOTT_PARK: "eileen00-0000-0000-0000-000000000001"
+};
+
+// Each provider grants to Chamber
+const agreements = [
+  { tenant: WOODS_END_LANDING, scopes: ['availability:read', 'reservation:create', 'reservation:read'] },
+  { tenant: WOODS_END_MARINA, scopes: ['availability:read', 'reservation:create', 'reservation:read'] },
+  { tenant: SAVE_PARADISE_PARKING, scopes: ['availability:read', 'reservation:create', 'reservation:read', 'incident:create', 'incident:dispatch'] },
+  { tenant: HFN_MARINA, scopes: ['availability:read', 'reservation:create', 'reservation:read'] },
+  { tenant: EILEEN_SCOTT_PARK, scopes: ['availability:read', 'reservation:create', 'incident:create', 'incident:dispatch'] }
+];
+```
+
+## Create federationService.ts
+```typescript
+// server/services/federationService.ts
+
+interface FederationContext {
+  actorTenantId: string; // Who is making the request (Chamber)
+  actorIndividualId: string;
+  communityId: string; // Bamfield
+}
+
+// Check if actor has scope on target tenant
+export async function hasScope(
+  ctx: FederationContext,
+  targetTenantId: string,
+  scope: string
+): Promise<boolean>
+
+// Get all tenants where actor has given scope
+export async function getAccessibleTenants(
+  ctx: FederationContext,
+  scope: string
+): Promise<string[]>
+
+// Get all facilities across federated tenants
+export async function getFederatedFacilities(
+  ctx: FederationContext
+): Promise<Facility[]>
+
+// Verify and log federated access (writes to activity_ledger)
+export async function logFederatedAccess(
+  ctx: FederationContext,
+  targetTenantId: string,
+  action: string,
+  resourceType: string,
+  resourceId: string
+): Promise<void>
+```
+
+## Create server/routes/community.ts
+
+New route file for cross-tenant Chamber operations:
+```typescript
+// server/routes/community.ts
+import { Router } from 'express';
+import { requireAuth, requireScope } from '../middleware/auth';
+
+const router = Router();
+
+// POST /api/community/availability/search
+// Cross-tenant availability search
+router.post('/availability/search', requireAuth, async (req, res) => {
+  const { communityId, startDate, endDate, requirements } = req.body;
+  
+  // 1. Get federated tenants where actor has 'availability:read'
+  // 2. Query cc_facilities + cc_inventory_units across all
+  // 3. Check disclosure layer (use truth for chamber, disclosed for public)
+  // 4. Apply constraints from requirements (boatLengthFt, vehicleLengthFt, partySize)
+  // 5. Return results grouped by category with scarcityBand (NEVER true counts)
+  
+  // Response format:
+  // {
+  //   results: {
+  //     accommodations: { items: [...] },
+  //     moorage: { items: [...] },
+  //     parking: { items: [...] }
+  //   },
+  //   bundleSuggestions: [...]
+  // }
+});
+
+// POST /api/community/reservations/bundle
+// Create cross-tenant bundle reservation
+router.post('/reservations/bundle', requireAuth, async (req, res) => {
+  const { communityId, customer, items, notes } = req.body;
+  
+  // 1. Verify federation scope for each item's tenant
+  // 2. Create reservation for each item using reservationService
+  // 3. Link all with same bundle_id
+  // 4. Log to activity_ledger
+  // 5. Return bundle with all confirmation numbers
+});
+
+export default router;
+```
+
+## Register routes in server/routes.ts
+
+Add:
+```typescript
+import communityRoutes from './routes/community';
+app.use('/api/community', communityRoutes);
+```
+
+## Disclosure-Aware Availability
+
+When querying availability:
+```typescript
+async function getAvailability(facilityId: string, channel: 'chamber_desk' | 'public') {
+  if (channel === 'chamber_desk') {
+    // Use TRUTH layer - see all real inventory
+    // Chamber can book truth_only assets
+  } else {
+    // Use DISCLOSURE layer - only see disclosed assets
+    // Apply visibility profiles and surface sets
+  }
+  
+  // NEVER return true counts in response
+  // Only return: scarcityBand, availability, nextAction
+}
+```
+
+## Deliverables
+- [ ] Federation agreements seeded (5 providers → Chamber)
+- [ ] server/services/federationService.ts
+- [ ] server/routes/community.ts with /availability/search and /reservations/bundle
+- [ ] Routes registered in server/routes.ts
+- [ ] Activity ledger logging for all federated access
+- [ ] Test: Chamber searches across all providers, sees results from 5 facilities
+
+Report with federation agreement count and sample cross-tenant search output.
