@@ -1993,3 +1993,85 @@ export const insertHandlingExceptionSchema = createInsertSchema(ccHandlingExcept
 });
 export type HandlingException = typeof ccHandlingExceptions.$inferSelect;
 export type InsertHandlingException = z.infer<typeof insertHandlingExceptionSchema>;
+
+// ============ AUTHORITIES ============
+// Governing bodies that issue permits (Parks Canada, First Nations, etc.)
+export const ccAuthorities = pgTable('cc_authorities', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  portalId: uuid('portal_id'),
+  
+  name: text('name').notNull(),
+  code: varchar('code', { length: 20 }),
+  authorityType: varchar('authority_type', { length: 50 }).notNull(),
+  
+  jurisdictionDescription: text('jurisdiction_description'),
+  jurisdictionAreaJson: jsonb('jurisdiction_area_json').default({}),
+  
+  contactName: text('contact_name'),
+  contactTitle: text('contact_title'),
+  contactPhone: text('contact_phone'),
+  contactEmail: text('contact_email'),
+  websiteUrl: text('website_url'),
+  officeAddress: text('office_address'),
+  
+  officeHoursJson: jsonb('office_hours_json').default({}),
+  permitProcessingJson: jsonb('permit_processing_json').default({}),
+  
+  apiEndpoint: text('api_endpoint'),
+  apiKeyEncrypted: text('api_key_encrypted'),
+  integrationType: varchar('integration_type', { length: 50 }),
+  
+  culturalProtocolsJson: jsonb('cultural_protocols_json').default({}),
+  
+  status: varchar('status', { length: 50 }).default('active'),
+  
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+});
+
+export const insertAuthoritySchema = createInsertSchema(ccAuthorities).omit({ 
+  id: true, createdAt: true, updatedAt: true 
+});
+export type Authority = typeof ccAuthorities.$inferSelect;
+export type InsertAuthority = z.infer<typeof insertAuthoritySchema>;
+
+// ============ PERMIT TYPES ============
+// Types of permits each authority can issue
+export const ccPermitTypes = pgTable('cc_permit_types', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  authorityId: uuid('authority_id').notNull(),
+  
+  name: text('name').notNull(),
+  code: varchar('code', { length: 20 }),
+  description: text('description'),
+  
+  permitCategory: varchar('permit_category', { length: 50 }).notNull(),
+  
+  requirementsJson: jsonb('requirements_json').default({}),
+  
+  baseFeeCad: numeric('base_fee_cad', { precision: 10, scale: 2 }).default('0'),
+  perPersonFeeCad: numeric('per_person_fee_cad', { precision: 10, scale: 2 }).default('0'),
+  perDayFeeCad: numeric('per_day_fee_cad', { precision: 10, scale: 2 }).default('0'),
+  perNightFeeCad: numeric('per_night_fee_cad', { precision: 10, scale: 2 }).default('0'),
+  
+  bookingRulesJson: jsonb('booking_rules_json').default({}),
+  
+  validityType: varchar('validity_type', { length: 50 }).default('date_range'),
+  defaultValidityDays: integer('default_validity_days').default(1),
+  
+  documentTemplateUrl: text('document_template_url'),
+  termsAndConditions: text('terms_and_conditions'),
+  
+  seasonalJson: jsonb('seasonal_json').default({}),
+  
+  status: varchar('status', { length: 50 }).default('active'),
+  
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+});
+
+export const insertPermitTypeSchema = createInsertSchema(ccPermitTypes).omit({ 
+  id: true, createdAt: true, updatedAt: true 
+});
+export type PermitType = typeof ccPermitTypes.$inferSelect;
+export type InsertPermitType = z.infer<typeof insertPermitTypeSchema>;

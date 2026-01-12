@@ -1,0 +1,791 @@
+**BAMFIELD OPS - PROMPT 10: Authority Registration (Permits Foundation)**
+
+Create the permit authority system for Parks Canada, First Nations, Harbour Authorities, and other governing bodies.
+
+## Migration 086_authorities.sql
+```sql
+BEGIN;
+
+-- ============ AUTHORITIES ============
+-- Governing bodies that issue permits (Parks Canada, First Nations, etc.)
+
+CREATE TABLE IF NOT EXISTS cc_authorities (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  portal_id uuid REFERENCES cc_portals(id) ON DELETE SET NULL,
+  
+  -- Identity
+  name text NOT NULL,
+  code varchar(20),
+  authority_type varchar NOT NULL CHECK (authority_type IN (
+    'parks_canada',      -- Federal parks
+    'bc_parks',          -- Provincial parks
+    'first_nation',      -- First Nations government
+    'harbour_authority', -- Local harbour authority
+    'municipality',      -- City/town
+    'regional_district', -- Regional government
+    'provincial',        -- Province of BC
+    'federal',           -- Federal (other than parks)
+    'private'            -- Private land/facility
+  )),
+  
+  -- Jurisdiction
+  jurisdiction_description text,
+  jurisdiction_area_json jsonb DEFAULT '{}'::jsonb,
+  -- {locations: [uuid], territories: ['Barkley Sound'], 
+  --  geographic_bounds: {north: 49.0, south: 48.5, east: -124.5, west: -126.0}}
+  
+  -- Contact
+  contact_name text,
+  contact_title text,
+  contact_phone text,
+  contact_email text,
+  website_url text,
+  office_address text,
+  
+  -- Operating info
+  office_hours_json jsonb DEFAULT '{}'::jsonb,
+  -- {weekdays: {open: '08:30', close: '16:30'}, weekends: false,
+  --  seasonal: [{months: [7,8], extended: true}]}
+  
+  -- Permit processing
+  permit_processing_json jsonb DEFAULT '{}'::jsonb,
+  -- {typical_days: 3, rush_available: true, rush_fee_cad: 50,
+  --  online_applications: true, application_url: '...'}
+  
+  -- Integration
+  api_endpoint text,
+  api_key_encrypted text,
+  integration_type varchar CHECK (integration_type IN (
+    'api', 'email', 'manual', 'portal'
+  )),
+  
+  -- Protocols (for First Nations)
+  cultural_protocols_json jsonb DEFAULT '{}'::jsonb,
+  -- {territory_acknowledgment: '...', 
+  --  required_notices: ['entry', 'camping', 'fishing'],
+  --  cultural_sites: [{name: '...', restrictions: '...'}]}
+  
+  -- Status
+  status varchar DEFAULT 'active' CHECK (status IN ('active', 'inactive', 'seasonal')),
+  
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now(),
+  
+  UNIQUE(portal_id, code)
+);
+
+CREATE INDEX idx_authorities_type ON cc_authorities(authority_type, status);
+CREATE INDEX idx_authorities_portal ON cc_authorities(portal_id) WHERE portal_id IS NOT NULL;
+
+ALTER TABLE cc_authorities ENABLE ROW LEVEL SECURITY;
+
+-- ============ PERMIT TYPES ============
+-- Types of permits each authority can issue
+
+CREATE TABLE IF NOT EXISTS cc_permit_types (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  authority_id uuid NOT NULL REFERENCES cc_authorities(id) ON DELETE CASCADE,
+  
+  -- Identity
+  name text NOT NULL,
+  code varchar(20),
+  description text,
+  
+  -- Category
+  permit_category varchar NOT NULL CHECK (permit_category IN (
+    'access',           -- Trail/park access
+    'backcountry',      -- Backcountry camping
+    'day_use',          -- Day use only
+    'fishing',          -- Fishing license
+    'hunting',          -- Hunting license
+    'commercial',       -- Commercial operation
+    'filming',          -- Film/photo permit
+    'research',         -- Research permit
+    'event',            -- Special event
+    'moorage',          -- Boat moorage
+    'anchoring',        -- Anchoring permit
+    'camping',          -- Campsite reservation
+    'fire',             -- Fire permit
+    'other'
+  )),
+  
+  -- Requirements
+  requirements_json jsonb DEFAULT '{}'::jsonb,
+  -- {id_required: true, vessel_registration: false, 
+  --  certifications: ['wilderness_first_aid'],
+  --  minimum_age: 18, group_size_limit: 12}
+  
+  -- Pricing
+  base_fee_cad numeric(10,2) DEFAULT 0,
+  per_person_fee_cad numeric(10,2) DEFAULT 0,
+  per_day_fee_cad numeric(10,2) DEFAULT 0,
+  per_night_fee_cad numeric(10,2) DEFAULT 0,
+  
+  -- Booking rules
+  booking_rules_json jsonb DEFAULT '{}'::jsonb,
+  -- {advance_days_min: 1, advance_days_max: 90,
+  --  max_duration_days: 14, quota_managed: true, daily_quota: 50,
+  --  reservation_required: true}
+  
+  -- Validity
+  validity_type varchar DEFAULT 'date_range' CHECK (validity_type IN (
+    'date_range',   -- Valid for specific dates
+    'duration',     -- Valid for X days from issue
+    'calendar',     -- Calendar year
+    'seasonal'      -- Seasonal (e.g., fishing season)
+  )),
+  default_validity_days integer DEFAULT 1,
+  
+  -- Documents
+  document_template_url text,
+  terms_and_conditions text,
+  
+  -- Seasonal availability
+  seasonal_json jsonb DEFAULT '{}'::jsonb,
+  -- {available_months: [5,6,7,8,9,10], 
+  --  blackout_dates: ['2026-07-01', '2026-08-01']}
+  
+  -- Status
+  status varchar DEFAULT 'active' CHECK (status IN ('active', 'inactive', 'seasonal')),
+  
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now(),
+  
+  UNIQUE(authority_id, code)
+);
+
+CREATE INDEX idx_permit_types_authority ON cc_permit_types(authority_id, status);
+CREATE INDEX idx_permit_types_category ON cc_permit_types(permit_category);
+
+ALTER TABLE cc_permit_types ENABLE ROW LEVEL SECURITY;
+
+-- ============ SEED BAMFIELD AUTHORITIES ============
+
+DO $$
+DECLARE
+  v_portal_id uuid;
+  v_parks_id uuid;
+  v_hfn_id uuid;
+  v_bha_id uuid;
+BEGIN
+  -- Get Bamfield portal
+  SELECT id INTO v_portal_id FROM cc_portals WHERE slug = 'bamfield' LIMIT 1;
+  
+  -- Parks Canada - Pacific Rim National Park Reserve
+  INSERT INTO cc_authorities (
+    portal_id, name, code, authority_type,
+    jurisdiction_description,
+    contact_phone, contact_email, website_url,
+    office_hours_json, permit_processing_json,
+    status
+  ) VALUES (
+    v_portal_id, 'Pacific Rim National Park Reserve', 'PRNPR', 'parks_canada',
+    'West Coast Trail, Broken Group Islands, Long Beach Unit',
+    '250-726-3500', 'pacrim.info@pc.gc.ca', 'https://parks.canada.ca/pn-np/bc/pacificrim',
+    '{"weekdays": {"open": "08:00", "close": "16:30"}, "summer_extended": true}'::jsonb,
+    '{"typical_days": 0, "online_applications": true, "reservation_system": "Parks Canada Reservation"}'::jsonb,
+    'active'
+  )
+  ON CONFLICT (portal_id, code) DO UPDATE SET updated_at = now()
+  RETURNING id INTO v_parks_id;
+  
+  -- Huu-ay-aht First Nations
+  INSERT INTO cc_authorities (
+    portal_id, name, code, authority_type,
+    jurisdiction_description,
+    contact_phone, contact_email, website_url,
+    cultural_protocols_json,
+    status
+  ) VALUES (
+    v_portal_id, 'Huu-ay-aht First Nations', 'HFN', 'first_nation',
+    'Traditional territory including Bamfield area, Deer Group Islands, Diana Island',
+    '250-728-3414', 'info@huuayaht.org', 'https://huuayaht.org',
+    '{
+      "territory_acknowledgment": "We acknowledge that we are on the traditional territory of the Huu-ay-aht First Nations",
+      "required_notices": ["camping", "commercial_activity", "cultural_sites"],
+      "cultural_protocol": "Visitors are asked to respect sacred sites and cultural areas",
+      "welcome_figure": true
+    }'::jsonb,
+    'active'
+  )
+  ON CONFLICT (portal_id, code) DO UPDATE SET updated_at = now()
+  RETURNING id INTO v_hfn_id;
+  
+  -- Bamfield Harbour Authority
+  INSERT INTO cc_authorities (
+    portal_id, name, code, authority_type,
+    jurisdiction_description,
+    contact_phone, contact_email,
+    office_hours_json,
+    status
+  ) VALUES (
+    v_portal_id, 'Bamfield Harbour Authority', 'BHA', 'harbour_authority',
+    'Bamfield Inlet, government docks, boat launches',
+    '250-728-3225', 'bamfieldha@gmail.com',
+    '{"weekdays": {"open": "09:00", "close": "17:00"}, "summer": {"open": "08:00", "close": "18:00"}}'::jsonb,
+    'active'
+  )
+  ON CONFLICT (portal_id, code) DO UPDATE SET updated_at = now()
+  RETURNING id INTO v_bha_id;
+  
+  -- Parks Canada permit types
+  IF v_parks_id IS NOT NULL THEN
+    -- West Coast Trail
+    INSERT INTO cc_permit_types (
+      authority_id, name, code, permit_category, description,
+      base_fee_cad, per_person_fee_cad,
+      requirements_json, booking_rules_json, seasonal_json,
+      status
+    ) VALUES (
+      v_parks_id, 'West Coast Trail Permit', 'WCT', 'backcountry',
+      'Required permit for hiking the 75km West Coast Trail',
+      24.50, 127.50,
+      '{"id_required": true, "orientation_required": true, "minimum_age": 0, "group_size_limit": 8}'::jsonb,
+      '{"advance_days_min": 1, "advance_days_max": 90, "max_duration_days": 10, "quota_managed": true, "daily_quota": 60, "reservation_required": true}'::jsonb,
+      '{"available_months": [5,6,7,8,9], "season_start": "May 1", "season_end": "September 30"}'::jsonb,
+      'active'
+    ) ON CONFLICT (authority_id, code) DO NOTHING;
+    
+    -- Broken Group Islands
+    INSERT INTO cc_permit_types (
+      authority_id, name, code, permit_category, description,
+      base_fee_cad, per_night_fee_cad,
+      requirements_json, booking_rules_json,
+      status
+    ) VALUES (
+      v_parks_id, 'Broken Group Islands Camping', 'BGI', 'backcountry',
+      'Backcountry camping permit for Broken Group Islands',
+      11.50, 10.00,
+      '{"id_required": true, "vessel_required": true, "kayak_experience_recommended": true}'::jsonb,
+      '{"advance_days_max": 90, "max_duration_days": 14, "quota_managed": true}'::jsonb,
+      'active'
+    ) ON CONFLICT (authority_id, code) DO NOTHING;
+  END IF;
+  
+  -- HFN permit types
+  IF v_hfn_id IS NOT NULL THEN
+    INSERT INTO cc_permit_types (
+      authority_id, name, code, permit_category, description,
+      base_fee_cad,
+      requirements_json,
+      status
+    ) VALUES (
+      v_hfn_id, 'Territory Access Notice', 'TAN', 'access',
+      'Acknowledgment of entry into Huu-ay-aht traditional territory',
+      0,
+      '{"acknowledgment_required": true, "cultural_orientation_available": true}'::jsonb,
+      'active'
+    ) ON CONFLICT (authority_id, code) DO NOTHING;
+    
+    INSERT INTO cc_permit_types (
+      authority_id, name, code, permit_category, description,
+      per_night_fee_cad,
+      status
+    ) VALUES (
+      v_hfn_id, 'Deer Group Camping', 'DGC', 'camping',
+      'Camping on Deer Group Islands within HFN territory',
+      15.00,
+      'active'
+    ) ON CONFLICT (authority_id, code) DO NOTHING;
+  END IF;
+  
+  -- Harbour Authority permit types
+  IF v_bha_id IS NOT NULL THEN
+    INSERT INTO cc_permit_types (
+      authority_id, name, code, permit_category, description,
+      per_day_fee_cad,
+      booking_rules_json,
+      status
+    ) VALUES (
+      v_bha_id, 'Transient Moorage', 'TRM', 'moorage',
+      'Short-term moorage at government docks',
+      2.00, -- per foot per day typically
+      '{"advance_days_min": 0, "max_duration_days": 14}'::jsonb,
+      'active'
+    ) ON CONFLICT (authority_id, code) DO NOTHING;
+    
+    INSERT INTO cc_permit_types (
+      authority_id, name, code, permit_category, description,
+      base_fee_cad,
+      status
+    ) VALUES (
+      v_bha_id, 'Boat Launch Permit', 'BLP', 'day_use',
+      'Single-day boat launch access at Grappler',
+      15.00,
+      'active'
+    ) ON CONFLICT (authority_id, code) DO NOTHING;
+  END IF;
+  
+END $$;
+
+COMMIT;
+```
+
+## Create server/services/authorityService.ts
+```typescript
+// server/services/authorityService.ts
+
+import { db } from '../db';
+import { eq, and, or, ilike, asc } from 'drizzle-orm';
+
+// ============ AUTHORITY FUNCTIONS ============
+
+export async function getAuthorities(
+  portalSlug: string,
+  options?: {
+    authorityType?: string;
+    status?: string;
+    query?: string;
+  }
+): Promise<any[]> {
+  const portal = await db.query.ccPortals.findFirst({
+    where: eq(ccPortals.slug, portalSlug)
+  });
+  
+  if (!portal) return [];
+  
+  const conditions: any[] = [eq(ccAuthorities.portalId, portal.id)];
+  
+  if (options?.authorityType) {
+    conditions.push(eq(ccAuthorities.authorityType, options.authorityType));
+  }
+  
+  if (options?.status) {
+    conditions.push(eq(ccAuthorities.status, options.status));
+  } else {
+    conditions.push(eq(ccAuthorities.status, 'active'));
+  }
+  
+  if (options?.query) {
+    conditions.push(or(
+      ilike(ccAuthorities.name, `%${options.query}%`),
+      ilike(ccAuthorities.code, `%${options.query}%`)
+    ));
+  }
+  
+  return db.query.ccAuthorities.findMany({
+    where: and(...conditions),
+    orderBy: [asc(ccAuthorities.name)]
+  });
+}
+
+export async function getAuthorityByCode(
+  portalSlug: string,
+  code: string
+): Promise<{
+  authority: any;
+  permitTypes: any[];
+} | null> {
+  const portal = await db.query.ccPortals.findFirst({
+    where: eq(ccPortals.slug, portalSlug)
+  });
+  
+  if (!portal) return null;
+  
+  const authority = await db.query.ccAuthorities.findFirst({
+    where: and(
+      eq(ccAuthorities.portalId, portal.id),
+      eq(ccAuthorities.code, code.toUpperCase())
+    )
+  });
+  
+  if (!authority) return null;
+  
+  const permitTypes = await db.query.ccPermitTypes.findMany({
+    where: and(
+      eq(ccPermitTypes.authorityId, authority.id),
+      eq(ccPermitTypes.status, 'active')
+    ),
+    orderBy: [asc(ccPermitTypes.name)]
+  });
+  
+  return { authority, permitTypes };
+}
+
+export async function getAuthorityById(authorityId: string): Promise<{
+  authority: any;
+  permitTypes: any[];
+} | null> {
+  const authority = await db.query.ccAuthorities.findFirst({
+    where: eq(ccAuthorities.id, authorityId)
+  });
+  
+  if (!authority) return null;
+  
+  const permitTypes = await db.query.ccPermitTypes.findMany({
+    where: and(
+      eq(ccPermitTypes.authorityId, authorityId),
+      eq(ccPermitTypes.status, 'active')
+    ),
+    orderBy: [asc(ccPermitTypes.name)]
+  });
+  
+  return { authority, permitTypes };
+}
+
+// ============ PERMIT TYPE FUNCTIONS ============
+
+export async function getPermitTypes(
+  portalSlug: string,
+  options?: {
+    authorityId?: string;
+    authorityCode?: string;
+    category?: string;
+  }
+): Promise<any[]> {
+  const portal = await db.query.ccPortals.findFirst({
+    where: eq(ccPortals.slug, portalSlug)
+  });
+  
+  if (!portal) return [];
+  
+  // Get authorities for this portal
+  const authorities = await db.query.ccAuthorities.findMany({
+    where: eq(ccAuthorities.portalId, portal.id)
+  });
+  
+  const authorityIds = authorities.map(a => a.id);
+  if (authorityIds.length === 0) return [];
+  
+  // Filter by specific authority if requested
+  let targetAuthorityIds = authorityIds;
+  
+  if (options?.authorityId) {
+    targetAuthorityIds = [options.authorityId];
+  } else if (options?.authorityCode) {
+    const auth = authorities.find(a => a.code === options.authorityCode.toUpperCase());
+    if (auth) targetAuthorityIds = [auth.id];
+  }
+  
+  const conditions: any[] = [
+    eq(ccPermitTypes.status, 'active')
+  ];
+  
+  if (options?.category) {
+    conditions.push(eq(ccPermitTypes.permitCategory, options.category));
+  }
+  
+  // Get permit types for target authorities
+  const permitTypes: any[] = [];
+  for (const authId of targetAuthorityIds) {
+    const types = await db.query.ccPermitTypes.findMany({
+      where: and(
+        eq(ccPermitTypes.authorityId, authId),
+        ...conditions
+      )
+    });
+    
+    // Attach authority info
+    const auth = authorities.find(a => a.id === authId);
+    for (const pt of types) {
+      permitTypes.push({
+        ...pt,
+        authority: auth ? { id: auth.id, name: auth.name, code: auth.code, type: auth.authorityType } : null
+      });
+    }
+  }
+  
+  return permitTypes;
+}
+
+export async function getPermitTypeByCode(
+  portalSlug: string,
+  authorityCode: string,
+  permitCode: string
+): Promise<{
+  permitType: any;
+  authority: any;
+} | null> {
+  const authResult = await getAuthorityByCode(portalSlug, authorityCode);
+  if (!authResult) return null;
+  
+  const permitType = await db.query.ccPermitTypes.findFirst({
+    where: and(
+      eq(ccPermitTypes.authorityId, authResult.authority.id),
+      eq(ccPermitTypes.code, permitCode.toUpperCase())
+    )
+  });
+  
+  if (!permitType) return null;
+  
+  return { permitType, authority: authResult.authority };
+}
+
+export async function calculatePermitFee(
+  permitTypeId: string,
+  options: {
+    persons?: number;
+    days?: number;
+    nights?: number;
+  }
+): Promise<{
+  baseFee: number;
+  personFee: number;
+  dayFee: number;
+  nightFee: number;
+  totalFee: number;
+  breakdown: string;
+}> {
+  const permitType = await db.query.ccPermitTypes.findFirst({
+    where: eq(ccPermitTypes.id, permitTypeId)
+  });
+  
+  if (!permitType) {
+    return { baseFee: 0, personFee: 0, dayFee: 0, nightFee: 0, totalFee: 0, breakdown: 'Permit type not found' };
+  }
+  
+  const baseFee = Number(permitType.baseFeeCad) || 0;
+  const personFee = (Number(permitType.perPersonFeeCad) || 0) * (options.persons || 1);
+  const dayFee = (Number(permitType.perDayFeeCad) || 0) * (options.days || 1);
+  const nightFee = (Number(permitType.perNightFeeCad) || 0) * (options.nights || 0);
+  
+  const totalFee = baseFee + personFee + dayFee + nightFee;
+  
+  const parts: string[] = [];
+  if (baseFee > 0) parts.push(`Base: $${baseFee.toFixed(2)}`);
+  if (personFee > 0) parts.push(`${options.persons || 1} person(s): $${personFee.toFixed(2)}`);
+  if (dayFee > 0) parts.push(`${options.days || 1} day(s): $${dayFee.toFixed(2)}`);
+  if (nightFee > 0) parts.push(`${options.nights || 0} night(s): $${nightFee.toFixed(2)}`);
+  
+  return {
+    baseFee,
+    personFee,
+    dayFee,
+    nightFee,
+    totalFee,
+    breakdown: parts.join(' + ') || 'No fees'
+  };
+}
+
+// ============ REQUIRED PERMITS FOR LOCATION ============
+
+export async function getRequiredPermits(
+  portalSlug: string,
+  locationId: string
+): Promise<{
+  location: any;
+  requiredPermits: any[];
+}> {
+  const portal = await db.query.ccPortals.findFirst({
+    where: eq(ccPortals.slug, portalSlug)
+  });
+  
+  if (!portal) return { location: null, requiredPermits: [] };
+  
+  const location = await db.query.ccLocations.findFirst({
+    where: eq(ccLocations.id, locationId)
+  });
+  
+  if (!location) return { location: null, requiredPermits: [] };
+  
+  const requiredPermits: any[] = [];
+  
+  // Check location authority rules
+  const authorityRules = location.authorityRules as any || {};
+  
+  if (authorityRules.permit_required && authorityRules.permit_type) {
+    // Find matching permit type
+    const permitTypes = await getPermitTypes(portalSlug, {});
+    const matching = permitTypes.find(pt => 
+      pt.code === authorityRules.permit_type || 
+      pt.permitCategory === authorityRules.permit_type
+    );
+    
+    if (matching) {
+      requiredPermits.push({
+        reason: 'Location requires permit',
+        permitType: matching,
+        authority: matching.authority
+      });
+    }
+  }
+  
+  // Check if in Parks Canada territory
+  if (location.authorityType === 'parks_canada') {
+    const parksPermits = await getPermitTypes(portalSlug, { authorityCode: 'PRNPR' });
+    for (const pp of parksPermits) {
+      requiredPermits.push({
+        reason: 'Parks Canada jurisdiction',
+        permitType: pp,
+        authority: pp.authority
+      });
+    }
+  }
+  
+  // Check if in First Nations territory
+  if (location.authorityType === 'first_nation') {
+    const fnPermits = await getPermitTypes(portalSlug, { authorityCode: 'HFN' });
+    for (const fp of fnPermits) {
+      if (fp.permitCategory === 'access') {
+        requiredPermits.push({
+          reason: 'First Nations territory acknowledgment',
+          permitType: fp,
+          authority: fp.authority,
+          required: true
+        });
+      }
+    }
+  }
+  
+  return { location, requiredPermits };
+}
+```
+
+## Add Authority Routes to transport.ts (or create permits.ts)
+```typescript
+// server/routes/permits.ts
+
+import { Router } from 'express';
+import {
+  getAuthorities, getAuthorityByCode, getAuthorityById,
+  getPermitTypes, getPermitTypeByCode, calculatePermitFee,
+  getRequiredPermits
+} from '../services/authorityService';
+
+const router = Router();
+
+// ============ AUTHORITY ENDPOINTS ============
+
+// GET /api/permits/portals/:slug/authorities - List authorities
+router.get('/portals/:slug/authorities', async (req, res) => {
+  const { slug } = req.params;
+  const { type, status, q } = req.query;
+  
+  try {
+    const authorities = await getAuthorities(slug, {
+      authorityType: type as string,
+      status: status as string,
+      query: q as string
+    });
+    
+    res.json({ authorities, count: authorities.length });
+  } catch (e: any) {
+    console.error('Get authorities error:', e);
+    res.status(500).json({ error: 'Failed to get authorities' });
+  }
+});
+
+// GET /api/permits/portals/:slug/authorities/:code - Get authority with permit types
+router.get('/portals/:slug/authorities/:code', async (req, res) => {
+  const { slug, code } = req.params;
+  
+  try {
+    const result = await getAuthorityByCode(slug, code);
+    if (!result) {
+      return res.status(404).json({ error: 'Authority not found' });
+    }
+    res.json(result);
+  } catch (e: any) {
+    console.error('Get authority error:', e);
+    res.status(500).json({ error: 'Failed to get authority' });
+  }
+});
+
+// ============ PERMIT TYPE ENDPOINTS ============
+
+// GET /api/permits/portals/:slug/types - List permit types
+router.get('/portals/:slug/types', async (req, res) => {
+  const { slug } = req.params;
+  const { authority, category } = req.query;
+  
+  try {
+    const permitTypes = await getPermitTypes(slug, {
+      authorityCode: authority as string,
+      category: category as string
+    });
+    
+    res.json({ permitTypes, count: permitTypes.length });
+  } catch (e: any) {
+    console.error('Get permit types error:', e);
+    res.status(500).json({ error: 'Failed to get permit types' });
+  }
+});
+
+// GET /api/permits/portals/:slug/types/:authorityCode/:permitCode - Get specific permit type
+router.get('/portals/:slug/types/:authorityCode/:permitCode', async (req, res) => {
+  const { slug, authorityCode, permitCode } = req.params;
+  
+  try {
+    const result = await getPermitTypeByCode(slug, authorityCode, permitCode);
+    if (!result) {
+      return res.status(404).json({ error: 'Permit type not found' });
+    }
+    res.json(result);
+  } catch (e: any) {
+    console.error('Get permit type error:', e);
+    res.status(500).json({ error: 'Failed to get permit type' });
+  }
+});
+
+// GET /api/permits/types/:id/calculate-fee - Calculate permit fee
+router.get('/types/:id/calculate-fee', async (req, res) => {
+  const { id } = req.params;
+  const { persons, days, nights } = req.query;
+  
+  try {
+    const result = await calculatePermitFee(id, {
+      persons: persons ? parseInt(persons as string) : undefined,
+      days: days ? parseInt(days as string) : undefined,
+      nights: nights ? parseInt(nights as string) : undefined
+    });
+    
+    res.json(result);
+  } catch (e: any) {
+    console.error('Calculate fee error:', e);
+    res.status(500).json({ error: 'Failed to calculate fee' });
+  }
+});
+
+// GET /api/permits/portals/:slug/required/:locationId - Get required permits for location
+router.get('/portals/:slug/required/:locationId', async (req, res) => {
+  const { slug, locationId } = req.params;
+  
+  try {
+    const result = await getRequiredPermits(slug, locationId);
+    res.json(result);
+  } catch (e: any) {
+    console.error('Get required permits error:', e);
+    res.status(500).json({ error: 'Failed to get required permits' });
+  }
+});
+
+export default router;
+```
+
+### Register routes in server/index.ts
+```typescript
+import permitRoutes from './routes/permits';
+
+// Add with other routes
+app.use('/api/permits', permitRoutes);
+```
+
+## Drizzle Schema Exports
+
+Add to shared/schema.ts:
+- Authority, InsertAuthority
+- PermitType, InsertPermitType
+
+## Deliverables
+- [ ] Migration 086_authorities.sql
+- [ ] cc_authorities table with RLS
+- [ ] cc_permit_types table with RLS
+- [ ] 3 authorities seeded:
+  - PRNPR (Pacific Rim National Park Reserve) - Parks Canada
+  - HFN (Huu-ay-aht First Nations)
+  - BHA (Bamfield Harbour Authority)
+- [ ] 6 permit types seeded:
+  - WCT (West Coast Trail) - $24.50 + $127.50/person
+  - BGI (Broken Group Islands) - $11.50 + $10/night
+  - TAN (Territory Access Notice) - Free
+  - DGC (Deer Group Camping) - $15/night
+  - TRM (Transient Moorage) - $2/day
+  - BLP (Boat Launch Permit) - $15
+- [ ] server/services/authorityService.ts
+- [ ] server/routes/permits.ts
+- [ ] Routes registered in server/index.ts
+- [ ] Test: GET /api/permits/portals/bamfield/authorities returns 3 authorities
+- [ ] Test: GET /api/permits/portals/bamfield/authorities/PRNPR returns Parks Canada with WCT + BGI permit types
+- [ ] Test: Calculate fee for WCT with 4 persons returns $534.50 (24.50 + 4×127.50)
+
+Report with authorities list and WCT fee calculation.

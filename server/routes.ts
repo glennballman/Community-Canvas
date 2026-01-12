@@ -65,6 +65,7 @@ import sitemapRouter from "./routes/sitemap";
 import mediaRouter from "./routes/media";
 import communityRouter from "./routes/community";
 import transportRouter from "./routes/transport";
+import permitsRouter from "./routes/permits";
 import { publicQuery, serviceQuery } from "./db/tenantDb";
 import express from "express";
 
@@ -203,6 +204,9 @@ export async function registerRoutes(
 
   // Register transport/location routes
   app.use('/api/transport', transportRouter);
+
+  // Register permits (authorities, permit types) routes
+  app.use('/api/permits', permitsRouter);
 
   // Register CRM routes (Places, People, Organizations)
   app.use('/api/crm', crmRouter);
