@@ -1,0 +1,703 @@
+**BAMFIELD OPS - PROMPT 02: Transport Operators & Vessels**
+
+Register transport operators (Lady Rose, water taxis) and their vessels/assets.
+
+## Migration 079_transport_operators.sql
+```sql
+BEGIN;
+
+-- ============ TRANSPORT OPERATORS ============
+-- Companies that provide transport services
+
+CREATE TABLE IF NOT EXISTS cc_transport_operators (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id uuid REFERENCES cc_tenants(id) ON DELETE SET NULL,
+  portal_id uuid REFERENCES cc_portals(id) ON DELETE SET NULL,
+  
+  -- Identity
+  name text NOT NULL,
+  code varchar(10), -- Short code (e.g., 'LRMS', 'BEWT')
+  
+  operator_type text NOT NULL CHECK (operator_type IN (
+    'ferry', 'water_taxi', 'charter', 'freight', 'shuttle', 'seaplane', 'other'
+  )),
+  
+  -- Contact
+  contact_name text,
+  contact_phone text,
+  contact_email text,
+  website_url text,
+  
+  -- Business details
+  business_license text,
+  insurance_policy text,
+  insurance_expiry date,
+  
+  -- Service area
+  service_area_json jsonb DEFAULT '{}'::jsonb,
+  -- {home_port: 'PAHQ', service_locations: ['WGD', 'EGD', 'SEC'], 
+  --  routes: [{from: 'PAHQ', to: 'WGD', typical_minutes: 240}]}
+  
+  -- Operating hours
+  operating_hours_json jsonb DEFAULT '{}'::jsonb,
+  -- {default: {start: '07:00', end: '20:00'}, 
+  --  seasonal: [{months: [11,12,1,2], start: '08:00', end: '17:00'}],
+  --  on_call_after_hours: true}
+  
+  -- Booking settings
+  booking_settings_json jsonb DEFAULT '{}'::jsonb,
+  -- {advance_booking_hours: 24, same_day_cutoff: '14:00',
+  --  cancellation_hours: 24, deposit_percent: 25,
+  --  accepts_freight: true, accepts_passengers: true}
+  
+  -- Settlement
+  settlement_method varchar DEFAULT 'invoice' CHECK (settlement_method IN (
+    'stripe', 'invoice', 'etransfer', 'cash', 'account'
+  )),
+  settlement_account_json jsonb DEFAULT '{}'::jsonb,
+  commission_percent numeric(5,2) DEFAULT 0,
+  
+  -- Integration
+  external_booking_url text,
+  api_endpoint text,
+  
+  -- Status
+  status varchar DEFAULT 'active' CHECK (status IN ('active', 'seasonal', 'inactive', 'suspended')),
+  
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now(),
+  
+  UNIQUE(portal_id, code)
+);
+
+CREATE INDEX idx_transport_ops_type ON cc_transport_operators(operator_type, status);
+CREATE INDEX idx_transport_ops_portal ON cc_transport_operators(portal_id) WHERE portal_id IS NOT NULL;
+
+ALTER TABLE cc_transport_operators ENABLE ROW LEVEL SECURITY;
+
+-- ============ TRANSPORT ASSETS (Vessels/Vehicles) ============
+
+CREATE TABLE IF NOT EXISTS cc_transport_assets (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  operator_id uuid NOT NULL REFERENCES cc_transport_operators(id) ON DELETE CASCADE,
+  
+  -- Identity
+  name text NOT NULL,
+  asset_type text NOT NULL CHECK (asset_type IN (
+    'vessel', 'vehicle', 'bus', 'van', 'seaplane', 'other'
+  )),
+  
+  -- Registration
+  registration_number text,
+  transport_canada_id text,
+  hull_number text,
+  
+  -- Specifications
+  specs_json jsonb DEFAULT '{}'::jsonb,
+  -- {length_ft: 65, beam_ft: 15, draft_ft: 6, gross_tonnage: 50,
+  --  year_built: 1992, manufacturer: 'Allied Shipbuilders'}
+  
+  -- Capacity
+  capacity_json jsonb NOT NULL DEFAULT '{}'::jsonb,
+  -- {passengers: 100, crew: 4, freight_lbs: 10000, 
+  --  kayaks: 40, bikes: 10, wheelchairs: 2,
+  --  vehicle_deck: false}
+  
+  -- Capabilities
+  capabilities_json jsonb DEFAULT '{}'::jsonb,
+  -- {wheelchair_accessible: true, covered_deck: true,
+  --  heated_cabin: true, washroom: true, food_service: false,
+  --  night_running: true, radar: true, ais: true}
+  
+  -- Safety
+  safety_json jsonb DEFAULT '{}'::jsonb,
+  -- {life_rafts: 2, life_jackets: 120, epirb: true,
+  --  last_inspection: '2025-06-15', inspection_authority: 'Transport Canada'}
+  
+  -- Media
+  image_url text,
+  
+  -- Status
+  status varchar DEFAULT 'active' CHECK (status IN (
+    'active', 'maintenance', 'seasonal', 'retired'
+  )),
+  
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+
+CREATE INDEX idx_transport_assets_operator ON cc_transport_assets(operator_id, status);
+
+ALTER TABLE cc_transport_assets ENABLE ROW LEVEL SECURITY;
+
+-- ============ SEED OPERATORS & VESSELS ============
+
+DO $$
+DECLARE
+  v_portal_id uuid;
+  v_lrms_id uuid;
+  v_bewt_id uuid;
+  v_bwt_id uuid;
+BEGIN
+  -- Get Bamfield portal
+  SELECT id INTO v_portal_id FROM cc_portals WHERE slug = 'bamfield' LIMIT 1;
+  
+  -- Lady Rose Marine Services (MV Frances Barkley)
+  INSERT INTO cc_transport_operators (
+    portal_id, name, code, operator_type,
+    contact_phone, contact_email, website_url,
+    service_area_json, operating_hours_json, booking_settings_json,
+    status
+  ) VALUES (
+    v_portal_id, 'Lady Rose Marine Services', 'LRMS', 'ferry',
+    '250-723-8313', 'info@ladyrosemarine.com', 'https://ladyrosemarine.com',
+    '{
+      "home_port": "PAHQ",
+      "service_locations": ["PAHQ", "SEC", "WGD", "USCH"],
+      "routes": [
+        {"from": "PAHQ", "to": "SEC", "typical_minutes": 180, "name": "Broken Group"},
+        {"from": "PAHQ", "to": "WGD", "typical_minutes": 240, "name": "Bamfield"},
+        {"from": "PAHQ", "to": "USCH", "typical_minutes": 300, "name": "Ucluelet"}
+      ]
+    }'::jsonb,
+    '{
+      "seasonal": {
+        "summer": {"months": [6,7,8,9], "departures": ["08:00"]},
+        "shoulder": {"months": [5,10], "departures": ["08:00"], "days": [2,4,6]},
+        "winter": {"months": [11,12,1,2,3,4], "departures": ["08:00"], "days": [2,6]}
+      }
+    }'::jsonb,
+    '{
+      "advance_booking_hours": 24,
+      "cancellation_hours": 48,
+      "deposit_percent": 0,
+      "accepts_freight": true,
+      "accepts_passengers": true,
+      "accepts_kayaks": true,
+      "kayak_fee_cad": 25
+    }'::jsonb,
+    'active'
+  )
+  ON CONFLICT (portal_id, code) DO UPDATE SET updated_at = now()
+  RETURNING id INTO v_lrms_id;
+  
+  -- Bamfield Express Water Taxi
+  INSERT INTO cc_transport_operators (
+    portal_id, name, code, operator_type,
+    contact_phone, contact_email,
+    service_area_json, operating_hours_json, booking_settings_json,
+    status
+  ) VALUES (
+    v_portal_id, 'Bamfield Express Water Taxi', 'BEWT', 'water_taxi',
+    '250-728-3000', 'bamfieldexpress@gmail.com',
+    '{
+      "home_port": "WGD",
+      "service_locations": ["WGD", "EGD", "GID", "SEC", "ANA", "PBT"],
+      "on_demand": true,
+      "charter_available": true
+    }'::jsonb,
+    '{
+      "default": {"start": "07:00", "end": "20:00"},
+      "on_call_after_hours": true,
+      "emergency_available": true
+    }'::jsonb,
+    '{
+      "advance_booking_hours": 2,
+      "same_day_available": true,
+      "cancellation_hours": 2,
+      "deposit_percent": 0,
+      "accepts_freight": true,
+      "accepts_passengers": true,
+      "min_charter_cad": 150
+    }'::jsonb,
+    'active'
+  )
+  ON CONFLICT (portal_id, code) DO UPDATE SET updated_at = now()
+  RETURNING id INTO v_bewt_id;
+  
+  -- Broken Island Adventures Water Taxi
+  INSERT INTO cc_transport_operators (
+    portal_id, name, code, operator_type,
+    contact_phone, contact_email,
+    service_area_json, operating_hours_json, booking_settings_json,
+    status
+  ) VALUES (
+    v_portal_id, 'Broken Island Adventures', 'BIA', 'water_taxi',
+    '250-728-3500', 'info@brokenislandadventures.com',
+    '{
+      "home_port": "SEC",
+      "service_locations": ["SEC", "WGD", "USCH"],
+      "specialty": "broken_group_islands",
+      "kayak_support": true
+    }'::jsonb,
+    '{
+      "seasonal": {"months": [5,6,7,8,9]},
+      "default": {"start": "07:00", "end": "19:00"}
+    }'::jsonb,
+    '{
+      "advance_booking_hours": 24,
+      "accepts_freight": false,
+      "accepts_passengers": true,
+      "kayak_transport": true,
+      "camping_drops": true
+    }'::jsonb,
+    'seasonal'
+  )
+  ON CONFLICT (portal_id, code) DO UPDATE SET updated_at = now()
+  RETURNING id INTO v_bwt_id;
+  
+  -- MV Frances Barkley (Lady Rose vessel)
+  INSERT INTO cc_transport_assets (
+    operator_id, name, asset_type,
+    registration_number,
+    specs_json, capacity_json, capabilities_json, safety_json,
+    status
+  ) VALUES (
+    v_lrms_id, 'MV Frances Barkley', 'vessel',
+    'CFN 12345',
+    '{
+      "length_ft": 128,
+      "beam_ft": 26,
+      "draft_ft": 8,
+      "gross_tonnage": 312,
+      "year_built": 1958,
+      "manufacturer": "Burrard Dry Dock",
+      "home_port": "Port Alberni"
+    }'::jsonb,
+    '{
+      "passengers": 200,
+      "crew": 6,
+      "freight_lbs": 20000,
+      "kayaks": 40,
+      "bikes": 20,
+      "wheelchairs": 4,
+      "vehicle_deck": false
+    }'::jsonb,
+    '{
+      "wheelchair_accessible": true,
+      "covered_deck": true,
+      "heated_cabin": true,
+      "washroom": true,
+      "food_service": true,
+      "licensed_bar": true,
+      "night_running": false,
+      "radar": true,
+      "ais": true
+    }'::jsonb,
+    '{
+      "life_rafts": 4,
+      "life_jackets": 250,
+      "epirb": true,
+      "last_inspection": "2025-05-15",
+      "inspection_authority": "Transport Canada"
+    }'::jsonb,
+    'active'
+  )
+  ON CONFLICT DO NOTHING;
+  
+  -- Water Taxi vessel (BEWT)
+  INSERT INTO cc_transport_assets (
+    operator_id, name, asset_type,
+    specs_json, capacity_json, capabilities_json,
+    status
+  ) VALUES (
+    v_bewt_id, 'Bamfield Express I', 'vessel',
+    '{
+      "length_ft": 26,
+      "beam_ft": 8,
+      "year_built": 2018,
+      "manufacturer": "Aluminum Marine",
+      "engine": "Twin 200hp outboard"
+    }'::jsonb,
+    '{
+      "passengers": 12,
+      "crew": 1,
+      "freight_lbs": 1500,
+      "kayaks": 4,
+      "bikes": 2,
+      "wheelchairs": 0
+    }'::jsonb,
+    '{
+      "wheelchair_accessible": false,
+      "covered": true,
+      "heated": false,
+      "washroom": false,
+      "radar": true,
+      "vhf": true
+    }'::jsonb,
+    'active'
+  )
+  ON CONFLICT DO NOTHING;
+  
+  -- Broken Island Adventures vessel
+  INSERT INTO cc_transport_assets (
+    operator_id, name, asset_type,
+    specs_json, capacity_json, capabilities_json,
+    status
+  ) VALUES (
+    v_bwt_id, 'Island Hopper', 'vessel',
+    '{
+      "length_ft": 32,
+      "beam_ft": 10,
+      "year_built": 2015,
+      "manufacturer": "Lifetimer Boats"
+    }'::jsonb,
+    '{
+      "passengers": 18,
+      "crew": 2,
+      "freight_lbs": 2000,
+      "kayaks": 12,
+      "bikes": 0,
+      "wheelchairs": 0
+    }'::jsonb,
+    '{
+      "wheelchair_accessible": false,
+      "covered": true,
+      "kayak_rack": true,
+      "camping_gear_storage": true
+    }'::jsonb,
+    'active'
+  )
+  ON CONFLICT DO NOTHING;
+  
+END $$;
+
+COMMIT;
+```
+
+## Create server/services/operatorService.ts
+```typescript
+// server/services/operatorService.ts
+
+import { db } from '../db';
+import { eq, and, or, ilike, asc } from 'drizzle-orm';
+
+// ============ TYPES ============
+
+interface OperatorSearchRequest {
+  portalSlug?: string;
+  portalId?: string;
+  operatorType?: string;
+  status?: string;
+  query?: string;
+}
+
+// ============ OPERATOR FUNCTIONS ============
+
+export async function getOperators(req: OperatorSearchRequest): Promise<{
+  operators: any[];
+  total: number;
+}> {
+  let portalId = req.portalId;
+  
+  if (req.portalSlug && !portalId) {
+    const portal = await db.query.ccPortals.findFirst({
+      where: eq(ccPortals.slug, req.portalSlug)
+    });
+    if (portal) portalId = portal.id;
+  }
+  
+  const conditions: any[] = [];
+  
+  if (portalId) {
+    conditions.push(eq(ccTransportOperators.portalId, portalId));
+  }
+  
+  if (req.operatorType) {
+    conditions.push(eq(ccTransportOperators.operatorType, req.operatorType));
+  }
+  
+  if (req.status) {
+    conditions.push(eq(ccTransportOperators.status, req.status));
+  } else {
+    conditions.push(or(
+      eq(ccTransportOperators.status, 'active'),
+      eq(ccTransportOperators.status, 'seasonal')
+    ));
+  }
+  
+  if (req.query) {
+    conditions.push(or(
+      ilike(ccTransportOperators.name, `%${req.query}%`),
+      ilike(ccTransportOperators.code, `%${req.query}%`)
+    ));
+  }
+  
+  const operators = await db.query.ccTransportOperators.findMany({
+    where: conditions.length > 0 ? and(...conditions) : undefined,
+    orderBy: [asc(ccTransportOperators.name)]
+  });
+  
+  return {
+    operators,
+    total: operators.length
+  };
+}
+
+export async function getOperatorByCode(
+  portalSlug: string,
+  code: string
+): Promise<any | null> {
+  const portal = await db.query.ccPortals.findFirst({
+    where: eq(ccPortals.slug, portalSlug)
+  });
+  
+  if (!portal) return null;
+  
+  const operator = await db.query.ccTransportOperators.findFirst({
+    where: and(
+      eq(ccTransportOperators.portalId, portal.id),
+      eq(ccTransportOperators.code, code.toUpperCase())
+    )
+  });
+  
+  if (!operator) return null;
+  
+  // Get assets for this operator
+  const assets = await db.query.ccTransportAssets.findMany({
+    where: eq(ccTransportAssets.operatorId, operator.id)
+  });
+  
+  return { ...operator, assets };
+}
+
+export async function getOperatorById(id: string): Promise<any | null> {
+  const operator = await db.query.ccTransportOperators.findFirst({
+    where: eq(ccTransportOperators.id, id)
+  });
+  
+  if (!operator) return null;
+  
+  const assets = await db.query.ccTransportAssets.findMany({
+    where: eq(ccTransportAssets.operatorId, id)
+  });
+  
+  return { ...operator, assets };
+}
+
+// ============ ASSET FUNCTIONS ============
+
+export async function getAssets(operatorId: string): Promise<any[]> {
+  return db.query.ccTransportAssets.findMany({
+    where: and(
+      eq(ccTransportAssets.operatorId, operatorId),
+      or(
+        eq(ccTransportAssets.status, 'active'),
+        eq(ccTransportAssets.status, 'seasonal')
+      )
+    )
+  });
+}
+
+export async function getAssetById(assetId: string): Promise<any | null> {
+  return db.query.ccTransportAssets.findFirst({
+    where: eq(ccTransportAssets.id, assetId)
+  });
+}
+
+export async function getOperatorRoutes(operatorId: string): Promise<any[]> {
+  const operator = await db.query.ccTransportOperators.findFirst({
+    where: eq(ccTransportOperators.id, operatorId)
+  });
+  
+  if (!operator?.serviceAreaJson) return [];
+  
+  const serviceArea = operator.serviceAreaJson as any;
+  return serviceArea.routes || [];
+}
+
+export async function findOperatorsForRoute(
+  portalSlug: string,
+  fromLocationCode: string,
+  toLocationCode: string
+): Promise<any[]> {
+  const portal = await db.query.ccPortals.findFirst({
+    where: eq(ccPortals.slug, portalSlug)
+  });
+  
+  if (!portal) return [];
+  
+  const operators = await db.query.ccTransportOperators.findMany({
+    where: and(
+      eq(ccTransportOperators.portalId, portal.id),
+      or(
+        eq(ccTransportOperators.status, 'active'),
+        eq(ccTransportOperators.status, 'seasonal')
+      )
+    )
+  });
+  
+  // Filter operators that serve both locations
+  return operators.filter(op => {
+    const serviceArea = op.serviceAreaJson as any;
+    const locations = serviceArea?.service_locations || [];
+    
+    // Check if operator serves both locations
+    const servesFrom = locations.includes(fromLocationCode) || serviceArea?.home_port === fromLocationCode;
+    const servesTo = locations.includes(toLocationCode);
+    
+    // Or has a specific route
+    const hasRoute = serviceArea?.routes?.some((r: any) => 
+      (r.from === fromLocationCode && r.to === toLocationCode) ||
+      (r.from === toLocationCode && r.to === fromLocationCode)
+    );
+    
+    return (servesFrom && servesTo) || hasRoute || serviceArea?.on_demand;
+  });
+}
+```
+
+## Add Operator Routes to transport.ts
+```typescript
+// Add to server/routes/transport.ts
+
+import { 
+  getOperators, getOperatorByCode, getOperatorById,
+  getAssets, getAssetById, getOperatorRoutes, findOperatorsForRoute
+} from '../services/operatorService';
+
+// ============ OPERATOR ENDPOINTS ============
+
+// GET /api/transport/portals/:slug/operators - List operators
+router.get('/portals/:slug/operators', async (req, res) => {
+  const { slug } = req.params;
+  const { type, status, q } = req.query;
+  
+  try {
+    const result = await getOperators({
+      portalSlug: slug,
+      operatorType: type as string,
+      status: status as string,
+      query: q as string
+    });
+    
+    res.json(result);
+  } catch (e: any) {
+    console.error('Get operators error:', e);
+    res.status(500).json({ error: 'Failed to get operators' });
+  }
+});
+
+// GET /api/transport/portals/:slug/operators/:code - Get operator by code
+router.get('/portals/:slug/operators/:code', async (req, res) => {
+  const { slug, code } = req.params;
+  
+  try {
+    const operator = await getOperatorByCode(slug, code);
+    if (!operator) {
+      return res.status(404).json({ error: 'Operator not found' });
+    }
+    res.json({ operator });
+  } catch (e: any) {
+    console.error('Get operator error:', e);
+    res.status(500).json({ error: 'Failed to get operator' });
+  }
+});
+
+// GET /api/transport/operators/:id - Get operator by ID
+router.get('/operators/:id', async (req, res) => {
+  const { id } = req.params;
+  
+  try {
+    const operator = await getOperatorById(id);
+    if (!operator) {
+      return res.status(404).json({ error: 'Operator not found' });
+    }
+    res.json({ operator });
+  } catch (e: any) {
+    console.error('Get operator error:', e);
+    res.status(500).json({ error: 'Failed to get operator' });
+  }
+});
+
+// GET /api/transport/operators/:id/assets - Get operator's vessels/vehicles
+router.get('/operators/:id/assets', async (req, res) => {
+  const { id } = req.params;
+  
+  try {
+    const assets = await getAssets(id);
+    res.json({ assets });
+  } catch (e: any) {
+    console.error('Get assets error:', e);
+    res.status(500).json({ error: 'Failed to get assets' });
+  }
+});
+
+// GET /api/transport/operators/:id/routes - Get operator's routes
+router.get('/operators/:id/routes', async (req, res) => {
+  const { id } = req.params;
+  
+  try {
+    const routes = await getOperatorRoutes(id);
+    res.json({ routes });
+  } catch (e: any) {
+    console.error('Get routes error:', e);
+    res.status(500).json({ error: 'Failed to get routes' });
+  }
+});
+
+// GET /api/transport/assets/:id - Get asset by ID
+router.get('/assets/:id', async (req, res) => {
+  const { id } = req.params;
+  
+  try {
+    const asset = await getAssetById(id);
+    if (!asset) {
+      return res.status(404).json({ error: 'Asset not found' });
+    }
+    res.json({ asset });
+  } catch (e: any) {
+    console.error('Get asset error:', e);
+    res.status(500).json({ error: 'Failed to get asset' });
+  }
+});
+
+// GET /api/transport/portals/:slug/route-options - Find operators for a route
+router.get('/portals/:slug/route-options', async (req, res) => {
+  const { slug } = req.params;
+  const { from, to } = req.query;
+  
+  if (!from || !to) {
+    return res.status(400).json({ error: 'from and to location codes required' });
+  }
+  
+  try {
+    const operators = await findOperatorsForRoute(slug, from as string, to as string);
+    res.json({ 
+      from, 
+      to, 
+      operators,
+      count: operators.length 
+    });
+  } catch (e: any) {
+    console.error('Find route options error:', e);
+    res.status(500).json({ error: 'Failed to find route options' });
+  }
+});
+```
+
+## Drizzle Schema Exports
+
+Add to shared/schema.ts:
+- TransportOperator, InsertTransportOperator
+- TransportAsset, InsertTransportAsset
+
+## Deliverables
+- [ ] Migration 079_transport_operators.sql
+- [ ] cc_transport_operators table with RLS
+- [ ] cc_transport_assets table with RLS
+- [ ] 3 operators seeded:
+  - LRMS - Lady Rose Marine Services (ferry)
+  - BEWT - Bamfield Express Water Taxi
+  - BIA - Broken Island Adventures (seasonal)
+- [ ] 3 vessels seeded:
+  - MV Frances Barkley (200 passengers, 40 kayaks)
+  - Bamfield Express I (12 passengers)
+  - Island Hopper (18 passengers, kayak transport)
+- [ ] server/services/operatorService.ts
+- [ ] Routes added to server/routes/transport.ts
+- [ ] Test: GET /api/transport/portals/bamfield/operators returns 3 operators
+- [ ] Test: GET /api/transport/portals/bamfield/operators/LRMS returns Lady Rose with MV Frances Barkley
+- [ ] Test: GET /api/transport/portals/bamfield/route-options?from=PAHQ&to=WGD returns operators serving that route
+
+Report with operator count and route-options test showing Lady Rose serves PAHQ→WGD.

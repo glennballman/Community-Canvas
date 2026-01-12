@@ -1463,3 +1463,73 @@ export const ccLocations = pgTable('cc_locations', {
 export const insertLocationSchema = createInsertSchema(ccLocations).omit({ id: true, createdAt: true, updatedAt: true });
 export type Location = typeof ccLocations.$inferSelect;
 export type InsertLocation = z.infer<typeof insertLocationSchema>;
+
+// Transport Operators - companies providing transport services
+export const ccTransportOperators = pgTable('cc_transport_operators', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id'),
+  portalId: uuid('portal_id'),
+  
+  name: text('name').notNull(),
+  code: varchar('code', { length: 10 }),
+  
+  operatorType: text('operator_type').notNull(),
+  
+  contactName: text('contact_name'),
+  contactPhone: text('contact_phone'),
+  contactEmail: text('contact_email'),
+  websiteUrl: text('website_url'),
+  
+  businessLicense: text('business_license'),
+  insurancePolicy: text('insurance_policy'),
+  insuranceExpiry: date('insurance_expiry'),
+  
+  serviceAreaJson: jsonb('service_area_json').default({}),
+  operatingHoursJson: jsonb('operating_hours_json').default({}),
+  bookingSettingsJson: jsonb('booking_settings_json').default({}),
+  
+  settlementMethod: varchar('settlement_method', { length: 50 }).default('invoice'),
+  settlementAccountJson: jsonb('settlement_account_json').default({}),
+  commissionPercent: numeric('commission_percent', { precision: 5, scale: 2 }).default('0'),
+  
+  externalBookingUrl: text('external_booking_url'),
+  apiEndpoint: text('api_endpoint'),
+  
+  status: varchar('status', { length: 50 }).default('active'),
+  
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+});
+
+export const insertTransportOperatorSchema = createInsertSchema(ccTransportOperators).omit({ id: true, createdAt: true, updatedAt: true });
+export type TransportOperator = typeof ccTransportOperators.$inferSelect;
+export type InsertTransportOperator = z.infer<typeof insertTransportOperatorSchema>;
+
+// Transport Assets - vessels, vehicles, etc.
+export const ccTransportAssets = pgTable('cc_transport_assets', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  operatorId: uuid('operator_id').notNull(),
+  
+  name: text('name').notNull(),
+  assetType: text('asset_type').notNull(),
+  
+  registrationNumber: text('registration_number'),
+  transportCanadaId: text('transport_canada_id'),
+  hullNumber: text('hull_number'),
+  
+  specsJson: jsonb('specs_json').default({}),
+  capacityJson: jsonb('capacity_json').default({}),
+  capabilitiesJson: jsonb('capabilities_json').default({}),
+  safetyJson: jsonb('safety_json').default({}),
+  
+  imageUrl: text('image_url'),
+  
+  status: varchar('status', { length: 50 }).default('active'),
+  
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+});
+
+export const insertTransportAssetSchema = createInsertSchema(ccTransportAssets).omit({ id: true, createdAt: true, updatedAt: true });
+export type TransportAsset = typeof ccTransportAssets.$inferSelect;
+export type InsertTransportAsset = z.infer<typeof insertTransportAssetSchema>;
