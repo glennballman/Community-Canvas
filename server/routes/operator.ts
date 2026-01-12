@@ -9,6 +9,17 @@ import {
   getOpenIncidents,
   testIncidentLifecycle
 } from '../services/incidentService';
+import { 
+  getOperatorAvailability,
+  testOperatorAvailability
+} from '../services/availabilityService';
+import { 
+  OperatorDashboardAvailabilityResponseSchema 
+} from '../../shared/types/operatorDashboardAvailability';
+import { assertNoCountLikeKeysDeep } from '../../shared/types/noCountsGuard';
+import { logActivity } from '../services/activityService';
+import { hasScope } from '../services/federationService';
+import * as reservationService from '../services/reservationService';
 
 const router = express.Router();
 
@@ -433,7 +444,7 @@ router.get('/incidents/:id', authenticateToken, async (req: AuthRequest, res: Re
       return res.status(404).json({ success: false, error: 'Incident not found' });
     }
     
-    const access = await verifyTenantAccess(userId, incident.tenant_id);
+    const access = await verifyTenantAccess(userId, incident.tenantId);
     if (!access.allowed) {
       return res.status(403).json({ success: false, error: 'Access denied to this incident' });
     }
@@ -457,7 +468,7 @@ router.post('/incidents/:id/dispatch', authenticateToken, async (req: AuthReques
       return res.status(404).json({ success: false, error: 'Incident not found' });
     }
     
-    const access = await verifyTenantAccess(userId, incident.tenant_id);
+    const access = await verifyTenantAccess(userId, incident.tenantId);
     if (!access.allowed) {
       return res.status(403).json({ success: false, error: 'Access denied to this incident' });
     }
@@ -483,7 +494,7 @@ router.post('/incidents/:id/resolve', authenticateToken, async (req: AuthRequest
       return res.status(404).json({ success: false, error: 'Incident not found' });
     }
     
-    const access = await verifyTenantAccess(userId, incident.tenant_id);
+    const access = await verifyTenantAccess(userId, incident.tenantId);
     if (!access.allowed) {
       return res.status(403).json({ success: false, error: 'Access denied to this incident' });
     }
@@ -507,6 +518,159 @@ router.get('/incidents/test/lifecycle', async (_req, res: Response) => {
     res.json(result);
   } catch (error: any) {
     console.error('Test incident lifecycle error:', error);
+    res.status(500).json({ success: false, error: String(error) });
+  }
+});
+
+// ============================================================================
+// DASHBOARD AVAILABILITY ROUTES
+// ============================================================================
+
+router.get('/dashboard/availability', authenticateToken, async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) {
+      return res.status(401).json({ success: false, error: 'Authentication required' });
+    }
+    
+    const { portalSlug, start, end, view, includeTruthOnly, includeWebcams, includeIncidents, tenant_id } = req.query;
+    
+    if (!tenant_id) {
+      return res.status(400).json({ success: false, error: 'tenant_id is required' });
+    }
+    
+    const access = await verifyTenantAccess(userId, tenant_id as string);
+    if (!access.allowed) {
+      return res.status(403).json({ success: false, error: 'Access denied to this tenant' });
+    }
+    
+    const result = await getOperatorAvailability({
+      portalSlug: portalSlug as string || 'default',
+      communityId: tenant_id as string,
+      startDate: start ? new Date(start as string) : new Date(),
+      endDate: end ? new Date(end as string) : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      channel: 'chamber_desk',
+      includeTruthOnly: includeTruthOnly === 'true',
+      includeWebcams: includeWebcams === 'true',
+      includeIncidents: includeIncidents === 'true'
+    });
+    
+    const parsed = OperatorDashboardAvailabilityResponseSchema.parse(result);
+    
+    const violations = assertNoCountLikeKeysDeep(parsed);
+    if (violations.length > 0) {
+      console.error('COUNT LEAK DETECTED:', violations);
+      return res.status(500).json({ error: 'Internal contract violation' });
+    }
+    
+    res.json(parsed);
+  } catch (error: any) {
+    console.error('Dashboard availability error:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch availability' });
+  }
+});
+
+router.post('/reservations/bundle', authenticateToken, async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) {
+      return res.status(401).json({ success: false, error: 'Authentication required' });
+    }
+    
+    const { 
+      tenant_id,
+      portalSlug, 
+      windowStart, 
+      windowEnd, 
+      caller, 
+      requirements, 
+      items 
+    } = req.body;
+    
+    if (!tenant_id) {
+      return res.status(400).json({ success: false, error: 'tenant_id is required' });
+    }
+    
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ success: false, error: 'items array is required' });
+    }
+    
+    const access = await verifyTenantAccess(userId, tenant_id);
+    if (!access.allowed) {
+      return res.status(403).json({ success: false, error: 'Access denied to this tenant' });
+    }
+    
+    const bundleId = crypto.randomUUID();
+    const reservations = [];
+    
+    for (const item of items) {
+      const scopeCheck = await hasScope(
+        { 
+          actorTenantId: tenant_id, 
+          actorIndividualId: userId, 
+          communityId: tenant_id 
+        },
+        item.providerTenantId,
+        'reservation:create'
+      );
+      
+      if (!scopeCheck) {
+        return res.status(403).json({ 
+          error: `No federation scope for tenant ${item.providerTenantId}` 
+        });
+      }
+      
+      const reservation = await reservationService.createReservation({
+        tenantId: item.providerTenantId,
+        facilityId: item.facilityId,
+        offerId: item.offerId,
+        customerName: caller?.name || 'Chamber Guest',
+        customerEmail: caller?.email,
+        customerPhone: caller?.telephone,
+        startAt: new Date(windowStart),
+        endAt: new Date(windowEnd),
+        vesselLengthFt: requirements?.boatLengthFt,
+        vehicleLengthFt: requirements?.combinedVehicleLengthFt,
+        idempotencyKey: `bundle-${bundleId}-${item.assetId}`,
+        source: 'chamber'
+      });
+      
+      reservations.push({
+        reservationId: reservation.reservationId,
+        confirmationNumber: reservation.confirmationNumber,
+        assetId: item.assetId,
+        providerTenantId: item.providerTenantId,
+        status: reservation.status
+      });
+      
+      await logActivity({
+        tenantId: tenant_id,
+        actorId: userId,
+        action: 'federation.booking',
+        resourceType: 'reservation',
+        resourceId: reservation.reservationId,
+        metadata: { bundleId, providerTenantId: item.providerTenantId },
+        correlationId: bundleId
+      });
+    }
+    
+    res.json({
+      traceId: crypto.randomUUID(),
+      bundleId,
+      reservations
+    });
+  } catch (error: any) {
+    console.error('Bundle reservation error:', error);
+    res.status(500).json({ success: false, error: 'Failed to create bundle reservation' });
+  }
+});
+
+router.get('/dashboard/availability/test', async (_req, res: Response) => {
+  try {
+    const result = await testOperatorAvailability();
+    res.json(result);
+  } catch (error: any) {
+    console.error('Test availability error:', error);
     res.status(500).json({ success: false, error: String(error) });
   }
 });
