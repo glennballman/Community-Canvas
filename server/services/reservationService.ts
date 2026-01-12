@@ -377,7 +377,7 @@ export async function expireSoftHolds(): Promise<number> {
       AND a.hold_expires_at IS NOT NULL
       AND a.hold_expires_at < now()
       AND r.status = 'pending'
-    RETURNING r.id
+    RETURNING r.id, r.provider_id
   `);
   
   const expiredCount = result.rows.length;
@@ -392,13 +392,13 @@ export async function expireSoftHolds(): Promise<number> {
       )
     `);
     
-    // Log to activity ledger
+    // Log to activity ledger with tenant_id
     for (const row of result.rows) {
       await db.execute(sql`
         INSERT INTO cc_activity_ledger (
-          action, entity_type, entity_id, payload
+          tenant_id, action, entity_type, entity_id, payload
         ) VALUES (
-          'reservation.expired', 'reservation', ${row.id},
+          ${row.provider_id}, 'reservation.expired', 'reservation', ${row.id},
           '{"reason": "soft_hold_expired"}'
         )
       `);
