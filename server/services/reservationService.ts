@@ -7,6 +7,7 @@
 import { db } from '../db';
 import { sql } from 'drizzle-orm';
 import { calculateQuote } from './pricingService';
+import { issueCredentialsForReservation } from './accessService';
 
 // Types
 export interface CreateReservationRequest {
@@ -297,9 +298,9 @@ export async function confirmReservation(reservationId: string): Promise<Reserva
     WHERE reservation_item_id IN (SELECT id FROM cc_reservation_items WHERE reservation_id = ${reservationId})
   `);
   
-  // Get updated reservation
+  // Get updated reservation with dates
   const result = await db.execute(sql`
-    SELECT id, confirmation_number, status, hold_type, provider_id
+    SELECT id, confirmation_number, status, hold_type, provider_id, start_date, end_date
     FROM cc_reservations WHERE id = ${reservationId}
   `);
   
@@ -307,7 +308,21 @@ export async function confirmReservation(reservationId: string): Promise<Reserva
     throw new Error('Reservation not found');
   }
   
-  const row = result.rows[0];
+  const row = result.rows[0] as any;
+  
+  // Auto-issue access credentials (QR + short code)
+  try {
+    const startAt = row.start_date ? new Date(row.start_date) : new Date();
+    const endAt = row.end_date ? new Date(row.end_date) : new Date(Date.now() + 86400000);
+    await issueCredentialsForReservation(
+      row.provider_id,
+      reservationId,
+      startAt,
+      endAt
+    );
+  } catch (err) {
+    console.error('Failed to issue credentials for reservation:', reservationId, err);
+  }
   
   // Log activity
   await db.execute(sql`

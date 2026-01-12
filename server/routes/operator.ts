@@ -20,6 +20,16 @@ import { assertNoCountLikeKeysDeep } from '../../shared/types/noCountsGuard';
 import { logActivity } from '../services/activityService';
 import { hasScope } from '../services/federationService';
 import * as reservationService from '../services/reservationService';
+import {
+  validateQrToken,
+  validateShortCode,
+  validatePlate,
+  recordAccessEvent,
+  revokeCredential,
+  extendCredential,
+  getCredentialsForReservation,
+  testAccessCredentials
+} from '../services/accessService';
 
 const router = express.Router();
 
@@ -671,6 +681,169 @@ router.get('/dashboard/availability/test', async (_req, res: Response) => {
     res.json(result);
   } catch (error: any) {
     console.error('Test availability error:', error);
+    res.status(500).json({ success: false, error: String(error) });
+  }
+});
+
+// ============================================================================
+// Access Credentials Routes
+// ============================================================================
+
+router.post('/credentials/validate', authenticateToken, async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) {
+      return res.status(401).json({ success: false, error: 'Authentication required' });
+    }
+    
+    const { qrToken, shortCode, plate, facilityId, tenant_id } = req.body;
+    
+    if (!tenant_id) {
+      return res.status(400).json({ success: false, error: 'tenant_id is required' });
+    }
+    
+    const access = await verifyTenantAccess(userId, tenant_id);
+    if (!access.allowed) {
+      return res.status(403).json({ success: false, error: 'Access denied to this tenant' });
+    }
+    
+    let result;
+    let method: string;
+    
+    if (qrToken) {
+      result = await validateQrToken(qrToken, facilityId);
+      method = 'qr_scan';
+    } else if (shortCode) {
+      result = await validateShortCode(shortCode, facilityId);
+      method = 'short_code';
+    } else if (plate) {
+      if (!facilityId) {
+        return res.status(400).json({ success: false, error: 'facilityId is required for plate lookup' });
+      }
+      result = await validatePlate(plate, facilityId);
+      method = 'plate_lookup';
+    } else {
+      return res.status(400).json({ success: false, error: 'Provide qrToken, shortCode, or plate' });
+    }
+    
+    await recordAccessEvent(
+      tenant_id,
+      result.credential?.id || null,
+      facilityId || null,
+      'validate',
+      result.result,
+      userId,
+      undefined,
+      { method }
+    );
+    
+    await logActivity({
+      tenantId: tenant_id,
+      actorId: userId,
+      action: 'credential.validated',
+      resourceType: 'credential',
+      resourceId: result.credential?.id || 'unknown',
+      metadata: { result: result.result, method }
+    });
+    
+    res.json(result);
+  } catch (error: any) {
+    console.error('Credential validation error:', error);
+    res.status(500).json({ success: false, error: 'Validation failed' });
+  }
+});
+
+router.post('/credentials/:id/revoke', authenticateToken, async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) {
+      return res.status(401).json({ success: false, error: 'Authentication required' });
+    }
+    
+    const { tenant_id, reason } = req.body;
+    
+    if (!tenant_id) {
+      return res.status(400).json({ success: false, error: 'tenant_id is required' });
+    }
+    
+    const access = await verifyTenantAccess(userId, tenant_id);
+    if (!access.allowed) {
+      return res.status(403).json({ success: false, error: 'Access denied to this tenant' });
+    }
+    
+    await revokeCredential(req.params.id, reason || 'Revoked by operator', userId);
+    
+    res.json({ success: true });
+  } catch (error: any) {
+    console.error('Credential revoke error:', error);
+    res.status(500).json({ success: false, error: error.message || 'Failed to revoke credential' });
+  }
+});
+
+router.post('/credentials/:id/extend', authenticateToken, async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) {
+      return res.status(401).json({ success: false, error: 'Authentication required' });
+    }
+    
+    const { tenant_id, validUntil } = req.body;
+    
+    if (!tenant_id) {
+      return res.status(400).json({ success: false, error: 'tenant_id is required' });
+    }
+    
+    if (!validUntil) {
+      return res.status(400).json({ success: false, error: 'validUntil is required' });
+    }
+    
+    const access = await verifyTenantAccess(userId, tenant_id);
+    if (!access.allowed) {
+      return res.status(403).json({ success: false, error: 'Access denied to this tenant' });
+    }
+    
+    const result = await extendCredential(req.params.id, new Date(validUntil), userId);
+    
+    res.json(result);
+  } catch (error: any) {
+    console.error('Credential extend error:', error);
+    res.status(500).json({ success: false, error: error.message || 'Failed to extend credential' });
+  }
+});
+
+router.get('/reservations/:id/credentials', authenticateToken, async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) {
+      return res.status(401).json({ success: false, error: 'Authentication required' });
+    }
+    
+    const { tenant_id } = req.query;
+    
+    if (!tenant_id) {
+      return res.status(400).json({ success: false, error: 'tenant_id query param is required' });
+    }
+    
+    const access = await verifyTenantAccess(userId, String(tenant_id));
+    if (!access.allowed) {
+      return res.status(403).json({ success: false, error: 'Access denied to this tenant' });
+    }
+    
+    const credentials = await getCredentialsForReservation(req.params.id);
+    
+    res.json({ credentials });
+  } catch (error: any) {
+    console.error('Get credentials error:', error);
+    res.status(500).json({ success: false, error: 'Failed to get credentials' });
+  }
+});
+
+router.get('/credentials/test', async (_req, res: Response) => {
+  try {
+    const result = await testAccessCredentials();
+    res.json(result);
+  } catch (error: any) {
+    console.error('Test credentials error:', error);
     res.status(500).json({ success: false, error: String(error) });
   }
 });
