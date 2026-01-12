@@ -1,7 +1,19 @@
 BEGIN;
 
--- ============ TRIPS ============
--- A trip is a container for a group's itinerary across multiple carts/reservations
+-- ============ TRIPS - ADD CART-FIRST RESERVATION FIELDS ============
+-- cc_trips already exists from expedition engine, add new fields
+
+ALTER TABLE cc_trips ADD COLUMN IF NOT EXISTS expected_adults integer DEFAULT 1;
+ALTER TABLE cc_trips ADD COLUMN IF NOT EXISTS expected_children integer DEFAULT 0;
+ALTER TABLE cc_trips ADD COLUMN IF NOT EXISTS expected_infants integer DEFAULT 0;
+ALTER TABLE cc_trips ADD COLUMN IF NOT EXISTS trip_type varchar DEFAULT 'leisure';
+ALTER TABLE cc_trips ADD COLUMN IF NOT EXISTS intent_json jsonb DEFAULT '{}'::jsonb;
+ALTER TABLE cc_trips ADD COLUMN IF NOT EXISTS needs_json jsonb DEFAULT '{}'::jsonb;
+ALTER TABLE cc_trips ADD COLUMN IF NOT EXISTS budget_json jsonb DEFAULT '{}'::jsonb;
+ALTER TABLE cc_trips ADD COLUMN IF NOT EXISTS viral_json jsonb DEFAULT '{}'::jsonb;
+
+-- ============ TRIPS - ENSURE INDEXES AND RLS ============
+-- Create indexes if not exist (some may already exist from expedition engine)
 
 CREATE TABLE IF NOT EXISTS cc_trips (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),

@@ -2390,4 +2390,214 @@ router.get('/carts/:cartId/receipt', async (req: Request, res: Response) => {
   }
 });
 
+// ============ TRIP ENDPOINTS ============
+
+import { 
+  createTrip, getTrip, updateTrip, getTripCarts, createTripCart,
+  createInvitation, getInvitation, acceptInvitation, declineInvitation, getTripInvitations
+} from '../services/tripService';
+
+router.post('/portals/:slug/trips', async (req: Request, res: Response) => {
+  const { slug } = req.params;
+  const b = req.body || {};
+  
+  if (!b.groupName || !b.primaryContactName) {
+    return res.status(400).json({ error: 'groupName and primaryContactName required' });
+  }
+  
+  try {
+    const result = await createTrip({
+      portalSlug: slug,
+      groupName: b.groupName,
+      tripType: b.tripType,
+      startDate: b.startDate ? new Date(b.startDate) : undefined,
+      endDate: b.endDate ? new Date(b.endDate) : undefined,
+      primaryContactName: b.primaryContactName,
+      primaryContactEmail: b.primaryContactEmail,
+      primaryContactPhone: b.primaryContactPhone,
+      expectedAdults: b.expectedAdults,
+      expectedChildren: b.expectedChildren,
+      expectedInfants: b.expectedInfants,
+      intent: b.intent,
+      needs: b.needs,
+      budget: b.budget,
+      viralSource: b.viralSource,
+      referrerTripId: b.referrerTripId
+    });
+    
+    res.json(result);
+  } catch (e: any) {
+    console.error('Create trip error:', e);
+    res.status(500).json({ error: 'Failed to create trip' });
+  }
+});
+
+router.get('/trips/:accessCode', async (req: Request, res: Response) => {
+  const { accessCode } = req.params;
+  
+  try {
+    const trip = await getTrip(accessCode);
+    if (!trip) {
+      return res.status(404).json({ error: 'Trip not found' });
+    }
+    
+    const carts = await getTripCarts(trip.id);
+    
+    res.json({ 
+      trip, 
+      carts, 
+      shareUrl: `${process.env.PUBLIC_URL || 'https://communitycanvas.ca'}/trip/${accessCode}` 
+    });
+  } catch (e: any) {
+    console.error('Get trip error:', e);
+    res.status(500).json({ error: 'Failed to get trip' });
+  }
+});
+
+router.patch('/trips/:accessCode', async (req: Request, res: Response) => {
+  const { accessCode } = req.params;
+  const b = req.body || {};
+  
+  try {
+    const updated = await updateTrip(accessCode, {
+      groupName: b.groupName,
+      startDate: b.startDate ? new Date(b.startDate) : undefined,
+      endDate: b.endDate ? new Date(b.endDate) : undefined,
+      expectedAdults: b.expectedAdults,
+      expectedChildren: b.expectedChildren,
+      expectedInfants: b.expectedInfants,
+      status: b.status,
+      intentJson: b.intent,
+      needsJson: b.needs,
+      budgetJson: b.budget
+    });
+    
+    if (!updated) {
+      return res.status(404).json({ error: 'Trip not found' });
+    }
+    
+    res.json({ trip: updated });
+  } catch (e: any) {
+    console.error('Update trip error:', e);
+    res.status(500).json({ error: 'Failed to update trip' });
+  }
+});
+
+router.post('/trips/:accessCode/carts', async (req: Request, res: Response) => {
+  const { accessCode } = req.params;
+  const b = req.body || {};
+  
+  try {
+    const result = await createTripCart(accessCode, {
+      primaryGuestName: b.primaryGuestName,
+      primaryGuestEmail: b.primaryGuestEmail
+    });
+    
+    res.json(result);
+  } catch (e: any) {
+    console.error('Create trip cart error:', e);
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// ============ INVITATION ENDPOINTS ============
+
+router.post('/trips/:accessCode/invitations', async (req: Request, res: Response) => {
+  const { accessCode } = req.params;
+  const b = req.body || {};
+  
+  if (!b.invitationType) {
+    return res.status(400).json({ error: 'invitationType required' });
+  }
+  
+  try {
+    const trip = await getTrip(accessCode);
+    if (!trip) {
+      return res.status(404).json({ error: 'Trip not found' });
+    }
+    
+    const result = await createInvitation({
+      tripId: trip.id,
+      invitationType: b.invitationType,
+      recipientName: b.recipientName,
+      recipientEmail: b.recipientEmail,
+      recipientPhone: b.recipientPhone,
+      messageSubject: b.messageSubject,
+      messageBody: b.messageBody,
+      senderName: b.senderName || trip.primary_contact_name,
+      handoffId: b.handoffId,
+      nextDestinationName: b.nextDestinationName,
+      expiresInDays: b.expiresInDays
+    });
+    
+    res.json(result);
+  } catch (e: any) {
+    console.error('Create invitation error:', e);
+    res.status(500).json({ error: 'Failed to create invitation' });
+  }
+});
+
+router.get('/trips/:accessCode/invitations', async (req: Request, res: Response) => {
+  const { accessCode } = req.params;
+  
+  try {
+    const trip = await getTrip(accessCode);
+    if (!trip) {
+      return res.status(404).json({ error: 'Trip not found' });
+    }
+    
+    const invitations = await getTripInvitations(trip.id);
+    res.json({ invitations });
+  } catch (e: any) {
+    console.error('Get invitations error:', e);
+    res.status(500).json({ error: 'Failed to get invitations' });
+  }
+});
+
+router.get('/invite/:token', async (req: Request, res: Response) => {
+  const { token } = req.params;
+  
+  try {
+    const result = await getInvitation(token);
+    if (!result) {
+      return res.status(404).json({ error: 'Invitation not found' });
+    }
+    
+    res.json(result);
+  } catch (e: any) {
+    console.error('Get invitation error:', e);
+    res.status(500).json({ error: 'Failed to get invitation' });
+  }
+});
+
+router.post('/invite/:token/accept', async (req: Request, res: Response) => {
+  const { token } = req.params;
+  const b = req.body || {};
+  
+  try {
+    const result = await acceptInvitation(token, b.name, b.email);
+    
+    if (!result.success) {
+      return res.status(400).json({ error: result.message });
+    }
+    
+    res.json(result);
+  } catch (e: any) {
+    console.error('Accept invitation error:', e);
+    res.status(500).json({ error: 'Failed to accept invitation' });
+  }
+});
+
+router.post('/invite/:token/decline', async (req: Request, res: Response) => {
+  const { token } = req.params;
+  
+  try {
+    await declineInvitation(token);
+    res.json({ success: true });
+  } catch (e: any) {
+    console.error('Decline invitation error:', e);
+    res.status(500).json({ error: 'Failed to decline invitation' });
+  }
+});
+
 export default router;

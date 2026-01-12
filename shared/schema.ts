@@ -260,6 +260,16 @@ export const ccTrips = pgTable('cc_trips', {
   nextDestinationEmail: varchar('next_destination_email'),
   nextDestinationPhone: varchar('next_destination_phone'),
   coordinateHandoff: boolean('coordinate_handoff').default(false),
+  
+  // Cart-first reservation fields (added 074)
+  tripType: varchar('trip_type').default('leisure'),
+  expectedAdults: integer('expected_adults').default(1),
+  expectedChildren: integer('expected_children').default(0),
+  expectedInfants: integer('expected_infants').default(0),
+  intentJson: jsonb('intent_json').default({}),
+  needsJson: jsonb('needs_json').default({}),
+  budgetJson: jsonb('budget_json').default({}),
+  viralJson: jsonb('viral_json').default({}),
 });
 
 export const insertTripSchema = createInsertSchema(ccTrips).omit({ id: true, createdAt: true, updatedAt: true });
@@ -1122,48 +1132,10 @@ export const insertWeatherTrendSchema = createInsertSchema(cc_weather_trends).om
 export type WeatherTrend = typeof cc_weather_trends.$inferSelect;
 export type InsertWeatherTrend = z.infer<typeof insertWeatherTrendSchema>;
 
-// Trips - container for group itineraries across multiple carts/reservations
-export const cc_trips = pgTable('cc_trips', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  
-  portalId: uuid('portal_id').references(() => ccPortals.id, { onDelete: 'set null' }),
-  tenantId: uuid('tenant_id').references(() => ccTenants.id, { onDelete: 'set null' }),
-  
-  accessCode: varchar('access_code', { length: 20 }).notNull().unique(),
-  
-  groupName: varchar('group_name', { length: 255 }).notNull(),
-  tripType: varchar('trip_type', { length: 50 }).default('leisure'),
-  
-  startDate: date('start_date'),
-  endDate: date('end_date'),
-  
-  primaryContactName: varchar('primary_contact_name', { length: 255 }),
-  primaryContactEmail: varchar('primary_contact_email', { length: 255 }),
-  primaryContactPhone: varchar('primary_contact_phone', { length: 50 }),
-  
-  expectedAdults: integer('expected_adults').default(1),
-  expectedChildren: integer('expected_children').default(0),
-  expectedInfants: integer('expected_infants').default(0),
-  
-  status: varchar('status', { length: 50 }).notNull().default('planning'),
-  
-  intentJson: jsonb('intent_json').default({}),
-  needsJson: jsonb('needs_json').default({}),
-  budgetJson: jsonb('budget_json').default({}),
-  viralJson: jsonb('viral_json').default({}),
-  
-  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
-  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
-});
-
-export const insertTripSchema = createInsertSchema(cc_trips).omit({ id: true, createdAt: true, updatedAt: true });
-export type Trip = typeof cc_trips.$inferSelect;
-export type InsertTrip = z.infer<typeof insertTripSchema>;
-
 // Trip Invitations - invite party members, planners, or next destinations
 export const cc_trip_invitations = pgTable('cc_trip_invitations', {
   id: uuid('id').primaryKey().defaultRandom(),
-  tripId: uuid('trip_id').notNull().references(() => cc_trips.id, { onDelete: 'cascade' }),
+  tripId: uuid('trip_id').notNull().references(() => ccTrips.id, { onDelete: 'cascade' }),
   
   invitationType: varchar('invitation_type', { length: 50 }).notNull(),
   
