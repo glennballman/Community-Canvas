@@ -2470,3 +2470,105 @@ export const insertPmsReservationSchema = createInsertSchema(ccPmsReservations).
 });
 export type PmsReservation = typeof ccPmsReservations.$inferSelect;
 export type InsertPmsReservation = z.infer<typeof insertPmsReservationSchema>;
+
+// ============ UNIT CALENDAR ============
+export const ccUnitCalendar = pgTable('cc_unit_calendar', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  unitId: uuid('unit_id').notNull(),
+  
+  calendarDate: date('calendar_date').notNull(),
+  
+  availability: varchar('availability').default('available'),
+  
+  rateCad: numeric('rate_cad', { precision: 10, scale: 2 }),
+  minStayNights: integer('min_stay_nights'),
+  
+  source: varchar('source').default('manual'),
+  sourceId: uuid('source_id'),
+  sourceRef: text('source_ref'),
+  
+  blockReason: text('block_reason'),
+  blockedBy: text('blocked_by'),
+  blockedAt: timestamp('blocked_at', { withTimezone: true }),
+  
+  notes: text('notes'),
+  
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+});
+
+export const insertUnitCalendarSchema = createInsertSchema(ccUnitCalendar).omit({ 
+  id: true, createdAt: true, updatedAt: true 
+});
+export type UnitCalendar = typeof ccUnitCalendar.$inferSelect;
+export type InsertUnitCalendar = z.infer<typeof insertUnitCalendarSchema>;
+
+// ============ SEASONAL RULES ============
+export const ccSeasonalRules = pgTable('cc_seasonal_rules', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  
+  portalId: uuid('portal_id'),
+  propertyId: uuid('property_id'),
+  unitId: uuid('unit_id'),
+  
+  name: text('name').notNull(),
+  code: varchar('code', { length: 20 }),
+  
+  startDate: date('start_date'),
+  endDate: date('end_date'),
+  startMonth: integer('start_month'),
+  startDay: integer('start_day'),
+  endMonth: integer('end_month'),
+  endDay: integer('end_day'),
+  
+  rateType: varchar('rate_type').default('fixed'),
+  rateValue: numeric('rate_value', { precision: 10, scale: 2 }),
+  
+  minStayNights: integer('min_stay_nights'),
+  maxStayNights: integer('max_stay_nights'),
+  
+  bookingWindowDays: integer('booking_window_days'),
+  noCheckInDays: integer('no_check_in_days').array(),
+  noCheckOutDays: integer('no_check_out_days').array(),
+  
+  priority: integer('priority').default(0),
+  
+  status: varchar('status').default('active'),
+  
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+});
+
+export const insertSeasonalRuleSchema = createInsertSchema(ccSeasonalRules).omit({ 
+  id: true, createdAt: true, updatedAt: true 
+});
+export type SeasonalRule = typeof ccSeasonalRules.$inferSelect;
+export type InsertSeasonalRule = z.infer<typeof insertSeasonalRuleSchema>;
+
+// ============ ICAL SYNC LOG ============
+export const ccIcalSyncLog = pgTable('cc_ical_sync_log', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  unitId: uuid('unit_id').notNull(),
+  
+  syncDirection: varchar('sync_direction').notNull(),
+  syncUrl: text('sync_url'),
+  
+  status: varchar('status').default('pending'),
+  
+  eventsFound: integer('events_found').default(0),
+  eventsCreated: integer('events_created').default(0),
+  eventsUpdated: integer('events_updated').default(0),
+  eventsRemoved: integer('events_removed').default(0),
+  
+  errorMessage: text('error_message'),
+  errorDetails: jsonb('error_details'),
+  
+  startedAt: timestamp('started_at', { withTimezone: true }).defaultNow(),
+  completedAt: timestamp('completed_at', { withTimezone: true }),
+});
+
+export const insertIcalSyncLogSchema = createInsertSchema(ccIcalSyncLog).omit({ 
+  id: true, startedAt: true 
+});
+export type IcalSyncLog = typeof ccIcalSyncLog.$inferSelect;
+export type InsertIcalSyncLog = z.infer<typeof insertIcalSyncLogSchema>;

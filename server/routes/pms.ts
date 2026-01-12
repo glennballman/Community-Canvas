@@ -7,6 +7,11 @@ import {
   searchReservations,
   confirmReservation, checkInGuest, checkOutGuest, cancelReservation
 } from '../services/pmsService';
+import {
+  getUnitCalendar, blockDates, unblockDates, syncReservationToCalendar,
+  getPropertyAvailability, getSeasonalRules, createSeasonalRule,
+  updateSeasonalRule, deleteSeasonalRule
+} from '../services/unitCalendarService';
 
 const router = Router();
 
@@ -318,6 +323,185 @@ router.post('/portals/:slug/reservations/:id/cancel', async (req, res) => {
     const reservation = await cancelReservation(slug, id, reason);
     res.json({ reservation });
   } catch (e: any) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// ============ CALENDAR ENDPOINTS ============
+
+router.get('/portals/:slug/units/:unitId/calendar', async (req, res) => {
+  const { slug, unitId } = req.params;
+  const { startDate, endDate } = req.query;
+  
+  if (!startDate || !endDate) {
+    return res.status(400).json({ error: 'startDate and endDate required' });
+  }
+  
+  try {
+    const calendar = await getUnitCalendar(
+      slug,
+      unitId,
+      new Date(startDate as string),
+      new Date(endDate as string)
+    );
+    res.json({ calendar });
+  } catch (e: any) {
+    console.error('Get calendar error:', e);
+    if (e.message?.includes('not found') || e.message?.includes('access denied')) {
+      return res.status(404).json({ error: e.message });
+    }
+    res.status(500).json({ error: 'Failed to get calendar' });
+  }
+});
+
+router.post('/portals/:slug/units/:unitId/block', async (req, res) => {
+  const { slug, unitId } = req.params;
+  const { startDate, endDate, availability, reason, blockedBy } = req.body || {};
+  
+  if (!startDate || !endDate) {
+    return res.status(400).json({ error: 'startDate and endDate required' });
+  }
+  
+  try {
+    const blocked = await blockDates({
+      portalSlug: slug,
+      unitId,
+      startDate: new Date(startDate),
+      endDate: new Date(endDate),
+      availability: availability || 'blocked',
+      reason,
+      blockedBy
+    });
+    res.json({ blocked, daysBlocked: blocked.length });
+  } catch (e: any) {
+    console.error('Block dates error:', e);
+    res.status(400).json({ error: e.message });
+  }
+});
+
+router.post('/portals/:slug/units/:unitId/unblock', async (req, res) => {
+  const { slug, unitId } = req.params;
+  const { startDate, endDate } = req.body || {};
+  
+  if (!startDate || !endDate) {
+    return res.status(400).json({ error: 'startDate and endDate required' });
+  }
+  
+  try {
+    const daysUnblocked = await unblockDates(
+      slug,
+      unitId,
+      new Date(startDate),
+      new Date(endDate)
+    );
+    res.json({ daysUnblocked });
+  } catch (e: any) {
+    console.error('Unblock dates error:', e);
+    res.status(400).json({ error: e.message });
+  }
+});
+
+router.post('/portals/:slug/reservations/:id/sync-calendar', async (req, res) => {
+  const { id } = req.params;
+  try {
+    await syncReservationToCalendar(id);
+    res.json({ success: true });
+  } catch (e: any) {
+    console.error('Sync calendar error:', e);
+    res.status(400).json({ error: e.message });
+  }
+});
+
+router.get('/portals/:slug/properties/:propertyId/calendar', async (req, res) => {
+  const { slug, propertyId } = req.params;
+  const { startDate, endDate } = req.query;
+  
+  if (!startDate || !endDate) {
+    return res.status(400).json({ error: 'startDate and endDate required' });
+  }
+  
+  try {
+    const result = await getPropertyAvailability(
+      slug,
+      propertyId,
+      new Date(startDate as string),
+      new Date(endDate as string)
+    );
+    res.json(result);
+  } catch (e: any) {
+    console.error('Get property availability error:', e);
+    res.status(500).json({ error: 'Failed to get property availability' });
+  }
+});
+
+// ============ SEASONAL RULES ENDPOINTS ============
+
+router.get('/portals/:slug/seasonal-rules', async (req, res) => {
+  const { slug } = req.params;
+  const { propertyId } = req.query;
+  
+  try {
+    const rules = await getSeasonalRules(slug, propertyId as string | undefined);
+    res.json({ rules, count: rules.length });
+  } catch (e: any) {
+    console.error('Get seasonal rules error:', e);
+    res.status(500).json({ error: 'Failed to get seasonal rules' });
+  }
+});
+
+router.post('/portals/:slug/seasonal-rules', async (req, res) => {
+  const { slug } = req.params;
+  const b = req.body || {};
+  
+  if (!b.name || !b.rateType || b.rateValue === undefined) {
+    return res.status(400).json({ error: 'name, rateType, and rateValue required' });
+  }
+  
+  try {
+    const rule = await createSeasonalRule(slug, {
+      propertyId: b.propertyId,
+      unitId: b.unitId,
+      name: b.name,
+      code: b.code,
+      startDate: b.startDate,
+      endDate: b.endDate,
+      startMonth: b.startMonth,
+      startDay: b.startDay,
+      endMonth: b.endMonth,
+      endDay: b.endDay,
+      rateType: b.rateType,
+      rateValue: b.rateValue,
+      minStayNights: b.minStayNights,
+      priority: b.priority
+    });
+    res.json({ rule });
+  } catch (e: any) {
+    console.error('Create seasonal rule error:', e);
+    res.status(400).json({ error: e.message });
+  }
+});
+
+router.patch('/portals/:slug/seasonal-rules/:ruleId', async (req, res) => {
+  const { slug, ruleId } = req.params;
+  const b = req.body || {};
+  
+  try {
+    const rule = await updateSeasonalRule(slug, ruleId, b);
+    res.json({ rule });
+  } catch (e: any) {
+    console.error('Update seasonal rule error:', e);
+    res.status(400).json({ error: e.message });
+  }
+});
+
+router.delete('/portals/:slug/seasonal-rules/:ruleId', async (req, res) => {
+  const { slug, ruleId } = req.params;
+  
+  try {
+    const deleted = await deleteSeasonalRule(slug, ruleId);
+    res.json({ deleted });
+  } catch (e: any) {
+    console.error('Delete seasonal rule error:', e);
     res.status(400).json({ error: e.message });
   }
 });
