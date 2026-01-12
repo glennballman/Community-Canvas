@@ -1,6 +1,14 @@
 import express, { Response } from 'express';
 import { serviceQuery } from '../db/tenantDb';
 import { authenticateToken, AuthRequest } from './foundation';
+import { 
+  createIncident, 
+  dispatchTow, 
+  resolveIncident, 
+  getIncident, 
+  getOpenIncidents,
+  testIncidentLifecycle
+} from '../services/incidentService';
 
 const router = express.Router();
 
@@ -327,6 +335,111 @@ router.post('/call-log', authenticateToken, async (req: AuthRequest, res: Respon
       success: false, 
       error: 'Failed to log call' 
     });
+  }
+});
+
+// ============================================================================
+// INCIDENT MANAGEMENT ROUTES
+// ============================================================================
+
+router.post('/incidents', authenticateToken, async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    const { tenant_id, incident_type, severity, location_label, latitude, longitude, facility_id, narrative, reporter_name, reporter_contact } = req.body;
+    
+    if (!tenant_id || !incident_type || !narrative) {
+      return res.status(400).json({ success: false, error: 'tenant_id, incident_type, and narrative are required' });
+    }
+    
+    const incident = await createIncident({
+      tenantId: tenant_id,
+      incidentType: incident_type,
+      severity: severity || 'warning',
+      locationLabel: location_label,
+      latitude,
+      longitude,
+      facilityId: facility_id,
+      narrative,
+      reporterName: reporter_name,
+      reporterContact: reporter_contact,
+      createdBy: userId,
+    });
+    
+    res.json({ success: true, incident });
+  } catch (error: any) {
+    console.error('Create incident error:', error);
+    res.status(500).json({ success: false, error: 'Failed to create incident' });
+  }
+});
+
+router.get('/incidents', authenticateToken, async (req: AuthRequest, res: Response) => {
+  try {
+    const { tenant_id } = req.query;
+    
+    if (!tenant_id) {
+      return res.status(400).json({ success: false, error: 'tenant_id is required' });
+    }
+    
+    const incidents = await getOpenIncidents(tenant_id as string);
+    res.json({ success: true, incidents });
+  } catch (error: any) {
+    console.error('Get incidents error:', error);
+    res.status(500).json({ success: false, error: 'Failed to get incidents' });
+  }
+});
+
+router.get('/incidents/:id', authenticateToken, async (req: AuthRequest, res: Response) => {
+  try {
+    const incident = await getIncident(req.params.id);
+    
+    if (!incident) {
+      return res.status(404).json({ success: false, error: 'Incident not found' });
+    }
+    
+    res.json({ success: true, incident });
+  } catch (error: any) {
+    console.error('Get incident error:', error);
+    res.status(500).json({ success: false, error: 'Failed to get incident' });
+  }
+});
+
+router.post('/incidents/:id/dispatch', authenticateToken, async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    const { priority, notes } = req.body;
+    
+    const result = await dispatchTow(req.params.id, priority || 'normal', notes || '', userId);
+    res.json({ success: true, ...result });
+  } catch (error: any) {
+    console.error('Dispatch tow error:', error);
+    res.status(500).json({ success: false, error: 'Failed to dispatch tow' });
+  }
+});
+
+router.post('/incidents/:id/resolve', authenticateToken, async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    const { resolution } = req.body;
+    
+    if (!resolution) {
+      return res.status(400).json({ success: false, error: 'resolution is required' });
+    }
+    
+    await resolveIncident(req.params.id, resolution, userId);
+    res.json({ success: true, status: 'resolved' });
+  } catch (error: any) {
+    console.error('Resolve incident error:', error);
+    res.status(500).json({ success: false, error: 'Failed to resolve incident' });
+  }
+});
+
+router.get('/incidents/test/lifecycle', async (_req, res: Response) => {
+  try {
+    const result = await testIncidentLifecycle();
+    res.json(result);
+  } catch (error: any) {
+    console.error('Test incident lifecycle error:', error);
+    res.status(500).json({ success: false, error: String(error) });
   }
 });
 

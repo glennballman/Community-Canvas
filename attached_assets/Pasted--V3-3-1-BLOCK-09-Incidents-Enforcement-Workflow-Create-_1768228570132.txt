@@ -1,0 +1,270 @@
+**V3.3.1 BLOCK 09: Incidents + Enforcement Workflow**
+
+Create the incident management system for emergencies (firetruck blockage scenario).
+
+## Create cc_incidents table
+```sql
+CREATE TABLE cc_incidents (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id uuid NOT NULL REFERENCES cc_tenants(id),
+  community_id uuid REFERENCES cc_tenants(id), -- Bamfield Community
+  portal_id uuid REFERENCES cc_portals(id),
+  
+  -- Identification
+  incident_number varchar NOT NULL, -- 'INC-260112-001'
+  
+  -- Classification
+  incident_type varchar NOT NULL CHECK (incident_type IN (
+    'road_blockage', 'illegal_parking', 'slip_violation', 
+    'damage_report', 'safety_hazard', 'medical', 'fire', 'other'
+  )),
+  severity varchar NOT NULL DEFAULT 'warning' CHECK (severity IN ('info', 'warning', 'critical')),
+  status varchar NOT NULL DEFAULT 'open' CHECK (status IN (
+    'open', 'triaged', 'dispatched', 'resolved', 'closed', 'cancelled'
+  )),
+  
+  -- Location
+  location_label text,
+  latitude numeric,
+  longitude numeric,
+  facility_id uuid REFERENCES cc_facilities(id),
+  inventory_unit_id uuid REFERENCES cc_inventory_units(id),
+  
+  -- Evidence
+  webcam_entity_id integer, -- Link to existing webcam if applicable
+  photo_urls text[], -- Uploaded evidence photos
+  
+  -- Details
+  narrative text, -- Description of incident
+  reporter_name varchar,
+  reporter_contact varchar,
+  
+  -- Dispatch tracking (append-only log)
+  dispatch_log jsonb DEFAULT '[]'::jsonb,
+  -- Example: [{"action": "tow_request", "provider": {"name": "ABC Towing", "contact": "250-555-0100"}, "notes": "Fire lane blocked", "dispatchedAt": "2026-01-12T22:10:00Z", "dispatchedBy": "uuid"}]
+  
+  -- Resolution
+  resolved_at timestamptz,
+  resolution text, -- 'vehicle_removed', 'false_alarm', 'owner_notified', etc.
+  resolved_by uuid REFERENCES cc_individuals(id),
+  
+  -- QA tagging
+  qa_seed_tag varchar, -- For test cleanup
+  
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now(),
+  created_by uuid REFERENCES cc_individuals(id)
+);
+
+CREATE UNIQUE INDEX idx_incidents_number ON cc_incidents(incident_number);
+CREATE INDEX idx_incidents_status ON cc_incidents(tenant_id, status) WHERE status NOT IN ('resolved', 'closed');
+CREATE INDEX idx_incidents_qa ON cc_incidents(qa_seed_tag) WHERE qa_seed_tag IS NOT NULL;
+ALTER TABLE cc_incidents ENABLE ROW LEVEL SECURITY;
+```
+
+## Create cc_incident_actions table
+```sql
+CREATE TABLE cc_incident_actions (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id uuid NOT NULL REFERENCES cc_tenants(id),
+  incident_id uuid NOT NULL REFERENCES cc_incidents(id) ON DELETE CASCADE,
+  
+  action_type varchar NOT NULL CHECK (action_type IN (
+    'dispatch_tow', 'notify_owner', 'issue_warning', 
+    'call_police', 'call_fire', 'call_ambulance',
+    'add_evidence', 'add_note', 'escalate', 'resolve'
+  )),
+  
+  -- Action details
+  payload jsonb DEFAULT '{}'::jsonb,
+  -- Examples:
+  -- dispatch_tow: {"provider": "ABC Towing", "contact": "250-555-0100", "priority": "emergency"}
+  -- notify_owner: {"method": "sms", "contact": "+1-250-555-0100", "message": "..."}
+  -- add_evidence: {"photoUrl": "...", "description": "..."}
+  
+  result varchar, -- 'queued', 'sent', 'acknowledged', 'completed', 'failed'
+  
+  performed_at timestamptz DEFAULT now(),
+  performed_by uuid REFERENCES cc_individuals(id)
+);
+
+CREATE INDEX idx_incident_actions_incident ON cc_incident_actions(incident_id);
+ALTER TABLE cc_incident_actions ENABLE ROW LEVEL SECURITY;
+```
+
+## Create cc_tow_requests table
+```sql
+CREATE TABLE cc_tow_requests (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id uuid NOT NULL REFERENCES cc_tenants(id),
+  incident_id uuid NOT NULL REFERENCES cc_incidents(id),
+  incident_action_id uuid REFERENCES cc_incident_actions(id),
+  
+  -- Request details
+  priority varchar NOT NULL DEFAULT 'normal' CHECK (priority IN ('normal', 'urgent', 'emergency')),
+  
+  -- Vehicle info (if known)
+  vehicle_plate varchar,
+  vehicle_description text,
+  
+  -- Location
+  location_label text,
+  latitude numeric,
+  longitude numeric,
+  
+  -- Tow provider
+  provider_name varchar,
+  provider_contact varchar,
+  
+  -- Status
+  status varchar NOT NULL DEFAULT 'requested' CHECK (status IN (
+    'requested', 'acknowledged', 'en_route', 'on_scene', 'completed', 'cancelled'
+  )),
+  
+  -- Timestamps
+  requested_at timestamptz DEFAULT now(),
+  acknowledged_at timestamptz,
+  arrived_at timestamptz,
+  completed_at timestamptz,
+  
+  notes text,
+  
+  created_at timestamptz DEFAULT now()
+);
+
+CREATE INDEX idx_tow_requests_incident ON cc_tow_requests(incident_id);
+ALTER TABLE cc_tow_requests ENABLE ROW LEVEL SECURITY;
+```
+
+## Create incidentService.ts
+```typescript
+// server/services/incidentService.ts
+
+interface CreateIncidentRequest {
+  tenantId: string;
+  communityId?: string;
+  incidentType: string;
+  severity: 'info' | 'warning' | 'critical';
+  locationLabel?: string;
+  latitude?: number;
+  longitude?: number;
+  facilityId?: string;
+  webcamEntityId?: number;
+  narrative: string;
+  reporterName?: string;
+  reporterContact?: string;
+  createdBy?: string;
+  qaSeedTag?: string;
+}
+
+interface IncidentResult {
+  id: string;
+  incidentNumber: string;
+  status: string;
+  createdAt: Date;
+}
+
+// Core functions
+export async function createIncident(req: CreateIncidentRequest): Promise<IncidentResult>
+
+export async function dispatchTow(
+  incidentId: string,
+  priority: 'normal' | 'urgent' | 'emergency',
+  notes: string,
+  actorId: string
+): Promise<{ actionId: string; towRequestId: string }>
+
+export async function resolveIncident(
+  incidentId: string,
+  resolution: string,
+  actorId: string
+): Promise<void>
+
+export async function addIncidentAction(
+  incidentId: string,
+  actionType: string,
+  payload: Record<string, any>,
+  actorId: string
+): Promise<string>
+
+export async function getIncident(incidentId: string): Promise<Incident | null>
+
+export async function getOpenIncidents(tenantId: string): Promise<Incident[]>
+```
+
+## Incident Number Format
+
+`INC-YYMMDD-NNN` where NNN is daily sequence
+Example: `INC-260112-001`
+
+Use same pattern as reservation confirmation numbers (cc_daily_sequences table).
+
+## Add Incident API Routes
+
+Add to server/routes/operator.ts (or create server/routes/incidents.ts):
+```typescript
+// POST /api/operator/incidents - Create incident
+router.post('/incidents', requireAuth, async (req, res) => {
+  const result = await createIncident({
+    tenantId: req.ctx.tenantId,
+    ...req.body
+  });
+  
+  await logActivity({
+    tenantId: req.ctx.tenantId,
+    actorId: req.ctx.individualId,
+    action: 'incident.created',
+    resourceType: 'incident',
+    resourceId: result.id,
+    metadata: { incidentNumber: result.incidentNumber, severity: req.body.severity }
+  });
+  
+  res.json({ traceId: generateTraceId(), incident: result });
+});
+
+// POST /api/operator/incidents/:id/dispatch - Dispatch tow
+router.post('/incidents/:id/dispatch', requireAuth, async (req, res) => {
+  const { priority, notes } = req.body;
+  const result = await dispatchTow(req.params.id, priority, notes, req.ctx.individualId);
+  
+  await logActivity({
+    tenantId: req.ctx.tenantId,
+    actorId: req.ctx.individualId,
+    action: 'incident.dispatch',
+    resourceType: 'incident',
+    resourceId: req.params.id,
+    metadata: { priority, actionId: result.actionId }
+  });
+  
+  res.json({ traceId: generateTraceId(), ...result });
+});
+
+// POST /api/operator/incidents/:id/resolve - Resolve incident
+router.post('/incidents/:id/resolve', requireAuth, async (req, res) => {
+  await resolveIncident(req.params.id, req.body.resolution, req.ctx.individualId);
+  
+  await logActivity({
+    tenantId: req.ctx.tenantId,
+    actorId: req.ctx.individualId,
+    action: 'incident.resolved',
+    resourceType: 'incident',
+    resourceId: req.params.id,
+    metadata: { resolution: req.body.resolution }
+  });
+  
+  res.json({ traceId: generateTraceId(), status: 'resolved' });
+});
+```
+
+## Deliverables
+- [ ] Migration file (071_incidents.sql)
+- [ ] cc_incidents table with RLS
+- [ ] cc_incident_actions table with RLS
+- [ ] cc_tow_requests table with RLS
+- [ ] server/services/incidentService.ts
+- [ ] Incident routes in server/routes/operator.ts
+- [ ] Activity logging for all incident actions
+- [ ] Drizzle types (Incident, IncidentAction, TowRequest)
+- [ ] Test: Create incident → dispatch tow → resolve → verify activity log
+
+Report with incident number sample and full lifecycle test result.
