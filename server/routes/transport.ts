@@ -853,9 +853,14 @@ router.post('/freight/manifests', async (req, res) => {
 
 router.get('/freight/manifests/:id', async (req, res) => {
   const { id } = req.params;
+  const { portal } = req.query;
+  
+  if (!portal) {
+    return res.status(400).json({ error: 'portal query parameter is required' });
+  }
   
   try {
-    const result = await getManifest(id);
+    const result = await getManifest(id, portal as string);
     if (!result) {
       return res.status(404).json({ error: 'Manifest not found' });
     }
@@ -868,9 +873,14 @@ router.get('/freight/manifests/:id', async (req, res) => {
 
 router.get('/freight/manifests/by-number/:number', async (req, res) => {
   const { number } = req.params;
+  const { portal } = req.query;
+  
+  if (!portal) {
+    return res.status(400).json({ error: 'portal query parameter is required' });
+  }
   
   try {
-    const result = await getManifestByNumber(number);
+    const result = await getManifestByNumber(number, portal as string);
     if (!result) {
       return res.status(404).json({ error: 'Manifest not found' });
     }
@@ -883,6 +893,10 @@ router.get('/freight/manifests/by-number/:number', async (req, res) => {
 
 router.get('/freight/manifests', async (req, res) => {
   const { portal, operator, from, to, status, limit } = req.query;
+  
+  if (!portal) {
+    return res.status(400).json({ error: 'portal query parameter is required' });
+  }
   
   try {
     const manifests = await searchManifests({
@@ -903,9 +917,14 @@ router.get('/freight/manifests', async (req, res) => {
 
 router.get('/sailings/:id/freight', async (req, res) => {
   const { id } = req.params;
+  const { portal } = req.query;
+  
+  if (!portal) {
+    return res.status(400).json({ error: 'portal query parameter is required' });
+  }
   
   try {
-    const manifests = await getManifestsForSailing(id);
+    const manifests = await getManifestsForSailing(id, portal as string);
     res.json({ manifests, count: manifests.length });
   } catch (e: any) {
     console.error('Get sailing freight error:', e);
@@ -947,9 +966,14 @@ router.post('/freight/manifests/:id/items', async (req, res) => {
 
 router.get('/freight/track/:code', async (req, res) => {
   const { code } = req.params;
+  const { portal } = req.query;
+  
+  if (!portal) {
+    return res.status(400).json({ error: 'portal query parameter is required' });
+  }
   
   try {
-    const result = await getItemByTracking(code);
+    const result = await getItemByTracking(code, portal as string);
     if (!result) {
       return res.status(404).json({ error: 'Item not found' });
     }

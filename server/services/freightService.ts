@@ -114,16 +114,28 @@ export async function createManifest(req: CreateManifestRequest): Promise<any> {
   return manifest;
 }
 
-export async function getManifest(manifestId: string): Promise<{
+export async function getManifest(manifestId: string, portalSlug: string): Promise<{
   manifest: any;
   items: any[];
 } | null> {
+  if (!portalSlug) {
+    throw new Error('portalSlug is required');
+  }
+  
   const [manifest] = await db.select()
     .from(ccFreightManifests)
     .where(sql`${ccFreightManifests.id} = ${manifestId}`)
     .limit(1);
   
   if (!manifest) return null;
+  
+  const [portal] = await db.select()
+    .from(ccPortals)
+    .where(sql`${ccPortals.slug} = ${portalSlug}`)
+    .limit(1);
+  if (!portal || manifest.portalId !== portal.id) {
+    return null;
+  }
   
   const items = await db.select()
     .from(ccFreightItems)
@@ -133,10 +145,14 @@ export async function getManifest(manifestId: string): Promise<{
   return { manifest, items };
 }
 
-export async function getManifestByNumber(manifestNumber: string): Promise<{
+export async function getManifestByNumber(manifestNumber: string, portalSlug: string): Promise<{
   manifest: any;
   items: any[];
 } | null> {
+  if (!portalSlug) {
+    throw new Error('portalSlug is required');
+  }
+  
   const [manifest] = await db.select()
     .from(ccFreightManifests)
     .where(eq(ccFreightManifests.manifestNumber, manifestNumber))
@@ -144,35 +160,48 @@ export async function getManifestByNumber(manifestNumber: string): Promise<{
   
   if (!manifest) return null;
   
-  return getManifest(manifest.id);
+  return getManifest(manifest.id, portalSlug);
 }
 
-export async function getManifestsForSailing(sailingId: string): Promise<any[]> {
+export async function getManifestsForSailing(sailingId: string, portalSlug: string): Promise<any[]> {
+  if (!portalSlug) {
+    throw new Error('portalSlug is required');
+  }
+  
+  const [portal] = await db.select()
+    .from(ccPortals)
+    .where(sql`${ccPortals.slug} = ${portalSlug}`)
+    .limit(1);
+  
+  if (!portal) return [];
+  
   return db.select()
     .from(ccFreightManifests)
-    .where(sql`${ccFreightManifests.sailingId} = ${sailingId}`)
+    .where(sql`${ccFreightManifests.sailingId} = ${sailingId} AND ${ccFreightManifests.portalId} = ${portal.id}`)
     .orderBy(asc(ccFreightManifests.createdAt));
 }
 
 export async function searchManifests(options: {
-  portalSlug?: string;
+  portalSlug: string;
   operatorId?: string;
   fromDate?: Date;
   toDate?: Date;
   status?: string;
   limit?: number;
 }): Promise<any[]> {
+  if (!options.portalSlug) {
+    throw new Error('portalSlug is required for manifest search');
+  }
+  
   const conditions: any[] = [];
   
-  if (options.portalSlug) {
-    const [portal] = await db.select()
-      .from(ccPortals)
-      .where(sql`${ccPortals.slug} = ${options.portalSlug}`)
-      .limit(1);
-    if (portal) {
-      conditions.push(sql`${ccFreightManifests.portalId} = ${portal.id}`);
-    }
-  }
+  const [portal] = await db.select()
+    .from(ccPortals)
+    .where(sql`${ccPortals.slug} = ${options.portalSlug}`)
+    .limit(1);
+  
+  if (!portal) return [];
+  conditions.push(sql`${ccFreightManifests.portalId} = ${portal.id}`);
   
   if (options.operatorId) {
     conditions.push(sql`${ccFreightManifests.operatorId} = ${options.operatorId}`);
@@ -268,10 +297,14 @@ export async function updateManifestTotals(manifestId: string): Promise<void> {
     .where(sql`${ccFreightManifests.id} = ${manifestId}`);
 }
 
-export async function getItemByTracking(trackingCode: string): Promise<{
+export async function getItemByTracking(trackingCode: string, portalSlug: string): Promise<{
   item: any;
   manifest: any;
 } | null> {
+  if (!portalSlug) {
+    throw new Error('portalSlug is required');
+  }
+  
   const [item] = await db.select()
     .from(ccFreightItems)
     .where(eq(ccFreightItems.trackingCode, trackingCode))
@@ -283,6 +316,16 @@ export async function getItemByTracking(trackingCode: string): Promise<{
     .from(ccFreightManifests)
     .where(sql`${ccFreightManifests.id} = ${item.manifestId}`)
     .limit(1);
+  
+  if (!manifest) return null;
+  
+  const [portal] = await db.select()
+    .from(ccPortals)
+    .where(sql`${ccPortals.slug} = ${portalSlug}`)
+    .limit(1);
+  if (!portal || manifest.portalId !== portal.id) {
+    return null;
+  }
   
   return { item, manifest };
 }
@@ -334,6 +377,10 @@ export async function markManifestInTransit(manifestId: string): Promise<any> {
 }
 
 export async function markManifestArrived(manifestId: string): Promise<any> {
+  await db.update(ccFreightItems)
+    .set({ status: 'offloaded', offloadedAt: new Date(), updatedAt: new Date() })
+    .where(sql`${ccFreightItems.manifestId} = ${manifestId}`);
+  
   const [updated] = await db.update(ccFreightManifests)
     .set({ status: 'arrived', arrivedAt: new Date(), updatedAt: new Date() })
     .where(sql`${ccFreightManifests.id} = ${manifestId}`)
@@ -386,6 +433,10 @@ export async function markItemDelivered(
 }
 
 export async function cancelManifest(manifestId: string): Promise<any> {
+  await db.update(ccFreightItems)
+    .set({ status: 'held', updatedAt: new Date() })
+    .where(sql`${ccFreightItems.manifestId} = ${manifestId}`);
+  
   const [updated] = await db.update(ccFreightManifests)
     .set({ status: 'cancelled', updatedAt: new Date() })
     .where(sql`${ccFreightManifests.id} = ${manifestId}`)
