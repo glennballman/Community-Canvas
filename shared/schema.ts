@@ -607,3 +607,69 @@ export const cc_activity_ledger = pgTable('cc_activity_ledger', {
 export const insertActivityLedgerSchema = createInsertSchema(cc_activity_ledger).omit({ id: true, createdAt: true });
 export type ActivityLedger = typeof cc_activity_ledger.$inferSelect;
 export type InsertActivityLedger = z.infer<typeof insertActivityLedgerSchema>;
+
+// ============================================================================
+// V3.3.1 BLOCK 03 - Facilities + Inventory Units
+// ============================================================================
+
+// Facilities - physical locations with inventory
+export const cc_facilities = pgTable('cc_facilities', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id').notNull(),
+  communityId: uuid('community_id'),
+  
+  name: varchar('name', { length: 255 }).notNull(),
+  slug: varchar('slug', { length: 100 }).notNull(),
+  facilityType: varchar('facility_type', { length: 32 }).notNull(),
+  
+  addressJson: jsonb('address_json'),
+  geoLat: numeric('geo_lat', { precision: 10, scale: 7 }),
+  geoLon: numeric('geo_lon', { precision: 10, scale: 7 }),
+  boundaryJson: jsonb('boundary_json'),
+  
+  allocationMode: varchar('allocation_mode', { length: 32 }).notNull(),
+  capacityUnit: varchar('capacity_unit', { length: 32 }),
+  capacityTotal: integer('capacity_total'),
+  
+  timezone: varchar('timezone', { length: 64 }).default('America/Vancouver'),
+  openingHours: jsonb('opening_hours'),
+  
+  isActive: boolean('is_active').default(true),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+});
+
+export const insertFacilitySchema = createInsertSchema(cc_facilities).omit({ id: true, createdAt: true, updatedAt: true });
+export type Facility = typeof cc_facilities.$inferSelect;
+export type InsertFacility = z.infer<typeof insertFacilitySchema>;
+
+// Inventory Units - individual bookable units within facilities
+export const cc_inventory_units = pgTable('cc_inventory_units', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id').notNull(),
+  facilityId: uuid('facility_id').notNull(),
+  
+  unitType: varchar('unit_type', { length: 32 }).notNull(),
+  displayLabel: varchar('display_label', { length: 100 }).notNull(),
+  
+  parentUnitId: uuid('parent_unit_id'),
+  sortOrder: integer('sort_order'),
+  
+  lengthFt: numeric('length_ft', { precision: 8, scale: 2 }),
+  widthFt: numeric('width_ft', { precision: 8, scale: 2 }),
+  depthFt: numeric('depth_ft', { precision: 8, scale: 2 }),
+  
+  capacityTotal: numeric('capacity_total', { precision: 10, scale: 2 }),
+  capacityBuffer: numeric('capacity_buffer', { precision: 10, scale: 2 }).default('0'),
+  
+  constraints: jsonb('constraints').default({}),
+  capabilities: jsonb('capabilities').default({}),
+  
+  isActive: boolean('is_active').default(true),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+});
+
+export const insertInventoryUnitSchema = createInsertSchema(cc_inventory_units).omit({ id: true, createdAt: true, updatedAt: true });
+export type InventoryUnit = typeof cc_inventory_units.$inferSelect;
+export type InsertInventoryUnit = z.infer<typeof insertInventoryUnitSchema>;

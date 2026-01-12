@@ -1,0 +1,127 @@
+**V3.3.1 BLOCK 03: Facilities + Inventory Units**
+
+Create the unified facility/unit model for Parking + Marina + Lodging.
+
+## Create cc_facilities
+```sql
+CREATE TABLE cc_facilities (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id uuid NOT NULL REFERENCES cc_tenants(id),
+  community_id uuid REFERENCES cc_tenants(id), -- Bamfield Community tenant
+  
+  name varchar NOT NULL,
+  slug varchar NOT NULL,
+  facility_type varchar NOT NULL CHECK (facility_type IN ('parking', 'marina', 'lodging', 'rental', 'road_ops')),
+  
+  -- Location
+  address_json jsonb,
+  geo_lat numeric,
+  geo_lon numeric,
+  boundary_json jsonb, -- GeoJSON polygon
+  
+  -- Allocation mode
+  allocation_mode varchar NOT NULL CHECK (allocation_mode IN ('discrete', 'continuous', 'capacity', 'flex_grid')),
+  capacity_unit varchar, -- 'stall', 'feet', 'slot'
+  capacity_total integer,
+  
+  -- Operational
+  timezone varchar DEFAULT 'America/Vancouver',
+  opening_hours jsonb,
+  
+  is_active boolean DEFAULT true,
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now(),
+  
+  UNIQUE(tenant_id, slug)
+);
+
+ALTER TABLE cc_facilities ENABLE ROW LEVEL SECURITY;
+```
+
+## Create cc_inventory_units
+```sql
+CREATE TABLE cc_inventory_units (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id uuid NOT NULL REFERENCES cc_tenants(id),
+  facility_id uuid NOT NULL REFERENCES cc_facilities(id),
+  
+  unit_type varchar NOT NULL, -- 'stall', 'slip', 'room', 'segment', 'zone_segment', 'flex_grid'
+  display_label varchar NOT NULL, -- 'Stall 12', 'Slip C-2'
+  
+  -- Hierarchy
+  parent_unit_id uuid REFERENCES cc_inventory_units(id),
+  sort_order integer,
+  
+  -- Dimensions
+  length_ft numeric,
+  width_ft numeric,
+  depth_ft numeric, -- for marina draft
+  
+  -- Capacity (for continuous allocation)
+  capacity_total numeric,
+  capacity_buffer numeric DEFAULT 0,
+  
+  -- Constraints (jsonb for flexibility)
+  constraints jsonb DEFAULT '{}'::jsonb,
+  -- Examples:
+  -- Parking: {"oversize": true, "pull_through": true, "surface": "gravel", "clear_lane": false}
+  -- Marina: {"max_beam_ft": 12, "shorepower_amps": 30, "min_depth_ft": 4}
+  -- Lodging: {"wheelchair_accessible": true, "max_occupancy": 4}
+  
+  -- Capabilities
+  capabilities jsonb DEFAULT '{}'::jsonb,
+  -- {"power_amps": [15, 30], "water": true, "wifi": true}
+  
+  is_active boolean DEFAULT true,
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+
+CREATE INDEX idx_inventory_units_facility ON cc_inventory_units(tenant_id, facility_id);
+ALTER TABLE cc_inventory_units ENABLE ROW LEVEL SECURITY;
+```
+
+## Seed Bamfield Facilities
+
+Use these LOCKED tenant UUIDs:
+```typescript
+const TENANTS = {
+  BAMFIELD_COMMUNITY: "c0000000-0000-0000-0000-000000000001",
+  WOODS_END_LANDING: "d0000000-0000-0000-0000-000000000001",
+  WOODS_END_MARINA: "ff08964d-94b5-4076-850c-2d002e3fd337",
+  SAVE_PARADISE_PARKING: "7d8e6df5-bf12-4965-85a9-20b4312ce6c8",
+  HFN_MARINA: "hfn00000-0000-0000-0000-000000000001",
+  EILEEN_SCOTT_PARK: "eileen00-0000-0000-0000-000000000001"
+};
+```
+
+Seed these facilities:
+
+| Tenant | Facility Name | Type | Allocation | Units |
+|--------|---------------|------|------------|-------|
+| Woods End Landing | Main Lodge | lodging | discrete | 7 rooms |
+| Woods End Marina | Main Dock | marina | continuous | 3 segments (A, B, C) |
+| Save Paradise | Main Lot | parking | discrete | 74 stalls |
+| HFN Marina | HFN Dock | marina | discrete | 12 slips |
+| Eileen Scott Park | Gravel Overflow | parking | flex_grid | 3 zone_segments |
+
+For Save Paradise, create stalls 1-74 with display_labels "Stall 1" through "Stall 74".
+
+For Woods End Marina:
+- Segment A: 50 feet capacity
+- Segment B: 50 feet capacity
+- Segment C: 170 feet capacity, parent to 6 virtual slips (C-1 through C-6)
+
+For Woods End Landing rooms:
+- Woodsman, Mariner, Beachcomber, Homesteader, Aviator, Stowaway, Castaway
+- Note: Castaway contains Stowaway (parent_unit_id relationship)
+
+## Deliverables
+- [ ] Migration file (066_facilities_inventory_units.sql)
+- [ ] cc_facilities table with RLS
+- [ ] cc_inventory_units table with RLS
+- [ ] Drizzle schema exports (Facility, InventoryUnit types)
+- [ ] Seed script or INSERT statements for all Bamfield facilities
+- [ ] Index on facility lookup
+
+Report completion with facility count, unit count, and any errors.
