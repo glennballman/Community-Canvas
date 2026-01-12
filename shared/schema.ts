@@ -2081,7 +2081,7 @@ export type InsertPermitType = z.infer<typeof insertPermitTypeSchema>;
 export const ccVisitorPermits = pgTable('cc_visitor_permits', {
   id: uuid('id').primaryKey().defaultRandom(),
   
-  portalId: uuid('portal_id'),
+  portalId: uuid('portal_id'), // nullable per migration (ON DELETE SET NULL)
   authorityId: uuid('authority_id').notNull(),
   permitTypeId: uuid('permit_type_id').notNull(),
   

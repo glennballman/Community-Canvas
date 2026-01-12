@@ -329,6 +329,19 @@ export async function submitPermit(
   
   if (!portal) throw new Error('Portal not found');
   
+  const permit = await db.query.ccVisitorPermits.findFirst({
+    where: and(
+      eq(ccVisitorPermits.id, permitId),
+      eq(ccVisitorPermits.portalId, portal.id)
+    )
+  });
+  
+  if (!permit) throw new Error('Permit not found');
+  
+  if (permit.status !== 'draft') {
+    throw new Error(`Cannot submit permit in status '${permit.status}'. Must be draft.`);
+  }
+  
   const [updated] = await db.update(ccVisitorPermits)
     .set({
       status: 'submitted',
@@ -355,6 +368,19 @@ export async function approvePermit(
   });
   
   if (!portal) throw new Error('Portal not found');
+  
+  const permit = await db.query.ccVisitorPermits.findFirst({
+    where: and(
+      eq(ccVisitorPermits.id, permitId),
+      eq(ccVisitorPermits.portalId, portal.id)
+    )
+  });
+  
+  if (!permit) throw new Error('Permit not found');
+  
+  if (!['submitted', 'pending'].includes(permit.status)) {
+    throw new Error(`Cannot approve permit in status '${permit.status}'. Must be submitted or pending.`);
+  }
   
   const updates: Record<string, any> = {
     status: 'approved',
@@ -398,6 +424,10 @@ export async function issuePermit(
   
   if (!permit) throw new Error('Permit not found');
   
+  if (permit.status !== 'approved') {
+    throw new Error(`Cannot issue permit in status '${permit.status}'. Must be approved first.`);
+  }
+  
   const requiresPayment = Number(permit.totalFeeCad) > 0;
   
   const updates: Record<string, any> = {
@@ -416,7 +446,10 @@ export async function issuePermit(
   
   const [updated] = await db.update(ccVisitorPermits)
     .set(updates)
-    .where(eq(ccVisitorPermits.id, permitId))
+    .where(and(
+      eq(ccVisitorPermits.id, permitId),
+      eq(ccVisitorPermits.portalId, portal.id)
+    ))
     .returning();
   
   return updated;
@@ -431,6 +464,19 @@ export async function activatePermit(
   });
   
   if (!portal) throw new Error('Portal not found');
+  
+  const permit = await db.query.ccVisitorPermits.findFirst({
+    where: and(
+      eq(ccVisitorPermits.id, permitId),
+      eq(ccVisitorPermits.portalId, portal.id)
+    )
+  });
+  
+  if (!permit) throw new Error('Permit not found');
+  
+  if (permit.status !== 'issued') {
+    throw new Error(`Cannot activate permit in status '${permit.status}'. Must be issued.`);
+  }
   
   const [updated] = await db.update(ccVisitorPermits)
     .set({
