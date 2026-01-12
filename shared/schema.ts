@@ -358,41 +358,107 @@ export const insertTripTimepointSchema = createInsertSchema(ccTripTimepoints).om
 export type TripTimepoint = typeof ccTripTimepoints.$inferSelect;
 export type InsertTripTimepoint = z.infer<typeof insertTripTimepointSchema>;
 
-// Portal Moments (curated fun suggestions)
+// Portal Moments (bookable experiences)
 export const ccPortalMoments = pgTable('cc_portal_moments', {
   id: uuid('id').primaryKey().defaultRandom(),
   portalId: uuid('portal_id').notNull(),
+  tenantId: uuid('tenant_id'),
   
+  slug: varchar('slug').notNull(),
   title: varchar('title').notNull(),
+  subtitle: varchar('subtitle'),
   description: text('description'),
   momentType: varchar('moment_type').notNull(),
   
+  category: varchar('category'),
+  tags: text('tags').array(),
+  
+  imageUrl: text('image_url'),
+  galleryUrls: text('gallery_urls').array(),
+  videoUrl: text('video_url'),
+  
+  durationMinutes: integer('duration_minutes'),
+  availableDays: integer('available_days').array(),
+  availableStartTime: time('available_start_time'),
+  availableEndTime: time('available_end_time'),
+  advanceBookingDays: integer('advance_booking_days').default(1),
+  maxAdvanceDays: integer('max_advance_days').default(90),
+  
+  minParticipants: integer('min_participants').default(1),
+  maxParticipants: integer('max_participants'),
+  minAge: integer('min_age'),
+  
+  priceCents: integer('price_cents'),
+  pricePer: varchar('price_per').default('person'),
+  currency: varchar('currency').default('CAD'),
+  depositPercent: integer('deposit_percent').default(25),
+  
+  reservationMode: varchar('reservation_mode').default('internal'),
+  facilityId: uuid('facility_id'),
+  offerId: uuid('offer_id'),
+  
+  providerName: varchar('provider_name'),
+  providerEmail: varchar('provider_email'),
+  providerPhone: varchar('provider_phone'),
+  externalBookingUrl: text('external_booking_url'),
+  
+  weatherJson: jsonb('weather_json').default({}),
+  constraintsJson: jsonb('constraints_json').default({}),
+  
+  schemaType: varchar('schema_type').default('Event'),
+  seoTitle: varchar('seo_title'),
+  seoDescription: varchar('seo_description'),
+  
+  isFeatured: boolean('is_featured').default(false),
+  displayOrder: integer('display_order').default(0),
+  isActive: boolean('is_active').default(true),
+  
+  // Legacy fields
   bestTimeOfDay: varchar('best_time_of_day'),
   bestWeather: varchar('best_weather'),
-  
   locationName: varchar('location_name'),
   locationLat: numeric('location_lat', { precision: 10, scale: 7 }),
   locationLng: numeric('location_lng', { precision: 10, scale: 7 }),
-  
   kidFriendly: boolean('kid_friendly').default(true),
-  
   proTip: text('pro_tip'),
   safetyNote: text('safety_note'),
-  
   photoMoment: boolean('photo_moment').default(true),
   suggestedCaption: text('suggested_caption'),
-  
-  imageUrl: text('image_url'),
   icon: varchar('icon'),
   sortOrder: integer('sort_order').default(0),
-  isActive: boolean('is_active').default(true),
+  
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+});
+
+export const insertPortalMomentSchema = createInsertSchema(ccPortalMoments).omit({ id: true, createdAt: true, updatedAt: true });
+export type PortalMoment = typeof ccPortalMoments.$inferSelect;
+export type InsertPortalMoment = z.infer<typeof insertPortalMomentSchema>;
+
+// Moment Availability (specific time slots)
+export const ccMomentAvailability = pgTable('cc_moment_availability', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  momentId: uuid('moment_id').notNull().references(() => ccPortalMoments.id, { onDelete: 'cascade' }),
+  
+  availableDate: date('available_date').notNull(),
+  startTime: time('start_time').notNull(),
+  endTime: time('end_time'),
+  
+  spotsTotal: integer('spots_total').notNull(),
+  spotsRemaining: integer('spots_remaining').notNull(),
+  
+  priceCentsOverride: integer('price_cents_override'),
+  
+  status: varchar('status').default('available'),
+  notes: text('notes'),
+  weatherNotes: text('weather_notes'),
   
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
-export const insertPortalMomentSchema = createInsertSchema(ccPortalMoments).omit({ id: true, createdAt: true });
-export type PortalMoment = typeof ccPortalMoments.$inferSelect;
-export type InsertPortalMoment = z.infer<typeof insertPortalMomentSchema>;
+export const insertMomentAvailabilitySchema = createInsertSchema(ccMomentAvailability).omit({ id: true, createdAt: true });
+export type MomentAvailability = typeof ccMomentAvailability.$inferSelect;
+export type InsertMomentAvailability = z.infer<typeof insertMomentAvailabilitySchema>;
 
 // ============================================================================
 // V3.3.1 TRUTH/DISCLOSURE LAYER - Visibility System
