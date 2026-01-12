@@ -2685,4 +2685,151 @@ router.post('/invite/:token/decline', async (req: Request, res: Response) => {
   }
 });
 
+// ============ PARTY PROFILE ENDPOINTS ============
+
+import { 
+  createProfile, getProfile, getTripProfiles, updateProfile, deleteProfile,
+  aggregateNeeds, getDietaryTerms
+} from '../services/partyService';
+
+router.get('/trips/:accessCode/party', async (req: Request, res: Response) => {
+  const { accessCode } = req.params;
+  
+  try {
+    const trip = await getTrip(accessCode);
+    if (!trip) {
+      return res.status(404).json({ error: 'Trip not found' });
+    }
+    
+    const profiles = await getTripProfiles(trip.id);
+    const aggregatedNeeds = await aggregateNeeds(trip.id);
+    
+    res.json({ profiles, aggregatedNeeds });
+  } catch (e: any) {
+    console.error('Get party error:', e);
+    res.status(500).json({ error: 'Failed to get party' });
+  }
+});
+
+router.post('/trips/:accessCode/party', async (req: Request, res: Response) => {
+  const { accessCode } = req.params;
+  const b = req.body || {};
+  
+  if (!b.displayName) {
+    return res.status(400).json({ error: 'displayName required' });
+  }
+  
+  try {
+    const trip = await getTrip(accessCode);
+    if (!trip) {
+      return res.status(404).json({ error: 'Trip not found' });
+    }
+    
+    const profile = await createProfile({
+      tripId: trip.id,
+      displayName: b.displayName,
+      role: b.role,
+      ageGroup: b.ageGroup,
+      birthDate: b.birthDate ? new Date(b.birthDate) : undefined,
+      email: b.email,
+      phone: b.phone,
+      dietaryRestrictions: b.dietaryRestrictions,
+      dietaryPreferences: b.dietaryPreferences,
+      dietarySeverity: b.dietarySeverity,
+      dietaryNotes: b.dietaryNotes,
+      accessibility: b.accessibility,
+      medical: b.medical,
+      needs: b.needs,
+      preferences: b.preferences,
+      surprises: b.surprises
+    });
+    
+    res.json({ profile });
+  } catch (e: any) {
+    console.error('Create profile error:', e);
+    res.status(500).json({ error: 'Failed to create profile' });
+  }
+});
+
+router.get('/trips/:accessCode/party/:profileId', async (req: Request, res: Response) => {
+  const { profileId } = req.params;
+  
+  try {
+    const profile = await getProfile(profileId);
+    if (!profile) {
+      return res.status(404).json({ error: 'Profile not found' });
+    }
+    res.json({ profile });
+  } catch (e: any) {
+    console.error('Get profile error:', e);
+    res.status(500).json({ error: 'Failed to get profile' });
+  }
+});
+
+router.patch('/trips/:accessCode/party/:profileId', async (req: Request, res: Response) => {
+  const { profileId } = req.params;
+  const b = req.body || {};
+  
+  try {
+    const updated = await updateProfile(profileId, {
+      displayName: b.displayName,
+      role: b.role,
+      ageGroup: b.ageGroup,
+      birthDate: b.birthDate ? new Date(b.birthDate) : undefined,
+      dietaryRestrictions: b.dietaryRestrictions,
+      dietaryPreferences: b.dietaryPreferences,
+      dietarySeverity: b.dietarySeverity,
+      dietaryNotes: b.dietaryNotes,
+      accessibility: b.accessibility,
+      medical: b.medical,
+      needs: b.needs,
+      preferences: b.preferences
+    });
+    
+    res.json({ profile: updated });
+  } catch (e: any) {
+    console.error('Update profile error:', e);
+    res.status(400).json({ error: e.message });
+  }
+});
+
+router.delete('/trips/:accessCode/party/:profileId', async (req: Request, res: Response) => {
+  const { profileId } = req.params;
+  
+  try {
+    await deleteProfile(profileId);
+    res.json({ success: true });
+  } catch (e: any) {
+    console.error('Delete profile error:', e);
+    res.status(500).json({ error: 'Failed to delete profile' });
+  }
+});
+
+router.get('/trips/:accessCode/needs', async (req: Request, res: Response) => {
+  const { accessCode } = req.params;
+  
+  try {
+    const trip = await getTrip(accessCode);
+    if (!trip) {
+      return res.status(404).json({ error: 'Trip not found' });
+    }
+    
+    const aggregated = await aggregateNeeds(trip.id);
+    res.json(aggregated);
+  } catch (e: any) {
+    console.error('Get needs error:', e);
+    res.status(500).json({ error: 'Failed to get needs' });
+  }
+});
+
+router.get('/dietary-terms', async (req: Request, res: Response) => {
+  try {
+    const terms = await getDietaryTerms();
+    res.json({ terms });
+  } catch (e: any) {
+    console.error('Get dietary terms error:', e);
+    res.status(500).json({ error: 'Failed to get dietary terms' });
+  }
+});
+
 export default router;
