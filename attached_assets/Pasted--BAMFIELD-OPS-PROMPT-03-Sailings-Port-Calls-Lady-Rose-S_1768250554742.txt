@@ -1,0 +1,788 @@
+**BAMFIELD OPS - PROMPT 03: Sailings & Port Calls (Lady Rose Schedule)**
+
+Model scheduled sailings with port calls for Lady Rose and on-demand water taxi trips.
+
+## Migration 080_sailings.sql
+```sql
+BEGIN;
+
+-- ============ SAILING SCHEDULES ============
+-- Recurring patterns for scheduled services (Lady Rose)
+
+CREATE TABLE IF NOT EXISTS cc_sailing_schedules (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  operator_id uuid NOT NULL REFERENCES cc_transport_operators(id) ON DELETE CASCADE,
+  
+  -- Identity
+  route_name text NOT NULL,
+  route_code varchar(20),
+  
+  -- Route definition
+  origin_location_id uuid REFERENCES cc_locations(id),
+  destination_location_id uuid REFERENCES cc_locations(id),
+  
+  -- Recurrence
+  days_of_week integer[] NOT NULL, -- 0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat
+  departure_time time NOT NULL,
+  
+  -- Seasonal availability
+  seasonal_json jsonb DEFAULT '{}'::jsonb,
+  -- {active_months: [5,6,7,8,9], 
+  --  winter_days: [2,6], winter_months: [11,12,1,2,3,4]}
+  
+  -- Pricing
+  base_fare_cad numeric(10,2),
+  
+  -- Status
+  status varchar DEFAULT 'active' CHECK (status IN ('active', 'seasonal', 'suspended')),
+  effective_from date,
+  effective_to date,
+  
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+
+CREATE INDEX idx_sailing_schedules_operator ON cc_sailing_schedules(operator_id, status);
+
+ALTER TABLE cc_sailing_schedules ENABLE ROW LEVEL SECURITY;
+
+-- ============ SAILINGS ============
+-- Individual sailing instances (generated from schedule or on-demand)
+
+CREATE TABLE IF NOT EXISTS cc_sailings (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  
+  -- Links
+  schedule_id uuid REFERENCES cc_sailing_schedules(id) ON DELETE SET NULL,
+  operator_id uuid NOT NULL REFERENCES cc_transport_operators(id),
+  asset_id uuid REFERENCES cc_transport_assets(id),
+  
+  -- Identity
+  sailing_number varchar(20), -- e.g., 'LRMS-2026-01-15-0800'
+  
+  -- Timing
+  sailing_date date NOT NULL,
+  scheduled_departure time NOT NULL,
+  scheduled_arrival time,
+  
+  actual_departure_at timestamptz,
+  actual_arrival_at timestamptz,
+  
+  -- Route
+  origin_location_id uuid REFERENCES cc_locations(id),
+  destination_location_id uuid REFERENCES cc_locations(id),
+  
+  -- Capacity tracking
+  capacity_json jsonb DEFAULT '{}'::jsonb,
+  -- {passengers: {total: 200, booked: 45, available: 155},
+  --  freight_lbs: {total: 20000, booked: 3500, available: 16500},
+  --  kayaks: {total: 40, booked: 12, available: 28}}
+  
+  -- State machine
+  status varchar NOT NULL DEFAULT 'scheduled' CHECK (status IN (
+    'scheduled',    -- Future sailing
+    'boarding',     -- Currently boarding
+    'departed',     -- Left origin
+    'in_transit',   -- Between stops
+    'arrived',      -- At destination
+    'completed',    -- Passengers disembarked
+    'cancelled',    -- Cancelled
+    'delayed'       -- Delayed (still happening)
+  )),
+  
+  -- Delay/cancel info
+  delay_minutes integer,
+  delay_reason text,
+  cancellation_reason text,
+  cancelled_at timestamptz,
+  
+  -- Weather
+  weather_json jsonb DEFAULT '{}'::jsonb,
+  -- {forecast: 'cloudy', wind_kph: 15, wave_height_m: 0.5, visibility: 'good'}
+  
+  -- Notes
+  notes text,
+  
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now(),
+  
+  UNIQUE(operator_id, sailing_number)
+);
+
+CREATE INDEX idx_sailings_date ON cc_sailings(sailing_date, status);
+CREATE INDEX idx_sailings_operator ON cc_sailings(operator_id, sailing_date);
+CREATE INDEX idx_sailings_schedule ON cc_sailings(schedule_id) WHERE schedule_id IS NOT NULL;
+
+ALTER TABLE cc_sailings ENABLE ROW LEVEL SECURITY;
+
+-- ============ PORT CALLS ============
+-- Intermediate stops on a sailing
+
+CREATE TABLE IF NOT EXISTS cc_port_calls (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  sailing_id uuid NOT NULL REFERENCES cc_sailings(id) ON DELETE CASCADE,
+  location_id uuid NOT NULL REFERENCES cc_locations(id),
+  
+  -- Sequence
+  stop_sequence integer NOT NULL, -- 1, 2, 3...
+  
+  -- Timing
+  scheduled_arrival time,
+  scheduled_departure time,
+  dwell_minutes integer DEFAULT 15,
+  
+  actual_arrival_at timestamptz,
+  actual_departure_at timestamptz,
+  
+  -- What happens here
+  operations_json jsonb DEFAULT '{}'::jsonb,
+  -- {passengers_embarking: 5, passengers_disembarking: 12,
+  --  freight_loading_lbs: 500, freight_unloading_lbs: 200,
+  --  kayaks_loading: 4, kayaks_unloading: 0}
+  
+  -- Status
+  status varchar DEFAULT 'scheduled' CHECK (status IN (
+    'scheduled', 'approaching', 'arrived', 'boarding', 'departed', 'skipped'
+  )),
+  
+  skip_reason text,
+  
+  created_at timestamptz DEFAULT now()
+);
+
+CREATE INDEX idx_port_calls_sailing ON cc_port_calls(sailing_id, stop_sequence);
+CREATE INDEX idx_port_calls_location ON cc_port_calls(location_id);
+
+ALTER TABLE cc_port_calls ENABLE ROW LEVEL SECURITY;
+
+-- ============ SEED LADY ROSE SCHEDULES ============
+
+DO $$
+DECLARE
+  v_lrms_id uuid;
+  v_pahq_id uuid;
+  v_wgd_id uuid;
+  v_sec_id uuid;
+  v_schedule_id uuid;
+  v_sailing_id uuid;
+BEGIN
+  -- Get operator
+  SELECT id INTO v_lrms_id FROM cc_transport_operators WHERE code = 'LRMS' LIMIT 1;
+  
+  -- Get locations
+  SELECT id INTO v_pahq_id FROM cc_locations WHERE code = 'PAHQ' LIMIT 1;
+  SELECT id INTO v_wgd_id FROM cc_locations WHERE code = 'WGD' LIMIT 1;
+  SELECT id INTO v_sec_id FROM cc_locations WHERE code = 'SEC' LIMIT 1;
+  
+  IF v_lrms_id IS NOT NULL AND v_pahq_id IS NOT NULL THEN
+    -- Summer schedule: Port Alberni to Bamfield (daily Jun-Sep)
+    INSERT INTO cc_sailing_schedules (
+      operator_id, route_name, route_code,
+      origin_location_id, destination_location_id,
+      days_of_week, departure_time,
+      seasonal_json, base_fare_cad, status
+    ) VALUES (
+      v_lrms_id, 'Port Alberni - Bamfield (Summer)', 'PA-BAM-S',
+      v_pahq_id, v_wgd_id,
+      ARRAY[0,1,2,3,4,5,6], '08:00',
+      '{"active_months": [6,7,8,9], "description": "Daily summer service"}'::jsonb,
+      45.00, 'active'
+    )
+    ON CONFLICT DO NOTHING
+    RETURNING id INTO v_schedule_id;
+    
+    -- Shoulder season: Tue, Thu, Sat only
+    INSERT INTO cc_sailing_schedules (
+      operator_id, route_name, route_code,
+      origin_location_id, destination_location_id,
+      days_of_week, departure_time,
+      seasonal_json, base_fare_cad, status
+    ) VALUES (
+      v_lrms_id, 'Port Alberni - Bamfield (Shoulder)', 'PA-BAM-SH',
+      v_pahq_id, v_wgd_id,
+      ARRAY[2,4,6], '08:00',
+      '{"active_months": [5,10], "description": "Shoulder season - Tue/Thu/Sat"}'::jsonb,
+      45.00, 'seasonal'
+    )
+    ON CONFLICT DO NOTHING;
+    
+    -- Winter: Tue, Sat only
+    INSERT INTO cc_sailing_schedules (
+      operator_id, route_name, route_code,
+      origin_location_id, destination_location_id,
+      days_of_week, departure_time,
+      seasonal_json, base_fare_cad, status
+    ) VALUES (
+      v_lrms_id, 'Port Alberni - Bamfield (Winter)', 'PA-BAM-W',
+      v_pahq_id, v_wgd_id,
+      ARRAY[2,6], '08:00',
+      '{"active_months": [11,12,1,2,3,4], "description": "Winter service - Tue/Sat only"}'::jsonb,
+      45.00, 'seasonal'
+    )
+    ON CONFLICT DO NOTHING;
+    
+    -- Create a sample sailing for today/tomorrow
+    INSERT INTO cc_sailings (
+      schedule_id, operator_id,
+      sailing_number, sailing_date, scheduled_departure,
+      origin_location_id, destination_location_id,
+      capacity_json, status
+    ) VALUES (
+      v_schedule_id, v_lrms_id,
+      'LRMS-' || to_char(CURRENT_DATE + 1, 'YYYY-MM-DD') || '-0800',
+      CURRENT_DATE + 1, '08:00',
+      v_pahq_id, v_wgd_id,
+      '{
+        "passengers": {"total": 200, "booked": 45, "available": 155},
+        "freight_lbs": {"total": 20000, "booked": 3500, "available": 16500},
+        "kayaks": {"total": 40, "booked": 8, "available": 32}
+      }'::jsonb,
+      'scheduled'
+    )
+    ON CONFLICT DO NOTHING
+    RETURNING id INTO v_sailing_id;
+    
+    -- Add port calls for this sailing
+    IF v_sailing_id IS NOT NULL AND v_sec_id IS NOT NULL THEN
+      -- Stop 1: Sechart (Broken Group)
+      INSERT INTO cc_port_calls (
+        sailing_id, location_id, stop_sequence,
+        scheduled_arrival, scheduled_departure, dwell_minutes,
+        operations_json
+      ) VALUES (
+        v_sailing_id, v_sec_id, 1,
+        '11:00', '11:30', 30,
+        '{"kayak_drop": true, "broken_group_staging": true}'::jsonb
+      );
+      
+      -- Stop 2: Bamfield (final)
+      INSERT INTO cc_port_calls (
+        sailing_id, location_id, stop_sequence,
+        scheduled_arrival, dwell_minutes,
+        operations_json
+      ) VALUES (
+        v_sailing_id, v_wgd_id, 2,
+        '12:30', 60,
+        '{"final_stop": true, "freight_unload": true}'::jsonb
+      );
+    END IF;
+    
+  END IF;
+END $$;
+
+COMMIT;
+```
+
+## Create server/services/sailingService.ts
+```typescript
+// server/services/sailingService.ts
+
+import { db } from '../db';
+import { eq, and, gte, lte, or, asc, desc, sql } from 'drizzle-orm';
+
+// ============ TYPES ============
+
+interface SailingSearchRequest {
+  operatorId?: string;
+  operatorCode?: string;
+  portalSlug?: string;
+  fromDate?: Date;
+  toDate?: Date;
+  originLocationId?: string;
+  destinationLocationId?: string;
+  status?: string;
+  limit?: number;
+}
+
+interface SailingWithPortCalls {
+  sailing: any;
+  portCalls: any[];
+  operator?: any;
+  asset?: any;
+}
+
+// ============ SCHEDULE FUNCTIONS ============
+
+export async function getSchedules(operatorId: string): Promise<any[]> {
+  return db.query.ccSailingSchedules.findMany({
+    where: and(
+      eq(ccSailingSchedules.operatorId, operatorId),
+      or(
+        eq(ccSailingSchedules.status, 'active'),
+        eq(ccSailingSchedules.status, 'seasonal')
+      )
+    ),
+    orderBy: [asc(ccSailingSchedules.departureTime)]
+  });
+}
+
+export async function getActiveScheduleForDate(
+  operatorId: string,
+  date: Date
+): Promise<any[]> {
+  const month = date.getMonth() + 1;
+  const dayOfWeek = date.getDay();
+  
+  const schedules = await db.query.ccSailingSchedules.findMany({
+    where: and(
+      eq(ccSailingSchedules.operatorId, operatorId),
+      or(
+        eq(ccSailingSchedules.status, 'active'),
+        eq(ccSailingSchedules.status, 'seasonal')
+      )
+    )
+  });
+  
+  // Filter by day of week and season
+  return schedules.filter(s => {
+    // Check day of week
+    if (!s.daysOfWeek.includes(dayOfWeek)) return false;
+    
+    // Check seasonal availability
+    const seasonal = s.seasonalJson as any;
+    if (seasonal?.active_months) {
+      return seasonal.active_months.includes(month);
+    }
+    
+    return true;
+  });
+}
+
+// ============ SAILING FUNCTIONS ============
+
+export async function getSailings(req: SailingSearchRequest): Promise<{
+  sailings: SailingWithPortCalls[];
+  total: number;
+}> {
+  const conditions: any[] = [];
+  
+  // Resolve operator
+  let operatorId = req.operatorId;
+  if (req.operatorCode && req.portalSlug) {
+    const portal = await db.query.ccPortals.findFirst({
+      where: eq(ccPortals.slug, req.portalSlug)
+    });
+    if (portal) {
+      const operator = await db.query.ccTransportOperators.findFirst({
+        where: and(
+          eq(ccTransportOperators.portalId, portal.id),
+          eq(ccTransportOperators.code, req.operatorCode)
+        )
+      });
+      if (operator) operatorId = operator.id;
+    }
+  }
+  
+  if (operatorId) {
+    conditions.push(eq(ccSailings.operatorId, operatorId));
+  }
+  
+  if (req.fromDate) {
+    conditions.push(gte(ccSailings.sailingDate, req.fromDate));
+  }
+  
+  if (req.toDate) {
+    conditions.push(lte(ccSailings.sailingDate, req.toDate));
+  }
+  
+  if (req.originLocationId) {
+    conditions.push(eq(ccSailings.originLocationId, req.originLocationId));
+  }
+  
+  if (req.destinationLocationId) {
+    conditions.push(eq(ccSailings.destinationLocationId, req.destinationLocationId));
+  }
+  
+  if (req.status) {
+    conditions.push(eq(ccSailings.status, req.status));
+  } else {
+    // Default: exclude cancelled/completed
+    conditions.push(sql`${ccSailings.status} NOT IN ('cancelled', 'completed')`);
+  }
+  
+  const sailings = await db.query.ccSailings.findMany({
+    where: conditions.length > 0 ? and(...conditions) : undefined,
+    orderBy: [asc(ccSailings.sailingDate), asc(ccSailings.scheduledDeparture)],
+    limit: req.limit || 50
+  });
+  
+  // Enrich with port calls
+  const results: SailingWithPortCalls[] = [];
+  for (const sailing of sailings) {
+    const portCalls = await db.query.ccPortCalls.findMany({
+      where: eq(ccPortCalls.sailingId, sailing.id),
+      orderBy: [asc(ccPortCalls.stopSequence)]
+    });
+    
+    results.push({ sailing, portCalls });
+  }
+  
+  return {
+    sailings: results,
+    total: results.length
+  };
+}
+
+export async function getSailingById(sailingId: string): Promise<SailingWithPortCalls | null> {
+  const sailing = await db.query.ccSailings.findFirst({
+    where: eq(ccSailings.id, sailingId)
+  });
+  
+  if (!sailing) return null;
+  
+  const portCalls = await db.query.ccPortCalls.findMany({
+    where: eq(ccPortCalls.sailingId, sailingId),
+    orderBy: [asc(ccPortCalls.stopSequence)]
+  });
+  
+  // Get operator and asset
+  const operator = sailing.operatorId 
+    ? await db.query.ccTransportOperators.findFirst({
+        where: eq(ccTransportOperators.id, sailing.operatorId)
+      })
+    : null;
+    
+  const asset = sailing.assetId
+    ? await db.query.ccTransportAssets.findFirst({
+        where: eq(ccTransportAssets.id, sailing.assetId)
+      })
+    : null;
+  
+  return { sailing, portCalls, operator, asset };
+}
+
+export async function getSailingByNumber(sailingNumber: string): Promise<SailingWithPortCalls | null> {
+  const sailing = await db.query.ccSailings.findFirst({
+    where: eq(ccSailings.sailingNumber, sailingNumber)
+  });
+  
+  if (!sailing) return null;
+  
+  return getSailingById(sailing.id);
+}
+
+// ============ SAILING STATE TRANSITIONS ============
+
+export async function updateSailingStatus(
+  sailingId: string,
+  status: string,
+  metadata?: { delayMinutes?: number; reason?: string }
+): Promise<any> {
+  const updates: Record<string, any> = {
+    status,
+    updatedAt: new Date()
+  };
+  
+  if (status === 'departed') {
+    updates.actualDepartureAt = new Date();
+  } else if (status === 'arrived' || status === 'completed') {
+    updates.actualArrivalAt = new Date();
+  } else if (status === 'cancelled') {
+    updates.cancelledAt = new Date();
+    updates.cancellationReason = metadata?.reason;
+  } else if (status === 'delayed') {
+    updates.delayMinutes = metadata?.delayMinutes;
+    updates.delayReason = metadata?.reason;
+  }
+  
+  const [updated] = await db.update(ccSailings)
+    .set(updates)
+    .where(eq(ccSailings.id, sailingId))
+    .returning();
+  
+  return updated;
+}
+
+export async function updatePortCallStatus(
+  portCallId: string,
+  status: string,
+  operations?: Record<string, any>
+): Promise<any> {
+  const updates: Record<string, any> = { status };
+  
+  if (status === 'arrived') {
+    updates.actualArrivalAt = new Date();
+  } else if (status === 'departed') {
+    updates.actualDepartureAt = new Date();
+  }
+  
+  if (operations) {
+    updates.operationsJson = operations;
+  }
+  
+  const [updated] = await db.update(ccPortCalls)
+    .set(updates)
+    .where(eq(ccPortCalls.id, portCallId))
+    .returning();
+  
+  return updated;
+}
+
+// ============ AVAILABILITY CHECK ============
+
+export async function checkSailingAvailability(
+  sailingId: string,
+  request: { passengers?: number; freightLbs?: number; kayaks?: number }
+): Promise<{
+  available: boolean;
+  capacity: any;
+  shortfall?: { type: string; requested: number; available: number };
+}> {
+  const sailing = await db.query.ccSailings.findFirst({
+    where: eq(ccSailings.id, sailingId)
+  });
+  
+  if (!sailing) {
+    return { available: false, capacity: null, shortfall: { type: 'sailing', requested: 0, available: 0 } };
+  }
+  
+  const capacity = sailing.capacityJson as any;
+  
+  // Check passengers
+  if (request.passengers && capacity.passengers) {
+    if (request.passengers > capacity.passengers.available) {
+      return {
+        available: false,
+        capacity,
+        shortfall: { 
+          type: 'passengers', 
+          requested: request.passengers, 
+          available: capacity.passengers.available 
+        }
+      };
+    }
+  }
+  
+  // Check freight
+  if (request.freightLbs && capacity.freight_lbs) {
+    if (request.freightLbs > capacity.freight_lbs.available) {
+      return {
+        available: false,
+        capacity,
+        shortfall: { 
+          type: 'freight_lbs', 
+          requested: request.freightLbs, 
+          available: capacity.freight_lbs.available 
+        }
+      };
+    }
+  }
+  
+  // Check kayaks
+  if (request.kayaks && capacity.kayaks) {
+    if (request.kayaks > capacity.kayaks.available) {
+      return {
+        available: false,
+        capacity,
+        shortfall: { 
+          type: 'kayaks', 
+          requested: request.kayaks, 
+          available: capacity.kayaks.available 
+        }
+      };
+    }
+  }
+  
+  return { available: true, capacity };
+}
+```
+
+## Add Sailing Routes to transport.ts
+```typescript
+// Add to server/routes/transport.ts
+
+import {
+  getSchedules, getActiveScheduleForDate,
+  getSailings, getSailingById, getSailingByNumber,
+  updateSailingStatus, updatePortCallStatus,
+  checkSailingAvailability
+} from '../services/sailingService';
+
+// ============ SCHEDULE ENDPOINTS ============
+
+// GET /api/transport/operators/:id/schedules - Get operator schedules
+router.get('/operators/:id/schedules', async (req, res) => {
+  const { id } = req.params;
+  
+  try {
+    const schedules = await getSchedules(id);
+    res.json({ schedules });
+  } catch (e: any) {
+    console.error('Get schedules error:', e);
+    res.status(500).json({ error: 'Failed to get schedules' });
+  }
+});
+
+// GET /api/transport/operators/:id/schedules/for-date - Get active schedules for specific date
+router.get('/operators/:id/schedules/for-date', async (req, res) => {
+  const { id } = req.params;
+  const { date } = req.query;
+  
+  try {
+    const targetDate = date ? new Date(date as string) : new Date();
+    const schedules = await getActiveScheduleForDate(id, targetDate);
+    res.json({ date: targetDate.toISOString().split('T')[0], schedules });
+  } catch (e: any) {
+    console.error('Get schedules for date error:', e);
+    res.status(500).json({ error: 'Failed to get schedules' });
+  }
+});
+
+// ============ SAILING ENDPOINTS ============
+
+// GET /api/transport/sailings - Search sailings
+router.get('/sailings', async (req, res) => {
+  const { operator, from, to, origin, destination, status, limit } = req.query;
+  
+  try {
+    const result = await getSailings({
+      operatorId: operator as string,
+      fromDate: from ? new Date(from as string) : undefined,
+      toDate: to ? new Date(to as string) : undefined,
+      originLocationId: origin as string,
+      destinationLocationId: destination as string,
+      status: status as string,
+      limit: limit ? parseInt(limit as string) : undefined
+    });
+    
+    res.json(result);
+  } catch (e: any) {
+    console.error('Get sailings error:', e);
+    res.status(500).json({ error: 'Failed to get sailings' });
+  }
+});
+
+// GET /api/transport/portals/:slug/sailings - Get sailings for portal
+router.get('/portals/:slug/sailings', async (req, res) => {
+  const { slug } = req.params;
+  const { operator, from, to, limit } = req.query;
+  
+  try {
+    const result = await getSailings({
+      portalSlug: slug,
+      operatorCode: operator as string,
+      fromDate: from ? new Date(from as string) : new Date(),
+      toDate: to ? new Date(to as string) : undefined,
+      limit: limit ? parseInt(limit as string) : 20
+    });
+    
+    res.json(result);
+  } catch (e: any) {
+    console.error('Get portal sailings error:', e);
+    res.status(500).json({ error: 'Failed to get sailings' });
+  }
+});
+
+// GET /api/transport/sailings/:id - Get sailing details with port calls
+router.get('/sailings/:id', async (req, res) => {
+  const { id } = req.params;
+  
+  try {
+    const result = await getSailingById(id);
+    if (!result) {
+      return res.status(404).json({ error: 'Sailing not found' });
+    }
+    res.json(result);
+  } catch (e: any) {
+    console.error('Get sailing error:', e);
+    res.status(500).json({ error: 'Failed to get sailing' });
+  }
+});
+
+// GET /api/transport/sailings/by-number/:number - Get by sailing number
+router.get('/sailings/by-number/:number', async (req, res) => {
+  const { number } = req.params;
+  
+  try {
+    const result = await getSailingByNumber(number);
+    if (!result) {
+      return res.status(404).json({ error: 'Sailing not found' });
+    }
+    res.json(result);
+  } catch (e: any) {
+    console.error('Get sailing error:', e);
+    res.status(500).json({ error: 'Failed to get sailing' });
+  }
+});
+
+// POST /api/transport/sailings/:id/status - Update sailing status
+router.post('/sailings/:id/status', async (req, res) => {
+  const { id } = req.params;
+  const { status, delayMinutes, reason } = req.body;
+  
+  if (!status) {
+    return res.status(400).json({ error: 'status required' });
+  }
+  
+  try {
+    const updated = await updateSailingStatus(id, status, { delayMinutes, reason });
+    res.json({ sailing: updated });
+  } catch (e: any) {
+    console.error('Update sailing status error:', e);
+    res.status(500).json({ error: 'Failed to update status' });
+  }
+});
+
+// POST /api/transport/sailings/:id/port-calls/:callId/status - Update port call status
+router.post('/sailings/:id/port-calls/:callId/status', async (req, res) => {
+  const { callId } = req.params;
+  const { status, operations } = req.body;
+  
+  if (!status) {
+    return res.status(400).json({ error: 'status required' });
+  }
+  
+  try {
+    const updated = await updatePortCallStatus(callId, status, operations);
+    res.json({ portCall: updated });
+  } catch (e: any) {
+    console.error('Update port call status error:', e);
+    res.status(500).json({ error: 'Failed to update status' });
+  }
+});
+
+// GET /api/transport/sailings/:id/availability - Check availability
+router.get('/sailings/:id/availability', async (req, res) => {
+  const { id } = req.params;
+  const { passengers, freight, kayaks } = req.query;
+  
+  try {
+    const result = await checkSailingAvailability(id, {
+      passengers: passengers ? parseInt(passengers as string) : undefined,
+      freightLbs: freight ? parseInt(freight as string) : undefined,
+      kayaks: kayaks ? parseInt(kayaks as string) : undefined
+    });
+    
+    res.json(result);
+  } catch (e: any) {
+    console.error('Check availability error:', e);
+    res.status(500).json({ error: 'Failed to check availability' });
+  }
+});
+```
+
+## Drizzle Schema Exports
+
+Add to shared/schema.ts:
+- SailingSchedule, InsertSailingSchedule
+- Sailing, InsertSailing
+- PortCall, InsertPortCall
+
+## Deliverables
+- [ ] Migration 080_sailings.sql
+- [ ] cc_sailing_schedules table with RLS
+- [ ] cc_sailings table with RLS
+- [ ] cc_port_calls table with RLS
+- [ ] 3 Lady Rose schedules seeded:
+  - Summer (daily Jun-Sep)
+  - Shoulder (Tue/Thu/Sat May, Oct)
+  - Winter (Tue/Sat Nov-Apr)
+- [ ] 1 sample sailing with 2 port calls (Sechart, Bamfield)
+- [ ] server/services/sailingService.ts
+- [ ] Routes added to server/routes/transport.ts
+- [ ] Test: GET /api/transport/portals/bamfield/sailings returns tomorrow's sailing
+- [ ] Test: GET /api/transport/sailings/:id shows port calls (Sechart, Bamfield)
+- [ ] Test: GET /api/transport/sailings/:id/availability?passengers=10 returns available: true
+- [ ] Test: POST /api/transport/sailings/:id/status with "departed" sets actual_departure_at
+
+Report with sailing details showing port calls and availability check result.
