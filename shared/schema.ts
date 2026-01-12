@@ -1121,3 +1121,78 @@ export const cc_weather_trends = pgTable('cc_weather_trends', {
 export const insertWeatherTrendSchema = createInsertSchema(cc_weather_trends).omit({ id: true, createdAt: true, updatedAt: true });
 export type WeatherTrend = typeof cc_weather_trends.$inferSelect;
 export type InsertWeatherTrend = z.infer<typeof insertWeatherTrendSchema>;
+
+// Trips - container for group itineraries across multiple carts/reservations
+export const cc_trips = pgTable('cc_trips', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  
+  portalId: uuid('portal_id').references(() => ccPortals.id, { onDelete: 'set null' }),
+  tenantId: uuid('tenant_id').references(() => ccTenants.id, { onDelete: 'set null' }),
+  
+  accessCode: varchar('access_code', { length: 20 }).notNull().unique(),
+  
+  groupName: varchar('group_name', { length: 255 }).notNull(),
+  tripType: varchar('trip_type', { length: 50 }).default('leisure'),
+  
+  startDate: date('start_date'),
+  endDate: date('end_date'),
+  
+  primaryContactName: varchar('primary_contact_name', { length: 255 }),
+  primaryContactEmail: varchar('primary_contact_email', { length: 255 }),
+  primaryContactPhone: varchar('primary_contact_phone', { length: 50 }),
+  
+  expectedAdults: integer('expected_adults').default(1),
+  expectedChildren: integer('expected_children').default(0),
+  expectedInfants: integer('expected_infants').default(0),
+  
+  status: varchar('status', { length: 50 }).notNull().default('planning'),
+  
+  intentJson: jsonb('intent_json').default({}),
+  needsJson: jsonb('needs_json').default({}),
+  budgetJson: jsonb('budget_json').default({}),
+  viralJson: jsonb('viral_json').default({}),
+  
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+});
+
+export const insertTripSchema = createInsertSchema(cc_trips).omit({ id: true, createdAt: true, updatedAt: true });
+export type Trip = typeof cc_trips.$inferSelect;
+export type InsertTrip = z.infer<typeof insertTripSchema>;
+
+// Trip Invitations - invite party members, planners, or next destinations
+export const cc_trip_invitations = pgTable('cc_trip_invitations', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tripId: uuid('trip_id').notNull().references(() => cc_trips.id, { onDelete: 'cascade' }),
+  
+  invitationType: varchar('invitation_type', { length: 50 }).notNull(),
+  
+  token: varchar('token', { length: 50 }).notNull().unique(),
+  
+  recipientName: varchar('recipient_name', { length: 255 }),
+  recipientEmail: varchar('recipient_email', { length: 255 }),
+  recipientPhone: varchar('recipient_phone', { length: 50 }),
+  
+  handoffId: uuid('handoff_id'),
+  nextDestinationName: varchar('next_destination_name', { length: 255 }),
+  
+  messageSubject: varchar('message_subject', { length: 255 }),
+  messageBody: text('message_body'),
+  senderName: varchar('sender_name', { length: 255 }),
+  
+  status: varchar('status', { length: 50 }).notNull().default('pending'),
+  
+  sentAt: timestamp('sent_at', { withTimezone: true }),
+  viewedAt: timestamp('viewed_at', { withTimezone: true }),
+  acceptedAt: timestamp('accepted_at', { withTimezone: true }),
+  declinedAt: timestamp('declined_at', { withTimezone: true }),
+  expiresAt: timestamp('expires_at', { withTimezone: true }),
+  
+  resultJson: jsonb('result_json').default({}),
+  
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+});
+
+export const insertTripInvitationSchema = createInsertSchema(cc_trip_invitations).omit({ id: true, createdAt: true });
+export type TripInvitation = typeof cc_trip_invitations.$inferSelect;
+export type InsertTripInvitation = z.infer<typeof insertTripInvitationSchema>;

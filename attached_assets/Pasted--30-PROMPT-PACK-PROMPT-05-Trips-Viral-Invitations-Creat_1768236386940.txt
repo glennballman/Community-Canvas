@@ -1,0 +1,769 @@
+**30-PROMPT PACK - PROMPT 05: Trips + Viral Invitations**
+
+Create trip management and invitation system for group coordination and viral growth.
+
+## Create Trip Tables
+
+### Migration 074_trips_invitations.sql
+```sql
+BEGIN;
+
+-- ============ TRIPS ============
+-- A trip is a container for a group's itinerary across multiple carts/reservations
+
+CREATE TABLE IF NOT EXISTS cc_trips (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  
+  -- Context
+  portal_id uuid REFERENCES cc_portals(id) ON DELETE SET NULL,
+  tenant_id uuid REFERENCES cc_tenants(id) ON DELETE SET NULL,
+  
+  -- Access (public access code for sharing)
+  access_code varchar NOT NULL UNIQUE,
+  
+  -- Trip info
+  group_name varchar NOT NULL,
+  trip_type varchar DEFAULT 'leisure' CHECK (trip_type IN (
+    'leisure', 'business', 'wedding', 'reunion', 'corporate', 'expedition', 'other'
+  )),
+  
+  -- Dates
+  start_date date,
+  end_date date,
+  
+  -- Primary contact
+  primary_contact_name varchar,
+  primary_contact_email varchar,
+  primary_contact_phone varchar,
+  
+  -- Party composition
+  expected_adults integer DEFAULT 1,
+  expected_children integer DEFAULT 0,
+  expected_infants integer DEFAULT 0,
+  
+  -- Status
+  status varchar NOT NULL DEFAULT 'planning' CHECK (status IN (
+    'planning', 'confirmed', 'in_progress', 'completed', 'cancelled'
+  )),
+  
+  -- INTENT (trip-level planning)
+  intent_json jsonb DEFAULT '{}'::jsonb,
+  
+  -- NEEDS (aggregated from party profiles)
+  needs_json jsonb DEFAULT '{}'::jsonb,
+  
+  -- BUDGET
+  budget_json jsonb DEFAULT '{}'::jsonb,
+  -- {total: 5000, currency: 'CAD', flexibility: 'moderate'}
+  
+  -- Viral tracking
+  viral_json jsonb DEFAULT '{}'::jsonb,
+  -- {source: 'referral', referrer_trip_id: uuid, invitation_token: string}
+  
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_trips_access ON cc_trips(access_code);
+CREATE INDEX IF NOT EXISTS idx_trips_portal ON cc_trips(portal_id) WHERE portal_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_trips_status ON cc_trips(status, start_date);
+
+ALTER TABLE cc_trips ENABLE ROW LEVEL SECURITY;
+
+-- ============ TRIP INVITATIONS ============
+-- Invite party members, planners, or next destinations
+
+CREATE TABLE IF NOT EXISTS cc_trip_invitations (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  trip_id uuid NOT NULL REFERENCES cc_trips(id) ON DELETE CASCADE,
+  
+  -- Invitation type
+  invitation_type varchar NOT NULL CHECK (invitation_type IN (
+    'party_member',      -- Join the trip as a guest
+    'co_planner',        -- Help plan the trip
+    'kid_planner',       -- Limited access for kids to add activities
+    'handoff_recipient', -- Next property receiving the group
+    'partner_invite'     -- Invite a business to join the platform
+  )),
+  
+  -- Token for accepting
+  token varchar NOT NULL UNIQUE,
+  
+  -- Recipient
+  recipient_name varchar,
+  recipient_email varchar,
+  recipient_phone varchar,
+  
+  -- For handoffs
+  handoff_id uuid,
+  next_destination_name varchar,
+  
+  -- Message
+  message_subject varchar,
+  message_body text,
+  sender_name varchar,
+  
+  -- Status
+  status varchar NOT NULL DEFAULT 'pending' CHECK (status IN (
+    'pending', 'sent', 'viewed', 'accepted', 'declined', 'expired'
+  )),
+  
+  -- Tracking
+  sent_at timestamptz,
+  viewed_at timestamptz,
+  accepted_at timestamptz,
+  declined_at timestamptz,
+  expires_at timestamptz DEFAULT (now() + interval '7 days'),
+  
+  -- Result (what was created when accepted)
+  result_json jsonb DEFAULT '{}'::jsonb,
+  -- {party_profile_id: uuid, individual_id: uuid}
+  
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_invitations_token ON cc_trip_invitations(token);
+CREATE INDEX IF NOT EXISTS idx_invitations_trip ON cc_trip_invitations(trip_id);
+CREATE INDEX IF NOT EXISTS idx_invitations_status ON cc_trip_invitations(status) WHERE status = 'pending';
+
+ALTER TABLE cc_trip_invitations ENABLE ROW LEVEL SECURITY;
+
+-- ============ LINK CARTS TO TRIPS ============
+-- Add foreign key now that trips table exists
+
+ALTER TABLE cc_reservation_carts
+  ADD CONSTRAINT fk_carts_trip 
+  FOREIGN KEY (trip_id) REFERENCES cc_trips(id) ON DELETE SET NULL;
+
+COMMIT;
+```
+
+## Create server/services/tripService.ts
+```typescript
+// server/services/tripService.ts
+
+import { db } from '../db';
+import { eq, and, desc } from 'drizzle-orm';
+import { nanoid } from 'nanoid';
+import { logActivity } from './activityService';
+
+// ============ TYPES ============
+
+interface CreateTripRequest {
+  portalSlug?: string;
+  portalId?: string;
+  groupName: string;
+  tripType?: 'leisure' | 'business' | 'wedding' | 'reunion' | 'corporate' | 'expedition' | 'other';
+  startDate?: Date;
+  endDate?: Date;
+  primaryContactName: string;
+  primaryContactEmail?: string;
+  primaryContactPhone?: string;
+  expectedAdults?: number;
+  expectedChildren?: number;
+  expectedInfants?: number;
+  intent?: Record<string, any>;
+  needs?: Record<string, any>;
+  budget?: Record<string, any>;
+  viralSource?: string;
+  referrerTripId?: string;
+}
+
+interface TripResult {
+  trip: any;
+  accessCode: string;
+  shareUrl: string;
+}
+
+interface InvitationRequest {
+  tripId: string;
+  invitationType: 'party_member' | 'co_planner' | 'kid_planner' | 'handoff_recipient' | 'partner_invite';
+  recipientName?: string;
+  recipientEmail?: string;
+  recipientPhone?: string;
+  messageSubject?: string;
+  messageBody?: string;
+  senderName?: string;
+  handoffId?: string;
+  nextDestinationName?: string;
+  expiresInDays?: number;
+}
+
+interface InvitationResult {
+  invitation: any;
+  inviteUrl: string;
+  token: string;
+}
+
+// ============ HELPERS ============
+
+function generateAccessCode(): string {
+  // Format: XXXX-XXXX (8 chars, easy to type)
+  const chars = '23456789ABCDEFGHJKMNPQRSTUVWXYZ';
+  let code = '';
+  for (let i = 0; i < 8; i++) {
+    if (i === 4) code += '-';
+    code += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return code;
+}
+
+function generateInviteToken(): string {
+  return nanoid(24);
+}
+
+function getShareUrl(accessCode: string): string {
+  const baseUrl = process.env.PUBLIC_URL || 'https://communitycanvas.ca';
+  return `${baseUrl}/trip/${accessCode}`;
+}
+
+function getInviteUrl(token: string): string {
+  const baseUrl = process.env.PUBLIC_URL || 'https://communitycanvas.ca';
+  return `${baseUrl}/invite/${token}`;
+}
+
+// ============ TRIP FUNCTIONS ============
+
+export async function createTrip(req: CreateTripRequest): Promise<TripResult> {
+  // Resolve portal
+  let portalId = req.portalId;
+  let tenantId: string | undefined;
+  
+  if (req.portalSlug && !portalId) {
+    const portal = await db.query.ccPortals.findFirst({
+      where: eq(ccPortals.slug, req.portalSlug)
+    });
+    if (portal) {
+      portalId = portal.id;
+      tenantId = portal.tenantId;
+    }
+  }
+  
+  const accessCode = generateAccessCode();
+  
+  const [trip] = await db.insert(ccTrips).values({
+    portalId,
+    tenantId,
+    accessCode,
+    groupName: req.groupName,
+    tripType: req.tripType || 'leisure',
+    startDate: req.startDate,
+    endDate: req.endDate,
+    primaryContactName: req.primaryContactName,
+    primaryContactEmail: req.primaryContactEmail,
+    primaryContactPhone: req.primaryContactPhone,
+    expectedAdults: req.expectedAdults || 1,
+    expectedChildren: req.expectedChildren || 0,
+    expectedInfants: req.expectedInfants || 0,
+    intentJson: req.intent || {},
+    needsJson: req.needs || {},
+    budgetJson: req.budget || {},
+    viralJson: {
+      source: req.viralSource || 'direct',
+      referrerTripId: req.referrerTripId
+    },
+    status: 'planning'
+  }).returning();
+  
+  await logActivity({
+    tenantId: tenantId || 'system',
+    actorId: 'guest',
+    action: 'trip.created',
+    resourceType: 'trip',
+    resourceId: trip.id,
+    metadata: { accessCode, groupName: req.groupName }
+  });
+  
+  return {
+    trip,
+    accessCode,
+    shareUrl: getShareUrl(accessCode)
+  };
+}
+
+export async function getTrip(accessCode: string): Promise<any | null> {
+  return db.query.ccTrips.findFirst({
+    where: eq(ccTrips.accessCode, accessCode)
+  });
+}
+
+export async function getTripById(tripId: string): Promise<any | null> {
+  return db.query.ccTrips.findFirst({
+    where: eq(ccTrips.id, tripId)
+  });
+}
+
+export async function updateTrip(
+  accessCode: string,
+  updates: Partial<{
+    groupName: string;
+    startDate: Date;
+    endDate: Date;
+    expectedAdults: number;
+    expectedChildren: number;
+    expectedInfants: number;
+    status: string;
+    intentJson: Record<string, any>;
+    needsJson: Record<string, any>;
+    budgetJson: Record<string, any>;
+  }>
+): Promise<any> {
+  const [updated] = await db.update(ccTrips)
+    .set({ ...updates, updatedAt: new Date() })
+    .where(eq(ccTrips.accessCode, accessCode))
+    .returning();
+  
+  return updated;
+}
+
+// Get all carts for a trip
+export async function getTripCarts(tripId: string): Promise<any[]> {
+  return db.query.ccReservationCarts.findMany({
+    where: eq(ccReservationCarts.tripId, tripId),
+    orderBy: [desc(ccReservationCarts.createdAt)]
+  });
+}
+
+// ============ INVITATION FUNCTIONS ============
+
+export async function createInvitation(req: InvitationRequest): Promise<InvitationResult> {
+  const token = generateInviteToken();
+  const expiresAt = new Date(Date.now() + (req.expiresInDays || 7) * 24 * 60 * 60 * 1000);
+  
+  // Get trip for context
+  const trip = await getTripById(req.tripId);
+  
+  // Default messages based on type
+  let subject = req.messageSubject;
+  let body = req.messageBody;
+  
+  if (!subject) {
+    switch (req.invitationType) {
+      case 'party_member':
+        subject = `You're invited to join ${trip?.groupName || 'our trip'}!`;
+        break;
+      case 'co_planner':
+        subject = `Help plan ${trip?.groupName || 'our trip'}`;
+        break;
+      case 'kid_planner':
+        subject = `Add your activities to ${trip?.groupName || 'our trip'}!`;
+        break;
+      case 'handoff_recipient':
+        subject = `Guest arriving from ${trip?.groupName || 'a trip'}`;
+        break;
+      case 'partner_invite':
+        subject = `Join Community Canvas`;
+        break;
+    }
+  }
+  
+  const [invitation] = await db.insert(ccTripInvitations).values({
+    tripId: req.tripId,
+    invitationType: req.invitationType,
+    token,
+    recipientName: req.recipientName,
+    recipientEmail: req.recipientEmail,
+    recipientPhone: req.recipientPhone,
+    handoffId: req.handoffId,
+    nextDestinationName: req.nextDestinationName,
+    messageSubject: subject,
+    messageBody: body,
+    senderName: req.senderName,
+    status: 'pending',
+    expiresAt
+  }).returning();
+  
+  await logActivity({
+    tenantId: trip?.tenantId || 'system',
+    actorId: 'system',
+    action: 'invitation.created',
+    resourceType: 'invitation',
+    resourceId: invitation.id,
+    metadata: { 
+      tripId: req.tripId, 
+      type: req.invitationType,
+      recipientEmail: req.recipientEmail 
+    }
+  });
+  
+  return {
+    invitation,
+    inviteUrl: getInviteUrl(token),
+    token
+  };
+}
+
+export async function getInvitation(token: string): Promise<any | null> {
+  const invitation = await db.query.ccTripInvitations.findFirst({
+    where: eq(ccTripInvitations.token, token)
+  });
+  
+  if (!invitation) return null;
+  
+  // Mark as viewed if first time
+  if (invitation.status === 'pending' || invitation.status === 'sent') {
+    await db.update(ccTripInvitations)
+      .set({ status: 'viewed', viewedAt: new Date() })
+      .where(eq(ccTripInvitations.id, invitation.id));
+  }
+  
+  // Get associated trip
+  const trip = await getTripById(invitation.tripId);
+  
+  return { invitation: { ...invitation, status: 'viewed' }, trip };
+}
+
+export async function acceptInvitation(
+  token: string,
+  accepterName?: string,
+  accepterEmail?: string
+): Promise<{ success: boolean; trip?: any; message: string }> {
+  const invitation = await db.query.ccTripInvitations.findFirst({
+    where: eq(ccTripInvitations.token, token)
+  });
+  
+  if (!invitation) {
+    return { success: false, message: 'Invitation not found' };
+  }
+  
+  if (invitation.status === 'accepted') {
+    const trip = await getTripById(invitation.tripId);
+    return { success: true, trip, message: 'Already accepted' };
+  }
+  
+  if (invitation.status === 'expired' || (invitation.expiresAt && new Date(invitation.expiresAt) < new Date())) {
+    return { success: false, message: 'Invitation has expired' };
+  }
+  
+  if (invitation.status === 'declined') {
+    return { success: false, message: 'Invitation was declined' };
+  }
+  
+  // Mark as accepted
+  await db.update(ccTripInvitations)
+    .set({
+      status: 'accepted',
+      acceptedAt: new Date(),
+      resultJson: {
+        accepterName,
+        accepterEmail,
+        acceptedAt: new Date().toISOString()
+      }
+    })
+    .where(eq(ccTripInvitations.id, invitation.id));
+  
+  const trip = await getTripById(invitation.tripId);
+  
+  await logActivity({
+    tenantId: trip?.tenantId || 'system',
+    actorId: 'guest',
+    action: 'invitation.accepted',
+    resourceType: 'invitation',
+    resourceId: invitation.id,
+    metadata: { 
+      tripId: invitation.tripId, 
+      type: invitation.invitationType,
+      accepterEmail
+    }
+  });
+  
+  return { 
+    success: true, 
+    trip, 
+    message: `Welcome to ${trip?.groupName || 'the trip'}!` 
+  };
+}
+
+export async function declineInvitation(token: string): Promise<{ success: boolean }> {
+  await db.update(ccTripInvitations)
+    .set({ status: 'declined', declinedAt: new Date() })
+    .where(eq(ccTripInvitations.token, token));
+  
+  return { success: true };
+}
+
+export async function getTripInvitations(tripId: string): Promise<any[]> {
+  return db.query.ccTripInvitations.findMany({
+    where: eq(ccTripInvitations.tripId, tripId),
+    orderBy: [desc(ccTripInvitations.createdAt)]
+  });
+}
+
+// Create cart linked to trip
+export async function createTripCart(
+  accessCode: string,
+  cartOptions?: {
+    primaryGuestName?: string;
+    primaryGuestEmail?: string;
+  }
+): Promise<any> {
+  const trip = await getTrip(accessCode);
+  if (!trip) {
+    throw new Error('Trip not found');
+  }
+  
+  // Import createCart from cartService
+  const { createCart } = await import('./cartService');
+  
+  return createCart({
+    portalId: trip.portalId,
+    tenantId: trip.tenantId,
+    tripId: trip.id,
+    source: 'trip',
+    sourceRef: accessCode,
+    primaryGuestName: cartOptions?.primaryGuestName || trip.primaryContactName,
+    primaryGuestEmail: cartOptions?.primaryGuestEmail || trip.primaryContactEmail,
+    partyAdults: trip.expectedAdults,
+    partyChildren: trip.expectedChildren,
+    partyInfants: trip.expectedInfants,
+    needs: trip.needsJson,
+    intent: trip.intentJson
+  });
+}
+```
+
+## Add Trip Routes
+
+### In server/routes/public-portal.ts
+```typescript
+import { 
+  createTrip, getTrip, updateTrip, getTripCarts, createTripCart,
+  createInvitation, getInvitation, acceptInvitation, declineInvitation, getTripInvitations
+} from '../services/tripService';
+
+// ============ TRIP ENDPOINTS ============
+
+// POST /api/public/portals/:slug/trips - Create trip from portal
+router.post('/portals/:slug/trips', async (req, res) => {
+  const { slug } = req.params;
+  const b = req.body || {};
+  
+  if (!b.groupName || !b.primaryContactName) {
+    return res.status(400).json({ error: 'groupName and primaryContactName required' });
+  }
+  
+  try {
+    const result = await createTrip({
+      portalSlug: slug,
+      groupName: b.groupName,
+      tripType: b.tripType,
+      startDate: b.startDate ? new Date(b.startDate) : undefined,
+      endDate: b.endDate ? new Date(b.endDate) : undefined,
+      primaryContactName: b.primaryContactName,
+      primaryContactEmail: b.primaryContactEmail,
+      primaryContactPhone: b.primaryContactPhone,
+      expectedAdults: b.expectedAdults,
+      expectedChildren: b.expectedChildren,
+      expectedInfants: b.expectedInfants,
+      intent: b.intent,
+      needs: b.needs,
+      budget: b.budget,
+      viralSource: b.viralSource,
+      referrerTripId: b.referrerTripId
+    });
+    
+    res.json(result);
+  } catch (e: any) {
+    console.error('Create trip error:', e);
+    res.status(500).json({ error: 'Failed to create trip' });
+  }
+});
+
+// GET /api/public/trips/:accessCode - Get trip by access code
+router.get('/trips/:accessCode', async (req, res) => {
+  const { accessCode } = req.params;
+  
+  try {
+    const trip = await getTrip(accessCode);
+    if (!trip) {
+      return res.status(404).json({ error: 'Trip not found' });
+    }
+    
+    const carts = await getTripCarts(trip.id);
+    
+    res.json({ trip, carts, shareUrl: `${process.env.PUBLIC_URL || 'https://communitycanvas.ca'}/trip/${accessCode}` });
+  } catch (e: any) {
+    console.error('Get trip error:', e);
+    res.status(500).json({ error: 'Failed to get trip' });
+  }
+});
+
+// PATCH /api/public/trips/:accessCode - Update trip
+router.patch('/trips/:accessCode', async (req, res) => {
+  const { accessCode } = req.params;
+  const b = req.body || {};
+  
+  try {
+    const updated = await updateTrip(accessCode, {
+      groupName: b.groupName,
+      startDate: b.startDate ? new Date(b.startDate) : undefined,
+      endDate: b.endDate ? new Date(b.endDate) : undefined,
+      expectedAdults: b.expectedAdults,
+      expectedChildren: b.expectedChildren,
+      expectedInfants: b.expectedInfants,
+      status: b.status,
+      intentJson: b.intent,
+      needsJson: b.needs,
+      budgetJson: b.budget
+    });
+    
+    if (!updated) {
+      return res.status(404).json({ error: 'Trip not found' });
+    }
+    
+    res.json({ trip: updated });
+  } catch (e: any) {
+    console.error('Update trip error:', e);
+    res.status(500).json({ error: 'Failed to update trip' });
+  }
+});
+
+// POST /api/public/trips/:accessCode/carts - Create cart for trip
+router.post('/trips/:accessCode/carts', async (req, res) => {
+  const { accessCode } = req.params;
+  const b = req.body || {};
+  
+  try {
+    const result = await createTripCart(accessCode, {
+      primaryGuestName: b.primaryGuestName,
+      primaryGuestEmail: b.primaryGuestEmail
+    });
+    
+    res.json(result);
+  } catch (e: any) {
+    console.error('Create trip cart error:', e);
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// ============ INVITATION ENDPOINTS ============
+
+// POST /api/public/trips/:accessCode/invitations - Create invitation
+router.post('/trips/:accessCode/invitations', async (req, res) => {
+  const { accessCode } = req.params;
+  const b = req.body || {};
+  
+  if (!b.invitationType) {
+    return res.status(400).json({ error: 'invitationType required' });
+  }
+  
+  try {
+    const trip = await getTrip(accessCode);
+    if (!trip) {
+      return res.status(404).json({ error: 'Trip not found' });
+    }
+    
+    const result = await createInvitation({
+      tripId: trip.id,
+      invitationType: b.invitationType,
+      recipientName: b.recipientName,
+      recipientEmail: b.recipientEmail,
+      recipientPhone: b.recipientPhone,
+      messageSubject: b.messageSubject,
+      messageBody: b.messageBody,
+      senderName: b.senderName || trip.primaryContactName,
+      handoffId: b.handoffId,
+      nextDestinationName: b.nextDestinationName,
+      expiresInDays: b.expiresInDays
+    });
+    
+    res.json(result);
+  } catch (e: any) {
+    console.error('Create invitation error:', e);
+    res.status(500).json({ error: 'Failed to create invitation' });
+  }
+});
+
+// GET /api/public/trips/:accessCode/invitations - List trip invitations
+router.get('/trips/:accessCode/invitations', async (req, res) => {
+  const { accessCode } = req.params;
+  
+  try {
+    const trip = await getTrip(accessCode);
+    if (!trip) {
+      return res.status(404).json({ error: 'Trip not found' });
+    }
+    
+    const invitations = await getTripInvitations(trip.id);
+    res.json({ invitations });
+  } catch (e: any) {
+    console.error('Get invitations error:', e);
+    res.status(500).json({ error: 'Failed to get invitations' });
+  }
+});
+
+// GET /api/public/invite/:token - View invitation
+router.get('/invite/:token', async (req, res) => {
+  const { token } = req.params;
+  
+  try {
+    const result = await getInvitation(token);
+    if (!result) {
+      return res.status(404).json({ error: 'Invitation not found' });
+    }
+    
+    res.json(result);
+  } catch (e: any) {
+    console.error('Get invitation error:', e);
+    res.status(500).json({ error: 'Failed to get invitation' });
+  }
+});
+
+// POST /api/public/invite/:token/accept - Accept invitation
+router.post('/invite/:token/accept', async (req, res) => {
+  const { token } = req.params;
+  const b = req.body || {};
+  
+  try {
+    const result = await acceptInvitation(token, b.name, b.email);
+    
+    if (!result.success) {
+      return res.status(400).json({ error: result.message });
+    }
+    
+    res.json(result);
+  } catch (e: any) {
+    console.error('Accept invitation error:', e);
+    res.status(500).json({ error: 'Failed to accept invitation' });
+  }
+});
+
+// POST /api/public/invite/:token/decline - Decline invitation
+router.post('/invite/:token/decline', async (req, res) => {
+  const { token } = req.params;
+  
+  try {
+    await declineInvitation(token);
+    res.json({ success: true });
+  } catch (e: any) {
+    console.error('Decline invitation error:', e);
+    res.status(500).json({ error: 'Failed to decline invitation' });
+  }
+});
+```
+
+## Drizzle Schema Exports
+
+Add to shared/schema.ts:
+- Trip, InsertTrip
+- TripInvitation, InsertTripInvitation
+
+## Deliverables
+- [ ] Migration 074_trips_invitations.sql
+- [ ] cc_trips table with RLS
+- [ ] cc_trip_invitations table with RLS
+- [ ] server/services/tripService.ts
+- [ ] Trip routes:
+  - POST /api/public/portals/:slug/trips
+  - GET /api/public/trips/:accessCode
+  - PATCH /api/public/trips/:accessCode
+  - POST /api/public/trips/:accessCode/carts
+- [ ] Invitation routes:
+  - POST /api/public/trips/:accessCode/invitations
+  - GET /api/public/trips/:accessCode/invitations
+  - GET /api/public/invite/:token
+  - POST /api/public/invite/:token/accept
+  - POST /api/public/invite/:token/decline
+- [ ] Test: Create trip → create invitation → accept → verify status
+
+Report with sample trip access code and invitation flow test.
