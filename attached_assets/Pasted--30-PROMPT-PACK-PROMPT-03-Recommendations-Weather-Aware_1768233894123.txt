@@ -1,0 +1,588 @@
+**30-PROMPT PACK - PROMPT 03: Recommendations + Weather-Aware Filtering**
+
+Create recommendation engine that filters activities based on weather, guest needs, and party composition.
+
+## Create server/services/recommendationService.ts
+```typescript
+// server/services/recommendationService.ts
+
+import { db } from '../db';
+import { eq, and, gte, lte, sql, or, ilike } from 'drizzle-orm';
+
+// ============ TYPES ============
+
+interface RecommendationRequest {
+  portalSlug?: string;
+  portalId?: string;
+  locationCode?: string;
+  targetDate: Date;
+  partyAdults?: number;
+  partyChildren?: number;
+  partyInfants?: number;
+  needs?: {
+    dietary?: { allergies?: string[]; restrictions?: string[] };
+    accessibility?: { wheelchair?: boolean; limitedMobility?: boolean };
+    pets?: { type?: string; count?: number };
+  };
+  intent?: {
+    archetype?: 'family' | 'solo' | 'couple' | 'group' | 'corporate' | 'wedding';
+    interests?: string[];
+    budget?: 'budget' | 'mid' | 'premium';
+  };
+  excludeItemTypes?: string[];
+  limit?: number;
+}
+
+interface RecommendationResult {
+  item: {
+    id: string;
+    type: string;
+    title: string;
+    description?: string;
+    facilityId?: string;
+    offerId?: string;
+    providerTenantId?: string;
+    providerName?: string;
+    basePrice?: number;
+    currency?: string;
+    imageUrl?: string;
+  };
+  score: number;
+  reasons: string[];
+  weatherFit: 'excellent' | 'good' | 'fair' | 'poor';
+  weatherWarnings: string[];
+  partyFit: 'excellent' | 'good' | 'fair' | 'poor';
+  accessibilityNotes?: string[];
+}
+
+interface WeatherContext {
+  month: number;
+  avgHighC: number;
+  avgLowC: number;
+  rainProbPercent: number;
+  fogProbPercent: number;
+  daylightHours: number;
+  bestFor: string[];
+  avoidFor: string[];
+  planningNotes: string;
+}
+
+// ============ WEATHER HELPERS ============
+
+async function getWeatherContext(locationCode: string, date: Date): Promise<WeatherContext | null> {
+  const month = date.getMonth() + 1;
+  
+  const result = await db.query.ccWeatherTrends.findFirst({
+    where: and(
+      eq(ccWeatherTrends.locationCode, locationCode),
+      eq(ccWeatherTrends.month, month)
+    )
+  });
+  
+  if (!result) return null;
+  
+  return {
+    month,
+    avgHighC: Number(result.avgHighC) || 15,
+    avgLowC: Number(result.avgLowC) || 8,
+    rainProbPercent: result.rainProbPercent || 50,
+    fogProbPercent: result.fogProbPercent || 20,
+    daylightHours: Number(result.daylightHours) || 12,
+    bestFor: result.bestFor || [],
+    avoidFor: result.avoidFor || [],
+    planningNotes: result.planningNotes || ''
+  };
+}
+
+function assessWeatherFit(
+  itemType: string,
+  itemTags: string[],
+  weather: WeatherContext
+): { fit: 'excellent' | 'good' | 'fair' | 'poor'; warnings: string[] } {
+  const warnings: string[] = [];
+  let score = 50; // Base score
+  
+  // Check if activity is in "best for" list
+  const isBestFor = weather.bestFor.some(b => 
+    itemTags.some(t => t.toLowerCase().includes(b.toLowerCase())) ||
+    itemType.toLowerCase().includes(b.toLowerCase())
+  );
+  
+  // Check if activity is in "avoid for" list
+  const isAvoidFor = weather.avoidFor.some(a => 
+    itemTags.some(t => t.toLowerCase().includes(a.toLowerCase())) ||
+    itemType.toLowerCase().includes(a.toLowerCase())
+  );
+  
+  if (isBestFor) score += 30;
+  if (isAvoidFor) {
+    score -= 40;
+    warnings.push(`This activity may not be ideal for ${weather.planningNotes}`);
+  }
+  
+  // Water activities in rainy months
+  const waterActivities = ['kayaking', 'swimming', 'paddleboard', 'boat', 'fishing'];
+  const isWaterActivity = waterActivities.some(w => 
+    itemType.toLowerCase().includes(w) || 
+    itemTags.some(t => t.toLowerCase().includes(w))
+  );
+  
+  if (isWaterActivity && weather.rainProbPercent > 50) {
+    score -= 20;
+    warnings.push(`${weather.rainProbPercent}% chance of rain - consider backup plan`);
+  }
+  
+  // Outdoor activities and fog
+  const outdoorActivities = ['hiking', 'photography', 'whale watching', 'scenic'];
+  const isOutdoor = outdoorActivities.some(o => 
+    itemType.toLowerCase().includes(o) || 
+    itemTags.some(t => t.toLowerCase().includes(o))
+  );
+  
+  if (isOutdoor && weather.fogProbPercent > 30) {
+    warnings.push(`${weather.fogProbPercent}% chance of fog - visibility may be limited`);
+  }
+  
+  // Indoor activities are weather-proof
+  const indoorActivities = ['meal', 'accommodation', 'spa', 'workshop', 'class'];
+  const isIndoor = indoorActivities.some(i => 
+    itemType.toLowerCase().includes(i) || 
+    itemTags.some(t => t.toLowerCase().includes(i))
+  );
+  
+  if (isIndoor) {
+    score += 10;
+  }
+  
+  // Convert score to fit level
+  let fit: 'excellent' | 'good' | 'fair' | 'poor';
+  if (score >= 70) fit = 'excellent';
+  else if (score >= 50) fit = 'good';
+  else if (score >= 30) fit = 'fair';
+  else fit = 'poor';
+  
+  return { fit, warnings };
+}
+
+// ============ PARTY FIT HELPERS ============
+
+function assessPartyFit(
+  itemType: string,
+  itemConstraints: any,
+  partyAdults: number,
+  partyChildren: number,
+  partyInfants: number
+): { fit: 'excellent' | 'good' | 'fair' | 'poor'; notes: string[] } {
+  const notes: string[] = [];
+  const totalParty = partyAdults + partyChildren + partyInfants;
+  let score = 50;
+  
+  // Check max capacity
+  if (itemConstraints?.maxOccupancy && totalParty > itemConstraints.maxOccupancy) {
+    return { fit: 'poor', notes: [`Exceeds max capacity of ${itemConstraints.maxOccupancy}`] };
+  }
+  
+  // Family-friendly check
+  if (partyChildren > 0 || partyInfants > 0) {
+    if (itemConstraints?.minAge && itemConstraints.minAge > 0) {
+      notes.push(`Minimum age ${itemConstraints.minAge} required`);
+      if (partyInfants > 0) score -= 30;
+    }
+    
+    // Boost family-friendly activities
+    const familyFriendly = ['accommodation', 'meal', 'beach', 'park', 'nature'];
+    if (familyFriendly.some(f => itemType.toLowerCase().includes(f))) {
+      score += 20;
+    }
+  }
+  
+  // Adults-only activities
+  const adultOnly = ['bar', 'wine', 'brewery', 'nightlife'];
+  if (adultOnly.some(a => itemType.toLowerCase().includes(a))) {
+    if (partyChildren > 0 || partyInfants > 0) {
+      return { fit: 'poor', notes: ['Not suitable for children'] };
+    }
+  }
+  
+  // Solo traveler
+  if (totalParty === 1) {
+    const soloFriendly = ['kayaking', 'hiking', 'photography', 'workshop'];
+    if (soloFriendly.some(s => itemType.toLowerCase().includes(s))) {
+      score += 15;
+    }
+  }
+  
+  // Large groups
+  if (totalParty >= 6) {
+    if (itemConstraints?.groupFriendly) {
+      score += 20;
+    } else {
+      notes.push('Contact provider for group availability');
+    }
+  }
+  
+  let fit: 'excellent' | 'good' | 'fair' | 'poor';
+  if (score >= 70) fit = 'excellent';
+  else if (score >= 50) fit = 'good';
+  else if (score >= 30) fit = 'fair';
+  else fit = 'poor';
+  
+  return { fit, notes };
+}
+
+// ============ MAIN RECOMMENDATION FUNCTION ============
+
+export async function getRecommendations(req: RecommendationRequest): Promise<{
+  recommendations: RecommendationResult[];
+  weatherContext: WeatherContext | null;
+  totalFound: number;
+}> {
+  const limit = req.limit || 10;
+  const locationCode = req.locationCode || 'BAMFIELD';
+  
+  // Get weather context
+  const weather = await getWeatherContext(locationCode, req.targetDate);
+  
+  // Get available offers from facilities
+  // This queries V3.3.1 infrastructure
+  let portalFilter = sql`1=1`;
+  if (req.portalId) {
+    portalFilter = eq(ccFacilities.tenantId, 
+      sql`(SELECT tenant_id FROM cc_portals WHERE id = ${req.portalId})`
+    );
+  }
+  
+  const facilities = await db.query.ccFacilities.findMany({
+    where: and(
+      eq(ccFacilities.isActive, true),
+      portalFilter
+    ),
+    with: {
+      offers: {
+        where: eq(ccOffers.isActive, true)
+      }
+    }
+  });
+  
+  // Also get any portal moments if they exist
+  let moments: any[] = [];
+  try {
+    if (req.portalId) {
+      moments = await db.query.ccPortalMoments?.findMany({
+        where: and(
+          eq(ccPortalMoments.portalId, req.portalId),
+          eq(ccPortalMoments.isActive, true)
+        )
+      }) || [];
+    }
+  } catch (e) {
+    // Portal moments table may not exist yet
+  }
+  
+  const recommendations: RecommendationResult[] = [];
+  
+  // Process facilities and offers
+  for (const facility of facilities) {
+    for (const offer of (facility.offers || [])) {
+      // Skip excluded types
+      if (req.excludeItemTypes?.includes(facility.facilityType)) continue;
+      
+      const itemTags = [
+        facility.facilityType,
+        offer.offerType,
+        ...(offer.tags || [])
+      ].filter(Boolean);
+      
+      // Assess weather fit
+      const weatherAssessment = weather 
+        ? assessWeatherFit(facility.facilityType, itemTags, weather)
+        : { fit: 'good' as const, warnings: [] };
+      
+      // Assess party fit
+      const partyAssessment = assessPartyFit(
+        facility.facilityType,
+        offer.constraints || {},
+        req.partyAdults || 1,
+        req.partyChildren || 0,
+        req.partyInfants || 0
+      );
+      
+      // Calculate overall score
+      const weatherScore = { excellent: 40, good: 30, fair: 20, poor: 10 }[weatherAssessment.fit];
+      const partyScore = { excellent: 40, good: 30, fair: 20, poor: 10 }[partyAssessment.fit];
+      const score = weatherScore + partyScore;
+      
+      // Build reasons
+      const reasons: string[] = [];
+      if (weatherAssessment.fit === 'excellent') reasons.push('Perfect weather conditions');
+      if (partyAssessment.fit === 'excellent') reasons.push('Great for your group');
+      if (weather?.bestFor.some(b => itemTags.includes(b))) {
+        reasons.push(`Best time for ${weather.bestFor[0]}`);
+      }
+      
+      recommendations.push({
+        item: {
+          id: offer.id,
+          type: facility.facilityType,
+          title: offer.name,
+          description: offer.description,
+          facilityId: facility.id,
+          offerId: offer.id,
+          providerTenantId: facility.tenantId,
+          providerName: facility.name,
+          basePrice: offer.priceCents / 100,
+          currency: offer.currency || 'CAD'
+        },
+        score,
+        reasons,
+        weatherFit: weatherAssessment.fit,
+        weatherWarnings: weatherAssessment.warnings,
+        partyFit: partyAssessment.fit,
+        accessibilityNotes: partyAssessment.notes
+      });
+    }
+  }
+  
+  // Process moments (if any)
+  for (const moment of moments) {
+    const itemTags = moment.tags || [];
+    
+    const weatherAssessment = weather 
+      ? assessWeatherFit(moment.momentType || 'activity', itemTags, weather)
+      : { fit: 'good' as const, warnings: [] };
+    
+    const partyAssessment = assessPartyFit(
+      moment.momentType || 'activity',
+      moment.constraints || {},
+      req.partyAdults || 1,
+      req.partyChildren || 0,
+      req.partyInfants || 0
+    );
+    
+    const weatherScore = { excellent: 40, good: 30, fair: 20, poor: 10 }[weatherAssessment.fit];
+    const partyScore = { excellent: 40, good: 30, fair: 20, poor: 10 }[partyAssessment.fit];
+    
+    recommendations.push({
+      item: {
+        id: moment.id,
+        type: moment.momentType || 'activity',
+        title: moment.title,
+        description: moment.description,
+        providerName: moment.providerName,
+        basePrice: moment.priceCents ? moment.priceCents / 100 : undefined,
+        currency: 'CAD',
+        imageUrl: moment.imageUrl
+      },
+      score: weatherScore + partyScore,
+      reasons: [],
+      weatherFit: weatherAssessment.fit,
+      weatherWarnings: weatherAssessment.warnings,
+      partyFit: partyAssessment.fit,
+      accessibilityNotes: partyAssessment.notes
+    });
+  }
+  
+  // Sort by score descending
+  recommendations.sort((a, b) => b.score - a.score);
+  
+  // Apply limit
+  const limited = recommendations.slice(0, limit);
+  
+  return {
+    recommendations: limited,
+    weatherContext: weather,
+    totalFound: recommendations.length
+  };
+}
+
+// Get weather-only summary
+export async function getWeatherSummary(
+  locationCode: string,
+  startDate: Date,
+  endDate: Date
+): Promise<{
+  months: WeatherContext[];
+  summary: string;
+  bestActivities: string[];
+  warnings: string[];
+}> {
+  const startMonth = startDate.getMonth() + 1;
+  const endMonth = endDate.getMonth() + 1;
+  
+  const results = await db.query.ccWeatherTrends.findMany({
+    where: and(
+      eq(ccWeatherTrends.locationCode, locationCode),
+      gte(ccWeatherTrends.month, startMonth),
+      lte(ccWeatherTrends.month, endMonth)
+    ),
+    orderBy: [asc(ccWeatherTrends.month)]
+  });
+  
+  const months = results.map(r => ({
+    month: r.month,
+    avgHighC: Number(r.avgHighC),
+    avgLowC: Number(r.avgLowC),
+    rainProbPercent: r.rainProbPercent || 0,
+    fogProbPercent: r.fogProbPercent || 0,
+    daylightHours: Number(r.daylightHours),
+    bestFor: r.bestFor || [],
+    avoidFor: r.avoidFor || [],
+    planningNotes: r.planningNotes || ''
+  }));
+  
+  // Aggregate best activities
+  const allBestFor = months.flatMap(m => m.bestFor);
+  const bestActivities = [...new Set(allBestFor)];
+  
+  // Aggregate warnings
+  const warnings: string[] = [];
+  const avgRain = months.reduce((s, m) => s + m.rainProbPercent, 0) / months.length;
+  if (avgRain > 50) {
+    warnings.push(`High chance of rain (${Math.round(avgRain)}% average) - pack rain gear`);
+  }
+  
+  const avgFog = months.reduce((s, m) => s + m.fogProbPercent, 0) / months.length;
+  if (avgFog > 25) {
+    warnings.push(`Morning fog common (${Math.round(avgFog)}% chance) - plan activities accordingly`);
+  }
+  
+  // Summary
+  const summary = months.length === 1
+    ? months[0].planningNotes
+    : `Your trip spans ${months.length} months with varying conditions.`;
+  
+  return { months, summary, bestActivities, warnings };
+}
+```
+
+## Add Recommendation Routes
+
+### In server/routes/public-portal.ts
+```typescript
+import { getRecommendations, getWeatherSummary } from '../services/recommendationService';
+
+// GET /api/public/portals/:slug/recommendations
+router.get('/portals/:slug/recommendations', async (req, res) => {
+  const { slug } = req.params;
+  const { 
+    date, 
+    partyAdults, 
+    partyChildren, 
+    partyInfants,
+    interests,
+    budget,
+    limit 
+  } = req.query;
+  
+  try {
+    // Get portal
+    const portal = await db.query.ccPortals.findFirst({
+      where: eq(ccPortals.slug, slug)
+    });
+    
+    if (!portal) {
+      return res.status(404).json({ error: 'Portal not found' });
+    }
+    
+    const result = await getRecommendations({
+      portalId: portal.id,
+      locationCode: 'BAMFIELD',
+      targetDate: date ? new Date(date as string) : new Date(),
+      partyAdults: partyAdults ? parseInt(partyAdults as string) : 1,
+      partyChildren: partyChildren ? parseInt(partyChildren as string) : 0,
+      partyInfants: partyInfants ? parseInt(partyInfants as string) : 0,
+      intent: {
+        interests: interests ? (interests as string).split(',') : undefined,
+        budget: budget as any
+      },
+      limit: limit ? parseInt(limit as string) : 10
+    });
+    
+    res.json(result);
+  } catch (e: any) {
+    console.error('Recommendations error:', e);
+    res.status(500).json({ error: 'Failed to get recommendations' });
+  }
+});
+
+// GET /api/public/portals/:slug/weather
+router.get('/portals/:slug/weather', async (req, res) => {
+  const { slug } = req.params;
+  const { start, end } = req.query;
+  
+  try {
+    const startDate = start ? new Date(start as string) : new Date();
+    const endDate = end ? new Date(end as string) : startDate;
+    
+    const result = await getWeatherSummary('BAMFIELD', startDate, endDate);
+    
+    res.json(result);
+  } catch (e: any) {
+    console.error('Weather error:', e);
+    res.status(500).json({ error: 'Failed to get weather' });
+  }
+});
+
+// POST /api/public/carts/:cartId/recommend - Get recommendations based on cart context
+router.post('/carts/:cartId/recommend', async (req, res) => {
+  const { cartId } = req.params;
+  const token = req.headers['x-cart-token'] as string;
+  
+  if (!token) {
+    return res.status(401).json({ error: 'Cart token required' });
+  }
+  
+  try {
+    const cartResult = await getCart(cartId, token);
+    if (!cartResult) {
+      return res.status(404).json({ error: 'Cart not found or invalid token' });
+    }
+    
+    const { cart, items } = cartResult;
+    
+    // Determine target date from cart items or use request body
+    let targetDate = new Date();
+    if (items.length > 0 && items[0].startAt) {
+      targetDate = new Date(items[0].startAt);
+    } else if (req.body.date) {
+      targetDate = new Date(req.body.date);
+    }
+    
+    // Get already-added item types to potentially exclude
+    const addedTypes = items.map(i => i.itemType);
+    
+    const result = await getRecommendations({
+      portalId: cart.portalId,
+      locationCode: 'BAMFIELD',
+      targetDate,
+      partyAdults: cart.partyAdults,
+      partyChildren: cart.partyChildren,
+      partyInfants: cart.partyInfants,
+      needs: cart.needsJson,
+      intent: cart.intentJson,
+      excludeItemTypes: req.body.excludeAdded ? addedTypes : undefined,
+      limit: req.body.limit || 5
+    });
+    
+    res.json(result);
+  } catch (e: any) {
+    console.error('Cart recommend error:', e);
+    res.status(500).json({ error: 'Failed to get recommendations' });
+  }
+});
+```
+
+## Deliverables
+- [ ] server/services/recommendationService.ts
+  - getRecommendations() - Weather + party aware recommendations
+  - getWeatherSummary() - Weather overview for date range
+  - assessWeatherFit() - Score activities against weather
+  - assessPartyFit() - Score activities against party composition
+- [ ] Routes in server/routes/public-portal.ts:
+  - GET /api/public/portals/:slug/recommendations
+  - GET /api/public/portals/:slug/weather
+  - POST /api/public/carts/:cartId/recommend
+- [ ] Test: GET /api/public/portals/bamfield/recommendations?date=2026-07-15 returns items sorted by weather fit
+- [ ] Test: GET /api/public/portals/bamfield/weather?start=2026-07-01&end=2026-07-31 returns July weather
+
+Report with sample recommendation response showing weather fit scores.

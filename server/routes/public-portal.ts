@@ -4,6 +4,7 @@ import { TenantRequest } from '../middleware/tenantContext';
 import { 
   createCart, getCart, addItem, updateItem, removeItem, addAdjustment, updateCartGuest
 } from '../services/cartService';
+import { getRecommendations, getWeatherSummary } from '../services/recommendationService';
 
 const router = express.Router();
 
@@ -2146,6 +2147,114 @@ router.post('/carts/:cartId/update-guest', async (req: Request, res: Response) =
   } catch (e: any) {
     console.error('Update guest error:', e);
     res.status(500).json({ error: 'Failed to update guest info' });
+  }
+});
+
+// ============ RECOMMENDATION ENDPOINTS ============
+
+// GET /api/public/portals/:slug/recommendations - Get weather-aware recommendations
+router.get('/portals/:slug/recommendations', async (req: Request, res: Response) => {
+  const { slug } = req.params;
+  const { 
+    date, 
+    partyAdults, 
+    partyChildren, 
+    partyInfants,
+    interests,
+    budget,
+    limit 
+  } = req.query;
+  
+  try {
+    const portalResult = await serviceQuery(`
+      SELECT id FROM cc_portals WHERE slug = $1
+    `, [slug]);
+    
+    if (portalResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Portal not found' });
+    }
+    
+    const result = await getRecommendations({
+      portalId: portalResult.rows[0].id,
+      locationCode: 'BAMFIELD',
+      targetDate: date ? new Date(date as string) : new Date(),
+      partyAdults: partyAdults ? parseInt(partyAdults as string) : 1,
+      partyChildren: partyChildren ? parseInt(partyChildren as string) : 0,
+      partyInfants: partyInfants ? parseInt(partyInfants as string) : 0,
+      intent: {
+        interests: interests ? (interests as string).split(',') : undefined,
+        budget: budget as any
+      },
+      limit: limit ? parseInt(limit as string) : 10
+    });
+    
+    res.json(result);
+  } catch (e: any) {
+    console.error('Recommendations error:', e);
+    res.status(500).json({ error: 'Failed to get recommendations' });
+  }
+});
+
+// GET /api/public/portals/:slug/weather - Get weather summary for date range
+router.get('/portals/:slug/weather', async (req: Request, res: Response) => {
+  const { start, end } = req.query;
+  
+  try {
+    const startDate = start ? new Date(start as string) : new Date();
+    const endDate = end ? new Date(end as string) : startDate;
+    
+    const result = await getWeatherSummary('BAMFIELD', startDate, endDate);
+    
+    res.json(result);
+  } catch (e: any) {
+    console.error('Weather error:', e);
+    res.status(500).json({ error: 'Failed to get weather' });
+  }
+});
+
+// POST /api/public/carts/:cartId/recommend - Get recommendations based on cart context
+router.post('/carts/:cartId/recommend', async (req: Request, res: Response) => {
+  const { cartId } = req.params;
+  const token = req.headers['x-cart-token'] as string;
+  
+  if (!token) {
+    return res.status(401).json({ error: 'X-Cart-Token header required' });
+  }
+  
+  try {
+    const cartResult = await getCart(cartId, token);
+    if (!cartResult) {
+      return res.status(404).json({ error: 'Cart not found or invalid token' });
+    }
+    
+    const { cart, items } = cartResult;
+    
+    let targetDate = new Date();
+    if (items.length > 0 && items[0].startAt) {
+      targetDate = new Date(items[0].startAt);
+    } else if (req.body.date) {
+      targetDate = new Date(req.body.date);
+    }
+    
+    const addedTypes = items.map((i: any) => i.itemType);
+    
+    const result = await getRecommendations({
+      portalId: cart.portalId,
+      locationCode: 'BAMFIELD',
+      targetDate,
+      partyAdults: cart.partyAdults,
+      partyChildren: cart.partyChildren,
+      partyInfants: cart.partyInfants,
+      needs: cart.needsJson,
+      intent: cart.intentJson,
+      excludeItemTypes: req.body.excludeAdded ? addedTypes : undefined,
+      limit: req.body.limit || 5
+    });
+    
+    res.json(result);
+  } catch (e: any) {
+    console.error('Cart recommend error:', e);
+    res.status(500).json({ error: 'Failed to get recommendations' });
   }
 });
 
