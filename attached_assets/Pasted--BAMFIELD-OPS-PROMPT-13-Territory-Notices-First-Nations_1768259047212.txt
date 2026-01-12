@@ -1,0 +1,823 @@
+**BAMFIELD OPS - PROMPT 13: Territory Notices (First Nations Protocol)**
+
+Create the territory notice system for acknowledging entry into First Nations traditional territories.
+
+## Migration 089_territory_notices.sql
+```sql
+BEGIN;
+
+-- ============ TERRITORY NOTICES ============
+-- Acknowledgments and notices for First Nations territories
+
+CREATE TABLE IF NOT EXISTS cc_territory_notices (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  
+  -- Links
+  portal_id uuid REFERENCES cc_portals(id) ON DELETE SET NULL,
+  authority_id uuid NOT NULL REFERENCES cc_authorities(id),
+  trip_id uuid REFERENCES cc_trips(id) ON DELETE SET NULL,
+  permit_id uuid REFERENCES cc_visitor_permits(id) ON DELETE SET NULL,
+  
+  -- Identity
+  notice_number varchar(30) NOT NULL UNIQUE,
+  -- Format: TAN-NATION-YYMMDD-XXXX (e.g., TAN-HFN-260115-A7K9)
+  
+  -- Visitor
+  visitor_name text NOT NULL,
+  visitor_email text,
+  visitor_phone text,
+  party_size integer DEFAULT 1,
+  party_members text[],
+  
+  -- Visit details
+  visit_purpose varchar CHECK (visit_purpose IN (
+    'recreation',     -- Tourism/recreation
+    'transit',        -- Passing through
+    'research',       -- Scientific research
+    'education',      -- Educational visit
+    'commercial',     -- Commercial activity
+    'cultural',       -- Cultural exchange/learning
+    'other'
+  )),
+  visit_description text,
+  
+  -- Dates
+  entry_date date NOT NULL,
+  exit_date date,
+  
+  -- Locations
+  entry_point text,
+  planned_areas text[],
+  -- ['Deer Group Islands', 'Diana Island', 'Bamfield Inlet']
+  
+  -- Acknowledgments
+  acknowledgments_json jsonb DEFAULT '{}'::jsonb,
+  -- {territory_acknowledged: true, 
+  --  cultural_respect_agreed: true,
+  --  leave_no_trace_agreed: true,
+  --  sacred_sites_respect: true,
+  --  timestamp: '2026-01-15T10:30:00Z'}
+  
+  -- Cultural protocol
+  orientation_completed boolean DEFAULT false,
+  orientation_date timestamptz,
+  cultural_guide_requested boolean DEFAULT false,
+  
+  -- Status
+  status varchar DEFAULT 'pending' CHECK (status IN (
+    'pending',        -- Not yet acknowledged
+    'acknowledged',   -- Visitor acknowledged
+    'active',         -- Currently in territory
+    'completed',      -- Visit completed
+    'expired',        -- Past exit date
+    'cancelled'
+  )),
+  
+  acknowledged_at timestamptz,
+  
+  -- Vessel (if applicable)
+  vessel_name text,
+  vessel_type text,
+  vessel_registration text,
+  
+  -- Notes
+  visitor_notes text,
+  authority_notes text,
+  
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+
+CREATE INDEX idx_territory_notices_authority ON cc_territory_notices(authority_id, status);
+CREATE INDEX idx_territory_notices_trip ON cc_territory_notices(trip_id) WHERE trip_id IS NOT NULL;
+CREATE INDEX idx_territory_notices_dates ON cc_territory_notices(entry_date, exit_date);
+CREATE INDEX idx_territory_notices_number ON cc_territory_notices(notice_number);
+
+ALTER TABLE cc_territory_notices ENABLE ROW LEVEL SECURITY;
+
+-- ============ CULTURAL SITES ============
+-- Sacred sites and areas with special protocols
+
+CREATE TABLE IF NOT EXISTS cc_cultural_sites (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  
+  portal_id uuid REFERENCES cc_portals(id) ON DELETE SET NULL,
+  authority_id uuid NOT NULL REFERENCES cc_authorities(id),
+  location_id uuid REFERENCES cc_locations(id) ON DELETE SET NULL,
+  
+  -- Identity
+  name text NOT NULL,
+  traditional_name text,
+  
+  site_type varchar CHECK (site_type IN (
+    'sacred',           -- Sacred/spiritual site
+    'burial',           -- Burial ground
+    'archaeological',   -- Archaeological site
+    'cultural',         -- Cultural significance
+    'historical',       -- Historical importance
+    'ecological',       -- Ecological protection
+    'restricted'        -- General restricted area
+  )),
+  
+  -- Location
+  description text,
+  lat numeric(9,6),
+  lon numeric(9,6),
+  boundary_json jsonb DEFAULT '{}'::jsonb,
+  
+  -- Access rules
+  access_level varchar DEFAULT 'restricted' CHECK (access_level IN (
+    'open',           -- Open to visitors
+    'guided_only',    -- Guided tours only
+    'restricted',     -- Limited access
+    'closed',         -- No public access
+    'seasonal'        -- Seasonally restricted
+  )),
+  
+  restrictions_json jsonb DEFAULT '{}'::jsonb,
+  -- {no_photography: true, no_camping: true, 
+  --  quiet_zone: true, no_harvesting: true,
+  --  seasonal_closure: {months: [3,4,5], reason: 'Nesting season'}}
+  
+  -- Protocol
+  protocol_description text,
+  required_acknowledgment text,
+  
+  -- Status
+  status varchar DEFAULT 'active',
+  
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+
+CREATE INDEX idx_cultural_sites_authority ON cc_cultural_sites(authority_id);
+CREATE INDEX idx_cultural_sites_location ON cc_cultural_sites(location_id) WHERE location_id IS NOT NULL;
+
+ALTER TABLE cc_cultural_sites ENABLE ROW LEVEL SECURITY;
+
+-- ============ SEED HFN CULTURAL SITES ============
+
+DO $$
+DECLARE
+  v_portal_id uuid;
+  v_hfn_id uuid;
+BEGIN
+  SELECT id INTO v_portal_id FROM cc_portals WHERE slug = 'bamfield' LIMIT 1;
+  SELECT id INTO v_hfn_id FROM cc_authorities WHERE code = 'HFN' LIMIT 1;
+  
+  IF v_hfn_id IS NOT NULL THEN
+    -- Kiixin (historic village)
+    INSERT INTO cc_cultural_sites (
+      portal_id, authority_id, name, traditional_name, site_type,
+      description, access_level, protocol_description, status
+    ) VALUES (
+      v_portal_id, v_hfn_id, 
+      'Kiixin National Historic Site', 'Kiixin',
+      'historical',
+      'Ancient Huu-ay-aht village site with traditional longhouse remains and cultural artifacts',
+      'guided_only',
+      'Visits require a guided tour with a Huu-ay-aht cultural interpreter. Please respect all marked areas.',
+      'active'
+    ) ON CONFLICT DO NOTHING;
+    
+    -- Diana Island
+    INSERT INTO cc_cultural_sites (
+      portal_id, authority_id, name, site_type,
+      description, access_level, restrictions_json, protocol_description, status
+    ) VALUES (
+      v_portal_id, v_hfn_id,
+      'Diana Island', 'cultural',
+      'Island within Huu-ay-aht traditional territory with cultural significance',
+      'restricted',
+      '{"camping_by_permission": true, "notify_hfn": true}'::jsonb,
+      'Contact Huu-ay-aht First Nations office before planning extended stays',
+      'active'
+    ) ON CONFLICT DO NOTHING;
+    
+    -- Deer Group Islands
+    INSERT INTO cc_cultural_sites (
+      portal_id, authority_id, name, site_type,
+      description, access_level, restrictions_json, status
+    ) VALUES (
+      v_portal_id, v_hfn_id,
+      'Deer Group Islands', 'cultural',
+      'Island group within Huu-ay-aht traditional territory, popular kayaking destination',
+      'open',
+      '{"leave_no_trace": true, "respect_wildlife": true, "no_harvesting": true}'::jsonb,
+      'active'
+    ) ON CONFLICT DO NOTHING;
+  END IF;
+END $$;
+
+COMMIT;
+```
+
+## Create server/services/territoryNoticeService.ts
+```typescript
+// server/services/territoryNoticeService.ts
+
+import { db } from '../db';
+import { eq, and, gte, lte, asc, desc } from 'drizzle-orm';
+import { nanoid } from 'nanoid';
+import { logActivity } from './activityService';
+
+// ============ TYPES ============
+
+interface CreateNoticeRequest {
+  portalSlug: string;
+  authorityCode: string;
+  tripId?: string;
+  
+  visitorName: string;
+  visitorEmail?: string;
+  visitorPhone?: string;
+  partySize?: number;
+  partyMembers?: string[];
+  
+  visitPurpose: string;
+  visitDescription?: string;
+  
+  entryDate: Date;
+  exitDate?: Date;
+  entryPoint?: string;
+  plannedAreas?: string[];
+  
+  vesselName?: string;
+  vesselType?: string;
+  vesselRegistration?: string;
+  
+  visitorNotes?: string;
+}
+
+interface AcknowledgmentData {
+  territoryAcknowledged: boolean;
+  culturalRespectAgreed: boolean;
+  leaveNoTraceAgreed: boolean;
+  sacredSitesRespect: boolean;
+}
+
+// ============ HELPERS ============
+
+function generateNoticeNumber(nationCode: string): string {
+  const date = new Date();
+  const dateStr = date.toISOString().slice(2, 10).replace(/-/g, '');
+  const suffix = nanoid(4).toUpperCase();
+  return `TAN-${nationCode}-${dateStr}-${suffix}`;
+}
+
+// ============ NOTICE FUNCTIONS ============
+
+export async function createTerritoryNotice(req: CreateNoticeRequest): Promise<any> {
+  const portal = await db.query.ccPortals.findFirst({
+    where: eq(ccPortals.slug, req.portalSlug)
+  });
+  
+  if (!portal) throw new Error('Portal not found');
+  
+  // Get authority
+  const authority = await db.query.ccAuthorities.findFirst({
+    where: and(
+      eq(ccAuthorities.portalId, portal.id),
+      eq(ccAuthorities.code, req.authorityCode)
+    )
+  });
+  
+  if (!authority) throw new Error('Authority not found');
+  
+  if (authority.authorityType !== 'first_nation') {
+    throw new Error('Territory notices are only for First Nations authorities');
+  }
+  
+  const noticeNumber = generateNoticeNumber(authority.code || 'FN');
+  
+  const [notice] = await db.insert(ccTerritoryNotices).values({
+    portalId: portal.id,
+    authorityId: authority.id,
+    tripId: req.tripId,
+    noticeNumber,
+    visitorName: req.visitorName,
+    visitorEmail: req.visitorEmail,
+    visitorPhone: req.visitorPhone,
+    partySize: req.partySize || 1,
+    partyMembers: req.partyMembers,
+    visitPurpose: req.visitPurpose,
+    visitDescription: req.visitDescription,
+    entryDate: req.entryDate,
+    exitDate: req.exitDate,
+    entryPoint: req.entryPoint,
+    plannedAreas: req.plannedAreas,
+    vesselName: req.vesselName,
+    vesselType: req.vesselType,
+    vesselRegistration: req.vesselRegistration,
+    visitorNotes: req.visitorNotes,
+    status: 'pending'
+  }).returning();
+  
+  await logActivity({
+    tenantId: 'system',
+    actorId: req.visitorEmail || 'visitor',
+    action: 'territory_notice.created',
+    resourceType: 'territory_notice',
+    resourceId: notice.id,
+    metadata: { noticeNumber, authority: authority.name }
+  });
+  
+  // Return with cultural protocols
+  const protocols = authority.culturalProtocolsJson as any || {};
+  
+  return {
+    notice,
+    authority: {
+      id: authority.id,
+      name: authority.name,
+      code: authority.code
+    },
+    culturalProtocols: protocols,
+    acknowledgmentRequired: true
+  };
+}
+
+export async function acknowledgeNotice(
+  portalSlug: string,
+  noticeId: string,
+  acknowledgments: AcknowledgmentData
+): Promise<any> {
+  const portal = await db.query.ccPortals.findFirst({
+    where: eq(ccPortals.slug, portalSlug)
+  });
+  
+  if (!portal) throw new Error('Portal not found');
+  
+  // Validate all required acknowledgments
+  if (!acknowledgments.territoryAcknowledged ||
+      !acknowledgments.culturalRespectAgreed ||
+      !acknowledgments.leaveNoTraceAgreed ||
+      !acknowledgments.sacredSitesRespect) {
+    throw new Error('All acknowledgments must be accepted');
+  }
+  
+  const [updated] = await db.update(ccTerritoryNotices)
+    .set({
+      status: 'acknowledged',
+      acknowledgedAt: new Date(),
+      acknowledgementsJson: {
+        ...acknowledgments,
+        timestamp: new Date().toISOString()
+      },
+      updatedAt: new Date()
+    })
+    .where(and(
+      eq(ccTerritoryNotices.id, noticeId),
+      eq(ccTerritoryNotices.portalId, portal.id)
+    ))
+    .returning();
+  
+  if (!updated) throw new Error('Notice not found');
+  
+  await logActivity({
+    tenantId: 'system',
+    actorId: 'visitor',
+    action: 'territory_notice.acknowledged',
+    resourceType: 'territory_notice',
+    resourceId: noticeId,
+    metadata: { noticeNumber: updated.noticeNumber }
+  });
+  
+  return updated;
+}
+
+export async function getNotice(
+  portalSlug: string,
+  noticeId: string
+): Promise<{
+  notice: any;
+  authority: any;
+  culturalSites: any[];
+} | null> {
+  const portal = await db.query.ccPortals.findFirst({
+    where: eq(ccPortals.slug, portalSlug)
+  });
+  
+  if (!portal) return null;
+  
+  const notice = await db.query.ccTerritoryNotices.findFirst({
+    where: and(
+      eq(ccTerritoryNotices.id, noticeId),
+      eq(ccTerritoryNotices.portalId, portal.id)
+    )
+  });
+  
+  if (!notice) return null;
+  
+  const authority = await db.query.ccAuthorities.findFirst({
+    where: eq(ccAuthorities.id, notice.authorityId)
+  });
+  
+  // Get cultural sites for planned areas
+  const culturalSites = await db.query.ccCulturalSites.findMany({
+    where: eq(ccCulturalSites.authorityId, notice.authorityId)
+  });
+  
+  return { notice, authority, culturalSites };
+}
+
+export async function getNoticeByNumber(
+  portalSlug: string,
+  noticeNumber: string
+): Promise<any | null> {
+  const portal = await db.query.ccPortals.findFirst({
+    where: eq(ccPortals.slug, portalSlug)
+  });
+  
+  if (!portal) return null;
+  
+  const notice = await db.query.ccTerritoryNotices.findFirst({
+    where: and(
+      eq(ccTerritoryNotices.noticeNumber, noticeNumber),
+      eq(ccTerritoryNotices.portalId, portal.id)
+    )
+  });
+  
+  if (!notice) return null;
+  
+  return getNotice(portalSlug, notice.id);
+}
+
+export async function getNoticesForTrip(
+  portalSlug: string,
+  tripId: string
+): Promise<any[]> {
+  const portal = await db.query.ccPortals.findFirst({
+    where: eq(ccPortals.slug, portalSlug)
+  });
+  
+  if (!portal) return [];
+  
+  return db.query.ccTerritoryNotices.findMany({
+    where: and(
+      eq(ccTerritoryNotices.portalId, portal.id),
+      eq(ccTerritoryNotices.tripId, tripId)
+    ),
+    orderBy: [asc(ccTerritoryNotices.entryDate)]
+  });
+}
+
+export async function searchNotices(
+  portalSlug: string,
+  options?: {
+    authorityId?: string;
+    status?: string;
+    entryDateFrom?: Date;
+    entryDateTo?: Date;
+    limit?: number;
+  }
+): Promise<any[]> {
+  const portal = await db.query.ccPortals.findFirst({
+    where: eq(ccPortals.slug, portalSlug)
+  });
+  
+  if (!portal) return [];
+  
+  const conditions: any[] = [eq(ccTerritoryNotices.portalId, portal.id)];
+  
+  if (options?.authorityId) {
+    conditions.push(eq(ccTerritoryNotices.authorityId, options.authorityId));
+  }
+  
+  if (options?.status) {
+    conditions.push(eq(ccTerritoryNotices.status, options.status));
+  }
+  
+  if (options?.entryDateFrom) {
+    conditions.push(gte(ccTerritoryNotices.entryDate, options.entryDateFrom));
+  }
+  
+  if (options?.entryDateTo) {
+    conditions.push(lte(ccTerritoryNotices.entryDate, options.entryDateTo));
+  }
+  
+  return db.query.ccTerritoryNotices.findMany({
+    where: and(...conditions),
+    orderBy: [desc(ccTerritoryNotices.entryDate)],
+    limit: options?.limit || 50
+  });
+}
+
+// ============ CULTURAL SITES ============
+
+export async function getCulturalSites(
+  portalSlug: string,
+  authorityCode?: string
+): Promise<any[]> {
+  const portal = await db.query.ccPortals.findFirst({
+    where: eq(ccPortals.slug, portalSlug)
+  });
+  
+  if (!portal) return [];
+  
+  const conditions: any[] = [eq(ccCulturalSites.portalId, portal.id)];
+  
+  if (authorityCode) {
+    const authority = await db.query.ccAuthorities.findFirst({
+      where: and(
+        eq(ccAuthorities.portalId, portal.id),
+        eq(ccAuthorities.code, authorityCode)
+      )
+    });
+    
+    if (authority) {
+      conditions.push(eq(ccCulturalSites.authorityId, authority.id));
+    }
+  }
+  
+  return db.query.ccCulturalSites.findMany({
+    where: and(...conditions),
+    orderBy: [asc(ccCulturalSites.name)]
+  });
+}
+
+export async function getCulturalSite(
+  portalSlug: string,
+  siteId: string
+): Promise<any | null> {
+  const portal = await db.query.ccPortals.findFirst({
+    where: eq(ccPortals.slug, portalSlug)
+  });
+  
+  if (!portal) return null;
+  
+  return db.query.ccCulturalSites.findFirst({
+    where: and(
+      eq(ccCulturalSites.id, siteId),
+      eq(ccCulturalSites.portalId, portal.id)
+    )
+  });
+}
+
+// ============ TERRITORY ACKNOWLEDGMENT TEXT ============
+
+export async function getTerritoryAcknowledgment(
+  portalSlug: string,
+  authorityCode: string
+): Promise<{
+  authority: any;
+  acknowledgment: string;
+  protocols: any;
+  sites: any[];
+} | null> {
+  const portal = await db.query.ccPortals.findFirst({
+    where: eq(ccPortals.slug, portalSlug)
+  });
+  
+  if (!portal) return null;
+  
+  const authority = await db.query.ccAuthorities.findFirst({
+    where: and(
+      eq(ccAuthorities.portalId, portal.id),
+      eq(ccAuthorities.code, authorityCode)
+    )
+  });
+  
+  if (!authority) return null;
+  
+  const protocols = authority.culturalProtocolsJson as any || {};
+  
+  const sites = await db.query.ccCulturalSites.findMany({
+    where: eq(ccCulturalSites.authorityId, authority.id)
+  });
+  
+  return {
+    authority: {
+      id: authority.id,
+      name: authority.name,
+      code: authority.code,
+      type: authority.authorityType
+    },
+    acknowledgment: protocols.territory_acknowledgment || 
+      `We acknowledge that we are visitors on the traditional territory of the ${authority.name}`,
+    protocols,
+    sites
+  };
+}
+```
+
+## Add Territory Notice Routes to permits.ts
+```typescript
+// Add to server/routes/permits.ts
+
+import {
+  createTerritoryNotice, acknowledgeNotice, getNotice, getNoticeByNumber,
+  getNoticesForTrip, searchNotices,
+  getCulturalSites, getCulturalSite, getTerritoryAcknowledgment
+} from '../services/territoryNoticeService';
+
+// ============ TERRITORY NOTICE ENDPOINTS ============
+
+// POST /api/permits/portals/:slug/territory-notices - Create notice
+router.post('/portals/:slug/territory-notices', async (req, res) => {
+  const { slug } = req.params;
+  const b = req.body || {};
+  
+  if (!b.authorityCode || !b.visitorName || !b.visitPurpose || !b.entryDate) {
+    return res.status(400).json({ 
+      error: 'authorityCode, visitorName, visitPurpose, entryDate required' 
+    });
+  }
+  
+  try {
+    const result = await createTerritoryNotice({
+      portalSlug: slug,
+      authorityCode: b.authorityCode,
+      tripId: b.tripId,
+      visitorName: b.visitorName,
+      visitorEmail: b.visitorEmail,
+      visitorPhone: b.visitorPhone,
+      partySize: b.partySize,
+      partyMembers: b.partyMembers,
+      visitPurpose: b.visitPurpose,
+      visitDescription: b.visitDescription,
+      entryDate: new Date(b.entryDate),
+      exitDate: b.exitDate ? new Date(b.exitDate) : undefined,
+      entryPoint: b.entryPoint,
+      plannedAreas: b.plannedAreas,
+      vesselName: b.vesselName,
+      vesselType: b.vesselType,
+      vesselRegistration: b.vesselRegistration,
+      visitorNotes: b.visitorNotes
+    });
+    
+    res.json(result);
+  } catch (e: any) {
+    console.error('Create notice error:', e);
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// POST /api/permits/portals/:slug/territory-notices/:id/acknowledge - Acknowledge
+router.post('/portals/:slug/territory-notices/:id/acknowledge', async (req, res) => {
+  const { slug, id } = req.params;
+  const b = req.body || {};
+  
+  try {
+    const notice = await acknowledgeNotice(slug, id, {
+      territoryAcknowledged: b.territoryAcknowledged === true,
+      culturalRespectAgreed: b.culturalRespectAgreed === true,
+      leaveNoTraceAgreed: b.leaveNoTraceAgreed === true,
+      sacredSitesRespect: b.sacredSitesRespect === true
+    });
+    
+    res.json({ notice });
+  } catch (e: any) {
+    console.error('Acknowledge notice error:', e);
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// GET /api/permits/portals/:slug/territory-notices - Search notices
+router.get('/portals/:slug/territory-notices', async (req, res) => {
+  const { slug } = req.params;
+  const { authority, status, from, to, limit } = req.query;
+  
+  try {
+    const notices = await searchNotices(slug, {
+      authorityId: authority as string,
+      status: status as string,
+      entryDateFrom: from ? new Date(from as string) : undefined,
+      entryDateTo: to ? new Date(to as string) : undefined,
+      limit: limit ? parseInt(limit as string) : undefined
+    });
+    
+    res.json({ notices, count: notices.length });
+  } catch (e: any) {
+    console.error('Search notices error:', e);
+    res.status(500).json({ error: 'Failed to search notices' });
+  }
+});
+
+// GET /api/permits/portals/:slug/territory-notices/:id - Get notice
+router.get('/portals/:slug/territory-notices/:id', async (req, res) => {
+  const { slug, id } = req.params;
+  
+  try {
+    const result = await getNotice(slug, id);
+    if (!result) {
+      return res.status(404).json({ error: 'Notice not found' });
+    }
+    res.json(result);
+  } catch (e: any) {
+    console.error('Get notice error:', e);
+    res.status(500).json({ error: 'Failed to get notice' });
+  }
+});
+
+// GET /api/permits/portals/:slug/territory-notices/by-number/:number - Get by number
+router.get('/portals/:slug/territory-notices/by-number/:number', async (req, res) => {
+  const { slug, number } = req.params;
+  
+  try {
+    const result = await getNoticeByNumber(slug, number);
+    if (!result) {
+      return res.status(404).json({ error: 'Notice not found' });
+    }
+    res.json(result);
+  } catch (e: any) {
+    console.error('Get notice error:', e);
+    res.status(500).json({ error: 'Failed to get notice' });
+  }
+});
+
+// GET /api/permits/portals/:slug/trips/:tripId/territory-notices - Get notices for trip
+router.get('/portals/:slug/trips/:tripId/territory-notices', async (req, res) => {
+  const { slug, tripId } = req.params;
+  
+  try {
+    const notices = await getNoticesForTrip(slug, tripId);
+    res.json({ notices, count: notices.length });
+  } catch (e: any) {
+    console.error('Get trip notices error:', e);
+    res.status(500).json({ error: 'Failed to get notices' });
+  }
+});
+
+// ============ CULTURAL SITES ENDPOINTS ============
+
+// GET /api/permits/portals/:slug/cultural-sites - Get cultural sites
+router.get('/portals/:slug/cultural-sites', async (req, res) => {
+  const { slug } = req.params;
+  const { authority } = req.query;
+  
+  try {
+    const sites = await getCulturalSites(slug, authority as string);
+    res.json({ sites, count: sites.length });
+  } catch (e: any) {
+    console.error('Get cultural sites error:', e);
+    res.status(500).json({ error: 'Failed to get sites' });
+  }
+});
+
+// GET /api/permits/portals/:slug/cultural-sites/:id - Get site
+router.get('/portals/:slug/cultural-sites/:id', async (req, res) => {
+  const { slug, id } = req.params;
+  
+  try {
+    const site = await getCulturalSite(slug, id);
+    if (!site) {
+      return res.status(404).json({ error: 'Site not found' });
+    }
+    res.json({ site });
+  } catch (e: any) {
+    console.error('Get site error:', e);
+    res.status(500).json({ error: 'Failed to get site' });
+  }
+});
+
+// GET /api/permits/portals/:slug/territory/:authorityCode - Get territory acknowledgment
+router.get('/portals/:slug/territory/:authorityCode', async (req, res) => {
+  const { slug, authorityCode } = req.params;
+  
+  try {
+    const result = await getTerritoryAcknowledgment(slug, authorityCode);
+    if (!result) {
+      return res.status(404).json({ error: 'Authority not found' });
+    }
+    res.json(result);
+  } catch (e: any) {
+    console.error('Get territory info error:', e);
+    res.status(500).json({ error: 'Failed to get territory info' });
+  }
+});
+```
+
+## Drizzle Schema Exports
+
+Add to shared/schema.ts:
+- TerritoryNotice, InsertTerritoryNotice
+- CulturalSite, InsertCulturalSite
+
+## Deliverables
+- [ ] Migration 089_territory_notices.sql
+- [ ] cc_territory_notices table with RLS
+- [ ] cc_cultural_sites table with RLS
+- [ ] 3 HFN cultural sites seeded:
+  - Kiixin National Historic Site (guided only)
+  - Diana Island (restricted)
+  - Deer Group Islands (open)
+- [ ] server/services/territoryNoticeService.ts
+- [ ] Routes added to server/routes/permits.ts:
+  - POST /portals/:slug/territory-notices
+  - POST /portals/:slug/territory-notices/:id/acknowledge
+  - GET /portals/:slug/territory-notices
+  - GET /portals/:slug/territory-notices/:id
+  - GET /portals/:slug/territory-notices/by-number/:number
+  - GET /portals/:slug/trips/:tripId/territory-notices
+  - GET /portals/:slug/cultural-sites
+  - GET /portals/:slug/cultural-sites/:id
+  - GET /portals/:slug/territory/:authorityCode
+- [ ] Notice number format: TAN-NATION-YYMMDD-XXXX
+- [ ] Acknowledgment requires 4 checkboxes: territory, cultural respect, leave no trace, sacred sites
+- [ ] Cultural sites include access level and restrictions
+- [ ] Test: Create notice for HFN → returns cultural protocols
+- [ ] Test: Acknowledge with all 4 flags → status changes to acknowledged
+- [ ] Test: GET /api/permits/portals/bamfield/territory/HFN returns acknowledgment text + sites
+
+Report with territory notice showing acknowledgment and cultural sites list.

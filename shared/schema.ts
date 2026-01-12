@@ -2180,3 +2180,95 @@ export const insertTripPermitSchema = createInsertSchema(ccTripPermits).omit({
 });
 export type TripPermit = typeof ccTripPermits.$inferSelect;
 export type InsertTripPermit = z.infer<typeof insertTripPermitSchema>;
+
+// ============ TERRITORY NOTICES ============
+// Acknowledgments and notices for First Nations territories
+export const ccTerritoryNotices = pgTable('cc_territory_notices', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  
+  portalId: uuid('portal_id'),
+  authorityId: uuid('authority_id').notNull(),
+  tripId: uuid('trip_id'),
+  permitId: uuid('permit_id'),
+  
+  noticeNumber: varchar('notice_number', { length: 30 }).notNull().unique(),
+  
+  visitorName: text('visitor_name').notNull(),
+  visitorEmail: text('visitor_email'),
+  visitorPhone: text('visitor_phone'),
+  partySize: integer('party_size').default(1),
+  partyMembers: text('party_members').array(),
+  
+  visitPurpose: varchar('visit_purpose', { length: 50 }),
+  visitDescription: text('visit_description'),
+  
+  entryDate: date('entry_date').notNull(),
+  exitDate: date('exit_date'),
+  
+  entryPoint: text('entry_point'),
+  plannedAreas: text('planned_areas').array(),
+  
+  acknowledgementsJson: jsonb('acknowledgments_json').default({}),
+  
+  orientationCompleted: boolean('orientation_completed').default(false),
+  orientationDate: timestamp('orientation_date', { withTimezone: true }),
+  culturalGuideRequested: boolean('cultural_guide_requested').default(false),
+  
+  status: varchar('status', { length: 50 }).default('pending'),
+  
+  acknowledgedAt: timestamp('acknowledged_at', { withTimezone: true }),
+  
+  vesselName: text('vessel_name'),
+  vesselType: text('vessel_type'),
+  vesselRegistration: text('vessel_registration'),
+  
+  visitorNotes: text('visitor_notes'),
+  authorityNotes: text('authority_notes'),
+  
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+});
+
+export const insertTerritoryNoticeSchema = createInsertSchema(ccTerritoryNotices).omit({ 
+  id: true, createdAt: true, updatedAt: true 
+});
+export type TerritoryNotice = typeof ccTerritoryNotices.$inferSelect;
+export type InsertTerritoryNotice = z.infer<typeof insertTerritoryNoticeSchema>;
+
+// ============ CULTURAL SITES ============
+// Sacred sites and areas with special protocols
+export const ccCulturalSites = pgTable('cc_cultural_sites', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  
+  portalId: uuid('portal_id'),
+  authorityId: uuid('authority_id').notNull(),
+  locationId: uuid('location_id'),
+  
+  name: text('name').notNull(),
+  traditionalName: text('traditional_name'),
+  
+  siteType: varchar('site_type', { length: 50 }),
+  
+  description: text('description'),
+  lat: numeric('lat', { precision: 9, scale: 6 }),
+  lon: numeric('lon', { precision: 9, scale: 6 }),
+  boundaryJson: jsonb('boundary_json').default({}),
+  
+  accessLevel: varchar('access_level', { length: 50 }).default('restricted'),
+  
+  restrictionsJson: jsonb('restrictions_json').default({}),
+  
+  protocolDescription: text('protocol_description'),
+  requiredAcknowledgment: text('required_acknowledgment'),
+  
+  status: varchar('status', { length: 50 }).default('active'),
+  
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+});
+
+export const insertCulturalSiteSchema = createInsertSchema(ccCulturalSites).omit({ 
+  id: true, createdAt: true, updatedAt: true 
+});
+export type CulturalSite = typeof ccCulturalSites.$inferSelect;
+export type InsertCulturalSite = z.infer<typeof insertCulturalSiteSchema>;

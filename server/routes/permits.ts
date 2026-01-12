@@ -17,6 +17,12 @@ import {
   obtainPermitForTrip,
   waiveTripPermit
 } from '../services/tripPermitService';
+import {
+  createTerritoryNotice, acknowledgeNotice, getNotice as getTerritoryNotice, getNoticeByNumber,
+  getNoticesForTrip, searchNotices,
+  getCulturalSites, getCulturalSite, getTerritoryAcknowledgment,
+  activateNotice, completeNotice, cancelNotice
+} from '../services/territoryNoticeService';
 
 const router = Router();
 
@@ -448,6 +454,221 @@ router.post('/portals/:slug/trip-permits/:id/waive', async (req, res) => {
   } catch (e: any) {
     console.error('Waive trip permit error:', e);
     res.status(400).json({ error: e.message });
+  }
+});
+
+// ============ TERRITORY NOTICE ENDPOINTS ============
+
+// POST /api/permits/portals/:slug/territory-notices - Create notice
+router.post('/portals/:slug/territory-notices', async (req, res) => {
+  const { slug } = req.params;
+  const b = req.body || {};
+  
+  if (!b.authorityCode || !b.visitorName || !b.visitPurpose || !b.entryDate) {
+    return res.status(400).json({ 
+      error: 'authorityCode, visitorName, visitPurpose, entryDate required' 
+    });
+  }
+  
+  try {
+    const result = await createTerritoryNotice({
+      portalSlug: slug,
+      authorityCode: b.authorityCode,
+      tripId: b.tripId,
+      visitorName: b.visitorName,
+      visitorEmail: b.visitorEmail,
+      visitorPhone: b.visitorPhone,
+      partySize: b.partySize,
+      partyMembers: b.partyMembers,
+      visitPurpose: b.visitPurpose,
+      visitDescription: b.visitDescription,
+      entryDate: new Date(b.entryDate),
+      exitDate: b.exitDate ? new Date(b.exitDate) : undefined,
+      entryPoint: b.entryPoint,
+      plannedAreas: b.plannedAreas,
+      vesselName: b.vesselName,
+      vesselType: b.vesselType,
+      vesselRegistration: b.vesselRegistration,
+      visitorNotes: b.visitorNotes
+    });
+    
+    res.json(result);
+  } catch (e: any) {
+    console.error('Create notice error:', e);
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// POST /api/permits/portals/:slug/territory-notices/:id/acknowledge - Acknowledge
+router.post('/portals/:slug/territory-notices/:id/acknowledge', async (req, res) => {
+  const { slug, id } = req.params;
+  const b = req.body || {};
+  
+  try {
+    const notice = await acknowledgeNotice(slug, id, {
+      territoryAcknowledged: b.territoryAcknowledged === true,
+      culturalRespectAgreed: b.culturalRespectAgreed === true,
+      leaveNoTraceAgreed: b.leaveNoTraceAgreed === true,
+      sacredSitesRespect: b.sacredSitesRespect === true
+    });
+    
+    res.json({ notice });
+  } catch (e: any) {
+    console.error('Acknowledge notice error:', e);
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// GET /api/permits/portals/:slug/territory-notices/by-number/:number - Get by number (before :id)
+router.get('/portals/:slug/territory-notices/by-number/:number', async (req, res) => {
+  const { slug, number } = req.params;
+  
+  try {
+    const result = await getNoticeByNumber(slug, number);
+    if (!result) {
+      return res.status(404).json({ error: 'Notice not found' });
+    }
+    res.json(result);
+  } catch (e: any) {
+    console.error('Get notice error:', e);
+    res.status(500).json({ error: 'Failed to get notice' });
+  }
+});
+
+// GET /api/permits/portals/:slug/territory-notices - Search notices
+router.get('/portals/:slug/territory-notices', async (req, res) => {
+  const { slug } = req.params;
+  const { authority, status, from, to, limit } = req.query;
+  
+  try {
+    const notices = await searchNotices(slug, {
+      authorityId: authority as string,
+      status: status as string,
+      entryDateFrom: from ? new Date(from as string) : undefined,
+      entryDateTo: to ? new Date(to as string) : undefined,
+      limit: limit ? parseInt(limit as string) : undefined
+    });
+    
+    res.json({ notices, count: notices.length });
+  } catch (e: any) {
+    console.error('Search notices error:', e);
+    res.status(500).json({ error: 'Failed to search notices' });
+  }
+});
+
+// GET /api/permits/portals/:slug/territory-notices/:id - Get notice
+router.get('/portals/:slug/territory-notices/:id', async (req, res) => {
+  const { slug, id } = req.params;
+  
+  try {
+    const result = await getTerritoryNotice(slug, id);
+    if (!result) {
+      return res.status(404).json({ error: 'Notice not found' });
+    }
+    res.json(result);
+  } catch (e: any) {
+    console.error('Get notice error:', e);
+    res.status(500).json({ error: 'Failed to get notice' });
+  }
+});
+
+// POST /api/permits/portals/:slug/territory-notices/:id/activate - Activate notice
+router.post('/portals/:slug/territory-notices/:id/activate', async (req, res) => {
+  const { slug, id } = req.params;
+  
+  try {
+    const notice = await activateNotice(slug, id);
+    res.json({ notice });
+  } catch (e: any) {
+    console.error('Activate notice error:', e);
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// POST /api/permits/portals/:slug/territory-notices/:id/complete - Complete notice
+router.post('/portals/:slug/territory-notices/:id/complete', async (req, res) => {
+  const { slug, id } = req.params;
+  
+  try {
+    const notice = await completeNotice(slug, id);
+    res.json({ notice });
+  } catch (e: any) {
+    console.error('Complete notice error:', e);
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// POST /api/permits/portals/:slug/territory-notices/:id/cancel - Cancel notice
+router.post('/portals/:slug/territory-notices/:id/cancel', async (req, res) => {
+  const { slug, id } = req.params;
+  
+  try {
+    const notice = await cancelNotice(slug, id);
+    res.json({ notice });
+  } catch (e: any) {
+    console.error('Cancel notice error:', e);
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// GET /api/permits/portals/:slug/trips/:tripId/territory-notices - Get notices for trip
+router.get('/portals/:slug/trips/:tripId/territory-notices', async (req, res) => {
+  const { slug, tripId } = req.params;
+  
+  try {
+    const notices = await getNoticesForTrip(slug, tripId);
+    res.json({ notices, count: notices.length });
+  } catch (e: any) {
+    console.error('Get trip notices error:', e);
+    res.status(500).json({ error: 'Failed to get notices' });
+  }
+});
+
+// ============ CULTURAL SITES ENDPOINTS ============
+
+// GET /api/permits/portals/:slug/cultural-sites - Get cultural sites
+router.get('/portals/:slug/cultural-sites', async (req, res) => {
+  const { slug } = req.params;
+  const { authority } = req.query;
+  
+  try {
+    const sites = await getCulturalSites(slug, authority as string);
+    res.json({ sites, count: sites.length });
+  } catch (e: any) {
+    console.error('Get cultural sites error:', e);
+    res.status(500).json({ error: 'Failed to get sites' });
+  }
+});
+
+// GET /api/permits/portals/:slug/cultural-sites/:id - Get cultural site
+router.get('/portals/:slug/cultural-sites/:id', async (req, res) => {
+  const { slug, id } = req.params;
+  
+  try {
+    const site = await getCulturalSite(slug, id);
+    if (!site) {
+      return res.status(404).json({ error: 'Site not found' });
+    }
+    res.json({ site });
+  } catch (e: any) {
+    console.error('Get cultural site error:', e);
+    res.status(500).json({ error: 'Failed to get site' });
+  }
+});
+
+// GET /api/permits/portals/:slug/territory-acknowledgment/:code - Get territory acknowledgment
+router.get('/portals/:slug/territory-acknowledgment/:code', async (req, res) => {
+  const { slug, code } = req.params;
+  
+  try {
+    const result = await getTerritoryAcknowledgment(slug, code);
+    if (!result) {
+      return res.status(404).json({ error: 'Authority not found' });
+    }
+    res.json(result);
+  } catch (e: any) {
+    console.error('Get acknowledgment error:', e);
+    res.status(500).json({ error: 'Failed to get acknowledgment' });
   }
 });
 
