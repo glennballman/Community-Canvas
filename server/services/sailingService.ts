@@ -77,13 +77,19 @@ export async function getSailings(req: SailingSearchRequest): Promise<{
   const conditions: any[] = [];
   
   let operatorId = req.operatorId;
-  if (req.operatorCode && req.portalSlug) {
+  let portalOperatorIds: string[] = [];
+  
+  if (req.portalSlug) {
     const [portal] = await db.select({ id: ccPortals.id })
       .from(ccPortals)
       .where(eq(ccPortals.slug, req.portalSlug))
       .limit(1);
     
-    if (portal) {
+    if (!portal) {
+      return { sailings: [], total: 0 };
+    }
+    
+    if (req.operatorCode) {
       const [operator] = await db.select({ id: ccTransportOperators.id })
         .from(ccTransportOperators)
         .where(and(
@@ -92,19 +98,33 @@ export async function getSailings(req: SailingSearchRequest): Promise<{
         ))
         .limit(1);
       if (operator) operatorId = operator.id;
+      else return { sailings: [], total: 0 };
+    } else {
+      const portalOps = await db.select({ id: ccTransportOperators.id })
+        .from(ccTransportOperators)
+        .where(eq(ccTransportOperators.portalId, portal.id));
+      portalOperatorIds = portalOps.map(o => o.id);
+      
+      if (portalOperatorIds.length === 0) {
+        return { sailings: [], total: 0 };
+      }
     }
   }
   
   if (operatorId) {
     conditions.push(eq(ccSailings.operatorId, operatorId));
+  } else if (portalOperatorIds.length > 0) {
+    conditions.push(sql`${ccSailings.operatorId} = ANY(${portalOperatorIds})`);
   }
   
   if (req.fromDate) {
-    conditions.push(gte(ccSailings.sailingDate, req.fromDate.toISOString().split('T')[0]));
+    const fromStr = req.fromDate.toISOString().split('T')[0];
+    conditions.push(sql`${ccSailings.sailingDate} >= ${fromStr}::date`);
   }
   
   if (req.toDate) {
-    conditions.push(lte(ccSailings.sailingDate, req.toDate.toISOString().split('T')[0]));
+    const toStr = req.toDate.toISOString().split('T')[0];
+    conditions.push(sql`${ccSailings.sailingDate} <= ${toStr}::date`);
   }
   
   if (req.originLocationId) {
