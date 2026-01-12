@@ -1632,3 +1632,72 @@ export const ccPortCalls = pgTable('cc_port_calls', {
 export const insertPortCallSchema = createInsertSchema(ccPortCalls).omit({ id: true, createdAt: true });
 export type PortCall = typeof ccPortCalls.$inferSelect;
 export type InsertPortCall = z.infer<typeof insertPortCallSchema>;
+
+// Transport Requests - bookings for sailings
+export const ccTransportRequests = pgTable('cc_transport_requests', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id'),
+  portalId: uuid('portal_id'),
+  operatorId: uuid('operator_id'),
+  sailingId: uuid('sailing_id'),
+  
+  cartId: uuid('cart_id'),
+  cartItemId: uuid('cart_item_id'),
+  tripId: uuid('trip_id'),
+  
+  requestNumber: varchar('request_number', { length: 30 }).notNull().unique(),
+  requestType: varchar('request_type', { length: 50 }).notNull(),
+  
+  originLocationId: uuid('origin_location_id'),
+  destinationLocationId: uuid('destination_location_id'),
+  
+  requestedDate: date('requested_date').notNull(),
+  requestedTime: time('requested_time'),
+  flexibleWindowMinutes: integer('flexible_window_minutes').default(0),
+  
+  passengerCount: integer('passenger_count').default(0),
+  passengerNames: text('passenger_names').array(),
+  
+  freightDescription: text('freight_description'),
+  freightWeightLbs: integer('freight_weight_lbs').default(0),
+  freightPieces: integer('freight_pieces').default(0),
+  freightSpecialHandling: text('freight_special_handling').array(),
+  
+  kayakCount: integer('kayak_count').default(0),
+  bikeCount: integer('bike_count').default(0),
+  
+  contactName: text('contact_name').notNull(),
+  contactPhone: text('contact_phone'),
+  contactEmail: text('contact_email'),
+  
+  needsJson: jsonb('needs_json').default({}),
+  
+  quotedFareCad: numeric('quoted_fare_cad', { precision: 10, scale: 2 }),
+  freightFeeCad: numeric('freight_fee_cad', { precision: 10, scale: 2 }),
+  kayakFeeCad: numeric('kayak_fee_cad', { precision: 10, scale: 2 }),
+  totalCad: numeric('total_cad', { precision: 10, scale: 2 }),
+  depositPaidCad: numeric('deposit_paid_cad', { precision: 10, scale: 2 }).default('0'),
+  paymentStatus: varchar('payment_status', { length: 50 }).default('pending'),
+  
+  status: varchar('status', { length: 50 }).notNull().default('requested'),
+  
+  confirmedAt: timestamp('confirmed_at', { withTimezone: true }),
+  confirmedBy: varchar('confirmed_by', { length: 255 }),
+  checkedInAt: timestamp('checked_in_at', { withTimezone: true }),
+  boardedAt: timestamp('boarded_at', { withTimezone: true }),
+  completedAt: timestamp('completed_at', { withTimezone: true }),
+  cancelledAt: timestamp('cancelled_at', { withTimezone: true }),
+  cancellationReason: text('cancellation_reason'),
+  
+  operatorNotes: text('operator_notes'),
+  specialRequests: text('special_requests'),
+  
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+});
+
+export const insertTransportRequestSchema = createInsertSchema(ccTransportRequests).omit({ 
+  id: true, createdAt: true, updatedAt: true 
+});
+export type TransportRequest = typeof ccTransportRequests.$inferSelect;
+export type InsertTransportRequest = z.infer<typeof insertTransportRequestSchema>;

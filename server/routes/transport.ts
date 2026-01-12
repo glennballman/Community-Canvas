@@ -13,6 +13,12 @@ import {
   updateSailingStatus, updatePortCallStatus,
   checkSailingAvailability
 } from '../services/sailingService';
+import {
+  createTransportRequest, getTransportRequest, getTransportRequestByNumber,
+  getRequestsForSailing, getRequestsForTrip,
+  confirmRequest, checkInRequest, boardRequest, completeRequest, cancelRequest,
+  markNoShow, getSailingManifest
+} from '../services/transportRequestService';
 
 const router = Router();
 
@@ -355,6 +361,191 @@ router.get('/sailings/:id/availability', async (req, res) => {
   } catch (e: any) {
     console.error('Check availability error:', e);
     res.status(500).json({ error: 'Failed to check availability' });
+  }
+});
+
+// ============ TRANSPORT REQUEST ROUTES ============
+
+router.post('/requests', async (req, res) => {
+  const b = req.body || {};
+  
+  if (!b.contactName || !b.requestedDate) {
+    return res.status(400).json({ error: 'contactName and requestedDate required' });
+  }
+  
+  try {
+    const result = await createTransportRequest({
+      portalSlug: b.portalSlug,
+      operatorId: b.operatorId,
+      sailingId: b.sailingId,
+      cartId: b.cartId,
+      cartItemId: b.cartItemId,
+      tripId: b.tripId,
+      requestType: b.requestType || 'scheduled',
+      originLocationId: b.originLocationId,
+      destinationLocationId: b.destinationLocationId,
+      requestedDate: new Date(b.requestedDate),
+      requestedTime: b.requestedTime,
+      flexibleWindowMinutes: b.flexibleWindowMinutes,
+      passengerCount: b.passengerCount,
+      passengerNames: b.passengerNames,
+      freightDescription: b.freightDescription,
+      freightWeightLbs: b.freightWeightLbs,
+      freightPieces: b.freightPieces,
+      freightSpecialHandling: b.freightSpecialHandling,
+      kayakCount: b.kayakCount,
+      bikeCount: b.bikeCount,
+      contactName: b.contactName,
+      contactPhone: b.contactPhone,
+      contactEmail: b.contactEmail,
+      needs: b.needs,
+      specialRequests: b.specialRequests
+    });
+    
+    res.json(result);
+  } catch (e: any) {
+    console.error('Create transport request error:', e);
+    res.status(400).json({ error: e.message });
+  }
+});
+
+router.get('/requests/:id', async (req, res) => {
+  const { id } = req.params;
+  
+  try {
+    const result = await getTransportRequest(id);
+    if (!result) {
+      return res.status(404).json({ error: 'Request not found' });
+    }
+    res.json(result);
+  } catch (e: any) {
+    console.error('Get request error:', e);
+    res.status(500).json({ error: 'Failed to get request' });
+  }
+});
+
+router.get('/requests/by-number/:number', async (req, res) => {
+  const { number } = req.params;
+  
+  try {
+    const result = await getTransportRequestByNumber(number);
+    if (!result) {
+      return res.status(404).json({ error: 'Request not found' });
+    }
+    res.json(result);
+  } catch (e: any) {
+    console.error('Get request error:', e);
+    res.status(500).json({ error: 'Failed to get request' });
+  }
+});
+
+router.get('/sailings/:id/requests', async (req, res) => {
+  const { id } = req.params;
+  
+  try {
+    const requests = await getRequestsForSailing(id);
+    res.json({ requests, count: requests.length });
+  } catch (e: any) {
+    console.error('Get sailing requests error:', e);
+    res.status(500).json({ error: 'Failed to get requests' });
+  }
+});
+
+router.get('/sailings/:id/manifest', async (req, res) => {
+  const { id } = req.params;
+  
+  try {
+    const manifest = await getSailingManifest(id);
+    res.json(manifest);
+  } catch (e: any) {
+    console.error('Get manifest error:', e);
+    res.status(500).json({ error: 'Failed to get manifest' });
+  }
+});
+
+router.get('/trips/:tripId/requests', async (req, res) => {
+  const { tripId } = req.params;
+  
+  try {
+    const requests = await getRequestsForTrip(tripId);
+    res.json({ requests });
+  } catch (e: any) {
+    console.error('Get trip requests error:', e);
+    res.status(500).json({ error: 'Failed to get requests' });
+  }
+});
+
+router.post('/requests/:id/confirm', async (req, res) => {
+  const { id } = req.params;
+  const { confirmedBy } = req.body || {};
+  
+  try {
+    const updated = await confirmRequest(id, confirmedBy);
+    res.json({ request: updated });
+  } catch (e: any) {
+    console.error('Confirm request error:', e);
+    res.status(400).json({ error: e.message });
+  }
+});
+
+router.post('/requests/:id/check-in', async (req, res) => {
+  const { id } = req.params;
+  
+  try {
+    const updated = await checkInRequest(id);
+    res.json({ request: updated });
+  } catch (e: any) {
+    console.error('Check-in request error:', e);
+    res.status(400).json({ error: e.message });
+  }
+});
+
+router.post('/requests/:id/board', async (req, res) => {
+  const { id } = req.params;
+  
+  try {
+    const updated = await boardRequest(id);
+    res.json({ request: updated });
+  } catch (e: any) {
+    console.error('Board request error:', e);
+    res.status(400).json({ error: e.message });
+  }
+});
+
+router.post('/requests/:id/complete', async (req, res) => {
+  const { id } = req.params;
+  
+  try {
+    const updated = await completeRequest(id);
+    res.json({ request: updated });
+  } catch (e: any) {
+    console.error('Complete request error:', e);
+    res.status(400).json({ error: e.message });
+  }
+});
+
+router.post('/requests/:id/cancel', async (req, res) => {
+  const { id } = req.params;
+  const { reason } = req.body || {};
+  
+  try {
+    const updated = await cancelRequest(id, reason);
+    res.json({ request: updated });
+  } catch (e: any) {
+    console.error('Cancel request error:', e);
+    res.status(400).json({ error: e.message });
+  }
+});
+
+router.post('/requests/:id/no-show', async (req, res) => {
+  const { id } = req.params;
+  
+  try {
+    const updated = await markNoShow(id);
+    res.json({ request: updated });
+  } catch (e: any) {
+    console.error('No-show request error:', e);
+    res.status(400).json({ error: e.message });
   }
 });
 

@@ -1,0 +1,832 @@
+**BAMFIELD OPS - PROMPT 04: Transport Requests (Booking Transport)**
+
+Create the transport request system for booking passengers, freight, and kayaks on sailings.
+
+## Migration 081_transport_requests.sql
+```sql
+BEGIN;
+
+-- ============ TRANSPORT REQUESTS ============
+-- Bookings for passengers, freight, kayaks on sailings or on-demand transport
+
+CREATE TABLE IF NOT EXISTS cc_transport_requests (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  
+  -- Links
+  tenant_id uuid REFERENCES cc_tenants(id) ON DELETE SET NULL,
+  portal_id uuid REFERENCES cc_portals(id) ON DELETE SET NULL,
+  operator_id uuid REFERENCES cc_transport_operators(id) ON DELETE SET NULL,
+  sailing_id uuid REFERENCES cc_sailings(id) ON DELETE SET NULL,
+  
+  -- Cart integration
+  cart_id uuid REFERENCES cc_reservation_carts(id) ON DELETE SET NULL,
+  cart_item_id uuid REFERENCES cc_reservation_cart_items(id) ON DELETE SET NULL,
+  trip_id uuid REFERENCES cc_trips(id) ON DELETE SET NULL,
+  
+  -- Identity
+  request_number varchar(30) NOT NULL UNIQUE,
+  -- Format: TR-YYMMDD-XXXX (e.g., TR-260115-A7K9)
+  
+  -- Request type
+  request_type varchar NOT NULL CHECK (request_type IN (
+    'scheduled',    -- Booking on a scheduled sailing
+    'on_demand',    -- Water taxi / charter request
+    'freight_only', -- Freight without passengers
+    'charter'       -- Full vessel charter
+  )),
+  
+  -- Route
+  origin_location_id uuid REFERENCES cc_locations(id),
+  destination_location_id uuid REFERENCES cc_locations(id),
+  
+  -- Timing
+  requested_date date NOT NULL,
+  requested_time time,
+  flexible_window_minutes integer DEFAULT 0,
+  
+  -- What's being transported
+  passenger_count integer DEFAULT 0,
+  passenger_names text[], -- For manifest
+  
+  freight_description text,
+  freight_weight_lbs integer DEFAULT 0,
+  freight_pieces integer DEFAULT 0,
+  freight_special_handling text[],
+  -- ['fragile', 'refrigerated', 'hazmat', 'oversized']
+  
+  kayak_count integer DEFAULT 0,
+  bike_count integer DEFAULT 0,
+  
+  -- Contact
+  contact_name text NOT NULL,
+  contact_phone text,
+  contact_email text,
+  
+  -- Party needs (from trip if linked)
+  needs_json jsonb DEFAULT '{}'::jsonb,
+  -- {wheelchair: true, dietary: ['vegetarian'], pets: [{type: 'dog'}]}
+  
+  -- Pricing
+  quoted_fare_cad numeric(10,2),
+  freight_fee_cad numeric(10,2),
+  kayak_fee_cad numeric(10,2),
+  total_cad numeric(10,2),
+  deposit_paid_cad numeric(10,2) DEFAULT 0,
+  payment_status varchar DEFAULT 'pending' CHECK (payment_status IN (
+    'pending', 'deposit_paid', 'paid', 'refunded', 'waived'
+  )),
+  
+  -- Status
+  status varchar NOT NULL DEFAULT 'requested' CHECK (status IN (
+    'requested',      -- Initial request
+    'pending',        -- Awaiting operator confirmation
+    'confirmed',      -- Operator confirmed
+    'waitlisted',     -- On waitlist for full sailing
+    'checked_in',     -- Passenger checked in
+    'boarded',        -- On the vessel
+    'completed',      -- Trip completed
+    'cancelled',      -- Cancelled by requester
+    'rejected',       -- Rejected by operator
+    'no_show'         -- Didn't show up
+  )),
+  
+  confirmed_at timestamptz,
+  confirmed_by varchar,
+  checked_in_at timestamptz,
+  boarded_at timestamptz,
+  completed_at timestamptz,
+  cancelled_at timestamptz,
+  cancellation_reason text,
+  
+  -- Operator notes
+  operator_notes text,
+  
+  -- Special requests
+  special_requests text,
+  
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+
+CREATE INDEX idx_transport_requests_sailing ON cc_transport_requests(sailing_id, status);
+CREATE INDEX idx_transport_requests_date ON cc_transport_requests(requested_date, status);
+CREATE INDEX idx_transport_requests_operator ON cc_transport_requests(operator_id, requested_date);
+CREATE INDEX idx_transport_requests_trip ON cc_transport_requests(trip_id) WHERE trip_id IS NOT NULL;
+CREATE INDEX idx_transport_requests_cart ON cc_transport_requests(cart_id) WHERE cart_id IS NOT NULL;
+CREATE INDEX idx_transport_requests_number ON cc_transport_requests(request_number);
+
+ALTER TABLE cc_transport_requests ENABLE ROW LEVEL SECURITY;
+
+COMMIT;
+```
+
+## Create server/services/transportRequestService.ts
+```typescript
+// server/services/transportRequestService.ts
+
+import { db } from '../db';
+import { eq, and, gte, lte, or, asc, desc, sql } from 'drizzle-orm';
+import { nanoid } from 'nanoid';
+import { checkSailingAvailability, getSailingById } from './sailingService';
+import { logActivity } from './activityService';
+
+// ============ TYPES ============
+
+interface CreateTransportRequest {
+  portalSlug?: string;
+  operatorId?: string;
+  sailingId?: string;
+  cartId?: string;
+  cartItemId?: string;
+  tripId?: string;
+  
+  requestType: 'scheduled' | 'on_demand' | 'freight_only' | 'charter';
+  
+  originLocationId?: string;
+  destinationLocationId?: string;
+  
+  requestedDate: Date;
+  requestedTime?: string;
+  flexibleWindowMinutes?: number;
+  
+  passengerCount?: number;
+  passengerNames?: string[];
+  
+  freightDescription?: string;
+  freightWeightLbs?: number;
+  freightPieces?: number;
+  freightSpecialHandling?: string[];
+  
+  kayakCount?: number;
+  bikeCount?: number;
+  
+  contactName: string;
+  contactPhone?: string;
+  contactEmail?: string;
+  
+  needs?: Record<string, any>;
+  specialRequests?: string;
+}
+
+interface TransportRequestResult {
+  request: any;
+  sailing?: any;
+  waitlisted: boolean;
+  message: string;
+}
+
+// ============ HELPERS ============
+
+function generateRequestNumber(): string {
+  const date = new Date();
+  const dateStr = date.toISOString().slice(2, 10).replace(/-/g, '');
+  const suffix = nanoid(4).toUpperCase();
+  return `TR-${dateStr}-${suffix}`;
+}
+
+async function calculateFare(
+  operatorId: string,
+  sailingId: string | undefined,
+  passengers: number,
+  freightLbs: number,
+  kayaks: number,
+  bikes: number
+): Promise<{
+  quotedFareCad: number;
+  freightFeeCad: number;
+  kayakFeeCad: number;
+  totalCad: number;
+}> {
+  // Get operator for pricing settings
+  const operator = await db.query.ccTransportOperators.findFirst({
+    where: eq(ccTransportOperators.id, operatorId)
+  });
+  
+  const bookingSettings = operator?.bookingSettingsJson as any || {};
+  
+  // Default Lady Rose pricing
+  const baseFare = 45; // Per passenger
+  const kayakFee = bookingSettings.kayak_fee_cad || 25;
+  const bikeFee = 15;
+  const freightPerLb = 0.10; // $0.10/lb
+  
+  const quotedFareCad = passengers * baseFare;
+  const kayakFeeCad = kayaks * kayakFee;
+  const bikeFeeCad = bikes * bikeFee;
+  const freightFeeCad = Math.ceil(freightLbs * freightPerLb);
+  
+  return {
+    quotedFareCad,
+    freightFeeCad: freightFeeCad + bikeFeeCad,
+    kayakFeeCad,
+    totalCad: quotedFareCad + freightFeeCad + kayakFeeCad + bikeFeeCad
+  };
+}
+
+// ============ REQUEST FUNCTIONS ============
+
+export async function createTransportRequest(
+  req: CreateTransportRequest
+): Promise<TransportRequestResult> {
+  // Resolve portal
+  let portalId: string | undefined;
+  if (req.portalSlug) {
+    const portal = await db.query.ccPortals.findFirst({
+      where: eq(ccPortals.slug, req.portalSlug)
+    });
+    if (portal) portalId = portal.id;
+  }
+  
+  // If sailing provided, get operator from sailing
+  let operatorId = req.operatorId;
+  let sailingDetails: any = null;
+  
+  if (req.sailingId) {
+    sailingDetails = await getSailingById(req.sailingId);
+    if (sailingDetails) {
+      operatorId = sailingDetails.sailing.operatorId;
+    }
+  }
+  
+  if (!operatorId) {
+    throw new Error('Operator ID required');
+  }
+  
+  // Check availability if booking on scheduled sailing
+  let waitlisted = false;
+  if (req.sailingId && req.requestType === 'scheduled') {
+    const availability = await checkSailingAvailability(req.sailingId, {
+      passengers: req.passengerCount,
+      freightLbs: req.freightWeightLbs,
+      kayaks: req.kayakCount
+    });
+    
+    if (!availability.available) {
+      // Add to waitlist instead of rejecting
+      waitlisted = true;
+    }
+  }
+  
+  // Calculate pricing
+  const pricing = await calculateFare(
+    operatorId,
+    req.sailingId,
+    req.passengerCount || 0,
+    req.freightWeightLbs || 0,
+    req.kayakCount || 0,
+    req.bikeCount || 0
+  );
+  
+  const requestNumber = generateRequestNumber();
+  
+  const [request] = await db.insert(ccTransportRequests).values({
+    portalId,
+    operatorId,
+    sailingId: req.sailingId,
+    cartId: req.cartId,
+    cartItemId: req.cartItemId,
+    tripId: req.tripId,
+    requestNumber,
+    requestType: req.requestType,
+    originLocationId: req.originLocationId,
+    destinationLocationId: req.destinationLocationId,
+    requestedDate: req.requestedDate,
+    requestedTime: req.requestedTime,
+    flexibleWindowMinutes: req.flexibleWindowMinutes,
+    passengerCount: req.passengerCount || 0,
+    passengerNames: req.passengerNames,
+    freightDescription: req.freightDescription,
+    freightWeightLbs: req.freightWeightLbs || 0,
+    freightPieces: req.freightPieces || 0,
+    freightSpecialHandling: req.freightSpecialHandling,
+    kayakCount: req.kayakCount || 0,
+    bikeCount: req.bikeCount || 0,
+    contactName: req.contactName,
+    contactPhone: req.contactPhone,
+    contactEmail: req.contactEmail,
+    needsJson: req.needs || {},
+    specialRequests: req.specialRequests,
+    quotedFareCad: pricing.quotedFareCad,
+    freightFeeCad: pricing.freightFeeCad,
+    kayakFeeCad: pricing.kayakFeeCad,
+    totalCad: pricing.totalCad,
+    status: waitlisted ? 'waitlisted' : 'requested'
+  }).returning();
+  
+  // Update sailing capacity if confirmed immediately (auto-confirm for scheduled)
+  if (req.sailingId && !waitlisted) {
+    await updateSailingCapacity(req.sailingId, {
+      passengers: req.passengerCount || 0,
+      freightLbs: req.freightWeightLbs || 0,
+      kayaks: req.kayakCount || 0
+    }, 'book');
+  }
+  
+  // Log activity
+  await logActivity({
+    tenantId: 'system',
+    actorId: 'guest',
+    action: 'transport_request.created',
+    resourceType: 'transport_request',
+    resourceId: request.id,
+    metadata: {
+      requestNumber,
+      requestType: req.requestType,
+      passengers: req.passengerCount,
+      waitlisted
+    }
+  });
+  
+  return {
+    request,
+    sailing: sailingDetails,
+    waitlisted,
+    message: waitlisted 
+      ? 'Added to waitlist - sailing is at capacity'
+      : 'Transport request created successfully'
+  };
+}
+
+async function updateSailingCapacity(
+  sailingId: string,
+  amounts: { passengers: number; freightLbs: number; kayaks: number },
+  action: 'book' | 'cancel'
+): Promise<void> {
+  const sailing = await db.query.ccSailings.findFirst({
+    where: eq(ccSailings.id, sailingId)
+  });
+  
+  if (!sailing) return;
+  
+  const capacity = sailing.capacityJson as any;
+  const multiplier = action === 'book' ? -1 : 1;
+  
+  if (capacity.passengers) {
+    capacity.passengers.booked += amounts.passengers * (action === 'book' ? 1 : -1);
+    capacity.passengers.available += amounts.passengers * multiplier;
+  }
+  
+  if (capacity.freight_lbs) {
+    capacity.freight_lbs.booked += amounts.freightLbs * (action === 'book' ? 1 : -1);
+    capacity.freight_lbs.available += amounts.freightLbs * multiplier;
+  }
+  
+  if (capacity.kayaks) {
+    capacity.kayaks.booked += amounts.kayaks * (action === 'book' ? 1 : -1);
+    capacity.kayaks.available += amounts.kayaks * multiplier;
+  }
+  
+  await db.update(ccSailings)
+    .set({ capacityJson: capacity, updatedAt: new Date() })
+    .where(eq(ccSailings.id, sailingId));
+}
+
+export async function getTransportRequest(requestId: string): Promise<any | null> {
+  const request = await db.query.ccTransportRequests.findFirst({
+    where: eq(ccTransportRequests.id, requestId)
+  });
+  
+  if (!request) return null;
+  
+  // Enrich with sailing details if linked
+  let sailing = null;
+  if (request.sailingId) {
+    sailing = await getSailingById(request.sailingId);
+  }
+  
+  return { request, sailing };
+}
+
+export async function getTransportRequestByNumber(requestNumber: string): Promise<any | null> {
+  const request = await db.query.ccTransportRequests.findFirst({
+    where: eq(ccTransportRequests.requestNumber, requestNumber)
+  });
+  
+  if (!request) return null;
+  
+  return getTransportRequest(request.id);
+}
+
+export async function getRequestsForSailing(sailingId: string): Promise<any[]> {
+  return db.query.ccTransportRequests.findMany({
+    where: and(
+      eq(ccTransportRequests.sailingId, sailingId),
+      sql`${ccTransportRequests.status} NOT IN ('cancelled', 'rejected')`
+    ),
+    orderBy: [asc(ccTransportRequests.createdAt)]
+  });
+}
+
+export async function getRequestsForTrip(tripId: string): Promise<any[]> {
+  return db.query.ccTransportRequests.findMany({
+    where: eq(ccTransportRequests.tripId, tripId),
+    orderBy: [asc(ccTransportRequests.requestedDate)]
+  });
+}
+
+// ============ STATUS TRANSITIONS ============
+
+export async function confirmRequest(
+  requestId: string,
+  confirmedBy?: string
+): Promise<any> {
+  const request = await db.query.ccTransportRequests.findFirst({
+    where: eq(ccTransportRequests.id, requestId)
+  });
+  
+  if (!request) throw new Error('Request not found');
+  
+  // If was waitlisted, update sailing capacity now
+  if (request.status === 'waitlisted' && request.sailingId) {
+    await updateSailingCapacity(request.sailingId, {
+      passengers: request.passengerCount || 0,
+      freightLbs: request.freightWeightLbs || 0,
+      kayaks: request.kayakCount || 0
+    }, 'book');
+  }
+  
+  const [updated] = await db.update(ccTransportRequests)
+    .set({
+      status: 'confirmed',
+      confirmedAt: new Date(),
+      confirmedBy,
+      updatedAt: new Date()
+    })
+    .where(eq(ccTransportRequests.id, requestId))
+    .returning();
+  
+  await logActivity({
+    tenantId: 'system',
+    actorId: confirmedBy || 'operator',
+    action: 'transport_request.confirmed',
+    resourceType: 'transport_request',
+    resourceId: requestId,
+    metadata: { requestNumber: request.requestNumber }
+  });
+  
+  return updated;
+}
+
+export async function checkInRequest(requestId: string): Promise<any> {
+  const [updated] = await db.update(ccTransportRequests)
+    .set({
+      status: 'checked_in',
+      checkedInAt: new Date(),
+      updatedAt: new Date()
+    })
+    .where(eq(ccTransportRequests.id, requestId))
+    .returning();
+  
+  return updated;
+}
+
+export async function boardRequest(requestId: string): Promise<any> {
+  const [updated] = await db.update(ccTransportRequests)
+    .set({
+      status: 'boarded',
+      boardedAt: new Date(),
+      updatedAt: new Date()
+    })
+    .where(eq(ccTransportRequests.id, requestId))
+    .returning();
+  
+  return updated;
+}
+
+export async function completeRequest(requestId: string): Promise<any> {
+  const [updated] = await db.update(ccTransportRequests)
+    .set({
+      status: 'completed',
+      completedAt: new Date(),
+      updatedAt: new Date()
+    })
+    .where(eq(ccTransportRequests.id, requestId))
+    .returning();
+  
+  return updated;
+}
+
+export async function cancelRequest(
+  requestId: string,
+  reason?: string
+): Promise<any> {
+  const request = await db.query.ccTransportRequests.findFirst({
+    where: eq(ccTransportRequests.id, requestId)
+  });
+  
+  if (!request) throw new Error('Request not found');
+  
+  // Release capacity if was booked
+  if (request.sailingId && ['confirmed', 'requested'].includes(request.status)) {
+    await updateSailingCapacity(request.sailingId, {
+      passengers: request.passengerCount || 0,
+      freightLbs: request.freightWeightLbs || 0,
+      kayaks: request.kayakCount || 0
+    }, 'cancel');
+  }
+  
+  const [updated] = await db.update(ccTransportRequests)
+    .set({
+      status: 'cancelled',
+      cancelledAt: new Date(),
+      cancellationReason: reason,
+      updatedAt: new Date()
+    })
+    .where(eq(ccTransportRequests.id, requestId))
+    .returning();
+  
+  await logActivity({
+    tenantId: 'system',
+    actorId: 'system',
+    action: 'transport_request.cancelled',
+    resourceType: 'transport_request',
+    resourceId: requestId,
+    metadata: { requestNumber: request.requestNumber, reason }
+  });
+  
+  return updated;
+}
+
+// ============ MANIFEST ============
+
+export async function getSailingManifest(sailingId: string): Promise<{
+  sailing: any;
+  passengers: { name: string; requestNumber: string; status: string }[];
+  totals: {
+    passengerCount: number;
+    checkedIn: number;
+    boarded: number;
+    freightLbs: number;
+    kayaks: number;
+    bikes: number;
+  };
+}> {
+  const sailingDetails = await getSailingById(sailingId);
+  const requests = await getRequestsForSailing(sailingId);
+  
+  const passengers: { name: string; requestNumber: string; status: string }[] = [];
+  let passengerCount = 0;
+  let checkedIn = 0;
+  let boarded = 0;
+  let freightLbs = 0;
+  let kayaks = 0;
+  let bikes = 0;
+  
+  for (const req of requests) {
+    passengerCount += req.passengerCount || 0;
+    freightLbs += req.freightWeightLbs || 0;
+    kayaks += req.kayakCount || 0;
+    bikes += req.bikeCount || 0;
+    
+    if (req.status === 'checked_in') checkedIn += req.passengerCount || 0;
+    if (req.status === 'boarded') boarded += req.passengerCount || 0;
+    
+    // Add individual passengers
+    if (req.passengerNames?.length) {
+      for (const name of req.passengerNames) {
+        passengers.push({
+          name,
+          requestNumber: req.requestNumber,
+          status: req.status
+        });
+      }
+    } else if (req.passengerCount > 0) {
+      passengers.push({
+        name: req.contactName,
+        requestNumber: req.requestNumber,
+        status: req.status
+      });
+    }
+  }
+  
+  return {
+    sailing: sailingDetails,
+    passengers,
+    totals: { passengerCount, checkedIn, boarded, freightLbs, kayaks, bikes }
+  };
+}
+```
+
+## Add Transport Request Routes to transport.ts
+```typescript
+// Add to server/routes/transport.ts
+
+import {
+  createTransportRequest, getTransportRequest, getTransportRequestByNumber,
+  getRequestsForSailing, getRequestsForTrip,
+  confirmRequest, checkInRequest, boardRequest, completeRequest, cancelRequest,
+  getSailingManifest
+} from '../services/transportRequestService';
+
+// ============ TRANSPORT REQUEST ENDPOINTS ============
+
+// POST /api/transport/requests - Create transport request
+router.post('/requests', async (req, res) => {
+  const b = req.body || {};
+  
+  if (!b.contactName || !b.requestedDate) {
+    return res.status(400).json({ error: 'contactName and requestedDate required' });
+  }
+  
+  try {
+    const result = await createTransportRequest({
+      portalSlug: b.portalSlug,
+      operatorId: b.operatorId,
+      sailingId: b.sailingId,
+      cartId: b.cartId,
+      cartItemId: b.cartItemId,
+      tripId: b.tripId,
+      requestType: b.requestType || 'scheduled',
+      originLocationId: b.originLocationId,
+      destinationLocationId: b.destinationLocationId,
+      requestedDate: new Date(b.requestedDate),
+      requestedTime: b.requestedTime,
+      flexibleWindowMinutes: b.flexibleWindowMinutes,
+      passengerCount: b.passengerCount,
+      passengerNames: b.passengerNames,
+      freightDescription: b.freightDescription,
+      freightWeightLbs: b.freightWeightLbs,
+      freightPieces: b.freightPieces,
+      freightSpecialHandling: b.freightSpecialHandling,
+      kayakCount: b.kayakCount,
+      bikeCount: b.bikeCount,
+      contactName: b.contactName,
+      contactPhone: b.contactPhone,
+      contactEmail: b.contactEmail,
+      needs: b.needs,
+      specialRequests: b.specialRequests
+    });
+    
+    res.json(result);
+  } catch (e: any) {
+    console.error('Create transport request error:', e);
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// GET /api/transport/requests/:id - Get request by ID
+router.get('/requests/:id', async (req, res) => {
+  const { id } = req.params;
+  
+  try {
+    const result = await getTransportRequest(id);
+    if (!result) {
+      return res.status(404).json({ error: 'Request not found' });
+    }
+    res.json(result);
+  } catch (e: any) {
+    console.error('Get request error:', e);
+    res.status(500).json({ error: 'Failed to get request' });
+  }
+});
+
+// GET /api/transport/requests/by-number/:number - Get by request number
+router.get('/requests/by-number/:number', async (req, res) => {
+  const { number } = req.params;
+  
+  try {
+    const result = await getTransportRequestByNumber(number);
+    if (!result) {
+      return res.status(404).json({ error: 'Request not found' });
+    }
+    res.json(result);
+  } catch (e: any) {
+    console.error('Get request error:', e);
+    res.status(500).json({ error: 'Failed to get request' });
+  }
+});
+
+// GET /api/transport/sailings/:id/requests - Get requests for sailing
+router.get('/sailings/:id/requests', async (req, res) => {
+  const { id } = req.params;
+  
+  try {
+    const requests = await getRequestsForSailing(id);
+    res.json({ requests, count: requests.length });
+  } catch (e: any) {
+    console.error('Get sailing requests error:', e);
+    res.status(500).json({ error: 'Failed to get requests' });
+  }
+});
+
+// GET /api/transport/sailings/:id/manifest - Get passenger manifest
+router.get('/sailings/:id/manifest', async (req, res) => {
+  const { id } = req.params;
+  
+  try {
+    const manifest = await getSailingManifest(id);
+    res.json(manifest);
+  } catch (e: any) {
+    console.error('Get manifest error:', e);
+    res.status(500).json({ error: 'Failed to get manifest' });
+  }
+});
+
+// GET /api/transport/trips/:tripId/requests - Get requests for trip
+router.get('/trips/:tripId/requests', async (req, res) => {
+  const { tripId } = req.params;
+  
+  try {
+    const requests = await getRequestsForTrip(tripId);
+    res.json({ requests });
+  } catch (e: any) {
+    console.error('Get trip requests error:', e);
+    res.status(500).json({ error: 'Failed to get requests' });
+  }
+});
+
+// POST /api/transport/requests/:id/confirm - Confirm request
+router.post('/requests/:id/confirm', async (req, res) => {
+  const { id } = req.params;
+  const { confirmedBy } = req.body || {};
+  
+  try {
+    const updated = await confirmRequest(id, confirmedBy);
+    res.json({ request: updated });
+  } catch (e: any) {
+    console.error('Confirm request error:', e);
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// POST /api/transport/requests/:id/check-in - Check in passenger
+router.post('/requests/:id/check-in', async (req, res) => {
+  const { id } = req.params;
+  
+  try {
+    const updated = await checkInRequest(id);
+    res.json({ request: updated });
+  } catch (e: any) {
+    console.error('Check-in error:', e);
+    res.status(500).json({ error: 'Failed to check in' });
+  }
+});
+
+// POST /api/transport/requests/:id/board - Mark as boarded
+router.post('/requests/:id/board', async (req, res) => {
+  const { id } = req.params;
+  
+  try {
+    const updated = await boardRequest(id);
+    res.json({ request: updated });
+  } catch (e: any) {
+    console.error('Board error:', e);
+    res.status(500).json({ error: 'Failed to board' });
+  }
+});
+
+// POST /api/transport/requests/:id/complete - Mark as completed
+router.post('/requests/:id/complete', async (req, res) => {
+  const { id } = req.params;
+  
+  try {
+    const updated = await completeRequest(id);
+    res.json({ request: updated });
+  } catch (e: any) {
+    console.error('Complete error:', e);
+    res.status(500).json({ error: 'Failed to complete' });
+  }
+});
+
+// POST /api/transport/requests/:id/cancel - Cancel request
+router.post('/requests/:id/cancel', async (req, res) => {
+  const { id } = req.params;
+  const { reason } = req.body || {};
+  
+  try {
+    const updated = await cancelRequest(id, reason);
+    res.json({ request: updated });
+  } catch (e: any) {
+    console.error('Cancel error:', e);
+    res.status(400).json({ error: e.message });
+  }
+});
+```
+
+## Drizzle Schema Export
+
+Add to shared/schema.ts:
+- TransportRequest, InsertTransportRequest
+
+## Deliverables
+- [ ] Migration 081_transport_requests.sql
+- [ ] cc_transport_requests table with RLS
+- [ ] server/services/transportRequestService.ts
+- [ ] Routes added to server/routes/transport.ts:
+  - POST /api/transport/requests
+  - GET /api/transport/requests/:id
+  - GET /api/transport/requests/by-number/:number
+  - GET /api/transport/sailings/:id/requests
+  - GET /api/transport/sailings/:id/manifest
+  - POST /api/transport/requests/:id/confirm
+  - POST /api/transport/requests/:id/check-in
+  - POST /api/transport/requests/:id/board
+  - POST /api/transport/requests/:id/complete
+  - POST /api/transport/requests/:id/cancel
+- [ ] Capacity automatically updates on booking/cancellation
+- [ ] Auto-pricing based on passengers, freight, kayaks
+- [ ] Test: POST /api/transport/requests with 4 passengers + 2 kayaks returns pricing
+- [ ] Test: GET /api/transport/sailings/:id/manifest shows booked passengers
+- [ ] Test: Cancellation releases capacity back to sailing
+
+Report with transport request showing pricing ($180 fare + $50 kayaks = $230 total) and capacity update verification.
