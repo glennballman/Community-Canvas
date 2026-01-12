@@ -23,6 +23,14 @@ import {
   createTransportAlert, getActiveAlerts, resolveAlert, acknowledgeAlert,
   getLiveDepartureBoard, checkCapacityAlerts
 } from '../services/transportAlertService';
+import {
+  addTransportToCart,
+  issueTransportConfirmation,
+  getConfirmationByNumber,
+  getConfirmationByQR,
+  getConfirmationsForTrip,
+  checkInByQR
+} from '../services/transportIntegrationService';
 
 const router = Router();
 
@@ -680,6 +688,122 @@ router.post('/sailings/:id/check-capacity', async (req, res) => {
   } catch (e: any) {
     console.error('Check capacity error:', e);
     res.status(500).json({ error: 'Failed to check capacity' });
+  }
+});
+
+// ============ CART INTEGRATION ENDPOINTS ============
+
+router.post('/carts/:cartId/transport', async (req, res) => {
+  const { cartId } = req.params;
+  const b = req.body || {};
+  
+  if (!b.portalSlug) {
+    return res.status(400).json({ error: 'portalSlug required' });
+  }
+  
+  if (!b.sailingId && !b.operatorCode) {
+    return res.status(400).json({ error: 'Either sailingId or operatorCode required' });
+  }
+  
+  try {
+    const result = await addTransportToCart({
+      cartId,
+      portalSlug: b.portalSlug,
+      sailingId: b.sailingId,
+      operatorCode: b.operatorCode,
+      originCode: b.originCode,
+      destinationCode: b.destinationCode,
+      requestedDate: b.requestedDate ? new Date(b.requestedDate) : undefined,
+      requestedTime: b.requestedTime,
+      passengerCount: b.passengerCount,
+      passengerNames: b.passengerNames,
+      kayakCount: b.kayakCount,
+      bikeCount: b.bikeCount,
+      freightDescription: b.freightDescription,
+      freightWeightLbs: b.freightWeightLbs,
+      contactName: b.contactName,
+      contactPhone: b.contactPhone,
+      contactEmail: b.contactEmail,
+      specialRequests: b.specialRequests
+    });
+    
+    res.json(result);
+  } catch (e: any) {
+    console.error('Add transport to cart error:', e);
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// ============ CONFIRMATION ENDPOINTS ============
+
+router.post('/requests/:id/issue-confirmation', async (req, res) => {
+  const { id } = req.params;
+  const { reservationId, tripId } = req.body || {};
+  
+  try {
+    const confirmation = await issueTransportConfirmation(id, { reservationId, tripId });
+    res.json({ confirmation });
+  } catch (e: any) {
+    console.error('Issue confirmation error:', e);
+    res.status(400).json({ error: e.message });
+  }
+});
+
+router.get('/confirmations/:number', async (req, res) => {
+  const { number } = req.params;
+  
+  try {
+    const confirmation = await getConfirmationByNumber(number);
+    if (!confirmation) {
+      return res.status(404).json({ error: 'Confirmation not found' });
+    }
+    res.json({ confirmation });
+  } catch (e: any) {
+    console.error('Get confirmation error:', e);
+    res.status(500).json({ error: 'Failed to get confirmation' });
+  }
+});
+
+router.get('/confirmations/qr/:token', async (req, res) => {
+  const { token } = req.params;
+  
+  try {
+    const confirmation = await getConfirmationByQR(token);
+    if (!confirmation) {
+      return res.status(404).json({ error: 'Confirmation not found' });
+    }
+    res.json({ confirmation });
+  } catch (e: any) {
+    console.error('Get confirmation error:', e);
+    res.status(500).json({ error: 'Failed to get confirmation' });
+  }
+});
+
+router.get('/trips/:tripId/confirmations', async (req, res) => {
+  const { tripId } = req.params;
+  
+  try {
+    const confirmations = await getConfirmationsForTrip(tripId);
+    res.json({ confirmations });
+  } catch (e: any) {
+    console.error('Get trip confirmations error:', e);
+    res.status(500).json({ error: 'Failed to get confirmations' });
+  }
+});
+
+router.post('/check-in/qr', async (req, res) => {
+  const { token } = req.body || {};
+  
+  if (!token) {
+    return res.status(400).json({ error: 'token required' });
+  }
+  
+  try {
+    const result = await checkInByQR(token);
+    res.json(result);
+  } catch (e: any) {
+    console.error('QR check-in error:', e);
+    res.status(400).json({ error: e.message });
   }
 });
 

@@ -1212,6 +1212,11 @@ export const cc_reservation_cart_items = pgTable('cc_reservation_cart_items', {
   partnerRequestId: uuid('partner_request_id'),
   itineraryItemId: uuid('itinerary_item_id'),
   
+  // Transport integration fields
+  transportRequestId: uuid('transport_request_id'),
+  transportType: varchar('transport_type', { length: 50 }),
+  transportDetailsJson: jsonb('transport_details_json').default({}),
+  
   status: varchar('status', { length: 30 }).default('pending'),
   
   requirementsSnapshot: jsonb('requirements_snapshot').default({}),
@@ -1747,3 +1752,53 @@ export const insertTransportAlertSchema = createInsertSchema(ccTransportAlerts).
 });
 export type TransportAlert = typeof ccTransportAlerts.$inferSelect;
 export type InsertTransportAlert = z.infer<typeof insertTransportAlertSchema>;
+
+// Transport Confirmations - booking confirmations with QR codes
+export const ccTransportConfirmations = pgTable('cc_transport_confirmations', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  
+  transportRequestId: uuid('transport_request_id').notNull(),
+  reservationId: uuid('reservation_id'),
+  cartId: uuid('cart_id'),
+  tripId: uuid('trip_id'),
+  
+  confirmationNumber: varchar('confirmation_number', { length: 20 }).notNull().unique(),
+  qrCodeToken: varchar('qr_code_token', { length: 30 }).unique(),
+  
+  guestName: text('guest_name').notNull(),
+  guestEmail: text('guest_email'),
+  guestPhone: text('guest_phone'),
+  
+  sailingDate: date('sailing_date').notNull(),
+  sailingTime: time('sailing_time').notNull(),
+  operatorName: text('operator_name').notNull(),
+  vesselName: text('vessel_name'),
+  originName: text('origin_name').notNull(),
+  destinationName: text('destination_name').notNull(),
+  
+  passengerCount: integer('passenger_count').default(1),
+  passengerNames: text('passenger_names').array(),
+  kayakCount: integer('kayak_count').default(0),
+  bikeCount: integer('bike_count').default(0),
+  freightDescription: text('freight_description'),
+  
+  totalCad: numeric('total_cad', { precision: 10, scale: 2 }),
+  paymentStatus: varchar('payment_status', { length: 50 }).default('pending'),
+  
+  status: varchar('status', { length: 50 }).default('active'),
+  
+  checkedInAt: timestamp('checked_in_at', { withTimezone: true }),
+  boardedAt: timestamp('boarded_at', { withTimezone: true }),
+  
+  validFrom: timestamp('valid_from', { withTimezone: true }).defaultNow(),
+  validTo: timestamp('valid_to', { withTimezone: true }),
+  
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+});
+
+export const insertTransportConfirmationSchema = createInsertSchema(ccTransportConfirmations).omit({ 
+  id: true, createdAt: true, updatedAt: true 
+});
+export type TransportConfirmation = typeof ccTransportConfirmations.$inferSelect;
+export type InsertTransportConfirmation = z.infer<typeof insertTransportConfirmationSchema>;

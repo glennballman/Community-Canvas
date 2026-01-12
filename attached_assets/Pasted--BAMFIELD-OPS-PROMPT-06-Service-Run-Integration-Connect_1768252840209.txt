@@ -1,0 +1,690 @@
+**BAMFIELD OPS - PROMPT 06: Service Run Integration**
+
+Connect transport requests to the cart/checkout system and enable adding transport to trips.
+
+## Migration 083_transport_integration.sql
+```sql
+BEGIN;
+
+-- ============ EXTEND CART ITEMS FOR TRANSPORT ============
+-- Add transport-specific fields to cart items
+
+ALTER TABLE cc_reservation_cart_items
+  ADD COLUMN IF NOT EXISTS transport_request_id uuid REFERENCES cc_transport_requests(id) ON DELETE SET NULL,
+  ADD COLUMN IF NOT EXISTS transport_type varchar CHECK (transport_type IN (
+    'scheduled', 'on_demand', 'freight_only', 'charter'
+  )),
+  ADD COLUMN IF NOT EXISTS transport_details_json jsonb DEFAULT '{}'::jsonb;
+  -- {passengers: 4, kayaks: 2, freightLbs: 0,
+  --  originCode: 'PAHQ', destinationCode: 'WGD',
+  --  sailingNumber: 'LRMS-2026-01-15-0800'}
+
+CREATE INDEX IF NOT EXISTS idx_cart_items_transport 
+  ON cc_reservation_cart_items(transport_request_id) 
+  WHERE transport_request_id IS NOT NULL;
+
+-- ============ TRANSPORT BOOKING CONFIRMATIONS ============
+-- Track transport confirmations issued to guests
+
+CREATE TABLE IF NOT EXISTS cc_transport_confirmations (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  
+  -- Links
+  transport_request_id uuid NOT NULL REFERENCES cc_transport_requests(id) ON DELETE CASCADE,
+  reservation_id uuid REFERENCES cc_reservations(id) ON DELETE SET NULL,
+  cart_id uuid REFERENCES cc_reservation_carts(id) ON DELETE SET NULL,
+  trip_id uuid REFERENCES cc_trips(id) ON DELETE SET NULL,
+  
+  -- Confirmation details
+  confirmation_number varchar(20) NOT NULL UNIQUE,
+  -- Format: TRN-XXXXXX
+  
+  qr_code_token varchar(30) UNIQUE,
+  
+  -- Guest info (denormalized for ticket)
+  guest_name text NOT NULL,
+  guest_email text,
+  guest_phone text,
+  
+  -- Journey details (denormalized for ticket)
+  sailing_date date NOT NULL,
+  sailing_time time NOT NULL,
+  operator_name text NOT NULL,
+  vessel_name text,
+  origin_name text NOT NULL,
+  destination_name text NOT NULL,
+  
+  -- Manifest details
+  passenger_count integer DEFAULT 1,
+  passenger_names text[],
+  kayak_count integer DEFAULT 0,
+  bike_count integer DEFAULT 0,
+  freight_description text,
+  
+  -- Pricing
+  total_cad numeric(10,2),
+  payment_status varchar DEFAULT 'pending',
+  
+  -- Status
+  status varchar DEFAULT 'active' CHECK (status IN (
+    'active', 'checked_in', 'boarded', 'completed', 'cancelled', 'no_show'
+  )),
+  
+  checked_in_at timestamptz,
+  boarded_at timestamptz,
+  
+  -- Validity
+  valid_from timestamptz DEFAULT now(),
+  valid_to timestamptz,
+  
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+
+CREATE INDEX idx_transport_confirmations_request ON cc_transport_confirmations(transport_request_id);
+CREATE INDEX idx_transport_confirmations_trip ON cc_transport_confirmations(trip_id) WHERE trip_id IS NOT NULL;
+CREATE INDEX idx_transport_confirmations_number ON cc_transport_confirmations(confirmation_number);
+CREATE INDEX idx_transport_confirmations_qr ON cc_transport_confirmations(qr_code_token) WHERE qr_code_token IS NOT NULL;
+
+ALTER TABLE cc_transport_confirmations ENABLE ROW LEVEL SECURITY;
+
+COMMIT;
+```
+
+## Create server/services/transportIntegrationService.ts
+```typescript
+// server/services/transportIntegrationService.ts
+
+import { db } from '../db';
+import { eq, and } from 'drizzle-orm';
+import { nanoid } from 'nanoid';
+import { 
+  createTransportRequest, 
+  getTransportRequest,
+  confirmRequest 
+} from './transportRequestService';
+import { getSailingById, checkSailingAvailability } from './sailingService';
+import { getLocationByCode } from './locationService';
+import { getOperatorByCode } from './operatorService';
+import { logActivity } from './activityService';
+
+// ============ TYPES ============
+
+interface AddTransportToCartRequest {
+  cartId: string;
+  portalSlug: string;
+  
+  // Either sailingId OR (operatorCode + date + time for on-demand)
+  sailingId?: string;
+  operatorCode?: string;
+  
+  // Route (required for on-demand, optional for scheduled if different from sailing default)
+  originCode?: string;
+  destinationCode?: string;
+  
+  // Date/time for on-demand
+  requestedDate?: Date;
+  requestedTime?: string;
+  
+  // What's being transported
+  passengerCount?: number;
+  passengerNames?: string[];
+  kayakCount?: number;
+  bikeCount?: number;
+  freightDescription?: string;
+  freightWeightLbs?: number;
+  
+  // Contact (from cart guest if not provided)
+  contactName?: string;
+  contactPhone?: string;
+  contactEmail?: string;
+  
+  specialRequests?: string;
+}
+
+interface TransportCartItemResult {
+  cartItem: any;
+  transportRequest: any;
+  sailing?: any;
+  quote: {
+    passengerFare: number;
+    kayakFee: number;
+    bikeFee: number;
+    freightFee: number;
+    total: number;
+    taxRate: number;
+    taxAmount: number;
+    grandTotal: number;
+  };
+}
+
+// ============ CART INTEGRATION ============
+
+export async function addTransportToCart(
+  req: AddTransportToCartRequest
+): Promise<TransportCartItemResult> {
+  // Get cart
+  const cart = await db.query.ccReservationCarts.findFirst({
+    where: eq(ccReservationCarts.id, req.cartId)
+  });
+  
+  if (!cart) throw new Error('Cart not found');
+  
+  // Resolve sailing or build on-demand request
+  let sailingId = req.sailingId;
+  let sailing: any = null;
+  let operatorId: string | undefined;
+  let requestType: 'scheduled' | 'on_demand' = 'scheduled';
+  let requestedDate: Date;
+  let requestedTime: string | undefined;
+  let originLocationId: string | undefined;
+  let destinationLocationId: string | undefined;
+  
+  if (sailingId) {
+    // Scheduled sailing
+    const sailingDetails = await getSailingById(sailingId);
+    if (!sailingDetails) throw new Error('Sailing not found');
+    
+    sailing = sailingDetails;
+    operatorId = sailingDetails.sailing.operatorId;
+    requestedDate = new Date(sailingDetails.sailing.sailingDate);
+    requestedTime = sailingDetails.sailing.scheduledDeparture;
+    originLocationId = sailingDetails.sailing.originLocationId;
+    destinationLocationId = sailingDetails.sailing.destinationLocationId;
+    
+    // Check availability
+    const availability = await checkSailingAvailability(sailingId, {
+      passengers: req.passengerCount,
+      kayaks: req.kayakCount,
+      freightLbs: req.freightWeightLbs
+    });
+    
+    if (!availability.available) {
+      throw new Error(`Insufficient capacity: ${availability.shortfall?.type} - requested ${availability.shortfall?.requested}, available ${availability.shortfall?.available}`);
+    }
+  } else if (req.operatorCode) {
+    // On-demand request
+    requestType = 'on_demand';
+    
+    const operator = await getOperatorByCode(req.portalSlug, req.operatorCode);
+    if (!operator) throw new Error('Operator not found');
+    operatorId = operator.id;
+    
+    if (!req.requestedDate) throw new Error('requestedDate required for on-demand');
+    requestedDate = req.requestedDate;
+    requestedTime = req.requestedTime;
+  } else {
+    throw new Error('Either sailingId or operatorCode required');
+  }
+  
+  // Resolve origin/destination if codes provided
+  if (req.originCode) {
+    const origin = await getLocationByCode(req.portalSlug, req.originCode);
+    if (origin) originLocationId = origin.id;
+  }
+  
+  if (req.destinationCode) {
+    const dest = await getLocationByCode(req.portalSlug, req.destinationCode);
+    if (dest) destinationLocationId = dest.id;
+  }
+  
+  // Get contact from cart if not provided
+  const guestInfo = cart.guestInfoJson as any || {};
+  const contactName = req.contactName || guestInfo.name || 'Guest';
+  const contactPhone = req.contactPhone || guestInfo.phone;
+  const contactEmail = req.contactEmail || guestInfo.email;
+  
+  // Create transport request
+  const transportResult = await createTransportRequest({
+    portalSlug: req.portalSlug,
+    operatorId,
+    sailingId,
+    cartId: req.cartId,
+    requestType,
+    originLocationId,
+    destinationLocationId,
+    requestedDate,
+    requestedTime,
+    passengerCount: req.passengerCount || 1,
+    passengerNames: req.passengerNames,
+    kayakCount: req.kayakCount || 0,
+    bikeCount: req.bikeCount || 0,
+    freightDescription: req.freightDescription,
+    freightWeightLbs: req.freightWeightLbs || 0,
+    contactName,
+    contactPhone,
+    contactEmail,
+    specialRequests: req.specialRequests
+  });
+  
+  // Calculate quote
+  const quote = calculateTransportQuote(
+    req.passengerCount || 1,
+    req.kayakCount || 0,
+    req.bikeCount || 0,
+    req.freightWeightLbs || 0
+  );
+  
+  // Get location names for display
+  let originName = 'Origin';
+  let destName = 'Destination';
+  
+  if (originLocationId) {
+    const loc = await db.query.ccLocations.findFirst({
+      where: eq(ccLocations.id, originLocationId)
+    });
+    if (loc) originName = loc.name;
+  }
+  
+  if (destinationLocationId) {
+    const loc = await db.query.ccLocations.findFirst({
+      where: eq(ccLocations.id, destinationLocationId)
+    });
+    if (loc) destName = loc.name;
+  }
+  
+  // Create cart item
+  const [cartItem] = await db.insert(ccReservationCartItems).values({
+    cartId: req.cartId,
+    itemType: 'transport',
+    reservationMode: 'internal',
+    name: `Transport: ${originName} → ${destName}`,
+    description: requestType === 'scheduled' 
+      ? `${sailing?.operator?.name || 'Ferry'} - ${requestedDate.toISOString().split('T')[0]} ${requestedTime}`
+      : `Water Taxi - ${requestedDate.toISOString().split('T')[0]}`,
+    startDate: requestedDate,
+    quantity: req.passengerCount || 1,
+    unitPriceCents: Math.round(quote.total * 100),
+    subtotalCents: Math.round(quote.total * 100),
+    taxCents: Math.round(quote.taxAmount * 100),
+    totalCents: Math.round(quote.grandTotal * 100),
+    transportRequestId: transportResult.request.id,
+    transportType: requestType,
+    transportDetailsJson: {
+      passengers: req.passengerCount || 1,
+      passengerNames: req.passengerNames,
+      kayaks: req.kayakCount || 0,
+      bikes: req.bikeCount || 0,
+      freightLbs: req.freightWeightLbs || 0,
+      originCode: req.originCode,
+      destinationCode: req.destinationCode,
+      sailingNumber: sailing?.sailing?.sailingNumber,
+      sailingId
+    },
+    status: 'pending'
+  }).returning();
+  
+  // Update cart item ID on transport request
+  await db.update(ccTransportRequests)
+    .set({ cartItemId: cartItem.id })
+    .where(eq(ccTransportRequests.id, transportResult.request.id));
+  
+  return {
+    cartItem,
+    transportRequest: transportResult.request,
+    sailing,
+    quote
+  };
+}
+
+function calculateTransportQuote(
+  passengers: number,
+  kayaks: number,
+  bikes: number,
+  freightLbs: number
+): {
+  passengerFare: number;
+  kayakFee: number;
+  bikeFee: number;
+  freightFee: number;
+  total: number;
+  taxRate: number;
+  taxAmount: number;
+  grandTotal: number;
+} {
+  const passengerFare = passengers * 45;
+  const kayakFee = kayaks * 25;
+  const bikeFee = bikes * 15;
+  const freightFee = Math.ceil(freightLbs * 0.10);
+  const total = passengerFare + kayakFee + bikeFee + freightFee;
+  const taxRate = 0.05; // 5% GST only for transport
+  const taxAmount = Math.round(total * taxRate * 100) / 100;
+  const grandTotal = total + taxAmount;
+  
+  return { passengerFare, kayakFee, bikeFee, freightFee, total, taxRate, taxAmount, grandTotal };
+}
+
+// ============ CONFIRMATION GENERATION ============
+
+function generateConfirmationNumber(): string {
+  return `TRN-${nanoid(6).toUpperCase()}`;
+}
+
+function generateQRToken(): string {
+  return nanoid(24);
+}
+
+export async function issueTransportConfirmation(
+  transportRequestId: string,
+  options?: {
+    reservationId?: string;
+    tripId?: string;
+  }
+): Promise<any> {
+  const requestDetails = await getTransportRequest(transportRequestId);
+  if (!requestDetails) throw new Error('Transport request not found');
+  
+  const req = requestDetails.request;
+  const sailing = requestDetails.sailing?.sailing;
+  
+  // Get operator name
+  let operatorName = 'Transport Operator';
+  if (req.operatorId) {
+    const operator = await db.query.ccTransportOperators.findFirst({
+      where: eq(ccTransportOperators.id, req.operatorId)
+    });
+    if (operator) operatorName = operator.name;
+  }
+  
+  // Get vessel name
+  let vesselName: string | undefined;
+  if (sailing?.assetId) {
+    const asset = await db.query.ccTransportAssets.findFirst({
+      where: eq(ccTransportAssets.id, sailing.assetId)
+    });
+    if (asset) vesselName = asset.name;
+  }
+  
+  // Get location names
+  let originName = 'Origin';
+  let destinationName = 'Destination';
+  
+  if (req.originLocationId) {
+    const loc = await db.query.ccLocations.findFirst({
+      where: eq(ccLocations.id, req.originLocationId)
+    });
+    if (loc) originName = loc.name;
+  }
+  
+  if (req.destinationLocationId) {
+    const loc = await db.query.ccLocations.findFirst({
+      where: eq(ccLocations.id, req.destinationLocationId)
+    });
+    if (loc) destinationName = loc.name;
+  }
+  
+  const confirmationNumber = generateConfirmationNumber();
+  const qrToken = generateQRToken();
+  
+  // Calculate valid_to (end of sailing day)
+  const sailingDate = new Date(req.requestedDate);
+  const validTo = new Date(sailingDate);
+  validTo.setHours(23, 59, 59, 999);
+  
+  const [confirmation] = await db.insert(ccTransportConfirmations).values({
+    transportRequestId,
+    reservationId: options?.reservationId,
+    cartId: req.cartId,
+    tripId: req.tripId || options?.tripId,
+    confirmationNumber,
+    qrCodeToken: qrToken,
+    guestName: req.contactName,
+    guestEmail: req.contactEmail,
+    guestPhone: req.contactPhone,
+    sailingDate: req.requestedDate,
+    sailingTime: req.requestedTime || '08:00',
+    operatorName,
+    vesselName,
+    originName,
+    destinationName,
+    passengerCount: req.passengerCount,
+    passengerNames: req.passengerNames,
+    kayakCount: req.kayakCount,
+    bikeCount: req.bikeCount,
+    freightDescription: req.freightDescription,
+    totalCad: req.totalCad,
+    paymentStatus: req.paymentStatus,
+    validTo
+  }).returning();
+  
+  // Update transport request to confirmed
+  await confirmRequest(transportRequestId, 'system');
+  
+  await logActivity({
+    tenantId: 'system',
+    actorId: 'system',
+    action: 'transport_confirmation.issued',
+    resourceType: 'transport_confirmation',
+    resourceId: confirmation.id,
+    metadata: { confirmationNumber, qrToken }
+  });
+  
+  return confirmation;
+}
+
+export async function getConfirmationByNumber(confirmationNumber: string): Promise<any | null> {
+  return db.query.ccTransportConfirmations.findFirst({
+    where: eq(ccTransportConfirmations.confirmationNumber, confirmationNumber)
+  });
+}
+
+export async function getConfirmationByQR(qrToken: string): Promise<any | null> {
+  return db.query.ccTransportConfirmations.findFirst({
+    where: eq(ccTransportConfirmations.qrCodeToken, qrToken)
+  });
+}
+
+export async function getConfirmationsForTrip(tripId: string): Promise<any[]> {
+  return db.query.ccTransportConfirmations.findMany({
+    where: eq(ccTransportConfirmations.tripId, tripId)
+  });
+}
+
+// ============ CHECK-IN VIA QR ============
+
+export async function checkInByQR(qrToken: string): Promise<{
+  confirmation: any;
+  request: any;
+  message: string;
+}> {
+  const confirmation = await getConfirmationByQR(qrToken);
+  if (!confirmation) throw new Error('Invalid QR code');
+  
+  if (confirmation.status === 'checked_in') {
+    return { confirmation, request: null, message: 'Already checked in' };
+  }
+  
+  if (confirmation.status === 'cancelled') {
+    throw new Error('Booking has been cancelled');
+  }
+  
+  // Update confirmation
+  const [updated] = await db.update(ccTransportConfirmations)
+    .set({
+      status: 'checked_in',
+      checkedInAt: new Date(),
+      updatedAt: new Date()
+    })
+    .where(eq(ccTransportConfirmations.id, confirmation.id))
+    .returning();
+  
+  // Update transport request
+  await db.update(ccTransportRequests)
+    .set({
+      status: 'checked_in',
+      checkedInAt: new Date(),
+      updatedAt: new Date()
+    })
+    .where(eq(ccTransportRequests.id, confirmation.transportRequestId));
+  
+  const request = await getTransportRequest(confirmation.transportRequestId);
+  
+  return {
+    confirmation: updated,
+    request: request?.request,
+    message: 'Check-in successful'
+  };
+}
+```
+
+## Add Integration Routes to transport.ts
+```typescript
+// Add to server/routes/transport.ts
+
+import {
+  addTransportToCart,
+  issueTransportConfirmation,
+  getConfirmationByNumber,
+  getConfirmationByQR,
+  getConfirmationsForTrip,
+  checkInByQR
+} from '../services/transportIntegrationService';
+
+// ============ CART INTEGRATION ENDPOINTS ============
+
+// POST /api/transport/carts/:cartId/transport - Add transport to cart
+router.post('/carts/:cartId/transport', async (req, res) => {
+  const { cartId } = req.params;
+  const b = req.body || {};
+  
+  if (!b.portalSlug) {
+    return res.status(400).json({ error: 'portalSlug required' });
+  }
+  
+  if (!b.sailingId && !b.operatorCode) {
+    return res.status(400).json({ error: 'Either sailingId or operatorCode required' });
+  }
+  
+  try {
+    const result = await addTransportToCart({
+      cartId,
+      portalSlug: b.portalSlug,
+      sailingId: b.sailingId,
+      operatorCode: b.operatorCode,
+      originCode: b.originCode,
+      destinationCode: b.destinationCode,
+      requestedDate: b.requestedDate ? new Date(b.requestedDate) : undefined,
+      requestedTime: b.requestedTime,
+      passengerCount: b.passengerCount,
+      passengerNames: b.passengerNames,
+      kayakCount: b.kayakCount,
+      bikeCount: b.bikeCount,
+      freightDescription: b.freightDescription,
+      freightWeightLbs: b.freightWeightLbs,
+      contactName: b.contactName,
+      contactPhone: b.contactPhone,
+      contactEmail: b.contactEmail,
+      specialRequests: b.specialRequests
+    });
+    
+    res.json(result);
+  } catch (e: any) {
+    console.error('Add transport to cart error:', e);
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// ============ CONFIRMATION ENDPOINTS ============
+
+// POST /api/transport/requests/:id/issue-confirmation - Issue confirmation
+router.post('/requests/:id/issue-confirmation', async (req, res) => {
+  const { id } = req.params;
+  const { reservationId, tripId } = req.body || {};
+  
+  try {
+    const confirmation = await issueTransportConfirmation(id, { reservationId, tripId });
+    res.json({ confirmation });
+  } catch (e: any) {
+    console.error('Issue confirmation error:', e);
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// GET /api/transport/confirmations/:number - Get by confirmation number
+router.get('/confirmations/:number', async (req, res) => {
+  const { number } = req.params;
+  
+  try {
+    const confirmation = await getConfirmationByNumber(number);
+    if (!confirmation) {
+      return res.status(404).json({ error: 'Confirmation not found' });
+    }
+    res.json({ confirmation });
+  } catch (e: any) {
+    console.error('Get confirmation error:', e);
+    res.status(500).json({ error: 'Failed to get confirmation' });
+  }
+});
+
+// GET /api/transport/confirmations/qr/:token - Get by QR token
+router.get('/confirmations/qr/:token', async (req, res) => {
+  const { token } = req.params;
+  
+  try {
+    const confirmation = await getConfirmationByQR(token);
+    if (!confirmation) {
+      return res.status(404).json({ error: 'Confirmation not found' });
+    }
+    res.json({ confirmation });
+  } catch (e: any) {
+    console.error('Get confirmation error:', e);
+    res.status(500).json({ error: 'Failed to get confirmation' });
+  }
+});
+
+// GET /api/transport/trips/:tripId/confirmations - Get confirmations for trip
+router.get('/trips/:tripId/confirmations', async (req, res) => {
+  const { tripId } = req.params;
+  
+  try {
+    const confirmations = await getConfirmationsForTrip(tripId);
+    res.json({ confirmations });
+  } catch (e: any) {
+    console.error('Get trip confirmations error:', e);
+    res.status(500).json({ error: 'Failed to get confirmations' });
+  }
+});
+
+// POST /api/transport/check-in/qr - Check in by QR scan
+router.post('/check-in/qr', async (req, res) => {
+  const { token } = req.body || {};
+  
+  if (!token) {
+    return res.status(400).json({ error: 'token required' });
+  }
+  
+  try {
+    const result = await checkInByQR(token);
+    res.json(result);
+  } catch (e: any) {
+    console.error('QR check-in error:', e);
+    res.status(400).json({ error: e.message });
+  }
+});
+```
+
+## Drizzle Schema Exports
+
+Add to shared/schema.ts:
+- TransportConfirmation, InsertTransportConfirmation
+
+## Deliverables
+- [ ] Migration 083_transport_integration.sql
+- [ ] cc_reservation_cart_items extended with transport fields
+- [ ] cc_transport_confirmations table with RLS
+- [ ] server/services/transportIntegrationService.ts
+- [ ] Routes added to server/routes/transport.ts:
+  - POST /api/transport/carts/:cartId/transport
+  - POST /api/transport/requests/:id/issue-confirmation
+  - GET /api/transport/confirmations/:number
+  - GET /api/transport/confirmations/qr/:token
+  - GET /api/transport/trips/:tripId/confirmations
+  - POST /api/transport/check-in/qr
+- [ ] Transport adds to cart with proper quote (fare + kayak + tax)
+- [ ] Confirmation includes QR code token for self-service check-in
+- [ ] QR check-in updates both confirmation and transport request status
+- [ ] Test: POST /api/transport/carts/:cartId/transport with sailing → cart item created with pricing
+- [ ] Test: POST /api/transport/requests/:id/issue-confirmation → TRN-XXXXXX confirmation number
+- [ ] Test: POST /api/transport/check-in/qr → status changes to checked_in
+
+Report with cart item showing transport details and confirmation showing QR token.
