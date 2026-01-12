@@ -22,6 +22,7 @@ export interface CreateReservationRequest {
   endAt: Date;
   vesselLengthFt?: number;
   vehicleLengthFt?: number;
+  vehiclePlate?: string; // License plate for parking validation
   idempotencyKey: string;
   source: 'direct' | 'portal' | 'chamber' | 'partner';
 }
@@ -200,12 +201,12 @@ export async function createReservation(req: CreateReservationRequest): Promise<
       provider_id, asset_id, confirmation_number, status, source, idempotency_key,
       start_date, end_date, hold_type, hold_expires_at,
       primary_guest_name, primary_guest_email, primary_guest_telephone,
-      pricing_snapshot, confirmed_at
+      pricing_snapshot, confirmed_at, vehicle_plate
     ) VALUES (
       ${req.tenantId}, ${assetId}, ${confirmationNumber}, ${initialStatus}, ${req.source}, ${req.idempotencyKey},
       ${req.startAt}, ${req.endAt}, ${holdType}, ${holdExpiresAt},
       ${req.customerName}, ${req.customerEmail || null}, ${req.customerPhone || null},
-      ${JSON.stringify(quote)}, ${isInstant ? new Date() : null}
+      ${JSON.stringify(quote)}, ${isInstant ? new Date() : null}, ${req.vehiclePlate || null}
     )
     RETURNING id
   `);
